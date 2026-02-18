@@ -411,13 +411,13 @@ python -m black . --exclude ".venv/|/venv/"
 
 ### Infrastructure Documentation
 
-| Document                  | Location                      | Description                                     |
-| ------------------------- | ----------------------------- | ----------------------------------------------- |
-| **Heroku Deployment**     | `docs/HEROKU_DEPLOYMENT.md`   | Full Heroku guide, debugging history, troubleshooting |
-| **Heroku 404 Fix**        | `docs/HEROKU_404_FIX.md`      | Fix 404 on root and frontend routes             |
-| **Heroku Backup Setup**   | `docs/HEROKU_BACKUP_SETUP.md` | Heroku deployment and backup                    |
-| **Apache Configuration**  | `docs/apache.md`              | Apache server setup                             |
-| **Security Guidelines**   | `docs/SECURITY.md`            | Security practices and reporting                |
+| Document                 | Location                      | Description                                           |
+| ------------------------ | ----------------------------- | ----------------------------------------------------- |
+| **Heroku Deployment**    | `docs/HEROKU_DEPLOYMENT.md`   | Full Heroku guide, debugging history, troubleshooting |
+| **Heroku 404 Fix**       | `docs/HEROKU_404_FIX.md`      | Fix 404 on root and frontend routes                   |
+| **Heroku Backup Setup**  | `docs/HEROKU_BACKUP_SETUP.md` | Heroku deployment and backup                          |
+| **Apache Configuration** | `docs/apache.md`              | Apache server setup                                   |
+| **Security Guidelines**  | `docs/SECURITY.md`            | Security practices and reporting                      |
 
 ### Additional Resources
 
@@ -541,7 +541,7 @@ Child and parent accounts were receiving 400 Bad Request or 403 Forbidden / "Mod
 
 2. **404 on / and /parents**: Buildpack apps (e.g. dsl-kidsgpt-pilot) had only heroku/python; frontend was never built. Added heroku/nodejs buildpack **before** heroku/python so `npm run build` runs.
 
-3. **Optional packages**: boto3, google-cloud-storage, azure-*, firecrawl, ddgs, tencentcloud, opentelemetry removed from requirements.txt; code uses lazy imports. Install only if feature is needed.
+3. **Optional packages**: boto3, google-cloud-storage, azure-\*, firecrawl, ddgs, tencentcloud, opentelemetry removed from requirements.txt; code uses lazy imports. Install only if feature is needed.
 
 4. **CORS**: Set `CORS_ALLOW_ORIGIN` to explicit origins (not `*`) for production.
 

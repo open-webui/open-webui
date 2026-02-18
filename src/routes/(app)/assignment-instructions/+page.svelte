@@ -6,14 +6,16 @@
 	import { get } from 'svelte/store';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
+	import { getWorkflowState, markInstructionsComplete } from '$lib/apis/workflow';
 
 	// State to track if Start button was clicked
 	let startButtonClicked: boolean = false;
-	// State to track if instructions have been read
+	// State to track if instructions have been read (loaded from backend)
 	let instructionsCompleted: boolean = false;
 	// State for scroll indicator
 	let showScrollIndicator: boolean = false;
 	let hasScrolled: boolean = false;
+	let scrollContainer: HTMLDivElement | null = null;
 	// State for ready modal
 	let showReadyModal: boolean = false;
 
@@ -21,30 +23,28 @@
 	let trackingEnabled: boolean = false;
 	$: sessionNumber = $user?.session_number || 1;
 
-	onMount(async () => {
-		// Check if instructions have been read - check localStorage directly for reactivity
-		const checkInstructionsCompleted = () => {
-			if (typeof window !== 'undefined') {
-				const instructionsRead = localStorage.getItem('instructionsCompleted');
-				instructionsCompleted = instructionsRead === 'true';
-				return instructionsCompleted;
+	async function fetchInstructionsStatus() {
+		try {
+			const token = (typeof window !== 'undefined' && localStorage.token) || '';
+			if (token) {
+				const state = await getWorkflowState(token);
+				instructionsCompleted = state?.progress_by_section?.instructions_completed || false;
+				if (instructionsCompleted) {
+					trackingEnabled = true;
+				}
 			}
-			return false;
-		};
-
-		checkInstructionsCompleted();
-
-		// Enable tracking if instructions are already completed (consent given)
-		if (instructionsCompleted) {
-			trackingEnabled = true;
+		} catch (e) {
+			console.warn('Failed to fetch workflow state:', e);
 		}
+	}
 
-		// Listen for storage changes to update state reactively
-		const handleStorageChange = () => {
-			checkInstructionsCompleted();
+	onMount(async () => {
+		await fetchInstructionsStatus();
+
+		const handleWorkflowUpdate = () => {
+			fetchInstructionsStatus();
 		};
-		window.addEventListener('storage', handleStorageChange);
-		window.addEventListener('workflow-updated', handleStorageChange);
+		window.addEventListener('workflow-updated', handleWorkflowUpdate);
 
 		// Default open sidebar on wide screens (md and up)
 		try {
@@ -65,51 +65,46 @@
 			showScrollIndicator = false;
 		};
 
-		// Find the scrollable container
-		const scrollContainer = document.querySelector('.overflow-y-auto');
-
-		// Attach to both window and container
-		if (scrollContainer) {
-			scrollContainer.addEventListener('scroll', handleScroll);
+		// Attach to the actual scroll container (use bind:this, attached after render)
+		const el = scrollContainer ?? document.querySelector('[data-assignment-scroll]');
+		if (el) {
+			el.addEventListener('scroll', handleScroll);
 		}
 		window.addEventListener('scroll', handleScroll);
 
 		return () => {
 			clearTimeout(timer);
-			if (scrollContainer) {
-				scrollContainer.removeEventListener('scroll', handleScroll);
+			const target = scrollContainer ?? document.querySelector('[data-assignment-scroll]');
+			if (target) {
+				target.removeEventListener('scroll', handleScroll);
 			}
 			window.removeEventListener('scroll', handleScroll);
-			window.removeEventListener('storage', handleStorageChange);
-			window.removeEventListener('workflow-updated', handleStorageChange);
+			window.removeEventListener('workflow-updated', handleWorkflowUpdate);
 		};
 	});
 
 	function startAssignment() {
-		// Set initial assignment step
-		localStorage.setItem('assignmentStep', '1');
 		startButtonClicked = true;
 		goto('/kids/profile');
 	}
 
-	function markInstructionsComplete() {
-		// Update local state immediately
-		instructionsCompleted = true;
-		// Unlock Step 1 immediately before showing the modal
-		localStorage.setItem('instructionsCompleted', 'true');
-		localStorage.setItem('assignmentStep', '1');
-		localStorage.setItem('unlock_kids', 'true');
-		window.dispatchEvent(new Event('storage'));
-		window.dispatchEvent(new Event('workflow-updated'));
-		showReadyModal = true;
-		// Start time tracking after consent
-		trackingEnabled = true;
+	async function handleMarkInstructionsComplete() {
+		try {
+			const token = (typeof window !== 'undefined' && localStorage.token) || '';
+			if (token) {
+				await markInstructionsComplete(token);
+				instructionsCompleted = true;
+				trackingEnabled = true;
+				showReadyModal = true;
+				window.dispatchEvent(new Event('workflow-updated'));
+			}
+		} catch (e) {
+			console.error('Failed to mark instructions complete:', e);
+		}
 	}
 
 	function proceedToTasks() {
 		instructionsCompleted = true;
-		localStorage.setItem('instructionsCompleted', 'true');
-		localStorage.setItem('assignmentStep', '1');
 		showReadyModal = false;
 		goto('/kids/profile');
 	}
@@ -154,7 +149,7 @@
 			</div>
 
 			<!-- Navigation Buttons -->
-			{#if instructionsCompleted || (typeof window !== 'undefined' && localStorage.getItem('instructionsCompleted') === 'true')}
+			{#if instructionsCompleted}
 				<div class="flex items-center space-x-2">
 					<button
 						on:click={() => goto('/kids/profile')}
@@ -171,7 +166,11 @@
 		</div>
 	</nav>
 
-	<div class="flex-1 max-h-full overflow-y-auto bg-gray-50 dark:bg-gray-900">
+	<div
+		bind:this={scrollContainer}
+		data-assignment-scroll
+		class="flex-1 max-h-full overflow-y-auto bg-gray-50 dark:bg-gray-900"
+	>
 		<div class="max-w-4xl mx-auto px-4 py-8">
 			<!-- Header -->
 			<div class="text-center mb-12">
@@ -293,7 +292,7 @@
 			<div class="text-center mt-8">
 				{#if !instructionsCompleted}
 					<button
-						on:click={markInstructionsComplete}
+						on:click={handleMarkInstructionsComplete}
 						class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
 					>
 						I've Read the Instructions

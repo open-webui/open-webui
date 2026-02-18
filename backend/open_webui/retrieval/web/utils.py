@@ -574,7 +574,7 @@ class SafeWebBaseLoader(WebBaseLoader):
 
     async def _fetch(
         self, url: str, retries: int = 3, cooldown: int = 2, backoff: float = 1.5
-        ) -> str:
+    ) -> str:
         async with aiohttp.ClientSession(trust_env=self.trust_env) as session:
             for i in range(retries):
                 try:

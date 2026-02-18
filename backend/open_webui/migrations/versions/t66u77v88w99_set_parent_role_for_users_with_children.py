@@ -26,12 +26,14 @@ def upgrade() -> None:
     if "user" not in inspector.get_table_names():
         return
 
-    op.execute("""
+    op.execute(
+        """
         UPDATE "user"
         SET role = 'parent'
         WHERE role = 'user'
           AND id IN (SELECT DISTINCT parent_id FROM "user" WHERE parent_id IS NOT NULL)
-    """)
+    """
+    )
 
 
 def downgrade() -> None:

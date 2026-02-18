@@ -34,6 +34,9 @@ build/
 dist/
 .svelte-kit/
 
+# Pyodide (generated during build, exclude pre-built packages)
+static/pyodide/
+
 # IDE
 .vscode/
 .idea/
@@ -81,3 +84,47 @@ webui.db
 tmp/
 temp/
 .cache/
+
+# Data exports and analysis (not needed at runtime)
+data-exports/
+stat_analysis/
+*.ipynb
+
+# Database dumps and archives
+*.dump
+*.sql
+*.db
+
+# Test data and scripts
+backend/open_webui/test/
+backend/open_webui/retrieval/web/testdata/
+cypress.config.ts
+
+# Documentation and meta files (keep only essential)
+deployment-summary.txt
+open-webui-environment-summary.md
+environment-comparison-report.md
+LICENSE_HISTORY
+PR_DESCRIPTION.md
+PR_SUMMARY.md
+README_DUMP_TRANSFORMATION.md
+TESTING_SCENARIO_SELECTION.md
+TOKEN_ISSUE_DIAGNOSIS.md
+WORKFLOW_STATE_ANALYSIS.md
+GITHUB_TOKEN_PERMISSIONS_GUIDE.md
+GPT5_VALIDATION_GUIDE.md
+CONTRIBUTOR_LICENSE_AGREEMENT
+conda-system-info.txt
+
+# Build and utility scripts (not needed in container)
+Makefile
+run-compose.sh
+run-navigation-tests.sh
+run-ollama-docker.sh
+update_ollama_models.sh
+confirm_remove.sh
+inspect_dump.py
+transform_dump_to_dataframes.py
+export_study_data.py
+export_moderation_direct.py
+contribution_stats.py

@@ -29,7 +29,7 @@ FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
 ARG BUILD_HASH
 
 # Set Node.js options (heap limit Allocation failed - JavaScript heap out of memory)
-# ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 WORKDIR /app
 
@@ -39,8 +39,10 @@ RUN apk add --no-cache git
 COPY package.json package-lock.json ./
 RUN npm ci --force
 
+# Copy all source files needed for build (respecting .dockerignore)
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
+# Build frontend - NODE_OPTIONS is set as ENV variable above
 RUN npm run build
 
 ######## WebUI backend ########
@@ -135,27 +137,48 @@ RUN apt-get update && \
 # install python dependencies
 COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 
-RUN pip3 install --no-cache-dir uv && \
-    if [ "$USE_CUDA" = "true" ]; then \
-    # If you use CUDA the whisper and embedding model will be downloaded on first use
-    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir && \
-    uv pip install --system -r requirements.txt --no-cache-dir && \
-    python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
-    python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ.get('AUXILIARY_EMBEDDING_MODEL', 'TaylorAI/bge-micro-v2'), device='cpu')" && \
-    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
-    python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
-    else \
-    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
-    uv pip install --system -r requirements.txt --no-cache-dir && \
-    if [ "$USE_SLIM" != "true" ]; then \
-    python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
-    python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ.get('AUXILIARY_EMBEDDING_MODEL', 'TaylorAI/bge-micro-v2'), device='cpu')" && \
-    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
-    python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
-    fi; \
-    fi; \
-    mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \
-    rm -rf /var/lib/apt/lists/*;
+# Upgrade pip first
+RUN pip3 install --upgrade pip setuptools wheel
+
+# Install critical packages first (core dependencies needed for app startup and migrations)
+RUN pip3 install --no-cache-dir \
+    "uvicorn[standard]==0.40.0" \
+    "fastapi==0.128.0" \
+    "typer" \
+    "sqlalchemy==2.0.45" \
+    "alembic==1.17.2" \
+    "pydantic==2.12.5" \
+    "python-multipart==0.0.21" \
+    "aiohttp==3.13.2" \
+    "aiocache" \
+    "requests==2.32.5" \
+    "redis" \
+    "starlette-compress==1.6.1" \
+    "starsessions[redis]==2.2.1"
+
+# Install torch separately (CPU version for Heroku) - skip if it fails
+RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir || echo "Warning: torch installation failed, continuing..."
+
+# Install remaining requirements - try multiple times with better error reporting
+RUN pip3 install --no-cache-dir -r requirements.txt 2>&1 | tee /tmp/pip_install.log || \
+    (echo "First attempt failed, retrying..." && pip3 install --no-cache-dir -r requirements.txt 2>&1 | tee -a /tmp/pip_install.log || \
+    (echo "ERROR: requirements.txt installation failed after 2 attempts!" && \
+     echo "Last 50 lines of pip output:" && tail -50 /tmp/pip_install.log && \
+     echo "Installed packages:" && pip3 list && exit 1))
+# Verify alembic is available (required for DB migrations at startup)
+RUN python3 -c "import alembic; print('✓ Alembic available for migrations')" || (echo "ERROR: alembic not found - migrations will fail at runtime!" && exit 1)
+
+# Copy and make dependency checker executable
+COPY --chown=$UID:$GID ./backend/check_dependencies.py ./check_dependencies.py
+RUN chmod +x ./check_dependencies.py
+
+# Verify core packages needed to start the app and run migrations.
+# Do NOT fail the image build on optional/large deps (runtime checker will handle them).
+RUN python3 -c "import uvicorn, fastapi, typer, sqlalchemy, pydantic, alembic; print('✓ Core packages verified')" || (echo "ERROR: Core packages missing!" && exit 1)
+
+# Create data directory
+RUN mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install Ollama if requested
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
@@ -198,4 +221,8 @@ ARG BUILD_HASH
 ENV WEBUI_BUILD_VERSION=${BUILD_HASH}
 ENV DOCKER=true
 
-CMD [ "bash", "start.sh"]
+# Ensure start.sh is executable
+RUN chmod +x start.sh
+
+# Use absolute path to be safe
+CMD [ "bash", "/app/backend/start.sh"]

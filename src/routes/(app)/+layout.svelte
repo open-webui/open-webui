@@ -14,6 +14,8 @@
 	import { getBanners } from '$lib/apis/configs';
 	import { getUserSettings } from '$lib/apis/users';
 	import { getUserType } from '$lib/utils';
+	import { getWorkflowState } from '$lib/apis/workflow';
+	import { getStepFromRoute } from '$lib/utils/workflow';
 
 	import { WEBUI_VERSION } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
@@ -323,18 +325,31 @@
 
 		try {
 			const currentPath = $page.url.pathname;
-			const assignmentStep = parseInt(localStorage.getItem('assignmentStep') || '0'); // Start with 0 for new users
-			const assignmentCompleted = localStorage.getItem('assignmentCompleted') === 'true';
-			const instructionsCompleted = localStorage.getItem('instructionsCompleted') === 'true';
+
+			// Get workflow state from backend API (single source of truth)
+			let workflowState = null;
+			try {
+				if (localStorage.token) {
+					workflowState = await getWorkflowState(localStorage.token);
+				}
+			} catch (error) {
+				console.error('Failed to fetch workflow state:', error);
+				// Continue with navigation logic even if API fails
+			}
 
 			// Check if this is a Prolific user
 			const isProlificUser = $user?.prolific_pid !== undefined && $user?.prolific_pid !== null;
 			const prolificSessionId = localStorage.getItem('prolificSessionId');
 			const prolificSessionNumber = parseInt(localStorage.getItem('prolificSessionNumber') || '1');
 
-			// For Prolific users on new sessions, reset workflow to instructions
+			// Get completion status from backend workflow state
+			const assignmentCompleted =
+				workflowState?.progress_by_section?.exit_survey_completed || false;
+			const instructionsCompleted =
+				workflowState?.progress_by_section?.instructions_completed || false;
+
+			// For Prolific users on new sessions, call reset API and redirect to instructions
 			if (isProlificUser) {
-				// Check both URL parameter and localStorage for session ID
 				const urlSessionId = $page.url.searchParams.get('SESSION_ID');
 				const storageSessionId = localStorage.getItem('prolificSessionId');
 				const sessionIdToCheck = urlSessionId || storageSessionId;
@@ -344,50 +359,22 @@
 					const isNewSession = lastSessionId && lastSessionId !== sessionIdToCheck;
 
 					if (isNewSession) {
-						console.log('🔄 New Prolific session detected in layout, resetting workflow');
-						// New session - reset workflow state but preserve child profile
+						console.log('🔄 New Prolific session detected, resetting workflow via API');
 						localStorage.setItem('lastProlificSessionId', sessionIdToCheck);
-						localStorage.removeItem('assignmentStep');
-						localStorage.removeItem('assignmentCompleted');
-						localStorage.removeItem('moderationScenariosAccessed');
-						localStorage.removeItem('unlock_exit');
-						localStorage.removeItem('instructionsCompleted');
-						// Keep child profile data
-
-						// Increment session number for all children
 						try {
-							// Get child profiles from cache (using the correct key from childProfileSync service)
-							const cached = localStorage.getItem('child-profiles-cache');
-							if (cached) {
-								const profiles = JSON.parse(cached);
-								if (Array.isArray(profiles) && profiles.length > 0) {
-									profiles.forEach((profile: any) => {
-										const childId = profile.id;
-										const sessionKey = `moderationSessionNumber_${childId}`;
-										const currentSession = parseInt(localStorage.getItem(sessionKey) || '1');
-										const newSession = currentSession + 1;
-										localStorage.setItem(sessionKey, String(newSession));
-										console.log(
-											`Incremented session for child ${childId}: ${currentSession} -> ${newSession}`
-										);
-									});
-								} else {
-									console.warn('No child profiles found in cache or cache is not an array');
-								}
-							} else {
-								console.warn('child-profiles-cache not found in localStorage');
-							}
+							const { resetUserWorkflow } = await import('$lib/apis/workflow');
+							await resetUserWorkflow(localStorage.token);
+							// Dispatch reset event so all components can clear their state
+							window.dispatchEvent(new Event('workflow-reset'));
+							window.dispatchEvent(new Event('workflow-updated'));
 						} catch (e) {
-							console.error('Error incrementing session numbers:', e);
+							console.error('Failed to reset workflow for new Prolific session:', e);
 						}
-
-						// Redirect to instructions for new session
 						if (currentPath !== '/assignment-instructions') {
 							await goto('/assignment-instructions');
 							return;
 						}
 					} else if (!lastSessionId && sessionIdToCheck) {
-						// First time seeing a session ID, store it
 						localStorage.setItem('lastProlificSessionId', sessionIdToCheck);
 					}
 				}
@@ -404,13 +391,17 @@
 				return;
 			}
 
-			// Allow access to assignment instructions page
-			if (currentPath === '/assignment-instructions') {
+			// Allow access to assignment instructions page (user can always choose to start here)
+			if (currentPath.startsWith('/assignment-instructions')) {
 				return;
 			}
 
-			// Block Kids Profile until instructions are confirmed
-			if (currentPath.startsWith('/kids/profile') && !instructionsCompleted) {
+			// Block Kids Profile until instructions are confirmed (only when we have workflow state)
+			if (
+				currentPath.startsWith('/kids/profile') &&
+				workflowState != null &&
+				!instructionsCompleted
+			) {
 				await goto('/assignment-instructions');
 				return;
 			}
@@ -444,29 +435,35 @@
 				return;
 			}
 
-			// Define step-to-route mapping (for interviewees only)
-			// Skip step 2 (moderation-scenario) is handled by backend, but we still need the mapping
-			const stepRoutes: { [key: number]: string } = {
-				1: '/kids/profile',
-				2: '/moderation-scenario',
-				3: '/exit-survey',
-				4: '/completion'
-			};
+			// Use backend workflow state to determine navigation
+			// Never redirect away from assignment-instructions (user chose "Survey View" to start there)
+			if (workflowState?.next_route && !currentPath.startsWith('/assignment-instructions')) {
+				const nextRoute = workflowState.next_route;
+				const currentStep = getStepFromRoute(currentPath);
+				const nextStep = getStepFromRoute(nextRoute);
 
-			// Allow users to access their current step or any previous steps
-			const allowedRoutes: string[] = [];
-			for (let step = 1; step <= assignmentStep; step++) {
-				if (stepRoutes[step]) {
-					allowedRoutes.push(stepRoutes[step]);
+				// Define valid workflow routes (excluding assignment-instructions - handled above)
+				const workflowRoutes = [
+					'/kids/profile',
+					'/moderation-scenario',
+					'/exit-survey',
+					'/completion'
+				];
+				const isWorkflowRoute = workflowRoutes.some((route) => currentPath.startsWith(route));
+
+				// If user is on a workflow route but not the correct one, redirect
+				if (isWorkflowRoute && currentPath !== nextRoute && !currentPath.startsWith(nextRoute)) {
+					// Check if user is trying to access a future step
+					if (currentStep > 0 && nextStep > 0 && currentStep > nextStep) {
+						// User is ahead of where they should be, redirect to next_route
+						await goto(nextRoute);
+						return;
+					} else if (currentStep === 0 || (nextStep > 0 && currentStep !== nextStep)) {
+						// User is on wrong workflow route, redirect to next_route
+						await goto(nextRoute);
+						return;
+					}
 				}
-			}
-
-			// Check if current route is allowed
-			const isAllowed = allowedRoutes.some((route) => currentPath.startsWith(route));
-
-			// If not allowed, redirect to current step
-			if (!isAllowed && stepRoutes[assignmentStep]) {
-				await goto(stepRoutes[assignmentStep]);
 			}
 		} finally {
 			isEnforcingNavigation = false;
@@ -495,9 +492,18 @@
 {/if}
 
 {#if $user}
+	{@const isSurveyOrWorkflowRoute =
+		$page.url.pathname.startsWith('/exit-survey') ||
+		$page.url.pathname.startsWith('/initial-survey') ||
+		$page.url.pathname.startsWith('/assignment-instructions') ||
+		$page.url.pathname.startsWith('/kids/profile') ||
+		$page.url.pathname.startsWith('/moderation-scenario') ||
+		$page.url.pathname === '/completion'}
 	<div class="app relative">
 		<div
-			class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
+			class="text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-screen max-h-[100dvh] overflow-auto flex flex-row {isSurveyOrWorkflowRoute
+				? 'justify-start'
+				: 'justify-end'}"
 		>
 			{#if !['user', 'admin', 'parent', 'child'].includes($user?.role)}
 				<AccountPending />
@@ -557,11 +563,7 @@
 					</div>
 				{/if}
 
-				{@const isSurveyRoute =
-					$page.url.pathname.startsWith('/exit-survey') ||
-					$page.url.pathname.startsWith('/initial-survey')}
-
-				{#if isSurveyRoute}
+				{#if isSurveyOrWorkflowRoute}
 					<SurveySidebar />
 				{:else}
 					<Sidebar />

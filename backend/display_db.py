@@ -76,12 +76,14 @@ def get_all_tables(conn: sqlite3.Connection) -> list[str]:
     Excludes system tables like sqlite_master, sqlite_sequence, etc.
     """
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT name FROM sqlite_master 
         WHERE type='table' 
         AND name NOT LIKE 'sqlite_%'
         ORDER BY name
-    """)
+    """
+    )
     tables = [row[0] for row in cursor.fetchall()]
     return tables
 

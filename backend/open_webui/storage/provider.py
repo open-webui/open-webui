@@ -364,7 +364,9 @@ class AzureStorageProvider(StorageProvider):
             from azure.core.exceptions import ResourceNotFoundError
 
             if isinstance(e, ResourceNotFoundError):
-                raise RuntimeError(f"Error downloading file from Azure Blob Storage: {e}")
+                raise RuntimeError(
+                    f"Error downloading file from Azure Blob Storage: {e}"
+                )
             raise
 
     def delete_file(self, file_path: str) -> None:

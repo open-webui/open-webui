@@ -44,17 +44,14 @@
 			return;
 		}
 
-		// For interviewees, use workflow state
+		// For interviewees, use workflow state from backend
 		if (userType === 'interviewee') {
-			const assignmentCompleted = localStorage.getItem('assignmentCompleted') === 'true';
-			if (assignmentCompleted) {
-				goto('/completion');
-				return;
-			}
-
-			// Get workflow state from backend
 			try {
 				const workflowState = await getWorkflowState(localStorage.token);
+				if (workflowState?.progress_by_section?.exit_survey_completed) {
+					goto('/completion');
+					return;
+				}
 				goto(workflowState.next_route || '/assignment-instructions');
 			} catch (error) {
 				goto('/assignment-instructions');

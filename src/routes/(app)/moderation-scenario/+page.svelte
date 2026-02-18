@@ -26,8 +26,20 @@
 		getAssignmentsForChild,
 		type AssignmentWithScenario
 	} from '$lib/apis/moderation';
-	import { getChildProfileById, getChildProfilesForUser } from '$lib/apis/child-profiles';
-	import { finalizeModeration } from '$lib/apis/workflow';
+	import {
+		getChildProfileById,
+		getChildProfiles,
+		getChildProfilesForUser
+	} from '$lib/apis/child-profiles';
+	import {
+		finalizeModeration,
+		getWorkflowState,
+		getWorkflowDraft,
+		saveWorkflowDraft,
+		deleteWorkflowDraft,
+		resetUserWorkflow,
+		getCurrentAttempt
+	} from '$lib/apis/workflow';
 	import { getAvailableScenarios, getCurrentSession } from '$lib/apis/prolific';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -130,7 +142,7 @@
 	// Suffix contains 3-step instructions appended to attention check responses.
 	const ATTENTION_CHECK_MARKER = '<!--ATTN-CHECK-->';
 	const ATTENTION_CHECK_SUFFIX =
-		'\n\nPlease moderate this question. Follow these steps:\n1) Step 1: Highlight anything in the response, then click "Continue".\n2) Step 2: In the "Explain why this content concerns you" field, enter "attention check", then click "Continue".\n3) Step 3: Select \'I read the instructions\' from the "Attention Check" dropdown under "Step 3: Moderate". ' +
+		'\n\n\n**Attention Check**\n\n1) Step 1: Highlight anything in the response, then click "Continue".\n2) Step 2: Select any option from the concern rating scale ("To what extent, if any, are you concerned about this interaction?"). \n3) Step 3: In the "Explain why this content concerns you" field, enter "attention check", then click "Continue".\n' +
 		ATTENTION_CHECK_MARKER;
 
 	// Custom scenario constant - always appears last
@@ -139,7 +151,24 @@
 
 	let selectedScenarioIndex: number = 0;
 	let scenarioList: Array<[string, string]> = []; // Initialized empty - populated by personality-based scenarios
+	let scenarioIdentifiers: string[] = []; // Parallel to scenarioList, stores stable identifiers (assignment_id or scenario_id)
 	let sessionNumber: number = 1; // Default session number for non-Prolific users
+
+	// Workflow state for Next Task button (exit survey access)
+	let workflowStateForModeration: {
+		progress_by_section?: {
+			moderation_completed_count?: number;
+			moderation_total?: number;
+			exit_survey_completed?: boolean;
+		};
+	} | null = null;
+	// Track if user has clicked "Done" button - only enable Next Task after Done is pressed
+	let moderationFinalized = false;
+	// Next Task button is ONLY shown after Done button is pressed (or exit survey already completed)
+	$: canAccessExitSurvey =
+		moderationFinalized ||
+		workflowStateForModeration?.progress_by_section?.exit_survey_completed ||
+		false;
 
 	// Track current session ID to detect changes
 	let trackedSessionId: string | null = null;
@@ -155,56 +184,19 @@
 	// to avoid accessing reactive stores outside component context
 	function resolveSessionNumber() {
 		try {
-			if (typeof window === 'undefined' || !selectedChildId) {
-				// Fallback: try to get from user object (only if in component context)
-				try {
-					const userObj = $user as any;
-					const userSessionNumber = userObj?.session_number;
-					if (userSessionNumber && Number.isFinite(userSessionNumber)) {
-						sessionNumber = Number(userSessionNumber);
-					} else {
-						sessionNumber = 1;
-					}
-				} catch (e) {
-					// Not in component context, use default
-					sessionNumber = 1;
+			// Use session number from backend (user object)
+			try {
+				const userObj = $user as any;
+				const userSessionNumber = userObj?.session_number;
+				if (userSessionNumber && Number.isFinite(userSessionNumber)) {
+					sessionNumber = Number(userSessionNumber);
+					return;
 				}
-				return;
+			} catch (e) {
+				// Not in component context, use default
 			}
-
-			let resolvedSessionNumber: number | null = null;
-
-			// First, check localStorage for child-specific session number (most up-to-date)
-			const sessionKey = `moderationSessionNumber_${selectedChildId}`;
-			const storedSession = localStorage.getItem(sessionKey);
-			if (storedSession) {
-				const parsedSession = parseInt(storedSession);
-				if (!isNaN(parsedSession) && parsedSession > 0) {
-					resolvedSessionNumber = parsedSession;
-				}
-			}
-
-			// Fallback: try to get from user object if localStorage didn't have a value
-			if (resolvedSessionNumber === null) {
-				try {
-					const userObj = $user as any;
-					const userSessionNumber = userObj?.session_number;
-					if (userSessionNumber && Number.isFinite(userSessionNumber)) {
-						resolvedSessionNumber = Number(userSessionNumber);
-					}
-				} catch (e) {
-					// Not in component context, skip user object fallback
-				}
-			}
-
-			// Final fallback
-			if (resolvedSessionNumber === null || !Number.isFinite(resolvedSessionNumber)) {
-				resolvedSessionNumber = 1;
-			}
-
-			sessionNumber = resolvedSessionNumber;
+			sessionNumber = 1;
 		} catch (e) {
-			// If anything fails, use default
 			console.warn('Error resolving session number, using default:', e);
 			sessionNumber = 1;
 		}
@@ -286,13 +278,13 @@
 		}
 	}
 
-	function handleSessionChange(newSessionId: string) {
+	async function handleSessionChange(newSessionId: string) {
 		const lastLoadedSessionId = localStorage.getItem('lastLoadedModerationSessionId') || '';
 
 		if (newSessionId && newSessionId !== lastLoadedSessionId) {
 			console.log('🔄 New session detected in moderation page, resetting state');
 			resetAllScenarioStates();
-			clearModerationLocalKeys();
+			await clearModerationLocalKeys();
 			localStorage.setItem('lastLoadedModerationSessionId', newSessionId);
 
 			// Reset scenario index to start fresh
@@ -457,9 +449,6 @@
 		}
 	}
 
-	// Helper for current scenario key (still used for UI state)
-	const currentKeyFor = (childId: string | number) => `moderationCurrentScenario_${childId}`;
-
 	function shouldRepollScenarios(childId: string | number, session: number): boolean {
 		if (!childId || !Number.isFinite(session)) return false;
 		if (scenariosLockedForSession && lastPolledChildId === childId && lastPolledSession === session)
@@ -490,48 +479,63 @@
 	 * @returns Promise resolving to the complete scenario list with attention check and custom scenario
 	 */
 	async function buildScenarioList(
-		basePairs: Array<[string, string]>
-	): Promise<Array<[string, string]>> {
+		basePairs: Array<[string, string]>,
+		baseIdentifiers: string[]
+	): Promise<{ list: Array<[string, string]>; identifiers: string[] }> {
 		let list: Array<[string, string]> = basePairs.slice();
+		let identifiers: string[] = baseIdentifiers.slice();
 
 		// Load one attention check question from the database via API
 		try {
 			const token = localStorage.getItem('token');
-			if (!token) {
-				console.warn('⚠️ No authentication token available, skipping attention check');
-			} else {
-				const attentionCheck = await getRandomAttentionCheck(token);
-				if (attentionCheck) {
-					// Apply instruction suffix to the attention check question
-					const attentionCheckResponse = attentionCheck.response + ATTENTION_CHECK_SUFFIX;
-					const attentionCheckPair: [string, string] = [
-						attentionCheck.question,
-						attentionCheckResponse
-					];
+			const attentionCheck = await getRandomAttentionCheck(token || undefined);
+			if (attentionCheck) {
+				// Apply instruction suffix to the attention check question
+				const attentionCheckResponse = attentionCheck.response + ATTENTION_CHECK_SUFFIX;
+				const attentionCheckPair: [string, string] = [
+					attentionCheck.question,
+					attentionCheckResponse
+				];
 
-					// Shuffle attention check into the list (not at index 0, not at last position)
-					list = shuffleAttentionCheckIntoList(list, attentionCheckPair);
-				} else {
-					console.warn(
-						'⚠️ No attention check question available, proceeding without attention check'
-					);
-				}
+				// Get scenarioId from attention check (API or fallback)
+				const attentionCheckId = attentionCheck.scenarioId || `ac_fallback_${Date.now()}`;
+
+				// Shuffle attention check into the list (not at index 0, not at last position)
+				const result = shuffleAttentionCheckIntoList(
+					list,
+					attentionCheckPair,
+					identifiers,
+					attentionCheckId
+				);
+				list = result.list;
+				identifiers = result.identifiers;
+			} else {
+				console.warn(
+					'⚠️ No attention check question available, proceeding without attention check'
+				);
 			}
 		} catch (error) {
 			console.error('Error loading attention check:', error);
 			// Continue without attention check if loading fails
 		}
 
+		// disable custom scenario
 		// Ensure custom scenario is last
-		const hasCustom = list.some(([q]) => q === CUSTOM_SCENARIO_PROMPT);
-		if (!hasCustom) {
-			list.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
-		} else {
-			// Move existing custom to the end
-			list = list.filter(([q]) => q !== CUSTOM_SCENARIO_PROMPT);
-			list.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
-		}
-		return list;
+		//const hasCustom = list.some(([q]) => q === CUSTOM_SCENARIO_PROMPT);
+		//if (!hasCustom) {
+		//	list.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+		//	identifiers.push('custom');
+		//} else {
+		//	// Move existing custom to the end
+		//	const customIndex = list.findIndex(([q]) => q === CUSTOM_SCENARIO_PROMPT);
+		//	if (customIndex >= 0) {
+		//		list = list.filter(([q]) => q !== CUSTOM_SCENARIO_PROMPT);
+		//		identifiers = identifiers.filter((id, idx) => idx !== customIndex);
+		//		list.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+		//		identifiers.push('custom');
+		//	}
+		//}
+		return { list, identifiers };
 	}
 
 	/**
@@ -540,20 +544,24 @@
 	 *
 	 * @param list - The base scenario list
 	 * @param attentionCheckPair - The attention check question/response pair with instructions already appended
-	 * @returns The list with attention check shuffled in
+	 * @param identifiers - The base identifiers array (parallel to list)
+	 * @param attentionCheckId - The identifier for the attention check (scenarioId from API or fallback)
+	 * @returns Object with list and identifiers, both with attention check inserted
 	 */
 	function shuffleAttentionCheckIntoList(
 		list: Array<[string, string]>,
-		attentionCheckPair: [string, string]
-	): Array<[string, string]> {
+		attentionCheckPair: [string, string],
+		identifiers: string[],
+		attentionCheckId: string
+	): { list: Array<[string, string]>; identifiers: string[] } {
 		if (!Array.isArray(list) || list.length === 0) {
 			// If list is empty, just add the attention check
-			return [attentionCheckPair];
+			return { list: [attentionCheckPair], identifiers: [attentionCheckId] };
 		}
 
 		// Skip if attention check already exists in list
 		if (list.some(([, res]) => (res || '').includes(ATTENTION_CHECK_MARKER))) {
-			return list;
+			return { list, identifiers };
 		}
 
 		// Valid positions: 1 through list.length (not 0, not last)
@@ -565,25 +573,29 @@
 
 		if (validPositions.length === 0) {
 			// If no valid positions (shouldn't happen), just append
-			return [...list, attentionCheckPair];
+			return {
+				list: [...list, attentionCheckPair],
+				identifiers: [...identifiers, attentionCheckId]
+			};
 		}
 
 		// Randomly select a position
 		const randomPosition = validPositions[Math.floor(Math.random() * validPositions.length)];
 
-		// Insert at the selected position
-		const updated = [...list];
-		updated.splice(randomPosition, 0, attentionCheckPair);
+		// Insert at the selected position in both list and identifiers
+		const updatedList = [...list];
+		updatedList.splice(randomPosition, 0, attentionCheckPair);
 
-		return updated;
+		const updatedIdentifiers = [
+			...identifiers.slice(0, randomPosition),
+			attentionCheckId,
+			...identifiers.slice(randomPosition)
+		];
+
+		return { list: updatedList, identifiers: updatedIdentifiers };
 	}
 
-	// Persist current scenario selection whenever it changes
-	$: if (selectedChildId != null && typeof selectedScenarioIndex === 'number') {
-		try {
-			localStorage.setItem(currentKeyFor(selectedChildId), String(selectedScenarioIndex));
-		} catch {}
-	}
+	// Current scenario selection is persisted via saveCurrentScenarioState -> saveWorkflowDraft
 
 	// Custom scenario state
 	let customScenarioPrompt: string = '';
@@ -601,19 +613,13 @@
 
 	async function ensureSessionNumberForChild(childId: string) {
 		try {
-			const sessionKey = `moderationSessionNumber_${childId}`;
-			const existing = localStorage.getItem(sessionKey);
-			if (!existing) {
-				const sessions = await getModerationSessions(localStorage.token, childId);
-				const maxSession =
-					Array.isArray(sessions) && sessions.length > 0
-						? Math.max(...sessions.map((s: any) => Number(s.session_number || 0)))
-						: 0;
-				localStorage.setItem(sessionKey, String(maxSession + 1));
-				// Prefer the freshly established session number immediately
-				sessionNumber = maxSession + 1;
-				console.log('✅ Started new session for child:', childId, 'session:', sessionNumber);
-			}
+			const sessions = await getModerationSessions(localStorage.token, childId);
+			const maxSession =
+				Array.isArray(sessions) && sessions.length > 0
+					? Math.max(...sessions.map((s: any) => Number(s.session_number || 0)))
+					: 0;
+			sessionNumber = maxSession > 0 ? maxSession : ($user?.session_number ?? 1);
+			console.log('✅ Ensured session number for child:', childId, 'session:', sessionNumber);
 		} catch (e) {
 			console.warn('Failed to ensure session number for child', childId, e);
 		}
@@ -754,6 +760,7 @@
 	function resetAllScenarioStates() {
 		console.log('Resetting all scenario states for new child profile');
 		scenarioStates.clear();
+		scenarioIdentifiers = [];
 		versions = [];
 		currentVersionIndex = -1;
 		confirmedVersionIndex = null;
@@ -761,6 +768,7 @@
 		selectedModerations = new Set();
 		customInstructions = [];
 		showComparisonView = false;
+		moderationFinalized = false;
 		// showOriginal1 and moderationPanelVisible are now derived
 		moderationPanelExpanded = false;
 		expandedGroups.clear();
@@ -786,36 +794,41 @@
 		lastPolledChildId = null;
 		lastPolledSession = null;
 
-		// Clear child-specific localStorage states
-		try {
-			if (selectedChildId) {
-				const stateKey = `moderationScenarioStates_${selectedChildId}`;
-				const timerKey = `moderationScenarioTimers_${selectedChildId}`;
-				const currentKey = `moderationCurrentScenario_${selectedChildId}`;
-
-				localStorage.removeItem(stateKey);
-				localStorage.removeItem(timerKey);
-				localStorage.removeItem(currentKey);
-				console.log(`Cleared localStorage states for child: ${selectedChildId}`);
-			}
-		} catch (e) {
-			console.error('Failed to clear scenario states from localStorage:', e);
-		}
+		// Moderation draft is cleared by clearModerationLocalKeys when session changes
+		// resetAllScenarioStates just clears in-memory state
 	}
 
 	// Load child profiles and generate personality-based scenarios
+	// Uses API directly (not cache) to ensure fresh data on navigation - avoids race where
+	// user store or cache may not be ready when page mounts
 	async function loadChildProfiles() {
 		try {
+			const token =
+				localStorage.getItem('token') ||
+				(typeof window !== 'undefined' && localStorage.token) ||
+				'';
+			if (!token) {
+				console.warn('No token available for loading child profiles');
+				return;
+			}
 			// Check if admin is viewing another user's quiz
 			const adminUserId = $page.url.searchParams.get('user_id');
 			if (adminUserId && $user?.role === 'admin') {
 				// Load child profiles for the target user
-				childProfiles = await getChildProfilesForUser(localStorage.token, adminUserId);
+				childProfiles = await getChildProfilesForUser(token, adminUserId);
 				console.log('Admin loaded child profiles for user:', adminUserId, childProfiles);
 			} else {
-				// Load child profiles for current user
-				childProfiles = await childProfileSync.getChildProfiles();
-				console.log('Loaded child profiles:', childProfiles);
+				// Load child profiles directly from API (bypass cache) so we always get fresh data
+				// when navigating to this page - fixes race where cache/user store may not be ready
+				let profiles = await getChildProfiles(token);
+				childProfiles = Array.isArray(profiles) ? profiles : [];
+				if (childProfiles.length === 0) {
+					// Fallback to cache in case API had a transient issue
+					profiles = await childProfileSync.getChildProfiles();
+					childProfiles = Array.isArray(profiles) ? profiles : [];
+					console.log('API returned empty, tried cache fallback:', childProfiles.length);
+				}
+				console.log('Loaded child profiles:', childProfiles.length, childProfiles);
 			}
 
 			if (childProfiles.length > 0) {
@@ -839,25 +852,19 @@
 		}
 	}
 
-	// Helper: aggressively clear moderation-related localStorage keys
-	function clearModerationLocalKeys() {
-		const keysToRemove: string[] = [];
-		for (let i = 0; i < localStorage.length; i++) {
-			const k = localStorage.key(i) || '';
-			if (
-				k.startsWith('scenario_') ||
-				k.startsWith('selection-') ||
-				k.startsWith('input-panel-state-') ||
-				k.startsWith('selection-dismissed-')
-			) {
-				keysToRemove.push(k);
+	// Helper: clear moderation draft when session changes (backend reset clears drafts on full reset)
+	async function clearModerationLocalKeys() {
+		if (selectedChildId && typeof window !== 'undefined') {
+			try {
+				const token = localStorage.token || '';
+				if (token) {
+					await deleteWorkflowDraft(token, selectedChildId, 'moderation');
+					console.log(`Cleared moderation draft for child: ${selectedChildId}`);
+				}
+			} catch (e) {
+				console.error('Failed to clear moderation draft:', e);
 			}
 		}
-		keysToRemove.forEach((k) => localStorage.removeItem(k));
-
-		// Also reset workflow progress state for new session
-		localStorage.removeItem('assignmentStep');
-		localStorage.setItem('assignmentStep', '0');
 	}
 
 	/**
@@ -881,6 +888,8 @@
 			console.log('Early return: selectedChildId is not set');
 			return;
 		}
+
+		isLoadingScenarios = true;
 
 		const token = localStorage.getItem('token') || '';
 		if (!token) {
@@ -924,6 +933,7 @@
 			if (existingAssignments.length > 0) {
 				console.log('✅ Using existing assignments from backend');
 				const basePairs: Array<[string, string]> = [];
+				const baseIdentifiers: string[] = [];
 				const assignmentMap: Map<number, { assignment_id: string; scenario_id: string }> =
 					new Map();
 
@@ -935,6 +945,7 @@
 				for (const assignment of existingAssignments) {
 					basePairs.push([assignment.prompt_text, assignment.response_text]);
 					const position = assignment.assignment_position || 0;
+					baseIdentifiers.push(assignment.assignment_id); // Use assignment_id as identifier
 					assignmentMap.set(position, {
 						assignment_id: assignment.assignment_id,
 						scenario_id: assignment.scenario_id
@@ -944,34 +955,45 @@
 				console.log(`✅ Loaded ${basePairs.length} existing scenarios from backend`);
 
 				// Build final list (loads attention check, shuffles it in, and adds custom scenario)
-				scenarioList = await buildScenarioList(basePairs);
+				const { list, identifiers } = await buildScenarioList(basePairs, baseIdentifiers);
+				scenarioList = list;
+				scenarioIdentifiers = identifiers;
 
-				// Store assignment IDs in scenario states
-				assignmentMap.forEach((assignment, index) => {
-					const existingState = scenarioStates.get(index) || {
-						versions: [],
-						currentVersionIndex: -1,
-						confirmedVersionIndex: null,
-						highlightedTexts1: [],
-						selectedModerations: new Set(),
-						customInstructions: [],
-						showOriginal1: false,
-						showComparisonView: false,
-						attentionCheckSelected: false,
-						attentionCheckPassed: false,
-						markedNotApplicable: false,
-						step1Completed: false,
-						step2Completed: false,
-						step3Completed: false,
-						concernLevel: null,
-						concernReason: '',
-						satisfactionLevel: null,
-						satisfactionReason: '',
-						nextAction: null
-					};
-					existingState.assignment_id = assignment.assignment_id;
-					existingState.scenario_id = assignment.scenario_id;
-					scenarioStates.set(index, existingState);
+				// Store assignment IDs in scenario states (keyed by identifier)
+				scenarioIdentifiers.forEach((identifier, index) => {
+					// Find the assignment for this identifier (if it's a base scenario)
+					const assignment = Array.from(assignmentMap.values()).find(
+						(a) => a.assignment_id === identifier
+					);
+					if (assignment) {
+						const existingState = scenarioStates.get(identifier) || {
+							versions: [],
+							currentVersionIndex: -1,
+							confirmedVersionIndex: null,
+							highlightedTexts1: [],
+							selectedModerations: new Set(),
+							customInstructions: [],
+							showOriginal1: false,
+							showComparisonView: false,
+							attentionCheckSelected: false,
+							attentionCheckPassed: false,
+							attentionCheckStep1Passed: false,
+							attentionCheckStep2Passed: false,
+							attentionCheckStep3Passed: false,
+							markedNotApplicable: false,
+							step1Completed: false,
+							step2Completed: false,
+							step3Completed: false,
+							concernLevel: null,
+							concernReason: '',
+							satisfactionLevel: null,
+							satisfactionReason: '',
+							nextAction: null
+						};
+						existingState.assignment_id = assignment.assignment_id;
+						existingState.scenario_id = assignment.scenario_id;
+						scenarioStates.set(identifier, existingState);
+					}
 				});
 
 				if (scenarioList.length > 0) {
@@ -979,7 +1001,7 @@
 					console.log('✅ Using existing assignments, scenarioList length:', scenarioList.length);
 
 					// Load saved states for this child after scenarios are loaded
-					loadSavedStates();
+					await loadSavedStates();
 
 					// Load the first scenario to ensure UI is updated (force reload)
 					await loadScenario(0, true);
@@ -993,6 +1015,7 @@
 
 				// Assign scenarios one by one using weighted sampling
 				const basePairs: Array<[string, string]> = [];
+				const baseIdentifiers: string[] = [];
 				const assignmentMap: Map<number, { assignment_id: string; scenario_id: string }> =
 					new Map();
 
@@ -1006,6 +1029,7 @@
 						});
 
 						basePairs.push([assignResponse.prompt_text, assignResponse.response_text]);
+						baseIdentifiers.push(assignResponse.assignment_id); // Use assignment_id as identifier
 						assignmentMap.set(i, {
 							assignment_id: assignResponse.assignment_id,
 							scenario_id: assignResponse.scenario_id
@@ -1039,34 +1063,45 @@
 				console.log(`✅ Created ${basePairs.length} new scenarios from backend`);
 
 				// Build final list (loads attention check, shuffles it in, and adds custom scenario)
-				scenarioList = await buildScenarioList(basePairs);
+				const { list, identifiers } = await buildScenarioList(basePairs, baseIdentifiers);
+				scenarioList = list;
+				scenarioIdentifiers = identifiers;
 
-				// Store assignment IDs in scenario states
-				assignmentMap.forEach((assignment, index) => {
-					const existingState = scenarioStates.get(index) || {
-						versions: [],
-						currentVersionIndex: -1,
-						confirmedVersionIndex: null,
-						highlightedTexts1: [],
-						selectedModerations: new Set(),
-						customInstructions: [],
-						showOriginal1: false,
-						showComparisonView: false,
-						attentionCheckSelected: false,
-						attentionCheckPassed: false,
-						markedNotApplicable: false,
-						step1Completed: false,
-						step2Completed: false,
-						step3Completed: false,
-						concernLevel: null,
-						concernReason: '',
-						satisfactionLevel: null,
-						satisfactionReason: '',
-						nextAction: null
-					};
-					existingState.assignment_id = assignment.assignment_id;
-					existingState.scenario_id = assignment.scenario_id;
-					scenarioStates.set(index, existingState);
+				// Store assignment IDs in scenario states (keyed by identifier)
+				scenarioIdentifiers.forEach((identifier, index) => {
+					// Find the assignment for this identifier (if it's a base scenario)
+					const assignment = Array.from(assignmentMap.values()).find(
+						(a) => a.assignment_id === identifier
+					);
+					if (assignment) {
+						const existingState = scenarioStates.get(identifier) || {
+							versions: [],
+							currentVersionIndex: -1,
+							confirmedVersionIndex: null,
+							highlightedTexts1: [],
+							selectedModerations: new Set(),
+							customInstructions: [],
+							showOriginal1: false,
+							showComparisonView: false,
+							attentionCheckSelected: false,
+							attentionCheckPassed: false,
+							attentionCheckStep1Passed: false,
+							attentionCheckStep2Passed: false,
+							attentionCheckStep3Passed: false,
+							markedNotApplicable: false,
+							step1Completed: false,
+							step2Completed: false,
+							step3Completed: false,
+							concernLevel: null,
+							concernReason: '',
+							satisfactionLevel: null,
+							satisfactionReason: '',
+							nextAction: null
+						};
+						existingState.assignment_id = assignment.assignment_id;
+						existingState.scenario_id = assignment.scenario_id;
+						scenarioStates.set(identifier, existingState);
+					}
 				});
 
 				if (scenarioList.length > 0) {
@@ -1074,7 +1109,7 @@
 					console.log('✅ Created new assignments, scenarioList length:', scenarioList.length);
 
 					// Load saved states for this child after scenarios are loaded
-					loadSavedStates();
+					await loadSavedStates();
 
 					// Load the first scenario to ensure UI is updated (force reload)
 					await loadScenario(0, true);
@@ -1088,6 +1123,8 @@
 			toast.error(
 				'Failed to load scenarios. Please refresh the page or contact support if the issue persists.'
 			);
+		} finally {
+			isLoadingScenarios = false;
 		}
 	}
 
@@ -1213,30 +1250,38 @@
 	 * @returns true if scenario is completed, false otherwise
 	 */
 	function isScenarioCompleted(index: number): boolean {
-		const state = scenarioStates.get(index);
+		const identifier = getScenarioId(index);
+		const state = scenarioStates.get(identifier);
 		const isAttentionCheck = (scenarioList[index]?.[1] || '').includes(ATTENTION_CHECK_MARKER);
 
 		if (state) {
-			// Check if this is an attention check scenario and if it's been passed
-			if (isAttentionCheck && state.attentionCheckSelected && state.attentionCheckPassed) {
+			// For attention checks: completed if selected AND result is known (passed or failed)
+			if (
+				isAttentionCheck &&
+				state.attentionCheckSelected &&
+				state.attentionCheckPassed !== null &&
+				state.attentionCheckPassed !== undefined
+			) {
 				return true;
 			}
-			// Completed if: marked not applicable or confirmed a moderated version
-			const completed =
-				state.markedNotApplicable ||
-				(state.confirmedVersionIndex !== null && state.confirmedVersionIndex >= 0);
+			// Completed if: marked not applicable or confirmed a version (including accept original = -1)
+			const completed = state.markedNotApplicable || state.confirmedVersionIndex !== null;
 			return completed;
 		}
 		// Check current scenario
 		if (index === selectedScenarioIndex) {
-			// Check if this is an attention check scenario and if it's been passed
-			if (isAttentionCheck && attentionCheckSelected && attentionCheckPassed) {
+			// For attention checks: completed if selected AND result is known (passed or failed)
+			if (
+				isAttentionCheck &&
+				attentionCheckSelected &&
+				attentionCheckPassed !== null &&
+				attentionCheckPassed !== undefined
+			) {
 				return true;
 			}
 			// For current scenario, check if they've made a decision
-			// Scenario is completed if: marked as not applicable OR a version has been confirmed
-			const completed =
-				markedNotApplicable || (confirmedVersionIndex !== null && confirmedVersionIndex >= 0);
+			// Scenario is completed if: marked as not applicable OR a version has been confirmed (including -1 = accept original)
+			const completed = markedNotApplicable || confirmedVersionIndex !== null;
 			console.log('Current scenario completion check:', {
 				index,
 				markedNotApplicable,
@@ -1280,6 +1325,10 @@
 		// passed indicates the attention check scenario was successfully completed
 		attentionCheckSelected: boolean;
 		attentionCheckPassed: boolean;
+		// Attention check step tracking (non-blocking - for analytics only)
+		attentionCheckStep1Passed: boolean; // Step 1: Highlighted anything
+		attentionCheckStep2Passed: boolean; // Step 2: Entered "attention check" in concern reason
+		attentionCheckStep3Passed: boolean; // Step 3: Selected "I read the instructions"
 		markedNotApplicable: boolean;
 		customPrompt?: string; // Store actual custom prompt text for custom scenarios
 		// Unified initial decision flow state (3-step flow)
@@ -1303,25 +1352,33 @@
 		promptHighlightedHTML?: string; // HTML with <mark> elements for prompt
 	}
 
-	let scenarioStates: Map<number, ScenarioState> = new Map();
+	let scenarioStates: Map<string, ScenarioState> = new Map(); // Keyed by identifier (assignment_id or scenario_id), not index
+
+	/**
+	 * Helper function to get the identifier for a scenario at a given index.
+	 * Falls back to stringified index if identifier is missing (edge case).
+	 */
+	function getScenarioId(index: number): string {
+		return scenarioIdentifiers[index] ?? String(index);
+	}
 
 	// Reactive variable to trigger sidebar updates when scenario states change
 	// This forces the sidebar to re-render when scenarios are completed
 	$: scenarioStatesUpdateTrigger = (() => {
 		// Access scenarioStates to make this reactive
-		scenarioStates.forEach((state, index) => {
+		scenarioStates.forEach((state, identifier) => {
 			// Just accessing the Map makes this reactive
 		});
 		return Date.now(); // Return timestamp to force update
 	})();
 
 	// Timer state - track time spent on each scenario
-	let scenarioTimers: Map<number, number> = new Map(); // Store accumulated time in seconds
+	let scenarioTimers: Map<string, number> = new Map(); // Store accumulated time in seconds (keyed by identifier)
 	let timerInterval: NodeJS.Timeout | null = null;
 	let currentTimerStart: number | null = null;
 
 	// Abandonment detection state
-	let scenarioStartTimes: Map<number, number> = new Map(); // Track when each scenario was started
+	let scenarioStartTimes: Map<string, number> = new Map(); // Track when each scenario was started (keyed by identifier)
 	let abandonmentTimeout: NodeJS.Timeout | null = null;
 	const ABANDONMENT_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -1343,14 +1400,14 @@
 	let confirmedVersionIndex: number | null = null;
 
 	// Reactive computation for current scenario completion
-	// Scenario is completed if: marked as not applicable OR a version has been confirmed OR attention check passed
+	// Scenario is completed if: marked as not applicable OR a version has been confirmed (including accept original = -1) OR attention check passed
 	$: currentScenarioCompleted = (() => {
 		const isAttentionCheck = (scenarioList[selectedScenarioIndex]?.[1] || '').includes(
 			ATTENTION_CHECK_MARKER
 		);
 		const completed = isAttentionCheck
 			? attentionCheckSelected && attentionCheckPassed
-			: markedNotApplicable || (confirmedVersionIndex !== null && confirmedVersionIndex >= 0);
+			: markedNotApplicable || confirmedVersionIndex !== null;
 		console.log('Reactive: currentScenarioCompleted =', completed, {
 			isAttentionCheck,
 			attentionCheckSelected,
@@ -1361,31 +1418,25 @@
 		return completed;
 	})();
 
-	// Reactive computation for completion count
-	// This updates when scenarioStates changes (via scenarioStatesUpdateTrigger)
+	// Reactive computation for completion count (used in scenarios sidebar)
 	$: completionCount = (() => {
-		// Access scenarioStatesUpdateTrigger to make this reactive to scenario state changes
 		const _ = scenarioStatesUpdateTrigger;
-
-		// Count only completed scenarios in scenarioStates
 		let completedInMap = 0;
-		scenarioStates.forEach((state, index) => {
-			if (isScenarioCompleted(index)) {
-				completedInMap++;
-			}
+		scenarioList.forEach((_, index) => {
+			if (isScenarioCompleted(index)) completedInMap++;
 		});
-
-		// Add current scenario if it's completed but not yet in scenarioStates
 		const isCurrentAttentionCheck = (scenarioList[selectedScenarioIndex]?.[1] || '').includes(
 			ATTENTION_CHECK_MARKER
 		);
 		const currentCompleted = isCurrentAttentionCheck
-			? attentionCheckSelected && attentionCheckPassed
-			: markedNotApplicable || (confirmedVersionIndex !== null && confirmedVersionIndex >= 0);
-		const currentNotInMap = !scenarioStates.has(selectedScenarioIndex);
+			? attentionCheckSelected &&
+				attentionCheckPassed !== null &&
+				attentionCheckPassed !== undefined
+			: markedNotApplicable || confirmedVersionIndex !== null;
+		const currentIdentifier = getScenarioId(selectedScenarioIndex);
+		const currentNotInMap = !scenarioStates.has(currentIdentifier);
 		const completedCount = completedInMap + (currentCompleted && currentNotInMap ? 1 : 0);
-
-		return `${completedCount} of ${scenarioList.length} completed`;
+		return `${completedCount}/${scenarioList.length}`;
 	})();
 
 	// Reactive array of completion statuses for all scenarios
@@ -1440,6 +1491,8 @@
 	let moderationPanelVisible: boolean = false;
 	// Loading flag to gate reactive updates during state restoration to prevent flashing
 	let isLoadingScenario: boolean = false;
+	// Loading flag for initial scenario fetch (assignScenario loop, etc.)
+	let isLoadingScenarios: boolean = false;
 	let expandedGroups: Set<string> = new Set();
 	let markedNotApplicable: boolean = false;
 
@@ -1967,7 +2020,8 @@
 
 			// Save to new `/moderation/highlights` API (no offsets in Approach 3)
 			try {
-				const state = scenarioStates.get(selectedScenarioIndex);
+				const currentIdentifier = getScenarioId(selectedScenarioIndex);
+				const state = scenarioStates.get(currentIdentifier);
 				const assignmentId = state?.assignment_id;
 
 				if (!assignmentId) {
@@ -2442,16 +2496,17 @@
 		currentTimerStart = Date.now();
 
 		// Initialize timer for this scenario if it doesn't exist
-		if (!scenarioTimers.has(scenarioIndex)) {
-			scenarioTimers.set(scenarioIndex, 0);
+		const identifier = getScenarioId(scenarioIndex);
+		if (!scenarioTimers.has(identifier)) {
+			scenarioTimers.set(identifier, 0);
 		}
 
 		// Update timer every second
 		timerInterval = setInterval(() => {
 			if (currentTimerStart) {
 				const elapsed = Math.floor((Date.now() - currentTimerStart) / 1000);
-				const existingTime = scenarioTimers.get(scenarioIndex) || 0;
-				scenarioTimers = new Map(scenarioTimers.set(scenarioIndex, existingTime + elapsed));
+				const existingTime = scenarioTimers.get(identifier) || 0;
+				scenarioTimers = new Map(scenarioTimers.set(identifier, existingTime + elapsed));
 				currentTimerStart = Date.now(); // Reset start for next interval
 			}
 		}, 1000);
@@ -2466,8 +2521,9 @@
 		// Save final elapsed time before stopping
 		if (currentTimerStart !== null) {
 			const elapsed = Math.floor((Date.now() - currentTimerStart) / 1000);
-			const existingTime = scenarioTimers.get(selectedScenarioIndex) || 0;
-			scenarioTimers = new Map(scenarioTimers.set(selectedScenarioIndex, existingTime + elapsed));
+			const currentIdentifier = getScenarioId(selectedScenarioIndex);
+			const existingTime = scenarioTimers.get(currentIdentifier) || 0;
+			scenarioTimers = new Map(scenarioTimers.set(currentIdentifier, existingTime + elapsed));
 			currentTimerStart = null;
 		}
 	}
@@ -2483,7 +2539,8 @@
 	 * A scenario is abandoned if it's been started but not completed within the timeout period.
 	 */
 	async function checkAndAbandonScenario(index: number) {
-		const state = scenarioStates.get(index);
+		const identifier = getScenarioId(index);
+		const state = scenarioStates.get(identifier);
 		if (!state?.assignment_id) return;
 
 		// Check if scenario is completed
@@ -2500,7 +2557,7 @@
 		}
 
 		// Check timeout
-		const startTime = scenarioStartTimes.get(index);
+		const startTime = scenarioStartTimes.get(identifier);
 		if (!startTime) return;
 
 		const elapsed = Date.now() - startTime;
@@ -2540,7 +2597,7 @@
 				state.assignment_id = abandonResponse.new_assignment_id;
 				state.scenario_id = abandonResponse.new_scenario_id;
 				state.assignmentStarted = false; // Reset so /start will be called again
-				scenarioStates.set(index, state);
+				scenarioStates.set(identifier, state);
 
 				console.log('✅ Scenario reassigned:', abandonResponse.new_assignment_id);
 			}
@@ -2549,7 +2606,7 @@
 		}
 	}
 
-	function saveCurrentScenarioState() {
+	async function saveCurrentScenarioState() {
 		// Guard: Don't save during scenario transitions to prevent saving old state to new scenario index
 		if (isLoadingScenario) {
 			console.log('⚠️ saveCurrentScenarioState skipped - isLoadingScenario is true');
@@ -2557,7 +2614,8 @@
 		}
 
 		// Get existing customPrompt if we're saving state for a custom scenario
-		const existingState = scenarioStates.get(selectedScenarioIndex);
+		const currentIdentifier = getScenarioId(selectedScenarioIndex);
+		const existingState = scenarioStates.get(currentIdentifier);
 		const currentState: ScenarioState = {
 			versions: [...versions],
 			currentVersionIndex,
@@ -2569,6 +2627,9 @@
 			showComparisonView,
 			attentionCheckSelected,
 			attentionCheckPassed,
+			attentionCheckStep1Passed: existingState?.attentionCheckStep1Passed || false,
+			attentionCheckStep2Passed: existingState?.attentionCheckStep2Passed || false,
+			attentionCheckStep3Passed: existingState?.attentionCheckStep3Passed || false,
 			markedNotApplicable,
 			customPrompt:
 				isCustomScenario && customScenarioGenerated
@@ -2580,6 +2641,9 @@
 			step1Completed,
 			step2Completed,
 			step3Completed,
+			attentionCheckStep1Passed: existingState?.attentionCheckStep1Passed || false,
+			attentionCheckStep2Passed: existingState?.attentionCheckStep2Passed || false,
+			attentionCheckStep3Passed: existingState?.attentionCheckStep3Passed || false,
 			concernLevel,
 			concernReason,
 			satisfactionLevel,
@@ -2590,38 +2654,59 @@
 			scenario_id: existingState?.scenario_id,
 			assignmentStarted: existingState?.assignmentStarted
 		};
-		scenarioStates.set(selectedScenarioIndex, currentState);
+		scenarioStates.set(currentIdentifier, currentState);
 		// Force reactive update by reassigning the Map
 		// This ensures the sidebar updates when scenario completion state changes
 		scenarioStates = new Map(scenarioStates);
 
-		// Save to localStorage for persistence across navigation (child-specific)
-		try {
-			const serializedStates = new Map();
-			scenarioStates.forEach((state, index) => {
-				serializedStates.set(index, {
-					...state,
-					selectedModerations: Array.from(state.selectedModerations) // Convert Set to Array for JSON
-				});
-			});
+		// Save to backend for persistence across navigation
+		if (selectedChildId && typeof window !== 'undefined') {
+			try {
+				const token = localStorage.token || '';
+				if (token) {
+					const serializedStates: [string, unknown][] = [];
+					scenarioStates.forEach((state, identifier) => {
+						serializedStates.push([
+							identifier,
+							{
+								...state,
+								selectedModerations: Array.from(state.selectedModerations)
+							}
+						]);
+					});
+					// Convert timers to identifier-based format
+					const serializedTimers: [string, number][] = [];
+					scenarioTimers.forEach((seconds, index) => {
+						const identifier = getScenarioId(index);
+						serializedTimers.push([identifier, seconds]);
+					});
 
-			// Use child-specific localStorage keys
-			const stateKey = selectedChildId
-				? `moderationScenarioStates_${selectedChildId}`
-				: 'moderationScenarioStates';
-			const timerKey = selectedChildId
-				? `moderationScenarioTimers_${selectedChildId}`
-				: 'moderationScenarioTimers';
-			const currentKey = selectedChildId
-				? `moderationCurrentScenario_${selectedChildId}`
-				: 'moderationCurrentScenario';
+					// Get current attempt number to store with draft
+					const attemptInfo = await getCurrentAttempt(token);
+					const currentAttemptNumber = attemptInfo?.current_attempt || 1;
 
-			localStorage.setItem(stateKey, JSON.stringify(Array.from(serializedStates.entries())));
-			localStorage.setItem(timerKey, JSON.stringify(Array.from(scenarioTimers.entries())));
-			localStorage.setItem(currentKey, selectedScenarioIndex.toString());
-			console.log(`Saved moderation states to localStorage for child: ${selectedChildId}`);
-		} catch (e) {
-			console.error('Failed to save moderation states to localStorage:', e);
+					const data: Record<string, unknown> = {
+						attempt_number: currentAttemptNumber, // Store attempt number so we can ignore old drafts
+						moderation_finalized: moderationFinalized, // Store if Done was clicked
+						states: serializedStates,
+						timers: serializedTimers,
+						current: currentIdentifier // Save identifier instead of index
+					};
+					// Persist scenario list so it can be restored on navigation (stable for attempt)
+					if (
+						scenariosLockedForSession &&
+						scenarioList.length > 0 &&
+						scenarioIdentifiers.length === scenarioList.length
+					) {
+						data.scenario_list = scenarioList;
+						data.scenario_identifiers = scenarioIdentifiers;
+					}
+					await saveWorkflowDraft(token, selectedChildId, 'moderation', data);
+					console.log(`Saved moderation states to backend for child: ${selectedChildId}`);
+				}
+			} catch (e) {
+				console.error('Failed to save moderation states to backend:', e);
+			}
 		}
 	}
 
@@ -2680,6 +2765,7 @@
 		showOriginal1 = false;
 		showComparisonView = false;
 		attentionCheckSelected = false;
+		attentionCheckPassed = false;
 		attentionCheckProcessing = false; // Reset processing flag when loading new scenario
 		// Reset Step 3 UI state fields
 		moderationPanelExpanded = false;
@@ -2719,8 +2805,25 @@
 					)
 					.sort((a, b) => a.version_number - b.version_number);
 
+				// Only use backend session if it matches THIS scenario's content (not just index).
+				// Prevents old DB session at same index (e.g. from before reset) from applying skip/state to a new scenario.
+				const promptForMatch = prompt;
+				const responseForMatch = response;
 				if (backendSession) {
-					console.log('✅ Found backend session for scenario', index, backendSession);
+					const contentMatches =
+						backendSession.scenario_prompt === promptForMatch &&
+						backendSession.original_response === responseForMatch;
+					if (!contentMatches) {
+						backendSession = null;
+						versionSessions = [];
+						console.log(
+							'⚠️ Backend session at index',
+							index,
+							'has different prompt/response (likely old assignment) - ignoring to avoid skip leakage'
+						);
+					} else {
+						console.log('✅ Found backend session for scenario', index, backendSession);
+					}
 				} else {
 					console.log(
 						'ℹ️ No backend session found for scenario',
@@ -2740,7 +2843,8 @@
 		// Handle custom scenario specially
 		if (prompt === CUSTOM_SCENARIO_PROMPT) {
 			// Check if custom scenario was already generated (response is not placeholder)
-			const savedState = scenarioStates.get(index);
+			const identifier = getScenarioId(index);
+			const savedState = scenarioStates.get(identifier);
 			const isGenerated = response && response !== CUSTOM_SCENARIO_PLACEHOLDER;
 			console.log(
 				'📋 Custom scenario check - Is generated:',
@@ -2797,7 +2901,8 @@
 			}
 		}
 
-		const savedState = scenarioStates.get(index);
+		const identifier = getScenarioId(index);
+		const savedState = scenarioStates.get(identifier);
 
 		// Call /start endpoint if this scenario has an assignment_id and hasn't been started yet
 		// Skip for custom scenarios and attention checks (they don't have assignments)
@@ -2813,10 +2918,10 @@
 				// Mark as started in state
 				if (savedState) {
 					savedState.assignmentStarted = true;
-					scenarioStates.set(index, savedState);
+					scenarioStates.set(identifier, savedState);
 				}
-				// Track start time for abandonment detection
-				scenarioStartTimes.set(index, Date.now());
+				// Track start time for abandonment detection (key by identifier)
+				scenarioStartTimes.set(identifier, Date.now());
 				// Reset abandonment timeout
 				if (abandonmentTimeout) {
 					clearTimeout(abandonmentTimeout);
@@ -3240,92 +3345,173 @@
 		saveCurrentScenarioState();
 	}
 
-	// Local restart removed; use global sidebar reset
-	function showResetConfirmation() {}
+	// Local restart removed; use global sidebar reset (modal still used if shown from UI)
+	function showResetConfirmation() {
+		showResetConfirmationModal = true;
+	}
 
-	function confirmReset() {}
-
-	function cancelReset() {}
-
-	function loadSavedStates() {
+	async function confirmReset() {
+		showResetConfirmationModal = false;
+		const token = localStorage.token;
+		if (!token) {
+			toast.error('Not signed in.');
+			return;
+		}
 		try {
-			// Use child-specific localStorage keys
-			const stateKey = selectedChildId
-				? `moderationScenarioStates_${selectedChildId}`
-				: 'moderationScenarioStates';
-			const timerKey = selectedChildId
-				? `moderationScenarioTimers_${selectedChildId}`
-				: 'moderationScenarioTimers';
-			const currentKey = selectedChildId
-				? `moderationCurrentScenario_${selectedChildId}`
-				: 'moderationCurrentScenario';
+			await resetUserWorkflow(token);
 
-			// Load scenario states
-			const savedStates = localStorage.getItem(stateKey);
-			if (savedStates) {
-				const parsedStates = new Map(JSON.parse(savedStates));
-				scenarioStates.clear();
-				parsedStates.forEach((state: any, index: any) => {
-					scenarioStates.set(index, {
-						...state,
-						selectedModerations: new Set(state.selectedModerations) // Convert Array back to Set
-					});
-				});
-				// Reassign Map to trigger reactivity - Svelte needs Map reassignment to detect changes
-				scenarioStates = new Map(scenarioStates);
-				console.log(`Loaded saved scenario states from localStorage for child: ${selectedChildId}`);
-			}
+			// Dispatch reset event first so all components can clear their state
+			window.dispatchEvent(new Event('workflow-reset'));
 
-			// Load timers
-			const savedTimers = localStorage.getItem(timerKey);
-			if (savedTimers) {
-				scenarioTimers = new Map(JSON.parse(savedTimers));
-				console.log(`Loaded saved timers from localStorage for child: ${selectedChildId}`);
-			}
+			// Clear all local state immediately to prevent auto-save with old data
+			scenarioList = [];
+			scenarioIdentifiers = [];
+			scenarioStates.clear();
+			scenarioTimers.clear();
+			selectedScenarioIndex = 0;
+			moderationFinalized = false;
 
-			// Load current scenario
-			const savedCurrentScenario = localStorage.getItem(currentKey);
-			if (savedCurrentScenario) {
-				const scenarioIndex = parseInt(savedCurrentScenario);
-				if (scenarioIndex >= 0 && scenarioIndex < scenarioList.length) {
-					selectedScenarioIndex = scenarioIndex;
-					const [prompt, response] = scenarioList[scenarioIndex];
-
-					// If this is a custom scenario, restore the custom prompt first
-					if (
-						prompt === CUSTOM_SCENARIO_PROMPT &&
-						response &&
-						response !== CUSTOM_SCENARIO_PLACEHOLDER
-					) {
-						const state = scenarioStates.get(scenarioIndex);
-						if (state?.customPrompt) {
-							customScenarioPrompt = state.customPrompt;
-							customScenarioResponse = response;
-							customScenarioGenerated = true;
-							childPrompt1 = customScenarioPrompt; // Use the actual custom prompt
-							originalResponse1 = response;
-							console.log(
-								'Restored custom scenario with prompt:',
-								customScenarioPrompt.substring(0, 50)
-							);
-						} else {
-							// Fallback if state not loaded yet
-							childPrompt1 = prompt;
-							originalResponse1 = response;
-						}
-					} else {
-						childPrompt1 = prompt;
-						originalResponse1 = response;
-					}
-					console.log('Restored current scenario:', scenarioIndex);
-				}
-			}
+			toast.success('Survey reset successfully.');
+			window.dispatchEvent(new Event('workflow-updated'));
+			await tick();
+			await new Promise((r) => setTimeout(r, 400));
+			await goto('/assignment-instructions');
 		} catch (e) {
-			console.error('Failed to load saved states from localStorage:', e);
+			console.error('Failed to reset survey:', e);
+			toast.error('Failed to reset survey. Please try again.');
 		}
 	}
 
-	function resetConversation() {
+	function cancelReset() {
+		showResetConfirmationModal = false;
+	}
+
+	async function loadSavedStates() {
+		try {
+			// Load from backend
+			if (selectedChildId && typeof window !== 'undefined') {
+				const token = localStorage.token || '';
+				if (token) {
+					const draftRes = await getWorkflowDraft(token, selectedChildId, 'moderation');
+					const data = draftRes?.data as
+						| {
+								moderation_finalized?: boolean;
+								states?: [number | string, unknown][];
+								timers?: [number | string, number][];
+								current?: number | string;
+						  }
+						| undefined;
+
+					// Restore moderation_finalized flag
+					if (data?.moderation_finalized) {
+						moderationFinalized = true;
+						console.log('✅ Restored moderationFinalized = true from loadSavedStates');
+						// Notify sidebar to update the checkmark
+						window.dispatchEvent(new Event('workflow-updated'));
+					}
+
+					if (data?.states) {
+						scenarioStates.clear();
+						// Check if this is legacy format (numeric keys) or new format (string identifiers)
+						const isLegacyFormat = data.states.length > 0 && typeof data.states[0][0] === 'number';
+
+						if (isLegacyFormat) {
+							// Legacy format: map numeric indices to identifiers
+							console.log('⚠️ Loading legacy draft format, migrating to identifier-based');
+							data.states.forEach(([index, state]: [number, any]) => {
+								const identifier = getScenarioId(index);
+								scenarioStates.set(identifier, {
+									...state,
+									selectedModerations: new Set(state.selectedModerations || [])
+								});
+							});
+						} else {
+							// New format: use identifiers directly
+							data.states.forEach(([identifier, state]: [string, any]) => {
+								scenarioStates.set(identifier, {
+									...state,
+									selectedModerations: new Set(state.selectedModerations || [])
+								});
+							});
+						}
+						scenarioStates = new Map(scenarioStates);
+						console.log(`Loaded saved scenario states from backend for child: ${selectedChildId}`);
+					}
+					if (data?.timers) {
+						// Check if timers are legacy format (numeric) or new format (string identifiers)
+						const isLegacyTimers = data.timers.length > 0 && typeof data.timers[0][0] === 'number';
+
+						if (isLegacyTimers) {
+							// Legacy format: map numeric indices to identifiers
+							scenarioTimers.clear();
+							data.timers.forEach(([index, seconds]: [number, number]) => {
+								const identifier = getScenarioId(index);
+								scenarioTimers.set(identifier, seconds);
+							});
+						} else {
+							// New format: use identifiers directly
+							scenarioTimers = new Map(data.timers as [string, number][]);
+						}
+						console.log(`Loaded saved timers from backend for child: ${selectedChildId}`);
+					}
+					if (data?.current != null) {
+						let scenarioIndex: number;
+						if (typeof data.current === 'number') {
+							// Legacy format: current is an index
+							scenarioIndex = data.current;
+						} else {
+							// New format: current is an identifier, find the index
+							scenarioIndex = scenarioIdentifiers.indexOf(data.current);
+							if (scenarioIndex === -1) {
+								console.warn(
+									`⚠️ Current identifier ${data.current} not found in scenarioIdentifiers, defaulting to 0`
+								);
+								scenarioIndex = 0;
+							}
+						}
+
+						if (scenarioIndex >= 0 && scenarioIndex < scenarioList.length) {
+							selectedScenarioIndex = scenarioIndex;
+							const [prompt, response] = scenarioList[scenarioIndex];
+
+							// If this is a custom scenario, restore the custom prompt first
+							if (
+								prompt === CUSTOM_SCENARIO_PROMPT &&
+								response &&
+								response !== CUSTOM_SCENARIO_PLACEHOLDER
+							) {
+								const identifier = getScenarioId(scenarioIndex);
+								const state = scenarioStates.get(identifier);
+								if (state?.customPrompt) {
+									customScenarioPrompt = state.customPrompt;
+									customScenarioResponse = response;
+									customScenarioGenerated = true;
+									childPrompt1 = customScenarioPrompt; // Use the actual custom prompt
+									originalResponse1 = response;
+									console.log(
+										'Restored custom scenario with prompt:',
+										customScenarioPrompt.substring(0, 50)
+									);
+								} else {
+									// Fallback if state not loaded yet
+									childPrompt1 = prompt;
+									originalResponse1 = response;
+								}
+							} else {
+								childPrompt1 = prompt;
+								originalResponse1 = response;
+							}
+							console.log('Restored current scenario:', scenarioIndex);
+						}
+					}
+				}
+			}
+		} catch (e) {
+			console.error('Failed to load saved states from backend:', e);
+		}
+	}
+
+	async function resetConversation() {
 		// Reset current scenario state
 		highlightedTexts1 = [];
 		versions = [];
@@ -3336,6 +3522,7 @@
 		showComparisonView = false;
 		// showOriginal1 and moderationPanelVisible are now derived
 		attentionCheckSelected = false;
+		moderationFinalized = false;
 		attentionCheckPassed = false;
 		attentionCheckProcessing = false;
 		markedNotApplicable = false;
@@ -3355,20 +3542,16 @@
 		scenarioTimers.clear();
 		stopTimer();
 
-		// Clear child-specific localStorage
-		if (selectedChildId) {
-			const stateKey = `moderationScenarioStates_${selectedChildId}`;
-			const timerKey = `moderationScenarioTimers_${selectedChildId}`;
-			const currentKey = `moderationCurrentScenario_${selectedChildId}`;
-
-			localStorage.removeItem(stateKey);
-			localStorage.removeItem(timerKey);
-			localStorage.removeItem(currentKey);
-		} else {
-			// Fallback to non-specific keys
-			localStorage.removeItem('moderationScenarioStates');
-			localStorage.removeItem('moderationScenarioTimers');
-			localStorage.removeItem('moderationCurrentScenario');
+		// Clear moderation draft from backend
+		if (selectedChildId && typeof window !== 'undefined') {
+			try {
+				const token = localStorage.token || '';
+				if (token) {
+					await deleteWorkflowDraft(token, selectedChildId, 'moderation');
+				}
+			} catch (e) {
+				console.error('Failed to delete moderation draft:', e);
+			}
 		}
 
 		// Reset to first scenario
@@ -3467,6 +3650,7 @@
 						isAttentionCheckScenario && attentionCheckSelected && selectedModerations.size > 0
 				});
 				console.log('Final version confirmed and saved to backend');
+				window.dispatchEvent(new Event('workflow-updated'));
 			} catch (e) {
 				console.error('Failed to save final version to backend', e);
 			}
@@ -3523,14 +3707,59 @@
 				attentionCheckSelected = false;
 				attentionCheckPassed = false;
 				attentionCheckProcessing = false;
+				// Clear step 3 tracking
+				if (isAttentionCheckScenario) {
+					const currentIdentifier = getScenarioId(selectedScenarioIndex);
+					const state = scenarioStates.get(currentIdentifier);
+					if (state) {
+						state.attentionCheckStep3Passed = false;
+						state.attentionCheckPassed = false;
+						scenarioStates.set(currentIdentifier, state);
+					}
+				}
 				return;
 			}
 
 			// If selecting and this is an attention check scenario, handle specially
 			if (isAttentionCheckScenario) {
 				attentionCheckSelected = true;
-				attentionCheckPassed = true;
 				attentionCheckProcessing = true; // Lock button immediately
+
+				// Track step 3: User selected "I read the instructions"
+				const currentIdentifier = getScenarioId(selectedScenarioIndex);
+				const state = scenarioStates.get(currentIdentifier) || {
+					versions: [],
+					currentVersionIndex: -1,
+					confirmedVersionIndex: null,
+					highlightedTexts1: [],
+					selectedModerations: new Set(),
+					customInstructions: [],
+					showOriginal1: false,
+					showComparisonView: false,
+					attentionCheckSelected: false,
+					attentionCheckPassed: false,
+					attentionCheckStep1Passed: false,
+					attentionCheckStep2Passed: false,
+					attentionCheckStep3Passed: false,
+					markedNotApplicable: false,
+					step1Completed: false,
+					step2Completed: false,
+					step3Completed: false,
+					concernLevel: null,
+					concernReason: '',
+					satisfactionLevel: null,
+					satisfactionReason: '',
+					nextAction: null
+				};
+				state.attentionCheckStep3Passed = true;
+
+				// Calculate overall pass/fail based on all 3 steps
+				state.attentionCheckPassed =
+					state.attentionCheckStep1Passed &&
+					state.attentionCheckStep2Passed &&
+					state.attentionCheckStep3Passed;
+				attentionCheckPassed = state.attentionCheckPassed;
+				scenarioStates.set(currentIdentifier, state);
 				console.log(
 					'[ATTENTION_CHECK] Scenario:',
 					selectedScenarioIndex,
@@ -3827,7 +4056,8 @@
 			step3Completed = true;
 
 			// Call /skip endpoint for new assignment tracking system
-			const state = scenarioStates.get(selectedScenarioIndex);
+			const currentIdentifier = getScenarioId(selectedScenarioIndex);
+			const state = scenarioStates.get(currentIdentifier);
 			const [prompt] = scenarioList[selectedScenarioIndex] || [];
 			if (state?.assignment_id && prompt !== CUSTOM_SCENARIO_PROMPT) {
 				try {
@@ -3871,21 +4101,54 @@
 					attention_check_selected: false,
 					attention_check_passed: false
 				});
+				window.dispatchEvent(new Event('workflow-updated'));
 			} catch (e) {
 				console.error('Failed to save skip decision', e);
 			}
 
 			// showInitialDecisionPane is now derived
 		} else {
-			// **NEW VALIDATION**: Require at least one highlight to continue
-			if (highlightedTexts1.length === 0) {
-				toast.error('Please highlight at least one concern to continue, or skip this scenario');
-				return; // Cannot proceed without highlights
+			// For attention checks: track if highlighted (non-blocking)
+			if (isAttentionCheckScenario) {
+				const currentIdentifier = getScenarioId(selectedScenarioIndex);
+				const state = scenarioStates.get(currentIdentifier) || {
+					versions: [],
+					currentVersionIndex: -1,
+					confirmedVersionIndex: null,
+					highlightedTexts1: [],
+					selectedModerations: new Set(),
+					customInstructions: [],
+					showOriginal1: false,
+					showComparisonView: false,
+					attentionCheckSelected: false,
+					attentionCheckPassed: false,
+					attentionCheckStep1Passed: false,
+					attentionCheckStep2Passed: false,
+					attentionCheckStep3Passed: false,
+					markedNotApplicable: false,
+					step1Completed: false,
+					step2Completed: false,
+					step3Completed: false,
+					concernLevel: null,
+					concernReason: '',
+					satisfactionLevel: null,
+					satisfactionReason: '',
+					nextAction: null
+				};
+				// Track if user highlighted anything (non-blocking)
+				state.attentionCheckStep1Passed = highlightedTexts1.length > 0;
+				scenarioStates.set(currentIdentifier, state);
 			}
 
-			// User has highlighted at least one concern
+			// **VALIDATION**: Require at least one highlight to continue (for regular scenarios only)
+			// Attention checks can proceed without highlights (non-blocking)
+			if (!isAttentionCheckScenario && highlightedTexts1.length === 0) {
+				toast.error('Please highlight at least one concern to continue, or skip this scenario');
+				return; // Cannot proceed without highlights for regular scenarios
+			}
+
+			// User has highlighted at least one concern (or it's an attention check)
 			step1Completed = true;
-			step1Completed = true; // Mark step 1 complete to move to step 2
 
 			// Save highlights to `moderation_session` table (batch save as JSON array)
 			// Note: Individual highlights were already saved to `selection` table via `saveSelection()`
@@ -3939,16 +4202,80 @@
 	 * Marks scenario as complete and navigates to next scenario if available.
 	 */
 	async function completeStep2() {
-		// Validate explanation field is filled
-		if (!concernReason.trim()) {
+		// Validate concern level is selected (for regular scenarios only)
+		// Attention checks can proceed without validation (non-blocking)
+		if (!isAttentionCheckScenario && concernLevel === null) {
+			toast.error('Please select your level of concern');
+			return;
+		}
+
+		// For attention checks: track step 2 (non-blocking)
+		if (isAttentionCheckScenario) {
+			const currentIdentifier = getScenarioId(selectedScenarioIndex);
+			const state = scenarioStates.get(currentIdentifier) || {
+				versions: [],
+				currentVersionIndex: -1,
+				confirmedVersionIndex: null,
+				highlightedTexts1: [],
+				selectedModerations: new Set(),
+				customInstructions: [],
+				showOriginal1: false,
+				showComparisonView: false,
+				attentionCheckSelected: false,
+				attentionCheckPassed: false,
+				attentionCheckStep1Passed: false,
+				attentionCheckStep2Passed: false,
+				attentionCheckStep3Passed: false,
+				markedNotApplicable: false,
+				step1Completed: false,
+				step2Completed: false,
+				step3Completed: false,
+				concernLevel: null,
+				concernReason: '',
+				satisfactionLevel: null,
+				satisfactionReason: '',
+				nextAction: null
+			};
+			// Track if user entered "attention check" in concern reason (case-insensitive)
+			state.attentionCheckStep2Passed = concernReason.toLowerCase().includes('attention check');
+			scenarioStates.set(currentIdentifier, state);
+		}
+
+		// Validate explanation field is filled (for regular scenarios only)
+		// Attention checks can proceed without validation (non-blocking)
+		if (!isAttentionCheckScenario && !concernReason.trim()) {
 			toast.error('Please explain why this content concerns you');
 			return;
 		}
 
-		// Validate minimum length requirement
-		if (concernReason.trim().length < 10) {
+		// Validate minimum length requirement (for regular scenarios only)
+		// Attention checks can proceed without validation (non-blocking)
+		if (!isAttentionCheckScenario && concernReason.trim().length < 10) {
 			toast.error('Please provide at least 10 characters in your explanation');
 			return;
+		}
+
+		// For attention checks: Calculate overall pass/fail after step 2
+		if (isAttentionCheckScenario) {
+			const currentIdentifier = getScenarioId(selectedScenarioIndex);
+			const state = scenarioStates.get(currentIdentifier);
+			if (state) {
+				// Step 3 may have been tracked already if user selected "I read the instructions"
+				// If not, it will be tracked when user selects it
+				// Calculate overall pass/fail based on all tracked steps
+				state.attentionCheckPassed =
+					state.attentionCheckStep1Passed &&
+					state.attentionCheckStep2Passed &&
+					state.attentionCheckStep3Passed;
+				attentionCheckPassed = state.attentionCheckPassed;
+				scenarioStates.set(currentIdentifier, state);
+				console.log('Attention check tracking:', {
+					step1: state.attentionCheckStep1Passed,
+					step2: state.attentionCheckStep2Passed,
+					step3: state.attentionCheckStep3Passed,
+					overall: state.attentionCheckPassed
+				});
+			}
 		}
 
 		// Mark step 2 and step 3 as complete (simplified flow - no Step 3)
@@ -3965,7 +4292,8 @@
 		saveCurrentScenarioState();
 
 		// Call /complete endpoint for new assignment tracking system
-		const state = scenarioStates.get(selectedScenarioIndex);
+		const currentIdentifier = getScenarioId(selectedScenarioIndex);
+		const state = scenarioStates.get(currentIdentifier);
 		if (state?.assignment_id && prompt !== CUSTOM_SCENARIO_PROMPT) {
 			try {
 				const completeResponse = await completeScenario(localStorage.token, {
@@ -4008,9 +4336,12 @@
 				is_final_version: true, // Mark as final - scenario is complete
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
-				attention_check_passed: false
+				attention_check_passed: isAttentionCheckScenario
+					? scenarioStates.get(getScenarioId(selectedScenarioIndex))?.attentionCheckPassed || false
+					: false
 			});
 			console.log('✅ Identification complete - scenario marked as final');
+			window.dispatchEvent(new Event('workflow-updated'));
 		} catch (e) {
 			console.error('Failed to save identification completion (non-blocking):', e);
 			// Don't throw - allow step to complete even if backend save fails
@@ -4094,7 +4425,9 @@
 				is_final_version: action === 'move_on', // Mark as final if moving on
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
-				attention_check_passed: false
+				attention_check_passed: isAttentionCheckScenario
+					? scenarioStates.get(getScenarioId(selectedScenarioIndex))?.attentionCheckPassed || false
+					: false
 			});
 
 			console.log('✅ Satisfaction check saved to backend');
@@ -4207,8 +4540,11 @@
 				decided_at: Date.now(),
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
-				attention_check_passed: false
+				attention_check_passed: isAttentionCheckScenario
+					? scenarioStates.get(getScenarioId(selectedScenarioIndex))?.attentionCheckPassed || false
+					: false
 			});
+			window.dispatchEvent(new Event('workflow-updated'));
 		} catch (e) {
 			console.error('Failed to save moderation session', e);
 		}
@@ -4445,22 +4781,28 @@
 		showConfirmationModal = true;
 	}
 
-	function proceedToNextStep() {
-		// Update assignment step to 3 (exit survey)
-		localStorage.setItem('assignmentStep', '3');
-		localStorage.setItem('moderationScenariosAccessed', 'true');
-		localStorage.setItem('unlock_exit', 'true');
-		window.dispatchEvent(new Event('storage'));
-		window.dispatchEvent(new Event('workflow-updated'));
+	async function proceedToNextStep() {
+		// Set flag to enable Next Task button (persisted in draft)
+		moderationFinalized = true;
+		showConfirmationModal = false; // Close modal
+
+		// Save the finalized flag to draft before navigating - AWAIT to ensure it completes
+		await saveCurrentScenarioState();
+
 		// Ask backend to mark latest per-scenario submission as final for this child/session
 		try {
-			finalizeModeration(localStorage.token, {
+			await finalizeModeration(localStorage.token, {
 				child_id: selectedChildId,
 				session_number: sessionNumber
-			}).catch((e) => console.error('Finalize moderation failed:', e));
+			});
 		} catch (e) {
 			console.error('Finalize moderation error:', e);
 		}
+
+		// Now that the draft is saved and moderation is finalized, trigger workflow update
+		window.dispatchEvent(new Event('workflow-updated'));
+
+		// Navigate to exit survey
 		goto('/exit-survey');
 	}
 
@@ -4572,10 +4914,49 @@
 	//
 	// =================================================================================================
 
+	async function fetchWorkflowStateForModeration() {
+		try {
+			const token = (typeof window !== 'undefined' && localStorage.token) || '';
+			if (token) {
+				const state = await getWorkflowState(token);
+				workflowStateForModeration = state;
+			}
+		} catch (e) {
+			console.warn('Failed to fetch workflow state for moderation:', e);
+		}
+	}
+
+	// Handlers for event listeners - defined at component scope so we can remove them in onDestroy.
+	// Must NOT call onDestroy inside async onMount - causes lifecycle_outside_component error.
+	function onWorkflowUpdateHandler() {
+		fetchWorkflowStateForModeration();
+	}
+	function onWorkflowResetHandler() {
+		// Clear all scenario state immediately when workflow is reset
+		// This prevents auto-save from persisting old scenarios with new attempt number
+		console.log('🔄 Workflow reset detected, clearing scenario state');
+		scenarioList = [];
+		scenarioIdentifiers = [];
+		scenarioStates.clear();
+		scenarioTimers.clear();
+		selectedScenarioIndex = 0;
+		moderationFinalized = false;
+	}
+	function onResizeHandler() {
+		const shouldOpen = window.innerWidth >= 768;
+		if (shouldOpen !== sidebarOpen) {
+			sidebarOpen = shouldOpen;
+		}
+	}
+
 	onMount(async () => {
 		hasHydrated = true;
 		// Close assignment steps sidebar by default (scenarios sidebar is controlled separately by sidebarOpen)
 		showSidebar.set(false);
+
+		await fetchWorkflowStateForModeration();
+		window.addEventListener('workflow-updated', onWorkflowUpdateHandler);
+		window.addEventListener('workflow-reset', onWorkflowResetHandler);
 
 		// Check for admin access via user_id query parameter
 		const adminUserId = $page.url.searchParams.get('user_id');
@@ -4592,14 +4973,7 @@
 		try {
 			// Initialize sidebar state based on screen size for mobile
 			sidebarOpen = window.innerWidth >= 768;
-			const onResize = () => {
-				const shouldOpen = window.innerWidth >= 768;
-				if (shouldOpen !== sidebarOpen) {
-					sidebarOpen = shouldOpen;
-				}
-			};
-			window.addEventListener('resize', onResize);
-			onDestroy(() => window.removeEventListener('resize', onResize));
+			window.addEventListener('resize', onResizeHandler);
 		} catch {}
 
 		// Warmup completion check is now handled synchronously via reactive statement
@@ -4633,9 +5007,17 @@
 		// Custom scenario is added during scenario list building (buildScenarioList function)
 		// No need to check for default scenarios anymore since we only use personality-based scenarios
 
-		// Guard navigation if user tries to jump ahead
-		const step = parseInt(localStorage.getItem('assignmentStep') || '0');
-		if (step < 1) {
+		// Guard navigation if user tries to jump ahead (check backend workflow state)
+		try {
+			const wf = await getWorkflowState(localStorage.token);
+			if (
+				!wf?.progress_by_section?.instructions_completed ||
+				!wf?.progress_by_section?.has_child_profile
+			) {
+				goto('/kids/profile');
+				return;
+			}
+		} catch {
 			goto('/kids/profile');
 			return;
 		}
@@ -4655,11 +5037,7 @@
 			const sessionInfo = await getCurrentSession(localStorage.token);
 			if (sessionInfo.is_prolific_user && selectedChildId) {
 				// Skip if we shouldn't repoll (locked and no change)
-				let prospectiveSession = sessionNumber;
-				try {
-					const stored = localStorage.getItem(`moderationSessionNumber_${selectedChildId}`);
-					if (stored && !Number.isNaN(Number(stored))) prospectiveSession = Number(stored);
-				} catch {}
+				const prospectiveSession = sessionNumber;
 				if (!shouldRepollScenarios(selectedChildId, prospectiveSession)) {
 					console.log('Repoll skipped: locked and no child/session change');
 				} else {
@@ -4675,7 +5053,7 @@
 					// If session changed since last load, wipe cached moderation state
 					if (currentSessionId && currentSessionId !== lastLoadedSessionId) {
 						resetAllScenarioStates();
-						clearModerationLocalKeys();
+						await clearModerationLocalKeys();
 						localStorage.setItem('lastLoadedModerationSessionId', currentSessionId);
 					}
 
@@ -4688,17 +5066,7 @@
 						return;
 					}
 					availableScenarioIndices = availableScenarios.available_scenarios || [];
-					// Prefer locally established session number (fresh session on cold start)
-					try {
-						const stored = localStorage.getItem(`moderationSessionNumber_${selectedChildId}`);
-						if (stored && !Number.isNaN(Number(stored))) {
-							sessionNumber = Number(stored);
-						} else {
-							sessionNumber = availableScenarios.session_number;
-						}
-					} catch {
-						sessionNumber = availableScenarios.session_number;
-					}
+					sessionNumber = availableScenarios.session_number ?? sessionNumber;
 					console.log(
 						'Prolific user - available scenarios (from backend):',
 						availableScenarioIndices,
@@ -4715,165 +5083,317 @@
 		}
 
 		// Automatically generate personality-based scenarios if child profiles exist
+		// Only run scenario population when there are no scenarios for this attempt (draft first, then existing assignments).
 		console.log('Child profiles loaded:', childProfiles.length);
 		if (childProfiles.length > 0) {
-			console.log('Generating personality-based scenarios...');
-			console.log(
-				'Before generation - scenarioList.length:',
-				scenarioList.length,
-				'selectedChildId:',
-				selectedChildId,
-				'usePersonalityScenarios:',
-				usePersonalityScenarios,
-				'scenariosLockedForSession:',
-				scenariosLockedForSession
-			);
+			let haveScenariosForAttempt = false;
 
-			// On hard refresh, if scenarioList is empty, clear any stale locks
-			if (scenarioList.length === 0 && scenariosLockedForSession) {
-				console.warn(
-					'Hard refresh detected: scenarioList is empty but lock is set. Clearing lock to allow regeneration...'
-				);
-				scenariosLockedForSession = false;
+			// 1) Try to restore scenario list from draft first (stable across navigation for same attempt)
+			if (selectedChildId && typeof window !== 'undefined') {
+				try {
+					const token = localStorage.token || '';
+					if (token) {
+						// Get current attempt number
+						const attemptInfo = await getCurrentAttempt(token);
+						const currentAttemptNumber = attemptInfo?.current_attempt || 1;
+
+						const draftRes = await getWorkflowDraft(token, selectedChildId, 'moderation');
+						const data = draftRes?.data as
+							| {
+									attempt_number?: number;
+									moderation_finalized?: boolean;
+									scenario_list?: [string, string][];
+									scenario_identifiers?: string[];
+							  }
+							| undefined;
+
+						// Check if draft is from current attempt
+						const draftAttemptNumber = data?.attempt_number || 1;
+						if (draftAttemptNumber !== currentAttemptNumber) {
+							console.log(
+								`🔄 Ignoring draft from attempt ${draftAttemptNumber}, current attempt is ${currentAttemptNumber}`
+							);
+							// Clear the old draft
+							await deleteWorkflowDraft(token, selectedChildId, 'moderation');
+						} else {
+							// Restore moderation_finalized flag from draft
+							if (data?.moderation_finalized) {
+								moderationFinalized = true;
+								console.log('✅ Restored moderationFinalized = true from draft');
+								// Notify sidebar to update the checkmark
+								window.dispatchEvent(new Event('workflow-updated'));
+							}
+
+							const list = data?.scenario_list;
+							const identifiers = data?.scenario_identifiers;
+							if (
+								Array.isArray(list) &&
+								Array.isArray(identifiers) &&
+								list.length > 0 &&
+								identifiers.length === list.length
+							) {
+								scenarioList = list;
+								scenarioIdentifiers = identifiers;
+								scenariosLockedForSession = true;
+								haveScenariosForAttempt = true;
+								console.log(
+									'✅ Restored scenario list from draft for stable navigation, length:',
+									scenarioList.length,
+									'attempt:',
+									currentAttemptNumber
+								);
+								await loadSavedStates();
+								const idx =
+									selectedScenarioIndex >= 0 && selectedScenarioIndex < scenarioList.length
+										? selectedScenarioIndex
+										: 0;
+								selectedScenarioIndex = idx;
+								await loadScenario(idx, true);
+							}
+						}
+					}
+				} catch (e) {
+					console.warn('Failed to restore scenario list from draft', e);
+				}
 			}
 
-			try {
-				console.log('Calling loadRandomScenarios()...');
-				await loadRandomScenarios();
-				console.log('Random scenarios loaded. Current scenarioList length:', scenarioList.length);
+			// 2) If no draft list, try existing assignments from backend (do not create new ones if any exist)
+			if (!haveScenariosForAttempt && selectedChildId) {
+				try {
+					const token = localStorage.token || '';
+					if (token) {
+						const existingAssignments = await getAssignmentsForChild(token, selectedChildId);
+						if (existingAssignments.length > 0) {
+							existingAssignments.sort(
+								(a, b) => (a.assignment_position || 0) - (b.assignment_position || 0)
+							);
+							const basePairs: Array<[string, string]> = existingAssignments.map((a) => [
+								a.prompt_text,
+								a.response_text
+							]);
+							const baseIdentifiers: string[] = existingAssignments.map((a) => a.assignment_id);
+							const { list, identifiers } = await buildScenarioList(basePairs, baseIdentifiers);
+							scenarioList = list;
+							scenarioIdentifiers = identifiers;
+							scenarioIdentifiers.forEach((identifier, index) => {
+								const assignment = existingAssignments[index];
+								if (assignment) {
+									const existingState = scenarioStates.get(identifier) || {
+										versions: [],
+										currentVersionIndex: -1,
+										confirmedVersionIndex: null,
+										highlightedTexts1: [],
+										selectedModerations: new Set(),
+										customInstructions: [],
+										showOriginal1: false,
+										showComparisonView: false,
+										attentionCheckSelected: false,
+										attentionCheckPassed: false,
+										attentionCheckStep1Passed: false,
+										attentionCheckStep2Passed: false,
+										attentionCheckStep3Passed: false,
+										markedNotApplicable: false,
+										step1Completed: false,
+										step2Completed: false,
+										step3Completed: false,
+										concernLevel: null,
+										concernReason: '',
+										satisfactionLevel: null,
+										satisfactionReason: '',
+										nextAction: null
+									};
+									existingState.assignment_id = assignment.assignment_id;
+									existingState.scenario_id = assignment.scenario_id;
+									scenarioStates.set(identifier, existingState);
+								}
+							});
+							if (scenarioList.length > 0) {
+								scenariosLockedForSession = true;
+								haveScenariosForAttempt = true;
+								console.log(
+									'✅ Using existing assignments from backend (no draft), scenarioList length:',
+									scenarioList.length
+								);
+								await loadSavedStates();
+								const idx =
+									selectedScenarioIndex >= 0 && selectedScenarioIndex < scenarioList.length
+										? selectedScenarioIndex
+										: 0;
+								selectedScenarioIndex = idx;
+								await loadScenario(idx, true);
+							}
+						}
+					}
+				} catch (e) {
+					console.warn('Failed to load existing assignments for attempt', e);
+				}
+			}
+
+			// 3) Only run loadRandomScenarios (and filter/top-up) when we have no scenarios for this attempt
+			if (haveScenariosForAttempt) {
+				// Skip: we already have list from draft or existing assignments
+			} else {
+				console.log('Generating personality-based scenarios...');
+				console.log(
+					'Before generation - scenarioList.length:',
+					scenarioList.length,
+					'selectedChildId:',
+					selectedChildId,
+					'usePersonalityScenarios:',
+					usePersonalityScenarios,
+					'scenariosLockedForSession:',
+					scenariosLockedForSession
+				);
+
+				// On hard refresh, if scenarioList is empty, clear any stale locks
+				if (scenarioList.length === 0 && scenariosLockedForSession) {
+					console.warn(
+						'Hard refresh detected: scenarioList is empty but lock is set. Clearing lock to allow regeneration...'
+					);
+					scenariosLockedForSession = false;
+				}
+
+				try {
+					console.log('Calling loadRandomScenarios()...');
+					isLoadingScenarios = true;
+					await loadRandomScenarios();
+					console.log('Random scenarios loaded. Current scenarioList length:', scenarioList.length);
+					if (scenarioList.length === 0) {
+						console.warn(
+							'⚠️ WARNING: loadRandomScenarios() completed but scenarioList is still empty!'
+						);
+					}
+				} catch (e) {
+					console.error('❌ Error in loadRandomScenarios:', e);
+				}
+
+				// Safety check: Ensure scenarios were populated - always attempt regeneration if empty
 				if (scenarioList.length === 0) {
 					console.warn(
-						'⚠️ WARNING: loadRandomScenarios() completed but scenarioList is still empty!'
+						'WARNING: scenarioList is empty after loadRandomScenarios(). Attempting to force generation...'
 					);
-				}
-			} catch (e) {
-				console.error('❌ Error in loadRandomScenarios:', e);
-			}
-
-			// Safety check: Ensure scenarios were populated - always attempt regeneration if empty
-			if (scenarioList.length === 0) {
-				console.warn(
-					'WARNING: scenarioList is empty after loadRandomScenarios(). Attempting to force generation...'
-				);
-				// Force regeneration by clearing locks
-				scenariosLockedForSession = false;
-				// Clear any scenario states that might be interfering
-				const stateKey = selectedChildId
-					? `moderationScenarioStates_${selectedChildId}`
-					: 'moderationScenarioStates';
-				console.log('Clearing scenario states key:', stateKey);
-				localStorage.removeItem(stateKey);
-				// Scenarios are now stored in backend, no localStorage cleanup needed
-				// Try generating again
-				try {
-					await loadRandomScenarios();
-					if (scenarioList.length === 0) {
-						console.error(
-							'ERROR: Failed to generate scenarios after retry. scenarioList is still empty.'
-						);
-						console.error('Debug info:', {
-							selectedChildId,
-							childProfilesLength: childProfiles.length,
-							scenarioListLength: scenarioList.length
-						});
-					} else {
-						console.log(
-							'Successfully generated scenarios on retry. scenarioList length:',
-							scenarioList.length
-						);
+					// Force regeneration by clearing locks
+					scenariosLockedForSession = false;
+					// Clear moderation draft if present (state stored in backend)
+					if (selectedChildId && typeof window !== 'undefined') {
+						try {
+							const token = localStorage.token || '';
+							if (token) {
+								await deleteWorkflowDraft(token, selectedChildId, 'moderation');
+							}
+						} catch {}
 					}
-				} catch (e) {
-					console.error('Error in retry loadRandomScenarios:', e);
-				}
-			}
-
-			// Filter/top-up only if not locked by canonical package
-			if (!scenariosLockedForSession) {
-				// Target number of base scenarios (custom is added separately; attention check is embedded)
-				const TARGET_SCENARIO_COUNT = 8;
-				let finalIndices: number[] = [];
-				if (availableScenarioIndices.length > 0) {
-					finalIndices = [
-						...new Set(availableScenarioIndices.filter((i) => Number.isInteger(i) && i >= 0))
-					];
-				}
-
-				// Fetch completed scenario indices to avoid previously seen ones
-				let completed: number[] = [];
-				try {
-					const fetchId2 = beginScenarioFetch();
-					const resp = await fetch(`${WEBUI_API_BASE_URL}/workflow/completed-scenarios`, {
-						method: 'GET',
-						headers: {
-							'Content-Type': 'application/json',
-							...(localStorage.token ? { authorization: `Bearer ${localStorage.token}` } : {})
-						}
-					});
-					if (resp.ok) {
-						const data = await resp.json();
-						if (isFetchCurrent(fetchId2)) {
-							completed = Array.isArray(data?.completed_scenario_indices)
-								? data.completed_scenario_indices
-								: [];
+					// Try generating again
+					try {
+						await loadRandomScenarios();
+						if (scenarioList.length === 0) {
+							console.error(
+								'ERROR: Failed to generate scenarios after retry. scenarioList is still empty.'
+							);
+							console.error('Debug info:', {
+								selectedChildId,
+								childProfilesLength: childProfiles.length,
+								scenarioListLength: scenarioList.length
+							});
 						} else {
-							console.log('Stale completed scenarios response ignored');
+							console.log(
+								'Successfully generated scenarios on retry. scenarioList length:',
+								scenarioList.length
+							);
 						}
+					} catch (e) {
+						console.error('Error in retry loadRandomScenarios:', e);
 					}
-					if (isFetchCurrent(fetchId2)) {
-						endScenarioFetch(fetchId2);
-					}
-				} catch (e) {
-					// Non-fatal; fallback below
 				}
 
-				// Build unseen pool from current scenarioList (personality generated) removing seen and already picked
-				const allIndices = Array.from({ length: scenarioList.length }, (_, i) => i).filter(
-					(i) => i >= 0
-				);
-				const seenSet = new Set<number>(completed);
-				const pickedSet = new Set<number>(finalIndices);
-				const unseenPool = allIndices.filter((i) => !seenSet.has(i) && !pickedSet.has(i));
-
-				// Top up to target count from unseenPool at random
-				while (finalIndices.length < TARGET_SCENARIO_COUNT && unseenPool.length > 0) {
-					const rand = Math.floor(Math.random() * unseenPool.length);
-					const pick = unseenPool.splice(rand, 1)[0];
-					finalIndices.push(pick);
-				}
-
-				// Map indices to scenarios
-				if (finalIndices.length > 0) {
-					const filteredScenarios = finalIndices
-						.filter((index) => index < scenarioList.length)
-						.map((index) => scenarioList[index])
-						.filter(Boolean);
-
-					// Ensure custom scenario is at the end if it was in original list
-					const hasCustom = scenarioList.some(([q]) => q === CUSTOM_SCENARIO_PROMPT);
-					if (hasCustom) {
-						const customIdx = filteredScenarios.findIndex(([q]) => q === CUSTOM_SCENARIO_PROMPT);
-						if (customIdx === -1) {
-							// Custom not in filtered scenarios, add it
-							filteredScenarios.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
-						} else if (customIdx !== filteredScenarios.length - 1) {
-							// Custom exists but not at end, move it
-							const custom = filteredScenarios.splice(customIdx, 1)[0];
-							filteredScenarios.push(custom);
-						}
+				// Filter/top-up only if not locked by canonical package
+				if (!scenariosLockedForSession) {
+					// Target number of base scenarios (custom is added separately; attention check is embedded)
+					const TARGET_SCENARIO_COUNT = 8;
+					let finalIndices: number[] = [];
+					if (availableScenarioIndices.length > 0) {
+						finalIndices = [
+							...new Set(availableScenarioIndices.filter((i) => Number.isInteger(i) && i >= 0))
+						];
 					}
 
-					if (filteredScenarios.length > 0) {
-						// Replace scenarios and reset in-memory UI state to avoid old responses
-						if (!scenariosLockedForSession) {
-							scenarioList = filteredScenarios;
+					// Fetch completed scenario indices to avoid previously seen ones
+					let completed: number[] = [];
+					try {
+						const fetchId2 = beginScenarioFetch();
+						const resp = await fetch(`${WEBUI_API_BASE_URL}/workflow/completed-scenarios`, {
+							method: 'GET',
+							headers: {
+								'Content-Type': 'application/json',
+								...(localStorage.token ? { authorization: `Bearer ${localStorage.token}` } : {})
+							}
+						});
+						if (resp.ok) {
+							const data = await resp.json();
+							if (isFetchCurrent(fetchId2)) {
+								completed = Array.isArray(data?.completed_scenario_indices)
+									? data.completed_scenario_indices
+									: [];
+							} else {
+								console.log('Stale completed scenarios response ignored');
+							}
 						}
-						resetAllScenarioStates();
-						selectedScenarioIndex = 0;
-						loadScenario(0, true);
-						console.log(
-							'Final scenarios for session (filled to target if needed):',
-							scenarioList.length
-						);
+						if (isFetchCurrent(fetchId2)) {
+							endScenarioFetch(fetchId2);
+						}
+					} catch (e) {
+						// Non-fatal; fallback below
+					}
+
+					// Build unseen pool from current scenarioList (personality generated) removing seen and already picked
+					const allIndices = Array.from({ length: scenarioList.length }, (_, i) => i).filter(
+						(i) => i >= 0
+					);
+					const seenSet = new Set<number>(completed);
+					const pickedSet = new Set<number>(finalIndices);
+					const unseenPool = allIndices.filter((i) => !seenSet.has(i) && !pickedSet.has(i));
+
+					// Top up to target count from unseenPool at random
+					while (finalIndices.length < TARGET_SCENARIO_COUNT && unseenPool.length > 0) {
+						const rand = Math.floor(Math.random() * unseenPool.length);
+						const pick = unseenPool.splice(rand, 1)[0];
+						finalIndices.push(pick);
+					}
+
+					// Map indices to scenarios
+					if (finalIndices.length > 0) {
+						const filteredScenarios = finalIndices
+							.filter((index) => index < scenarioList.length)
+							.map((index) => scenarioList[index])
+							.filter(Boolean);
+
+						// Ensure custom scenario is at the end if it was in original list
+						const hasCustom = scenarioList.some(([q]) => q === CUSTOM_SCENARIO_PROMPT);
+						if (hasCustom) {
+							const customIdx = filteredScenarios.findIndex(([q]) => q === CUSTOM_SCENARIO_PROMPT);
+							if (customIdx === -1) {
+								// Custom not in filtered scenarios, add it
+								filteredScenarios.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+							} else if (customIdx !== filteredScenarios.length - 1) {
+								// Custom exists but not at end, move it
+								const custom = filteredScenarios.splice(customIdx, 1)[0];
+								filteredScenarios.push(custom);
+							}
+						}
+
+						if (filteredScenarios.length > 0) {
+							// Replace scenarios and reset in-memory UI state to avoid old responses
+							if (!scenariosLockedForSession) {
+								scenarioList = filteredScenarios;
+							}
+							resetAllScenarioStates();
+							selectedScenarioIndex = 0;
+							loadScenario(0, true);
+							console.log(
+								'Final scenarios for session (filled to target if needed):',
+								scenarioList.length
+							);
+						}
 					}
 				}
 			}
@@ -4890,7 +5410,8 @@
 		}
 
 		// Load the current scenario state if it exists
-		const savedState = scenarioStates.get(selectedScenarioIndex);
+		const currentIdentifier = getScenarioId(selectedScenarioIndex);
+		const savedState = scenarioStates.get(currentIdentifier);
 		if (savedState) {
 			versions = [...savedState.versions];
 			currentVersionIndex = savedState.currentVersionIndex;
@@ -4960,7 +5481,10 @@
 			clearTimeout(abandonmentTimeout);
 			abandonmentTimeout = null;
 		}
-		// Remove event listener
+		// Remove event listeners (must be here, not inside async onMount - causes lifecycle_outside_component)
+		window.removeEventListener('workflow-updated', onWorkflowUpdateHandler);
+		window.removeEventListener('workflow-reset', onWorkflowResetHandler);
+		window.removeEventListener('resize', onResizeHandler);
 		window.removeEventListener('child-profiles-updated', handleProfileUpdate);
 	});
 
@@ -5322,23 +5846,26 @@
 			class="px-2.5 pt-1.5 pb-2 backdrop-blur-xl w-full drag-region bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800"
 		>
 			<div class="flex items-center">
-				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
-					<button
-						id="sidebar-toggle-button"
-						class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-						on:click={() => {
-							showSidebar.set(!$showSidebar);
-						}}
-						aria-label="Toggle Sidebar"
-					>
-						<div class="m-auto self-center">
-							<MenuLines />
-						</div>
-					</button>
-				</div>
+				<!-- Sidebar toggle: only show when scenarios panel is visible; when hidden, Scenarios button replaces it -->
+				{#if sidebarOpen}
+					<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
+						<button
+							id="sidebar-toggle-button"
+							class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							on:click={() => {
+								showSidebar.set(!$showSidebar);
+							}}
+							aria-label="Toggle Sidebar"
+						>
+							<div class="m-auto self-center">
+								<MenuLines />
+							</div>
+						</button>
+					</div>
+				{/if}
 
 				<div class="flex w-full items-center justify-between">
-					<div class="flex items-center">
+					<div class="flex items-center space-x-3">
 						{#if !sidebarOpen}
 							<button
 								class="px-3 py-2 text-xs rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
@@ -5347,13 +5874,12 @@
 								}}
 								aria-label="Open scenarios">Scenarios</button
 							>
-						{:else}
-							<div class="flex items-center text-xl font-semibold">Review Scenarios</div>
 						{/if}
+						<div class="flex items-center text-xl font-semibold">Review Scenarios</div>
 					</div>
 
-					<!-- Controls -->
-					<div class="flex items-center space-x-3 {!sidebarOpen ? 'max-md:hidden' : ''}">
+					<!-- Controls - always visible so Previous/Next Task accessible when scenarios sidebar is closed -->
+					<div class="flex items-center space-x-3">
 						<!-- Help Button - HIDDEN -->
 						<!-- Help button has been hidden for the time being -->
 						<!--
@@ -5384,7 +5910,7 @@
 							</button>
 
 							<!-- Next Task Button -->
-							{#if typeof window !== 'undefined' && parseInt(localStorage.getItem('assignmentStep') || '0') >= 3}
+							{#if canAccessExitSurvey}
 								<button
 									on:click={() => goto('/exit-survey')}
 									class="px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 bg-blue-500 hover:bg-blue-600 text-white"
@@ -5407,252 +5933,291 @@
 		</nav>
 
 		<div class="flex-1 flex bg-white dark:bg-gray-900 overflow-hidden">
-			<!-- Left Sidebar: Scenario List -->
-			<div
-				class="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-gray-50 dark:bg-gray-900 {sidebarOpen
-					? 'md:flex'
-					: 'hidden md:hidden'}"
-			>
-				<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
-					<div class="flex items-center justify-between">
-						<h1 class="text-xl font-bold text-gray-900 dark:text-white">Scenarios</h1>
-						<div class="flex items-center space-x-2">
-							<!-- Tutorial Button - DISABLED -->
-							<!-- Tutorial feature has been disabled -->
-							<button
-								class="text-xs px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800"
-								on:click={() => {
-									sidebarOpen = !sidebarOpen;
-								}}
-								aria-label="Toggle scenarios">{sidebarOpen ? 'Hide' : 'Show'}</button
-							>
+			{#if isLoadingScenarios}
+				<div
+					class="flex-1 flex flex-col items-center justify-center gap-4 text-gray-600 dark:text-gray-400 p-8"
+				>
+					<svg
+						class="animate-spin h-10 w-10 text-blue-500"
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						aria-hidden="true"
+					>
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+						></circle>
+						<path
+							class="opacity-75"
+							fill="currentColor"
+							d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+						></path>
+					</svg>
+					<p class="text-lg font-medium">Loading scenarios...</p>
+					<p class="text-sm">
+						Assigning scenarios based on your child profile. This may take a moment.
+					</p>
+				</div>
+			{:else}
+				<!-- Left Sidebar: Scenario List -->
+				<div
+					class="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-gray-50 dark:bg-gray-900 {sidebarOpen
+						? 'md:flex'
+						: 'hidden md:hidden'}"
+				>
+					<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
+						<div class="flex items-center justify-between">
+							<h1 class="text-xl font-bold text-gray-900 dark:text-white">Scenarios</h1>
+							<div class="flex items-center space-x-2">
+								<!-- Tutorial Button - DISABLED -->
+								<!-- Tutorial feature has been disabled -->
+								<button
+									class="text-xs px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800"
+									on:click={() => {
+										sidebarOpen = !sidebarOpen;
+									}}
+									aria-label="Toggle scenarios">{sidebarOpen ? 'Hide' : 'Show'}</button
+								>
+							</div>
 						</div>
+						<p class="text-sm text-gray-600 dark:text-gray-400">
+							{completionCount}
+						</p>
 					</div>
-					<p class="text-sm text-gray-600 dark:text-gray-400">
-						{completionCount}
-					</p>
-				</div>
 
-				<div class="flex-1 overflow-y-auto p-3 space-y-2">
-					{#each scenarioList as [prompt, response], index}
-						<button
-							on:click={() => loadScenario(index)}
-							class="w-full text-left p-3 rounded-lg border transition-all duration-200 {selectedScenarioIndex ===
-							index
-								? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 dark:border-blue-600 shadow-sm'
-								: scenarioCompletionStatuses[index]
-									? 'bg-gray-100 dark:bg-gray-800/50 border-gray-300 dark:border-gray-700 opacity-60 hover:opacity-80'
-									: 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm'}"
-						>
-							<div class="flex items-start space-x-2">
-								<div class="flex-shrink-0 relative">
-									<div
-										class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold {selectedScenarioIndex ===
-										index
-											? 'bg-blue-500 text-white'
-											: prompt === CUSTOM_SCENARIO_PROMPT
-												? 'bg-purple-500 text-white'
-												: scenarioCompletionStatuses[index]
-													? 'bg-gray-400 dark:bg-gray-600 text-gray-200 dark:text-gray-400'
-													: 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}"
-									>
-										{#if prompt === CUSTOM_SCENARIO_PROMPT}
-											<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M12 4v16m8-8H4"
-												></path>
-											</svg>
-										{:else}
-											{index + 1}
-										{/if}
-									</div>
-								</div>
-
-								<div class="flex-1 min-w-0">
-									<p
-										class="text-sm font-medium {scenarioCompletionStatuses[index]
-											? 'text-gray-500 dark:text-gray-500'
-											: prompt === CUSTOM_SCENARIO_PROMPT
-												? 'text-purple-900 dark:text-purple-100'
-												: 'text-gray-900 dark:text-white'} line-clamp-2 leading-tight"
-									>
-										{customScenarioGenerated &&
-										prompt === CUSTOM_SCENARIO_PROMPT &&
-										customScenarioPrompt
-											? customScenarioPrompt
-											: prompt}
-									</p>
-								</div>
-							</div>
-
-							<div class="mt-2 flex items-center justify-between">
-								{#if selectedScenarioIndex === index}
-									<div class="flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400">
-										<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-											<path
-												fill-rule="evenodd"
-												d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-												clip-rule="evenodd"
-											></path>
-										</svg>
-										<span>Currently viewing</span>
-									</div>
-								{:else if scenarioCompletionStatuses[index]}
-									<!-- Use reactive array instead of isScenarioCompleted(index) function call
-							     to ensure template updates when scenarioStates changes -->
-									<div class="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500">
-										<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-											<path
-												fill-rule="evenodd"
-												d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-												clip-rule="evenodd"
-											></path>
-										</svg>
-										<span>Completed</span>
-									</div>
-								{:else}
-									<div></div>
-								{/if}
-
-								{#if scenarioTimers.has(index) && (scenarioTimers.get(index) || 0) > 0}
-									<div class="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
-										<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-											<path
-												fill-rule="evenodd"
-												d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
-												clip-rule="evenodd"
-											></path>
-										</svg>
-										<span>{formatTime(scenarioTimers.get(index) || 0)}</span>
-									</div>
-								{/if}
-							</div>
-						</button>
-					{/each}
-				</div>
-
-				<!-- Removed bottom divider and reset area -->
-			</div>
-
-			<!-- Right Side: Chat Thread -->
-			<div class="flex-1 flex flex-col">
-				<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
-					<h1 class="text-xl font-bold text-gray-900 dark:text-white">Conversation Review</h1>
-					<p class="text-sm text-gray-600 dark:text-gray-400">
-						Please the conversation below, and answer the questions that follow.
-					</p>
-				</div>
-
-				<div class="flex-1 overflow-y-auto p-6 space-y-4" bind:this={mainContentContainer}>
-					<!-- Custom Scenario Input (only shown for custom scenario before generation) -->
-					{#if isCustomScenario && !customScenarioGenerated}
-						<div class="max-w-3xl mx-auto mt-2 space-y-6">
-							<div
-								class="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-8 border border-purple-200 dark:border-purple-800 shadow-lg"
+					<div class="flex-1 overflow-y-auto p-3 space-y-2">
+						{#each scenarioList as [prompt, response], index}
+							{@const timerIdentifier = getScenarioId(index)}
+							<button
+								on:click={() => loadScenario(index)}
+								class="w-full text-left p-3 rounded-lg border transition-all duration-200 {selectedScenarioIndex ===
+								index
+									? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 dark:border-blue-600 shadow-sm'
+									: scenarioCompletionStatuses[index]
+										? 'bg-gray-100 dark:bg-gray-800/50 border-gray-300 dark:border-gray-700 opacity-60 hover:opacity-80'
+										: 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm'}"
 							>
-								<div class="flex items-start space-x-3 mb-6">
-									<svg
-										class="w-8 h-8 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-1"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-										></path>
-									</svg>
-									<div>
-										<h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-											Create Your Own Scenario
-										</h3>
-										<p class="text-sm text-gray-600 dark:text-gray-400">
-											Enter a custom child prompt below and we'll generate an AI response for you to
-											review and moderate.
-										</p>
-									</div>
-								</div>
-
-								<div class="space-y-4">
-									<div>
-										<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-											Child's Question or Prompt
-										</label>
-										<textarea
-											bind:value={customScenarioPrompt}
-											placeholder={CUSTOM_SCENARIO_PLACEHOLDER}
-											rows="6"
-											minlength="10"
-											class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-base"
-										></textarea>
-										<p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-											💡 Tip: Write this from the perspective of a child asking a question or making
-											a statement.
-										</p>
-									</div>
-
-									<Tooltip
-										content={(!customScenarioPrompt.trim() ||
-											customScenarioPrompt.trim().length < 10) &&
-										!customScenarioGenerating
-											? 'Please enter at least 10 characters'
-											: ''}
-										placement="top"
-										className="w-full"
-									>
-										<button
-											on:click={generateCustomScenarioResponse}
-											disabled={customScenarioGenerating ||
-												!customScenarioPrompt.trim() ||
-												customScenarioPrompt.trim().length < 10}
-											class="w-full flex items-center justify-center space-x-2 px-6 py-4 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors duration-200 shadow-md hover:shadow-lg"
+								<div class="flex items-start space-x-2">
+									<div class="flex-shrink-0 relative">
+										<div
+											class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold {selectedScenarioIndex ===
+											index
+												? 'bg-blue-500 text-white'
+												: prompt === CUSTOM_SCENARIO_PROMPT
+													? 'bg-purple-500 text-white'
+													: scenarioCompletionStatuses[index]
+														? 'bg-gray-400 dark:bg-gray-600 text-gray-200 dark:text-gray-400'
+														: 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}"
 										>
-											{#if customScenarioGenerating}
-												<svg
-													class="animate-spin h-5 w-5 text-white"
-													fill="none"
-													viewBox="0 0 24 24"
-												>
-													<circle
-														class="opacity-25"
-														cx="12"
-														cy="12"
-														r="10"
-														stroke="currentColor"
-														stroke-width="4"
-													></circle>
-													<path
-														class="opacity-75"
-														fill="currentColor"
-														d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-													></path>
-												</svg>
-												<span>Generating Response...</span>
-											{:else}
-												<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											{#if prompt === CUSTOM_SCENARIO_PROMPT}
+												<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 													<path
 														stroke-linecap="round"
 														stroke-linejoin="round"
 														stroke-width="2"
-														d="M13 10V3L4 14h7v7l9-11h-7z"
+														d="M12 4v16m8-8H4"
 													></path>
 												</svg>
-												<span>Generate AI Response</span>
+											{:else}
+												{index + 1}
 											{/if}
-										</button>
-									</Tooltip>
+										</div>
+									</div>
+
+									<div class="flex-1 min-w-0">
+										<p
+											class="text-sm font-medium {scenarioCompletionStatuses[index]
+												? 'text-gray-500 dark:text-gray-500'
+												: prompt === CUSTOM_SCENARIO_PROMPT
+													? 'text-purple-900 dark:text-purple-100'
+													: 'text-gray-900 dark:text-white'} line-clamp-2 leading-tight"
+										>
+											{customScenarioGenerated &&
+											prompt === CUSTOM_SCENARIO_PROMPT &&
+											customScenarioPrompt
+												? customScenarioPrompt
+												: prompt}
+										</p>
+									</div>
+								</div>
+
+								<div class="mt-2 flex items-center justify-between">
+									{#if selectedScenarioIndex === index}
+										<div
+											class="flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400"
+										>
+											<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+												<path
+													fill-rule="evenodd"
+													d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+													clip-rule="evenodd"
+												></path>
+											</svg>
+											<span>Currently viewing</span>
+										</div>
+									{:else if scenarioCompletionStatuses[index]}
+										<!-- Use reactive array instead of isScenarioCompleted(index) function call
+							     to ensure template updates when scenarioStates changes -->
+										<div
+											class="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500"
+										>
+											<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+												<path
+													fill-rule="evenodd"
+													d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+													clip-rule="evenodd"
+												></path>
+											</svg>
+											<span>Completed</span>
+										</div>
+									{:else}
+										<div></div>
+									{/if}
+
+									{#if scenarioTimers.has(timerIdentifier) && (scenarioTimers.get(timerIdentifier) || 0) > 0}
+										<div
+											class="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400"
+										>
+											<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+												<path
+													fill-rule="evenodd"
+													d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+													clip-rule="evenodd"
+												></path>
+											</svg>
+											<span>{formatTime(scenarioTimers.get(timerIdentifier) || 0)}</span>
+										</div>
+									{/if}
+								</div>
+							</button>
+						{/each}
+					</div>
+
+					<!-- Removed bottom divider and reset area -->
+				</div>
+
+				<!-- Right Side: Chat Thread -->
+				<div class="flex-1 flex flex-col">
+					<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
+						<h1 class="text-xl font-bold text-gray-900 dark:text-white">Conversation Review</h1>
+						<p class="text-sm text-gray-600 dark:text-gray-400">
+							Please the conversation below, and answer the questions that follow.
+						</p>
+					</div>
+
+					<div class="flex-1 overflow-y-auto p-6 space-y-4" bind:this={mainContentContainer}>
+						<!-- Custom Scenario Input (only shown for custom scenario before generation) -->
+						{#if isCustomScenario && !customScenarioGenerated}
+							<div class="max-w-3xl mx-auto mt-2 space-y-6">
+								<div
+									class="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-8 border border-purple-200 dark:border-purple-800 shadow-lg"
+								>
+									<div class="flex items-start space-x-3 mb-6">
+										<svg
+											class="w-8 h-8 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-1"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+											></path>
+										</svg>
+										<div>
+											<h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+												Create Your Own Scenario
+											</h3>
+											<p class="text-sm text-gray-600 dark:text-gray-400">
+												Enter a custom child prompt below and we'll generate an AI response for you
+												to review and moderate.
+											</p>
+										</div>
+									</div>
+
+									<div class="space-y-4">
+										<div>
+											<label
+												class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+											>
+												Child's Question or Prompt
+											</label>
+											<textarea
+												bind:value={customScenarioPrompt}
+												placeholder={CUSTOM_SCENARIO_PLACEHOLDER}
+												rows="6"
+												minlength="10"
+												class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-base"
+											></textarea>
+											<p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+												💡 Tip: Write this from the perspective of a child asking a question or
+												making a statement.
+											</p>
+										</div>
+
+										<Tooltip
+											content={(!customScenarioPrompt.trim() ||
+												customScenarioPrompt.trim().length < 10) &&
+											!customScenarioGenerating
+												? 'Please enter at least 10 characters'
+												: ''}
+											placement="top"
+											className="w-full"
+										>
+											<button
+												on:click={generateCustomScenarioResponse}
+												disabled={customScenarioGenerating ||
+													!customScenarioPrompt.trim() ||
+													customScenarioPrompt.trim().length < 10}
+												class="w-full flex items-center justify-center space-x-2 px-6 py-4 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors duration-200 shadow-md hover:shadow-lg"
+											>
+												{#if customScenarioGenerating}
+													<svg
+														class="animate-spin h-5 w-5 text-white"
+														fill="none"
+														viewBox="0 0 24 24"
+													>
+														<circle
+															class="opacity-25"
+															cx="12"
+															cy="12"
+															r="10"
+															stroke="currentColor"
+															stroke-width="4"
+														></circle>
+														<path
+															class="opacity-75"
+															fill="currentColor"
+															d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+														></path>
+													</svg>
+													<span>Generating Response...</span>
+												{:else}
+													<svg
+														class="w-5 h-5"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															stroke-width="2"
+															d="M13 10V3L4 14h7v7l9-11h-7z"
+														></path>
+													</svg>
+													<span>Generate AI Response</span>
+												{/if}
+											</button>
+										</Tooltip>
+									</div>
 								</div>
 							</div>
-						</div>
-					{:else if !isCustomScenario || customScenarioGenerated}
-						<!-- Child Prompt Bubble -->
-						<div class="flex justify-end">
-							<!-- 
+						{:else if !isCustomScenario || customScenarioGenerated}
+							<!-- Child Prompt Bubble -->
+							<div class="flex justify-end">
+								<!-- 
 						DRAG-TO-HIGHLIGHT UI: Child Prompt Bubble
 						All three highlighting indicators must use identical conditions:
 						1. cursor-text class: Visual cursor feedback
@@ -5660,118 +6225,256 @@
 						3. Tooltip visibility: "← Drag to highlight" arrow indicator
 						See DRAG-TO-HIGHLIGHT FEATURE DOCUMENTATION above for details.
 					-->
-							<div
-								class="max-w-[80%] bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm relative select-text {isHighlightingEnabled
-									? 'cursor-text hover:ring-2 hover:ring-blue-300 dark:hover:ring-blue-600 transition-all'
-									: ''}"
-								bind:this={promptContainer1}
-								on:mouseup={handleTextSelection}
-								title={isHighlightingEnabled ? 'Drag over text to highlight concerns' : ''}
-							>
-								{#if isHighlightingEnabled && highlightedTexts1.length === 0}
-									<div
-										class="absolute -top-6 right-0 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm border border-gray-200 dark:border-gray-700 pointer-events-none"
-									>
-										← Drag to highlight
-									</div>
-								{/if}
-								<p class="text-sm whitespace-pre-wrap">{@html childPromptHTML}</p>
-								<!-- Auto-highlight enabled: No button needed -->
+								<div
+									class="max-w-[80%] bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm relative select-text {isHighlightingEnabled
+										? 'cursor-text hover:ring-2 hover:ring-blue-300 dark:hover:ring-blue-600 transition-all'
+										: ''}"
+									bind:this={promptContainer1}
+									on:mouseup={handleTextSelection}
+									title={isHighlightingEnabled ? 'Drag over text to highlight concerns' : ''}
+								>
+									{#if isHighlightingEnabled && highlightedTexts1.length === 0}
+										<div
+											class="absolute -top-6 right-0 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm border border-gray-200 dark:border-gray-700 pointer-events-none"
+										>
+											← Drag to highlight
+										</div>
+									{/if}
+									<p class="text-sm whitespace-pre-wrap">{@html childPromptHTML}</p>
+									<!-- Auto-highlight enabled: No button needed -->
+								</div>
 							</div>
-						</div>
-					{/if}
+						{/if}
 
-					<!-- AI Response Bubble (hidden for custom scenario before generation) -->
-					{#if !isCustomScenario || customScenarioGenerated}
-						<!-- Side-by-Side Comparison View -->
-						{#if showComparisonView && versions.length > 0 && currentVersionIndex >= 0 && currentVersionIndex < versions.length}
-							<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-								<!-- Left Column: Original Response -->
-								<div class="max-w-full">
-									<div class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
-										Original Response
+						<!-- AI Response Bubble (hidden for custom scenario before generation) -->
+						{#if !isCustomScenario || customScenarioGenerated}
+							<!-- Side-by-Side Comparison View -->
+							{#if showComparisonView && versions.length > 0 && currentVersionIndex >= 0 && currentVersionIndex < versions.length}
+								<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+									<!-- Left Column: Original Response -->
+									<div class="max-w-full">
+										<div class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
+											Original Response
+										</div>
+										<div
+											class="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm"
+										>
+											<div class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+												{@html getHighlightedHTML(originalResponse1, highlightedTexts1)}
+											</div>
+										</div>
 									</div>
-									<div
-										class="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm"
-									>
-										<div class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
-											{@html getHighlightedHTML(originalResponse1, highlightedTexts1)}
+
+									<!-- Right Column: Moderated Response -->
+									<div class="max-w-full">
+										<div class="flex items-center justify-between mb-2">
+											<div class="text-xs font-semibold text-gray-600 dark:text-gray-400">
+												Moderated Version {currentVersionIndex + 1}
+											</div>
+											<!-- Version Navigation Controls -->
+											{#if versions.length > 1}
+												<div class="flex items-center space-x-1">
+													<button
+														on:click={() => navigateToVersion('prev')}
+														disabled={currentVersionIndex <= 0 || confirmedVersionIndex !== null}
+														class="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
+														title="Previous version"
+													>
+														<svg
+															class="w-3 h-3"
+															fill="none"
+															stroke="currentColor"
+															viewBox="0 0 24 24"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="2"
+																d="M15 19l-7-7 7-7"
+															></path>
+														</svg>
+													</button>
+
+													<span class="text-xs font-medium text-gray-700 dark:text-gray-300">
+														{confirmedVersionIndex !== null &&
+														currentVersionIndex === confirmedVersionIndex
+															? '✓ '
+															: ''}
+														{currentVersionIndex + 1}/{versions.length}
+													</span>
+
+													<button
+														on:click={() => navigateToVersion('next')}
+														disabled={currentVersionIndex >= versions.length - 1 ||
+															confirmedVersionIndex !== null}
+														class="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
+														title="Next version"
+													>
+														<svg
+															class="w-3 h-3"
+															fill="none"
+															stroke="currentColor"
+															viewBox="0 0 24 24"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="2"
+																d="M9 5l7 7-7 7"
+															></path>
+														</svg>
+													</button>
+												</div>
+											{/if}
+										</div>
+										<div
+											class="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm"
+										>
+											<div class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+												{@html versions[currentVersionIndex].response}
+											</div>
+
+											<!-- Applied Strategies inside moderated version -->
+											{#if versions[currentVersionIndex].strategies.length > 0 || versions[currentVersionIndex].customInstructions.length > 0}
+												<div class="mt-3 pt-3 border-t border-gray-300 dark:border-gray-600">
+													<p class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+														Applied Strategies:
+													</p>
+													<div class="flex flex-wrap gap-1">
+														{#each versions[currentVersionIndex].strategies as strategy}
+															<span
+																class="inline-flex items-center px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded"
+															>
+																{strategy}
+															</span>
+														{/each}
+														{#each versions[currentVersionIndex].customInstructions as custom}
+															<span
+																class="inline-flex items-center px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 rounded"
+															>
+																Custom: {custom.text}
+															</span>
+														{/each}
+													</div>
+												</div>
+											{/if}
 										</div>
 									</div>
 								</div>
-
-								<!-- Right Column: Moderated Response -->
-								<div class="max-w-full">
-									<div class="flex items-center justify-between mb-2">
-										<div class="text-xs font-semibold text-gray-600 dark:text-gray-400">
-											Moderated Version {currentVersionIndex + 1}
-										</div>
-										<!-- Version Navigation Controls -->
-										{#if versions.length > 1}
-											<div class="flex items-center space-x-1">
-												<button
-													on:click={() => navigateToVersion('prev')}
-													disabled={currentVersionIndex <= 0 || confirmedVersionIndex !== null}
-													class="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
-													title="Previous version"
-												>
-													<svg
-														class="w-3 h-3"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															stroke-width="2"
-															d="M15 19l-7-7 7-7"
-														></path>
-													</svg>
-												</button>
-
-												<span class="text-xs font-medium text-gray-700 dark:text-gray-300">
-													{confirmedVersionIndex !== null &&
-													currentVersionIndex === confirmedVersionIndex
-														? '✓ '
-														: ''}
-													{currentVersionIndex + 1}/{versions.length}
-												</span>
-
-												<button
-													on:click={() => navigateToVersion('next')}
-													disabled={currentVersionIndex >= versions.length - 1 ||
-														confirmedVersionIndex !== null}
-													class="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
-													title="Next version"
-												>
-													<svg
-														class="w-3 h-3"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															stroke-width="2"
-															d="M9 5l7 7-7 7"
-														></path>
-													</svg>
-												</button>
+							{:else}
+								<!-- Single Response View -->
+								<div class="flex justify-start">
+									<!-- 
+						DRAG-TO-HIGHLIGHT UI: AI Response Bubble
+						All three highlighting indicators must use identical conditions:
+						1. cursor-text class: Visual cursor feedback
+						2. title attribute: Hover tooltip
+						3. Tooltip visibility: "Drag to highlight →" arrow indicator
+						See DRAG-TO-HIGHLIGHT FEATURE DOCUMENTATION above for details.
+					-->
+									<div
+										bind:this={responseContainer1}
+										on:mouseup={handleTextSelection}
+										class="max-w-[80%] bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm relative select-text {isHighlightingEnabled
+											? 'cursor-text hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-600 transition-all'
+											: ''}"
+										title={isHighlightingEnabled ? 'Drag over text to highlight concerns' : ''}
+									>
+										{#if isHighlightingEnabled && highlightedTexts1.length === 0}
+											<div
+												class="absolute -top-6 left-0 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm border border-gray-200 dark:border-gray-700 pointer-events-none"
+											>
+												Drag to highlight →
 											</div>
 										{/if}
-									</div>
-									<div
-										class="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm"
-									>
-										<div class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
-											{@html versions[currentVersionIndex].response}
+										<div
+											class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap response-text"
+										>
+											{@html response1HTML}
 										</div>
+										<!-- Auto-highlight enabled: No button needed -->
 
-										<!-- Applied Strategies inside moderated version -->
-										{#if versions[currentVersionIndex].strategies.length > 0 || versions[currentVersionIndex].customInstructions.length > 0}
-											<div class="mt-3 pt-3 border-t border-gray-300 dark:border-gray-600">
+										<!-- Original Accepted Indicator -->
+										{#if false}
+											<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
+												<div
+													class="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg"
+												>
+													<div class="flex items-center space-x-2">
+														<svg
+															class="w-4 h-4 text-green-600 dark:text-green-400"
+															fill="none"
+															stroke="currentColor"
+															viewBox="0 0 24 24"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="2"
+																d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+															></path>
+														</svg>
+														<span class="text-xs font-medium text-green-700 dark:text-green-300">
+															Original response accepted as satisfactory
+														</span>
+													</div>
+													<button
+														on:click={unmarkSatisfaction}
+														class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+													>
+														Undo
+													</button>
+												</div>
+											</div>
+										{/if}
+
+										{#if highlightedTexts1.length > 0 && showOriginal1 && !markedNotApplicable}
+											<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
+												<div class="flex items-center justify-between mb-1">
+													<p class="text-xs font-semibold text-gray-700 dark:text-gray-300">
+														Highlighted Concerns ({highlightedTexts1.length}):
+													</p>
+													{#if moderationPanelVisible}
+														<button
+															on:click={returnToHighlighting}
+															class="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
+														>
+															Change/Add Highlighted Text
+														</button>
+													{/if}
+												</div>
+												<div class="flex flex-wrap gap-1">
+													{#each highlightedTexts1 as highlight}
+														<button
+															class="inline-flex items-center px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-700 text-gray-800 dark:text-gray-100 rounded hover:bg-yellow-200 dark:hover:bg-yellow-600 transition-colors"
+															on:click={() => removeHighlight(highlight)}
+															title="Click to remove"
+														>
+															{highlight.text.length > 30
+																? highlight.text.substring(0, 30) + '...'
+																: highlight.text}
+															<svg
+																class="w-3 h-3 ml-1"
+																fill="none"
+																stroke="currentColor"
+																viewBox="0 0 24 24"
+															>
+																<path
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																	stroke-width="2"
+																	d="M6 18L18 6M6 6l12 12"
+																></path>
+															</svg>
+														</button>
+													{/each}
+												</div>
+											</div>
+										{/if}
+
+										<!-- Applied Strategies Display (below response) -->
+										{#if versions.length > 0 && !showOriginal1 && currentVersionIndex >= 0 && currentVersionIndex < versions.length}
+											<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
 												<p class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
 													Applied Strategies:
 												</p>
@@ -5795,843 +6498,110 @@
 										{/if}
 									</div>
 								</div>
-							</div>
-						{:else}
-							<!-- Single Response View -->
-							<div class="flex justify-start">
-								<!-- 
-						DRAG-TO-HIGHLIGHT UI: AI Response Bubble
-						All three highlighting indicators must use identical conditions:
-						1. cursor-text class: Visual cursor feedback
-						2. title attribute: Hover tooltip
-						3. Tooltip visibility: "Drag to highlight →" arrow indicator
-						See DRAG-TO-HIGHLIGHT FEATURE DOCUMENTATION above for details.
-					-->
-								<div
-									bind:this={responseContainer1}
-									on:mouseup={handleTextSelection}
-									class="max-w-[80%] bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm relative select-text {isHighlightingEnabled
-										? 'cursor-text hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-600 transition-all'
-										: ''}"
-									title={isHighlightingEnabled ? 'Drag over text to highlight concerns' : ''}
-								>
-									{#if isHighlightingEnabled && highlightedTexts1.length === 0}
-										<div
-											class="absolute -top-6 left-0 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm border border-gray-200 dark:border-gray-700 pointer-events-none"
-										>
-											Drag to highlight →
-										</div>
-									{/if}
-									<div
-										class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap response-text"
-									>
-										{@html response1HTML}
-									</div>
-									<!-- Auto-highlight enabled: No button needed -->
-
-									<!-- Original Accepted Indicator -->
-									{#if false}
-										<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
-											<div
-												class="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg"
-											>
-												<div class="flex items-center space-x-2">
-													<svg
-														class="w-4 h-4 text-green-600 dark:text-green-400"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															stroke-width="2"
-															d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-														></path>
-													</svg>
-													<span class="text-xs font-medium text-green-700 dark:text-green-300">
-														Original response accepted as satisfactory
-													</span>
-												</div>
-												<button
-													on:click={unmarkSatisfaction}
-													class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
-												>
-													Undo
-												</button>
-											</div>
-										</div>
-									{/if}
-
-									{#if highlightedTexts1.length > 0 && showOriginal1 && !markedNotApplicable}
-										<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
-											<div class="flex items-center justify-between mb-1">
-												<p class="text-xs font-semibold text-gray-700 dark:text-gray-300">
-													Highlighted Concerns ({highlightedTexts1.length}):
-												</p>
-												{#if moderationPanelVisible}
-													<button
-														on:click={returnToHighlighting}
-														class="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
-													>
-														Change/Add Highlighted Text
-													</button>
-												{/if}
-											</div>
-											<div class="flex flex-wrap gap-1">
-												{#each highlightedTexts1 as highlight}
-													<button
-														class="inline-flex items-center px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-700 text-gray-800 dark:text-gray-100 rounded hover:bg-yellow-200 dark:hover:bg-yellow-600 transition-colors"
-														on:click={() => removeHighlight(highlight)}
-														title="Click to remove"
-													>
-														{highlight.text.length > 30
-															? highlight.text.substring(0, 30) + '...'
-															: highlight.text}
-														<svg
-															class="w-3 h-3 ml-1"
-															fill="none"
-															stroke="currentColor"
-															viewBox="0 0 24 24"
-														>
-															<path
-																stroke-linecap="round"
-																stroke-linejoin="round"
-																stroke-width="2"
-																d="M6 18L18 6M6 6l12 12"
-															></path>
-														</svg>
-													</button>
-												{/each}
-											</div>
-										</div>
-									{/if}
-
-									<!-- Applied Strategies Display (below response) -->
-									{#if versions.length > 0 && !showOriginal1 && currentVersionIndex >= 0 && currentVersionIndex < versions.length}
-										<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
-											<p class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-												Applied Strategies:
-											</p>
-											<div class="flex flex-wrap gap-1">
-												{#each versions[currentVersionIndex].strategies as strategy}
-													<span
-														class="inline-flex items-center px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded"
-													>
-														{strategy}
-													</span>
-												{/each}
-												{#each versions[currentVersionIndex].customInstructions as custom}
-													<span
-														class="inline-flex items-center px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 rounded"
-													>
-														Custom: {custom.text}
-													</span>
-												{/each}
-											</div>
-										</div>
-									{/if}
-								</div>
-							</div>
+							{/if}
 						{/if}
-					{/if}
 
-					<!-- Unified Initial Decision Pane -->
-					<!-- SIMPLIFIED FLOW: Only Steps 1 and 2 are shown (Step 3 is disabled) -->
-					{#if showInitialDecisionPane && !markedNotApplicable && initialDecisionStep >= 1 && initialDecisionStep <= 2 && (!isCustomScenario || customScenarioGenerated)}
-						<div class="flex justify-center mt-6">
-							<div class="w-full max-w-4xl px-4">
-								<div
-									class="p-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg"
-								>
-									<!-- Step Indicators -->
-									<!-- SIMPLIFIED FLOW: Only showing Steps 1 (Highlight) and 2 (Reflect) -->
-									<!-- Step 3 (Moderate) has been removed for identification-only experiment -->
-									<div class="flex items-center justify-between mb-6">
-										{#each [1, 2] as step}
-											{@const stepCompleted =
-												(step === 1 && step1Completed) || (step === 2 && step2Completed)}
-											{@const stepCurrent = step === initialDecisionStep}
-											{@const stepLocked =
-												(step > 1 && !step1Completed) || (step > 2 && !step2Completed)}
-											<button
-												on:click={() => navigateToStep(step)}
-												disabled={stepLocked}
-												class="flex items-center space-x-2 transition-all {stepCurrent
-													? 'text-blue-600 dark:text-blue-400'
-													: stepCompleted
-														? 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-														: 'text-gray-300 dark:text-gray-600'} {stepLocked
-													? 'cursor-not-allowed opacity-50'
-													: 'cursor-pointer'}"
-											>
-												<div
-													class="w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all {stepCurrent
-														? 'border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20 scale-110'
+						<!-- Unified Initial Decision Pane -->
+						<!-- SIMPLIFIED FLOW: Only Steps 1 and 2 are shown (Step 3 is disabled) -->
+						{#if showInitialDecisionPane && !markedNotApplicable && initialDecisionStep >= 1 && initialDecisionStep <= 2 && (!isCustomScenario || customScenarioGenerated)}
+							<div class="flex justify-center mt-6">
+								<div class="w-full max-w-4xl px-4">
+									<div
+										class="p-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg"
+									>
+										<!-- Step Indicators -->
+										<!-- SIMPLIFIED FLOW: Only showing Steps 1 (Highlight) and 2 (Reflect) -->
+										<!-- Step 3 (Moderate) has been removed for identification-only experiment -->
+										<div class="flex items-center justify-between mb-6">
+											{#each [1, 2] as step}
+												{@const stepCompleted =
+													(step === 1 && step1Completed) || (step === 2 && step2Completed)}
+												{@const stepCurrent = step === initialDecisionStep}
+												{@const stepLocked =
+													(step > 1 && !step1Completed) || (step > 2 && !step2Completed)}
+												<button
+													on:click={() => navigateToStep(step)}
+													disabled={stepLocked}
+													class="flex items-center space-x-2 transition-all {stepCurrent
+														? 'text-blue-600 dark:text-blue-400'
 														: stepCompleted
-															? 'border-gray-400 dark:border-gray-500 bg-gray-50 dark:bg-gray-700 hover:border-gray-500 dark:hover:border-gray-400'
-															: 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'}"
+															? 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+															: 'text-gray-300 dark:text-gray-600'} {stepLocked
+														? 'cursor-not-allowed opacity-50'
+														: 'cursor-pointer'}"
 												>
-													{#if stepCompleted}
-														<svg
-															class="w-5 h-5 text-green-600 dark:text-green-400"
-															fill="none"
-															stroke="currentColor"
-															viewBox="0 0 24 24"
-														>
-															<path
-																stroke-linecap="round"
-																stroke-linejoin="round"
-																stroke-width="2"
-																d="M5 13l4 4L19 7"
-															></path>
-														</svg>
-													{:else}
-														<span class="text-sm font-semibold">{step}</span>
-													{/if}
-												</div>
-												<span class="text-sm font-medium hidden sm:inline">
-													{step === 1 ? 'Highlight' : 'Reflect'}
-												</span>
-											</button>
-											{#if step < 2}
-												<div
-													class="flex-1 h-0.5 mx-2 transition-colors {(step === 1 &&
-														step1Completed) ||
-													(step === 2 && step2Completed)
-														? 'bg-gray-400 dark:bg-gray-500'
-														: 'bg-gray-200 dark:bg-gray-700'}"
-												></div>
-											{/if}
-										{/each}
-									</div>
-
-									<!-- Step 1: Highlighting or Skip -->
-									{#if initialDecisionStep === 1}
-										<div class="space-y-4">
-											<div>
-												<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-													Step 1: Highlight the content that concerns you
-												</h3>
-
-												{#if highlightedTexts1.length > 0}
 													<div
-														class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
+														class="w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all {stepCurrent
+															? 'border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20 scale-110'
+															: stepCompleted
+																? 'border-gray-400 dark:border-gray-500 bg-gray-50 dark:bg-gray-700 hover:border-gray-500 dark:hover:border-gray-400'
+																: 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'}"
 													>
-														<p class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-															✓ {highlightedTexts1.length} section{highlightedTexts1.length === 1
-																? ''
-																: 's'} highlighted
-														</p>
-														<div class="flex flex-wrap gap-2">
-															{#each highlightedTexts1 as highlight}
-																<button
-																	class="inline-flex items-center px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-700 text-gray-800 dark:text-gray-100 rounded hover:bg-yellow-200 dark:hover:bg-yellow-600 transition-colors"
-																	on:click={() => removeHighlight(highlight)}
-																	title="Click to remove"
-																>
-																	{highlight.text.length > 40
-																		? highlight.text.substring(0, 40) + '...'
-																		: highlight.text}
-																	<svg
-																		class="w-3 h-3 ml-1"
-																		fill="none"
-																		stroke="currentColor"
-																		viewBox="0 0 24 24"
-																	>
-																		<path
-																			stroke-linecap="round"
-																			stroke-linejoin="round"
-																			stroke-width="2"
-																			d="M6 18L18 6M6 6l12 12"
-																		></path>
-																	</svg>
-																</button>
-															{/each}
-														</div>
-														<p class="text-xs text-gray-600 dark:text-gray-400 mt-2">
-															Drag over more text to add highlights, or click "Continue" when done.
-														</p>
+														{#if stepCompleted}
+															<svg
+																class="w-5 h-5 text-green-600 dark:text-green-400"
+																fill="none"
+																stroke="currentColor"
+																viewBox="0 0 24 24"
+															>
+																<path
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																	stroke-width="2"
+																	d="M5 13l4 4L19 7"
+																></path>
+															</svg>
+														{:else}
+															<span class="text-sm font-semibold">{step}</span>
+														{/if}
 													</div>
-												{:else}
+													<span class="text-sm font-medium hidden sm:inline">
+														{step === 1 ? 'Highlight' : 'Reflect'}
+													</span>
+												</button>
+												{#if step < 2}
 													<div
-														class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
-													>
-														<p class="text-xs text-yellow-800 dark:text-yellow-200">
-															⚠️ Drag over text in the response above to highlight concerns. If this
-															scenario is not relevant, click "Skip Scenario".
-														</p>
-													</div>
+														class="flex-1 h-0.5 mx-2 transition-colors {(step === 1 &&
+															step1Completed) ||
+														(step === 2 && step2Completed)
+															? 'bg-gray-400 dark:bg-gray-500'
+															: 'bg-gray-200 dark:bg-gray-700'}"
+													></div>
 												{/if}
-											</div>
-
-											<!-- Action buttons - Continue disabled when no highlights, only Skip enabled -->
-											<div
-												class="flex space-x-3 pt-2 border-t border-gray-200 dark:border-gray-700"
-											>
-												<button
-													on:click={() => completeStep1(false)}
-													disabled={highlightedTexts1.length === 0}
-													class="flex-1 px-6 py-3 {highlightedTexts1.length > 0
-														? 'bg-green-500 hover:bg-green-600 text-white'
-														: 'bg-gray-400 text-white cursor-not-allowed opacity-50'} font-medium rounded-lg transition-colors flex items-center justify-center space-x-2 disabled:cursor-not-allowed"
-												>
-													<span>Continue</span>
-													{#if highlightedTexts1.length === 0}
-														<span class="text-xs opacity-75">(highlight required)</span>
-													{/if}
-												</button>
-												<button
-													on:click={() => completeStep1(true)}
-													class="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
-												>
-													Skip Scenario
-												</button>
-											</div>
+											{/each}
 										</div>
-									{/if}
 
-									<!-- Step 2: Assess -->
-									{#if initialDecisionStep === 2}
-										<div class="space-y-4">
-											<div>
-												<div class="flex items-center justify-between mb-2">
-													<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-														Step 2: Explain why this content concerns you
-													</h3>
-													<button
-														on:click={() => navigateToStep(1)}
-														class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200"
-													>
-														<svg
-															class="w-3 h-3 flex-shrink-0"
-															fill="none"
-															stroke="currentColor"
-															viewBox="0 0 24 24"
-														>
-															<path
-																stroke-linecap="round"
-																stroke-linejoin="round"
-																stroke-width="2"
-																d="M10 19l-7-7m0 0l7-7m-7 7h18"
-															></path>
-														</svg>
-														<span>Back</span>
-													</button>
-												</div>
-											</div>
-
-											<!-- Explanation field -->
+										<!-- Step 1: Highlighting or Skip -->
+										{#if initialDecisionStep === 1}
 											<div class="space-y-4">
 												<div>
-													<label
-														class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-													>
-														Explain why this content concerns you <span class="text-red-500">*</span
-														>
-													</label>
-													<textarea
-														bind:value={concernReason}
-														placeholder="Explain why this content concerns you... (minimum 10 characters)"
-														rows="5"
-														minlength="10"
-														class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none"
-													></textarea>
-												</div>
-											</div>
-
-											<div>
-												<button
-													on:click={completeStep2}
-													disabled={!concernReason.trim() || concernReason.trim().length < 10}
-													class="w-full px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
-												>
-													Submit
-												</button>
-											</div>
-										</div>
-									{/if}
-
-									<!-- ============================================================================
-						     STEP 3 (MODERATION) - COMMENTED OUT FOR IDENTIFICATION-ONLY EXPERIMENT
-						     This entire block is disabled but preserved for future restoration.
-						     To restore: Change `{#if false && initialDecisionStep === 3}` back to `{#if initialDecisionStep === 3}`
-						     ============================================================================ -->
-									<!-- Step 3: Update -->
-									{#if false && initialDecisionStep === 3}
-										<div class="space-y-4">
-											<div>
-												<div class="flex items-center justify-between mb-2">
-													<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-														Step 3: Moderate
+													<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+														Step 1: Highlight the content that concerns you
 													</h3>
-													<button
-														on:click={() => navigateToStep(2)}
-														disabled={moderationLoading}
-														class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 disabled:opacity-50"
-													>
-														<svg
-															class="w-3 h-3 flex-shrink-0"
-															fill="none"
-															stroke="currentColor"
-															viewBox="0 0 24 24"
-														>
-															<path
-																stroke-linecap="round"
-																stroke-linejoin="round"
-																stroke-width="2"
-																d="M10 19l-7-7m0 0l7-7m-7 7h18"
-															></path>
-														</svg>
-														<span>Back</span>
-													</button>
-												</div>
-												{#if versions.length > 0 && showComparisonView}
-													<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-														Review the moderated version above. You can confirm it or try different
-														strategies.
-													</p>
-												{:else}
-													<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-														How would you like to moderate the content?
-													</p>
-												{/if}
-											</div>
 
-											<!-- Step 3: Satisfaction Check UI (unified panel - always shown when versions exist) -->
-											{#if versions.length > 0 && showComparisonView && !moderationPanelVisible}
-												<div
-													class="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
-												>
-													<h4 class="text-base font-semibold text-gray-900 dark:text-white mb-3">
-														How satisfied are you with the updated response?
-													</h4>
-
-													<!-- Satisfaction Likert Scale (1-5) - Required -->
-													<div class="space-y-2">
-														<label
-															class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-														>
-															Satisfaction Level <span class="text-red-500">*</span>
-														</label>
-														{#each [1, 2, 3, 4, 5] as level}
-															<label
-																class="flex items-center p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors {satisfactionLevel ===
-																level
-																	? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'
-																	: ''}"
-															>
-																<input
-																	type="radio"
-																	name="satisfactionLevel"
-																	value={level}
-																	bind:group={satisfactionLevel}
-																	class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
-																/>
-																<span class="ml-3 text-sm text-gray-700 dark:text-gray-300">
-																	{level === 1
-																		? '1 - Very Dissatisfied'
-																		: level === 2
-																			? '2 - Dissatisfied'
-																			: level === 3
-																				? '3 - Neutral'
-																				: level === 4
-																					? '4 - Satisfied'
-																					: '5 - Very Satisfied'}
-																</span>
-															</label>
-														{/each}
-													</div>
-
-													<!-- Why field - Always shown, required (minimum 10 characters) -->
-													<div>
-														<label
-															class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-														>
-															Why? <span class="text-red-500">*</span>
-														</label>
-														<textarea
-															bind:value={satisfactionReason}
-															placeholder="Explain your satisfaction level... (minimum 10 characters)"
-															rows="3"
-															minlength="10"
-															class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none"
-														></textarea>
-													</div>
-
-													<!-- Navigation Buttons -->
-													<div
-														class="flex space-x-3 pt-2 border-t border-gray-200 dark:border-gray-700"
-													>
-														<!-- Moderate Again Button -->
-														<button
-															on:click={async () => {
-																// Validate satisfaction level is set
-																if (satisfactionLevel === null) {
-																	toast.error('Please select a satisfaction level');
-																	return;
-																}
-
-																// Validate reason is filled and meets minimum length
-																if (!satisfactionReason.trim()) {
-																	toast.error('Please explain your satisfaction level');
-																	return;
-																}
-
-																if (satisfactionReason.trim().length < 10) {
-																	toast.error(
-																		'Please provide at least 10 characters in your explanation'
-																	);
-																	return;
-																}
-
-																try {
-																	// Save satisfaction check to backend
-																	await submitSatisfactionCheck(
-																		satisfactionLevel,
-																		satisfactionReason,
-																		'try_again'
-																	);
-
-																	// Reset satisfaction state to allow creating new version
-																	satisfactionLevel = null;
-																	satisfactionReason = '';
-																	nextAction = null;
-
-																	// Clear selected moderations to start fresh
-																	selectedModerations = new Set();
-																	customInstructions = [];
-
-																	// Show moderation panel for another iteration
-																	moderationPanelVisible = true;
-																	moderationPanelExpanded = true;
-																	toast.info(
-																		'Select moderation strategies to create another version'
-																	);
-
-																	// Scroll to moderation panel after it opens
-																	setTimeout(() => {
-																		if (moderationPanelElement) {
-																			moderationPanelElement.scrollIntoView({
-																				behavior: 'smooth',
-																				block: 'start'
-																			});
-																		}
-																	}, 100);
-																} catch (error) {
-																	console.error('Failed to save satisfaction check:', error);
-																	toast.error('Failed to save your response. Please try again.');
-																}
-															}}
-															disabled={satisfactionLevel === null ||
-																!satisfactionReason.trim() ||
-																satisfactionReason.trim().length < 10}
-															class="flex-1 px-6 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
-														>
-															Moderate Again
-														</button>
-
-														<!-- Continue to next scenario Button -->
-														<button
-															on:click={async () => {
-																// Validate satisfaction level is set
-																if (satisfactionLevel === null) {
-																	toast.error('Please select a satisfaction level');
-																	return;
-																}
-
-																// Validate reason is filled and meets minimum length
-																if (!satisfactionReason.trim()) {
-																	toast.error('Please explain your satisfaction level');
-																	return;
-																}
-
-																if (satisfactionReason.trim().length < 10) {
-																	toast.error(
-																		'Please provide at least 10 characters in your explanation'
-																	);
-																	return;
-																}
-
-																try {
-																	// Save satisfaction check to backend (this already handles navigation)
-																	await submitSatisfactionCheck(
-																		satisfactionLevel,
-																		satisfactionReason,
-																		'move_on'
-																	);
-																	// submitSatisfactionCheck already handles confirmCurrentVersion() and navigation (lines 2590-2603)
-																} catch (error) {
-																	console.error('Failed to save satisfaction check:', error);
-																	toast.error('Failed to save your response. Please try again.');
-																}
-															}}
-															disabled={satisfactionLevel === null ||
-																!satisfactionReason.trim() ||
-																satisfactionReason.trim().length < 10}
-															class="flex-1 px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
-														>
-															Continue to next scenario
-														</button>
-													</div>
-												</div>
-											{:else}
-												<!-- Strategy instruction and Clear button -->
-												<div class="flex items-center justify-between mb-3">
-													<p class="text-sm text-gray-600 dark:text-gray-400">
-														Choose up to <b>3 strategies</b> to improve the AI's response.
-													</p>
-													{#if selectedModerations.size > 0 || attentionCheckSelected}
-														<button
-															on:click={clearSelections}
-															class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-														>
-															Clear All
-														</button>
-													{/if}
-												</div>
-
-												<!-- Grouped Strategy Options (Legacy validated design) -->
-												<div class="space-y-3 mb-4" bind:this={moderationPanelElement}>
-													{#each Object.entries(moderationOptions) as [category, options]}
+													{#if highlightedTexts1.length > 0}
 														<div
-															class="border-2 {category === 'Refuse and Remove'
-																? 'border-red-500 dark:border-red-600'
-																: category === 'Investigate and Empathize'
-																	? 'border-blue-500 dark:border-blue-600'
-																	: category === 'Correct their Understanding'
-																		? 'border-green-500 dark:border-green-600'
-																		: category === 'Match their Age'
-																			? 'border-yellow-500 dark:border-yellow-600'
-																			: category === 'Defer to Support'
-																				? 'border-purple-500 dark:border-purple-600'
-																				: 'border-pink-500 dark:border-pink-600'} rounded-lg bg-gray-50 dark:bg-gray-800/50"
+															class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
 														>
-															<!-- Group Header -->
-															<button
-																on:click={() => toggleGroupExpansion(category)}
-																class="w-full p-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors rounded-lg"
+															<p
+																class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2"
 															>
-																<div class="flex items-center justify-between">
-																	<div class="flex items-center">
-																		<span
-																			class="w-3 h-3 rounded-full mr-3 {category ===
-																			'Refuse and Remove'
-																				? 'bg-red-500'
-																				: category === 'Investigate and Empathize'
-																					? 'bg-blue-500'
-																					: category === 'Correct their Understanding'
-																						? 'bg-green-500'
-																						: category === 'Match their Age'
-																							? 'bg-yellow-500'
-																							: category === 'Defer to Support'
-																								? 'bg-purple-500'
-																								: 'bg-pink-500'}"
-																		></span>
-																		<h4 class="text-sm font-bold text-gray-900 dark:text-white">
-																			{category === 'Custom' && showCustomInput
-																				? '✨ Custom (Open)'
-																				: category}
-																		</h4>
-																	</div>
-																	<div class="flex items-center space-x-2">
-																		{#if (category === 'Attention Check' && attentionCheckSelected) || options.some( (option) => selectedModerations.has(option) ) || (category === 'Custom' && customInstructions.length > 0)}
-																			<span
-																				class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full"
-																			>
-																				{#if category === 'Custom'}
-																					{customInstructions.filter((c) =>
-																						selectedModerations.has(c.id)
-																					).length} selected
-																				{:else if category === 'Attention Check'}
-																					{attentionCheckSelected ? 1 : 0} selected
-																				{:else}
-																					{options.filter((option) =>
-																						selectedModerations.has(option)
-																					).length} selected
-																				{/if}
-																			</span>
-																		{/if}
-																		{#if category !== 'Custom' || !showCustomInput}
-																			<svg
-																				class="w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform {expandedGroups.has(
-																					category
-																				) ||
-																				(category === 'Custom' && showCustomInput)
-																					? 'rotate-180'
-																					: ''}"
-																				fill="none"
-																				stroke="currentColor"
-																				viewBox="0 0 24 24"
-																			>
-																				<path
-																					stroke-linecap="round"
-																					stroke-linejoin="round"
-																					stroke-width="2"
-																					d="M19 9l-7 7-7-7"
-																				></path>
-																			</svg>
-																		{:else}
-																			<svg
-																				class="w-5 h-5 text-purple-500 dark:text-purple-400 transition-transform rotate-180"
-																				fill="none"
-																				stroke="currentColor"
-																				viewBox="0 0 24 24"
-																			>
-																				<path
-																					stroke-linecap="round"
-																					stroke-linejoin="round"
-																					stroke-width="2"
-																					d="M19 9l-7 7-7-7"
-																				></path>
-																			</svg>
-																		{/if}
-																	</div>
-																</div>
-															</button>
-
-															<!-- Group Content (2-column grid with button toggles) -->
-															{#if expandedGroups.has(category) && category !== 'Custom'}
-																<div class="px-3 pb-3">
-																	<div class="grid grid-cols-2 gap-2">
-																		{#each options as option}
-																			<Tooltip
-																				content={moderationTooltips[option] || ''}
-																				placement="top-end"
-																				className="w-full"
-																				tippyOptions={{ delay: [200, 0] }}
-																			>
-																				<button
-																					on:click={() => toggleModerationSelection(option)}
-																					disabled={moderationLoading}
-																					aria-pressed={option === 'I read the instructions'
-																						? attentionCheckSelected
-																						: selectedModerations.has(option)}
-																					class="p-2 text-xs font-medium text-center rounded-lg transition-all min-h-[40px] flex items-center justify-center {(
-																						option === 'I read the instructions'
-																							? attentionCheckSelected
-																							: selectedModerations.has(option)
-																					)
-																						? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400 shadow-lg'
-																						: 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'} disabled:opacity-50"
-																				>
-																					{option}
-																				</button>
-																			</Tooltip>
-																		{/each}
-																	</div>
-																</div>
-															{/if}
-
-															<!-- Custom Input Field -->
-															{#if category === 'Custom' && showCustomInput}
-																<div class="px-3 pb-3 pt-2">
-																	<div class="space-y-2">
-																		<label
-																			class="block text-xs font-medium text-purple-900 dark:text-purple-200"
-																		>
-																			Enter custom moderation instruction:
-																		</label>
-																		<textarea
-																			bind:value={customInstructionInput}
-																			rows="2"
-																			placeholder="E.g., Emphasize problem-solving skills..."
-																			class="w-full px-3 py-2 text-sm border border-purple-300 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-																			on:keydown={(e) => {
-																				if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-																					addCustomInstruction();
-																				} else if (e.key === 'Escape') {
-																					cancelCustomInput();
-																				}
-																			}}
-																		></textarea>
-																		<div class="flex justify-end space-x-2">
-																			<button
-																				on:click={cancelCustomInput}
-																				class="px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-																			>
-																				Cancel
-																			</button>
-																			<button
-																				on:click={addCustomInstruction}
-																				class="px-3 py-1 text-xs font-medium bg-purple-500 hover:bg-purple-600 text-white rounded transition-colors"
-																			>
-																				Add
-																			</button>
-																		</div>
-																	</div>
-																</div>
-															{/if}
-														</div>
-													{/each}
-												</div>
-
-												<!-- Custom Instructions Display -->
-												{#if customInstructions.length > 0}
-													<div
-														class="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg mb-3"
-													>
-														<h4
-															class="text-xs font-semibold text-purple-900 dark:text-purple-200 mb-2"
-														>
-															Custom Instructions ({customInstructions.length}):
-														</h4>
-														<div class="space-y-2">
-															{#each customInstructions as custom}
-																<div
-																	class="flex items-start justify-between bg-white dark:bg-purple-900/30 p-2 rounded border-2 {selectedModerations.has(
-																		custom.id
-																	)
-																		? 'border-purple-500'
-																		: 'border-transparent'}"
-																>
+																✓ {highlightedTexts1.length} section{highlightedTexts1.length === 1
+																	? ''
+																	: 's'} highlighted
+															</p>
+															<div class="flex flex-wrap gap-2">
+																{#each highlightedTexts1 as highlight}
 																	<button
-																		on:click={() => toggleModerationSelection(custom.id)}
-																		class="flex-1 text-left mr-2"
+																		class="inline-flex items-center px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-700 text-gray-800 dark:text-gray-100 rounded hover:bg-yellow-200 dark:hover:bg-yellow-600 transition-colors"
+																		on:click={() => removeHighlight(highlight)}
+																		title="Click to remove"
 																	>
-																		<div class="flex items-center space-x-1 mb-1">
-																			<div
-																				class="w-3 h-3 rounded border-2 {selectedModerations.has(
-																					custom.id
-																				)
-																					? 'bg-purple-500 border-purple-500'
-																					: 'border-gray-300 dark:border-gray-600'} flex items-center justify-center"
-																			>
-																				{#if selectedModerations.has(custom.id)}
-																					<svg
-																						class="w-2 h-2 text-white"
-																						fill="none"
-																						stroke="currentColor"
-																						viewBox="0 0 24 24"
-																					>
-																						<path
-																							stroke-linecap="round"
-																							stroke-linejoin="round"
-																							stroke-width="3"
-																							d="M5 13l4 4L19 7"
-																						></path>
-																					</svg>
-																				{/if}
-																			</div>
-																			<p
-																				class="text-xs text-purple-800 dark:text-purple-200 font-medium"
-																			>
-																				#{customInstructions.indexOf(custom) + 1}
-																			</p>
-																		</div>
-																		<p
-																			class="text-xs text-gray-700 dark:text-gray-300 line-clamp-2"
-																		>
-																			{custom.text}
-																		</p>
-																	</button>
-																	<button
-																		on:click={() => removeCustomInstruction(custom.id)}
-																		class="text-red-500 hover:text-red-700 dark:text-red-400 flex-shrink-0"
-																		title="Remove"
-																	>
+																		{highlight.text.length > 40
+																			? highlight.text.substring(0, 40) + '...'
+																			: highlight.text}
 																		<svg
-																			class="w-3 h-3"
+																			class="w-3 h-3 ml-1"
 																			fill="none"
 																			stroke="currentColor"
 																			viewBox="0 0 24 24"
@@ -6644,110 +6614,674 @@
 																			></path>
 																		</svg>
 																	</button>
-																</div>
+																{/each}
+															</div>
+															<p class="text-xs text-gray-600 dark:text-gray-400 mt-2">
+																Drag over more text to add highlights, or click "Continue" when
+																done.
+															</p>
+														</div>
+													{:else}
+														<div
+															class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
+														>
+															<p class="text-xs text-yellow-800 dark:text-yellow-200">
+																⚠️ Drag over text in the response above to highlight concerns. If
+																this scenario is not relevant, click "Skip Scenario".
+															</p>
+														</div>
+													{/if}
+												</div>
+
+												<!-- Action buttons - Continue disabled when no highlights, only Skip enabled -->
+												<div
+													class="flex space-x-3 pt-2 border-t border-gray-200 dark:border-gray-700"
+												>
+													<button
+														on:click={() => completeStep1(false)}
+														disabled={highlightedTexts1.length === 0}
+														class="flex-1 px-6 py-3 {highlightedTexts1.length > 0
+															? 'bg-green-500 hover:bg-green-600 text-white'
+															: 'bg-gray-400 text-white cursor-not-allowed opacity-50'} font-medium rounded-lg transition-colors flex items-center justify-center space-x-2 disabled:cursor-not-allowed"
+													>
+														<span>Continue</span>
+														{#if highlightedTexts1.length === 0}
+															<span class="text-xs opacity-75">(highlight required)</span>
+														{/if}
+													</button>
+													<button
+														on:click={() => completeStep1(true)}
+														class="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+													>
+														Skip Scenario
+													</button>
+												</div>
+											</div>
+										{/if}
+
+										<!-- Step 2: Assess -->
+										{#if initialDecisionStep === 2}
+											<div class="space-y-4">
+												<div>
+													<div class="flex items-center justify-between mb-2">
+														<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+															Step 2: Explain why this content concerns you
+														</h3>
+														<button
+															on:click={() => navigateToStep(1)}
+															class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200"
+														>
+															<svg
+																class="w-3 h-3 flex-shrink-0"
+																fill="none"
+																stroke="currentColor"
+																viewBox="0 0 24 24"
+															>
+																<path
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																	stroke-width="2"
+																	d="M10 19l-7-7m0 0l7-7m-7 7h18"
+																></path>
+															</svg>
+															<span>Back</span>
+														</button>
+													</div>
+												</div>
+
+												<!-- Concern Rating Likert Scale (before explain why) -->
+												<div class="space-y-4">
+													<div>
+														<label
+															class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+														>
+															To what extent, if any, are you concerned about this interaction? <span
+																class="text-red-500">*</span
+															>
+														</label>
+														<div class="space-y-2">
+															{#each [{ value: 1, label: 'Not concerned at all' }, { value: 2, label: 'Somewhat unconcerned' }, { value: 3, label: 'Neutral' }, { value: 4, label: 'Somewhat concerned' }, { value: 5, label: 'Concerned' }] as option}
+																<label
+																	class="flex items-center p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors {concernLevel ===
+																	option.value
+																		? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'
+																		: ''}"
+																>
+																	<input
+																		type="radio"
+																		name="concernLevel"
+																		value={option.value}
+																		bind:group={concernLevel}
+																		class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+																	/>
+																	<span class="ml-3 text-sm text-gray-700 dark:text-gray-300">
+																		{option.label}
+																	</span>
+																</label>
 															{/each}
 														</div>
 													</div>
-												{/if}
 
-												<!-- Action Buttons -->
-												<div class="flex space-x-3">
+													<!-- Explanation field -->
+													<div>
+														<label
+															class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+														>
+															Explain why this content concerns you <span class="text-red-500"
+																>*</span
+															>
+														</label>
+														<textarea
+															bind:value={concernReason}
+															placeholder="Explain why this content concerns you... (minimum 10 characters)"
+															rows="5"
+															minlength="10"
+															class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none"
+														></textarea>
+													</div>
+												</div>
+
+												<div>
 													<button
-														on:click={applySelectedModerations}
-														disabled={moderationLoading ||
-															(selectedModerations.size === 0 && !attentionCheckSelected) ||
-															attentionCheckProcessing}
-														class="flex-1 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center space-x-2"
+														on:click={completeStep2}
+														disabled={concernLevel === null ||
+															!concernReason.trim() ||
+															concernReason.trim().length < 10}
+														class="w-full px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
 													>
-														{#if moderationLoading}
-															<div
-																class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
-															></div>
-															<span>Creating Version...</span>
-														{:else}
-															<span>Generate New Version</span>
-														{/if}
+														Submit
 													</button>
 												</div>
-											{/if}
-										</div>
-									{/if}
+											</div>
+										{/if}
+
+										<!-- ============================================================================
+						     STEP 3 (MODERATION) - COMMENTED OUT FOR IDENTIFICATION-ONLY EXPERIMENT
+						     This entire block is disabled but preserved for future restoration.
+						     To restore: Change `{#if false && initialDecisionStep === 3}` back to `{#if initialDecisionStep === 3}`
+						     ============================================================================ -->
+										<!-- Step 3: Update -->
+										{#if false && initialDecisionStep === 3}
+											<div class="space-y-4">
+												<div>
+													<div class="flex items-center justify-between mb-2">
+														<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+															Step 3: Moderate
+														</h3>
+														<button
+															on:click={() => navigateToStep(2)}
+															disabled={moderationLoading}
+															class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 disabled:opacity-50"
+														>
+															<svg
+																class="w-3 h-3 flex-shrink-0"
+																fill="none"
+																stroke="currentColor"
+																viewBox="0 0 24 24"
+															>
+																<path
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																	stroke-width="2"
+																	d="M10 19l-7-7m0 0l7-7m-7 7h18"
+																></path>
+															</svg>
+															<span>Back</span>
+														</button>
+													</div>
+													{#if versions.length > 0 && showComparisonView}
+														<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+															Review the moderated version above. You can confirm it or try
+															different strategies.
+														</p>
+													{:else}
+														<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+															How would you like to moderate the content?
+														</p>
+													{/if}
+												</div>
+
+												<!-- Step 3: Satisfaction Check UI (unified panel - always shown when versions exist) -->
+												{#if versions.length > 0 && showComparisonView && !moderationPanelVisible}
+													<div
+														class="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+													>
+														<h4 class="text-base font-semibold text-gray-900 dark:text-white mb-3">
+															How satisfied are you with the updated response?
+														</h4>
+
+														<!-- Satisfaction Likert Scale (1-5) - Required -->
+														<div class="space-y-2">
+															<label
+																class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+															>
+																Satisfaction Level <span class="text-red-500">*</span>
+															</label>
+															{#each [1, 2, 3, 4, 5] as level}
+																<label
+																	class="flex items-center p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors {satisfactionLevel ===
+																	level
+																		? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'
+																		: ''}"
+																>
+																	<input
+																		type="radio"
+																		name="satisfactionLevel"
+																		value={level}
+																		bind:group={satisfactionLevel}
+																		class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+																	/>
+																	<span class="ml-3 text-sm text-gray-700 dark:text-gray-300">
+																		{level === 1
+																			? '1 - Very Dissatisfied'
+																			: level === 2
+																				? '2 - Dissatisfied'
+																				: level === 3
+																					? '3 - Neutral'
+																					: level === 4
+																						? '4 - Satisfied'
+																						: '5 - Very Satisfied'}
+																	</span>
+																</label>
+															{/each}
+														</div>
+
+														<!-- Why field - Always shown, required (minimum 10 characters) -->
+														<div>
+															<label
+																class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+															>
+																Why? <span class="text-red-500">*</span>
+															</label>
+															<textarea
+																bind:value={satisfactionReason}
+																placeholder="Explain your satisfaction level... (minimum 10 characters)"
+																rows="3"
+																minlength="10"
+																class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none"
+															></textarea>
+														</div>
+
+														<!-- Navigation Buttons -->
+														<div
+															class="flex space-x-3 pt-2 border-t border-gray-200 dark:border-gray-700"
+														>
+															<!-- Moderate Again Button -->
+															<button
+																on:click={async () => {
+																	// Validate satisfaction level is set
+																	if (satisfactionLevel === null) {
+																		toast.error('Please select a satisfaction level');
+																		return;
+																	}
+
+																	// Validate reason is filled and meets minimum length
+																	if (!satisfactionReason.trim()) {
+																		toast.error('Please explain your satisfaction level');
+																		return;
+																	}
+
+																	if (satisfactionReason.trim().length < 10) {
+																		toast.error(
+																			'Please provide at least 10 characters in your explanation'
+																		);
+																		return;
+																	}
+
+																	try {
+																		// Save satisfaction check to backend
+																		await submitSatisfactionCheck(
+																			satisfactionLevel,
+																			satisfactionReason,
+																			'try_again'
+																		);
+
+																		// Reset satisfaction state to allow creating new version
+																		satisfactionLevel = null;
+																		satisfactionReason = '';
+																		nextAction = null;
+
+																		// Clear selected moderations to start fresh
+																		selectedModerations = new Set();
+																		customInstructions = [];
+
+																		// Show moderation panel for another iteration
+																		moderationPanelVisible = true;
+																		moderationPanelExpanded = true;
+																		toast.info(
+																			'Select moderation strategies to create another version'
+																		);
+
+																		// Scroll to moderation panel after it opens
+																		setTimeout(() => {
+																			if (moderationPanelElement) {
+																				moderationPanelElement.scrollIntoView({
+																					behavior: 'smooth',
+																					block: 'start'
+																				});
+																			}
+																		}, 100);
+																	} catch (error) {
+																		console.error('Failed to save satisfaction check:', error);
+																		toast.error('Failed to save your response. Please try again.');
+																	}
+																}}
+																disabled={satisfactionLevel === null ||
+																	!satisfactionReason.trim() ||
+																	satisfactionReason.trim().length < 10}
+																class="flex-1 px-6 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+															>
+																Moderate Again
+															</button>
+
+															<!-- Continue to next scenario Button -->
+															<button
+																on:click={async () => {
+																	// Validate satisfaction level is set
+																	if (satisfactionLevel === null) {
+																		toast.error('Please select a satisfaction level');
+																		return;
+																	}
+
+																	// Validate reason is filled and meets minimum length
+																	if (!satisfactionReason.trim()) {
+																		toast.error('Please explain your satisfaction level');
+																		return;
+																	}
+
+																	if (satisfactionReason.trim().length < 10) {
+																		toast.error(
+																			'Please provide at least 10 characters in your explanation'
+																		);
+																		return;
+																	}
+
+																	try {
+																		// Save satisfaction check to backend (this already handles navigation)
+																		await submitSatisfactionCheck(
+																			satisfactionLevel,
+																			satisfactionReason,
+																			'move_on'
+																		);
+																		// submitSatisfactionCheck already handles confirmCurrentVersion() and navigation (lines 2590-2603)
+																	} catch (error) {
+																		console.error('Failed to save satisfaction check:', error);
+																		toast.error('Failed to save your response. Please try again.');
+																	}
+																}}
+																disabled={satisfactionLevel === null ||
+																	!satisfactionReason.trim() ||
+																	satisfactionReason.trim().length < 10}
+																class="flex-1 px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+															>
+																Continue to next scenario
+															</button>
+														</div>
+													</div>
+												{:else}
+													<!-- Strategy instruction and Clear button -->
+													<div class="flex items-center justify-between mb-3">
+														<p class="text-sm text-gray-600 dark:text-gray-400">
+															Choose up to <b>3 strategies</b> to improve the AI's response.
+														</p>
+														{#if selectedModerations.size > 0 || attentionCheckSelected}
+															<button
+																on:click={clearSelections}
+																class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+															>
+																Clear All
+															</button>
+														{/if}
+													</div>
+
+													<!-- Grouped Strategy Options (Legacy validated design) -->
+													<div class="space-y-3 mb-4" bind:this={moderationPanelElement}>
+														{#each Object.entries(moderationOptions) as [category, options]}
+															<div
+																class="border-2 {category === 'Refuse and Remove'
+																	? 'border-red-500 dark:border-red-600'
+																	: category === 'Investigate and Empathize'
+																		? 'border-blue-500 dark:border-blue-600'
+																		: category === 'Correct their Understanding'
+																			? 'border-green-500 dark:border-green-600'
+																			: category === 'Match their Age'
+																				? 'border-yellow-500 dark:border-yellow-600'
+																				: category === 'Defer to Support'
+																					? 'border-purple-500 dark:border-purple-600'
+																					: 'border-pink-500 dark:border-pink-600'} rounded-lg bg-gray-50 dark:bg-gray-800/50"
+															>
+																<!-- Group Header -->
+																<button
+																	on:click={() => toggleGroupExpansion(category)}
+																	class="w-full p-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors rounded-lg"
+																>
+																	<div class="flex items-center justify-between">
+																		<div class="flex items-center">
+																			<span
+																				class="w-3 h-3 rounded-full mr-3 {category ===
+																				'Refuse and Remove'
+																					? 'bg-red-500'
+																					: category === 'Investigate and Empathize'
+																						? 'bg-blue-500'
+																						: category === 'Correct their Understanding'
+																							? 'bg-green-500'
+																							: category === 'Match their Age'
+																								? 'bg-yellow-500'
+																								: category === 'Defer to Support'
+																									? 'bg-purple-500'
+																									: 'bg-pink-500'}"
+																			></span>
+																			<h4 class="text-sm font-bold text-gray-900 dark:text-white">
+																				{category === 'Custom' && showCustomInput
+																					? '✨ Custom (Open)'
+																					: category}
+																			</h4>
+																		</div>
+																		<div class="flex items-center space-x-2">
+																			{#if (category === 'Attention Check' && attentionCheckSelected) || options.some( (option) => selectedModerations.has(option) ) || (category === 'Custom' && customInstructions.length > 0)}
+																				<span
+																					class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full"
+																				>
+																					{#if category === 'Custom'}
+																						{customInstructions.filter((c) =>
+																							selectedModerations.has(c.id)
+																						).length} selected
+																					{:else if category === 'Attention Check'}
+																						{attentionCheckSelected ? 1 : 0} selected
+																					{:else}
+																						{options.filter((option) =>
+																							selectedModerations.has(option)
+																						).length} selected
+																					{/if}
+																				</span>
+																			{/if}
+																			{#if category !== 'Custom' || !showCustomInput}
+																				<svg
+																					class="w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform {expandedGroups.has(
+																						category
+																					) ||
+																					(category === 'Custom' && showCustomInput)
+																						? 'rotate-180'
+																						: ''}"
+																					fill="none"
+																					stroke="currentColor"
+																					viewBox="0 0 24 24"
+																				>
+																					<path
+																						stroke-linecap="round"
+																						stroke-linejoin="round"
+																						stroke-width="2"
+																						d="M19 9l-7 7-7-7"
+																					></path>
+																				</svg>
+																			{:else}
+																				<svg
+																					class="w-5 h-5 text-purple-500 dark:text-purple-400 transition-transform rotate-180"
+																					fill="none"
+																					stroke="currentColor"
+																					viewBox="0 0 24 24"
+																				>
+																					<path
+																						stroke-linecap="round"
+																						stroke-linejoin="round"
+																						stroke-width="2"
+																						d="M19 9l-7 7-7-7"
+																					></path>
+																				</svg>
+																			{/if}
+																		</div>
+																	</div>
+																</button>
+
+																<!-- Group Content (2-column grid with button toggles) -->
+																{#if expandedGroups.has(category) && category !== 'Custom'}
+																	<div class="px-3 pb-3">
+																		<div class="grid grid-cols-2 gap-2">
+																			{#each options as option}
+																				<Tooltip
+																					content={moderationTooltips[option] || ''}
+																					placement="top-end"
+																					className="w-full"
+																					tippyOptions={{ delay: [200, 0] }}
+																				>
+																					<button
+																						on:click={() => toggleModerationSelection(option)}
+																						disabled={moderationLoading}
+																						aria-pressed={option === 'I read the instructions'
+																							? attentionCheckSelected
+																							: selectedModerations.has(option)}
+																						class="p-2 text-xs font-medium text-center rounded-lg transition-all min-h-[40px] flex items-center justify-center {(
+																							option === 'I read the instructions'
+																								? attentionCheckSelected
+																								: selectedModerations.has(option)
+																						)
+																							? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400 shadow-lg'
+																							: 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'} disabled:opacity-50"
+																					>
+																						{option}
+																					</button>
+																				</Tooltip>
+																			{/each}
+																		</div>
+																	</div>
+																{/if}
+
+																<!-- Custom Input Field -->
+																{#if category === 'Custom' && showCustomInput}
+																	<div class="px-3 pb-3 pt-2">
+																		<div class="space-y-2">
+																			<label
+																				class="block text-xs font-medium text-purple-900 dark:text-purple-200"
+																			>
+																				Enter custom moderation instruction:
+																			</label>
+																			<textarea
+																				bind:value={customInstructionInput}
+																				rows="2"
+																				placeholder="E.g., Emphasize problem-solving skills..."
+																				class="w-full px-3 py-2 text-sm border border-purple-300 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+																				on:keydown={(e) => {
+																					if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+																						addCustomInstruction();
+																					} else if (e.key === 'Escape') {
+																						cancelCustomInput();
+																					}
+																				}}
+																			></textarea>
+																			<div class="flex justify-end space-x-2">
+																				<button
+																					on:click={cancelCustomInput}
+																					class="px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+																				>
+																					Cancel
+																				</button>
+																				<button
+																					on:click={addCustomInstruction}
+																					class="px-3 py-1 text-xs font-medium bg-purple-500 hover:bg-purple-600 text-white rounded transition-colors"
+																				>
+																					Add
+																				</button>
+																			</div>
+																		</div>
+																	</div>
+																{/if}
+															</div>
+														{/each}
+													</div>
+
+													<!-- Custom Instructions Display -->
+													{#if customInstructions.length > 0}
+														<div
+															class="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg mb-3"
+														>
+															<h4
+																class="text-xs font-semibold text-purple-900 dark:text-purple-200 mb-2"
+															>
+																Custom Instructions ({customInstructions.length}):
+															</h4>
+															<div class="space-y-2">
+																{#each customInstructions as custom}
+																	<div
+																		class="flex items-start justify-between bg-white dark:bg-purple-900/30 p-2 rounded border-2 {selectedModerations.has(
+																			custom.id
+																		)
+																			? 'border-purple-500'
+																			: 'border-transparent'}"
+																	>
+																		<button
+																			on:click={() => toggleModerationSelection(custom.id)}
+																			class="flex-1 text-left mr-2"
+																		>
+																			<div class="flex items-center space-x-1 mb-1">
+																				<div
+																					class="w-3 h-3 rounded border-2 {selectedModerations.has(
+																						custom.id
+																					)
+																						? 'bg-purple-500 border-purple-500'
+																						: 'border-gray-300 dark:border-gray-600'} flex items-center justify-center"
+																				>
+																					{#if selectedModerations.has(custom.id)}
+																						<svg
+																							class="w-2 h-2 text-white"
+																							fill="none"
+																							stroke="currentColor"
+																							viewBox="0 0 24 24"
+																						>
+																							<path
+																								stroke-linecap="round"
+																								stroke-linejoin="round"
+																								stroke-width="3"
+																								d="M5 13l4 4L19 7"
+																							></path>
+																						</svg>
+																					{/if}
+																				</div>
+																				<p
+																					class="text-xs text-purple-800 dark:text-purple-200 font-medium"
+																				>
+																					#{customInstructions.indexOf(custom) + 1}
+																				</p>
+																			</div>
+																			<p
+																				class="text-xs text-gray-700 dark:text-gray-300 line-clamp-2"
+																			>
+																				{custom.text}
+																			</p>
+																		</button>
+																		<button
+																			on:click={() => removeCustomInstruction(custom.id)}
+																			class="text-red-500 hover:text-red-700 dark:text-red-400 flex-shrink-0"
+																			title="Remove"
+																		>
+																			<svg
+																				class="w-3 h-3"
+																				fill="none"
+																				stroke="currentColor"
+																				viewBox="0 0 24 24"
+																			>
+																				<path
+																					stroke-linecap="round"
+																					stroke-linejoin="round"
+																					stroke-width="2"
+																					d="M6 18L18 6M6 6l12 12"
+																				></path>
+																			</svg>
+																		</button>
+																	</div>
+																{/each}
+															</div>
+														</div>
+													{/if}
+
+													<!-- Action Buttons -->
+													<div class="flex space-x-3">
+														<button
+															on:click={applySelectedModerations}
+															disabled={moderationLoading ||
+																(selectedModerations.size === 0 && !attentionCheckSelected) ||
+																attentionCheckProcessing}
+															class="flex-1 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center space-x-2"
+														>
+															{#if moderationLoading}
+																<div
+																	class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
+																></div>
+																<span>Creating Version...</span>
+															{:else}
+																<span>Generate New Version</span>
+															{/if}
+														</button>
+													</div>
+												{/if}
+											</div>
+										{/if}
+									</div>
 								</div>
 							</div>
-						</div>
-					{/if}
+						{/if}
 
-					<!-- Completion Indicator for identification-only flow (shows after Submit) -->
-					{#if confirmedVersionIndex === 0 && versions.length === 0}
-						<div class="mt-3">
-							<div
-								class="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800"
-							>
-								<div class="flex items-center space-x-2">
-									<svg
-										class="w-4 h-4 text-green-600 dark:text-green-400"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-										></path>
-									</svg>
-									<span class="text-xs font-medium text-green-700 dark:text-green-300">
-										Scenario Completed
-									</span>
-								</div>
-								<button
-									on:click={undoScenarioCompleted}
-									class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
-								>
-									Undo
-								</button>
-							</div>
-						</div>
-					{/if}
-
-					<!-- Not Applicable Indicator (moved from response bubble) -->
-					{#if markedNotApplicable}
-						<div class="mt-3">
-							<div
-								class="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg"
-							>
-								<div class="flex items-center space-x-2">
-									<svg
-										class="w-4 h-4 text-gray-600 dark:text-gray-400"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-										></path>
-									</svg>
-									<span class="text-xs font-medium text-gray-700 dark:text-gray-300">
-										Marked as not applicable
-									</span>
-								</div>
-								<button
-									on:click={unmarkNotApplicable}
-									class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
-								>
-									Undo
-								</button>
-							</div>
-						</div>
-					{/if}
-
-					<!-- Confirmation Indicator moved below the response area -->
-					{#if versions.length > 0 && !showOriginal1 && confirmedVersionIndex !== null}
-						{#if confirmedVersionIndex === currentVersionIndex}
+						<!-- Completion Indicator for identification-only flow (shows after Submit) -->
+						{#if confirmedVersionIndex === 0 && versions.length === 0}
 							<div class="mt-3">
 								<div
 									class="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800"
@@ -6767,423 +7301,498 @@
 											></path>
 										</svg>
 										<span class="text-xs font-medium text-green-700 dark:text-green-300">
-											Scenario Moderated
+											Scenario Completed
 										</span>
 									</div>
 									<button
-										on:click={() => {
-											confirmCurrentVersion();
-											// Confirmation will be saved in the session data
-										}}
+										on:click={undoScenarioCompleted}
 										class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
 									>
-										Edit Moderation
-									</button>
-								</div>
-							</div>
-						{:else}
-							<div class="mt-3">
-								<div
-									class="flex items-center justify-between px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg"
-								>
-									<span class="text-xs font-medium text-gray-600 dark:text-gray-400">
-										Another version is confirmed
-									</span>
-									<button
-										on:click={() => {
-											confirmCurrentVersion(); // Unconfirm to go back
-										}}
-										class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
-									>
-										Back
+										Undo
 									</button>
 								</div>
 							</div>
 						{/if}
-					{/if}
 
-					<!-- Moderation Panel (Legacy - only shown when not in Step 4) -->
-					{#if moderationPanelVisible && initialDecisionStep !== 3}
-						<div
-							class="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
-							bind:this={moderationPanelElement}
-						>
-							<div class="flex items-center justify-between mb-1">
-								<h3 class="text-sm font-semibold text-gray-900 dark:text-white">
-									Select Moderation Strategies
-								</h3>
-								<button
-									on:click={() => navigateToStep(3)}
-									disabled={moderationLoading}
-									class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 disabled:opacity-50"
-								>
-									<svg
-										class="w-3 h-3 flex-shrink-0"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M10 19l-7-7m0 0l7-7m-7 7h18"
-										></path>
-									</svg>
-									<span>Back</span>
-								</button>
-							</div>
-
-							<p class="text-base text-gray-600 dark:text-gray-400 mb-3">
-								Choose up to <b>3 strategies</b> to improve the AI's response. Click on a group to see
-								its strategies, or hover over each option for details.
-							</p>
-
-							<!-- Strategy Count -->
-							<div class="flex items-center justify-end mb-3">
-								{#if selectedModerations.size > 0 || attentionCheckSelected}
-									<button
-										on:click={clearSelections}
-										class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-									>
-										Clear All
-									</button>
-								{/if}
-							</div>
-
-							<!-- Grouped Strategy Options -->
-							<div class="space-y-4 mb-4">
-								{#each Object.entries(moderationOptions) as [category, options]}
-									<div
-										class="border-2 {category === 'Refuse and Remove'
-											? 'border-red-500 dark:border-red-600'
-											: category === 'Investigate and Empathize'
-												? 'border-blue-500 dark:border-blue-600'
-												: category === 'Correct their Understanding'
-													? 'border-green-500 dark:border-green-600'
-													: category === 'Match their Age'
-														? 'border-yellow-500 dark:border-yellow-600'
-														: category === 'Defer to Support'
-															? 'border-purple-500 dark:border-purple-600'
-															: 'border-pink-500 dark:border-pink-600'} rounded-lg bg-gray-50 dark:bg-gray-800/50"
-									>
-										<!-- Group Header (Always Visible) -->
-										<button
-											on:click={() => toggleGroupExpansion(category)}
-											class="w-full p-4 text-left hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors rounded-lg"
-										>
-											<div class="flex items-center justify-between">
-												<div class="flex items-center">
-													<span
-														class="w-3 h-3 rounded-full mr-3 {category === 'Refuse and Remove'
-															? 'bg-red-500'
-															: category === 'Investigate and Empathize'
-																? 'bg-blue-500'
-																: category === 'Correct their Understanding'
-																	? 'bg-green-500'
-																	: category === 'Match their Age'
-																		? 'bg-yellow-500'
-																		: category === 'Defer to Support'
-																			? 'bg-purple-500'
-																			: 'bg-pink-500'}"
-													></span>
-													<h4 class="text-base font-bold text-gray-900 dark:text-white">
-														{category === 'Custom' && showCustomInput
-															? '✨ Custom (Open)'
-															: category}
-													</h4>
-												</div>
-												<div class="flex items-center space-x-2">
-													{#if (category === 'Attention Check' && attentionCheckSelected) || options.some( (option) => selectedModerations.has(option) ) || (category === 'Custom' && customInstructions.length > 0)}
-														<span
-															class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full"
-														>
-															{#if category === 'Custom'}
-																{customInstructions.filter((c) => selectedModerations.has(c.id))
-																	.length} selected
-															{:else if category === 'Attention Check'}
-																{attentionCheckSelected ? 1 : 0} selected
-															{:else}
-																{options.filter((option) => selectedModerations.has(option)).length} selected
-															{/if}
-														</span>
-													{/if}
-													{#if category !== 'Custom' || !showCustomInput}
-														<svg
-															class="w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform {expandedGroups.has(
-																category
-															) ||
-															(category === 'Custom' && showCustomInput)
-																? 'rotate-180'
-																: ''}"
-															fill="none"
-															stroke="currentColor"
-															viewBox="0 0 24 24"
-														>
-															<path
-																stroke-linecap="round"
-																stroke-linejoin="round"
-																stroke-width="2"
-																d="M19 9l-7 7-7-7"
-															></path>
-														</svg>
-													{:else}
-														<svg
-															class="w-5 h-5 text-purple-500 dark:text-purple-400 transition-transform rotate-180"
-															fill="none"
-															stroke="currentColor"
-															viewBox="0 0 24 24"
-														>
-															<path
-																stroke-linecap="round"
-																stroke-linejoin="round"
-																stroke-width="2"
-																d="M19 9l-7 7-7-7"
-															></path>
-														</svg>
-													{/if}
-												</div>
-											</div>
-										</button>
-
-										<!-- Group Content (Expandable) - Skip for Custom category -->
-										{#if expandedGroups.has(category) && category !== 'Custom'}
-											<div class="px-4 pb-4">
-												<div class="grid grid-cols-2 gap-3">
-													{#each options as option}
-														<Tooltip
-															content={moderationTooltips[option] || ''}
-															placement="top-end"
-															className="w-full"
-															tippyOptions={{ delay: [200, 0] }}
-														>
-															<button
-																on:click={() => toggleModerationSelection(option)}
-																disabled={moderationLoading}
-																aria-pressed={option === 'I read the instructions'
-																	? attentionCheckSelected
-																	: selectedModerations.has(option)}
-																class="p-3 text-sm font-medium text-center rounded-lg transition-all min-h-[50px] flex items-center justify-center {(
-																	option === 'I read the instructions'
-																		? attentionCheckSelected
-																		: selectedModerations.has(option)
-																)
-																	? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400 shadow-lg'
-																	: 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'} disabled:opacity-50"
-															>
-																{option}
-															</button>
-														</Tooltip>
-													{/each}
-												</div>
-											</div>
-										{/if}
-
-										<!-- Custom Input Field - Shows directly when Custom category is clicked -->
-										{#if category === 'Custom' && showCustomInput}
-											<div class="px-4 pb-4 pt-2">
-												<div class="space-y-3">
-													<label
-														class="block text-sm font-medium text-purple-900 dark:text-purple-200"
-													>
-														Enter custom moderation instruction:
-													</label>
-													<textarea
-														bind:value={customInstructionInput}
-														rows="3"
-														placeholder="E.g., Emphasize problem-solving skills, Include mindfulness techniques, Focus on building independence..."
-														class="w-full px-3 py-2 border border-purple-300 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-														on:keydown={(e) => {
-															if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-																addCustomInstruction();
-															} else if (e.key === 'Escape') {
-																cancelCustomInput();
-															}
-														}}
-													></textarea>
-													<div class="flex justify-end">
-														<div class="flex space-x-2">
-															<button
-																on:click={cancelCustomInput}
-																class="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-															>
-																Cancel
-															</button>
-															<button
-																on:click={addCustomInstruction}
-																class="px-3 py-1.5 text-sm font-medium bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors"
-															>
-																Add
-															</button>
-														</div>
-													</div>
-												</div>
-											</div>
-										{/if}
-									</div>
-								{/each}
-							</div>
-
-							<!-- Custom Instructions -->
-							{#if customInstructions.length > 0}
+						<!-- Not Applicable Indicator (moved from response bubble) -->
+						{#if markedNotApplicable}
+							<div class="mt-3">
 								<div
-									class="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg mb-3"
+									class="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg"
 								>
-									<h4 class="text-xs font-semibold text-purple-900 dark:text-purple-200 mb-2">
-										Custom Instructions ({customInstructions.length}):
-									</h4>
-									<div class="space-y-2">
-										{#each customInstructions as custom}
-											<div
-												class="flex items-start justify-between bg-white dark:bg-purple-900/30 p-2 rounded border-2 {selectedModerations.has(
-													custom.id
-												)
-													? 'border-purple-500'
-													: 'border-transparent'}"
+									<div class="flex items-center space-x-2">
+										<svg
+											class="w-4 h-4 text-gray-600 dark:text-gray-400"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+											></path>
+										</svg>
+										<span class="text-xs font-medium text-gray-700 dark:text-gray-300">
+											Marked as not applicable
+										</span>
+									</div>
+									<button
+										on:click={unmarkNotApplicable}
+										class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+									>
+										Undo
+									</button>
+								</div>
+							</div>
+						{/if}
+
+						<!-- Confirmation Indicator moved below the response area -->
+						{#if versions.length > 0 && !showOriginal1 && confirmedVersionIndex !== null}
+							{#if confirmedVersionIndex === currentVersionIndex}
+								<div class="mt-3">
+									<div
+										class="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800"
+									>
+										<div class="flex items-center space-x-2">
+											<svg
+												class="w-4 h-4 text-green-600 dark:text-green-400"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
 											>
-												<button
-													on:click={() => toggleModerationSelection(custom.id)}
-													class="flex-1 text-left mr-2"
-												>
-													<div class="flex items-center space-x-1 mb-1">
-														<div
-															class="w-3 h-3 rounded border-2 {selectedModerations.has(custom.id)
-																? 'bg-purple-500 border-purple-500'
-																: 'border-gray-300 dark:border-gray-600'} flex items-center justify-center"
-														>
-															{#if selectedModerations.has(custom.id)}
-																<svg
-																	class="w-2 h-2 text-white"
-																	fill="none"
-																	stroke="currentColor"
-																	viewBox="0 0 24 24"
-																>
-																	<path
-																		stroke-linecap="round"
-																		stroke-linejoin="round"
-																		stroke-width="3"
-																		d="M5 13l4 4L19 7"
-																	></path>
-																</svg>
-															{/if}
-														</div>
-														<p class="text-xs text-purple-800 dark:text-purple-200 font-medium">
-															#{customInstructions.indexOf(custom) + 1}
-														</p>
-													</div>
-													<p class="text-xs text-gray-700 dark:text-gray-300 line-clamp-2">
-														{custom.text}
-													</p>
-												</button>
-												<button
-													on:click={() => removeCustomInstruction(custom.id)}
-													class="text-red-500 hover:text-red-700 dark:text-red-400 flex-shrink-0"
-													title="Remove"
-												>
-													<svg
-														class="w-3 h-3"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															stroke-width="2"
-															d="M6 18L18 6M6 6l12 12"
-														></path>
-													</svg>
-												</button>
-											</div>
-										{/each}
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+												></path>
+											</svg>
+											<span class="text-xs font-medium text-green-700 dark:text-green-300">
+												Scenario Moderated
+											</span>
+										</div>
+										<button
+											on:click={() => {
+												confirmCurrentVersion();
+												// Confirmation will be saved in the session data
+											}}
+											class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+										>
+											Edit Moderation
+										</button>
+									</div>
+								</div>
+							{:else}
+								<div class="mt-3">
+									<div
+										class="flex items-center justify-between px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg"
+									>
+										<span class="text-xs font-medium text-gray-600 dark:text-gray-400">
+											Another version is confirmed
+										</span>
+										<button
+											on:click={() => {
+												confirmCurrentVersion(); // Unconfirm to go back
+											}}
+											class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+										>
+											Back
+										</button>
 									</div>
 								</div>
 							{/if}
+						{/if}
 
-							<!-- Apply Button -->
-							<button
-								on:click={applySelectedModerations}
-								disabled={moderationLoading ||
-									(selectedModerations.size === 0 && !attentionCheckSelected) ||
-									(selectedModerations.size === 0 && attentionCheckSelected) ||
-									attentionCheckProcessing}
-								class="w-full px-4 py-2.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center space-x-2"
+						<!-- Moderation Panel (Legacy - only shown when not in Step 4) -->
+						{#if moderationPanelVisible && initialDecisionStep !== 3}
+							<div
+								class="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+								bind:this={moderationPanelElement}
 							>
-								{#if moderationLoading}
+								<div class="flex items-center justify-between mb-1">
+									<h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+										Select Moderation Strategies
+									</h3>
+									<button
+										on:click={() => navigateToStep(3)}
+										disabled={moderationLoading}
+										class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 disabled:opacity-50"
+									>
+										<svg
+											class="w-3 h-3 flex-shrink-0"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M10 19l-7-7m0 0l7-7m-7 7h18"
+											></path>
+										</svg>
+										<span>Back</span>
+									</button>
+								</div>
+
+								<p class="text-base text-gray-600 dark:text-gray-400 mb-3">
+									Choose up to <b>3 strategies</b> to improve the AI's response. Click on a group to see
+									its strategies, or hover over each option for details.
+								</p>
+
+								<!-- Strategy Count -->
+								<div class="flex items-center justify-end mb-3">
+									{#if selectedModerations.size > 0 || attentionCheckSelected}
+										<button
+											on:click={clearSelections}
+											class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+										>
+											Clear All
+										</button>
+									{/if}
+								</div>
+
+								<!-- Grouped Strategy Options -->
+								<div class="space-y-4 mb-4">
+									{#each Object.entries(moderationOptions) as [category, options]}
+										<div
+											class="border-2 {category === 'Refuse and Remove'
+												? 'border-red-500 dark:border-red-600'
+												: category === 'Investigate and Empathize'
+													? 'border-blue-500 dark:border-blue-600'
+													: category === 'Correct their Understanding'
+														? 'border-green-500 dark:border-green-600'
+														: category === 'Match their Age'
+															? 'border-yellow-500 dark:border-yellow-600'
+															: category === 'Defer to Support'
+																? 'border-purple-500 dark:border-purple-600'
+																: 'border-pink-500 dark:border-pink-600'} rounded-lg bg-gray-50 dark:bg-gray-800/50"
+										>
+											<!-- Group Header (Always Visible) -->
+											<button
+												on:click={() => toggleGroupExpansion(category)}
+												class="w-full p-4 text-left hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors rounded-lg"
+											>
+												<div class="flex items-center justify-between">
+													<div class="flex items-center">
+														<span
+															class="w-3 h-3 rounded-full mr-3 {category === 'Refuse and Remove'
+																? 'bg-red-500'
+																: category === 'Investigate and Empathize'
+																	? 'bg-blue-500'
+																	: category === 'Correct their Understanding'
+																		? 'bg-green-500'
+																		: category === 'Match their Age'
+																			? 'bg-yellow-500'
+																			: category === 'Defer to Support'
+																				? 'bg-purple-500'
+																				: 'bg-pink-500'}"
+														></span>
+														<h4 class="text-base font-bold text-gray-900 dark:text-white">
+															{category === 'Custom' && showCustomInput
+																? '✨ Custom (Open)'
+																: category}
+														</h4>
+													</div>
+													<div class="flex items-center space-x-2">
+														{#if (category === 'Attention Check' && attentionCheckSelected) || options.some( (option) => selectedModerations.has(option) ) || (category === 'Custom' && customInstructions.length > 0)}
+															<span
+																class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full"
+															>
+																{#if category === 'Custom'}
+																	{customInstructions.filter((c) => selectedModerations.has(c.id))
+																		.length} selected
+																{:else if category === 'Attention Check'}
+																	{attentionCheckSelected ? 1 : 0} selected
+																{:else}
+																	{options.filter((option) => selectedModerations.has(option))
+																		.length} selected
+																{/if}
+															</span>
+														{/if}
+														{#if category !== 'Custom' || !showCustomInput}
+															<svg
+																class="w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform {expandedGroups.has(
+																	category
+																) ||
+																(category === 'Custom' && showCustomInput)
+																	? 'rotate-180'
+																	: ''}"
+																fill="none"
+																stroke="currentColor"
+																viewBox="0 0 24 24"
+															>
+																<path
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																	stroke-width="2"
+																	d="M19 9l-7 7-7-7"
+																></path>
+															</svg>
+														{:else}
+															<svg
+																class="w-5 h-5 text-purple-500 dark:text-purple-400 transition-transform rotate-180"
+																fill="none"
+																stroke="currentColor"
+																viewBox="0 0 24 24"
+															>
+																<path
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																	stroke-width="2"
+																	d="M19 9l-7 7-7-7"
+																></path>
+															</svg>
+														{/if}
+													</div>
+												</div>
+											</button>
+
+											<!-- Group Content (Expandable) - Skip for Custom category -->
+											{#if expandedGroups.has(category) && category !== 'Custom'}
+												<div class="px-4 pb-4">
+													<div class="grid grid-cols-2 gap-3">
+														{#each options as option}
+															<Tooltip
+																content={moderationTooltips[option] || ''}
+																placement="top-end"
+																className="w-full"
+																tippyOptions={{ delay: [200, 0] }}
+															>
+																<button
+																	on:click={() => toggleModerationSelection(option)}
+																	disabled={moderationLoading}
+																	aria-pressed={option === 'I read the instructions'
+																		? attentionCheckSelected
+																		: selectedModerations.has(option)}
+																	class="p-3 text-sm font-medium text-center rounded-lg transition-all min-h-[50px] flex items-center justify-center {(
+																		option === 'I read the instructions'
+																			? attentionCheckSelected
+																			: selectedModerations.has(option)
+																	)
+																		? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400 shadow-lg'
+																		: 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'} disabled:opacity-50"
+																>
+																	{option}
+																</button>
+															</Tooltip>
+														{/each}
+													</div>
+												</div>
+											{/if}
+
+											<!-- Custom Input Field - Shows directly when Custom category is clicked -->
+											{#if category === 'Custom' && showCustomInput}
+												<div class="px-4 pb-4 pt-2">
+													<div class="space-y-3">
+														<label
+															class="block text-sm font-medium text-purple-900 dark:text-purple-200"
+														>
+															Enter custom moderation instruction:
+														</label>
+														<textarea
+															bind:value={customInstructionInput}
+															rows="3"
+															placeholder="E.g., Emphasize problem-solving skills, Include mindfulness techniques, Focus on building independence..."
+															class="w-full px-3 py-2 border border-purple-300 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+															on:keydown={(e) => {
+																if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+																	addCustomInstruction();
+																} else if (e.key === 'Escape') {
+																	cancelCustomInput();
+																}
+															}}
+														></textarea>
+														<div class="flex justify-end">
+															<div class="flex space-x-2">
+																<button
+																	on:click={cancelCustomInput}
+																	class="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+																>
+																	Cancel
+																</button>
+																<button
+																	on:click={addCustomInstruction}
+																	class="px-3 py-1.5 text-sm font-medium bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors"
+																>
+																	Add
+																</button>
+															</div>
+														</div>
+													</div>
+												</div>
+											{/if}
+										</div>
+									{/each}
+								</div>
+
+								<!-- Custom Instructions -->
+								{#if customInstructions.length > 0}
 									<div
-										class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
-									></div>
-									<span>Creating Version...</span>
-								{:else}
-									<span>Generate New Version</span>
+										class="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg mb-3"
+									>
+										<h4 class="text-xs font-semibold text-purple-900 dark:text-purple-200 mb-2">
+											Custom Instructions ({customInstructions.length}):
+										</h4>
+										<div class="space-y-2">
+											{#each customInstructions as custom}
+												<div
+													class="flex items-start justify-between bg-white dark:bg-purple-900/30 p-2 rounded border-2 {selectedModerations.has(
+														custom.id
+													)
+														? 'border-purple-500'
+														: 'border-transparent'}"
+												>
+													<button
+														on:click={() => toggleModerationSelection(custom.id)}
+														class="flex-1 text-left mr-2"
+													>
+														<div class="flex items-center space-x-1 mb-1">
+															<div
+																class="w-3 h-3 rounded border-2 {selectedModerations.has(custom.id)
+																	? 'bg-purple-500 border-purple-500'
+																	: 'border-gray-300 dark:border-gray-600'} flex items-center justify-center"
+															>
+																{#if selectedModerations.has(custom.id)}
+																	<svg
+																		class="w-2 h-2 text-white"
+																		fill="none"
+																		stroke="currentColor"
+																		viewBox="0 0 24 24"
+																	>
+																		<path
+																			stroke-linecap="round"
+																			stroke-linejoin="round"
+																			stroke-width="3"
+																			d="M5 13l4 4L19 7"
+																		></path>
+																	</svg>
+																{/if}
+															</div>
+															<p class="text-xs text-purple-800 dark:text-purple-200 font-medium">
+																#{customInstructions.indexOf(custom) + 1}
+															</p>
+														</div>
+														<p class="text-xs text-gray-700 dark:text-gray-300 line-clamp-2">
+															{custom.text}
+														</p>
+													</button>
+													<button
+														on:click={() => removeCustomInstruction(custom.id)}
+														class="text-red-500 hover:text-red-700 dark:text-red-400 flex-shrink-0"
+														title="Remove"
+													>
+														<svg
+															class="w-3 h-3"
+															fill="none"
+															stroke="currentColor"
+															viewBox="0 0 24 24"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="2"
+																d="M6 18L18 6M6 6l12 12"
+															></path>
+														</svg>
+													</button>
+												</div>
+											{/each}
+										</div>
+									</div>
 								{/if}
-							</button>
-						</div>
-					{/if}
 
-					<!-- Footer with Navigation -->
-					<div
-						class="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4"
-					>
-						<div class="flex items-center justify-between">
-							<!-- Previous Scenario Button -->
-							{#if selectedScenarioIndex > 0}
+								<!-- Apply Button -->
 								<button
-									on:click={() => loadScenario(selectedScenarioIndex - 1)}
-									class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center space-x-2"
+									on:click={applySelectedModerations}
+									disabled={moderationLoading ||
+										(selectedModerations.size === 0 && !attentionCheckSelected) ||
+										(selectedModerations.size === 0 && attentionCheckSelected) ||
+										attentionCheckProcessing}
+									class="w-full px-4 py-2.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center space-x-2"
 								>
-									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M15 19l-7-7 7-7"
-										></path>
-									</svg>
-									<span>Previous</span>
+									{#if moderationLoading}
+										<div
+											class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
+										></div>
+										<span>Creating Version...</span>
+									{:else}
+										<span>Generate New Version</span>
+									{/if}
 								</button>
-							{:else}
-								<div></div>
-							{/if}
+							</div>
+						{/if}
 
-							<!-- Next Scenario or Done Button -->
-							{#if selectedScenarioIndex < scenarioList.length - 1}
-								<button
-									on:click={() => loadScenario(selectedScenarioIndex + 1)}
-									class="px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center space-x-2 {currentScenarioCompleted
-										? 'bg-green-500 text-white hover:bg-green-600 shadow-lg hover:shadow-xl'
-										: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
-								>
-									<span>Next</span>
-									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M9 5l7 7-7 7"
-										></path>
-									</svg>
-								</button>
-							{:else if currentScenarioCompleted}
-								<button
-									on:click={completeModeration}
-									class="px-6 py-2 text-sm font-medium rounded-lg transition-all shadow-lg bg-purple-500 text-white hover:bg-purple-600 flex items-center space-x-2"
-								>
-									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M5 13l4 4L19 7"
-										></path>
-									</svg>
-									<span>Done</span>
-								</button>
-							{/if}
+						<!-- Footer with Navigation -->
+						<div
+							class="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4"
+						>
+							<div class="flex items-center justify-between">
+								<!-- Previous Scenario Button -->
+								{#if selectedScenarioIndex > 0}
+									<button
+										on:click={() => loadScenario(selectedScenarioIndex - 1)}
+										class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center space-x-2"
+									>
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M15 19l-7-7 7-7"
+											></path>
+										</svg>
+										<span>Previous</span>
+									</button>
+								{:else}
+									<div></div>
+								{/if}
+
+								<!-- Next Scenario or Done Button -->
+								{#if selectedScenarioIndex < scenarioList.length - 1}
+									<button
+										on:click={() => loadScenario(selectedScenarioIndex + 1)}
+										class="px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center space-x-2 {currentScenarioCompleted
+											? 'bg-green-500 text-white hover:bg-green-600 shadow-lg hover:shadow-xl'
+											: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+									>
+										<span>Next</span>
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M9 5l7 7-7 7"
+											></path>
+										</svg>
+									</button>
+								{:else}
+									<!-- Last scenario: always show Done; disabled until current scenario is completed -->
+									<button
+										on:click={completeModeration}
+										disabled={!currentScenarioCompleted}
+										class="px-6 py-2 text-sm font-medium rounded-lg transition-all flex items-center space-x-2 {currentScenarioCompleted
+											? 'shadow-lg bg-purple-500 text-white hover:bg-purple-600 cursor-pointer'
+											: 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'}"
+									>
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M5 13l4 4L19 7"
+											></path>
+										</svg>
+										<span>Done</span>
+									</button>
+								{/if}
+							</div>
 						</div>
 					</div>
 				</div>
-			</div>
+			{/if}
 		</div>
 
 		<!-- Custom Instruction Modal - REMOVED: Now using inline input -->

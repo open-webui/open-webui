@@ -1,17 +1,17 @@
 {
-  "name": "Open WebUI KidsGPT",
-  "description": "Open WebUI with KidsGPT modifications",
-  "buildpacks": [
-    {
-      "url": "heroku/nodejs"
-    },
-    {
-      "url": "heroku/python"
-    }
-  ],
-  "formation": {
-    "web": {
-      "quantity": 1
-    }
-  }
+	"name": "Open WebUI KidsGPT",
+	"description": "Open WebUI with KidsGPT modifications",
+	"buildpacks": [
+		{
+			"url": "heroku/nodejs"
+		},
+		{
+			"url": "heroku/python"
+		}
+	],
+	"formation": {
+		"web": {
+			"quantity": 1
+		}
+	}
 }

@@ -36,7 +36,9 @@ def upgrade() -> None:
     if "info_json" in columns and "info" not in columns:
         op.execute(sa.text('ALTER TABLE "user" RENAME COLUMN info_json TO info'))
     if "settings_json" in columns and "settings" not in columns:
-        op.execute(sa.text('ALTER TABLE "user" RENAME COLUMN settings_json TO settings'))
+        op.execute(
+            sa.text('ALTER TABLE "user" RENAME COLUMN settings_json TO settings')
+        )
 
 
 def downgrade() -> None:

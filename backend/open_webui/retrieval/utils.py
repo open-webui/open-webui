@@ -11,15 +11,32 @@ import time
 import re
 
 from urllib.parse import quote
-from huggingface_hub import snapshot_download
-from langchain_classic.retrievers import (
-    ContextualCompressionRetriever,
-    EnsembleRetriever,
-)
 
-from langchain_community.retrievers import BM25Retriever
 
-from langchain_core.documents import Document
+# Lazy import huggingface_hub for Heroku slug size
+def snapshot_download(*args, **kwargs):
+    from huggingface_hub import snapshot_download as _snapshot_download
+
+    return _snapshot_download(*args, **kwargs)
+
+
+# Lazy imports for langchain (removed from requirements for Heroku slug size)
+def _get_langchain_imports():
+    from langchain_classic.retrievers import (
+        ContextualCompressionRetriever,
+        EnsembleRetriever,
+    )
+    from langchain_community.retrievers import BM25Retriever
+    from langchain_core.documents import Document
+
+    return ContextualCompressionRetriever, EnsembleRetriever, BM25Retriever, Document
+
+
+# Will be set on first use
+ContextualCompressionRetriever = None
+EnsembleRetriever = None
+BM25Retriever = None
+Document = None
 
 from open_webui.config import VECTOR_DB
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
@@ -58,8 +75,32 @@ log = logging.getLogger(__name__)
 
 from typing import Any
 
-from langchain_core.callbacks import CallbackManagerForRetrieverRun
-from langchain_core.retrievers import BaseRetriever
+
+# Lazy imports for langchain (removed from requirements for Heroku slug size)
+def _get_langchain_core_imports():
+    try:
+        from langchain_core.callbacks import CallbackManagerForRetrieverRun
+        from langchain_core.retrievers import BaseRetriever
+
+        return CallbackManagerForRetrieverRun, BaseRetriever
+    except ImportError:
+        # If langchain is not available, return None
+        return None, None
+
+
+CallbackManagerForRetrieverRun = None
+BaseRetriever = None
+
+# Try to import BaseRetriever at module load time
+try:
+    CallbackManagerForRetrieverRun, BaseRetriever = _get_langchain_core_imports()
+except Exception as e:
+    # If import fails, BaseRetriever will remain None
+    import logging
+
+    log = logging.getLogger(__name__)
+    log.warning(f"Failed to import BaseRetriever: {e}")
+    pass
 
 
 def is_youtube_url(url: str) -> bool:
@@ -90,51 +131,62 @@ def get_content_from_url(request, url: str) -> str:
     return content, docs
 
 
-class VectorSearchRetriever(BaseRetriever):
-    collection_name: Any
-    embedding_function: Any
-    top_k: int
+# Only define VectorSearchRetriever if BaseRetriever is available
+if BaseRetriever is not None:
 
-    def _get_relevant_documents(
-        self, query: str, *, run_manager: CallbackManagerForRetrieverRun
-    ) -> list[Document]:
-        """Get documents relevant to a query.
+    class VectorSearchRetriever(BaseRetriever):
+        collection_name: Any
+        embedding_function: Any
+        top_k: int
 
-        Args:
-            query: String to find relevant documents for.
-            run_manager: The callback handler to use.
+        def _get_relevant_documents(
+            self, query: str, *, run_manager: CallbackManagerForRetrieverRun
+        ) -> list[Document]:
+            """Get documents relevant to a query.
 
-        Returns:
-            List of relevant documents.
-        """
-        return []
+            Args:
+                query: String to find relevant documents for.
+                run_manager: The callback handler to use.
 
-    async def _aget_relevant_documents(
-        self,
-        query: str,
-        *,
-        run_manager: CallbackManagerForRetrieverRun,
-    ) -> list[Document]:
-        embedding = await self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
-        result = VECTOR_DB_CLIENT.search(
-            collection_name=self.collection_name,
-            vectors=[embedding],
-            limit=self.top_k,
-        )
+            Returns:
+                List of relevant documents.
+            """
+            return []
 
-        ids = result.ids[0]
-        metadatas = result.metadatas[0]
-        documents = result.documents[0]
-
-        results = []
-        for idx in range(len(ids)):
-            results.append(
-                Document(
-                    metadata=metadatas[idx],
-                    page_content=documents[idx],
-                )
+        async def _aget_relevant_documents(
+            self,
+            query: str,
+            *,
+            run_manager: CallbackManagerForRetrieverRun,
+        ) -> list[Document]:
+            embedding = await self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
+            result = VECTOR_DB_CLIENT.search(
+                collection_name=self.collection_name,
+                vectors=[embedding],
+                limit=self.top_k,
             )
-        return results
+
+            ids = result.ids[0]
+            metadatas = result.metadatas[0]
+            documents = result.documents[0]
+
+            results = []
+            for idx in range(len(ids)):
+                results.append(
+                    Document(
+                        metadata=metadatas[idx],
+                        page_content=documents[idx],
+                    )
+                )
+            return results
+
+else:
+    # Create a dummy class if BaseRetriever is not available
+    class VectorSearchRetriever:
+        def __init__(self, *args, **kwargs):
+            raise ImportError(
+                "langchain_core.retrievers.BaseRetriever is not available. Please install langchain-core."
+            )
 
 
 def query_doc(
@@ -1254,86 +1306,119 @@ def get_model_path(model: str, update_model: bool = False):
 import operator
 from typing import Optional, Sequence
 
-from langchain_core.callbacks import Callbacks
-from langchain_core.documents import BaseDocumentCompressor, Document
+# Lazy imports (already handled above)
+# from langchain_core.callbacks import Callbacks
+# from langchain_core.documents import BaseDocumentCompressor, Document
+Callbacks = None
+BaseDocumentCompressor = None
+# Document already defined above
 
+# Try to import BaseDocumentCompressor at module load time
+try:
+    from langchain_core.documents import (
+        BaseDocumentCompressor as _BaseDocumentCompressor,
+    )
 
-class RerankCompressor(BaseDocumentCompressor):
-    embedding_function: Any
-    top_n: int
-    reranking_function: Any
-    r_score: float
+    BaseDocumentCompressor = _BaseDocumentCompressor
+except ImportError:
+    import logging
 
-    class Config:
-        extra = "forbid"
-        arbitrary_types_allowed = True
+    log = logging.getLogger(__name__)
+    log.warning("Failed to import BaseDocumentCompressor from langchain_core.documents")
+    BaseDocumentCompressor = None
 
-    def compress_documents(
-        self,
-        documents: Sequence[Document],
-        query: str,
-        callbacks: Optional[Callbacks] = None,
-    ) -> Sequence[Document]:
-        """Compress retrieved documents given the query context.
+# Only define RerankCompressor if BaseDocumentCompressor is available
+if BaseDocumentCompressor is not None:
 
-        Args:
-            documents: The retrieved documents.
-            query: The query context.
-            callbacks: Optional callbacks to run during compression.
+    class RerankCompressor(BaseDocumentCompressor):
+        embedding_function: Any
+        top_n: int
+        reranking_function: Any
+        r_score: float
 
-        Returns:
-            The compressed documents.
+        class Config:
+            extra = "forbid"
+            arbitrary_types_allowed = True
 
-        """
-        return []
+        def compress_documents(
+            self,
+            documents: Sequence[Document],
+            query: str,
+            callbacks: Optional[Callbacks] = None,
+        ) -> Sequence[Document]:
+            """Compress retrieved documents given the query context.
 
-    async def acompress_documents(
-        self,
-        documents: Sequence[Document],
-        query: str,
-        callbacks: Optional[Callbacks] = None,
-    ) -> Sequence[Document]:
-        reranking = self.reranking_function is not None
+            Args:
+                documents: The retrieved documents.
+                query: The query context.
+                callbacks: Optional callbacks to run during compression.
 
-        scores = None
-        if reranking:
-            scores = await asyncio.to_thread(self.reranking_function, query, documents)
-        else:
-            from sentence_transformers import util
+            Returns:
+                The compressed documents.
 
-            query_embedding = await self.embedding_function(
-                query, RAG_EMBEDDING_QUERY_PREFIX
-            )
-            document_embedding = await self.embedding_function(
-                [doc.page_content for doc in documents], RAG_EMBEDDING_CONTENT_PREFIX
-            )
-            scores = util.cos_sim(query_embedding, document_embedding)[0]
+            """
+            return []
 
-        if scores is not None:
-            docs_with_scores = list(
-                zip(
-                    documents,
-                    scores.tolist() if not isinstance(scores, list) else scores,
+        async def acompress_documents(
+            self,
+            documents: Sequence[Document],
+            query: str,
+            callbacks: Optional[Callbacks] = None,
+        ) -> Sequence[Document]:
+            reranking = self.reranking_function is not None
+
+            scores = None
+            if reranking:
+                scores = await asyncio.to_thread(
+                    self.reranking_function, query, documents
                 )
-            )
-            if self.r_score:
-                docs_with_scores = [
-                    (d, s) for d, s in docs_with_scores if s >= self.r_score
-                ]
+            else:
+                from sentence_transformers import util
 
-            result = sorted(docs_with_scores, key=operator.itemgetter(1), reverse=True)
-            final_results = []
-            for doc, doc_score in result[: self.top_n]:
-                metadata = doc.metadata
-                metadata["score"] = doc_score
-                doc = Document(
-                    page_content=doc.page_content,
-                    metadata=metadata,
+                query_embedding = await self.embedding_function(
+                    query, RAG_EMBEDDING_QUERY_PREFIX
                 )
-                final_results.append(doc)
-            return final_results
-        else:
-            log.warning(
-                "No valid scores found, check your reranking function. Returning original documents."
+                document_embedding = await self.embedding_function(
+                    [doc.page_content for doc in documents],
+                    RAG_EMBEDDING_CONTENT_PREFIX,
+                )
+                scores = util.cos_sim(query_embedding, document_embedding)[0]
+
+            if scores is not None:
+                docs_with_scores = list(
+                    zip(
+                        documents,
+                        scores.tolist() if not isinstance(scores, list) else scores,
+                    )
+                )
+                if self.r_score:
+                    docs_with_scores = [
+                        (d, s) for d, s in docs_with_scores if s >= self.r_score
+                    ]
+
+                result = sorted(
+                    docs_with_scores, key=operator.itemgetter(1), reverse=True
+                )
+                final_results = []
+                for doc, doc_score in result[: self.top_n]:
+                    metadata = doc.metadata
+                    metadata["score"] = doc_score
+                    doc = Document(
+                        page_content=doc.page_content,
+                        metadata=metadata,
+                    )
+                    final_results.append(doc)
+                return final_results
+            else:
+                log.warning(
+                    "No valid scores found, check your reranking function. Returning original documents."
+                )
+                return documents
+
+else:
+    # Create a dummy class if BaseDocumentCompressor is not available
+    class RerankCompressor:
+        def __init__(self, *args, **kwargs):
+            raise ImportError(
+                "langchain_core.documents.BaseDocumentCompressor is not available. Please install langchain-core."
             )
-            return documents

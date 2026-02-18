@@ -365,8 +365,7 @@
 							<div class="flex justify-end">
 								<button
 									on:click={() => {
-										// Update assignment step and proceed to next step
-										localStorage.setItem('assignmentStep', '2');
+										window.dispatchEvent(new Event('workflow-updated'));
 										// Navigate to chat page and trigger parent mode
 										window.location.href = '/';
 										// Set a flag to trigger parent mode after page load

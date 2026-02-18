@@ -84,44 +84,11 @@
 				} else if (userType === 'admin') {
 					redirectPath = '/admin/users';
 				} else if (userType === 'interviewee') {
-					// For interviewees, fetch workflow state
+					// For interviewees, fetch workflow state and redirect to next route
 					try {
 						const state = await getWorkflowState(sessionUser.token);
-						// Sync sidebar progress flags for reactive updates
-						try {
-							const p = state?.progress_by_section || {};
-							// Reset first
-							localStorage.removeItem('unlock_kids');
-							localStorage.removeItem('unlock_moderation');
-							localStorage.removeItem('unlock_exit');
-							localStorage.removeItem('unlock_completion');
-							localStorage.removeItem('assignmentCompleted');
-							// Determine step and unlocks
-							if (p.has_child_profile) {
-								localStorage.setItem('unlock_kids', 'true');
-								localStorage.setItem('assignmentStep', '1');
-							}
-							if ((p.moderation_completed_count ?? 0) > 0 || p.has_child_profile) {
-								localStorage.setItem('unlock_moderation', 'true');
-								if (!localStorage.getItem('moderationScenariosAccessed')) {
-									localStorage.setItem('moderationScenariosAccessed', 'true');
-								}
-								localStorage.setItem('assignmentStep', '2');
-							}
-							if (p.exit_survey_completed) {
-								localStorage.setItem('unlock_exit', 'true');
-								localStorage.setItem('assignmentStep', '4');
-								localStorage.setItem('assignmentCompleted', 'true');
-								localStorage.setItem('unlock_completion', 'true');
-							} else if ((p.moderation_completed_count ?? 0) >= (p.moderation_total ?? 12)) {
-								// Completed moderation; ready for survey
-								localStorage.setItem('unlock_exit', 'true');
-								localStorage.setItem('assignmentStep', '3');
-							}
-							window.dispatchEvent(new Event('storage'));
-							window.dispatchEvent(new Event('workflow-updated'));
-						} catch {}
 						redirectPath = state?.next_route || '/assignment-instructions';
+						window.dispatchEvent(new Event('workflow-updated'));
 					} catch {
 						redirectPath = '/assignment-instructions';
 					}
@@ -258,12 +225,13 @@
 				}
 
 				// Determine redirect path based on Prolific response
-				let prolificRedirectPath = '/';
+				// Prolific users go to assignment-instructions (consent modal shows on top)
+				let prolificRedirectPath = '/assignment-instructions';
 				if (authResponse.new_child_id) {
 					prolificRedirectPath = '/kids/profile';
-				} else {
-					prolificRedirectPath = $page.url.searchParams.get('redirect') || '/';
 				}
+				// Ignore redirect param for Prolific users - it's just used to pass params around
+				// Always send Prolific users to assignment-instructions (unless new_child_id)
 
 				// Store Prolific metadata BEFORE setSessionUser (which clears localStorage)
 				localStorage.setItem('prolificPid', prolificPid);
@@ -278,9 +246,7 @@
 				if (authResponse.new_child_id) {
 					await childProfileSync.setCurrentChildId(authResponse.new_child_id);
 				}
-				if (authResponse.has_exit_quiz) {
-					localStorage.setItem('unlock_exit', 'true');
-				}
+				// Sidebar and pages use getWorkflowState from backend - no localStorage needed
 				return true;
 			}
 		} catch (error) {
@@ -839,7 +805,6 @@
 
 						<!-- Survey Information -->
 						<div class="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
-							<p>This is a survey for a Child-AI Conversations interview</p>
 							<p>Contact: childai.research.ucsd@gmail.com</p>
 						</div>
 					</div>

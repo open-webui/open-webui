@@ -24,11 +24,18 @@ def get_db_path():
     if db_abs:
         if db_abs.startswith("sqlite://") or db_abs.startswith("sqlite+sqlcipher://"):
             path = (
-                db_abs.replace("sqlite+sqlcipher://", "").replace("sqlite://", "")
+                db_abs.replace("sqlite+sqlcipher://", "")
+                .replace("sqlite://", "")
                 .lstrip("/")
             )
-            return os.path.normpath(path) if os.path.isabs(path) else os.path.abspath(path)
-        return os.path.normpath(db_abs) if os.path.isabs(db_abs) else os.path.abspath(db_abs)
+            return (
+                os.path.normpath(path) if os.path.isabs(path) else os.path.abspath(path)
+            )
+        return (
+            os.path.normpath(db_abs)
+            if os.path.isabs(db_abs)
+            else os.path.abspath(db_abs)
+        )
 
     from open_webui.env import DATABASE_URL, DATA_DIR
 
@@ -36,7 +43,11 @@ def get_db_path():
         print("Error: This script only works with SQLite. Set DB_ABS to your db path.")
         sys.exit(1)
 
-    path = DATABASE_URL.replace("sqlite+sqlcipher://", "").replace("sqlite://", "").lstrip("/")
+    path = (
+        DATABASE_URL.replace("sqlite+sqlcipher://", "")
+        .replace("sqlite://", "")
+        .lstrip("/")
+    )
     if not os.path.isabs(path):
         path = os.path.join(DATA_DIR, path.lstrip("./"))
     return os.path.normpath(path)
@@ -54,10 +65,14 @@ def main():
     cur = conn.cursor()
 
     # Check tables exist
-    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('child_profile', 'user')")
+    cur.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('child_profile', 'user')"
+    )
     tables = {r[0] for r in cur.fetchall()}
     if "child_profile" not in tables:
-        print("Warning: child_profile table not found. Run migrations: cd backend/open_webui && alembic upgrade head")
+        print(
+            "Warning: child_profile table not found. Run migrations: cd backend/open_webui && alembic upgrade head"
+        )
     if "user" not in tables:
         print("Warning: user table not found.")
     if "child_profile" not in tables or "user" not in tables:
@@ -80,7 +95,9 @@ def main():
     accounts = [dict(r) for r in cur.fetchall()]
     print(f"\n=== Child user accounts (role=child, parent_id set): {len(accounts)} ===")
     for a in accounts:
-        print(f"  id={a['id'][:8]}... name={a['name']!r} email={a['email']!r} parent_id={a['parent_id'][:8]}...")
+        print(
+            f"  id={a['id'][:8]}... name={a['name']!r} email={a['email']!r} parent_id={a['parent_id'][:8]}..."
+        )
 
     # 3. Match by name (profile.user_id = account.parent_id, profile.name = account.name)
     print("\n=== Name-based matching (profile.user_id = account.parent_id) ===")
@@ -102,14 +119,20 @@ def main():
         print(f"  MATCH: profile {p['name']!r} -> account email={a['email']!r}")
 
     if unmatched_profiles:
-        print(f"\n  Profiles WITHOUT matching child account ({len(unmatched_profiles)}):")
+        print(
+            f"\n  Profiles WITHOUT matching child account ({len(unmatched_profiles)}):"
+        )
         for p in unmatched_profiles:
             print(f"    - {p['name']!r} (user_id={p['user_id'][:8]}...)")
 
     matched_account_ids = {m[1]["id"] for m in matched}
-    accounts_without_profile = [a for a in accounts if a["id"] not in matched_account_ids]
+    accounts_without_profile = [
+        a for a in accounts if a["id"] not in matched_account_ids
+    ]
     if accounts_without_profile:
-        print(f"\n  Child accounts WITHOUT matching profile ({len(accounts_without_profile)}):")
+        print(
+            f"\n  Child accounts WITHOUT matching profile ({len(accounts_without_profile)}):"
+        )
         for a in accounts_without_profile:
             print(f"    - {a['name']!r} email={a['email']!r}")
 

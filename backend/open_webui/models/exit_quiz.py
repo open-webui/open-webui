@@ -58,11 +58,14 @@ class ExitQuizForm(BaseModel):
 
 class ExitQuizTable:
     def insert_new_response(
-        self, form_data: ExitQuizForm, user_id: str
+        self,
+        form_data: ExitQuizForm,
+        user_id: str,
+        attempt_number: int = 1,
     ) -> Optional[ExitQuizModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
-            ts = int(time.time_ns())
+            ts = int(time.time() * 1000)
 
             model = ExitQuizModel(
                 **{
@@ -72,7 +75,7 @@ class ExitQuizTable:
                     "answers": form_data.answers,
                     "score": form_data.score,
                     "meta": form_data.meta,
-                    "attempt_number": 1,
+                    "attempt_number": attempt_number,
                     "is_current": True,
                     "created_at": ts,
                     "updated_at": ts,
@@ -86,14 +89,23 @@ class ExitQuizTable:
             return ExitQuizModel.model_validate(row) if row else None
 
     def get_responses_by_user(
-        self, user_id: str, child_id: Optional[str] = None
+        self,
+        user_id: str,
+        child_id: Optional[str] = None,
+        attempt_number: Optional[int] = None,
     ) -> list[ExitQuizModel]:
+        """Get exit quiz responses.
+        When attempt_number is provided, filter to that specific attempt.
+        If not provided, returns all responses for the user.
+        """
         with get_db() as db:
             query = db.query(ExitQuizResponse).filter(
                 ExitQuizResponse.user_id == user_id
             )
             if child_id:
                 query = query.filter(ExitQuizResponse.child_id == child_id)
+            if attempt_number is not None:
+                query = query.filter(ExitQuizResponse.attempt_number == attempt_number)
             rows = query.order_by(ExitQuizResponse.created_at.desc()).all()
             return [ExitQuizModel.model_validate(r) for r in rows]
 
@@ -117,7 +129,7 @@ class ExitQuizTable:
             )
             if not row:
                 return None
-            ts = int(time.time_ns())
+            ts = int(time.time() * 1000)
             row.child_id = updated.child_id
             row.answers = updated.answers
             row.score = updated.score

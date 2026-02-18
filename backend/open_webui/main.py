@@ -94,6 +94,10 @@ from open_webui.routers import (
     utils,
     scim,
     child_profiles,
+    moderation_scenarios,
+    exit_quiz,
+    assignment_time,
+    prolific,
 )
 from open_webui.routers import workflow
 
@@ -566,7 +570,8 @@ class SPAStaticFiles(StaticFiles):
                 raise ex
 
 
-print(rf"""
+print(
+    rf"""
  ██████╗ ██████╗ ███████╗███╗   ██╗    ██╗    ██╗███████╗██████╗ ██╗   ██╗██╗
 ██╔═══██╗██╔══██╗██╔════╝████╗  ██║    ██║    ██║██╔════╝██╔══██╗██║   ██║██║
 ██║   ██║██████╔╝█████╗  ██╔██╗ ██║    ██║ █╗ ██║█████╗  ██████╔╝██║   ██║██║
@@ -578,7 +583,8 @@ print(rf"""
 v{VERSION} - building the best AI user interface.
 {f"Commit: {WEBUI_BUILD_HASH}" if WEBUI_BUILD_HASH != "dev-build" else ""}
 https://github.com/open-webui/open-webui
-""")
+"""
+)
 
 
 @asynccontextmanager
@@ -587,35 +593,50 @@ async def lifespan(app: FastAPI):
     start_logger()
 
     if RESET_CONFIG_ON_START:
-        reset_config()
+        try:
+            reset_config()
+        except Exception as e:
+            log.warning(f"Failed to reset config on start: {e}")
 
     if LICENSE_KEY:
         get_license_data(app, LICENSE_KEY)
 
     # Create admin account from env vars if specified and no users exist
     if WEBUI_ADMIN_EMAIL and WEBUI_ADMIN_PASSWORD:
-        if create_admin_user(WEBUI_ADMIN_EMAIL, WEBUI_ADMIN_PASSWORD, WEBUI_ADMIN_NAME):
-            # Disable signup since we now have an admin
-            app.state.config.ENABLE_SIGNUP = False
+        try:
+            if create_admin_user(
+                WEBUI_ADMIN_EMAIL, WEBUI_ADMIN_PASSWORD, WEBUI_ADMIN_NAME
+            ):
+                # Disable signup since we now have an admin
+                app.state.config.ENABLE_SIGNUP = False
+        except Exception as e:
+            log.warning(f"Failed to create admin user: {e}")
 
     # This should be blocking (sync) so functions are not deactivated on first /get_models calls
     # when the first user lands on the / route.
-    log.info("Installing external dependencies of functions and tools...")
-    install_tool_and_function_dependencies()
+    try:
+        log.info("Installing external dependencies of functions and tools...")
+        install_tool_and_function_dependencies()
+    except Exception as e:
+        log.warning(f"Failed to install tool dependencies: {e}")
 
-    app.state.redis = get_redis_connection(
-        redis_url=REDIS_URL,
-        redis_sentinels=get_sentinels_from_env(
-            REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT
-        ),
-        redis_cluster=REDIS_CLUSTER,
-        async_mode=True,
-    )
-
-    if app.state.redis is not None:
-        app.state.redis_task_command_listener = asyncio.create_task(
-            redis_task_command_listener(app)
+    try:
+        app.state.redis = get_redis_connection(
+            redis_url=REDIS_URL,
+            redis_sentinels=get_sentinels_from_env(
+                REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT
+            ),
+            redis_cluster=REDIS_CLUSTER,
+            async_mode=True,
         )
+
+        if app.state.redis is not None:
+            app.state.redis_task_command_listener = asyncio.create_task(
+                redis_task_command_listener(app)
+            )
+    except Exception as e:
+        log.warning(f"Failed to initialize Redis: {e}")
+        app.state.redis = None
 
     if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0:
         limiter = anyio.to_thread.current_default_thread_limiter()
@@ -624,25 +645,28 @@ async def lifespan(app: FastAPI):
     asyncio.create_task(periodic_usage_pool_cleanup())
 
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
-        await get_all_models(
-            Request(
-                # Creating a mock request object to pass to get_all_models
-                {
-                    "type": "http",
-                    "asgi.version": "3.0",
-                    "asgi.spec_version": "2.0",
-                    "method": "GET",
-                    "path": "/internal",
-                    "query_string": b"",
-                    "headers": Headers({}).raw,
-                    "client": ("127.0.0.1", 12345),
-                    "server": ("127.0.0.1", 80),
-                    "scheme": "http",
-                    "app": app,
-                }
-            ),
-            None,
-        )
+        try:
+            await get_all_models(
+                Request(
+                    # Creating a mock request object to pass to get_all_models
+                    {
+                        "type": "http",
+                        "asgi.version": "3.0",
+                        "asgi.spec_version": "2.0",
+                        "method": "GET",
+                        "path": "/internal",
+                        "query_string": b"",
+                        "headers": Headers({}).raw,
+                        "client": ("127.0.0.1", 12345),
+                        "server": ("127.0.0.1", 80),
+                        "scheme": "http",
+                        "app": app,
+                    }
+                ),
+                None,
+            )
+        except Exception as e:
+            log.warning(f"Failed to preload models cache: {e}")
 
     yield
 
@@ -667,12 +691,21 @@ oauth_client_manager = OAuthClientManager(app)
 app.state.oauth_client_manager = oauth_client_manager
 
 app.state.instance_id = None
-app.state.config = AppConfig(
-    redis_url=REDIS_URL,
-    redis_sentinels=get_sentinels_from_env(REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT),
-    redis_cluster=REDIS_CLUSTER,
-    redis_key_prefix=REDIS_KEY_PREFIX,
-)
+try:
+    app.state.config = AppConfig(
+        redis_url=REDIS_URL,
+        redis_sentinels=get_sentinels_from_env(
+            REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT
+        ),
+        redis_cluster=REDIS_CLUSTER,
+        redis_key_prefix=REDIS_KEY_PREFIX,
+    )
+except Exception as e:
+    log.error(f"Failed to initialize AppConfig: {e}")
+    # Create a minimal config to allow app to start
+    from open_webui.config import AppConfig
+
+    app.state.config = AppConfig()
 app.state.redis = None
 
 app.state.WEBUI_NAME = WEBUI_NAME
@@ -1441,6 +1474,12 @@ app.include_router(
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 app.include_router(child_profiles.router, prefix="/api/v1", tags=["child_profiles"])
 app.include_router(workflow.router, prefix="/api/v1", tags=["workflow"])
+app.include_router(
+    moderation_scenarios.router, prefix="/api/v1", tags=["moderation_scenarios"]
+)
+app.include_router(exit_quiz.router, prefix="/api/v1", tags=["exit_quiz"])
+app.include_router(assignment_time.router, prefix="/api/v1", tags=["assignment_time"])
+app.include_router(prolific.router, prefix="/api/v1/prolific", tags=["prolific"])
 
 # SCIM 2.0 API for identity management
 if ENABLE_SCIM:

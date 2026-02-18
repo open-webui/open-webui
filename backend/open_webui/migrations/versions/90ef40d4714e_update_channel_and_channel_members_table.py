@@ -30,13 +30,19 @@ def upgrade() -> None:
         channel_columns = [col["name"] for col in inspector.get_columns("channel")]
 
         if "is_private" not in channel_columns:
-            op.add_column("channel", sa.Column("is_private", sa.Boolean(), nullable=True))
+            op.add_column(
+                "channel", sa.Column("is_private", sa.Boolean(), nullable=True)
+            )
         if "archived_at" not in channel_columns:
-            op.add_column("channel", sa.Column("archived_at", sa.BigInteger(), nullable=True))
+            op.add_column(
+                "channel", sa.Column("archived_at", sa.BigInteger(), nullable=True)
+            )
         if "archived_by" not in channel_columns:
             op.add_column("channel", sa.Column("archived_by", sa.Text(), nullable=True))
         if "deleted_at" not in channel_columns:
-            op.add_column("channel", sa.Column("deleted_at", sa.BigInteger(), nullable=True))
+            op.add_column(
+                "channel", sa.Column("deleted_at", sa.BigInteger(), nullable=True)
+            )
         if "deleted_by" not in channel_columns:
             op.add_column("channel", sa.Column("deleted_by", sa.Text(), nullable=True))
         if "updated_by" not in channel_columns:
@@ -44,14 +50,21 @@ def upgrade() -> None:
 
     # Update 'channel_member' table (idempotent)
     if "channel_member" in existing_tables:
-        member_columns = [col["name"] for col in inspector.get_columns("channel_member")]
+        member_columns = [
+            col["name"] for col in inspector.get_columns("channel_member")
+        ]
 
         if "role" not in member_columns:
             op.add_column("channel_member", sa.Column("role", sa.Text(), nullable=True))
         if "invited_by" not in member_columns:
-            op.add_column("channel_member", sa.Column("invited_by", sa.Text(), nullable=True))
+            op.add_column(
+                "channel_member", sa.Column("invited_by", sa.Text(), nullable=True)
+            )
         if "invited_at" not in member_columns:
-            op.add_column("channel_member", sa.Column("invited_at", sa.BigInteger(), nullable=True))
+            op.add_column(
+                "channel_member",
+                sa.Column("invited_at", sa.BigInteger(), nullable=True),
+            )
 
     #  Create 'channel_webhook' table (idempotent)
     if "channel_webhook" not in existing_tables:

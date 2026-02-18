@@ -80,3 +80,6 @@ backend/open_webui/retrieval/web/testdata/
 
 # Demo videos (can be large; serve from CDN if needed)
 static/video/
+
+# SvelteKit build artifacts (not needed in production)
+.svelte-kit/

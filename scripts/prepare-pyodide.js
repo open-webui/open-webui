@@ -1,20 +1,11 @@
+// Reduced packages for Heroku slug size - keep only essentials
 const packages = [
 	'micropip',
 	'packaging',
 	'requests',
-	'beautifulsoup4',
-	'numpy',
-	'pandas',
-	'matplotlib',
-	'scikit-learn',
-	'scipy',
-	'regex',
-	'sympy',
 	'tiktoken',
-	'seaborn',
-	'pytz',
-	'black',
 	'openai'
+	// Removed heavy packages: numpy, pandas, matplotlib, scikit-learn, scipy, regex, sympy, seaborn, pytz, black, beautifulsoup4
 ];
 
 import { loadPyodide } from 'pyodide';

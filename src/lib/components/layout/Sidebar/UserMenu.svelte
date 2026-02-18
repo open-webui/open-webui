@@ -31,6 +31,8 @@
 	import DocumentChartBar from '$lib/components/icons/DocumentChartBar.svelte';
 	import { updateUserStatus } from '$lib/apis/users';
 	import { toast } from 'svelte-sonner';
+	import { resetUserWorkflow } from '$lib/apis/workflow';
+	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -244,13 +246,17 @@
 				<div class=" self-center truncate">{$i18n.t('Archived Chats')}</div>
 			</DropdownMenu.Item>
 
-			{@const isSurveyView =
+			{@const isSurveyOrWorkflowRoute =
 				$page.url.pathname.startsWith('/exit-survey') ||
-				$page.url.pathname.startsWith('/initial-survey')}
+				$page.url.pathname.startsWith('/initial-survey') ||
+				$page.url.pathname.startsWith('/assignment-instructions') ||
+				$page.url.pathname.startsWith('/kids/profile') ||
+				$page.url.pathname.startsWith('/moderation-scenario') ||
+				$page.url.pathname === '/completion'}
 			{@const isParentOrChild =
 				$user?.role === 'parent' || $user?.role === 'child' || ($user as any)?.parent_id}
 
-			{#if isSurveyView}
+			{#if isSurveyOrWorkflowRoute}
 				<DropdownMenu.Item
 					as="a"
 					href="/"
@@ -267,16 +273,16 @@
 					<div class=" self-center mr-3">
 						<DocumentChartBar className="size-5" strokeWidth="1.5" />
 					</div>
-					<div class=" self-center truncate">{$i18n.t('Main View')}</div>
+					<div class=" self-center truncate">{$i18n.t('Chat View')}</div>
 				</DropdownMenu.Item>
 			{:else if !isParentOrChild}
 				<DropdownMenu.Item
 					as="a"
-					href="/exit-survey"
+					href="/assignment-instructions"
 					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
 					on:click={async () => {
 						show = false;
-						await goto('/exit-survey');
+						await goto('/assignment-instructions');
 						if ($mobile) {
 							await tick();
 							showSidebar.set(false);
@@ -324,6 +330,43 @@
 						<UserGroup className="w-5 h-5" strokeWidth="1.5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
+				</DropdownMenu.Item>
+			{/if}
+
+			{#if isSurveyOrWorkflowRoute}
+				<DropdownMenu.Item
+					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none cursor-pointer"
+					on:click={async () => {
+						show = false;
+						if ($mobile) {
+							await tick();
+							showSidebar.set(false);
+						}
+						const confirmed = confirm(
+							$i18n.t(
+								'Reset survey? This will clear all assignment progress (child profile, moderation, exit survey) and cannot be undone.'
+							)
+						);
+						if (!confirmed) return;
+						try {
+							await resetUserWorkflow(localStorage.token);
+							// Dispatch reset event so all components can clear their state
+							window.dispatchEvent(new Event('workflow-reset'));
+							toast.success($i18n.t('Survey reset successfully.'));
+							window.dispatchEvent(new Event('workflow-updated'));
+							// Allow sidebar to refetch workflow state before navigating so button states update
+							await new Promise((r) => setTimeout(r, 400));
+							await goto('/assignment-instructions');
+						} catch (e) {
+							console.error('Failed to reset survey:', e);
+							toast.error($i18n.t('Failed to reset survey. Please try again.'));
+						}
+					}}
+				>
+					<div class=" self-center mr-3">
+						<ArrowPath className="w-5 h-5" strokeWidth="1.5" />
+					</div>
+					<div class=" self-center truncate">{$i18n.t('Reset survey')}</div>
 				</DropdownMenu.Item>
 			{/if}
 

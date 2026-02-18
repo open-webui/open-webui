@@ -1,0 +1,59 @@
+name: Deploy to Heroku Container Registry
+
+on:
+  push:
+    branches:
+      - dev
+      - cursor/heroku-build-memory-e9e1
+  workflow_dispatch:
+
+env:
+  HEROKU_APP_NAME: dsl-kidsgpt-pilot-alt
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Heroku Container Registry
+        run: |
+          echo "${{ secrets.HEROKU_API_KEY }}" | docker login --username=_ --password-stdin registry.heroku.com
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+
+      - name: Build Docker image
+        run: |
+          # Heroku Container Registry rejects manifest lists/attestations (error: unsupported).
+          # Build a single-platform image with attestations disabled so push succeeds.
+          docker build --provenance=false --sbom=false -t registry.heroku.com/$HEROKU_APP_NAME/web .
+        env:
+          DOCKER_DEFAULT_PLATFORM: linux/amd64
+
+      - name: Push to Heroku Container Registry
+        run: |
+          docker push registry.heroku.com/$HEROKU_APP_NAME/web
+
+      - name: Install Heroku CLI
+        run: |
+          curl https://cli-assets.heroku.com/install.sh | sh
+
+      - name: Release container
+        run: |
+          echo "$HEROKU_API_KEY" | heroku auth:token
+          heroku container:release web -a $HEROKU_APP_NAME
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+
+      - name: Check deployment status
+        run: |
+          echo "Waiting for dyno to start (max 5 minutes)..."
+          timeout 300 bash -c 'until heroku ps:wait -a $HEROKU_APP_NAME --type web 2>/dev/null; do sleep 10; done' || echo "Dyno may still be starting"
+          heroku ps -a $HEROKU_APP_NAME
+          echo "Checking app health..."
+          sleep 10
+          curl -f https://$HEROKU_APP_NAME.herokuapp.com/health || echo "Health check failed - check logs"
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}

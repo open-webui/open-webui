@@ -41,10 +41,12 @@ export const createExitQuiz = async (
 
 export const listExitQuiz = async (
 	token: string,
-	child_id?: string
+	child_id?: string,
+	current_only?: boolean
 ): Promise<ExitQuizResponse[]> => {
 	const url = new URL(`${WEBUI_API_BASE_URL}/exit-quiz`);
 	if (child_id) url.searchParams.set('child_id', child_id);
+	if (current_only === true) url.searchParams.set('current_only', 'true');
 
 	const res = await fetch(url.toString(), {
 		method: 'GET',
@@ -55,9 +57,21 @@ export const listExitQuiz = async (
 		}
 	});
 
+	const text = await res.text();
 	if (!res.ok) {
-		const err = await res.json().catch(() => ({}));
-		throw new Error(err.detail || 'Failed to list exit quiz');
+		let msg = 'Failed to list exit quiz';
+		try {
+			const err = JSON.parse(text) as { detail?: string };
+			if (err.detail) msg = err.detail;
+		} catch {
+			// Server may have returned HTML (e.g. 500 error page)
+		}
+		throw new Error(msg);
 	}
-	return res.json();
+	try {
+		return JSON.parse(text) as ExitQuizResponse[];
+	} catch {
+		// Response was not JSON (e.g. HTML); return empty so repopulation doesn't throw
+		return [];
+	}
 };

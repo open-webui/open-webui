@@ -11,7 +11,9 @@ export const APP_NAME = 'Open WebUI';
 
 export const WEBUI_HOSTNAME = browser ? (dev ? `${location.hostname}:${location.port}` : ``) : '';
 export const WEBUI_BASE_URL = browser ? (dev ? `${location.protocol}//${WEBUI_HOSTNAME}` : ``) : ``;
-export const WEBUI_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1`;
+// In dev: use VITE_WEBUI_API_BASE_URL if set (e.g. http://localhost:8080/api/v1) to bypass proxy when it returns HTML
+const directApiUrl = typeof import.meta !== 'undefined' && import.meta.env?.VITE_WEBUI_API_BASE_URL;
+export const WEBUI_API_BASE_URL = directApiUrl || `${WEBUI_BASE_URL}/api/v1`;
 
 export const OLLAMA_API_BASE_URL = `${WEBUI_BASE_URL}/ollama`;
 export const OPENAI_API_BASE_URL = `${WEBUI_BASE_URL}/openai`;

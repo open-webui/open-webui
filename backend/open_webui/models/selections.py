@@ -55,7 +55,9 @@ class Selection(Base):
 
     # Relationships
     assignment = relationship(
-        "ScenarioAssignment", back_populates="selections", foreign_keys=[assignment_id]
+        "ScenarioAssignment",
+        back_populates="selections",
+        foreign_keys=[assignment_id],
     )
 
     # Indexes for efficient querying

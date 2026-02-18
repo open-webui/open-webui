@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from open_webui.utils.auth import get_verified_user
 from open_webui.models.exit_quiz import ExitQuizzes, ExitQuizModel, ExitQuizForm
 from open_webui.models.users import UserModel
+from open_webui.routers.workflow import get_current_attempt_number
 
 log = logging.getLogger(__name__)
 
@@ -30,7 +31,10 @@ async def create_exit_quiz_response(
     current_user: UserModel = Depends(get_verified_user),
 ):
     try:
-        res = ExitQuizzes.insert_new_response(form_data, current_user.id)
+        attempt_number = get_current_attempt_number(current_user.id)
+        res = ExitQuizzes.insert_new_response(
+            form_data, current_user.id, attempt_number=attempt_number
+        )
         if not res:
             raise HTTPException(
                 status_code=500, detail="Failed to create exit quiz response"
@@ -44,10 +48,24 @@ async def create_exit_quiz_response(
 @router.get("/exit-quiz", response_model=List[ExitQuizResponse])
 async def list_exit_quiz_responses(
     child_id: Optional[str] = None,
+    attempt_number: Optional[int] = None,
     current_user: UserModel = Depends(get_verified_user),
 ):
+    """
+    List exit quiz responses.
+    - Use attempt_number to filter to a specific attempt
+    - If not specified, defaults to current attempt number
+    """
     try:
-        items = ExitQuizzes.get_responses_by_user(current_user.id, child_id=child_id)
+        # Default to current attempt if not specified
+        if attempt_number is None:
+            attempt_number = get_current_attempt_number(current_user.id)
+
+        items = ExitQuizzes.get_responses_by_user(
+            current_user.id,
+            child_id=child_id,
+            attempt_number=attempt_number,
+        )
         return [ExitQuizResponse(**i.model_dump()) for i in items]
     except Exception as e:
         log.error(f"Error listing exit quiz responses: {e}")

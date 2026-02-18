@@ -11,14 +11,8 @@
 	let trackingEnabled: boolean = true;
 
 	onMount(async () => {
-		// Send final time and stop tracking after a short delay to ensure data is sent
-		setTimeout(() => {
-			trackingEnabled = false;
-		}, 5000); // Give 5 seconds for final sync
-
-		// Ensure sidebar reflects completion when landing here (idempotent)
-		localStorage.setItem('assignmentStep', '4');
-		localStorage.setItem('assignmentCompleted', 'true');
+		// Ensure sidebar refetches workflow state (backend already has exit_survey_completed)
+		window.dispatchEvent(new Event('workflow-updated'));
 
 		// Send final time and stop tracking after a short delay to ensure data is sent
 		setTimeout(() => {

@@ -6,13 +6,12 @@
 	import type { ChildProfile } from '$lib/apis/child-profiles';
 	import { getChildProfiles } from '$lib/apis/child-profiles';
 	import { toast } from 'svelte-sonner';
-	import { createChildAccount, getChildAccounts } from '$lib/apis/users';
-	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import {
 		personalityTraits,
 		type PersonalityTrait,
 		type SubCharacteristic
 	} from '$lib/data/personalityTraits';
+	import ChildPersonalitySection from '$lib/components/profile/ChildPersonalitySection.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -42,7 +41,6 @@
 	let childGender: string = '';
 	let childCharacteristics: string = '';
 	let childEmail: string = '';
-	let childPassword: string = '';
 
 	// Child quiz research fields (conditional)
 	let isOnlyChild: string = '';
@@ -55,13 +53,11 @@
 	let childAIUseContextsOther: string = '';
 	let parentLLMMonitoringOther: string = '';
 
-	// Personality traits system
-	let expandedTraits: Set<string> = new Set();
+	// Personality traits system (selectedSubCharacteristics bound to ChildPersonalitySection)
 	let selectedSubCharacteristics: string[] = [];
 
 	// Multi-child support
 	let childProfiles: ChildProfile[] = [];
-	let childAccounts: { id: string; name: string; email?: string }[] = [];
 	let selectedChildIndex: number = initialSelectedIndex;
 	let showForm: boolean = false;
 	let isEditing: boolean = false;
@@ -76,15 +72,6 @@
 	}
 
 	// Personality trait helper functions
-	function toggleTrait(traitId: string) {
-		if (expandedTraits.has(traitId)) {
-			expandedTraits.delete(traitId);
-		} else {
-			expandedTraits.add(traitId);
-		}
-		expandedTraits = expandedTraits;
-	}
-
 	function getSelectedSubCharacteristics(): SubCharacteristic[] {
 		const selected: SubCharacteristic[] = [];
 		for (const trait of personalityTraits) {
@@ -131,6 +118,7 @@
 	function hydrateFormFromSelectedChild() {
 		ensureAtLeastOneChild();
 		const sel = childProfiles[selectedChildIndex];
+		if (!sel) return;
 
 		childName = sel?.name || '';
 		childAge = sel?.child_age || '';
@@ -202,29 +190,20 @@
 							}
 						}
 						selectedSubCharacteristics = restoredIds;
-						for (const trait of personalityTraits) {
-							if (trait.subCharacteristics.some((sc) => restoredIds.includes(sc.id))) {
-								expandedTraits.add(trait.id);
-							}
-						}
 					} else {
 						selectedSubCharacteristics = [];
-						expandedTraits = new Set();
 					}
 				} else {
 					childCharacteristics = characteristics;
 					selectedSubCharacteristics = [];
-					expandedTraits = new Set();
 				}
 			} else {
 				childCharacteristics = characteristics;
 				selectedSubCharacteristics = [];
-				expandedTraits = new Set();
 			}
 		} else {
 			childCharacteristics = '';
 			selectedSubCharacteristics = [];
-			expandedTraits = new Set();
 		}
 	}
 
@@ -289,35 +268,6 @@
 		}
 	}
 
-	function addNewProfile() {
-		if (selectedChildIndex === -1 && showForm && isEditing) {
-			return;
-		}
-
-		childName = '';
-		childAge = '';
-		childGender = '';
-		childCharacteristics = '';
-		childEmail = '';
-		childPassword = '';
-		selectedSubCharacteristics = [];
-		expandedTraits = new Set();
-
-		if (showResearchFields) {
-			isOnlyChild = '';
-			childHasAIUse = '';
-			childAIUseContexts = [];
-			parentLLMMonitoringLevel = '';
-			childGenderOther = '';
-			childAIUseContextsOther = '';
-			parentLLMMonitoringOther = '';
-		}
-
-		showForm = true;
-		isEditing = true;
-		selectedChildIndex = -1;
-	}
-
 	function validateForm(): string | null {
 		if (!childName.trim()) {
 			return 'Please enter a name for the child';
@@ -334,22 +284,6 @@
 		if (showPersonalityTraits && selectedSubCharacteristics.length === 0) {
 			return 'Please select at least one personality trait';
 		}
-		// Email/password required only when creating new profile (account creation)
-		if (selectedChildIndex === -1) {
-			if (!childEmail.trim()) {
-				return 'Please enter an email address for the child account';
-			}
-			if (!childEmail.includes('@')) {
-				return 'Please enter a valid email address';
-			}
-			if (!childPassword.trim()) {
-				return 'Please enter a password for the child account';
-			}
-			if (childPassword.length < 6) {
-				return 'Password must be at least 6 characters long';
-			}
-		}
-
 		if (showResearchFields && requireResearchFields) {
 			if (!isOnlyChild) {
 				return 'Please indicate if this child is an only child';
@@ -415,24 +349,6 @@
 
 			const newChild = await childProfileSync.createChildProfile(profileData);
 
-			// Create child account
-			try {
-				const token = localStorage.getItem('token') || '';
-				await createChildAccount(token, {
-					name: childName,
-					email: childEmail,
-					password: childPassword
-				});
-				const accounts = await getChildAccounts(token);
-				childAccounts = Array.isArray(accounts) ? accounts : childAccounts;
-			} catch (accountError) {
-				console.error('Failed to create child account:', accountError);
-				// Continue even if account creation fails - profile is already created
-				toast.warning(
-					'Child profile created, but account creation failed. Please create the account manually.'
-				);
-			}
-
 			childProfiles = [...childProfiles, newChild];
 			selectedChildIndex = childProfiles.length - 1;
 			showForm = true;
@@ -444,7 +360,7 @@
 				await onProfileCreated(newChild);
 			}
 
-			toast.success('Child profile and account created successfully!');
+			toast.success('Child profile created successfully!');
 		} catch (error) {
 			console.error('Failed to create child profile:', error);
 			let errorMessage = 'Failed to create child profile';
@@ -471,9 +387,7 @@
 			childGender = '';
 			childCharacteristics = '';
 			childEmail = '';
-			childPassword = '';
 			selectedSubCharacteristics = [];
-			expandedTraits = new Set();
 		}
 	}
 
@@ -498,12 +412,6 @@
 			if (!childProfiles || !Array.isArray(childProfiles)) {
 				childProfiles = [];
 			}
-			try {
-				const accounts = await getChildAccounts(localStorage.token || '');
-				childAccounts = Array.isArray(accounts) ? accounts : [];
-			} catch {
-				childAccounts = [];
-			}
 
 			if (childProfiles.length > 0) {
 				const currentChildId = childProfileSync.getCurrentChildId();
@@ -521,13 +429,18 @@
 				showForm = false;
 				isProfileCompleted = true;
 			} else {
+				// No profiles: go directly to the child survey form (single child)
 				selectedChildIndex = -1;
-				showForm = false;
+				showForm = true;
+				isEditing = true;
 				isProfileCompleted = false;
 			}
 		} catch (error) {
 			console.error('Failed to load child profiles:', error);
 			childProfiles = [];
+			selectedChildIndex = -1;
+			showForm = true;
+			isEditing = true;
 		}
 	}
 
@@ -570,24 +483,6 @@
 				}
 
 				const newChild = await childProfileSync.createChildProfile(profileData);
-
-				// Create child account
-				try {
-					const token = localStorage.getItem('token') || '';
-					await createChildAccount(token, {
-						name: childName,
-						email: childEmail,
-						password: childPassword
-					});
-					const accounts = await getChildAccounts(token);
-					childAccounts = Array.isArray(accounts) ? accounts : childAccounts;
-				} catch (accountError) {
-					console.error('Failed to create child account:', accountError);
-					// Continue even if account creation fails - profile is already created
-					toast.warning(
-						'Child profile created, but account creation failed. Please create the account manually.'
-					);
-				}
 
 				if (childProfiles.length === 0) {
 					childProfiles = [newChild];
@@ -693,11 +588,7 @@
 	}
 
 	function getChildEmailForProfile(profile: ChildProfile | undefined): string {
-		if (!profile?.name) return '';
-		const match = childAccounts.find(
-			(acc) => acc.name?.toLowerCase().trim() === profile.name?.toLowerCase().trim()
-		);
-		return match?.email ?? '';
+		return (profile as any)?.child_email ?? '';
 	}
 
 	function joinContextsForDisplay(): string {
@@ -736,6 +627,15 @@
 	bind:this={mainPageContainer}
 >
 	<div class="max-w-4xl mx-auto px-4 py-8">
+		<!-- Instructional Message -->
+		<div
+			class="mb-6 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
+		>
+			<p class="text-sm text-blue-900 dark:text-blue-200">
+				<strong>Note:</strong> Please provide information about one child you have in mind for this survey.
+			</p>
+		</div>
+
 		<!-- Child Selection -->
 		{#if childProfiles && childProfiles.length > 0}
 			<div class="mb-8">
@@ -766,47 +666,7 @@
 								</button>
 							</div>
 						{/each}
-						<button
-							type="button"
-							class="px-6 py-4 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 shadow-lg ring-1 ring-gray-300/30 dark:ring-gray-600/30 hover:bg-gray-300 dark:hover:bg-gray-600 hover:ring-gray-400/50 dark:hover:ring-gray-500/50 hover:scale-105 transition-all duration-200"
-							on:click={addNewProfile}
-						>
-							<span class="font-medium">+ Add Profile</span>
-						</button>
 					</div>
-				</div>
-			</div>
-		{:else}
-			<!-- Empty State -->
-			<div class="mb-8">
-				<div
-					class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8 text-center"
-				>
-					<div
-						class="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4"
-					>
-						<svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-							></path>
-						</svg>
-					</div>
-					<h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-						No Child Profiles Yet
-					</h2>
-					<p class="text-gray-600 dark:text-gray-300 mb-6">
-						Create your first child profile to get started.
-					</p>
-					<button
-						type="button"
-						class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
-						on:click={addNewProfile}
-					>
-						+ Add Your First Child Profile
-					</button>
 				</div>
 			</div>
 		{/if}
@@ -846,51 +706,6 @@
 						<p class="text-gray-900 dark:text-white">
 							{childProfiles[selectedChildIndex]?.child_gender || 'Not specified'}
 						</p>
-					</div>
-					<div>
-						<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Email</div>
-						<p class="text-gray-900 dark:text-white">
-							{(childProfiles[selectedChildIndex] as any)?.child_email ||
-								getChildEmailForProfile(childProfiles[selectedChildIndex]) ||
-								'Not specified'}
-						</p>
-					</div>
-					<div>
-						<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-							Password
-						</div>
-						<div class="flex items-center gap-2">
-							<p class="text-gray-900 dark:text-white">
-								{(childProfiles[selectedChildIndex] as any)?.child_email ||
-								getChildEmailForProfile(childProfiles[selectedChildIndex])
-									? '••••••••'
-									: 'Not set'}
-							</p>
-							{#if (childProfiles[selectedChildIndex] as any)?.child_email || getChildEmailForProfile(childProfiles[selectedChildIndex])}
-								<button
-									type="button"
-									class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
-									aria-label={$i18n.t('View password')}
-									on:click={() =>
-										toast.info($i18n.t('Passwords are stored securely and cannot be displayed.'))}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 16 16"
-										fill="currentColor"
-										class="size-4"
-										aria-hidden="true"
-									>
-										<path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
-										<path
-											fill-rule="evenodd"
-											d="M1.38 8.28a.87.87 0 0 1 0-.566 7.003 7.003 0 0 1 13.238.006.87.87 0 0 1 0 .566A7.003 7.003 0 0 1 1.379 8.28ZM11 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-											clip-rule="evenodd"
-										/>
-									</svg>
-								</button>
-							{/if}
-						</div>
 					</div>
 					{#if showPersonalityTraits}
 						<div>
@@ -950,6 +765,11 @@
 				<form on:submit|preventDefault={saveChildProfile} class="space-y-6">
 					<div class="space-y-6">
 						<h3 class="text-xl font-semibold text-gray-900 dark:text-white">Child Information</h3>
+						<p class="text-sm text-gray-600 dark:text-gray-400 -mt-2 mb-2">
+							This survey asks you to describe your child. This information will not be used to
+							customize the scenarios you will be shown and will only be used in the context of
+							academic research.
+						</p>
 
 						<div>
 							<label
@@ -1025,185 +845,12 @@
 
 						<!-- Personality Traits Selection (hidden when showPersonalityTraits is false) -->
 						{#if showPersonalityTraits}
-							<div>
-								<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-									Personality Traits <span class="text-red-500">*</span>
-								</label>
-								<p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-									Select personality traits and choose specific characteristics from one or more
-									traits that describe your child.
-								</p>
-
-								<div class="space-y-3 mb-4">
-									{#each personalityTraits as trait}
-										<div
-											class="border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-										>
-											<button
-												type="button"
-												on:click={() => toggleTrait(trait.id)}
-												class="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors rounded-lg"
-											>
-												<div class="text-left flex-1">
-													<div
-														class="font-medium text-gray-900 dark:text-white flex items-center space-x-2"
-													>
-														<span>{trait.name}</span>
-														{#if trait.subCharacteristics.some( (sub) => selectedSubCharacteristics.includes(sub.id) )}
-															<span
-																class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-															>
-																{trait.subCharacteristics.filter((sub) =>
-																	selectedSubCharacteristics.includes(sub.id)
-																).length} selected
-															</span>
-														{/if}
-													</div>
-													<div class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-														{trait.description}
-													</div>
-												</div>
-												<div class="ml-2 flex-shrink-0">
-													<svg
-														class="w-5 h-5 text-gray-500 transition-transform {expandedTraits.has(
-															trait.id
-														)
-															? 'transform rotate-180'
-															: ''}"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															stroke-width="2"
-															d="M19 9l-7 7-7-7"
-														></path>
-													</svg>
-												</div>
-											</button>
-
-											{#if expandedTraits.has(trait.id)}
-												<div
-													class="px-4 pb-4 space-y-2 border-t border-gray-200 dark:border-gray-600 pt-4"
-												>
-													<p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-														Select characteristics that apply:
-													</p>
-													{#each trait.subCharacteristics as subChar}
-														<label
-															class="flex items-start space-x-3 p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer transition-colors"
-														>
-															<input
-																type="checkbox"
-																bind:group={selectedSubCharacteristics}
-																value={subChar.id}
-																class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-															/>
-															<div class="flex-1">
-																<div class="font-medium text-gray-900 dark:text-white">
-																	{subChar.name}
-																</div>
-																<div class="text-sm text-gray-600 dark:text-gray-400">
-																	{subChar.description}
-																</div>
-															</div>
-														</label>
-													{/each}
-												</div>
-											{/if}
-										</div>
-									{/each}
-								</div>
-
-								{#if selectedSubCharacteristics.length > 0}
-									<div
-										class="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-4"
-									>
-										<div class="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
-											Selected: {selectedSubCharacteristics.length} characteristic{selectedSubCharacteristics.length !==
-											1
-												? 's'
-												: ''}
-										</div>
-										<div class="text-xs text-blue-700 dark:text-blue-300">
-											{getSelectedSubCharacteristicNames().join(', ')}
-										</div>
-									</div>
-								{/if}
-
-								<div>
-									<label
-										for="childCharacteristics"
-										class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-									>
-										Additional Characteristics & Interests <span class="text-red-500">*</span>
-									</label>
-									<textarea
-										id="childCharacteristics"
-										bind:value={childCharacteristics}
-										rows="3"
-										placeholder="Add any additional details about your child's personality, interests, learning style, etc."
-										class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-									></textarea>
-								</div>
-							</div>
+							<ChildPersonalitySection
+								bind:selectedSubCharacteristics
+								bind:additionalInfo={childCharacteristics}
+								required={true}
+							/>
 						{/if}
-
-						<!-- Account Creation Section -->
-						<div class="pt-6 border-t border-gray-200 dark:border-gray-700">
-							<div class="mb-4">
-								<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-									{$i18n.t('Child Account Creation')}
-								</h3>
-								<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-									{$i18n.t(
-										'When you create a child profile, a user account will also be created for your child. This account will allow your child to interact with the AI system.'
-									)}
-								</p>
-							</div>
-
-							<div class="space-y-4">
-								<div>
-									<label
-										for="childEmail"
-										class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-									>
-										{$i18n.t('Child Email Address')} <span class="text-red-500">*</span>
-									</label>
-									<input
-										type="email"
-										id="childEmail"
-										bind:value={childEmail}
-										placeholder={$i18n.t("Enter child's email address")}
-										class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-										required
-									/>
-								</div>
-
-								<div>
-									<label
-										for="childPassword"
-										class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-									>
-										{$i18n.t('Child Account Password')} <span class="text-red-500">*</span>
-									</label>
-									<SensitiveInput
-										type="password"
-										id="childPassword"
-										bind:value={childPassword}
-										placeholder={$i18n.t('Enter password for child account (min. 6 characters)')}
-										class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-										autocomplete="off"
-										required
-									/>
-									<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-										{$i18n.t('Password must be at least 6 characters long')}
-									</p>
-								</div>
-							</div>
-						</div>
 
 						<!-- Research Fields (Conditional) -->
 						{#if showResearchFields}

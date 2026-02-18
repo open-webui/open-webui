@@ -29,9 +29,7 @@ def upgrade() -> None:
     existing_columns = [col["name"] for col in inspector.get_columns("child_profile")]
     if "child_email" not in existing_columns:
         with op.batch_alter_table("child_profile") as batch_op:
-            batch_op.add_column(
-                sa.Column("child_email", sa.String(), nullable=True)
-            )
+            batch_op.add_column(sa.Column("child_email", sa.String(), nullable=True))
 
 
 def downgrade() -> None:

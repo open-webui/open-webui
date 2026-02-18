@@ -72,7 +72,9 @@ def _convert_column_to_json(table: str, column: str):
         # If column is already JSON (no original text column, no temp column), skip
         if has_original and not has_temp:
             # Check if it's already JSON type by inspecting column type
-            col_info = next((c for c in inspector.get_columns(table) if c["name"] == column), None)
+            col_info = next(
+                (c for c in inspector.get_columns(table) if c["name"] == column), None
+            )
             if col_info and "JSON" in str(col_info.get("type", "")).upper():
                 return  # Already converted
 
@@ -82,7 +84,9 @@ def _convert_column_to_json(table: str, column: str):
 
         # 2. Load old data and migrate (only if original column still exists)
         if has_original:
-            rows = conn.execute(sa.text(f'SELECT id, {column} FROM "{table}"')).fetchall()
+            rows = conn.execute(
+                sa.text(f'SELECT id, {column} FROM "{table}"')
+            ).fetchall()
 
             for row in rows:
                 uid, raw = row
@@ -95,7 +99,9 @@ def _convert_column_to_json(table: str, column: str):
                         parsed = None  # fallback safe behavior
 
                 conn.execute(
-                    sa.text(f'UPDATE "{table}" SET {column}_json = :val WHERE id = :id'),
+                    sa.text(
+                        f'UPDATE "{table}" SET {column}_json = :val WHERE id = :id'
+                    ),
                     {"val": json.dumps(parsed) if parsed else None, "id": uid},
                 )
 
@@ -106,7 +112,11 @@ def _convert_column_to_json(table: str, column: str):
         # Use raw SQL on SQLite so RENAME COLUMN completes (op.alter_column can fail on some SQLite builds)
         existing_columns = [col["name"] for col in inspector.get_columns(table)]
         if f"{column}_json" in existing_columns and column not in existing_columns:
-            op.execute(sa.text(f'ALTER TABLE "{table}" RENAME COLUMN {column}_json TO {column}'))
+            op.execute(
+                sa.text(
+                    f'ALTER TABLE "{table}" RENAME COLUMN {column}_json TO {column}'
+                )
+            )
 
     else:
         # PostgreSQL supports direct CAST
@@ -200,7 +210,9 @@ def upgrade() -> None:
         op.create_table(
             "api_key",
             sa.Column("id", sa.Text(), primary_key=True, unique=True),
-            sa.Column("user_id", sa.Text(), sa.ForeignKey("user.id", ondelete="CASCADE")),
+            sa.Column(
+                "user_id", sa.Text(), sa.ForeignKey("user.id", ondelete="CASCADE")
+            ),
             sa.Column("key", sa.Text(), unique=True, nullable=False),
             sa.Column("data", sa.JSON(), nullable=True),
             sa.Column("expires_at", sa.BigInteger(), nullable=True),
@@ -252,10 +264,12 @@ def upgrade() -> None:
                 ).fetchone()
                 if not existing:
                     conn.execute(
-                        sa.text("""
+                        sa.text(
+                            """
                             INSERT INTO api_key (id, user_id, key, created_at, updated_at)
                             VALUES (:id, :user_id, :key, :created_at, :updated_at)
-                        """),
+                        """
+                        ),
                         {
                             "id": f"key_{uid}",
                             "user_id": uid,

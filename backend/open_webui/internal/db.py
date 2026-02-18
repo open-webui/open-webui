@@ -17,6 +17,7 @@ from open_webui.env import (
     DATABASE_ENABLE_SESSION_SHARING,
     ENABLE_DB_MIGRATIONS,
 )
+
 # Peewee migrations removed - using Alembic only
 from sqlalchemy import Dialect, create_engine, MetaData, event, types
 from sqlalchemy.ext.declarative import declarative_base

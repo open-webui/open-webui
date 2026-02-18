@@ -17,13 +17,53 @@ from sqlalchemy import (
     String,
     Float,
     ForeignKey,
+    func,
 )
 from sqlalchemy.orm import relationship
 
 from open_webui.internal.db import Base, get_db
 import logging
 
+# Import Selection early so it's in the registry before ScenarioAssignment mapper config.
+# Must be before ScenarioAssignment class; avoids circular import (selections uses string ref).
+from open_webui.models.selections import Selection
+
 log = logging.getLogger(__name__)
+
+
+def _get_current_attempt_number(user_id: str) -> int:
+    """Get current attempt number for a user.
+    Uses user.current_attempt_number if set; otherwise max across workflow tables.
+    Duplicates logic from workflow.get_current_attempt_number to avoid circular import.
+    """
+    from open_webui.models.users import User
+    from open_webui.models.moderation import ModerationSession
+    from open_webui.models.child_profiles import ChildProfile
+    from open_webui.models.exit_quiz import ExitQuizResponse
+
+    with get_db() as db:
+        user_row = db.query(User).filter(User.id == user_id).first()
+        if user_row and getattr(user_row, "current_attempt_number", None) is not None:
+            return user_row.current_attempt_number
+        max_mod = (
+            db.query(func.max(ModerationSession.attempt_number))
+            .filter(ModerationSession.user_id == user_id)
+            .scalar()
+            or 0
+        )
+        max_child = (
+            db.query(func.max(ChildProfile.attempt_number))
+            .filter(ChildProfile.user_id == user_id)
+            .scalar()
+            or 0
+        )
+        max_exit = (
+            db.query(func.max(ExitQuizResponse.attempt_number))
+            .filter(ExitQuizResponse.user_id == user_id)
+            .scalar()
+            or 0
+        )
+        return max(max_mod, max_child, max_exit, 1)  # Default to 1 if no records
 
 
 class AssignmentStatus(str, Enum):
@@ -47,6 +87,17 @@ class Scenario(Base):
     polarity = Column(String, nullable=True)  # 'positive', 'negative', 'neutral'
     prompt_style = Column(String, nullable=True)  # 'Journalistic', 'Should I', etc.
     domain = Column(String, nullable=True)  # 'Internet Interaction', 'Self', etc.
+
+    # Extended metadata (pilot_scenarios / child_llm_scenarios JSON format)
+    persona_id = Column(String, nullable=True)
+    age_band = Column(String, nullable=True)
+    gender_identity = Column(String, nullable=True)
+    context = Column(Text, nullable=True)
+    piaget_stage = Column(String, nullable=True)
+    trait_level = Column(String, nullable=True)  # 'high' or 'low' from big_five.level
+    intent = Column(String, nullable=True)
+    subdomain = Column(String, nullable=True)
+    safety_notes = Column(Text, nullable=True)
 
     # Source tracking fields
     source = Column(String, nullable=True)  # 'json_file', 'api_generated', 'manual'
@@ -75,6 +126,9 @@ class Scenario(Base):
         Index("idx_scenarios_is_active", "is_active"),
         Index("idx_scenarios_source", "source"),
         Index("idx_scenarios_n_assigned", "n_assigned"),
+        Index("idx_scenarios_age_band", "age_band"),
+        Index("idx_scenarios_gender_identity", "gender_identity"),
+        Index("idx_scenarios_piaget_stage", "piaget_stage"),
     )
 
 
@@ -115,6 +169,9 @@ class ScenarioAssignment(Base):
     participant_id = Column(String, nullable=False)  # user_id
     scenario_id = Column(String, ForeignKey("scenarios.scenario_id"), nullable=False)
     child_profile_id = Column(String, nullable=True)
+    attempt_number = Column(
+        Integer, nullable=False, default=1
+    )  # Workflow attempt number
 
     # Status tracking
     status = Column(
@@ -151,9 +208,7 @@ class ScenarioAssignment(Base):
 
     # Relationships
     scenario = relationship("Scenario", back_populates="assignments")
-    # Bidirectional relationship to Selection (defined in selections.py).
-    # Use string class names so SQLAlchemy can resolve them without import cycles.
-    selections = relationship("Selection", back_populates="assignment")
+    selections = relationship(Selection, back_populates="assignment")
 
     __table_args__ = (
         Index("idx_assignments_participant_id", "participant_id"),
@@ -161,6 +216,8 @@ class ScenarioAssignment(Base):
         Index("idx_assignments_status", "status"),
         Index("idx_assignments_assigned_at", "assigned_at"),
         Index("idx_assignments_participant_scenario", "participant_id", "scenario_id"),
+        Index("idx_assignments_attempt_number", "attempt_number"),
+        Index("idx_assignments_child_attempt", "child_profile_id", "attempt_number"),
     )
 
 
@@ -207,6 +264,7 @@ class ScenarioAssignmentModel(BaseModel):
     participant_id: str
     scenario_id: str
     child_profile_id: Optional[str] = None
+    attempt_number: int
     status: str
     assigned_at: int
     started_at: Optional[int] = None
@@ -228,6 +286,9 @@ class ScenarioAssignmentForm(BaseModel):
     participant_id: str
     scenario_id: Optional[str] = None  # If None, will be assigned via weighted sampling
     child_profile_id: Optional[str] = None
+    attempt_number: Optional[int] = (
+        None  # If None, will be computed from user's current attempt
+    )
     assignment_position: Optional[int] = None
     alpha: Optional[float] = 1.0  # Default alpha for weighted sampling
 
@@ -522,11 +583,17 @@ class ScenarioAssignmentTable:
             ts = int(time.time() * 1000)
             assignment_id = str(uuid.uuid4())
 
+            # Get attempt_number from form or compute from user's current attempt
+            attempt_number = form.attempt_number
+            if attempt_number is None:
+                attempt_number = _get_current_attempt_number(form.participant_id)
+
             obj = ScenarioAssignment(
                 assignment_id=assignment_id,
                 participant_id=form.participant_id,
                 scenario_id=scenario_id,
                 child_profile_id=form.child_profile_id,
+                attempt_number=attempt_number,
                 status=AssignmentStatus.ASSIGNED.value,
                 assigned_at=ts,
                 started_at=None,
@@ -662,15 +729,22 @@ class ScenarioAssignmentTable:
             return [row[0] for row in rows]
 
     def get_assignments_by_child(
-        self, child_profile_id: str, status_filter: Optional[List[str]] = None
+        self,
+        child_profile_id: str,
+        status_filter: Optional[List[str]] = None,
+        attempt_number: Optional[int] = None,
     ) -> List[ScenarioAssignmentModel]:
-        """Get all assignments for a child profile, optionally filtered by status"""
+        """Get all assignments for a child profile, optionally filtered by status and attempt_number"""
         with get_db() as db:
             query = db.query(ScenarioAssignment).filter(
                 ScenarioAssignment.child_profile_id == child_profile_id
             )
             if status_filter:
                 query = query.filter(ScenarioAssignment.status.in_(status_filter))
+            if attempt_number is not None:
+                query = query.filter(
+                    ScenarioAssignment.attempt_number == attempt_number
+                )
             # Order by assignment_position to maintain order
             rows = query.order_by(ScenarioAssignment.assignment_position.asc()).all()
             return [ScenarioAssignmentModel.model_validate(row) for row in rows]

@@ -29,9 +29,14 @@ from functools import update_wrapper, partial
 from fastapi import Request
 from pydantic import BaseModel, Field, create_model
 
-from langchain_core.utils.function_calling import (
-    convert_to_openai_function as convert_pydantic_model_to_openai_function_spec,
-)
+
+# Lazy import langchain for Heroku slug size
+def convert_pydantic_model_to_openai_function_spec(model):
+    from langchain_core.utils.function_calling import (
+        convert_to_openai_function as _convert,
+    )
+
+    return _convert(model)
 
 
 from open_webui.utils.misc import is_string_allowed

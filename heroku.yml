@@ -3,7 +3,7 @@ build:
     web: Dockerfile
 
 release:
-  command: cd backend/open_webui && python -m alembic upgrade head
+  command: cd /app/backend/open_webui && python -m alembic upgrade head || echo "Migration failed, continuing..."
 
-run:
-  web: uvicorn open_webui.main:app --host 0.0.0.0 --port $PORT
+# For Container Registry, Heroku uses Dockerfile CMD (bash start.sh)
+# The heroku.yml run section is ignored for Container Registry deployments

@@ -33,12 +33,11 @@ peewee-migrate==1.12.2
 pycrdt==0.12.25
 redis
 
-pymongo
-
+# Optional DB/search backends - REMOVED for slim Heroku slug
+# pymongo
 psycopg2-binary==2.9.10
 pgvector==0.4.1
-
-PyMySQL==1.1.1
+# PyMySQL==1.1.1  # install manually if MySQL is needed
 # boto3 # REMOVED: Lazy import - install if using STORAGE_PROVIDER=s3
 
 APScheduler==3.10.4
@@ -48,84 +47,84 @@ loguru==0.7.3
 asgiref==3.8.1
 typer
 
-# AI libraries
+## Core AI libraries (keep for pilot)
 tiktoken
-mcp==1.14.1
+# mcp==1.14.1                 # REMOVED for Heroku slug size (optional MCP tooling)
 
 openai
-anthropic
-google-genai==1.38.0
-google-generativeai==0.8.5
+# anthropic                   # REMOVED: optional model provider for Heroku pilot
+# google-genai==1.38.0        # REMOVED: optional Google GenAI provider
+# google-generativeai==0.8.5  # REMOVED: optional Google GenAI provider
 
-langchain==1.2.0
-langchain-community==0.4.1
-langchain-classic==1.0.1
-langchain-text-splitters==1.1.0
+# langchain==1.2.2              # REMOVED: heavy RAG/tools stack for Heroku pilot
+# langchain-community==0.4.1    # REMOVED: heavy RAG/tools stack
+# langchain-classic==1.0.1      # REMOVED: heavy RAG/tools stack  
+# langchain-text-splitters==1.1.0  # REMOVED: heavy RAG/tools stack
 
 fake-useragent==2.2.0
 # chromadb removed for Heroku slug size - use VECTOR_DB=pgvector
-huggingface_hub
+# huggingface_hub           # REMOVED: heavy HF integration, lazy import in retrieval.utils
 PyYAML
 websocket-client
 websockets
 chardet==5.2.0
-opensearch-py==2.8.0
+# opensearch-py==2.8.0  # REMOVED: optional search backend
 
-pymilvus==2.5.0
-qdrant-client==1.14.3
+# pymilvus==2.5.0         # REMOVED: optional vector DB
+# qdrant-client==1.14.3   # REMOVED: optional vector DB
 # playwright==1.49.1 # REMOVED: Too heavy for Heroku
-elasticsearch==9.1.0
-pinecone==6.0.2
-oracledb==3.2.0
+# elasticsearch==9.1.0    # REMOVED: optional search backend
+# pinecone==6.0.2         # REMOVED: optional vector DB
+# oracledb==3.2.0         # REMOVED: optional DB
 
 # av==14.0.1 # REMOVED: Heavy video processing
 # transformers # REMOVED: Too heavy for Heroku
 # sentence-transformers==5.1.1 # REMOVED: Too heavy for Heroku
 # accelerate # REMOVED: Too heavy for Heroku
-pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
-einops==0.8.1 
+# pyarrow==20.0.0 # REMOVED: heavy; not needed on Heroku pilot
+# einops==0.8.1    # REMOVED: heavy; not needed for basic chat 
 
 # colbert-ai==0.2.21 # REMOVED: Too heavy for Heroku
 
 ftfy==6.3.1
-pypdf==6.5.0
-fpdf2==2.8.2
-pymdown-extensions==10.14.2
-docx2txt==0.8
-python-pptx==1.0.2
-unstructured==0.16.17
-nltk==3.9.1
+# Document/RAG helpers - REMOVED to shrink Heroku slug
+# pypdf==6.5.0
+# fpdf2==2.8.2
+# docx2txt==0.8
+# python-pptx==1.0.2
+# unstructured==0.16.17
+# nltk==3.9.1
+# pypandoc==1.15
+# pandas==2.2.3
+# openpyxl==3.1.5
+# pyxlsb==1.0.10
+# xlrd==2.0.1
 Markdown==3.8.2
-pypandoc==1.15
-pandas==2.2.3
-openpyxl==3.1.5
-pyxlsb==1.0.10
-xlrd==2.0.1
 validators==0.35.0
 psutil
-sentencepiece
-soundfile==0.13.1
+# sentencepiece  # REMOVED: heavy tokenizer, not needed for basic chat
+# soundfile==0.13.1   # REMOVED: audio processing not needed on Heroku
 # azure-ai-documentintelligence # REMOVED: Lazy import - install if using document_intelligence loader
 
-pillow==11.3.0
+# pillow==11.3.0  # REMOVED: heavy image processing, not needed for basic chat
 # opencv-python-headless==4.11.0.86 # REMOVED: Too heavy for Heroku
 # rapidocr-onnxruntime==1.4.4 # REMOVED: Too heavy for Heroku
-rank-bm25==0.2.2
+# rank-bm25==0.2.2  # REMOVED: RAG retriever not needed without langchain
 
 # onnxruntime==1.20.1 # REMOVED: Too heavy for Heroku
 # faster-whisper==1.1.1 # REMOVED: Too heavy for Heroku
 
 black==25.1.0
-youtube-transcript-api==1.2.2
-pytube==15.0.0
+# youtube-transcript-api==1.2.2  # REMOVED: optional YouTube loader
+# pytube==15.0.0                  # REMOVED: optional YouTube loader
 
-pydub
+# pydub  # REMOVED: audio processing not needed on Heroku
 # ddgs # REMOVED: Lazy import - install if using DuckDuckGo search
 
-## Google Drive
-google-api-python-client
-google-auth-httplib2
-google-auth-oauthlib
+## Google Drive - REMOVED for slim Heroku slug (optional integration)
+# google-api-python-client
+# google-auth-httplib2
+# google-auth-oauthlib
 
 ## Tests
 # docker~=7.1.0 # REMOVED: Not needed for production
@@ -138,8 +137,8 @@ google-auth-oauthlib
 # azure-identity # REMOVED: Lazy import - install if using STORAGE_PROVIDER=azure or document_intelligence
 # azure-storage-blob # REMOVED: Lazy import - install if using STORAGE_PROVIDER=azure
 
-## LDAP
-ldap3==2.9.1
+## LDAP - REMOVED for slim Heroku slug (optional integration)
+# ldap3==2.9.1
 
 # firecrawl-py # REMOVED: Lazy import - install if using WEB_LOADER_ENGINE=firecrawl
 

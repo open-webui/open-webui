@@ -45,6 +45,9 @@
 	} from '$lib/apis/chats';
 	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { getWorkflowState, type WorkflowStateResponse } from '$lib/apis/workflow';
+	import { getStepRoute, canAccessStep, getStepLabel, isStepCompleted } from '$lib/utils/workflow';
+	import { getUserType } from '$lib/utils';
 
 	import ArchivedChatsModal from './ArchivedChatsModal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
@@ -95,8 +98,86 @@
 
 	let newFolderId = null;
 
+	// Workflow state for interviewee users
+	let userType = 'user';
+	let workflowState: WorkflowStateResponse | null = null;
+	let loadingWorkflow = false;
+	$: isInterviewee = userType === 'interviewee';
+
+	/** Get auth token from user store first, then localStorage. Always use backend as source of truth. */
+	function getToken(): string | null {
+		return ($user as { token?: string })?.token ?? localStorage.token ?? null;
+	}
+
+	// Fetch workflow state from backend
+	async function fetchWorkflowState() {
+		if (userType !== 'interviewee') return;
+		const token = getToken();
+		if (!token) return;
+
+		loadingWorkflow = true;
+		try {
+			workflowState = await getWorkflowState(token);
+		} catch (error) {
+			console.error('Failed to fetch workflow state:', error);
+			workflowState = null;
+		} finally {
+			loadingWorkflow = false;
+		}
+	}
+
+	// Navigation function
+	async function goToStep(step: number) {
+		if (!workflowState) {
+			await fetchWorkflowState();
+		}
+
+		if (!workflowState || !canAccessStep(step, workflowState)) {
+			toast.error('This step is not yet available');
+			return;
+		}
+
+		const route = getStepRoute(step);
+		await goto(route);
+
+		// Refresh state after navigation
+		await fetchWorkflowState();
+	}
+
+	// Get step display info
+	function getStepInfo(step: number) {
+		if (!workflowState) {
+			return {
+				route: getStepRoute(step),
+				isCurrentStep: false,
+				isCompleted: false,
+				canAccess: false,
+				label: getStepLabel(step)
+			};
+		}
+
+		const route = getStepRoute(step);
+		const currentRoute = $page.url.pathname;
+		const isCurrentStep = route === currentRoute || currentRoute.startsWith(route);
+		const canAccess = canAccessStep(step, workflowState);
+		const isCompleted = isStepCompleted(step, workflowState);
+
+		return {
+			route,
+			isCurrentStep,
+			isCompleted,
+			canAccess,
+			label: getStepLabel(step)
+		};
+	}
+
 	$: if ($selectedFolder) {
 		initFolders();
+	}
+
+	// Refresh workflow state when route changes (must be at top level)
+	$: if (isInterviewee && $page.url.pathname) {
+		fetchWorkflowState();
 	}
 
 	const initFolders = async () => {
@@ -432,6 +513,14 @@
 
 		await showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
 
+		// Determine user type and fetch workflow state if interviewee
+		if ($user) {
+			userType = await getUserType($user);
+			if (userType === 'interviewee') {
+				await fetchWorkflowState();
+			}
+		}
+
 		unsubscribers = [
 			mobile.subscribe((value) => {
 				if ($showSidebar && value) {
@@ -496,6 +585,16 @@
 		dropZone?.addEventListener('dragover', onDragOver);
 		dropZone?.addEventListener('drop', onDrop);
 		dropZone?.addEventListener('dragleave', onDragLeave);
+
+		const onWorkflowUpdate = () => {
+			if (userType === 'interviewee') fetchWorkflowState();
+		};
+		window.addEventListener('workflow-updated', onWorkflowUpdate);
+		window.addEventListener('storage', onWorkflowUpdate);
+		unsubscribers.push(() => {
+			window.removeEventListener('workflow-updated', onWorkflowUpdate);
+			window.removeEventListener('storage', onWorkflowUpdate);
+		});
 	});
 
 	onDestroy(() => {
@@ -977,6 +1076,243 @@
 					}
 				}}
 			>
+				<!-- Workflow Navigation Section (for interviewee users only) -->
+				{#if isInterviewee && !loadingWorkflow && workflowState}
+					{@const step0 = getStepInfo(0)}
+					{@const step1 = getStepInfo(1)}
+					{@const step2 = getStepInfo(2)}
+					{@const step3 = getStepInfo(3)}
+					{@const step4 = getStepInfo(4)}
+					{@const onInstructionsPage = $page.url.pathname.startsWith('/assignment-instructions')}
+					{@const step1Clickable = step1.canAccess && !onInstructionsPage}
+					<div class="px-[0.4375rem] mb-3 pb-3 border-b border-gray-200 dark:border-gray-800">
+						<div
+							class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-2"
+						>
+							{$i18n.t('Assignment Workflow')}
+						</div>
+						<div class="space-y-1.5">
+							<!-- Step 0: Assignment Instructions -->
+							<button
+								data-step="0"
+								on:click={() => goToStep(0)}
+								disabled={!step0.canAccess}
+								class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-xl transition text-left {step0.isCurrentStep
+									? 'bg-blue-100 dark:bg-blue-900'
+									: step0.canAccess
+										? 'hover:bg-gray-100 dark:hover:bg-gray-900 cursor-pointer'
+										: 'opacity-50 cursor-not-allowed'}"
+								aria-label="Navigate to {step0.label}"
+							>
+								<div
+									class="size-4 rounded-full flex items-center justify-center flex-shrink-0 {step0.isCompleted
+										? 'bg-green-500'
+										: step0.isCurrentStep
+											? 'bg-blue-500'
+											: 'bg-gray-300 dark:bg-gray-600'}"
+								>
+									{#if step0.isCompleted}
+										<svg
+											class="size-2.5 text-white"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M5 13l4 4L19 7"
+											></path>
+										</svg>
+									{:else}
+										<span class="text-[10px] font-bold text-white">0</span>
+									{/if}
+								</div>
+								<span class="text-xs text-gray-700 dark:text-gray-300"
+									>{$i18n.t('Assignment Instructions')}</span
+								>
+							</button>
+
+							<!-- Step 1: Child Profile (not clickable while on assignment-instructions) -->
+							<button
+								data-step="1"
+								on:click={() => goToStep(1)}
+								disabled={!step1Clickable}
+								class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-xl transition text-left {step1.isCurrentStep
+									? 'bg-blue-100 dark:bg-blue-900'
+									: step1Clickable
+										? 'hover:bg-gray-100 dark:hover:bg-gray-900 cursor-pointer'
+										: 'opacity-50 cursor-not-allowed'}"
+								aria-label="Navigate to {step1.label}"
+							>
+								<div
+									class="size-4 rounded-full flex items-center justify-center flex-shrink-0 {step1.isCompleted
+										? 'bg-green-500'
+										: step1.isCurrentStep
+											? 'bg-blue-500'
+											: 'bg-gray-300 dark:bg-gray-600'}"
+								>
+									{#if step1.isCompleted}
+										<svg
+											class="size-2.5 text-white"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M5 13l4 4L19 7"
+											></path>
+										</svg>
+									{:else}
+										<span class="text-[10px] font-bold text-white">1</span>
+									{/if}
+								</div>
+								<span class="text-xs text-gray-700 dark:text-gray-300"
+									>{$i18n.t('Child Profile')}</span
+								>
+							</button>
+
+							<!-- Step 2: Moderation -->
+							<button
+								data-step="2"
+								on:click={() => goToStep(2)}
+								disabled={!step2.canAccess}
+								class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-xl transition text-left {step2.isCurrentStep
+									? 'bg-blue-100 dark:bg-blue-900'
+									: step2.canAccess
+										? 'hover:bg-gray-100 dark:hover:bg-gray-900 cursor-pointer'
+										: 'opacity-50 cursor-not-allowed'}"
+								aria-label="Navigate to {step2.label}"
+							>
+								<div
+									class="size-4 rounded-full flex items-center justify-center flex-shrink-0 {step2.isCompleted
+										? 'bg-green-500'
+										: (workflowState?.progress_by_section?.moderation_completed_count ?? 0) > 0
+											? 'bg-yellow-500'
+											: step2.isCurrentStep
+												? 'bg-blue-500'
+												: 'bg-gray-300 dark:bg-gray-600'}"
+								>
+									{#if step2.isCompleted}
+										<svg
+											class="size-2.5 text-white"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M5 13l4 4L19 7"
+											></path>
+										</svg>
+									{:else if (workflowState?.progress_by_section?.moderation_completed_count ?? 0) > 0}
+										<span class="text-[9px] text-white font-semibold">
+											{workflowState?.progress_by_section?.moderation_completed_count ??
+												0}/{workflowState?.progress_by_section?.moderation_total ?? 0}
+										</span>
+									{:else}
+										<span class="text-[10px] font-bold text-white">2</span>
+									{/if}
+								</div>
+								<span class="text-xs text-gray-700 dark:text-gray-300">
+									{$i18n.t('Moderation')} ({workflowState?.progress_by_section
+										?.moderation_completed_count ?? 0}/
+									{workflowState?.progress_by_section?.moderation_total ?? 0})
+								</span>
+							</button>
+
+							<!-- Step 3: Exit Survey -->
+							<button
+								data-step="3"
+								on:click={() => goToStep(3)}
+								disabled={!step3.canAccess}
+								class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-xl transition text-left {step3.isCurrentStep
+									? 'bg-blue-100 dark:bg-blue-900'
+									: step3.canAccess
+										? 'hover:bg-gray-100 dark:hover:bg-gray-900 cursor-pointer'
+										: 'opacity-50 cursor-not-allowed'}"
+								aria-label="Navigate to {step3.label}"
+							>
+								<div
+									class="size-4 rounded-full flex items-center justify-center flex-shrink-0 {step3.isCompleted
+										? 'bg-green-500'
+										: step3.isCurrentStep
+											? 'bg-blue-500'
+											: 'bg-gray-300 dark:bg-gray-600'}"
+								>
+									{#if step3.isCompleted}
+										<svg
+											class="size-2.5 text-white"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M5 13l4 4L19 7"
+											></path>
+										</svg>
+									{:else}
+										<span class="text-[10px] font-bold text-white">3</span>
+									{/if}
+								</div>
+								<span class="text-xs text-gray-700 dark:text-gray-300"
+									>{$i18n.t('Exit Survey')}</span
+								>
+							</button>
+
+							<!-- Step 4: Completion -->
+							<button
+								data-step="4"
+								on:click={() => goToStep(4)}
+								disabled={!step4.canAccess}
+								class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-xl transition text-left {step4.isCurrentStep
+									? 'bg-blue-100 dark:bg-blue-900'
+									: step4.canAccess
+										? 'hover:bg-gray-100 dark:hover:bg-gray-900 cursor-pointer'
+										: 'opacity-50 cursor-not-allowed'}"
+								aria-label="Navigate to {step4.label}"
+							>
+								<div
+									class="size-4 rounded-full flex items-center justify-center flex-shrink-0 {step4.isCompleted
+										? 'bg-green-500'
+										: step4.isCurrentStep
+											? 'bg-blue-500'
+											: 'bg-gray-300 dark:bg-gray-600'}"
+								>
+									{#if step4.isCompleted}
+										<svg
+											class="size-2.5 text-white"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M5 13l4 4L19 7"
+											></path>
+										</svg>
+									{:else}
+										<span class="text-[10px] font-bold text-white">4</span>
+									{/if}
+								</div>
+								<span class="text-xs text-gray-700 dark:text-gray-300">{$i18n.t('Completion')}</span
+								>
+							</button>
+						</div>
+					</div>
+				{/if}
+
 				<div class="pb-1.5">
 					<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
 						<a

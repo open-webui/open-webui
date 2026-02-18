@@ -1,5 +1,26 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
+/** Parse JSON response safely; throws structured error if body is not JSON (e.g. HTML) */
+async function parseJsonOrThrow<T>(res: Response): Promise<T> {
+	const text = await res.text();
+	let parsed: T;
+	try {
+		parsed = JSON.parse(text) as T;
+	} catch {
+		if (!res.ok) {
+			throw { detail: res.statusText || `Request failed (${res.status})` };
+		}
+		throw {
+			detail:
+				'Server returned invalid response. The API may be unavailable or the route may not exist.'
+		};
+	}
+	if (!res.ok) {
+		throw typeof parsed === 'object' && parsed !== null ? parsed : { detail: res.statusText };
+	}
+	return parsed;
+}
+
 export interface ModerationRequest {
 	moderation_types: string[]; // Changed to array for multiple selections
 	child_prompt?: string;
@@ -604,8 +625,7 @@ export const uploadScenariosAdmin = async (
 		},
 		body: formData
 	});
-	if (!res.ok) throw await res.json();
-	return res.json();
+	return parseJsonOrThrow<ScenarioUploadResponse>(res);
 };
 
 export const listScenariosAdmin = async (
@@ -634,8 +654,7 @@ export const listScenariosAdmin = async (
 			Authorization: `Bearer ${token}`
 		}
 	});
-	if (!res.ok) throw await res.json();
-	return res.json();
+	return parseJsonOrThrow<ScenarioAdminListResponse>(res);
 };
 
 export const getScenarioStatsAdmin = async (token: string): Promise<ScenarioStatsResponse> => {
@@ -646,8 +665,7 @@ export const getScenarioStatsAdmin = async (token: string): Promise<ScenarioStat
 			Authorization: `Bearer ${token}`
 		}
 	});
-	if (!res.ok) throw await res.json();
-	return res.json();
+	return parseJsonOrThrow<ScenarioStatsResponse>(res);
 };
 
 export const updateScenarioAdmin = async (
@@ -663,8 +681,7 @@ export const updateScenarioAdmin = async (
 		},
 		body: JSON.stringify({ is_active })
 	});
-	if (!res.ok) throw await res.json();
-	return res.json();
+	return parseJsonOrThrow<{ status: string; scenario: ScenarioModel }>(res);
 };
 
 export const uploadAttentionChecksAdmin = async (
@@ -689,8 +706,7 @@ export const uploadAttentionChecksAdmin = async (
 		},
 		body: formData
 	});
-	if (!res.ok) throw await res.json();
-	return res.json();
+	return parseJsonOrThrow<ScenarioUploadResponse>(res);
 };
 
 export const listAttentionChecksAdmin = async (
@@ -709,8 +725,7 @@ export const listAttentionChecksAdmin = async (
 			Authorization: `Bearer ${token}`
 		}
 	});
-	if (!res.ok) throw await res.json();
-	return res.json();
+	return parseJsonOrThrow<AttentionCheckAdminListResponse>(res);
 };
 
 export const updateAttentionCheckAdmin = async (
@@ -726,8 +741,7 @@ export const updateAttentionCheckAdmin = async (
 		},
 		body: JSON.stringify({ is_active })
 	});
-	if (!res.ok) throw await res.json();
-	return res.json();
+	return parseJsonOrThrow<{ status: string; attention_check: AttentionCheckAdminModel }>(res);
 };
 
 // Set name management APIs
@@ -744,8 +758,7 @@ export const getScenarioSetNames = async (token: string): Promise<SetNamesRespon
 			Authorization: `Bearer ${token}`
 		}
 	});
-	if (!res.ok) throw await res.json();
-	return res.json();
+	return parseJsonOrThrow<SetNamesResponse>(res);
 };
 
 export const getAttentionCheckSetNames = async (token: string): Promise<SetNamesResponse> => {
@@ -756,8 +769,7 @@ export const getAttentionCheckSetNames = async (token: string): Promise<SetNames
 			Authorization: `Bearer ${token}`
 		}
 	});
-	if (!res.ok) throw await res.json();
-	return res.json();
+	return parseJsonOrThrow<SetNamesResponse>(res);
 };
 
 export interface SetActiveSetRequest {
@@ -783,8 +795,7 @@ export const setActiveScenarioSet = async (
 		},
 		body: JSON.stringify({ set_name: setName })
 	});
-	if (!res.ok) throw await res.json();
-	return res.json();
+	return parseJsonOrThrow<SetActiveSetResponse>(res);
 };
 
 export const setActiveAttentionCheckSet = async (
@@ -799,6 +810,5 @@ export const setActiveAttentionCheckSet = async (
 		},
 		body: JSON.stringify({ set_name: setName })
 	});
-	if (!res.ok) throw await res.json();
-	return res.json();
+	return parseJsonOrThrow<SetActiveSetResponse>(res);
 };

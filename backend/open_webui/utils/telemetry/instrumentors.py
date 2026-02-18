@@ -7,6 +7,7 @@ from aiohttp import (
     TraceRequestEndParams,
     TraceRequestExceptionParams,
 )
+
 try:
     from chromadb.telemetry.opentelemetry.fastapi import instrument_fastapi
 except ImportError:
