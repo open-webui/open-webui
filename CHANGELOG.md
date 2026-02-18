@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ⚙️ **Connection enable/disable toggles.** Individual provider connections can now be enabled or disabled from both admin and user settings. [Commit](https://github.com/open-webui/open-webui/commit/990c638f6cf91507b61898f454c26f9516114c36)
 - ⏸️ **Prompt enable/disable toggle.** Users can now enable or disable prompts directly from the prompts list using a toggle switch, without needing to delete and recreate them. Inactive prompts display an "Inactive" badge and are still visible in the list. [Commit](https://github.com/open-webui/open-webui/commit/094ed0b48cb86b9b6aff3c93f522072d11230761)
 
+### Fixed
+
+- 🗄️ **PostgreSQL workspace cloning.** Cloning workspace models now works correctly on PostgreSQL databases by generating proper unique IDs for access grants instead of using potentially duplicate or invalid IDs. [Commit](https://github.com/open-webui/open-webui/commit/3dd44c4f1931d13bfd46062291c6f23b33dde003)
+
 ## [0.8.3] - 2026-02-17
 
 ### Added
