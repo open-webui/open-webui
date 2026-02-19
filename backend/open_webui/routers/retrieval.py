@@ -25,7 +25,7 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import run_in_threadpool
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import tiktoken
 
 
@@ -252,6 +252,14 @@ class CollectionNameForm(BaseModel):
 
 class ProcessUrlForm(CollectionNameForm):
     url: str
+    overwrite: bool = Field(
+        default=True,
+        description=(
+            "Whether to replace an existing vector collection before saving "
+            "content from the URL. Set to false to preserve existing vectors "
+            "for the collection."
+        ),
+    )
 
 
 class SearchForm(BaseModel):
@@ -1953,7 +1961,7 @@ async def process_web(
                     request,
                     docs,
                     collection_name,
-                    overwrite=True,
+                    overwrite=form_data.overwrite,
                     user=user,
                 )
             else:

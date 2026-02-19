@@ -331,7 +331,8 @@ export const processWeb = async (
 	token: string,
 	collection_name: string,
 	url: string,
-	process: boolean = true
+	process: boolean = true,
+	overwrite: boolean = true
 ) => {
 	let error = null;
 
@@ -350,7 +351,8 @@ export const processWeb = async (
 		},
 		body: JSON.stringify({
 			url: url,
-			collection_name: collection_name
+			collection_name: collection_name,
+			overwrite: overwrite
 		})
 	})
 		.then(async (res) => {
