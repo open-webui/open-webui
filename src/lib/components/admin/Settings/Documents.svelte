@@ -250,8 +250,8 @@
 			BYPASS_EMBEDDING_AND_RETRIEVAL: BYPASS_EMBEDDING_AND_RETRIEVAL,
 			chunk: {
 				text_splitter: textSplitter,
-				chunk_overlap: chunkOverlap,
-				chunk_size: chunkSize
+				chunk_overlap: (chunkOverlap === '' || chunkOverlap === null || isNaN(Number(chunkOverlap)) || Number(chunkOverlap) < 0) ? 200 : Number(chunkOverlap),
+				chunk_size: (chunkSize === '' || chunkSize === null || isNaN(Number(chunkSize)) || Number(chunkSize) <= 0) ? 1000 : Number(chunkSize)
 			},
 			content_extraction: {
 				engine: contentExtractionEngine,
@@ -320,8 +320,10 @@
 			}
 
 
-			OllamaKey = embeddingConfig.ollama_config.key;
-			OllamaUrl = embeddingConfig.ollama_config.url;
+			if (embeddingConfig.ollama_config) {
+				OllamaKey = embeddingConfig.ollama_config.key ?? OllamaKey;
+				OllamaUrl = embeddingConfig.ollama_config.url ?? OllamaUrl;
+			}
 		} else {
 			// No embedding config yet for this admin; force explicit entry.
 			embeddingEngine = 'portkey';
@@ -536,10 +538,6 @@
 										bind:value={chunkSize}
 										autocomplete="off"
 										min="1"
-										on:input={(e) => {
-											const val = parseInt(e.target.value) || 0;
-											chunkSize = val > 0 ? val : 1000;
-										}}
 									/>
 								</div>
 							</div>
@@ -557,10 +555,6 @@
 										bind:value={chunkOverlap}
 										autocomplete="off"
 										min="0"
-										on:input={(e) => {
-											const val = parseInt(e.target.value) || 0;
-											chunkOverlap = val > 0 ? val : 200;
-										}}
 									/>
 								</div>
 							</div>
