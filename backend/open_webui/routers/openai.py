@@ -63,6 +63,29 @@ log = logging.getLogger(__name__)
 
 ##########################################
 #
+# API provider hardcoded behavior
+#
+##########################################
+
+def force_streaming_malformed_header(url_check):
+    
+    """
+        Takes in url, and checks it against a hard coded url to force streaming.
+        input: post URL           Output:  force_streaming? flag
+    """
+    
+    try:
+        host = urlparse(url_check).netloc.split(':')[0]
+        if host == 'parasail.io' or host.endswith('.parasail.io'):
+            return True
+        else:
+            return False
+    except:
+        return False
+
+
+##########################################
+#
 # Utility functions
 #
 ##########################################
@@ -1058,7 +1081,8 @@ async def generate_chat_completion(
     )
 
     is_responses = api_config.get("api_type") == "responses"
-
+    stream_requested_flag = payload.get("stream", False)
+    
     if api_config.get("azure", False):
         api_version = api_config.get("api_version", "2023-03-15-preview")
         request_url, payload = convert_to_azure_payload(url, payload, api_version)
@@ -1104,12 +1128,17 @@ async def generate_chat_completion(
         )
 
         # Check if response is SSE
-        if "text/event-stream" in r.headers.get("Content-Type", ""):
+        # r.headers is immutable therefore need to create a variable a mutable var
+        response_headers = dict(r.headers)
+        if force_streaming_malformed_header(url) and stream_requested_flag:
+            response_headers["Content-Type"] = "text/event-stream"
+
+        if "text/event-stream" in response_headers.get("Content-Type",""):
             streaming = True
             return StreamingResponse(
                 stream_wrapper(r, session, stream_chunks_handler),
                 status_code=r.status,
-                headers=dict(r.headers),
+                headers=response_headers,
             )
         else:
             try:
@@ -1154,6 +1183,9 @@ async def embeddings(request: Request, form_data: dict, user):
         dict: OpenAI-compatible embeddings response.
     """
     idx = 0
+
+    stream_requested_flag = form_data.get("stream", False)
+
     # Prepare payload/body
     body = json.dumps(form_data)
     # Find correct backend url/key based on model
@@ -1189,13 +1221,18 @@ async def embeddings(request: Request, form_data: dict, user):
             headers=headers,
             cookies=cookies,
         )
+        
+        # fix response header for broken api endpoint
+        response_headers = dict(r.headers)
+        if force_streaming_malformed_header(url) and stream_requested_flag:
+            response_headers["Content-Type"] = "text/event-stream"
 
-        if "text/event-stream" in r.headers.get("Content-Type", ""):
+        if "text/event-stream" in response_headers.get("Content-Type",""):
             streaming = True
             return StreamingResponse(
                 stream_wrapper(r, session),
                 status_code=r.status,
-                headers=dict(r.headers),
+                headers=response_headers,
             )
         else:
             try:
@@ -1254,6 +1291,7 @@ async def responses(
     Routes to the correct upstream backend based on the model field.
     """
     payload = form_data.model_dump(exclude_none=True)
+    stream_requested_flag = payload.get("stream", False)
     body = json.dumps(payload)
 
     idx = 0
@@ -1312,12 +1350,17 @@ async def responses(
         )
 
         # Check if response is SSE
-        if "text/event-stream" in r.headers.get("Content-Type", ""):
+        # fix the streaming response for broken endpoint
+        response_headers = dict(r.headers)
+        if force_streaming_malformed_header(url) and stream_requested_flag:
+            response_headers["Content-Type"] = "text/event-stream"
+
+        if "text/event-stream" in response_headers.get("Content-Type",""):
             streaming = True
             return StreamingResponse(
                 stream_wrapper(r, session),
                 status_code=r.status,
-                headers=dict(r.headers),
+                headers=response_headers,
             )
         else:
             try:
@@ -1380,7 +1423,9 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             request.app.state.config.OPENAI_API_BASE_URLS[idx], {}
         ),  # Legacy support
     )
-
+    
+    stream_requested_flag = (payload.get("stream", False) if isinstance(payload, dict) else False)
+    
     r = None
     session = None
     streaming = False
@@ -1419,12 +1464,16 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         )
 
         # Check if response is SSE
-        if "text/event-stream" in r.headers.get("Content-Type", ""):
+        response_headers = dict(r.headers)
+        if force_streaming_malformed_header(url) and stream_requested_flag:
+            response_headers["Content-Type"] = "text/event-stream"
+
+        if "text/event-stream" in response_headers.get("Content-Type",""):
             streaming = True
             return StreamingResponse(
                 stream_wrapper(r, session),
                 status_code=r.status,
-                headers=dict(r.headers),
+                headers=response_headers,
             )
         else:
             try:
