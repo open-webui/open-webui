@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔧 **SCIM parameter handling.** The SCIM Users and Groups endpoints now accept out-of-range startIndex and count values by clamping them to valid ranges instead of returning errors, in compliance with RFC 7644. [#21577](https://github.com/open-webui/open-webui/pull/21577)
 - 🔍 **Hybrid search result fix.** Hybrid search now returns correct results after fixing a bug where query result unpacking order was mismatched, causing search results to appear empty. [#21562](https://github.com/open-webui/open-webui/pull/21562)
 - 🧩 **Skill JSON import support.** Skills can now be imported from both JSON and Markdown files, fixing an issue where exported JSON skills could not be re-imported and would appear as raw JSON text instead. [#21511](https://github.com/open-webui/open-webui/issues/21511)
+- 🛠️ **Imported items display.** Imported functions and tools now appear immediately in the list after import, without requiring a page reload. [#21593](https://github.com/open-webui/open-webui/issues/21593)
 
 ## [0.8.3] - 2026-02-17
 
