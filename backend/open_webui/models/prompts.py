@@ -206,17 +206,29 @@ class PromptsTable:
             )
 
             user_ids = list(set(prompt.user_id for prompt in all_prompts))
+            prompt_ids = [prompt.id for prompt in all_prompts]
 
             users = Users.get_users_by_user_ids(user_ids, db=db) if user_ids else []
             users_dict = {user.id: user for user in users}
 
+            # Batch-fetch access grants for all prompts in one query
+            all_grants = (
+                AccessGrants.get_grants_by_resources("prompt", prompt_ids, db=db)
+                if prompt_ids
+                else {}
+            )
+
             prompts = []
             for prompt in all_prompts:
                 user = users_dict.get(prompt.user_id)
+                prompt_data = PromptModel.model_validate(prompt).model_dump(
+                    exclude={"access_grants"}
+                )
+                prompt_data["access_grants"] = all_grants.get(prompt.id, [])
                 prompts.append(
                     PromptUserResponse.model_validate(
                         {
-                            **self._to_prompt_model(prompt, db=db).model_dump(),
+                            **prompt_data,
                             "user": user.model_dump() if user else None,
                         }
                     )
@@ -228,22 +240,25 @@ class PromptsTable:
         self, user_id: str, permission: str = "write", db: Optional[Session] = None
     ) -> list[PromptUserResponse]:
         prompts = self.get_prompts(db=db)
+        prompt_ids = [p.id for p in prompts]
         user_group_ids = {
             group.id for group in Groups.get_groups_by_member_id(user_id, db=db)
         }
 
+        # Batch access check instead of N+1 has_access() calls
+        accessible_ids = AccessGrants.get_accessible_resource_ids(
+            user_id=user_id,
+            resource_type="prompt",
+            resource_ids=prompt_ids,
+            permission=permission,
+            user_group_ids=user_group_ids,
+            db=db,
+        )
+
         return [
             prompt
             for prompt in prompts
-            if prompt.user_id == user_id
-            or AccessGrants.has_access(
-                user_id=user_id,
-                resource_type="prompt",
-                resource_id=prompt.id,
-                permission=permission,
-                user_group_ids=user_group_ids,
-                db=db,
-            )
+            if prompt.user_id == user_id or prompt.id in accessible_ids
         ]
 
     def search_prompts(
@@ -329,11 +344,23 @@ class PromptsTable:
 
             items = query.all()
 
+            # Batch-fetch access grants for all prompts in one query
+            prompt_ids = [prompt.id for prompt, user in items]
+            all_grants = (
+                AccessGrants.get_grants_by_resources("prompt", prompt_ids, db=db)
+                if prompt_ids
+                else {}
+            )
+
             prompts = []
             for prompt, user in items:
+                prompt_data = PromptModel.model_validate(prompt).model_dump(
+                    exclude={"access_grants"}
+                )
+                prompt_data["access_grants"] = all_grants.get(prompt.id, [])
                 prompts.append(
                     PromptUserResponse(
-                        **self._to_prompt_model(prompt, db=db).model_dump(),
+                        **prompt_data,
                         user=(
                             UserResponse(**UserModel.model_validate(user).model_dump())
                             if user
