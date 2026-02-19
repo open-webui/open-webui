@@ -1,0 +1,67 @@
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: "0 9 * * 1" # Mondays 9am UTC
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/open-webui/open-webui.git
+          git fetch upstream main
+
+      - name: Check for upstream changes
+        id: check
+        run: |
+          COUNT=$(git rev-list HEAD..upstream/main --count)
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+
+      - name: Create sync branch and merge
+        if: steps.check.outputs.count != '0'
+        id: merge
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          BRANCH="sync/upstream-$DATE"
+          git checkout -b "$BRANCH"
+          git merge upstream/main -X ours --no-edit -m "chore: sync upstream $DATE"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Open PR
+        if: steps.check.outputs.count != '0'
+        run: |
+          git push origin "${{ steps.merge.outputs.branch }}"
+          gh pr create \
+            --title "chore: sync upstream $(date +%Y-%m-%d)" \
+            --body "$(cat <<'EOF'
+          Auto-sync from [open-webui/open-webui](https://github.com/open-webui/open-webui) upstream.
+
+          Conflicts (if any) resolved with \`-X ours\` — our patches take priority.
+          Review the diff to confirm no upstream changes break our customizations.
+          EOF
+          )" \
+            --base main \
+            --head "${{ steps.merge.outputs.branch }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: No changes
+        if: steps.check.outputs.count == '0'
+        run: echo "Upstream has no new commits. Nothing to sync."
