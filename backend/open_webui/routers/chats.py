@@ -887,18 +887,13 @@ async def get_shared_session_user_chat_list(
     if direction:
         filter["direction"] = direction
 
-    chat_list = [
-        SharedChatResponse(**chat.model_dump())
-        for chat in Chats.get_shared_chat_list_by_user_id(
-            user.id,
-            filter=filter,
-            skip=skip,
-            limit=limit,
-            db=db,
-        )
-    ]
-
-    return chat_list
+    return Chats.get_shared_chat_list_by_user_id(
+        user.id,
+        filter=filter,
+        skip=skip,
+        limit=limit,
+        db=db,
+    )
 
 
 ############################

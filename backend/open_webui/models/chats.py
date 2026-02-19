@@ -754,7 +754,7 @@ class ChatTable:
         skip: int = 0,
         limit: int = 50,
         db: Optional[Session] = None,
-    ) -> list[ChatModel]:
+    ) -> list[SharedChatResponse]:
 
         with get_db_context(db) as db:
             query = (
@@ -784,13 +784,29 @@ class ChatTable:
             else:
                 query = query.order_by(Chat.updated_at.desc())
 
+            # Select only the columns needed for SharedChatResponse
+            # to avoid loading the heavy chat JSON blob
+            query = query.with_entities(
+                Chat.id, Chat.title, Chat.share_id,
+                Chat.updated_at, Chat.created_at,
+            )
+
             if skip:
                 query = query.offset(skip)
             if limit:
                 query = query.limit(limit)
 
             all_chats = query.all()
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+            return [
+                SharedChatResponse(
+                    id=chat[0],
+                    title=chat[1],
+                    share_id=chat[2],
+                    updated_at=chat[3],
+                    created_at=chat[4],
+                )
+                for chat in all_chats
+            ]
 
     def get_chat_list_by_user_id(
         self,
