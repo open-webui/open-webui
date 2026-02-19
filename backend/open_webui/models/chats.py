@@ -481,15 +481,17 @@ class ChatTable:
     def upsert_message_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, message: dict
     ) -> Optional[ChatModel]:
-        chat = self.get_chat_by_id(id)
-        if chat is None:
+        chat_obj = self.get_chat_by_id(id)
+        if chat_obj is None:
             return None
+
+        user_id = chat_obj.user_id
 
         # Sanitize message content for null characters before upserting
         if isinstance(message.get("content"), str):
             message["content"] = sanitize_text_for_db(message["content"])
 
-        chat = chat.chat
+        chat = chat_obj.chat
         history = chat.get("history", {})
 
         if message_id in history.get("messages", {}):
@@ -509,7 +511,7 @@ class ChatTable:
             ChatMessages.upsert_message(
                 message_id=message_id,
                 chat_id=id,
-                user_id=self.get_chat_by_id(id).user_id,
+                user_id=user_id,
                 data=history["messages"][message_id],
             )
         except Exception as e:
