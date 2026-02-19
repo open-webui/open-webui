@@ -738,12 +738,16 @@ def apply_params_to_form_data(form_data, model):
 
 async def process_chat_payload(request, form_data, metadata, user, model):
     log.debug(
-        f"[DEBUG] [inside process_chat_payload() from middleware.py] entry. user={user.email} (id={user.id}), "
+        f"[DEBUG] [WS-CHAT 3] [inside process_chat_payload() from middleware.py] entry. user={user.email} (id={user.id}), "
         f"model_id={model.get('id')}, chat_id={metadata.get('chat_id')}, session_id={metadata.get('session_id')}."
     )
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
 
+    log.debug(
+        f"[DEBUG] [WS-CHAT 4] [inside process_chat_payload() from middleware.py] metadata before get_event_emitter: "
+        f"session_id={metadata.get('session_id')!r} chat_id={metadata.get('chat_id')!r} message_id={metadata.get('message_id')!r}."
+    )
     event_emitter = get_event_emitter(metadata)
     event_call = get_event_call(metadata)
 
@@ -999,7 +1003,7 @@ async def process_chat_response(
     pod_id = os.environ.get("HOSTNAME", "unknown")
     is_stream = isinstance(response, StreamingResponse)
     log.debug(
-        f"[DEBUG] [inside process_chat_response() from middleware.py] entry. pod={pod_id}, user={user.email} (id={user.id}), "
+        f"[DEBUG] [WS-CHAT 11] [inside process_chat_response() from middleware.py] entry. pod={pod_id}, user={user.email} (id={user.id}), "
         f"chat_id={metadata.get('chat_id')}, message_id={metadata.get('message_id')}, session_id={metadata.get('session_id')}, is_stream={is_stream}."
     )
     async def background_tasks_handler():
@@ -1130,12 +1134,14 @@ async def process_chat_response(
         event_emitter = get_event_emitter(metadata)
         event_caller = get_event_call(metadata)
         log.debug(
-            f"[DEBUG] [inside process_chat_response() from middleware.py] event_emitter/event_caller set for session_id={metadata.get('session_id')} "
+            f"[DEBUG] [WS-CHAT 12] [inside process_chat_response() from middleware.py] event_emitter/event_caller set for session_id={metadata.get('session_id')} "
             f"(chat_id={metadata.get('chat_id')}). Responses will be emitted to this session from pod={pod_id}."
         )
     else:
         log.debug(
-            "[DEBUG] [inside process_chat_response() from middleware.py] no session_id/chat_id/message_id in metadata; event_emitter will not be used (UI may not update until refresh)."
+            f"[DEBUG] [WS-CHAT 13] [inside process_chat_response() from middleware.py] no valid session_id/chat_id/message_id in metadata; "
+            f"event_emitter will not be used (UI may not update until refresh). "
+            f"Actual values: session_id={metadata.get('session_id')!r} chat_id={metadata.get('chat_id')!r} message_id={metadata.get('message_id')!r}. (BROKE: no emitter.)"
         )
 
     # Non-streaming response
@@ -1154,7 +1160,9 @@ async def process_chat_response(
                 content = response["choices"][0]["message"]["content"]
 
                 if content:
-
+                    log.debug(
+                        f"[DEBUG] [WS-CHAT 16] [inside process_chat_response() from middleware.py] non-streaming: about to emit chat:completion to session_id={metadata.get('session_id')}."
+                    )
                     await event_emitter(
                         {
                             "type": "chat:completion",
@@ -1229,11 +1237,16 @@ async def process_chat_response(
     filter_ids = get_sorted_filter_ids(form_data.get("model"))
 
     # Streaming response
+    if not event_emitter:
+        log.debug(
+            "[DEBUG] [WS-CHAT 14] [inside process_chat_response() from middleware.py] streaming path: event_emitter is None; "
+            "will use fallback stream_wrapper without socket emit (UI may not update until refresh)."
+        )
     if event_emitter and event_caller:
         task_id = str(uuid4())  # Create a unique task ID.
         model_id = form_data.get("model", "")
         log.debug(
-            f"[DEBUG] [inside process_chat_response() from middleware.py] streaming path: persisting message to DB chat_id={metadata.get('chat_id')} message_id={metadata.get('message_id')} from pod={pod_id}."
+            f"[DEBUG] [WS-CHAT 15] [inside process_chat_response() from middleware.py] streaming path: persisting message to DB chat_id={metadata.get('chat_id')} message_id={metadata.get('message_id')} from pod={pod_id}."
         )
         Chats.upsert_message_to_chat_by_id_and_message_id(
             metadata["chat_id"],

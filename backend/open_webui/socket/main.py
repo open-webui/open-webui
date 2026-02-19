@@ -223,7 +223,7 @@ async def connect(sid, environ, auth):
 
                 pod_id = os.environ.get("HOSTNAME", "unknown")
                 log.debug(
-                    f"[DEBUG] [socket connect from socket/main.py] websocket connected on this pod. pod={pod_id} session_id={sid} user_id={user.id}."
+                    f"[DEBUG] [WS-CHAT 0] [socket connect from socket/main.py] websocket connected on this pod. pod={pod_id} session_id={sid} user_id={user.id}."
                 )
                 await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
                 await sio.emit("usage", {"models": get_models_in_use()})
@@ -261,7 +261,7 @@ async def user_join(sid, data):
 
         pod_id = os.environ.get("HOSTNAME", "unknown")
         log.debug(
-            f"[DEBUG] [user_join from socket/main.py] session registered on this pod. pod={pod_id} session_id={sid} user_id={user.id}."
+            f"[DEBUG] [WS-CHAT 0a] [user_join from socket/main.py] session registered on this pod. pod={pod_id} session_id={sid} user_id={user.id}."
         )
         # Join all the channels
         channels = Channels.get_channels_by_user_id(user.id)
@@ -371,6 +371,10 @@ async def disconnect(sid):
 
 
 def get_event_emitter(request_info):
+    log.debug(
+        f"[DEBUG] [WS-CHAT 5] [inside get_event_emitter() from socket/main.py] factory called with request_info: "
+        f"session_id={request_info.get('session_id')!r} chat_id={request_info.get('chat_id')!r} message_id={request_info.get('message_id')!r} user_id={request_info.get('user_id')!r}."
+    )
     async def __event_emitter__(event_data):
         user_id = request_info["user_id"]
         session_ids = list(
@@ -379,7 +383,7 @@ def get_event_emitter(request_info):
         pod_id = os.environ.get("HOSTNAME", "unknown")
         event_type = event_data.get("type", "unknown")
         log.debug(
-            f"[DEBUG] [inside get_event_emitter() __event_emitter__ from socket/main.py] emitting chat-events from pod={pod_id} to session_ids={session_ids} "
+            f"[DEBUG] [WS-CHAT 17] [inside get_event_emitter() __event_emitter__ from socket/main.py] emitting chat-events from pod={pod_id} to session_ids={session_ids} "
             f"chat_id={request_info.get('chat_id')} message_id={request_info.get('message_id')} user_id={user_id} event_type={event_type}."
         )
         for session_id in session_ids:
@@ -432,6 +436,10 @@ def get_event_emitter(request_info):
 
 
 def get_event_call(request_info):
+    log.debug(
+        f"[DEBUG] [WS-CHAT 6] [inside get_event_call() from socket/main.py] factory called with request_info: "
+        f"session_id={request_info.get('session_id')!r} chat_id={request_info.get('chat_id')!r} message_id={request_info.get('message_id')!r}."
+    )
     async def __event_caller__(event_data):
         response = await sio.call(
             "chat-events",

@@ -485,9 +485,22 @@ async def generate_function_chat_completion(
             __task_body__ = None
 
             if metadata:
-                if all(k in metadata for k in ("session_id", "chat_id", "message_id")):
+                has_keys = all(k in metadata for k in ("session_id", "chat_id", "message_id"))
+                has_valid_values = (
+                    metadata.get("session_id") and metadata.get("chat_id") and metadata.get("message_id")
+                )
+                if has_keys and has_valid_values:
                     __event_emitter__ = get_event_emitter(metadata)
                     __event_call__ = get_event_call(metadata)
+                    log.debug(
+                        f"[DEBUG] [WS-CHAT 8] [inside generate_function_chat_completion() from functions.py] metadata has session_id/chat_id/message_id; "
+                        f"__event_emitter__ set. session_id={metadata.get('session_id')!r} chat_id={metadata.get('chat_id')!r}."
+                    )
+                else:
+                    log.debug(
+                        f"[DEBUG] [WS-CHAT 9] [inside generate_function_chat_completion() from functions.py] metadata missing or invalid session_id/chat_id/message_id; "
+                        f"__event_emitter__=None. session_id={metadata.get('session_id')!r} chat_id={metadata.get('chat_id')!r} message_id={metadata.get('message_id')!r}. (BROKE: no emitter for pipe.)"
+                    )
                 __task__ = metadata.get("task", None)
                 __task_body__ = metadata.get("task_body", None)
 
@@ -529,7 +542,7 @@ async def generate_function_chat_completion(
             pipe_id = get_pipe_id(form_data)
             function_module = get_function_module_by_id(request, pipe_id)
             log.debug(
-                f"[DEBUG] [inside generate_function_chat_completion() from functions.py] got function module for pipe_id={pipe_id}; executing pipe (stream={form_data.get('stream', False)})."
+                f"[DEBUG] [WS-CHAT 10] [inside generate_function_chat_completion() from functions.py] got function module for pipe_id={pipe_id}; executing pipe (stream={form_data.get('stream', False)})."
             )
             pipe = function_module.pipe
             params = get_function_params(function_module, form_data, user, extra_params)

@@ -1258,7 +1258,7 @@ async def chat_completion(
     user=Depends(get_verified_user),
 ):
     pod_id = os.environ.get("HOSTNAME", "unknown")
-    log.debug(f"[DEBUG] [inside chat_completion() from main.py] POST /api/chat/completions handled on pod={pod_id}, user={user.email} (id={user.id}).")
+    log.debug(f"[DEBUG] [WS-CHAT 1] [inside chat_completion() from main.py] POST /api/chat/completions handled on pod={pod_id}, user={user.email} (id={user.id}).")
     models_was_empty = not request.app.state.MODELS
     if models_was_empty:
         log.debug(f"[DEBUG] [inside chat_completion() from main.py] request.app.state.MODELS is empty. Calling get_all_models().")
@@ -1306,11 +1306,18 @@ async def chat_completion(
             request.state.direct = True
             request.state.model = model
 
+        _session_id = form_data.pop("session_id", None)
+        _chat_id = form_data.pop("chat_id", None)
+        _message_id = form_data.pop("id", None)
+        log.debug(
+            f"[DEBUG] [WS-CHAT 2] [inside chat_completion() from main.py] extracted from form_data: session_id={_session_id!r} chat_id={_chat_id!r} message_id={_message_id!r}. "
+            f"(CRITICAL: if session_id is None, chat-events will not be emitted and UI will not update until refresh.)"
+        )
         metadata = {
             "user_id": user.id,
-            "chat_id": form_data.pop("chat_id", None),
-            "message_id": form_data.pop("id", None),
-            "session_id": form_data.pop("session_id", None),
+            "chat_id": _chat_id,
+            "message_id": _message_id,
+            "session_id": _session_id,
             "tool_ids": form_data.get("tool_ids", None),
             "files": form_data.get("files", None),
             "features": form_data.get("features", None),

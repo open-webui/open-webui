@@ -410,7 +410,7 @@ async def generate_chat_completion(
                             "selected_model_id": selected_model_id,
                         }
                 elif model.get("pipe"):
-                    log.debug("[DEBUG] [inside generate_chat_completion() from chat.py] routing to pipe (generate_function_chat_completion).")
+                    log.debug("[DEBUG] [WS-CHAT 7] [inside generate_chat_completion() from chat.py] routing to pipe (generate_function_chat_completion).")
                     # Below does not require bypass_filter because this is the only route the uses this function and it is already bypassing the filter
                     response = await generate_function_chat_completion(
                         request, form_data, user=user, models=models
