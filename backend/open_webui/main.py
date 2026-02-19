@@ -1747,8 +1747,7 @@ async def chat_completion(
 
                 # Verify chat ownership — lightweight EXISTS check avoids
                 # deserializing the full chat JSON blob just to confirm the row exists
-                chat_owned = Chats.chat_exists_by_id_and_user_id(metadata["chat_id"], user.id)
-                if not chat_owned and user.role != "admin":  # admins can access any chat
+                if not Chats.is_chat_owner(metadata["chat_id"], user.id) and user.role != "admin":  # admins can access any chat
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
                         detail=ERROR_MESSAGES.DEFAULT(),

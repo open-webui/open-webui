@@ -938,7 +938,7 @@ class ChatTable:
         except Exception:
             return None
 
-    def chat_exists_by_id_and_user_id(
+    def is_chat_owner(
         self, id: str, user_id: str, db: Optional[Session] = None
     ) -> bool:
         """
