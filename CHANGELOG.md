@@ -14,8 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 💡 **No models prompt.** When no models are available, a helpful prompt now guides users to manage their provider connections. [Commit](https://github.com/open-webui/open-webui/commit/a0195cd5ae9b9915295839cd0a5fbac5a1b0bfa2)
 - ⚙️ **Connection enable/disable toggles.** Individual provider connections can now be enabled or disabled from both admin and user settings. [Commit](https://github.com/open-webui/open-webui/commit/990c638f6cf91507b61898f454c26f9516114c36)
 - ⏸️ **Prompt enable/disable toggle.** Users can now enable or disable prompts directly from the prompts list using a toggle switch, without needing to delete and recreate them. Inactive prompts display an "Inactive" badge and are still visible in the list. [Commit](https://github.com/open-webui/open-webui/commit/094ed0b48cb86b9b6aff3c93f522072d11230761)
-- 🗑️ **Memory deletion.** Agents can now delete specific memories that are no longer relevant, duplicated, or incorrect, giving better control over stored memory content. [#21552](https://github.com/open-webui/open-webui/issues/21552)
-- 📋 **Memory listing.** Agents can now list all stored memories, enabling them to identify which memories to manage or delete based on the complete memory inventory. [#21552](https://github.com/open-webui/open-webui/issues/21552)
+- 🗑️ **Memory deletion.** Agents can now delete specific memories that are no longer relevant, duplicated, or incorrect, giving better control over stored memory content. [Commit](https://github.com/open-webui/open-webui/commit/094ed0b48cb86b9b6aff3c93f522072d11230761)
+- 📋 **Memory listing.** Agents can now list all stored memories, enabling them to identify which memories to manage or delete based on the complete memory inventory. [Commit](https://github.com/open-webui/open-webui/commit/094ed0b48cb86b9b6aff3c93f522072d11230761)
 - 📦 **Pip requirements toggle.** Administrators can now disable automatic pip package installation from function frontmatter requirements using the ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS environment variable, providing more control over function dependency management. [Commit](https://github.com/open-webui/open-webui/commit/8bfab327ec5f635f9fe93c26efd198712ff7116d)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for French were enhanced and expanded.
@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - ⏱️ **Embeddings and proxy timeout fix.** The embeddings and OpenAI proxy endpoints now properly honor the AIOHTTP_CLIENT_TIMEOUT environment variable, instead of using default timeouts that could cause requests to hang. [#21558](https://github.com/open-webui/open-webui/pull/21558)
 - 🗄️ **PostgreSQL workspace cloning.** Cloning workspace models now works correctly on PostgreSQL databases by generating proper unique IDs for access grants instead of using potentially duplicate or invalid IDs. [Commit](https://github.com/open-webui/open-webui/commit/3dd44c4f1931d13bfd46062291c6f23b33dde003)
-- 🔓 **MCP SSL verification fix.** MCP tool connections now properly respect the AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL environment variable to disable SSL verification, instead of always verifying SSL certificates. [#21485](https://github.com/open-webui/open-webui/pull/21485), [#21481](https://github.com/open-webui/open-webui/issues/21481)
+- 🔓 **MCP SSL verification fix.** MCP tool connections now properly respect the AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL environment variable to disable SSL verification, instead of always verifying SSL certificates. [Commit](https://github.com/open-webui/open-webui/commit/af5661c2c807465f5600899e8c1a421f96cd7a8c), [#21481](https://github.com/open-webui/open-webui/issues/21481)
 
 ## [0.8.3] - 2026-02-17
 
