@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 💡 **No models prompt.** When no models are available, a helpful prompt now guides users to manage their provider connections. [Commit](https://github.com/open-webui/open-webui/commit/a0195cd5ae9b9915295839cd0a5fbac5a1b0bfa2)
 - ⚙️ **Connection enable/disable toggles.** Individual provider connections can now be enabled or disabled from both admin and user settings. [Commit](https://github.com/open-webui/open-webui/commit/990c638f6cf91507b61898f454c26f9516114c36)
 - ⏸️ **Prompt enable/disable toggle.** Users can now enable or disable prompts directly from the prompts list using a toggle switch, without needing to delete and recreate them. Inactive prompts display an "Inactive" badge and are still visible in the list. [Commit](https://github.com/open-webui/open-webui/commit/094ed0b48cb86b9b6aff3c93f522072d11230761)
+- 🗑️ **Memory deletion.** Agents can now delete specific memories that are no longer relevant, duplicated, or incorrect, giving better control over stored memory content. [#21552](https://github.com/open-webui/open-webui/issues/21552)
+- 📋 **Memory listing.** Agents can now list all stored memories, enabling them to identify which memories to manage or delete based on the complete memory inventory. [#21552](https://github.com/open-webui/open-webui/issues/21552)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for French were enhanced and expanded.
 
