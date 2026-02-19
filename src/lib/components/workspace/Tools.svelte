@@ -615,7 +615,9 @@
 				}
 
 				toast.success($i18n.t('Tool imported successfully'));
-				tools.set(await getTools(localStorage.token));
+				await init();
+				importFiles = null;
+				toolsImportInputElement.value = '';
 			};
 
 			reader.readAsText(importFiles[0]);
