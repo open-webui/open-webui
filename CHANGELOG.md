@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ⚡ **Shared chat loading optimization.** The shared chats endpoint now loads only the needed columns instead of the full conversation history, making shared chat listings significantly faster. [#21614](https://github.com/open-webui/open-webui/pull/21614)
 - 💨 **Chat title query optimization.** Retrieving chat titles now queries only the title column instead of the entire conversation history, making title lookups significantly faster and reducing database load. [#21590](https://github.com/open-webui/open-webui/pull/21590)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 Translations for French, Portuguese (Brazil), Simplified Chinese, and Traditional Chinese were enhanced and expanded.
+- 🌐 Translations for Finnish, French, Portuguese (Brazil), Simplified Chinese, and Traditional Chinese were enhanced and expanded.
 
 ### Fixed
 
@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🗄️ **PostgreSQL workspace cloning.** Cloning workspace models now works correctly on PostgreSQL databases by generating proper unique IDs for access grants instead of using potentially duplicate or invalid IDs. [Commit](https://github.com/open-webui/open-webui/commit/3dd44c4f1931d13bfd46062291c6f23b33dde003)
 - 🔓 **MCP SSL verification fix.** MCP tool connections now properly respect the AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL environment variable to disable SSL verification, instead of always verifying SSL certificates. [Commit](https://github.com/open-webui/open-webui/commit/af5661c2c807465f5600899e8c1a421f96cd7a8c), [#21481](https://github.com/open-webui/open-webui/issues/21481)
 - 🔧 **SCIM parameter handling.** The SCIM Users and Groups endpoints now accept out-of-range startIndex and count values by clamping them to valid ranges instead of returning errors, in compliance with RFC 7644. [#21577](https://github.com/open-webui/open-webui/pull/21577)
+- 🔍 **Hybrid search result fix.** Hybrid search now returns correct results after fixing a bug where query result unpacking order was mismatched, causing search results to appear empty. [#21562](https://github.com/open-webui/open-webui/pull/21562)
 
 ## [0.8.3] - 2026-02-17
 
