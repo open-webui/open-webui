@@ -15,6 +15,7 @@ services:
       - WEBUI_AUTH=true
       - WEBUI_NAME=Otto
       - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      - DEFAULT_MODELS=${OPENCLAW_DEFAULT_MODEL:-claude-opus-4-6}
       - ENABLE_OLLAMA_API=false
       - ENABLE_CHANNELS=true
       - ENABLE_COMMUNITY_SHARING=false
