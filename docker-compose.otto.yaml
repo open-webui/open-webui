@@ -1,0 +1,32 @@
+services:
+  open-webui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: otto-webui:dev
+    container_name: otto-webui
+    volumes:
+      - otto-webui:/app/backend/data
+    ports:
+      - ${OPEN_WEBUI_PORT-3001}:8080
+    environment:
+      - OPENAI_API_BASE_URL=http://host.docker.internal:18789/v1
+      - OPENAI_API_KEY=${OPENCLAW_GATEWAY_TOKEN}
+      - WEBUI_AUTH=true
+      - WEBUI_NAME=Otto
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      - ENABLE_OLLAMA_API=false
+      - ENABLE_CHANNELS=true
+      - ENABLE_COMMUNITY_SHARING=false
+      - ENABLE_MESSAGE_RATING=false
+      - ENABLE_EASTER_EGGS=false
+      - ENABLE_VERSION_UPDATE_CHECK=false
+      - SCARF_NO_ANALYTICS=true
+      - DO_NOT_TRACK=true
+      - ANONYMIZED_TELEMETRY=false
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    restart: unless-stopped
+
+volumes:
+  otto-webui: {}
