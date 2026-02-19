@@ -34,6 +34,9 @@ async def get_all_base_models(request: Request, user: UserModel = None):
     function_models = []
     openai_models = []
     ollama_models = []
+    # We do not need to use Ollama and OpenAI models cuz the only models we use are via Pipe Functions (portkey) 
+    # That means, we do not necessarily have to check the first two models (openai and ollama). 
+    # Possibly consider commenting them out.
 
     if request.app.state.config.ENABLE_OPENAI_API:
         openai_models = await openai.get_all_models(request, user=user)
@@ -60,14 +63,19 @@ async def get_all_base_models(request: Request, user: UserModel = None):
 
 
 async def get_all_models(request, user: UserModel = None):
+    log.debug("[DEBUG] [inside get_all_models()] get_all_models() is called...")
     models = await get_all_base_models(request, user=user)
+    log.debug("[DEBUG] [inside get_all_models()] get_all_base_models() returned models.")
+    log.debug(f"[DEBUG] [inside get_all_models()] get_all_base_models() defined inside functions.py called from models.py returned {len(models)} models. Not sure if these models are pre-filtered to reflect the user's own models/models accessible to the user or not prefiltered but lists ALL models/functions. Here are the models: {models}")
 
     # If there are no models, return an empty list
     if len(models) == 0:
+        log.debug("[DEBUG] [inside get_all_models()] get_all_models() returning an empty list because get_all_base_models() returned an empty list.")
         return []
 
     # Add arena models
     if request.app.state.config.ENABLE_EVALUATION_ARENA_MODELS:
+        log.debug("[DEBUG] get_all_models() adding arena models because ENABLE_EVALUATION_ARENA_MODELS is True. We should set the env var to FALSE")
         arena_models = []
         if len(request.app.state.config.EVALUATION_ARENA_MODELS) > 0:
             arena_models = [
@@ -104,14 +112,18 @@ async def get_all_models(request, user: UserModel = None):
     global_action_ids = [
         function.id for function in Functions.get_global_action_functions()
     ]
+    log.debug(f"[DEBUG] [inside get_all_models()] global_action_ids: {global_action_ids}. Length of global_action_ids: {len(global_action_ids)}. The Functions.get_global_action_functions() returned {Functions.get_global_action_functions()}")
     enabled_action_ids = [
         function.id
         for function in Functions.get_functions_by_type("action", active_only=True)
     ]
+    log.debug(f"[DEBUG] [inside get_all_models()] Now, filtering for active action_ids based on the global_action_ids. enabled_action_ids: {enabled_action_ids}. Length of enabled_action_ids:{len(enabled_action_ids)}")
 
     custom_models = Models.get_all_models(user.id, user.email)
+    log.debug(f"[DEBUG] [inside get_all_models()] custom_models: {custom_models}. Length of custom_models: {len(custom_models)}. The Models.get_all_models() returned {Models.get_all_models(user.id, user.email)}. This is for user: {user.email} and user_id: {user.id}")
     for custom_model in custom_models:
         if custom_model.base_model_id is None:
+            log.debug(f"the custom.base_model_id is None for custom model: {custom_model}")
             for model in models:
                 if (
                     custom_model.id == model["id"]
@@ -225,6 +237,11 @@ async def get_all_models(request, user: UserModel = None):
     log.debug(f"get_all_models() returned {len(models)} models")
 
     request.app.state.MODELS = {model["id"]: model for model in models}
+    log.debug(
+        f"[DEBUG] [inside get_all_models()] request.app.state.MODELS: {request.app.state.MODELS}. Length of request.app.state.MODELS: {len(request.app.state.MODELS)}."
+        f"The models are: {models}. The length of 'models' is {len(models)}. This is set in the request.app.state.MODELS"
+        f"The user is {user.email} and user_id is {user.id}"
+    )
     return models
 
 
@@ -262,4 +279,4 @@ def check_model_access(user, model):
             return  # User has explicit access
         
         # No access
-            raise Exception("Model not found")
+        raise Exception("Model not found")

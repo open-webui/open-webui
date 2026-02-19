@@ -292,10 +292,13 @@ async def generate_chat_completion(
     user: Any,
     bypass_filter: bool = False,
 ):
+    model_id = form_data.get("model", "unknown")
+    log.debug(
+        f"[DEBUG] [inside generate_chat_completion() from chat.py] entry. model_id={model_id}, user={getattr(user, 'email', None)} (id={getattr(user, 'id', None)}), stream={form_data.get('stream')}."
+    )
     log.debug(f"generate_chat_completion: {form_data}")
     
     # Extract model and user info for instrumentation
-    model_id = form_data.get("model", "unknown")
     user_id = getattr(user, "id", None)
     user_email = getattr(user, "email", None)
     is_streaming = form_data.get("stream", False)
@@ -407,6 +410,7 @@ async def generate_chat_completion(
                             "selected_model_id": selected_model_id,
                         }
                 elif model.get("pipe"):
+                    log.debug("[DEBUG] [inside generate_chat_completion() from chat.py] routing to pipe (generate_function_chat_completion).")
                     # Below does not require bypass_filter because this is the only route the uses this function and it is already bypassing the filter
                     response = await generate_function_chat_completion(
                         request, form_data, user=user, models=models
@@ -440,6 +444,7 @@ async def generate_chat_completion(
                             bypass_filter=bypass_filter,
                     )
                 elif model.get("owned_by") == "ollama":
+                    log.debug("[DEBUG] [inside generate_chat_completion() from chat.py] routing to Ollama (generate_ollama_chat_completion).")
                     # Using /ollama/api/chat endpoint
                     form_data = convert_payload_openai_to_ollama(form_data)
                     response = await generate_ollama_chat_completion(
@@ -458,6 +463,7 @@ async def generate_chat_completion(
                     else:
                         response = convert_response_ollama_to_openai(response)
                 else:
+                    log.debug("[DEBUG] [inside generate_chat_completion() from chat.py] routing to OpenAI (generate_openai_chat_completion).")
                     response = await generate_openai_chat_completion(
                         request=request,
                         form_data=form_data,
@@ -487,25 +493,35 @@ chat_completion = generate_chat_completion
 
 
 async def chat_completed(request: Request, form_data: dict, user: Any):
+    log.debug("[DEBUG] [inside chat_completed() from chat.py] chat_completed() called.")
     if not request.app.state.MODELS:
+        log.debug("[DEBUG] [inside chat_completed() from chat.py] request.app.state.MODELS is empty. Calling get_all_models().")
         await get_all_models(request, user=user)
+        log.debug(f"[DEBUG] [inside chat_completed() from chat.py] get_all_models() returned. request.app.state.MODELS has {len(request.app.state.MODELS)} models.")
 
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
+        log.debug("[DEBUG] [inside chat_completed() from chat.py] Using direct model from request.state.")
         models = {
             request.state.model["id"]: request.state.model,
         }
     else:
+        log.debug("[DEBUG] [inside chat_completed() from chat.py] Using request.app.state.MODELS.")
         models = request.app.state.MODELS
 
     data = form_data
     model_id = data["model"]
+    log.debug(f"[DEBUG] [inside chat_completed() from chat.py] model_id from form_data: {model_id}. Checking if model_id in models.")
     if model_id not in models:
+        log.info(f"[MODEL NOT FOUND ERROR IS RAISED in chat_completed] model_id: {model_id} not found in models. User: {user.email} (id={user.id}).")
         raise Exception("Model not found")
 
     model = models[model_id]
+    log.debug(f"[DEBUG] [inside chat_completed() from chat.py] model_id found. Proceeding with outlet filter and filters. User: {user.email}.")
 
     try:
+        log.debug("[DEBUG] [inside chat_completed() from chat.py] Calling process_pipeline_outlet_filter().")
         data = await process_pipeline_outlet_filter(request, data, user, models)
+        log.debug("[DEBUG] [inside chat_completed() from chat.py] process_pipeline_outlet_filter() returned.")
     except Exception as e:
         log.error(f"Error in chat_completed: {e}")
         raise Exception(f"Error: {e}")
@@ -516,6 +532,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
         "session_id": data["session_id"],
         "user_id": user.id,
     }
+    log.debug(f"[DEBUG] [inside chat_completed() from chat.py] metadata: chat_id={metadata['chat_id']}, message_id={metadata['message_id']}, session_id={metadata['session_id']}.")
 
     extra_params = {
         "__event_emitter__": get_event_emitter(metadata),
@@ -532,6 +549,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
     }
 
     try:
+        log.debug("[DEBUG] [inside chat_completed() from chat.py] Calling process_filter_functions() with filter_type=outlet.")
         result, _ = await process_filter_functions(
             request=request,
             filter_ids=get_sorted_filter_ids(model),
@@ -539,6 +557,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
             form_data=data,
             extra_params=extra_params,
         )
+        log.debug("[DEBUG] [inside chat_completed() from chat.py] process_filter_functions() returned. Returning result.")
         return result
     except Exception as e:
         log.error(f"Error in chat_completed filter processing: {e}")

@@ -133,11 +133,14 @@ def safe_trace_span_async(*args, **kwargs):
 
 
 def get_function_module_by_id(request: Request, pipe_id: str):
+    log.debug(f"[DEBUG] [inside get_function_module_by_id() from functions.py] entry. pipe_id={pipe_id}.")
     # Check if function is already loaded
     if pipe_id not in request.app.state.FUNCTIONS:
+        log.debug(f"[DEBUG] [inside get_function_module_by_id() from functions.py] cache miss for pipe_id={pipe_id}; loading via load_function_module_by_id().")
         function_module, _, _ = load_function_module_by_id(pipe_id)
         request.app.state.FUNCTIONS[pipe_id] = function_module
     else:
+        log.debug(f"[DEBUG] [inside get_function_module_by_id() from functions.py] cache hit for pipe_id={pipe_id}.")
         function_module = request.app.state.FUNCTIONS[pipe_id]
 
     if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
@@ -382,7 +385,10 @@ async def generate_function_chat_completion(
     if "." in pipe_id:
         pipe_id, _ = pipe_id.split(".", 1)
     is_streaming = form_data.get("stream", False)
-    
+    log.debug(
+        f"[DEBUG] [inside generate_function_chat_completion() from functions.py] entry. pipe_id={pipe_id}, model_id={model_id}, "
+        f"user={getattr(user, 'email', None)} (id={getattr(user, 'id', None)}), stream={is_streaming}."
+    )
     # Create span for function/pipe chat completion
     # CRITICAL: Use safe_trace_span_async to ensure OTEL failures never prevent function execution
     async with safe_trace_span_async(
@@ -522,7 +528,9 @@ async def generate_function_chat_completion(
 
             pipe_id = get_pipe_id(form_data)
             function_module = get_function_module_by_id(request, pipe_id)
-
+            log.debug(
+                f"[DEBUG] [inside generate_function_chat_completion() from functions.py] got function module for pipe_id={pipe_id}; executing pipe (stream={form_data.get('stream', False)})."
+            )
             pipe = function_module.pipe
             params = get_function_params(function_module, form_data, user, extra_params)
 

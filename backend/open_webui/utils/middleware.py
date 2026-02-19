@@ -737,7 +737,10 @@ def apply_params_to_form_data(form_data, model):
 
 
 async def process_chat_payload(request, form_data, metadata, user, model):
-
+    log.debug(
+        f"[DEBUG] [inside process_chat_payload() from middleware.py] entry. user={user.email} (id={user.id}), "
+        f"model_id={model.get('id')}, chat_id={metadata.get('chat_id')}, session_id={metadata.get('session_id')}."
+    )
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
 
@@ -825,6 +828,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         form_data = await process_pipeline_inlet_filter(
             request, form_data, user, models
         )
+        log.debug("[DEBUG] [inside process_chat_payload() from middleware.py] process_pipeline_inlet_filter() returned.")
     except Exception as e:
         raise e
 
@@ -836,6 +840,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
             form_data=form_data,
             extra_params=extra_params,
         )
+        log.debug("[DEBUG] [inside process_chat_payload() from middleware.py] process_filter_functions(inlet) returned.")
     except Exception as e:
         raise Exception(f"Error: {e}")
 
@@ -991,6 +996,12 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 async def process_chat_response(
     request, response, form_data, user, events, metadata, tasks
 ):
+    pod_id = os.environ.get("HOSTNAME", "unknown")
+    is_stream = isinstance(response, StreamingResponse)
+    log.debug(
+        f"[DEBUG] [inside process_chat_response() from middleware.py] entry. pod={pod_id}, user={user.email} (id={user.id}), "
+        f"chat_id={metadata.get('chat_id')}, message_id={metadata.get('message_id')}, session_id={metadata.get('session_id')}, is_stream={is_stream}."
+    )
     async def background_tasks_handler():
         message_map = Chats.get_messages_by_chat_id(metadata["chat_id"])
         message = message_map.get(metadata["message_id"]) if message_map else None
@@ -1118,6 +1129,14 @@ async def process_chat_response(
     ):
         event_emitter = get_event_emitter(metadata)
         event_caller = get_event_call(metadata)
+        log.debug(
+            f"[DEBUG] [inside process_chat_response() from middleware.py] event_emitter/event_caller set for session_id={metadata.get('session_id')} "
+            f"(chat_id={metadata.get('chat_id')}). Responses will be emitted to this session from pod={pod_id}."
+        )
+    else:
+        log.debug(
+            "[DEBUG] [inside process_chat_response() from middleware.py] no session_id/chat_id/message_id in metadata; event_emitter will not be used (UI may not update until refresh)."
+        )
 
     # Non-streaming response
     if not isinstance(response, StreamingResponse):
@@ -1213,7 +1232,9 @@ async def process_chat_response(
     if event_emitter and event_caller:
         task_id = str(uuid4())  # Create a unique task ID.
         model_id = form_data.get("model", "")
-
+        log.debug(
+            f"[DEBUG] [inside process_chat_response() from middleware.py] streaming path: persisting message to DB chat_id={metadata.get('chat_id')} message_id={metadata.get('message_id')} from pod={pod_id}."
+        )
         Chats.upsert_message_to_chat_by_id_and_message_id(
             metadata["chat_id"],
             metadata["message_id"],

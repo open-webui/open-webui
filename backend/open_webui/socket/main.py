@@ -1,4 +1,5 @@
 import asyncio
+import os
 import socketio
 import logging
 import sys
@@ -220,7 +221,10 @@ async def connect(sid, environ, auth):
                         existing_sessions = []
                     USER_POOL[user.id] = existing_sessions + [sid]
 
-                # print(f"user {user.name}({user.id}) connected with session ID {sid}")
+                pod_id = os.environ.get("HOSTNAME", "unknown")
+                log.debug(
+                    f"[DEBUG] [socket connect from socket/main.py] websocket connected on this pod. pod={pod_id} session_id={sid} user_id={user.id}."
+                )
                 await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
                 await sio.emit("usage", {"models": get_models_in_use()})
             except Exception as e:
@@ -255,6 +259,10 @@ async def user_join(sid, data):
                 existing_sessions = []
             USER_POOL[user.id] = existing_sessions + [sid]
 
+        pod_id = os.environ.get("HOSTNAME", "unknown")
+        log.debug(
+            f"[DEBUG] [user_join from socket/main.py] session registered on this pod. pod={pod_id} session_id={sid} user_id={user.id}."
+        )
         # Join all the channels
         channels = Channels.get_channels_by_user_id(user.id)
         log.debug(f"{channels=}")
@@ -368,7 +376,12 @@ def get_event_emitter(request_info):
         session_ids = list(
             set(USER_POOL.get(user_id, []) + [request_info["session_id"]])
         )
-
+        pod_id = os.environ.get("HOSTNAME", "unknown")
+        event_type = event_data.get("type", "unknown")
+        log.debug(
+            f"[DEBUG] [inside get_event_emitter() __event_emitter__ from socket/main.py] emitting chat-events from pod={pod_id} to session_ids={session_ids} "
+            f"chat_id={request_info.get('chat_id')} message_id={request_info.get('message_id')} user_id={user_id} event_type={event_type}."
+        )
         for session_id in session_ids:
             await sio.emit(
                 "chat-events",

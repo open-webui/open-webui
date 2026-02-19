@@ -116,6 +116,7 @@ def load_tools_module_by_id(toolkit_id, content=None):
 
 
 def load_function_module_by_id(function_id, content=None):
+    log.debug(f"[DEBUG] [inside load_function_module_by_id() from plugin.py] entry. function_id={function_id}. content = {content}.")
     if content is None:
         function = Functions.get_function_by_id(function_id)
         if not function:
@@ -148,11 +149,17 @@ def load_function_module_by_id(function_id, content=None):
 
         # Create appropriate object based on available class type in the module
         if hasattr(module, "Pipe"):
-            return module.Pipe(), "pipe", frontmatter
+            module_type = "pipe"
+            log.debug(f"[DEBUG] [inside load_function_module_by_id() from plugin.py] exec done; module type=pipe, function_id={function_id}.")
+            return module.Pipe(), module_type, frontmatter
         elif hasattr(module, "Filter"):
-            return module.Filter(), "filter", frontmatter
+            module_type = "filter"
+            log.debug(f"[DEBUG] [inside load_function_module_by_id() from plugin.py] exec done; module type=filter, function_id={function_id}.")
+            return module.Filter(), module_type, frontmatter
         elif hasattr(module, "Action"):
-            return module.Action(), "action", frontmatter
+            module_type = "action"
+            log.debug(f"[DEBUG] [inside load_function_module_by_id() from plugin.py] exec done; module type=action, function_id={function_id}.")
+            return module.Action(), module_type, frontmatter
         else:
             raise Exception("No Function class found in the module")
     except Exception as e:

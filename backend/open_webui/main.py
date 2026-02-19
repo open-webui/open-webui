@@ -1161,6 +1161,8 @@ if audit_level != AuditLevel.NONE:
 
 @app.get("/api/models")
 async def get_models(request: Request, user=Depends(get_verified_user)):
+    pod_id = os.environ.get("HOSTNAME", "unknown")
+    log.debug(f"[DEBUG] [inside get_models() from main.py] GET /api/models on pod={pod_id}, user={user.email} (id={user.id}).")
     def get_filtered_models(models, user):
         # Batch fetch all model info first
         model_ids = [model["id"] for model in models if not model.get("arena")]
@@ -1215,6 +1217,7 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
         return filtered_models
 
     models = await get_all_models(request, user=user)
+    log.debug(f"[DEBUG] [inside get_models() from main.py] get_all_models() returned {len(models)} models.")
 
     # Filter out filter pipelines
     models = [
@@ -1234,6 +1237,7 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
     # Filter out models that the user does not have access to
     if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
         models = get_filtered_models(models, user)
+        log.debug(f"[DEBUG] [inside get_models() from main.py] get_filtered_models() applied; returning {len(models)} models to user.")
 
     log.debug(
         f"/api/models returned filtered models accessible to the user: {json.dumps([model['id'] for model in models])}"
@@ -1253,28 +1257,49 @@ async def chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
-    if not request.app.state.MODELS:
+    pod_id = os.environ.get("HOSTNAME", "unknown")
+    log.debug(f"[DEBUG] [inside chat_completion() from main.py] POST /api/chat/completions handled on pod={pod_id}, user={user.email} (id={user.id}).")
+    models_was_empty = not request.app.state.MODELS
+    if models_was_empty:
+        log.debug(f"[DEBUG] [inside chat_completion() from main.py] request.app.state.MODELS is empty. Calling get_all_models().")
         await get_all_models(request, user=user)
+        log.debug(f"[DEBUG] [inside chat_completion() from main.py] get_all_models() returned {len(request.app.state.MODELS)} models. The models are: {request.app.state.MODELS}. The length of the models is {len(request.app.state.MODELS)}.")
 
     model_item = form_data.pop("model_item", {})
     tasks = form_data.pop("background_tasks", None)
 
     try:
+        log.debug("Checking if the model_item is direct...")
         if not model_item.get("direct", False):
+            log.debug("The model_item is not direct!")
             model_id = form_data.get("model", None)
+            log.debug("checking if the model_id is in request.app.state.MODELS...")
             if model_id not in request.app.state.MODELS:
+                log.info(f"[MODEL NOT FOUND ERROR IS RAISED] inside chat_completion() from main.py - >> model_id: {model_id} not found in request.app.state.MODELS. The models are: {request.app.state.MODELS}. The length of the models is {len(request.app.state.MODELS)}.")
+                log.info(f"[DEBUG] [inside chat_completion() from main.py] The model_id is {model_id} but it is not found in request.app.state.MODELS.")
+                current_keys = list(request.app.state.MODELS.keys())
+                log.info(
+                    f"[MODEL NOT FOUND ERROR IS RAISED] model_id={model_id} not in app.state.MODELS. "
+                    f"user={user.email} (id={user.id}), pod={pod_id}, MODELS_was_empty_before_request={models_was_empty}, "
+                    f"current_MODELS_count={len(current_keys)}, current_MODELS_keys_sample={current_keys[:30]!r}"
+                )
                 raise Exception("Model not found")
 
+            log.debug("The model_id is in request.app.state.MODELS! So, we can proceed with the chat completion.")
             model = request.app.state.MODELS[model_id]
             model_info = Models.get_model_by_id(model_id)
 
             # Check if user has access to the model
             if not BYPASS_MODEL_ACCESS_CONTROL and user.role == "user":
                 try:
+                    log.debug("Checking if the user has access to the model...")
                     check_model_access(user, model)
+                    log.debug("The user has access to the model! So, we can proceed with the chat completion.")
                 except Exception as e:
+                    log.debug(f"The user does not have access to the model! So, we cannot proceed with the chat completion. The error is: {e}")
                     raise e
         else:
+            log.debug("The model_item is direct!")
             model = model_item
             model_info = None
 
@@ -1306,25 +1331,37 @@ async def chat_completion(
 
         request.state.metadata = metadata
         form_data["metadata"] = metadata
+        log.debug(
+            f"[DEBUG] [inside chat_completion() from main.py] The chat payload is processed! The metadata is: {metadata}."
+            f"The form_data is: {form_data}."
+            f"The user is: {user.email} and user_id is: {user.id}."
+            f"The model is: {model}."
+        )
 
+        log.debug("Processing the chat payload...")
         form_data, metadata, events = await process_chat_payload(
             request, form_data, metadata, user, model
         )
 
     except Exception as e:
         log.debug(f"Error processing chat payload: {e}")
+        log.debug(f"[DEBUG] [inside chat_completion() from main.py] The error is: {e}...... This will be returning a 400 bad request.")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
 
     try:
+        log.debug("Calling the chat completion handler...")
         response = await chat_completion_handler(request, form_data, user)
+        log.debug(f"[DEBUG] [inside chat_completion() from main.py] The chat completion handler returned the response: {response}. The inputs for chat_completion_handler() are: {request}, {form_data}, {user}.")
 
+        log.debug("Calling the process_chat_response()... this is defined in middleware.py")
         return await process_chat_response(
             request, response, form_data, user, events, metadata, tasks
         )
     except Exception as e:
+        log.debug(f"[DEBUG] [inside chat_completion() from main.py] The error is: {e}...... This will be returning a 400 bad request.")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
