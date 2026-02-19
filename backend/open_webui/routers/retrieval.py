@@ -77,6 +77,7 @@ from open_webui.retrieval.web.sougou import search_sougou
 from open_webui.retrieval.web.firecrawl import search_firecrawl
 from open_webui.retrieval.web.external import search_external
 from open_webui.retrieval.web.yandex import search_yandex
+from open_webui.retrieval.web.ydc import search_youcom
 
 from open_webui.retrieval.utils import (
     get_content_from_url,
