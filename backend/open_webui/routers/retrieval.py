@@ -584,6 +584,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "YANDEX_WEB_SEARCH_URL": request.app.state.config.YANDEX_WEB_SEARCH_URL,
             "YANDEX_WEB_SEARCH_API_KEY": request.app.state.config.YANDEX_WEB_SEARCH_API_KEY,
             "YANDEX_WEB_SEARCH_CONFIG": request.app.state.config.YANDEX_WEB_SEARCH_CONFIG,
+            "YOUCOM_API_KEY": request.app.state.config.YOUCOM_API_KEY,
         },
     }
 
@@ -650,6 +651,7 @@ class WebConfig(BaseModel):
     YANDEX_WEB_SEARCH_URL: Optional[str] = None
     YANDEX_WEB_SEARCH_API_KEY: Optional[str] = None
     YANDEX_WEB_SEARCH_CONFIG: Optional[str] = None
+    YOUCOM_API_KEY: Optional[str] = None
 
 
 class ConfigForm(BaseModel):
@@ -1206,6 +1208,9 @@ async def update_rag_config(
         request.app.state.config.YANDEX_WEB_SEARCH_CONFIG = (
             form_data.web.YANDEX_WEB_SEARCH_CONFIG
         )
+        request.app.state.config.YOUCOM_API_KEY = (
+            form_data.web.YOUCOM_API_KEY
+        )
 
     return {
         "status": True,
@@ -1333,6 +1338,7 @@ async def update_rag_config(
             "YANDEX_WEB_SEARCH_URL": request.app.state.config.YANDEX_WEB_SEARCH_URL,
             "YANDEX_WEB_SEARCH_API_KEY": request.app.state.config.YANDEX_WEB_SEARCH_API_KEY,
             "YANDEX_WEB_SEARCH_CONFIG": request.app.state.config.YANDEX_WEB_SEARCH_CONFIG,
+            "YOUCOM_API_KEY": request.app.state.config.YOUCOM_API_KEY,
         },
     }
 
@@ -2289,6 +2295,13 @@ def search_web(
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             user=user,
+        )
+    elif engine == "youcom":
+        return search_youcom(
+            request.app.state.config.YOUCOM_API_KEY,
+            query,
+            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
     else:
         raise Exception("No search engine API key found in environment variables")
