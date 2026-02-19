@@ -489,6 +489,7 @@ class ChatTable:
         if isinstance(message.get("content"), str):
             message["content"] = sanitize_text_for_db(message["content"])
 
+        user_id = chat.user_id
         chat = chat.chat
         history = chat.get("history", {})
 
@@ -509,7 +510,7 @@ class ChatTable:
             ChatMessages.upsert_message(
                 message_id=message_id,
                 chat_id=id,
-                user_id=self.get_chat_by_id(id).user_id,
+                user_id=user_id,
                 data=history["messages"][message_id],
             )
         except Exception as e:
@@ -787,8 +788,11 @@ class ChatTable:
             # Select only the columns needed for SharedChatResponse
             # to avoid loading the heavy chat JSON blob
             query = query.with_entities(
-                Chat.id, Chat.title, Chat.share_id,
-                Chat.updated_at, Chat.created_at,
+                Chat.id,
+                Chat.title,
+                Chat.share_id,
+                Chat.updated_at,
+                Chat.created_at,
             )
 
             if skip:
@@ -1146,23 +1150,29 @@ class ChatTable:
 
                 # Check if there are any tags to filter, it should have all the tags
                 if "none" in tag_ids:
-                    query = query.filter(text("""
+                    query = query.filter(
+                        text(
+                            """
                             NOT EXISTS (
                                 SELECT 1
                                 FROM json_each(Chat.meta, '$.tags') AS tag
                             )
-                            """))
+                            """
+                        )
+                    )
                 elif tag_ids:
                     query = query.filter(
                         and_(
                             *[
-                                text(f"""
+                                text(
+                                    f"""
                                     EXISTS (
                                         SELECT 1
                                         FROM json_each(Chat.meta, '$.tags') AS tag
                                         WHERE tag.value = :tag_id_{tag_idx}
                                     )
-                                    """).params(**{f"tag_id_{tag_idx}": tag_id})
+                                    """
+                                ).params(**{f"tag_id_{tag_idx}": tag_id})
                                 for tag_idx, tag_id in enumerate(tag_ids)
                             ]
                         )
@@ -1198,23 +1208,29 @@ class ChatTable:
 
                 # Check if there are any tags to filter, it should have all the tags
                 if "none" in tag_ids:
-                    query = query.filter(text("""
+                    query = query.filter(
+                        text(
+                            """
                             NOT EXISTS (
                                 SELECT 1
                                 FROM json_array_elements_text(Chat.meta->'tags') AS tag
                             )
-                            """))
+                            """
+                        )
+                    )
                 elif tag_ids:
                     query = query.filter(
                         and_(
                             *[
-                                text(f"""
+                                text(
+                                    f"""
                                     EXISTS (
                                         SELECT 1
                                         FROM json_array_elements_text(Chat.meta->'tags') AS tag
                                         WHERE tag = :tag_id_{tag_idx}
                                     )
-                                    """).params(**{f"tag_id_{tag_idx}": tag_id})
+                                    """
+                                ).params(**{f"tag_id_{tag_idx}": tag_id})
                                 for tag_idx, tag_id in enumerate(tag_ids)
                             ]
                         )
