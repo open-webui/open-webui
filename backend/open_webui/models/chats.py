@@ -714,7 +714,7 @@ class ChatTable:
         skip: int = 0,
         limit: int = 50,
         db: Optional[Session] = None,
-    ) -> list[ChatModel]:
+    ) -> list[ChatTitleIdResponse]:
 
         with get_db_context(db) as db:
             query = db.query(Chat).filter_by(user_id=user_id, archived=True)
@@ -740,13 +740,27 @@ class ChatTable:
             else:
                 query = query.order_by(Chat.updated_at.desc())
 
+            query = query.with_entities(
+                Chat.id, Chat.title, Chat.updated_at, Chat.created_at
+            )
+
             if skip:
                 query = query.offset(skip)
             if limit:
                 query = query.limit(limit)
 
             all_chats = query.all()
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+            return [
+                ChatTitleIdResponse.model_validate(
+                    {
+                        "id": chat[0],
+                        "title": chat[1],
+                        "updated_at": chat[2],
+                        "created_at": chat[3],
+                    }
+                )
+                for chat in all_chats
+            ]
 
     def get_shared_chat_list_by_user_id(
         self,
@@ -802,12 +816,14 @@ class ChatTable:
 
             all_chats = query.all()
             return [
-                SharedChatResponse(
-                    id=chat[0],
-                    title=chat[1],
-                    share_id=chat[2],
-                    updated_at=chat[3],
-                    created_at=chat[4],
+                SharedChatResponse.model_validate(
+                    {
+                        "id": chat[0],
+                        "title": chat[1],
+                        "share_id": chat[2],
+                        "updated_at": chat[3],
+                        "created_at": chat[4],
+                    }
                 )
                 for chat in all_chats
             ]
@@ -1017,14 +1033,27 @@ class ChatTable:
 
     def get_pinned_chats_by_user_id(
         self, user_id: str, db: Optional[Session] = None
-    ) -> list[ChatModel]:
+    ) -> list[ChatTitleIdResponse]:
         with get_db_context(db) as db:
             all_chats = (
                 db.query(Chat)
                 .filter_by(user_id=user_id, pinned=True, archived=False)
                 .order_by(Chat.updated_at.desc())
+                .with_entities(
+                    Chat.id, Chat.title, Chat.updated_at, Chat.created_at
+                )
             )
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+            return [
+                ChatTitleIdResponse.model_validate(
+                    {
+                        "id": chat[0],
+                        "title": chat[1],
+                        "updated_at": chat[2],
+                        "created_at": chat[3],
+                    }
+                )
+                for chat in all_chats
+            ]
 
     def get_archived_chats_by_user_id(
         self, user_id: str, db: Optional[Session] = None

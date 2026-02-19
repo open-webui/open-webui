@@ -723,10 +723,7 @@ async def get_chat_list_by_folder_id(
 async def get_user_pinned_chats(
     user=Depends(get_verified_user), db: Session = Depends(get_session)
 ):
-    return [
-        ChatTitleIdResponse(**chat.model_dump())
-        for chat in Chats.get_pinned_chats_by_user_id(user.id, db=db)
-    ]
+    return Chats.get_pinned_chats_by_user_id(user.id, db=db)
 
 
 ############################
@@ -821,18 +818,13 @@ async def get_archived_session_user_chat_list(
     if direction:
         filter["direction"] = direction
 
-    chat_list = [
-        ChatTitleIdResponse(**chat.model_dump())
-        for chat in Chats.get_archived_chat_list_by_user_id(
-            user.id,
-            filter=filter,
-            skip=skip,
-            limit=limit,
-            db=db,
-        )
-    ]
-
-    return chat_list
+    return Chats.get_archived_chat_list_by_user_id(
+        user.id,
+        filter=filter,
+        skip=skip,
+        limit=limit,
+        db=db,
+    )
 
 
 ############################
