@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔓 **MCP SSL verification fix.** MCP tool connections now properly respect the AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL environment variable to disable SSL verification, instead of always verifying SSL certificates. [Commit](https://github.com/open-webui/open-webui/commit/af5661c2c807465f5600899e8c1a421f96cd7a8c), [#21481](https://github.com/open-webui/open-webui/issues/21481)
 - 🔧 **SCIM parameter handling.** The SCIM Users and Groups endpoints now accept out-of-range startIndex and count values by clamping them to valid ranges instead of returning errors, in compliance with RFC 7644. [#21577](https://github.com/open-webui/open-webui/pull/21577)
 - 🔍 **Hybrid search result fix.** Hybrid search now returns correct results after fixing a bug where query result unpacking order was mismatched, causing search results to appear empty. [#21562](https://github.com/open-webui/open-webui/pull/21562)
+- 🧩 **Skill JSON import support.** Skills can now be imported from both JSON and Markdown files, fixing an issue where exported JSON skills could not be re-imported and would appear as raw JSON text instead. [#21511](https://github.com/open-webui/open-webui/issues/21511)
 
 ## [0.8.3] - 2026-02-17
 
