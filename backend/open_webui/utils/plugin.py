@@ -8,7 +8,7 @@ import tempfile
 import logging
 from typing import Any
 
-from open_webui.env import PIP_OPTIONS, PIP_PACKAGE_INDEX_OPTIONS, OFFLINE_MODE
+from open_webui.env import PIP_OPTIONS, PIP_PACKAGE_INDEX_OPTIONS, OFFLINE_MODE, ENABLE_AUTO_DEPENDENCY_INSTALL
 from open_webui.models.functions import Functions
 from open_webui.models.tools import Tools
 
@@ -403,6 +403,31 @@ def get_function_module_from_cache(request, function_id, load_from_db=True):
 def install_frontmatter_requirements(requirements: str):
     if OFFLINE_MODE:
         log.info("Offline mode enabled, skipping installation of requirements.")
+        return
+
+    if not ENABLE_AUTO_DEPENDENCY_INSTALL:
+        if requirements:
+            from importlib.metadata import distribution, PackageNotFoundError
+            import re
+
+            req_list = [req.strip() for req in requirements.split(",") if req.strip()]
+            missing = []
+            for req in req_list:
+                # Strip version specifiers to get the package name
+                pkg_name = re.split(r"[><=!~\[]", req, 1)[0].strip()
+                if pkg_name:
+                    try:
+                        distribution(pkg_name)
+                    except PackageNotFoundError:
+                        missing.append(req)
+
+            if missing:
+                log.warning(
+                    "ENABLE_AUTO_DEPENDENCY_INSTALL is disabled. "
+                    "The following required packages are not installed: %s. "
+                    "Pre-install them in your Docker image to avoid import errors.",
+                    ", ".join(missing),
+                )
         return
 
     if requirements:

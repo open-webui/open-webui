@@ -978,6 +978,7 @@ OTEL_LOGS_OTLP_SPAN_EXPORTER = os.environ.get(
 # TOOLS/FUNCTIONS PIP OPTIONS
 ####################################
 
+ENABLE_AUTO_DEPENDENCY_INSTALL = os.getenv("ENABLE_AUTO_DEPENDENCY_INSTALL", "true").lower() == "true"
 PIP_OPTIONS = os.getenv("PIP_OPTIONS", "").split()
 PIP_PACKAGE_INDEX_OPTIONS = os.getenv("PIP_PACKAGE_INDEX_OPTIONS", "").split()
 
