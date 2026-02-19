@@ -18,8 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📋 **Memory listing.** Agents can now list all stored memories, enabling them to identify which memories to manage or delete based on the complete memory inventory. [Commit](https://github.com/open-webui/open-webui/commit/094ed0b48cb86b9b6aff3c93f522072d11230761)
 - 📦 **Pip requirements toggle.** Administrators can now disable automatic pip package installation from function frontmatter requirements using the ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS environment variable, providing more control over function dependency management. [Commit](https://github.com/open-webui/open-webui/commit/8bfab327ec5f635f9fe93c26efd198712ff7116d)
 - 🔒 **Iframe sandbox security.** Embedded tools can no longer submit forms or access same-origin content by default, improving security for users. [#21529](https://github.com/open-webui/open-webui/pull/21529)
+- ⚡ **Shared chat loading optimization.** The shared chats endpoint now loads only the needed columns instead of the full conversation history, making shared chat listings significantly faster. [#21614](https://github.com/open-webui/open-webui/pull/21614)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 Translations for French were enhanced and expanded.
+- 🌐 Translations for French, Portuguese (Brazil), Simplified Chinese, and Traditional Chinese were enhanced and expanded.
 
 ### Fixed
 
