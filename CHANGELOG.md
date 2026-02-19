@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ⏱️ **Embeddings and proxy timeout fix.** The embeddings and OpenAI proxy endpoints now properly honor the AIOHTTP_CLIENT_TIMEOUT environment variable, instead of using default timeouts that could cause requests to hang. [#21558](https://github.com/open-webui/open-webui/pull/21558)
 - 🗄️ **PostgreSQL workspace cloning.** Cloning workspace models now works correctly on PostgreSQL databases by generating proper unique IDs for access grants instead of using potentially duplicate or invalid IDs. [Commit](https://github.com/open-webui/open-webui/commit/3dd44c4f1931d13bfd46062291c6f23b33dde003)
 - 🔓 **MCP SSL verification fix.** MCP tool connections now properly respect the AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL environment variable to disable SSL verification, instead of always verifying SSL certificates. [Commit](https://github.com/open-webui/open-webui/commit/af5661c2c807465f5600899e8c1a421f96cd7a8c), [#21481](https://github.com/open-webui/open-webui/issues/21481)
+- 🔧 **SCIM parameter handling.** The SCIM Users and Groups endpoints now accept out-of-range startIndex and count values by clamping them to valid ranges instead of returning errors, in compliance with RFC 7644. [#21577](https://github.com/open-webui/open-webui/pull/21577)
 
 ## [0.8.3] - 2026-02-17
 
