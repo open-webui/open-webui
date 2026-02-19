@@ -47,6 +47,7 @@ from open_webui.routers.audio import transcribe
 from open_webui.storage.provider import Storage
 
 
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.misc import strict_match_mime_type
 from pydantic import BaseModel
@@ -362,7 +363,7 @@ async def list_files(
     content: bool = Query(True),
     db: Session = Depends(get_session),
 ):
-    if user.role == "admin":
+    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         files = Files.get_files(db=db)
     else:
         files = Files.get_files_by_user_id(user.id, db=db)
@@ -398,8 +399,8 @@ async def search_files(
     Search for files by filename with support for wildcard patterns.
     Uses SQL-based filtering with pagination for better performance.
     """
-    # Determine user_id: null for admin (search all), user.id for regular users
-    user_id = None if user.role == "admin" else user.id
+    # Determine user_id: null for admin with bypass (search all), user.id otherwise
+    user_id = None if (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL) else user.id
 
     # Use optimized database query with pagination
     files = Files.search_files(
