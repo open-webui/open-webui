@@ -456,11 +456,11 @@ class ChatTable:
             return ChatModel.model_validate(chat)
 
     def get_chat_title_by_id(self, id: str) -> Optional[str]:
-        chat = self.get_chat_by_id(id)
-        if chat is None:
-            return None
-
-        return chat.chat.get("title", "New Chat")
+        with get_db_context() as db:
+            result = db.query(Chat.title).filter_by(id=id).first()
+            if result is None:
+                return None
+            return result[0] or "New Chat"
 
     def get_messages_map_by_chat_id(self, id: str) -> Optional[dict]:
         chat = self.get_chat_by_id(id)
@@ -489,6 +489,7 @@ class ChatTable:
         if isinstance(message.get("content"), str):
             message["content"] = sanitize_text_for_db(message["content"])
 
+        user_id = chat.user_id
         chat = chat.chat
         history = chat.get("history", {})
 
@@ -509,7 +510,7 @@ class ChatTable:
             ChatMessages.upsert_message(
                 message_id=message_id,
                 chat_id=id,
-                user_id=self.get_chat_by_id(id).user_id,
+                user_id=user_id,
                 data=history["messages"][message_id],
             )
         except Exception as e:
@@ -713,7 +714,7 @@ class ChatTable:
         skip: int = 0,
         limit: int = 50,
         db: Optional[Session] = None,
-    ) -> list[ChatModel]:
+    ) -> list[ChatTitleIdResponse]:
 
         with get_db_context(db) as db:
             query = db.query(Chat).filter_by(user_id=user_id, archived=True)
@@ -739,13 +740,27 @@ class ChatTable:
             else:
                 query = query.order_by(Chat.updated_at.desc())
 
+            query = query.with_entities(
+                Chat.id, Chat.title, Chat.updated_at, Chat.created_at
+            )
+
             if skip:
                 query = query.offset(skip)
             if limit:
                 query = query.limit(limit)
 
             all_chats = query.all()
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+            return [
+                ChatTitleIdResponse.model_validate(
+                    {
+                        "id": chat[0],
+                        "title": chat[1],
+                        "updated_at": chat[2],
+                        "created_at": chat[3],
+                    }
+                )
+                for chat in all_chats
+            ]
 
     def get_shared_chat_list_by_user_id(
         self,
@@ -754,7 +769,7 @@ class ChatTable:
         skip: int = 0,
         limit: int = 50,
         db: Optional[Session] = None,
-    ) -> list[ChatModel]:
+    ) -> list[SharedChatResponse]:
 
         with get_db_context(db) as db:
             query = (
@@ -784,13 +799,34 @@ class ChatTable:
             else:
                 query = query.order_by(Chat.updated_at.desc())
 
+            # Select only the columns needed for SharedChatResponse
+            # to avoid loading the heavy chat JSON blob
+            query = query.with_entities(
+                Chat.id,
+                Chat.title,
+                Chat.share_id,
+                Chat.updated_at,
+                Chat.created_at,
+            )
+
             if skip:
                 query = query.offset(skip)
             if limit:
                 query = query.limit(limit)
 
             all_chats = query.all()
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+            return [
+                SharedChatResponse.model_validate(
+                    {
+                        "id": chat[0],
+                        "title": chat[1],
+                        "share_id": chat[2],
+                        "updated_at": chat[3],
+                        "created_at": chat[4],
+                    }
+                )
+                for chat in all_chats
+            ]
 
     def get_chat_list_by_user_id(
         self,
@@ -997,14 +1033,27 @@ class ChatTable:
 
     def get_pinned_chats_by_user_id(
         self, user_id: str, db: Optional[Session] = None
-    ) -> list[ChatModel]:
+    ) -> list[ChatTitleIdResponse]:
         with get_db_context(db) as db:
             all_chats = (
                 db.query(Chat)
                 .filter_by(user_id=user_id, pinned=True, archived=False)
                 .order_by(Chat.updated_at.desc())
+                .with_entities(
+                    Chat.id, Chat.title, Chat.updated_at, Chat.created_at
+                )
             )
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+            return [
+                ChatTitleIdResponse.model_validate(
+                    {
+                        "id": chat[0],
+                        "title": chat[1],
+                        "updated_at": chat[2],
+                        "created_at": chat[3],
+                    }
+                )
+                for chat in all_chats
+            ]
 
     def get_archived_chats_by_user_id(
         self, user_id: str, db: Optional[Session] = None
@@ -1130,23 +1179,29 @@ class ChatTable:
 
                 # Check if there are any tags to filter, it should have all the tags
                 if "none" in tag_ids:
-                    query = query.filter(text("""
+                    query = query.filter(
+                        text(
+                            """
                             NOT EXISTS (
                                 SELECT 1
                                 FROM json_each(Chat.meta, '$.tags') AS tag
                             )
-                            """))
+                            """
+                        )
+                    )
                 elif tag_ids:
                     query = query.filter(
                         and_(
                             *[
-                                text(f"""
+                                text(
+                                    f"""
                                     EXISTS (
                                         SELECT 1
                                         FROM json_each(Chat.meta, '$.tags') AS tag
                                         WHERE tag.value = :tag_id_{tag_idx}
                                     )
-                                    """).params(**{f"tag_id_{tag_idx}": tag_id})
+                                    """
+                                ).params(**{f"tag_id_{tag_idx}": tag_id})
                                 for tag_idx, tag_id in enumerate(tag_ids)
                             ]
                         )
@@ -1182,23 +1237,29 @@ class ChatTable:
 
                 # Check if there are any tags to filter, it should have all the tags
                 if "none" in tag_ids:
-                    query = query.filter(text("""
+                    query = query.filter(
+                        text(
+                            """
                             NOT EXISTS (
                                 SELECT 1
                                 FROM json_array_elements_text(Chat.meta->'tags') AS tag
                             )
-                            """))
+                            """
+                        )
+                    )
                 elif tag_ids:
                     query = query.filter(
                         and_(
                             *[
-                                text(f"""
+                                text(
+                                    f"""
                                     EXISTS (
                                         SELECT 1
                                         FROM json_array_elements_text(Chat.meta->'tags') AS tag
                                         WHERE tag = :tag_id_{tag_idx}
                                     )
-                                    """).params(**{f"tag_id_{tag_idx}": tag_id})
+                                    """
+                                ).params(**{f"tag_id_{tag_idx}": tag_id})
                                 for tag_idx, tag_id in enumerate(tag_ids)
                             ]
                         )

@@ -462,13 +462,9 @@ class AccessGrantsTable:
         resource_ids: list[str],
         db: Optional[Session] = None,
     ) -> dict[str, list[AccessGrantModel]]:
-        """Batch-fetch all grants for multiple resources in a single query.
-
-        Returns a dict mapping resource_id -> list of AccessGrantModel.
-        """
+        """Batch-fetch grants for multiple resources. Returns {resource_id: [grants]}."""
         if not resource_ids:
             return {}
-
         with get_db_context(db) as db:
             grants = (
                 db.query(AccessGrant)
@@ -478,7 +474,6 @@ class AccessGrantsTable:
                 )
                 .all()
             )
-
             result: dict[str, list[AccessGrantModel]] = {
                 rid: [] for rid in resource_ids
             }

@@ -1934,6 +1934,7 @@ async def process_web(
     request: Request,
     form_data: ProcessUrlForm,
     process: bool = Query(True, description="Whether to process and save the content"),
+    overwrite: bool = Query(True, description="Whether to overwrite existing collection"),
     user=Depends(get_verified_user),
 ):
     try:
@@ -1953,7 +1954,7 @@ async def process_web(
                     request,
                     docs,
                     collection_name,
-                    overwrite=True,
+                    overwrite=overwrite,
                     user=user,
                 )
             else:
