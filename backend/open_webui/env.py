@@ -978,6 +978,10 @@ OTEL_LOGS_OTLP_SPAN_EXPORTER = os.environ.get(
 # TOOLS/FUNCTIONS PIP OPTIONS
 ####################################
 
+ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS = (
+    os.environ.get("ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS", "True").lower() == "true"
+)
+
 PIP_OPTIONS = os.getenv("PIP_OPTIONS", "").split()
 PIP_PACKAGE_INDEX_OPTIONS = os.getenv("PIP_PACKAGE_INDEX_OPTIONS", "").split()
 
