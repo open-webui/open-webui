@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📦 **Pip requirements toggle.** Administrators can now disable automatic pip package installation from function frontmatter requirements using the ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS environment variable, providing more control over function dependency management. [Commit](https://github.com/open-webui/open-webui/commit/8bfab327ec5f635f9fe93c26efd198712ff7116d)
 - 🔒 **Iframe sandbox security.** Embedded tools can no longer submit forms or access same-origin content by default, improving security for users. [#21529](https://github.com/open-webui/open-webui/pull/21529)
 - ⚡ **Shared chat loading optimization.** The shared chats endpoint now loads only the needed columns instead of the full conversation history, making shared chat listings significantly faster. [#21614](https://github.com/open-webui/open-webui/pull/21614)
+- 💨 **Chat title query optimization.** Retrieving chat titles now queries only the title column instead of the entire conversation history, making title lookups significantly faster and reducing database load. [#21590](https://github.com/open-webui/open-webui/pull/21590)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for French, Portuguese (Brazil), Simplified Chinese, and Traditional Chinese were enhanced and expanded.
 
