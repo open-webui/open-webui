@@ -191,6 +191,76 @@ class ToolsTable:
             )
         ]
 
+    def get_tools_for_listing(
+        self, db: Optional[Session] = None
+    ) -> list[ToolUserResponse]:
+        """Lightweight tool listing that skips content/specs/valves columns
+        and batch-fetches access grants + users in two queries instead of N+1.
+        """
+        with get_db_context(db) as db:
+            rows = (
+                db.query(
+                    Tool.id, Tool.user_id, Tool.name, Tool.meta,
+                    Tool.updated_at, Tool.created_at,
+                )
+                .order_by(Tool.updated_at.desc())
+                .all()
+            )
+
+            tool_ids = [r.id for r in rows]
+            user_ids = list(set(r.user_id for r in rows))
+
+            users = Users.get_users_by_user_ids(user_ids, db=db) if user_ids else []
+            users_dict = {u.id: u for u in users}
+
+            all_grants = (
+                AccessGrants.get_grants_by_resources("tool", tool_ids, db=db)
+                if tool_ids
+                else {}
+            )
+
+            tools = []
+            for r in rows:
+                user = users_dict.get(r.user_id)
+                tools.append(
+                    ToolUserResponse(
+                        id=r.id,
+                        user_id=r.user_id,
+                        name=r.name,
+                        meta=ToolMeta.model_validate(r.meta) if r.meta else ToolMeta(),
+                        access_grants=all_grants.get(r.id, []),
+                        updated_at=r.updated_at,
+                        created_at=r.created_at,
+                        user=user.model_dump() if user else None,
+                    )
+                )
+            return tools
+
+    def get_tools_for_listing_by_user_id(
+        self, user_id: str, permission: str = "write", db: Optional[Session] = None
+    ) -> list[ToolUserResponse]:
+        """Lightweight listing filtered to tools the user can access."""
+        tools = self.get_tools_for_listing(db=db)
+        tool_ids = [t.id for t in tools]
+        user_group_ids = {
+            group.id for group in Groups.get_groups_by_member_id(user_id, db=db)
+        }
+
+        accessible_ids = AccessGrants.get_accessible_resource_ids(
+            user_id=user_id,
+            resource_type="tool",
+            resource_ids=tool_ids,
+            permission=permission,
+            user_group_ids=user_group_ids,
+            db=db,
+        )
+
+        return [
+            tool
+            for tool in tools
+            if tool.user_id == user_id or tool.id in accessible_ids
+        ]
+
     def get_tool_valves_by_id(
         self, id: str, db: Optional[Session] = None
     ) -> Optional[dict]:

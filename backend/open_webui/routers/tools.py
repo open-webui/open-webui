@@ -63,8 +63,8 @@ async def get_tools(
 ):
     tools = []
 
-    # Local Tools
-    for tool in Tools.get_tools(db=db):
+    # Local Tools — lightweight query (no content/specs/valves loaded)
+    for tool in Tools.get_tools_for_listing(db=db):
         tool_module = get_tool_module(request, tool.id)
         tools.append(
             ToolUserResponse(
@@ -196,23 +196,33 @@ async def get_tool_list(
     user=Depends(get_verified_user), db: Session = Depends(get_session)
 ):
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
-        tools = Tools.get_tools(db=db)
+        tools = Tools.get_tools_for_listing(db=db)
     else:
-        tools = Tools.get_tools_by_user_id(user.id, "read", db=db)
+        tools = Tools.get_tools_for_listing_by_user_id(user.id, "read", db=db)
+
+    # Batch-fetch writable tool IDs in a single query instead of N has_access calls
+    tool_ids = [t.id for t in tools]
+    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
+        writable_tool_ids = set(tool_ids)
+    else:
+        user_group_ids = {
+            group.id for group in Groups.get_groups_by_member_id(user.id, db=db)
+        }
+        writable_tool_ids = AccessGrants.get_accessible_resource_ids(
+            user_id=user.id,
+            resource_type="tool",
+            resource_ids=tool_ids,
+            permission="write",
+            user_group_ids=user_group_ids,
+            db=db,
+        )
 
     return [
         ToolAccessResponse(
             **tool.model_dump(),
             write_access=(
-                (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
-                or user.id == tool.user_id
-                or AccessGrants.has_access(
-                    user_id=user.id,
-                    resource_type="tool",
-                    resource_id=tool.id,
-                    permission="write",
-                    db=db,
-                )
+                user.id == tool.user_id
+                or tool.id in writable_tool_ids
             ),
         )
         for tool in tools
