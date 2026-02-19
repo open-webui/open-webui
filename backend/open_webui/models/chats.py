@@ -456,11 +456,11 @@ class ChatTable:
             return ChatModel.model_validate(chat)
 
     def get_chat_title_by_id(self, id: str) -> Optional[str]:
-        chat = self.get_chat_by_id(id)
-        if chat is None:
-            return None
-
-        return chat.chat.get("title", "New Chat")
+        with get_db_context() as db:
+            result = db.query(Chat.title).filter_by(id=id).first()
+            if result is None:
+                return None
+            return result[0] or "New Chat"
 
     def get_messages_map_by_chat_id(self, id: str) -> Optional[dict]:
         chat = self.get_chat_by_id(id)
