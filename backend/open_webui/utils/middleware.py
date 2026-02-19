@@ -1226,6 +1226,15 @@ async def chat_completion_tools_handler(
 async def chat_memory_handler(
     request: Request, form_data: dict, extra_params: dict, user
 ):
+    system_message = get_system_message(form_data.get("messages", []))
+    system_prompt = (
+        get_content_from_message(system_message) if system_message is not None else ""
+    )
+
+    # Skip memory-context prompt injection when no system prompt is configured.
+    if str(system_prompt).strip() == "":
+        return form_data
+
     try:
         results = await query_memory(
             request,
@@ -1255,9 +1264,10 @@ async def chat_memory_handler(
 
                 user_context += f"{doc_idx + 1}. [{created_at_date}] {doc}\n"
 
-    form_data["messages"] = add_or_update_system_message(
-        f"User Context:\n{user_context}\n", form_data["messages"], append=True
-    )
+    if user_context.strip() != "":
+        form_data["messages"] = add_or_update_system_message(
+            f"User Context:\n{user_context}\n", form_data["messages"], append=True
+        )
 
     return form_data
 
