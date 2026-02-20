@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.3] - 2026-02-17
+
+### Added
+
+- ✏️ **Model edit shortcut.** Users can now edit models directly from the model selector dropdown menu, making it faster to modify model settings without navigating to separate admin or workspace pages. [Commit](https://github.com/open-webui/open-webui/commit/519ff40cb69cdc1d215cee369e9db70ff7438153)
+- 🎨 **Image edit API background support.** The image edit API now supports the background parameter for OpenAI's gpt-image-1 model, enabling background transparency control ("transparent", "opaque", "auto") when the feature is exposed in the UI. [#21459](https://github.com/open-webui/open-webui/pull/21459)
+- ⚡ **Faster model filtering.** Model access control filtering no longer makes a redundant database query to re-fetch model info that is already available in memory, reducing latency when loading model lists for non-admin users. [Commit](https://github.com/open-webui/open-webui/commit/34cd3d79e8688f589e3dd2f03415f8a8f9a13115)
+- 🔧 **Tool call display improvements.** Tool call results now display arguments in a cleaner key-value format instead of raw JSON, with a responsive layout that shows only the tool name on narrow screens and the full label on wider screens, preventing text wrapping to multiple lines. [Commit](https://github.com/open-webui/open-webui/commit/2ce935bdb10d2b26b230cd54cb649f5c667ed96a)
+- 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
+- 🌐 Translations for Portuguese (Brazil), Simplified Chinese, and Traditional Chinese were enhanced and expanded.
+
+### Fixed
+
+- 📧 **USER_EMAIL variable fix.** The {{USER_EMAIL}} template variable now correctly returns the user's email address instead of "Unknown" in prompts. [#21479](https://github.com/open-webui/open-webui/pull/21479), [#21465](https://github.com/open-webui/open-webui/issues/21465)
+- 🖼️ **Image and file attachment handling fixes.** Uploaded images are now correctly sent to vision-enabled models, and file attachments now work even when no user text is entered alongside a system prompt. This fixes two issues where the backend was not properly processing file attachments: images weren't converted to the expected format for API requests, and file context was dropped when the user sent only a file without accompanying text. [Commit](https://github.com/open-webui/open-webui/commit/f1053d94c7ef7b8b78682dd73586b65a84d202a1), [#21477](https://github.com/open-webui/open-webui/issues/21477), [#21457](https://github.com/open-webui/open-webui/issues/21457)
+- 🛡️ **Missing function error handling.** Models that reference deleted functions no longer cause the entire /api/models endpoint to crash; instead, the missing functions are skipped and logged, allowing the rest of the models to load successfully. [#21476](https://github.com/open-webui/open-webui/pull/21476), [#21464](https://github.com/open-webui/open-webui/issues/21464)
+- 🚀 **Startup model pre-fetch error handling.** If model pre-fetching fails during app startup, the application now logs a warning and continues instead of crashing entirely. [Commit](https://github.com/open-webui/open-webui/commit/337109e99ce390f55a9085d0a301853637923779)
+- ⚙️ **Function module loading error handling.** Function modules that fail to load during startup or model processing are now caught and logged, preventing crashes when models reference functions with loading errors. [Commit](https://github.com/open-webui/open-webui/commit/15b893e651de71b033408e1b713e0b51f6829ab8)
+- 🗄️ **PostgreSQL group query fix.** The '/api/v1/groups/' endpoint no longer fails with a GROUP BY error when using PostgreSQL; member counts are now calculated using correlated subqueries for better database compatibility. [#21458](https://github.com/open-webui/open-webui/pull/21458), [#21467](https://github.com/open-webui/open-webui/issues/21467)
+
+## [0.8.2] - 2026-02-16
+
+### Added
+
+- 🧠 **Skill content handling.** User-selected skills now have their full content injected into the chat, while model-attached skills only display name and description in the available skills list. This allows users to override skill behavior while model-attached skills remain flexible. [Commit](https://github.com/open-webui/open-webui/commit/393c0071dc612c5ac982fb37dfc0288cb9911439)
+- ⚙️ **Chat toggles now control built-in tools.** Users can now disable web search, image generation, and code execution on a per-conversation basis, even when those tools are enabled as builtin tools on the model. [#20641](https://github.com/open-webui/open-webui/issues/20641), [#21318](https://github.com/open-webui/open-webui/discussions/21318), [Commit](https://github.com/open-webui/open-webui/commit/c46ef3b63bcc1e2e9adbdd18fab82c4bbe33ff6c), [Commit](https://github.com/open-webui/open-webui/commit/f1a1e64d2e9ad953b2bc2a9543e9a308b7c669c8)
+- 🖼️ **Image preview in file modal.** Images uploaded to chats can now be previewed directly in the file management modal, making it easier to identify and manage image files. [#21413](https://github.com/open-webui/open-webui/issues/21413), [Commit](https://github.com/open-webui/open-webui/commit/e1b3e7252c1896c04d498547908f0fce111434e1)
+- 🏷️ **Batch tag operations.** Tag creation, deletion, and orphan cleanup for chats now use batch database queries instead of per-tag loops, significantly reducing database round trips when updating, archiving, or deleting chats with multiple tags. [Commit](https://github.com/open-webui/open-webui/commit/c748c3ede)
+- 💨 **Faster group list loading.** Group lists and search results now load with a single database query that joins member counts, replacing the previous pattern of fetching groups first and then counting members in a separate batch query. [Commit](https://github.com/open-webui/open-webui/commit/33308022f)
+- 🔐 **Skills sharing permissions.** Administrators can now control skills sharing and public sharing permissions per-group, matching the existing capabilities for tools, knowledge, and prompts. [Commit](https://github.com/open-webui/open-webui/commit/88401e91c)
+- ⚡ **Long content truncation in preview modals.** Citation and file content modals now truncate markdown-rendered content at 10,000 characters with a "Show all" expansion button, preventing UI jank when previewing very large documents.
+- 🌐 **Translation updates.** Translations for Spanish and German were enhanced and expanded.
+
+### Fixed
+
+- 🔐 **OAuth session error handling.** Corrupted OAuth sessions are now gracefully handled and automatically cleaned up instead of causing errors. [Commit](https://github.com/open-webui/open-webui/commit/7e224e4a536b07ec008613f06592e34050e7067c)
+- 🐛 **Task model selector validation.** The task model selector in admin settings now correctly accepts models based on the new access grants system instead of rejecting all models with an incorrect error. [Commit](https://github.com/open-webui/open-webui/commit/9a2595f0706d0c9d809ae7746001cf799f98db1d)
+- 🔗 **Tool call message preservation.** Models no longer hallucinate tool outputs in multi-turn conversations because tool call history is now properly preserved instead of being merged into assistant messages. [#21098](https://github.com/open-webui/open-webui/discussions/21098), [#20600](https://github.com/open-webui/open-webui/issues/20600), [Commit](https://github.com/open-webui/open-webui/commit/f2aca781c87244cffc130aa2722e700c19a81d66)
+- 🔧 **Tool server startup initialization.** External tool servers configured via the "TOOL_SERVER_CONNECTIONS" environment variable now initialize automatically on startup, eliminating the need to manually visit the Admin Panel and save for tools to become available. This enables proper GitOps and containerized deployments. [#18140](https://github.com/open-webui/open-webui/issues/18140), [#20914](https://github.com/open-webui/open-webui/pull/20914), [Commit](https://github.com/open-webui/open-webui/commit/f20cc6d7e6da493eb75ca1618f5cbd068fa57684)
+- ♻️ **Resource handle cleanup.** File handles are now properly closed during audio transcription and pipeline uploads, preventing resource leaks that could cause system instability over time. [#21411](https://github.com/open-webui/open-webui/issues/21411)
+- ⌨️ **Strikethrough shortcut conflict fix.** Pressing Ctrl+Shift+S to toggle the sidebar no longer causes text to become struck through in the chat input, by disabling the TipTap Strike extension's default keyboard shortcut when rich text mode is off. [Commit](https://github.com/open-webui/open-webui/commit/38ae91ae2)
+- 🔧 **Tool call finish_reason fix.** API responses now correctly set finish_reason to "tool_calls" instead of "stop" when tool calls are present, fixing an issue where external API clients (such as OpenCode) would halt prematurely after tool execution when routing Ollama models through the Open WebUI API. [#20896](https://github.com/open-webui/open-webui/issues/20896)
+
 ## [0.8.1] - 2026-02-14
 
 ### Added

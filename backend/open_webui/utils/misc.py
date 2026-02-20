@@ -93,12 +93,11 @@ def get_message_list(messages_map, message_id):
     message_list = []
 
     while current_message:
-        message_list.insert(
-            0, current_message
-        )  # Insert the message at the beginning of the list
+        message_list.append(current_message)
         parent_id = current_message.get("parentId")  # Use .get() for safety
         current_message = messages_map.get(parent_id) if parent_id else None
 
+    message_list.reverse()
     return message_list
 
 
@@ -447,7 +446,7 @@ def openai_chat_completion_message_template(
             **({"tool_calls": tool_calls} if tool_calls else {}),
         }
 
-    template["choices"][0]["finish_reason"] = "stop"
+    template["choices"][0]["finish_reason"] = "tool_calls" if tool_calls else "stop"
 
     if usage:
         template["usage"] = usage

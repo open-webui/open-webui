@@ -100,9 +100,18 @@ class ToolsTable:
     ) -> list[AccessGrantModel]:
         return AccessGrants.get_grants_by_resource("tool", tool_id, db=db)
 
-    def _to_tool_model(self, tool: Tool, db: Optional[Session] = None) -> ToolModel:
+    def _to_tool_model(
+        self,
+        tool: Tool,
+        access_grants: Optional[list[AccessGrantModel]] = None,
+        db: Optional[Session] = None,
+    ) -> ToolModel:
         tool_data = ToolModel.model_validate(tool).model_dump(exclude={"access_grants"})
-        tool_data["access_grants"] = self._get_access_grants(tool_data["id"], db=db)
+        tool_data["access_grants"] = (
+            access_grants
+            if access_grants is not None
+            else self._get_access_grants(tool_data["id"], db=db)
+        )
         return ToolModel.model_validate(tool_data)
 
     def insert_new_tool(
@@ -152,9 +161,11 @@ class ToolsTable:
             all_tools = db.query(Tool).order_by(Tool.updated_at.desc()).all()
 
             user_ids = list(set(tool.user_id for tool in all_tools))
+            tool_ids = [tool.id for tool in all_tools]
 
             users = Users.get_users_by_user_ids(user_ids, db=db) if user_ids else []
             users_dict = {user.id: user for user in users}
+            grants_map = AccessGrants.get_grants_by_resources("tool", tool_ids, db=db)
 
             tools = []
             for tool in all_tools:
@@ -162,7 +173,11 @@ class ToolsTable:
                 tools.append(
                     ToolUserModel.model_validate(
                         {
-                            **self._to_tool_model(tool, db=db).model_dump(),
+                            **self._to_tool_model(
+                                tool,
+                                access_grants=grants_map.get(tool.id, []),
+                                db=db,
+                            ).model_dump(),
                             "user": user.model_dump() if user else None,
                         }
                     )

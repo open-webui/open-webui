@@ -64,6 +64,7 @@ from open_webui.socket.main import (
     MODELS,
     app as socket_app,
     periodic_usage_pool_cleanup,
+    periodic_session_pool_cleanup,
     get_event_emitter,
     get_models_in_use,
 )
@@ -520,6 +521,7 @@ from open_webui.utils.middleware import (
     process_chat_payload,
     process_chat_response,
 )
+from open_webui.utils.tools import set_tool_servers
 
 from open_webui.utils.auth import (
     get_license_data,
@@ -637,11 +639,37 @@ async def lifespan(app: FastAPI):
         limiter.total_tokens = THREAD_POOL_SIZE
 
     asyncio.create_task(periodic_usage_pool_cleanup())
+    asyncio.create_task(periodic_session_pool_cleanup())
 
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
-        await get_all_models(
-            Request(
-                # Creating a mock request object to pass to get_all_models
+        try:
+            await get_all_models(
+                Request(
+                    # Creating a mock request object to pass to get_all_models
+                    {
+                        "type": "http",
+                        "asgi.version": "3.0",
+                        "asgi.spec_version": "2.0",
+                        "method": "GET",
+                        "path": "/internal",
+                        "query_string": b"",
+                        "headers": Headers({}).raw,
+                        "client": ("127.0.0.1", 12345),
+                        "server": ("127.0.0.1", 80),
+                        "scheme": "http",
+                        "app": app,
+                    }
+                ),
+                None,
+            )
+        except Exception as e:
+            log.warning(f"Failed to pre-fetch models at startup: {e}")
+
+    # Pre-fetch tool server specs so the first request doesn't pay the latency cost
+    if len(app.state.config.TOOL_SERVER_CONNECTIONS) > 0:
+        log.info("Initializing tool servers...")
+        try:
+            mock_request = Request(
                 {
                     "type": "http",
                     "asgi.version": "3.0",
@@ -655,9 +683,11 @@ async def lifespan(app: FastAPI):
                     "scheme": "http",
                     "app": app,
                 }
-            ),
-            None,
-        )
+            )
+            await set_tool_servers(mock_request)
+            log.info(f"Initialized {len(app.state.TOOL_SERVERS)} tool server(s)")
+        except Exception as e:
+            log.warning(f"Failed to initialize tool servers at startup: {e}")
 
     yield
 
@@ -1423,6 +1453,16 @@ async def check_url(request: Request, call_next):
             scheme="Bearer", credentials=request.cookies.get("token")
         )
 
+    # Fallback to x-api-key header for Anthropic Messages API routes
+    if request.state.token is None and request.headers.get("x-api-key"):
+        request_path = request.url.path
+        if request_path in ("/api/message", "/api/v1/messages"):
+            from fastapi.security import HTTPAuthorizationCredentials
+
+            request.state.token = HTTPAuthorizationCredentials(
+                scheme="Bearer", credentials=request.headers.get("x-api-key")
+            )
+
     request.state.enable_api_keys = app.state.config.ENABLE_API_KEYS
     response = await call_next(request)
     process_time = int(time.time()) - start_time
@@ -1873,6 +1913,69 @@ async def chat_completion(
 # Alias for chat_completion (Legacy)
 generate_chat_completions = chat_completion
 generate_chat_completion = chat_completion
+
+
+##################################
+#
+# Anthropic Messages API Compatible Endpoint
+#
+##################################
+
+
+from open_webui.utils.anthropic import (
+    convert_anthropic_to_openai_payload,
+    convert_openai_to_anthropic_response,
+    openai_stream_to_anthropic_stream,
+)
+
+
+@app.post("/api/message")
+@app.post("/api/v1/messages")  # Anthropic Messages API compatible endpoint
+async def generate_messages(
+    request: Request,
+    form_data: dict,
+    user=Depends(get_verified_user),
+):
+    """
+    Anthropic Messages API compatible endpoint.
+
+    Accepts the Anthropic Messages API format, converts internally to OpenAI
+    Chat Completions format, routes through the existing chat completion
+    pipeline, then converts the response back to Anthropic Messages format.
+
+    Supports both streaming and non-streaming requests.
+    All models configured in Open WebUI are accessible via this endpoint.
+
+    Authentication: Supports both standard Authorization header and
+    Anthropic's x-api-key header (via middleware translation).
+    """
+    # Convert Anthropic payload to OpenAI format
+    requested_model = form_data.get("model", "")
+
+    openai_payload = convert_anthropic_to_openai_payload(form_data)
+
+    # Route through the existing chat_completion handler
+    response = await chat_completion(request, openai_payload, user)
+
+    # Convert response back to Anthropic format
+    if isinstance(response, StreamingResponse):
+        # Streaming response: wrap the generator to convert SSE format
+        return StreamingResponse(
+            openai_stream_to_anthropic_stream(
+                response.body_iterator, model=requested_model
+            ),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+            },
+        )
+    elif isinstance(response, dict):
+        return convert_openai_to_anthropic_response(response, model=requested_model)
+    else:
+        # Passthrough for error responses (JSONResponse, PlainTextResponse, etc.)
+        return response
+
 
 
 @app.post("/api/chat/completed")

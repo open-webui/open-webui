@@ -1746,6 +1746,7 @@ def process_file(
                         DOCLING_API_KEY=request.app.state.config.DOCLING_API_KEY,
                         DOCLING_PARAMS=request.app.state.config.DOCLING_PARAMS,
                         PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
+                        PDF_LOADER_MODE=request.app.state.config.PDF_LOADER_MODE,
                         DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                         DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
                         DOCUMENT_INTELLIGENCE_MODEL=request.app.state.config.DOCUMENT_INTELLIGENCE_MODEL,
@@ -1933,6 +1934,7 @@ async def process_web(
     request: Request,
     form_data: ProcessUrlForm,
     process: bool = Query(True, description="Whether to process and save the content"),
+    overwrite: bool = Query(True, description="Whether to overwrite existing collection"),
     user=Depends(get_verified_user),
 ):
     try:
@@ -1952,7 +1954,7 @@ async def process_web(
                     request,
                     docs,
                     collection_name,
-                    overwrite=True,
+                    overwrite=overwrite,
                     user=user,
                 )
             else:

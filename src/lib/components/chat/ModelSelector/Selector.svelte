@@ -569,11 +569,31 @@
 
 			<div class="px-2.5 group relative">
 				{#if filteredItems.length === 0}
-					<div class="">
-						<div class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-100">
-							{$i18n.t('No results found')}
+					{#if items.length === 0 && $user?.role === 'admin'}
+						<div class="flex flex-col items-start justify-center py-6 px-4 text-start">
+							<div class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+								{$i18n.t('No models available')}
+							</div>
+							<div class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+								{$i18n.t('Connect to an AI provider to start chatting')}
+							</div>
+							<a
+								href="/admin/settings/connections"
+								class="px-4 py-1.5 rounded-xl text-xs font-medium bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 transition"
+								on:click={() => {
+									show = false;
+								}}
+							>
+								{$i18n.t('Manage Connections')}
+							</a>
 						</div>
-					</div>
+					{:else}
+						<div class="">
+							<div class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-100">
+								{$i18n.t('No results found')}
+							</div>
+						</div>
+					{/if}
 				{:else}
 					<!-- svelte-ignore a11y-no-static-element-interactions -->
 					<div
