@@ -415,7 +415,7 @@
 	});
 </script>
 
-<div>
+<div class="max-w-full overflow-hidden">
 	<div
 		class="relative {className} flex flex-col rounded-2xl border border-gray-100/30 dark:border-gray-850/30 my-0.5"
 		dir="ltr"
