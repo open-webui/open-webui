@@ -58,6 +58,7 @@
 	import ChannelModal from './Sidebar/ChannelModal.svelte';
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
+	import ChatBubble from '../icons/ChatBubble.svelte';
 	import Search from '../icons/Search.svelte';
 	import SearchModal from './SearchModal.svelte';
 	import FolderModal from './Sidebar/Folders/FolderModal.svelte';
@@ -963,14 +964,14 @@
 							href="/"
 							draggable="false"
 							on:click={newChatHandler}
-							aria-label={$i18n.t('New Chat')}
+							aria-label={$i18n.t('Chats')}
 						>
 							<div class="self-center">
-								<PencilSquare className=" size-4.5" strokeWidth="2" />
+								<ChatBubble className=" size-4.5" strokeWidth="2" />
 							</div>
 
 							<div class="flex flex-1 self-center translate-y-[0.5px]">
-								<div class=" self-center text-sm font-primary">{$i18n.t('New Chat')}</div>
+								<div class=" self-center text-sm font-primary">{$i18n.t('Chats')}</div>
 							</div>
 
 							<HotkeyHint name="newChat" className=" group-hover:visible invisible" />
@@ -1197,7 +1198,7 @@
 				<Folder
 					id="sidebar-chats"
 					className="px-2 mt-0.5"
-					name={$i18n.t('Chats')}
+					name={$i18n.t('Recents')}
 					chevron={false}
 					on:change={async (e) => {
 						selectedFolder.set(null);
@@ -1428,6 +1429,14 @@
 							{/if}
 						</div>
 					</div>
+				<div class="px-2.5 py-1">
+					<button
+						class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition font-primary"
+						on:click={() => { showSearch.set(true); }}
+					>
+						{$i18n.t('All chats')} →
+					</button>
+				</div>
 				</Folder>
 			</div>
 
@@ -1435,45 +1444,56 @@
 				<div
 					class=" sidebar-bg-gradient-to-t bg-linear-to-t from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10 -mt-6"
 				></div>
-				<div class="flex flex-col font-primary">
+				<div class="flex items-center gap-1 font-primary">
 					{#if $user !== undefined && $user !== null}
-						<UserMenu
-							role={$user?.role}
-							profile={$config?.features?.enable_user_status ?? true}
-							showActiveUsers={false}
-							on:show={(e) => {
-								if (e.detail === 'archived-chat') {
-									showArchivedChats.set(true);
-								}
-							}}
-						>
-							<div
-								class=" flex items-center rounded-2xl py-2 px-1.5 w-full hover:bg-gray-100/50 dark:hover:bg-gray-900/50 transition"
+						<div class="flex-1 min-w-0">
+							<UserMenu
+								role={$user?.role}
+								profile={$config?.features?.enable_user_status ?? true}
+								showActiveUsers={false}
+								on:show={(e) => {
+									if (e.detail === 'archived-chat') {
+										showArchivedChats.set(true);
+									}
+								}}
 							>
-								<div class=" self-center mr-3 relative">
-									<img
-										src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
-										class=" size-7 object-cover rounded-full"
-										alt={$i18n.t('Open User Profile Menu')}
-										aria-label={$i18n.t('Open User Profile Menu')}
-									/>
+								<div
+									class=" flex items-center rounded-2xl py-2 px-1.5 w-full hover:bg-gray-100/50 dark:hover:bg-gray-900/50 transition"
+								>
+									<div class=" self-center mr-3 relative">
+										<img
+											src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
+											class=" size-7 object-cover rounded-full"
+											alt={$i18n.t('Open User Profile Menu')}
+											aria-label={$i18n.t('Open User Profile Menu')}
+										/>
 
-									{#if $config?.features?.enable_user_status}
-										<div class="absolute -bottom-0.5 -right-0.5">
-											<span class="relative flex size-2.5">
-												<span
-													class="relative inline-flex size-2.5 rounded-full {true
-														? 'bg-green-500'
-														: 'bg-gray-300 dark:bg-gray-700'} border-2 border-white dark:border-gray-900"
-												></span>
-											</span>
-										</div>
-									{/if}
+										{#if $config?.features?.enable_user_status}
+											<div class="absolute -bottom-0.5 -right-0.5">
+												<span class="relative flex size-2.5">
+													<span
+														class="relative inline-flex size-2.5 rounded-full {true
+															? 'bg-green-500'
+															: 'bg-gray-300 dark:bg-gray-700'} border-2 border-white dark:border-gray-900"
+													></span>
+												</span>
+											</div>
+										{/if}
+									</div>
+									<div class=" self-center font-medium truncate">{$user?.name}</div>
 								</div>
-								<div class=" self-center font-medium">{$user?.name}</div>
-							</div>
-						</UserMenu>
+							</UserMenu>
+						</div>
 					{/if}
+					<a
+						href="/"
+						class="flex items-center justify-center size-9 rounded-full bg-[#FFAA2C] hover:bg-[#D98A18] text-[#0B0F14] transition shrink-0"
+						on:click={newChatHandler}
+						draggable="false"
+						aria-label={$i18n.t('New Chat')}
+					>
+						<Plus className="size-4.5" strokeWidth="2.5" />
+					</a>
 				</div>
 			</div>
 		</div>
