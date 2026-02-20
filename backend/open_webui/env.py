@@ -557,6 +557,12 @@ OAUTH_SESSION_TOKEN_ENCRYPTION_KEY = os.environ.get(
     "OAUTH_SESSION_TOKEN_ENCRYPTION_KEY", WEBUI_SECRET_KEY
 )
 
+# Maximum number of concurrent OAuth sessions per user per provider
+# This prevents unbounded session growth while allowing multi-device usage
+OAUTH_MAX_SESSIONS_PER_USER = int(
+    os.environ.get("OAUTH_MAX_SESSIONS_PER_USER", "10")
+)
+
 # Token Exchange Configuration
 # Allows external apps to exchange OAuth tokens for OpenWebUI tokens
 ENABLE_OAUTH_TOKEN_EXCHANGE = (
