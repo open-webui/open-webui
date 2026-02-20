@@ -1,6 +1,6 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-export interface OversightUser {
+export interface OversightTarget {
 	id: string;
 	name: string;
 	email: string;
@@ -15,24 +15,19 @@ export interface OversightChat {
 	created_at: number;
 }
 
-export interface OversightGroup {
+export interface OversightAssignment {
 	id: string;
-	name: string;
-	description: string;
-	member_count: number;
-}
-
-export interface GroupExclusion {
-	id: string;
-	group_id: string;
-	user_id: string;
+	overseer_id: string;
+	target_id: string;
+	created_by: string;
 	created_at: number;
+	source?: string;
 }
 
-export const getOversightUsers = async (token: string): Promise<OversightUser[] | null> => {
+export const getOversightTargets = async (token: string): Promise<OversightTarget[] | null> => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/oversight/users`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/oversight/targets`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -57,7 +52,7 @@ export const getOversightUsers = async (token: string): Promise<OversightUser[] 
 	return res;
 };
 
-export const getOversightUserChats = async (
+export const getOversightTargetChats = async (
 	token: string,
 	userId: string,
 	skip: number = 0,
@@ -70,7 +65,7 @@ export const getOversightUserChats = async (
 	searchParams.append('limit', String(limit));
 
 	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/oversight/users/${userId}/chats?${searchParams.toString()}`,
+		`${WEBUI_API_BASE_URL}/oversight/targets/${userId}/chats?${searchParams.toString()}`,
 		{
 			method: 'GET',
 			headers: {
@@ -97,10 +92,12 @@ export const getOversightUserChats = async (
 	return res;
 };
 
-export const getOversightGroups = async (token: string): Promise<OversightGroup[] | null> => {
+export const getOversightAssignments = async (
+	token: string
+): Promise<OversightAssignment[] | null> => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/oversight/groups`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/oversight/assignments`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -125,52 +122,26 @@ export const getOversightGroups = async (token: string): Promise<OversightGroup[
 	return res;
 };
 
-export const getGroupExclusions = async (
+export const createOversightAssignment = async (
 	token: string,
-	groupId: string
-): Promise<GroupExclusion[] | null> => {
+	targetId: string,
+	overseerId?: string,
+	source?: string
+): Promise<OversightAssignment | null> => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/oversight/groups/id/${groupId}/exclusions`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
+	const body: Record<string, string> = { target_id: targetId };
+	if (overseerId) body.overseer_id = overseerId;
+	if (source) body.source = source;
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const addGroupExclusion = async (
-	token: string,
-	groupId: string,
-	userId: string
-): Promise<GroupExclusion | null> => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/oversight/groups/id/${groupId}/exclusions`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/oversight/assignments`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({ user_id: userId })
+		body: JSON.stringify(body)
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -189,24 +160,21 @@ export const addGroupExclusion = async (
 	return res;
 };
 
-export const removeGroupExclusion = async (
+export const deleteOversightAssignment = async (
 	token: string,
-	groupId: string,
-	userId: string
+	overseerId: string,
+	targetId: string
 ): Promise<boolean | null> => {
 	let error = null;
 
-	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/oversight/groups/id/${groupId}/exclusions/${userId}`,
-		{
-			method: 'DELETE',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
+	const res = await fetch(`${WEBUI_API_BASE_URL}/oversight/assignments/${overseerId}/${targetId}`, {
+		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
 		}
-	)
+	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
@@ -224,22 +192,21 @@ export const removeGroupExclusion = async (
 	return res;
 };
 
-export const setGroupMemberRole = async (
+export const bulkAssignFromGroup = async (
 	token: string,
 	groupId: string,
-	userId: string,
-	role: string
-): Promise<boolean | null> => {
+	overseerId: string
+): Promise<OversightAssignment[] | null> => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/groups/id/${groupId}/members/${userId}/role`, {
-		method: 'PUT',
+	const res = await fetch(`${WEBUI_API_BASE_URL}/oversight/assignments/bulk`, {
+		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({ role })
+		body: JSON.stringify({ group_id: groupId, overseer_id: overseerId })
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

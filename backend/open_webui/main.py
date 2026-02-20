@@ -120,7 +120,7 @@ from open_webui.models.users import UserModel, Users
 from open_webui.models.chats import Chats
 from open_webui.models.roles import Roles
 from open_webui.models.tenant_oauth import TenantOAuthConfigs  # noqa: F401 - register model with SQLAlchemy
-from open_webui.models.group_oversight import OversightExclusions  # noqa: F401 - register model with SQLAlchemy
+from open_webui.models.oversight_assignment import OversightAssignments  # noqa: F401 - register model with SQLAlchemy
 
 from open_webui.config import (
     # Ollama

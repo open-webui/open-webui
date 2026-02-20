@@ -1,12 +1,13 @@
 import logging
 from typing import Optional
 
-from open_webui.models.users import Users, UserInfoResponse
-from open_webui.models.groups import Groups, GroupResponse
-from open_webui.models.group_oversight import (
-    OversightExclusions,
-    GroupOversightExclusionModel,
-    GroupOversightExclusionForm,
+from open_webui.models.users import Users
+from open_webui.models.groups import Groups
+from open_webui.models.oversight_assignment import (
+    OversightAssignments,
+    OversightAssignmentModel,
+    OversightAssignmentForm,
+    BulkAssignForm,
 )
 from open_webui.models.chats import Chats, ChatTitleIdResponse
 
@@ -19,9 +20,7 @@ from sqlalchemy.orm import Session
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import (
     can_read_group_member_chats,
-    get_oversight_target_user_ids,
     can_read_user_chats_in_group,
-    has_capability,
 )
 
 from pydantic import BaseModel
@@ -36,7 +35,7 @@ router = APIRouter()
 ############################
 
 
-class OversightUserResponse(BaseModel):
+class OversightTargetResponse(BaseModel):
     id: str
     name: str
     email: str
@@ -44,77 +43,58 @@ class OversightUserResponse(BaseModel):
     groups: list[dict] = []
 
 
-class OversightGroupResponse(BaseModel):
-    id: str
-    name: str
-    description: str
-    member_count: int = 0
-
-
 ############################
-# GetOversightUsers
+# GetOversightTargets
 ############################
 
 
-@router.get("/users", response_model=list[OversightUserResponse])
-async def get_oversight_users(
+@router.get("/targets", response_model=list[OversightTargetResponse])
+async def get_oversight_targets(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    """
-    List all users whose chats the requesting user can oversee.
-    Requires audit.read_group_chats capability.
-    """
     if not can_read_group_member_chats(user.id, db=db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    target_user_ids = get_oversight_target_user_ids(user.id, db=db)
-    if not target_user_ids:
+    target_ids = OversightAssignments.get_target_ids_for_overseer(user.id, db=db)
+    if not target_ids:
         return []
 
-    # Get user info for all target users
-    target_user_id_list = list(target_user_ids)
-    users = Users.get_users_by_user_ids(target_user_id_list, db=db)
+    target_id_list = list(target_ids)
+    users = Users.get_users_by_user_ids(target_id_list, db=db)
 
-    # Batch-fetch groups for all target users
-    user_groups_map = Groups.get_groups_by_member_ids(target_user_id_list, db=db)
+    user_groups_map = Groups.get_groups_by_member_ids(target_id_list, db=db)
 
-    result = []
-    for u in users:
-        groups_for_user = user_groups_map.get(u.id, [])
-        result.append(
-            OversightUserResponse(
-                id=u.id,
-                name=u.name,
-                email=u.email,
-                role=u.role,
-                groups=[{"id": g.id, "name": g.name} for g in groups_for_user],
-            )
+    return [
+        OversightTargetResponse(
+            id=u.id,
+            name=u.name,
+            email=u.email,
+            role=u.role,
+            groups=[
+                {"id": g.id, "name": g.name} for g in user_groups_map.get(u.id, [])
+            ],
         )
-
-    return result
+        for u in users
+    ]
 
 
 ############################
-# GetOversightUserChats
+# GetTargetChats
 ############################
 
 
-@router.get("/users/{user_id}/chats", response_model=list[ChatTitleIdResponse])
-async def get_oversight_user_chats(
+@router.get("/targets/{user_id}/chats", response_model=list[ChatTitleIdResponse])
+async def get_target_chats(
     user_id: str,
     skip: int = 0,
     limit: int = 50,
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    """
-    Get paginated chat list for a specific overseen user.
-    Verifies the requesting user can oversee the target via group admin oversight.
-    """
     if not can_read_user_chats_in_group(user.id, user_id, db=db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -141,134 +121,90 @@ async def get_oversight_user_chats(
 
 
 ############################
-# GetOversightGroups
+# Assignments CRUD
 ############################
 
 
-@router.get("/groups", response_model=list[OversightGroupResponse])
-async def get_oversight_groups(
+@router.get("/assignments", response_model=list[OversightAssignmentModel])
+async def get_assignments(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    """
-    List groups where the requesting user is admin, with member counts.
-    """
-    if not can_read_group_member_chats(user.id, db=db):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
-
-    admin_groups = Groups.get_groups_where_admin(user.id, db=db)
-    if not admin_groups:
-        return []
-
-    # Batch-fetch member counts
-    group_ids = [g.id for g in admin_groups]
-    member_counts = Groups.get_group_member_counts_by_ids(group_ids, db=db)
-
-    return [
-        OversightGroupResponse(
-            id=g.id,
-            name=g.name,
-            description=g.description,
-            member_count=member_counts.get(g.id, 0),
-        )
-        for g in admin_groups
-    ]
+    if user.role == "admin":
+        return OversightAssignments.get_all_assignments(db=db)
+    return OversightAssignments.get_targets_for_overseer(user.id, db=db)
 
 
-############################
-# Group Oversight Exclusions
-############################
-
-
-@router.get(
-    "/groups/id/{group_id}/exclusions",
-    response_model=list[GroupOversightExclusionModel],
-)
-async def get_group_exclusions(
-    group_id: str,
-    user=Depends(get_verified_user),
+@router.post("/assignments", response_model=Optional[OversightAssignmentModel])
+async def create_assignment(
+    form_data: OversightAssignmentForm,
+    user=Depends(get_admin_user),
     db: Session = Depends(get_session),
 ):
-    """
-    List oversight exclusions for a group.
-    Requires system admin OR group admin of the specified group.
-    """
-    _verify_group_admin_access(user, group_id, db)
+    effective_overseer = form_data.overseer_id if form_data.overseer_id else user.id
 
-    return OversightExclusions.get_exclusions_by_group(group_id, db=db)
+    assignment = OversightAssignments.add_assignment(
+        overseer_id=effective_overseer,
+        target_id=form_data.target_id,
+        created_by=user.id,
+        source=form_data.source,
+        db=db,
+    )
+    if assignment:
+        return assignment
+
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=ERROR_MESSAGES.DEFAULT("Error creating assignment"),
+    )
 
 
-@router.post(
-    "/groups/id/{group_id}/exclusions",
-    response_model=Optional[GroupOversightExclusionModel],
-)
-async def add_group_exclusion(
-    group_id: str,
-    form_data: GroupOversightExclusionForm,
-    user=Depends(get_verified_user),
+@router.delete("/assignments/{overseer_id}/{target_id}", response_model=bool)
+async def delete_assignment(
+    overseer_id: str,
+    target_id: str,
+    user=Depends(get_admin_user),
     db: Session = Depends(get_session),
 ):
-    """
-    Add a user to the oversight exclusion list for a group.
-    Requires system admin OR group admin of the specified group.
-    """
-    _verify_group_admin_access(user, group_id, db)
-
-    exclusion = OversightExclusions.add_exclusion(group_id, form_data.user_id, db=db)
-    if exclusion:
-        return exclusion
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT("Error adding exclusion"),
-        )
-
-
-@router.delete(
-    "/groups/id/{group_id}/exclusions/{user_id}",
-    response_model=bool,
-)
-async def remove_group_exclusion(
-    group_id: str,
-    user_id: str,
-    user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
-):
-    """
-    Remove a user from the oversight exclusion list for a group.
-    Requires system admin OR group admin of the specified group.
-    """
-    _verify_group_admin_access(user, group_id, db)
-
-    result = OversightExclusions.remove_exclusion(group_id, user_id, db=db)
+    result = OversightAssignments.remove_assignment(overseer_id, target_id, db=db)
     if result:
         return result
-    else:
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=ERROR_MESSAGES.NOT_FOUND,
+    )
+
+
+@router.post("/assignments/bulk", response_model=list[OversightAssignmentModel])
+async def bulk_assign_from_group(
+    form_data: BulkAssignForm,
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
+):
+    group = Groups.get_group_by_id(form_data.group_id, db=db)
+    if not group:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
+    member_ids = Groups.get_group_user_ids_by_id(form_data.group_id, db=db)
+    source = f"group:{group.name}"
 
-############################
-# Helpers
-############################
+    created = []
+    for member_id in member_ids:
+        if member_id == form_data.overseer_id:
+            continue
 
-
-def _verify_group_admin_access(user, group_id: str, db: Session):
-    """
-    Verify the user is a system admin or a group admin of the specified group.
-    Raises HTTPException if access is denied.
-    """
-    if user.role == "admin":
-        return
-
-    member_role = Groups.get_member_role(group_id, user.id, db=db)
-    if member_role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        assignment = OversightAssignments.add_assignment(
+            overseer_id=form_data.overseer_id,
+            target_id=member_id,
+            created_by=user.id,
+            source=source,
+            db=db,
         )
+        if assignment:
+            created.append(assignment)
+
+    return created
