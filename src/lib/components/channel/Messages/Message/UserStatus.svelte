@@ -103,10 +103,10 @@
 		{/if}
 
 		{#if (user?.groups ?? []).length > 0}
-			<div class="mx-3.5 mt-2 flex gap-0.5">
+			<div class="mx-3.5 mt-2 flex flex-wrap gap-0.5 max-h-16 overflow-hidden">
 				{#each user.groups as group}
 					<div
-						class="px-1.5 py-0.5 rounded-lg bg-gray-50 dark:text-white dark:bg-gray-900/50 text-black transition text-xs"
+						class="px-1.5 py-0.5 rounded-lg bg-gray-50 dark:text-white dark:bg-gray-900/50 text-black transition text-xs whitespace-nowrap"
 					>
 						{group.name}
 					</div>
