@@ -12,14 +12,14 @@ from open_webui.models.users import Users
 from open_webui.models.feedbacks import Feedbacks
 from open_webui.utils.auth import get_admin_user
 from open_webui.internal.db import get_session
-from open_webui.config import ENABLE_ANALYTICS_DASHBOARD
+from open_webui.config import ENABLE_ADMIN_ANALYTICS
 from sqlalchemy.orm import Session
 
 log = logging.getLogger(__name__)
 
 
 def check_analytics_enabled():
-    if not ENABLE_ANALYTICS_DASHBOARD:
+    if not ENABLE_ADMIN_ANALYTICS:
         raise HTTPException(status_code=403, detail="Analytics dashboard is disabled")
 
 

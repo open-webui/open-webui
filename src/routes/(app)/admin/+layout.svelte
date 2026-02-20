@@ -66,7 +66,7 @@
 							href="/admin">{$i18n.t('Users')}</a
 						>
 
-						{#if $config?.features?.enable_analytics_dashboard ?? true}
+						{#if $config?.features?.enable_admin_analytics ?? true}
 							<a
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/analytics')
 									? ''
