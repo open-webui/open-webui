@@ -871,7 +871,8 @@ export const addSharePointFolderToSpace = async (
 	folderName?: string,
 	siteName?: string,
 	recursive: boolean = true,
-	maxDepth: number = 10
+	maxDepth: number = 10,
+	signal?: AbortSignal
 ): Promise<SharePointFolderImportResult> => {
 	let error = null;
 
@@ -890,7 +891,8 @@ export const addSharePointFolderToSpace = async (
 			site_name: siteName,
 			recursive: recursive,
 			max_depth: maxDepth
-		})
+		}),
+		signal
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

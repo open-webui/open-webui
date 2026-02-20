@@ -339,7 +339,8 @@ export const getSharepointFilesRecursive = async (
 	tenantId: string,
 	driveId: string,
 	folderId?: string,
-	maxDepth: number = 10
+	maxDepth: number = 10,
+	signal?: AbortSignal
 ): Promise<DriveItem[]> => {
 	let error = null;
 
@@ -358,7 +359,8 @@ export const getSharepointFilesRecursive = async (
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
-		}
+		},
+		signal
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -386,7 +388,8 @@ export const downloadSharepointFile = async (
 	tenantId: string,
 	driveId: string,
 	fileId: string,
-	filename?: string
+	filename?: string,
+	signal?: AbortSignal
 ): Promise<DownloadedFile> => {
 	let error = null;
 
@@ -399,7 +402,8 @@ export const downloadSharepointFile = async (
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: filename ? JSON.stringify({ filename }) : undefined
+		body: filename ? JSON.stringify({ filename }) : undefined,
+		signal
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

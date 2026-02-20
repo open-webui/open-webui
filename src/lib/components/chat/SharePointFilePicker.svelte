@@ -55,6 +55,8 @@
 	let loadingSites = false;
 	let loadingDrives = false;
 	let downloading = false;
+	let abortController: AbortController | null = null;
+	let importProgress = { current: 0, total: 0 };
 
 	let siteDropdownOpen = false;
 	let siteSearchValue = '';
@@ -432,12 +434,17 @@
 		if (!currentDrive || (selectedItems.size === 0 && selectedFolders.size === 0)) return;
 
 		downloading = true;
+		abortController = new AbortController();
+		importProgress = { current: 0, total: 0 };
 
 		if (!currentTenant || !currentDrive) {
 			toast.error('No tenant or drive selected');
 			downloading = false;
+			abortController = null;
 			return;
 		}
+
+		const signal = abortController.signal;
 
 		try {
 			// When spaceId is provided and folders are selected, use bulk folder import
@@ -446,10 +453,13 @@
 				let totalSkipped = 0;
 				let totalFailed = 0;
 
+				importProgress.total = selectedFolders.size + selectedItems.size;
+
 				for (const folderId of selectedFolders) {
+					if (signal.aborted) break;
+
 					const folder = items.find((i) => i.id === folderId);
 					const folderName = folder?.name || 'folder';
-					toast.info(`Importing ${folderName}...`);
 
 					const result = await addSharePointFolderToSpace(
 						token,
@@ -460,8 +470,11 @@
 						folderName,
 						currentSite?.display_name,
 						true,
-						10
+						10,
+						signal
 					);
+
+					if (signal.aborted) break;
 
 					totalAdded += result.added;
 					totalSkipped += result.skipped;
@@ -470,10 +483,14 @@
 					for (const file of result.files) {
 						dispatch('fileDownloaded', file);
 					}
+					importProgress.current++;
+					importProgress = importProgress;
 				}
 
 				// Also handle individually selected files
 				for (const itemId of selectedItems) {
+					if (signal.aborted) break;
+
 					const item = items.find((i) => i.id === itemId && !i.is_folder);
 					if (item) {
 						const result = await downloadSharepointFile(
@@ -481,18 +498,26 @@
 							currentTenant.id,
 							currentDrive.id,
 							item.id,
-							item.name
+							item.name,
+							signal
 						);
+						if (signal.aborted) break;
 						dispatch('fileDownloaded', result);
 						totalAdded++;
+						importProgress.current++;
+						importProgress = importProgress;
 					}
 				}
 
-				const message =
-					`Imported ${totalAdded} file(s)` +
-					(totalSkipped > 0 ? `, ${totalSkipped} skipped` : '') +
-					(totalFailed > 0 ? `, ${totalFailed} failed` : '');
-				toast.success(message);
+				if (signal.aborted) {
+					toast.warning(`Cancelled. Imported ${totalAdded} file(s) before stopping.`);
+				} else {
+					const message =
+						`Imported ${totalAdded} file(s)` +
+						(totalSkipped > 0 ? `, ${totalSkipped} skipped` : '') +
+						(totalFailed > 0 ? `, ${totalFailed} failed` : '');
+					toast.success(message);
+				}
 			} else {
 				// Original flow: enumerate and download files one by one
 				const filesToDownload = items.filter(
@@ -500,6 +525,8 @@
 				);
 
 				for (const folderId of selectedFolders) {
+					if (signal.aborted) break;
+
 					const folder = items.find((i) => i.id === folderId);
 					const folderName = folder?.name || 'folder';
 					toast.info(`Scanning ${folderName}...`);
@@ -508,43 +535,79 @@
 						token,
 						currentTenant.id,
 						currentDrive.id,
-						folderId
+						folderId,
+						10,
+						signal
 					);
+					if (signal.aborted) break;
 					filesToDownload.push(...folderFiles);
 				}
 
-				if (filesToDownload.length === 0) {
+				if (signal.aborted) {
+					toast.warning('Cancelled during folder scan.');
+				} else if (filesToDownload.length === 0) {
 					toast.warning('No files to import');
 					downloading = false;
+					abortController = null;
+					importProgress = { current: 0, total: 0 };
 					return;
+				} else {
+					importProgress.total = filesToDownload.length;
+					importProgress = importProgress;
+
+					for (const file of filesToDownload) {
+						if (signal.aborted) break;
+
+						const result = await downloadSharepointFile(
+							token,
+							currentTenant.id,
+							currentDrive.id,
+							file.id,
+							file.name,
+							signal
+						);
+						if (signal.aborted) break;
+						dispatch('fileDownloaded', result);
+						importProgress.current++;
+						importProgress = importProgress;
+					}
+
+					if (signal.aborted) {
+						toast.warning(
+							`Cancelled. Imported ${importProgress.current} of ${importProgress.total} files.`
+						);
+					} else {
+						toast.success(`Imported ${filesToDownload.length} file(s)`);
+					}
 				}
-
-				toast.info(`Importing ${filesToDownload.length} file(s)...`);
-
-				for (const file of filesToDownload) {
-					const result = await downloadSharepointFile(
-						token,
-						currentTenant.id,
-						currentDrive.id,
-						file.id,
-						file.name
-					);
-					dispatch('fileDownloaded', result);
-				}
-
-				toast.success(`Imported ${filesToDownload.length} file(s)`);
 			}
 
-			selectedItems.clear();
-			selectedFolders.clear();
-			selectedItems = selectedItems;
-			selectedFolders = selectedFolders;
-			show = false;
+			if (!signal.aborted) {
+				selectedItems.clear();
+				selectedFolders.clear();
+				selectedItems = selectedItems;
+				selectedFolders = selectedFolders;
+				show = false;
+			}
 		} catch (error) {
-			console.error('Failed to download files:', error);
-			toast.error('Failed to download files');
+			if (signal.aborted) {
+				toast.warning(
+					`Cancelled. Imported ${importProgress.current} of ${importProgress.total} files.`
+				);
+			} else {
+				console.error('Failed to download files:', error);
+				toast.error('Failed to download files');
+			}
 		} finally {
 			downloading = false;
+			abortController = null;
+			importProgress = { current: 0, total: 0 };
+		}
+	}
+
+	function cancelImport() {
+		if (abortController) {
+			abortController.abort();
 		}
 	}
 
@@ -643,7 +706,10 @@
 				{/if}
 				<button
 					class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
-					on:click={() => (show = false)}
+					on:click={() => {
+						if (downloading) cancelImport();
+						show = false;
+					}}
 					aria-label="Close"
 				>
 					<svg
@@ -1109,7 +1175,19 @@
 					class="flex items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 rounded-b-4xl"
 				>
 					<div class="text-xs text-gray-500 dark:text-gray-400">
-						{#if selectedItems.size > 0 || selectedFolders.size > 0}
+						{#if downloading && importProgress.total > 0}
+							<span class="inline-flex items-center gap-2">
+								<Spinner className="size-3" />
+								<span class="font-medium text-gray-700 dark:text-gray-300">
+									Importing {importProgress.current} / {importProgress.total}...
+								</span>
+							</span>
+						{:else if downloading}
+							<span class="inline-flex items-center gap-2">
+								<Spinner className="size-3" />
+								<span class="text-gray-500 dark:text-gray-400">Scanning folders...</span>
+							</span>
+						{:else if selectedItems.size > 0 || selectedFolders.size > 0}
 							<span class="inline-flex items-center gap-1.5 flex-wrap">
 								{#if selectedItems.size > 0}
 									<span
@@ -1137,21 +1215,25 @@
 						{/if}
 					</div>
 					<div class="flex items-center gap-2">
-						<button
-							class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
-							on:click={() => (show = false)}
-						>
-							Cancel
-						</button>
-						<button
-							class="px-4 py-2 text-sm font-medium text-white bg-gray-900 dark:bg-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-900 dark:disabled:hover:bg-white flex items-center gap-2 shadow-sm active:scale-[0.98]"
-							disabled={(selectedItems.size === 0 && selectedFolders.size === 0) || downloading}
-							on:click={downloadSelected}
-						>
-							{#if downloading}
-								<Spinner className="size-3.5" />
-								Importing...
-							{:else}
+						{#if downloading}
+							<button
+								class="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:text-white dark:hover:text-white hover:bg-red-500 dark:hover:bg-red-600 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg transition-all"
+								on:click={cancelImport}
+							>
+								Cancel Import
+							</button>
+						{:else}
+							<button
+								class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
+								on:click={() => (show = false)}
+							>
+								Cancel
+							</button>
+							<button
+								class="px-4 py-2 text-sm font-medium text-white bg-gray-900 dark:bg-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-900 dark:disabled:hover:bg-white flex items-center gap-2 shadow-sm active:scale-[0.98]"
+								disabled={selectedItems.size === 0 && selectedFolders.size === 0}
+								on:click={downloadSelected}
+							>
 								<svg
 									class="w-4 h-4"
 									fill="none"
@@ -1166,8 +1248,8 @@
 									/>
 								</svg>
 								Import Selected
-							{/if}
-						</button>
+							</button>
+						{/if}
 					</div>
 				</div>
 			</div>

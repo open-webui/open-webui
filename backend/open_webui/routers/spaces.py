@@ -1559,6 +1559,11 @@ async def add_sharepoint_folder_to_space(
         return items
 
     while queue:
+        # Check for client disconnect periodically during folder enumeration
+        if await request.is_disconnected():
+            log.info("[spaces] Client disconnected during folder enumeration, stopping")
+            break
+
         current_folder_id, current_folder_name, depth = queue.pop(0)
 
         if depth > max_depth:
@@ -1594,7 +1599,14 @@ async def add_sharepoint_folder_to_space(
     failed = 0
     errors = []
 
-    for file_entry in all_files:
+    for file_idx, file_entry in enumerate(all_files):
+        # Check for client disconnect every 5 files
+        if file_idx % 5 == 0 and await request.is_disconnected():
+            log.info(
+                f"[spaces] Client disconnected, stopping folder import after {len(added_files)} files"
+            )
+            break
+
         # Extract item and its immediate parent folder info
         item = file_entry["item"]
         parent_folder_id = file_entry["parent_folder_id"]
