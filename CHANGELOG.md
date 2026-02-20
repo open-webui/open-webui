@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔍 **Hybrid search result fix.** Hybrid search now returns correct results after fixing a bug where query result unpacking order was mismatched, causing search results to appear empty. [#21562](https://github.com/open-webui/open-webui/pull/21562)
 - 🛠️ **Imported items display.** Imported functions and tools now appear immediately in the list after import, without requiring a page reload. [#21593](https://github.com/open-webui/open-webui/issues/21593)
 - 🔄 **WebSocket race condition fix.** Collaborative note saves no longer crash with errors when users disconnect before pending saves complete, preventing AttributeError exceptions and excessive logging. [#21601](https://github.com/open-webui/open-webui/issues/21601), [Commit](https://github.com/open-webui/open-webui/commit/0a700aafe46dfea2cf9721bb81725d2582b0d781)
+- ✋ **Drag-and-drop overlay fix.** The "Add Files" overlay no longer remains stuck on screen when dragging files back out of the chat window in Mozilla Firefox. [#21664](https://github.com/open-webui/open-webui/pull/21664)
 
 ## [0.8.3] - 2026-02-17
 
