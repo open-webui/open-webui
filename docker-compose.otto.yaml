@@ -12,12 +12,15 @@ services:
     environment:
       - OPENAI_API_BASE_URL=http://host.docker.internal:18789/v1
       - OPENAI_API_KEY=${OPENCLAW_GATEWAY_TOKEN}
+      - ENABLE_FORWARD_USER_INFO_HEADERS=true  # safe: service is behind Cloudflare Tunnel (trusted proxy)
       - WEBUI_AUTH=true
       - WEBUI_NAME=Otto
       - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      - WEBUI_URL=${WEBUI_URL:-http://localhost:3001}
       - DEFAULT_MODELS=${OPENCLAW_DEFAULT_MODEL:-claude-opus-4-6}
       - ENABLE_OLLAMA_API=false
       - ENABLE_CHANNELS=true
+      - ENABLE_WEBSOCKET_SUPPORT=false
       - ENABLE_COMMUNITY_SHARING=false
       - ENABLE_MESSAGE_RATING=false
       - ENABLE_EASTER_EGGS=false
