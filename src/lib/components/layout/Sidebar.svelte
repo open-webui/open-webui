@@ -1004,11 +1004,12 @@
 								class="group flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition cursor-pointer"
 								role="button"
 								tabindex="0"
-								on:click={async () => {
-							if (Object.keys(folders).length === 0) await initFolders();
-							showFolders = !showFolders;
-						}}
-								on:keydown={(e) => { if (e.key === 'Enter') showFolders = !showFolders; }}
+								on:click={(e) => { e.stopPropagation(); }}
+								on:pointerup={() => {
+									showFolders = !showFolders;
+									if (showFolders && Object.keys(folders).length === 0) initFolders();
+								}}
+								on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') showFolders = !showFolders; }}
 								aria-expanded={showFolders}
 								aria-label={$i18n.t('Folders')}
 							>
@@ -1021,6 +1022,7 @@
 								<button
 									class="invisible group-hover:visible self-center p-0.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition"
 									on:click|stopPropagation={() => { showCreateFolderModal = true; }}
+									on:pointerup|stopPropagation={() => {}}
 									aria-label={$i18n.t('New Folder')}
 								>
 									<Plus className="size-3.5" strokeWidth="2.5" />
@@ -1054,11 +1056,12 @@
 								class="group flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition cursor-pointer"
 								role="button"
 								tabindex="0"
-								on:click={async () => {
-							if ($channels.length === 0) await initChannels();
-							showChannels = !showChannels;
-						}}
-								on:keydown={(e) => { if (e.key === 'Enter') showChannels = !showChannels; }}
+								on:click={(e) => { e.stopPropagation(); }}
+								on:pointerup={() => {
+									showChannels = !showChannels;
+									if (showChannels && $channels.length === 0) initChannels();
+								}}
+								on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') showChannels = !showChannels; }}
 								aria-expanded={showChannels}
 								aria-label={$i18n.t('Channels')}
 							>
@@ -1075,6 +1078,7 @@
 											await tick();
 											setTimeout(() => { showCreateChannel = true; }, 0);
 										}}
+										on:pointerup|stopPropagation={() => {}}
 										aria-label={$i18n.t('Create Channel')}
 									>
 										<Plus className="size-3.5" strokeWidth="2.5" />
