@@ -16,14 +16,10 @@
 		userSignUp,
 		updateUserTimezone
 	} from '$lib/apis/auths';
-	import { getPublicBrandingConfig } from '$lib/apis/configs';
-
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
+	import { WEBUI_NAME, config, user, socket, brandingConfig } from '$lib/stores';
 
 	import { generateInitialsImage, canvasPixelTest, getUserTimezone } from '$lib/utils';
-	import { applyBranding, getEffectiveBranding } from '$lib/utils/branding';
-	import type { BrandingConfig } from '$lib/utils/branding';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
@@ -150,8 +146,6 @@
 	};
 
 	let onboarding = false;
-	let brandingConfig: BrandingConfig | null = null;
-	let effectiveBranding: ReturnType<typeof getEffectiveBranding> | null = null;
 
 	async function setLogoImage() {
 		await tick();
@@ -159,15 +153,15 @@
 
 		if (logo) {
 			// On login page, always prefer the colored logo (logo_url) for visibility on dark backgrounds
-			if (effectiveBranding?.logo_url) {
-				logo.src = effectiveBranding.logo_url;
+			if ($brandingConfig?.logo_url) {
+				logo.src = $brandingConfig.logo_url;
 				logo.style.filter = '';
 				return;
 			}
 
 			// Fallback to dark logo if no colored logo available
-			if (effectiveBranding?.logo_dark_url) {
-				logo.src = effectiveBranding.logo_dark_url;
+			if ($brandingConfig?.logo_dark_url) {
+				logo.src = $brandingConfig.logo_dark_url;
 				logo.style.filter = '';
 				return;
 			}
@@ -209,17 +203,6 @@
 
 		loaded = true;
 
-		// Fetch and apply public branding (accent colors, favicon, login background)
-		try {
-			brandingConfig = await getPublicBrandingConfig();
-			if (brandingConfig) {
-				applyBranding(brandingConfig);
-				effectiveBranding = getEffectiveBranding(brandingConfig);
-			}
-		} catch (e) {
-			console.debug('Branding config not available:', e);
-		}
-
 		setLogoImage();
 
 		if (($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false) {
@@ -229,12 +212,6 @@
 		}
 	});
 </script>
-
-<svelte:head>
-	<title>
-		{effectiveBranding?.app_name || $WEBUI_NAME}
-	</title>
-</svelte:head>
 
 <OnBoarding
 	bind:show={onboarding}
@@ -247,8 +224,8 @@
 <div class="w-full h-screen max-h-[100dvh] text-white relative" id="auth-page">
 	<div
 		class="w-full h-full absolute top-0 left-0 bg-white dark:bg-black"
-		style={effectiveBranding?.login_background_color || effectiveBranding?.login_background_url
-			? `${effectiveBranding.login_background_color ? `background-color: ${effectiveBranding.login_background_color};` : ''}${effectiveBranding.login_background_url ? ` background-image: url('${effectiveBranding.login_background_url}'); background-size: cover; background-position: center;` : ''}`
+		style={$brandingConfig?.login_background_color || $brandingConfig?.login_background_url
+			? `${$brandingConfig?.login_background_color ? `background-color: ${$brandingConfig.login_background_color};` : ''}${$brandingConfig?.login_background_url ? ` background-image: url('${$brandingConfig.login_background_url}'); background-size: cover; background-position: center;` : ''}`
 			: ''}
 	></div>
 
@@ -278,21 +255,21 @@
 					<div class="my-auto flex flex-col justify-center items-center">
 						<div class=" sm:max-w-md my-auto pb-10 w-full dark:text-gray-100">
 							<div class="flex justify-center mb-8 h-24">
-								{#if effectiveBranding?.logo_url}
+								{#if $brandingConfig?.logo_url}
 									<img
 										id="logo"
 										crossorigin="anonymous"
-										src={effectiveBranding.logo_url}
+										src={$brandingConfig.logo_url}
 										class="h-24 max-w-[400px] object-contain"
-										alt={effectiveBranding?.app_name || 'Logo'}
+										alt={$brandingConfig?.app_name || 'Logo'}
 									/>
-								{:else if effectiveBranding !== null}
+								{:else if $brandingConfig !== null}
 									<img
 										id="logo"
 										crossorigin="anonymous"
 										src="{WEBUI_BASE_URL}/static/favicon.png"
 										class="h-24 max-w-[400px] object-contain"
-										alt={effectiveBranding?.app_name || 'Logo'}
+										alt={$brandingConfig?.app_name || 'Logo'}
 									/>
 								{/if}
 							</div>
@@ -307,19 +284,19 @@
 									<div class=" text-2xl font-medium">
 										{#if $config?.onboarding ?? false}
 											{$i18n.t(`Get started with {{WEBUI_NAME}}`, {
-												WEBUI_NAME: effectiveBranding?.app_name || $WEBUI_NAME
+												WEBUI_NAME: $brandingConfig?.app_name || $WEBUI_NAME
 											})}
 										{:else if mode === 'ldap'}
 											{$i18n.t(`Sign in to {{WEBUI_NAME}} with LDAP`, {
-												WEBUI_NAME: effectiveBranding?.app_name || $WEBUI_NAME
+												WEBUI_NAME: $brandingConfig?.app_name || $WEBUI_NAME
 											})}
 										{:else if mode === 'signin'}
 											{$i18n.t(`Sign in to {{WEBUI_NAME}}`, {
-												WEBUI_NAME: effectiveBranding?.app_name || $WEBUI_NAME
+												WEBUI_NAME: $brandingConfig?.app_name || $WEBUI_NAME
 											})}
 										{:else}
 											{$i18n.t(`Sign up to {{WEBUI_NAME}}`, {
-												WEBUI_NAME: effectiveBranding?.app_name || $WEBUI_NAME
+												WEBUI_NAME: $brandingConfig?.app_name || $WEBUI_NAME
 											})}
 										{/if}
 									</div>

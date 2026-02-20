@@ -926,7 +926,9 @@
 </script>
 
 <svelte:head>
-	<title>{$brandingConfig?.app_name || $WEBUI_NAME}</title>
+	{#if $brandingConfig?.app_name || $WEBUI_NAME}
+		<title>{$brandingConfig?.app_name || $WEBUI_NAME}</title>
+	{/if}
 	<link
 		crossorigin="anonymous"
 		rel="icon"

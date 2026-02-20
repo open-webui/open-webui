@@ -7,7 +7,7 @@ import type { Socket } from 'socket.io-client';
 import emojiShortCodes from '$lib/emoji-shortcodes.json';
 
 // Backend
-export const WEBUI_NAME = writable(APP_NAME);
+export const WEBUI_NAME = writable('');
 
 export const WEBUI_VERSION = writable(null);
 export const WEBUI_DEPLOYMENT_ID = writable(null);
