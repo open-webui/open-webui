@@ -1,7 +1,8 @@
 /* Otto dark theme — overrides Open WebUI's gray-scale CSS variables */
 html.dark {
+	/* Backgrounds */
 	--color-gray-950: #070a0e;
-	--color-gray-900: #0b0f14; /* bg-base: app background */
+	--color-gray-900: #0b0f14; /* bg-base */
 	--color-gray-850: #111720; /* bg-surface: sidebar, cards */
 	--color-gray-800: #18202c; /* bg-elevated: modals, dropdowns */
 	--color-gray-700: #1f2a38; /* bg-overlay: tooltips */
@@ -11,19 +12,39 @@ html.dark {
 	--color-gray-200: #e8eff7; /* text-primary */
 	--color-gray-100: #e8eff7;
 
-	/* Otto amber accent */
-	--color-accent: #ffaa2c;
-	--color-accent-dim: #d98a18;
-	--color-accent-glow: rgba(255, 170, 44, 0.18);
+	/* Amber accent */
+	--color-accent:        #ffaa2c;
+	--color-accent-dim:    #d98a18;
+	--color-accent-deep:   #7a4a08;
+	--color-accent-glow:   rgba(255, 170, 44, 0.18);
+	--color-accent-subtle: rgba(255, 170, 44, 0.08);
 	--color-border-accent: rgba(255, 170, 44, 0.12);
+	--color-border-subtle: rgba(255, 255, 255, 0.06);
+
+	/* Semantic aliases matching design system */
+	--bg-base:      #0b0f14;
+	--bg-surface:   #111720;
+	--bg-elevated:  #18202c;
+	--bg-overlay:   #1f2a38;
+	--bg-hover:     #243040;
+	--text-primary:   #e8eff7;
+	--text-secondary: #8a9bb0;
+	--text-muted:     #4e6178;
+	--text-inverse:   #0b0f14;
+	--accent:        #ffaa2c;
+	--accent-dim:    #d98a18;
+	--accent-glow:   rgba(255, 170, 44, 0.18);
+	--accent-subtle: rgba(255, 170, 44, 0.08);
+	--border:        rgba(255, 170, 44, 0.12);
+	--border-subtle: rgba(255, 255, 255, 0.06);
 }
 
-/* IBM Plex font family override */
+/* IBM Plex font family */
 html {
 	font-family: 'IBM Plex Sans', 'Vazirmatn', system-ui, sans-serif;
 }
 
-/* Sidebar brand name: larger, Plex Mono */
+/* Sidebar brand name: IBM Plex Mono, bold */
 #sidebar-webui-name {
 	font-family: 'IBM Plex Mono', monospace;
 	font-weight: 700;

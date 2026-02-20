@@ -1,27 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
   <defs>
-    <radialGradient id="bodyGrad" cx="50%" cy="40%" r="55%">
-      <stop offset="0%" stop-color="#ffc84a"/>
-      <stop offset="100%" stop-color="#e8900a"/>
+    <radialGradient id="g" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#FFAA2C"/>
+      <stop offset="100%" stop-color="#B8720E"/>
     </radialGradient>
   </defs>
 
-  <!-- Tentacle bumps (5) -->
-  <ellipse cx="18" cy="66" rx="6" ry="5" fill="url(#bodyGrad)"/>
-  <ellipse cx="30" cy="70" rx="6" ry="5" fill="url(#bodyGrad)"/>
-  <ellipse cx="40" cy="72" rx="6" ry="5" fill="url(#bodyGrad)"/>
-  <ellipse cx="50" cy="70" rx="6" ry="5" fill="url(#bodyGrad)"/>
-  <ellipse cx="62" cy="66" rx="6" ry="5" fill="url(#bodyGrad)"/>
+  <!-- Tentacles drawn first so body covers their bases -->
+  <ellipse cx="22" cy="50" rx="6" ry="5" fill="#C47A10"/>
+  <ellipse cx="31" cy="55" rx="6" ry="5" fill="#FFAA2C"/>
+  <ellipse cx="40" cy="57" rx="6" ry="5" fill="#C47A10"/>
+  <ellipse cx="49" cy="55" rx="6" ry="5" fill="#FFAA2C"/>
+  <ellipse cx="58" cy="50" rx="6" ry="5" fill="#C47A10"/>
 
-  <!-- Body (round) -->
-  <ellipse cx="40" cy="36" rx="28" ry="28" fill="url(#bodyGrad)"/>
+  <!-- Body on top, covering tentacle bases -->
+  <ellipse cx="40" cy="34" rx="24" ry="22" fill="url(#g)"/>
+
+  <!-- Sheen highlight -->
+  <ellipse cx="32" cy="23" rx="8" ry="4.5" fill="white" opacity="0.11" transform="rotate(-18 32 23)"/>
 
   <!-- Eyes -->
-  <ellipse cx="31" cy="32" rx="5.5" ry="6" fill="#0b0f14"/>
-  <ellipse cx="49" cy="32" rx="5.5" ry="6" fill="#0b0f14"/>
-  <ellipse cx="32.5" cy="30.5" rx="1.8" ry="1.8" fill="#fff" opacity="0.7"/>
-  <ellipse cx="50.5" cy="30.5" rx="1.8" ry="1.8" fill="#fff" opacity="0.7"/>
+  <circle cx="32" cy="35" r="3.2" fill="#3D2800"/>
+  <circle cx="33.2" cy="33.8" r="1.1" fill="white" opacity="0.85"/>
+  <circle cx="48" cy="35" r="3.2" fill="#3D2800"/>
+  <circle cx="49.2" cy="33.8" r="1.1" fill="white" opacity="0.85"/>
 
   <!-- Smile -->
-  <path d="M33 42 Q40 47 47 42" stroke="#0b0f14" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <path d="M35 42 Q40 46 45 42" stroke="#3D2800" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.5"/>
 </svg>

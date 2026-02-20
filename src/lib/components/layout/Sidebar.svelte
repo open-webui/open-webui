@@ -902,21 +902,16 @@
 			<div
 				class="sidebar px-[0.5625rem] pt-2 pb-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 -mb-3"
 			>
-				<a
-					class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition no-drag-region"
-					href="/"
-					draggable="false"
-					on:click={newChatHandler}
-				>
-					<img
-						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/favicon.png"
-						class="sidebar-new-chat-icon size-6 rounded-full"
-						alt=""
-					/>
-				</a>
-
-				<a href="/" class="flex flex-1 px-1.5" on:click={newChatHandler}>
+				<a href="/" class="flex items-center gap-2 px-1 no-drag-region" on:click={newChatHandler} draggable="false">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none" class="size-6 shrink-0">
+						<defs><radialGradient id="sg" cx="40%" cy="35%" r="65%"><stop offset="0%" stop-color="#FFAA2C"/><stop offset="100%" stop-color="#B8720E"/></radialGradient></defs>
+						<ellipse cx="22" cy="50" rx="6" ry="5" fill="#C47A10"/><ellipse cx="31" cy="55" rx="6" ry="5" fill="#FFAA2C"/><ellipse cx="40" cy="57" rx="6" ry="5" fill="#C47A10"/><ellipse cx="49" cy="55" rx="6" ry="5" fill="#FFAA2C"/><ellipse cx="58" cy="50" rx="6" ry="5" fill="#C47A10"/>
+						<ellipse cx="40" cy="34" rx="24" ry="22" fill="url(#sg)"/>
+						<ellipse cx="32" cy="23" rx="8" ry="4.5" fill="white" opacity="0.11" transform="rotate(-18 32 23)"/>
+						<circle cx="32" cy="35" r="3.2" fill="#3D2800"/><circle cx="33.2" cy="33.8" r="1.1" fill="white" opacity="0.85"/>
+						<circle cx="48" cy="35" r="3.2" fill="#3D2800"/><circle cx="49.2" cy="33.8" r="1.1" fill="white" opacity="0.85"/>
+						<path d="M35 42 Q40 46 45 42" stroke="#3D2800" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.5"/>
+					</svg>
 					<div
 						id="sidebar-webui-name"
 						class=" self-center font-medium text-gray-850 dark:text-white font-primary"
