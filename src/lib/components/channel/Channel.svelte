@@ -44,6 +44,8 @@
 	let typingUsers = [];
 	let typingUsersTimeout = {};
 
+	let socketEventUnsubscribe = null;
+
 	$: if (id) {
 		initHandler();
 	}
@@ -246,7 +248,17 @@
 			chatId.set('');
 		}
 
-		$socket?.on('events:channel', channelEventHandler);
+		// Subscribe to the socket store so the event handler is registered even if
+		// the socket isn't ready when onMount fires (it's initialized async in
+		// +layout.svelte after getBackendConfig()). Also re-registers on reconnect.
+		socketEventUnsubscribe = socket.subscribe((sock) => {
+			if (sock) {
+				sock.off('events:channel', channelEventHandler);
+				sock.on('events:channel', channelEventHandler);
+				// Rejoin channel rooms after reconnect or new channel creation.
+				sock.emit('join-channels', { auth: { token: localStorage.token } });
+			}
+		});
 
 		mediaQuery = window.matchMedia('(min-width: 1024px)');
 
@@ -266,6 +278,7 @@
 		// last read at
 		updateLastReadAt(id);
 		_channelId.set(null);
+		socketEventUnsubscribe?.();
 		$socket?.off('events:channel', channelEventHandler);
 	});
 </script>

@@ -2124,6 +2124,14 @@ async def post_webhook_message(
         "channel": channel.model_dump(),
     }
 
+    # Ensure the webhook creator's sessions are in the channel room before
+    # broadcasting. This handles the case where the channel was created after
+    # the socket connected (room join happens at connect time via user-join).
+    await enter_room_for_users(
+        f"channel:{channel.id}",
+        [webhook.user_id],
+    )
+
     await sio.emit(
         "events:channel",
         event_data,
