@@ -3958,6 +3958,12 @@ async def streaming_chat_response_handler(response, ctx):
 
                 tool_call_retries = 0
                 tool_call_sources = []  # Track citation sources from tool results
+                _emitted_source_idx = 0
+                # Save original user message so RAG template is not
+                # recursively nested on every tool-call iteration.
+                _original_user_msg = get_last_user_message(
+                    form_data["messages"]
+                )
 
                 while (
                     len(tool_calls) > 0
@@ -4188,21 +4194,35 @@ async def streaming_chat_response_handler(response, ctx):
                         }
                     )
 
-                    # Emit citation sources for UI display
-                    for source in tool_call_sources:
+                    # Emit only newly added citation sources for UI display
+                    for source in tool_call_sources[_emitted_source_idx:]:
                         await event_emitter({"type": "source", "data": source})
+                    _emitted_source_idx = len(tool_call_sources)
 
-                    # Apply source context to messages for model
-                    if tool_call_sources:
-                        user_msg = get_last_user_message(form_data["messages"])
-                        if user_msg:
-                            form_data["messages"] = apply_source_context_to_messages(
-                                request,
-                                form_data["messages"],
-                                tool_call_sources,
-                                user_msg,
-                            )
-                        tool_call_sources.clear()
+                    # Apply source context to messages for model.
+                    # Sources accumulate across iterations so the
+                    # context grows; we restore the original user
+                    # message each time to avoid recursive nesting
+                    # of the RAG template.
+                    if tool_call_sources and _original_user_msg:
+                        msg_item = get_last_user_message_item(
+                            form_data["messages"]
+                        )
+                        if msg_item:
+                            if isinstance(msg_item["content"], list):
+                                for part in msg_item["content"]:
+                                    if part.get("type") == "text":
+                                        part["text"] = _original_user_msg
+                                        break
+                            else:
+                                msg_item["content"] = _original_user_msg
+
+                        form_data["messages"] = apply_source_context_to_messages(
+                            request,
+                            form_data["messages"],
+                            tool_call_sources,
+                            _original_user_msg,
+                        )
 
                     await event_emitter(
                         {
