@@ -14,6 +14,7 @@ export interface BrandingPreset {
 	logo_url?: string;
 	logo_dark_url?: string;
 	favicon_url?: string;
+	favicon_data?: string;
 	login_background_url?: string;
 	login_background_color?: string;
 }
@@ -30,6 +31,7 @@ export interface BrandingConfig {
 	logo_url?: string;
 	logo_dark_url?: string;
 	favicon_url?: string;
+	favicon_data?: string;
 	login_background_url?: string;
 	login_background_color?: string;
 	presets?: BrandingPreset[];
@@ -174,6 +176,7 @@ export function getEffectiveBranding(config: BrandingConfig): {
 	logo_url: string;
 	logo_dark_url: string;
 	favicon_url: string;
+	favicon_data: string;
 	login_background_url: string;
 	login_background_color: string;
 	app_name: string;
@@ -185,6 +188,7 @@ export function getEffectiveBranding(config: BrandingConfig): {
 		logo_url: preset?.logo_url || config.logo_url || '',
 		logo_dark_url: preset?.logo_dark_url || config.logo_dark_url || '',
 		favicon_url: preset?.favicon_url || config.favicon_url || '',
+		favicon_data: preset?.favicon_data || config.favicon_data || '',
 		login_background_url: preset?.login_background_url || config.login_background_url || '',
 		login_background_color: preset?.login_background_color || config.login_background_color || '',
 		app_name: preset?.app_name || config.app_name || ''

@@ -1787,6 +1787,7 @@ DEFAULT_BRANDING_CONFIG = {
     "logo_url": "",
     "logo_dark_url": "",
     "favicon_url": "",
+    "favicon_data": "",
     "login_background_url": "",
     "login_background_color": "#1a2744",
     "presets": [
@@ -1799,6 +1800,7 @@ DEFAULT_BRANDING_CONFIG = {
             "logo_url": "/static/branding/fia-logo-white-main.png",
             "logo_dark_url": "/static/branding/fia-logo-white-main.png",
             "favicon_url": "",
+            "favicon_data": "",
             "login_background_url": "",
             "login_background_color": "#1a2744",
             "microsoft_client_id": "",
@@ -1814,6 +1816,7 @@ DEFAULT_BRANDING_CONFIG = {
             "logo_url": "/static/branding/magellan-logo.png",
             "logo_dark_url": "/static/branding/magellan-logo.png",
             "favicon_url": "",
+            "favicon_data": "",
             "login_background_url": "",
             "login_background_color": "#000000",
             "microsoft_client_id": "",

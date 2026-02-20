@@ -46,8 +46,9 @@
 				<div class=" self-center">
 					<img
 						id="logo"
-						crossorigin="anonymous"
-						src={$brandingConfig?.favicon_url || `${WEBUI_BASE_URL}/static/favicon.png`}
+						src={$brandingConfig?.favicon_data ||
+							$brandingConfig?.favicon_url ||
+							`${WEBUI_BASE_URL}/static/favicon.png`}
 						class=" w-6 rounded-full"
 						alt="logo"
 					/>

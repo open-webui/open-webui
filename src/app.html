@@ -2,7 +2,7 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-		<link rel="icon" id="app-favicon" href="/static/favicon.png" crossorigin="use-credentials" />
+		<link rel="icon" id="app-favicon" href="/static/favicon.png" />
 		<link
 			rel="apple-touch-icon"
 			sizes="180x180"
@@ -108,7 +108,10 @@
 							}
 						}
 						const title = (preset && preset.app_name) || cfg.app_name;
-						const favicon = (preset && preset.favicon_url) || cfg.favicon_url;
+						const favicon =
+							(preset && (preset.favicon_data || preset.favicon_url)) ||
+							cfg.favicon_data ||
+							cfg.favicon_url;
 						if (title) document.title = title;
 						if (favicon) {
 							const el = document.getElementById('app-favicon');

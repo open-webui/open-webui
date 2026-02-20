@@ -5,7 +5,7 @@
 
 	import { forceResetPassword, getSessionUser } from '$lib/apis/auths';
 	import { getBackendConfig } from '$lib/apis';
-	import { WEBUI_NAME, config, user } from '$lib/stores';
+	import { WEBUI_NAME, config, user, brandingConfig } from '$lib/stores';
 
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
@@ -78,8 +78,9 @@
 		<div class="flex space-x-2">
 			<div class=" self-center">
 				<img
-					crossorigin="anonymous"
-					src={$config?.ui?.favicon_url ?? '/static/favicon.png'}
+					src={$brandingConfig?.favicon_data ||
+						$brandingConfig?.favicon_url ||
+						'/static/favicon.png'}
 					class=" size-6 rounded-full"
 					alt="logo"
 				/>

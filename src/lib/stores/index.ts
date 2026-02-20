@@ -78,6 +78,7 @@ export const banners: Writable<Banner[]> = writable([]);
 // Branding config (fetched from public endpoint, no auth required)
 export const brandingConfig: Writable<{
 	favicon_url?: string;
+	favicon_data?: string;
 	logo_url?: string;
 	logo_dark_url?: string;
 	login_background_url?: string;

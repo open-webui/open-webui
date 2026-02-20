@@ -258,7 +258,6 @@
 								{#if $brandingConfig?.logo_url}
 									<img
 										id="logo"
-										crossorigin="anonymous"
 										src={$brandingConfig.logo_url}
 										class="h-24 max-w-[400px] object-contain"
 										alt={$brandingConfig?.app_name || 'Logo'}
@@ -266,8 +265,7 @@
 								{:else if $brandingConfig !== null}
 									<img
 										id="logo"
-										crossorigin="anonymous"
-										src="{WEBUI_BASE_URL}/static/favicon.png"
+										src={$brandingConfig?.favicon_data || `${WEBUI_BASE_URL}/static/favicon.png`}
 										class="h-24 max-w-[400px] object-contain"
 										alt={$brandingConfig?.app_name || 'Logo'}
 									/>

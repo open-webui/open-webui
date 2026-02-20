@@ -556,6 +556,7 @@ class BrandingPreset(BaseModel):
     logo_url: Optional[str] = ""
     logo_dark_url: Optional[str] = ""
     favicon_url: Optional[str] = ""
+    favicon_data: Optional[str] = ""
     login_background_url: Optional[str] = ""
     login_background_color: Optional[str] = ""
     microsoft_client_id: Optional[str] = ""
@@ -575,10 +576,60 @@ class BrandingConfigForm(BaseModel):
     logo_url: Optional[str] = ""
     logo_dark_url: Optional[str] = ""
     favicon_url: Optional[str] = ""
+    favicon_data: Optional[str] = ""
     login_background_url: Optional[str] = ""
     login_background_color: Optional[str] = ""
     presets: Optional[list[BrandingPreset]] = []
     domain_mappings: Optional[list[DomainMapping]] = []
+
+
+async def _fetch_favicon_as_data_uri(url: str) -> str:
+    """Download a favicon URL and return it as a base64 data URI.
+    Returns empty string on failure so the system falls back to favicon_url."""
+    if not url or url.startswith("data:") or url.startswith("/"):
+        return ""
+    try:
+        import base64
+
+        timeout = aiohttp.ClientTimeout(total=10)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(url) as resp:
+                if resp.status != 200:
+                    log.warning(f"Failed to fetch favicon {url}: HTTP {resp.status}")
+                    return ""
+                content_type = resp.content_type or ""
+                data = await resp.read()
+                if len(data) > 500_000:  # Skip if > 500KB
+                    log.warning(f"Favicon too large ({len(data)} bytes): {url}")
+                    return ""
+                # Infer MIME type from content or URL
+                if "png" in content_type or url.endswith(".png"):
+                    mime = "image/png"
+                elif "webp" in content_type or url.endswith(".webp"):
+                    mime = "image/webp"
+                elif "svg" in content_type or url.endswith(".svg"):
+                    mime = "image/svg+xml"
+                elif "icon" in content_type or url.endswith(".ico"):
+                    mime = "image/x-icon"
+                elif (
+                    "jpeg" in content_type
+                    or "jpg" in content_type
+                    or url.endswith((".jpg", ".jpeg"))
+                ):
+                    mime = "image/jpeg"
+                elif "gif" in content_type or url.endswith(".gif"):
+                    mime = "image/gif"
+                else:
+                    mime = (
+                        content_type
+                        if content_type.startswith("image/")
+                        else "image/png"
+                    )
+                b64 = base64.b64encode(data).decode("ascii")
+                return f"data:{mime};base64,{b64}"
+    except Exception as e:
+        log.warning(f"Error fetching favicon {url}: {e}")
+        return ""
 
 
 @router.get("/branding")
@@ -592,7 +643,22 @@ async def set_branding_config(
     form_data: BrandingConfigForm,
     user=Depends(get_admin_user),
 ):
-    request.app.state.config.BRANDING_CONFIG = form_data.model_dump()
+    config_data = form_data.model_dump()
+
+    # Auto-convert favicon URLs to base64 data URIs for CORS-free rendering.
+    # Only re-fetch if the URL changed (i.e. existing favicon_data doesn't match).
+    if config_data.get("favicon_url") and not config_data.get("favicon_data"):
+        config_data["favicon_data"] = await _fetch_favicon_as_data_uri(
+            config_data["favicon_url"]
+        )
+
+    for preset in config_data.get("presets", []):
+        if preset.get("favicon_url") and not preset.get("favicon_data"):
+            preset["favicon_data"] = await _fetch_favicon_as_data_uri(
+                preset["favicon_url"]
+            )
+
+    request.app.state.config.BRANDING_CONFIG = config_data
     return request.app.state.config.BRANDING_CONFIG
 
 
@@ -632,5 +698,25 @@ async def get_public_branding_config(request: Request):
     # Preserve domain_mappings from stored config
     if stored.get("domain_mappings"):
         merged["domain_mappings"] = stored["domain_mappings"]
+
+    # Lazily populate favicon_data for any preset that has a URL but no cached data.
+    # This handles configs saved before the favicon_data feature was added.
+    needs_persist = False
+    if merged.get("favicon_url") and not merged.get("favicon_data"):
+        data_uri = await _fetch_favicon_as_data_uri(merged["favicon_url"])
+        if data_uri:
+            merged["favicon_data"] = data_uri
+            needs_persist = True
+
+    for preset in merged.get("presets", []):
+        if preset.get("favicon_url") and not preset.get("favicon_data"):
+            data_uri = await _fetch_favicon_as_data_uri(preset["favicon_url"])
+            if data_uri:
+                preset["favicon_data"] = data_uri
+                needs_persist = True
+
+    # Persist back so we only fetch once
+    if needs_persist:
+        request.app.state.config.BRANDING_CONFIG = merged
 
     return merged

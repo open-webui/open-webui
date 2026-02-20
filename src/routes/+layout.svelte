@@ -374,7 +374,10 @@
 						if ($settings?.notificationEnabled ?? false) {
 							new Notification(`${displayTitle} • ${$WEBUI_NAME}`, {
 								body: content,
-								icon: $brandingConfig?.favicon_url || `${WEBUI_BASE_URL}/static/favicon.png`
+								icon:
+									$brandingConfig?.favicon_data ||
+									$brandingConfig?.favicon_url ||
+									`${WEBUI_BASE_URL}/static/favicon.png`
 							});
 						}
 					}
@@ -930,9 +933,10 @@
 		<title>{$brandingConfig?.app_name || $WEBUI_NAME}</title>
 	{/if}
 	<link
-		crossorigin="anonymous"
 		rel="icon"
-		href={$brandingConfig?.favicon_url || `${WEBUI_BASE_URL}/static/favicon.png`}
+		href={$brandingConfig?.favicon_data ||
+			$brandingConfig?.favicon_url ||
+			`${WEBUI_BASE_URL}/static/favicon.png`}
 	/>
 
 	<meta name="apple-mobile-web-app-title" content={$brandingConfig?.app_name || $WEBUI_NAME} />
