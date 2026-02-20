@@ -8,7 +8,8 @@ services:
     volumes:
       - otto-webui:/app/backend/data
     ports:
-      - ${OPEN_WEBUI_PORT-3001}:8080
+      - ${OPEN_WEBUI_PORT-3100}:8080
+      - "8080:8080"  # local npm run dev — frontend dev server connects here
     environment:
       - OPENAI_API_BASE_URL=http://host.docker.internal:18789/v1
       - OPENAI_API_KEY=${OPENCLAW_GATEWAY_TOKEN}
