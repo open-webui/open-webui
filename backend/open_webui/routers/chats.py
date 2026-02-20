@@ -41,6 +41,7 @@ from open_webui.utils.access_control import (
     has_permission,
     has_capability,
     can_access_user_chats,
+    can_read_user_chats_in_group,
     can_export_data,
     can_manage_all,
 )
@@ -513,10 +514,11 @@ async def export_single_chat_stats(
                 detail=ERROR_MESSAGES.NOT_FOUND,
             )
 
-        # Verify the chat belongs to the user (unless admin)
+        # Verify the chat belongs to the user (unless admin or group oversight)
         if (
             chat.user_id != user.id
             and not can_access_user_chats(user.id)
+            and not can_read_user_chats_in_group(user.id, chat.user_id)
             and user.role != "admin"
         ):
             raise HTTPException(
@@ -577,8 +579,10 @@ async def get_user_chat_list_by_user_id(
     user=Depends(get_admin_user),
     db: Session = Depends(get_session),
 ):
-    if not can_access_user_chats(user.id) and not (
-        user.role == "admin" and ENABLE_ADMIN_CHAT_ACCESS
+    if (
+        not can_access_user_chats(user.id)
+        and not can_read_user_chats_in_group(user.id, user_id)
+        and not (user.role == "admin" and ENABLE_ADMIN_CHAT_ACCESS)
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -1023,11 +1027,12 @@ async def get_shared_chat_by_id(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if can_access_user_chats(user.id) or (
-        user.role == "admin" and ENABLE_ADMIN_CHAT_ACCESS
+    chat = Chats.get_chat_by_id(share_id, db=db)
+    if not (
+        can_access_user_chats(user.id)
+        or (chat and can_read_user_chats_in_group(user.id, chat.user_id))
+        or (user.role == "admin" and ENABLE_ADMIN_CHAT_ACCESS)
     ):
-        chat = Chats.get_chat_by_id(share_id, db=db)
-    else:
         chat = Chats.get_chat_by_share_id(share_id, db=db)
 
     if chat:
@@ -1283,6 +1288,7 @@ async def update_chat_message_by_id(
     if (
         chat.user_id != user.id
         and not can_access_user_chats(user.id)
+        and not can_read_user_chats_in_group(user.id, chat.user_id)
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -1351,6 +1357,7 @@ async def send_chat_message_event_by_id(
     if (
         chat.user_id != user.id
         and not can_access_user_chats(user.id)
+        and not can_read_user_chats_in_group(user.id, chat.user_id)
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -1529,7 +1536,15 @@ async def clone_shared_chat_by_id(
     if can_access_user_chats(user.id) or user.role == "admin":
         chat = Chats.get_chat_by_id(id, db=db)
     else:
+        # Check group oversight — allow cloning if user can read this chat
         chat = Chats.get_chat_by_share_id(id, db=db)
+        if not chat:
+            # Try direct lookup for group oversight
+            potential_chat = Chats.get_chat_by_id(id, db=db)
+            if potential_chat and can_read_user_chats_in_group(
+                user.id, potential_chat.user_id
+            ):
+                chat = potential_chat
 
     if chat:
         updated_chat = {

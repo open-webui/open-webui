@@ -20,6 +20,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.internal.db import get_session
 from sqlalchemy.orm import Session
 
+from pydantic import BaseModel
+
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_capability
 
@@ -261,6 +263,60 @@ async def remove_users_from_group(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
+
+
+############################
+# SetGroupMemberRole
+############################
+
+
+class MemberRoleForm(BaseModel):
+    role: str  # "admin" or "member"
+
+
+@router.put("/id/{id}/members/{user_id}/role", response_model=bool)
+async def set_group_member_role(
+    id: str,
+    user_id: str,
+    form_data: MemberRoleForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    """Set a group member's role. Requires system admin or group admin of that group."""
+    if form_data.role not in ("admin", "member"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Role must be 'admin' or 'member'",
+        )
+
+    # Auth: system admin OR group admin of this group
+    is_system_admin = user.role == "admin" or has_capability(
+        user.id, "admin.manage_groups"
+    )
+    member_role = Groups.get_member_role(id, user.id, db=db)
+    is_group_admin = member_role == "admin"
+
+    if not is_system_admin and not is_group_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    # Verify target user is a member of the group
+    group_user_ids = Groups.get_group_user_ids_by_id(id, db=db)
+    if user_id not in group_user_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not a member of this group",
+        )
+
+    result = Groups.set_member_role(id, user_id, form_data.role, db=db)
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update member role",
+        )
+    return True
 
 
 ############################

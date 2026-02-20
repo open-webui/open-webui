@@ -82,6 +82,7 @@ from open_webui.routers import (
     channels,
     chats,
     notes,
+    oversight,
     folders,
     configs,
     groups,
@@ -119,6 +120,7 @@ from open_webui.models.users import UserModel, Users
 from open_webui.models.chats import Chats
 from open_webui.models.roles import Roles
 from open_webui.models.tenant_oauth import TenantOAuthConfigs  # noqa: F401 - register model with SQLAlchemy
+from open_webui.models.group_oversight import OversightExclusions  # noqa: F401 - register model with SQLAlchemy
 
 from open_webui.config import (
     # Ollama
@@ -1582,6 +1584,7 @@ app.include_router(skills.router, prefix="/api/v1/skills", tags=["skills"])
 app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"])
 app.include_router(folders.router, prefix="/api/v1/folders", tags=["folders"])
 app.include_router(groups.router, prefix="/api/v1/groups", tags=["groups"])
+app.include_router(oversight.router, prefix="/api/v1/oversight", tags=["oversight"])
 app.include_router(roles.router, prefix="/api/v1/roles", tags=["roles"])
 app.include_router(files.router, prefix="/api/v1/files", tags=["files"])
 app.include_router(functions.router, prefix="/api/v1/functions", tags=["functions"])

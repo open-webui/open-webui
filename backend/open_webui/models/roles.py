@@ -44,6 +44,7 @@ SYSTEM_CAPABILITIES = {
     "admin.bypass_access_control": "Access workspace content (models, knowledge, tools) regardless of ownership",
     # Audit & Compliance (new capabilities for enterprise use cases)
     "audit.read_user_chats": "Read-only access to all user chat conversations",
+    "audit.read_group_chats": "Read chats of users in groups where you are a group admin",
     "audit.view_analytics": "Access analytics dashboard and usage statistics",
     "audit.export_data": "Export chats, analytics, and system data",
     # Delegated Workspace Management (for team leads / managers)

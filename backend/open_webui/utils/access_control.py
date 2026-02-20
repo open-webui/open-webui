@@ -24,59 +24,7 @@ def has_capability(
     capability: str,
     db: Optional[Any] = None,
 ) -> bool:
-    """
-    Check if a user has a specific admin-tier capability based on their role.
-
-    Capabilities are distinct from permissions:
-    - Permissions: User-facing feature toggles (can use TTS? can share chats?)
-    - Capabilities: Admin-tier actions (can manage users? can read all chats?)
-
-    This function:
-    1. Looks up the user's role_id
-    2. Checks if that role has the specified capability via role_capability table
-    3. Falls back to checking if user.role == "admin" (backward compatibility)
-
-    Args:
-        user_id: The user's ID
-        capability: The capability to check (e.g., "admin.manage_users", "audit.read_user_chats")
-        db: Optional database session
-
-    Returns:
-        True if the user has the capability, False otherwise
-    """
-    from open_webui.internal.db import get_db_context
-    from open_webui.models.roles import RoleCapability, Role
-    from open_webui.models.users import User
-
-    # Check cache first
-    global _capability_cache
-    if user_id in _capability_cache:
-        return capability in _capability_cache[user_id]
-
-    with get_db_context(db) as db:
-        user = db.query(User).filter_by(id=user_id).first()
-        if not user:
-            return False
-
-        # Backward compatibility: if user has role_id, use new system
-        # Otherwise fall back to checking user.role == "admin"
-        if hasattr(user, "role_id") and user.role_id:
-            # New system: check role_capability table
-            exists = (
-                db.query(RoleCapability)
-                .filter_by(
-                    role_id=user.role_id,
-                    capability=capability,
-                )
-                .first()
-            )
-            return exists is not None
-        else:
-            # Backward compatibility: admin role has all capabilities
-            # This ensures existing code works during migration
-            if user.role == "admin":
-                return True
-            return False
+    return capability in get_user_capabilities(user_id, db=db)
 
 
 def get_user_capabilities(
@@ -205,6 +153,92 @@ def can_access_user_chats(user_id: str, db: Optional[Any] = None) -> bool:
     Use this instead of: user.role == "admin" and ENABLE_ADMIN_CHAT_ACCESS
     """
     return has_capability(user_id, "audit.read_user_chats", db=db)
+
+
+def can_read_group_member_chats(user_id: str, db: Optional[Any] = None) -> bool:
+    """
+    Check if user's role allows group-scoped chat oversight.
+
+    Maps to the "audit.read_group_chats" capability.
+    This is separate from audit.read_user_chats (global) — this one is scoped
+    to groups where the user is an admin.
+    """
+    return has_capability(user_id, "audit.read_group_chats", db=db)
+
+
+def get_oversight_target_user_ids(user_id: str, db: Optional[Any] = None) -> set:
+    """
+    Return user IDs whose chats this user can read via group admin oversight.
+
+    Logic:
+    1. Find all groups where requesting user is admin (group_member.role = 'admin')
+    2. Get all members of those groups
+    3. Subtract self and any users on the exclusion list
+
+    Returns empty set if user doesn't have audit.read_group_chats capability.
+    """
+    if not can_read_group_member_chats(user_id, db=db):
+        return set()
+
+    from open_webui.internal.db import get_db_context
+    from open_webui.models.groups import GroupMember
+    from open_webui.models.group_oversight import GroupOversightExclusion
+
+    with get_db_context(db) as db:
+        # Groups where requesting user is admin
+        admin_group_ids = [
+            r[0]
+            for r in db.query(GroupMember.group_id)
+            .filter(
+                GroupMember.user_id == user_id,
+                GroupMember.role == "admin",
+            )
+            .all()
+        ]
+
+        if not admin_group_ids:
+            return set()
+
+        # Excluded users across those groups
+        excluded_user_ids = {
+            r[0]
+            for r in db.query(GroupOversightExclusion.user_id)
+            .filter(GroupOversightExclusion.group_id.in_(admin_group_ids))
+            .all()
+        }
+
+        # All members of those groups, minus self, minus excluded
+        target_user_ids = {
+            r[0]
+            for r in db.query(GroupMember.user_id)
+            .filter(
+                GroupMember.group_id.in_(admin_group_ids),
+                GroupMember.user_id != user_id,
+            )
+            .distinct()
+            .all()
+        }
+
+        return target_user_ids - excluded_user_ids
+
+
+def can_read_user_chats_in_group(
+    requesting_user_id: str,
+    target_user_id: str,
+    db: Optional[Any] = None,
+) -> bool:
+    """
+    Point check: can requesting_user read target_user's chats via group oversight?
+
+    Returns True if:
+    1. Requesting user has audit.read_group_chats capability
+    2. Requesting user is admin of at least one group that target_user is a member of
+    3. Target user is not excluded from oversight in that group
+    """
+    if not can_read_group_member_chats(requesting_user_id, db=db):
+        return False
+    targets = get_oversight_target_user_ids(requesting_user_id, db=db)
+    return target_user_id in targets
 
 
 def can_export_data(user_id: str, db: Optional[Any] = None) -> bool:

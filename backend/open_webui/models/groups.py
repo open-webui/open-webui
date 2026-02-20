@@ -78,6 +78,7 @@ class GroupMember(Base):
         nullable=False,
     )
     user_id = Column(Text, nullable=False)
+    role = Column(Text, nullable=False, server_default="member")  # "member" or "admin"
     created_at = Column(BigInteger, nullable=True)
     updated_at = Column(BigInteger, nullable=True)
 
@@ -86,6 +87,7 @@ class GroupMemberModel(BaseModel):
     id: str
     group_id: str
     user_id: str
+    role: str = "member"
     created_at: Optional[int] = None  # timestamp in epoch
     updated_at: Optional[int] = None  # timestamp in epoch
 
@@ -371,24 +373,42 @@ class GroupTable:
     def set_group_user_ids_by_id(
         self, group_id: str, user_ids: list[str], db: Optional[Session] = None
     ) -> None:
+        """
+        Set the member list for a group using a diff approach.
+        Preserves existing members' role assignments (e.g., group admin status)
+        instead of deleting all and re-inserting.
+        """
         with get_db_context(db) as db:
-            # Delete existing members
-            db.query(GroupMember).filter(GroupMember.group_id == group_id).delete()
-
-            # Insert new members
+            existing = {
+                m.user_id
+                for m in db.query(GroupMember)
+                .filter(GroupMember.group_id == group_id)
+                .all()
+            }
+            desired = set(user_ids)
             now = int(time.time())
-            new_members = [
-                GroupMember(
-                    id=str(uuid.uuid4()),
-                    group_id=group_id,
-                    user_id=user_id,
-                    created_at=now,
-                    updated_at=now,
-                )
-                for user_id in user_ids
-            ]
 
-            db.add_all(new_members)
+            # Remove departed members
+            to_remove = existing - desired
+            if to_remove:
+                db.query(GroupMember).filter(
+                    GroupMember.group_id == group_id,
+                    GroupMember.user_id.in_(to_remove),
+                ).delete(synchronize_session=False)
+
+            # Add new members (default role='member')
+            for uid in desired - existing:
+                db.add(
+                    GroupMember(
+                        id=str(uuid.uuid4()),
+                        group_id=group_id,
+                        user_id=uid,
+                        role="member",
+                        created_at=now,
+                        updated_at=now,
+                    )
+                )
+
             db.commit()
 
     def get_group_member_count_by_id(
@@ -489,7 +509,6 @@ class GroupTable:
     def create_groups_by_group_names(
         self, user_id: str, group_names: list[str], db: Optional[Session] = None
     ) -> list[GroupModel]:
-
         # check for existing groups
         existing_groups = self.get_all_groups(db=db)
         existing_group_names = {group.name for group in existing_groups}
@@ -562,6 +581,7 @@ class GroupTable:
                             id=str(uuid.uuid4()),
                             group_id=group_id,
                             user_id=user_id,
+                            role="member",
                             created_at=now,
                             updated_at=now,
                         )
@@ -601,6 +621,7 @@ class GroupTable:
                                 id=str(uuid.uuid4()),
                                 group_id=id,
                                 user_id=user_id,
+                                role="member",
                                 created_at=now,
                                 updated_at=now,
                             )
@@ -651,6 +672,84 @@ class GroupTable:
         except Exception as e:
             log.exception(e)
             return None
+
+    def set_member_role(
+        self,
+        group_id: str,
+        user_id: str,
+        role: str,
+        db: Optional[Session] = None,
+    ) -> bool:
+        """Set a user's role within a group (e.g., 'member' or 'admin')."""
+        if role not in ("member", "admin"):
+            return False
+        try:
+            with get_db_context(db) as db:
+                member = (
+                    db.query(GroupMember)
+                    .filter(
+                        GroupMember.group_id == group_id,
+                        GroupMember.user_id == user_id,
+                    )
+                    .first()
+                )
+                if not member:
+                    return False
+
+                member.role = role
+                member.updated_at = int(time.time())
+                db.commit()
+                return True
+        except Exception as e:
+            log.exception(e)
+            return False
+
+    def get_group_admins(
+        self, group_id: str, db: Optional[Session] = None
+    ) -> list[str]:
+        """Get user IDs of all admins in a group."""
+        with get_db_context(db) as db:
+            rows = (
+                db.query(GroupMember.user_id)
+                .filter(
+                    GroupMember.group_id == group_id,
+                    GroupMember.role == "admin",
+                )
+                .all()
+            )
+            return [r[0] for r in rows]
+
+    def get_groups_where_admin(
+        self, user_id: str, db: Optional[Session] = None
+    ) -> list[GroupModel]:
+        """Get all groups where the user is an admin."""
+        with get_db_context(db) as db:
+            return [
+                GroupModel.model_validate(group)
+                for group in db.query(Group)
+                .join(GroupMember, GroupMember.group_id == Group.id)
+                .filter(
+                    GroupMember.user_id == user_id,
+                    GroupMember.role == "admin",
+                )
+                .order_by(Group.updated_at.desc())
+                .all()
+            ]
+
+    def get_member_role(
+        self, group_id: str, user_id: str, db: Optional[Session] = None
+    ) -> Optional[str]:
+        """Get the role of a user in a specific group."""
+        with get_db_context(db) as db:
+            member = (
+                db.query(GroupMember)
+                .filter(
+                    GroupMember.group_id == group_id,
+                    GroupMember.user_id == user_id,
+                )
+                .first()
+            )
+            return member.role if member else None
 
 
 Groups = GroupTable()
