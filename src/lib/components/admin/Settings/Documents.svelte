@@ -42,6 +42,7 @@
 	let RAG_EMBEDDING_MODEL = '';
 	let RAG_EMBEDDING_BATCH_SIZE = 1;
 	let ENABLE_ASYNC_EMBEDDING = true;
+	let EMBEDDING_MAX_CONCURRENCY = 0;
 
 	let rerankingModel = '';
 
@@ -113,6 +114,7 @@
 			RAG_EMBEDDING_MODEL: RAG_EMBEDDING_MODEL,
 			RAG_EMBEDDING_BATCH_SIZE: RAG_EMBEDDING_BATCH_SIZE,
 			ENABLE_ASYNC_EMBEDDING: ENABLE_ASYNC_EMBEDDING,
+			EMBEDDING_MAX_CONCURRENCY: EMBEDDING_MAX_CONCURRENCY,
 			ollama_config: {
 				key: OllamaKey,
 				url: OllamaUrl
@@ -241,6 +243,7 @@
 			RAG_EMBEDDING_MODEL = embeddingConfig.RAG_EMBEDDING_MODEL;
 			RAG_EMBEDDING_BATCH_SIZE = embeddingConfig.RAG_EMBEDDING_BATCH_SIZE ?? 1;
 			ENABLE_ASYNC_EMBEDDING = embeddingConfig.ENABLE_ASYNC_EMBEDDING ?? true;
+			EMBEDDING_MAX_CONCURRENCY = embeddingConfig.EMBEDDING_MAX_CONCURRENCY ?? 0;
 
 			OpenAIKey = embeddingConfig.openai_config.key;
 			OpenAIUrl = embeddingConfig.openai_config.url;
@@ -1043,6 +1046,31 @@
 									<Switch bind:state={ENABLE_ASYNC_EMBEDDING} />
 								</div>
 							</div>
+
+							{#if ENABLE_ASYNC_EMBEDDING}
+								<div class="  mb-2.5 flex w-full justify-between">
+									<div class="self-center text-xs font-medium">
+										<Tooltip
+											content={$i18n.t(
+												'Limits how many embedding tasks run at once. 0 = unlimited (default).'
+											)
+										}
+										placement="top-start"
+									>
+										{$i18n.t('Embedding Max Concurrency')}
+									</Tooltip>
+									</div>
+									<div class="flex items-center relative">
+										<input
+											bind:value={EMBEDDING_MAX_CONCURRENCY}
+											type="number"
+											class=" bg-transparent text-center w-14 outline-none"
+											min="0"
+											step="1"
+										/>
+									</div>
+								</div>
+							{/if}
 						{/if}
 					</div>
 

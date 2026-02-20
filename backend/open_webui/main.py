@@ -240,6 +240,7 @@ from open_webui.config import (
     RAG_EMBEDDING_ENGINE,
     RAG_EMBEDDING_BATCH_SIZE,
     ENABLE_ASYNC_EMBEDDING,
+    EMBEDDING_MAX_CONCURRENCY,
     RAG_TOP_K,
     RAG_TOP_K_RERANKER,
     RAG_RELEVANCE_THRESHOLD,
@@ -980,6 +981,7 @@ app.state.config.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE
 app.state.config.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
 app.state.config.RAG_EMBEDDING_BATCH_SIZE = RAG_EMBEDDING_BATCH_SIZE
 app.state.config.ENABLE_ASYNC_EMBEDDING = ENABLE_ASYNC_EMBEDDING
+app.state.config.EMBEDDING_MAX_CONCURRENCY = EMBEDDING_MAX_CONCURRENCY
 
 app.state.config.RAG_RERANKING_ENGINE = RAG_RERANKING_ENGINE
 app.state.config.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
@@ -1133,6 +1135,7 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
         else None
     ),
     enable_async=app.state.config.ENABLE_ASYNC_EMBEDDING,
+    embedding_max_concurrency=app.state.config.EMBEDDING_MAX_CONCURRENCY,
 )
 
 app.state.RERANKING_FUNCTION = get_reranking_function(
