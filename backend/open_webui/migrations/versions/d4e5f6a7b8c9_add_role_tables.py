@@ -78,6 +78,16 @@ def upgrade() -> None:
         )
         op.create_index("user_role_id_idx", "user", ["role_id"])
 
+    # Backfill: assign role_id to existing users based on their role string
+    conn = op.get_bind()
+    conn.execute(
+        sa.text(
+            "UPDATE user SET role_id = ("
+            "  SELECT r.id FROM role r WHERE r.name = user.role"
+            ") WHERE role_id IS NULL"
+        )
+    )
+
 
 def downgrade() -> None:
     op.drop_index("user_role_id_idx", table_name="user")

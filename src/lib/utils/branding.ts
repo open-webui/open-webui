@@ -161,20 +161,8 @@ export function applyBranding(config: BrandingConfig): void {
 	}
 	applyAccentColors(accentScale);
 
-	// Apply favicon
-	const faviconUrl = preset?.favicon_url || config.favicon_url;
-	if (faviconUrl) {
-		applyFavicon(faviconUrl);
-	}
-
-	// Apply app name to document title if set
-	const appName = config.app_name;
-	if (appName) {
-		// Only update if the title still contains the default
-		if (document.title.includes('Open WebUI')) {
-			document.title = document.title.replace('Open WebUI', appName);
-		}
-	}
+	// NOTE: favicon and title are handled reactively via svelte:head in +layout.svelte
+	// using the effectiveBranding store. No imperative DOM manipulation needed here.
 }
 
 /**

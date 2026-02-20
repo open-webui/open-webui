@@ -885,12 +885,21 @@
 		try {
 			const bc2 = await getPublicBrandingConfig();
 			if (bc2) {
-				brandingConfig.set(bc2);
+				const effective = getEffectiveBranding(bc2);
+				brandingConfig.set(effective);
 				applyBranding(bc2);
+				// Overwrite WEBUI_NAME with branded app_name so all svelte:head
+				// consumers (Chat, Workspace, Admin, etc.) reflect tenant branding
+				if (effective.app_name) {
+					WEBUI_NAME.set(effective.app_name);
+				}
 			}
 		} catch (e) {
 			console.debug('Branding config not available:', e);
 		}
+
+		// Remove app.html placeholder favicon — svelte:head now manages it
+		document.getElementById('app-favicon')?.remove();
 
 		// Auto-show SyncStatsModal when opened with ?sync=true (from community)
 		if (
@@ -917,19 +926,19 @@
 </script>
 
 <svelte:head>
-	<title>{$WEBUI_NAME}</title>
+	<title>{$brandingConfig?.app_name || $WEBUI_NAME}</title>
 	<link
 		crossorigin="anonymous"
 		rel="icon"
 		href={$brandingConfig?.favicon_url || `${WEBUI_BASE_URL}/static/favicon.png`}
 	/>
 
-	<meta name="apple-mobile-web-app-title" content={$WEBUI_NAME} />
-	<meta name="description" content={$WEBUI_NAME} />
+	<meta name="apple-mobile-web-app-title" content={$brandingConfig?.app_name || $WEBUI_NAME} />
+	<meta name="description" content={$brandingConfig?.app_name || $WEBUI_NAME} />
 	<link
 		rel="search"
 		type="application/opensearchdescription+xml"
-		title={$WEBUI_NAME}
+		title={$brandingConfig?.app_name || $WEBUI_NAME}
 		href="/opensearch.xml"
 		crossorigin="use-credentials"
 	/>

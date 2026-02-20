@@ -549,6 +549,7 @@ async def get_banners(
 
 class BrandingPreset(BaseModel):
     name: str
+    app_name: Optional[str] = ""
     accent_color: Optional[str] = "#e3530f"
     accent_color_scale: Optional[dict] = {}
     background_color: Optional[str] = ""
@@ -557,6 +558,9 @@ class BrandingPreset(BaseModel):
     favicon_url: Optional[str] = ""
     login_background_url: Optional[str] = ""
     login_background_color: Optional[str] = ""
+    microsoft_client_id: Optional[str] = ""
+    microsoft_client_secret: Optional[str] = ""
+    microsoft_tenant_id: Optional[str] = ""
 
 
 class DomainMapping(BaseModel):
@@ -595,6 +599,38 @@ async def set_branding_config(
 @router.get("/branding/public")
 async def get_public_branding_config(request: Request):
     """Public endpoint - returns branding config for domain-based theming.
-    No auth required so the login page can apply the correct theme."""
-    branding = request.app.state.config.BRANDING_CONFIG
-    return branding
+    No auth required so the login page can apply the correct theme.
+    Deep-merges stored config with defaults so new fields (e.g. app_name)
+    are always present even if DB config was saved before they were added."""
+    from open_webui.config import DEFAULT_BRANDING_CONFIG
+
+    stored = request.app.state.config.BRANDING_CONFIG
+    if not stored:
+        return DEFAULT_BRANDING_CONFIG
+
+    # Shallow merge top-level: defaults ← stored (non-empty values win)
+    merged = {**DEFAULT_BRANDING_CONFIG}
+    for k, v in stored.items():
+        if k == "presets":
+            continue  # handled below
+        if v is not None:
+            merged[k] = v
+
+    # Deep-merge each preset by name: default preset ← stored preset
+    default_presets = {p["name"]: p for p in DEFAULT_BRANDING_CONFIG.get("presets", [])}
+    if stored.get("presets"):
+        merged_presets = []
+        for preset in stored["presets"]:
+            base = default_presets.get(preset.get("name", ""), {})
+            merged_preset = {**base}
+            for k, v in preset.items():
+                if v is not None:
+                    merged_preset[k] = v
+            merged_presets.append(merged_preset)
+        merged["presets"] = merged_presets
+
+    # Preserve domain_mappings from stored config
+    if stored.get("domain_mappings"):
+        merged["domain_mappings"] = stored["domain_mappings"]
+
+    return merged

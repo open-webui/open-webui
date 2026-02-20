@@ -4,7 +4,7 @@
 
 	import { goto } from '$app/navigation';
 
-	import { showSidebar, sidebarPinned, user } from '$lib/stores';
+	import { showSidebar, sidebarPinned, user, WEBUI_NAME } from '$lib/stores';
 	import { getSpaces, getBookmarkedSpaces, getPinnedSpaces, getTemplates } from '$lib/apis/spaces';
 	import type { Space } from '$lib/apis/spaces';
 
@@ -55,7 +55,7 @@
 </script>
 
 <svelte:head>
-	<title>{$i18n.t('Spaces')} | Open WebUI</title>
+	<title>{$i18n.t('Spaces')} | {$WEBUI_NAME}</title>
 </svelte:head>
 
 {#if loading}

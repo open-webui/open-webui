@@ -5,7 +5,7 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 
-	import { showSidebar, sidebarPinned, user } from '$lib/stores';
+	import { showSidebar, sidebarPinned, user, WEBUI_NAME } from '$lib/stores';
 	import { getChatList, getPinnedChatList, deleteChatById, archiveChatById } from '$lib/apis/chats';
 	import { getSpaces } from '$lib/apis/spaces';
 	import type { Space } from '$lib/apis/spaces';
@@ -101,7 +101,7 @@
 </script>
 
 <svelte:head>
-	<title>{$i18n.t('History')} | Open WebUI</title>
+	<title>{$i18n.t('History')} | {$WEBUI_NAME}</title>
 </svelte:head>
 
 <DeleteConfirmDialog

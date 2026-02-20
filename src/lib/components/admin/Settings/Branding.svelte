@@ -85,6 +85,7 @@
 			...brandingConfig.presets,
 			{
 				name: newPresetName.trim(),
+				app_name: '',
 				accent_color: brandingConfig.accent_color,
 				accent_color_scale: { ...brandingConfig.accent_color_scale },
 				background_color: '',
@@ -578,6 +579,21 @@
 											{$i18n.t(
 												'Configure logos and assets for this preset. These will be used when a domain is mapped to this preset.'
 											)}
+										</div>
+										<div>
+											<div class="text-[10px] font-medium text-gray-500 mb-0.5">
+												{$i18n.t('App Name')}
+											</div>
+											<input
+												class="w-full rounded py-1.5 px-2.5 text-xs bg-white dark:bg-gray-800 outline-hidden border border-gray-200 dark:border-gray-700"
+												bind:value={preset.app_name}
+												placeholder={$i18n.t('e.g. Foundations AI')}
+											/>
+											<div class="text-[9px] text-gray-400 mt-0.5">
+												{$i18n.t(
+													'Shown in browser tab and sign-in page when this preset is active'
+												)}
+											</div>
 										</div>
 										<div class="grid grid-cols-2 gap-2">
 											<div>

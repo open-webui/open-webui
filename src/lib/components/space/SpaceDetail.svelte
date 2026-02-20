@@ -12,7 +12,8 @@
 		currentSpaceId,
 		models,
 		toolServers,
-		socket
+		socket,
+		WEBUI_NAME
 	} from '$lib/stores';
 	import {
 		getSpaceBySlug,
@@ -502,7 +503,7 @@
 </script>
 
 <svelte:head>
-	<title>{space?.name ?? 'Space'} | Open WebUI</title>
+	<title>{space?.name ?? 'Space'} | {$WEBUI_NAME}</title>
 </svelte:head>
 
 {#if loading}
