@@ -1,11 +1,8 @@
 import asyncio
-import logging
 from typing import Optional, List, Any
 from contextlib import AsyncExitStack
 
 import anyio
-
-log = logging.getLogger(__name__)
 
 from mcp import ClientSession
 from mcp.client.auth import OAuthClientProvider, TokenStorage
