@@ -2848,6 +2848,63 @@ async def process_chat_response(
 
                         if isinstance(res, StreamingResponse):
                             await stream_body_handler(res, new_form_data)
+                        elif isinstance(res, dict) and "choices" in res and len(res["choices"]) > 0:
+                            log.debug(f"generate_chat_completion returned non-streaming response with choices")
+                            message = res["choices"][0].get("message", {})
+                            
+                            # Process reasoning
+                            reasoning_content = message.get("reasoning_content") or message.get("reasoning") or message.get("thinking")
+                            if reasoning_content:
+                                content_blocks.append({
+                                    "type": "reasoning",
+                                    "start_tag": "<think>",
+                                    "end_tag": "</think>",
+                                    "attributes": {"type": "reasoning_content"},
+                                    "content": reasoning_content,
+                                    "started_at": time.time(),
+                                    "ended_at": time.time(),
+                                    "duration": 0
+                                })
+                            
+                            # Process content
+                            msg_content = message.get("content")
+                            if msg_content:
+                                content_blocks.append({
+                                    "type": "text",
+                                    "content": msg_content
+                                })
+                            
+                            # Process tool calls
+                            res_tool_calls = message.get("tool_calls")
+                            if res_tool_calls:
+                                tool_calls.append({
+                                    "tool_calls": res_tool_calls,
+                                    "reasoning_details": message.get("reasoning_details")
+                                })
+                                
+                            usage = res.get("usage", {})
+                            if usage:
+                                response_usage = usage
+                                await process_token_usage(
+                                    model_id,
+                                    usage,
+                                    chat_id=metadata.get("chat_id"),
+                                    user_id=user.id if user else None
+                                )
+                                await event_emitter({
+                                    "type": "chat:completion",
+                                    "data": {
+                                        "usage": usage,
+                                    }
+                                })
+
+                            # Emit completion event
+                            await event_emitter({
+                                "type": "chat:completion",
+                                "data": {
+                                    "content": serialize_content_blocks(content_blocks),
+                                }
+                            })
                         else:
                             log.debug(f"generate_chat_completion returned non-streaming response: {res}")
                             try:
@@ -2855,11 +2912,28 @@ async def process_chat_response(
                                 if hasattr(res, "body"):
                                     error_content = res.body.decode("utf-8") if isinstance(res.body, bytes) else str(res.body)
                                     log.error(f"Error response content: {error_content}")
+                                    
+                                    try:
+                                        error_json = json.loads(error_content)
+                                        error_msg = error_json.get("error", error_content)
+                                        if isinstance(error_msg, dict):
+                                            error_msg = error_msg.get("message", error_msg.get("detail", str(error_msg)))
+                                    except:
+                                        error_msg = error_content
+                                        
+                                    await event_emitter({
+                                        "type": "chat:message:error",
+                                        "data": {"error": {"content": str(error_msg)}}
+                                    })
                             except Exception as read_err:
                                 log.error(f"Could not read error response: {read_err}")
                             break
                     except Exception as e:
                         log.exception(f"Error in tool loop: {e}")
+                        await event_emitter({
+                            "type": "chat:message:error",
+                            "data": {"error": {"content": f"Error in tool loop: {str(e)}"}}
+                        })
                         break
 
                 if DETECT_CODE_INTERPRETER:
@@ -3035,10 +3109,91 @@ async def process_chat_response(
 
                             if isinstance(res, StreamingResponse):
                                 await stream_body_handler(res, new_form_data)
+                            elif isinstance(res, dict) and "choices" in res and len(res["choices"]) > 0:
+                                log.debug(f"generate_chat_completion returned non-streaming response with choices")
+                                message = res["choices"][0].get("message", {})
+                                
+                                # Process reasoning
+                                reasoning_content = message.get("reasoning_content") or message.get("reasoning") or message.get("thinking")
+                                if reasoning_content:
+                                    content_blocks.append({
+                                        "type": "reasoning",
+                                        "start_tag": "<think>",
+                                        "end_tag": "</think>",
+                                        "attributes": {"type": "reasoning_content"},
+                                        "content": reasoning_content,
+                                        "started_at": time.time(),
+                                        "ended_at": time.time(),
+                                        "duration": 0
+                                    })
+                                
+                                # Process content
+                                msg_content = message.get("content")
+                                if msg_content:
+                                    content_blocks.append({
+                                        "type": "text",
+                                        "content": msg_content
+                                    })
+                                
+                                # Process tool calls
+                                res_tool_calls = message.get("tool_calls")
+                                if res_tool_calls:
+                                    tool_calls.append({
+                                        "tool_calls": res_tool_calls,
+                                        "reasoning_details": message.get("reasoning_details")
+                                    })
+                                    
+                                usage = res.get("usage", {})
+                                if usage:
+                                    response_usage = usage
+                                    await process_token_usage(
+                                        model_id,
+                                        usage,
+                                        chat_id=metadata.get("chat_id"),
+                                        user_id=user.id if user else None
+                                    )
+                                    await event_emitter({
+                                        "type": "chat:completion",
+                                        "data": {
+                                            "usage": usage,
+                                        }
+                                    })
+
+                                # Emit completion event
+                                await event_emitter({
+                                    "type": "chat:completion",
+                                    "data": {
+                                        "content": serialize_content_blocks(content_blocks),
+                                    }
+                                })
                             else:
+                                try:
+                                    # Attempt to read the error response
+                                    if hasattr(res, "body"):
+                                        error_content = res.body.decode("utf-8") if isinstance(res.body, bytes) else str(res.body)
+                                        log.error(f"Error response content: {error_content}")
+                                        
+                                        try:
+                                            error_json = json.loads(error_content)
+                                            error_msg = error_json.get("error", error_content)
+                                            if isinstance(error_msg, dict):
+                                                error_msg = error_msg.get("message", error_msg.get("detail", str(error_msg)))
+                                        except:
+                                            error_msg = error_content
+                                            
+                                        await event_emitter({
+                                            "type": "chat:message:error",
+                                            "data": {"error": {"content": str(error_msg)}}
+                                        })
+                                except Exception as read_err:
+                                    log.error(f"Could not read error response: {read_err}")
                                 break
                         except Exception as e:
                             log.debug(e)
+                            await event_emitter({
+                                "type": "chat:message:error",
+                                "data": {"error": {"content": f"Error in code interpreter loop: {str(e)}"}}
+                            })
                             break
 
                 title = Chats.get_chat_title_by_id(metadata["chat_id"])
