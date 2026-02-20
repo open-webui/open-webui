@@ -140,6 +140,9 @@ class DoclingLoader:
         self.params = params or {}
 
     def load(self) -> list[Document]:
+        # Use a unique page break placeholder to split markdown by page
+        page_break_marker = "<!-- DOCLING_PAGE_BREAK -->"
+
         with open(self.file_path, "rb") as f:
             headers = {}
             if self.api_key:
@@ -156,6 +159,7 @@ class DoclingLoader:
                 },
                 data={
                     "image_export_mode": "placeholder",
+                    "md_page_break_placeholder": page_break_marker,
                     **self.params,
                 },
                 headers=headers,
@@ -163,11 +167,37 @@ class DoclingLoader:
         if r.ok:
             result = r.json()
             document_data = result.get("document", {})
-            text = document_data.get("md_content", "<No text content found>")
+            md_content = document_data.get("md_content", "")
 
-            metadata = {"Content-Type": self.mime_type} if self.mime_type else {}
+            if md_content:
+                # Split markdown by page break markers
+                pages = md_content.split(page_break_marker)
+                documents = []
 
-            log.debug("Docling extracted text: %s", text)
+                for page_no, page_content in enumerate(pages, start=1):
+                    page_content = page_content.strip()
+                    if page_content:
+                        metadata = {
+                            "page": page_no,
+                            "source": self.file_path,
+                            "processing_engine": "docling"
+                        }
+                        if self.mime_type:
+                            metadata["Content-Type"] = self.mime_type
+                        documents.append(Document(page_content=page_content, metadata=metadata))
+
+                if documents:
+                    return documents
+
+            # Fallback: return entire content as single document
+            text = md_content or "<No text content found>"
+            metadata = {
+                "source": self.file_path,
+                "processing_engine": "docling"
+            }
+            if self.mime_type:
+                metadata["Content-Type"] = self.mime_type
+
             return [Document(page_content=text, metadata=metadata)]
         else:
             error_msg = f"Error calling Docling API: {r.reason}"
