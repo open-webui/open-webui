@@ -1144,6 +1144,11 @@ async def get_chat_by_id(
                     or is_space_contributor(user.email, space.id, db)
                 ):
                     chat = None
+        elif chat and (
+            can_access_user_chats(user.id)
+            or can_read_user_chats_in_group(user.id, chat.user_id)
+        ):
+            pass  # oversight or global chat access — allow
         else:
             chat = None
 
