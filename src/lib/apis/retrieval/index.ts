@@ -530,3 +530,155 @@ export const resetVectorDB = async (token: string) => {
 
 	return res;
 };
+
+// Confluence integration
+
+export type ConfluenceConnectionConfig = {
+	base_url: string;
+	auth_type: 'cloud' | 'datacenter';
+	email?: string;
+	api_token?: string;
+	username?: string;
+	password?: string;
+	personal_access_token?: string;
+};
+
+export type ConfluenceSpace = {
+	key: string;
+	name: string;
+	type: string;
+	description: string;
+};
+
+export type ConfluencePage = {
+	id: string;
+	title: string;
+	type: string;
+};
+
+export const testConfluenceConnection = async (
+	token: string,
+	config: ConfluenceConnectionConfig
+) => {
+	let error = null;
+
+	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/confluence/test`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(config)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getConfluenceSpaces = async (
+	token: string,
+	config: ConfluenceConnectionConfig
+): Promise<{ status: boolean; spaces: ConfluenceSpace[] } | null> => {
+	let error = null;
+
+	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/confluence/spaces`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(config)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getConfluenceSpacePages = async (
+	token: string,
+	spaceKey: string,
+	config: ConfluenceConnectionConfig
+): Promise<{ status: boolean; pages: ConfluencePage[] } | null> => {
+	let error = null;
+
+	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/confluence/spaces/${spaceKey}/pages`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(config)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const importConfluenceContent = async (
+	token: string,
+	config: ConfluenceConnectionConfig & {
+		space_keys: string[];
+		content_types?: string[];
+	}
+) => {
+	let error = null;
+
+	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/confluence/import`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			...config,
+			content_types: config.content_types ?? ['page']
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
