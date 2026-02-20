@@ -647,6 +647,33 @@
 									bind:value={RAGConfig.MISTRAL_OCR_API_KEY}
 								/>
 							</div>
+							<div class="my-0.5 flex flex-col w-full">
+								<div class=" mb-1 text-xs font-medium">
+									{$i18n.t('OCR Model')}
+								</div>
+								<div class="flex w-full">
+									<div class="flex-1 mr-2">
+										<input
+											class="flex-1 w-full text-sm bg-transparent outline-hidden"
+											placeholder={$i18n.t('Enter OCR Model')}
+											bind:value={RAGConfig.MISTRAL_OCR_MODEL}
+										/>
+									</div>
+								</div>
+							</div>
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t('Uses data URI base64 format instead of file upload.')}
+										placement="top-start"
+									>
+										{$i18n.t('Use Base64 Encoding')}
+									</Tooltip>
+								</div>
+								<div class="flex items-center">
+									<Switch bind:state={RAGConfig.MISTRAL_OCR_USE_BASE64} />
+								</div>
+							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mineru'}
 							<!-- API Mode Selection -->
 							<div class="flex w-full mt-2">

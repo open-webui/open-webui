@@ -357,6 +357,8 @@ class Loader:
                 base_url=self.kwargs.get("MISTRAL_OCR_API_BASE_URL"),
                 api_key=self.kwargs.get("MISTRAL_OCR_API_KEY"),
                 file_path=file_path,
+                use_base64=self.kwargs.get("MISTRAL_OCR_USE_BASE64", False),
+                model=self.kwargs.get("MISTRAL_OCR_MODEL", "mistral-ocr-latest"),
             )
         else:
             if file_ext == "pdf":
