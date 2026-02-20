@@ -1253,16 +1253,23 @@
 
 		taskIds = null;
 
-		// Process message queue - combine all queued messages and submit at once
+		// Process message queue
 		if (messageQueue.length > 0) {
-			const combinedPrompt = messageQueue.map((m) => m.prompt).join('\n\n');
-			const combinedFiles = messageQueue.flatMap((m) => m.files);
-			messageQueue = [];
+			if ($chatId === _chatId) {
+				// We're still in the same chat, process the queue immediately
+				const combinedPrompt = messageQueue.map((m) => m.prompt).join('\n\n');
+				const combinedFiles = messageQueue.flatMap((m) => m.files);
+				messageQueue = [];
 
-			// Set the files and submit
-			files = combinedFiles;
-			await tick();
-			await submitPrompt(combinedPrompt);
+				// Set the files and submit
+				files = combinedFiles;
+				await tick();
+				await submitPrompt(combinedPrompt);
+			} else {
+				// We've navigated away, save the queue to sessionStorage for when we return
+				sessionStorage.setItem(`chat-queue-${_chatId}`, JSON.stringify(messageQueue));
+				messageQueue = [];
+			}
 		}
 	};
 
