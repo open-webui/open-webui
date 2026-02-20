@@ -1236,7 +1236,7 @@
 
 		await tick();
 
-		if ($chatId == _chatId) {
+		if ($chatId === _chatId) {
 			if (!$temporaryChatEnabled) {
 				chat = await updateChatById(localStorage.token, _chatId, {
 					models: selectedModels,
@@ -1249,14 +1249,11 @@
 				currentChatPage.set(1);
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			}
-		}
 
-		taskIds = null;
+			taskIds = null;
 
-		// Process message queue
-		if (messageQueue.length > 0) {
-			if ($chatId === _chatId) {
-				// We're still in the same chat, process the queue immediately
+			// Process message queue
+			if (messageQueue.length > 0) {
 				const combinedPrompt = messageQueue.map((m) => m.prompt).join('\n\n');
 				const combinedFiles = messageQueue.flatMap((m) => m.files);
 				messageQueue = [];
@@ -1265,10 +1262,6 @@
 				files = combinedFiles;
 				await tick();
 				await submitPrompt(combinedPrompt);
-			} else {
-				// We've navigated away, save the queue to sessionStorage for when we return
-				sessionStorage.setItem(`chat-queue-${_chatId}`, JSON.stringify(messageQueue));
-				messageQueue = [];
 			}
 		}
 	};
