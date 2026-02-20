@@ -6,6 +6,7 @@ from fastapi.concurrency import run_in_threadpool
 import logging
 import io
 import zipfile
+from urllib.parse import quote
 
 from sqlalchemy.orm import Session
 from open_webui.internal.db import get_session
@@ -1132,8 +1133,12 @@ async def export_knowledge_by_id(
     safe_name = "".join(c if c.isalnum() or c in " -_" else "_" for c in knowledge.name)
     zip_filename = f"{safe_name}.zip"
 
+    # RFC 5987: Use UTF-8 encoding for non-ASCII filenames
+    encoded_filename = quote(zip_filename, safe='')
     return StreamingResponse(
         zip_buffer,
         media_type="application/zip",
-        headers={"Content-Disposition": f"attachment; filename={zip_filename}"},
+        headers={
+            "Content-Disposition": f"attachment; filename=\"knowledge.zip\"; filename*=UTF-8''{encoded_filename}"
+        },
     )
