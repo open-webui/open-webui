@@ -559,9 +559,6 @@ class BrandingPreset(BaseModel):
     favicon_data: Optional[str] = ""
     login_background_url: Optional[str] = ""
     login_background_color: Optional[str] = ""
-    microsoft_client_id: Optional[str] = ""
-    microsoft_client_secret: Optional[str] = ""
-    microsoft_tenant_id: Optional[str] = ""
 
 
 class DomainMapping(BaseModel):
@@ -719,4 +716,88 @@ async def get_public_branding_config(request: Request):
     if needs_persist:
         request.app.state.config.BRANDING_CONFIG = merged
 
+    # Strip any microsoft_* secrets from presets before returning publicly
+    _SENSITIVE_PRESET_KEYS = {
+        "microsoft_client_id",
+        "microsoft_client_secret",
+        "microsoft_tenant_id",
+    }
+    for preset in merged.get("presets", []):
+        for key in _SENSITIVE_PRESET_KEYS:
+            preset.pop(key, None)
+
     return merged
+
+
+############################
+# Tenant OAuth Config
+############################
+
+
+from open_webui.models.tenant_oauth import (
+    TenantOAuthConfigs,
+    TenantOAuthConfigForm,
+    TenantOAuthConfigResponse,
+)
+
+
+@router.get("/tenant-oauth")
+async def list_tenant_oauth_configs(user=Depends(get_admin_user)):
+    """List all tenant OAuth configs (admin only)."""
+    configs = TenantOAuthConfigs.get_all()
+    return [TenantOAuthConfigResponse.from_model(c) for c in configs]
+
+
+@router.get("/tenant-oauth/{domain}")
+async def get_tenant_oauth_config(domain: str, user=Depends(get_admin_user)):
+    """Get tenant OAuth config for a specific domain (admin only)."""
+    config = TenantOAuthConfigs.get_by_domain(domain)
+    if not config:
+        raise HTTPException(
+            status_code=404, detail="No OAuth config found for this domain"
+        )
+    return TenantOAuthConfigResponse.from_model(config)
+
+
+@router.post("/tenant-oauth")
+async def create_tenant_oauth_config(
+    form_data: TenantOAuthConfigForm,
+    user=Depends(get_admin_user),
+):
+    """Create a new tenant OAuth config (admin only)."""
+    existing = TenantOAuthConfigs.get_by_domain_and_provider(
+        form_data.domain, form_data.provider
+    )
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail=f"OAuth config already exists for domain={form_data.domain}, provider={form_data.provider}",
+        )
+    config = TenantOAuthConfigs.create(form_data)
+    if not config:
+        raise HTTPException(
+            status_code=500, detail="Failed to create tenant OAuth config"
+        )
+    return TenantOAuthConfigResponse.from_model(config)
+
+
+@router.put("/tenant-oauth/{id}")
+async def update_tenant_oauth_config(
+    id: str,
+    form_data: TenantOAuthConfigForm,
+    user=Depends(get_admin_user),
+):
+    """Update an existing tenant OAuth config (admin only)."""
+    config = TenantOAuthConfigs.update_by_id(id, form_data)
+    if not config:
+        raise HTTPException(status_code=404, detail="Tenant OAuth config not found")
+    return TenantOAuthConfigResponse.from_model(config)
+
+
+@router.delete("/tenant-oauth/{id}")
+async def delete_tenant_oauth_config(id: str, user=Depends(get_admin_user)):
+    """Delete a tenant OAuth config (admin only)."""
+    success = TenantOAuthConfigs.delete_by_id(id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Tenant OAuth config not found")
+    return {"success": True}

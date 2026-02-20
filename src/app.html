@@ -2,7 +2,11 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-		<link rel="icon" id="app-favicon" href="/static/favicon.png" />
+		<link
+			rel="icon"
+			id="app-favicon"
+			href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAABJRUEFTkSuQmCC"
+		/>
 		<link
 			rel="apple-touch-icon"
 			sizes="180x180"
@@ -90,39 +94,51 @@
 		</script>
 
 		<script>
-			// Early branding: set domain-specific title + favicon before framework hydrates
+			// Early branding: set domain-specific title + favicon BEFORE first paint.
+			// Uses synchronous XHR so the browser never renders the default favicon.
 			// Mirrors findPresetForDomain logic from src/lib/utils/branding.ts
 			(() => {
-				fetch('/api/v1/configs/branding/public')
-					.then((r) => (r.ok ? r.json() : null))
-					.then((cfg) => {
-						if (!cfg) return;
-						const host = location.hostname;
-						let preset = null;
-						if (cfg.domain_mappings && cfg.presets) {
-							const mapping = cfg.domain_mappings.find(
-								(m) => m.domain === host || host.endsWith('.' + m.domain)
-							);
-							if (mapping) {
-								preset = cfg.presets.find((p) => p.name === mapping.preset_name) || null;
+				try {
+					var xhr = new XMLHttpRequest();
+					xhr.open('GET', '/api/v1/configs/branding/public', false); // synchronous
+					xhr.setRequestHeader('Accept', 'application/json');
+					xhr.send(null);
+					if (xhr.status !== 200) return;
+					var cfg = JSON.parse(xhr.responseText);
+					if (!cfg) return;
+					var host = location.hostname;
+					var preset = null;
+					if (cfg.domain_mappings && cfg.presets) {
+						for (var i = 0; i < cfg.domain_mappings.length; i++) {
+							var m = cfg.domain_mappings[i];
+							if (m.domain === host || host.endsWith('.' + m.domain)) {
+								for (var j = 0; j < cfg.presets.length; j++) {
+									if (cfg.presets[j].name === m.preset_name) {
+										preset = cfg.presets[j];
+										break;
+									}
+								}
+								break;
 							}
 						}
-						const title = (preset && preset.app_name) || cfg.app_name;
-						const favicon =
-							(preset && (preset.favicon_data || preset.favicon_url)) ||
-							cfg.favicon_data ||
-							cfg.favicon_url;
-						if (title) document.title = title;
-						if (favicon) {
-							const el = document.getElementById('app-favicon');
-							if (el) el.href = favicon;
-							// Also update the splash screen logo so it shows the
-							// branded icon instead of the default OpenWebUI logo
-							const splashLogo = document.getElementById('logo');
-							if (splashLogo) splashLogo.src = favicon;
-						}
-					})
-					.catch(() => {});
+					}
+					var title = (preset && preset.app_name) || cfg.app_name;
+					var favicon =
+						(preset && (preset.favicon_data || preset.favicon_url)) ||
+						cfg.favicon_data ||
+						cfg.favicon_url;
+					if (title) document.title = title;
+					if (favicon) {
+						var el = document.getElementById('app-favicon');
+						if (el) el.href = favicon;
+						// Also update the splash screen logo so it shows the
+						// branded icon instead of the default OpenWebUI logo
+						var splashLogo = document.getElementById('logo');
+						if (splashLogo) splashLogo.src = favicon;
+					}
+				} catch (e) {
+					// Branding unavailable — transparent placeholder stays until Svelte hydrates
+				}
 			})();
 		</script>
 

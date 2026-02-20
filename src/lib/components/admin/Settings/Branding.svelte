@@ -14,7 +14,52 @@
 
 	let loading = true;
 
-	let brandingConfig = {
+	// ─── Types ──────────────────────────────────────────────────────────────────
+
+	type BrandingPreset = {
+		name: string;
+		app_name: string;
+		accent_color: string;
+		accent_color_scale: Record<string, string>;
+		background_color: string;
+		logo_url: string;
+		logo_dark_url: string;
+		favicon_url: string;
+		login_background_url: string;
+		login_background_color: string;
+	};
+
+	type DomainMapping = {
+		domain: string;
+		preset_name: string;
+	};
+
+	type TenantOAuthConfig = {
+		id: string;
+		domain: string;
+		provider: string;
+		client_id: string;
+		client_secret_masked: string;
+		tenant_id: string;
+		redirect_uri: string | null;
+		created_at: number;
+		updated_at: number;
+	};
+
+	// ─── Branding State ─────────────────────────────────────────────────────────
+
+	let brandingConfig: {
+		app_name: string;
+		accent_color: string;
+		accent_color_scale: Record<string, string>;
+		logo_url: string;
+		logo_dark_url: string;
+		favicon_url: string;
+		login_background_url: string;
+		login_background_color: string;
+		presets: BrandingPreset[];
+		domain_mappings: DomainMapping[];
+	} = {
 		app_name: '',
 		accent_color: '#e3530f',
 		accent_color_scale: {},
@@ -34,6 +79,22 @@
 	// Domain mapping editing
 	let newDomain = '';
 	let newDomainPreset = '';
+
+	// ─── Tenant OAuth State ──────────────────────────────────────────────────────
+
+	let tenantOAuthConfigs: TenantOAuthConfig[] = [];
+	let showTenantOAuthForm = false;
+	let editingTenantOAuthId: string | null = null;
+	let tenantOAuthClientSecretChanged = false;
+	let deletingTenantOAuthId: string | null = null;
+
+	let tenantOAuthForm = {
+		domain: '',
+		provider: 'microsoft',
+		client_id: '',
+		client_secret: '',
+		tenant_id: ''
+	};
 
 	// Color scale generation from a base hex color
 	function generateColorScale(hex: string): Record<string, string> {
@@ -93,10 +154,7 @@
 				logo_dark_url: '',
 				favicon_url: '',
 				login_background_url: '',
-				login_background_color: '',
-				microsoft_client_id: '',
-				microsoft_client_secret: '',
-				microsoft_tenant_id: ''
+				login_background_color: ''
 			}
 		];
 		newPresetName = '';
@@ -166,6 +224,121 @@
 		brandingConfig.domain_mappings = brandingConfig.domain_mappings.filter((_, i) => i !== index);
 	}
 
+	// ─── Tenant OAuth Functions ──────────────────────────────────────────────────
+
+	async function loadTenantOAuthConfigs() {
+		try {
+			const res = await fetch('/api/v1/configs/tenant-oauth', {
+				headers: { Authorization: `Bearer ${localStorage.token}` }
+			});
+			if (res.ok) {
+				tenantOAuthConfigs = await res.json();
+			} else {
+				console.error('Failed to load tenant OAuth configs:', res.status);
+			}
+		} catch (e) {
+			console.error('Failed to load tenant OAuth configs:', e);
+		}
+	}
+
+	async function saveTenantOAuth() {
+		const body: Record<string, string> = {
+			domain: tenantOAuthForm.domain,
+			provider: tenantOAuthForm.provider,
+			client_id: tenantOAuthForm.client_id,
+			tenant_id: tenantOAuthForm.tenant_id
+		};
+		// Only send secret if creating new or user explicitly changed it
+		if (!editingTenantOAuthId || tenantOAuthClientSecretChanged) {
+			body.client_secret = tenantOAuthForm.client_secret;
+		}
+
+		try {
+			let res: Response;
+			if (editingTenantOAuthId) {
+				res = await fetch(`/api/v1/configs/tenant-oauth/${editingTenantOAuthId}`, {
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json',
+						Authorization: `Bearer ${localStorage.token}`
+					},
+					body: JSON.stringify(body)
+				});
+			} else {
+				res = await fetch('/api/v1/configs/tenant-oauth', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						Authorization: `Bearer ${localStorage.token}`
+					},
+					body: JSON.stringify(body)
+				});
+			}
+
+			if (res.ok) {
+				toast.success(
+					$i18n.t(
+						editingTenantOAuthId ? 'Tenant OAuth config updated' : 'Tenant OAuth config created'
+					)
+				);
+				await loadTenantOAuthConfigs();
+				resetTenantOAuthForm();
+			} else {
+				const err = await res.json().catch(() => ({}));
+				toast.error(
+					(err as { detail?: string }).detail ?? $i18n.t('Failed to save tenant OAuth config')
+				);
+			}
+		} catch (e) {
+			toast.error($i18n.t('Failed to save tenant OAuth config'));
+		}
+	}
+
+	async function deleteTenantOAuth(id: string) {
+		try {
+			const res = await fetch(`/api/v1/configs/tenant-oauth/${id}`, {
+				method: 'DELETE',
+				headers: { Authorization: `Bearer ${localStorage.token}` }
+			});
+			if (res.ok) {
+				toast.success($i18n.t('Tenant OAuth config deleted'));
+				await loadTenantOAuthConfigs();
+			} else {
+				toast.error($i18n.t('Failed to delete tenant OAuth config'));
+			}
+		} catch (e) {
+			toast.error($i18n.t('Failed to delete tenant OAuth config'));
+		} finally {
+			deletingTenantOAuthId = null;
+		}
+	}
+
+	function editTenantOAuth(cfg: TenantOAuthConfig) {
+		editingTenantOAuthId = cfg.id;
+		tenantOAuthForm = {
+			domain: cfg.domain,
+			provider: cfg.provider,
+			client_id: cfg.client_id,
+			client_secret: '',
+			tenant_id: cfg.tenant_id
+		};
+		tenantOAuthClientSecretChanged = false;
+		showTenantOAuthForm = true;
+	}
+
+	function resetTenantOAuthForm() {
+		showTenantOAuthForm = false;
+		editingTenantOAuthId = null;
+		tenantOAuthForm = {
+			domain: '',
+			provider: 'microsoft',
+			client_id: '',
+			client_secret: '',
+			tenant_id: ''
+		};
+		tenantOAuthClientSecretChanged = false;
+	}
+
 	const saveBrandingHandler = async () => {
 		// Auto-generate color scale if not set
 		if (
@@ -203,6 +376,9 @@
 		} catch (e) {
 			console.error('Failed to load branding config:', e);
 		}
+
+		await loadTenantOAuthConfigs();
+
 		loading = false;
 	});
 </script>
@@ -481,9 +657,6 @@
 											{#if preset.login_background_color}
 												&middot; bg: {preset.login_background_color}
 											{/if}
-											{#if preset.microsoft_client_id}
-												&middot; <span class="text-blue-500">MS OAuth</span>
-											{/if}
 										</div>
 									</div>
 
@@ -684,70 +857,6 @@
 										{/if}
 									</div>
 								</details>
-
-								<!-- Microsoft OAuth Settings (collapsible) -->
-								<details class="border-t border-gray-100 dark:border-gray-800">
-									<summary
-										class="px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer select-none flex items-center gap-1"
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 20 20"
-											fill="currentColor"
-											class="w-3.5 h-3.5"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
-												clip-rule="evenodd"
-											/>
-										</svg>
-										{$i18n.t('Microsoft OAuth (SSO)')}
-										{#if preset.microsoft_client_id}
-											<span class="ml-1 text-[10px] text-green-600 dark:text-green-400"
-												>Configured</span
-											>
-										{/if}
-									</summary>
-									<div class="px-3 pb-3 space-y-2">
-										<div class="text-[10px] text-gray-400 mb-2">
-											{$i18n.t(
-												'Configure domain-specific Microsoft OAuth for this preset. When a domain is mapped to this preset, these credentials will be used instead of the global OAuth settings.'
-											)}
-										</div>
-										<div>
-											<div class="text-[10px] font-medium text-gray-500 mb-0.5">
-												{$i18n.t('Client ID')}
-											</div>
-											<input
-												class="w-full rounded py-1.5 px-2.5 text-xs bg-white dark:bg-gray-800 outline-hidden border border-gray-200 dark:border-gray-700 font-mono"
-												bind:value={preset.microsoft_client_id}
-												placeholder="00000000-0000-0000-0000-000000000000"
-											/>
-										</div>
-										<div>
-											<div class="text-[10px] font-medium text-gray-500 mb-0.5">
-												{$i18n.t('Client Secret')}
-											</div>
-											<input
-												type="password"
-												class="w-full rounded py-1.5 px-2.5 text-xs bg-white dark:bg-gray-800 outline-hidden border border-gray-200 dark:border-gray-700 font-mono"
-												bind:value={preset.microsoft_client_secret}
-												placeholder="••••••••••••••••"
-											/>
-										</div>
-										<div>
-											<div class="text-[10px] font-medium text-gray-500 mb-0.5">
-												{$i18n.t('Tenant ID')}
-											</div>
-											<input
-												class="w-full rounded py-1.5 px-2.5 text-xs bg-white dark:bg-gray-800 outline-hidden border border-gray-200 dark:border-gray-700 font-mono"
-												bind:value={preset.microsoft_tenant_id}
-												placeholder="00000000-0000-0000-0000-000000000000"
-											/>
-										</div>
-									</div>
-								</details>
 							</div>
 						{/each}
 					</div>
@@ -872,6 +981,277 @@
 						{$i18n.t('Add')}
 					</button>
 				</div>
+			</div>
+
+			<!-- ═══════════════════════════════════════════ -->
+			<!-- TENANT OAUTH CONFIGURATION -->
+			<!-- ═══════════════════════════════════════════ -->
+			<div class="mb-4">
+				<div class="mt-0.5 mb-2.5 text-base font-medium">
+					{$i18n.t('Tenant OAuth Configuration')}
+				</div>
+				<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
+
+				<div class="text-xs text-gray-500 mb-3">
+					{$i18n.t(
+						'Configure per-domain OAuth credentials. When a user signs in from a mapped domain, these credentials override the global OAuth settings.'
+					)}
+				</div>
+
+				<!-- Existing tenant OAuth configs -->
+				{#if tenantOAuthConfigs.length > 0}
+					<div class="space-y-2 mb-3">
+						{#each tenantOAuthConfigs as cfg}
+							<div
+								class="rounded-lg bg-gray-50 dark:bg-gray-850 border border-gray-100 dark:border-gray-800"
+							>
+								<div class="flex items-center gap-2 p-3">
+									<!-- Provider icon -->
+									<div
+										class="w-8 h-8 rounded-md shrink-0 bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center"
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 21 21"
+											class="w-4 h-4"
+											aria-hidden="true"
+										>
+											<rect width="10" height="10" fill="#f25022" />
+											<rect x="11" width="10" height="10" fill="#7fba00" />
+											<rect y="11" width="10" height="10" fill="#00a4ef" />
+											<rect x="11" y="11" width="10" height="10" fill="#ffb900" />
+										</svg>
+									</div>
+
+									<div class="flex-1 min-w-0">
+										<div class="text-sm font-mono font-medium truncate">{cfg.domain}</div>
+										<div
+											class="text-[10px] text-gray-400 font-mono mt-0.5 flex items-center gap-1.5 flex-wrap"
+										>
+											<span class="capitalize">{cfg.provider}</span>
+											{#if cfg.client_id}
+												<span class="text-gray-300 dark:text-gray-600">&middot;</span>
+												<span class="truncate max-w-[130px]" title={cfg.client_id}
+													>{cfg.client_id}</span
+												>
+											{/if}
+											{#if cfg.tenant_id}
+												<span class="text-gray-300 dark:text-gray-600">&middot;</span>
+												<span class="truncate max-w-[130px]" title={cfg.tenant_id}
+													>{cfg.tenant_id}</span
+												>
+											{/if}
+											{#if cfg.client_secret_masked}
+												<span class="text-gray-300 dark:text-gray-600">&middot;</span>
+												<span class="text-gray-300 dark:text-gray-500"
+													>{cfg.client_secret_masked}</span
+												>
+											{/if}
+										</div>
+									</div>
+
+									<div class="flex items-center gap-1 shrink-0">
+										<!-- Edit button -->
+										<Tooltip content={$i18n.t('Edit')}>
+											<button
+												type="button"
+												class="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+												on:click={() => editTenantOAuth(cfg)}
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z"
+													/>
+													<path
+														d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z"
+													/>
+												</svg>
+											</button>
+										</Tooltip>
+
+										<!-- Delete button with inline confirmation -->
+										{#if deletingTenantOAuthId === cfg.id}
+											<div class="flex items-center gap-1">
+												<span class="text-[10px] text-red-500 font-medium"
+													>{$i18n.t('Delete?')}</span
+												>
+												<button
+													type="button"
+													class="px-2 py-1 text-[10px] rounded bg-red-500 hover:bg-red-600 text-white transition font-medium"
+													on:click={() => deleteTenantOAuth(cfg.id)}
+												>
+													{$i18n.t('Yes')}
+												</button>
+												<button
+													type="button"
+													class="px-2 py-1 text-[10px] rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+													on:click={() => (deletingTenantOAuthId = null)}
+												>
+													{$i18n.t('No')}
+												</button>
+											</div>
+										{:else}
+											<Tooltip content={$i18n.t('Delete')}>
+												<button
+													type="button"
+													class="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+													on:click={() => (deletingTenantOAuthId = cfg.id)}
+												>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 20 20"
+														fill="currentColor"
+														class="w-4 h-4"
+													>
+														<path
+															fill-rule="evenodd"
+															d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022 1.005 11.36A2.75 2.75 0 0 0 7.76 20h4.48a2.75 2.75 0 0 0 2.742-2.53l1.005-11.36.149.022a.75.75 0 1 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z"
+															clip-rule="evenodd"
+														/>
+													</svg>
+												</button>
+											</Tooltip>
+										{/if}
+									</div>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{:else if !showTenantOAuthForm}
+					<div
+						class="text-xs text-gray-400 text-center py-4 rounded-lg bg-gray-50 dark:bg-gray-850 border border-dashed border-gray-200 dark:border-gray-700 mb-3"
+					>
+						{$i18n.t('No tenant OAuth configurations yet.')}
+					</div>
+				{/if}
+
+				<!-- Inline add/edit form -->
+				{#if showTenantOAuthForm}
+					<div
+						class="mb-3 rounded-lg bg-gray-50 dark:bg-gray-850 border border-gray-200 dark:border-gray-700 p-3 space-y-2"
+					>
+						<div class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+							{editingTenantOAuthId
+								? $i18n.t('Edit Tenant OAuth Config')
+								: $i18n.t('New Tenant OAuth Config')}
+						</div>
+
+						<!-- Domain -->
+						<div>
+							<div class="text-[10px] font-medium text-gray-500 mb-0.5">
+								{$i18n.t('Domain')}
+							</div>
+							<input
+								class="w-full rounded py-1.5 px-2.5 text-xs bg-white dark:bg-gray-800 outline-hidden border border-gray-200 dark:border-gray-700 font-mono"
+								bind:value={tenantOAuthForm.domain}
+								placeholder="chat.example.com"
+							/>
+						</div>
+
+						<!-- Provider -->
+						<div>
+							<div class="text-[10px] font-medium text-gray-500 mb-0.5">
+								{$i18n.t('Provider')}
+							</div>
+							<select
+								class="w-full rounded py-1.5 px-2.5 text-xs bg-white dark:bg-gray-800 outline-hidden border border-gray-200 dark:border-gray-700"
+								bind:value={tenantOAuthForm.provider}
+							>
+								<option value="microsoft">{$i18n.t('Microsoft')}</option>
+							</select>
+						</div>
+
+						<!-- Client ID -->
+						<div>
+							<div class="text-[10px] font-medium text-gray-500 mb-0.5">
+								{$i18n.t('Client ID')}
+							</div>
+							<input
+								class="w-full rounded py-1.5 px-2.5 text-xs bg-white dark:bg-gray-800 outline-hidden border border-gray-200 dark:border-gray-700 font-mono"
+								bind:value={tenantOAuthForm.client_id}
+								placeholder="00000000-0000-0000-0000-000000000000"
+							/>
+						</div>
+
+						<!-- Client Secret -->
+						<div>
+							<div class="text-[10px] font-medium text-gray-500 mb-0.5">
+								{$i18n.t('Client Secret')}
+								{#if editingTenantOAuthId}
+									<span class="text-gray-400 font-normal ml-1"
+										>({$i18n.t('leave blank to keep existing')})</span
+									>
+								{/if}
+							</div>
+							<input
+								type="password"
+								class="w-full rounded py-1.5 px-2.5 text-xs bg-white dark:bg-gray-800 outline-hidden border border-gray-200 dark:border-gray-700 font-mono"
+								bind:value={tenantOAuthForm.client_secret}
+								placeholder={editingTenantOAuthId ? '••••••••' : ''}
+								on:input={() => (tenantOAuthClientSecretChanged = true)}
+							/>
+						</div>
+
+						<!-- Tenant ID -->
+						<div>
+							<div class="text-[10px] font-medium text-gray-500 mb-0.5">
+								{$i18n.t('Tenant ID')}
+							</div>
+							<input
+								class="w-full rounded py-1.5 px-2.5 text-xs bg-white dark:bg-gray-800 outline-hidden border border-gray-200 dark:border-gray-700 font-mono"
+								bind:value={tenantOAuthForm.tenant_id}
+								placeholder="00000000-0000-0000-0000-000000000000"
+							/>
+						</div>
+
+						<!-- Form actions -->
+						<div class="flex items-center justify-end gap-2 pt-1">
+							<button
+								type="button"
+								class="px-3 py-1.5 text-xs rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+								on:click={resetTenantOAuthForm}
+							>
+								{$i18n.t('Cancel')}
+							</button>
+							<button
+								type="button"
+								class="px-3 py-1.5 text-xs rounded-lg bg-black hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-100 text-white transition font-medium"
+								on:click={saveTenantOAuth}
+							>
+								{editingTenantOAuthId ? $i18n.t('Update') : $i18n.t('Create')}
+							</button>
+						</div>
+					</div>
+				{/if}
+
+				<!-- Add Tenant OAuth button (shown only when form is hidden) -->
+				{#if !showTenantOAuthForm}
+					<button
+						type="button"
+						class="flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition font-medium"
+						on:click={() => {
+							resetTenantOAuthForm();
+							showTenantOAuthForm = true;
+						}}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							class="w-3.5 h-3.5"
+						>
+							<path
+								d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
+							/>
+						</svg>
+						{$i18n.t('Add Tenant OAuth')}
+					</button>
+				{/if}
 			</div>
 		</div>
 

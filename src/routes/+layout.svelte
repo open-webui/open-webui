@@ -932,12 +932,14 @@
 	{#if $brandingConfig?.app_name || $WEBUI_NAME}
 		<title>{$brandingConfig?.app_name || $WEBUI_NAME}</title>
 	{/if}
-	<link
-		rel="icon"
-		href={$brandingConfig?.favicon_data ||
-			$brandingConfig?.favicon_url ||
-			`${WEBUI_BASE_URL}/static/favicon.png`}
-	/>
+	{#if $brandingConfig?.favicon_data || $brandingConfig?.favicon_url}
+		<link
+			rel="icon"
+			href={$brandingConfig?.favicon_data ||
+				$brandingConfig?.favicon_url ||
+				`${WEBUI_BASE_URL}/static/favicon.png`}
+		/>
+	{/if}
 
 	<meta name="apple-mobile-web-app-title" content={$brandingConfig?.app_name || $WEBUI_NAME} />
 	<meta name="description" content={$brandingConfig?.app_name || $WEBUI_NAME} />

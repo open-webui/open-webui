@@ -1803,9 +1803,6 @@ DEFAULT_BRANDING_CONFIG = {
             "favicon_data": "",
             "login_background_url": "",
             "login_background_color": "#1a2744",
-            "microsoft_client_id": "",
-            "microsoft_client_secret": "",
-            "microsoft_tenant_id": "",
         },
         {
             "name": "Magellan",
@@ -1819,9 +1816,6 @@ DEFAULT_BRANDING_CONFIG = {
             "favicon_data": "",
             "login_background_url": "",
             "login_background_color": "#000000",
-            "microsoft_client_id": "",
-            "microsoft_client_secret": "",
-            "microsoft_tenant_id": "",
         },
     ],
     "domain_mappings": [
@@ -1840,11 +1834,15 @@ BRANDING_CONFIG = PersistentConfig(
 def get_microsoft_oauth_for_domain(domain: str) -> dict:
     """
     Get Microsoft OAuth configuration for a specific domain.
-    Returns preset OAuth config if domain is mapped, otherwise returns default global config.
+    Looks up per-tenant config from the tenant_oauth_config DB table first,
+    then falls back to global env vars (MICROSOFT_CLIENT_ID, etc.).
     """
+    from open_webui.models.tenant_oauth import TenantOAuthConfigs
+    from open_webui.internal.db import get_db_context
+
+    # Look up preset_name from branding domain_mappings (for return value compatibility)
     config = BRANDING_CONFIG.value
     domain_mappings = config.get("domain_mappings", [])
-    presets = config.get("presets", [])
 
     preset_name = None
     for mapping in domain_mappings:
@@ -1853,20 +1851,21 @@ def get_microsoft_oauth_for_domain(domain: str) -> dict:
             preset_name = mapping.get("preset_name")
             break
 
-    if preset_name:
-        for preset in presets:
-            if preset.get("name") == preset_name:
-                client_id = preset.get("microsoft_client_id", "")
-                client_secret = preset.get("microsoft_client_secret", "")
-                tenant_id = preset.get("microsoft_tenant_id", "")
-                if client_id and client_secret and tenant_id:
-                    return {
-                        "client_id": client_id,
-                        "client_secret": client_secret,
-                        "tenant_id": tenant_id,
-                        "preset_name": preset_name,
-                    }
+    # Look up per-tenant OAuth config from DB
+    with get_db_context() as db:
+        tenant_config = TenantOAuthConfigs.get_by_domain_and_provider(
+            domain, "microsoft", db
+        )
 
+    if tenant_config:
+        return {
+            "client_id": tenant_config.client_id,
+            "client_secret": tenant_config.client_secret,
+            "tenant_id": tenant_config.tenant_id,
+            "preset_name": preset_name,
+        }
+
+    # Fall back to global env vars
     return {
         "client_id": MICROSOFT_CLIENT_ID.value,
         "client_secret": MICROSOFT_CLIENT_SECRET.value,
