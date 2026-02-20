@@ -1662,6 +1662,10 @@ WEBHOOK_URL = PersistentConfig(
 
 ENABLE_ADMIN_EXPORT = os.environ.get("ENABLE_ADMIN_EXPORT", "True").lower() == "true"
 
+ENABLE_ANALYTICS_DASHBOARD = (
+    os.environ.get("ENABLE_ANALYTICS_DASHBOARD", "True").lower() == "true"
+)
+
 ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS = (
     os.environ.get("ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS", "True").lower() == "true"
 )
