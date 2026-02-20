@@ -2517,8 +2517,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # If context is not empty, insert it into the messages
     if sources and prompt:
+        log.warning(
+            f"[DefaultMode] Applying RAG template with {len(sources)} source(s), "
+            f"original user message: {len(prompt)} chars"
+        )
         form_data["messages"] = apply_source_context_to_messages(
             request, form_data["messages"], sources, prompt
+        )
+        injected_msg = get_last_user_message(form_data["messages"])
+        log.warning(
+            f"[DefaultMode] User message now {len(injected_msg or '')} chars"
         )
 
     # If there are citations, add them to the data_items
@@ -3964,6 +3972,10 @@ async def streaming_chat_response_handler(response, ctx):
                 _original_user_msg = get_last_user_message(
                     form_data["messages"]
                 )
+                log.warning(
+                    "[ToolLoop] Saved original user message "
+                    f"({len(_original_user_msg or '')} chars)"
+                )
 
                 while (
                     len(tool_calls) > 0
@@ -4121,6 +4133,10 @@ async def streaming_chat_response_handler(response, ctx):
                                     tool_id=tool.get("tool_id", "") if tool else "",
                                 )
                                 tool_call_sources.extend(citation_sources)
+                                log.warning(
+                                    f"[ToolLoop] Extracted {len(citation_sources)} citation source(s) "
+                                    f"from {tool_function_name}, total accumulated: {len(tool_call_sources)}"
+                                )
                             except Exception as e:
                                 log.exception(f"Error extracting citation source: {e}")
 
@@ -4216,12 +4232,21 @@ async def streaming_chat_response_handler(response, ctx):
                                         break
                             else:
                                 msg_item["content"] = _original_user_msg
+                            log.warning(
+                                f"[ToolLoop] Restored user message to original "
+                                f"({len(_original_user_msg)} chars)"
+                            )
 
                         form_data["messages"] = apply_source_context_to_messages(
                             request,
                             form_data["messages"],
                             tool_call_sources,
                             _original_user_msg,
+                        )
+                        injected_msg = get_last_user_message(form_data["messages"])
+                        log.warning(
+                            f"[ToolLoop] Applied RAG template with {len(tool_call_sources)} source(s), "
+                            f"user message now {len(injected_msg or '')} chars"
                         )
 
                     await event_emitter(
