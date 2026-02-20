@@ -894,6 +894,234 @@ def get_event_emitter(request_info, update_db=True):
     else:
         return None
 
+@sio.on("tool:check_pending")
+async def handle_check_pending_approvals(sid, data):
+    """Check if there are pending approvals for a chat."""
+
+    session_data = SESSION_POOL.get(sid)
+    if not session_data:
+        log.error(f"Invalid session for pending check: {sid}")
+        return
+
+    chat_id = data.get("chat_id")
+    if not chat_id:
+        log.error(f"No chat_id provided for pending check: {sid}")
+        return
+
+    from open_webui.utils.tool_approval import approval_manager
+
+    pending_approvals = approval_manager.get_pending_approvals_for_chat(chat_id)
+
+    if pending_approvals:
+        await sio.emit('tool:pending_found', pending_approvals, room=sid)
+
+
+@sio.on("tool:approval_response")
+async def handle_tool_approval_response(sid, data):
+    """Handle tool approval response from frontend."""
+
+
+    session_data = SESSION_POOL.get(sid)
+    if not session_data:
+        log.error(f"Invalid session for approval response: {sid}")
+        return {"status": "error", "message": "Invalid session"}
+
+    user_id = session_data.get("id")
+    if not user_id:
+        log.error(f"No user ID found in session: {sid}")
+        return {"status": "error", "message": "User not found"}
+
+    chat_id = data.get("chat_id")
+    approval_id = data.get("approval_id")
+    decision = data.get("decision")  # "approved" or "denied"
+
+    if not all([chat_id, approval_id, decision]):
+        return {"status": "error", "message": "Missing required fields"}
+
+    if decision not in ["approved", "denied"]:
+        return {"status": "error", "message": "Invalid decision"}
+
+    from open_webui.utils.tool_approval import approval_manager
+
+    await approval_manager.handle_approval_response(
+        chat_id=chat_id,
+        approval_id=approval_id,
+        decision=decision
+    )
+
+
+    return {"status": "success", "message": f"Approval {decision}"}
+
+
+@sio.on("tool:add_always_approved")
+async def handle_add_always_approved(sid, data):
+    """Add a tool to the always-approved list for a chat."""
+    session_data = SESSION_POOL.get(sid)
+    if not session_data:
+        return {"status": "error", "message": "Invalid session"}
+
+    chat_id = data.get("chat_id")
+    if not chat_id:
+        return {"status": "error", "message": "Missing chat_id"}
+
+    from open_webui.utils.tool_approval import approval_manager
+
+    level = data.get("level", "function")
+    parent_tool_id = data.get("parent_tool_id", "")
+    function_name = data.get("function_name", "")
+
+    if level == "parent" and parent_tool_id:
+        approval_manager.add_always_approved_parent(chat_id, parent_tool_id)
+    elif level == "function" and parent_tool_id and function_name:
+        approval_manager.add_always_approved_function(chat_id, parent_tool_id, function_name)
+    else:
+        return {"status": "error", "message": "Missing required fields"}
+
+    return {
+        "status": "success",
+        "always_approved": approval_manager.get_always_approved(chat_id)
+    }
+
+
+@sio.on("tool:remove_always_approved")
+async def handle_remove_always_approved(sid, data):
+    """Remove a tool from the always-approved list for a chat."""
+    session_data = SESSION_POOL.get(sid)
+    if not session_data:
+        return {"status": "error", "message": "Invalid session"}
+
+    chat_id = data.get("chat_id")
+    if not chat_id:
+        return {"status": "error", "message": "Missing chat_id"}
+
+    from open_webui.utils.tool_approval import approval_manager
+
+    level = data.get("level", "function")
+    parent_tool_id = data.get("parent_tool_id", "")
+    function_name = data.get("function_name", "")
+
+    if level == "parent" and parent_tool_id:
+        approval_manager.remove_always_approved_parent(chat_id, parent_tool_id)
+    elif level == "function" and parent_tool_id and function_name:
+        approval_manager.remove_always_approved_function(chat_id, parent_tool_id, function_name)
+    else:
+        return {"status": "error", "message": "Missing required fields"}
+
+    return {
+        "status": "success",
+        "always_approved": approval_manager.get_always_approved(chat_id)
+    }
+
+
+@sio.on("tool:get_always_approved")
+async def handle_get_always_approved(sid, data):
+    """Get always-approved tools for a chat."""
+    session_data = SESSION_POOL.get(sid)
+    if not session_data:
+        return {"status": "error", "message": "Invalid session"}
+
+    chat_id = data.get("chat_id")
+    if not chat_id:
+        return {"status": "error", "message": "Missing chat_id"}
+
+    from open_webui.utils.tool_approval import approval_manager
+
+    return {
+        "status": "success",
+        "always_approved": approval_manager.get_always_approved(chat_id)
+    }
+
+
+@sio.on("tool:clear_always_approved")
+async def handle_clear_always_approved(sid, data):
+    """Clear all always-approved tools for a chat."""
+    session_data = SESSION_POOL.get(sid)
+    if not session_data:
+        return {"status": "error", "message": "Invalid session"}
+
+    chat_id = data.get("chat_id")
+    if not chat_id:
+        return {"status": "error", "message": "Missing chat_id"}
+
+    from open_webui.utils.tool_approval import approval_manager
+
+    approval_manager.clear_always_approved(chat_id)
+
+    return {"status": "success", "always_approved": {}}
+
+
+@sio.on("tool:set_yolo")
+async def handle_set_yolo(sid, data):
+    """Set YOLO mode for a chat (per-function, per-parent, or all)."""
+    session_data = SESSION_POOL.get(sid)
+    if not session_data:
+        return {"status": "error", "message": "Invalid session"}
+
+    chat_id = data.get("chat_id")
+    if not chat_id:
+        return {"status": "error", "message": "Missing chat_id"}
+
+    from open_webui.utils.tool_approval import approval_manager
+
+    level = data.get("level", "all")
+    enabled = data.get("enabled", False)
+    parent_tool_id = data.get("parent_tool_id", "")
+    function_name = data.get("function_name", "")
+
+    if level == "all":
+        approval_manager.set_yolo_all(chat_id, enabled)
+    elif level == "parent" and parent_tool_id:
+        approval_manager.set_yolo_parent(chat_id, parent_tool_id, enabled)
+    elif level == "function" and parent_tool_id and function_name:
+        approval_manager.set_yolo_function(chat_id, parent_tool_id, function_name, enabled)
+    else:
+        return {"status": "error", "message": "Missing required fields"}
+
+    return {
+        "status": "success",
+        "yolo": approval_manager.get_yolo_status(chat_id)
+    }
+
+
+@sio.on("tool:get_yolo")
+async def handle_get_yolo(sid, data):
+    """Get YOLO mode status for a chat."""
+    session_data = SESSION_POOL.get(sid)
+    if not session_data:
+        return {"status": "error", "message": "Invalid session"}
+
+    chat_id = data.get("chat_id")
+    if not chat_id:
+        return {"status": "error", "message": "Missing chat_id"}
+
+    from open_webui.utils.tool_approval import approval_manager
+
+    return {
+        "status": "success",
+        "yolo": approval_manager.get_yolo_status(chat_id)
+    }
+
+
+@sio.on("tool:clear_yolo")
+async def handle_clear_yolo(sid, data):
+    """Clear all YOLO settings for a chat."""
+    session_data = SESSION_POOL.get(sid)
+    if not session_data:
+        return {"status": "error", "message": "Invalid session"}
+
+    chat_id = data.get("chat_id")
+    if not chat_id:
+        return {"status": "error", "message": "Missing chat_id"}
+
+    from open_webui.utils.tool_approval import approval_manager
+
+    approval_manager.clear_yolo(chat_id)
+
+    return {
+        "status": "success",
+        "yolo": {"yolo_all": False, "yolo_functions": {}}
+    }
+
 
 def get_event_call(request_info):
     async def __event_caller__(event_data):

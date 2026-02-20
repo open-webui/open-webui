@@ -97,6 +97,7 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
 	import Image from '../common/Image.svelte';
+	import { checkPendingApprovals, flushPendingYolo } from '$lib/stores/toolApproval';
 
 	export let chatIdProp = '';
 
@@ -167,6 +168,11 @@
 		navigateHandler();
 	}
 
+	// Check for pending approvals when socket reconnects
+	$: if ($socket && chatIdProp) {
+		checkPendingApprovals(chatIdProp);
+	}
+
 	const navigateHandler = async () => {
 		loading = true;
 
@@ -191,6 +197,8 @@
 
 		if (chatIdProp && (await loadChat())) {
 			await tick();
+			// Check for pending approvals when navigating to a chat
+			checkPendingApprovals(chatIdProp);
 			loading = false;
 			window.setTimeout(() => scrollToBottom(), 0);
 
@@ -2429,6 +2437,8 @@
 		}
 		await tick();
 
+		await flushPendingYolo(_chatId);
+
 		return _chatId;
 	};
 
@@ -2656,6 +2666,7 @@
 							<div class=" pb-2 z-10">
 								<MessageInput
 									bind:this={messageInput}
+									bind:chatId={$chatId}
 									{history}
 									{taskIds}
 									{selectedModels}

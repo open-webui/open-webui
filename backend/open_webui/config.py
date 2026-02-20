@@ -116,7 +116,9 @@ if os.path.exists(f"{DATA_DIR}/config.json"):
 
 DEFAULT_CONFIG = {
     "version": 0,
-    "ui": {},
+    "ui": {
+        "enable_tool_approval": True,
+    },
 }
 
 
@@ -251,6 +253,7 @@ class AppConfig:
             )
 
         super().__setattr__("_state", {})
+        self._state["ENABLE_TOOL_APPROVAL"] = ENABLE_TOOL_APPROVAL
 
     def __setattr__(self, key, value):
         if isinstance(value, PersistentConfig):
@@ -1676,6 +1679,12 @@ BYPASS_ADMIN_ACCESS_CONTROL = (
 
 ENABLE_ADMIN_CHAT_ACCESS = (
     os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "true"
+)
+
+ENABLE_TOOL_APPROVAL = PersistentConfig(
+    "ENABLE_TOOL_APPROVAL",
+    "ui.enable_tool_approval",
+    os.environ.get("ENABLE_TOOL_APPROVAL", "true").lower() == "true",
 )
 
 ENABLE_COMMUNITY_SHARING = PersistentConfig(

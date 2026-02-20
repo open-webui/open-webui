@@ -109,6 +109,8 @@
 	let selectedModelIds = [];
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
 
+	export let chatId = '';
+
 	export let history;
 	export let taskIds = null;
 
@@ -1552,6 +1554,7 @@
 										/>
 
 										<IntegrationsMenu
+											{chatId}
 											selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
 											{toggleFilters}
 											{showWebSearchButton}

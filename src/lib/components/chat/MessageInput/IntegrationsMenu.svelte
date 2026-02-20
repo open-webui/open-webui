@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
-	import { getContext, onMount, tick } from 'svelte';
+	import { getContext, tick } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import { flyAndScale } from '$lib/utils/transitions';
 
@@ -8,6 +8,20 @@
 
 	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
 	import { getTools } from '$lib/apis/tools';
+
+	import {
+		getAlwaysApproved,
+		removeAlwaysApproved,
+		clearAllAlwaysApproved,
+		getYoloStatus,
+		setYolo,
+		clearYolo,
+		pendingYolo,
+		setPendingYolo,
+		getPendingYoloAsStatus,
+		type AlwaysApprovedMap,
+		type YoloStatus
+	} from '$lib/stores/toolApproval';
 
 	import Knobs from '$lib/components/icons/Knobs.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -23,6 +37,8 @@
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 
 	const i18n = getContext('i18n');
+
+	export let chatId = '';
 
 	export let selectedToolIds: string[] = [];
 
@@ -47,7 +63,11 @@
 	let show = false;
 	let tab = '';
 
-	let tools = null;
+	let tools: Record<string, any> | null = null;
+
+	// YOLO and Always Approved state
+	let alwaysApproved: AlwaysApprovedMap = {};
+	let yoloStatus: YoloStatus = { yolo_all: false, yolo_functions: {} };
 
 	$: if (show) {
 		init();
@@ -64,7 +84,7 @@
 		}
 
 		if ($_tools) {
-			tools = $_tools.reduce((a, tool, i, arr) => {
+			tools = $_tools.reduce((a: Record<string, any>, tool: any) => {
 				a[tool.id] = {
 					name: tool.name,
 					description: tool.meta.description,
@@ -79,6 +99,7 @@
 			for (const serverIdx in $toolServers) {
 				const server = $toolServers[serverIdx];
 				if (server.info) {
+					tools = tools || {};
 					tools[`direct_server:${serverIdx}`] = {
 						name: server?.info?.title ?? server.url,
 						description: server.info.description ?? '',
@@ -88,14 +109,64 @@
 			}
 		}
 
-		selectedToolIds = selectedToolIds.filter((id) => Object.keys(tools).includes(id));
+		if (tools) {
+			selectedToolIds = selectedToolIds.filter((id) => Object.keys(tools!).includes(id));
+		}
 	};
+
+	const loadAlwaysApproved = async () => {
+		if (chatId) {
+			alwaysApproved = await getAlwaysApproved(chatId);
+		}
+	};
+
+	const loadYoloStatus = async () => {
+		if (chatId) {
+			yoloStatus = await getYoloStatus(chatId);
+		} else {
+			yoloStatus = getPendingYoloAsStatus();
+		}
+	};
+
+	async function toggleYoloAll() {
+		const newState = !yoloStatus.yolo_all;
+		if (chatId) {
+			const result = await setYolo(chatId, 'all', newState);
+			if (result) yoloStatus = result;
+		} else {
+			setPendingYolo('all', newState);
+			yoloStatus = getPendingYoloAsStatus();
+		}
+	}
+
+	async function toggleToolYolo(toolId: string) {
+		const parentFuncs = yoloStatus.yolo_functions[toolId];
+		const isOn = parentFuncs && (parentFuncs.includes('*') || parentFuncs.length > 0);
+		if (chatId) {
+			const result = await setYolo(chatId, 'parent', !isOn, toolId);
+			if (result) yoloStatus = result;
+		} else {
+			setPendingYolo('parent', !isOn, toolId);
+			yoloStatus = getPendingYoloAsStatus();
+		}
+	}
+
+	// Helper: check if a function is in YOLO
+	function isFunctionYolo(parentId: string, funcName: string): boolean {
+		const parentFuncs = yoloStatus.yolo_functions[parentId];
+		if (!parentFuncs) return false;
+		return parentFuncs.includes('*') || parentFuncs.includes(funcName);
+	}
+
+	// Helper: count always-approved entries
+	$: alwaysApprovedCount = Object.values(alwaysApproved).reduce((sum, children) => sum + children.length, 0);
 </script>
 
 <Dropdown
 	bind:show
 	on:change={(e) => {
 		if (e.detail === false) {
+			tab = '';
 			onClose();
 		}
 	}}
@@ -105,7 +176,7 @@
 	</Tooltip>
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-70 rounded-2xl px-1 py-1  border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
+			class="w-full max-w-70 rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
 			sideOffset={4}
 			alignOffset={-6}
 			side="bottom"
@@ -116,6 +187,7 @@
 				<div in:fly={{ x: -20, duration: 150 }}>
 					{#if tools}
 						{#if Object.keys(tools).length > 0}
+							<!-- Tools -->
 							<button
 								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
 								on:click={() => {
@@ -123,18 +195,64 @@
 								}}
 							>
 								<Wrench />
-
 								<div class="flex items-center w-full justify-between">
-									<div class=" line-clamp-1">
+									<div class="line-clamp-1">
 										{$i18n.t('Tools')}
 										<span class="ml-0.5 text-gray-500">{Object.keys(tools).length}</span>
 									</div>
-
 									<div class="text-gray-500">
 										<ChevronRight />
 									</div>
 								</div>
 							</button>
+
+							<!-- YOLO Mode -->
+							<button
+								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+							on:click={async () => {
+								await loadYoloStatus();
+								tab = 'yolo';
+							}}
+							>
+								<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+								</svg>
+								<div class="flex items-center w-full justify-between">
+									<div class="line-clamp-1">
+										{$i18n.t('YOLO Mode')}
+										{#if yoloStatus.yolo_all}
+											<span class="ml-0.5 text-amber-500 text-xs font-medium">ON</span>
+										{/if}
+									</div>
+									<div class="text-gray-500">
+										<ChevronRight />
+									</div>
+								</div>
+							</button>
+
+							<!-- Always Allowed -->
+								<button
+									class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+								on:click={async () => {
+									if (chatId) await loadAlwaysApproved();
+									tab = 'always-allowed';
+								}}
+								>
+									<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+									</svg>
+									<div class="flex items-center w-full justify-between">
+										<div class="line-clamp-1">
+											{$i18n.t('Always Allowed')}
+											{#if alwaysApprovedCount > 0}
+												<span class="ml-0.5 text-gray-500">{alwaysApprovedCount}</span>
+											{/if}
+										</div>
+										<div class="text-gray-500">
+											<ChevronRight />
+										</div>
+									</div>
+								</button>
 						{/if}
 					{:else}
 						<div class="py-4">
@@ -174,12 +292,12 @@
 												{/if}
 											</div>
 
-											<div class=" truncate">{filter?.name}</div>
+											<div class="truncate">{filter?.name}</div>
 										</div>
 									</div>
 
 									{#if filter?.has_user_valves && ($user?.role === 'admin' || ($user?.permissions?.chat?.valves ?? true))}
-										<div class=" shrink-0">
+										<div class="shrink-0">
 											<Tooltip content={$i18n.t('Valves')}>
 												<button
 													class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
@@ -199,7 +317,7 @@
 										</div>
 									{/if}
 
-									<div class=" shrink-0">
+									<div class="shrink-0">
 										<Switch
 											state={selectedFilterIds.includes(filter.id)}
 											on:change={async (e) => {
@@ -226,12 +344,11 @@
 										<div class="shrink-0">
 											<GlobeAlt />
 										</div>
-
-										<div class=" truncate">{$i18n.t('Web Search')}</div>
+										<div class="truncate">{$i18n.t('Web Search')}</div>
 									</div>
 								</div>
 
-								<div class=" shrink-0">
+								<div class="shrink-0">
 									<Switch
 										state={webSearchEnabled}
 										on:change={async (e) => {
@@ -257,12 +374,11 @@
 										<div class="shrink-0">
 											<Photo className="size-4" strokeWidth="1.5" />
 										</div>
-
-										<div class=" truncate">{$i18n.t('Image')}</div>
+										<div class="truncate">{$i18n.t('Image')}</div>
 									</div>
 								</div>
 
-								<div class=" shrink-0">
+								<div class="shrink-0">
 									<Switch
 										state={imageGenerationEnabled}
 										on:change={async (e) => {
@@ -292,12 +408,11 @@
 										<div class="shrink-0">
 											<Terminal className="size-3.5" strokeWidth="1.75" />
 										</div>
-
-										<div class=" truncate">{$i18n.t('Code Interpreter')}</div>
+										<div class="truncate">{$i18n.t('Code Interpreter')}</div>
 									</div>
 								</div>
 
-								<div class=" shrink-0">
+								<div class="shrink-0">
 									<Switch
 										state={codeInterpreterEnabled}
 										on:change={async (e) => {
@@ -310,7 +425,9 @@
 						</Tooltip>
 					{/if}
 				</div>
+
 			{:else if tab === 'tools' && tools}
+				<!-- Tools sub-menu (existing) -->
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
 						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
@@ -319,7 +436,6 @@
 						}}
 					>
 						<ChevronLeft />
-
 						<div class="flex items-center w-full justify-between">
 							<div>
 								{$i18n.t('Tools')}
@@ -334,18 +450,14 @@
 							on:click={async (e) => {
 								if (!(tools[toolId]?.authenticated ?? true)) {
 									e.preventDefault();
-
 									let parts = toolId.split(':');
 									let serverId = parts?.at(-1) ?? toolId;
-
 									const authUrl = getOAuthClientAuthorizationUrl(serverId, 'mcp');
 									window.open(authUrl, '_self', 'noopener');
 								} else {
 									tools[toolId].enabled = !tools[toolId].enabled;
-
 									const state = tools[toolId].enabled;
 									await tick();
-
 									if (state) {
 										selectedToolIds = [...selectedToolIds, toolId];
 									} else {
@@ -355,7 +467,6 @@
 							}}
 						>
 							{#if !(tools[toolId]?.authenticated ?? true)}
-								<!-- make it slighly darker and not clickable -->
 								<div class="absolute inset-0 opacity-50 rounded-xl cursor-pointer z-10" />
 							{/if}
 							<div class="flex-1 truncate">
@@ -366,13 +477,13 @@
 										</div>
 									</Tooltip>
 									<Tooltip content={tools[toolId]?.description ?? ''} placement="top-start">
-										<div class=" truncate">{tools[toolId].name}</div>
+										<div class="truncate">{tools[toolId].name}</div>
 									</Tooltip>
 								</div>
 							</div>
 
 							{#if tools[toolId]?.has_user_valves && ($user?.role === 'admin' || ($user?.permissions?.chat?.valves ?? true))}
-								<div class=" shrink-0">
+								<div class="shrink-0">
 									<Tooltip content={$i18n.t('Valves')}>
 										<button
 											class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
@@ -392,11 +503,175 @@
 								</div>
 							{/if}
 
-							<div class=" shrink-0">
+							<div class="shrink-0">
 								<Switch state={tools[toolId].enabled} />
 							</div>
 						</button>
 					{/each}
+				</div>
+
+		{:else if tab === 'yolo' && tools}
+			<!-- YOLO Mode sub-menu -->
+			<div in:fly={{ x: 20, duration: 150 }}>
+				<button
+					class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+					on:click={() => {
+						tab = '';
+					}}
+				>
+					<ChevronLeft />
+					<div class="flex items-center w-full justify-between">
+						<div>{$i18n.t('YOLO Mode')}</div>
+					</div>
+				</button>
+
+				<!-- YOLO All toggle -->
+				<button
+					class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+					on:click={toggleYoloAll}
+				>
+					<div class="flex-1 truncate">
+						<div class="flex flex-1 gap-2 items-center">
+							<svg class="size-4 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+							</svg>
+							<div class="truncate font-medium">{$i18n.t('YOLO All Tools')}</div>
+						</div>
+					</div>
+					<div class="shrink-0">
+						<Switch state={yoloStatus.yolo_all} />
+					</div>
+				</button>
+
+				{#if !yoloStatus.yolo_all}
+					<div class="border-t border-gray-100 dark:border-gray-800 my-1" />
+
+					<!-- Per-tool YOLO toggles -->
+					{#each Object.keys(tools) as toolId}
+						<button
+							class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+							on:click={() => toggleToolYolo(toolId)}
+						>
+							<div class="flex-1 truncate">
+								<div class="flex flex-1 gap-2 items-center">
+									<div class="shrink-0">
+										<Wrench />
+									</div>
+									<div class="truncate">{tools[toolId].name}</div>
+								</div>
+							</div>
+							<div class="shrink-0">
+								<Switch state={
+									(() => {
+										const parentFuncs = yoloStatus.yolo_functions[toolId];
+										return !!(parentFuncs && (parentFuncs.includes('*') || parentFuncs.length > 0));
+									})()
+								} />
+							</div>
+						</button>
+					{/each}
+				{/if}
+			</div>
+
+			{:else if tab === 'always-allowed'}
+				<!-- Always Allowed sub-menu -->
+				<div in:fly={{ x: 20, duration: 150 }}>
+					<button
+						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+						on:click={() => {
+							tab = '';
+						}}
+					>
+						<ChevronLeft />
+						<div class="flex items-center w-full justify-between">
+							<div>{$i18n.t('Always Allowed')}</div>
+						</div>
+					</button>
+
+					{#if alwaysApprovedCount > 0}
+						<!-- Revoke All -->
+						<button
+							class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
+							on:click={async () => {
+								await clearAllAlwaysApproved(chatId);
+								alwaysApproved = {};
+							}}
+						>
+							<div class="flex flex-1 gap-2 items-center">
+								<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<line x1="18" y1="6" x2="6" y2="18" />
+									<line x1="6" y1="6" x2="18" y2="18" />
+								</svg>
+								<div class="truncate">{$i18n.t('Revoke All')}</div>
+							</div>
+						</button>
+
+						<div class="border-t border-gray-100 dark:border-gray-800 my-1" />
+
+						<!-- Tree of always-approved entries grouped by parent -->
+						{#each Object.entries(alwaysApproved) as [parentId, children], idx}
+							{#if idx > 0}
+								<div class="border-t border-gray-100 dark:border-gray-800 my-1" />
+							{/if}
+
+							<!-- Parent header row -->
+							<div class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50">
+								<div class="flex-1 truncate">
+									<div class="flex flex-1 gap-2 items-center">
+										<div class="shrink-0">
+											<Wrench />
+										</div>
+										<div class="truncate font-medium">{parentId}</div>
+									</div>
+								</div>
+								<button
+									class="shrink-0 text-red-500 hover:text-red-700 dark:hover:text-red-300 transition p-0.5"
+									title={$i18n.t('Revoke tool')}
+									on:click={async () => {
+										await removeAlwaysApproved(chatId, parentId, '', 'parent');
+										alwaysApproved = await getAlwaysApproved(chatId);
+									}}
+								>
+									<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<line x1="18" y1="6" x2="6" y2="18" />
+										<line x1="6" y1="6" x2="18" y2="18" />
+									</svg>
+								</button>
+							</div>
+
+							<!-- Children -->
+							{#if children.includes('*')}
+								<div class="flex w-full items-center pl-9 pr-3 py-1 text-xs text-gray-500 dark:text-gray-400 italic">
+									{$i18n.t('All functions approved')}
+								</div>
+							{:else}
+								{#each children as funcName}
+									<div class="flex w-full justify-between gap-2 items-center pl-9 pr-3 py-1 text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50">
+										<div class="flex-1 truncate text-gray-700 dark:text-gray-300">
+											{funcName}
+										</div>
+										<button
+											class="shrink-0 text-red-500 hover:text-red-700 dark:hover:text-red-300 transition p-0.5"
+											title={$i18n.t('Revoke function')}
+											on:click={async () => {
+												await removeAlwaysApproved(chatId, parentId, funcName, 'function');
+												alwaysApproved = await getAlwaysApproved(chatId);
+											}}
+										>
+											<svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+												<line x1="18" y1="6" x2="6" y2="18" />
+												<line x1="6" y1="6" x2="18" y2="18" />
+											</svg>
+										</button>
+									</div>
+								{/each}
+							{/if}
+						{/each}
+					{:else}
+						<div class="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+							{$i18n.t('No tools are always allowed')}
+						</div>
+					{/if}
 				</div>
 			{/if}
 		</DropdownMenu.Content>
