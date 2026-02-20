@@ -30,6 +30,7 @@
 	export let resource: MCPAppResource;
 	export let toolName: string;
 	export let serverId: string;
+	export let toolArgs: Record<string, unknown> = {};
 	export let toolResult: unknown = null;
 	export let toolCallId: string | number | undefined = undefined;
 	export let token: string = '';
@@ -355,7 +356,11 @@ window.parent.postMessage({
 				state = 'ready';
 				updateAppState(instanceId, 'ready');
 
-				// Send tool input (arguments) after initialization
+				// Send tool input (arguments) after initialization - required per SDK spec
+				console.log('MCPAppView: Sending tool-input with args:', toolArgs);
+				bridge?.sendToolInput({ arguments: toolArgs });
+
+				// Then send tool result if available
 				if (toolResult !== null) {
 					sendToolResult(toolResult);
 				}

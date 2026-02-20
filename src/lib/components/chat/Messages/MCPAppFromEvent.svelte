@@ -131,6 +131,7 @@
 			{resource}
 			toolName={toolCall.name}
 			{serverId}
+			toolArgs={toolCall.arguments || {}}
 			{toolResult}
 			{toolCallId}
 			{token}

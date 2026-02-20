@@ -165,6 +165,7 @@
 					resource={mcpResource}
 					toolName={attributes.name || 'MCP App'}
 					serverId={mcpApp.serverId}
+					toolArgs={args ? parseJSONString(args) : {}}
 					toolResult={result ? parseJSONString(result) : null}
 					toolCallId={attributes.id}
 					token={localStorage.token || ''}
