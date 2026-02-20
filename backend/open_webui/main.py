@@ -92,6 +92,7 @@ from open_webui.routers import (
     knowledge,
     prompts,
     evaluations,
+    roles,
     skills,
     spaces,
     tools,
@@ -116,6 +117,7 @@ from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 from open_webui.models.users import UserModel, Users
 from open_webui.models.chats import Chats
+from open_webui.models.roles import Roles
 
 from open_webui.config import (
     # Ollama
@@ -624,6 +626,10 @@ async def lifespan(app: FastAPI):
             # Disable signup since we now have an admin
             app.state.config.ENABLE_SIGNUP = False
 
+    # Seed system roles (admin, user, pending) if they don't exist
+    log.info("Seeding system roles...")
+    Roles.seed_system_roles()
+
     # This should be blocking (sync) so functions are not deactivated on first /get_models calls
     # when the first user lands on the / route.
     log.info("Installing external dependencies of functions and tools...")
@@ -871,7 +877,11 @@ app.state.config.ENABLE_EVALUATION_ARENA_MODELS = ENABLE_EVALUATION_ARENA_MODELS
 app.state.config.EVALUATION_ARENA_MODELS = EVALUATION_ARENA_MODELS
 
 # Migrate legacy access_control → access_grants on boot
-from open_webui.utils.access_control import migrate_access_control
+from open_webui.utils.access_control import (
+    has_capability,
+    can_access_user_chats,
+    migrate_access_control,
+)
 
 connections = app.state.config.TOOL_SERVER_CONNECTIONS
 if any("access_control" in c.get("config", {}) for c in connections):
@@ -1571,6 +1581,7 @@ app.include_router(skills.router, prefix="/api/v1/skills", tags=["skills"])
 app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"])
 app.include_router(folders.router, prefix="/api/v1/folders", tags=["folders"])
 app.include_router(groups.router, prefix="/api/v1/groups", tags=["groups"])
+app.include_router(roles.router, prefix="/api/v1/roles", tags=["roles"])
 app.include_router(files.router, prefix="/api/v1/files", tags=["files"])
 app.include_router(functions.router, prefix="/api/v1/functions", tags=["functions"])
 app.include_router(
@@ -1807,7 +1818,11 @@ async def chat_completion(
             ):  # temporary chats are not stored
                 # Verify chat ownership or Space contributor access
                 chat = Chats.get_chat_by_id_and_user_id(metadata["chat_id"], user.id)
-                if chat is None and user.role != "admin":  # admins can access any chat
+                if (
+                    chat is None
+                    and not can_access_user_chats(user.id)
+                    and user.role != "admin"
+                ):
                     # Check if user has Space contributor access
                     space_chat = Chats.get_chat_by_id(metadata["chat_id"])
                     if space_chat and space_chat.space_id:
@@ -2296,7 +2311,11 @@ async def get_current_usage(user=Depends(get_verified_user)):
     """
     try:
         # If public visibility is disabled, only allow admins to access this endpoint
-        if not ENABLE_PUBLIC_ACTIVE_USERS_COUNT and user.role != "admin":
+        if (
+            not ENABLE_PUBLIC_ACTIVE_USERS_COUNT
+            and not has_capability(user.id, "admin.manage_config")
+            and user.role != "admin"
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied. Only administrators can view usage statistics.",

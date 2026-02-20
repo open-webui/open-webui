@@ -21,6 +21,7 @@ from open_webui.internal.db import get_session
 from sqlalchemy.orm import Session
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.access_control import has_capability
 
 log = logging.getLogger(__name__)
 
@@ -37,11 +38,10 @@ async def get_groups(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-
     filter = {}
 
     # Admins can share to all groups regardless of share setting
-    if user.role != "admin":
+    if not has_capability(user.id, "admin.manage_groups") and user.role != "admin":
         filter["member_id"] = user.id
         if share is not None:
             filter["share"] = share

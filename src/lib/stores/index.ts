@@ -75,6 +75,17 @@ export const toolServers = writable([]);
 
 export const banners: Writable<Banner[]> = writable([]);
 
+// Branding config (fetched from public endpoint, no auth required)
+export const brandingConfig: Writable<{
+	favicon_url?: string;
+	logo_url?: string;
+	logo_dark_url?: string;
+	login_background_url?: string;
+	login_background_color?: string;
+	app_name?: string;
+	accent_color?: string;
+} | null> = writable(null);
+
 export const settings: Writable<Settings> = writable({});
 
 export const audioQueue = writable(null);

@@ -58,6 +58,7 @@ from open_webui.utils.payload import (
     apply_system_prompt_to_body,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.access_control import has_capability
 from open_webui.config import (
     UPLOAD_DIR,
 )
@@ -114,7 +115,6 @@ async def send_post_request(
     user: UserModel = None,
     metadata: Optional[dict] = None,
 ):
-
     r = None
     streaming = False
     try:
@@ -1355,7 +1355,10 @@ async def generate_chat_completion(
                     detail="Model not found",
                 )
     elif not bypass_filter:
-        if user.role != "admin":
+        if (
+            not has_capability(user.id, "admin.manage_connections")
+            and user.role != "admin"
+        ):
             raise HTTPException(
                 status_code=403,
                 detail="Model not found",
@@ -1466,7 +1469,10 @@ async def generate_openai_completion(
                     detail="Model not found",
                 )
     else:
-        if user.role != "admin":
+        if (
+            not has_capability(user.id, "admin.manage_connections")
+            and user.role != "admin"
+        ):
             raise HTTPException(
                 status_code=403,
                 detail="Model not found",
@@ -1554,7 +1560,10 @@ async def generate_openai_chat_completion(
                     detail="Model not found",
                 )
     else:
-        if user.role != "admin":
+        if (
+            not has_capability(user.id, "admin.manage_connections")
+            and user.role != "admin"
+        ):
             raise HTTPException(
                 status_code=403,
                 detail="Model not found",
@@ -1588,7 +1597,6 @@ async def get_openai_models(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-
     models = []
     if url_idx is None:
         model_list = await get_all_models(request, user=user)

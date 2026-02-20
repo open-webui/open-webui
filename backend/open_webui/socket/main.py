@@ -43,7 +43,7 @@ from open_webui.utils.auth import decode_token
 from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
 from open_webui.tasks import create_task, stop_item_tasks
 from open_webui.utils.redis import get_redis_connection
-from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control import has_permission, can_manage_all
 from open_webui.models.access_grants import AccessGrants
 
 
@@ -403,7 +403,11 @@ async def user_join(sid, data):
     await sio.enter_room(sid, f"user:{user.id}")
 
     # Join all the channels only if user has channels permission
-    if user.role == "admin" or has_permission(user.id, "features.channels"):
+    if (
+        can_manage_all(user.id, "channels")
+        or user.role == "admin"
+        or has_permission(user.id, "features.channels")
+    ):
         channels = Channels.get_channels_by_user_id(user.id)
         log.debug(f"{channels=}")
         for channel in channels:
@@ -441,7 +445,11 @@ async def join_channel(sid, data):
         return
 
     # Join all the channels only if user has channels permission
-    if user.role == "admin" or has_permission(user.id, "features.channels"):
+    if (
+        can_manage_all(user.id, "channels")
+        or user.role == "admin"
+        or has_permission(user.id, "features.channels")
+    ):
         channels = Channels.get_channels_by_user_id(user.id)
         log.debug(f"{channels=}")
         for channel in channels:
@@ -489,7 +497,8 @@ async def join_note(sid, data):
         return
 
     if (
-        user.role != "admin"
+        not can_manage_all(user.id, "channels")
+        and user.role != "admin"
         and user.id != note.user_id
         and not AccessGrants.has_access(
             user_id=user.id,

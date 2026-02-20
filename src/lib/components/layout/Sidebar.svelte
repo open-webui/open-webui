@@ -29,7 +29,8 @@
 		WEBUI_NAME,
 		sidebarWidth,
 		sidebarPinned,
-		activeChatIds
+		activeChatIds,
+		brandingConfig
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
@@ -845,7 +846,7 @@
 					>
 						<img
 							crossorigin="anonymous"
-							src="{WEBUI_BASE_URL}/static/favicon.png"
+							src={$brandingConfig?.favicon_url || `${WEBUI_BASE_URL}/static/favicon.png`}
 							class="size-6 rounded"
 							alt="logo"
 						/>
@@ -1184,7 +1185,7 @@
 			>
 				<img
 					crossorigin="anonymous"
-					src="{WEBUI_BASE_URL}/static/favicon.png"
+					src={$brandingConfig?.favicon_url || `${WEBUI_BASE_URL}/static/favicon.png`}
 					class="size-7 rounded"
 					alt="logo"
 				/>

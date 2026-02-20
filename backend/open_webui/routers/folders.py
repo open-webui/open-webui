@@ -31,7 +31,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control import has_capability, has_permission
 
 log = logging.getLogger(__name__)
 
@@ -56,11 +56,15 @@ async def get_folders(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    if user.role != "admin" and not has_permission(
-        user.id,
-        "features.folders",
-        request.app.state.config.USER_PERMISSIONS,
-        db=db,
+    if (
+        not has_capability(user.id, "admin.manage_users")
+        and user.role != "admin"
+        and not has_permission(
+            user.id,
+            "features.folders",
+            request.app.state.config.USER_PERMISSIONS,
+            db=db,
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -83,7 +87,6 @@ async def get_folders(
             if "files" in folder.data:
                 valid_files = []
                 for file in folder.data["files"]:
-
                     if file.get("type") == "file":
                         if Files.check_access_by_user_id(
                             file.get("id"), user.id, "read", db=db
@@ -173,7 +176,6 @@ async def update_folder_name_by_id(
 ):
     folder = Folders.get_folder_by_id_and_user_id(id, user.id, db=db)
     if folder:
-
         if form_data.name is not None:
             # Check if folder with same name exists
             existing_folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
@@ -305,7 +307,11 @@ async def delete_folder_by_id(
         chat_delete_permission = has_permission(
             user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS, db=db
         )
-        if user.role != "admin" and not chat_delete_permission:
+        if (
+            not has_capability(user.id, "admin.manage_users")
+            and user.role != "admin"
+            and not chat_delete_permission
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,

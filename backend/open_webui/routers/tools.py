@@ -30,7 +30,12 @@ from open_webui.utils.plugin import (
 )
 from open_webui.utils.tools import get_tool_specs
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_access, has_permission
+from open_webui.utils.access_control import (
+    has_access,
+    has_permission,
+    can_bypass_access_control,
+    can_manage_all,
+)
 from open_webui.utils.tools import get_tool_servers
 
 from open_webui.config import CACHE_DIR, BYPASS_ADMIN_ACCESS_CONTROL
@@ -153,7 +158,9 @@ async def get_tools(
                 )
             )
 
-    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
+    if can_bypass_access_control(user.id) or (
+        user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL
+    ):
         # Admin can see all tools
         return tools
     else:
@@ -195,7 +202,9 @@ async def get_tools(
 async def get_tool_list(
     user=Depends(get_verified_user), db: Session = Depends(get_session)
 ):
-    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
+    if can_bypass_access_control(user.id) or (
+        user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL
+    ):
         tools = Tools.get_tools(db=db)
     else:
         tools = Tools.get_tools_by_user_id(user.id, "read", db=db)
@@ -204,7 +213,8 @@ async def get_tool_list(
         ToolAccessResponse(
             **tool.model_dump(),
             write_access=(
-                (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                can_bypass_access_control(user.id)
+                or (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                 or user.id == tool.user_id
                 or AccessGrants.has_access(
                     user_id=user.id,
@@ -269,7 +279,9 @@ async def load_tool_from_url(
             file_name.endswith(".py")
             and (not file_name.startswith(("main.py", "index.py", "__init__.py")))
         )
-        else url_parts[-2] if len(url_parts) > 1 else "function"
+        else url_parts[-2]
+        if len(url_parts) > 1
+        else "function"
     )
 
     try:
@@ -307,18 +319,24 @@ async def export_tools(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    if user.role != "admin" and not has_permission(
-        user.id,
-        "workspace.tools_export",
-        request.app.state.config.USER_PERMISSIONS,
-        db=db,
+    if (
+        user.role != "admin"
+        and not can_manage_all(user.id, "tools")
+        and not has_permission(
+            user.id,
+            "workspace.tools_export",
+            request.app.state.config.USER_PERMISSIONS,
+            db=db,
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
+    if can_bypass_access_control(user.id) or (
+        user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL
+    ):
         return Tools.get_tools(db=db)
     else:
         return Tools.get_tools_by_user_id(user.id, "read", db=db)
@@ -336,15 +354,22 @@ async def create_new_tools(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    if user.role != "admin" and not (
-        has_permission(
-            user.id, "workspace.tools", request.app.state.config.USER_PERMISSIONS, db=db
-        )
-        or has_permission(
-            user.id,
-            "workspace.tools_import",
-            request.app.state.config.USER_PERMISSIONS,
-            db=db,
+    if (
+        user.role != "admin"
+        and not can_manage_all(user.id, "tools")
+        and not (
+            has_permission(
+                user.id,
+                "workspace.tools",
+                request.app.state.config.USER_PERMISSIONS,
+                db=db,
+            )
+            or has_permission(
+                user.id,
+                "workspace.tools_import",
+                request.app.state.config.USER_PERMISSIONS,
+                db=db,
+            )
         )
     ):
         raise HTTPException(
@@ -411,7 +436,8 @@ async def get_tools_by_id(
 
     if tools:
         if (
-            user.role == "admin"
+            can_manage_all(user.id, "tools")
+            or user.role == "admin"
             or tools.user_id == user.id
             or AccessGrants.has_access(
                 user_id=user.id,
@@ -424,7 +450,8 @@ async def get_tools_by_id(
             return ToolAccessResponse(
                 **tools.model_dump(),
                 write_access=(
-                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    can_bypass_access_control(user.id)
+                    or (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                     or user.id == tools.user_id
                     or AccessGrants.has_access(
                         user_id=user.id,
@@ -477,6 +504,7 @@ async def update_tools_by_id(
             permission="write",
             db=db,
         )
+        and not can_manage_all(user.id, "tools")
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -550,6 +578,7 @@ async def update_tool_access_by_id(
             permission="write",
             db=db,
         )
+        and not can_manage_all(user.id, "tools")
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -560,6 +589,7 @@ async def update_tool_access_by_id(
     # Strip public sharing if user lacks permission
     if (
         user.role != "admin"
+        and not can_manage_all(user.id, "tools")
         and has_public_read_access_grant(form_data.access_grants)
         and not has_permission(
             user.id,
@@ -609,6 +639,7 @@ async def delete_tools_by_id(
             permission="write",
             db=db,
         )
+        and not can_manage_all(user.id, "tools")
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -714,6 +745,7 @@ async def update_tools_valves_by_id(
             permission="write",
             db=db,
         )
+        and not can_manage_all(user.id, "tools")
         and user.role != "admin"
     ):
         raise HTTPException(

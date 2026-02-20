@@ -30,7 +30,8 @@
 		toolServers,
 		playingNotificationSound,
 		channels,
-		channelId
+		channelId,
+		brandingConfig
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -44,6 +45,8 @@
 	import 'tippy.js/dist/tippy.css';
 
 	import { executeToolServer, getBackendConfig, getVersion } from '$lib/apis';
+	import { getPublicBrandingConfig } from '$lib/apis/configs';
+	import { getEffectiveBranding, applyBranding } from '$lib/utils/branding';
 	import { getSessionUser, userSignOut, updateUserProfile } from '$lib/apis/auths';
 	import { getAllTags, getChatList } from '$lib/apis/chats';
 	import { chatCompletion } from '$lib/apis/openai';
@@ -369,9 +372,9 @@
 
 					if ($isLastActiveTab) {
 						if ($settings?.notificationEnabled ?? false) {
-							new Notification(`${displayTitle} • Open WebUI`, {
+							new Notification(`${displayTitle} • ${$WEBUI_NAME}`, {
 								body: content,
-								icon: `${WEBUI_BASE_URL}/static/favicon.png`
+								icon: $brandingConfig?.favicon_url || `${WEBUI_BASE_URL}/static/favicon.png`
 							});
 						}
 					}
@@ -809,27 +812,27 @@
 						return null;
 					});
 
-				if (sessionUser) {
-					await user.set(sessionUser);
-					await config.set(await getBackendConfig());
+					if (sessionUser) {
+						await user.set(sessionUser);
+						await config.set(await getBackendConfig());
 
-					if (
-						sessionUser.profile_image_url &&
-						sessionUser.profile_image_url.startsWith('data:image')
-					) {
-						const freshImage = generateInitialsImage(sessionUser.name);
-						if (freshImage !== sessionUser.profile_image_url) {
-							updateUserProfile(localStorage.token, {
-								name: sessionUser.name,
-								profile_image_url: freshImage
-							}).catch(() => {});
+						if (
+							sessionUser.profile_image_url &&
+							sessionUser.profile_image_url.startsWith('data:image')
+						) {
+							const freshImage = generateInitialsImage(sessionUser.name);
+							if (freshImage !== sessionUser.profile_image_url) {
+								updateUserProfile(localStorage.token, {
+									name: sessionUser.name,
+									profile_image_url: freshImage
+								}).catch(() => {});
+							}
 						}
-					}
 
-					if (sessionUser.must_change_password && $page.url.pathname !== '/auth/reset-password') {
-						await goto('/auth/reset-password');
-					}
-				} else {
+						if (sessionUser.must_change_password && $page.url.pathname !== '/auth/reset-password') {
+							await goto('/auth/reset-password');
+						}
+					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');
 						await goto(`/auth?redirect=${encodedUrl}`);
@@ -879,6 +882,16 @@
 			loaded = true;
 		}
 
+		try {
+			const bc2 = await getPublicBrandingConfig();
+			if (bc2) {
+				brandingConfig.set(bc2);
+				applyBranding(bc2);
+			}
+		} catch (e) {
+			console.debug('Branding config not available:', e);
+		}
+
 		// Auto-show SyncStatsModal when opened with ?sync=true (from community)
 		if (
 			(window.opener ?? false) &&
@@ -905,7 +918,11 @@
 
 <svelte:head>
 	<title>{$WEBUI_NAME}</title>
-	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
+	<link
+		crossorigin="anonymous"
+		rel="icon"
+		href={$brandingConfig?.favicon_url || `${WEBUI_BASE_URL}/static/favicon.png`}
+	/>
 
 	<meta name="apple-mobile-web-app-title" content={$WEBUI_NAME} />
 	<meta name="description" content={$WEBUI_NAME} />

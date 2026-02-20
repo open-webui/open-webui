@@ -61,7 +61,11 @@ from open_webui.utils.chat import generate_chat_completion
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control import (
+    has_permission,
+    can_manage_all,
+    can_access_user_chats,
+)
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.channels import extract_mentions, replace_mentions
 from open_webui.internal.db import get_session
@@ -146,8 +150,12 @@ def check_channels_access(request: Request, user: Optional[UserModel] = None):
         )
 
     if user:
-        if user.role != "admin" and not has_permission(
-            user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
+        if (
+            not can_manage_all(user.id, "channels")
+            and user.role != "admin"
+            and not has_permission(
+                user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
+            )
         ):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -230,7 +238,7 @@ async def get_all_channels(
     db: Session = Depends(get_session),
 ):
     check_channels_access(request)
-    if user.role == "admin":
+    if can_manage_all(user.id, "channels") or user.role == "admin":
         return Channels.get_channels(db=db)
     return Channels.get_channels_by_user_id(user.id, db=db)
 
@@ -321,7 +329,11 @@ async def create_new_channel(
 ):
     check_channels_access(request, user)
 
-    if form_data.type not in ["group", "dm"] and user.role != "admin":
+    if (
+        form_data.type not in ["group", "dm"]
+        and not can_manage_all(user.id, "channels")
+        and user.role != "admin"
+    ):
         # Only admins can create standard channels (joined by default)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -452,8 +464,10 @@ async def get_channel_by_id(
             }
         )
     else:
-        if user.role != "admin" and not channel_has_access(
-            user.id, channel, permission="read", db=db
+        if (
+            not can_manage_all(user.id, "channels")
+            and user.role != "admin"
+            and not channel_has_access(user.id, channel, permission="read", db=db)
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -484,7 +498,9 @@ async def get_channel_by_id(
                 "is_manager": Channels.is_user_channel_manager(
                     channel.id, user.id, db=db
                 ),
-                "write_access": write_access or user.role == "admin",
+                "write_access": write_access
+                or can_manage_all(user.id, "channels")
+                or user.role == "admin",
                 "user_count": user_count,
                 "last_read_at": channel_member.last_read_at if channel_member else None,
                 "unread_count": unread_count,
@@ -640,7 +656,11 @@ async def add_members_by_id(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if channel.user_id != user.id and user.role != "admin":
+    if (
+        channel.user_id != user.id
+        and not can_manage_all(user.id, "channels")
+        and user.role != "admin"
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
@@ -683,7 +703,11 @@ async def remove_members_by_id(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if channel.user_id != user.id and user.role != "admin":
+    if (
+        channel.user_id != user.id
+        and not can_manage_all(user.id, "channels")
+        and user.role != "admin"
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
@@ -722,7 +746,11 @@ async def update_channel_by_id(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if channel.user_id != user.id and user.role != "admin":
+    if (
+        channel.user_id != user.id
+        and not can_manage_all(user.id, "channels")
+        and user.role != "admin"
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
@@ -757,7 +785,11 @@ async def delete_channel_by_id(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if channel.user_id != user.id and user.role != "admin":
+    if (
+        channel.user_id != user.id
+        and not can_manage_all(user.id, "channels")
+        and user.role != "admin"
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
@@ -812,8 +844,10 @@ async def get_channel_messages(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
-        if user.role != "admin" and not channel_has_access(
-            user.id, channel, permission="read", db=db
+        if (
+            not can_access_user_chats(user.id)
+            and user.role != "admin"
+            and not channel_has_access(user.id, channel, permission="read", db=db)
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -889,8 +923,10 @@ async def get_pinned_channel_messages(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
-        if user.role != "admin" and not channel_has_access(
-            user.id, channel, permission="read", db=db
+        if (
+            not can_access_user_chats(user.id)
+            and user.role != "admin"
+            and not channel_has_access(user.id, channel, permission="read", db=db)
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -1174,12 +1210,16 @@ async def new_message_handler(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
-        if user.role != "admin" and not channel_has_access(
-            user.id,
-            channel,
-            permission="write",
-            strict=False,
-            db=db,
+        if (
+            not can_access_user_chats(user.id)
+            and not (user.role == "admin" and ENABLE_ADMIN_CHAT_ACCESS)
+            and not channel_has_access(
+                user.id,
+                channel,
+                permission="write",
+                strict=False,
+                db=db,
+            )
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -1319,8 +1359,10 @@ async def get_channel_message(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
-        if user.role != "admin" and not channel_has_access(
-            user.id, channel, permission="read", db=db
+        if (
+            not can_access_user_chats(user.id)
+            and user.role != "admin"
+            and not channel_has_access(user.id, channel, permission="read", db=db)
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -1373,8 +1415,10 @@ async def get_channel_message_data(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
-        if user.role != "admin" and not channel_has_access(
-            user.id, channel, permission="read", db=db
+        if (
+            not can_access_user_chats(user.id)
+            and user.role != "admin"
+            and not channel_has_access(user.id, channel, permission="read", db=db)
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()

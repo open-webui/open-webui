@@ -13,6 +13,7 @@ from starlette.responses import FileResponse
 from open_webui.utils.misc import get_gravatar_url
 from open_webui.utils.pdf_generator import PDFGenerator
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.access_control import can_export_data
 from open_webui.utils.code_interpreter import execute_code_jupyter
 
 log = logging.getLogger(__name__)
@@ -104,7 +105,7 @@ async def download_chat_as_pdf(
 
 @router.get("/db/download")
 async def download_db(user=Depends(get_admin_user)):
-    if not ENABLE_ADMIN_EXPORT:
+    if not can_export_data(user.id) and not ENABLE_ADMIN_EXPORT:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,

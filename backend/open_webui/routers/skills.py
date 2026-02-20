@@ -19,7 +19,12 @@ from open_webui.models.skills import (
 )
 from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_access, has_permission
+from open_webui.utils.access_control import (
+    has_access,
+    has_permission,
+    can_bypass_access_control,
+    can_manage_all,
+)
 
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
@@ -42,7 +47,9 @@ async def get_skills(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
+    if can_bypass_access_control(user.id) or (
+        user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL
+    ):
         skills = Skills.get_skills(db=db)
     else:
         user_group_ids = {
@@ -90,7 +97,10 @@ async def get_skill_list(
     if view_option:
         filter["view_option"] = view_option
 
-    if not (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL):
+    if not (
+        can_bypass_access_control(user.id)
+        or (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+    ):
         groups = Groups.get_groups_by_member_id(user.id, db=db)
         if groups:
             filter["group_ids"] = [group.id for group in groups]
@@ -104,7 +114,8 @@ async def get_skill_list(
             SkillAccessResponse(
                 **skill.model_dump(),
                 write_access=(
-                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    can_bypass_access_control(user.id)
+                    or (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                     or user.id == skill.user_id
                     or AccessGrants.has_access(
                         user_id=user.id,
@@ -132,18 +143,24 @@ async def export_skills(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    if user.role != "admin" and not has_permission(
-        user.id,
-        "workspace.skills",
-        request.app.state.config.USER_PERMISSIONS,
-        db=db,
+    if (
+        user.role != "admin"
+        and not can_manage_all(user.id, "skills")
+        and not has_permission(
+            user.id,
+            "workspace.skills",
+            request.app.state.config.USER_PERMISSIONS,
+            db=db,
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
+    if can_bypass_access_control(user.id) or (
+        user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL
+    ):
         return Skills.get_skills(db=db)
     else:
         return Skills.get_skills_by_user_id(user.id, "read", db=db)
@@ -161,8 +178,15 @@ async def create_new_skill(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    if user.role != "admin" and not has_permission(
-        user.id, "workspace.skills", request.app.state.config.USER_PERMISSIONS, db=db
+    if (
+        user.role != "admin"
+        and not can_manage_all(user.id, "skills")
+        and not has_permission(
+            user.id,
+            "workspace.skills",
+            request.app.state.config.USER_PERMISSIONS,
+            db=db,
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -208,7 +232,8 @@ async def get_skill_by_id(
 
     if skill:
         if (
-            user.role == "admin"
+            can_manage_all(user.id, "skills")
+            or user.role == "admin"
             or skill.user_id == user.id
             or AccessGrants.has_access(
                 user_id=user.id,
@@ -221,7 +246,8 @@ async def get_skill_by_id(
             return SkillAccessResponse(
                 **skill.model_dump(),
                 write_access=(
-                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    can_bypass_access_control(user.id)
+                    or (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                     or user.id == skill.user_id
                     or AccessGrants.has_access(
                         user_id=user.id,
@@ -273,6 +299,7 @@ async def update_skill_by_id(
             permission="write",
             db=db,
         )
+        and not can_manage_all(user.id, "skills")
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -334,6 +361,7 @@ async def update_skill_access_by_id(
             permission="write",
             db=db,
         )
+        and not can_manage_all(user.id, "skills")
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -344,6 +372,7 @@ async def update_skill_access_by_id(
     # Strip public sharing if user lacks permission
     if (
         user.role != "admin"
+        and not can_manage_all(user.id, "skills")
         and has_public_read_access_grant(form_data.access_grants)
         and not has_permission(
             user.id,
@@ -377,7 +406,8 @@ async def toggle_skill_by_id(
     skill = Skills.get_skill_by_id(id, db=db)
     if skill:
         if (
-            user.role == "admin"
+            can_manage_all(user.id, "skills")
+            or user.role == "admin"
             or skill.user_id == user.id
             or AccessGrants.has_access(
                 user_id=user.id,
@@ -436,6 +466,7 @@ async def delete_skill_by_id(
             permission="write",
             db=db,
         )
+        and not can_manage_all(user.id, "skills")
         and user.role != "admin"
     ):
         raise HTTPException(

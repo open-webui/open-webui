@@ -56,6 +56,7 @@ from open_webui.utils.misc import (
 )
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.access_control import has_capability
 from open_webui.utils.headers import include_user_info_headers
 
 log = logging.getLogger(__name__)
@@ -989,7 +990,10 @@ async def generate_chat_completion(
                     detail="Model not found",
                 )
     elif not bypass_filter:
-        if user.role != "admin":
+        if (
+            not has_capability(user.id, "admin.manage_connections")
+            and user.role != "admin"
+        ):
             raise HTTPException(
                 status_code=403,
                 detail="Model not found",

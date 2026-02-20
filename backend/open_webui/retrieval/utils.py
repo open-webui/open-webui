@@ -30,6 +30,7 @@ from open_webui.models.knowledge import Knowledges
 from open_webui.models.chats import Chats
 from open_webui.models.notes import Notes
 from open_webui.models.access_grants import AccessGrants
+from open_webui.utils.access_control import can_manage_all
 
 from open_webui.retrieval.vector.main import GetResult
 from open_webui.utils.headers import include_user_info_headers
@@ -309,7 +310,7 @@ async def query_doc_with_hybrid_search(
 
         log.info(
             "query_doc_with_hybrid_search:result "
-            + f'{result["metadatas"]} {result["distances"]}'
+            + f"{result['metadatas']} {result['distances']}"
         )
         return result
     except Exception as e:
@@ -1005,7 +1006,8 @@ async def get_sources_from_items(
             note = Notes.get_note_by_id(item.get("id"))
 
             if note and (
-                user.role == "admin"
+                can_manage_all(user.id, "knowledge")
+                or user.role == "admin"
                 or note.user_id == user.id
                 or AccessGrants.has_access(
                     user_id=user.id,
@@ -1024,7 +1026,11 @@ async def get_sources_from_items(
             # Chat Attached
             chat = Chats.get_chat_by_id(item.get("id"))
 
-            if chat and (user.role == "admin" or chat.user_id == user.id):
+            if chat and (
+                can_manage_all(user.id, "knowledge")
+                or user.role == "admin"
+                or chat.user_id == user.id
+            ):
                 messages_map = chat.chat.get("history", {}).get("messages", {})
                 message_id = chat.chat.get("history", {}).get("currentId")
 
@@ -1102,7 +1108,8 @@ async def get_sources_from_items(
             knowledge_base = Knowledges.get_knowledge_by_id(item.get("id"))
 
             if knowledge_base and (
-                user.role == "admin"
+                can_manage_all(user.id, "knowledge")
+                or user.role == "admin"
                 or knowledge_base.user_id == user.id
                 or AccessGrants.has_access(
                     user_id=user.id,
@@ -1116,7 +1123,8 @@ async def get_sources_from_items(
                     or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
                 ):
                     if knowledge_base and (
-                        user.role == "admin"
+                        can_manage_all(user.id, "knowledge")
+                        or user.role == "admin"
                         or knowledge_base.user_id == user.id
                         or AccessGrants.has_access(
                             user_id=user.id,

@@ -35,7 +35,7 @@ from pydantic import BaseModel
 
 from open_webui.utils.misc import strict_match_mime_type
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control import has_permission, has_capability
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.config import (
     WHISPER_MODEL_AUTO_UPDATE,
@@ -338,8 +338,12 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if user.role != "admin" and not has_permission(
-        user.id, "chat.tts", request.app.state.config.USER_PERMISSIONS
+    if (
+        not has_capability(user.id, "admin.manage_config")
+        and user.role != "admin"
+        and not has_permission(
+            user.id, "chat.tts", request.app.state.config.USER_PERMISSIONS
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -1175,8 +1179,12 @@ def transcription(
     language: Optional[str] = Form(None),
     user=Depends(get_verified_user),
 ):
-    if user.role != "admin" and not has_permission(
-        user.id, "chat.stt", request.app.state.config.USER_PERMISSIONS
+    if (
+        not has_capability(user.id, "admin.manage_config")
+        and user.role != "admin"
+        and not has_permission(
+            user.id, "chat.stt", request.app.state.config.USER_PERMISSIONS
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

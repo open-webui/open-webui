@@ -2,6 +2,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { brandingConfig } from '$lib/stores';
 
 	let selected = '';
 </script>
@@ -50,7 +51,7 @@
 			}}
 		>
 			<img
-				src="{WEBUI_BASE_URL}/static/favicon.png"
+				src={$brandingConfig?.favicon_url || `${WEBUI_BASE_URL}/static/favicon.png`}
 				class="size-10 {selected === '' ? 'rounded-2xl' : 'rounded-full'}"
 				alt="logo"
 				draggable="false"

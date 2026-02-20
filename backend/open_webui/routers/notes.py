@@ -27,7 +27,12 @@ from open_webui.constants import ERROR_MESSAGES
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control import (
+    has_permission,
+    can_bypass_access_control,
+    can_access_user_chats,
+    can_export_data,
+)
 from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant
 from open_webui.internal.db import get_session
 from sqlalchemy.orm import Session
@@ -57,8 +62,12 @@ async def get_notes(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    if user.role != "admin" and not has_permission(
-        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+    if (
+        user.role != "admin"
+        and not can_access_user_chats(user.id)
+        and not has_permission(
+            user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -102,8 +111,12 @@ async def search_notes(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    if user.role != "admin" and not has_permission(
-        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+    if (
+        user.role != "admin"
+        and not can_access_user_chats(user.id)
+        and not has_permission(
+            user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -128,7 +141,10 @@ async def search_notes(
     if direction:
         filter["direction"] = direction
 
-    if not user.role == "admin" or not BYPASS_ADMIN_ACCESS_CONTROL:
+    if not (
+        can_bypass_access_control(user.id)
+        or (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+    ):
         groups = Groups.get_groups_by_member_id(user.id, db=db)
         if groups:
             filter["group_ids"] = [group.id for group in groups]
@@ -150,8 +166,12 @@ async def create_new_note(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    if user.role != "admin" and not has_permission(
-        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+    if (
+        user.role != "admin"
+        and not can_access_user_chats(user.id)
+        and not has_permission(
+            user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -184,8 +204,12 @@ async def get_note_by_id(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    if user.role != "admin" and not has_permission(
-        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+    if (
+        user.role != "admin"
+        and not can_access_user_chats(user.id)
+        and not has_permission(
+            user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -243,8 +267,12 @@ async def update_note_by_id(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    if user.role != "admin" and not has_permission(
-        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+    if (
+        user.role != "admin"
+        and not can_access_user_chats(user.id)
+        and not has_permission(
+            user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -317,8 +345,12 @@ async def update_note_access_by_id(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    if user.role != "admin" and not has_permission(
-        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+    if (
+        user.role != "admin"
+        and not can_access_user_chats(user.id)
+        and not has_permission(
+            user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -381,8 +413,12 @@ async def delete_note_by_id(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    if user.role != "admin" and not has_permission(
-        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+    if (
+        user.role != "admin"
+        and not can_access_user_chats(user.id)
+        and not has_permission(
+            user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

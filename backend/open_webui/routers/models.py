@@ -34,7 +34,11 @@ from fastapi.responses import FileResponse, StreamingResponse
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control import (
+    has_permission,
+    can_bypass_access_control,
+    can_manage_all,
+)
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, STATIC_DIR
 from open_webui.internal.db import get_session
 from sqlalchemy.orm import Session
@@ -90,7 +94,10 @@ async def get_models(
     groups = Groups.get_groups_by_member_id(user.id, db=db)
     user_group_ids = {group.id for group in groups}
 
-    if not user.role == "admin" or not BYPASS_ADMIN_ACCESS_CONTROL:
+    if not (
+        can_bypass_access_control(user.id)
+        or (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+    ):
         if groups:
             filter["group_ids"] = [group.id for group in groups]
 
@@ -114,7 +121,8 @@ async def get_models(
             ModelAccessResponse(
                 **model.model_dump(),
                 write_access=(
-                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    can_bypass_access_control(user.id)
+                    or (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                     or user.id == model.user_id
                     or model.id in writable_model_ids
                 ),
@@ -146,7 +154,9 @@ async def get_base_models(
 async def get_model_tags(
     user=Depends(get_verified_user), db: Session = Depends(get_session)
 ):
-    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
+    if can_bypass_access_control(user.id) or (
+        user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL
+    ):
         models = Models.get_models(db=db)
     else:
         models = Models.get_models_by_user_id(user.id, db=db)
@@ -175,8 +185,15 @@ async def create_new_model(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    if user.role != "admin" and not has_permission(
-        user.id, "workspace.models", request.app.state.config.USER_PERMISSIONS, db=db
+    if (
+        not can_manage_all(user.id, "models")
+        and user.role != "admin"
+        and not has_permission(
+            user.id,
+            "workspace.models",
+            request.app.state.config.USER_PERMISSIONS,
+            db=db,
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -218,18 +235,24 @@ async def export_models(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    if user.role != "admin" and not has_permission(
-        user.id,
-        "workspace.models_export",
-        request.app.state.config.USER_PERMISSIONS,
-        db=db,
+    if (
+        not can_manage_all(user.id, "models")
+        and user.role != "admin"
+        and not has_permission(
+            user.id,
+            "workspace.models_export",
+            request.app.state.config.USER_PERMISSIONS,
+            db=db,
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
+    if can_bypass_access_control(user.id) or (
+        user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL
+    ):
         return Models.get_models(db=db)
     else:
         return Models.get_models_by_user_id(user.id, db=db)
@@ -251,11 +274,15 @@ async def import_models(
     form_data: ModelsImportForm = (...),
     db: Session = Depends(get_session),
 ):
-    if user.role != "admin" and not has_permission(
-        user.id,
-        "workspace.models_import",
-        request.app.state.config.USER_PERMISSIONS,
-        db=db,
+    if (
+        not can_manage_all(user.id, "models")
+        and user.role != "admin"
+        and not has_permission(
+            user.id,
+            "workspace.models_import",
+            request.app.state.config.USER_PERMISSIONS,
+            db=db,
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -344,7 +371,8 @@ async def get_model_by_id(
     model = Models.get_model_by_id(id, db=db)
     if model:
         if (
-            (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+            can_bypass_access_control(user.id)
+            or (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
             or model.user_id == user.id
             or AccessGrants.has_access(
                 user_id=user.id,
@@ -357,7 +385,8 @@ async def get_model_by_id(
             return ModelAccessResponse(
                 **model.model_dump(),
                 write_access=(
-                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    can_bypass_access_control(user.id)
+                    or (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                     or user.id == model.user_id
                     or AccessGrants.has_access(
                         user_id=user.id,
@@ -462,7 +491,8 @@ async def toggle_model_by_id(
     model = Models.get_model_by_id(id, db=db)
     if model:
         if (
-            user.role == "admin"
+            can_manage_all(user.id, "models")
+            or user.role == "admin"
             or model.user_id == user.id
             or AccessGrants.has_access(
                 user_id=user.id,
@@ -520,6 +550,7 @@ async def update_model_by_id(
             permission="write",
             db=db,
         )
+        and not can_manage_all(user.id, "models")
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -555,7 +586,7 @@ async def update_model_access_by_id(
     # Non-preset models (e.g. direct Ollama/OpenAI models) may not have a DB
     # entry yet. Create a minimal one so access grants can be stored.
     if not model:
-        if user.role != "admin":
+        if not can_manage_all(user.id, "models") and user.role != "admin":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -585,6 +616,7 @@ async def update_model_access_by_id(
             permission="write",
             db=db,
         )
+        and not can_manage_all(user.id, "models")
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -594,7 +626,8 @@ async def update_model_access_by_id(
 
     # Strip public sharing if user lacks permission
     if (
-        user.role != "admin"
+        not can_manage_all(user.id, "models")
+        and user.role != "admin"
         and has_public_read_access_grant(form_data.access_grants)
         and not has_permission(
             user.id,
@@ -637,7 +670,8 @@ async def delete_model_by_id(
         )
 
     if (
-        user.role != "admin"
+        not can_manage_all(user.id, "models")
+        and user.role != "admin"
         and model.user_id != user.id
         and not AccessGrants.has_access(
             user_id=user.id,

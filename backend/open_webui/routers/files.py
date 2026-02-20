@@ -48,6 +48,7 @@ from open_webui.storage.provider import Storage
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.access_control import can_manage_all
 from open_webui.utils.misc import strict_match_mime_type
 from pydantic import BaseModel
 
@@ -384,7 +385,7 @@ async def list_files(
     content: bool = Query(True),
     db: Session = Depends(get_session),
 ):
-    if user.role == "admin":
+    if can_manage_all(user.id, "files") or user.role == "admin":
         files = Files.get_files(db=db)
     else:
         files = Files.get_files_by_user_id(user.id, db=db)
@@ -421,7 +422,9 @@ async def search_files(
     Uses SQL-based filtering with pagination for better performance.
     """
     # Determine user_id: null for admin (search all), user.id for regular users
-    user_id = None if user.role == "admin" else user.id
+    user_id = (
+        None if (can_manage_all(user.id, "files") or user.role == "admin") else user.id
+    )
 
     # Use optimized database query with pagination
     files = Files.search_files(
@@ -494,6 +497,7 @@ async def get_file_by_id(
 
     if (
         file.user_id == user.id
+        or can_manage_all(user.id, "files")
         or user.role == "admin"
         or has_access_to_file(id, "read", user, db=db)
     ):
@@ -522,6 +526,7 @@ async def get_file_process_status(
 
     if (
         file.user_id == user.id
+        or can_manage_all(user.id, "files")
         or user.role == "admin"
         or has_access_to_file(id, "read", user, db=db)
     ):
@@ -587,6 +592,7 @@ async def get_file_data_content_by_id(
 
     if (
         file.user_id == user.id
+        or can_manage_all(user.id, "files")
         or user.role == "admin"
         or has_access_to_file(id, "read", user, db=db)
     ):
@@ -625,6 +631,7 @@ def update_file_data_content_by_id(
 
     if (
         file.user_id == user.id
+        or can_manage_all(user.id, "files")
         or user.role == "admin"
         or has_access_to_file(id, "write", user, db=db)
     ):
@@ -669,6 +676,7 @@ async def get_file_content_by_id(
 
     if (
         file.user_id == user.id
+        or can_manage_all(user.id, "files")
         or user.role == "admin"
         or has_access_to_file(id, "read", user, db=db)
     ):
@@ -746,6 +754,7 @@ async def get_html_file_content_by_id(
 
     if (
         file.user_id == user.id
+        or can_manage_all(user.id, "files")
         or user.role == "admin"
         or has_access_to_file(id, "read", user, db=db)
     ):
@@ -790,6 +799,7 @@ async def get_file_content_by_id(
 
     if (
         file.user_id == user.id
+        or can_manage_all(user.id, "files")
         or user.role == "admin"
         or has_access_to_file(id, "read", user, db=db)
     ):
@@ -854,6 +864,7 @@ async def delete_file_by_id(
 
     if (
         file.user_id == user.id
+        or can_manage_all(user.id, "files")
         or user.role == "admin"
         or has_access_to_file(id, "write", user, db=db)
     ):

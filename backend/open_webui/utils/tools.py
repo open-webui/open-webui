@@ -40,7 +40,7 @@ from open_webui.models.users import UserModel
 from open_webui.models.groups import Groups
 from open_webui.models.access_grants import AccessGrants
 from open_webui.utils.plugin import load_tool_module_by_id
-from open_webui.utils.access_control import has_access
+from open_webui.utils.access_control import has_access, can_bypass_access_control
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
@@ -146,7 +146,9 @@ def has_tool_server_access(
     user: UserModel, server_connection: dict, user_group_ids: set = None
 ) -> bool:
     """Check if user has access to a tool server (MCP or OpenAPI)."""
-    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
+    if can_bypass_access_control(user.id) or (
+        user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL
+    ):
         return True
 
     if user_group_ids is None:
@@ -171,7 +173,10 @@ async def get_tools(
         if tool:
             # Check access control for local tools
             if (
-                not (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                not (
+                    can_bypass_access_control(user.id)
+                    or (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                )
                 and tool.user_id != user.id
                 and not AccessGrants.has_access(
                     user_id=user.id,
@@ -273,7 +278,6 @@ async def get_tools(
                     function_names = server_id_splits[1].split(",")
 
                 if type == "openapi":
-
                     tool_server_data = None
                     for server in await get_tool_servers(request):
                         if server["id"] == server_id:

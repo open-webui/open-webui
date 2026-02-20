@@ -11,6 +11,7 @@ from typing import Any
 from open_webui.env import PIP_OPTIONS, PIP_PACKAGE_INDEX_OPTIONS, OFFLINE_MODE
 from open_webui.models.functions import Functions
 from open_webui.models.tools import Tools
+from open_webui.utils.access_control import has_capability
 
 log = logging.getLogger(__name__)
 
@@ -205,7 +206,6 @@ def replace_imports(content):
 
 
 def load_tool_module_by_id(tool_id, content=None):
-
     if content is None:
         tool = Tools.get_tool_by_id(tool_id)
         if not tool:
@@ -442,7 +442,10 @@ def install_tool_and_function_dependencies():
                 all_dependencies += f"{dependencies}, "
         for tool in tool_list:
             # Only install requirements for admin tools
-            if tool.user and tool.user.role == "admin":
+            if tool.user and (
+                has_capability(tool.user.id, "admin.manage_functions")
+                or tool.user.role == "admin"
+            ):
                 frontmatter = extract_frontmatter(replace_imports(tool.content))
                 if dependencies := frontmatter.get("requirements"):
                     all_dependencies += f"{dependencies}, "

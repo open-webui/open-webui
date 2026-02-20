@@ -39,7 +39,11 @@ from open_webui.utils.auth import (
     get_verified_user,
     validate_password,
 )
-from open_webui.utils.access_control import get_permissions, has_permission
+from open_webui.utils.access_control import (
+    get_permissions,
+    has_capability,
+    has_permission,
+)
 
 log = logging.getLogger(__name__)
 
@@ -306,7 +310,8 @@ async def update_user_settings_by_session_user(
     updated_user_settings = form_data.model_dump()
     ui_settings = updated_user_settings.get("ui")
     if (
-        user.role != "admin"
+        not has_capability(user.id, "admin.manage_users")
+        and user.role != "admin"
         and ui_settings is not None
         and "toolServers" in ui_settings.keys()
         and not has_permission(

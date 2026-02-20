@@ -1,10 +1,220 @@
 from typing import Optional, Set, Union, List, Dict, Any
+from functools import lru_cache
 from open_webui.models.users import Users, UserModel
 from open_webui.models.groups import Groups
 
 
 from open_webui.config import DEFAULT_USER_PERMISSIONS
 import json
+
+
+# Request-scoped cache for user capabilities
+# This avoids repeated DB queries within a single request
+_capability_cache: Dict[str, Set[str]] = {}
+
+
+def clear_capability_cache() -> None:
+    """Clear the capability cache. Call at the start of each request."""
+    global _capability_cache
+    _capability_cache = {}
+
+
+def has_capability(
+    user_id: str,
+    capability: str,
+    db: Optional[Any] = None,
+) -> bool:
+    """
+    Check if a user has a specific admin-tier capability based on their role.
+
+    Capabilities are distinct from permissions:
+    - Permissions: User-facing feature toggles (can use TTS? can share chats?)
+    - Capabilities: Admin-tier actions (can manage users? can read all chats?)
+
+    This function:
+    1. Looks up the user's role_id
+    2. Checks if that role has the specified capability via role_capability table
+    3. Falls back to checking if user.role == "admin" (backward compatibility)
+
+    Args:
+        user_id: The user's ID
+        capability: The capability to check (e.g., "admin.manage_users", "audit.read_user_chats")
+        db: Optional database session
+
+    Returns:
+        True if the user has the capability, False otherwise
+    """
+    from open_webui.internal.db import get_db_context
+    from open_webui.models.roles import RoleCapability, Role
+    from open_webui.models.users import User
+
+    # Check cache first
+    global _capability_cache
+    if user_id in _capability_cache:
+        return capability in _capability_cache[user_id]
+
+    with get_db_context(db) as db:
+        user = db.query(User).filter_by(id=user_id).first()
+        if not user:
+            return False
+
+        # Backward compatibility: if user has role_id, use new system
+        # Otherwise fall back to checking user.role == "admin"
+        if hasattr(user, "role_id") and user.role_id:
+            # New system: check role_capability table
+            exists = (
+                db.query(RoleCapability)
+                .filter_by(
+                    role_id=user.role_id,
+                    capability=capability,
+                )
+                .first()
+            )
+            return exists is not None
+        else:
+            # Backward compatibility: admin role has all capabilities
+            # This ensures existing code works during migration
+            if user.role == "admin":
+                return True
+            return False
+
+
+def get_user_capabilities(
+    user_id: str,
+    db: Optional[Any] = None,
+) -> Set[str]:
+    """
+    Get all capabilities for a user based on their role.
+
+    Returns a set of capability strings that the user has.
+    Results are cached per-request for performance.
+
+    Args:
+        user_id: The user's ID
+        db: Optional database session
+
+    Returns:
+        Set of capability strings (e.g., {"admin.manage_users", "audit.read_user_chats"})
+    """
+    from open_webui.internal.db import get_db_context
+    from open_webui.models.roles import RoleCapability, Role, SYSTEM_CAPABILITIES
+    from open_webui.models.users import User
+
+    global _capability_cache
+    if user_id in _capability_cache:
+        return _capability_cache[user_id]
+
+    with get_db_context(db) as db:
+        user = db.query(User).filter_by(id=user_id).first()
+        if not user:
+            _capability_cache[user_id] = set()
+            return set()
+
+        capabilities = set()
+
+        # New system: get capabilities from role
+        if hasattr(user, "role_id") and user.role_id:
+            caps = db.query(RoleCapability).filter_by(role_id=user.role_id).all()
+            capabilities = {cap.capability for cap in caps}
+        else:
+            # Backward compatibility: admin role has all capabilities
+            if user.role == "admin":
+                capabilities = set(SYSTEM_CAPABILITIES.keys())
+
+        _capability_cache[user_id] = capabilities
+        return capabilities
+
+
+def has_any_capability(
+    user_id: str,
+    capabilities: List[str],
+    db: Optional[Any] = None,
+) -> bool:
+    """
+    Check if a user has ANY of the specified capabilities.
+
+    Args:
+        user_id: The user's ID
+        capabilities: List of capability strings to check
+        db: Optional database session
+
+    Returns:
+        True if the user has at least one of the capabilities
+    """
+    user_caps = get_user_capabilities(user_id, db=db)
+    return bool(user_caps.intersection(capabilities))
+
+
+def has_all_capabilities(
+    user_id: str,
+    capabilities: List[str],
+    db: Optional[Any] = None,
+) -> bool:
+    """
+    Check if a user has ALL of the specified capabilities.
+
+    Args:
+        user_id: The user's ID
+        capabilities: List of capability strings to check
+        db: Optional database session
+
+    Returns:
+        True if the user has all of the capabilities
+    """
+    user_caps = get_user_capabilities(user_id, db=db)
+    return all(cap in user_caps for cap in capabilities)
+
+
+def can_bypass_access_control(user_id: str, db: Optional[Any] = None) -> bool:
+    """
+    Check if user can bypass access control for workspace resources.
+
+    This maps to the "admin.bypass_access_control" capability.
+    For backward compatibility, also respects the legacy BYPASS_ADMIN_ACCESS_CONTROL config.
+
+    Use this instead of: user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL
+    """
+    return has_capability(user_id, "admin.bypass_access_control", db=db)
+
+
+def can_manage_all(user_id: str, resource_type: str, db: Optional[Any] = None) -> bool:
+    """
+    Check if user can manage all resources of a given type regardless of ownership.
+
+    Maps resource types to workspace.manage_all_* capabilities.
+    Use this instead of: user.role == "admin" (for ownership-or-admin checks)
+
+    Args:
+        user_id: The user's ID
+        resource_type: One of: models, knowledge, tools, prompts, skills,
+                       spaces, files, channels
+        db: Optional database session
+
+    Returns:
+        True if the user has the workspace.manage_all_{resource_type} capability
+    """
+    capability = f"workspace.manage_all_{resource_type}"
+    return has_capability(user_id, capability, db=db)
+
+
+def can_access_user_chats(user_id: str, db: Optional[Any] = None) -> bool:
+    """
+    Check if user can access other users' chats (audit/compliance use case).
+
+    Maps to the "audit.read_user_chats" capability.
+    Use this instead of: user.role == "admin" and ENABLE_ADMIN_CHAT_ACCESS
+    """
+    return has_capability(user_id, "audit.read_user_chats", db=db)
+
+
+def can_export_data(user_id: str, db: Optional[Any] = None) -> bool:
+    """
+    Check if user can export system data (chats, analytics, DB).
+
+    Maps to the "audit.export_data" capability.
+    Use this instead of: user.role == "admin" and ENABLE_ADMIN_EXPORT
+    """
+    return has_capability(user_id, "audit.export_data", db=db)
 
 
 def fill_missing_permissions(
@@ -31,16 +241,27 @@ def get_permissions(
     db: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """
-    Get all permissions for a user by combining the permissions of all groups the user is a member of.
-    If a permission is defined in multiple groups, the most permissive value is used (True > False).
+    Get all permissions for a user by combining:
+    1. Default permissions (base)
+    2. Role permissions (from user's assigned role)
+    3. Group permissions (additive overrides)
+
+    Permission resolution order:
+    - Start with default_permissions
+    - Apply role permissions (if user has a role with permissions defined)
+    - Apply group permissions (most permissive value wins: True > False)
+
     Permissions are nested in a dict with the permission key as the key and a boolean as the value.
     """
+    from open_webui.internal.db import get_db_context
+    from open_webui.models.roles import Role
+    from open_webui.models.users import User
 
     def combine_permissions(
-        permissions: Dict[str, Any], group_permissions: Dict[str, Any]
+        permissions: Dict[str, Any], overlay_permissions: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Combine permissions from multiple groups by taking the most permissive value."""
-        for key, value in group_permissions.items():
+        """Combine permissions by taking the most permissive value (True > False)."""
+        for key, value in overlay_permissions.items():
             if isinstance(value, dict):
                 if key not in permissions:
                     permissions[key] = {}
@@ -54,12 +275,19 @@ def get_permissions(
                     )  # Use the most permissive value (True > False)
         return permissions
 
-    user_groups = Groups.get_groups_by_member_id(user_id, db=db)
-
     # Deep copy default permissions to avoid modifying the original dict
     permissions = json.loads(json.dumps(default_permissions))
 
-    # Combine permissions from all user groups
+    # Step 1: Get role permissions (if user has a role assigned)
+    with get_db_context(db) as db:
+        user = db.query(User).filter_by(id=user_id).first()
+        if user and hasattr(user, "role_id") and user.role_id:
+            role = db.query(Role).filter_by(id=user.role_id).first()
+            if role and role.permissions:
+                permissions = combine_permissions(permissions, role.permissions)
+
+    # Step 2: Get group permissions (additive overrides)
+    user_groups = Groups.get_groups_by_member_id(user_id, db=db)
     for group in user_groups:
         permissions = combine_permissions(permissions, group.permissions or {})
 

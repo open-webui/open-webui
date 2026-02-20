@@ -51,6 +51,7 @@ class User(Base):
     email = Column(String)
     username = Column(String(50), nullable=True)
     role = Column(String)
+    role_id = Column(String, nullable=True)
 
     name = Column(String)
 
@@ -84,6 +85,7 @@ class UserModel(BaseModel):
     email: str
     username: Optional[str] = None
     role: str = "pending"
+    role_id: Optional[str] = None
 
     name: str
 

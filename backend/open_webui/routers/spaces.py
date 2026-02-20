@@ -58,7 +58,12 @@ from open_webui.routers.retrieval import ProcessFileForm, process_file
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_verified_user
-from open_webui.utils.access_control import has_access, has_permission
+from open_webui.utils.access_control import (
+    has_access,
+    has_permission,
+    can_bypass_access_control,
+    can_manage_all,
+)
 
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, ENABLE_SHAREPOINT_INTEGRATION
 
@@ -184,6 +189,7 @@ async def get_spaces(
                 ).model_dump(),
                 write_access=(
                     user.id == space.user_id
+                    or can_bypass_access_control(user.id)
                     or (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                     or has_access(user.id, "write", space.access_control, db=db)
                 ),
@@ -208,15 +214,23 @@ async def create_space(
 ):
     """Create a new space."""
     # Check if user has permission to create spaces
-    if user.role != "admin" and not has_permission(
-        user.id, "workspace.spaces", request.app.state.config.USER_PERMISSIONS, db=db
+    if (
+        not can_manage_all(user.id, "spaces")
+        and user.role != "admin"
+        and not has_permission(
+            user.id,
+            "workspace.spaces",
+            request.app.state.config.USER_PERMISSIONS,
+            db=db,
+        )
     ):
         # Default to allowing space creation if permission not configured
         pass
 
     # Check if user can share publicly
     if (
-        user.role != "admin"
+        not can_manage_all(user.id, "spaces")
+        and user.role != "admin"
         and form_data.access_control is None
         and not has_permission(
             user.id,
@@ -381,6 +395,7 @@ async def get_bookmarked_spaces(
                     **space_response.model_dump(),
                     write_access=(
                         user.id == space.user_id
+                        or can_bypass_access_control(user.id)
                         or (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                         or has_access(user.id, "write", space.access_control, db=db)
                     ),
@@ -414,6 +429,7 @@ async def get_templates(
                     **space_response.model_dump(),
                     write_access=(
                         user.id == space.user_id
+                        or can_bypass_access_control(user.id)
                         or (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                         or has_access(user.id, "write", space.access_control, db=db)
                     ),
@@ -483,7 +499,7 @@ async def pin_space(
     db: Session = Depends(get_session),
 ):
     """Pin a space org-wide (admin only)."""
-    if user.role != "admin":
+    if not can_manage_all(user.id, "spaces") and user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -518,7 +534,7 @@ async def unpin_space(
     db: Session = Depends(get_session),
 ):
     """Unpin a space (admin only)."""
-    if user.role != "admin":
+    if not can_manage_all(user.id, "spaces") and user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -546,6 +562,7 @@ async def get_pinned_spaces(
                     **space_response.model_dump(),
                     write_access=(
                         user.id == space.user_id
+                        or can_bypass_access_control(user.id)
                         or (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                         or has_access(user.id, "write", space.access_control, db=db)
                     ),
@@ -630,7 +647,8 @@ async def get_space_by_id(
 
     # Check access (includes contributor/invitation check)
     if not (
-        user.role == "admin"
+        can_manage_all(user.id, "spaces")
+        or user.role == "admin"
         or space.user_id == user.id
         or has_access(user.id, "read", space.access_control, db=db)
         or is_space_contributor(user.email, space.id, db)
@@ -648,6 +666,7 @@ async def get_space_by_id(
         **space_response.model_dump(),
         write_access=(
             user.id == space.user_id
+            or can_bypass_access_control(user.id)
             or (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
             or has_access(user.id, "write", space.access_control, db=db)
         ),
@@ -676,7 +695,8 @@ async def get_space_by_slug(
 
     # Check access (includes contributor/invitation check)
     if not (
-        user.role == "admin"
+        can_manage_all(user.id, "spaces")
+        or user.role == "admin"
         or space.user_id == user.id
         or has_access(user.id, "read", space.access_control, db=db)
         or is_space_contributor(user.email, space.id, db)
@@ -694,6 +714,7 @@ async def get_space_by_slug(
         **space_response.model_dump(),
         write_access=(
             user.id == space.user_id
+            or can_bypass_access_control(user.id)
             or (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
             or has_access(user.id, "write", space.access_control, db=db)
         ),
@@ -726,6 +747,7 @@ async def update_space_by_id(
     if not (
         space.user_id == user.id
         or has_access(user.id, "write", space.access_control, db=db)
+        or can_manage_all(user.id, "spaces")
         or user.role == "admin"
     ):
         raise HTTPException(
@@ -735,7 +757,8 @@ async def update_space_by_id(
 
     # Check if user can share publicly
     if (
-        user.role != "admin"
+        not can_manage_all(user.id, "spaces")
+        and user.role != "admin"
         and form_data.access_control is None
         and not has_permission(
             user.id,
@@ -787,6 +810,7 @@ async def delete_space_by_id(
     if not (
         space.user_id == user.id
         or has_access(user.id, "write", space.access_control, db=db)
+        or can_manage_all(user.id, "spaces")
         or user.role == "admin"
     ):
         raise HTTPException(
@@ -825,6 +849,7 @@ async def add_knowledge_to_space(
     if not (
         space.user_id == user.id
         or has_access(user.id, "write", space.access_control, db=db)
+        or can_manage_all(user.id, "spaces")
         or user.role == "admin"
     ):
         raise HTTPException(
@@ -841,7 +866,8 @@ async def add_knowledge_to_space(
         )
 
     if not (
-        user.role == "admin"
+        can_manage_all(user.id, "spaces")
+        or user.role == "admin"
         or knowledge.user_id == user.id
         or has_access(user.id, "read", knowledge.access_control, db=db)
     ):
@@ -898,6 +924,7 @@ async def remove_knowledge_from_space(
     if not (
         space.user_id == user.id
         or has_access(user.id, "write", space.access_control, db=db)
+        or can_manage_all(user.id, "spaces")
         or user.role == "admin"
     ):
         raise HTTPException(
@@ -949,7 +976,8 @@ async def get_space_knowledge(
 
     # Check read access (includes contributor/invitation check)
     if not (
-        user.role == "admin"
+        can_manage_all(user.id, "spaces")
+        or user.role == "admin"
         or space.user_id == user.id
         or has_access(user.id, "read", space.access_control, db=db)
         or is_space_contributor(user.email, space.id, db)
@@ -987,7 +1015,11 @@ async def invite_contributor(
         )
 
     # Only owner or admin can invite
-    if not (space.user_id == user.id or user.role == "admin"):
+    if not (
+        space.user_id == user.id
+        or can_manage_all(user.id, "spaces")
+        or user.role == "admin"
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -1049,7 +1081,11 @@ async def remove_contributor(
         )
 
     # Only owner or admin can remove contributors
-    if not (space.user_id == user.id or user.role == "admin"):
+    if not (
+        space.user_id == user.id
+        or can_manage_all(user.id, "spaces")
+        or user.role == "admin"
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -1076,7 +1112,8 @@ async def get_contributors(
 
     # Check read access (includes contributor/invitation check)
     if not (
-        user.role == "admin"
+        can_manage_all(user.id, "spaces")
+        or user.role == "admin"
         or space.user_id == user.id
         or has_access(user.id, "read", space.access_control, db=db)
         or is_space_contributor(user.email, space.id, db)
@@ -1116,6 +1153,7 @@ def upload_file_to_space(
     if not (
         space.user_id == user.id
         or has_access(user.id, "write", space.access_control, db=db)
+        or can_manage_all(user.id, "spaces")
         or user.role == "admin"
     ):
         raise HTTPException(
@@ -1215,6 +1253,7 @@ async def link_existing_file_to_space(
     if not (
         space.user_id == user.id
         or has_access(user.id, "write", space.access_control, db=db)
+        or can_manage_all(user.id, "spaces")
         or user.role == "admin"
     ):
         raise HTTPException(
@@ -1287,6 +1326,7 @@ async def add_sharepoint_file_to_space(
     if not (
         space.user_id == user.id
         or has_access(user.id, "write", space.access_control, db=db)
+        or can_manage_all(user.id, "spaces")
         or user.role == "admin"
     ):
         raise HTTPException(
@@ -1446,6 +1486,7 @@ async def add_sharepoint_folder_to_space(
     if not (
         space.user_id == user.id
         or has_access(user.id, "write", space.access_control, db=db)
+        or can_manage_all(user.id, "spaces")
         or user.role == "admin"
     ):
         raise HTTPException(
@@ -1685,7 +1726,8 @@ async def get_space_files(
 
     # Check read access (includes contributor/invitation check)
     if not (
-        user.role == "admin"
+        can_manage_all(user.id, "spaces")
+        or user.role == "admin"
         or space.user_id == user.id
         or has_access(user.id, "read", space.access_control, db=db)
         or is_space_contributor(user.email, space.id, db)
@@ -1719,6 +1761,7 @@ async def remove_file_from_space(
     if not (
         space.user_id == user.id
         or has_access(user.id, "write", space.access_control, db=db)
+        or can_manage_all(user.id, "spaces")
         or user.role == "admin"
     ):
         raise HTTPException(
@@ -1786,6 +1829,7 @@ async def sync_sharepoint_files(
     if not (
         space.user_id == user.id
         or has_access(user.id, "write", space.access_control, db=db)
+        or can_manage_all(user.id, "spaces")
         or user.role == "admin"
     ):
         raise HTTPException(
@@ -1961,6 +2005,7 @@ async def add_link_to_space(
     if not (
         space.user_id == user.id
         or has_access(user.id, "write", space.access_control, db=db)
+        or can_manage_all(user.id, "spaces")
         or user.role == "admin"
     ):
         raise HTTPException(
@@ -2005,6 +2050,7 @@ async def remove_link_from_space(
     if not (
         space.user_id == user.id
         or has_access(user.id, "write", space.access_control, db=db)
+        or can_manage_all(user.id, "spaces")
         or user.role == "admin"
     ):
         raise HTTPException(
@@ -2033,7 +2079,8 @@ async def get_space_links(
 
     # Check read access (includes contributor/invitation check)
     if not (
-        user.role == "admin"
+        can_manage_all(user.id, "spaces")
+        or user.role == "admin"
         or space.user_id == user.id
         or has_access(user.id, "read", space.access_control, db=db)
         or is_space_contributor(user.email, space.id, db)
@@ -2068,7 +2115,11 @@ async def update_space_access_level(
         )
 
     # Only owner or admin can change access level
-    if not (space.user_id == user.id or user.role == "admin"):
+    if not (
+        space.user_id == user.id
+        or can_manage_all(user.id, "spaces")
+        or user.role == "admin"
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -2136,6 +2187,7 @@ async def update_thread_access(
     if not (
         space.user_id == user.id
         or has_access(user.id, "write", space.access_control, db=db)
+        or can_manage_all(user.id, "spaces")
         or user.role == "admin"
     ):
         raise HTTPException(
@@ -2230,7 +2282,11 @@ async def bulk_share_threads(
         )
 
     # Only owner or admin can bulk-share
-    if not (space.user_id == user.id or user.role == "admin"):
+    if not (
+        space.user_id == user.id
+        or can_manage_all(user.id, "spaces")
+        or user.role == "admin"
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -2303,7 +2359,8 @@ async def subscribe_to_space(
 
     # Check read access (includes contributor/invitation check)
     if not (
-        user.role == "admin"
+        can_manage_all(user.id, "spaces")
+        or user.role == "admin"
         or space.user_id == user.id
         or has_access(user.id, "read", space.access_control, db=db)
         or is_space_contributor(user.email, space.id, db)

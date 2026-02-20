@@ -94,7 +94,7 @@ from open_webui.utils.misc import (
     sanitize_text_for_db,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control import has_permission, has_capability
 
 from open_webui.config import (
     ENV,
@@ -1692,7 +1692,7 @@ def process_file(
         f"[DEBUG process_file] START - file_id={form_data.file_id}, collection_name={form_data.collection_name}, has_content={bool(form_data.content)}"
     )
 
-    if user.role == "admin":
+    if has_capability(user.id, "admin.manage_config") or user.role == "admin":
         file = Files.get_file_by_id(form_data.file_id, db=db)
     else:
         file = Files.get_file_by_id_and_user_id(form_data.file_id, user.id, db=db)
@@ -2377,8 +2377,12 @@ async def process_web_search(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    if user.role != "admin" and not has_permission(
-        user.id, "features.web_search", request.app.state.config.USER_PERMISSIONS
+    if (
+        not has_capability(user.id, "admin.manage_config")
+        and user.role != "admin"
+        and not has_permission(
+            user.id, "features.web_search", request.app.state.config.USER_PERMISSIONS
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
