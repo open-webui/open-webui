@@ -463,6 +463,12 @@ OPENID_PROVIDER_URL = PersistentConfig(
     os.environ.get("OPENID_PROVIDER_URL", ""),
 )
 
+OAUTH_LOGOUT_URI = PersistentConfig(
+    "OAUTH_LOGOUT_URI",
+    "oauth.oidc.logout_uri",
+    os.environ.get("OAUTH_LOGOUT_URI", ""),
+)
+
 OPENID_REDIRECT_URI = PersistentConfig(
     "OPENID_REDIRECT_URI",
     "oauth.oidc.redirect_uri",
@@ -812,7 +818,7 @@ def load_oauth_providers():
     if FEISHU_CLIENT_ID.value:
         configured_providers.append("Feishu")
 
-    if configured_providers and not OPENID_PROVIDER_URL.value:
+    if configured_providers and not OPENID_PROVIDER_URL.value and not OAUTH_LOGOUT_URI.value:
         provider_list = ", ".join(configured_providers)
         log.warning(
             f"⚠️  OAuth providers configured ({provider_list}) but OPENID_PROVIDER_URL not set - logout will not work!"

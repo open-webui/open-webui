@@ -45,6 +45,7 @@ from open_webui.env import (
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse, Response, JSONResponse
 from open_webui.config import (
+    OAUTH_LOGOUT_URI,
     OPENID_PROVIDER_URL,
     ENABLE_OAUTH_SIGNUP,
     ENABLE_LDAP,
@@ -818,6 +819,19 @@ async def signout(
     oauth_session_id = request.cookies.get("oauth_session_id")
     if oauth_session_id:
         response.delete_cookie("oauth_session_id")
+
+        # If a custom logout URI is configured, use it directly.
+        # This supports SSO providers (e.g. AWS Cognito) that do not
+        # use the standard OIDC end_session_endpoint flow.
+        if OAUTH_LOGOUT_URI.value:
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "status": True,
+                    "redirect_url": OAUTH_LOGOUT_URI.value,
+                },
+                headers=response.headers,
+            )
 
         session = OAuthSessions.get_session_by_id(oauth_session_id, db=db)
         oauth_server_metadata_url = (
