@@ -177,11 +177,13 @@ def get_citation_source_from_tool_result(
 
         if tool_name == "search_web":
             # Parse JSON array: [{"title": "...", "link": "...", "snippet": "..."}]
-            results = tool_result
+            results = tool_result if isinstance(tool_result, list) else []
             documents = []
             metadata = []
 
             for result in results:
+                if not isinstance(result, dict):
+                    continue
                 title = result.get("title", "")
                 link = result.get("link", "")
                 snippet = result.get("snippet", "")
@@ -205,6 +207,8 @@ def get_citation_source_from_tool_result(
 
         elif tool_name == "view_knowledge_file":
             file_data = tool_result
+            if not isinstance(file_data, dict):
+                return []
             filename = file_data.get("filename", "Unknown File")
             file_id = file_data.get("id", "")
             knowledge_name = file_data.get("knowledge_name", "")
@@ -233,13 +237,15 @@ def get_citation_source_from_tool_result(
             ]
 
         elif tool_name == "query_knowledge_files":
-            chunks = tool_result
+            chunks = tool_result if isinstance(tool_result, list) else []
 
             # Group chunks by source for better citation display
             # Each unique source becomes a separate source entry
             sources_by_file = {}
 
             for chunk in chunks:
+                if not isinstance(chunk, dict):
+                    continue
                 source_name = chunk.get("source", "Unknown")
                 file_id = chunk.get("file_id", "")
                 note_id = chunk.get("note_id", "")
