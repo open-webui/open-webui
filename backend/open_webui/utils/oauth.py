@@ -693,10 +693,8 @@ class OAuthClientManager:
                     return refreshed_token
                 else:
                     log.warning(
-                        f"Token refresh failed for user {user_id}, client_id {session.provider}, deleting session {session.id}"
+                        f"Token refresh failed for user {user_id}, client_id {session.provider}"
                     )
-                    OAuthSessions.delete_session_by_id(session.id)
-                    return None
             return session.token
 
         except Exception as e:
@@ -986,11 +984,8 @@ class OAuthManager:
                     return refreshed_token
                 else:
                     log.warning(
-                        f"Token refresh failed for user {user_id}, provider {session.provider}, deleting session {session.id}"
+                        f"Token refresh failed for user {user_id}, provider {session.provider}"
                     )
-                    OAuthSessions.delete_session_by_id(session.id)
-
-                    return None
             return session.token
 
         except Exception as e:
