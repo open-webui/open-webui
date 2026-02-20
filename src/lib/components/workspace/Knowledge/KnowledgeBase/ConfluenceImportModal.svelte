@@ -1,11 +1,14 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
+
+	import { settings } from '$lib/stores';
+	import { updateUserSettings } from '$lib/apis/users';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
 	import {
@@ -19,7 +22,7 @@
 	export let show = false;
 	export let onImport: (documents: any[]) => void = () => {};
 
-	// Connection config
+	// Connection config - loaded from user settings
 	let authType: 'cloud' | 'datacenter' = 'cloud';
 	let baseUrl = '';
 	let email = '';
@@ -48,6 +51,46 @@
 
 	$: allFilteredSelected =
 		filteredSpaces.length > 0 && filteredSpaces.every((s) => selectedSpaceKeys.has(s.key));
+
+	// Load saved credentials from user settings
+	function loadFromSettings() {
+		const confluenceSettings = $settings?.confluence ?? {};
+		authType = confluenceSettings.auth_type ?? 'cloud';
+		baseUrl = confluenceSettings.base_url ?? '';
+		email = confluenceSettings.email ?? '';
+		apiToken = confluenceSettings.api_token ?? '';
+		username = confluenceSettings.username ?? '';
+		personalAccessToken = confluenceSettings.personal_access_token ?? '';
+		// Note: password is NOT persisted for security
+	}
+
+	// Save credentials to user settings (persisted server-side)
+	async function saveToSettings() {
+		const confluenceSettings: Record<string, string> = {
+			auth_type: authType,
+			base_url: baseUrl.trim()
+		};
+		if (authType === 'cloud') {
+			confluenceSettings.email = email.trim();
+			confluenceSettings.api_token = apiToken.trim();
+		} else {
+			if (personalAccessToken.trim()) {
+				confluenceSettings.personal_access_token = personalAccessToken.trim();
+			}
+			if (username.trim()) {
+				confluenceSettings.username = username.trim();
+			}
+			// Note: password is NOT persisted for security
+		}
+
+		await settings.set({ ...$settings, confluence: confluenceSettings });
+		await updateUserSettings(localStorage.token, { ui: $settings });
+	}
+
+	// Load saved settings whenever modal opens
+	$: if (show) {
+		loadFromSettings();
+	}
 
 	function getConfig(): ConfluenceConnectionConfig {
 		const config: ConfluenceConnectionConfig = {
@@ -81,9 +124,7 @@
 		} else {
 			if (!personalAccessToken.trim() && (!username.trim() || !password)) {
 				toast.error(
-					$i18n.t(
-						'Please enter a personal access token, or username and password.'
-					)
+					$i18n.t('Please enter a personal access token, or username and password.')
 				);
 				return false;
 			}
@@ -99,6 +140,8 @@
 		try {
 			await testConfluenceConnection(localStorage.token, getConfig());
 			connectionTested = true;
+			// Save credentials on successful connection
+			await saveToSettings();
 			toast.success($i18n.t('Connection successful!'));
 		} catch (e) {
 			toast.error(`${e}`);
@@ -117,6 +160,8 @@
 				spaces = res.spaces;
 				selectedSpaceKeys = new Set();
 				step = 'spaces';
+				// Save credentials on successful connection
+				await saveToSettings();
 			} else {
 				toast.error($i18n.t('No spaces found.'));
 			}
@@ -243,10 +288,7 @@
 
 		{#if step === 'config'}
 			<div class="px-5 pb-4 overflow-y-auto">
-				<form
-					on:submit|preventDefault={handleFetchSpaces}
-					class="flex flex-col gap-3"
-				>
+				<form on:submit|preventDefault={handleFetchSpaces} class="flex flex-col gap-3">
 					<!-- Deployment Type -->
 					<div>
 						<label
@@ -264,7 +306,9 @@
 							}}
 						>
 							<option value="cloud">{$i18n.t('Confluence Cloud')}</option>
-							<option value="datacenter">{$i18n.t('Confluence Data Center / Server')}</option>
+							<option value="datacenter"
+								>{$i18n.t('Confluence Data Center / Server')}</option
+							>
 						</select>
 					</div>
 
@@ -319,13 +363,10 @@
 							>
 								{$i18n.t('API Token')}
 							</label>
-							<input
-								id="confluence-api-token"
-								type="password"
-								class="w-full text-sm bg-gray-50 dark:bg-gray-850 rounded-xl px-3 py-2 outline-none"
-								bind:value={apiToken}
+							<SensitiveInput
 								placeholder={$i18n.t('Atlassian API Token')}
-								required
+								bind:value={apiToken}
+								required={true}
 								on:input={() => {
 									connectionTested = false;
 								}}
@@ -343,12 +384,10 @@
 							>
 								{$i18n.t('Personal Access Token')}
 							</label>
-							<input
-								id="confluence-pat"
-								type="password"
-								class="w-full text-sm bg-gray-50 dark:bg-gray-850 rounded-xl px-3 py-2 outline-none"
-								bind:value={personalAccessToken}
+							<SensitiveInput
 								placeholder={$i18n.t('Personal Access Token (recommended)')}
+								bind:value={personalAccessToken}
+								required={false}
 								on:input={() => {
 									connectionTested = false;
 								}}
@@ -356,9 +395,11 @@
 						</div>
 
 						<div class="flex items-center gap-2 text-xs text-gray-400">
-							<div class="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
+							<div class="flex-1 border-t border-gray-200 dark:border-gray-700"
+							></div>
 							<span>{$i18n.t('or')}</span>
-							<div class="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
+							<div class="flex-1 border-t border-gray-200 dark:border-gray-700"
+							></div>
 						</div>
 
 						<div>
@@ -391,11 +432,14 @@
 								type="password"
 								class="w-full text-sm bg-gray-50 dark:bg-gray-850 rounded-xl px-3 py-2 outline-none"
 								bind:value={password}
-								placeholder={$i18n.t('Password')}
+								placeholder={$i18n.t('Password (not saved)')}
 								on:input={() => {
 									connectionTested = false;
 								}}
 							/>
+							<p class="text-xs text-gray-400 mt-1">
+								{$i18n.t('Password is not saved. Use a Personal Access Token for persistent access.')}
+							</p>
 						</div>
 					{/if}
 
@@ -487,7 +531,9 @@
 					class="flex-1 overflow-y-auto border border-gray-100 dark:border-gray-800 rounded-xl"
 				>
 					{#if filteredSpaces.length === 0}
-						<div class="flex items-center justify-center h-full text-sm text-gray-400 py-8">
+						<div
+							class="flex items-center justify-center h-full text-sm text-gray-400 py-8"
+						>
 							{#if spaces.length === 0}
 								{$i18n.t('No spaces found.')}
 							{:else}

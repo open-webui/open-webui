@@ -352,6 +352,7 @@ from open_webui.config import (
     ENABLE_RAG_LOCAL_WEB_FETCH,
     ENABLE_WEB_LOADER_SSL_VERIFICATION,
     ENABLE_GOOGLE_DRIVE_INTEGRATION,
+    ENABLE_CONFLUENCE_INTEGRATION,
     UPLOAD_DIR,
     EXTERNAL_WEB_SEARCH_URL,
     EXTERNAL_WEB_SEARCH_API_KEY,
@@ -1028,6 +1029,7 @@ app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER = BYPASS_WEB_SEARCH_WEB_LOADER
 
 app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = ENABLE_GOOGLE_DRIVE_INTEGRATION
 app.state.config.ENABLE_ONEDRIVE_INTEGRATION = ENABLE_ONEDRIVE_INTEGRATION
+app.state.config.ENABLE_CONFLUENCE_INTEGRATION = ENABLE_CONFLUENCE_INTEGRATION
 
 app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY = OLLAMA_CLOUD_WEB_SEARCH_API_KEY
 app.state.config.SEARXNG_QUERY_URL = SEARXNG_QUERY_URL
@@ -2127,6 +2129,7 @@ async def get_app_config(request: Request):
                     "enable_admin_analytics": ENABLE_ADMIN_ANALYTICS,
                     "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
                     "enable_onedrive_integration": app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
+                    "enable_confluence_integration": app.state.config.ENABLE_CONFLUENCE_INTEGRATION,
                     "enable_memories": app.state.config.ENABLE_MEMORIES,
                     **(
                         {

@@ -2594,6 +2594,15 @@ ONEDRIVE_SHAREPOINT_TENANT_ID = PersistentConfig(
     os.environ.get("ONEDRIVE_SHAREPOINT_TENANT_ID", ""),
 )
 
+
+# Confluence integration
+ENABLE_CONFLUENCE_INTEGRATION = PersistentConfig(
+    "ENABLE_CONFLUENCE_INTEGRATION",
+    "confluence.enable",
+    os.getenv("ENABLE_CONFLUENCE_INTEGRATION", "False").lower() == "true",
+)
+
+
 # RAG Content Extraction
 CONTENT_EXTRACTION_ENGINE = PersistentConfig(
     "CONTENT_EXTRACTION_ENGINE",

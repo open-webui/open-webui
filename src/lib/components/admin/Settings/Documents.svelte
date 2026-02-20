@@ -1460,6 +1460,22 @@
 							<Switch bind:state={RAGConfig.ENABLE_ONEDRIVE_INTEGRATION} />
 						</div>
 					</div>
+
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							<Tooltip
+								content={$i18n.t(
+									'Enable Confluence integration to allow users to import content from Atlassian Confluence spaces into Knowledge bases.'
+								)}
+								placement="top-start"
+							>
+								{$i18n.t('Confluence')}
+							</Tooltip>
+						</div>
+						<div class="flex items-center relative">
+							<Switch bind:state={RAGConfig.ENABLE_CONFLUENCE_INTEGRATION} />
+						</div>
+					</div>
 				</div>
 
 				<div class="mb-3">
