@@ -390,8 +390,7 @@
 
 	let command = '';
 	export let showCommands = false;
-	$: showCommands =
-		['/', '#', '@', '$'].includes(command?.charAt(0)) || '\\#' === command?.slice(0, 2);
+	$: showCommands = command?.charAt(0) === '/';
 	let suggestions = null;
 
 	let showTools = false;
@@ -842,41 +841,6 @@
 	onMount(async () => {
 		suggestions = [
 			{
-				char: '@',
-				render: getSuggestionRenderer(CommandSuggestionList, {
-					i18n,
-					onSelect: (e) => {
-						const { type, data } = e;
-
-						if (type === 'model') {
-							atSelectedModel = data;
-						}
-
-						document.getElementById('chat-input')?.focus();
-					},
-
-					insertTextHandler: insertTextAtCursor,
-					onUpload: (e) => {
-						const { type, data } = e;
-
-						if (type === 'file') {
-							if (files.find((f) => f.id === data.id)) {
-								return;
-							}
-							files = [
-								...files,
-								{
-									...data,
-									status: 'processed'
-								}
-							];
-						} else {
-							onUpload(e);
-						}
-					}
-				})
-			},
-			{
 				char: '/',
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					i18n,
@@ -909,53 +873,6 @@
 							onUpload(e);
 						}
 					}
-				})
-			},
-			{
-				char: '#',
-				render: getSuggestionRenderer(CommandSuggestionList, {
-					i18n,
-					onSelect: (e) => {
-						const { type, data } = e;
-
-						if (type === 'model') {
-							atSelectedModel = data;
-						}
-
-						document.getElementById('chat-input')?.focus();
-					},
-
-					insertTextHandler: insertTextAtCursor,
-					onUpload: (e) => {
-						const { type, data } = e;
-
-						if (type === 'file') {
-							if (files.find((f) => f.id === data.id)) {
-								return;
-							}
-							files = [
-								...files,
-								{
-									...data,
-									status: 'processed'
-								}
-							];
-						} else {
-							onUpload(e);
-						}
-					}
-				})
-			},
-			{
-				char: '$',
-				render: getSuggestionRenderer(CommandSuggestionList, {
-					i18n,
-					onSelect: (e) => {
-						document.getElementById('chat-input')?.focus();
-					},
-
-					insertTextHandler: insertTextAtCursor,
-					onUpload: () => {}
 				})
 			}
 		];

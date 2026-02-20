@@ -81,6 +81,14 @@
 		}
 		loading = true;
 
+		if (OPENCLAW_RESERVED.has(command.toLowerCase())) {
+			toast.error(
+				`"/${command}" is reserved by OpenClaw. Choose a different command name.`
+			);
+			loading = false;
+			return;
+		}
+
 		if (validateCommandString(command)) {
 			await onSubmit({
 				id: prompt?.id,
@@ -108,6 +116,19 @@
 
 		loading = false;
 	};
+
+	// OpenClaw owns these command names — block user prompts from shadowing them.
+	const OPENCLAW_RESERVED = new Set([
+		'new', 'reset', 'compact', 'stop',
+		'model', 'models', 'think', 'verbose', 'reasoning', 'elevated', 'queue', 'exec',
+		'help', 'commands', 'status', 'whoami', 'context', 'usage',
+		'allowlist', 'approve', 'subagents', 'activation', 'send',
+		'skill', 'restart', 'weather', 'github', 'tmux', 'browser_extract',
+		'video_frames', 'openai_whisper', 'tts',
+		'otto', 'bluebubbles', 'coding_agent', 'gemini', 'healthcheck',
+		'skill_creator', 'qmd', 'pm_decompose', 'pm_next', 'pm_standup', 'pm_status',
+		'dock_telegram', 'dock_discord', 'dock_slack',
+	]);
 
 	const validateCommandString = (inputString) => {
 		const regex = /^[a-zA-Z0-9-_]+$/;

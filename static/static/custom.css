@@ -1,0 +1,48 @@
+/* Otto dark theme — overrides Open WebUI's gray-scale CSS variables */
+html.dark {
+	--color-gray-950: #070a0e;
+	--color-gray-900: #0b0f14; /* bg-base: app background */
+	--color-gray-850: #111720; /* bg-surface: sidebar, cards */
+	--color-gray-800: #18202c; /* bg-elevated: modals, dropdowns */
+	--color-gray-700: #1f2a38; /* bg-overlay: tooltips */
+	--color-gray-600: #243040; /* bg-hover */
+	--color-gray-500: #4e6178; /* text-muted */
+	--color-gray-400: #8a9bb0; /* text-secondary */
+	--color-gray-200: #e8eff7; /* text-primary */
+	--color-gray-100: #e8eff7;
+
+	/* Otto amber accent */
+	--color-accent: #ffaa2c;
+	--color-accent-dim: #d98a18;
+	--color-accent-glow: rgba(255, 170, 44, 0.18);
+	--color-border-accent: rgba(255, 170, 44, 0.12);
+}
+
+/* IBM Plex font family override */
+html {
+	font-family: 'IBM Plex Sans', 'Vazirmatn', system-ui, sans-serif;
+}
+
+/* Sidebar brand name: larger, Plex Mono */
+#sidebar-webui-name {
+	font-family: 'IBM Plex Mono', monospace;
+	font-weight: 700;
+	font-size: 1.1rem;
+	letter-spacing: -0.01em;
+}
+
+/* Amber accent on active sidebar chat items */
+html.dark .conv-item.active,
+html.dark [aria-current='page'] {
+	background: var(--color-accent-glow) !important;
+	border-color: var(--color-border-accent) !important;
+}
+
+/* Amber send button in dark mode */
+html.dark #send-message-button {
+	background: var(--color-accent) !important;
+	color: #0b0f14 !important;
+}
+html.dark #send-message-button:hover {
+	background: var(--color-accent-dim) !important;
+}

@@ -64,6 +64,9 @@
 	import Sidebar from '../icons/Sidebar.svelte';
 	import PinnedModelList from './Sidebar/PinnedModelList.svelte';
 	import Note from '../icons/Note.svelte';
+	import FolderIcon from '../icons/Folder.svelte';
+	import Hashtag from '../icons/Hashtag.svelte';
+	import Grid from '../icons/Grid.svelte';
 	import { slide } from 'svelte/transition';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
 
@@ -998,6 +1001,74 @@
 							<HotkeyHint name="search" className=" group-hover:visible invisible" />
 						</button>
 					</div>
+
+					{#if $config?.features?.enable_folders && ($user?.role === 'admin' || ($user?.permissions?.features?.folders ?? true))}
+						<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
+							<a
+								id="sidebar-folders-nav-button"
+								class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								href="/"
+								on:click={(e) => {
+									e.preventDefault();
+									showFolders = true;
+									itemClickHandler();
+								}}
+								draggable="false"
+								aria-label={$i18n.t('Folders')}
+							>
+								<div class="self-center">
+									<FolderIcon className="size-4.5" strokeWidth="2" />
+								</div>
+								<div class="flex flex-1 self-center translate-y-[0.5px]">
+									<div class="self-center text-sm font-primary">{$i18n.t('Folders')}</div>
+								</div>
+							</a>
+						</div>
+					{/if}
+
+					{#if $config?.features?.enable_channels && ($user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true))}
+						<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
+							<a
+								id="sidebar-channels-nav-button"
+								class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								href="/"
+								on:click={(e) => {
+									e.preventDefault();
+									showChannels = true;
+									itemClickHandler();
+								}}
+								draggable="false"
+								aria-label={$i18n.t('Channels')}
+							>
+								<div class="self-center">
+									<Hashtag className="size-4.5" strokeWidth="2" />
+								</div>
+								<div class="flex flex-1 self-center translate-y-[0.5px]">
+									<div class="self-center text-sm font-primary">{$i18n.t('Channels')}</div>
+								</div>
+							</a>
+						</div>
+					{/if}
+
+					{#if $config?.features?.enable_dashboard}
+						<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
+							<a
+								id="sidebar-dashboard-nav-button"
+								class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								href="/dashboard"
+								on:click={itemClickHandler}
+								draggable="false"
+								aria-label={$i18n.t('Dashboard')}
+							>
+								<div class="self-center">
+									<Grid className="size-4.5" strokeWidth="2" />
+								</div>
+								<div class="flex flex-1 self-center translate-y-[0.5px]">
+									<div class="self-center text-sm font-primary">{$i18n.t('Dashboard')}</div>
+								</div>
+							</a>
+						</div>
+					{/if}
 
 					{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
 						<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
