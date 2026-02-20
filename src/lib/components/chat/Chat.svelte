@@ -1033,6 +1033,11 @@
 
 		autoScroll = true;
 
+		generating = false;
+		generationController = null;
+		taskIds = null;
+		messageQueue = [];
+
 		resetInput();
 		await chatId.set('');
 		await chatTitle.set('');
@@ -1143,6 +1148,11 @@
 						: convertMessagesToHistory(chatContent.messages);
 
 				chatTitle.set(chatContent.title);
+
+				generating = false;
+				generationController = null;
+				taskIds = null;
+				messageQueue = [];
 
 				params = chatContent?.params ?? {};
 				chatFiles = chatContent?.files ?? [];
@@ -2220,15 +2230,18 @@
 
 			taskIds = null;
 
-			const responseMessage = history.messages[history.currentId];
-			// Set all response messages to done
-			if (responseMessage.parentId && history.messages[responseMessage.parentId]) {
-				for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
-					history.messages[messageId].done = true;
-				}
-			}
+			const responseMessage = history.currentId ? history.messages[history.currentId] : null;
 
-			history.messages[history.currentId] = responseMessage;
+			if (responseMessage) {
+				// Set all response messages to done
+				if (responseMessage.parentId && history.messages[responseMessage.parentId]) {
+					for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
+						history.messages[messageId].done = true;
+					}
+				}
+
+				history.messages[history.currentId] = responseMessage;
+			}
 
 			if (autoScroll) {
 				scrollToBottom();
