@@ -266,7 +266,7 @@
 	const uploadConfluenceDocuments = async (documents: any[]) => {
 		for (const doc of documents) {
 			try {
-				const title = doc.metadata?.title || 'Confluence Page';
+				const title = doc.metadata?.title || $i18n.t('Confluence Page');
 				const content = doc.page_content || '';
 
 				if (!content.trim()) continue;

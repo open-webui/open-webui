@@ -655,6 +655,7 @@ export const importConfluenceContent = async (
 	config: ConfluenceConnectionConfig & {
 		space_keys: string[];
 		content_types?: string[];
+		space_page_map?: Record<string, string[]>;
 	}
 ) => {
 	let error = null;

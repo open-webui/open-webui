@@ -14,9 +14,11 @@
 	import {
 		testConfluenceConnection,
 		getConfluenceSpaces,
+		getConfluenceSpacePages,
 		importConfluenceContent,
 		type ConfluenceConnectionConfig,
-		type ConfluenceSpace
+		type ConfluenceSpace,
+		type ConfluencePage
 	} from '$lib/apis/retrieval';
 
 	export let show = false;
@@ -36,14 +38,19 @@
 	let personalAccessToken = '';
 
 	// State
-	type Step = 'config' | 'spaces';
+	type Step = 'config' | 'spaces' | 'pages';
 	let step: Step = 'config';
 	let loading = false;
 	let connectionTested = false;
 	let spaces: ConfluenceSpace[] = [];
 	let selectedSpaceKeys: Set<string> = new Set();
+	let spacePages: Record<string, ConfluencePage[]> = {};
+	let selectedPageIds: Set<string> = new Set();
 	let importing = false;
+	let fetchingPages = false;
+	let fetchingSpaces = false;
 	let spaceFilter = '';
+	let pageFilter = '';
 
 	$: filteredSpaces = spaceFilter
 		? spaces.filter(
@@ -55,6 +62,13 @@
 
 	$: allFilteredSelected =
 		filteredSpaces.length > 0 && filteredSpaces.every((s) => selectedSpaceKeys.has(s.key));
+
+	$: allFilteredPages = Object.entries(spacePages).flatMap(([spaceKey, pages]) => {
+		if (!selectedSpaceKeys.has(spaceKey)) return [];
+		return pages.filter(p => p.title.toLowerCase().includes(pageFilter.toLowerCase()));
+	});
+
+	$: allFilteredPagesSelected = allFilteredPages.length > 0 && allFilteredPages.every((p) => selectedPageIds.has(p.id));
 
 	// Load saved credentials from user settings
 	function loadFromSettings() {
@@ -157,7 +171,7 @@
 	async function handleFetchSpaces() {
 		if (!validateConfig()) return;
 
-		loading = true;
+		fetchingSpaces = true;
 		try {
 			const res = await getConfluenceSpaces(localStorage.token, getConfig());
 			if (res && res.spaces) {
@@ -172,7 +186,7 @@
 		} catch (e) {
 			toast.error(`${e}`);
 		} finally {
-			loading = false;
+			fetchingSpaces = false;
 		}
 	}
 
@@ -198,19 +212,89 @@
 		selectedSpaceKeys = selectedSpaceKeys;
 	}
 
-	async function handleImport() {
+	function togglePage(id: string) {
+		if (selectedPageIds.has(id)) {
+			selectedPageIds.delete(id);
+		} else {
+			selectedPageIds.add(id);
+		}
+		selectedPageIds = selectedPageIds;
+	}
+
+	function toggleAllFilteredPages() {
+		if (allFilteredPagesSelected) {
+			for (const p of allFilteredPages) {
+				selectedPageIds.delete(p.id);
+			}
+		} else {
+			for (const p of allFilteredPages) {
+				selectedPageIds.add(p.id);
+			}
+		}
+		selectedPageIds = selectedPageIds;
+	}
+
+	async function handleNextToPages() {
 		if (selectedSpaceKeys.size === 0) {
 			toast.error($i18n.t('Please select at least one space.'));
+			return;
+		}
+
+		fetchingPages = true;
+		try {
+			const cfg = getConfig();
+			const newSpacePages: Record<string, ConfluencePage[]> = {};
+			for (const spaceKey of selectedSpaceKeys) {
+				const res = await getConfluenceSpacePages(localStorage.token, spaceKey, cfg);
+				if (res && res.pages) {
+					newSpacePages[spaceKey] = res.pages;
+				} else {
+					newSpacePages[spaceKey] = [];
+				}
+			}
+			spacePages = newSpacePages;
+			
+			// Auto-select all pages by default
+			const newSelectedPageIds = new Set<string>();
+			for (const spaceKey of Object.keys(spacePages)) {
+				for (const page of spacePages[spaceKey]) {
+					newSelectedPageIds.add(page.id);
+				}
+			}
+			selectedPageIds = newSelectedPageIds;
+			
+			step = 'pages';
+		} catch (e) {
+			toast.error(`${e}`);
+		} finally {
+			fetchingPages = false;
+		}
+	}
+
+	async function handleImport() {
+		if (selectedPageIds.size === 0) {
+			toast.error($i18n.t('Please select at least one page.'));
 			return;
 		}
 
 		importing = true;
 		try {
 			const cfg = getConfig();
+			const space_page_map: Record<string, string[]> = {};
+			for (const spaceKey of selectedSpaceKeys) {
+				const selectedInSpace = spacePages[spaceKey]
+					?.filter(p => selectedPageIds.has(p.id))
+					.map(p => p.id) || [];
+				if (selectedInSpace.length > 0) {
+					space_page_map[spaceKey] = selectedInSpace;
+				}
+			}
+
 			const res = await importConfluenceContent(localStorage.token, {
 				...cfg,
 				space_keys: Array.from(selectedSpaceKeys),
-				content_types: ['page']
+				content_types: ['page'],
+				space_page_map
 			});
 
 			if (res && res.documents && res.documents.length > 0) {
@@ -235,16 +319,24 @@
 		step = 'config';
 		spaces = [];
 		selectedSpaceKeys = new Set();
+		spacePages = {};
+		selectedPageIds = new Set();
 		connectionTested = false;
 		spaceFilter = '';
+		pageFilter = '';
 		show = false;
 	}
 
 	function handleBack() {
-		step = 'config';
-		spaces = [];
-		selectedSpaceKeys = new Set();
-		spaceFilter = '';
+		if (step === 'pages') {
+			step = 'spaces';
+			pageFilter = '';
+		} else {
+			step = 'config';
+			spaces = [];
+			selectedSpaceKeys = new Set();
+			spaceFilter = '';
+		}
 	}
 </script>
 
@@ -252,7 +344,7 @@
 	<div class="flex flex-col h-full max-h-[80vh]">
 		<div class="flex justify-between items-center dark:text-gray-100 px-5 pt-4 pb-2">
 			<div class="flex items-center gap-2">
-				{#if step === 'spaces'}
+				{#if step === 'spaces' || step === 'pages'}
 					<button
 						class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 						on:click={handleBack}
@@ -276,8 +368,10 @@
 				<h1 class="text-lg font-medium font-primary">
 					{#if step === 'config'}
 						{$i18n.t('Connect to Confluence')}
-					{:else}
+					{:else if step === 'spaces'}
 						{$i18n.t('Select Spaces')}
+					{:else}
+						{$i18n.t('Select Pages')}
 					{/if}
 				</h1>
 			</div>
@@ -465,12 +559,12 @@
 						<button
 							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-800 text-white dark:bg-white dark:text-black dark:hover:bg-gray-200 transition rounded-full disabled:opacity-50"
 							type="submit"
-							disabled={loading || !adminBaseUrl}
+							disabled={loading || fetchingSpaces || !adminBaseUrl}
 						>
-							{#if loading && !connectionTested}
+							{#if fetchingSpaces}
 								<div class="flex items-center gap-2">
 									<Spinner className="size-3" />
-									{$i18n.t('Connecting...')}
+									{$i18n.t('Loading Spaces...')}
 								</div>
 							{:else}
 								{$i18n.t('Browse Spaces')}
@@ -576,11 +670,120 @@
 					{/if}
 				</div>
 
+				<!-- Next button -->
+				<div class="flex justify-end gap-2 pt-3">
+					<button
+						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-800 text-white dark:bg-white dark:text-black dark:hover:bg-gray-200 transition rounded-full disabled:opacity-50"
+						disabled={selectedSpaceKeys.size === 0 || fetchingPages}
+						on:click={handleNextToPages}
+					>
+						{#if fetchingPages}
+							<div class="flex items-center gap-2">
+								<Spinner className="size-3" />
+								{$i18n.t('Loading Pages...')}
+							</div>
+						{:else}
+							{$i18n.t('Select Pages')}
+						{/if}
+					</button>
+				</div>
+			</div>
+		{:else if step === 'pages'}
+			<div class="flex flex-col flex-1 min-h-0 px-5 pb-4">
+				<!-- Search filter -->
+				<div class="mb-3">
+					<input
+						type="text"
+						class="w-full text-sm bg-gray-50 dark:bg-gray-850 rounded-xl px-3 py-2 outline-none"
+						bind:value={pageFilter}
+						placeholder={$i18n.t('Filter pages...')}
+					/>
+				</div>
+
+				<!-- Select all toggle -->
+				<div class="flex items-center justify-between mb-2 px-1">
+					<button
+						class="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+						on:click={toggleAllFilteredPages}
+					>
+						{#if allFilteredPagesSelected}
+							{$i18n.t('Deselect All')}
+						{:else}
+							{$i18n.t('Select All')}
+						{/if}
+					</button>
+					<span class="text-xs text-gray-400">
+						{selectedPageIds.size}
+						{$i18n.t('selected')}
+					</span>
+				</div>
+
+				<!-- Pages list -->
+				<div
+					class="flex-1 overflow-y-auto border border-gray-100 dark:border-gray-800 rounded-xl"
+				>
+					{#if allFilteredPages.length === 0}
+						<div
+							class="flex items-center justify-center h-full text-sm text-gray-400 py-8"
+						>
+							{#if Object.values(spacePages).flat().length === 0}
+								{$i18n.t('No pages found in selected spaces.')}
+							{:else}
+								{$i18n.t('No pages match your filter.')}
+							{/if}
+						</div>
+					{:else}
+						{#each Array.from(selectedSpaceKeys) as spaceKey}
+							{#if spacePages[spaceKey] && spacePages[spaceKey].filter(p => p.title.toLowerCase().includes(pageFilter.toLowerCase())).length > 0}
+								<div class="px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-800/50 text-xs font-semibold text-gray-600 dark:text-gray-300 sticky top-0 z-10 shadow-sm flex items-center justify-between">
+									<span>{spaces.find(s => s.key === spaceKey)?.name || spaceKey}</span>
+								</div>
+								{#each spacePages[spaceKey].filter(p => p.title.toLowerCase().includes(pageFilter.toLowerCase())) as page (page.id)}
+									<button
+										class="w-full flex items-start gap-3 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition border-b border-gray-50 dark:border-gray-800/50 last:border-b-0"
+										on:click={() => togglePage(page.id)}
+									>
+										<div class="mt-0.5">
+											<div
+												class="w-4 h-4 rounded border-2 flex items-center justify-center transition {selectedPageIds.has(page.id)
+													? 'bg-black dark:bg-white border-black dark:border-white'
+													: 'border-gray-300 dark:border-gray-600'}"
+											>
+												{#if selectedPageIds.has(page.id)}
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke-width="3"
+														stroke="currentColor"
+														class="w-3 h-3 text-white dark:text-black"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															d="M4.5 12.75l6 6 9-13.5"
+														/>
+													</svg>
+												{/if}
+											</div>
+										</div>
+										<div class="flex-1 min-w-0">
+											<div class="text-sm font-medium truncate">
+												{page.title || $i18n.t('Untitled')}
+											</div>
+										</div>
+									</button>
+								{/each}
+							{/if}
+						{/each}
+					{/if}
+				</div>
+
 				<!-- Import button -->
 				<div class="flex justify-end gap-2 pt-3">
 					<button
 						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-800 text-white dark:bg-white dark:text-black dark:hover:bg-gray-200 transition rounded-full disabled:opacity-50"
-						disabled={selectedSpaceKeys.size === 0 || importing}
+						disabled={selectedPageIds.size === 0 || importing}
 						on:click={handleImport}
 					>
 						{#if importing}
@@ -589,8 +792,8 @@
 								{$i18n.t('Importing...')}
 							</div>
 						{:else}
-							{$i18n.t('Import {{count}} space(s)', {
-								count: selectedSpaceKeys.size
+							{$i18n.t('Import {{count}} page(s)', {
+								count: selectedPageIds.size
 							})}
 						{/if}
 					</button>

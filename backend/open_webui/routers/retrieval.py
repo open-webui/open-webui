@@ -2873,6 +2873,7 @@ class ConfluenceImportForm(BaseModel):
     personal_access_token: Optional[str] = None
     space_keys: List[str]
     content_types: List[str] = ["page"]
+    space_page_map: Optional[dict[str, list[str]]] = None
 
 
 def _get_confluence_client(request: Request, form_data):
@@ -2959,10 +2960,16 @@ async def get_confluence_spaces(
     form_data: ConfluenceConnectionForm,
     user=Depends(get_verified_user),
 ):
-    """Get all accessible Confluence spaces."""
+    """Get global Confluence spaces and the authenticated user's personal space."""
     try:
         client = _get_confluence_client(request, form_data)
-        spaces = await run_in_threadpool(client.get_all_spaces)
+        
+        def fetch_filtered_spaces():
+            global_spaces = client.get_all_spaces(space_type="global")
+            personal_space = client.get_personal_space()
+            return personal_space + global_spaces
+            
+        spaces = await run_in_threadpool(fetch_filtered_spaces)
         return {
             "status": True,
             "spaces": [
@@ -3041,13 +3048,22 @@ async def import_confluence_content(
         all_documents = []
 
         for space_key in form_data.space_keys:
-            for content_type in form_data.content_types:
-                pages = await run_in_threadpool(
-                    client.get_all_space_content, space_key, content_type
-                )
-                for page in pages:
+            if form_data.space_page_map and space_key in form_data.space_page_map and form_data.space_page_map[space_key]:
+                page_ids = form_data.space_page_map[space_key]
+                for page_id in page_ids:
+                    page = await run_in_threadpool(
+                        client.get_page_by_id, page_id
+                    )
                     doc = confluence_page_to_document(page, space_key)
                     all_documents.append(doc)
+            else:
+                for content_type in form_data.content_types:
+                    pages = await run_in_threadpool(
+                        client.get_all_space_content, space_key, content_type
+                    )
+                    for page in pages:
+                        doc = confluence_page_to_document(page, space_key)
+                        all_documents.append(doc)
 
         return {
             "status": True,

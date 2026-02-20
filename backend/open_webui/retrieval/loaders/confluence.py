@@ -102,21 +102,53 @@ class ConfluenceClient:
                 if e.response is not None and e.response.status_code == 404:
                     continue
                 raise
-        raise Exception("Could not reach Confluence space API")
+            except requests.exceptions.JSONDecodeError:
+                continue
+        raise Exception("Could not reach Confluence space API. Please check your provided Base URL.")
 
-    def get_all_spaces(self) -> List[dict]:
-        """Get all spaces using pagination."""
+    def get_all_spaces(self, space_type: Optional[str] = None) -> List[dict]:
+        """Fetch all spaces handling pagination."""
         all_spaces = []
         start = 0
         limit = 25
         while True:
-            result = self.get_spaces(start=start, limit=limit)
+            result = self.get_spaces(start=start, limit=limit, space_type=space_type)
             spaces = result.get("results", [])
             all_spaces.extend(spaces)
             if len(spaces) < limit:
                 break
             start += limit
         return all_spaces
+
+    def get_personal_space(self) -> List[dict]:
+        """Fetch the authenticated user's personal space."""
+        try:
+            # 1. Get current user's profile to extract accountId or username
+            user_info = self._get("/rest/api/user/current")
+            
+            # Confluence Cloud uses accountId, Server/Data Center might use username
+            user_id = user_info.get("accountId") or user_info.get("username")
+            if not user_id:
+                raise Exception("Could not determine user ID for personal space.")
+                
+            space_key = f"~{user_id}"
+            
+            # 2. Fetch just this specific space
+            for prefix in ["/wiki/rest/api/space", "/rest/api/space"]:
+                try:
+                    space = self._get(f"{prefix}/{space_key}", {"expand": "description.plain"})
+                    return [space]
+                except requests.exceptions.HTTPError as e:
+                    if e.response is not None and e.response.status_code == 404:
+                        continue
+                    raise
+                except requests.exceptions.JSONDecodeError:
+                    continue
+        except Exception as e:
+            # If the personal space doesn't exist or isn't accessible, return empty list
+            return []
+            
+        return []
 
     def get_space_content(
         self,
@@ -141,7 +173,9 @@ class ConfluenceClient:
                 if e.response is not None and e.response.status_code == 404:
                     continue
                 raise
-        raise Exception("Could not reach Confluence content API")
+            except requests.exceptions.JSONDecodeError:
+                continue
+        raise Exception("Could not reach Confluence content API. Please check your provided Base URL.")
 
     def get_all_space_content(
         self,
@@ -183,7 +217,9 @@ class ConfluenceClient:
                 if e.response is not None and e.response.status_code == 404:
                     continue
                 raise
-        raise Exception(f"Could not fetch page {page_id}")
+            except requests.exceptions.JSONDecodeError:
+                continue
+        raise Exception(f"Could not fetch page {page_id}. Please check your provided Base URL.")
 
 
 def html_to_text(html_content: str) -> str:
