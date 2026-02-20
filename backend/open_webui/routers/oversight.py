@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import (
+    can_access_user_chats,
     can_read_group_member_chats,
     can_read_user_chats_in_group,
 )
@@ -41,6 +42,9 @@ class OversightTargetResponse(BaseModel):
     email: str
     role: str
     groups: list[dict] = []
+    has_assignment: bool = (
+        False  # True if access is via oversight_assignment (removable)
+    )
 
 
 ############################
@@ -53,18 +57,39 @@ async def get_oversight_targets(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    if not can_read_group_member_chats(user.id, db=db):
+    # Tier 1: audit.read_user_chats — can see ALL users
+    has_read_all = can_access_user_chats(user.id, db=db)
+    # Tier 2: audit.read_group_chats — can see assigned users only
+    has_read_group = can_read_group_member_chats(user.id, db=db)
+
+    if not has_read_all and not has_read_group:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    target_ids = OversightAssignments.get_target_ids_for_overseer(user.id, db=db)
-    if not target_ids:
-        return []
+    # Always fetch assignment IDs so we can mark which targets are removable
+    assigned_ids = OversightAssignments.get_target_ids_for_overseer(user.id, db=db)
 
-    target_id_list = list(target_ids)
-    users = Users.get_users_by_user_ids(target_id_list, db=db)
+    if has_read_all:
+        # Return all users except self
+        all_users_result = Users.get_users(db=db)
+        all_users = (
+            all_users_result.get("users", [])
+            if isinstance(all_users_result, dict)
+            else all_users_result
+        )
+        target_users = [u for u in all_users if u.id != user.id]
+        target_id_list = [u.id for u in target_users]
+    else:
+        # Return only assigned targets
+        if not assigned_ids:
+            return []
+        target_id_list = list(assigned_ids)
+        target_users = Users.get_users_by_user_ids(target_id_list, db=db)
+
+    if not target_id_list:
+        return []
 
     user_groups_map = Groups.get_groups_by_member_ids(target_id_list, db=db)
 
@@ -77,8 +102,9 @@ async def get_oversight_targets(
             groups=[
                 {"id": g.id, "name": g.name} for g in user_groups_map.get(u.id, [])
             ],
+            has_assignment=u.id in assigned_ids,
         )
-        for u in users
+        for u in target_users
     ]
 
 
@@ -95,7 +121,11 @@ async def get_target_chats(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    if not can_read_user_chats_in_group(user.id, user_id, db=db):
+    # Tier 1: audit.read_user_chats — can read any user's chats
+    # Tier 2: audit.read_group_chats + assignment — can read assigned users' chats
+    if not can_access_user_chats(user.id, db=db) and not can_read_user_chats_in_group(
+        user.id, user_id, db=db
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,

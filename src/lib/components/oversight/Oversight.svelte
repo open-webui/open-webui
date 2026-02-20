@@ -261,8 +261,8 @@
 				{:else}
 					{#each filteredTargets as target (target.id)}
 						<button
-							class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors
-								{selectedTarget?.id === target.id && !showAdminPanel
+							class="group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors
+							{selectedTarget?.id === target.id && !showAdminPanel
 								? 'bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800'
 								: 'hover:bg-gray-50 dark:hover:bg-gray-800/60'}"
 							on:click={() => {
@@ -283,6 +283,41 @@
 									{target.email}
 								</p>
 							</div>
+
+							{#if $user?.role === 'admin' && target.has_assignment}
+								<button
+									class="flex-shrink-0 size-6 flex items-center justify-center rounded text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100"
+									on:click|stopPropagation={async () => {
+										const res = await deleteOversightAssignment(
+											localStorage.token,
+											$user.id,
+											target.id
+										);
+										if (res) {
+											targets = targets.filter((t) => t.id !== target.id);
+											if (selectedTarget?.id === target.id) {
+												selectedTarget = null;
+												userChats = null;
+											}
+											toast.success($i18n.t('Assignment removed'));
+										} else {
+											toast.error($i18n.t('Failed to remove assignment'));
+										}
+									}}
+									title={$i18n.t('Remove assignment')}
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="size-3.5"
+									>
+										<path
+											d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
+										/>
+									</svg>
+								</button>
+							{/if}
 						</button>
 					{/each}
 				{/if}
@@ -548,23 +583,27 @@
 				{/if}
 			</div>
 		{:else if selectedTarget}
-			<div class="flex items-center gap-4 px-6 py-4 border-b border-gray-100 dark:border-gray-850">
-				<div
-					class="size-10 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-sm font-bold text-white uppercase flex-shrink-0"
-				>
-					{selectedTarget.name.charAt(0)}
-				</div>
-				<div class="flex-1 min-w-0">
-					<h2 class="text-base font-semibold text-gray-800 dark:text-gray-100">
-						{selectedTarget.name}
-					</h2>
-					<p class="text-xs text-gray-500 dark:text-gray-400">{selectedTarget.email}</p>
+			<div class="px-6 py-4 border-b border-gray-100 dark:border-gray-850">
+				<div class="flex items-center gap-3">
+					<div
+						class="size-10 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-sm font-bold text-white uppercase flex-shrink-0"
+					>
+						{selectedTarget.name.charAt(0)}
+					</div>
+					<div class="flex-1 min-w-0">
+						<h2 class="text-base font-semibold text-gray-800 dark:text-gray-100 truncate">
+							{selectedTarget.name}
+						</h2>
+						<p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+							{selectedTarget.email}
+						</p>
+					</div>
 				</div>
 				{#if selectedTarget.groups.length > 0}
-					<div class="flex flex-wrap gap-1.5">
+					<div class="flex flex-wrap gap-1.5 mt-2.5 ml-[52px]">
 						{#each selectedTarget.groups as grp (grp.id)}
 							<span
-								class="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-full px-2.5 py-1"
+								class="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-full px-2.5 py-0.5"
 							>
 								{grp.name}
 							</span>

@@ -6,6 +6,7 @@ export interface OversightTarget {
 	email: string;
 	role: string;
 	groups: { id: string; name: string }[];
+	has_assignment: boolean;
 }
 
 export interface OversightChat {
