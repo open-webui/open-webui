@@ -2137,6 +2137,10 @@
 		).catch(async (error) => {
 			console.log(error);
 
+			if (_chatId !== $chatId) {
+				return null;
+			}
+
 			let errorMessage = error;
 			if (error?.error?.message) {
 				errorMessage = error.error.message;
@@ -2161,7 +2165,7 @@
 			return null;
 		});
 
-		if (res) {
+		if (res && _chatId === $chatId) {
 			if (res.error) {
 				await handleOpenAIError(res.error, responseMessage);
 			} else {
@@ -2174,7 +2178,10 @@
 		}
 
 		await tick();
-		scrollToBottom();
+		
+		if (_chatId === $chatId) {
+			scrollToBottom();
+		}
 	};
 
 	const handleOpenAIError = async (error, responseMessage) => {
@@ -2230,7 +2237,7 @@
 
 			taskIds = null;
 
-			const responseMessage = history.currentId ? history.messages[history.currentId] : null;
+			const responseMessage: any = history.currentId ? history.messages[history.currentId] : null;
 
 			if (responseMessage) {
 				// Set all response messages to done
