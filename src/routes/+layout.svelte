@@ -794,10 +794,26 @@
 			dayjs.locale(lang);
 		}
 
+		// Fetch branding config early (in parallel concept) so we can
+		// set WEBUI_NAME to the branded name immediately, avoiding the
+		// "Open WebUI" flash between backendConfig load and branding load
+		let earlyBranding = null;
+		try {
+			const bc2 = await getPublicBrandingConfig();
+			if (bc2) {
+				earlyBranding = getEffectiveBranding(bc2);
+				brandingConfig.set(earlyBranding);
+				applyBranding(bc2);
+			}
+		} catch (e) {
+			console.debug('Early branding config not available:', e);
+		}
+
 		if (backendConfig) {
 			// Save Backend Status to Store
 			await config.set(backendConfig);
-			await WEBUI_NAME.set(backendConfig.name);
+			// Use branded app_name if available, otherwise fall back to backend name
+			await WEBUI_NAME.set(earlyBranding?.app_name || backendConfig.name);
 
 			if ($config) {
 				await setupSocket($config.features?.enable_websocket ?? true);
@@ -882,23 +898,7 @@
 			loaded = true;
 		}
 
-		try {
-			const bc2 = await getPublicBrandingConfig();
-			if (bc2) {
-				const effective = getEffectiveBranding(bc2);
-				brandingConfig.set(effective);
-				applyBranding(bc2);
-				// Overwrite WEBUI_NAME with branded app_name so all svelte:head
-				// consumers (Chat, Workspace, Admin, etc.) reflect tenant branding
-				if (effective.app_name) {
-					WEBUI_NAME.set(effective.app_name);
-				}
-			}
-		} catch (e) {
-			console.debug('Branding config not available:', e);
-		}
-
-		// Remove app.html placeholder favicon — svelte:head now manages it
+		// Branding already fetched before backendConfig — just clean up placeholder
 		document.getElementById('app-favicon')?.remove();
 
 		// Auto-show SyncStatsModal when opened with ?sync=true (from community)
