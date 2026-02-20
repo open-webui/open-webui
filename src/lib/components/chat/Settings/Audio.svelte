@@ -4,6 +4,7 @@
 
 	import { user, settings, config } from '$lib/stores';
 	import { getVoices as _getVoices } from '$lib/apis/audio';
+	import { getEffectiveTTSEngine, DEFAULT_KOKORO_DTYPE } from '$lib/utils/audio';
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -91,8 +92,10 @@
 		STTEngine = $settings?.audio?.stt?.engine ?? '';
 		STTLanguage = $settings?.audio?.stt?.language ?? '';
 
-		TTSEngine = $settings?.audio?.tts?.engine ?? '';
-		TTSEngineConfig = $settings?.audio?.tts?.engineConfig ?? {};
+		TTSEngine = getEffectiveTTSEngine($settings?.audio?.tts?.engine, $config?.audio?.tts?.engine);
+		TTSEngineConfig =
+			$settings?.audio?.tts?.engineConfig ??
+			(TTSEngine === 'browser-kokoro' ? { dtype: DEFAULT_KOKORO_DTYPE } : {});
 
 		if ($settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice) {
 			voice = $settings?.audio?.tts?.voice ?? $config.audio.tts.voice ?? '';

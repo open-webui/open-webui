@@ -632,8 +632,15 @@ async def update_user_by_id(
 
         Auths.update_email_by_id(user_id, form_data.email.lower(), db=db)
 
+        # Resolve role_id from the role name
+        from open_webui.models.roles import Roles as RolesTable
+
+        role_record = RolesTable.get_role_by_name(form_data.role, db=db)
+        role_id = role_record.id if role_record else None
+
         update_data = {
             "role": form_data.role,
+            "role_id": role_id,
             "name": form_data.name,
             "email": form_data.email.lower(),
             "profile_image_url": form_data.profile_image_url,

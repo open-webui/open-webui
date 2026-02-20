@@ -9,6 +9,7 @@
 	import { goto } from '$app/navigation';
 
 	import { updateUserById, getUserGroupsById } from '$lib/apis/users';
+	import { getRoles } from '$lib/apis/roles';
 	import { getSharepointTenants, getSharepointSites } from '$lib/apis/sharepoint';
 	import type { TenantInfo, SiteInfo } from '$lib/apis/sharepoint';
 
@@ -32,6 +33,8 @@
 		init();
 	}
 
+	let roles: { id: string; name: string; description?: string; is_system: boolean }[] = [];
+
 	// SharePoint state
 	let sharepointSectionOpen = false;
 	let sharepointTenants: TenantInfo[] = [];
@@ -46,12 +49,24 @@
 		site.display_name.toLowerCase().includes(siteSearchQuery.toLowerCase())
 	);
 
-	const init = () => {
+	const init = async () => {
 		if (selectedUser) {
 			_user = selectedUser;
 			_user.password = '';
 			loadUserGroups();
 			loadSharepointConfig();
+			await loadRoles();
+		}
+	};
+
+	const loadRoles = async () => {
+		try {
+			const res = await getRoles(localStorage.token);
+			if (res?.items) {
+				roles = res.items;
+			}
+		} catch (err) {
+			console.error('Failed to load roles:', err);
 		}
 	};
 
@@ -211,14 +226,20 @@
 
 										<div class="flex-1">
 											<select
-												class="w-full dark:bg-gray-900 text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+												class="w-full dark:bg-gray-900 text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden capitalize"
 												bind:value={_user.role}
 												disabled={_user.id == sessionUser.id}
 												required
 											>
-												<option value="admin">{$i18n.t('Admin')}</option>
-												<option value="user">{$i18n.t('User')}</option>
-												<option value="pending">{$i18n.t('Pending')}</option>
+												{#if roles.length > 0}
+													{#each roles as role}
+														<option value={role.name}>{role.name}</option>
+													{/each}
+												{:else}
+													<option value="admin">{$i18n.t('Admin')}</option>
+													<option value="user">{$i18n.t('User')}</option>
+													<option value="pending">{$i18n.t('Pending')}</option>
+												{/if}
 											</select>
 										</div>
 									</div>

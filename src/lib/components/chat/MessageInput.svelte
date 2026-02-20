@@ -57,6 +57,7 @@
 	import { processFile } from '$lib/apis/retrieval';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
+	import { getEffectiveTTSEngine, DEFAULT_KOKORO_DTYPE } from '$lib/utils/audio';
 
 	import { createNoteHandler } from '../notes/utils';
 	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
@@ -1927,12 +1928,18 @@
 
 																stream = null;
 
-																if ($settings.audio?.tts?.engine === 'browser-kokoro') {
-																	// If the user has not initialized the TTS worker, initialize it
+																if (
+																	getEffectiveTTSEngine(
+																		$settings.audio?.tts?.engine,
+																		$config.audio.tts.engine
+																	) === 'browser-kokoro'
+																) {
 																	if (!$TTSWorker) {
 																		await TTSWorker.set(
 																			new KokoroWorker({
-																				dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
+																				dtype:
+																					$settings.audio?.tts?.engineConfig?.dtype ??
+																					DEFAULT_KOKORO_DTYPE
 																			})
 																		);
 

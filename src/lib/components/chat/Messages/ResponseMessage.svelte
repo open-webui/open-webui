@@ -25,6 +25,11 @@
 		user
 	} from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
+	import {
+		getEffectiveTTSEngine,
+		DEFAULT_KOKORO_DTYPE,
+		DEFAULT_KOKORO_VOICE
+	} from '$lib/utils/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
 		copyToClipboard as _copyToClipboard,
@@ -209,18 +214,29 @@
 
 		// Get voice: model-specific > user settings > config default
 		const getVoiceId = () => {
-			// Check for model-specific TTS voice first
 			if (model?.info?.meta?.tts?.voice) {
 				return model.info.meta.tts.voice;
 			}
-			// Fall back to user settings or config default
+			const isKokoro = effectiveTTSEngine === 'browser-kokoro';
+			const userVoice = $settings?.audio?.tts?.voice;
+			if (isKokoro && userVoice && userVoice.includes('_')) {
+				return userVoice;
+			}
+			if (isKokoro) {
+				return DEFAULT_KOKORO_VOICE;
+			}
 			if ($settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice) {
-				return $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice;
+				return userVoice ?? $config?.audio?.tts?.voice;
 			}
 			return $config?.audio?.tts?.voice;
 		};
 
-		if ($config.audio.tts.engine === '') {
+		const effectiveTTSEngine = getEffectiveTTSEngine(
+			$settings.audio?.tts?.engine,
+			$config.audio.tts.engine
+		);
+
+		if (effectiveTTSEngine !== 'browser-kokoro' && $config.audio.tts.engine === '') {
 			let voices = [];
 			const getVoicesLoop = setInterval(() => {
 				voices = speechSynthesis.getVoices();
@@ -277,11 +293,11 @@
 			const voiceId = getVoiceId();
 			console.debug('Prepared message content for TTS', messageContentParts, 'voice:', voiceId);
 
-			if ($settings.audio?.tts?.engine === 'browser-kokoro') {
+			if (effectiveTTSEngine === 'browser-kokoro') {
 				if (!$TTSWorker) {
 					await TTSWorker.set(
 						new KokoroWorker({
-							dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
+							dtype: $settings.audio?.tts?.engineConfig?.dtype ?? DEFAULT_KOKORO_DTYPE
 						})
 					);
 

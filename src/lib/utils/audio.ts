@@ -1,3 +1,19 @@
+export function getEffectiveTTSEngine(
+	userEngine: string | undefined,
+	serverEngine: string | undefined
+): string {
+	if (userEngine) {
+		return userEngine;
+	}
+	if (serverEngine) {
+		return '';
+	}
+	return 'browser-kokoro';
+}
+
+export const DEFAULT_KOKORO_DTYPE = 'q8';
+export const DEFAULT_KOKORO_VOICE = 'af_heart';
+
 export class AudioQueue {
 	constructor(audioElement) {
 		this.audio = audioElement;

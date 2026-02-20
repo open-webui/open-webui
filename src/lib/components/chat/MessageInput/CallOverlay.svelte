@@ -5,6 +5,11 @@
 	const dispatch = createEventDispatcher();
 
 	import { blobToFile } from '$lib/utils';
+	import {
+		getEffectiveTTSEngine,
+		DEFAULT_KOKORO_DTYPE,
+		DEFAULT_KOKORO_VOICE
+	} from '$lib/utils/audio';
 	import { generateEmoji } from '$lib/apis';
 	import { synthesizeOpenAISpeech, transcribeAudio } from '$lib/apis/audio';
 
@@ -365,13 +370,21 @@
 
 	// Get voice: model-specific > user settings > config default
 	const getVoiceId = () => {
-		// Check for model-specific TTS voice first
 		if (model?.info?.meta?.tts?.voice) {
 			return model.info.meta.tts.voice;
 		}
-		// Fall back to user settings or config default
+		const isKokoro =
+			getEffectiveTTSEngine($settings.audio?.tts?.engine, $config.audio.tts.engine) ===
+			'browser-kokoro';
+		const userVoice = $settings?.audio?.tts?.voice;
+		if (isKokoro && userVoice && userVoice.includes('_')) {
+			return userVoice;
+		}
+		if (isKokoro) {
+			return DEFAULT_KOKORO_VOICE;
+		}
 		if ($settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice) {
-			return $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice;
+			return userVoice ?? $config?.audio?.tts?.voice;
 		}
 		return $config?.audio?.tts?.voice;
 	};
@@ -476,7 +489,10 @@
 					}
 				}
 
-				if ($settings.audio?.tts?.engine === 'browser-kokoro') {
+				if (
+					getEffectiveTTSEngine($settings.audio?.tts?.engine, $config.audio.tts.engine) ===
+					'browser-kokoro'
+				) {
 					const url = await $TTSWorker
 						.generate({
 							text: content,
@@ -532,7 +548,11 @@
 						emoji = null;
 					}
 
-					if ($config.audio.tts.engine !== '') {
+					if (
+						getEffectiveTTSEngine($settings.audio?.tts?.engine, $config.audio.tts.engine) ===
+							'browser-kokoro' ||
+						$config.audio.tts.engine !== ''
+					) {
 						try {
 							console.log(
 								'%c%s',
@@ -541,9 +561,9 @@
 							);
 
 							const audio = audioCache.get(content);
-							await playAudio(audio); // Here ensure that playAudio is indeed correct method to execute
+							await playAudio(audio);
 							console.log(`Played audio for content: ${content}`);
-							await new Promise((resolve) => setTimeout(resolve, 200)); // Wait before retrying to reduce tight loop
+							await new Promise((resolve) => setTimeout(resolve, 200));
 						} catch (error) {
 							console.error('Error playing audio:', error);
 						}
