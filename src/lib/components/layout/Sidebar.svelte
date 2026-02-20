@@ -67,6 +67,7 @@
 	import FolderIcon from '../icons/Folder.svelte';
 	import Hashtag from '../icons/Hashtag.svelte';
 	import Grid from '../icons/Grid.svelte';
+	import Plus from '../icons/Plus.svelte';
 	import { slide } from 'svelte/transition';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
 
@@ -1003,17 +1004,14 @@
 					</div>
 
 					{#if $config?.features?.enable_folders && ($user?.role === 'admin' || ($user?.permissions?.features?.folders ?? true))}
-						<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
-							<a
-								id="sidebar-folders-nav-button"
-								class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-								href="/"
-								on:click={(e) => {
-									e.preventDefault();
-									showFolders = true;
-									itemClickHandler();
-								}}
-								draggable="false"
+						<div class="px-[0.4375rem] text-gray-800 dark:text-gray-200">
+							<div
+								class="group flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition cursor-pointer"
+								role="button"
+								tabindex="0"
+								on:click={() => { showFolders = !showFolders; }}
+								on:keydown={(e) => { if (e.key === 'Enter') showFolders = !showFolders; }}
+								aria-expanded={showFolders}
 								aria-label={$i18n.t('Folders')}
 							>
 								<div class="self-center">
@@ -1022,22 +1020,45 @@
 								<div class="flex flex-1 self-center translate-y-[0.5px]">
 									<div class="self-center text-sm font-primary">{$i18n.t('Folders')}</div>
 								</div>
-							</a>
+								<button
+									class="invisible group-hover:visible self-center p-0.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition"
+									on:click|stopPropagation={() => { showCreateFolderModal = true; }}
+									aria-label={$i18n.t('New Folder')}
+								>
+									<Plus className="size-3.5" strokeWidth="2.5" />
+								</button>
+							</div>
+							{#if showFolders}
+								<div class="mt-0.5 mb-1" transition:slide={{ duration: 150 }}>
+									<Folders
+										bind:folderRegistry
+										{folders}
+										{shiftKey}
+										onDelete={(folderId) => {
+											selectedFolder.set(null);
+											initChatList();
+										}}
+										on:update={() => { initChatList(); }}
+										on:import={(e) => {
+											const { folderId, items } = e.detail;
+											importChatHandler(items, false, folderId);
+										}}
+										on:change={async () => { initChatList(); }}
+									/>
+								</div>
+							{/if}
 						</div>
 					{/if}
 
 					{#if $config?.features?.enable_channels && ($user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true))}
-						<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
-							<a
-								id="sidebar-channels-nav-button"
-								class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-								href="/"
-								on:click={(e) => {
-									e.preventDefault();
-									showChannels = true;
-									itemClickHandler();
-								}}
-								draggable="false"
+						<div class="px-[0.4375rem] text-gray-800 dark:text-gray-200">
+							<div
+								class="group flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition cursor-pointer"
+								role="button"
+								tabindex="0"
+								on:click={() => { showChannels = !showChannels; }}
+								on:keydown={(e) => { if (e.key === 'Enter') showChannels = !showChannels; }}
+								aria-expanded={showChannels}
 								aria-label={$i18n.t('Channels')}
 							>
 								<div class="self-center">
@@ -1046,7 +1067,32 @@
 								<div class="flex flex-1 self-center translate-y-[0.5px]">
 									<div class="self-center text-sm font-primary">{$i18n.t('Channels')}</div>
 								</div>
-							</a>
+								{#if $user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true)}
+									<button
+										class="invisible group-hover:visible self-center p-0.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition"
+										on:click|stopPropagation={async () => {
+											await tick();
+											setTimeout(() => { showCreateChannel = true; }, 0);
+										}}
+										aria-label={$i18n.t('Create Channel')}
+									>
+										<Plus className="size-3.5" strokeWidth="2.5" />
+									</button>
+								{/if}
+							</div>
+							{#if showChannels}
+								<div class="mt-0.5 mb-1" transition:slide={{ duration: 150 }}>
+									{#each $channels as channel, channelIdx (`${channel?.id}`)}
+										<ChannelItem
+											{channel}
+											onUpdate={async () => { await initChannels(); }}
+										/>
+										{#if channelIdx < $channels.length - 1 && channel.type !== $channels[channelIdx + 1]?.type}
+											<hr class="border-gray-100/40 dark:border-gray-800/10 my-1.5 w-full" />
+										{/if}
+									{/each}
+								</div>
+							{/if}
 						</div>
 					{/if}
 
@@ -1139,94 +1185,9 @@
 					</Folder>
 				{/if}
 
-				{#if $config?.features?.enable_channels && ($user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true))}
-					<Folder
-						id="sidebar-channels"
-						bind:open={showChannels}
-						className="px-2 mt-0.5"
-						name={$i18n.t('Channels')}
-						chevron={false}
-						dragAndDrop={false}
-						onAdd={$user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true)
-							? async () => {
-									await tick();
 
-									setTimeout(() => {
-										showCreateChannel = true;
-									}, 0);
-								}
-							: null}
-						onAddLabel={$i18n.t('Create Channel')}
-					>
-						{#each $channels as channel, channelIdx (`${channel?.id}`)}
-							<ChannelItem
-								{channel}
-								onUpdate={async () => {
-									await initChannels();
-								}}
-							/>
 
-							{#if channelIdx < $channels.length - 1 && channel.type !== $channels[channelIdx + 1]?.type}<hr
-									class=" border-gray-100/40 dark:border-gray-800/10 my-1.5 w-full"
-								/>
-							{/if}
-						{/each}
-					</Folder>
-				{/if}
 
-				{#if $config?.features?.enable_folders && ($user?.role === 'admin' || ($user?.permissions?.features?.folders ?? true))}
-					<Folder
-						id="sidebar-folders"
-						bind:open={showFolders}
-						className="px-2 mt-0.5"
-						name={$i18n.t('Folders')}
-						chevron={false}
-						onAdd={() => {
-							showCreateFolderModal = true;
-						}}
-						onAddLabel={$i18n.t('New Folder')}
-						on:drop={async (e) => {
-							const { type, id, item } = e.detail;
-
-							if (type === 'folder') {
-								if (folders[id].parent_id === null) {
-									return;
-								}
-
-								const res = await updateFolderParentIdById(localStorage.token, id, null).catch(
-									(error) => {
-										toast.error(`${error}`);
-										return null;
-									}
-								);
-
-								if (res) {
-									await initFolders();
-								}
-							}
-						}}
-					>
-						<Folders
-							bind:folderRegistry
-							{folders}
-							{shiftKey}
-							onDelete={(folderId) => {
-								selectedFolder.set(null);
-								initChatList();
-							}}
-							on:update={() => {
-								initChatList();
-							}}
-							on:import={(e) => {
-								const { folderId, items } = e.detail;
-								importChatHandler(items, false, folderId);
-							}}
-							on:change={async () => {
-								initChatList();
-							}}
-						/>
-					</Folder>
-				{/if}
 
 				<Folder
 					id="sidebar-chats"
