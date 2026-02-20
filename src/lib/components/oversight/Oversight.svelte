@@ -17,12 +17,14 @@
 		getOversightTargets,
 		getOversightTargetChats,
 		getOversightAssignments,
+		getUnmonitoredUsers,
 		createOversightAssignment,
 		deleteOversightAssignment,
 		bulkAssignFromGroup,
 		type OversightTarget,
 		type OversightChat,
-		type OversightAssignment
+		type OversightAssignment,
+		type UnmonitoredUser
 	} from '$lib/apis/oversight';
 
 	import { getAllUsers } from '$lib/apis/users';
@@ -48,6 +50,9 @@
 	let allUsers: { id: string; name: string; email: string }[] = [];
 	let allGroups: { id: string; name: string }[] = [];
 	let adminLoading = false;
+
+	let unmonitoredUsers: UnmonitoredUser[] = [];
+	let showUnmonitoredDetail = false;
 
 	let newTargetId = '';
 	let newOverseerId = '';
@@ -80,10 +85,11 @@
 
 	const loadAdminData = async () => {
 		adminLoading = true;
-		const [assignmentsRes, usersRes, groupsRes] = await Promise.allSettled([
+		const [assignmentsRes, usersRes, groupsRes, unmonitoredRes] = await Promise.allSettled([
 			getOversightAssignments(localStorage.token),
 			getAllUsers(localStorage.token),
-			getGroups(localStorage.token)
+			getGroups(localStorage.token),
+			getUnmonitoredUsers(localStorage.token)
 		]);
 		if (assignmentsRes.status === 'fulfilled' && assignmentsRes.value) {
 			assignments = assignmentsRes.value;
@@ -94,6 +100,9 @@
 		}
 		if (groupsRes.status === 'fulfilled' && groupsRes.value) {
 			allGroups = groupsRes.value;
+		}
+		if (unmonitoredRes.status === 'fulfilled' && unmonitoredRes.value) {
+			unmonitoredUsers = unmonitoredRes.value;
 		}
 		adminLoading = false;
 	};
@@ -253,73 +262,153 @@
 				</div>
 			</div>
 
-			<div class="px-2 overflow-y-auto flex-1 space-y-0.5 pb-2">
+			<div class="overflow-y-auto flex-1 pb-2">
 				{#if filteredTargets.length === 0}
 					<p class="px-3 py-3 text-sm text-gray-400 dark:text-gray-500 italic">
 						{$i18n.t('No users found.')}
 					</p>
-				{:else}
-					{#each filteredTargets as target (target.id)}
-						<button
-							class="group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors
-							{selectedTarget?.id === target.id && !showAdminPanel
-								? 'bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800'
-								: 'hover:bg-gray-50 dark:hover:bg-gray-800/60'}"
-							on:click={() => {
-								showAdminPanel = false;
-								loadTargetChats(target);
-							}}
-						>
-							<div
-								class="size-8 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-600 dark:to-gray-700 flex items-center justify-center flex-shrink-0 text-xs font-semibold text-white uppercase"
-							>
-								{target.name.charAt(0)}
-							</div>
-							<div class="flex-1 min-w-0">
-								<p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
-									{target.name}
-								</p>
-								<p class="text-xs text-gray-500 dark:text-gray-400 truncate">
-									{target.email}
-								</p>
-							</div>
+				{/if}
 
-							{#if $user?.role === 'admin' && target.has_assignment}
+				{#if filteredTargets.some((t) => t.has_assignment)}
+					<div class="px-2 pt-2">
+						<div class="px-2 pb-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+							{$i18n.t('Your Assignments')}
+						</div>
+						<div class="space-y-0.5">
+							{#each filteredTargets.filter((t) => t.has_assignment) as target (target.id)}
 								<button
-									class="flex-shrink-0 size-6 flex items-center justify-center rounded text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100"
-									on:click|stopPropagation={async () => {
-										const res = await deleteOversightAssignment(
-											localStorage.token,
-											$user.id,
-											target.id
-										);
-										if (res) {
-											targets = targets.filter((t) => t.id !== target.id);
-											if (selectedTarget?.id === target.id) {
-												selectedTarget = null;
-												userChats = null;
-											}
-											toast.success($i18n.t('Assignment removed'));
-										} else {
-											toast.error($i18n.t('Failed to remove assignment'));
-										}
+									class="group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors
+									{selectedTarget?.id === target.id && !showAdminPanel
+										? 'bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800'
+										: 'hover:bg-gray-50 dark:hover:bg-gray-800/60'}"
+									on:click={() => {
+										showAdminPanel = false;
+										loadTargetChats(target);
 									}}
-									title={$i18n.t('Remove assignment')}
 								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 16 16"
-										fill="currentColor"
-										class="size-3.5"
+									<div
+										class="size-8 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-600 dark:to-gray-700 flex items-center justify-center flex-shrink-0 text-xs font-semibold text-white uppercase"
 									>
-										<path
-											d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
-										/>
-									</svg>
+										{target.name.charAt(0)}
+									</div>
+									<div class="flex-1 min-w-0">
+										<p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+											{target.name}
+										</p>
+										<p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+											{target.email}
+										</p>
+									</div>
+
+									{#if $user?.role === 'admin' && target.has_assignment}
+										<button
+											class="flex-shrink-0 size-6 flex items-center justify-center rounded text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100"
+											on:click|stopPropagation={async () => {
+												const res = await deleteOversightAssignment(
+													localStorage.token,
+													$user.id,
+													target.id
+												);
+												if (res) {
+													targets = targets.filter((t) => t.id !== target.id);
+													if (selectedTarget?.id === target.id) {
+														selectedTarget = null;
+														userChats = null;
+													}
+													toast.success($i18n.t('Assignment removed'));
+												} else {
+													toast.error($i18n.t('Failed to remove assignment'));
+												}
+											}}
+											title={$i18n.t('Remove assignment')}
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 16 16"
+												fill="currentColor"
+												class="size-3.5"
+											>
+												<path
+													d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
+												/>
+											</svg>
+										</button>
+									{/if}
 								</button>
-							{/if}
-						</button>
-					{/each}
+							{/each}
+						</div>
+					</div>
+				{/if}
+
+				{#if filteredTargets.some((t) => !t.has_assignment)}
+					<div class="px-2 pt-2">
+						<div class="px-2 pb-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+							{$i18n.t('All Users')}
+						</div>
+						<div class="space-y-0.5">
+							{#each filteredTargets.filter((t) => !t.has_assignment) as target (target.id)}
+								<button
+									class="group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors
+									{selectedTarget?.id === target.id && !showAdminPanel
+										? 'bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800'
+										: 'hover:bg-gray-50 dark:hover:bg-gray-800/60'}"
+									on:click={() => {
+										showAdminPanel = false;
+										loadTargetChats(target);
+									}}
+								>
+									<div
+										class="size-8 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-600 dark:to-gray-700 flex items-center justify-center flex-shrink-0 text-xs font-semibold text-white uppercase"
+									>
+										{target.name.charAt(0)}
+									</div>
+									<div class="flex-1 min-w-0">
+										<p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+											{target.name}
+										</p>
+										<p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+											{target.email}
+										</p>
+									</div>
+
+									{#if $user?.role === 'admin' && target.has_assignment}
+										<button
+											class="flex-shrink-0 size-6 flex items-center justify-center rounded text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100"
+											on:click|stopPropagation={async () => {
+												const res = await deleteOversightAssignment(
+													localStorage.token,
+													$user.id,
+													target.id
+												);
+												if (res) {
+													targets = targets.filter((t) => t.id !== target.id);
+													if (selectedTarget?.id === target.id) {
+														selectedTarget = null;
+														userChats = null;
+													}
+													toast.success($i18n.t('Assignment removed'));
+												} else {
+													toast.error($i18n.t('Failed to remove assignment'));
+												}
+											}}
+											title={$i18n.t('Remove assignment')}
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 16 16"
+												fill="currentColor"
+												class="size-3.5"
+											>
+												<path
+													d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
+												/>
+											</svg>
+										</button>
+									{/if}
+								</button>
+							{/each}
+						</div>
+					</div>
 				{/if}
 			</div>
 
@@ -386,6 +475,56 @@
 						<Spinner />
 					</div>
 				{:else}
+					{#if unmonitoredUsers.length > 0}
+						<div
+							class="flex items-start gap-3 px-4 py-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50"
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								class="size-5 flex-shrink-0 mt-0.5 text-amber-500 dark:text-amber-400"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 6a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 6Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+							<div class="flex-1 min-w-0">
+								<p class="text-sm font-medium text-amber-800 dark:text-amber-200">
+									{unmonitoredUsers.length} unmonitored {unmonitoredUsers.length === 1
+										? 'user'
+										: 'users'}
+								</p>
+								<p class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+									{$i18n.t(
+										'These non-admin users have no oversight assignment and their chats are not being monitored.'
+									)}
+								</p>
+
+								{#if showUnmonitoredDetail}
+									<div class="mt-2 flex flex-wrap gap-1.5">
+										{#each unmonitoredUsers as u (u.id)}
+											<span
+												class="inline-flex items-center gap-1 text-xs bg-amber-100 dark:bg-amber-800/40 text-amber-700 dark:text-amber-300 rounded-full px-2.5 py-0.5"
+											>
+												{u.name}
+											</span>
+										{/each}
+									</div>
+								{/if}
+
+								<button
+									class="mt-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 underline underline-offset-2 transition-colors"
+									on:click={() => (showUnmonitoredDetail = !showUnmonitoredDetail)}
+								>
+									{showUnmonitoredDetail ? $i18n.t('Hide details') : $i18n.t('Show users')}
+								</button>
+							</div>
+						</div>
+					{/if}
+
 					<section>
 						<h3
 							class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3"
@@ -409,18 +548,11 @@
 											>
 												{userMap.get(a.overseer_id)?.name ?? a.overseer_id}
 											</span>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 16 16"
-												fill="currentColor"
-												class="size-3.5 flex-shrink-0 text-gray-400"
+											<span
+												class="flex-shrink-0 text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500"
 											>
-												<path
-													fill-rule="evenodd"
-													d="M2 8a.75.75 0 0 1 .75-.75h8.69L8.22 4.03a.75.75 0 0 1 1.06-1.06l4.5 4.5a.75.75 0 0 1 0 1.06l-4.5 4.5a.75.75 0 0 1-1.06-1.06l3.22-3.22H2.75A.75.75 0 0 1 2 8Z"
-													clip-rule="evenodd"
-												/>
-											</svg>
+												{$i18n.t('oversees')}
+											</span>
 											<span
 												class="font-medium text-gray-800 dark:text-gray-200 truncate max-w-[130px]"
 												title={userMap.get(a.target_id)?.name ?? a.target_id}
@@ -463,14 +595,26 @@
 						{/if}
 					</section>
 
-					<section class="border-t border-gray-100 dark:border-gray-850 pt-5">
-						<h3
-							class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3"
+					<details class="border-t border-gray-100 dark:border-gray-850 pt-4">
+						<summary
+							class="cursor-pointer select-none text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3 list-none flex items-center gap-1.5"
 						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 16 16"
+								fill="currentColor"
+								class="size-3 transition-transform [details[open]>&]:rotate-90"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M6.22 4.22a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06l-3.25 3.25a.75.75 0 0 1-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 0 1 0-1.06Z"
+									clip-rule="evenodd"
+								/>
+							</svg>
 							{$i18n.t('Add Assignment')}
-						</h3>
+						</summary>
 						<form
-							class="flex flex-wrap items-end gap-3"
+							class="flex flex-wrap items-end gap-3 mt-3"
 							on:submit|preventDefault={handleCreateAssignment}
 						>
 							<div class="flex-1 min-w-[160px]">
@@ -487,7 +631,7 @@
 								>
 									<option value="">{$i18n.t('Self (current user)')}</option>
 									{#each allUsers as u (u.id)}
-										<option value={u.id}>{u.name}</option>
+										<option value={u.id}>{u.name} ({u.email})</option>
 									{/each}
 								</select>
 							</div>
@@ -506,7 +650,7 @@
 								>
 									<option value="">{$i18n.t('Select target...')}</option>
 									{#each allUsers as u (u.id)}
-										<option value={u.id}>{u.name}</option>
+										<option value={u.id}>{u.name} ({u.email})</option>
 									{/each}
 								</select>
 							</div>
@@ -518,15 +662,27 @@
 								{assignmentSubmitting ? $i18n.t('Adding...') : $i18n.t('Add')}
 							</button>
 						</form>
-					</section>
+					</details>
 
-					<section class="border-t border-gray-100 dark:border-gray-850 pt-5">
-						<h3
-							class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1"
+					<details class="border-t border-gray-100 dark:border-gray-850 pt-4">
+						<summary
+							class="cursor-pointer select-none text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3 list-none flex items-center gap-1.5"
 						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 16 16"
+								fill="currentColor"
+								class="size-3 transition-transform [details[open]>&]:rotate-90"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M6.22 4.22a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06l-3.25 3.25a.75.75 0 0 1-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 0 1 0-1.06Z"
+									clip-rule="evenodd"
+								/>
+							</svg>
 							{$i18n.t('Bulk Assign from Group')}
-						</h3>
-						<p class="text-xs text-gray-400 dark:text-gray-500 mb-3">
+						</summary>
+						<p class="text-xs text-gray-400 dark:text-gray-500 mb-3 mt-3">
 							{$i18n.t('Assign all members of a group to an overseer at once.')}
 						</p>
 						<form
@@ -567,7 +723,7 @@
 								>
 									<option value="">{$i18n.t('Select overseer...')}</option>
 									{#each allUsers as u (u.id)}
-										<option value={u.id}>{u.name}</option>
+										<option value={u.id}>{u.name} ({u.email})</option>
 									{/each}
 								</select>
 							</div>
@@ -579,7 +735,7 @@
 								{bulkSubmitting ? $i18n.t('Assigning...') : $i18n.t('Bulk Assign')}
 							</button>
 						</form>
-					</section>
+					</details>
 				{/if}
 			</div>
 		{:else if selectedTarget}

@@ -151,6 +151,47 @@ async def get_target_chats(
 
 
 ############################
+# GetUnmonitoredUsers
+############################
+
+
+class UnmonitoredUserResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    role: str
+
+
+@router.get("/unmonitored", response_model=list[UnmonitoredUserResponse])
+async def get_unmonitored_users(
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
+):
+    """Return non-admin users who are NOT a target in any oversight assignment."""
+    monitored_ids = OversightAssignments.get_all_target_ids(db=db)
+
+    all_users_result = Users.get_users(db=db)
+    all_users = (
+        all_users_result.get("users", [])
+        if isinstance(all_users_result, dict)
+        else all_users_result
+    )
+
+    unmonitored = [
+        UnmonitoredUserResponse(
+            id=u.id,
+            name=u.name,
+            email=u.email,
+            role=u.role,
+        )
+        for u in all_users
+        if u.role != "admin" and u.id not in monitored_ids
+    ]
+
+    return unmonitored
+
+
+############################
 # Assignments CRUD
 ############################
 

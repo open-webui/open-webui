@@ -200,6 +200,14 @@ class OversightAssignmentTable:
                 is not None
             )
 
+    def get_all_target_ids(
+        self,
+        db: Optional[Session] = None,
+    ) -> set[str]:
+        with get_db_context(db) as db:
+            rows = db.query(OversightAssignment.target_id).distinct().all()
+            return {r[0] for r in rows}
+
     def remove_all_for_overseer(
         self,
         overseer_id: str,

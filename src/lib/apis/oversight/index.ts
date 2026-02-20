@@ -16,6 +16,13 @@ export interface OversightChat {
 	created_at: number;
 }
 
+export interface UnmonitoredUser {
+	id: string;
+	name: string;
+	email: string;
+	role: string;
+}
+
 export interface OversightAssignment {
 	id: string;
 	overseer_id: string;
@@ -170,6 +177,34 @@ export const deleteOversightAssignment = async (
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/oversight/assignments/${overseerId}/${targetId}`, {
 		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getUnmonitoredUsers = async (token: string): Promise<UnmonitoredUser[] | null> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/oversight/unmonitored`, {
+		method: 'GET',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',

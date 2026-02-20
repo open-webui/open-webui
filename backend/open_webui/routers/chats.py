@@ -1307,7 +1307,6 @@ async def update_chat_message_by_id(
         {
             "content": form_data.content,
         },
-        db=db,
     )
 
     event_emitter = get_event_emitter(
