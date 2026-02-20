@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
   <defs>
-    <radialGradient id="bodyGrad" cx="50%" cy="45%" r="55%">
+    <radialGradient id="bodyGrad" cx="50%" cy="40%" r="55%">
       <stop offset="0%" stop-color="#ffc84a"/>
       <stop offset="100%" stop-color="#e8900a"/>
     </radialGradient>
@@ -13,15 +13,15 @@
   <ellipse cx="50" cy="70" rx="6" ry="5" fill="url(#bodyGrad)"/>
   <ellipse cx="62" cy="66" rx="6" ry="5" fill="url(#bodyGrad)"/>
 
-  <!-- Body -->
-  <ellipse cx="40" cy="38" rx="28" ry="32" fill="url(#bodyGrad)"/>
+  <!-- Body (round) -->
+  <ellipse cx="40" cy="36" rx="28" ry="28" fill="url(#bodyGrad)"/>
 
   <!-- Eyes -->
-  <ellipse cx="31" cy="34" rx="5.5" ry="6" fill="#0b0f14"/>
-  <ellipse cx="49" cy="34" rx="5.5" ry="6" fill="#0b0f14"/>
-  <ellipse cx="32.5" cy="32.5" rx="1.8" ry="1.8" fill="#fff" opacity="0.7"/>
-  <ellipse cx="50.5" cy="32.5" rx="1.8" ry="1.8" fill="#fff" opacity="0.7"/>
+  <ellipse cx="31" cy="32" rx="5.5" ry="6" fill="#0b0f14"/>
+  <ellipse cx="49" cy="32" rx="5.5" ry="6" fill="#0b0f14"/>
+  <ellipse cx="32.5" cy="30.5" rx="1.8" ry="1.8" fill="#fff" opacity="0.7"/>
+  <ellipse cx="50.5" cy="30.5" rx="1.8" ry="1.8" fill="#fff" opacity="0.7"/>
 
   <!-- Smile -->
-  <path d="M33 44 Q40 49 47 44" stroke="#0b0f14" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <path d="M33 42 Q40 47 47 42" stroke="#0b0f14" stroke-width="1.8" stroke-linecap="round" fill="none"/>
 </svg>
