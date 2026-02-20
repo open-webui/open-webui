@@ -270,6 +270,7 @@ async def get_status(request: Request):
         "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
         "RAG_EMBEDDING_BATCH_SIZE": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         "ENABLE_ASYNC_EMBEDDING": request.app.state.config.ENABLE_ASYNC_EMBEDDING,
+        "RAG_MAX_CONCURRENT_EMBEDDING": request.app.state.config.RAG_MAX_CONCURRENT_EMBEDDING,
     }
 
 
@@ -281,6 +282,7 @@ async def get_embedding_config(request: Request, user=Depends(get_admin_user)):
         "RAG_EMBEDDING_MODEL": request.app.state.config.RAG_EMBEDDING_MODEL,
         "RAG_EMBEDDING_BATCH_SIZE": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         "ENABLE_ASYNC_EMBEDDING": request.app.state.config.ENABLE_ASYNC_EMBEDDING,
+        "RAG_MAX_CONCURRENT_EMBEDDING": request.app.state.config.RAG_MAX_CONCURRENT_EMBEDDING,
         "openai_config": {
             "url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
             "key": request.app.state.config.RAG_OPENAI_API_KEY,
@@ -321,6 +323,7 @@ class EmbeddingModelUpdateForm(BaseModel):
     RAG_EMBEDDING_MODEL: str
     RAG_EMBEDDING_BATCH_SIZE: Optional[int] = 1
     ENABLE_ASYNC_EMBEDDING: Optional[bool] = True
+    RAG_MAX_CONCURRENT_EMBEDDING: Optional[int] = 0
 
 
 def unload_embedding_model(request: Request):
@@ -354,6 +357,9 @@ async def update_embedding_config(
         )
         request.app.state.config.ENABLE_ASYNC_EMBEDDING = (
             form_data.ENABLE_ASYNC_EMBEDDING
+        )
+        request.app.state.config.RAG_MAX_CONCURRENT_EMBEDDING = (
+            form_data.RAG_MAX_CONCURRENT_EMBEDDING
         )
 
         if request.app.state.config.RAG_EMBEDDING_ENGINE in [
@@ -422,6 +428,7 @@ async def update_embedding_config(
                 else None
             ),
             enable_async=request.app.state.config.ENABLE_ASYNC_EMBEDDING,
+            max_concurrent=request.app.state.config.RAG_MAX_CONCURRENT_EMBEDDING,
         )
 
         return {
@@ -430,6 +437,7 @@ async def update_embedding_config(
             "RAG_EMBEDDING_MODEL": request.app.state.config.RAG_EMBEDDING_MODEL,
             "RAG_EMBEDDING_BATCH_SIZE": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
             "ENABLE_ASYNC_EMBEDDING": request.app.state.config.ENABLE_ASYNC_EMBEDDING,
+            "RAG_MAX_CONCURRENT_EMBEDDING": request.app.state.config.RAG_MAX_CONCURRENT_EMBEDDING,
             "openai_config": {
                 "url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
                 "key": request.app.state.config.RAG_OPENAI_API_KEY,
@@ -1589,6 +1597,7 @@ def save_docs_to_vector_db(
                 else None
             ),
             enable_async=request.app.state.config.ENABLE_ASYNC_EMBEDDING,
+            max_concurrent=request.app.state.config.RAG_MAX_CONCURRENT_EMBEDDING,
         )
 
         # Run async embedding in sync context using the main event loop

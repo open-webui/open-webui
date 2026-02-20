@@ -42,6 +42,7 @@
 	let RAG_EMBEDDING_MODEL = '';
 	let RAG_EMBEDDING_BATCH_SIZE = 1;
 	let ENABLE_ASYNC_EMBEDDING = true;
+	let RAG_MAX_CONCURRENT_EMBEDDING = 0;
 
 	let rerankingModel = '';
 
@@ -104,7 +105,8 @@
 			RAG_EMBEDDING_ENGINE,
 			RAG_EMBEDDING_MODEL,
 			RAG_EMBEDDING_BATCH_SIZE,
-			ENABLE_ASYNC_EMBEDDING
+			ENABLE_ASYNC_EMBEDDING,
+			RAG_MAX_CONCURRENT_EMBEDDING
 		});
 
 		updateEmbeddingModelLoading = true;
@@ -113,6 +115,7 @@
 			RAG_EMBEDDING_MODEL: RAG_EMBEDDING_MODEL,
 			RAG_EMBEDDING_BATCH_SIZE: RAG_EMBEDDING_BATCH_SIZE,
 			ENABLE_ASYNC_EMBEDDING: ENABLE_ASYNC_EMBEDDING,
+			RAG_MAX_CONCURRENT_EMBEDDING: RAG_MAX_CONCURRENT_EMBEDDING,
 			ollama_config: {
 				key: OllamaKey,
 				url: OllamaUrl
@@ -241,6 +244,7 @@
 			RAG_EMBEDDING_MODEL = embeddingConfig.RAG_EMBEDDING_MODEL;
 			RAG_EMBEDDING_BATCH_SIZE = embeddingConfig.RAG_EMBEDDING_BATCH_SIZE ?? 1;
 			ENABLE_ASYNC_EMBEDDING = embeddingConfig.ENABLE_ASYNC_EMBEDDING ?? true;
+			RAG_MAX_CONCURRENT_EMBEDDING = embeddingConfig.RAG_MAX_CONCURRENT_EMBEDDING ?? 0;
 
 			OpenAIKey = embeddingConfig.openai_config.key;
 			OpenAIUrl = embeddingConfig.openai_config.url;
@@ -1043,6 +1047,32 @@
 									<Switch bind:state={ENABLE_ASYNC_EMBEDDING} />
 								</div>
 							</div>
+
+							{#if ENABLE_ASYNC_EMBEDDING}
+								<div class="  mb-2.5 flex w-full justify-between">
+									<div class="self-center text-xs font-medium">
+										<Tooltip
+											content={$i18n.t(
+													'Limits how many embedding batches run at once. Set to 0 for unlimited.'
+											)}
+											placement="top-start"
+										>
+											{$i18n.t('Max Concurrent Embedding Requests')}
+										</Tooltip>
+									</div>
+
+								<div class="">
+									<input
+										bind:value={RAG_MAX_CONCURRENT_EMBEDDING}
+										type="number"
+										class=" bg-transparent text-center w-14 outline-none"
+										min="0"
+										max="1000"
+										step="1"
+									/>
+								</div>
+							</div>
+						{/if}
 						{/if}
 					</div>
 

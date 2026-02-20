@@ -2903,6 +2903,12 @@ ENABLE_ASYNC_EMBEDDING = PersistentConfig(
     os.environ.get("ENABLE_ASYNC_EMBEDDING", "True").lower() == "true",
 )
 
+RAG_MAX_CONCURRENT_EMBEDDING = PersistentConfig(
+    "RAG_MAX_CONCURRENT_EMBEDDING",
+    "rag.max_concurrent_embedding",
+    int(os.environ.get("RAG_MAX_CONCURRENT_EMBEDDING", "0")),
+)
+
 RAG_EMBEDDING_QUERY_PREFIX = os.environ.get("RAG_EMBEDDING_QUERY_PREFIX", None)
 
 RAG_EMBEDDING_CONTENT_PREFIX = os.environ.get("RAG_EMBEDDING_CONTENT_PREFIX", None)
