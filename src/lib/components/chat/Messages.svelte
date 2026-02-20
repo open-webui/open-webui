@@ -76,18 +76,42 @@
 	$: if (history.currentId) {
 		let _messages = [];
 
-		let message = history.messages[history.currentId];
-		const visitedMessageIds = new Set();
+		// Guard against orphan messages: if currentId points to a node without a
+		// role (e.g. a partially-written followUps placeholder left behind by a
+		// browser crash or network drop during streaming), fall back to the most
+		// recent valid terminal message so the chat can still be displayed.
+		let currentId = history.currentId;
+		const currentMsg = history.messages[currentId];
+		if (!currentMsg || !currentMsg.role) {
+			const terminal = Object.values(history.messages)
+				.filter((m) => m?.role && Array.isArray(m.childrenIds) && m.childrenIds.length === 0)
+				.sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0))[0];
 
-		while (message && (messagesCount !== null ? _messages.length <= messagesCount : true)) {
-			if (visitedMessageIds.has(message.id)) {
-				console.warn('Circular dependency detected in message history', message.id);
-				break;
+			if (terminal) {
+				console.warn(
+					`history.currentId "${currentId}" points to an invalid message (keys: ${Object.keys(currentMsg ?? {}).join(', ') || 'none'}). Falling back to last valid message "${terminal.id}".`
+				);
+				currentId = terminal.id;
+			} else {
+				console.error('history.currentId is invalid and no valid terminal message was found.');
+				currentId = null;
 			}
-			visitedMessageIds.add(message.id);
+		}
 
-			_messages.unshift({ ...message });
-			message = message.parentId !== null ? history.messages[message.parentId] : null;
+		if (currentId) {
+			let message = history.messages[currentId];
+			const visitedMessageIds = new Set();
+
+			while (message && (messagesCount !== null ? _messages.length <= messagesCount : true)) {
+				if (visitedMessageIds.has(message.id)) {
+					console.warn('Circular dependency detected in message history', message.id);
+					break;
+				}
+				visitedMessageIds.add(message.id);
+
+				_messages.unshift({ ...message });
+				message = message.parentId !== null ? history.messages[message.parentId] : null;
+			}
 		}
 
 		messages = _messages;
