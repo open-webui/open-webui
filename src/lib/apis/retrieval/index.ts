@@ -55,6 +55,8 @@ type RAGConfigForm = {
 	ENABLE_GOOGLE_DRIVE_INTEGRATION?: boolean;
 	ENABLE_ONEDRIVE_INTEGRATION?: boolean;
 	ENABLE_CONFLUENCE_INTEGRATION?: boolean;
+	CONFLUENCE_BASE_URL?: string;
+	CONFLUENCE_DEPLOYMENT_TYPE?: string;
 	chunk?: ChunkConfigForm;
 	content_extraction?: ContentExtractConfigForm;
 	web_loader_ssl_verification?: boolean;

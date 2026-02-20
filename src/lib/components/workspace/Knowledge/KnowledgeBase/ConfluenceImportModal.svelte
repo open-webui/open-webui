@@ -3,7 +3,7 @@
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { settings } from '$lib/stores';
+	import { config, settings } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
 
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -22,9 +22,13 @@
 	export let show = false;
 	export let onImport: (documents: any[]) => void = () => {};
 
-	// Connection config - loaded from user settings
-	let authType: 'cloud' | 'datacenter' = 'cloud';
-	let baseUrl = '';
+	// Admin-configured values (read-only for users)
+	$: adminBaseUrl = $config?.confluence?.base_url ?? '';
+	$: adminDeploymentType = ($config?.confluence?.deployment_type ?? 'cloud') as
+		| 'cloud'
+		| 'datacenter';
+
+	// User credentials
 	let email = '';
 	let apiToken = '';
 	let username = '';
@@ -55,8 +59,6 @@
 	// Load saved credentials from user settings
 	function loadFromSettings() {
 		const confluenceSettings = $settings?.confluence ?? {};
-		authType = confluenceSettings.auth_type ?? 'cloud';
-		baseUrl = confluenceSettings.base_url ?? '';
 		email = confluenceSettings.email ?? '';
 		apiToken = confluenceSettings.api_token ?? '';
 		username = confluenceSettings.username ?? '';
@@ -66,11 +68,8 @@
 
 	// Save credentials to user settings (persisted server-side)
 	async function saveToSettings() {
-		const confluenceSettings: Record<string, string> = {
-			auth_type: authType,
-			base_url: baseUrl.trim()
-		};
-		if (authType === 'cloud') {
+		const confluenceSettings: Record<string, string> = {};
+		if (adminDeploymentType === 'cloud') {
 			confluenceSettings.email = email.trim();
 			confluenceSettings.api_token = apiToken.trim();
 		} else {
@@ -93,30 +92,35 @@
 	}
 
 	function getConfig(): ConfluenceConnectionConfig {
-		const config: ConfluenceConnectionConfig = {
-			base_url: baseUrl.trim(),
-			auth_type: authType
+		// base_url and auth_type come from admin config — not sent by user
+		const cfg: ConfluenceConnectionConfig = {
+			base_url: adminBaseUrl,
+			auth_type: adminDeploymentType
 		};
-		if (authType === 'cloud') {
-			config.email = email.trim();
-			config.api_token = apiToken.trim();
+		if (adminDeploymentType === 'cloud') {
+			cfg.email = email.trim();
+			cfg.api_token = apiToken.trim();
 		} else {
 			if (personalAccessToken.trim()) {
-				config.personal_access_token = personalAccessToken.trim();
+				cfg.personal_access_token = personalAccessToken.trim();
 			} else {
-				config.username = username.trim();
-				config.password = password;
+				cfg.username = username.trim();
+				cfg.password = password;
 			}
 		}
-		return config;
+		return cfg;
 	}
 
 	function validateConfig(): boolean {
-		if (!baseUrl.trim()) {
-			toast.error($i18n.t('Please enter the Confluence base URL.'));
+		if (!adminBaseUrl) {
+			toast.error(
+				$i18n.t(
+					'Confluence base URL is not configured. Please ask your administrator to set it in the admin settings.'
+				)
+			);
 			return false;
 		}
-		if (authType === 'cloud') {
+		if (adminDeploymentType === 'cloud') {
 			if (!email.trim() || !apiToken.trim()) {
 				toast.error($i18n.t('Please enter your email and API token.'));
 				return false;
@@ -202,9 +206,9 @@
 
 		importing = true;
 		try {
-			const config = getConfig();
+			const cfg = getConfig();
 			const res = await importConfluenceContent(localStorage.token, {
-				...config,
+				...cfg,
 				space_keys: Array.from(selectedSpaceKeys),
 				content_types: ['page']
 			});
@@ -288,54 +292,33 @@
 
 		{#if step === 'config'}
 			<div class="px-5 pb-4 overflow-y-auto">
-				<form on:submit|preventDefault={handleFetchSpaces} class="flex flex-col gap-3">
-					<!-- Deployment Type -->
-					<div>
-						<label
-							class="block text-xs text-gray-500 dark:text-gray-400 mb-1"
-							for="confluence-auth-type"
-						>
-							{$i18n.t('Deployment Type')}
-						</label>
-						<select
-							id="confluence-auth-type"
-							class="w-full text-sm bg-gray-50 dark:bg-gray-850 rounded-xl px-3 py-2 outline-none"
-							bind:value={authType}
-							on:change={() => {
-								connectionTested = false;
-							}}
-						>
-							<option value="cloud">{$i18n.t('Confluence Cloud')}</option>
-							<option value="datacenter"
-								>{$i18n.t('Confluence Data Center / Server')}</option
+				<!-- Admin-configured endpoint info (read-only) -->
+				<div
+					class="mb-3 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-850 text-xs text-gray-500 dark:text-gray-400"
+				>
+					<div class="font-medium text-gray-700 dark:text-gray-300 mb-1">
+						{$i18n.t('Confluence Endpoint')}
+					</div>
+					{#if adminBaseUrl}
+						<div class="flex items-center gap-2">
+							<span class="truncate">{adminBaseUrl}</span>
+							<span
+								class="shrink-0 px-1.5 py-0.5 rounded text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
 							>
-						</select>
-					</div>
+								{adminDeploymentType === 'cloud'
+									? $i18n.t('Cloud')
+									: $i18n.t('Data Center')}
+							</span>
+						</div>
+					{:else}
+						<span class="text-red-500 dark:text-red-400">
+							{$i18n.t('Not configured — ask your administrator to set the Confluence URL.')}
+						</span>
+					{/if}
+				</div>
 
-					<!-- Base URL -->
-					<div>
-						<label
-							class="block text-xs text-gray-500 dark:text-gray-400 mb-1"
-							for="confluence-base-url"
-						>
-							{$i18n.t('Base URL')}
-						</label>
-						<input
-							id="confluence-base-url"
-							type="url"
-							class="w-full text-sm bg-gray-50 dark:bg-gray-850 rounded-xl px-3 py-2 outline-none"
-							bind:value={baseUrl}
-							placeholder={authType === 'cloud'
-								? 'https://yoursite.atlassian.net'
-								: 'https://confluence.yourcompany.com'}
-							required
-							on:input={() => {
-								connectionTested = false;
-							}}
-						/>
-					</div>
-
-					{#if authType === 'cloud'}
+				<form on:submit|preventDefault={handleFetchSpaces} class="flex flex-col gap-3">
+					{#if adminDeploymentType === 'cloud'}
 						<!-- Cloud: Email + API Token -->
 						<div>
 							<label
@@ -395,11 +378,9 @@
 						</div>
 
 						<div class="flex items-center gap-2 text-xs text-gray-400">
-							<div class="flex-1 border-t border-gray-200 dark:border-gray-700"
-							></div>
+							<div class="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
 							<span>{$i18n.t('or')}</span>
-							<div class="flex-1 border-t border-gray-200 dark:border-gray-700"
-							></div>
+							<div class="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
 						</div>
 
 						<div>
@@ -438,7 +419,9 @@
 								}}
 							/>
 							<p class="text-xs text-gray-400 mt-1">
-								{$i18n.t('Password is not saved. Use a Personal Access Token for persistent access.')}
+								{$i18n.t(
+									'Password is not saved. Use a Personal Access Token for persistent access.'
+								)}
 							</p>
 						</div>
 					{/if}
@@ -448,7 +431,7 @@
 						<button
 							class="px-3.5 py-1.5 text-sm font-medium border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition rounded-full"
 							type="button"
-							disabled={loading}
+							disabled={loading || !adminBaseUrl}
 							on:click={handleTestConnection}
 						>
 							{#if loading && !connectionTested}
@@ -482,7 +465,7 @@
 						<button
 							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-800 text-white dark:bg-white dark:text-black dark:hover:bg-gray-200 transition rounded-full disabled:opacity-50"
 							type="submit"
-							disabled={loading}
+							disabled={loading || !adminBaseUrl}
 						>
 							{#if loading && !connectionTested}
 								<div class="flex items-center gap-2">

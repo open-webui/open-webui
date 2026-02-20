@@ -2602,6 +2602,18 @@ ENABLE_CONFLUENCE_INTEGRATION = PersistentConfig(
     os.getenv("ENABLE_CONFLUENCE_INTEGRATION", "False").lower() == "true",
 )
 
+CONFLUENCE_BASE_URL = PersistentConfig(
+    "CONFLUENCE_BASE_URL",
+    "confluence.base_url",
+    os.environ.get("CONFLUENCE_BASE_URL", ""),
+)
+
+CONFLUENCE_DEPLOYMENT_TYPE = PersistentConfig(
+    "CONFLUENCE_DEPLOYMENT_TYPE",
+    "confluence.deployment_type",
+    os.environ.get("CONFLUENCE_DEPLOYMENT_TYPE", "cloud"),
+)
+
 
 # RAG Content Extraction
 CONTENT_EXTRACTION_ENGINE = PersistentConfig(

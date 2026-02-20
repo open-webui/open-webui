@@ -280,6 +280,10 @@ type Config = {
 			[key: string]: string;
 		};
 	};
+	confluence?: {
+		base_url: string;
+		deployment_type: 'cloud' | 'datacenter';
+	};
 	ui?: {
 		pending_user_overlay_title?: string;
 		pending_user_overlay_content?: string;

@@ -530,6 +530,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "ENABLE_GOOGLE_DRIVE_INTEGRATION": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
         "ENABLE_ONEDRIVE_INTEGRATION": request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
         "ENABLE_CONFLUENCE_INTEGRATION": request.app.state.config.ENABLE_CONFLUENCE_INTEGRATION,
+        "CONFLUENCE_BASE_URL": request.app.state.config.CONFLUENCE_BASE_URL,
+        "CONFLUENCE_DEPLOYMENT_TYPE": request.app.state.config.CONFLUENCE_DEPLOYMENT_TYPE,
         # Web search settings
         "web": {
             "ENABLE_WEB_SEARCH": request.app.state.config.ENABLE_WEB_SEARCH,
@@ -739,6 +741,8 @@ class ConfigForm(BaseModel):
     ENABLE_GOOGLE_DRIVE_INTEGRATION: Optional[bool] = None
     ENABLE_ONEDRIVE_INTEGRATION: Optional[bool] = None
     ENABLE_CONFLUENCE_INTEGRATION: Optional[bool] = None
+    CONFLUENCE_BASE_URL: Optional[str] = None
+    CONFLUENCE_DEPLOYMENT_TYPE: Optional[str] = None
 
     # Web search settings
     web: Optional[WebConfig] = None
@@ -1098,6 +1102,16 @@ async def update_rag_config(
         if form_data.ENABLE_CONFLUENCE_INTEGRATION is not None
         else request.app.state.config.ENABLE_CONFLUENCE_INTEGRATION
     )
+    request.app.state.config.CONFLUENCE_BASE_URL = (
+        form_data.CONFLUENCE_BASE_URL
+        if form_data.CONFLUENCE_BASE_URL is not None
+        else request.app.state.config.CONFLUENCE_BASE_URL
+    )
+    request.app.state.config.CONFLUENCE_DEPLOYMENT_TYPE = (
+        form_data.CONFLUENCE_DEPLOYMENT_TYPE
+        if form_data.CONFLUENCE_DEPLOYMENT_TYPE is not None
+        else request.app.state.config.CONFLUENCE_DEPLOYMENT_TYPE
+    )
 
     if form_data.web is not None:
         # Web search settings
@@ -1290,6 +1304,8 @@ async def update_rag_config(
         "ENABLE_GOOGLE_DRIVE_INTEGRATION": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
         "ENABLE_ONEDRIVE_INTEGRATION": request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
         "ENABLE_CONFLUENCE_INTEGRATION": request.app.state.config.ENABLE_CONFLUENCE_INTEGRATION,
+        "CONFLUENCE_BASE_URL": request.app.state.config.CONFLUENCE_BASE_URL,
+        "CONFLUENCE_DEPLOYMENT_TYPE": request.app.state.config.CONFLUENCE_DEPLOYMENT_TYPE,
         # Web search settings
         "web": {
             "ENABLE_WEB_SEARCH": request.app.state.config.ENABLE_WEB_SEARCH,
@@ -2836,8 +2852,9 @@ async def process_files_batch(
 
 
 class ConfluenceConnectionForm(BaseModel):
-    base_url: str
-    auth_type: str = "cloud"  # "cloud" or "datacenter"
+    # base_url and auth_type are optional: admin-configured values are used as defaults
+    base_url: Optional[str] = None
+    auth_type: Optional[str] = None  # "cloud" or "datacenter"
     email: Optional[str] = None
     api_token: Optional[str] = None
     username: Optional[str] = None
@@ -2846,8 +2863,9 @@ class ConfluenceConnectionForm(BaseModel):
 
 
 class ConfluenceImportForm(BaseModel):
-    base_url: str
-    auth_type: str = "cloud"
+    # base_url and auth_type are optional: admin-configured values are used as defaults
+    base_url: Optional[str] = None
+    auth_type: Optional[str] = None
     email: Optional[str] = None
     api_token: Optional[str] = None
     username: Optional[str] = None
@@ -2857,12 +2875,39 @@ class ConfluenceImportForm(BaseModel):
     content_types: List[str] = ["page"]
 
 
-def _get_confluence_client(form_data):
+def _get_confluence_client(request: Request, form_data):
+    """Build a ConfluenceClient using admin-configured base_url/auth_type as defaults.
+
+    The admin sets the Confluence endpoint (base_url and deployment type) via admin
+    settings. Users only supply their own credentials (API token / PAT / password).
+    """
     from open_webui.retrieval.loaders.confluence import ConfluenceClient
 
+    # Admin-configured values take precedence as the canonical endpoint;
+    # form-provided values (if any) are only used when the admin config is empty,
+    # which preserves backward compatibility.
+    base_url = (
+        request.app.state.config.CONFLUENCE_BASE_URL
+        or getattr(form_data, "base_url", None)
+        or ""
+    )
+    auth_type = (
+        request.app.state.config.CONFLUENCE_DEPLOYMENT_TYPE
+        or getattr(form_data, "auth_type", None)
+        or "cloud"
+    )
+
+    if not base_url:
+        from fastapi import HTTPException, status as http_status
+
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail="Confluence base URL is not configured. Please ask your administrator to set the Confluence endpoint in the admin settings.",
+        )
+
     return ConfluenceClient(
-        base_url=form_data.base_url,
-        auth_type=form_data.auth_type,
+        base_url=base_url,
+        auth_type=auth_type,
         email=getattr(form_data, "email", None),
         api_token=getattr(form_data, "api_token", None),
         username=getattr(form_data, "username", None),
@@ -2873,12 +2918,13 @@ def _get_confluence_client(form_data):
 
 @router.post("/confluence/test")
 async def test_confluence_connection(
+    request: Request,
     form_data: ConfluenceConnectionForm,
     user=Depends(get_verified_user),
 ):
     """Test the Confluence connection with provided credentials."""
     try:
-        client = _get_confluence_client(form_data)
+        client = _get_confluence_client(request, form_data)
         result = await run_in_threadpool(client.test_connection)
         return {"status": True, "message": "Connection successful"}
     except requests.exceptions.HTTPError as e:
@@ -2897,6 +2943,8 @@ async def test_confluence_connection(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Connection failed: {str(e)}",
         )
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -2907,12 +2955,13 @@ async def test_confluence_connection(
 
 @router.post("/confluence/spaces")
 async def get_confluence_spaces(
+    request: Request,
     form_data: ConfluenceConnectionForm,
     user=Depends(get_verified_user),
 ):
     """Get all accessible Confluence spaces."""
     try:
-        client = _get_confluence_client(form_data)
+        client = _get_confluence_client(request, form_data)
         spaces = await run_in_threadpool(client.get_all_spaces)
         return {
             "status": True,
@@ -2930,6 +2979,8 @@ async def get_confluence_spaces(
                 for s in spaces
             ],
         }
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -2941,12 +2992,13 @@ async def get_confluence_spaces(
 @router.post("/confluence/spaces/{space_key}/pages")
 async def get_confluence_space_pages(
     space_key: str,
+    request: Request,
     form_data: ConfluenceConnectionForm,
     user=Depends(get_verified_user),
 ):
     """Get all pages in a specific Confluence space."""
     try:
-        client = _get_confluence_client(form_data)
+        client = _get_confluence_client(request, form_data)
         pages = await run_in_threadpool(
             client.get_all_space_content, space_key, "page"
         )
@@ -2961,6 +3013,8 @@ async def get_confluence_space_pages(
                 for p in pages
             ],
         }
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -2983,7 +3037,7 @@ async def import_confluence_content(
     from open_webui.retrieval.loaders.confluence import confluence_page_to_document
 
     try:
-        client = _get_confluence_client(form_data)
+        client = _get_confluence_client(request, form_data)
         all_documents = []
 
         for space_key in form_data.space_keys:
@@ -3000,6 +3054,8 @@ async def import_confluence_content(
             "documents": all_documents,
             "count": len(all_documents),
         }
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(e)
         raise HTTPException(

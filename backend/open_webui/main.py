@@ -2182,6 +2182,16 @@ async def get_app_config(request: Request):
                     "sharepoint_url": ONEDRIVE_SHAREPOINT_URL.value,
                     "sharepoint_tenant_id": ONEDRIVE_SHAREPOINT_TENANT_ID.value,
                 },
+                **(
+                    {
+                        "confluence": {
+                            "base_url": app.state.config.CONFLUENCE_BASE_URL,
+                            "deployment_type": app.state.config.CONFLUENCE_DEPLOYMENT_TYPE,
+                        },
+                    }
+                    if app.state.config.ENABLE_CONFLUENCE_INTEGRATION
+                    else {}
+                ),
                 "ui": {
                     "pending_user_overlay_title": app.state.config.PENDING_USER_OVERLAY_TITLE,
                     "pending_user_overlay_content": app.state.config.PENDING_USER_OVERLAY_CONTENT,

@@ -1476,6 +1476,49 @@
 							<Switch bind:state={RAGConfig.ENABLE_CONFLUENCE_INTEGRATION} />
 						</div>
 					</div>
+
+					{#if RAGConfig.ENABLE_CONFLUENCE_INTEGRATION}
+						<div class="mt-1 mb-2.5 pl-3 border-l-2 border-gray-200 dark:border-gray-700 flex flex-col gap-2">
+							<div class="flex w-full justify-between items-center">
+								<div class="self-center text-xs font-medium">
+									{$i18n.t('Deployment Type')}
+								</div>
+								<select
+									class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+									bind:value={RAGConfig.CONFLUENCE_DEPLOYMENT_TYPE}
+								>
+									<option value="cloud">{$i18n.t('Confluence Cloud')}</option>
+									<option value="datacenter"
+										>{$i18n.t('Confluence Data Center / Server')}</option
+									>
+								</select>
+							</div>
+
+							<div class="flex w-full items-center">
+								<Tooltip
+									content={RAGConfig.CONFLUENCE_DEPLOYMENT_TYPE === 'datacenter'
+										? $i18n.t('e.g. https://confluence.yourcompany.com')
+										: $i18n.t('e.g. https://yoursite.atlassian.net')}
+									placement="top-start"
+									className="w-full"
+								>
+									<input
+										class="flex-1 w-full text-sm bg-transparent outline-hidden"
+										placeholder={RAGConfig.CONFLUENCE_DEPLOYMENT_TYPE === 'datacenter'
+											? 'https://confluence.yourcompany.com'
+											: 'https://yoursite.atlassian.net'}
+										bind:value={RAGConfig.CONFLUENCE_BASE_URL}
+									/>
+								</Tooltip>
+							</div>
+
+							<div class="text-xs text-gray-400 dark:text-gray-500">
+								{$i18n.t(
+									'Set the Confluence base URL. Users configure their own credentials in their account settings.'
+								)}
+							</div>
+						</div>
+					{/if}
 				</div>
 
 				<div class="mb-3">
