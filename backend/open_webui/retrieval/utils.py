@@ -220,53 +220,76 @@ async def query_doc_with_hybrid_search(
     enable_enriched_texts: bool = False,
 ) -> dict:
     try:
-        # First check if collection_result has the required attributes
-        if (
-            not collection_result
-            or not hasattr(collection_result, "documents")
-            or not hasattr(collection_result, "metadatas")
-        ):
-            log.warning(f"query_doc_with_hybrid_search:no_docs {collection_name}")
-            return {"documents": [], "metadatas": [], "distances": []}
+        # First check if collection_result has the required attributes, but check only if hybrid_bm25_weight >0
+        if hybrid_bm25_weight<=0:
+            log.debug(f"query_doc_with_hybrid_search:doc with weight 0 {collection_name}")
+        else:
+            if (
+                not collection_result
+                or not hasattr(collection_result, "documents")
+                or not hasattr(collection_result, "metadatas")
+            ):
+                log.warning(f"query_doc_with_hybrid_search:no_docs {collection_name}")
+                return {"documents": [], "metadatas": [], "distances": []}
 
-        # Now safely check the documents content after confirming attributes exist
-        if (
-            not collection_result.documents
-            or len(collection_result.documents) == 0
-            or not collection_result.documents[0]
-        ):
-            log.warning(f"query_doc_with_hybrid_search:no_docs {collection_name}")
-            return {"documents": [], "metadatas": [], "distances": []}
+            # Now safely check the documents content after confirming attributes exist
+            if (
+                not collection_result.documents
+                or len(collection_result.documents) == 0
+                or not collection_result.documents[0]
+            ):
+                log.warning(f"query_doc_with_hybrid_search:no_docs {collection_name}")
+                return {"documents": [], "metadatas": [], "distances": []}
 
         log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
 
-        bm25_texts = (
-            get_enriched_texts(collection_result)
-            if enable_enriched_texts
-            else collection_result.documents[0]
-        )
-
-        bm25_retriever = BM25Retriever.from_texts(
-            texts=bm25_texts,
-            metadatas=collection_result.metadatas[0],
-        )
-        bm25_retriever.k = k
-
-        vector_search_retriever = VectorSearchRetriever(
-            collection_name=collection_name,
-            embedding_function=embedding_function,
-            top_k=k,
-        )
+        
 
         if hybrid_bm25_weight <= 0:
+            
+            vector_search_retriever = VectorSearchRetriever(
+                collection_name=collection_name,
+                embedding_function=embedding_function,
+                top_k=k,
+            )
             ensemble_retriever = EnsembleRetriever(
                 retrievers=[vector_search_retriever], weights=[1.0]
             )
         elif hybrid_bm25_weight >= 1:
+            bm25_texts = (
+                get_enriched_texts(collection_result)
+                if enable_enriched_texts
+                else collection_result.documents[0]
+            )
+
+            bm25_retriever = BM25Retriever.from_texts(
+                texts=bm25_texts,
+                metadatas=collection_result.metadatas[0],
+            )
+            bm25_retriever.k = k
+
+            
             ensemble_retriever = EnsembleRetriever(
                 retrievers=[bm25_retriever], weights=[1.0]
             )
         else:
+            bm25_texts = (
+                get_enriched_texts(collection_result)
+                if enable_enriched_texts
+                else collection_result.documents[0]
+            )
+
+            bm25_retriever = BM25Retriever.from_texts(
+                texts=bm25_texts,
+                metadatas=collection_result.metadatas[0],
+            )
+            bm25_retriever.k = k
+
+            vector_search_retriever = VectorSearchRetriever(
+                collection_name=collection_name,
+                embedding_function=embedding_function,
+                top_k=k,
+            )
             ensemble_retriever = EnsembleRetriever(
                 retrievers=[bm25_retriever, vector_search_retriever],
                 weights=[hybrid_bm25_weight, 1.0 - hybrid_bm25_weight],
@@ -474,12 +497,18 @@ async def query_collection_with_hybrid_search(
     collection_results = {}
     for collection_name in collection_names:
         try:
-            log.debug(
-                f"query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:collection {collection_name}"
-            )
-            collection_results[collection_name] = VECTOR_DB_CLIENT.get(
-                collection_name=collection_name
-            )
+            if hybrid_bm25_weight<=0: 
+                collection_results[collection_name] = None
+                log.debug(
+                    f"query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:collection not required as weight is 0{collection_name}"
+                )
+            else:
+                log.debug(
+                    f"query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:collection {collection_name}"
+                )
+                collection_results[collection_name] = VECTOR_DB_CLIENT.get(
+                    collection_name=collection_name
+                )
         except Exception as e:
             log.exception(f"Failed to fetch collection {collection_name}: {e}")
             collection_results[collection_name] = None
@@ -509,10 +538,11 @@ async def query_collection_with_hybrid_search(
 
     # Prepare tasks for all collections and queries
     # Avoid running any tasks for collections that failed to fetch data (have assigned None)
+    ## if condition to perform task if hybrid_bm25_weight <= 0 or collection_results[collection_name] is not None
     tasks = [
         (collection_name, query)
         for collection_name in collection_names
-        if collection_results[collection_name] is not None
+        if hybrid_bm25_weight <= 0 or collection_results[collection_name] is not None
         for query in queries
     ]
 
