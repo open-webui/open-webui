@@ -1685,6 +1685,7 @@ class OAuthManager:
             sessions = OAuthSessions.get_sessions_by_user_id(user.id, db=db)
             provider_sessions = sorted(
                 [
+                    session
                     for session in sessions
                     if session.provider == provider
                 ],
