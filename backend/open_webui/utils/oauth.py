@@ -1706,11 +1706,24 @@ class OAuthManager:
             if "expires_in" in token and "expires_at" not in token:
                 token["expires_at"] = datetime.now().timestamp() + token["expires_in"]
 
-            # Clean up any existing sessions for this user/provider first
+            # Enforce max concurrent sessions per user/provider to prevent
+            # unbounded growth while allowing multi-device usage
             sessions = OAuthSessions.get_sessions_by_user_id(user.id, db=db)
-            for session in sessions:
-                if session.provider == provider:
-                    OAuthSessions.delete_session_by_id(session.id, db=db)
+            provider_sessions = sorted(
+                [
+                    session
+                    for session in sessions
+                    if session.provider == provider
+                ],
+                key=lambda session: session.created_at,
+                reverse=True,
+            )
+            # Keep the newest sessions up to the limit, prune the rest
+            if len(provider_sessions) >= OAUTH_MAX_SESSIONS_PER_USER:
+                for old_session in provider_sessions[
+                    OAUTH_MAX_SESSIONS_PER_USER - 1 :
+                ]:
+                    OAuthSessions.delete_session_by_id(old_session.id, db=db)
 
             session = OAuthSessions.create_session(
                 user_id=user.id,
