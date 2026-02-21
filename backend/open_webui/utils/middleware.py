@@ -1972,10 +1972,22 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Load messages from DB when available — DB preserves structured 'output' items
     # which the frontend strips, causing tool calls to be merged into content.
     chat_id = metadata.get("chat_id")
+    message_id = metadata.get("message_id")
     parent_message_id = metadata.get("parent_message_id")
 
     if chat_id and parent_message_id and not chat_id.startswith("local:"):
-        db_messages = load_messages_from_db(chat_id, parent_message_id)
+        # Load up to message_id so that an existing partial assistant response is
+        # included in the context (needed for "Continue Response").  For a brand-new
+        # generation the assistant message has no content yet, so we strip it from the
+        # end to avoid sending an empty assistant turn to the LLM.
+        load_id = message_id if message_id else parent_message_id
+        db_messages = load_messages_from_db(chat_id, load_id)
+        if db_messages and db_messages[-1].get("role") == "assistant":
+            last = db_messages[-1]
+            if not (last.get("content") or "").strip() and not last.get("output"):
+                db_messages = db_messages[:-1]
+        if not db_messages:
+            db_messages = load_messages_from_db(chat_id, parent_message_id)
         if db_messages:
             system_message = get_system_message(form_data.get("messages", []))
             form_data["messages"] = (
