@@ -179,6 +179,9 @@ interface PickerParams {
 	search: {
 		enabled: boolean;
 	};
+	selection?: {
+		mode?: 'single' | 'multiple' | 'pick';
+	};
 	typesAndSources: {
 		mode: string;
 		pivots: Record<string, boolean>;
@@ -210,12 +213,18 @@ function getPickerParams(): PickerParams {
 		search: {
 			enabled: true
 		},
+		selection: {
+			mode: 'multiple'
+		},
 		typesAndSources: {
-			mode: 'files',
+			mode: 'all',
 			pivots: {
 				oneDrive: true,
 				recent: true,
-				myOrganization: config.getAuthorityType() === 'organizations'
+				shared: true,
+				sharedLibraries: true,
+				myOrganization: config.getAuthorityType() === 'organizations',
+				site: config.getAuthorityType() === 'organizations'
 			}
 		}
 	};
@@ -235,8 +244,64 @@ interface OneDriveFileInfo {
 		driveId: string;
 	};
 	'@sharePoint.endpoint': string;
+	folder?: {
+		childCount?: number;
+	};
+	file?: {
+		mimeType?: string;
+	};
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	[key: string]: any;
+}
+
+// List all items in a folder recursively
+async function listFolderContentsRecursive(
+	folderInfo: OneDriveFileInfo,
+	authorityType?: 'personal' | 'organizations',
+	currentPath: string = ''
+): Promise<OneDriveFileInfo[]> {
+	const accessToken = await getToken(undefined, authorityType);
+	if (!accessToken) {
+		throw new Error('Unable to retrieve OneDrive access token.');
+	}
+
+	const childrenUrl = `${folderInfo['@sharePoint.endpoint']}/drives/${folderInfo.parentReference.driveId}/items/${folderInfo.id}/children`;
+
+	const response = await fetch(childrenUrl, {
+		headers: {
+			Authorization: `Bearer ${accessToken}`
+		}
+	});
+
+	if (!response.ok) {
+		throw new Error(`Failed to list folder contents: ${response.status} ${response.statusText}`);
+	}
+
+	const data = await response.json();
+	const items: OneDriveFileInfo[] = data.value || [];
+
+	const allFiles: OneDriveFileInfo[] = [];
+
+	// Process all items
+	for (const item of items) {
+		// Inherit the @sharePoint.endpoint from parent folder if not present
+		if (!item['@sharePoint.endpoint']) {
+			item['@sharePoint.endpoint'] = folderInfo['@sharePoint.endpoint'];
+		}
+
+		if (item.folder) {
+			// Recursively get files from subfolder
+			const subPath = currentPath ? `${currentPath}/${item.name}` : item.name;
+			const subfolderFiles = await listFolderContentsRecursive(item, authorityType, subPath);
+			allFiles.push(...subfolderFiles);
+		} else if (item.file) {
+			// It's a file, add it to the list
+			allFiles.push(item);
+		}
+		// Skip items that are neither files nor folders (e.g., packages, OneNote notebooks)
+	}
+
+	return allFiles;
 }
 
 // Download file from OneDrive
@@ -434,20 +499,61 @@ export async function openOneDrivePicker(
 	});
 }
 
-// Pick and download file from OneDrive
-export async function pickAndDownloadFile(
+// Pick and download multiple files from OneDrive (with folder support)
+export async function pickAndDownloadFiles(
 	authorityType?: 'personal' | 'organizations'
-): Promise<{ blob: Blob; name: string } | null> {
+): Promise<{ blob: Blob; name: string }[] | null> {
 	const pickerResult = await openOneDrivePicker(authorityType);
 
 	if (!pickerResult || !pickerResult.items || pickerResult.items.length === 0) {
 		return null;
 	}
 
-	const selectedFile = pickerResult.items[0];
-	const blob = await downloadOneDriveFile(selectedFile, authorityType);
+	const allFiles: OneDriveFileInfo[] = [];
 
-	return { blob, name: selectedFile.name };
+	// First, expand folders to get all files
+	for (const item of pickerResult.items) {
+		if (item.folder) {
+			// It's a folder, get all files recursively
+			const folderFiles = await listFolderContentsRecursive(item, authorityType, item.name);
+			allFiles.push(...folderFiles);
+		} else {
+			// It's a file
+			allFiles.push(item);
+		}
+	}
+
+	// Check if any files were actually found
+	if (allFiles.length === 0) {
+		throw new Error('No files found in the selected items.');
+	}
+
+	// Download all files with error handling
+	const downloadPromises = allFiles.map(async (fileInfo) => {
+		const blob = await downloadOneDriveFile(fileInfo, authorityType);
+		return {
+			blob,
+			name: fileInfo.name
+		};
+	});
+
+	const results = await Promise.allSettled(downloadPromises);
+	const successful = results
+		.filter((r): r is PromiseFulfilledResult<{ blob: Blob; name: string }> => r.status === 'fulfilled')
+		.map((r) => r.value);
+
+	const failed = results.filter((r) => r.status === 'rejected');
+
+	if (failed.length > 0) {
+		console.warn(`Failed to download ${failed.length} out of ${allFiles.length} files from OneDrive`);
+		// If all downloads failed, throw error
+		if (successful.length === 0) {
+			throw new Error('Failed to download any files from OneDrive');
+		}
+		// If some succeeded, log warning but continue with successful ones
+	}
+
+	return successful.length > 0 ? successful : null;
 }
 
 export { downloadOneDriveFile };
