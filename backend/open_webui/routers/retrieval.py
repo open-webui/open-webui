@@ -1986,7 +1986,7 @@ async def process_web(
 
 
 def search_web(
-    request: Request, engine: str, query: str, user=None
+    request: Request, engine: str, query: str, user=None, count: int = None
 ) -> list[SearchResult]:
     """Search the web using a search engine and return the results as a list of SearchResult objects.
     Will look for a search engine API key in environment variables in the following order:
@@ -2010,13 +2010,15 @@ def search_web(
         query (str): The query to search for
     """
 
+    result_count = count if count is not None else result_count
+
     # TODO: add playwright to search the web
     if engine == "ollama_cloud":
         return search_ollama_cloud(
             "https://ollama.com",
             request.app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
             query,
-            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            result_count,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
     elif engine == "perplexity_search":
@@ -2024,7 +2026,7 @@ def search_web(
             return search_perplexity_search(
                 request.app.state.config.PERPLEXITY_API_KEY,
                 query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                result_count,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
                 request.app.state.config.PERPLEXITY_SEARCH_API_URL,
                 user,
@@ -2037,7 +2039,7 @@ def search_web(
             return search_searxng(
                 request.app.state.config.SEARXNG_QUERY_URL,
                 query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                result_count,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
                 **searxng_kwargs,
             )
@@ -2050,7 +2052,7 @@ def search_web(
                 request.app.state.config.YACY_USERNAME,
                 request.app.state.config.YACY_PASSWORD,
                 query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                result_count,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
@@ -2064,7 +2066,7 @@ def search_web(
                 request.app.state.config.GOOGLE_PSE_API_KEY,
                 request.app.state.config.GOOGLE_PSE_ENGINE_ID,
                 query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                result_count,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
                 referer=request.app.state.config.WEBUI_URL,
             )
@@ -2077,7 +2079,7 @@ def search_web(
             return search_brave(
                 request.app.state.config.BRAVE_SEARCH_API_KEY,
                 query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                result_count,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
@@ -2087,7 +2089,7 @@ def search_web(
             return search_kagi(
                 request.app.state.config.KAGI_SEARCH_API_KEY,
                 query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                result_count,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
@@ -2097,7 +2099,7 @@ def search_web(
             return search_mojeek(
                 request.app.state.config.MOJEEK_SEARCH_API_KEY,
                 query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                result_count,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
@@ -2107,7 +2109,7 @@ def search_web(
             return search_bocha(
                 request.app.state.config.BOCHA_SEARCH_API_KEY,
                 query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                result_count,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
@@ -2117,7 +2119,7 @@ def search_web(
             return search_serpstack(
                 request.app.state.config.SERPSTACK_API_KEY,
                 query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                result_count,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
                 https_enabled=request.app.state.config.SERPSTACK_HTTPS,
             )
@@ -2128,7 +2130,7 @@ def search_web(
             return search_serper(
                 request.app.state.config.SERPER_API_KEY,
                 query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                result_count,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
@@ -2138,7 +2140,7 @@ def search_web(
             return search_serply(
                 request.app.state.config.SERPLY_API_KEY,
                 query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                result_count,
                 filter_list=request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
@@ -2146,7 +2148,7 @@ def search_web(
     elif engine == "duckduckgo":
         return search_duckduckgo(
             query,
-            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            result_count,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             concurrent_requests=request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
             backend=request.app.state.config.DDGS_BACKEND,
@@ -2156,7 +2158,7 @@ def search_web(
             return search_tavily(
                 request.app.state.config.TAVILY_API_KEY,
                 query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                result_count,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
@@ -2166,7 +2168,7 @@ def search_web(
             return search_exa(
                 request.app.state.config.EXA_API_KEY,
                 query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                result_count,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
@@ -2177,7 +2179,7 @@ def search_web(
                 request.app.state.config.SEARCHAPI_API_KEY,
                 request.app.state.config.SEARCHAPI_ENGINE,
                 query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                result_count,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
@@ -2188,7 +2190,7 @@ def search_web(
                 request.app.state.config.SERPAPI_API_KEY,
                 request.app.state.config.SERPAPI_ENGINE,
                 query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                result_count,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
@@ -2197,7 +2199,7 @@ def search_web(
         return search_jina(
             request.app.state.config.JINA_API_KEY,
             query,
-            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            result_count,
             request.app.state.config.JINA_API_BASE_URL,
         )
     elif engine == "bing":
@@ -2206,7 +2208,7 @@ def search_web(
             request.app.state.config.BING_SEARCH_V7_ENDPOINT,
             str(DEFAULT_LOCALE),
             query,
-            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            result_count,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
     elif engine == "azure":
@@ -2220,7 +2222,7 @@ def search_web(
                 request.app.state.config.AZURE_AI_SEARCH_ENDPOINT,
                 request.app.state.config.AZURE_AI_SEARCH_INDEX_NAME,
                 query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                result_count,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
@@ -2231,14 +2233,14 @@ def search_web(
         return search_exa(
             request.app.state.config.EXA_API_KEY,
             query,
-            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            result_count,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
     elif engine == "perplexity":
         return search_perplexity(
             request.app.state.config.PERPLEXITY_API_KEY,
             query,
-            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            result_count,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             model=request.app.state.config.PERPLEXITY_MODEL,
             search_context_usage=request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
@@ -2252,7 +2254,7 @@ def search_web(
                 request.app.state.config.SOUGOU_API_SID,
                 request.app.state.config.SOUGOU_API_SK,
                 query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                result_count,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
@@ -2264,7 +2266,7 @@ def search_web(
             request.app.state.config.FIRECRAWL_API_BASE_URL,
             request.app.state.config.FIRECRAWL_API_KEY,
             query,
-            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            result_count,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
     elif engine == "external":
@@ -2273,7 +2275,7 @@ def search_web(
             request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
             request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
             query,
-            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            result_count,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             user=user,
         )
@@ -2284,7 +2286,7 @@ def search_web(
             request.app.state.config.YANDEX_WEB_SEARCH_API_KEY,
             request.app.state.config.YANDEX_WEB_SEARCH_CONFIG,
             query,
-            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            result_count,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             user=user,
         )
