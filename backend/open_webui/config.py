@@ -3491,6 +3491,12 @@ YANDEX_WEB_SEARCH_CONFIG = PersistentConfig(
     os.environ.get("YANDEX_WEB_SEARCH_CONFIG", ""),
 )
 
+YOUCOM_API_KEY = PersistentConfig(
+    "YOUCOM_API_KEY",
+    "rag.web.search.youcom_api_key",
+    os.environ.get("YOUCOM_API_KEY", ""),
+)
+
 ####################################
 # Images
 ####################################
