@@ -339,6 +339,11 @@ ENABLE_OAUTH_SIGNUP = PersistentConfig(
     os.environ.get("ENABLE_OAUTH_SIGNUP", "False").lower() == "true",
 )
 
+OAUTH_DEFAULT_GROUP_PERMISSIONS = PersistentConfig(
+    "OAUTH_DEFAULT_GROUP_PERMISSIONS",
+    "oauth.default_group_permissions",
+    os.environ.get("OAUTH_DEFAULT_GROUP_PERMISSIONS", "members"),
+)
 
 OAUTH_MERGE_ACCOUNTS_BY_EMAIL = PersistentConfig(
     "OAUTH_MERGE_ACCOUNTS_BY_EMAIL",
