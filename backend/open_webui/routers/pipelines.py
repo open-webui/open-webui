@@ -59,9 +59,9 @@ async def process_pipeline_inlet_filter(request, payload, user, models):
     user = {"id": user.id, "email": user.email, "name": user.name, "role": user.role}
     model_id = payload["model"]
     sorted_filters = get_sorted_filters(model_id, models)
-    model = models[model_id]
+    model = models.get(model_id)
 
-    if "pipeline" in model:
+    if model and "pipeline" in model:
         sorted_filters.append(model)
 
     async with aiohttp.ClientSession(trust_env=True) as session:
@@ -112,9 +112,9 @@ async def process_pipeline_outlet_filter(request, payload, user, models):
     user = {"id": user.id, "email": user.email, "name": user.name, "role": user.role}
     model_id = payload["model"]
     sorted_filters = get_sorted_filters(model_id, models)
-    model = models[model_id]
+    model = models.get(model_id)
 
-    if "pipeline" in model:
+    if model and "pipeline" in model:
         sorted_filters = [model] + sorted_filters
 
     async with aiohttp.ClientSession(trust_env=True) as session:

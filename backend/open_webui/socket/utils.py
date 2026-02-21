@@ -87,13 +87,20 @@ class RedisDict:
         return [(k, json.loads(v)) for k, v in self.redis.hgetall(self.name).items()]
 
     def set(self, mapping: dict):
-        pipe = self.redis.pipeline()
+        if not mapping:
+            self.redis.delete(self.name)
+            return
 
-        pipe.delete(self.name)
-        if mapping:
-            pipe.hset(self.name, mapping={k: json.dumps(v) for k, v in mapping.items()})
+        # Write new key-value pairs first so the hash is never empty during
+        # an update (avoids a race window visible to other workers when using
+        # Redis Cluster where pipeline() does not support MULTI/EXEC).
+        self.redis.hset(self.name, mapping={k: json.dumps(v) for k, v in mapping.items()})
 
-        pipe.execute()
+        # Remove keys that are no longer present in the new mapping.
+        existing_keys = set(self.redis.hkeys(self.name))
+        stale_keys = existing_keys - set(mapping.keys())
+        if stale_keys:
+            self.redis.hdel(self.name, *stale_keys)
 
     def get(self, key, default=None):
         try:
