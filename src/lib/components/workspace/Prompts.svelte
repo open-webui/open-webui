@@ -246,24 +246,26 @@
 					const savedPrompts = JSON.parse(event.target.result);
 					console.log(savedPrompts);
 
-					for (const prompt of savedPrompts) {
-						await createNewPrompt(localStorage.token, {
-							command: prompt.command,
-							name: prompt.name,
-							content: prompt.content
-						}).catch((error) => {
-							toast.error(typeof error === 'string' ? error : JSON.stringify(error));
-							return null;
-						});
+					try {
+						for (const prompt of savedPrompts) {
+							await createNewPrompt(localStorage.token, {
+								command: prompt.command,
+								name: prompt.name,
+								content: prompt.content
+							}).catch((error) => {
+								toast.error(typeof error === 'string' ? error : JSON.stringify(error));
+								return null;
+							});
+						}
+
+						prompts = null;
+						page = 1;
+						await getPromptList();
+						await _prompts.set(await getPrompts(localStorage.token));
+					} finally {
+						importFiles = [];
+						promptsImportInputElement.value = '';
 					}
-
-					prompts = null;
-					page = 1;
-					getPromptList();
-					await _prompts.set(await getPrompts(localStorage.token));
-
-					importFiles = [];
-					promptsImportInputElement.value = '';
 				};
 
 				reader.readAsText(importFiles[0]);
