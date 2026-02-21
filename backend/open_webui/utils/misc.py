@@ -91,8 +91,17 @@ def get_message_list(messages_map, message_id):
 
     # Reconstruct the chain by following the parentId links
     message_list = []
+    visited_message_ids = set()
 
     while current_message:
+        message_id = current_message.get("id")
+        if message_id in visited_message_ids:
+            # Cycle detected, break to prevent infinite loop
+            break
+        
+        if message_id is not None:
+            visited_message_ids.add(message_id)
+            
         message_list.append(current_message)
         parent_id = current_message.get("parentId")  # Use .get() for safety
         current_message = messages_map.get(parent_id) if parent_id else None
