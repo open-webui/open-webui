@@ -49,12 +49,13 @@
 			</div>
 		</a>
 
-		{#if mouseOver && shiftKey && onUnpin}
-			<div class="absolute right-5 top-2.5">
+		{#if shiftKey && onUnpin}
+			<div class="absolute right-5 top-2.5 invisible group-hover:visible group-focus-within:visible">
 				<div class=" flex items-center self-center space-x-1.5">
 					<Tooltip content={$i18n.t('Unpin')} className="flex items-center">
 						<button
 							class=" self-center dark:hover:text-white transition"
+							aria-label={$i18n.t('Unpin')}
 							on:click={() => {
 								onUnpin();
 							}}

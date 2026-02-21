@@ -169,8 +169,17 @@
 		chatListLoading = false;
 	};
 
+	let triggerElement = null;
 	$: if (show) {
+		triggerElement = document.activeElement;
 		searchHandler();
+	} else if (triggerElement) {
+		tick().then(() => {
+			if (triggerElement) {
+				triggerElement.focus();
+				triggerElement = null;
+			}
+		});
 	}
 
 	const onKeyDown = (e) => {
