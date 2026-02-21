@@ -1045,6 +1045,11 @@
 
 		autoScroll = true;
 
+		generating = false;
+		generationController = null;
+		taskIds = null;
+		messageQueue = [];
+
 		resetInput();
 		await chatId.set('');
 		await chatTitle.set('');
@@ -1156,6 +1161,11 @@
 
 				chatTitle.set(chatContent.title);
 
+				generating = false;
+				generationController = null;
+				taskIds = null;
+				messageQueue = [];
+
 				params = chatContent?.params ?? {};
 				chatFiles = chatContent?.files ?? [];
 
@@ -1238,7 +1248,7 @@
 
 		await tick();
 
-		if ($chatId == _chatId) {
+		if ($chatId === _chatId) {
 			if (!$temporaryChatEnabled) {
 				chat = await updateChatById(localStorage.token, _chatId, {
 					models: selectedModels,
@@ -1251,20 +1261,20 @@
 				currentChatPage.set(1);
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			}
-		}
 
-		taskIds = null;
+			taskIds = null;
 
-		// Process message queue - combine all queued messages and submit at once
-		if (messageQueue.length > 0) {
-			const combinedPrompt = messageQueue.map((m) => m.prompt).join('\n\n');
-			const combinedFiles = messageQueue.flatMap((m) => m.files);
-			messageQueue = [];
+			// Process message queue
+			if (messageQueue.length > 0) {
+				const combinedPrompt = messageQueue.map((m) => m.prompt).join('\n\n');
+				const combinedFiles = messageQueue.flatMap((m) => m.files);
+				messageQueue = [];
 
-			// Set the files and submit
-			files = combinedFiles;
-			await tick();
-			await submitPrompt(combinedPrompt);
+				// Set the files and submit
+				files = combinedFiles;
+				await tick();
+				await submitPrompt(combinedPrompt);
+			}
 		}
 	};
 
@@ -2139,6 +2149,10 @@
 		).catch(async (error) => {
 			console.log(error);
 
+			if (_chatId !== $chatId) {
+				return null;
+			}
+
 			let errorMessage = error;
 			if (error?.error?.message) {
 				errorMessage = error.error.message;
@@ -2163,7 +2177,7 @@
 			return null;
 		});
 
-		if (res) {
+		if (res && _chatId === $chatId) {
 			if (res.error) {
 				await handleOpenAIError(res.error, responseMessage);
 			} else {
@@ -2176,7 +2190,10 @@
 		}
 
 		await tick();
-		scrollToBottom();
+		
+		if (_chatId === $chatId) {
+			scrollToBottom();
+		}
 	};
 
 	const handleOpenAIError = async (error, responseMessage) => {
@@ -2232,15 +2249,18 @@
 
 			taskIds = null;
 
-			const responseMessage = history.messages[history.currentId];
-			// Set all response messages to done
-			if (responseMessage.parentId && history.messages[responseMessage.parentId]) {
-				for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
-					history.messages[messageId].done = true;
-				}
-			}
+			const responseMessage: any = history.currentId ? history.messages[history.currentId] : null;
 
-			history.messages[history.currentId] = responseMessage;
+			if (responseMessage) {
+				// Set all response messages to done
+				if (responseMessage.parentId && history.messages[responseMessage.parentId]) {
+					for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
+						history.messages[messageId].done = true;
+					}
+				}
+
+				history.messages[history.currentId] = responseMessage;
+			}
 
 			if (autoScroll) {
 				scrollToBottom();
