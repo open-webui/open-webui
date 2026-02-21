@@ -2903,6 +2903,12 @@ ENABLE_ASYNC_EMBEDDING = PersistentConfig(
     os.environ.get("ENABLE_ASYNC_EMBEDDING", "True").lower() == "true",
 )
 
+RAG_EMBEDDING_CONCURRENT_REQUESTS = PersistentConfig(
+    "RAG_EMBEDDING_CONCURRENT_REQUESTS",
+    "rag.embedding_concurrent_requests",
+    int(os.getenv("RAG_EMBEDDING_CONCURRENT_REQUESTS", "0")),
+)
+
 RAG_EMBEDDING_QUERY_PREFIX = os.environ.get("RAG_EMBEDDING_QUERY_PREFIX", None)
 
 RAG_EMBEDDING_CONTENT_PREFIX = os.environ.get("RAG_EMBEDDING_CONTENT_PREFIX", None)

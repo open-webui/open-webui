@@ -803,6 +803,7 @@ def get_embedding_function(
     embedding_batch_size,
     azure_api_version=None,
     enable_async=True,
+    concurrent_requests=0,
 ) -> Awaitable:
     if embedding_engine == "":
         # Sentence transformers: CPU-bound sync operation
@@ -844,10 +845,22 @@ def get_embedding_function(
                     log.debug(
                         f"generate_multiple_async: Processing {len(batches)} batches in parallel"
                     )
-                    # Execute all batches in parallel
-                    tasks = [
-                        embedding_function(batch, prefix=prefix, user=user)
-                        for batch in batches
+                    # Use semaphore to limit concurrent embedding API requests
+                    # 0 = unlimited (no semaphore)
+                    if concurrent_requests:
+                        semaphore = asyncio.Semaphore(concurrent_requests)
+
+                        async def generate_batch_with_semaphore(batch):
+                            async with semaphore:
+                                return await embedding_function(
+                                    batch, prefix=prefix, user=user
+                                )
+
+                        tasks = [generate_batch_with_semaphore(batch) for batch in batches]
+                    else:
+                        tasks = [
+                            embedding_function(batch, prefix=prefix, user=user)
+                            for batch in batches
                     ]
                     batch_results = await asyncio.gather(*tasks)
                 else:

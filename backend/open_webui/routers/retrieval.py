@@ -270,6 +270,7 @@ async def get_status(request: Request):
         "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
         "RAG_EMBEDDING_BATCH_SIZE": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         "ENABLE_ASYNC_EMBEDDING": request.app.state.config.ENABLE_ASYNC_EMBEDDING,
+        "RAG_EMBEDDING_CONCURRENT_REQUESTS": request.app.state.config.RAG_EMBEDDING_CONCURRENT_REQUESTS,
     }
 
 
@@ -281,6 +282,7 @@ async def get_embedding_config(request: Request, user=Depends(get_admin_user)):
         "RAG_EMBEDDING_MODEL": request.app.state.config.RAG_EMBEDDING_MODEL,
         "RAG_EMBEDDING_BATCH_SIZE": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         "ENABLE_ASYNC_EMBEDDING": request.app.state.config.ENABLE_ASYNC_EMBEDDING,
+        "RAG_EMBEDDING_CONCURRENT_REQUESTS": request.app.state.config.RAG_EMBEDDING_CONCURRENT_REQUESTS,
         "openai_config": {
             "url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
             "key": request.app.state.config.RAG_OPENAI_API_KEY,
@@ -321,6 +323,7 @@ class EmbeddingModelUpdateForm(BaseModel):
     RAG_EMBEDDING_MODEL: str
     RAG_EMBEDDING_BATCH_SIZE: Optional[int] = 1
     ENABLE_ASYNC_EMBEDDING: Optional[bool] = True
+    RAG_EMBEDDING_CONCURRENT_REQUESTS: Optional[int] = 0
 
 
 def unload_embedding_model(request: Request):
@@ -354,6 +357,9 @@ async def update_embedding_config(
         )
         request.app.state.config.ENABLE_ASYNC_EMBEDDING = (
             form_data.ENABLE_ASYNC_EMBEDDING
+        )
+        request.app.state.config.RAG_EMBEDDING_CONCURRENT_REQUESTS = (
+            form_data.RAG_EMBEDDING_CONCURRENT_REQUESTS
         )
 
         if request.app.state.config.RAG_EMBEDDING_ENGINE in [
@@ -422,6 +428,7 @@ async def update_embedding_config(
                 else None
             ),
             enable_async=request.app.state.config.ENABLE_ASYNC_EMBEDDING,
+            concurrent_requests=request.app.state.config.RAG_EMBEDDING_CONCURRENT_REQUESTS,
         )
 
         return {
@@ -430,6 +437,7 @@ async def update_embedding_config(
             "RAG_EMBEDDING_MODEL": request.app.state.config.RAG_EMBEDDING_MODEL,
             "RAG_EMBEDDING_BATCH_SIZE": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
             "ENABLE_ASYNC_EMBEDDING": request.app.state.config.ENABLE_ASYNC_EMBEDDING,
+            "RAG_EMBEDDING_CONCURRENT_REQUESTS": request.app.state.config.RAG_EMBEDDING_CONCURRENT_REQUESTS,
             "openai_config": {
                 "url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
                 "key": request.app.state.config.RAG_OPENAI_API_KEY,
@@ -1589,6 +1597,7 @@ def save_docs_to_vector_db(
                 else None
             ),
             enable_async=request.app.state.config.ENABLE_ASYNC_EMBEDDING,
+            concurrent_requests=request.app.state.config.RAG_EMBEDDING_CONCURRENT_REQUESTS,
         )
 
         # Run async embedding in sync context using the main event loop
@@ -2329,7 +2338,7 @@ async def process_web_search(
             # Limited concurrency with semaphore
             semaphore = asyncio.Semaphore(concurrent_limit)
 
-            async def search_with_limit(query):
+            async def search_query_with_semaphore(query):
                 async with semaphore:
                     return await run_in_threadpool(
                         search_web,
@@ -2339,7 +2348,7 @@ async def process_web_search(
                         user,
                     )
 
-            search_tasks = [search_with_limit(query) for query in form_data.queries]
+            search_tasks = [search_query_with_semaphore(query) for query in form_data.queries]
         else:
             # Unlimited parallel execution (previous behavior)
             search_tasks = [
