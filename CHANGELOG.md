@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.4] - 2026-02-18
+## [0.8.4] - 2026-02-21
 
 ### Added
 
@@ -58,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✋ **Drag-and-drop overlay fix.** The "Add Files" overlay no longer remains stuck on screen when dragging files back out of the chat window in Mozilla Firefox. [#21664](https://github.com/open-webui/open-webui/pull/21664)
 - 👁️ **Group search visibility fix.** Groups now appear correctly in access control search results, even when the search doesn't match any users. [#21691](https://github.com/open-webui/open-webui/pull/21691)
 - 🐛 **User menu drag and click fixes.** Fixed draggable ghost images when dragging menu items and eliminated phantom link clicks that occurred when dragging outside dropdown menus. [#21699](https://github.com/open-webui/open-webui/pull/21699)
+- 🐛 **Admin and workspace nav drag fix.** Fixed ghost drag images when dragging top navigation tabs in the Admin and Workspace panels by adding proper drag constraints and text selection prevention. [#21701](https://github.com/open-webui/open-webui/pull/21701)
 - 📝 **Console log spam fix.** Requesting deleted or missing files no longer floods the backend console with Python traceback logs, thanks to proper exception handling for expected 404 errors. [#21687](https://github.com/open-webui/open-webui/pull/21687)
 
 ## [0.8.3] - 2026-02-17
