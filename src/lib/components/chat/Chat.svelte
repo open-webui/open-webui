@@ -431,7 +431,7 @@
 					// Auto-scroll to the embed once it's rendered in the DOM
 					await tick();
 					setTimeout(() => {
-						const embedEl = document.getElementById(`${event.message_id}-embeds-0`);
+						const embedEl = document.getElementById(`${event.message_id}-embeds-container`);
 						if (embedEl) {
 							embedEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
 						}
