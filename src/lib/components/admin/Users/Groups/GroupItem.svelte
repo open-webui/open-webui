@@ -68,9 +68,14 @@
 		showEdit = true;
 	}}
 >
-	<div class="flex items-center gap-1.5 w-full font-medium flex-1">
+	<div class="flex items-center gap-1.5 w-full font-medium flex-1 min-w-0">
 		<div class="line-clamp-1">
 			{group.name}
+			{#if group.description}
+				<span class="font-normal text-gray-400 dark:text-gray-500"
+					>&middot; {group.description}</span
+				>
+			{/if}
 		</div>
 	</div>
 
