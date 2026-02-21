@@ -20,3 +20,7 @@
 		}
 	});
 </script>
+
+<main id="main-content" class="sr-only" aria-live="polite">
+	Redirecting…
+</main>

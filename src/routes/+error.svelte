@@ -2,10 +2,10 @@
 	import { page } from '$app/stores';
 </script>
 
-<div class=" bg-white dark:bg-gray-800 min-h-screen">
+<main class=" bg-white dark:bg-gray-800 min-h-screen" id="main-content">
 	<div class=" flex h-full">
-		<div class="m-auto my-10 dark:text-gray-300 text-3xl font-medium">
+		<h1 class="m-auto my-10 dark:text-gray-300 text-3xl font-medium">
 			{$page.status}: {$page.error?.message}
-		</div>
+		</h1>
 	</div>
-</div>
+</main>
