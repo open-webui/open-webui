@@ -383,19 +383,23 @@
 					</div>
 				{/if}
 
-				<Sidebar />
+				<nav aria-label="Chat Sidebar">
+					<Sidebar />
+				</nav>
 
-				{#if loaded}
-					<slot />
-				{:else}
-					<div
-						class="w-full flex-1 h-full flex items-center justify-center {$showSidebar
-							? '  md:max-w-[calc(100%-var(--sidebar-width))]'
-							: ' '}"
-					>
-						<Spinner className="size-5" />
-					</div>
-				{/if}
+				<main id="main-content">
+					{#if loaded}
+						<slot />
+					{:else}
+						<div
+							class="w-full flex-1 h-full flex items-center justify-center {$showSidebar
+								? '  md:max-w-[calc(100%-var(--sidebar-width))]'
+								: ' '}"
+						>
+							<Spinner className="size-5" />
+						</div>
+					{/if}
+				</main>
 			{/if}
 		</div>
 	</div>

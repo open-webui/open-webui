@@ -17,13 +17,13 @@
 </script>
 
 {#if loaded}
-	<div class="absolute w-full h-full flex z-50">
+	<main class="absolute w-full h-full flex z-50" id="main-content">
 		<div class="absolute rounded-xl w-full h-full backdrop-blur-sm flex justify-center">
 			<div class="m-auto pb-44 flex flex-col justify-center">
 				<div class="max-w-md">
-					<div class="text-center text-2xl font-medium z-50">
+					<h1 class="text-center text-2xl font-medium z-50">
 						{$i18n.t('{{webUIName}} Backend Required', { webUIName: $WEBUI_NAME })}
-					</div>
+					</h1>
 
 					<div class=" mt-4 text-center text-sm w-full">
 						{$i18n.t(
@@ -35,11 +35,15 @@
 						<a
 							class=" font-medium underline"
 							href="https://github.com/open-webui/open-webui#how-to-install-"
-							target="_blank">{$i18n.t('See readme.md for instructions')}</a
+							target="_blank"
+							rel="noopener noreferrer">{$i18n.t('See readme.md for instructions')}</a
 						>
 						{$i18n.t('or')}
-						<a class=" font-medium underline" href="https://discord.gg/5rJgQTnV4s" target="_blank"
-							>{$i18n.t('join our Discord for help.')}</a
+						<a
+							class=" font-medium underline"
+							href="https://discord.gg/5rJgQTnV4s"
+							target="_blank"
+							rel="noopener noreferrer">{$i18n.t('join our Discord for help.')}</a
 						>
 					</div>
 
@@ -56,5 +60,5 @@
 				</div>
 			</div>
 		</div>
-	</div>
+	</main>
 {/if}

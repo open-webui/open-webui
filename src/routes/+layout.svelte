@@ -896,14 +896,18 @@
 {#if loaded}
 	{#if $isApp}
 		<div class="flex flex-row h-screen">
-			<AppSidebar />
+			<aside aria-label="App Navigation">
+				<AppSidebar />
+			</aside>
 
-			<div class="w-full flex-1 max-w-[calc(100%-4.5rem)]">
+			<main id="main-content" class="w-full flex-1 max-w-[calc(100%-4.5rem)]">
 				<slot />
-			</div>
+			</main>
 		</div>
 	{:else}
-		<slot />
+		<main id="main-content">
+			<slot />
+		</main>
 	{/if}
 {/if}
 
