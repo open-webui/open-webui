@@ -94,6 +94,7 @@ from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
     get_content_from_message,
     convert_output_to_messages,
+    filter_output_by_content,
 )
 from open_webui.utils.tools import (
     get_tools,
@@ -1948,11 +1949,40 @@ def process_messages_with_output(messages: list[dict]) -> list[dict]:
 
     for message in messages:
         if message.get("role") == "assistant" and message.get("output"):
-            # Use output items for clean OpenAI-format messages
-            output_messages = convert_output_to_messages(message["output"])
+            # Drop output items for tool call blocks removed from content
+            output = filter_output_by_content(
+                message["output"], message.get("content", "")
+            )
+
+            # Use content for text (respects edits), output for structured items
+            content = re.sub(
+                r"<details\b[^>]*>.*?</details>", "",
+                message.get("content", ""), flags=re.S,
+            ).strip()
+            non_message_items = [
+                i for i in output if i.get("type") != "message"
+            ]
+            output_messages = convert_output_to_messages(non_message_items)
+
             if output_messages:
+                # Prepend edited text to first assistant message
+                for om in output_messages:
+                    if om.get("role") == "assistant":
+                        om["content"] = (
+                            (content + "\n" + om["content"]).strip()
+                            if om.get("content")
+                            else content
+                        )
+                        content = ""
+                        break
+                if content:
+                    output_messages.insert(
+                        0, {"role": "assistant", "content": content}
+                    )
                 processed.extend(output_messages)
-                continue
+            elif content:
+                processed.append({"role": "assistant", "content": content})
+            continue
 
         # Strip 'output' field before adding (LLM shouldn't see it)
         clean_message = {k: v for k, v in message.items() if k != "output"}
