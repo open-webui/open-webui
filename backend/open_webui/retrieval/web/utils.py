@@ -584,22 +584,27 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
 class SafeWebBaseLoader(WebBaseLoader):
     """WebBaseLoader with enhanced error handling for URLs."""
 
-    def __init__(self, trust_env: bool = False, timeout: int = 10000, retries: int = 3, *args, **kwargs):
+    def __init__(self, trust_env: bool = False, timeout: int | None = None, retry_count: int | None = None, *args, **kwargs):
         """Initialize SafeWebBaseLoader
         Args:
             trust_env (bool, optional): set to True if using proxy to make web requests, for example
                 using http(s)_proxy environment variables. Defaults to False.
+            timeout (int, optional): request timeout in milliseconds. Defaults to WEB_LOADER_TIMEOUT
+                configuration value.
+            retry_count (int, optional): number of retry attempts for failed requests. Defaults to
+                WEB_LOADER_RETRY_COUNT configuration value.
         """
         super().__init__(*args, **kwargs)
         self.trust_env = trust_env
         self.timeout = timeout
-        self.retries = retries
+        self.retry_count = retry_count
 
     async def _fetch(
         self, url: str, retries: int | None = None, cooldown: int = 2, backoff: float = 1.5
     ) -> str:
-        retries = retries or self.retries
-        async with aiohttp.ClientSession(trust_env=self.trust_env, timeout=aiohttp.ClientTimeout(self.timeout / 1000.0)) as session:
+        retries = retries or self.retry_count or WEB_LOADER_RETRY_COUNT.value
+        timeout = self.timeout or WEB_LOADER_TIMEOUT.value
+        async with aiohttp.ClientSession(trust_env=self.trust_env, timeout=aiohttp.ClientTimeout(timeout / 1000.0)) as session:
             for i in range(retries):
                 try:
                     kwargs: Dict = dict(
@@ -713,7 +718,7 @@ def get_web_loader(
     if WEB_LOADER_ENGINE.value == "" or WEB_LOADER_ENGINE.value == "safe_web":
         WebLoaderClass = SafeWebBaseLoader
         web_loader_args["timeout"] = WEB_LOADER_TIMEOUT.value
-        web_loader_args["retries"] = WEB_LOADER_RETRY_COUNT.value
+        web_loader_args["retry_count"] = WEB_LOADER_RETRY_COUNT.value
     if WEB_LOADER_ENGINE.value == "playwright":
         WebLoaderClass = SafePlaywrightURLLoader
         web_loader_args["playwright_timeout"] = PLAYWRIGHT_TIMEOUT.value
