@@ -894,6 +894,7 @@ def get_event_emitter(request_info, update_db=True):
     else:
         return None
 
+
 @sio.on("tool:check_pending")
 async def handle_check_pending_approvals(sid, data):
     """Check if there are pending approvals for a chat."""
@@ -913,13 +914,12 @@ async def handle_check_pending_approvals(sid, data):
     pending_approvals = approval_manager.get_pending_approvals_for_chat(chat_id)
 
     if pending_approvals:
-        await sio.emit('tool:pending_found', pending_approvals, room=sid)
+        await sio.emit("tool:pending_found", pending_approvals, room=sid)
 
 
 @sio.on("tool:approval_response")
 async def handle_tool_approval_response(sid, data):
     """Handle tool approval response from frontend."""
-
 
     session_data = SESSION_POOL.get(sid)
     if not session_data:
@@ -944,11 +944,8 @@ async def handle_tool_approval_response(sid, data):
     from open_webui.utils.tool_approval import approval_manager
 
     await approval_manager.handle_approval_response(
-        chat_id=chat_id,
-        approval_id=approval_id,
-        decision=decision
+        chat_id=chat_id, approval_id=approval_id, decision=decision
     )
-
 
     return {"status": "success", "message": f"Approval {decision}"}
 
@@ -973,13 +970,15 @@ async def handle_add_always_approved(sid, data):
     if level == "parent" and parent_tool_id:
         approval_manager.add_always_approved_parent(chat_id, parent_tool_id)
     elif level == "function" and parent_tool_id and function_name:
-        approval_manager.add_always_approved_function(chat_id, parent_tool_id, function_name)
+        approval_manager.add_always_approved_function(
+            chat_id, parent_tool_id, function_name
+        )
     else:
         return {"status": "error", "message": "Missing required fields"}
 
     return {
         "status": "success",
-        "always_approved": approval_manager.get_always_approved(chat_id)
+        "always_approved": approval_manager.get_always_approved(chat_id),
     }
 
 
@@ -1003,13 +1002,15 @@ async def handle_remove_always_approved(sid, data):
     if level == "parent" and parent_tool_id:
         approval_manager.remove_always_approved_parent(chat_id, parent_tool_id)
     elif level == "function" and parent_tool_id and function_name:
-        approval_manager.remove_always_approved_function(chat_id, parent_tool_id, function_name)
+        approval_manager.remove_always_approved_function(
+            chat_id, parent_tool_id, function_name
+        )
     else:
         return {"status": "error", "message": "Missing required fields"}
 
     return {
         "status": "success",
-        "always_approved": approval_manager.get_always_approved(chat_id)
+        "always_approved": approval_manager.get_always_approved(chat_id),
     }
 
 
@@ -1028,7 +1029,7 @@ async def handle_get_always_approved(sid, data):
 
     return {
         "status": "success",
-        "always_approved": approval_manager.get_always_approved(chat_id)
+        "always_approved": approval_manager.get_always_approved(chat_id),
     }
 
 
@@ -1073,14 +1074,13 @@ async def handle_set_yolo(sid, data):
     elif level == "parent" and parent_tool_id:
         approval_manager.set_yolo_parent(chat_id, parent_tool_id, enabled)
     elif level == "function" and parent_tool_id and function_name:
-        approval_manager.set_yolo_function(chat_id, parent_tool_id, function_name, enabled)
+        approval_manager.set_yolo_function(
+            chat_id, parent_tool_id, function_name, enabled
+        )
     else:
         return {"status": "error", "message": "Missing required fields"}
 
-    return {
-        "status": "success",
-        "yolo": approval_manager.get_yolo_status(chat_id)
-    }
+    return {"status": "success", "yolo": approval_manager.get_yolo_status(chat_id)}
 
 
 @sio.on("tool:get_yolo")
@@ -1096,10 +1096,7 @@ async def handle_get_yolo(sid, data):
 
     from open_webui.utils.tool_approval import approval_manager
 
-    return {
-        "status": "success",
-        "yolo": approval_manager.get_yolo_status(chat_id)
-    }
+    return {"status": "success", "yolo": approval_manager.get_yolo_status(chat_id)}
 
 
 @sio.on("tool:clear_yolo")
@@ -1117,10 +1114,7 @@ async def handle_clear_yolo(sid, data):
 
     approval_manager.clear_yolo(chat_id)
 
-    return {
-        "status": "success",
-        "yolo": {"yolo_all": False, "yolo_functions": {}}
-    }
+    return {"status": "success", "yolo": {"yolo_all": False, "yolo_functions": {}}}
 
 
 def get_event_call(request_info):

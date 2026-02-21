@@ -177,14 +177,15 @@
 	}
 
 	// Feature tools are gated by their existing show* flags
-	$: visibleFeatureTools = featureTools.filter(t =>
-		(t.id === 'web_search' && showWebSearchButton) ||
-		(t.id === 'image_generation' && showImageGenerationButton) ||
-		(t.id === 'code_interpreter' && showCodeInterpreterButton)
+	$: visibleFeatureTools = featureTools.filter(
+		(t) =>
+			(t.id === 'web_search' && showWebSearchButton) ||
+			(t.id === 'image_generation' && showImageGenerationButton) ||
+			(t.id === 'code_interpreter' && showCodeInterpreterButton)
 	);
 
 	function isBuiltinToolYolo(tool: BuiltinTool): boolean {
-		return tool.parentIds.every(pid => {
+		return tool.parentIds.every((pid) => {
 			const funcs = yoloStatus.yolo_functions[pid];
 			return funcs && (funcs.includes('*') || funcs.length > 0);
 		});
@@ -237,7 +238,10 @@
 	}
 
 	// Helper: count always-approved entries
-	$: alwaysApprovedCount = Object.values(alwaysApproved).reduce((sum, children) => sum + children.length, 0);
+	$: alwaysApprovedCount = Object.values(alwaysApproved).reduce(
+		(sum, children) => sum + children.length,
+		0
+	);
 </script>
 
 <Dropdown
@@ -292,8 +296,16 @@
 									tab = 'yolo';
 								}}
 							>
-								<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-									<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+								<svg
+									class="size-4"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								>
+									<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
 								</svg>
 								<div class="flex items-center w-full justify-between">
 									<div class="line-clamp-1">
@@ -309,28 +321,36 @@
 							</button>
 
 							<!-- Always Allowed -->
-								<button
-									class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
-									on:click={async () => {
-										if (chatId) await loadAlwaysApproved();
-										tab = 'always-allowed';
-									}}
+							<button
+								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+								on:click={async () => {
+									if (chatId) await loadAlwaysApproved();
+									tab = 'always-allowed';
+								}}
+							>
+								<svg
+									class="size-4"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
 								>
-									<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-									</svg>
-									<div class="flex items-center w-full justify-between">
-										<div class="line-clamp-1">
-											{$i18n.t('Always Allowed')}
-											{#if alwaysApprovedCount > 0}
-												<span class="ml-0.5 text-gray-500">{alwaysApprovedCount}</span>
-											{/if}
-										</div>
-										<div class="text-gray-500">
-											<ChevronRight />
-										</div>
+									<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+								</svg>
+								<div class="flex items-center w-full justify-between">
+									<div class="line-clamp-1">
+										{$i18n.t('Always Allowed')}
+										{#if alwaysApprovedCount > 0}
+											<span class="ml-0.5 text-gray-500">{alwaysApprovedCount}</span>
+										{/if}
 									</div>
-								</button>
+									<div class="text-gray-500">
+										<ChevronRight />
+									</div>
+								</div>
+							</button>
 						{/if}
 					{:else}
 						<div class="py-4">
@@ -503,7 +523,6 @@
 						</Tooltip>
 					{/if}
 				</div>
-
 			{:else if tab === 'tools' && tools}
 				<!-- Tools sub-menu (existing) -->
 				<div in:fly={{ x: 20, duration: 150 }}>
@@ -587,141 +606,156 @@
 						</button>
 					{/each}
 				</div>
-
-		{:else if tab === 'yolo' && tools}
-			<!-- YOLO Mode sub-menu -->
-			<div in:fly={{ x: 20, duration: 150 }}>
-				<button
-					class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
-					on:click={() => {
-						tab = '';
-					}}
-				>
-					<ChevronLeft />
-					<div class="flex items-center w-full justify-between">
-						<div>{$i18n.t('YOLO Mode')}</div>
-					</div>
-				</button>
-
-				<!-- YOLO All toggle -->
-				<button
-					class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
-					on:click={toggleYoloAll}
-				>
-					<div class="flex-1 truncate">
-						<div class="flex flex-1 gap-2 items-center">
-							<svg class="size-4 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-							</svg>
-							<div class="truncate font-medium">{$i18n.t('YOLO All Tools')}</div>
+			{:else if tab === 'yolo' && tools}
+				<!-- YOLO Mode sub-menu -->
+				<div in:fly={{ x: 20, duration: 150 }}>
+					<button
+						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+						on:click={() => {
+							tab = '';
+						}}
+					>
+						<ChevronLeft />
+						<div class="flex items-center w-full justify-between">
+							<div>{$i18n.t('YOLO Mode')}</div>
 						</div>
-					</div>
-					<div class="shrink-0">
-						<Switch state={yoloStatus.yolo_all} />
-					</div>
-				</button>
+					</button>
 
-				{#if !yoloStatus.yolo_all}
-					<!-- Default Features YOLO toggles (gated by existing show* flags) -->
-					{#if visibleFeatureTools.length > 0}
-						<div class="border-t border-gray-100 dark:border-gray-800 my-1" />
-						<div class="px-3 py-1 text-xs font-medium text-gray-400 dark:text-gray-500">{$i18n.t('Default Features')}</div>
-						{#each visibleFeatureTools as featureTool (featureTool.id)}
-							<button
-								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
-								on:click={() => toggleBuiltinToolYolo(featureTool)}
-							>
-								<div class="flex-1 truncate">
-									<div class="flex flex-1 gap-2 items-center">
-										<div class="shrink-0">
-											{#if featureTool.id === 'web_search'}
-												<GlobeAlt />
-											{:else if featureTool.id === 'image_generation'}
-												<Photo className="size-4" strokeWidth="1.5" />
-											{:else if featureTool.id === 'code_interpreter'}
-												<Terminal className="size-3.5" strokeWidth="1.75" />
-											{/if}
+					<!-- YOLO All toggle -->
+					<button
+						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+						on:click={toggleYoloAll}
+					>
+						<div class="flex-1 truncate">
+							<div class="flex flex-1 gap-2 items-center">
+								<svg
+									class="size-4 text-amber-500"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								>
+									<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+								</svg>
+								<div class="truncate font-medium">{$i18n.t('YOLO All Tools')}</div>
+							</div>
+						</div>
+						<div class="shrink-0">
+							<Switch state={yoloStatus.yolo_all} />
+						</div>
+					</button>
+
+					{#if !yoloStatus.yolo_all}
+						<!-- Default Features YOLO toggles (gated by existing show* flags) -->
+						{#if visibleFeatureTools.length > 0}
+							<div class="border-t border-gray-100 dark:border-gray-800 my-1" />
+							<div class="px-3 py-1 text-xs font-medium text-gray-400 dark:text-gray-500">
+								{$i18n.t('Default Features')}
+							</div>
+							{#each visibleFeatureTools as featureTool (featureTool.id)}
+								<button
+									class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+									on:click={() => toggleBuiltinToolYolo(featureTool)}
+								>
+									<div class="flex-1 truncate">
+										<div class="flex flex-1 gap-2 items-center">
+											<div class="shrink-0">
+												{#if featureTool.id === 'web_search'}
+													<GlobeAlt />
+												{:else if featureTool.id === 'image_generation'}
+													<Photo className="size-4" strokeWidth="1.5" />
+												{:else if featureTool.id === 'code_interpreter'}
+													<Terminal className="size-3.5" strokeWidth="1.75" />
+												{/if}
+											</div>
+											<div class="truncate">{$i18n.t(featureTool.name)}</div>
 										</div>
-										<div class="truncate">{$i18n.t(featureTool.name)}</div>
 									</div>
-								</div>
-								<div class="shrink-0">
-									<Switch state={isBuiltinToolYolo(featureTool)} />
-								</div>
-							</button>
-						{/each}
-					{/if}
-
-					<!-- Builtin Tools YOLO toggles (loaded dynamically from backend) -->
-					{#if builtinTools.length > 0}
-						<div class="border-t border-gray-100 dark:border-gray-800 my-1" />
-						<div class="px-3 py-1 text-xs font-medium text-gray-400 dark:text-gray-500">{$i18n.t('Builtin Tools')}</div>
-						{#each builtinTools as builtinTool (builtinTool.id)}
-							<button
-								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
-								on:click={() => toggleBuiltinToolYolo(builtinTool)}
-							>
-								<div class="flex-1 truncate">
-									<div class="flex flex-1 gap-2 items-center">
-										<div class="shrink-0">
-											{#if builtinTool.id === 'time'}
-												<Calendar className="size-4" strokeWidth="1.5" />
-											{:else if builtinTool.id === 'memory'}
-												<Database className="size-4" strokeWidth="1.5" />
-											{:else if builtinTool.id === 'chats'}
-												<ChatBubble className="size-4" strokeWidth="1.5" />
-											{:else if builtinTool.id === 'notes'}
-												<Note className="size-4" strokeWidth="1.5" />
-											{:else if builtinTool.id === 'knowledge'}
-												<BookOpen className="size-4" strokeWidth="1.5" />
-											{:else if builtinTool.id === 'channels'}
-												<Hashtag className="size-4" strokeWidth="1.5" />
-											{:else}
-												<Wrench />
-											{/if}
-										</div>
-										<div class="truncate">{$i18n.t(builtinTool.name)}</div>
-									</div>
-								</div>
-								<div class="shrink-0">
-									<Switch state={isBuiltinToolYolo(builtinTool)} />
-								</div>
-							</button>
-						{/each}
-					{/if}
-
-					{#if (visibleFeatureTools.length > 0 || builtinTools.length > 0) && Object.keys(tools).length > 0}
-						<div class="border-t border-gray-100 dark:border-gray-800 my-1" />
-						<div class="px-3 py-1 text-xs font-medium text-gray-400 dark:text-gray-500">{$i18n.t('Workspace Tools')}</div>
-					{/if}
-
-					<!-- Per-tool YOLO toggles -->
-					{#each Object.keys(tools) as toolId}
-						<button
-							class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
-							on:click={() => toggleToolYolo(toolId)}
-						>
-							<div class="flex-1 truncate">
-								<div class="flex flex-1 gap-2 items-center">
 									<div class="shrink-0">
-										<Wrench />
+										<Switch state={isBuiltinToolYolo(featureTool)} />
 									</div>
-									<div class="truncate">{tools[toolId].name}</div>
-								</div>
-							</div>
-							<div class="shrink-0">
-								<Switch state={
-									(() => {
-										const parentFuncs = yoloStatus.yolo_functions[toolId];
-										return !!(parentFuncs && (parentFuncs.includes('*') || parentFuncs.length > 0));
-									})()
-								} />
-							</div>
-						</button>
-					{/each}
-				{/if}
-			</div>
+								</button>
+							{/each}
+						{/if}
 
+						<!-- Builtin Tools YOLO toggles (loaded dynamically from backend) -->
+						{#if builtinTools.length > 0}
+							<div class="border-t border-gray-100 dark:border-gray-800 my-1" />
+							<div class="px-3 py-1 text-xs font-medium text-gray-400 dark:text-gray-500">
+								{$i18n.t('Builtin Tools')}
+							</div>
+							{#each builtinTools as builtinTool (builtinTool.id)}
+								<button
+									class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+									on:click={() => toggleBuiltinToolYolo(builtinTool)}
+								>
+									<div class="flex-1 truncate">
+										<div class="flex flex-1 gap-2 items-center">
+											<div class="shrink-0">
+												{#if builtinTool.id === 'time'}
+													<Calendar className="size-4" strokeWidth="1.5" />
+												{:else if builtinTool.id === 'memory'}
+													<Database className="size-4" strokeWidth="1.5" />
+												{:else if builtinTool.id === 'chats'}
+													<ChatBubble className="size-4" strokeWidth="1.5" />
+												{:else if builtinTool.id === 'notes'}
+													<Note className="size-4" strokeWidth="1.5" />
+												{:else if builtinTool.id === 'knowledge'}
+													<BookOpen className="size-4" strokeWidth="1.5" />
+												{:else if builtinTool.id === 'channels'}
+													<Hashtag className="size-4" strokeWidth="1.5" />
+												{:else}
+													<Wrench />
+												{/if}
+											</div>
+											<div class="truncate">{$i18n.t(builtinTool.name)}</div>
+										</div>
+									</div>
+									<div class="shrink-0">
+										<Switch state={isBuiltinToolYolo(builtinTool)} />
+									</div>
+								</button>
+							{/each}
+						{/if}
+
+						{#if (visibleFeatureTools.length > 0 || builtinTools.length > 0) && Object.keys(tools).length > 0}
+							<div class="border-t border-gray-100 dark:border-gray-800 my-1" />
+							<div class="px-3 py-1 text-xs font-medium text-gray-400 dark:text-gray-500">
+								{$i18n.t('Workspace Tools')}
+							</div>
+						{/if}
+
+						<!-- Per-tool YOLO toggles -->
+						{#each Object.keys(tools) as toolId}
+							<button
+								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+								on:click={() => toggleToolYolo(toolId)}
+							>
+								<div class="flex-1 truncate">
+									<div class="flex flex-1 gap-2 items-center">
+										<div class="shrink-0">
+											<Wrench />
+										</div>
+										<div class="truncate">{tools[toolId].name}</div>
+									</div>
+								</div>
+								<div class="shrink-0">
+									<Switch
+										state={(() => {
+											const parentFuncs = yoloStatus.yolo_functions[toolId];
+											return !!(
+												parentFuncs &&
+												(parentFuncs.includes('*') || parentFuncs.length > 0)
+											);
+										})()}
+									/>
+								</div>
+							</button>
+						{/each}
+					{/if}
+				</div>
 			{:else if tab === 'always-allowed'}
 				<!-- Always Allowed sub-menu -->
 				<div in:fly={{ x: 20, duration: 150 }}>
@@ -747,7 +781,15 @@
 							}}
 						>
 							<div class="flex flex-1 gap-2 items-center">
-								<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<svg
+									class="size-4"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								>
 									<line x1="18" y1="6" x2="6" y2="18" />
 									<line x1="6" y1="6" x2="18" y2="18" />
 								</svg>
@@ -764,7 +806,9 @@
 							{/if}
 
 							<!-- Parent header row -->
-							<div class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50">
+							<div
+								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+							>
 								<div class="flex-1 truncate">
 									<div class="flex flex-1 gap-2 items-center">
 										<div class="shrink-0">
@@ -781,7 +825,15 @@
 										alwaysApproved = await getAlwaysApproved(chatId);
 									}}
 								>
-									<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<svg
+										class="size-4"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+									>
 										<line x1="18" y1="6" x2="6" y2="18" />
 										<line x1="6" y1="6" x2="18" y2="18" />
 									</svg>
@@ -790,12 +842,16 @@
 
 							<!-- Children -->
 							{#if children.includes('*')}
-								<div class="flex w-full items-center pl-9 pr-3 py-1 text-xs text-gray-500 dark:text-gray-400 italic">
+								<div
+									class="flex w-full items-center pl-9 pr-3 py-1 text-xs text-gray-500 dark:text-gray-400 italic"
+								>
 									{$i18n.t('All functions approved')}
 								</div>
 							{:else}
 								{#each children as funcName}
-									<div class="flex w-full justify-between gap-2 items-center pl-9 pr-3 py-1 text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50">
+									<div
+										class="flex w-full justify-between gap-2 items-center pl-9 pr-3 py-1 text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+									>
 										<div class="flex-1 truncate text-gray-700 dark:text-gray-300">
 											{funcName}
 										</div>
@@ -807,7 +863,15 @@
 												alwaysApproved = await getAlwaysApproved(chatId);
 											}}
 										>
-											<svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+											<svg
+												class="size-3.5"
+												viewBox="0 0 24 24"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+											>
 												<line x1="18" y1="6" x2="6" y2="18" />
 												<line x1="6" y1="6" x2="18" y2="18" />
 											</svg>

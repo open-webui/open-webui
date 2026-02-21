@@ -1100,7 +1100,6 @@ async def chat_completion_tools_handler(
                 if "id" not in tool_call:
                     tool_call["id"] = str(uuid4())
 
-
             # Check if approval is required
             require_approval = request.app.state.config.ENABLE_TOOL_APPROVAL
             approval_results = {}
@@ -1113,9 +1112,15 @@ async def chat_completion_tools_handler(
                 for tool_call in tool_calls_list:
                     tool_id = tool_call.get("id", "")
                     tool_name = tool_call.get("name", None)
-                    parent_tool_id = tools.get(tool_name, {}).get("tool_id", "unknown") if tool_name else "unknown"
+                    parent_tool_id = (
+                        tools.get(tool_name, {}).get("tool_id", "unknown")
+                        if tool_name
+                        else "unknown"
+                    )
 
-                    if approval_manager.should_auto_approve(chat_id, tool_name or "", parent_tool_id):
+                    if approval_manager.should_auto_approve(
+                        chat_id, tool_name or "", parent_tool_id
+                    ):
                         approval_results[tool_id] = "approved"
                         continue
 
@@ -1132,23 +1137,27 @@ async def chat_completion_tools_handler(
                     approval_id = str(uuid4())
                     approval_results[tool_id] = approval_id
 
-                    tools_to_approve.append({
-                        "approval_id": approval_id,
-                        "tool_id": tool_id,
-                        "tool_name": tool_name,
-                        "tool_params": tool_args,
-                        "parent_tool_id": parent_tool_id,
-                    })
+                    tools_to_approve.append(
+                        {
+                            "approval_id": approval_id,
+                            "tool_id": tool_id,
+                            "tool_name": tool_name,
+                            "tool_params": tool_args,
+                            "parent_tool_id": parent_tool_id,
+                        }
+                    )
 
                 if tools_to_approve:
-                    await event_emitter({
-                        "type": "tool:approval_required",
-                        "data": {
-                            "chat_id": chat_id,
-                            "message_id": metadata.get("message_id", ""),
-                            "tools": tools_to_approve
+                    await event_emitter(
+                        {
+                            "type": "tool:approval_required",
+                            "data": {
+                                "chat_id": chat_id,
+                                "message_id": metadata.get("message_id", ""),
+                                "tools": tools_to_approve,
+                            },
                         }
-                    })
+                    )
 
                     async def wait_for_tool_approval(tool):
                         tool_id = tool["tool_id"]
@@ -1162,21 +1171,25 @@ async def chat_completion_tools_handler(
                                 "tool_name": tool["tool_name"],
                                 "tool_params": tool["tool_params"],
                                 "parent_tool_id": tool["parent_tool_id"],
+                            },
+                        )
+
+                        await event_emitter(
+                            {
+                                "type": "tool:approval_status",
+                                "data": {
+                                    "tool_id": tool_id,
+                                    "tool_name": tool["tool_name"],
+                                    "status": decision,
+                                },
                             }
                         )
 
-                        await event_emitter({
-                            "type": "tool:approval_status",
-                            "data": {
-                                "tool_id": tool_id,
-                                "tool_name": tool["tool_name"],
-                                "status": decision
-                            }
-                        })
-
                         return tool_id, decision
 
-                    approval_tasks = [wait_for_tool_approval(tool) for tool in tools_to_approve]
+                    approval_tasks = [
+                        wait_for_tool_approval(tool) for tool in tools_to_approve
+                    ]
                     approval_responses = await asyncio.gather(*approval_tasks)
 
                     for tool_id, decision in approval_responses:
@@ -1197,29 +1210,49 @@ async def chat_completion_tools_handler(
                 approval_status = approval_results.get(tool_id, "denied")
 
                 if approval_status == "denied":
-       
+
                     tool_name = f"TOOL:{tool_function_name}"
-                    sources.append({
-                        "source": {"name": tool_name},
-                        "document": [f"Tool execution {approval_status}: User did not approve execution of {tool_function_name}"],
-                        "metadata": [{"source": tool_name, "parameters": {}, "status": approval_status}],
-                        "tool_result": True,
-                    })
+                    sources.append(
+                        {
+                            "source": {"name": tool_name},
+                            "document": [
+                                f"Tool execution {approval_status}: User did not approve execution of {tool_function_name}"
+                            ],
+                            "metadata": [
+                                {
+                                    "source": tool_name,
+                                    "parameters": {},
+                                    "status": approval_status,
+                                }
+                            ],
+                            "tool_result": True,
+                        }
+                    )
                     body["messages"] = add_or_update_user_message(
                         f"\nTool `{tool_function_name}` Output: Tool execution {approval_status}: User did not approve execution",
                         body["messages"],
                     )
-                    return 
-                
+                    return
+
                 if approval_status != "approved":
                     # Pending status (default mode way)
                     tool_name = f"TOOL:{tool_function_name}"
-                    sources.append({
-                        "source": {"name": tool_name},
-                        "document": [f"Tool execution skipped: Invalid approval status for {tool_function_name}"],
-                        "metadata": [{"source": tool_name, "parameters": {}, "status": "invalid"}],
-                        "tool_result": True,
-                    })
+                    sources.append(
+                        {
+                            "source": {"name": tool_name},
+                            "document": [
+                                f"Tool execution skipped: Invalid approval status for {tool_function_name}"
+                            ],
+                            "metadata": [
+                                {
+                                    "source": tool_name,
+                                    "parameters": {},
+                                    "status": "invalid",
+                                }
+                            ],
+                            "tool_result": True,
+                        }
+                    )
                     body["messages"] = add_or_update_user_message(
                         f"\nTool `{tool_function_name}` Output: Tool execution skipped: Invalid approval status",
                         body["messages"],
@@ -4126,13 +4159,21 @@ async def streaming_chat_response_handler(response, ctx):
                         for tool_call in response_tool_calls:
                             tool_id = tool_call.get("id", "")
                             tool_name = tool_call.get("function", {}).get("name", "")
-                            parent_tool_id = tools_meta.get(tool_name, {}).get("tool_id", "unknown") if tool_name else "unknown"
+                            parent_tool_id = (
+                                tools_meta.get(tool_name, {}).get("tool_id", "unknown")
+                                if tool_name
+                                else "unknown"
+                            )
 
-                            if approval_manager.should_auto_approve(chat_id, tool_name, parent_tool_id):
+                            if approval_manager.should_auto_approve(
+                                chat_id, tool_name, parent_tool_id
+                            ):
                                 approval_results[tool_id] = "approved"
                                 continue
 
-                            tool_args_str = tool_call.get("function", {}).get("arguments", "{}")
+                            tool_args_str = tool_call.get("function", {}).get(
+                                "arguments", "{}"
+                            )
 
                             try:
                                 tool_args = json.loads(tool_args_str)
@@ -4145,23 +4186,27 @@ async def streaming_chat_response_handler(response, ctx):
                             approval_id = str(uuid4())
                             approval_results[tool_id] = approval_id
 
-                            tools_to_approve.append({
-                                "approval_id": approval_id,
-                                "tool_id": tool_id,
-                                "tool_name": tool_name,
-                                "tool_params": tool_args,
-                                "parent_tool_id": parent_tool_id,
-                            })
+                            tools_to_approve.append(
+                                {
+                                    "approval_id": approval_id,
+                                    "tool_id": tool_id,
+                                    "tool_name": tool_name,
+                                    "tool_params": tool_args,
+                                    "parent_tool_id": parent_tool_id,
+                                }
+                            )
 
                         if tools_to_approve:
-                            await event_emitter({
-                                "type": "tool:approval_required",
-                                "data": {
-                                    "chat_id": chat_id,
-                                    "message_id": metadata.get("message_id", ""),
-                                    "tools": tools_to_approve
+                            await event_emitter(
+                                {
+                                    "type": "tool:approval_required",
+                                    "data": {
+                                        "chat_id": chat_id,
+                                        "message_id": metadata.get("message_id", ""),
+                                        "tools": tools_to_approve,
+                                    },
                                 }
-                            })
+                            )
 
                             for tool in tools_to_approve:
                                 tool_id = tool["tool_id"]
@@ -4175,19 +4220,21 @@ async def streaming_chat_response_handler(response, ctx):
                                         "tool_name": tool["tool_name"],
                                         "tool_params": tool["tool_params"],
                                         "parent_tool_id": tool["parent_tool_id"],
-                                    }
+                                    },
                                 )
 
                                 approval_results[tool_id] = decision
 
-                                await event_emitter({
-                                    "type": "tool:approval_status",
-                                    "data": {
-                                        "tool_id": tool_id,
-                                        "tool_name": tool["tool_name"],
-                                        "status": decision
+                                await event_emitter(
+                                    {
+                                        "type": "tool:approval_status",
+                                        "data": {
+                                            "tool_id": tool_id,
+                                            "tool_name": tool["tool_name"],
+                                            "status": decision,
+                                        },
                                     }
-                                })
+                                )
                     else:
                         for tool_call in response_tool_calls:
                             approval_results[tool_call.get("id", "")] = "approved"
@@ -4199,7 +4246,9 @@ async def streaming_chat_response_handler(response, ctx):
                         func = tc.get("function", {})
                         # Determine status based on approval_results
                         # By this point, approval_results should contain "approved" or "denied" for each tool_id
-                        status = approval_results.get(call_id, "approved") # Default to "approved" if for some reason not found
+                        status = approval_results.get(
+                            call_id, "approved"
+                        )  # Default to "approved" if for some reason not found
 
                         output.append(
                             {
@@ -4258,22 +4307,25 @@ async def streaming_chat_response_handler(response, ctx):
                         # CHECK TOOL APPROVAL
                         approval_status = approval_results.get(tool_call_id, "denied")
 
-
                         if approval_status == "denied":
-                            results.append({
-                                "tool_call_id": tool_call_id,
-                                "role": "tool",
-                                "content": f"Tool execution denied: User did not approve execution of {tool_name}"
-                            })
+                            results.append(
+                                {
+                                    "tool_call_id": tool_call_id,
+                                    "role": "tool",
+                                    "content": f"Tool execution denied: User did not approve execution of {tool_name}",
+                                }
+                            )
                             continue
 
                         if approval_status != "approved":
                             # Unknown status, skip for safety
-                            results.append({
-                                "tool_call_id": tool_call_id,
-                                "role": "tool",
-                                "content": f"Tool execution skipped: Invalid approval status for {tool_name}"
-                            })
+                            results.append(
+                                {
+                                    "tool_call_id": tool_call_id,
+                                    "role": "tool",
+                                    "content": f"Tool execution skipped: Invalid approval status for {tool_name}",
+                                }
+                            )
                             continue
 
                         tool_result = None

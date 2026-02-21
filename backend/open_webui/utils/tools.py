@@ -104,7 +104,13 @@ BUILTIN_TOOL_CATEGORIES: dict[str, dict] = {
     "memory": {
         "name": "Memory",
         "description": "Search and manage user memories",
-        "functions": ["search_memories", "add_memory", "replace_memory_content", "delete_memory", "list_memories"],
+        "functions": [
+            "search_memories",
+            "add_memory",
+            "replace_memory_content",
+            "delete_memory",
+            "list_memories",
+        ],
         "feature": False,
     },
     "chats": {
@@ -116,22 +122,37 @@ BUILTIN_TOOL_CATEGORIES: dict[str, dict] = {
     "notes": {
         "name": "Notes",
         "description": "Search, view, and manage user notes",
-        "functions": ["search_notes", "view_note", "write_note", "replace_note_content"],
+        "functions": [
+            "search_notes",
+            "view_note",
+            "write_note",
+            "replace_note_content",
+        ],
         "feature": False,
     },
     "knowledge": {
         "name": "Knowledge Base",
         "description": "Browse and query knowledge bases",
         "functions": [
-            "list_knowledge_bases", "search_knowledge_bases", "query_knowledge_bases",
-            "search_knowledge_files", "query_knowledge_files", "view_knowledge_file", "view_file",
+            "list_knowledge_bases",
+            "search_knowledge_bases",
+            "query_knowledge_bases",
+            "search_knowledge_files",
+            "query_knowledge_files",
+            "view_knowledge_file",
+            "view_file",
         ],
         "feature": False,
     },
     "channels": {
         "name": "Channels",
         "description": "Search channels and channel messages",
-        "functions": ["search_channels", "search_channel_messages", "view_channel_thread", "view_channel_message"],
+        "functions": [
+            "search_channels",
+            "search_channel_messages",
+            "view_channel_thread",
+            "view_channel_message",
+        ],
         "feature": False,
     },
     "web_search": {
@@ -539,7 +560,15 @@ def get_builtin_tools(
 
     # Add memory tools if builtin category enabled AND enabled for this chat
     if is_builtin_tool_enabled("memory") and features.get("memory"):
-        builtin_functions.extend([search_memories, add_memory, replace_memory_content, delete_memory, list_memories])
+        builtin_functions.extend(
+            [
+                search_memories,
+                add_memory,
+                replace_memory_content,
+                delete_memory,
+                list_memories,
+            ]
+        )
 
     # Add web search tools if builtin category enabled AND enabled globally AND model has web_search capability
     if (

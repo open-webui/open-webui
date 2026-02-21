@@ -356,26 +356,25 @@
 
 		// Always handle tool approval events immediately
 		if (type === 'tool:approval_required') {
-
 			// Only show modal if this tab is viewing the relevant chat
 			const approvalChatId = data.chat_id || event.chat_id || '';
 			const currentChatId = $chatId;
-			
+
 			if (approvalChatId && currentChatId && approvalChatId === currentChatId) {
 				setApprovalRequest({
 					chat_id: data.chat_id || event.chat_id || '',
 					message_id: data.message_id || event.message_id || '',
 					tools: data.tools || [],
 					timestamp: Date.now()
-					});
+				});
 			} else {
 			}
 			return; // stop here so it doesn't go into other branches
 		}
 		if (type === 'tool:approval_status') {
-			// Handle approval status updates		
+			// Handle approval status updates
 			const { tool_name, status } = data;
-			
+
 			// Show toast based on status
 			if (status === 'approved') {
 				toast.success(`Executing ${tool_name}...`);

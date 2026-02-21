@@ -30,10 +30,7 @@ class ToolApprovalManager:
     # ---- Approval wait/response (unchanged logic) ----
 
     async def wait_for_approval(
-        self,
-        chat_id: str,
-        approval_id: str,
-        tool_data: Dict[str, Any] = None
+        self, chat_id: str, approval_id: str, tool_data: Dict[str, Any] = None
     ) -> str:
         event_key = f"{chat_id}:{approval_id}"
 
@@ -53,10 +50,7 @@ class ToolApprovalManager:
             self.approval_data.pop(event_key, None)
 
     async def handle_approval_response(
-        self,
-        chat_id: str,
-        approval_id: str,
-        decision: str
+        self, chat_id: str, approval_id: str, decision: str
     ):
         event_key = f"{chat_id}:{approval_id}"
         self.approval_results[event_key] = decision
@@ -74,13 +68,15 @@ class ToolApprovalManager:
                 approval_id = event_key.split(":", 1)[1]
                 tool_data = self.approval_data.get(event_key, {})
 
-                tools.append({
-                    "approval_id": approval_id,
-                    "tool_id": tool_data.get("tool_id", "unknown"),
-                    "tool_name": tool_data.get("tool_name", "Unknown Tool"),
-                    "tool_params": tool_data.get("tool_params", {}),
-                    "parent_tool_id": tool_data.get("parent_tool_id", "unknown"),
-                })
+                tools.append(
+                    {
+                        "approval_id": approval_id,
+                        "tool_id": tool_data.get("tool_id", "unknown"),
+                        "tool_name": tool_data.get("tool_name", "Unknown Tool"),
+                        "tool_params": tool_data.get("tool_params", {}),
+                        "parent_tool_id": tool_data.get("parent_tool_id", "unknown"),
+                    }
+                )
 
         if not tools:
             return None
@@ -89,12 +85,14 @@ class ToolApprovalManager:
             "chat_id": chat_id,
             "message_id": "restored",
             "tools": tools,
-            "timestamp": int(time.time() * 1000)
+            "timestamp": int(time.time() * 1000),
         }
 
     # ---- Auto-approve checks (YOLO first, then always-approved) ----
 
-    def should_auto_approve(self, chat_id: str, function_name: str, parent_tool_id: str) -> bool:
+    def should_auto_approve(
+        self, chat_id: str, function_name: str, parent_tool_id: str
+    ) -> bool:
         # YOLO all trumps everything
         if chat_id in self.yolo_all_chats:
             return True
@@ -117,7 +115,9 @@ class ToolApprovalManager:
 
         return False
 
-    def add_always_approved_function(self, chat_id: str, parent_tool_id: str, function_name: str):
+    def add_always_approved_function(
+        self, chat_id: str, parent_tool_id: str, function_name: str
+    ):
         chat_approvals = self.always_approved.setdefault(chat_id, {})
         children = chat_approvals.setdefault(parent_tool_id, set())
         children.add(function_name)
@@ -126,7 +126,9 @@ class ToolApprovalManager:
         chat_approvals = self.always_approved.setdefault(chat_id, {})
         chat_approvals[parent_tool_id] = {PARENT_WILDCARD}
 
-    def remove_always_approved_function(self, chat_id: str, parent_tool_id: str, function_name: str):
+    def remove_always_approved_function(
+        self, chat_id: str, parent_tool_id: str, function_name: str
+    ):
         chat_approvals = self.always_approved.get(chat_id)
         if chat_approvals is None:
             return
@@ -157,7 +159,6 @@ class ToolApprovalManager:
         chat_approvals = self.always_approved.get(chat_id, {})
         return {parent: sorted(children) for parent, children in chat_approvals.items()}
 
-
     # ---- YOLO mode ----
 
     def set_yolo_all(self, chat_id: str, enabled: bool):
@@ -169,7 +170,9 @@ class ToolApprovalManager:
     def is_yolo_all(self, chat_id: str) -> bool:
         return chat_id in self.yolo_all_chats
 
-    def set_yolo_function(self, chat_id: str, parent_tool_id: str, function_name: str, enabled: bool):
+    def set_yolo_function(
+        self, chat_id: str, parent_tool_id: str, function_name: str, enabled: bool
+    ):
         chat_yolo = self.yolo_functions.setdefault(chat_id, {})
         children = chat_yolo.setdefault(parent_tool_id, set())
         if enabled:
@@ -201,7 +204,7 @@ class ToolApprovalManager:
             "yolo_functions": {
                 parent: sorted(children)
                 for parent, children in self.yolo_functions.get(chat_id, {}).items()
-            }
+            },
         }
 
 

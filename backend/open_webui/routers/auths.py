@@ -1067,7 +1067,7 @@ async def update_admin_config(
     # Check if the input string matches the pattern
     if re.match(pattern, form_data.JWT_EXPIRES_IN):
         request.app.state.config.JWT_EXPIRES_IN = form_data.JWT_EXPIRES_IN
-    
+
     request.app.state.config.ENABLE_TOOL_APPROVAL = form_data.ENABLE_TOOL_APPROVAL
 
     request.app.state.config.ENABLE_COMMUNITY_SHARING = (
