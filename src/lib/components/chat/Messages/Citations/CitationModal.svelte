@@ -130,6 +130,7 @@
 			</div>
 			<button
 				class="self-center"
+				aria-label={$i18n.t('Close citation modal')}
 				on:click={() => {
 					show = false;
 				}}
