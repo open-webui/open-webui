@@ -36,8 +36,8 @@
 	let loaded = false;
 
 	let groups = [];
-	let filteredGroups;
 
+	let search = '';
 	let sortBy = '';
 	let sortAsc = true;
 
@@ -71,7 +71,7 @@
 			return 0;
 		});
 
-	let search = '';
+
 	let defaultPermissions = {};
 
 	let showAddGroupModal = false;
