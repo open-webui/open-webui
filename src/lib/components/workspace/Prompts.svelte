@@ -259,12 +259,11 @@
 							});
 						}
 
-						prompts = null;
 						page = 1;
 						await getPromptList();
 						await _prompts.set(await getPrompts(localStorage.token));
 					} finally {
-						importFiles = [];
+						importFiles = null;
 						promptsImportInputElement.value = '';
 					}
 				};
