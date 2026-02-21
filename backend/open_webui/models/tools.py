@@ -2,7 +2,7 @@ import logging
 import time
 from typing import Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 from open_webui.models.users import Users, UserResponse
 from open_webui.models.groups import Groups
@@ -156,9 +156,14 @@ class ToolsTable:
         except Exception:
             return None
 
-    def get_tools(self, db: Optional[Session] = None) -> list[ToolUserModel]:
+    def get_tools(
+        self, defer_content: bool = False, db: Optional[Session] = None
+    ) -> list[ToolUserModel]:
         with get_db_context(db) as db:
-            all_tools = db.query(Tool).order_by(Tool.updated_at.desc()).all()
+            query = db.query(Tool).order_by(Tool.updated_at.desc())
+            if defer_content:
+                query = query.options(defer(Tool.content), defer(Tool.specs))
+            all_tools = query.all()
 
             user_ids = list(set(tool.user_id for tool in all_tools))
             tool_ids = [tool.id for tool in all_tools]
@@ -185,9 +190,9 @@ class ToolsTable:
             return tools
 
     def get_tools_by_user_id(
-        self, user_id: str, permission: str = "write", db: Optional[Session] = None
+        self, user_id: str, permission: str = "write", defer_content: bool = False, db: Optional[Session] = None
     ) -> list[ToolUserModel]:
-        tools = self.get_tools(db=db)
+        tools = self.get_tools(defer_content=defer_content, db=db)
         user_group_ids = {
             group.id for group in Groups.get_groups_by_member_id(user_id, db=db)
         }
