@@ -234,8 +234,6 @@
 		{/if}
 	</div>
 
-	<hr class="mb-2 border-gray-100/30 dark:border-gray-850/30" />
-
 	<EditGroupModal
 		bind:show={showDefaultPermissionsModal}
 		tabs={['permissions']}
@@ -245,7 +243,7 @@
 	/>
 
 	<button
-		class="flex items-center justify-between rounded-lg w-full transition pt-1"
+		class="flex items-center justify-between rounded-lg w-full transition mt-4"
 		on:click={() => {
 			showDefaultPermissionsModal = true;
 		}}
