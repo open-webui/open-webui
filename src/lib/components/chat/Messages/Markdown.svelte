@@ -19,6 +19,7 @@
 	export let save = false;
 	export let preview = false;
 
+	export let paragraphTag = 'p';
 	export let editCodeBlock = true;
 	export let topPadding = false;
 
@@ -45,7 +46,11 @@
 	marked.use(footnoteExtension(options));
 	marked.use(disableSingleTilde);
 	marked.use({
-		extensions: [mentionExtension({ triggerChar: '@' }), mentionExtension({ triggerChar: '#' })]
+		extensions: [
+			mentionExtension({ triggerChar: '@' }),
+			mentionExtension({ triggerChar: '#' }),
+			mentionExtension({ triggerChar: '$' })
+		]
 	});
 
 	$: (async () => {
@@ -64,6 +69,7 @@
 		{done}
 		{save}
 		{preview}
+		{paragraphTag}
 		{editCodeBlock}
 		{sourceIds}
 		{topPadding}

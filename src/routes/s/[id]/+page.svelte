@@ -12,7 +12,7 @@
 
 	import Messages from '$lib/components/chat/Messages.svelte';
 
-	import { getUserById, getUserSettings } from '$lib/apis/users';
+	import { getUserInfoById, getUserSettings } from '$lib/apis/users';
 	import { getModels } from '$lib/apis';
 	import { toast } from 'svelte-sonner';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
@@ -92,7 +92,7 @@
 		});
 
 		if (chat) {
-			user = await getUserById(localStorage.token, chat.user_id).catch((error) => {
+			user = await getUserInfoById(localStorage.token, chat.user_id).catch((error) => {
 				console.error(error);
 				return null;
 			});

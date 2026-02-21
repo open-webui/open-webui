@@ -6,13 +6,11 @@ from open_webui.retrieval.vector.main import (
     SearchResult,
 )
 from open_webui.config import S3_VECTOR_BUCKET_NAME, S3_VECTOR_REGION
-from open_webui.env import SRC_LOG_LEVELS
 from typing import List, Optional, Dict, Any, Union
 import logging
 import boto3
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 class S3VectorClient(VectorDBBase):
@@ -297,7 +295,11 @@ class S3VectorClient(VectorDBBase):
             raise
 
     def search(
-        self, collection_name: str, vectors: List[List[Union[float, int]]], limit: int
+        self,
+        collection_name: str,
+        vectors: List[List[Union[float, int]]],
+        filter: Optional[dict] = None,
+        limit: int = 10,
     ) -> Optional[SearchResult]:
         """
         Search for similar vectors in a collection using multiple query vectors.

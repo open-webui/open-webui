@@ -172,7 +172,9 @@
 									>{$i18n.t('Select a tool')}</option
 								>
 
-								{#each $tools.filter((tool) => !tool?.id?.startsWith('server:')) as tool, toolIdx}
+								{#each $tools
+									.filter((tool) => !tool?.id?.startsWith('server:'))
+									.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')) as tool, toolIdx}
 									<option value={tool.id} class="bg-gray-100 dark:bg-gray-800">{tool.name}</option>
 								{/each}
 							{:else if tab === 'functions'}
@@ -180,7 +182,7 @@
 									>{$i18n.t('Select a function')}</option
 								>
 
-								{#each $functions as func, funcIdx}
+								{#each $functions.sort( (a, b) => (a.name ?? '').localeCompare(b.name ?? '') ) as func, funcIdx}
 									<option value={func.id} class="bg-gray-100 dark:bg-gray-800">{func.name}</option>
 								{/each}
 							{/if}
@@ -190,7 +192,7 @@
 			</div>
 
 			{#if selectedId}
-				<hr class="border-gray-50 dark:border-gray-800 my-1 w-full" />
+				<hr class="border-gray-50/30 dark:border-gray-800/30 my-1 w-full" />
 
 				<div class="my-2 text-xs">
 					{#if !loading}

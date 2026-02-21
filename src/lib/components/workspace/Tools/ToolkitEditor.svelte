@@ -1,10 +1,12 @@
 <script>
+	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick } from 'svelte';
 
 	const i18n = getContext('i18n');
 
 	import { goto } from '$app/navigation';
 	import { user } from '$lib/stores';
+	import { updateToolAccessGrants } from '$lib/apis/tools';
 
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -30,7 +32,7 @@
 		description: ''
 	};
 	export let content = '';
-	export let accessControl = {};
+	export let accessGrants = [];
 
 	let _content = '';
 
@@ -161,7 +163,7 @@ class Tools:
 			name,
 			meta,
 			content,
-			access_control: accessControl
+			access_grants: accessGrants
 		});
 	};
 
@@ -187,10 +189,20 @@ class Tools:
 
 <AccessControlModal
 	bind:show={showAccessControlModal}
-	bind:accessControl
+	bind:accessGrants
 	accessRoles={['read', 'write']}
 	share={$user?.permissions?.sharing?.tools || $user?.role === 'admin'}
 	sharePublic={$user?.permissions?.sharing?.public_tools || $user?.role === 'admin'}
+	onChange={async () => {
+		if (edit && id) {
+			try {
+				await updateToolAccessGrants(localStorage.token, id, accessGrants);
+				toast.success($i18n.t('Saved'));
+			} catch (error) {
+				toast.error(`${error}`);
+			}
+		}
+	}}
 />
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
@@ -226,7 +238,7 @@ class Tools:
 						<div class="flex-1">
 							<Tooltip content={$i18n.t('e.g. My Tools')} placement="top-start">
 								<input
-									class="w-full text-2xl font-medium bg-transparent outline-hidden font-primary"
+									class="w-full text-2xl bg-transparent outline-hidden"
 									type="text"
 									placeholder={$i18n.t('Tool Name')}
 									bind:value={name}

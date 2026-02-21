@@ -35,11 +35,8 @@ from open_webui.config import (
     DEFAULT_MOA_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_VOICE_MODE_PROMPT_TEMPLATE,
 )
-from open_webui.env import SRC_LOG_LEVELS
-
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
 
@@ -49,6 +46,21 @@ router = APIRouter()
 # Task Endpoints
 #
 ##################################
+
+
+class ActiveChatsForm(BaseModel):
+    chat_ids: list[str]
+
+
+@router.post("/active/chats")
+async def check_active_chats(
+    request: Request, form_data: ActiveChatsForm, user=Depends(get_verified_user)
+):
+    """Check which chat IDs have active tasks."""
+    from open_webui.tasks import get_active_chat_ids
+
+    active = await get_active_chat_ids(request.app.state.redis, form_data.chat_ids)
+    return {"active_chat_ids": active}
 
 
 @router.get("/config")

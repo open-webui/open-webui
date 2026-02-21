@@ -86,6 +86,15 @@ class RedisDict:
     def items(self):
         return [(k, json.loads(v)) for k, v in self.redis.hgetall(self.name).items()]
 
+    def set(self, mapping: dict):
+        pipe = self.redis.pipeline()
+
+        pipe.delete(self.name)
+        if mapping:
+            pipe.hset(self.name, mapping={k: json.dumps(v) for k, v in mapping.items()})
+
+        pipe.execute()
+
     def get(self, key, default=None):
         try:
             return self[key]
@@ -109,6 +118,8 @@ class RedisDict:
 
 
 class YdocManager:
+    COMPACTION_THRESHOLD = 500
+
     def __init__(
         self,
         redis=None,
@@ -124,10 +135,42 @@ class YdocManager:
         if self._redis:
             redis_key = f"{self._redis_key_prefix}:{document_id}:updates"
             await self._redis.rpush(redis_key, json.dumps(list(update)))
+            list_len = await self._redis.llen(redis_key)
+            if list_len >= self.COMPACTION_THRESHOLD:
+                await self._compact_updates_redis(document_id)
         else:
             if document_id not in self._updates:
                 self._updates[document_id] = []
             self._updates[document_id].append(update)
+            if len(self._updates[document_id]) >= self.COMPACTION_THRESHOLD:
+                self._compact_updates_memory(document_id)
+
+    async def _compact_updates_redis(self, document_id: str):
+        """Rolling compaction: squash oldest half into one snapshot."""
+        redis_key = f"{self._redis_key_prefix}:{document_id}:updates"
+        all_updates = await self._redis.lrange(redis_key, 0, -1)
+        if len(all_updates) <= 1:
+            return
+        mid = len(all_updates) // 2
+        ydoc = Y.Doc()
+        for raw in all_updates[:mid]:
+            ydoc.apply_update(bytes(json.loads(raw)))
+        snapshot = json.dumps(list(ydoc.get_update()))
+        pipe = self._redis.pipeline()
+        pipe.delete(redis_key)
+        pipe.rpush(redis_key, snapshot, *all_updates[mid:])
+        await pipe.execute()
+
+    def _compact_updates_memory(self, document_id: str):
+        """Rolling compaction: squash oldest half into one snapshot."""
+        updates = self._updates.get(document_id, [])
+        if len(updates) <= 1:
+            return
+        mid = len(updates) // 2
+        ydoc = Y.Doc()
+        for update in updates[:mid]:
+            ydoc.apply_update(bytes(update))
+        self._updates[document_id] = [ydoc.get_update()] + updates[mid:]
 
     async def get_updates(self, document_id: str) -> List[bytes]:
         document_id = document_id.replace(":", "_")
@@ -181,7 +224,11 @@ class YdocManager:
 
     async def remove_user_from_all_documents(self, user_id: str):
         if self._redis:
-            keys = await self._redis.keys(f"{self._redis_key_prefix}:*")
+            keys = []
+            async for key in self._redis.scan_iter(
+                match=f"{self._redis_key_prefix}:*", count=100
+            ):
+                keys.append(key)
             for key in keys:
                 if key.endswith(":users"):
                     await self._redis.srem(key, user_id)

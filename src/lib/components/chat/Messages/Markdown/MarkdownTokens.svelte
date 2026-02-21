@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { decode } from 'html-entities';
-	import DOMPurify from 'dompurify';
 	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -18,6 +17,7 @@
 	import KatexRenderer from './KatexRenderer.svelte';
 	import AlertRenderer, { alertComponent } from './AlertRenderer.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
+	import ToolCallDisplay from '$lib/components/common/ToolCallDisplay.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
 
@@ -34,6 +34,8 @@
 
 	export let save = false;
 	export let preview = false;
+
+	export let paragraphTag = 'p';
 
 	export let editCodeBlock = true;
 	export let topPadding = false;
@@ -52,16 +54,18 @@
 	const exportTableToCSVHandler = (token, tokenIdx = 0) => {
 		console.log('Exporting table to CSV');
 
-		// Extract header row text and escape for CSV.
-		const header = token.header.map((headerCell) => `"${headerCell.text.replace(/"/g, '""')}"`);
+		// Extract header row text, decode HTML entities, and escape for CSV.
+		const header = token.header.map(
+			(headerCell) => `"${decode(headerCell.text).replace(/"/g, '""')}"`
+		);
 
 		// Create an array for rows that will hold the mapped cell text.
 		const rows = token.rows.map((row) =>
 			row.map((cell) => {
 				// Map tokens into a single text
 				const cellContent = cell.tokens.map((token) => token.text).join('');
-				// Escape double quotes and wrap the content in double quotes
-				return `"${cellContent.replace(/"/g, '""')}"`;
+				// Decode HTML entities and escape double quotes, wrap in double quotes
+				return `"${decode(cellContent).replace(/"/g, '""')}"`;
 			})
 		);
 
@@ -89,7 +93,7 @@
 <!-- {JSON.stringify(tokens)} -->
 {#each tokens as token, tokenIdx (tokenIdx)}
 	{#if token.type === 'hr'}
-		<hr class=" border-gray-100 dark:border-gray-850" />
+		<hr class=" border-gray-100/30 dark:border-gray-850/30" />
 	{:else if token.type === 'heading'}
 		<svelte:element this={headerComponent(token.depth)} dir="auto">
 			<MarkdownInlineTokens
@@ -112,7 +116,7 @@
 				{save}
 				{preview}
 				edit={editCodeBlock}
-				stickyButtonsClassName={topPadding ? 'top-7' : 'top-0'}
+				stickyButtonsClassName={topPadding ? 'top-10' : 'top-0'}
 				onSave={(value) => {
 					onSave({
 						raw: token.raw,
@@ -130,7 +134,8 @@
 		<div class="relative w-full group mb-2">
 			<div class="scrollbar-hidden relative overflow-x-auto max-w-full">
 				<table
-					class=" w-full text-sm text-left text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
+					class=" w-full text-sm text-start text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
+					dir="auto"
 				>
 					<thead
 						class="text-xs text-gray-700 uppercase bg-white dark:bg-gray-900 dark:text-gray-400 border-none"
@@ -140,9 +145,9 @@
 								<th
 									scope="col"
 									class="px-2.5! py-2! cursor-pointer border-b border-gray-100! dark:border-gray-800!"
-									style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}
+									style={token.align[headerIdx] ? `text-align: ${token.align[headerIdx]}` : ''}
 								>
-									<div class="gap-1.5 text-left">
+									<div class="gap-1.5 text-start">
 										<div class="shrink-0 break-normal">
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-header-${headerIdx}`}
@@ -192,7 +197,7 @@
 						class="p-1 rounded-lg bg-transparent transition"
 						on:click={(e) => {
 							e.stopPropagation();
-							copyToClipboard(token.raw.trim());
+							copyToClipboard(token.raw.trim(), null, $settings?.copyFormatted ?? false);
 						}}
 					>
 						<Clipboard className=" size-3.5" strokeWidth="1.5" />
@@ -224,6 +229,7 @@
 					{done}
 					{editCodeBlock}
 					{onTaskClick}
+					{sourceIds}
 					{onSourceClick}
 				/>
 			</blockquote>
@@ -258,6 +264,7 @@
 							{done}
 							{editCodeBlock}
 							{onTaskClick}
+							{sourceIds}
 							{onSourceClick}
 						/>
 					</li>
@@ -292,6 +299,7 @@
 									{done}
 									{editCodeBlock}
 									{onTaskClick}
+									{sourceIds}
 									{onSourceClick}
 								/>
 							</div>
@@ -303,6 +311,7 @@
 								{done}
 								{editCodeBlock}
 								{onTaskClick}
+								{sourceIds}
 								{onSourceClick}
 							/>
 						{/if}
@@ -311,25 +320,49 @@
 			</ul>
 		{/if}
 	{:else if token.type === 'details'}
-		<Collapsible
-			title={token.summary}
-			open={$settings?.expandDetails ?? false}
-			attributes={token?.attributes}
-			className="w-full space-y-1"
-			dir="auto"
-		>
-			<div class=" mb-1.5" slot="content">
-				<svelte:self
-					id={`${id}-${tokenIdx}-d`}
-					tokens={marked.lexer(decode(token.text))}
-					attributes={token?.attributes}
-					{done}
-					{editCodeBlock}
-					{onTaskClick}
-					{onSourceClick}
-				/>
-			</div>
-		</Collapsible>
+		{@const textContent = decode(token.text || '')
+			.replace(/<summary>.*?<\/summary>/gi, '')
+			.trim()}
+
+		{#if token?.attributes?.type === 'tool_calls'}
+			<!-- Tool calls have dedicated handling with ToolCallDisplay component -->
+			<ToolCallDisplay
+				id={`${id}-${tokenIdx}-tc`}
+				attributes={token.attributes}
+				open={false}
+				className="w-full space-y-1"
+			/>
+		{:else if textContent.length > 0}
+			<Collapsible
+				title={token.summary}
+				open={$settings?.expandDetails ?? false}
+				attributes={token?.attributes}
+				className="w-full space-y-1"
+				dir="auto"
+			>
+				<div class=" mb-1.5" slot="content">
+					<svelte:self
+						id={`${id}-${tokenIdx}-d`}
+						tokens={marked.lexer(decode(token.text))}
+						attributes={token?.attributes}
+						{done}
+						{editCodeBlock}
+						{onTaskClick}
+						{sourceIds}
+						{onSourceClick}
+					/>
+				</div>
+			</Collapsible>
+		{:else}
+			<Collapsible
+				title={token.summary}
+				open={false}
+				disabled={true}
+				attributes={token?.attributes}
+				className="w-full space-y-1"
+				dir="auto"
+			/>
+		{/if}
 	{:else if token.type === 'html'}
 		<HtmlToken {id} {token} {onSourceClick} />
 	{:else if token.type === 'iframe'}
@@ -346,15 +379,27 @@
 			}}
 		></iframe>
 	{:else if token.type === 'paragraph'}
-		<p dir="auto">
-			<MarkdownInlineTokens
-				id={`${id}-${tokenIdx}-p`}
-				tokens={token.tokens ?? []}
-				{done}
-				{sourceIds}
-				{onSourceClick}
-			/>
-		</p>
+		{#if paragraphTag == 'span'}
+			<span dir="auto">
+				<MarkdownInlineTokens
+					id={`${id}-${tokenIdx}-p`}
+					tokens={token.tokens ?? []}
+					{done}
+					{sourceIds}
+					{onSourceClick}
+				/>
+			</span>
+		{:else}
+			<p dir="auto">
+				<MarkdownInlineTokens
+					id={`${id}-${tokenIdx}-p`}
+					tokens={token.tokens ?? []}
+					{done}
+					{sourceIds}
+					{onSourceClick}
+				/>
+			</p>
+		{/if}
 	{:else if token.type === 'text'}
 		{#if top}
 			<p>

@@ -44,7 +44,7 @@
 	let modelIds = [];
 	let filterMode = 'include';
 
-	let accessControl = {};
+	let accessGrants = [];
 
 	let imageInputElement;
 	let loading = false;
@@ -83,7 +83,7 @@
 				description: description || null,
 				model_ids: modelIds.length > 0 ? modelIds : null,
 				filter_mode: modelIds.length > 0 ? (filterMode ? filterMode : null) : null,
-				access_control: accessControl
+				access_grants: accessGrants
 			}
 		};
 
@@ -107,7 +107,7 @@
 			description = model.meta.description;
 			modelIds = model.meta.model_ids || [];
 			filterMode = model.meta?.filter_mode ?? 'include';
-			accessControl = 'access_control' in model.meta ? model.meta.access_control : {};
+			accessGrants = model.meta.access_grants ?? [];
 		}
 	};
 
@@ -201,7 +201,7 @@
 											ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
 
 											// Get the base64 representation of the compressed image
-											const compressedSrc = canvas.toDataURL('image/jpeg');
+											const compressedSrc = canvas.toDataURL('image/webp', 0.8);
 
 											// Display the compressed image
 											profileImageUrl = compressedSrc;
@@ -292,10 +292,8 @@
 
 						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
-						<div class="my-2 -mx-2">
-							<div class="px-4 py-3 bg-gray-50 dark:bg-gray-950 rounded-3xl">
-								<AccessControl bind:accessControl />
-							</div>
+						<div class="my-2">
+							<AccessControl bind:accessGrants />
 						</div>
 
 						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
@@ -352,7 +350,7 @@
 
 						<div class="flex items-center">
 							<select
-								class="w-full py-1 text-sm rounded-lg bg-transparent {selectedModelId
+								class="dark:bg-gray-900 w-full py-1 text-sm rounded-lg bg-transparent {selectedModelId
 									? ''
 									: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 								bind:value={selectedModelId}

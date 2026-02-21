@@ -47,7 +47,8 @@
 	let key = '';
 	let headers = '';
 
-	let accessControl = {};
+	let functionNameFilterList = '';
+	let accessGrants = [];
 
 	let id = '';
 	let name = '';
@@ -148,7 +149,7 @@
 				key,
 				config: {
 					enable: enable,
-					access_control: accessControl
+					access_grants: accessGrants
 				},
 				info: {
 					id,
@@ -205,7 +206,7 @@
 
 				if (data.config) {
 					enable = data.config.enable ?? true;
-					accessControl = data.config.access_control ?? {};
+					accessGrants = data.config.access_grants ?? [];
 				}
 
 				toast.success($i18n.t('Import successful'));
@@ -249,8 +250,12 @@
 	const submitHandler = async () => {
 		loading = true;
 
-		// remove trailing slash from url
-		url = url.replace(/\/$/, '');
+		// remove trailing slash from url for non-MCP connections
+		// MCP servers may require a trailing slash; stripping it can cause
+		// 301 redirects that lose auth headers (see #21179)
+		if (type !== 'mcp') {
+			url = url.replace(/\/$/, '');
+		}
 		if (id.includes(':') || id.includes('|')) {
 			toast.error($i18n.t('ID cannot contain ":" or "|" characters'));
 			loading = false;
@@ -284,6 +289,7 @@
 				headers = JSON.stringify(_headers, null, 2);
 			} catch (error) {
 				toast.error($i18n.t('Headers must be a valid JSON object'));
+				loading = false;
 				return;
 			}
 		}
@@ -302,8 +308,8 @@
 			key,
 			config: {
 				enable: enable,
-
-				access_control: accessControl
+				function_name_filter_list: functionNameFilterList,
+				access_grants: accessGrants
 			},
 			info: {
 				id: id,
@@ -332,10 +338,12 @@
 		id = '';
 		name = '';
 		description = '';
+
 		oauthClientInfo = null;
 
 		enable = true;
-		accessControl = null;
+		functionNameFilterList = '';
+		accessGrants = [];
 	};
 
 	const init = () => {
@@ -358,7 +366,8 @@
 			oauthClientInfo = connection.info?.oauth_client_info ?? null;
 
 			enable = connection.config?.enable ?? true;
-			accessControl = connection.config?.access_control ?? null;
+			functionNameFilterList = connection.config?.function_name_filter_list ?? '';
+			accessGrants = connection.config?.access_grants ?? [];
 		}
 	};
 
@@ -529,7 +538,7 @@
 										<div class="flex-shrink-0 self-start">
 											<select
 												id="select-bearer-or-session"
-												class={`w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+												class={`dark:bg-gray-900 w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 												bind:value={spec_type}
 											>
 												<option value="url">{$i18n.t('URL')}</option>
@@ -639,7 +648,7 @@
 									<div class="flex-shrink-0 self-start">
 										<select
 											id="select-bearer-or-session"
-											class={`w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class={`dark:bg-gray-900 w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 											bind:value={auth_type}
 										>
 											<option value="none">{$i18n.t('None')}</option>
@@ -792,12 +801,29 @@
 								</div>
 							</div>
 
+							<div class="flex flex-col w-full mt-2">
+								<label
+									for="function-name-filter-list"
+									class={`mb-1 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100 placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 text-gray-500'}`}
+									>{$i18n.t('Function Name Filter List')}</label
+								>
+
+								<div class="flex-1">
+									<input
+										id="function-name-filter-list"
+										class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										type="text"
+										bind:value={functionNameFilterList}
+										placeholder={$i18n.t('Enter function name filter list (e.g. func1, !func2)')}
+										autocomplete="off"
+									/>
+								</div>
+							</div>
+
 							<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
-							<div class="my-2 -mx-2">
-								<div class="px-4 py-3 bg-gray-50 dark:bg-gray-950 rounded-3xl">
-									<AccessControl bind:accessControl />
-								</div>
+							<div class="my-2">
+								<AccessControl bind:accessGrants />
 							</div>
 						{/if}
 					</div>

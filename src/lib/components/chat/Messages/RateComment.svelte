@@ -5,6 +5,7 @@
 	import { config, models, tags as _tags } from '$lib/stores';
 	import Tags from '$lib/components/common/Tags.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -111,7 +112,7 @@
 {/if}
 
 <div
-	class=" my-2.5 rounded-xl px-4 py-3 border border-gray-100 dark:border-gray-850"
+	class=" my-2.5 rounded-xl px-4 py-3 border border-gray-100/30 dark:border-gray-850/30"
 	id="message-feedback-{message.id}"
 >
 	<div class="flex justify-between items-center">
@@ -134,7 +135,7 @@
 				<!-- 1-10 scale -->
 				{#each Array.from({ length: 10 }).map((_, i) => i + 1) as rating}
 					<button
-						class="size-7 text-sm border border-gray-100 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-850 {detailedRating ===
+						class="size-7 text-sm border border-gray-100/30 dark:border-gray-850/30 hover:bg-gray-50 dark:hover:bg-gray-850 {detailedRating ===
 						rating
 							? 'bg-gray-100 dark:bg-gray-800'
 							: ''} transition rounded-full disabled:cursor-not-allowed disabled:text-gray-500 disabled:bg-white dark:disabled:bg-gray-900"
@@ -167,7 +168,7 @@
 			<div class="flex flex-wrap gap-1.5 text-sm mt-1.5">
 				{#each reasons as reason}
 					<button
-						class="px-3 py-0.5 border border-gray-100 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedReason ===
+						class="px-3 py-0.5 border border-gray-100/30 dark:border-gray-850/30 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedReason ===
 						reason
 							? 'bg-gray-100 dark:bg-gray-800'
 							: ''} transition rounded-xl"
@@ -248,4 +249,24 @@
 			{$i18n.t('Save')}
 		</button>
 	</div>
+
+	{#if $config?.features.enable_community_sharing && message?.model}
+		<div class="mt-3 pt-3 border-t border-gray-100/30 dark:border-gray-850/30">
+			<a
+				href={`https://openwebui.com/models?q=${encodeURIComponent(message.model)}`}
+				target="_blank"
+				class="flex cursor-pointer items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-850 w-full px-3 py-2 rounded-xl transition"
+			>
+				<div class="self-center">
+					<div class="text-sm font-medium">
+						{$i18n.t('Leave a public review for {{modelName}}', { modelName: message.model })}
+					</div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t('Help the community discover great models')}
+					</div>
+				</div>
+				<ChevronRight className="size-4" />
+			</a>
+		</div>
+	{/if}
 </div>

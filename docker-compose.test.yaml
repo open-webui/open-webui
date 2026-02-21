@@ -1,0 +1,9 @@
+services:
+  open-webui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./data:/app/backend/data
+    ports:
+      - "3000:8080"

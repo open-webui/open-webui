@@ -1,9 +1,6 @@
-import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+import { WEBUI_BASE_URL } from '$lib/constants';
 import { convertOpenApiToToolPayload } from '$lib/utils';
 import { getOpenAIModelsDirect } from './openai';
-
-import { parse } from 'yaml';
-import { toast } from 'svelte-sonner';
 
 export const getModels = async (
 	token: string = '',
@@ -316,7 +313,7 @@ export const getToolServerData = async (token: string, url: string) => {
 			// Check if URL ends with .yaml or .yml to determine format
 			if (url.toLowerCase().endsWith('.yaml') || url.toLowerCase().endsWith('.yml')) {
 				if (!res.ok) throw await res.text();
-				const text = await res.text();
+				const [text, { parse }] = await Promise.all([res.text(), import('yaml')]);
 				return parse(text);
 			} else {
 				if (!res.ok) throw await res.json();
@@ -382,6 +379,13 @@ export const getToolServersData = async (servers: object[]) => {
 					}
 
 					if (res) {
+						if (!res.paths) {
+							return {
+								error: 'Invalid OpenAPI spec',
+								url: server?.url
+							};
+						}
+
 						const { openapi, info, specs } = {
 							openapi: res,
 							info: res.info,
@@ -445,8 +449,9 @@ export const executeToolServer = async (
 
 		if (operation.parameters) {
 			operation.parameters.forEach((param: any) => {
-				const paramName = param.name;
-				const paramIn = param.in;
+				const paramName = param?.name;
+				if (!paramName) return;
+				const paramIn = param?.in;
 				if (params.hasOwnProperty(paramName)) {
 					if (paramIn === 'path') {
 						pathParams[paramName] = params[paramName];
@@ -859,7 +864,8 @@ export const generateQueries = async (
 	model: string,
 	messages: object[],
 	prompt: string,
-	type: string = 'web_search'
+	type: string = 'web_search',
+	chat_id?: string
 ) => {
 	let error = null;
 
@@ -874,7 +880,8 @@ export const generateQueries = async (
 			model: model,
 			messages: messages,
 			prompt: prompt,
-			type: type
+			type: type,
+			...(chat_id && { chat_id: chat_id })
 		})
 	})
 		.then(async (res) => {
@@ -928,7 +935,8 @@ export const generateAutoCompletion = async (
 	model: string,
 	prompt: string,
 	messages?: object[],
-	type: string = 'search query'
+	type: string = 'search query',
+	chat_id?: string
 ) => {
 	const controller = new AbortController();
 	let error = null;
@@ -946,7 +954,8 @@ export const generateAutoCompletion = async (
 			prompt: prompt,
 			...(messages && { messages: messages }),
 			type: type,
-			stream: false
+			stream: false,
+			...(chat_id && { chat_id: chat_id })
 		})
 	})
 		.then(async (res) => {

@@ -7,6 +7,7 @@
 	import Prompts from './Commands/Prompts.svelte';
 	import Knowledge from './Commands/Knowledge.svelte';
 	import Models from './Commands/Models.svelte';
+	import Skills from './Commands/Skills.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	import { onMount } from 'svelte';
@@ -28,9 +29,6 @@
 		await Promise.all([
 			(async () => {
 				prompts.set(await getPrompts(localStorage.token));
-			})(),
-			(async () => {
-				knowledge.set(await getKnowledgeBases(localStorage.token));
 			})()
 		]);
 		loading = false;
@@ -103,7 +101,6 @@
 					bind:this={suggestionElement}
 					{query}
 					bind:filteredItems
-					knowledge={$knowledge ?? []}
 					onSelect={(e) => {
 						const { type, data } = e;
 
@@ -112,13 +109,6 @@
 
 							onUpload({
 								type: 'file',
-								data: data
-							});
-						} else if (type === 'youtube') {
-							insertTextHandler('');
-
-							onUpload({
-								type: 'youtube',
 								data: data
 							});
 						} else if (type === 'web') {
@@ -144,6 +134,27 @@
 
 							onSelect({
 								type: 'model',
+								data: data
+							});
+						}
+					}}
+				/>
+			{:else if char === '$'}
+				<Skills
+					bind:this={suggestionElement}
+					{query}
+					bind:filteredItems
+					onSelect={(e) => {
+						const { type, data } = e;
+
+						if (type === 'skill') {
+							command({
+								id: `${data.id}|${data.name}`,
+								label: data.name
+							});
+
+							onSelect({
+								type: 'skill',
 								data: data
 							});
 						}

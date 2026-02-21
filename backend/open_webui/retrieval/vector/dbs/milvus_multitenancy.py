@@ -12,7 +12,6 @@ from open_webui.config import (
     MILVUS_HNSW_EFCONSTRUCTION,
     MILVUS_IVF_FLAT_NLIST,
 )
-from open_webui.env import SRC_LOG_LEVELS
 from open_webui.retrieval.vector.main import (
     GetResult,
     SearchResult,
@@ -29,7 +28,6 @@ from pymilvus import (
 )
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 RESOURCE_ID_FIELD = "resource_id"
 
@@ -157,10 +155,13 @@ class MilvusClient(VectorDBBase):
             for item in items
         ]
         collection.insert(entities)
-        collection.flush()
 
     def search(
-        self, collection_name: str, vectors: List[List[float]], limit: int
+        self,
+        collection_name: str,
+        vectors: List[List[float]],
+        filter: Optional[Dict] = None,
+        limit: int = 10,
     ) -> Optional[SearchResult]:
         if not vectors:
             return None
@@ -263,15 +264,23 @@ class MilvusClient(VectorDBBase):
                 else:
                     expr.append(f"metadata['{key}'] == {value}")
 
-        results = collection.query(
+        iterator = collection.query_iterator(
             expr=" and ".join(expr),
             output_fields=["id", "text", "metadata"],
-            limit=limit,
+            limit=limit if limit else -1,
         )
 
-        ids = [res["id"] for res in results]
-        documents = [res["text"] for res in results]
-        metadatas = [res["metadata"] for res in results]
+        all_results = []
+        while True:
+            batch = iterator.next()
+            if not batch:
+                iterator.close()
+                break
+            all_results.extend(batch)
+
+        ids = [res["id"] for res in all_results]
+        documents = [res["text"] for res in all_results]
+        metadatas = [res["metadata"] for res in all_results]
 
         return GetResult(ids=[ids], documents=[documents], metadatas=[metadatas])
 

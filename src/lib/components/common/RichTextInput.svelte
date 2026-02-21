@@ -169,7 +169,7 @@
 
 	export let documentId = '';
 
-	export let className = 'input-prose';
+	export let className = 'input-prose min-h-fit h-full';
 	export let placeholder = $i18n.t('Type here...');
 	let _placeholder = placeholder;
 
@@ -416,7 +416,7 @@
 	};
 
 	export const setText = (text: string) => {
-		if (!editor) return;
+		if (!editor || !editor.view) return;
 		text = text.replaceAll('\n\n', '\n');
 
 		// reset the editor content
@@ -448,11 +448,13 @@
 		}
 
 		selectNextTemplate(editor.view.state, editor.view.dispatch);
+
+		// Ensure the editor is still valid before trying to focus
 		focus();
 	};
 
 	export const insertContent = (content) => {
-		if (!editor) return;
+		if (!editor || !editor.view) return;
 		const { state, view } = editor;
 		const { schema, tr } = state;
 
@@ -466,7 +468,7 @@
 	};
 
 	export const replaceVariables = (variables) => {
-		if (!editor) return;
+		if (!editor || !editor.view) return;
 		const { state, view } = editor;
 		const { doc } = state;
 
@@ -509,11 +511,16 @@
 	};
 
 	export const focus = () => {
-		if (editor) {
+		if (editor && editor.view) {
+			// Check if the editor is destroyed
+			if (editor.isDestroyed) {
+				return;
+			}
+
 			try {
-				editor.view?.focus();
+				editor.view.focus();
 				// Scroll to the current selection
-				editor.view?.dispatch(editor.view.state.tr.scrollIntoView());
+				editor.view.dispatch(editor.view.state.tr.scrollIntoView());
 			} catch (e) {
 				// sometimes focusing throws an error, ignore
 				console.warn('Error focusing editor', e);
@@ -684,7 +691,12 @@
 			element: element,
 			extensions: [
 				StarterKit.configure({
-					link: link
+					link: link,
+					// When rich text is off, disable Strike from StarterKit so we can
+					// re-add it below without its Mod-Shift-s shortcut (which conflicts
+					// with the Toggle Sidebar shortcut). When rich text is on, the user
+					// can undo strikethrough via the toolbar, so the shortcut is fine.
+					...(richText ? {} : { strike: false })
 				}),
 				...(dragHandle ? [ListItemDragHandle] : []),
 				Placeholder.configure({ placeholder: () => _placeholder, showOnlyWhenEditable: false }),
@@ -753,6 +765,14 @@
 									placement: 'top',
 									theme: 'transparent',
 									offset: [0, 2]
+								},
+								shouldShow: ({ editor, view, state, oldState, from, to }) => {
+									// safety check
+									if (!editor || !editor.view || editor.isDestroyed) {
+										return false;
+									}
+									// default logic
+									return from !== to;
 								}
 							}),
 							FloatingMenu.configure({
@@ -763,6 +783,14 @@
 									placement: floatingMenuPlacement,
 									theme: 'transparent',
 									offset: [-12, 4]
+								},
+								shouldShow: ({ editor, view, state, oldState }) => {
+									// safety check
+									if (!editor || !editor.view || editor.isDestroyed) {
+										return false;
+									}
+									// default logic
+									return editor.isActive('paragraph');
 								}
 							})
 						]
@@ -872,6 +900,34 @@
 					},
 					compositionend: (view, event) => {
 						oncompositionend(event);
+						return false;
+					},
+					beforeinput: (view, event) => {
+						// Workaround for Gboard's clipboard suggestion strip which sends
+						// multi-line pastes as 'insertText' rather than a standard paste event.
+						// Manually insert with hard breaks to preserve multi-line formatting.
+						const isAndroid = /Android/i.test(navigator.userAgent);
+						if (isAndroid && event.inputType === 'insertText' && event.data?.includes('\n')) {
+							event.preventDefault();
+
+							const { state, dispatch } = view;
+							const { from, to } = state.selection;
+							const lines = event.data.split('\n');
+							const nodes = [];
+
+							lines.forEach((line, index) => {
+								if (index > 0) {
+									nodes.push(state.schema.nodes.hardBreak.create());
+								}
+								if (line.length > 0) {
+									nodes.push(state.schema.text(line));
+								}
+							});
+
+							const fragment = Fragment.fromArray(nodes);
+							dispatch(state.tr.replaceWith(from, to, fragment).scrollIntoView());
+							return true;
+						}
 						return false;
 					},
 					focus: (view, event) => {
@@ -1156,7 +1212,6 @@
 
 <div
 	bind:this={element}
-	class="relative w-full min-w-full h-full min-h-fit {className} {!editable
-		? 'cursor-not-allowed'
-		: ''}"
+	dir="auto"
+	class="relative w-full min-w-full {className} {!editable ? 'cursor-not-allowed' : ''}"
 />

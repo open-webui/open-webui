@@ -5,6 +5,7 @@
 
 	import { marked } from 'marked';
 	import { createEventDispatcher, onMount } from 'svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -15,10 +16,15 @@
 	let startX = 0,
 		startY = 0;
 	let moved = false;
+	let closeButtonElement: HTMLButtonElement;
 	const DRAG_THRESHOLD_PX = 6;
 
 	const clickHandler = () => {
 		onClick();
+		dispatch('closeToast');
+	};
+
+	const closeHandler = () => {
 		dispatch('closeToast');
 	};
 
@@ -42,6 +48,14 @@
 	function onPointerUp(e: PointerEvent) {
 		// Release capture if taken
 		(e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+
+		// Skip if clicking the close button
+		if (
+			closeButtonElement &&
+			(e.target === closeButtonElement || closeButtonElement.contains(e.target as Node))
+		) {
+			return;
+		}
 
 		// Only treat as a click if there wasn't a drag
 		if (!moved) {
@@ -71,7 +85,7 @@
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
-	class="flex gap-2.5 text-left min-w-[var(--width)] w-full dark:bg-gray-850 dark:text-white bg-white text-black border border-gray-100 dark:border-gray-800 rounded-3xl px-4 py-3.5 cursor-pointer select-none"
+	class="group relative flex gap-2.5 text-left min-w-[var(--width)] w-full dark:bg-gray-850 dark:text-white bg-white text-black border border-gray-100 dark:border-gray-800 rounded-3xl px-4 py-3.5 cursor-pointer select-none"
 	on:dragstart|preventDefault
 	on:pointerdown={onPointerDown}
 	on:pointermove={onPointerMove}
@@ -84,6 +98,16 @@
 		}
 	}}
 >
+	<!-- Close button (visible on hover) -->
+	<button
+		bind:this={closeButtonElement}
+		class="absolute -top-0.5 -left-0.5 p-0.5 rounded-full opacity-0 group-hover:opacity-100 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-opacity z-10"
+		on:click|stopPropagation={closeHandler}
+		aria-label="Dismiss notification"
+	>
+		<XMark className="size-3" />
+	</button>
+
 	<div class="shrink-0 self-top -translate-y-0.5">
 		<img src="{WEBUI_BASE_URL}/static/favicon.png" alt="favicon" class="size-6 rounded-full" />
 	</div>

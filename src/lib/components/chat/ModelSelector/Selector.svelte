@@ -159,9 +159,7 @@
 					})
 	).filter((item) => !(item.model?.info?.meta?.hidden ?? false));
 
-	$: if (selectedTag || selectedConnectionType) {
-		resetView();
-	} else {
+	$: if (selectedTag !== undefined || selectedConnectionType !== undefined || searchValue !== undefined) {
 		resetView();
 	}
 
@@ -176,6 +174,16 @@
 		} else {
 			// The selected model is not visible, default to first item in filtered list
 			selectedModelIdx = 0;
+		}
+
+		// Set the virtual scroll position so the selected item is rendered and centered
+		const targetScrollTop = Math.max(0, selectedModelIdx * ITEM_HEIGHT - 128 + ITEM_HEIGHT / 2);
+		listScrollTop = targetScrollTop;
+
+		await tick();
+
+		if (listContainer) {
+			listContainer.scrollTop = targetScrollTop;
 		}
 
 		await tick();
@@ -361,12 +369,25 @@
 			);
 		}
 	};
+
+	const ITEM_HEIGHT = 42;
+	const OVERSCAN = 10;
+
+	let listScrollTop = 0;
+	let listContainer;
+
+	$: visibleStart = Math.max(0, Math.floor(listScrollTop / ITEM_HEIGHT) - OVERSCAN);
+	$: visibleEnd = Math.min(
+		filteredItems.length,
+		Math.ceil((listScrollTop + 256) / ITEM_HEIGHT) + OVERSCAN
+	);
 </script>
 
 <DropdownMenu.Root
 	bind:open={show}
 	onOpenChange={async () => {
 		searchValue = '';
+		listScrollTop = 0;
 		window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
 
 		resetView();
@@ -544,29 +565,63 @@
 				{/if}
 			</div>
 
-			<div class="px-2.5 max-h-64 overflow-y-auto group relative">
-				{#each filteredItems as item, index}
-					<ModelItem
-						{selectedModelIdx}
-						{item}
-						{index}
-						{value}
-						{pinModelHandler}
-						{unloadModelHandler}
-						onClick={() => {
-							value = item.value;
-							selectedModelIdx = index;
-
-							show = false;
-						}}
-					/>
-				{:else}
-					<div class="">
-						<div class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-100">
-							{$i18n.t('No results found')}
+			<div class="px-2.5 group relative">
+				{#if filteredItems.length === 0}
+					{#if items.length === 0 && $user?.role === 'admin'}
+						<div class="flex flex-col items-start justify-center py-6 px-4 text-start">
+							<div class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+								{$i18n.t('No models available')}
+							</div>
+							<div class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+								{$i18n.t('Connect to an AI provider to start chatting')}
+							</div>
+							<a
+								href="/admin/settings/connections"
+								class="px-4 py-1.5 rounded-xl text-xs font-medium bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 transition"
+								on:click={() => {
+									show = false;
+								}}
+							>
+								{$i18n.t('Manage Connections')}
+							</a>
 						</div>
+					{:else}
+						<div class="">
+							<div class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-100">
+								{$i18n.t('No results found')}
+							</div>
+						</div>
+					{/if}
+				{:else}
+					<!-- svelte-ignore a11y-no-static-element-interactions -->
+					<div
+						class="max-h-64 overflow-y-auto"
+						bind:this={listContainer}
+						on:scroll={() => {
+							listScrollTop = listContainer.scrollTop;
+						}}
+					>
+						<div style="height: {visibleStart * ITEM_HEIGHT}px;" />
+						{#each filteredItems.slice(visibleStart, visibleEnd) as item, i (item.value)}
+							{@const index = visibleStart + i}
+							<ModelItem
+								{selectedModelIdx}
+								{item}
+								{index}
+								{value}
+								{pinModelHandler}
+								{unloadModelHandler}
+								onClick={() => {
+									value = item.value;
+									selectedModelIdx = index;
+
+									show = false;
+								}}
+							/>
+						{/each}
+						<div style="height: {(filteredItems.length - visibleEnd) * ITEM_HEIGHT}px;" />
 					</div>
-				{/each}
+				{/if}
 
 				{#if !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user?.role === 'admin'}
 					<Tooltip

@@ -38,9 +38,12 @@
 	let showResetUploadDirConfirm = false;
 	let showReindexConfirm = false;
 
-	let embeddingEngine = '';
-	let embeddingModel = '';
-	let embeddingBatchSize = 1;
+	let RAG_EMBEDDING_ENGINE = '';
+	let RAG_EMBEDDING_MODEL = '';
+	let RAG_EMBEDDING_BATCH_SIZE = 1;
+	let ENABLE_ASYNC_EMBEDDING = true;
+	let RAG_EMBEDDING_CONCURRENT_REQUESTS = 0;
+
 	let rerankingModel = '';
 
 	let OpenAIUrl = '';
@@ -64,7 +67,7 @@
 	let RAGConfig = null;
 
 	const embeddingModelUpdateHandler = async () => {
-		if (embeddingEngine === '' && embeddingModel.split('/').length - 1 > 1) {
+		if (RAG_EMBEDDING_ENGINE === '' && RAG_EMBEDDING_MODEL.split('/').length - 1 > 1) {
 			toast.error(
 				$i18n.t(
 					'Model filesystem path detected. Model shortname is required for update, cannot continue.'
@@ -72,7 +75,7 @@
 			);
 			return;
 		}
-		if (embeddingEngine === 'ollama' && embeddingModel === '') {
+		if (RAG_EMBEDDING_ENGINE === 'ollama' && RAG_EMBEDDING_MODEL === '') {
 			toast.error(
 				$i18n.t(
 					'Model filesystem path detected. Model shortname is required for update, cannot continue.'
@@ -81,7 +84,7 @@
 			return;
 		}
 
-		if (embeddingEngine === 'openai' && embeddingModel === '') {
+		if (RAG_EMBEDDING_ENGINE === 'openai' && RAG_EMBEDDING_MODEL === '') {
 			toast.error(
 				$i18n.t(
 					'Model filesystem path detected. Model shortname is required for update, cannot continue.'
@@ -91,20 +94,28 @@
 		}
 
 		if (
-			embeddingEngine === 'azure_openai' &&
+			RAG_EMBEDDING_ENGINE === 'azure_openai' &&
 			(AzureOpenAIKey === '' || AzureOpenAIUrl === '' || AzureOpenAIVersion === '')
 		) {
 			toast.error($i18n.t('OpenAI URL/Key required.'));
 			return;
 		}
 
-		console.debug('Update embedding model attempt:', embeddingModel);
+		console.debug('Update embedding model attempt:', {
+			RAG_EMBEDDING_ENGINE,
+			RAG_EMBEDDING_MODEL,
+			RAG_EMBEDDING_BATCH_SIZE,
+			ENABLE_ASYNC_EMBEDDING,
+			RAG_EMBEDDING_CONCURRENT_REQUESTS
+		});
 
 		updateEmbeddingModelLoading = true;
 		const res = await updateEmbeddingConfig(localStorage.token, {
-			embedding_engine: embeddingEngine,
-			embedding_model: embeddingModel,
-			embedding_batch_size: embeddingBatchSize,
+			RAG_EMBEDDING_ENGINE: RAG_EMBEDDING_ENGINE,
+			RAG_EMBEDDING_MODEL: RAG_EMBEDDING_MODEL,
+			RAG_EMBEDDING_BATCH_SIZE: RAG_EMBEDDING_BATCH_SIZE,
+			ENABLE_ASYNC_EMBEDDING: ENABLE_ASYNC_EMBEDDING,
+			RAG_EMBEDDING_CONCURRENT_REQUESTS: RAG_EMBEDDING_CONCURRENT_REQUESTS,
 			ollama_config: {
 				key: OllamaKey,
 				url: OllamaUrl
@@ -127,11 +138,6 @@
 
 		if (res) {
 			console.debug('embeddingModelUpdateHandler:', res);
-			if (res.status === true) {
-				toast.success($i18n.t('Embedding model set to "{{embedding_model}}"', res), {
-					duration: 1000 * 10
-				});
-			}
 		}
 	};
 
@@ -151,26 +157,6 @@
 			toast.error($i18n.t('Docling Server URL required.'));
 			return;
 		}
-		if (
-			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' &&
-			RAGConfig.DOCLING_DO_OCR &&
-			((RAGConfig.DOCLING_OCR_ENGINE === '' && RAGConfig.DOCLING_OCR_LANG !== '') ||
-				(RAGConfig.DOCLING_OCR_ENGINE !== '' && RAGConfig.DOCLING_OCR_LANG === ''))
-		) {
-			toast.error(
-				$i18n.t('Both Docling OCR Engine and Language(s) must be provided or both left empty.')
-			);
-			return;
-		}
-		if (
-			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' &&
-			RAGConfig.DOCLING_DO_OCR === false &&
-			RAGConfig.DOCLING_FORCE_OCR === true
-		) {
-			toast.error($i18n.t('In order to force OCR, performing OCR must be enabled.'));
-			return;
-		}
-
 		if (
 			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker' &&
 			RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG &&
@@ -238,12 +224,6 @@
 			ALLOWED_FILE_EXTENSIONS: RAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
 				.map((ext) => ext.trim())
 				.filter((ext) => ext !== ''),
-			DOCLING_PICTURE_DESCRIPTION_LOCAL: JSON.parse(
-				RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL || '{}'
-			),
-			DOCLING_PICTURE_DESCRIPTION_API: JSON.parse(
-				RAGConfig.DOCLING_PICTURE_DESCRIPTION_API || '{}'
-			),
 			DOCLING_PARAMS:
 				typeof RAGConfig.DOCLING_PARAMS === 'string' && RAGConfig.DOCLING_PARAMS.trim() !== ''
 					? JSON.parse(RAGConfig.DOCLING_PARAMS)
@@ -260,9 +240,11 @@
 		const embeddingConfig = await getEmbeddingConfig(localStorage.token);
 
 		if (embeddingConfig) {
-			embeddingEngine = embeddingConfig.embedding_engine;
-			embeddingModel = embeddingConfig.embedding_model;
-			embeddingBatchSize = embeddingConfig.embedding_batch_size ?? 1;
+			RAG_EMBEDDING_ENGINE = embeddingConfig.RAG_EMBEDDING_ENGINE;
+			RAG_EMBEDDING_MODEL = embeddingConfig.RAG_EMBEDDING_MODEL;
+			RAG_EMBEDDING_BATCH_SIZE = embeddingConfig.RAG_EMBEDDING_BATCH_SIZE ?? 1;
+			ENABLE_ASYNC_EMBEDDING = embeddingConfig.ENABLE_ASYNC_EMBEDDING ?? true;
+			RAG_EMBEDDING_CONCURRENT_REQUESTS = embeddingConfig.RAG_EMBEDDING_CONCURRENT_REQUESTS ?? 0;
 
 			OpenAIKey = embeddingConfig.openai_config.key;
 			OpenAIUrl = embeddingConfig.openai_config.url;
@@ -281,16 +263,6 @@
 		const config = await getRAGConfig(localStorage.token);
 		config.ALLOWED_FILE_EXTENSIONS = (config?.ALLOWED_FILE_EXTENSIONS ?? []).join(', ');
 
-		config.DOCLING_PICTURE_DESCRIPTION_LOCAL = JSON.stringify(
-			config.DOCLING_PICTURE_DESCRIPTION_LOCAL ?? {},
-			null,
-			2
-		);
-		config.DOCLING_PICTURE_DESCRIPTION_API = JSON.stringify(
-			config.DOCLING_PICTURE_DESCRIPTION_API ?? {},
-			null,
-			2
-		);
 		config.DOCLING_PARAMS =
 			typeof config.DOCLING_PARAMS === 'object'
 				? JSON.stringify(config.DOCLING_PARAMS ?? {}, null, 2)
@@ -359,7 +331,7 @@
 				<div class="mb-3">
 					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="mb-2.5 flex flex-col w-full justify-between">
 						<div class="flex w-full justify-between mb-1">
@@ -391,6 +363,30 @@
 									</div>
 									<div class="flex items-center relative">
 										<Switch bind:state={RAGConfig.PDF_EXTRACT_IMAGES} />
+									</div>
+								</div>
+							</div>
+
+							<div class="flex w-full mt-2">
+								<div class="flex-1 flex justify-between">
+									<div class=" self-center text-xs font-medium">
+										<Tooltip
+											content={$i18n.t(
+												'Page mode creates one document per page. Single mode combines all pages into one document for better chunking across page boundaries.'
+											)}
+											placement="top-start"
+										>
+											{$i18n.t('PDF Loader Mode')}
+										</Tooltip>
+									</div>
+									<div class="">
+										<select
+											class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+											bind:value={RAGConfig.PDF_LOADER_MODE}
+										>
+											<option value="page">{$i18n.t('Page')}</option>
+											<option value="single">{$i18n.t('Single')}</option>
+										</select>
 									</div>
 								</div>
 							</div>
@@ -589,173 +585,18 @@
 								</div>
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling'}
-							<div class="flex w-full mt-1">
+							<div class="my-0.5 flex gap-2 pr-2">
 								<input
 									class="flex-1 w-full text-sm bg-transparent outline-hidden"
 									placeholder={$i18n.t('Enter Docling Server URL')}
 									bind:value={RAGConfig.DOCLING_SERVER_URL}
 								/>
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Docling API Key')}
+									bind:value={RAGConfig.DOCLING_API_KEY}
+									required={false}
+								/>
 							</div>
-
-							<div class="flex w-full mt-2">
-								<div class="flex-1 flex justify-between">
-									<div class=" self-center text-xs font-medium">
-										{$i18n.t('Perform OCR')}
-									</div>
-									<div class="flex items-center relative">
-										<Switch bind:state={RAGConfig.DOCLING_DO_OCR} />
-									</div>
-								</div>
-							</div>
-							{#if RAGConfig.DOCLING_DO_OCR}
-								<div class="flex w-full mt-2">
-									<input
-										class="flex-1 w-full text-sm bg-transparent outline-hidden"
-										placeholder={$i18n.t('Enter Docling OCR Engine')}
-										bind:value={RAGConfig.DOCLING_OCR_ENGINE}
-									/>
-									<input
-										class="flex-1 w-full text-sm bg-transparent outline-hidden"
-										placeholder={$i18n.t('Enter Docling OCR Language(s)')}
-										bind:value={RAGConfig.DOCLING_OCR_LANG}
-									/>
-								</div>
-							{/if}
-							<div class="flex w-full mt-2">
-								<div class="flex-1 flex justify-between">
-									<div class=" self-center text-xs font-medium">
-										{$i18n.t('Force OCR')}
-									</div>
-									<div class="flex items-center relative">
-										<Switch bind:state={RAGConfig.DOCLING_FORCE_OCR} />
-									</div>
-								</div>
-							</div>
-							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
-									<Tooltip content={''} placement="top-start">
-										{$i18n.t('PDF Backend')}
-									</Tooltip>
-								</div>
-								<div class="">
-									<select
-										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-										bind:value={RAGConfig.DOCLING_PDF_BACKEND}
-									>
-										<option value="pypdfium2">{$i18n.t('pypdfium2')}</option>
-										<option value="dlparse_v1">{$i18n.t('dlparse_v1')}</option>
-										<option value="dlparse_v2">{$i18n.t('dlparse_v2')}</option>
-										<option value="dlparse_v4">{$i18n.t('dlparse_v4')}</option>
-									</select>
-								</div>
-							</div>
-							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
-									<Tooltip content={''} placement="top-start">
-										{$i18n.t('Table Mode')}
-									</Tooltip>
-								</div>
-								<div class="">
-									<select
-										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-										bind:value={RAGConfig.DOCLING_TABLE_MODE}
-									>
-										<option value="fast">{$i18n.t('fast')}</option>
-										<option value="accurate">{$i18n.t('accurate')}</option>
-									</select>
-								</div>
-							</div>
-							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
-									<Tooltip content={''} placement="top-start">
-										{$i18n.t('Pipeline')}
-									</Tooltip>
-								</div>
-								<div class="">
-									<select
-										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-										bind:value={RAGConfig.DOCLING_PIPELINE}
-									>
-										<option value="standard">{$i18n.t('standard')}</option>
-										<option value="vlm">{$i18n.t('vlm')}</option>
-									</select>
-								</div>
-							</div>
-							<div class="flex w-full mt-2">
-								<div class="flex-1 flex justify-between">
-									<div class=" self-center text-xs font-medium">
-										{$i18n.t('Describe Pictures in Documents')}
-									</div>
-									<div class="flex items-center relative">
-										<Switch bind:state={RAGConfig.DOCLING_DO_PICTURE_DESCRIPTION} />
-									</div>
-								</div>
-							</div>
-							{#if RAGConfig.DOCLING_DO_PICTURE_DESCRIPTION}
-								<div class="flex justify-between w-full mt-2">
-									<div class="self-center text-xs font-medium">
-										<Tooltip content={''} placement="top-start">
-											{$i18n.t('Picture Description Mode')}
-										</Tooltip>
-									</div>
-									<div class="">
-										<select
-											class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-											bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE}
-										>
-											<option value="">{$i18n.t('Default')}</option>
-											<option value="local">{$i18n.t('Local')}</option>
-											<option value="api">{$i18n.t('API')}</option>
-										</select>
-									</div>
-								</div>
-
-								{#if RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE === 'local'}
-									<div class="flex flex-col gap-2 mt-2">
-										<div class=" flex flex-col w-full justify-between">
-											<div class=" mb-1 text-xs font-medium">
-												{$i18n.t('Picture Description Local Config')}
-											</div>
-											<div class="flex w-full items-center relative">
-												<Tooltip
-													content={$i18n.t(
-														'Options for running a local vision-language model in the picture description. The parameters refer to a model hosted on Hugging Face. This parameter is mutually exclusive with picture_description_api.'
-													)}
-													placement="top-start"
-													className="w-full"
-												>
-													<Textarea
-														bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL}
-														placeholder={$i18n.t('Enter Config in JSON format')}
-													/>
-												</Tooltip>
-											</div>
-										</div>
-									</div>
-								{:else if RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE === 'api'}
-									<div class="flex flex-col gap-2 mt-2">
-										<div class=" flex flex-col w-full justify-between">
-											<div class=" mb-1 text-xs font-medium">
-												{$i18n.t('Picture Description API Config')}
-											</div>
-											<div class="flex w-full items-center relative">
-												<Tooltip
-													content={$i18n.t(
-														'API details for using a vision-language model in the picture description. This parameter is mutually exclusive with picture_description_local.'
-													)}
-													placement="top-start"
-													className="w-full"
-												>
-													<Textarea
-														bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_API}
-														placeholder={$i18n.t('Enter Config in JSON format')}
-													/>
-												</Tooltip>
-											</div>
-										</div>
-									</div>
-								{/if}
-							{/if}
 
 							<div class="flex flex-col gap-2 mt-2">
 								<div class=" flex flex-col w-full justify-between">
@@ -783,6 +624,20 @@
 									bind:value={RAGConfig.DOCUMENT_INTELLIGENCE_KEY}
 									required={false}
 								/>
+							</div>
+							<div class="my-0.5 flex flex-col w-full">
+								<div class=" mb-1 text-xs font-medium">
+									{$i18n.t('Document Intelligence Model')}
+								</div>
+								<div class="flex w-full">
+									<div class="flex-1 mr-2">
+										<input
+											class="flex-1 w-full text-sm bg-transparent outline-hidden"
+											placeholder={$i18n.t('Enter Document Intelligence Model')}
+											bind:value={RAGConfig.DOCUMENT_INTELLIGENCE_MODEL}
+										/>
+									</div>
+								</div>
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mistral_ocr'}
 							<div class="my-0.5 flex gap-2 pr-2">
@@ -843,8 +698,22 @@
 								<SensitiveInput
 									placeholder={$i18n.t('Enter MinerU API Key')}
 									bind:value={RAGConfig.MINERU_API_KEY}
-									required={false}
 								/>
+							</div>
+
+							<div class="flex w-full mt-2">
+								<div class="flex-1 flex justify-between">
+									<div class="self-center text-xs font-medium">
+										{$i18n.t('API Timeout')}
+									</div>
+									<input
+										class="w-16 text-sm bg-transparent outline-hidden text-right"
+										type="number"
+										min="1"
+										bind:value={RAGConfig.MINERU_API_TIMEOUT}
+										placeholder="60"
+									/>
+								</div>
 							</div>
 
 							<!-- Parameters -->
@@ -901,8 +770,23 @@
 								>
 									<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
 									<option value="token">{$i18n.t('Token')} ({$i18n.t('Tiktoken')})</option>
-									<option value="markdown_header">{$i18n.t('Markdown (Header)')}</option>
 								</select>
+							</div>
+						</div>
+
+						<div class="  mb-2.5 flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
+								<Tooltip
+									placement="top-start"
+									content={$i18n.t(
+										'Split documents by markdown headers before applying character/token splitting.'
+									)}
+								>
+									{$i18n.t('Markdown Header Text Splitter')}
+								</Tooltip>
+							</div>
+							<div class="flex items-center relative">
+								<Switch bind:state={RAGConfig.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER} />
 							</div>
 						</div>
 
@@ -942,6 +826,35 @@
 								</div>
 							</div>
 						</div>
+
+						{#if RAGConfig.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER}
+							<div class="  mb-2.5 flex w-full justify-between">
+								<div class=" flex gap-1.5 w-full">
+									<div class="w-full">
+										<div class="self-center text-xs font-medium min-w-fit mb-1">
+											<Tooltip
+												placement="top-start"
+												content={$i18n.t(
+													'Chunks smaller than this threshold will be merged with neighboring chunks when possible. Set to 0 to disable merging.'
+												)}
+											>
+												{$i18n.t('Chunk Min Size Target')}
+											</Tooltip>
+										</div>
+										<div class="self-center">
+											<input
+												class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="number"
+												placeholder={$i18n.t('Enter Chunk Min Size Target')}
+												bind:value={RAGConfig.CHUNK_MIN_SIZE_TARGET}
+												autocomplete="off"
+												min="0"
+											/>
+										</div>
+									</div>
+								</div>
+							</div>
+						{/if}
 					{/if}
 				</div>
 
@@ -949,7 +862,7 @@
 					<div class="mb-3">
 						<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Embedding')}</div>
 
-						<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+						<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 						<div class="  mb-2.5 flex flex-col w-full justify-between">
 							<div class="flex w-full justify-between">
@@ -959,17 +872,17 @@
 								<div class="flex items-center relative">
 									<select
 										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
-										bind:value={embeddingEngine}
+										bind:value={RAG_EMBEDDING_ENGINE}
 										placeholder={$i18n.t('Select an embedding model engine')}
 										on:change={(e) => {
 											if (e.target.value === 'ollama') {
-												embeddingModel = '';
+												RAG_EMBEDDING_MODEL = '';
 											} else if (e.target.value === 'openai') {
-												embeddingModel = 'text-embedding-3-small';
+												RAG_EMBEDDING_MODEL = 'text-embedding-3-small';
 											} else if (e.target.value === 'azure_openai') {
-												embeddingModel = 'text-embedding-3-small';
+												RAG_EMBEDDING_MODEL = 'text-embedding-3-small';
 											} else if (e.target.value === '') {
-												embeddingModel = 'sentence-transformers/all-MiniLM-L6-v2';
+												RAG_EMBEDDING_MODEL = 'sentence-transformers/all-MiniLM-L6-v2';
 											}
 										}}
 									>
@@ -981,7 +894,7 @@
 								</div>
 							</div>
 
-							{#if embeddingEngine === 'openai'}
+							{#if RAG_EMBEDDING_ENGINE === 'openai'}
 								<div class="my-0.5 flex gap-2 pr-2">
 									<input
 										class="flex-1 w-full text-sm bg-transparent outline-hidden"
@@ -996,7 +909,7 @@
 										required={false}
 									/>
 								</div>
-							{:else if embeddingEngine === 'ollama'}
+							{:else if RAG_EMBEDDING_ENGINE === 'ollama'}
 								<div class="my-0.5 flex gap-2 pr-2">
 									<input
 										class="flex-1 w-full text-sm bg-transparent outline-hidden"
@@ -1011,7 +924,7 @@
 										required={false}
 									/>
 								</div>
-							{:else if embeddingEngine === 'azure_openai'}
+							{:else if RAG_EMBEDDING_ENGINE === 'azure_openai'}
 								<div class="my-0.5 flex flex-col gap-2 pr-2 w-full">
 									<div class="flex gap-2">
 										<input
@@ -1038,12 +951,12 @@
 							<div class=" mb-1 text-xs font-medium">{$i18n.t('Embedding Model')}</div>
 
 							<div class="">
-								{#if embeddingEngine === 'ollama'}
+								{#if RAG_EMBEDDING_ENGINE === 'ollama'}
 									<div class="flex w-full">
 										<div class="flex-1 mr-2">
 											<input
 												class="flex-1 w-full text-sm bg-transparent outline-hidden"
-												bind:value={embeddingModel}
+												bind:value={RAG_EMBEDDING_MODEL}
 												placeholder={$i18n.t('Set embedding model')}
 												required
 											/>
@@ -1055,13 +968,13 @@
 											<input
 												class="flex-1 w-full text-sm bg-transparent outline-hidden"
 												placeholder={$i18n.t('Set embedding model (e.g. {{model}})', {
-													model: embeddingModel.slice(-40)
+													model: RAG_EMBEDDING_MODEL.slice(-40)
 												})}
-												bind:value={embeddingModel}
+												bind:value={RAG_EMBEDDING_MODEL}
 											/>
 										</div>
 
-										{#if embeddingEngine === ''}
+										{#if RAG_EMBEDDING_ENGINE === ''}
 											<button
 												class="px-2.5 bg-transparent text-gray-800 dark:bg-transparent dark:text-gray-100 rounded-lg transition"
 												on:click={() => {
@@ -1101,19 +1014,57 @@
 							</div>
 						</div>
 
-						{#if embeddingEngine === 'ollama' || embeddingEngine === 'openai' || embeddingEngine === 'azure_openai'}
-							<div class="  mb-2.5 flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">
-									{$i18n.t('Embedding Batch Size')}
-								</div>
+						<div class="  mb-2.5 flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Embedding Batch Size')}
+							</div>
 
+							<div class="">
+								<input
+									bind:value={RAG_EMBEDDING_BATCH_SIZE}
+									type="number"
+									class=" bg-transparent text-center w-14 outline-none"
+									min="-2"
+									max="16000"
+									step="1"
+								/>
+							</div>
+						</div>
+
+						{#if RAG_EMBEDDING_ENGINE === 'ollama' || RAG_EMBEDDING_ENGINE === 'openai' || RAG_EMBEDDING_ENGINE === 'azure_openai'}
+							<div class="  mb-2.5 flex w-full justify-between">
+								<div class="self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t(
+											'Runs embedding tasks concurrently to speed up processing. Turn off if rate limits become an issue.'
+										)}
+										placement="top-start"
+									>
+										{$i18n.t('Async Embedding Processing')}
+									</Tooltip>
+								</div>
+								<div class="flex items-center relative">
+									<Switch bind:state={ENABLE_ASYNC_EMBEDDING} />
+								</div>
+							</div>
+
+							<div class="  mb-2.5 flex w-full justify-between">
+								<div class="self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t(
+											'Limits the number of concurrent embedding requests. Set to 0 for unlimited.'
+										)}
+										placement="top-start"
+									>
+										{$i18n.t('Embedding Concurrent Requests')}
+									</Tooltip>
+								</div>
 								<div class="">
 									<input
-										bind:value={embeddingBatchSize}
+										bind:value={RAG_EMBEDDING_CONCURRENT_REQUESTS}
 										type="number"
 										class=" bg-transparent text-center w-14 outline-none"
-										min="-2"
-										max="16000"
+										min="0"
 										step="1"
 									/>
 								</div>
@@ -1124,7 +1075,7 @@
 					<div class="mb-3">
 						<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Retrieval')}</div>
 
-						<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+						<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 						<div class="  mb-2.5 flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">{$i18n.t('Full Context Mode')}</div>
@@ -1382,7 +1333,7 @@
 				<div class="mb-3">
 					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Files')}</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">{$i18n.t('Allowed File Extensions')}</div>
@@ -1494,7 +1445,7 @@
 				<div class="mb-3">
 					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Integration')}</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">{$i18n.t('Google Drive')}</div>
@@ -1514,13 +1465,14 @@
 				<div class="mb-3">
 					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Danger Zone')}</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">{$i18n.t('Reset Upload Directory')}</div>
 						<div class="flex items-center relative">
 							<button
 								class="text-xs"
+								type="button"
 								on:click={() => {
 									showResetUploadDirConfirm = true;
 								}}
@@ -1537,6 +1489,7 @@
 						<div class="flex items-center relative">
 							<button
 								class="text-xs"
+								type="button"
 								on:click={() => {
 									showResetConfirm = true;
 								}}
@@ -1552,6 +1505,7 @@
 						<div class="flex items-center relative">
 							<button
 								class="text-xs"
+								type="button"
 								on:click={() => {
 									showReindexConfirm = true;
 								}}

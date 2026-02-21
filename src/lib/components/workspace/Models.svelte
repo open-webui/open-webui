@@ -24,6 +24,7 @@
 
 	import { getModels } from '$lib/apis';
 	import { getGroups } from '$lib/apis/groups';
+	import { updateUserSettings } from '$lib/apis/users';
 
 	import { capitalizeFirstLetter, copyToClipboard } from '$lib/utils';
 
@@ -43,6 +44,7 @@
 	import ViewSelector from './common/ViewSelector.svelte';
 	import TagSelector from './common/TagSelector.svelte';
 	import Pagination from '../common/Pagination.svelte';
+	import Badge from '$lib/components/common/Badge.svelte';
 
 	let shiftKey = false;
 
@@ -68,16 +70,15 @@
 	let models = null;
 	let total = null;
 
-	$: if (
-		page !== undefined &&
-		query !== undefined &&
-		selectedTag !== undefined &&
-		viewOption !== undefined
-	) {
+	let searchDebounceTimer;
+
+	$: if (loaded && page !== undefined && selectedTag !== undefined && viewOption !== undefined) {
 		getModelList();
 	}
 
 	const getModelList = async () => {
+		if (!loaded) return;
+
 		try {
 			const res = await getWorkspaceModels(
 				localStorage.token,
@@ -210,15 +211,27 @@
 		saveAs(blob, `${model.id}-${Date.now()}.json`);
 	};
 
+	const pinModelHandler = async (modelId) => {
+		let pinnedModels = $settings?.pinnedModels ?? [];
+
+		if (pinnedModels.includes(modelId)) {
+			pinnedModels = pinnedModels.filter((id) => id !== modelId);
+		} else {
+			pinnedModels = [...new Set([...pinnedModels, modelId])];
+		}
+
+		settings.set({ ...$settings, pinnedModels: pinnedModels });
+		await updateUserSettings(localStorage.token, { ui: $settings });
+	};
+
 	onMount(async () => {
 		viewOption = localStorage.workspaceViewOption ?? '';
 		page = 1;
 
-		await getModelList();
-
 		let groups = await getGroups(localStorage.token);
 		groupIds = groups.map((group) => group.id);
 
+		await tick();
 		loaded = true;
 
 		const onKeyDown = (event) => {
@@ -372,7 +385,7 @@
 	</div>
 
 	<div
-		class="py-2 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-850"
+		class="py-2 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100/30 dark:border-gray-850/30"
 	>
 		<div class="px-3.5 flex flex-1 items-center w-full space-x-2 py-0.5 pb-2">
 			<div class="flex flex-1 items-center">
@@ -383,6 +396,13 @@
 					class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={query}
 					placeholder={$i18n.t('Search Models')}
+					maxlength="500"
+					on:input={() => {
+						clearTimeout(searchDebounceTimer);
+						searchDebounceTimer = setTimeout(() => {
+							getModelList();
+						}, 300);
+					}}
 				/>
 
 				{#if query}
@@ -391,6 +411,7 @@
 							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 							on:click={() => {
 								query = '';
+								getModelList();
 							}}
 						>
 							<XMark className="size-3" strokeWidth="2" />
@@ -432,62 +453,63 @@
 			</div>
 		</div>
 
-		{#if (models ?? []).length !== 0}
-			<div class=" px-3 my-2 gap-1 lg:gap-2 grid lg:grid-cols-2" id="model-list">
-				{#each models as model (model.id)}
-					<!-- svelte-ignore a11y_no_static_element_interactions -->
-					<!-- svelte-ignore a11y_click_events_have_key_events -->
-					<div
-						class="  flex cursor-pointer dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl w-full p-2.5"
-						id="model-item-{model.id}"
-						on:click={() => {
-							if (
-								$user?.role === 'admin' ||
-								model.user_id === $user?.id ||
-								model.access_control.write.group_ids.some((wg) => groupIds.includes(wg))
-							) {
-								goto(`/workspace/models/edit?id=${encodeURIComponent(model.id)}`);
-							}
-						}}
-					>
-						<div class="flex group/item gap-3.5 w-full">
-							<div class="self-center pl-0.5">
-								<div class="flex bg-white rounded-2xl">
-									<div
-										class="{model.is_active
-											? ''
-											: 'opacity-50 dark:opacity-50'} bg-transparent rounded-2xl"
-									>
-										<img
-											src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}`}
-											alt="modelfile profile"
-											class=" rounded-2xl size-12 object-cover"
-										/>
+		{#if models !== null}
+			{#if (models ?? []).length !== 0}
+				<div class=" px-3 my-2 gap-1 lg:gap-2 grid lg:grid-cols-2" id="model-list">
+					{#each models as model (model.id)}
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<div
+							class="flex transition rounded-2xl w-full p-2.5 {model.write_access
+								? 'cursor-pointer dark:hover:bg-gray-850/50 hover:bg-gray-50'
+								: 'dark:hover:bg-gray-850/50 hover:bg-gray-50'}"
+							id="model-item-{model.id}"
+							on:click={() => {
+								if (model.write_access) {
+									goto(`/workspace/models/edit?id=${encodeURIComponent(model.id)}`);
+								}
+							}}
+						>
+							<div class="flex group/item gap-3.5 w-full">
+								<div class="self-center pl-0.5">
+									<div class="flex bg-white rounded-2xl">
+										<div
+											class="{model.is_active
+												? ''
+												: 'opacity-50 dark:opacity-50'} bg-transparent rounded-2xl"
+										>
+											<img
+												src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}`}
+												alt="modelfile profile"
+												class=" rounded-2xl size-12 object-cover"
+											/>
+										</div>
 									</div>
 								</div>
-							</div>
 
-							<div class=" shrink-0 flex w-full min-w-0 flex-1 pr-1 self-center">
-								<div class="flex h-full w-full flex-1 flex-col justify-start self-center group">
-									<div class="flex-1 w-full">
-										<div class="flex items-center justify-between w-full">
-											<Tooltip content={model.name} className=" w-fit" placement="top-start">
-												<a
-													class=" font-medium line-clamp-1 hover:underline capitalize"
-													href={`/?models=${encodeURIComponent(model.id)}`}
-												>
-													{model.name}
-												</a>
-											</Tooltip>
+								<div class=" shrink-0 flex w-full min-w-0 flex-1 pr-1 self-center">
+									<div class="flex h-full w-full flex-1 flex-col justify-start self-center group">
+										<div class="flex-1 w-full">
+											<div class="flex items-center justify-between w-full">
+												<Tooltip content={model.name} className=" w-fit" placement="top-start">
+													<a
+														class=" font-medium line-clamp-1 hover:underline capitalize"
+														href={`/?models=${encodeURIComponent(model.id)}`}
+													>
+														{model.name}
+													</a>
+												</Tooltip>
 
-											<div class=" flex items-center gap-1">
-												<div
-													class="flex justify-end w-full {model.is_active ? '' : 'text-gray-500'}"
-												>
-													<div class="flex justify-between items-center w-full">
-														<div class=""></div>
-														<div class="flex flex-row gap-0.5 items-center">
-															{#if shiftKey}
+												<div class="flex items-center gap-1">
+													{#if !model.write_access}
+														<div>
+															<Badge type="muted" content={$i18n.t('Read Only')} />
+														</div>
+													{/if}
+
+													<div class="flex {model.is_active ? '' : 'text-gray-500'}">
+														<div class="flex items-center gap-0.5">
+															{#if shiftKey && model.write_access}
 																<Tooltip
 																	content={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}
 																>
@@ -523,6 +545,7 @@
 																<ModelMenu
 																	user={$user}
 																	{model}
+																	writeAccess={model.write_access}
 																	editHandler={() => {
 																		goto(
 																			`/workspace/models/edit?id=${encodeURIComponent(model.id)}`
@@ -539,6 +562,9 @@
 																	}}
 																	hideHandler={() => {
 																		hideModelHandler(model);
+																	}}
+																	pinModelHandler={() => {
+																		pinModelHandler(model.id);
 																	}}
 																	copyLinkHandler={() => {
 																		copyLinkHandler(model);
@@ -558,87 +584,93 @@
 															{/if}
 														</div>
 													</div>
-												</div>
 
-												<button
-													on:click={(e) => {
-														e.stopPropagation();
-													}}
-												>
-													<Tooltip
-														content={model.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}
-													>
-														<Switch
-															bind:state={model.is_active}
-															on:change={async () => {
-																toggleModelById(localStorage.token, model.id);
-																_models.set(
-																	await getModels(
-																		localStorage.token,
-																		$config?.features?.enable_direct_connections &&
-																			($settings?.directConnections ?? null)
-																	)
-																);
+													{#if model.write_access}
+														<button
+															on:click={(e) => {
+																e.stopPropagation();
 															}}
-														/>
-													</Tooltip>
-												</button>
+														>
+															<Tooltip
+																content={model.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}
+															>
+																<Switch
+																	bind:state={model.is_active}
+																	on:change={async () => {
+																		toggleModelById(localStorage.token, model.id);
+																		_models.set(
+																			await getModels(
+																				localStorage.token,
+																				$config?.features?.enable_direct_connections &&
+																					($settings?.directConnections ?? null)
+																			)
+																		);
+																	}}
+																/>
+															</Tooltip>
+														</button>
+													{/if}
+												</div>
 											</div>
-										</div>
 
-										<div class=" flex gap-1 pr-2 -mt-1 items-center">
-											<Tooltip
-												content={model?.user?.email ?? $i18n.t('Deleted User')}
-												className="flex shrink-0"
-												placement="top-start"
-											>
-												<div class="shrink-0 text-gray-500 text-xs">
-													{$i18n.t('By {{name}}', {
-														name: capitalizeFirstLetter(
-															model?.user?.name ?? model?.user?.email ?? $i18n.t('Deleted User')
-														)
-													})}
-												</div>
-											</Tooltip>
-
-											<div>·</div>
-
-											<Tooltip
-												content={marked.parse(model?.meta?.description ?? model.id)}
-												className=" w-fit text-left"
-												placement="top-start"
-											>
-												<div class="flex gap-1 text-xs overflow-hidden">
-													<div class="line-clamp-1">
-														{#if (model?.meta?.description ?? '').trim()}
-															{model?.meta?.description}
-														{:else}
-															{model.id}
-														{/if}
+											<div class=" flex gap-1 pr-2 -mt-1 items-center">
+												<Tooltip
+													content={model?.user?.email ?? $i18n.t('Deleted User')}
+													className="flex shrink-0"
+													placement="top-start"
+												>
+													<div class="shrink-0 text-gray-500 text-xs">
+														{$i18n.t('By {{name}}', {
+															name: capitalizeFirstLetter(
+																model?.user?.name ?? model?.user?.email ?? $i18n.t('Deleted User')
+															)
+														})}
 													</div>
-												</div>
-											</Tooltip>
+												</Tooltip>
+
+												<div>·</div>
+
+												<Tooltip
+													content={marked.parse(model?.meta?.description ?? model.id)}
+													className=" w-fit text-left"
+													placement="top-start"
+												>
+													<div class="flex gap-1 text-xs overflow-hidden">
+														<div class="line-clamp-1">
+															{#if (model?.meta?.description ?? '').trim()}
+																{model?.meta?.description}
+															{:else}
+																{model.id}
+															{/if}
+														</div>
+													</div>
+												</Tooltip>
+											</div>
 										</div>
 									</div>
 								</div>
 							</div>
 						</div>
-					</div>
-				{/each}
-			</div>
+					{/each}
+				</div>
 
-			{#if total > 30}
-				<Pagination bind:page count={total} perPage={30} />
-			{/if}
-		{:else}
-			<div class=" w-full h-full flex flex-col justify-center items-center my-16 mb-24">
-				<div class="max-w-md text-center">
-					<div class=" text-3xl mb-3">😕</div>
-					<div class=" text-lg font-medium mb-1">{$i18n.t('No models found')}</div>
-					<div class=" text-gray-500 text-center text-xs">
-						{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
+				{#if total > 30}
+					<Pagination bind:page count={total} perPage={30} />
+				{/if}
+			{:else}
+				<div class=" w-full h-full flex flex-col justify-center items-center my-16 mb-24">
+					<div class="max-w-md text-center">
+						<div class=" text-3xl mb-3">😕</div>
+						<div class=" text-lg font-medium mb-1">{$i18n.t('No models found')}</div>
+						<div class=" text-gray-500 text-center text-xs">
+							{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
+						</div>
 					</div>
 				</div>
+			{/if}
+		{:else}
+			<div class="w-full h-full flex justify-center items-center py-10">
+				<Spinner className="size-4" />
 			</div>
 		{/if}
 	</div>

@@ -33,21 +33,20 @@ from open_webui.config import (
     PLAYWRIGHT_WS_URL,
     PLAYWRIGHT_TIMEOUT,
     WEB_LOADER_ENGINE,
+    WEB_LOADER_TIMEOUT,
+    WEB_LOADER_RETRY_COUNT,
     FIRECRAWL_API_BASE_URL,
     FIRECRAWL_API_KEY,
+    FIRECRAWL_TIMEOUT,
     TAVILY_API_KEY,
     TAVILY_EXTRACT_DEPTH,
     EXTERNAL_WEB_LOADER_URL,
     EXTERNAL_WEB_LOADER_API_KEY,
     WEB_FETCH_FILTER_LIST,
-    WEB_LOADER_TIMEOUT,
-    WEB_LOADER_RETRY_COUNT,
 )
-from open_webui.env import SRC_LOG_LEVELS
-
+from open_webui.utils.misc import is_string_allowed
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def resolve_hostname(hostname):
@@ -59,39 +58,6 @@ def resolve_hostname(hostname):
     ipv6_addresses = [info[4][0] for info in addr_info if info[0] == socket.AF_INET6]
 
     return ipv4_addresses, ipv6_addresses
-
-
-def get_allow_block_lists(filter_list):
-    allow_list = []
-    block_list = []
-
-    if filter_list:
-        for d in filter_list:
-            if d.startswith("!"):
-                # Domains starting with "!" → blocked
-                block_list.append(d[1:])
-            else:
-                # Domains starting without "!" → allowed
-                allow_list.append(d)
-
-    return allow_list, block_list
-
-
-def is_string_allowed(string: str, filter_list: Optional[list[str]] = None) -> bool:
-    if not filter_list:
-        return True
-
-    allow_list, block_list = get_allow_block_lists(filter_list)
-    # If allow list is non-empty, require domain to match one of them
-    if allow_list:
-        if not any(string.endswith(allowed) for allowed in allow_list):
-            return False
-
-    # Block list always removes matches
-    if any(string.endswith(blocked) for blocked in block_list):
-        return False
-
-    return True
 
 
 def validate_url(url: Union[str, Sequence[str]]):
@@ -209,7 +175,7 @@ class URLProcessingMixin:
 
     def _safe_process_url_sync(self, url: str) -> bool:
         """Synchronous version of safety checks."""
-        if self.verify_ssl and not self._verify_ssl_cert(url):
+        if self.verify_ssl and not verify_ssl_cert(url):
             raise ValueError(f"SSL certificate verification failed for {url}")
         self._sync_wait_for_rate_limit()
         return True
@@ -225,6 +191,7 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         continue_on_failure: bool = True,
         api_key: Optional[str] = None,
         api_url: Optional[str] = None,
+        timeout: Optional[int] = None,
         mode: Literal["crawl", "scrape", "map"] = "scrape",
         proxy: Optional[Dict[str, str]] = None,
         params: Optional[Dict] = None,
@@ -267,6 +234,7 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         self.continue_on_failure = continue_on_failure
         self.api_key = api_key
         self.api_url = api_url
+        self.timeout = timeout
         self.mode = mode
         self.params = params or {}
 
@@ -289,7 +257,7 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 ignore_invalid_urls=True,
                 remove_base64_images=True,
                 max_age=300000,  # 5 minutes https://docs.firecrawl.dev/features/fast-scraping#common-maxage-values
-                wait_timeout=len(self.web_paths) * 3,
+                wait_timeout=self.timeout if self.timeout else len(self.web_paths) * 3,
                 **self.params,
             )
 
@@ -330,7 +298,7 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 ignore_invalid_urls=True,
                 remove_base64_images=True,
                 max_age=300000,  # 5 minutes https://docs.firecrawl.dev/features/fast-scraping#common-maxage-values
-                wait_timeout=len(self.web_paths) * 3,
+                wait_timeout=self.timeout if self.timeout else len(self.web_paths) * 3,
                 **self.params,
             )
 
@@ -719,6 +687,7 @@ def get_web_loader(
         WebLoaderClass = SafeWebBaseLoader
         web_loader_args["timeout"] = WEB_LOADER_TIMEOUT.value
         web_loader_args["retry_count"] = WEB_LOADER_RETRY_COUNT.value
+
     if WEB_LOADER_ENGINE.value == "playwright":
         WebLoaderClass = SafePlaywrightURLLoader
         web_loader_args["playwright_timeout"] = PLAYWRIGHT_TIMEOUT.value
@@ -729,6 +698,11 @@ def get_web_loader(
         WebLoaderClass = SafeFireCrawlLoader
         web_loader_args["api_key"] = FIRECRAWL_API_KEY.value
         web_loader_args["api_url"] = FIRECRAWL_API_BASE_URL.value
+        if FIRECRAWL_TIMEOUT.value:
+            try:
+                web_loader_args["timeout"] = int(FIRECRAWL_TIMEOUT.value)
+            except ValueError:
+                pass
 
     if WEB_LOADER_ENGINE.value == "tavily":
         WebLoaderClass = SafeTavilyLoader

@@ -9,6 +9,7 @@
 	import { chatCompletion } from '$lib/apis/openai';
 
 	import { splitStream } from '$lib/utils';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Selector from '$lib/components/chat/ModelSelector/Selector.svelte';
 
 	const i18n = getContext('i18n');
@@ -151,7 +152,7 @@
 						<textarea
 							id="text-completion-textarea"
 							bind:this={textCompletionAreaElement}
-							class="w-full h-full p-3 bg-transparent border border-gray-100 dark:border-gray-850 outline-hidden resize-none rounded-lg text-sm"
+							class="w-full h-full p-3 bg-transparent border border-gray-100/30 dark:border-gray-850/30 outline-hidden resize-none rounded-lg text-sm"
 							bind:value={text}
 							placeholder={$i18n.t("You're a helpful assistant.")}
 						/>
@@ -160,25 +161,28 @@
 			</div>
 
 			<div class="pb-3 flex justify-end">
-				{#if !loading}
-					<button
-						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-						on:click={() => {
-							submitHandler();
-						}}
-					>
-						{$i18n.t('Run')}
-					</button>
-				{:else}
-					<button
-						class="px-3 py-1.5 text-sm font-medium bg-gray-300 text-black transition rounded-full"
-						on:click={() => {
-							stopResponse();
-						}}
-					>
-						{$i18n.t('Cancel')}
-					</button>
-				{/if}
+				<div class="flex gap-2 shrink-0">
+					{#if !loading}
+						<button
+							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
+							on:click={() => {
+								submitHandler();
+							}}
+						>
+							{$i18n.t('Run')}
+						</button>
+					{:else}
+						<button
+							class="px-3.5 py-1.5 text-sm font-medium bg-gray-300 text-black transition rounded-lg flex items-center gap-2"
+							on:click={() => {
+								stopResponse();
+							}}
+						>
+							<Spinner className="size-4" />
+							{$i18n.t('Cancel')}
+						</button>
+					{/if}
+				</div>
 			</div>
 		</div>
 	</div>

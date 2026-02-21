@@ -21,6 +21,8 @@
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
 	import EditGroupModal from './Groups/EditGroupModal.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
+	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import GroupItem from './Groups/GroupItem.svelte';
 	import { createNewGroup, getGroups } from '$lib/apis/groups';
 	import {
@@ -34,19 +36,42 @@
 	let loaded = false;
 
 	let groups = [];
-	let filteredGroups;
 
-	$: filteredGroups = groups.filter((user) => {
-		if (search === '') {
-			return true;
+	let query = '';
+	let orderBy = '';
+	let direction = 'asc';
+
+	const setSortKey = (key) => {
+		if (orderBy === key) {
+			direction = direction === 'asc' ? 'desc' : 'asc';
 		} else {
-			let name = user.name.toLowerCase();
-			const query = search.toLowerCase();
-			return name.includes(query);
+			orderBy = key;
+			direction = 'asc';
 		}
-	});
+	};
 
-	let search = '';
+	$: filteredGroups = groups
+		.filter((group) => {
+			if (query === '') {
+				return true;
+			} else {
+				let name = group.name.toLowerCase();
+				const q = query.toLowerCase();
+				return name.includes(q);
+			}
+		})
+		.sort((a, b) => {
+			if (orderBy === 'name') {
+				const cmp = a.name.localeCompare(b.name);
+				return direction === 'asc' ? cmp : -cmp;
+			} else if (orderBy === 'members') {
+				const cmp = (a.member_count ?? 0) - (b.member_count ?? 0);
+				return direction === 'asc' ? cmp : -cmp;
+			}
+			return 0;
+		});
+
+
 	let defaultPermissions = {};
 
 	let showAddGroupModal = false;
@@ -100,6 +125,7 @@
 	<EditGroupModal
 		bind:show={showAddGroupModal}
 		edit={false}
+		tabs={['general', 'permissions']}
 		permissions={defaultPermissions}
 		onSubmit={addGroupHandler}
 	/>
@@ -123,7 +149,7 @@
 					</div>
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
-						bind:value={search}
+						bind:value={query}
 						placeholder={$i18n.t('Search')}
 					/>
 				</div>
@@ -170,12 +196,36 @@
 		{:else}
 			<div>
 				<div class=" flex items-center gap-3 justify-between text-xs uppercase px-1 font-medium">
-					<div class="w-full basis-3/5">{$i18n.t('Group')}</div>
+					<button
+						class="w-full basis-3/5 flex items-center gap-1 hover:text-gray-900 dark:hover:text-gray-100 transition cursor-pointer"
+						on:click={() => setSortKey('name')}
+					>
+						{$i18n.t('Group')}
+						{#if orderBy === 'name'}
+							{#if direction === 'asc'}
+								<ChevronUp className="size-3" strokeWidth="2.5" />
+							{:else}
+								<ChevronDown className="size-3" strokeWidth="2.5" />
+							{/if}
+						{/if}
+					</button>
 
-					<div class="w-full basis-2/5 text-right">{$i18n.t('Users')}</div>
+					<button
+						class="w-full basis-2/5 flex items-center gap-1 justify-end hover:text-gray-900 dark:hover:text-gray-100 transition cursor-pointer"
+						on:click={() => setSortKey('members')}
+					>
+						{$i18n.t('Users')}
+						{#if orderBy === 'members'}
+							{#if direction === 'asc'}
+								<ChevronUp className="size-3" strokeWidth="2.5" />
+							{:else}
+								<ChevronDown className="size-3" strokeWidth="2.5" />
+							{/if}
+						{/if}
+					</button>
 				</div>
 
-				<hr class="mt-1.5 border-gray-100 dark:border-gray-850" />
+				<hr class="mt-1.5 border-gray-100/30 dark:border-gray-850/30" />
 
 				{#each filteredGroups as group}
 					<div class="my-2">
@@ -185,7 +235,7 @@
 			</div>
 		{/if}
 
-		<hr class="mb-2 border-gray-100 dark:border-gray-850" />
+		<hr class="mb-2 border-gray-100/30 dark:border-gray-850/30" />
 
 		<EditGroupModal
 			bind:show={showDefaultPermissionsModal}
