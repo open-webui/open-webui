@@ -573,6 +573,20 @@ ENABLE_OAUTH_GROUP_CREATION = PersistentConfig(
 )
 
 
+oauth_group_default_share = (
+    os.environ.get("OAUTH_GROUP_DEFAULT_SHARE", "true").strip().lower()
+)
+OAUTH_GROUP_DEFAULT_SHARE = PersistentConfig(
+    "OAUTH_GROUP_DEFAULT_SHARE",
+    "oauth.group_default_share",
+    (
+        "members"
+        if oauth_group_default_share == "members"
+        else oauth_group_default_share == "true"
+    ),
+)
+
+
 OAUTH_BLOCKED_GROUPS = PersistentConfig(
     "OAUTH_BLOCKED_GROUPS",
     "oauth.blocked_groups",
