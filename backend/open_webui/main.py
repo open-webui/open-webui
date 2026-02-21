@@ -1760,9 +1760,9 @@ async def chat_completion(
                 "local:"
             ):  # temporary chats are not stored
 
-                # Verify chat ownership
-                chat = Chats.get_chat_by_id_and_user_id(metadata["chat_id"], user.id)
-                if chat is None and user.role != "admin":  # admins can access any chat
+                # Verify chat ownership — lightweight EXISTS check avoids
+                # deserializing the full chat JSON blob just to confirm the row exists
+                if not Chats.is_chat_owner(metadata["chat_id"], user.id) and user.role != "admin":  # admins can access any chat
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
                         detail=ERROR_MESSAGES.DEFAULT(),
