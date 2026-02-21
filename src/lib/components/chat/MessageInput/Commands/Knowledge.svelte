@@ -174,6 +174,8 @@
 					? ' bg-gray-50 dark:bg-gray-800 dark:text-gray-100 selected-command-option-button'
 					: ''}"
 				type="button"
+				role="option"
+				aria-selected={idx === selectedIdx}
 				on:click={() => {
 					console.log(item);
 					onSelect({
@@ -182,6 +184,9 @@
 					});
 				}}
 				on:mousemove={() => {
+					selectedIdx = idx;
+				}}
+				on:focus={() => {
 					selectedIdx = idx;
 				}}
 				data-selected={idx === selectedIdx}
@@ -220,6 +225,8 @@
 		<button
 			class="px-2 py-1 rounded-xl w-full text-left bg-gray-50 dark:bg-gray-800 dark:text-gray-100 selected-command-option-button"
 			type="button"
+			role="option"
+			aria-selected={true}
 			data-selected={true}
 			on:click={() => {
 				if (isValidHttpUrl(query)) {
@@ -248,6 +255,8 @@
 		<button
 			class="px-2 py-1 rounded-xl w-full text-left bg-gray-50 dark:bg-gray-800 dark:text-gray-100 selected-command-option-button"
 			type="button"
+			role="option"
+			aria-selected={true}
 			data-selected={true}
 			on:click={() => {
 				if (isValidHttpUrl(query)) {

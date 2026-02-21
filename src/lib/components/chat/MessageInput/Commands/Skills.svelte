@@ -64,13 +64,17 @@
 					? 'bg-gray-50 dark:bg-gray-800 selected-command-option-button'
 					: ''}"
 				type="button"
+				role="option"
+				aria-selected={skillIdx === selectedIdx}
 				on:click={() => {
 					onSelect({ type: 'skill', data: skill });
 				}}
 				on:mousemove={() => {
 					selectedIdx = skillIdx;
 				}}
-				on:focus={() => {}}
+				on:focus={() => {
+					selectedIdx = skillIdx;
+				}}
 				data-selected={skillIdx === selectedIdx}
 			>
 				<div class="flex text-black dark:text-gray-100 line-clamp-1 items-center">

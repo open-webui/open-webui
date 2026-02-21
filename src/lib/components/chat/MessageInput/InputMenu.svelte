@@ -141,6 +141,7 @@
 							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
+							aria-disabled={!fileUploadEnabled}
 							on:click={() => {
 								if (fileUploadEnabled) {
 									uploadFilesHandler();
@@ -165,6 +166,7 @@
 							class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50  rounded-xl {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
+							aria-disabled={!fileUploadEnabled}
 							on:click={() => {
 								if (fileUploadEnabled) {
 									if (!detectMobile()) {
@@ -196,6 +198,7 @@
 							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
+							aria-disabled={!fileUploadEnabled}
 							on:click={() => {
 								if (fileUploadEnabled) {
 									showAttachWebpageModal = true;
@@ -220,6 +223,7 @@
 								class="flex gap-2 w-full items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl {!fileUploadEnabled
 									? 'opacity-50'
 									: ''}"
+								aria-disabled={!fileUploadEnabled}
 								on:click={() => {
 									tab = 'notes';
 								}}
@@ -251,6 +255,7 @@
 							class="flex gap-2 w-full items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
+							aria-disabled={!fileUploadEnabled}
 							on:click={() => {
 								tab = 'knowledge';
 							}}
@@ -281,6 +286,7 @@
 							class="flex gap-2 w-full items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
+							aria-disabled={!fileUploadEnabled}
 							on:click={() => {
 								tab = 'chats';
 							}}
@@ -342,6 +348,7 @@
 								class="flex gap-2 w-full items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl {!fileUploadEnabled
 									? 'opacity-50'
 									: ''}"
+								aria-disabled={!fileUploadEnabled}
 								on:click={() => {
 									tab = 'microsoft_onedrive';
 								}}
@@ -449,6 +456,7 @@
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
 						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+						aria-label={$i18n.t('Go back')}
 						on:click={() => {
 							tab = '';
 						}}
@@ -468,6 +476,7 @@
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
 						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+						aria-label={$i18n.t('Go back')}
 						on:click={() => {
 							tab = '';
 						}}
@@ -487,6 +496,7 @@
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
 						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+						aria-label={$i18n.t('Go back')}
 						on:click={() => {
 							tab = '';
 						}}
@@ -506,6 +516,7 @@
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
 						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+						aria-label={$i18n.t('Go back')}
 						on:click={() => {
 							tab = '';
 						}}

@@ -184,6 +184,9 @@
 								selectedIdx = -1;
 							}
 						}}
+						on:focus={() => {
+							selectedIdx = idx;
+						}}
 						data-selected={idx === selectedIdx}
 					>
 						<div class="w-full text-left text-black dark:text-gray-100 flex items-center gap-1">
@@ -207,6 +210,7 @@
 						<button
 							type="button"
 							class=" ml-2 opacity-50 hover:opacity-100 transition"
+							aria-expanded={selectedItem && selectedItem.id === item.id}
 							on:click={() => {
 								if (selectedItem && selectedItem.id === item.id) {
 									selectedItem = null;

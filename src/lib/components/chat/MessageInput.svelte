@@ -1055,6 +1055,7 @@
 						>
 							<button
 								class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
+								aria-label={$i18n.t('Scroll to bottom')}
 								on:click={() => {
 									autoScroll = true;
 									scrollToBottom();
@@ -1182,6 +1183,7 @@
 										<div>
 											<button
 												class="flex items-center dark:text-gray-500"
+												aria-label={$i18n.t('Remove model')}
 												on:click={() => {
 													atSelectedModel = undefined;
 												}}
@@ -1538,12 +1540,14 @@
 											chatInput?.focus();
 										}}
 									>
-										<div
+										<button
 											id="input-menu-button"
+											type="button"
+											aria-label={$i18n.t('Attachments')}
 											class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
 										>
 											<PlusAlt className="size-5.5" />
-										</div>
+										</button>
 									</InputMenu>
 
 									{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || (toggleFilters && toggleFilters.length > 0)}
@@ -1577,12 +1581,14 @@
 												chatInput?.focus();
 											}}
 										>
-											<div
+											<button
 												id="integration-menu-button"
+												type="button"
+												aria-label={$i18n.t('Integrations')}
 												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
 											>
 												<Component className="size-4.5" strokeWidth="1.5" />
-											</div>
+											</button>
 										</IntegrationsMenu>
 									{/if}
 
@@ -1592,6 +1598,7 @@
 												<button
 													type="button"
 													id="model-valves-button"
+													aria-label={$i18n.t('Valves')}
 													class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
 													on:click={() => {
 														selectedValvesType = 'function';
@@ -1634,6 +1641,7 @@
 											{#if filter}
 												<Tooltip content={filter?.name} placement="top">
 													<button
+														aria-label={$i18n.t('Remove filter')}
 														on:click|preventDefault={() => {
 															selectedFilterIds = selectedFilterIds.filter((id) => id !== filterId);
 														}}
@@ -1669,6 +1677,7 @@
 										{#if webSearchEnabled}
 											<Tooltip content={$i18n.t('Web Search')} placement="top">
 												<button
+													aria-label={$i18n.t('Web Search')}
 													on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
 													type="button"
 													class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
@@ -1687,6 +1696,7 @@
 										{#if imageGenerationEnabled}
 											<Tooltip content={$i18n.t('Image')} placement="top">
 												<button
+													aria-label={$i18n.t('Image')}
 													on:click|preventDefault={() =>
 														(imageGenerationEnabled = !imageGenerationEnabled)}
 													type="button"
@@ -1736,6 +1746,7 @@
 											<Tooltip content={$i18n.t('Stop')}>
 												<button
 													class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
+													aria-label={$i18n.t('Stop')}
 													on:click={() => {
 														stopResponse();
 													}}
@@ -1761,6 +1772,7 @@
 											<Tooltip content={$i18n.t('Create note')} className=" flex items-center">
 												<button
 													id="create-note-button"
+													aria-label={$i18n.t('Create note')}
 													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center"
 													type="button"
 													disabled={prompt === '' && files.length === 0}
@@ -1891,6 +1903,7 @@
 												<Tooltip content={$i18n.t('Send message')}>
 													<button
 														id="send-message-button"
+														aria-label={$i18n.t('Send message')}
 														class="{!(prompt === '' && files.length === 0)
 															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"

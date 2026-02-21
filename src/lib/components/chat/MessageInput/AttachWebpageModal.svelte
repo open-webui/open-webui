@@ -81,6 +81,7 @@
 					<button
 						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-800 text-white dark:bg-white dark:text-black dark:hover:bg-gray-200 transition rounded-full"
 						type="submit"
+						aria-label={$i18n.t('Add webpage')}
 					>
 						{$i18n.t('Add')}
 					</button>
