@@ -1064,6 +1064,13 @@ OLLAMA_API_CONFIGS = PersistentConfig(
     {},
 )
 
+# Pre-loads models into Ollama memory on model switch to prevent queued/lost
+# requests and wrong-model responses during load
+OLLAMA_PRELOAD_ON_SWITCH = (
+    os.environ.get("OLLAMA_PRELOAD_ON_SWITCH", "True").lower() == "true"
+)
+
+
 ####################################
 # OPENAI_API
 ####################################
