@@ -15,7 +15,10 @@ import logging
 import re
 from typing import Optional, Callable
 
-from open_webui.utils.payload import apply_model_params_to_body, remove_open_webui_params
+from open_webui.utils.payload import (
+    apply_model_params_to_body,
+    remove_open_webui_params,
+)
 from open_webui.utils.misc import deep_update
 
 log = logging.getLogger(__name__)
@@ -237,7 +240,9 @@ def _convert_content_blocks(content) -> list[dict]:
 
             else:
                 # Pass through unknown types as text
-                log.debug(f"Unknown content part type '{part_type}', converting to text")
+                log.debug(
+                    f"Unknown content part type '{part_type}', converting to text"
+                )
                 text = part.get("text", part.get("content", str(part)))
                 blocks.append({"type": "text", "text": str(text)})
 

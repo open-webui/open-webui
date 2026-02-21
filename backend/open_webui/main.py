@@ -1985,7 +1985,6 @@ async def generate_messages(
         return response
 
 
-
 @app.post("/api/chat/completed")
 async def chat_completed(
     request: Request, form_data: dict, user=Depends(get_verified_user)

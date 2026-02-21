@@ -1140,9 +1140,13 @@ ENABLE_ANTHROPIC_API = PersistentConfig(
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
 ANTHROPIC_API_KEYS = os.environ.get("ANTHROPIC_API_KEYS", "")
-ANTHROPIC_API_KEYS = ANTHROPIC_API_KEYS if ANTHROPIC_API_KEYS != "" else ANTHROPIC_API_KEY
+ANTHROPIC_API_KEYS = (
+    ANTHROPIC_API_KEYS if ANTHROPIC_API_KEYS != "" else ANTHROPIC_API_KEY
+)
 
-ANTHROPIC_API_KEYS = [key.strip() for key in ANTHROPIC_API_KEYS.split(";") if key.strip()]
+ANTHROPIC_API_KEYS = [
+    key.strip() for key in ANTHROPIC_API_KEYS.split(";") if key.strip()
+]
 ANTHROPIC_API_KEYS = PersistentConfig(
     "ANTHROPIC_API_KEYS", "anthropic.api_keys", ANTHROPIC_API_KEYS
 )

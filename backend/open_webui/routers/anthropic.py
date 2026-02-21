@@ -120,9 +120,7 @@ async def update_config(
                 request.app.state.config.ANTHROPIC_API_KEYS[:num_urls]
             )
         else:
-            request.app.state.config.ANTHROPIC_API_KEYS += [""] * (
-                num_urls - num_keys
-            )
+            request.app.state.config.ANTHROPIC_API_KEYS += [""] * (num_urls - num_keys)
 
     request.app.state.config.ANTHROPIC_API_CONFIGS = form_data.ANTHROPIC_API_CONFIGS
 
@@ -393,7 +391,7 @@ async def generate_chat_completion(
     prefix_id = config.get("prefix_id", None)
     actual_model_id = payload.get("model", model_id)
     if prefix_id and actual_model_id.startswith(f"{prefix_id}."):
-        actual_model_id = actual_model_id[len(f"{prefix_id}."):]
+        actual_model_id = actual_model_id[len(f"{prefix_id}.") :]
     payload["model"] = actual_model_id
 
     # Convert payload from OpenAI format to Anthropic format

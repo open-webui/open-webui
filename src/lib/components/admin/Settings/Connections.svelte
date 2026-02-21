@@ -211,7 +211,9 @@
 			OLLAMA_BASE_URLS = ollamaConfig.OLLAMA_BASE_URLS;
 			OLLAMA_API_CONFIGS = ollamaConfig.OLLAMA_API_CONFIGS;
 
-			ANTHROPIC_API_BASE_URLS = anthropicConfig.ANTHROPIC_API_BASE_URLS ?? ['https://api.anthropic.com'];
+			ANTHROPIC_API_BASE_URLS = anthropicConfig.ANTHROPIC_API_BASE_URLS ?? [
+				'https://api.anthropic.com'
+			];
 			ANTHROPIC_API_KEYS = anthropicConfig.ANTHROPIC_API_KEYS ?? [''];
 			ANTHROPIC_API_CONFIGS = anthropicConfig.ANTHROPIC_API_CONFIGS ?? {};
 
@@ -249,7 +251,6 @@
 					}
 				}
 			}
-
 		}
 	});
 
@@ -412,90 +413,93 @@
 								</div>
 							</div>
 
-						<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
-							{$i18n.t('Trouble accessing Ollama?')}
-							<a
-								class=" text-gray-300 font-medium underline"
-								href="https://github.com/open-webui/open-webui#troubleshooting"
-								target="_blank"
-							>
-								{$i18n.t('Click here for help.')}
-							</a>
-						</div>
-					</div>
-				{/if}
-			</div>
-
-			<div class="my-2">
-				<div class="mt-2 space-y-2">
-					<div class="flex justify-between items-center text-sm">
-						<div class="font-medium">{$i18n.t('Anthropic API')}</div>
-
-						<div class="flex items-center">
-							<div class="">
-								<Switch
-									bind:state={ENABLE_ANTHROPIC_API}
-									on:change={async () => {
-										updateAnthropicHandler();
-									}}
-								/>
-							</div>
-						</div>
-					</div>
-
-					{#if ENABLE_ANTHROPIC_API}
-						<div class="">
-							<div class="flex justify-between items-center">
-								<div class="font-medium text-xs">{$i18n.t('Manage Anthropic API Connections')}</div>
-
-								<Tooltip content={$i18n.t(`Add Connection`)}>
-									<button
-										class="px-1"
-										on:click={() => {
-											showAddAnthropicConnectionModal = true;
-										}}
-										type="button"
-									>
-										<Plus />
-									</button>
-								</Tooltip>
-							</div>
-
-							<div class="flex flex-col gap-1.5 mt-1.5">
-								{#each ANTHROPIC_API_BASE_URLS as url, idx}
-									<AnthropicConnection
-										bind:url={ANTHROPIC_API_BASE_URLS[idx]}
-										bind:key={ANTHROPIC_API_KEYS[idx]}
-										bind:config={ANTHROPIC_API_CONFIGS[idx]}
-										onSubmit={() => {
-											updateAnthropicHandler();
-										}}
-										onDelete={() => {
-											ANTHROPIC_API_BASE_URLS = ANTHROPIC_API_BASE_URLS.filter(
-												(url, urlIdx) => idx !== urlIdx
-											);
-											ANTHROPIC_API_KEYS = ANTHROPIC_API_KEYS.filter((key, keyIdx) => idx !== keyIdx);
-
-											let newConfig = {};
-											ANTHROPIC_API_BASE_URLS.forEach((url, newIdx) => {
-												newConfig[newIdx] =
-													ANTHROPIC_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
-											});
-											ANTHROPIC_API_CONFIGS = newConfig;
-											updateAnthropicHandler();
-										}}
-									/>
-								{/each}
+							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+								{$i18n.t('Trouble accessing Ollama?')}
+								<a
+									class=" text-gray-300 font-medium underline"
+									href="https://github.com/open-webui/open-webui#troubleshooting"
+									target="_blank"
+								>
+									{$i18n.t('Click here for help.')}
+								</a>
 							</div>
 						</div>
 					{/if}
 				</div>
-			</div>
 
+				<div class="my-2">
+					<div class="mt-2 space-y-2">
+						<div class="flex justify-between items-center text-sm">
+							<div class="font-medium">{$i18n.t('Anthropic API')}</div>
 
-			<div class="my-2">
-				<div class="flex justify-between items-center text-sm">
-					<div class="  font-medium">{$i18n.t('Direct Connections')}</div>
+							<div class="flex items-center">
+								<div class="">
+									<Switch
+										bind:state={ENABLE_ANTHROPIC_API}
+										on:change={async () => {
+											updateAnthropicHandler();
+										}}
+									/>
+								</div>
+							</div>
+						</div>
+
+						{#if ENABLE_ANTHROPIC_API}
+							<div class="">
+								<div class="flex justify-between items-center">
+									<div class="font-medium text-xs">
+										{$i18n.t('Manage Anthropic API Connections')}
+									</div>
+
+									<Tooltip content={$i18n.t(`Add Connection`)}>
+										<button
+											class="px-1"
+											on:click={() => {
+												showAddAnthropicConnectionModal = true;
+											}}
+											type="button"
+										>
+											<Plus />
+										</button>
+									</Tooltip>
+								</div>
+
+								<div class="flex flex-col gap-1.5 mt-1.5">
+									{#each ANTHROPIC_API_BASE_URLS as url, idx}
+										<AnthropicConnection
+											bind:url={ANTHROPIC_API_BASE_URLS[idx]}
+											bind:key={ANTHROPIC_API_KEYS[idx]}
+											bind:config={ANTHROPIC_API_CONFIGS[idx]}
+											onSubmit={() => {
+												updateAnthropicHandler();
+											}}
+											onDelete={() => {
+												ANTHROPIC_API_BASE_URLS = ANTHROPIC_API_BASE_URLS.filter(
+													(url, urlIdx) => idx !== urlIdx
+												);
+												ANTHROPIC_API_KEYS = ANTHROPIC_API_KEYS.filter(
+													(key, keyIdx) => idx !== keyIdx
+												);
+
+												let newConfig = {};
+												ANTHROPIC_API_BASE_URLS.forEach((url, newIdx) => {
+													newConfig[newIdx] =
+														ANTHROPIC_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
+												});
+												ANTHROPIC_API_CONFIGS = newConfig;
+												updateAnthropicHandler();
+											}}
+										/>
+									{/each}
+								</div>
+							</div>
+						{/if}
+					</div>
+				</div>
+
+				<div class="my-2">
+					<div class="flex justify-between items-center text-sm">
+						<div class="  font-medium">{$i18n.t('Direct Connections')}</div>
 
 						<div class="flex items-center">
 							<div class="">

@@ -82,15 +82,10 @@ async def get_all_base_models(request: Request, user: UserModel = None):
     function_task = get_function_models(request)
 
     openai_models, ollama_models, anthropic_models, function_models = (
-        await asyncio.gather(
-            openai_task, ollama_task, anthropic_task, function_task
-        )
+        await asyncio.gather(openai_task, ollama_task, anthropic_task, function_task)
     )
 
-    return (
-        function_models + openai_models + ollama_models
-        + anthropic_models
-    )
+    return function_models + openai_models + ollama_models + anthropic_models
 
 
 async def get_all_models(request, refresh: bool = False, user: UserModel = None):

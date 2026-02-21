@@ -113,7 +113,9 @@ async def convert_streaming_response_anthropic_to_openai(response):
                     if block_type == "tool_use":
                         # Start of a tool call — emit the initial tool_calls chunk
                         tool_call_index += 1
-                        tool_id = getattr(content_block, "id", f"call_{uuid4().hex[:8]}")
+                        tool_id = getattr(
+                            content_block, "id", f"call_{uuid4().hex[:8]}"
+                        )
                         tool_name = getattr(content_block, "name", "")
 
                         chunk = openai_chat_chunk_message_template(model)
@@ -204,9 +206,7 @@ async def convert_streaming_response_anthropic_to_openai(response):
                     input_tokens, output_tokens
                 )
 
-                chunk = openai_chat_chunk_message_template(
-                    model, usage=combined_usage
-                )
+                chunk = openai_chat_chunk_message_template(model, usage=combined_usage)
                 chunk["id"] = message_id
                 chunk["choices"][0]["finish_reason"] = finish_reason
                 chunk["choices"][0]["delta"] = {}
