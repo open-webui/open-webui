@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- 💥 **Admin functions page crash fix.** The admin Functions tab no longer crashes when clicked, fixing a null reference error that occurred while the functions list was loading. [#21661](https://github.com/open-webui/open-webui/pull/21661), [Commit](https://github.com/open-webui/open-webui/commit/8265422ba0660e7ba2192eb19efd70f8be652748)
 - 💀 **Cyclic chat history deadlock fix.** Chat histories with circular parent-child message references no longer cause the backend to freeze when syncing usage stats. The system now detects and safely aborts when encountering cyclic message references. [#21681](https://github.com/open-webui/open-webui/pull/21681)
 - 🔒 **Iframe sandbox security.** Embedded tools can no longer submit forms or access same-origin content by default, improving security for users. [#21529](https://github.com/open-webui/open-webui/pull/21529)
 - ⏱️ **Embeddings and proxy timeout fix.** The embeddings and OpenAI proxy endpoints now properly honor the AIOHTTP_CLIENT_TIMEOUT environment variable, instead of using default timeouts that could cause requests to hang. [#21558](https://github.com/open-webui/open-webui/pull/21558)
@@ -49,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔄 **WebSocket race condition fix.** Collaborative note saves no longer crash with errors when users disconnect before pending saves complete, preventing AttributeError exceptions and excessive logging. [#21601](https://github.com/open-webui/open-webui/issues/21601), [Commit](https://github.com/open-webui/open-webui/commit/0a700aafe46dfea2cf9721bb81725d2582b0d781)
 - ✋ **Drag-and-drop overlay fix.** The "Add Files" overlay no longer remains stuck on screen when dragging files back out of the chat window in Mozilla Firefox. [#21664](https://github.com/open-webui/open-webui/pull/21664)
 - 👁️ **Group search visibility fix.** Groups now appear correctly in access control search results, even when the search doesn't match any users. [#21691](https://github.com/open-webui/open-webui/pull/21691)
+- 🐛 **User menu drag and click fixes.** Fixed draggable ghost images when dragging menu items and eliminated phantom link clicks that occurred when dragging outside dropdown menus. [#21699](https://github.com/open-webui/open-webui/pull/21699)
 
 ## [0.8.3] - 2026-02-17
 
