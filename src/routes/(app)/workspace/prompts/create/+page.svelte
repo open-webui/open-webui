@@ -1,12 +1,11 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { prompts } from '$lib/stores';
 	import { onMount, tick, getContext } from 'svelte';
 
 	const i18n = getContext('i18n');
 
-	import { createNewPrompt, getPrompts } from '$lib/apis/prompts';
+	import { createNewPrompt } from '$lib/apis/prompts';
 	import PromptEditor from '$lib/components/workspace/Prompts/PromptEditor.svelte';
 
 	let prompt: {
@@ -27,8 +26,6 @@
 
 		if (res) {
 			toast.success($i18n.t('Prompt created successfully'));
-
-			await prompts.set(await getPrompts(localStorage.token));
 			await goto('/workspace/prompts');
 		}
 	};

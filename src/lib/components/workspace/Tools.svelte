@@ -6,7 +6,7 @@
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, config, prompts, tools as _tools, user } from '$lib/stores';
+	import { WEBUI_NAME, config, tools as _tools, user } from '$lib/stores';
 
 	import { goto } from '$app/navigation';
 	import {

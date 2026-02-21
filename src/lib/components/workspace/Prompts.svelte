@@ -5,13 +5,12 @@
 
 	import { goto } from '$app/navigation';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
-	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
+	import { WEBUI_NAME, config, user } from '$lib/stores';
 
 	import {
 		createNewPrompt,
 		deletePromptById,
 		togglePromptById,
-		getPrompts,
 		getPromptItems,
 		getPromptTags
 	} from '$lib/apis/prompts';
@@ -171,7 +170,6 @@
 
 		page = 1;
 		getPromptList();
-		await _prompts.set(await getPrompts(localStorage.token));
 	};
 
 	onMount(async () => {
@@ -261,7 +259,6 @@
 
 						page = 1;
 						await getPromptList();
-						await _prompts.set(await getPrompts(localStorage.token));
 					} finally {
 						importFiles = null;
 						promptsImportInputElement.value = '';
