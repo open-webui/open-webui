@@ -26,6 +26,7 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded-sm transition"
 					type="button"
+					aria-label={$i18n.t('Toggle custom value for') + ' ' + valvesSpec.properties[property].title}
 					on:click={() => {
 						const propertySpec = valvesSpec.properties[property] ?? {};
 
@@ -66,6 +67,7 @@
 							<select
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 								bind:value={valves[property]}
+								aria-label={valvesSpec.properties[property].title}
 								on:change={() => {
 									dispatch('change');
 								}}
@@ -96,6 +98,7 @@
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 								type="text"
 								placeholder={valvesSpec.properties[property].title}
+								aria-label={valvesSpec.properties[property].title}
 								bind:value={valves[property]}
 								autocomplete="off"
 								required
@@ -122,6 +125,7 @@
 								<select
 									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 									bind:value={valves[property]}
+									aria-label={valvesSpec.properties[property]?.description ?? $i18n.t('Select an option')}
 									on:change={() => {
 										dispatch('change');
 									}}
@@ -161,6 +165,7 @@
 										type="text"
 										class="flex-1 rounded-lg py-2 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 										placeholder={$i18n.t('Enter hex color (e.g. #FF0000)')}
+										aria-label={$i18n.t('Enter hex color')}
 										bind:value={valves[property]}
 										autocomplete="off"
 										disabled
@@ -200,6 +205,7 @@
 							<textarea
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 								placeholder={valvesSpec.properties[property].title}
+								aria-label={valvesSpec.properties[property].title}
 								bind:value={valves[property]}
 								autocomplete="off"
 								required

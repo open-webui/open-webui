@@ -61,10 +61,10 @@
 
 <div {id} class={className}>
 	{#if title !== null}
-		<!-- svelte-ignore a11y-no-static-element-interactions -->
-		<!-- svelte-ignore a11y-click-events-have-key-events -->
-		<div
-			class="{buttonClassName} {disabled ? '' : 'cursor-pointer'}"
+		<button
+			class="w-full text-left {buttonClassName} {disabled ? '' : 'cursor-pointer'}"
+			type="button"
+			aria-expanded={open}
 			on:pointerup={() => {
 				if (!disabled) {
 					open = !open;
@@ -122,12 +122,12 @@
 					</div>
 				{/if}
 			</div>
-		</div>
+		</button>
 	{:else}
-		<!-- svelte-ignore a11y-no-static-element-interactions -->
-		<!-- svelte-ignore a11y-click-events-have-key-events -->
-		<div
-			class="{buttonClassName} cursor-pointer"
+		<button
+			class="w-full text-left {buttonClassName} cursor-pointer"
+			type="button"
+			aria-expanded={open}
 			on:click={(e) => {
 				e.stopPropagation();
 			}}
@@ -165,7 +165,7 @@
 					{/if}
 				{/if}
 			</div>
-		</div>
+		</button>
 	{/if}
 
 	{#if !grow}

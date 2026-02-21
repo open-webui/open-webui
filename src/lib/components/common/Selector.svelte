@@ -40,7 +40,12 @@
 		value = selectedItem.value;
 	}}
 >
-	<Select.Trigger class="relative w-full" aria-label={placeholder}>
+	<Select.Trigger
+		class="relative w-full"
+		aria-label={value
+			? `${placeholder}: ${items.find((item) => item.value === value)?.label ?? value}`
+			: placeholder}
+	>
 		<Select.Value
 			class="inline-flex h-input px-0.5 w-full outline-hidden bg-transparent truncate text-lg font-semibold placeholder-gray-400  focus:outline-hidden"
 			{placeholder}

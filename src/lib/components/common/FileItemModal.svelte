@@ -228,6 +228,7 @@
 
 				<div>
 					<button
+						aria-label={$i18n.t('Close')}
 						on:click={() => {
 							show = false;
 						}}
@@ -336,12 +337,15 @@
 				{#if isAudio || isPDF || isExcel || isCode || isMarkdown}
 					<div
 						class="flex mb-2.5 scrollbar-none overflow-x-auto w-full border-b border-gray-50 dark:border-gray-850/30 text-center text-sm font-medium bg-transparent dark:text-gray-200"
+						role="tablist"
 					>
 						<button
 							class="min-w-fit py-1.5 px-4 border-b {selectedTab === ''
 								? ' '
 								: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 							type="button"
+							role="tab"
+							aria-selected={selectedTab === ''}
 							on:click={() => {
 								selectedTab = '';
 							}}>{$i18n.t('Content')}</button
@@ -352,6 +356,8 @@
 								? ' '
 								: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 							type="button"
+							role="tab"
+							aria-selected={selectedTab === 'preview'}
 							on:click={() => {
 								selectedTab = 'preview';
 							}}>{$i18n.t('Preview')}</button

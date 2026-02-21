@@ -80,5 +80,8 @@
 </script>
 
 <div class=" z-10 w-full">
-	<div bind:this={mapElement} class="h-96 z-10" />
+	<div class="sr-only" id="map-instructions">
+		{$i18n.t('Map selector is not fully functional via keyboard. Please use the coordinate input field manually if needed.')}
+	</div>
+	<div bind:this={mapElement} class="h-96 z-10" aria-describedby="map-instructions" />
 </div>

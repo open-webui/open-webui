@@ -336,4 +336,9 @@ print("${endTag}")
 	});
 </script>
 
-<div id="code-textarea-{id}" class="h-full w-full text-sm" />
+<div
+	id="code-textarea-{id}"
+	class="h-full w-full text-sm"
+	role="region"
+	aria-label={$i18n.t('Code Editor')}
+/>

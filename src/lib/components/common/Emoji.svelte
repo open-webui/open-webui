@@ -9,7 +9,7 @@
 {#if $shortCodesToEmojis[shortCode]}
 	<img
 		src="{WEBUI_BASE_URL}/assets/emojis/{$shortCodesToEmojis[shortCode].toLowerCase()}.svg"
-		alt={shortCode}
+		alt="{shortCode.replace(/:/g, '').replace(/_/g, ' ')} emoji"
 		class={className}
 		loading="lazy"
 	/>

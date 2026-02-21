@@ -194,6 +194,7 @@ window.Chart = parent.Chart; // Chart previously assigned on parent
 		bind:this={iframe}
 		srcdoc={iframeDoc}
 		{title}
+		aria-label={title}
 		class={iframeClassName}
 		style={`${initialHeight ? `height:${initialHeight}px;` : ''}`}
 		width="100%"
@@ -207,6 +208,7 @@ window.Chart = parent.Chart; // Chart previously assigned on parent
 		bind:this={iframe}
 		src={iframeSrc}
 		{title}
+		aria-label={title}
 		class={iframeClassName}
 		style={`${initialHeight ? `height:${initialHeight}px;` : ''}`}
 		width="100%"
