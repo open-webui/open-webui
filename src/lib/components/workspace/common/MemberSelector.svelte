@@ -191,7 +191,7 @@
 			</div>
 		</div>
 
-		{#if users.length > 0}
+		{#if users.length > 0 || filteredGroups.length > 0}
 			<div class="scrollbar-hidden relative whitespace-nowrap w-full max-w-full">
 				<div class=" text-sm text-left text-gray-500 dark:text-gray-400 w-full max-w-full">
 					<div class="w-full max-h-96 overflow-y-auto rounded-lg">

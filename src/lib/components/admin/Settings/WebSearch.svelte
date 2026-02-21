@@ -37,7 +37,8 @@
 		'sougou',
 		'firecrawl',
 		'external',
-		'yandex'
+		'yandex',
+		'youcom'
 	];
 	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'external'];
 
@@ -784,6 +785,19 @@
 											)}
 										/>
 									</Tooltip>
+								</div>
+							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'youcom'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('You.com API Key')}
+									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter You.com API Key')}
+										bind:value={webConfig.YOUCOM_API_KEY}
+									/>
 								</div>
 							</div>
 						{/if}

@@ -41,6 +41,7 @@ from open_webui.config import (
     ENABLE_OAUTH_ROLE_MANAGEMENT,
     ENABLE_OAUTH_GROUP_MANAGEMENT,
     ENABLE_OAUTH_GROUP_CREATION,
+    OAUTH_GROUP_DEFAULT_SHARE,
     OAUTH_BLOCKED_GROUPS,
     OAUTH_GROUPS_SEPARATOR,
     OAUTH_ROLES_SEPARATOR,
@@ -69,6 +70,7 @@ from open_webui.env import (
     ENABLE_OAUTH_ID_TOKEN_COOKIE,
     ENABLE_OAUTH_EMAIL_FALLBACK,
     OAUTH_CLIENT_INFO_ENCRYPTION_KEY,
+    OAUTH_MAX_SESSIONS_PER_USER,
 )
 from open_webui.utils.misc import parse_duration
 from open_webui.utils.auth import get_password_hash, create_token
@@ -113,6 +115,7 @@ auth_manager_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL = OAUTH_MERGE_ACCOUNTS_BY_EMAI
 auth_manager_config.ENABLE_OAUTH_ROLE_MANAGEMENT = ENABLE_OAUTH_ROLE_MANAGEMENT
 auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT = ENABLE_OAUTH_GROUP_MANAGEMENT
 auth_manager_config.ENABLE_OAUTH_GROUP_CREATION = ENABLE_OAUTH_GROUP_CREATION
+auth_manager_config.OAUTH_GROUP_DEFAULT_SHARE = OAUTH_GROUP_DEFAULT_SHARE
 auth_manager_config.OAUTH_BLOCKED_GROUPS = OAUTH_BLOCKED_GROUPS
 auth_manager_config.OAUTH_ROLES_CLAIM = OAUTH_ROLES_CLAIM
 auth_manager_config.OAUTH_SUB_CLAIM = OAUTH_SUB_CLAIM
@@ -1245,7 +1248,11 @@ class OAuthManager:
                             name=group_name,
                             description=f"Group '{group_name}' created automatically via OAuth.",
                             permissions=default_permissions,  # Use default permissions from function args
-                            user_ids=[],  # Start with no users, user will be added later by subsequent logic
+                            data={
+                                "config": {
+                                    "share": auth_manager_config.OAUTH_GROUP_DEFAULT_SHARE
+                                }
+                            },
                         )
                         # Use determined creator ID (admin or fallback to current user)
                         created_group = Groups.insert_new_group(
@@ -1679,11 +1686,18 @@ class OAuthManager:
             if "expires_in" in token and "expires_at" not in token:
                 token["expires_at"] = datetime.now().timestamp() + token["expires_in"]
 
-            # Clean up any existing sessions for this user/provider first
+            # Enforce max concurrent sessions per user/provider to prevent
+            # unbounded growth while allowing multi-device usage
             sessions = OAuthSessions.get_sessions_by_user_id(user.id, db=db)
-            for session in sessions:
-                if session.provider == provider:
-                    OAuthSessions.delete_session_by_id(session.id, db=db)
+            provider_sessions = sorted(
+                [session for session in sessions if session.provider == provider],
+                key=lambda session: session.created_at,
+                reverse=True,
+            )
+            # Keep the newest sessions up to the limit, prune the rest
+            if len(provider_sessions) >= OAUTH_MAX_SESSIONS_PER_USER:
+                for old_session in provider_sessions[OAUTH_MAX_SESSIONS_PER_USER - 1 :]:
+                    OAuthSessions.delete_session_by_id(old_session.id, db=db)
 
             session = OAuthSessions.create_session(
                 user_id=user.id,

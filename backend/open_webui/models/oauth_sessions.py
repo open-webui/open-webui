@@ -188,6 +188,7 @@ class OAuthSessionTable:
                 session = (
                     db.query(OAuthSession)
                     .filter_by(provider=provider, user_id=user_id)
+                    .order_by(OAuthSession.created_at.desc())
                     .first()
                 )
                 if session:

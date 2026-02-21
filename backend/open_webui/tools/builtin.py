@@ -36,6 +36,8 @@ from open_webui.models.chats import Chats
 from open_webui.models.channels import Channels, ChannelMember, Channel
 from open_webui.models.messages import Messages, Message
 from open_webui.models.groups import Groups
+from open_webui.models.memories import Memories
+from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.utils.sanitize import sanitize_code
 
 log = logging.getLogger(__name__)
@@ -631,6 +633,79 @@ async def replace_memory_content(
         )
     except Exception as e:
         log.exception(f"replace_memory_content error: {e}")
+        return json.dumps({"error": str(e)})
+
+
+async def delete_memory(
+    memory_id: str,
+    __request__: Request = None,
+    __user__: dict = None,
+) -> str:
+    """
+    Delete a memory by its ID.
+
+    :param memory_id: The ID of the memory to delete
+    :return: Confirmation that the memory was deleted
+    """
+    if __request__ is None:
+        return json.dumps({"error": "Request context not available"})
+
+    try:
+        user = UserModel(**__user__) if __user__ else None
+
+        result = Memories.delete_memory_by_id_and_user_id(memory_id, user.id)
+
+        if result:
+            VECTOR_DB_CLIENT.delete(
+                collection_name=f"user-memory-{user.id}", ids=[memory_id]
+            )
+            return json.dumps(
+                {"status": "success", "message": f"Memory {memory_id} deleted"},
+                ensure_ascii=False,
+            )
+        else:
+            return json.dumps({"error": "Memory not found or access denied"})
+    except Exception as e:
+        log.exception(f"delete_memory error: {e}")
+        return json.dumps({"error": str(e)})
+
+
+async def list_memories(
+    __request__: Request = None,
+    __user__: dict = None,
+) -> str:
+    """
+    List all stored memories for the user.
+
+    :return: JSON list of all memories with id, content, and dates
+    """
+    if __request__ is None:
+        return json.dumps({"error": "Request context not available"})
+
+    try:
+        user = UserModel(**__user__) if __user__ else None
+
+        memories = Memories.get_memories_by_user_id(user.id)
+
+        if memories:
+            result = [
+                {
+                    "id": m.id,
+                    "content": m.content,
+                    "created_at": time.strftime(
+                        "%Y-%m-%d %H:%M", time.localtime(m.created_at)
+                    ),
+                    "updated_at": time.strftime(
+                        "%Y-%m-%d %H:%M", time.localtime(m.updated_at)
+                    ),
+                }
+                for m in memories
+            ]
+            return json.dumps(result, ensure_ascii=False)
+        else:
+            return json.dumps([])
+    except Exception as e:
+        log.exception(f"list_memories error: {e}")
         return json.dumps({"error": str(e)})
 
 

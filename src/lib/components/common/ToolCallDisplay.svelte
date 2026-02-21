@@ -16,6 +16,7 @@
 	import CheckCircle from '../icons/CheckCircle.svelte';
 	import Image from './Image.svelte';
 	import FullHeightIframe from './FullHeightIframe.svelte';
+	import { settings } from '$lib/stores';
 
 	export let id: string = '';
 	export let attributes: {
@@ -92,8 +93,8 @@
 						src={embed}
 						{args}
 						allowScripts={true}
-						allowForms={true}
-						allowSameOrigin={true}
+						allowForms={$settings?.iframeSandboxAllowForms ?? false}
+						allowSameOrigin={$settings?.iframeSandboxAllowSameOrigin ?? false}
 						allowPopups={true}
 					/>
 				</div>

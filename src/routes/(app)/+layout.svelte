@@ -22,7 +22,6 @@
 		user,
 		settings,
 		models,
-		prompts,
 		knowledge,
 		tools,
 		functions,

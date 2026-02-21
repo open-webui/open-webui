@@ -60,6 +60,8 @@ from open_webui.tools.builtin import (
     search_memories,
     add_memory,
     replace_memory_content,
+    delete_memory,
+    list_memories,
     get_current_timestamp,
     calculate_timestamp,
     search_notes,
@@ -471,7 +473,15 @@ def get_builtin_tools(
 
     # Add memory tools if builtin category enabled AND enabled for this chat
     if is_builtin_tool_enabled("memory") and features.get("memory"):
-        builtin_functions.extend([search_memories, add_memory, replace_memory_content])
+        builtin_functions.extend(
+            [
+                search_memories,
+                add_memory,
+                replace_memory_content,
+                delete_memory,
+                list_memories,
+            ]
+        )
 
     # Add web search tools if builtin category enabled AND enabled globally AND model has web_search capability
     if (

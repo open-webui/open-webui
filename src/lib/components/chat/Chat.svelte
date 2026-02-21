@@ -329,15 +329,27 @@
 
 			// Set Default Features
 			if (model?.info?.meta?.defaultFeatureIds) {
-				if (model.info?.meta?.capabilities?.['image_generation']) {
+				if (
+					model.info?.meta?.capabilities?.['image_generation'] &&
+					$config?.features?.enable_image_generation &&
+					($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
+				) {
 					imageGenerationEnabled = model.info.meta.defaultFeatureIds.includes('image_generation');
 				}
 
-				if (model.info?.meta?.capabilities?.['web_search']) {
+				if (
+					model.info?.meta?.capabilities?.['web_search'] &&
+					$config?.features?.enable_web_search &&
+					($user?.role === 'admin' || $user?.permissions?.features?.web_search)
+				) {
 					webSearchEnabled = model.info.meta.defaultFeatureIds.includes('web_search');
 				}
 
-				if (model.info?.meta?.capabilities?.['code_interpreter']) {
+				if (
+					model.info?.meta?.capabilities?.['code_interpreter'] &&
+					$config?.features?.enable_code_interpreter &&
+					($user?.role === 'admin' || $user?.permissions?.features?.code_interpreter)
+				) {
 					codeInterpreterEnabled = model.info.meta.defaultFeatureIds.includes('code_interpreter');
 				}
 			}
@@ -415,6 +427,15 @@
 					message.files = data.files;
 				} else if (type === 'chat:message:embeds' || type === 'embeds') {
 					message.embeds = data.embeds;
+
+					// Auto-scroll to the embed once it's rendered in the DOM
+					await tick();
+					setTimeout(() => {
+						const embedEl = document.getElementById(`${event.message_id}-embeds-container`);
+						if (embedEl) {
+							embedEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+						}
+					}, 100);
 				} else if (type === 'chat:message:error') {
 					message.error = data.error;
 				} else if (type === 'chat:message:follow_ups') {

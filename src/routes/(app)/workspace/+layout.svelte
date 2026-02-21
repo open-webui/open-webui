@@ -7,7 +7,6 @@
 		user,
 		mobile,
 		models,
-		prompts,
 		knowledge,
 		tools
 	} from '$lib/stores';
@@ -57,7 +56,7 @@
 			? 'md:max-w-[calc(100%-var(--sidebar-width))]'
 			: ''} max-w-full"
 	>
-		<nav class="   px-2.5 pt-1.5 backdrop-blur-xl drag-region">
+		<nav class="   px-2.5 pt-1.5 backdrop-blur-xl drag-region select-none">
 			<div class=" flex items-center gap-1">
 				{#if $mobile}
 					<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
@@ -86,18 +85,20 @@
 					>
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
 							<a
+								draggable="false"
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/models')
 									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
 								href="/workspace/models">{$i18n.t('Models')}</a
 							>
 						{/if}
 
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
 							<a
+								draggable="false"
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/knowledge')
 									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
 								href="/workspace/knowledge"
 							>
 								{$i18n.t('Knowledge')}
@@ -106,18 +107,20 @@
 
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts}
 							<a
+								draggable="false"
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/prompts')
 									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
 								href="/workspace/prompts">{$i18n.t('Prompts')}</a
 							>
 						{/if}
 
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.skills}
 							<a
+								draggable="false"
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/skills')
 									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
 								href="/workspace/skills"
 							>
 								{$i18n.t('Skills')}
@@ -126,9 +129,10 @@
 
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.tools}
 							<a
+								draggable="false"
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/tools')
 									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
 								href="/workspace/tools"
 							>
 								{$i18n.t('Tools')}

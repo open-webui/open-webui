@@ -171,7 +171,10 @@ def get_citation_source_from_tool_result(
     Returns a list of sources (usually one, but query_knowledge_files may return multiple).
     """
     try:
-        tool_result = json.loads(tool_result)
+        try:
+            tool_result = json.loads(tool_result)
+        except (json.JSONDecodeError, TypeError):
+            pass  # keep tool_result as-is (e.g. fetch_url returns plain text)
         if isinstance(tool_result, dict) and "error" in tool_result:
             return []
 
@@ -227,6 +230,25 @@ def get_citation_source_from_tool_result(
                                 if knowledge_name
                                 else {}
                             ),
+                        }
+                    ],
+                }
+            ]
+
+        elif tool_name == "fetch_url":
+            url = tool_params.get("url", "")
+            content = tool_result if isinstance(tool_result, str) else str(tool_result)
+            snippet = content[:500] + ("..." if len(content) > 500 else "")
+
+            return [
+                {
+                    "source": {"name": url or "fetch_url", "id": url or "fetch_url"},
+                    "document": [snippet],
+                    "metadata": [
+                        {
+                            "source": url,
+                            "name": url,
+                            "url": url,
                         }
                     ],
                 }
@@ -2056,11 +2078,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # Folder "Project" handling
     # Check if the request has chat_id and is inside of a folder
+    # Uses lightweight column query — only fetches folder_id, not the full chat JSON blob
     chat_id = metadata.get("chat_id", None)
     if chat_id and user:
-        chat = Chats.get_chat_by_id_and_user_id(chat_id, user.id)
-        if chat and chat.folder_id:
-            folder = Folders.get_folder_by_id_and_user_id(chat.folder_id, user.id)
+        folder_id = Chats.get_chat_folder_id(chat_id, user.id)
+        if folder_id:
+            folder = Folders.get_folder_by_id_and_user_id(folder_id, user.id)
 
             if folder and folder.data:
                 if "system_prompt" in folder.data:
@@ -4102,6 +4125,7 @@ async def streaming_chat_response_handler(response, ctx):
                             tool_function_name
                             in [
                                 "search_web",
+                                "fetch_url",
                                 "view_knowledge_file",
                                 "query_knowledge_files",
                             ]

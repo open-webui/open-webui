@@ -6,7 +6,7 @@
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, config, prompts, tools as _tools, user } from '$lib/stores';
+	import { WEBUI_NAME, config, tools as _tools, user } from '$lib/stores';
 
 	import { goto } from '$app/navigation';
 	import {
@@ -615,7 +615,9 @@
 				}
 
 				toast.success($i18n.t('Tool imported successfully'));
-				tools.set(await getTools(localStorage.token));
+				await init();
+				importFiles = null;
+				toolsImportInputElement.value = '';
 			};
 
 			reader.readAsText(importFiles[0]);
