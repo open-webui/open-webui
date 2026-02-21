@@ -37,36 +37,36 @@
 
 	let groups = [];
 
-	let search = '';
-	let sortBy = '';
-	let sortAsc = true;
+	let query = '';
+	let orderBy = '';
+	let direction = 'asc';
 
-	const toggleSort = (column) => {
-		if (sortBy === column) {
-			sortAsc = !sortAsc;
+	const setSortKey = (key) => {
+		if (orderBy === key) {
+			direction = direction === 'asc' ? 'desc' : 'asc';
 		} else {
-			sortBy = column;
-			sortAsc = true;
+			orderBy = key;
+			direction = 'asc';
 		}
 	};
 
 	$: filteredGroups = groups
 		.filter((group) => {
-			if (search === '') {
+			if (query === '') {
 				return true;
 			} else {
 				let name = group.name.toLowerCase();
-				const query = search.toLowerCase();
-				return name.includes(query);
+				const q = query.toLowerCase();
+				return name.includes(q);
 			}
 		})
 		.sort((a, b) => {
-			if (sortBy === 'name') {
+			if (orderBy === 'name') {
 				const cmp = a.name.localeCompare(b.name);
-				return sortAsc ? cmp : -cmp;
-			} else if (sortBy === 'members') {
+				return direction === 'asc' ? cmp : -cmp;
+			} else if (orderBy === 'members') {
 				const cmp = (a.member_count ?? 0) - (b.member_count ?? 0);
-				return sortAsc ? cmp : -cmp;
+				return direction === 'asc' ? cmp : -cmp;
 			}
 			return 0;
 		});
@@ -149,7 +149,7 @@
 					</div>
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
-						bind:value={search}
+						bind:value={query}
 						placeholder={$i18n.t('Search')}
 					/>
 				</div>
@@ -198,11 +198,11 @@
 				<div class=" flex items-center gap-3 justify-between text-xs uppercase px-1 font-medium">
 					<button
 						class="w-full basis-3/5 flex items-center gap-1 hover:text-gray-900 dark:hover:text-gray-100 transition cursor-pointer"
-						on:click={() => toggleSort('name')}
+						on:click={() => setSortKey('name')}
 					>
 						{$i18n.t('Group')}
-						{#if sortBy === 'name'}
-							{#if sortAsc}
+						{#if orderBy === 'name'}
+							{#if direction === 'asc'}
 								<ChevronUp className="size-3" strokeWidth="2.5" />
 							{:else}
 								<ChevronDown className="size-3" strokeWidth="2.5" />
@@ -212,11 +212,11 @@
 
 					<button
 						class="w-full basis-2/5 flex items-center gap-1 justify-end hover:text-gray-900 dark:hover:text-gray-100 transition cursor-pointer"
-						on:click={() => toggleSort('members')}
+						on:click={() => setSortKey('members')}
 					>
 						{$i18n.t('Users')}
-						{#if sortBy === 'members'}
-							{#if sortAsc}
+						{#if orderBy === 'members'}
+							{#if direction === 'asc'}
 								<ChevronUp className="size-3" strokeWidth="2.5" />
 							{:else}
 								<ChevronDown className="size-3" strokeWidth="2.5" />
