@@ -88,6 +88,72 @@ import copy
 
 log = logging.getLogger(__name__)
 
+# Canonical mapping of builtin tool categories to their function names.
+# Used by the frontend for YOLO mode and the admin builtin-tools panel.
+#
+# "feature" categories (web_search, image_generation, code_interpreter) have
+# dedicated global config flags, model capabilities, and UI toggles.
+# Non-feature categories are pure builtin tools without that special treatment.
+BUILTIN_TOOL_CATEGORIES: dict[str, dict] = {
+    "time": {
+        "name": "Time & Calculation",
+        "description": "Get current time and perform date/time calculations",
+        "functions": ["get_current_timestamp", "calculate_timestamp"],
+        "feature": False,
+    },
+    "memory": {
+        "name": "Memory",
+        "description": "Search and manage user memories",
+        "functions": ["search_memories", "add_memory", "replace_memory_content", "delete_memory", "list_memories"],
+        "feature": False,
+    },
+    "chats": {
+        "name": "Chat History",
+        "description": "Search and view user chat history",
+        "functions": ["search_chats", "view_chat"],
+        "feature": False,
+    },
+    "notes": {
+        "name": "Notes",
+        "description": "Search, view, and manage user notes",
+        "functions": ["search_notes", "view_note", "write_note", "replace_note_content"],
+        "feature": False,
+    },
+    "knowledge": {
+        "name": "Knowledge Base",
+        "description": "Browse and query knowledge bases",
+        "functions": [
+            "list_knowledge_bases", "search_knowledge_bases", "query_knowledge_bases",
+            "search_knowledge_files", "query_knowledge_files", "view_knowledge_file", "view_file",
+        ],
+        "feature": False,
+    },
+    "channels": {
+        "name": "Channels",
+        "description": "Search channels and channel messages",
+        "functions": ["search_channels", "search_channel_messages", "view_channel_thread", "view_channel_message"],
+        "feature": False,
+    },
+    "web_search": {
+        "name": "Web Search",
+        "description": "Search the web and fetch URLs",
+        "functions": ["search_web", "fetch_url"],
+        "feature": True,
+    },
+    "image_generation": {
+        "name": "Image Generation",
+        "description": "Generate and edit images",
+        "functions": ["generate_image", "edit_image"],
+        "feature": True,
+    },
+    "code_interpreter": {
+        "name": "Code Interpreter",
+        "description": "Execute code",
+        "functions": ["execute_code"],
+        "feature": True,
+    },
+}
+
 
 def get_async_tool_function_and_apply_extra_params(
     function: Callable, extra_params: dict

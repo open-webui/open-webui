@@ -28,7 +28,7 @@ from open_webui.utils.plugin import (
     get_tool_module_from_cache,
     resolve_valves_schema_options,
 )
-from open_webui.utils.tools import get_tool_specs
+from open_webui.utils.tools import get_tool_specs, BUILTIN_TOOL_CATEGORIES
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
 from open_webui.utils.tools import get_tool_servers
@@ -48,6 +48,16 @@ def get_tool_module(request, tool_id, load_from_db=True):
     """
     tool_module, _ = get_tool_module_from_cache(request, tool_id, load_from_db)
     return tool_module
+
+
+############################
+# GetBuiltinToolCategories
+############################
+
+
+@router.get("/builtin/categories")
+async def get_builtin_tool_categories(user=Depends(get_verified_user)):
+    return BUILTIN_TOOL_CATEGORIES
 
 
 ############################

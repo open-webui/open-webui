@@ -1,62 +1,30 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { getBuiltinToolCategories } from '$lib/apis/tools';
 	import { marked } from 'marked';
 
 	const i18n = getContext('i18n');
 
-	const toolLabels = {
-		time: {
-			label: $i18n.t('Time & Calculation'),
-			description: $i18n.t('Get current time and perform date/time calculations')
-		},
-		memory: {
-			label: $i18n.t('Memory'),
-			description: $i18n.t('Search and manage user memories')
-		},
-		chats: {
-			label: $i18n.t('Chat History'),
-			description: $i18n.t('Search and view user chat history')
-		},
-		notes: {
-			label: $i18n.t('Notes'),
-			description: $i18n.t('Search, view, and manage user notes')
-		},
-		knowledge: {
-			label: $i18n.t('Knowledge Base'),
-			description: $i18n.t('Browse and query knowledge bases')
-		},
-		channels: {
-			label: $i18n.t('Channels'),
-			description: $i18n.t('Search channels and channel messages')
-		},
-		web_search: {
-			label: $i18n.t('Web Search'),
-			description: $i18n.t('Search the web and fetch URLs')
-		},
-		image_generation: {
-			label: $i18n.t('Image Generation'),
-			description: $i18n.t('Generate and edit images')
-		},
-		code_interpreter: {
-			label: $i18n.t('Code Interpreter'),
-			description: $i18n.t('Execute code')
-		}
-	};
-
-	const allTools = Object.keys(toolLabels);
+	let categories: Record<string, { name: string; description: string; functions: string[] }> = {};
+	let allTools: string[] = [];
 
 	export let builtinTools: Record<string, boolean> = {};
 
-	// Initialize missing keys to true (default enabled)
-	$: {
-		for (const tool of allTools) {
-			if (!(tool in builtinTools)) {
-				builtinTools[tool] = true;
+	onMount(async () => {
+		try {
+			categories = await getBuiltinToolCategories(localStorage.token);
+			allTools = Object.keys(categories);
+			for (const tool of allTools) {
+				if (!(tool in builtinTools)) {
+					builtinTools[tool] = true;
+				}
 			}
+		} catch (e) {
+			console.error('Failed to load builtin tool categories:', e);
 		}
-	}
+	});
 </script>
 
 <div>
@@ -77,8 +45,8 @@
 				/>
 
 				<div class="py-0.5 text-sm">
-					<Tooltip content={marked.parse(toolLabels[tool].description)}>
-						{$i18n.t(toolLabels[tool].label)}
+					<Tooltip content={marked.parse(categories[tool]?.description ?? '')}>
+						{$i18n.t(categories[tool]?.name ?? tool)}
 					</Tooltip>
 				</div>
 			</div>

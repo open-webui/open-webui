@@ -7,7 +7,7 @@
 	import { config, user, tools as _tools, mobile, settings, toolServers } from '$lib/stores';
 
 	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
-	import { getTools } from '$lib/apis/tools';
+	import { getTools, getBuiltinToolCategories } from '$lib/apis/tools';
 
 	import {
 		getAlwaysApproved,
@@ -33,6 +33,12 @@
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 	import Photo from '$lib/components/icons/Photo.svelte';
 	import Terminal from '$lib/components/icons/Terminal.svelte';
+	import Calendar from '$lib/components/icons/Calendar.svelte';
+	import Database from '$lib/components/icons/Database.svelte';
+	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
+	import Note from '$lib/components/icons/Note.svelte';
+	import BookOpen from '$lib/components/icons/BookOpen.svelte';
+	import Hashtag from '$lib/components/icons/Hashtag.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 
@@ -83,6 +89,10 @@
 			await _tools.set(await getTools(localStorage.token));
 		}
 
+		if (featureTools.length === 0 && builtinTools.length === 0) {
+			await loadBuiltinTools();
+		}
+
 		if ($_tools) {
 			tools = $_tools.reduce((a: Record<string, any>, tool: any) => {
 				a[tool.id] = {
@@ -127,6 +137,74 @@
 			yoloStatus = getPendingYoloAsStatus();
 		}
 	};
+
+	// Builtin tools for YOLO menu, fetched from backend.
+	// "Feature tools" (web search, image gen, code interpreter) are shown conditionally
+	// via existing show* flags. "Builtin tools" (the rest) are shown dynamically.
+	interface BuiltinTool {
+		id: string;
+		name: string;
+		parentIds: string[];
+	}
+
+	let featureTools: BuiltinTool[] = [];
+	let builtinTools: BuiltinTool[] = [];
+
+	async function loadBuiltinTools() {
+		try {
+			const categories = await getBuiltinToolCategories(localStorage.token);
+			if (categories) {
+				const features: BuiltinTool[] = [];
+				const builtin: BuiltinTool[] = [];
+				for (const [id, cat] of Object.entries(categories)) {
+					const entry: BuiltinTool = {
+						id,
+						name: cat.name,
+						parentIds: cat.functions.map((fn: string) => `builtin:${fn}`)
+					};
+					if (cat.feature) {
+						features.push(entry);
+					} else {
+						builtin.push(entry);
+					}
+				}
+				featureTools = features;
+				builtinTools = builtin;
+			}
+		} catch (e) {
+			console.error('Failed to load builtin tool categories:', e);
+		}
+	}
+
+	// Feature tools are gated by their existing show* flags
+	$: visibleFeatureTools = featureTools.filter(t =>
+		(t.id === 'web_search' && showWebSearchButton) ||
+		(t.id === 'image_generation' && showImageGenerationButton) ||
+		(t.id === 'code_interpreter' && showCodeInterpreterButton)
+	);
+
+	function isBuiltinToolYolo(tool: BuiltinTool): boolean {
+		return tool.parentIds.every(pid => {
+			const funcs = yoloStatus.yolo_functions[pid];
+			return funcs && (funcs.includes('*') || funcs.length > 0);
+		});
+	}
+
+	async function toggleBuiltinToolYolo(tool: BuiltinTool) {
+		const isOn = isBuiltinToolYolo(tool);
+		if (chatId) {
+			let result: YoloStatus | null = null;
+			for (const pid of tool.parentIds) {
+				result = await setYolo(chatId, 'parent', !isOn, pid);
+			}
+			if (result) yoloStatus = result;
+		} else {
+			for (const pid of tool.parentIds) {
+				setPendingYolo('parent', !isOn, pid);
+			}
+			yoloStatus = getPendingYoloAsStatus();
+		}
+	}
 
 	async function toggleYoloAll() {
 		const newState = !yoloStatus.yolo_all;
@@ -209,10 +287,10 @@
 							<!-- YOLO Mode -->
 							<button
 								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
-							on:click={async () => {
-								await loadYoloStatus();
-								tab = 'yolo';
-							}}
+								on:click={async () => {
+									await loadYoloStatus();
+									tab = 'yolo';
+								}}
 							>
 								<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 									<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
@@ -233,10 +311,10 @@
 							<!-- Always Allowed -->
 								<button
 									class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
-								on:click={async () => {
-									if (chatId) await loadAlwaysApproved();
-									tab = 'always-allowed';
-								}}
+									on:click={async () => {
+										if (chatId) await loadAlwaysApproved();
+										tab = 'always-allowed';
+									}}
 								>
 									<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 										<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
@@ -544,7 +622,78 @@
 				</button>
 
 				{#if !yoloStatus.yolo_all}
-					<div class="border-t border-gray-100 dark:border-gray-800 my-1" />
+					<!-- Default Features YOLO toggles (gated by existing show* flags) -->
+					{#if visibleFeatureTools.length > 0}
+						<div class="border-t border-gray-100 dark:border-gray-800 my-1" />
+						<div class="px-3 py-1 text-xs font-medium text-gray-400 dark:text-gray-500">{$i18n.t('Default Features')}</div>
+						{#each visibleFeatureTools as featureTool (featureTool.id)}
+							<button
+								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+								on:click={() => toggleBuiltinToolYolo(featureTool)}
+							>
+								<div class="flex-1 truncate">
+									<div class="flex flex-1 gap-2 items-center">
+										<div class="shrink-0">
+											{#if featureTool.id === 'web_search'}
+												<GlobeAlt />
+											{:else if featureTool.id === 'image_generation'}
+												<Photo className="size-4" strokeWidth="1.5" />
+											{:else if featureTool.id === 'code_interpreter'}
+												<Terminal className="size-3.5" strokeWidth="1.75" />
+											{/if}
+										</div>
+										<div class="truncate">{$i18n.t(featureTool.name)}</div>
+									</div>
+								</div>
+								<div class="shrink-0">
+									<Switch state={isBuiltinToolYolo(featureTool)} />
+								</div>
+							</button>
+						{/each}
+					{/if}
+
+					<!-- Builtin Tools YOLO toggles (loaded dynamically from backend) -->
+					{#if builtinTools.length > 0}
+						<div class="border-t border-gray-100 dark:border-gray-800 my-1" />
+						<div class="px-3 py-1 text-xs font-medium text-gray-400 dark:text-gray-500">{$i18n.t('Builtin Tools')}</div>
+						{#each builtinTools as builtinTool (builtinTool.id)}
+							<button
+								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+								on:click={() => toggleBuiltinToolYolo(builtinTool)}
+							>
+								<div class="flex-1 truncate">
+									<div class="flex flex-1 gap-2 items-center">
+										<div class="shrink-0">
+											{#if builtinTool.id === 'time'}
+												<Calendar className="size-4" strokeWidth="1.5" />
+											{:else if builtinTool.id === 'memory'}
+												<Database className="size-4" strokeWidth="1.5" />
+											{:else if builtinTool.id === 'chats'}
+												<ChatBubble className="size-4" strokeWidth="1.5" />
+											{:else if builtinTool.id === 'notes'}
+												<Note className="size-4" strokeWidth="1.5" />
+											{:else if builtinTool.id === 'knowledge'}
+												<BookOpen className="size-4" strokeWidth="1.5" />
+											{:else if builtinTool.id === 'channels'}
+												<Hashtag className="size-4" strokeWidth="1.5" />
+											{:else}
+												<Wrench />
+											{/if}
+										</div>
+										<div class="truncate">{$i18n.t(builtinTool.name)}</div>
+									</div>
+								</div>
+								<div class="shrink-0">
+									<Switch state={isBuiltinToolYolo(builtinTool)} />
+								</div>
+							</button>
+						{/each}
+					{/if}
+
+					{#if (visibleFeatureTools.length > 0 || builtinTools.length > 0) && Object.keys(tools).length > 0}
+						<div class="border-t border-gray-100 dark:border-gray-800 my-1" />
+						<div class="px-3 py-1 text-xs font-medium text-gray-400 dark:text-gray-500">{$i18n.t('Workspace Tools')}</div>
+					{/if}
 
 					<!-- Per-tool YOLO toggles -->
 					{#each Object.keys(tools) as toolId}
