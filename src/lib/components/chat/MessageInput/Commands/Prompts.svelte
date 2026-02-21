@@ -70,13 +70,17 @@
 						? '  bg-gray-50 dark:bg-gray-800 selected-command-option-button'
 						: ''} truncate"
 					type="button"
+					role="option"
+					aria-selected={promptIdx === selectedPromptIdx}
 					on:click={() => {
 						onSelect({ type: 'prompt', data: promptItem });
 					}}
 					on:mousemove={() => {
 						selectedPromptIdx = promptIdx;
 					}}
-					on:focus={() => {}}
+					on:focus={() => {
+						selectedPromptIdx = promptIdx;
+					}}
 					data-selected={promptIdx === selectedPromptIdx}
 				>
 					<span class=" font-medium text-black dark:text-gray-100">

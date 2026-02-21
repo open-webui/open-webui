@@ -56,6 +56,8 @@
 		? ''
 		: 'hidden'} rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-72 p-1"
 	id="suggestions-container"
+	role="listbox"
+	aria-label={$i18n.t('Command suggestions')}
 >
 	<div class="overflow-y-auto scrollbar-thin max-h-60">
 		{#if char === '/'}

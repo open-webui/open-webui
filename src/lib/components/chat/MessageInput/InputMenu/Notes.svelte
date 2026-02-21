@@ -89,6 +89,9 @@
 							selectedIdx = -1;
 						}
 					}}
+					on:focus={() => {
+						selectedIdx = idx;
+					}}
 					data-selected={idx === selectedIdx}
 				>
 					<div class="text-black dark:text-gray-100 flex items-center gap-1.5">
