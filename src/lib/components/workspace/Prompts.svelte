@@ -240,6 +240,7 @@
 			hidden
 			on:change={() => {
 				console.log(importFiles);
+				if (!importFiles || importFiles.length === 0) return;
 
 				const reader = new FileReader();
 				reader.onload = async (event) => {
@@ -390,7 +391,7 @@
 		{:else if (prompts ?? []).length !== 0}
 			<!-- Before they call, I will answer; while they are yet speaking, I will hear. -->
 			<div class="gap-2 grid my-2 px-3 lg:grid-cols-2">
-				{#each prompts as prompt}
+				{#each prompts as prompt (prompt.id)}
 					<a
 						class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2.5 dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl"
 						href={`/workspace/prompts/${prompt.id}`}
