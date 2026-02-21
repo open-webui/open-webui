@@ -176,6 +176,7 @@
 		<div class="flex items-center gap-2.5">
 			<button
 				class="self-center p-0.5"
+				aria-label={$i18n.t('Back')}
 				on:click={() => {
 					showOverview.set(false);
 				}}
@@ -186,6 +187,7 @@
 		</div>
 		<button
 			class="self-center p-0.5"
+			aria-label={$i18n.t('Close overview')}
 			on:click={() => {
 				onClose();
 				showOverview.set(false);
