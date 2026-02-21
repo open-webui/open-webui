@@ -60,6 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 👁️ **Group search visibility fix.** Groups now appear correctly in access control search results, even when the search doesn't match any users. [#21691](https://github.com/open-webui/open-webui/pull/21691)
 - 🐛 **User menu drag and click fixes.** Fixed draggable ghost images when dragging menu items and eliminated phantom link clicks that occurred when dragging outside dropdown menus. [#21699](https://github.com/open-webui/open-webui/pull/21699)
 - 🐛 **Admin and workspace nav drag fix.** Fixed ghost drag images when dragging top navigation tabs in the Admin and Workspace panels by adding proper drag constraints and text selection prevention. [#21701](https://github.com/open-webui/open-webui/pull/21701)
+- 🐛 **Playground nav drag fix.** Fixed ghost drag images when dragging top navigation tabs in the Playground panel by adding proper drag constraints and text selection prevention. [#21704](https://github.com/open-webui/open-webui/pull/21704)
 - 📝 **Console log spam fix.** Requesting deleted or missing files no longer floods the backend console with Python traceback logs, thanks to proper exception handling for expected 404 errors. [#21687](https://github.com/open-webui/open-webui/pull/21687)
 
 ## [0.8.3] - 2026-02-17
