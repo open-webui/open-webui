@@ -102,9 +102,10 @@
 		</div>
 	{:else}
 		<!-- Tool call display -->
-		<!-- svelte-ignore a11y-no-static-element-interactions -->
-		<div
-			class="{buttonClassName} cursor-pointer"
+		<button
+			class="w-full text-left {buttonClassName} cursor-pointer"
+			type="button"
+			aria-expanded={open}
 			on:pointerup={() => {
 				open = !open;
 			}}
@@ -116,15 +117,15 @@
 			>
 				<!-- Status icon -->
 				{#if isExecuting}
-					<div>
+					<div aria-hidden="true">
 						<Spinner className="size-4" />
 					</div>
 				{:else if isDone}
-					<div class="text-emerald-500 dark:text-emerald-400">
+					<div class="text-emerald-500 dark:text-emerald-400" aria-hidden="true">
 						<CheckCircle className="size-4" strokeWidth="2" />
 					</div>
 				{:else}
-					<div class="text-gray-400 dark:text-gray-500">
+					<div class="text-gray-400 dark:text-gray-500" aria-hidden="true">
 						<WrenchSolid className="size-3.5" />
 					</div>
 				{/if}
@@ -162,7 +163,7 @@
 					{/if}
 				</div>
 			</div>
-		</div>
+		</button>
 
 		{#if open}
 			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>

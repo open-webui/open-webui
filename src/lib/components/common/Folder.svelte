@@ -169,25 +169,25 @@
 					</button>
 
 					{#if onAdd}
-						<button
-							class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
-							on:pointerup={(e) => {
-								e.stopPropagation();
-							}}
-							on:click={(e) => {
-								e.stopPropagation();
-								onAdd();
-							}}
+						<div
+							class="absolute z-10 right-2 invisible group-hover:visible group-focus-within:visible self-center flex items-center dark:text-gray-300"
 						>
 							<Tooltip content={onAddLabel}>
 								<button
 									class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
-									on:click={(e) => {}}
+									aria-label={onAddLabel || $i18n.t('Add')}
+									on:pointerup={(e) => {
+										e.stopPropagation();
+									}}
+									on:click={(e) => {
+										e.stopPropagation();
+										onAdd();
+									}}
 								>
 									<Plus className=" size-3" strokeWidth="2.5" />
 								</button>
 							</Tooltip>
-						</button>
+						</div>
 					{/if}
 				</div>
 

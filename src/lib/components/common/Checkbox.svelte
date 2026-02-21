@@ -20,6 +20,8 @@
 		: 'hover:outline-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'} text-white transition-all rounded-sm inline-block w-3.5 h-3.5 relative {disabled
 		? disabledClassName
 		: ''}"
+	role="checkbox"
+	aria-checked={_state === 'checked' ? 'true' : indeterminate ? 'mixed' : 'false'}
 	on:click={() => {
 		if (disabled) return;
 

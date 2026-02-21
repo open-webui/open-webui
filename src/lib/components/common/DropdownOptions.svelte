@@ -22,14 +22,15 @@
 
 <DropdownMenu.Root bind:open>
 	<DropdownMenu.Trigger>
-		<div
+		<button
+			type="button"
 			class={className
 				? className
 				: 'flex w-full items-center gap-2 truncate bg-transparent px-0.5 text-sm placeholder-gray-400 outline-hidden focus:outline-hidden'}
 		>
 			{items.find((item) => item.value === value)?.label ?? placeholder}
 			<ChevronDown className=" size-3" strokeWidth="2.5" />
-		</div>
+		</button>
 	</DropdownMenu.Trigger>
 
 	<DropdownMenu.Content {align}>

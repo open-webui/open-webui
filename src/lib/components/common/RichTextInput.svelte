@@ -860,7 +860,11 @@
 				}
 			},
 			editorProps: {
-				attributes: { id },
+				attributes: { 
+					id,
+					'aria-label': placeholder || $i18n.t('Text Input'),
+					'aria-multiline': 'true'
+				},
 				handlePaste: (view, event) => {
 					// Force plain-text pasting when richText === false
 					if (!richText) {

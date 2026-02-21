@@ -56,6 +56,7 @@
 		? 'rounded-xl p-2'
 		: 'rounded-2xl'} text-left"
 	type="button"
+	aria-label="{decodeString(name)}, {type}{size ? `, ${formatFileSize(size)}` : ''}"
 	on:click={async () => {
 		if (item?.file?.data?.content || item?.type === 'file' || item?.content || modal) {
 			showModal = !showModal;

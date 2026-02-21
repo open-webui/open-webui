@@ -9,7 +9,7 @@
 
 <div class="relative">
 	{#if show}
-		<div class="absolute w-full h-full flex">
+		<div class="absolute w-full h-full flex" role="status" aria-live="polite" aria-label={content || 'Loading'}>
 			<div
 				class="absolute rounded-sm"
 				style="inset: -10px; opacity: {opacity}; backdrop-filter: blur(5px);"

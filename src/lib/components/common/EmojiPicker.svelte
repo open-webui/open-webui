@@ -124,7 +124,9 @@
 		transition={flyAndScale}
 	>
 		<div class="mb-1 px-4 pt-2.5 pb-2">
+			<label for="emoji-search" class="sr-only">{$i18n.t('Search all emojis')}</label>
 			<input
+				id="emoji-search"
 				type="text"
 				class="w-full text-sm bg-transparent outline-hidden"
 				placeholder={$i18n.t('Search all emojis')}
@@ -156,6 +158,7 @@
 										>
 											<button
 												class="p-1.5 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+												aria-label={$i18n.t('Insert {{emojiName}} emoji', { emojiName: emojiItem.name })}
 												on:click={() => selectEmoji(emojiItem)}
 											>
 												<img

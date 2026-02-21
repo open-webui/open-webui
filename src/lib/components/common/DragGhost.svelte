@@ -30,6 +30,7 @@
 <div
 	bind:this={popupElement}
 	class="fixed top-0 left-0 w-screen h-[100dvh] z-50 touch-none pointer-events-none"
+	aria-hidden="true"
 >
 	<div class=" absolute text-white z-99999" style="top: {y + 10}px; left: {x + 10}px;">
 		<slot></slot>
