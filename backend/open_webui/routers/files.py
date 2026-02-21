@@ -42,7 +42,6 @@ from open_webui.models.chats import Chats
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.groups import Groups
 from open_webui.models.access_grants import AccessGrants
-from open_webui.models.folders import FolderForm, Folders
 
 from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.routers.audio import transcribe
