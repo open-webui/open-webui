@@ -83,7 +83,7 @@
 	}
 
 	const setFilteredItems = () => {
-		filteredItems = functions
+		filteredItems = (functions ?? [])
 			.filter(
 				(f) =>
 					(selectedType !== '' ? f.type === selectedType : true) &&
