@@ -13,6 +13,7 @@ jobs:
       name: pypi
       url: https://pypi.org/p/open-webui
     permissions:
+      contents: read
       id-token: write
     steps:
       - name: Checkout repository
