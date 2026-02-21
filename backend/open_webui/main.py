@@ -83,6 +83,7 @@ from open_webui.routers import (
     chats,
     notes,
     oversight,
+    message_limits,
     folders,
     configs,
     groups,
@@ -121,6 +122,7 @@ from open_webui.models.chats import Chats
 from open_webui.models.roles import Roles
 from open_webui.models.tenant_oauth import TenantOAuthConfigs  # noqa: F401 - register model with SQLAlchemy
 from open_webui.models.oversight_assignment import OversightAssignments  # noqa: F401 - register model with SQLAlchemy
+from open_webui.models.message_limits import MessageLimits  # noqa: F401 - register model with SQLAlchemy
 
 from open_webui.config import (
     # Ollama
@@ -1585,6 +1587,9 @@ app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"]
 app.include_router(folders.router, prefix="/api/v1/folders", tags=["folders"])
 app.include_router(groups.router, prefix="/api/v1/groups", tags=["groups"])
 app.include_router(oversight.router, prefix="/api/v1/oversight", tags=["oversight"])
+app.include_router(
+    message_limits.router, prefix="/api/v1/message-limits", tags=["message-limits"]
+)
 app.include_router(roles.router, prefix="/api/v1/roles", tags=["roles"])
 app.include_router(files.router, prefix="/api/v1/files", tags=["files"])
 app.include_router(functions.router, prefix="/api/v1/functions", tags=["functions"])
@@ -1718,6 +1723,43 @@ async def chat_completion(
 ):
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
+
+    # --- Daily message limit check ---
+    if user.role != "admin":
+        from open_webui.models.message_limits import MessageLimits as MsgLimits
+        from open_webui.models.chat_messages import ChatMessages as ChatMsgs
+
+        effective_limit, limit_source = MsgLimits.get_effective_limit(
+            user_id=user.id,
+            role=user.role,
+            role_id=getattr(user, "role_id", None),
+        )
+
+        if effective_limit != -1:
+            used_today = ChatMsgs.get_user_message_count_today(user.id)
+            if used_today >= effective_limit:
+                from datetime import datetime, timezone
+
+                now_utc = datetime.now(timezone.utc)
+                resets_at = (
+                    int(
+                        now_utc.replace(
+                            hour=0, minute=0, second=0, microsecond=0
+                        ).timestamp()
+                    )
+                    + 86400
+                )
+                raise HTTPException(
+                    status_code=429,
+                    detail={
+                        "error": "daily_message_limit_exceeded",
+                        "message": f"Daily message limit ({effective_limit}) exceeded. Resets at {datetime.fromtimestamp(resets_at, tz=timezone.utc).strftime('%H:%M UTC')}.",
+                        "limit": effective_limit,
+                        "used": used_today,
+                        "resets_at": resets_at,
+                    },
+                )
+    # --- End daily message limit check ---
 
     model_id = form_data.get("model", None)
     model_item = form_data.pop("model_item", {})

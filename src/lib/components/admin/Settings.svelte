@@ -22,6 +22,7 @@
 	import CodeExecution from './Settings/CodeExecution.svelte';
 	import Tools from './Settings/Tools.svelte';
 	import Branding from './Settings/Branding.svelte';
+	import MessageLimits from './Settings/MessageLimits.svelte';
 
 	import ChartBar from '../icons/ChartBar.svelte';
 	import DocumentChartBar from '../icons/DocumentChartBar.svelte';
@@ -50,7 +51,8 @@
 			'audio',
 			'images',
 			'pipelines',
-			'db'
+			'db',
+			'message-limits'
 		].includes(tabFromPath)
 			? tabFromPath
 			: 'general';
@@ -259,6 +261,12 @@
 			title: 'Pipelines',
 			route: '/admin/settings/pipelines',
 			keywords: ['pipelines', 'workflows', 'filters', 'valves', 'middleware']
+		},
+		{
+			id: 'message-limits',
+			title: 'Message Limits',
+			route: '/admin/settings/message-limits',
+			keywords: ['message', 'limits', 'rate', 'daily', 'quota', 'usage', 'throttle']
 		},
 		{
 			id: 'db',
@@ -530,6 +538,19 @@
 								d="M8 12.5c1.84 0 3.579-.37 4.914-1.037.366-.183.74-.41 1.086-.684V12c0 1.657-2.686 3-6 3s-6-1.343-6-3v-1.22c.346.273.72.5 1.087.683C4.42 12.131 6.16 12.5 8 12.5Z"
 							/>
 						</svg>
+					{:else if tab.id === 'message-limits'}
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M1 8a7 7 0 1 1 14 0A7 7 0 0 1 1 8Zm7.75-4.25a.75.75 0 0 0-1.5 0V8c0 .414.336.75.75.75h3.25a.75.75 0 0 0 0-1.5h-2.5v-3.5Z"
+								clip-rule="evenodd"
+							/>
+						</svg>
 					{/if}
 				</div>
 				<div class=" self-center">{$i18n.t(tab.title)}</div>
@@ -623,6 +644,12 @@
 			/>
 		{:else if selectedTab === 'pipelines'}
 			<Pipelines
+				saveHandler={() => {
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'message-limits'}
+			<MessageLimits
 				saveHandler={() => {
 					toast.success($i18n.t('Settings saved successfully!'));
 				}}

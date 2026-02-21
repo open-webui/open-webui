@@ -640,5 +640,31 @@ class ChatMessageTable:
 
             return hourly_counts
 
+    def get_user_message_count_today(
+        self,
+        user_id: str,
+        db: Optional[Session] = None,
+    ) -> int:
+        """Count user's messages sent today (UTC midnight to now).
+        Only counts role='user' messages (what the user sent, not assistant responses)."""
+        with get_db_context(db) as db:
+            from datetime import datetime, timezone
+
+            now = datetime.now(timezone.utc)
+            today_start = int(
+                now.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+            )
+
+            count = (
+                db.query(func.count(ChatMessage.id))
+                .filter(
+                    ChatMessage.user_id == user_id,
+                    ChatMessage.role == "user",
+                    ChatMessage.created_at >= today_start,
+                )
+                .scalar()
+            )
+            return count or 0
+
 
 ChatMessages = ChatMessageTable()
