@@ -21,6 +21,8 @@
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
 	import EditGroupModal from './Groups/EditGroupModal.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
+	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import GroupItem from './Groups/GroupItem.svelte';
 	import { createNewGroup, getGroups } from '$lib/apis/groups';
 	import {
@@ -36,15 +38,38 @@
 	let groups = [];
 	let filteredGroups;
 
-	$: filteredGroups = groups.filter((user) => {
-		if (search === '') {
-			return true;
+	let sortBy = '';
+	let sortAsc = true;
+
+	const toggleSort = (column) => {
+		if (sortBy === column) {
+			sortAsc = !sortAsc;
 		} else {
-			let name = user.name.toLowerCase();
-			const query = search.toLowerCase();
-			return name.includes(query);
+			sortBy = column;
+			sortAsc = true;
 		}
-	});
+	};
+
+	$: filteredGroups = groups
+		.filter((group) => {
+			if (search === '') {
+				return true;
+			} else {
+				let name = group.name.toLowerCase();
+				const query = search.toLowerCase();
+				return name.includes(query);
+			}
+		})
+		.sort((a, b) => {
+			if (sortBy === 'name') {
+				const cmp = a.name.localeCompare(b.name);
+				return sortAsc ? cmp : -cmp;
+			} else if (sortBy === 'members') {
+				const cmp = (a.member_count ?? 0) - (b.member_count ?? 0);
+				return sortAsc ? cmp : -cmp;
+			}
+			return 0;
+		});
 
 	let search = '';
 	let defaultPermissions = {};
@@ -171,9 +196,33 @@
 		{:else}
 			<div>
 				<div class=" flex items-center gap-3 justify-between text-xs uppercase px-1 font-medium">
-					<div class="w-full basis-3/5">{$i18n.t('Group')}</div>
+					<button
+						class="w-full basis-3/5 flex items-center gap-1 hover:text-gray-900 dark:hover:text-gray-100 transition cursor-pointer"
+						on:click={() => toggleSort('name')}
+					>
+						{$i18n.t('Group')}
+						{#if sortBy === 'name'}
+							{#if sortAsc}
+								<ChevronUp className="size-3" strokeWidth="2.5" />
+							{:else}
+								<ChevronDown className="size-3" strokeWidth="2.5" />
+							{/if}
+						{/if}
+					</button>
 
-					<div class="w-full basis-2/5 text-right">{$i18n.t('Users')}</div>
+					<button
+						class="w-full basis-2/5 flex items-center gap-1 justify-end hover:text-gray-900 dark:hover:text-gray-100 transition cursor-pointer"
+						on:click={() => toggleSort('members')}
+					>
+						{$i18n.t('Users')}
+						{#if sortBy === 'members'}
+							{#if sortAsc}
+								<ChevronUp className="size-3" strokeWidth="2.5" />
+							{:else}
+								<ChevronDown className="size-3" strokeWidth="2.5" />
+							{/if}
+						{/if}
+					</button>
 				</div>
 
 				<hr class="mt-1.5 border-gray-100/30 dark:border-gray-850/30" />
