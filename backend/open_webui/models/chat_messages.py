@@ -3,6 +3,8 @@ import time
 import uuid
 from typing import Any, Optional
 
+from open_webui.utils.response import normalize_usage
+
 from sqlalchemy.orm import Session
 from open_webui.internal.db import Base, get_db_context
 
@@ -173,7 +175,7 @@ class ChatMessageTable:
                     info = data.get("info", {})
                     usage = info.get("usage") if info else None
                 if usage:
-                    existing.usage = usage
+                    existing.usage = normalize_usage(usage)
                 existing.updated_at = now
                 db.commit()
                 db.refresh(existing)
@@ -185,6 +187,8 @@ class ChatMessageTable:
                 if not usage:
                     info = data.get("info", {})
                     usage = info.get("usage") if info else None
+                if usage:
+                    usage = normalize_usage(usage)
                 message = ChatMessage(
                     id=composite_id,
                     chat_id=chat_id,
@@ -360,19 +364,33 @@ class ChatMessageTable:
 
             if dialect == "sqlite":
                 input_tokens = cast(
-                    func.json_extract(ChatMessage.usage, "$.input_tokens"), Integer
+                    func.coalesce(
+                        func.json_extract(ChatMessage.usage, "$.input_tokens"),
+                        func.json_extract(ChatMessage.usage, "$.prompt_tokens"),
+                    ),
+                    Integer,
                 )
                 output_tokens = cast(
-                    func.json_extract(ChatMessage.usage, "$.output_tokens"), Integer
+                    func.coalesce(
+                        func.json_extract(ChatMessage.usage, "$.output_tokens"),
+                        func.json_extract(ChatMessage.usage, "$.completion_tokens"),
+                    ),
+                    Integer,
                 )
             elif dialect == "postgresql":
                 # Use json_extract_path_text for PostgreSQL JSON columns
                 input_tokens = cast(
-                    func.json_extract_path_text(ChatMessage.usage, "input_tokens"),
+                    func.coalesce(
+                        func.json_extract_path_text(ChatMessage.usage, "input_tokens"),
+                        func.json_extract_path_text(ChatMessage.usage, "prompt_tokens"),
+                    ),
                     Integer,
                 )
                 output_tokens = cast(
-                    func.json_extract_path_text(ChatMessage.usage, "output_tokens"),
+                    func.coalesce(
+                        func.json_extract_path_text(ChatMessage.usage, "output_tokens"),
+                        func.json_extract_path_text(ChatMessage.usage, "completion_tokens"),
+                    ),
                     Integer,
                 )
             else:
@@ -428,19 +446,33 @@ class ChatMessageTable:
 
             if dialect == "sqlite":
                 input_tokens = cast(
-                    func.json_extract(ChatMessage.usage, "$.input_tokens"), Integer
+                    func.coalesce(
+                        func.json_extract(ChatMessage.usage, "$.input_tokens"),
+                        func.json_extract(ChatMessage.usage, "$.prompt_tokens"),
+                    ),
+                    Integer,
                 )
                 output_tokens = cast(
-                    func.json_extract(ChatMessage.usage, "$.output_tokens"), Integer
+                    func.coalesce(
+                        func.json_extract(ChatMessage.usage, "$.output_tokens"),
+                        func.json_extract(ChatMessage.usage, "$.completion_tokens"),
+                    ),
+                    Integer,
                 )
             elif dialect == "postgresql":
                 # Use json_extract_path_text for PostgreSQL JSON columns
                 input_tokens = cast(
-                    func.json_extract_path_text(ChatMessage.usage, "input_tokens"),
+                    func.coalesce(
+                        func.json_extract_path_text(ChatMessage.usage, "input_tokens"),
+                        func.json_extract_path_text(ChatMessage.usage, "prompt_tokens"),
+                    ),
                     Integer,
                 )
                 output_tokens = cast(
-                    func.json_extract_path_text(ChatMessage.usage, "output_tokens"),
+                    func.coalesce(
+                        func.json_extract_path_text(ChatMessage.usage, "output_tokens"),
+                        func.json_extract_path_text(ChatMessage.usage, "completion_tokens"),
+                    ),
                     Integer,
                 )
             else:
