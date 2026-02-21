@@ -690,6 +690,8 @@ async def get_file_content_by_id(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=ERROR_MESSAGES.NOT_FOUND,
                 )
+        except HTTPException as e:
+            raise e
         except Exception as e:
             log.exception(e)
             log.error("Error getting file content")
@@ -741,6 +743,8 @@ async def get_html_file_content_by_id(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=ERROR_MESSAGES.NOT_FOUND,
                 )
+        except HTTPException as e:
+            raise e
         except Exception as e:
             log.exception(e)
             log.error("Error getting file content")
