@@ -26,12 +26,12 @@
 	});
 </script>
 
-<Drawer bind:show>
+<Drawer bind:show ariaLabelledby="code-editor-modal-title">
 	<div class="flex h-full flex-col">
 		<div
 			class=" sticky top-0 z-30 flex justify-between bg-white px-4.5 pt-3 pb-3 dark:bg-gray-900 dark:text-gray-100"
 		>
-			<div class=" font-primary self-center text-lg font-medium">
+			<div id="code-editor-modal-title" class=" font-primary self-center text-lg font-medium">
 				{$i18n.t('Code Editor')}
 			</div>
 			<button
