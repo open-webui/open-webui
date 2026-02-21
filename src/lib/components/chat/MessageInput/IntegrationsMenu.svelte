@@ -336,7 +336,9 @@
 
 							<div class="shrink-0 p-1 px-2 text-xs flex rounded-sm transition">
 								{#if thinkingEnabled === true}
-									<span class="text-purple-500 dark:text-purple-300 font-medium">{$i18n.t('On')}</span>
+									<span class="text-purple-500 dark:text-purple-300 font-medium"
+										>{$i18n.t('On')}</span
+									>
 								{:else if thinkingEnabled === false}
 									<span class="text-gray-400 dark:text-gray-500 font-medium">{$i18n.t('Off')}</span>
 								{:else}

@@ -2077,7 +2077,10 @@
 								)
 							: undefined,
 					...(thinkingEnabled === true
-						? { reasoning_effort: params?.reasoning_effort ?? $settings?.params?.reasoning_effort ?? 'medium' }
+						? {
+								reasoning_effort:
+									params?.reasoning_effort ?? $settings?.params?.reasoning_effort ?? 'medium'
+							}
 						: thinkingEnabled === false
 							? { reasoning_effort: 'off' }
 							: {})

@@ -1678,8 +1678,7 @@
 												placement="top"
 											>
 												<button
-													on:click|preventDefault={() =>
-														(thinkingEnabled = !thinkingEnabled)}
+													on:click|preventDefault={() => (thinkingEnabled = !thinkingEnabled)}
 													type="button"
 													class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {thinkingEnabled
 														? 'text-purple-500 dark:text-purple-300 bg-purple-50 hover:bg-purple-100 dark:bg-purple-400/10 dark:hover:bg-purple-600/10 border border-purple-200/40 dark:border-purple-500/20'

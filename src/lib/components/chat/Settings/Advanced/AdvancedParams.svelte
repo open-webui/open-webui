@@ -107,11 +107,7 @@
 					class="p-1 px-3 text-xs flex rounded-sm transition"
 					on:click={() => {
 						params.include_usage =
-							(params?.include_usage ?? null) === null
-								? true
-								: params.include_usage
-									? false
-									: null;
+							(params?.include_usage ?? null) === null ? true : params.include_usage ? false : null;
 					}}
 					type="button"
 				>
