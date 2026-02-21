@@ -171,7 +171,10 @@ def get_citation_source_from_tool_result(
     Returns a list of sources (usually one, but query_knowledge_files may return multiple).
     """
     try:
-        tool_result = json.loads(tool_result)
+        try:
+            tool_result = json.loads(tool_result)
+        except (json.JSONDecodeError, TypeError):
+            pass  # keep tool_result as-is (e.g. fetch_url returns plain text)
         if isinstance(tool_result, dict) and "error" in tool_result:
             return []
 
@@ -227,6 +230,25 @@ def get_citation_source_from_tool_result(
                                 if knowledge_name
                                 else {}
                             ),
+                        }
+                    ],
+                }
+            ]
+
+        elif tool_name == "fetch_url":
+            url = tool_params.get("url", "")
+            content = tool_result if isinstance(tool_result, str) else str(tool_result)
+            snippet = content[:500] + ("..." if len(content) > 500 else "")
+
+            return [
+                {
+                    "source": {"name": url or "fetch_url", "id": url or "fetch_url"},
+                    "document": [snippet],
+                    "metadata": [
+                        {
+                            "source": url,
+                            "name": url,
+                            "url": url,
                         }
                     ],
                 }
@@ -4102,6 +4124,7 @@ async def streaming_chat_response_handler(response, ctx):
                             tool_function_name
                             in [
                                 "search_web",
+                                "fetch_url",
                                 "view_knowledge_file",
                                 "query_knowledge_files",
                             ]
