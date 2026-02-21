@@ -112,6 +112,9 @@
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
 
+	// Deferred scroll target for when embed arrives while tab is hidden
+	let pendingEmbedScrollId: string | null = null;
+
 	let navbarElement;
 
 	let showEventConfirmation = false;
@@ -430,12 +433,18 @@
 
 					// Auto-scroll to the embed once it's rendered in the DOM
 					await tick();
-					setTimeout(() => {
-						const embedEl = document.getElementById(`${event.message_id}-embeds-container`);
-						if (embedEl) {
-							embedEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-						}
-					}, 100);
+					const embedElId = `${event.message_id}-embeds-container`;
+					if (document.hidden) {
+						// Tab not visible — defer scroll until the user returns
+						pendingEmbedScrollId = embedElId;
+					} else {
+						setTimeout(() => {
+							const embedEl = document.getElementById(embedElId);
+							if (embedEl) {
+								embedEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+							}
+						}, 100);
+					}
 				} else if (type === 'chat:message:error') {
 					message.error = data.error;
 				} else if (type === 'chat:message:follow_ups') {
@@ -602,10 +611,24 @@
 		} catch {}
 	};
 
+	const onVisibilityChange = () => {
+		if (!document.hidden && pendingEmbedScrollId) {
+			const scrollTarget = pendingEmbedScrollId;
+			pendingEmbedScrollId = null;
+			setTimeout(() => {
+				const embedEl = document.getElementById(scrollTarget);
+				if (embedEl) {
+					embedEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+				}
+			}, 100);
+		}
+	};
+
 	onMount(async () => {
 		loading = true;
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
+		document.addEventListener('visibilitychange', onVisibilityChange);
 		$socket?.on('events', chatEventHandler);
 
 		audioQueue.set(new AudioQueue(document.getElementById('audioElement')));
@@ -697,6 +720,7 @@
 			selectedFolderSubscribe();
 			chatIdUnsubscriber?.();
 			window.removeEventListener('message', onMessageHandler);
+			document.removeEventListener('visibilitychange', onVisibilityChange);
 			$socket?.off('events', chatEventHandler);
 			$audioQueue?.destroy();
 		} catch (e) {
