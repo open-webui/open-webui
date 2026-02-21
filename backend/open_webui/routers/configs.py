@@ -1,7 +1,8 @@
 import logging
 import copy
+import asyncio
 from fastapi import APIRouter, Depends, Request, HTTPException
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 import aiohttp
 
 from typing import Optional
@@ -538,3 +539,82 @@ async def get_banners(
     user=Depends(get_verified_user),
 ):
     return request.app.state.config.BANNERS
+
+
+############################
+# Interface Defaults
+############################
+
+
+class InterfaceDefaultsForm(BaseModel):
+    """
+    Schema for interface defaults.
+    Only fields needing validation are defined explicitly.
+    All other fields are accepted dynamically.
+    """
+    chatDirection: Optional[str] = None
+    textScale: Optional[float] = None
+    webSearch: Optional[str] = None
+
+    @field_validator("chatDirection")
+    @classmethod
+    def validate_chat_direction(cls, value):
+        if value is not None and value not in ("auto", "ltr", "rtl"):
+            raise ValueError("chatDirection must be 'auto', 'ltr', or 'rtl'")
+        return value
+
+    @field_validator("textScale")
+    @classmethod
+    def validate_text_scale(cls, value):
+        if value is not None and not (0.5 <= value <= 1.5):
+            raise ValueError("textScale must be between 0.5 and 1.5")
+        return value
+
+    @field_validator("webSearch")
+    @classmethod
+    def validate_web_search(cls, value):
+        if value is not None and value not in ("always",):
+            raise ValueError("webSearch must be 'always' or null")
+        return value
+
+    class Config:
+        extra = "allow"  # Accept any other fields dynamically
+
+
+@router.get("/interface/defaults")
+async def get_interface_defaults(user=Depends(get_verified_user)):
+    """
+    Get global interface defaults for all users.
+    Returns empty dict if no defaults are configured.
+    Cached for 10 minutes to reduce redundant fetches.
+    """
+    from fastapi.responses import JSONResponse
+    
+    config = await asyncio.to_thread(get_config)
+    defaults = config.get("ui", {}).get("interface_defaults", {})
+    
+    return JSONResponse(
+        content=defaults,
+        headers={"Cache-Control": "private, max-age=600"}
+    )
+
+
+@router.post("/interface/defaults", response_model=dict)
+async def set_interface_defaults(
+    form_data: InterfaceDefaultsForm, user=Depends(get_admin_user)
+):
+    """
+    Set global interface defaults (admin only).
+    These will be used as defaults for all users who haven't customized their settings.
+    """
+    config = await asyncio.to_thread(get_config)
+
+    if "ui" not in config:
+        config["ui"] = {}
+
+    validated_defaults = {k: v for k, v in form_data.model_dump().items() if v is not None}
+    config["ui"]["interface_defaults"] = validated_defaults
+
+    await asyncio.to_thread(save_config, config)
+
+    return config["ui"]["interface_defaults"]

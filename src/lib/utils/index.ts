@@ -1699,24 +1699,75 @@ export const getCodeBlockContents = (content: string): object => {
 		js: jsContent.trim()
 	};
 };
+
 export const parseFrontmatter = (content) => {
-	const match = content.match(/^---\s*\n([\s\S]*?)\n---/);
-	if (match) {
-		const frontmatter = {};
-		match[1].split('\n').forEach((line) => {
-			const [key, ...value] = line.split(':');
-			if (key && value) {
-				frontmatter[key.trim()] = value
-					.join(':')
-					.trim()
-					.replace(/^["']|["']$/g, '');
-			}
-		});
-		return frontmatter;
-	}
-	return {};
+    const match = content.match(/^---\s*\n([\s\S]*?)\n---/);
+    if (match) {
+        const frontmatter = {};
+        match[1].split('\n').forEach((line) => {
+            const [key, ...value] = line.split(':');
+            if (key && value) {
+                frontmatter[key.trim()] = value
+                    .join(':')
+                    .trim()
+                    .replace(/^["']|["']$/g, '');
+            }
+        });
+        return frontmatter;
+    }
+    return {};
 };
 
 export const formatSkillName = (name) => {
-	return name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    return name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+/**
+ * Deep merge two objects, with source properties taking precedence over target.
+ * Arrays are replaced, not merged.
+ * @param target - The target object (defaults)
+ * @param source - The source object (overrides)
+ * @returns A new object with deep-merged properties
+ */
+export const deepMerge = (target: any, source: any): any => {
+    // Handle null/undefined cases - distinguish between "not provided" and "explicitly null"
+    if (source === undefined) return target;
+    if (target === undefined) return source;
+    if (source === null || target === null) return source; // Explicit null takes precedence
+
+    // If either isn't an object, source wins
+    if (typeof source !== 'object' || typeof target !== 'object') {
+        return source;
+    }
+
+    // Both are objects (and not null)
+    if (Array.isArray(source) || Array.isArray(target)) {
+        return source; // Arrays are replaced, not merged
+    }
+
+    const result = { ...target };
+
+    for (const key in source) {
+        if (Object.prototype.hasOwnProperty.call(source, key)) {
+            const sourceValue = source[key];
+            const targetValue = result[key];
+
+            // Recursively merge if both are non-null objects
+            if (
+                sourceValue !== null &&
+                targetValue !== null &&
+                typeof sourceValue === 'object' &&
+                typeof targetValue === 'object' &&
+                !Array.isArray(sourceValue) &&
+                !Array.isArray(targetValue)
+            ) {
+                result[key] = deepMerge(targetValue, sourceValue);
+            } else {
+                // Source value takes precedence (including explicit null)
+                result[key] = sourceValue;
+            }
+        }
+    }
+
+    return result;
 };
