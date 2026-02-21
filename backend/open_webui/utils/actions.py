@@ -126,6 +126,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
                         "type": "embeds",
                         "data": {
                             "embeds": action_embeds,
+                            "placement": "bottom",
                         },
                     }
                 )

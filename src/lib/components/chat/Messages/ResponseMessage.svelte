@@ -678,7 +678,7 @@
 							</div>
 						{/if}
 
-						{#if message?.embeds && message.embeds.length > 0}
+						{#if (message?.embed_placement ?? 'bottom') === 'top' && message?.embeds && message.embeds.length > 0}
 							<div class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap">
 								{#each message.embeds as embed, idx}
 									<div class="my-2 w-full" id={`${message.id}-embeds-${idx}`}>
@@ -829,6 +829,22 @@
 
 							{#if message.code_executions}
 								<CodeExecutions codeExecutions={message.code_executions} />
+							{/if}
+
+							{#if (message?.embed_placement ?? 'bottom') === 'bottom' && message?.embeds && message.embeds.length > 0}
+								<div class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap">
+									{#each message.embeds as embed, idx}
+										<div class="my-2 w-full" id={`${message.id}-embeds-${idx}`}>
+											<FullHeightIframe
+												src={embed}
+												allowScripts={true}
+												allowForms={true}
+												allowSameOrigin={$settings?.iframeSandboxAllowSameOrigin ?? false}
+												allowPopups={true}
+											/>
+										</div>
+									{/each}
+								</div>
 							{/if}
 						</div>
 					</div>

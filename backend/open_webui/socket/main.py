@@ -841,12 +841,18 @@ def get_event_emitter(request_info, update_db=True):
                 embeds = event_data.get("data", {}).get("embeds", [])
                 embeds.extend(message.get("embeds", []))
 
+                placement = event_data.get("data", {}).get("placement", None)
+
+                update_data = {
+                    "embeds": embeds,
+                }
+                if placement:
+                    update_data["embed_placement"] = placement
+
                 Chats.upsert_message_to_chat_by_id_and_message_id(
                     request_info["chat_id"],
                     request_info["message_id"],
-                    {
-                        "embeds": embeds,
-                    },
+                    update_data,
                 )
 
             if "type" in event_data and event_data["type"] == "files":
