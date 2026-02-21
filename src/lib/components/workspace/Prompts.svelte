@@ -248,11 +248,11 @@
 
 					for (const prompt of savedPrompts) {
 						await createNewPrompt(localStorage.token, {
-							command: prompt.command.charAt(0) === '/' ? prompt.command.slice(1) : prompt.command,
-							title: prompt.title,
+							command: prompt.command,
+							name: prompt.name,
 							content: prompt.content
 						}).catch((error) => {
-							toast.error(`${error}`);
+							toast.error(typeof error === 'string' ? error : JSON.stringify(error));
 							return null;
 						});
 					}
