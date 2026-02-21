@@ -415,6 +415,16 @@
 					message.files = data.files;
 				} else if (type === 'chat:message:embeds' || type === 'embeds') {
 					message.embeds = data.embeds;
+
+					// Auto-scroll to the embed once it's rendered in the DOM
+					tick().then(() => {
+						setTimeout(() => {
+							const embedEl = document.getElementById(`${event.message_id}-embeds-0`);
+							if (embedEl) {
+								embedEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+							}
+						}, 100);
+					});
 				} else if (type === 'chat:message:error') {
 					message.error = data.error;
 				} else if (type === 'chat:message:follow_ups') {
