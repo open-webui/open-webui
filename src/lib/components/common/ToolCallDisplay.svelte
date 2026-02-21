@@ -31,6 +31,7 @@
 	} = {};
 
 	export let open = false;
+	export let showToolCallOutput: boolean = true;
 	export let className = '';
 	export let buttonClassName =
 		'w-fit text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
@@ -201,7 +202,7 @@
 					{/if}
 
 					<!-- Output -->
-					{#if isDone && result}
+					{#if showToolCallOutput && isDone && result}
 						<div>
 							<div
 								class="text-[10px] uppercase tracking-wider font-medium text-gray-400 dark:text-gray-500 mb-1.5 px-1"

@@ -70,6 +70,7 @@
 	let chatFadeStreamingText = true;
 	let collapseCodeBlocks = false;
 	let expandDetails = false;
+	let showToolCallOutput = true;
 	let renderMarkdownInPreviews = true;
 	let showChatTitleInTab = true;
 
@@ -233,6 +234,7 @@
 
 		collapseCodeBlocks = $settings?.collapseCodeBlocks ?? false;
 		expandDetails = $settings?.expandDetails ?? false;
+		showToolCallOutput = $settings?.showToolCallOutput ?? true;
 		renderMarkdownInPreviews = $settings?.renderMarkdownInPreviews ?? true;
 
 		landingPageMode = $settings?.landingPageMode ?? '';
@@ -960,6 +962,25 @@
 							bind:state={expandDetails}
 							on:change={() => {
 								saveSettings({ expandDetails });
+							}}
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="show-tool-call-output-label" class=" self-center text-xs">
+						{$i18n.t('Show Tool Call Output')}
+					</div>
+
+					<div class="flex items-center gap-2 p-1">
+						<Switch
+							ariaLabelledbyId="show-tool-call-output-label"
+							tooltip={true}
+							bind:state={showToolCallOutput}
+							on:change={() => {
+								saveSettings({ showToolCallOutput });
 							}}
 						/>
 					</div>

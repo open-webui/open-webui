@@ -329,6 +329,7 @@
 			<ToolCallDisplay
 				id={`${id}-${tokenIdx}-tc`}
 				attributes={token.attributes}
+				showToolCallOutput={$settings?.showToolCallOutput ?? true}
 				open={false}
 				className="w-full space-y-1"
 			/>
