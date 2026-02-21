@@ -56,6 +56,7 @@ from open_webui.config import (
     OAUTH_UPDATE_PICTURE_ON_LOGIN,
     OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID,
     OAUTH_AUDIENCE,
+    OAUTH_DEFAULT_GROUP_PERMISSIONS,
     WEBHOOK_URL,
     JWT_EXPIRES_IN,
     AppConfig,
@@ -69,7 +70,6 @@ from open_webui.env import (
     ENABLE_OAUTH_ID_TOKEN_COOKIE,
     ENABLE_OAUTH_EMAIL_FALLBACK,
     OAUTH_CLIENT_INFO_ENCRYPTION_KEY,
-    OAUTH_MAX_SESSIONS_PER_USER,
 )
 from open_webui.utils.misc import parse_duration
 from open_webui.utils.auth import get_password_hash, create_token
@@ -128,6 +128,7 @@ auth_manager_config.WEBHOOK_URL = WEBHOOK_URL
 auth_manager_config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN = OAUTH_UPDATE_PICTURE_ON_LOGIN
 auth_manager_config.OAUTH_AUDIENCE = OAUTH_AUDIENCE
+auth_manager_config.OAUTH_DEFAULT_GROUP_PERMISSIONS = OAUTH_DEFAULT_GROUP_PERMISSIONS
 
 
 FERNET = None
@@ -1236,6 +1237,30 @@ class OAuthManager:
             creator_id = admin_user.id if admin_user else user.id
             log.debug(f"Using creator ID {creator_id} for potential group creation.")
 
+            # Determine group data payload based on OAUTH_DEFAULT_GROUP_PERMISSIONS
+            group_data_payload = {}
+            oauth_default_permission = (
+                auth_manager_config.OAUTH_DEFAULT_GROUP_PERMISSIONS
+            )
+
+            if oauth_default_permission:
+                if oauth_default_permission.lower() == "members":
+                    group_data_payload = {"config": {"share": "members"}}
+                elif oauth_default_permission.lower() == "noone":
+                    group_data_payload = {"config": {"share": False}}
+                elif oauth_default_permission.lower() == "anyone":
+                    group_data_payload = {"config": {"share": True}}
+                else:
+                    log.warning(
+                        f"Unknown OAUTH_DEFAULT_GROUP_PERMISSIONS value: {oauth_default_permission}. "
+                        "Using empty data payload."
+                    )
+                    group_data_payload = {"config": {"share": False}}
+
+            log.debug(
+                f"Group data payload for OAuth group creation: {group_data_payload}"
+            )
+
             for group_name in user_oauth_groups:
                 if group_name not in all_group_names:
                     log.info(
@@ -1246,6 +1271,7 @@ class OAuthManager:
                             name=group_name,
                             description=f"Group '{group_name}' created automatically via OAuth.",
                             permissions=default_permissions,  # Use default permissions from function args
+                            data=group_data_payload,
                             user_ids=[],  # Start with no users, user will be added later by subsequent logic
                         )
                         # Use determined creator ID (admin or fallback to current user)
@@ -1680,24 +1706,11 @@ class OAuthManager:
             if "expires_in" in token and "expires_at" not in token:
                 token["expires_at"] = datetime.now().timestamp() + token["expires_in"]
 
-            # Enforce max concurrent sessions per user/provider to prevent
-            # unbounded growth while allowing multi-device usage
+            # Clean up any existing sessions for this user/provider first
             sessions = OAuthSessions.get_sessions_by_user_id(user.id, db=db)
-            provider_sessions = sorted(
-                [
-                    session
-                    for session in sessions
-                    if session.provider == provider
-                ],
-                key=lambda session: session.created_at,
-                reverse=True,
-            )
-            # Keep the newest sessions up to the limit, prune the rest
-            if len(provider_sessions) >= OAUTH_MAX_SESSIONS_PER_USER:
-                for old_session in provider_sessions[
-                    OAUTH_MAX_SESSIONS_PER_USER - 1 :
-                ]:
-                    OAuthSessions.delete_session_by_id(old_session.id, db=db)
+            for session in sessions:
+                if session.provider == provider:
+                    OAuthSessions.delete_session_by_id(session.id, db=db)
 
             session = OAuthSessions.create_session(
                 user_id=user.id,
