@@ -615,7 +615,26 @@
 						uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
 					fileItem.content_type = uploadedFile.meta?.content_type || uploadedFile.content_type;
 					fileItem.url = `${uploadedFile.id}`;
-
+					fileItem.name = uploadedFile.filename || fileItem.name;
+					// Add extracted archives to chat
+					if (uploadedFile.extracted_files) {
+						for (const ef of uploadedFile.extracted_files) {
+							files = [...files, {
+								type: 'file',
+								file: ef,
+								id: ef.id,
+								url: `${ef.id}`,
+								name: ef.filename,
+								status: 'uploaded',
+								collection_name: ef?.meta?.collection_name,
+								content_type: ef.meta?.content_type,
+								size: ef?.meta?.size ?? 0,
+								error: '',
+								itemId: uuidv4(),
+        
+							}];
+						}
+					}	
 					files = files;
 				} else {
 					files = files.filter((item) => item?.itemId !== tempItemId);

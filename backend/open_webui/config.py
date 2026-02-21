@@ -2853,7 +2853,13 @@ RAG_ALLOWED_FILE_EXTENSIONS = PersistentConfig(
         if ext.strip()
     ],
 )
-
+RAG_IS_ARCHIVED_FILE_EXTENSIONS = PersistentConfig(
+    "RAG_IS_ARCHIVED_FILE_EXTENSIONS",
+    "rag.file.archived_extensions",
+    [
+        "zip", "rar", "7z", "tar"
+    ],
+)
 RAG_EMBEDDING_ENGINE = PersistentConfig(
     "RAG_EMBEDDING_ENGINE",
     "rag.embedding_engine",

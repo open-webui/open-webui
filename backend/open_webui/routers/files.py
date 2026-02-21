@@ -1,3 +1,4 @@
+import io
 import logging
 import os
 import uuid
@@ -6,6 +7,8 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
 import asyncio
+import patoolib
+import tempfile
 
 from fastapi import (
     BackgroundTasks,
@@ -39,7 +42,7 @@ from open_webui.models.chats import Chats
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.groups import Groups
 from open_webui.models.access_grants import AccessGrants
-
+from open_webui.models.folders import FolderForm, Folders
 
 from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.routers.audio import transcribe
@@ -226,6 +229,7 @@ def upload_file_handler(
     user=Depends(get_verified_user),
     background_tasks: Optional[BackgroundTasks] = None,
     db: Optional[Session] = None,
+    skip_archive_extraction: bool = False,  # Internal flag to skip archive extraction when processing in background to avoid double extraction
 ):
     log.info(f"file.content_type: {file.content_type} {process}")
 
@@ -259,6 +263,73 @@ def upload_file_handler(
                         f"File type {file_extension} is not allowed"
                     ),
                 )
+        if not skip_archive_extraction and file_extension in request.app.state.config.RAG_IS_ARCHIVED_FILE_EXTENSIONS:
+            try: 
+                with tempfile.TemporaryDirectory() as temp_dir: 
+                    # Save the uploaded file to a temp location
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_extension}") as temp_file:
+                        temp_file.write(file.file.read())
+                        archive_path = temp_file.name
+                    patoolib.extract_archive(archive_path, outdir=temp_dir)
+                    # Walk through extracted files and upload them
+                    uploaded_files = []  # Initialize list to collect results
+                    for root, _, files in os.walk(temp_dir):
+                        
+                        for extracted_file in files:
+                            # Get the file path and read content
+                            extracted_file_path = os.path.join(root, extracted_file)
+                            with open(extracted_file_path, "rb") as f:
+                                file_content = f.read()
+
+                            # Skip if it's an archive
+                            extracted_ext = os.path.splitext(extracted_file)[1][1:].lower()
+                            if extracted_ext in request.app.state.config.RAG_IS_ARCHIVED_FILE_EXTENSIONS:
+                                continue
+
+                            # Create UploadFile object
+                            extracted_upload_file = UploadFile(
+                                filename=extracted_file,
+                                file=io.BytesIO(file_content),
+                            )
+
+                            # Recursively call upload handler
+                            result = upload_file_handler(
+                                request,
+                                file=extracted_upload_file,
+                                metadata=metadata,
+                                process=process,
+                                process_in_background=process_in_background,
+                                user=user,
+                                background_tasks=background_tasks,
+                                db=db,
+                                skip_archive_extraction=True, 
+                            )
+
+                            # Add result to list
+                            uploaded_files.append(result)
+                        
+
+            except Exception as e:
+                log.exception(e)
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT(f"Error processing archive file: {str(e)}"),
+                )
+            finally:
+                if os.path.exists(archive_path):
+                    os.unlink(archive_path)
+            if uploaded_files:
+                first = uploaded_files[0]
+                if isinstance(first, dict):
+                    first["extracted_files"] = uploaded_files[1:]
+                return first
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT("No files found in archive"),
+                )
+                
+
 
         # replace filename with uuid
         id = str(uuid.uuid4())
