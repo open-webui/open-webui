@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- 💀 **Cyclic chat history deadlock fix.** Chat histories with circular parent-child message references no longer cause the backend to freeze when syncing usage stats. The system now detects and safely aborts when encountering cyclic message references. [#21681](https://github.com/open-webui/open-webui/pull/21681)
 - 🔒 **Iframe sandbox security.** Embedded tools can no longer submit forms or access same-origin content by default, improving security for users. [#21529](https://github.com/open-webui/open-webui/pull/21529)
 - ⏱️ **Embeddings and proxy timeout fix.** The embeddings and OpenAI proxy endpoints now properly honor the AIOHTTP_CLIENT_TIMEOUT environment variable, instead of using default timeouts that could cause requests to hang. [#21558](https://github.com/open-webui/open-webui/pull/21558)
 - 🗄️ **File access control respect.** The files list and search endpoints now properly respect the BYPASS_ADMIN_ACCESS_CONTROL setting, ensuring admins only see their own files when the setting is disabled, consistent with other endpoints. [#21595](https://github.com/open-webui/open-webui/pull/21595), [#21589](https://github.com/open-webui/open-webui/issues/21589)
