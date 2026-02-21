@@ -1248,7 +1248,11 @@ class OAuthManager:
                             name=group_name,
                             description=f"Group '{group_name}' created automatically via OAuth.",
                             permissions=default_permissions,  # Use default permissions from function args
-                            data={"config": {"share": auth_manager_config.OAUTH_GROUP_DEFAULT_SHARE}},
+                            data={
+                                "config": {
+                                    "share": auth_manager_config.OAUTH_GROUP_DEFAULT_SHARE
+                                }
+                            },
                         )
                         # Use determined creator ID (admin or fallback to current user)
                         created_group = Groups.insert_new_group(
@@ -1686,19 +1690,13 @@ class OAuthManager:
             # unbounded growth while allowing multi-device usage
             sessions = OAuthSessions.get_sessions_by_user_id(user.id, db=db)
             provider_sessions = sorted(
-                [
-                    session
-                    for session in sessions
-                    if session.provider == provider
-                ],
+                [session for session in sessions if session.provider == provider],
                 key=lambda session: session.created_at,
                 reverse=True,
             )
             # Keep the newest sessions up to the limit, prune the rest
             if len(provider_sessions) >= OAUTH_MAX_SESSIONS_PER_USER:
-                for old_session in provider_sessions[
-                    OAUTH_MAX_SESSIONS_PER_USER - 1 :
-                ]:
+                for old_session in provider_sessions[OAUTH_MAX_SESSIONS_PER_USER - 1 :]:
                     OAuthSessions.delete_session_by_id(old_session.id, db=db)
 
             session = OAuthSessions.create_session(

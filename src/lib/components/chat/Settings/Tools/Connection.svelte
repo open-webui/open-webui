@@ -81,7 +81,9 @@
 			</button>
 		</Tooltip>
 
-		<Tooltip content={(connection?.config?.enable ?? true) ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
+		<Tooltip
+			content={(connection?.config?.enable ?? true) ? $i18n.t('Enabled') : $i18n.t('Disabled')}
+		>
 			<Switch
 				state={connection?.config?.enable ?? true}
 				on:change={() => {

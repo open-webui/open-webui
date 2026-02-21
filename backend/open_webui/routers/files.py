@@ -400,7 +400,9 @@ async def search_files(
     Uses SQL-based filtering with pagination for better performance.
     """
     # Determine user_id: null for admin with bypass (search all), user.id otherwise
-    user_id = None if (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL) else user.id
+    user_id = (
+        None if (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL) else user.id
+    )
 
     # Use optimized database query with pagination
     files = Files.search_files(

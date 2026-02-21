@@ -230,9 +230,7 @@ class ModelsTable:
 
     def get_base_models(self, db: Optional[Session] = None) -> list[ModelModel]:
         with get_db_context(db) as db:
-            all_models = (
-                db.query(Model).filter(Model.base_model_id == None).all()
-            )
+            all_models = db.query(Model).filter(Model.base_model_id == None).all()
             model_ids = [model.id for model in all_models]
             grants_map = AccessGrants.get_grants_by_resources("model", model_ids, db=db)
             return [

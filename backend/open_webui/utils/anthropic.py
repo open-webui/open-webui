@@ -62,13 +62,15 @@ async def get_anthropic_models(url: str, key: str, user: UserModel = None) -> di
                     data = await response.json()
 
                     for model in data.get("data", []):
-                        all_models.append({
-                            "id": model.get("id"),
-                            "object": "model",
-                            "created": 0,
-                            "owned_by": "anthropic",
-                            "name": model.get("display_name", model.get("id")),
-                        })
+                        all_models.append(
+                            {
+                                "id": model.get("id"),
+                                "object": "model",
+                                "created": 0,
+                                "owned_by": "anthropic",
+                                "name": model.get("display_name", model.get("id")),
+                            }
+                        )
 
                     if not data.get("has_more", False):
                         break
@@ -136,37 +138,47 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
                 block_type = block.get("type", "text")
 
                 if block_type == "text":
-                    openai_content.append({
-                        "type": "text",
-                        "text": block.get("text", ""),
-                    })
+                    openai_content.append(
+                        {
+                            "type": "text",
+                            "text": block.get("text", ""),
+                        }
+                    )
                 elif block_type == "image":
                     source = block.get("source", {})
                     if source.get("type") == "base64":
                         media_type = source.get("media_type", "image/png")
                         data = source.get("data", "")
-                        openai_content.append({
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:{media_type};base64,{data}",
-                            },
-                        })
+                        openai_content.append(
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:{media_type};base64,{data}",
+                                },
+                            }
+                        )
                     elif source.get("type") == "url":
-                        openai_content.append({
-                            "type": "image_url",
-                            "image_url": {"url": source.get("url", "")},
-                        })
+                        openai_content.append(
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": source.get("url", "")},
+                            }
+                        )
                 elif block_type == "tool_use":
-                    tool_calls.append({
-                        "id": block.get("id", ""),
-                        "type": "function",
-                        "function": {
-                            "name": block.get("name", ""),
-                            "arguments": json.dumps(block.get("input", {}))
-                            if isinstance(block.get("input"), dict)
-                            else str(block.get("input", "{}")),
-                        },
-                    })
+                    tool_calls.append(
+                        {
+                            "id": block.get("id", ""),
+                            "type": "function",
+                            "function": {
+                                "name": block.get("name", ""),
+                                "arguments": (
+                                    json.dumps(block.get("input", {}))
+                                    if isinstance(block.get("input"), dict)
+                                    else str(block.get("input", "{}"))
+                                ),
+                            },
+                        }
+                    )
                 elif block_type == "tool_result":
                     # Tool results become separate tool messages in OpenAI format
                     tool_content = block.get("content", "")
@@ -181,11 +193,13 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
                     if block.get("is_error"):
                         tool_content = f"Error: {tool_content}"
 
-                    messages.append({
-                        "role": "tool",
-                        "tool_call_id": block.get("tool_use_id", ""),
-                        "content": tool_content,
-                    })
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": block.get("tool_use_id", ""),
+                            "content": tool_content,
+                        }
+                    )
 
             # Build the message
             if tool_calls:
@@ -204,7 +218,9 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
             elif openai_content:
                 # If there's only a single text block, flatten it to a string
                 if len(openai_content) == 1 and openai_content[0]["type"] == "text":
-                    messages.append({"role": role, "content": openai_content[0]["text"]})
+                    messages.append(
+                        {"role": role, "content": openai_content[0]["text"]}
+                    )
                 else:
                     messages.append({"role": role, "content": openai_content})
         else:
@@ -228,14 +244,16 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
     if "tools" in anthropic_payload:
         openai_tools = []
         for tool in anthropic_payload["tools"]:
-            openai_tools.append({
-                "type": "function",
-                "function": {
-                    "name": tool.get("name", ""),
-                    "description": tool.get("description", ""),
-                    "parameters": tool.get("input_schema", {}),
-                },
-            })
+            openai_tools.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool.get("name", ""),
+                        "description": tool.get("description", ""),
+                        "parameters": tool.get("input_schema", {}),
+                    },
+                }
+            )
         openai_payload["tools"] = openai_tools
 
     # tool_choice
@@ -294,12 +312,14 @@ def convert_openai_to_anthropic_response(
             tool_input = json.loads(func.get("arguments", "{}"))
         except (json.JSONDecodeError, TypeError):
             tool_input = {}
-        content.append({
-            "type": "tool_use",
-            "id": tc.get("id", f"toolu_{_uuid.uuid4().hex[:24]}"),
-            "name": func.get("name", ""),
-            "input": tool_input,
-        })
+        content.append(
+            {
+                "type": "tool_use",
+                "id": tc.get("id", f"toolu_{_uuid.uuid4().hex[:24]}"),
+                "name": func.get("name", ""),
+                "input": tool_input,
+            }
+        )
 
     # Usage
     openai_usage = openai_response.get("usage", {})
@@ -320,9 +340,7 @@ def convert_openai_to_anthropic_response(
     }
 
 
-async def openai_stream_to_anthropic_stream(
-    openai_stream_generator, model: str = ""
-):
+async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str = ""):
     """
     Convert an OpenAI SSE streaming response to Anthropic Messages SSE format.
 
@@ -391,9 +409,7 @@ async def openai_stream_to_anthropic_stream(
                 if not choices:
                     # Check for usage in the final chunk
                     if data.get("usage"):
-                        input_tokens = data["usage"].get(
-                            "prompt_tokens", input_tokens
-                        )
+                        input_tokens = data["usage"].get("prompt_tokens", input_tokens)
                         output_tokens = data["usage"].get(
                             "completion_tokens", output_tokens
                         )
@@ -404,9 +420,7 @@ async def openai_stream_to_anthropic_stream(
 
                 # Update usage if present
                 if data.get("usage"):
-                    input_tokens = data["usage"].get(
-                        "prompt_tokens", input_tokens
-                    )
+                    input_tokens = data["usage"].get("prompt_tokens", input_tokens)
                     output_tokens = data["usage"].get(
                         "completion_tokens", output_tokens
                     )
@@ -454,9 +468,7 @@ async def openai_stream_to_anthropic_stream(
                             tool_call_started[tc_index] = True
 
                             # Extract tool call ID and name from the first chunk
-                            tc_id = tc.get(
-                                "id", f"toolu_{_uuid.uuid4().hex[:24]}"
-                            )
+                            tc_id = tc.get("id", f"toolu_{_uuid.uuid4().hex[:24]}")
                             tc_name = tc.get("function", {}).get("name", "")
 
                             block_start = {
@@ -473,9 +485,7 @@ async def openai_stream_to_anthropic_stream(
                             current_block_index += 1
 
                         # Emit argument chunks as input_json_delta
-                        args_chunk = tc.get("function", {}).get(
-                            "arguments", ""
-                        )
+                        args_chunk = tc.get("function", {}).get("arguments", "")
                         if args_chunk:
                             block_delta = {
                                 "type": "content_block_delta",
@@ -522,4 +532,3 @@ async def openai_stream_to_anthropic_stream(
 
     # Emit message_stop
     yield f"event: message_stop\ndata: {json.dumps({'type': 'message_stop'})}\n\n".encode()
-

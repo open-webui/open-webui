@@ -69,8 +69,6 @@ log = logging.getLogger(__name__)
 ##########################################
 
 
-
-
 async def send_get_request(url, key=None, user: UserModel = None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     try:
@@ -374,9 +372,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
     request_tasks = []
     for idx, url in enumerate(api_base_urls):
         if (str(idx) not in api_configs) and (url not in api_configs):  # Legacy support
-            request_tasks.append(
-                get_models_request(url, api_keys[idx], user=user)
-            )
+            request_tasks.append(get_models_request(url, api_keys[idx], user=user))
         else:
             api_config = api_configs.get(
                 str(idx),
@@ -716,9 +712,7 @@ async def verify_connection(
                         status_code=500, detail="Failed to connect to Anthropic API"
                     )
                 if "error" in result:
-                    raise HTTPException(
-                        status_code=500, detail=result["error"]
-                    )
+                    raise HTTPException(status_code=500, detail=result["error"])
                 return result
             else:
                 async with session.get(

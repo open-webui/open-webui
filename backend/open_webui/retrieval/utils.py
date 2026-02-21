@@ -856,12 +856,14 @@ def get_embedding_function(
                                     batch, prefix=prefix, user=user
                                 )
 
-                        tasks = [generate_batch_with_semaphore(batch) for batch in batches]
+                        tasks = [
+                            generate_batch_with_semaphore(batch) for batch in batches
+                        ]
                     else:
                         tasks = [
                             embedding_function(batch, prefix=prefix, user=user)
                             for batch in batches
-                    ]
+                        ]
                     batch_results = await asyncio.gather(*tasks)
                 else:
                     log.debug(

@@ -439,9 +439,7 @@ class ChannelTable:
                 "channel", channel_ids, db=db
             )
             return [
-                self._to_channel_model(
-                    c, access_grants=grants_map.get(c.id, []), db=db
-                )
+                self._to_channel_model(c, access_grants=grants_map.get(c.id, []), db=db)
                 for c in all_channels
             ]
 

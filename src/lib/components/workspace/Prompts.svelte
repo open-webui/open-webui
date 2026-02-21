@@ -399,7 +399,6 @@
 									<div class="text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
 										/{prompt.command}
 									</div>
-	
 								</div>
 								{#if !prompt.write_access}
 									<Badge type="muted" content={$i18n.t('Read Only')} />
@@ -488,7 +487,9 @@
 								</PromptMenu>
 
 								<button on:click|stopPropagation|preventDefault>
-									<Tooltip content={prompt.is_active !== false ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
+									<Tooltip
+										content={prompt.is_active !== false ? $i18n.t('Enabled') : $i18n.t('Disabled')}
+									>
 										<Switch
 											bind:state={prompt.is_active}
 											on:change={async () => {

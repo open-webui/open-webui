@@ -1216,9 +1216,7 @@ async def update_rag_config(
         request.app.state.config.YANDEX_WEB_SEARCH_CONFIG = (
             form_data.web.YANDEX_WEB_SEARCH_CONFIG
         )
-        request.app.state.config.YOUCOM_API_KEY = (
-            form_data.web.YOUCOM_API_KEY
-        )
+        request.app.state.config.YOUCOM_API_KEY = form_data.web.YOUCOM_API_KEY
 
     return {
         "status": True,
@@ -1950,7 +1948,9 @@ async def process_web(
     request: Request,
     form_data: ProcessUrlForm,
     process: bool = Query(True, description="Whether to process and save the content"),
-    overwrite: bool = Query(True, description="Whether to overwrite existing collection"),
+    overwrite: bool = Query(
+        True, description="Whether to overwrite existing collection"
+    ),
     user=Depends(get_verified_user),
 ):
     try:
@@ -2362,7 +2362,9 @@ async def process_web_search(
                         user,
                     )
 
-            search_tasks = [search_query_with_semaphore(query) for query in form_data.queries]
+            search_tasks = [
+                search_query_with_semaphore(query) for query in form_data.queries
+            ]
         else:
             # Unlimited parallel execution (previous behavior)
             search_tasks = [

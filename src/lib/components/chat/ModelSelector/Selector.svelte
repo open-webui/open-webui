@@ -159,7 +159,11 @@
 					})
 	).filter((item) => !(item.model?.info?.meta?.hidden ?? false));
 
-	$: if (selectedTag !== undefined || selectedConnectionType !== undefined || searchValue !== undefined) {
+	$: if (
+		selectedTag !== undefined ||
+		selectedConnectionType !== undefined ||
+		searchValue !== undefined
+	) {
 		resetView();
 	}
 

@@ -7,7 +7,6 @@
 		user,
 		mobile,
 		models,
-		prompts,
 		knowledge,
 		tools
 	} from '$lib/stores';

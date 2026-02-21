@@ -8,7 +8,12 @@ import tempfile
 import logging
 from typing import Any
 
-from open_webui.env import PIP_OPTIONS, PIP_PACKAGE_INDEX_OPTIONS, OFFLINE_MODE, ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS
+from open_webui.env import (
+    PIP_OPTIONS,
+    PIP_PACKAGE_INDEX_OPTIONS,
+    OFFLINE_MODE,
+    ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS,
+)
 from open_webui.models.functions import Functions
 from open_webui.models.tools import Tools
 
@@ -402,7 +407,9 @@ def get_function_module_from_cache(request, function_id, load_from_db=True):
 
 def install_frontmatter_requirements(requirements: str):
     if not ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS:
-        log.info("ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS is disabled, skipping installation of requirements.")
+        log.info(
+            "ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS is disabled, skipping installation of requirements."
+        )
         return
 
     if OFFLINE_MODE:

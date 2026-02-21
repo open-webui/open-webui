@@ -286,9 +286,7 @@ class KnowledgeTable:
                             {
                                 **self._to_knowledge_model(
                                     knowledge_base,
-                                    access_grants=grants_map.get(
-                                        knowledge_base.id, []
-                                    ),
+                                    access_grants=grants_map.get(knowledge_base.id, []),
                                     db=db,
                                 ).model_dump(),
                                 "user": (

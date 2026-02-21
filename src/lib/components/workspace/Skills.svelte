@@ -218,11 +218,9 @@
 										const items = Array.isArray(parsedSkills) ? parsedSkills : [parsedSkills];
 
 										for (const skill of items) {
-											await createNewSkill(localStorage.token, skill).catch(
-												(error) => {
-													toast.error(`${error}`);
-												}
-											);
+											await createNewSkill(localStorage.token, skill).catch((error) => {
+												toast.error(`${error}`);
+											});
 										}
 
 										toast.success($i18n.t('Skill imported successfully'));

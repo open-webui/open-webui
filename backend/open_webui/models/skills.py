@@ -283,7 +283,9 @@ class SkillsTable:
                 items = query.all()
 
                 skill_ids = [skill.id for skill, _ in items]
-                grants_map = AccessGrants.get_grants_by_resources("skill", skill_ids, db=db)
+                grants_map = AccessGrants.get_grants_by_resources(
+                    "skill", skill_ids, db=db
+                )
 
                 skills = []
                 for skill, user in items:

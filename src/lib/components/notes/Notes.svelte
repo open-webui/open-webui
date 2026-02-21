@@ -31,7 +31,13 @@
 
 	import { goto } from '$app/navigation';
 	import { WEBUI_NAME, config, user } from '$lib/stores';
-	import { createNewNote, deleteNoteById, getNoteById, getNoteList, searchNotes } from '$lib/apis/notes';
+	import {
+		createNewNote,
+		deleteNoteById,
+		getNoteById,
+		getNoteList,
+		searchNotes
+	} from '$lib/apis/notes';
 	import { capitalizeFirstLetter, copyToClipboard, getTimeRange } from '$lib/utils';
 	import { downloadPdf, createNoteHandler } from './utils';
 

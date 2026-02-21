@@ -559,9 +559,7 @@ OAUTH_SESSION_TOKEN_ENCRYPTION_KEY = os.environ.get(
 
 # Maximum number of concurrent OAuth sessions per user per provider
 # This prevents unbounded session growth while allowing multi-device usage
-OAUTH_MAX_SESSIONS_PER_USER = int(
-    os.environ.get("OAUTH_MAX_SESSIONS_PER_USER", "10")
-)
+OAUTH_MAX_SESSIONS_PER_USER = int(os.environ.get("OAUTH_MAX_SESSIONS_PER_USER", "10"))
 
 # Token Exchange Configuration
 # Allows external apps to exchange OAuth tokens for OpenWebUI tokens
@@ -985,7 +983,8 @@ OTEL_LOGS_OTLP_SPAN_EXPORTER = os.environ.get(
 ####################################
 
 ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS = (
-    os.environ.get("ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS", "True").lower() == "true"
+    os.environ.get("ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS", "True").lower()
+    == "true"
 )
 
 PIP_OPTIONS = os.getenv("PIP_OPTIONS", "").split()

@@ -217,7 +217,9 @@ class PromptsTable:
 
             users = Users.get_users_by_user_ids(user_ids, db=db) if user_ids else []
             users_dict = {user.id: user for user in users}
-            grants_map = AccessGrants.get_grants_by_resources("prompt", prompt_ids, db=db)
+            grants_map = AccessGrants.get_grants_by_resources(
+                "prompt", prompt_ids, db=db
+            )
 
             prompts = []
             for prompt in all_prompts:
@@ -343,7 +345,9 @@ class PromptsTable:
             items = query.all()
 
             prompt_ids = [prompt.id for prompt, _ in items]
-            grants_map = AccessGrants.get_grants_by_resources("prompt", prompt_ids, db=db)
+            grants_map = AccessGrants.get_grants_by_resources(
+                "prompt", prompt_ids, db=db
+            )
 
             prompts = []
             for prompt, user in items:

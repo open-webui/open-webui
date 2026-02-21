@@ -71,7 +71,6 @@
 			return 0;
 		});
 
-
 	let defaultPermissions = {};
 
 	let showAddGroupModal = false;
