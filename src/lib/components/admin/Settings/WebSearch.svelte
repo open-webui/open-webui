@@ -965,25 +965,36 @@
 					{#if webConfig.WEB_LOADER_ENGINE === '' || webConfig.WEB_LOADER_ENGINE === 'safe_web'}
 						<div class="  mb-2.5 flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">
-								{$i18n.t('Timeout')}
-							</div>
-							<div class="flex items-center relative">
-								<input
-									class="flex-1 w-full text-sm bg-transparent outline-hidden"
-									placeholder={$i18n.t('Timeout')}
-									bind:value={webConfig.WEB_LOADER_TIMEOUT}
-								/>
-							</div>
-						</div>
-
-						<div class="  mb-2.5 flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">
 								{$i18n.t('Verify SSL Certificate')}
 							</div>
 							<div class="flex items-center relative">
 								<Switch bind:state={webConfig.ENABLE_WEB_LOADER_SSL_VERIFICATION} />
 							</div>
 						</div>
+            <div class="mb-2.5 w-full">
+              <div class=" self-center text-xs font-medium mb-1">
+                {$i18n.t('Request Timeout (ms)')}
+              </div>
+
+              <input
+                class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+                placeholder={$i18n.t('Request Timeout (ms)')}
+                bind:value={webConfig.WEB_LOADER_TIMEOUT}
+                required
+              />
+            </div>
+            <div class="mb-2.5 w-full">
+              <div class=" self-center text-xs font-medium mb-1">
+                {$i18n.t('Retry Count')}
+              </div>
+
+              <input
+                class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+                placeholder={$i18n.t('Retry Count')}
+                bind:value={webConfig.WEB_LOADER_RETRY_COUNT}
+                required
+              />
+            </div>
 					{:else if webConfig.WEB_LOADER_ENGINE === 'playwright'}
 						<div class="mb-2.5 flex w-full flex-col">
 							<div>

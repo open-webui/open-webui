@@ -34,6 +34,7 @@ from open_webui.config import (
     PLAYWRIGHT_TIMEOUT,
     WEB_LOADER_ENGINE,
     WEB_LOADER_TIMEOUT,
+    WEB_LOADER_RETRY_COUNT,
     FIRECRAWL_API_BASE_URL,
     FIRECRAWL_API_KEY,
     FIRECRAWL_TIMEOUT,
@@ -551,19 +552,27 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
 class SafeWebBaseLoader(WebBaseLoader):
     """WebBaseLoader with enhanced error handling for URLs."""
 
-    def __init__(self, trust_env: bool = False, *args, **kwargs):
+    def __init__(self, trust_env: bool = False, timeout: int | None = None, retry_count: int | None = None, *args, **kwargs):
         """Initialize SafeWebBaseLoader
         Args:
             trust_env (bool, optional): set to True if using proxy to make web requests, for example
                 using http(s)_proxy environment variables. Defaults to False.
+            timeout (int, optional): request timeout in milliseconds. Defaults to WEB_LOADER_TIMEOUT
+                configuration value.
+            retry_count (int, optional): number of retry attempts for failed requests. Defaults to
+                WEB_LOADER_RETRY_COUNT configuration value.
         """
         super().__init__(*args, **kwargs)
         self.trust_env = trust_env
+        self.timeout = timeout
+        self.retry_count = retry_count
 
     async def _fetch(
-        self, url: str, retries: int = 3, cooldown: int = 2, backoff: float = 1.5
+        self, url: str, retries: int | None = None, cooldown: int = 2, backoff: float = 1.5
     ) -> str:
-        async with aiohttp.ClientSession(trust_env=self.trust_env) as session:
+        retries = retries or self.retry_count or WEB_LOADER_RETRY_COUNT.value
+        timeout = self.timeout or WEB_LOADER_TIMEOUT.value
+        async with aiohttp.ClientSession(trust_env=self.trust_env, timeout=aiohttp.ClientTimeout(timeout / 1000.0)) as session:
             for i in range(retries):
                 try:
                     kwargs: Dict = dict(
@@ -581,7 +590,7 @@ class SafeWebBaseLoader(WebBaseLoader):
                         if self.raise_for_status:
                             response.raise_for_status()
                         return await response.text()
-                except aiohttp.ClientConnectionError as e:
+                except (aiohttp.ClientConnectionError, asyncio.TimeoutError) as e:
                     if i == retries - 1:
                         raise
                     else:
@@ -676,19 +685,8 @@ def get_web_loader(
 
     if WEB_LOADER_ENGINE.value == "" or WEB_LOADER_ENGINE.value == "safe_web":
         WebLoaderClass = SafeWebBaseLoader
-
-        request_kwargs = {}
-        if WEB_LOADER_TIMEOUT.value:
-            try:
-                timeout_value = float(WEB_LOADER_TIMEOUT.value)
-            except ValueError:
-                timeout_value = None
-
-            if timeout_value:
-                request_kwargs["timeout"] = timeout_value
-
-        if request_kwargs:
-            web_loader_args["requests_kwargs"] = request_kwargs
+        web_loader_args["timeout"] = WEB_LOADER_TIMEOUT.value
+        web_loader_args["retry_count"] = WEB_LOADER_RETRY_COUNT.value
 
     if WEB_LOADER_ENGINE.value == "playwright":
         WebLoaderClass = SafePlaywrightURLLoader
