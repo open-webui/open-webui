@@ -402,9 +402,7 @@
 									<div class="text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
 										/{prompt.command}
 									</div>
-									{#if prompt.is_active === false}
-										<Badge type="muted" content={$i18n.t('Inactive')} />
-									{/if}
+	
 								</div>
 								{#if !prompt.write_access}
 									<Badge type="muted" content={$i18n.t('Read Only')} />
