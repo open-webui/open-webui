@@ -51,12 +51,14 @@
 			if (typeof parsed === 'object') {
 				return JSON.stringify(parsed, null, 2);
 			} else {
-				return `${JSON.stringify(String(parsed))}`;
+				return String(parsed);
 			}
 		} catch (e) {
 			return str;
 		}
 	}
+
+
 
 	function parseArguments(str: string): Record<string, unknown> | null {
 		try {
@@ -78,6 +80,7 @@
 	$: isExecuting = attributes?.done && attributes?.done !== 'true';
 
 	$: parsedArgs = parseArguments(args);
+	$: parsedResult = parseJSONString(result);
 </script>
 
 <div {id} class={className}>
@@ -209,10 +212,14 @@
 								{$i18n.t('Output')}
 							</div>
 							<div class="w-full max-w-none!">
-								<Markdown
-									id={`${componentId}-tool-call-result`}
-									content={`\`\`\`json\n${formatJSONString(result)}\n\`\`\``}
-								/>
+								{#if typeof parsedResult === 'object' && parsedResult !== null}
+									<Markdown
+										id={`${componentId}-tool-call-result`}
+										content={`\`\`\`json\n${JSON.stringify(parsedResult, null, 2)}\n\`\`\``}
+									/>
+								{:else}
+									<pre class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre-wrap break-words font-mono">{String(parsedResult)}</pre>
+								{/if}
 							</div>
 						</div>
 					{/if}
