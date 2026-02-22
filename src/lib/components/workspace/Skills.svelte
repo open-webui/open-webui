@@ -321,12 +321,14 @@
 				<input
 					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={query}
+					aria-label={$i18n.t('Search Skills')}
 					placeholder={$i18n.t('Search Skills')}
 				/>
 				{#if query}
 					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 						<button
 							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							aria-label={$i18n.t('Clear search')}
 							on:click={() => {
 								query = '';
 							}}
@@ -453,6 +455,7 @@
 											<button
 												class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 												type="button"
+												aria-label={$i18n.t('Delete')}
 												on:click={() => {
 													deleteHandler(skill);
 												}}
