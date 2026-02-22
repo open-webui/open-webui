@@ -475,6 +475,7 @@
 										? 'bg-transparent'
 										: 'bg-white'} shadow-xl group relative"
 									type="button"
+									aria-label={$i18n.t('Upload profile image')}
 									on:click={() => {
 										filesInputElement.click();
 									}}
