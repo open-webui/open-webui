@@ -349,6 +349,9 @@
 											src="{WEBUI_API_BASE_URL}/models/model/profile/image?id={model.model_id}"
 											alt={model.name}
 											class="size-5 rounded-full object-cover shrink-0"
+											on:error={(e) => {
+												e.target.src = '/favicon.png';
+											}}
 										/>
 										<span class="truncate max-w-[150px]">{model.name}</span>
 									</div>
@@ -435,6 +438,9 @@
 											src="{WEBUI_API_BASE_URL}/users/{user.user_id}/profile/image"
 											alt={user.name || 'User'}
 											class="size-5 rounded-full object-cover shrink-0"
+											on:error={(e) => {
+												e.target.src = '/user.png';
+											}}
 										/>
 										<span class="truncate max-w-[150px]"
 											>{user.name || user.email || user.user_id.substring(0, 8)}</span
