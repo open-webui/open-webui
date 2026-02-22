@@ -327,7 +327,10 @@
 						{/if}
 
 						<div class="shrink-0">
-							<button class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg">
+							<button
+								class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
+								aria-label={$i18n.t('Toggle System Instructions')}
+							>
 								{#if showSystem}
 									<ChevronUp className="size-3.5" />
 								{:else}
@@ -344,6 +347,7 @@
 								class="w-full h-full bg-transparent resize-none outline-hidden text-sm"
 								bind:value={system}
 								placeholder={$i18n.t("You're a helpful assistant.")}
+								aria-label={$i18n.t('System Instructions')}
 								on:input={() => {
 									resizeSystemTextarea();
 								}}
@@ -476,6 +480,7 @@
 								<select
 									class=" bg-transparent border border-gray-100/30 dark:border-gray-850/30 rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden w-full"
 									bind:value={selectedModelId}
+									aria-label={$i18n.t('Select a model')}
 								>
 									{#each $models as model}
 										<option value={model.id} class="bg-gray-50 dark:bg-gray-700"

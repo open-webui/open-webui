@@ -21,6 +21,7 @@
 	<div class=" mr-1 flex items-center">
 		<button
 			class="p-0.5 bg-transparent transition rounded-lg"
+			aria-label={$i18n.t('Close Controls')}
 			on:click={() => {
 				show = !show;
 			}}
@@ -90,7 +91,11 @@
 		<div class=" text-xs font-medium mb-1">{$i18n.t('Model')}</div>
 
 		<div class="w-full">
-			<select class="w-full bg-transparent text-sm outline-hidden" bind:value={selectedModelId}>
+			<select
+				class="w-full bg-transparent text-sm outline-hidden"
+				bind:value={selectedModelId}
+				aria-label={$i18n.t('Select a model')}
+			>
 				<option value="" class="bg-gray-50 dark:bg-gray-700" disabled>
 					{$i18n.t('Select a model')}
 				</option>

@@ -74,6 +74,7 @@
 						<button
 							id="sidebar-toggle-button"
 							class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+							aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 							on:click={() => {
 								showSidebar.set(!$showSidebar);
 							}}
@@ -158,7 +159,7 @@
 					<Tooltip content={$i18n.t('Pinned Messages')}>
 						<button
 							class=" flex cursor-pointer py-1.5 px-1.5 border dark:border-gray-850 border-gray-50 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							aria-label="Pinned Messages"
+							aria-label={$i18n.t('Pinned Messages')}
 							type="button"
 							on:click={() => {
 								showChannelPinnedMessagesModal = true;
@@ -174,7 +175,7 @@
 						<Tooltip content={$i18n.t('Users')}>
 							<button
 								class=" flex cursor-pointer py-1 px-1.5 border dark:border-gray-850 border-gray-50 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-								aria-label="User Count"
+								aria-label={$i18n.t('Users')}
 								type="button"
 								on:click={() => {
 									showChannelInfoModal = true;
@@ -205,7 +206,7 @@
 					>
 						<button
 							class="select-none flex rounded-xl p-1.5 w-full hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							aria-label="User Menu"
+							aria-label={$i18n.t('User Menu')}
 						>
 							<div class=" self-center">
 								<img

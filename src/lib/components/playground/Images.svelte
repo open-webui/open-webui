@@ -136,6 +136,7 @@
 								{#each generatedImages as image, index}
 									<button
 										class="relative group cursor-pointer"
+										aria-label={$i18n.t('Download Generated Image')}
 										on:click={() => downloadImage(image.url, index)}
 									>
 										<img
@@ -190,6 +191,7 @@
 										<button
 											class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
 											type="button"
+											aria-label={$i18n.t('Remove Image')}
 											on:click={() => removeImage(index)}
 										>
 											<svg
@@ -219,6 +221,9 @@
 							placeholder={sourceImages.length > 0
 								? $i18n.t('Describe the edit...')
 								: $i18n.t('Describe the image...')}
+							aria-label={sourceImages.length > 0
+								? $i18n.t('Describe the edit')
+								: $i18n.t('Describe the image')}
 							on:input={resizePromptTextarea}
 							on:focus={resizePromptTextarea}
 							on:keydown={(e) => {
