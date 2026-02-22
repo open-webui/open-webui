@@ -11,7 +11,6 @@
 	export let outerClassName = 'flex flex-1 bg-transparent';
 	export let inputClassName = 'w-full text-sm py-0.5 bg-transparent';
 	export let showButtonClassName = 'pl-1.5  transition bg-transparent';
-	export let showButtonClassName = 'pl-1.5  transition bg-transparent';
 	export let autocomplete = 'current-password';
 
 	let show = false;
