@@ -831,38 +831,80 @@ def apply_source_context_to_messages(
     """
     Build source context from citation sources and apply to messages.
     Uses RAG template to format context for model consumption.
+
+    When RAG_SYSTEM_CONTEXT is enabled, implements hybrid placement:
+    - Static sources (full documents, bypass embedding) -> system message (KV cache friendly)
+    - Dynamic sources (per-query chunks) -> user message (changes each turn anyway)
     """
     if not sources or not user_message:
         return messages
 
-    context_string = ""
-    citation_idx = {}
+    def build_context_string(source_list: list) -> tuple[str, dict]:
+        """Build context string and citation index from sources."""
+        context = ""
+        citation_idx = {}
+        for source in source_list:
+            for doc, meta in zip(source.get("document", []), source.get("metadata", [])):
+                src_id = meta.get("source") or source.get("source", {}).get("id") or "N/A"
+                if src_id not in citation_idx:
+                    citation_idx[src_id] = len(citation_idx) + 1
+                src_name = source.get("source", {}).get("name")
+                context += (
+                    f'<source id="{citation_idx[src_id]}"'
+                    + (f' name="{src_name}"' if src_name else "")
+                    + f">{doc}</source>\n"
+                )
+        return context.strip(), citation_idx
 
-    for source in sources:
-        for doc, meta in zip(source.get("document", []), source.get("metadata", [])):
-            src_id = meta.get("source") or source.get("source", {}).get("id") or "N/A"
-            if src_id not in citation_idx:
-                citation_idx[src_id] = len(citation_idx) + 1
-            src_name = source.get("source", {}).get("name")
-            context_string += (
-                f'<source id="{citation_idx[src_id]}"'
-                + (f' name="{src_name}"' if src_name else "")
-                + f">{doc}</source>\n"
-            )
-
-    context_string = context_string.strip()
-    if not context_string:
-        return messages
+    def is_static_source(source: dict, request: Request) -> bool:
+        source_info = source.get("source", {})
+        
+        # Tool results are always dynamic - they belong to the turn they were generated
+        if source.get("tool_result"):
+            return False
+        
+        return (
+            source_info.get("context") == "full"
+            or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
+            or request.app.state.config.RAG_FULL_CONTEXT
+        )
 
     if RAG_SYSTEM_CONTEXT:
-        return add_or_update_system_message(
-            rag_template(
-                request.app.state.config.RAG_TEMPLATE, context_string, user_message
-            ),
-            messages,
-            append=True,
-        )
+        # Hybrid approach: separate static and dynamic sources
+        static_sources = [s for s in sources if is_static_source(s, request)]
+        dynamic_sources = [s for s in sources if not is_static_source(s, request)]
+
+        # Apply static sources to system message (stable prefix for KV caching)
+        if static_sources:
+            static_context, _ = build_context_string(static_sources)
+            if static_context:
+                messages = add_or_update_system_message(
+                    rag_template(
+                        request.app.state.config.RAG_TEMPLATE, static_context, user_message
+                    ),
+                    messages,
+                    append=True,
+                )
+
+        # Apply dynamic sources to user message (changes each turn)
+        if dynamic_sources:
+            dynamic_context, _ = build_context_string(dynamic_sources)
+            if dynamic_context:
+                messages = add_or_update_user_message(
+                    rag_template(
+                        request.app.state.config.RAG_TEMPLATE, dynamic_context, user_message
+                    ),
+                    messages,
+                    append=False,
+                )
+
+        return messages
     else:
+        # Original behavior: all sources go to user message
+        context_string, _ = build_context_string(sources)
+        if not context_string:
+            return messages
+
         return add_or_update_user_message(
             rag_template(
                 request.app.state.config.RAG_TEMPLATE, context_string, user_message
