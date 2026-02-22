@@ -503,6 +503,7 @@ from open_webui.env import (
     WEBUI_ADMIN_PASSWORD,
     WEBUI_ADMIN_NAME,
     ENABLE_EASTER_EGGS,
+    LOG_FORMAT,
 )
 
 
@@ -581,7 +582,8 @@ class SPAStaticFiles(StaticFiles):
                 raise ex
 
 
-print(rf"""
+if LOG_FORMAT != "json":
+    print(rf"""
  ██████╗ ██████╗ ███████╗███╗   ██╗    ██╗    ██╗███████╗██████╗ ██╗   ██╗██╗
 ██╔═══██╗██╔══██╗██╔════╝████╗  ██║    ██║    ██║██╔════╝██╔══██╗██║   ██║██║
 ██║   ██║██████╔╝█████╗  ██╔██╗ ██║    ██║ █╗ ██║█████╗  ██████╔╝██║   ██║██║
