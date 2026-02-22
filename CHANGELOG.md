@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.4] - 2026-02-21
+## [0.8.4] - 2026-02-22
 
 ### Added
 
@@ -40,9 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔽 **Rich UI auto-scroll.** The view now automatically scrolls to action-generated Rich UI content once it renders, ensuring users can see the results without manually scrolling. [#21698](https://github.com/open-webui/open-webui/pull/21698), [#21482](https://github.com/open-webui/open-webui/discussions/21482)
 - 📊 **Admin analytics toggle.** Administrators can now enable or disable the analytics feature using the ENABLE_ADMIN_ANALYTICS environment variable, giving more control over available admin features. [#21651](https://github.com/open-webui/open-webui/pull/21651), [Commit](https://github.com/open-webui/open-webui/commit/35598b8017557258b8c9ee3469d320adb0140751)
 - 📑 **Fetch URL citation sources.** When models fetch URLs during tool calling, the fetched URLs now appear as clickable citation sources in the UI with content previews, matching the existing behavior of web search and knowledge file tools. [#21669](https://github.com/open-webui/open-webui/pull/21669)
-- ♿ **UI accessibility improvements.** Screen reader users can now navigate the interface more easily with improved keyboard navigation in dialogs and proper ARIA labels on all interactive elements. Model selector and icon components now comply with WCAG accessibility standards. [#21706](https://github.com/open-webui/open-webui/pull/21706), [#21705](https://github.com/open-webui/open-webui/pull/21705)
-- ✨ **Accessibility fixes across components.** Added critical accessibility improvements across various app components including proper ARIA labels, semantic HTML elements, and screen reader support for auth, sidebar, chat, and notification components, addressing WCAG compliance. [#21710](https://github.com/open-webui/open-webui/pull/21710)
-- ♿ **Button accessibility labels.** Added aria-labels to close, back, and action buttons across various components including chat controls, modals, and folder options for better screen reader support. [#21709](https://github.com/open-webui/open-webui/pull/21709)
+- ♿ **UI accessibility improvements.** Screen reader users can now navigate the interface more easily with improved keyboard navigation in dialogs and proper ARIA labels on all interactive elements. Added aria-labels to close, back, and action buttons across various components, and improved semantic HTML and screen reader support across auth, sidebar, chat, and notification components, addressing WCAG compliance. [#21706](https://github.com/open-webui/open-webui/pull/21706), [#21705](https://github.com/open-webui/open-webui/pull/21705), [#21710](https://github.com/open-webui/open-webui/pull/21710), [#21709](https://github.com/open-webui/open-webui/pull/21709)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for Finnish, French, Portuguese (Brazil), Simplified Chinese, and Traditional Chinese were enhanced and expanded.
 
