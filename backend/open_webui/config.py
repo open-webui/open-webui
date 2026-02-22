@@ -59,7 +59,9 @@ def run_migrations():
         from alembic import command
         from alembic.config import Config
 
-        alembic_cfg = Config(OPEN_WEBUI_DIR / "alembic.ini")
+        alembic_cfg = Config(
+            OPEN_WEBUI_DIR / "alembic.ini", configure_logger=False
+        )
 
         # Set the script location dynamically
         migrations_path = OPEN_WEBUI_DIR / "migrations"
