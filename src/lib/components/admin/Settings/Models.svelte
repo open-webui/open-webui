@@ -684,8 +684,9 @@
 				upsertModelHandler(model);
 				selectedModelId = null;
 			}}
-			onBack={() => {
+			onBack={async () => {
 				selectedModelId = null;
+				await init();
 			}}
 		/>
 	{/if}
