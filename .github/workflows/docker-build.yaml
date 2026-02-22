@@ -58,11 +58,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Extract metadata for Docker images (default latest tag)
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.FULL_IMAGE_NAME }}
+          images: |
+            ${{ env.FULL_IMAGE_NAME }}
+            ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && 'openwebui/open-webui' || '' }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -160,11 +169,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Extract metadata for Docker images (cuda tag)
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.FULL_IMAGE_NAME }}
+          images: |
+            ${{ env.FULL_IMAGE_NAME }}
+            ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && 'openwebui/open-webui' || '' }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -265,11 +283,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Extract metadata for Docker images (cuda126 tag)
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.FULL_IMAGE_NAME }}
+          images: |
+            ${{ env.FULL_IMAGE_NAME }}
+            ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && 'openwebui/open-webui' || '' }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -368,11 +395,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Extract metadata for Docker images (ollama tag)
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.FULL_IMAGE_NAME }}
+          images: |
+            ${{ env.FULL_IMAGE_NAME }}
+            ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && 'openwebui/open-webui' || '' }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -470,11 +506,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Extract metadata for Docker images (slim tag)
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.FULL_IMAGE_NAME }}
+          images: |
+            ${{ env.FULL_IMAGE_NAME }}
+            ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && 'openwebui/open-webui' || '' }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -557,11 +602,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Extract metadata for Docker images (default latest tag)
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.FULL_IMAGE_NAME }}
+          images: |
+            ${{ env.FULL_IMAGE_NAME }}
+            ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && 'openwebui/open-webui' || '' }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -611,11 +665,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Extract metadata for Docker images (default latest tag)
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.FULL_IMAGE_NAME }}
+          images: |
+            ${{ env.FULL_IMAGE_NAME }}
+            ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && 'openwebui/open-webui' || '' }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -667,11 +730,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Extract metadata for Docker images (default latest tag)
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.FULL_IMAGE_NAME }}
+          images: |
+            ${{ env.FULL_IMAGE_NAME }}
+            ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && 'openwebui/open-webui' || '' }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -723,11 +795,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Extract metadata for Docker images (default ollama tag)
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.FULL_IMAGE_NAME }}
+          images: |
+            ${{ env.FULL_IMAGE_NAME }}
+            ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && 'openwebui/open-webui' || '' }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -779,11 +860,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Extract metadata for Docker images (default slim tag)
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.FULL_IMAGE_NAME }}
+          images: |
+            ${{ env.FULL_IMAGE_NAME }}
+            ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && 'openwebui/open-webui' || '' }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag
