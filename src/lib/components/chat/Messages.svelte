@@ -392,9 +392,27 @@
 			delete history.messages[id];
 		});
 
-		await tick();
+		// Compute new currentId by walking to deepest child of parent branch
+		// This avoids calling showMessage which triggers scrollIntoView and causes scroll jumping
+		let newCurrentId = parentMessageId;
+		if (newCurrentId === null || !history.messages[newCurrentId]) {
+			// Deleted a root message — find the last root message
+			const rootIds = Object.keys(history.messages).filter(
+				(id) => history.messages[id].parentId === null
+			);
+			newCurrentId = rootIds.length > 0 ? rootIds[rootIds.length - 1] : null;
+		}
+		// Walk to deepest child
+		if (newCurrentId !== null) {
+			let childIds = history.messages[newCurrentId]?.childrenIds ?? [];
+			while (childIds.length > 0) {
+				newCurrentId = childIds[childIds.length - 1];
+				childIds = history.messages[newCurrentId]?.childrenIds ?? [];
+			}
+		}
+		history.currentId = newCurrentId;
 
-		showMessage({ id: parentMessageId });
+		await tick();
 
 		// Update the chat
 		await updateChat();
