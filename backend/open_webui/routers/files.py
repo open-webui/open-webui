@@ -2,6 +2,7 @@ import logging
 import os
 import uuid
 import json
+import mimetypes
 from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
@@ -45,6 +46,13 @@ from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.routers.audio import transcribe
 
 from open_webui.storage.provider import Storage
+
+# Register common text-based file extensions that may be misdetected
+# .ts files are often detected as video/vnd.dlna.mpeg-tts (MPEG Transport Stream)
+# instead of TypeScript, causing upload rejection
+mimetypes.add_type("text/typescript", ".ts")
+mimetypes.add_type("text/tsx", ".tsx")
+mimetypes.add_type("text/jsx", ".jsx")
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -246,6 +254,26 @@ def upload_file_handler(
         file_extension = os.path.splitext(filename)[1]
         # Remove the leading dot from the file extension
         file_extension = file_extension[1:] if file_extension else ""
+
+        # Correct misdetected MIME types based on file extension.
+        # Some extensions (e.g. .ts) are ambiguous: browsers may report them as
+        # video/vnd.dlna.mpeg-tts (MPEG Transport Stream) instead of the intended
+        # text type, causing valid text files to be rejected.
+        if file_extension:
+            guessed_type, _ = mimetypes.guess_type(f"file.{file_extension}")
+            if guessed_type and guessed_type != file.content_type:
+                # Only override if the guessed type is text-based and the reported
+                # type is non-text (prevents overriding legitimate video/audio uploads)
+                if guessed_type.startswith("text/") or guessed_type in (
+                    "application/json",
+                    "application/xml",
+                    "application/javascript",
+                ):
+                    log.debug(
+                        f"Correcting MIME type for .{file_extension}: "
+                        f"{file.content_type!r} -> {guessed_type!r}"
+                    )
+                    file.content_type = guessed_type
 
         if process and request.app.state.config.ALLOWED_FILE_EXTENSIONS:
             request.app.state.config.ALLOWED_FILE_EXTENSIONS = [
