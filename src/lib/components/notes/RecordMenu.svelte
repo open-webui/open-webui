@@ -40,8 +40,8 @@
 			align="start"
 			transition={(e) => fade(e, { duration: 100 })}
 		>
-			<button
-				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+			<DropdownMenu.Item
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
 				on:click={async () => {
 					onRecord();
 					show = false;
@@ -51,10 +51,10 @@
 					<Mic className="size-4" strokeWidth="2" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Record')}</div>
-			</button>
+			</DropdownMenu.Item>
 
-			<button
-				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+			<DropdownMenu.Item
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
 				on:click={() => {
 					onCaptureAudio();
 					show = false;
@@ -64,10 +64,10 @@
 					<CursorArrowRays className="size-4" strokeWidth="2" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Capture Audio')}</div>
-			</button>
+			</DropdownMenu.Item>
 
-			<button
-				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+			<DropdownMenu.Item
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
 				on:click={() => {
 					onUpload();
 					show = false;
@@ -77,7 +77,7 @@
 					<CloudArrowUp className="size-4" strokeWidth="2" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Upload Audio')}</div>
-			</button>
+			</DropdownMenu.Item>
 		</DropdownMenu.Content>
 	</slot>
 </DropdownMenu.Root>

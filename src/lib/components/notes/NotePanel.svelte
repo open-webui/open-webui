@@ -80,6 +80,7 @@
 	<PaneResizer
 		class="relative flex items-center justify-center group border-l border-gray-50 dark:border-gray-850/30 hover:border-gray-200 dark:hover:border-gray-800  transition z-20"
 		id="controls-resizer"
+		aria-label={$i18n.t('Resize Panel')}
 	>
 		<div
 			class=" absolute -left-1.5 -right-1.5 -top-0 -bottom-0 z-20 cursor-col-resize bg-transparent"

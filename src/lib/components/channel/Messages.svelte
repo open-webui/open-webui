@@ -56,7 +56,7 @@
 
 {#if messages}
 	{@const messageList = messages.slice().reverse()}
-	<div>
+	<div aria-live="polite">
 		{#if !top}
 			<Loader
 				on:visible={(e) => {

@@ -941,6 +941,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								type="text"
 								bind:value={note.title}
 								placeholder={titleGenerating ? $i18n.t('Generating...') : $i18n.t('Title')}
+								aria-label={$i18n.t('Note Title')}
 								disabled={(note?.user_id !== $user?.id && $user?.role !== 'admin') ||
 									titleGenerating}
 								required
@@ -967,6 +968,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 										<button
 											class=" self-center dark:hover:text-white transition"
 											id="generate-title-button"
+											aria-label={$i18n.t('Generate Title')}
 											disabled={(note?.user_id !== $user?.id && $user?.role !== 'admin') ||
 												titleGenerating}
 											on:mouseenter={() => {
@@ -994,6 +996,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 											<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
 												<button
 													class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
+													aria-label={$i18n.t('Undo')}
 													on:click={() => {
 														editor.chain().focus().undo().run();
 														// versionNavigateHandler('prev');
@@ -1005,6 +1008,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 
 												<button
 													class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
+													aria-label={$i18n.t('Redo')}
 													on:click={() => {
 														editor.chain().focus().redo().run();
 														// versionNavigateHandler('next');
@@ -1020,6 +1024,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 									<Tooltip placement="top" content={$i18n.t('Chat')} className="cursor-pointer">
 										<button
 											class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
+											aria-label={$i18n.t('Chat')}
 											on:click={() => {
 												if (showPanel && selectedPanel === 'chat') {
 													showPanel = false;
@@ -1038,6 +1043,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 									<Tooltip placement="top" content={$i18n.t('Controls')} className="cursor-pointer">
 										<button
 											class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
+											aria-label={$i18n.t('Controls')}
 											on:click={() => {
 												if (showPanel && selectedPanel === 'settings') {
 													showPanel = false;
@@ -1086,9 +1092,13 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 										showDeleteConfirm = true;
 									}}
 								>
-									<div class="p-1 bg-transparent hover:bg-white/5 transition rounded-lg">
+									<button
+										class="p-1 bg-transparent hover:bg-white/5 transition rounded-lg"
+										aria-label={$i18n.t('More Options')}
+										type="button"
+									>
 										<EllipsisHorizontal className="size-5" />
-									</div>
+									</button>
 								</NoteMenu>
 
 								{#if note?.write_access}
@@ -1330,11 +1340,13 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 										selectedPanel = 'chat';
 									}}
 								>
-									<div
+									<button
 										class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-white dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
+										aria-label={$i18n.t('AI Formatting Options')}
+										type="button"
 									>
 										<SparklesSolid />
-									</div>
+									</button>
 								</AiMenu>
 							{/if}
 						</Tooltip>
@@ -1387,11 +1399,13 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 						}}
 					>
 						<Tooltip content={$i18n.t('Record')} placement="top">
-							<div
+							<button
 								class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-white dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
+								aria-label={$i18n.t('Record Menu')}
+								type="button"
 							>
 								<MicSolid className="size-4.5" />
-							</div>
+							</button>
 						</Tooltip>
 					</RecordMenu>
 				{/if}

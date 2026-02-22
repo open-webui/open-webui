@@ -696,6 +696,7 @@
 							>
 								<button
 									class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
+									aria-label={$i18n.t('Scroll to bottom')}
 									on:click={() => {
 										scrollEnd = true;
 										scrollToBottom();
@@ -793,6 +794,7 @@
 										<div>
 											<button
 												class="flex items-center dark:text-gray-500"
+												aria-label={$i18n.t('Cancel reply')}
 												on:click={() => {
 													replyToMessage = null;
 												}}
@@ -824,6 +826,7 @@
 													<button
 														class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
 														type="button"
+														aria-label={$i18n.t('Remove file')}
 														on:click={() => {
 															files.splice(fileIdx, 1);
 															files = files;
@@ -963,7 +966,7 @@
 													id="input-menu-button"
 													class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
 													type="button"
-													aria-label="More"
+													aria-label={$i18n.t('More Options')}
 												>
 													<svg
 														xmlns="http://www.w3.org/2000/svg"
@@ -1013,8 +1016,7 @@
 													} catch {
 														toast.error($i18n.t('Permission denied when accessing microphone'));
 													}
-												}}
-												aria-label="Voice Input"
+												aria-label={$i18n.t('Voice Input')}
 											>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
@@ -1037,6 +1039,7 @@
 												<Tooltip content={$i18n.t('Stop')}>
 													<button
 														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
+														aria-label={$i18n.t('Stop')}
 														on:click={() => {
 															onStop();
 														}}
@@ -1064,6 +1067,7 @@
 														class="{content !== '' || files.length !== 0
 															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
+														aria-label={$i18n.t('Send Message')}
 														type="submit"
 														disabled={content === '' && files.length === 0}
 													>

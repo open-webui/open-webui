@@ -108,7 +108,7 @@
 	>
 		{#if !edit && !disabled}
 			<div
-				class=" absolute {showButtons ? '' : 'invisible group-hover:visible'} right-1 -top-2 z-10"
+				class=" absolute {showButtons ? '' : 'opacity-0 focus-within:opacity-100 group-hover:opacity-100'} right-1 -top-2 z-10"
 			>
 				<div
 					class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100/30 dark:border-gray-850/30"
@@ -124,6 +124,7 @@
 							<Tooltip content={$i18n.t('Add Reaction')}>
 								<button
 									class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+									aria-label={$i18n.t('Add Reaction')}
 									on:click={() => {
 										showButtons = true;
 									}}
@@ -138,6 +139,7 @@
 						<Tooltip content={$i18n.t('Reply')}>
 							<button
 								class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-0.5"
+								aria-label={$i18n.t('Reply')}
 								on:click={() => {
 									onReply(message);
 								}}
@@ -150,6 +152,7 @@
 					<Tooltip content={message?.is_pinned ? $i18n.t('Unpin') : $i18n.t('Pin')}>
 						<button
 							class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+							aria-label={message?.is_pinned ? $i18n.t('Unpin') : $i18n.t('Pin')}
 							on:click={() => {
 								onPin(message);
 							}}
@@ -166,6 +169,7 @@
 						<Tooltip content={$i18n.t('Reply in Thread')}>
 							<button
 								class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+								aria-label={$i18n.t('Reply in Thread')}
 								on:click={() => {
 									onThread(message.id);
 								}}
@@ -180,6 +184,7 @@
 							<Tooltip content={$i18n.t('Edit')}>
 								<button
 									class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+									aria-label={$i18n.t('Edit')}
 									on:click={() => {
 										edit = true;
 										editedContent = message.content;
@@ -194,6 +199,7 @@
 							<Tooltip content={$i18n.t('Delete')}>
 								<button
 									class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+									aria-label={$i18n.t('Delete')}
 									on:click={() => (showDeleteConfirmDialog = true)}
 								>
 									<GarbageBin />
@@ -222,6 +228,7 @@
 
 				<button
 					class="ml-12 flex items-center space-x-2 relative z-0"
+					aria-label={$i18n.t('View replied message')}
 					on:click={() => {
 						const messageElement = document.getElementById(
 							`message-${message.reply_to_message.id}`
@@ -499,11 +506,13 @@
 										}}
 									>
 										<Tooltip content={$i18n.t('Add Reaction')}>
-											<div
+											<button
 												class="flex items-center gap-1.5 bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1 transition rounded-xl px-1 py-1 cursor-pointer text-gray-500 dark:text-gray-400"
+												aria-label={$i18n.t('Add Reaction')}
+												type="button"
 											>
 												<FaceSmile />
-											</div>
+											</button>
 										</Tooltip>
 									</EmojiPicker>
 								{/if}

@@ -329,6 +329,7 @@ Based on the user's instruction, update and enhance the existing notes or select
 	<div class="flex items-center mr-1">
 		<button
 			class="p-0.5 bg-transparent transition rounded-lg"
+			aria-label={$i18n.t('Close Chat')}
 			on:click={() => {
 				show = !show;
 			}}
@@ -420,6 +421,7 @@ Based on the user's instruction, update and enhance the existing notes or select
 								<select
 									class=" bg-transparent rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden w-full text-right pr-5"
 									bind:value={selectedModelId}
+									aria-label={$i18n.t('Select a model')}
 								>
 									{#each $models.filter((model) => !(model?.info?.meta?.hidden ?? false)) as model}
 										<option value={model.id} class="bg-gray-50 dark:bg-gray-700"
