@@ -16,6 +16,7 @@
 
 	import { WEBUI_VERSION } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
+	import { customHeadersFetch } from '../../hooks.client';
 
 	import {
 		config,
@@ -155,6 +156,7 @@
 			setBanners(),
 			setTools(),
 			setUserSettings(async () => {
+				customHeadersFetch();
 				await Promise.all([setModels(), setToolServers()]);
 			})
 		]);

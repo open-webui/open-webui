@@ -455,6 +455,7 @@ from open_webui.config import (
     QUERY_GENERATION_PROMPT_TEMPLATE,
     AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
     AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
+    TRANSLATION_LANGUAGES,
     AppConfig,
     reset_config,
 )
@@ -1294,6 +1295,7 @@ app.state.config.ENABLE_AUTOCOMPLETE_GENERATION = ENABLE_AUTOCOMPLETE_GENERATION
 app.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION
 app.state.config.ENABLE_TITLE_GENERATION = ENABLE_TITLE_GENERATION
 app.state.config.ENABLE_FOLLOW_UP_GENERATION = ENABLE_FOLLOW_UP_GENERATION
+app.state.config.TRANSLATION_LANGUAGES = TRANSLATION_LANGUAGES
 
 
 app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE
@@ -2127,6 +2129,7 @@ async def get_app_config(request: Request):
                     "enable_admin_analytics": ENABLE_ADMIN_ANALYTICS,
                     "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
                     "enable_onedrive_integration": app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
+                    "translation_languages": app.state.config.TRANSLATION_LANGUAGES,
                     "enable_memories": app.state.config.ENABLE_MEMORIES,
                     **(
                         {
