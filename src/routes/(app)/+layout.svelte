@@ -149,7 +149,8 @@
 			return;
 		}
 
-		clearChatInputStorage();
+		// Note: chat-input localStorage keys are now intentionally used for crash-safe draft persistence.
+		// Stale drafts are cleaned up by cleanupStaleDrafts() in Chat.svelte instead.
 		await Promise.all([
 			checkLocalDBChats(),
 			setBanners(),
