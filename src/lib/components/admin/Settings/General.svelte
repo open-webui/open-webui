@@ -542,7 +542,6 @@
 											>
 												<input
 													class="w-full bg-transparent outline-hidden py-0.5"
-													required
 													placeholder={$i18n.t('Enter Application DN')}
 													bind:value={LDAP_SERVER.app_dn}
 												/>
@@ -554,6 +553,7 @@
 											</div>
 											<SensitiveInput
 												placeholder={$i18n.t('Enter Application DN Password')}
+												required={false}
 												bind:value={LDAP_SERVER.app_dn_password}
 											/>
 										</div>

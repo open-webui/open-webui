@@ -1157,8 +1157,6 @@ async def update_ldap_server(
         "host",
         "attribute_for_mail",
         "attribute_for_username",
-        "app_dn",
-        "app_dn_password",
         "search_base",
     ]
     for key in required_fields:
@@ -1173,8 +1171,8 @@ async def update_ldap_server(
     request.app.state.config.LDAP_ATTRIBUTE_FOR_USERNAME = (
         form_data.attribute_for_username
     )
-    request.app.state.config.LDAP_APP_DN = form_data.app_dn
-    request.app.state.config.LDAP_APP_PASSWORD = form_data.app_dn_password
+    request.app.state.config.LDAP_APP_DN = form_data.app_dn or ""
+    request.app.state.config.LDAP_APP_PASSWORD = form_data.app_dn_password or ""
     request.app.state.config.LDAP_SEARCH_BASE = form_data.search_base
     request.app.state.config.LDAP_SEARCH_FILTERS = form_data.search_filters
     request.app.state.config.LDAP_USE_TLS = form_data.use_tls
