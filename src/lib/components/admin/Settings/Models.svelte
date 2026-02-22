@@ -537,8 +537,9 @@
 										className=" w-fit"
 										placement="top-start"
 									>
-										<div class="font-medium line-clamp-1 flex items-center gap-1.5">
+										<div class="font-medium line-clamp-1 flex items-center gap-2">
 											{model.name}
+
 											<Badge
 												type={(model?.access_grants ?? []).some(
 													(g) =>
@@ -559,7 +560,9 @@
 											/>
 										</div>
 									</Tooltip>
-									<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
+									<div
+										class=" text-xs overflow-hidden text-ellipsis line-clamp-1 flex items-center gap-1 text-gray-500"
+									>
 										<span class=" line-clamp-1">
 											{!!model?.meta?.description
 												? model?.meta?.description

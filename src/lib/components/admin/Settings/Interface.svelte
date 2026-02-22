@@ -1,27 +1,14 @@
 <script lang="ts">
-	import fileSaver from 'file-saver';
-	const { saveAs } = fileSaver;
-
-	import { v4 as uuidv4 } from 'uuid';
-	import { toast } from 'svelte-sonner';
-
-	import { getBackendConfig, getModels, getTaskConfig, updateTaskConfig } from '$lib/apis';
-	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
-	import { config, settings, user } from '$lib/stores';
+	import { getModels, getTaskConfig, updateTaskConfig } from '$lib/apis';
+	import { config, settings } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 
-	import { banners as _banners } from '$lib/stores';
-	import type { Banner } from '$lib/types';
-
 	import { getBaseModels } from '$lib/apis/models';
-	import { getBanners, setBanners } from '$lib/apis/configs';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import Banners from './Interface/Banners.svelte';
-	import PromptSuggestions from '$lib/components/workspace/Models/PromptSuggestions.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -46,22 +33,10 @@
 		VOICE_MODE_PROMPT_TEMPLATE: ''
 	};
 
-	let promptSuggestions = [];
-	let banners: Banner[] = [];
-
 	const updateInterfaceHandler = async () => {
 		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
-
-		promptSuggestions = promptSuggestions.filter((p) => p.content !== '');
-		promptSuggestions = await setDefaultPromptSuggestions(localStorage.token, promptSuggestions);
-		await updateBanners();
-
-		await config.set(await getBackendConfig());
 	};
 
-	const updateBanners = async () => {
-		_banners.set(await setBanners(localStorage.token, banners));
-	};
 
 	let workspaceModels = null;
 	let baseModels = null;
@@ -70,8 +45,6 @@
 
 	const init = async () => {
 		taskConfig = await getTaskConfig(localStorage.token);
-		promptSuggestions = $config?.default_prompt_suggestions ?? [];
-		banners = await getBanners(localStorage.token);
 
 		workspaceModels = await getBaseModels(localStorage.token);
 		baseModels = await getModels(localStorage.token, null, false);
@@ -434,63 +407,6 @@
 						/>
 					</Tooltip>
 				</div>
-			</div>
-
-			<div class="mb-3.5">
-				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('UI')}</div>
-
-				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
-
-				<div class="mb-2.5">
-					<div class="flex w-full justify-between">
-						<div class=" self-center text-xs">
-							{$i18n.t('Banners')}
-						</div>
-
-						<button
-							class="p-1 px-3 text-xs flex rounded-sm transition"
-							type="button"
-							on:click={() => {
-								if (banners.length === 0 || banners.at(-1).content !== '') {
-									banners = [
-										...banners,
-										{
-											id: uuidv4(),
-											type: '',
-											title: '',
-											content: '',
-											dismissible: true,
-											timestamp: Math.floor(Date.now() / 1000)
-										}
-									];
-								}
-							}}
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 20 20"
-								fill="currentColor"
-								class="w-4 h-4"
-							>
-								<path
-									d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
-								/>
-							</svg>
-						</button>
-					</div>
-
-					<Banners bind:banners />
-				</div>
-
-				{#if $user?.role === 'admin'}
-					<PromptSuggestions bind:promptSuggestions />
-
-					{#if promptSuggestions.length > 0}
-						<div class="text-xs text-left w-full mt-2">
-							{$i18n.t('Adjusting these settings will apply changes universally to all users.')}
-						</div>
-					{/if}
-				{/if}
 			</div>
 		</div>
 

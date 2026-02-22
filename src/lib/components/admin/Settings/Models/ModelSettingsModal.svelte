@@ -5,10 +5,11 @@
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
-	import { models } from '$lib/stores';
+	import { models, config as _config } from '$lib/stores';
 	import { DEFAULT_CAPABILITIES } from '$lib/constants';
 	import { deleteAllModels } from '$lib/apis/models';
-	import { getModelsConfig, setModelsConfig } from '$lib/apis/configs';
+	import { getModelsConfig, setModelsConfig, setDefaultPromptSuggestions } from '$lib/apis/configs';
+	import { getBackendConfig } from '$lib/apis';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -27,6 +28,7 @@
 	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
 	import DefaultFeatures from '$lib/components/workspace/Models/DefaultFeatures.svelte';
 	import BuiltinTools from '$lib/components/workspace/Models/BuiltinTools.svelte';
+	import PromptSuggestions from '$lib/components/workspace/Models/PromptSuggestions.svelte';
 
 	import AdjustmentsHorizontal from '$lib/components/icons/AdjustmentsHorizontal.svelte';
 	import Eye from '$lib/components/icons/Eye.svelte';
@@ -53,11 +55,13 @@
 	let showResetModal = false;
 	let showDefaultCapabilities = false;
 	let showDefaultParams = false;
+	let showDefaultPromptSuggestions = false;
 
 	let defaultCapabilities = {};
 	let defaultFeatureIds = [];
 	let defaultParams = {};
 	let builtinTools = {};
+	let promptSuggestions = [];
 
 	$: if (show) {
 		init();
@@ -104,6 +108,8 @@
 			builtinTools = {};
 		}
 		defaultParams = config?.DEFAULT_MODEL_PARAMS ?? {};
+
+		promptSuggestions = $_config?.default_prompt_suggestions ?? [];
 	};
 	const submitHandler = async () => {
 		loading = true;
@@ -125,6 +131,10 @@
 		});
 
 		if (res) {
+			promptSuggestions = promptSuggestions.filter((p) => p.content !== '');
+			promptSuggestions = await setDefaultPromptSuggestions(localStorage.token, promptSuggestions);
+			await _config.set(await getBackendConfig());
+
 			toast.success($i18n.t('Models configuration saved successfully'));
 			initHandler();
 			show = false;
@@ -238,6 +248,43 @@
 											models={$models}
 											bind:modelIds={defaultPinnedModelIds}
 										/>
+
+										<hr class=" border-gray-50 dark:border-gray-800/10 my-2.5 w-full" />
+
+										<div>
+											<button
+												class="flex w-full justify-between items-center"
+												type="button"
+												on:click={() => {
+													showDefaultPromptSuggestions = !showDefaultPromptSuggestions;
+												}}
+											>
+												<div class="text-xs text-gray-500 font-medium">
+													{$i18n.t('Prompt Suggestions')}
+												</div>
+												<div>
+													{#if showDefaultPromptSuggestions}
+														<ChevronUp className="size-3" />
+													{:else}
+														<ChevronDown className="size-3" />
+													{/if}
+												</div>
+											</button>
+
+											{#if showDefaultPromptSuggestions}
+												<div class="mt-2">
+													<PromptSuggestions bind:promptSuggestions />
+
+													{#if promptSuggestions.length > 0}
+														<div class="text-xs text-left w-full mt-2 text-gray-500">
+															{$i18n.t(
+																'Adjusting these settings will apply changes universally to all users.'
+															)}
+														</div>
+													{/if}
+												</div>
+											{/if}
+										</div>
 
 										<hr class=" border-gray-50 dark:border-gray-800/10 my-2.5 w-full" />
 
@@ -369,7 +416,6 @@
 												<ModelList bind:modelIds />
 											</div>
 										</div>
-
 									{/if}
 								</div>
 
