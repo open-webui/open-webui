@@ -1031,12 +1031,13 @@
 		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
 			if (availableModels.length > 0) {
 				if (defaultModels && defaultModels.length > 0) {
-					// Set from default models
 					selectedModels = defaultModels.filter((modelId) => availableModels.includes(modelId));
 				}
 
-				// Set to first available model
-				selectedModels = [availableModels?.at(0) ?? ''];
+				if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
+					// Only fall back to first available model if default models didn't resolve
+					selectedModels = [availableModels?.at(0) ?? ''];
+				}
 			} else {
 				selectedModels = [''];
 			}

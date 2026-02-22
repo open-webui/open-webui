@@ -1705,8 +1705,10 @@ async def chat_completion(
                         default_models[0].strip() if default_models[0] else None
                     )
 
-                    if fallback_model_id:
-                        request.base_model_id = fallback_model_id
+                    if fallback_model_id and fallback_model_id in request.app.state.MODELS:
+                        # Update model and form_data so routing uses the fallback model's type
+                        model = request.app.state.MODELS[fallback_model_id]
+                        form_data["model"] = fallback_model_id
                     else:
                         raise Exception("Model not found")
                 else:
