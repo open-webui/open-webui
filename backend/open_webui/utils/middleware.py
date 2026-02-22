@@ -347,7 +347,7 @@ def make_reference_sources(sources: list) -> list:
         reference_sources.append({
             **source,
             "document": [
-                "(Content provided in tool response above)"
+                "The full content of this source is provided in the tool call response."
                 for _ in source.get("document", [""])
             ],
         })
