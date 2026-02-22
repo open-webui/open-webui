@@ -3981,6 +3981,8 @@ async def streaming_chat_response_handler(response, ctx):
 
                 tool_call_retries = 0
                 tool_call_sources = []  # Track citation sources from tool results
+                all_tool_call_sources = []  # Accumulated sources across all iterations
+                user_message = get_last_user_message(form_data["messages"])
 
                 while (
                     len(tool_calls) > 0
@@ -4217,16 +4219,19 @@ async def streaming_chat_response_handler(response, ctx):
                         await event_emitter({"type": "source", "data": source})
 
                     # Apply source context to messages for model
-                    if tool_call_sources:
-                        user_msg = get_last_user_message(form_data["messages"])
-                        if user_msg:
-                            form_data["messages"] = apply_source_context_to_messages(
-                                request,
-                                form_data["messages"],
-                                tool_call_sources,
-                                user_msg,
-                            )
-                        tool_call_sources.clear()
+                    all_tool_call_sources.extend(tool_call_sources)
+                    if all_tool_call_sources and user_message:
+                        # Restore original user message before re-applying to avoid recursive nesting
+                        form_data["messages"] = add_or_update_user_message(
+                            user_message, form_data["messages"], append=False
+                        )
+                        form_data["messages"] = apply_source_context_to_messages(
+                            request,
+                            form_data["messages"],
+                            all_tool_call_sources,
+                            user_message,
+                        )
+                    tool_call_sources.clear()
 
                     await event_emitter(
                         {
