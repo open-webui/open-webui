@@ -163,12 +163,16 @@
 	// Message queue for storing messages while generating
 	let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
 
+	// Draft persistence: block saves until initial restore is complete
+	let draftInitialized = false;
+
 	$: if (chatIdProp) {
 		navigateHandler();
 	}
 
 	const navigateHandler = async () => {
 		loading = true;
+		draftInitialized = false;
 
 		// Save current queue to sessionStorage before navigating away
 		if (messageQueue.length > 0 && $chatId) {
@@ -237,6 +241,8 @@
 			} else {
 				await setDefaults();
 			}
+
+			setTimeout(() => { draftInitialized = true; }, 0);
 
 			const chatInput = document.getElementById('chat-input');
 			chatInput?.focus();
@@ -620,7 +626,7 @@
 			stopAudio();
 		});
 
-		const storageChatInput = sessionStorage.getItem(
+		const storageChatInput = localStorage.getItem(
 			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
 		);
 
@@ -653,6 +659,10 @@
 					codeInterpreterEnabled = input.codeInterpreterEnabled;
 				}
 			} catch (e) {}
+		}
+
+		if (!chatIdProp) {
+			setTimeout(() => { draftInitialized = true; }, 0);
 		}
 
 		showControlsSubscribe = showControls.subscribe(async (value) => {
@@ -2480,6 +2490,10 @@
 	const saveDraft = async (draft, chatId = null) => {
 		if (saveDraftTimeout) {
 			clearTimeout(saveDraftTimeout);
+		}
+
+		if (!draftInitialized) {
+			return;
 		}
 
 		const key = `chat-input${chatId ? `-${chatId}` : ''}`;
