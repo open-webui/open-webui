@@ -139,16 +139,18 @@
 				<div class="flex items-center">{$i18n.t('Copy Link')}</div>
 			</DropdownMenu.Item>
 
-			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-				on:click={() => {
-					cloneHandler();
-				}}
-			>
-				<DocumentDuplicate />
+			{#if model?.is_active ?? true}
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-1.5 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+					on:click={() => {
+						cloneHandler();
+					}}
+				>
+					<DocumentDuplicate />
 
-				<div class="flex items-center">{$i18n.t('Clone')}</div>
-			</DropdownMenu.Item>
+					<div class="flex items-center">{$i18n.t('Clone')}</div>
+				</DropdownMenu.Item>
+			{/if}
 
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-1.5 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
