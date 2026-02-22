@@ -80,6 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🐛 **Firefox avatar overflow fix.** Fixed a visual bug in Firefox where broken model or user avatar images would display overflowing alt text that overlapped adjacent labels on the Analytics and Leaderboard pages. Failed avatar images now properly show fallback icons instead. [#21730](https://github.com/open-webui/open-webui/pull/21730)
 - 🎨 **Dark mode select background fix.** Fixed an issue where select inputs and dropdown menus had inconsistent lighter background colors in dark mode by removing conflicting dark theme overrides, ensuring a cohesive transparent look. [#21728](https://github.com/open-webui/open-webui/pull/21728)
 - 💾 **Prompt import fix.** Importing prompts that were previously exported no longer fails with a "[object Object]" error toast, making prompt backup and restore work correctly. [#21594](https://github.com/open-webui/open-webui/issues/21594)
+- 🔧 **Ollama reasoning effort fix.** Reasoning effort now works correctly with Ollama models that require string values ("low", "medium", "high") instead of boolean, fixing "invalid option provided" errors when using models like GPT-OSS. [#20921](https://github.com/open-webui/open-webui/issues/20921), [#20928](https://github.com/open-webui/open-webui/pull/20928), [Commit](https://github.com/open-webui/open-webui/commit/30a13b9b2fb2c6da7e1ddbf52edb93a58d09cc56)
 
 ## [0.8.3] - 2026-02-17
 
