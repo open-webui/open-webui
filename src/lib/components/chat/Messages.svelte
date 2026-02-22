@@ -403,12 +403,12 @@
 			newCurrentId = rootIds.length > 0 ? rootIds[rootIds.length - 1] : null;
 		}
 		// Walk to deepest child
+		const getDeepestChildId = (id) => {
+			const childIds = history.messages[id]?.childrenIds ?? [];
+			return childIds.length > 0 ? getDeepestChildId(childIds.at(-1)) : id;
+		};
 		if (newCurrentId !== null) {
-			let childIds = history.messages[newCurrentId]?.childrenIds ?? [];
-			while (childIds.length > 0) {
-				newCurrentId = childIds[childIds.length - 1];
-				childIds = history.messages[newCurrentId]?.childrenIds ?? [];
-			}
+			newCurrentId = getDeepestChildId(newCurrentId);
 		}
 		history.currentId = newCurrentId;
 
