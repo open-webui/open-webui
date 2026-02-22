@@ -418,6 +418,7 @@
 					? 'bg-gray-100 dark:bg-gray-950 selected'
 					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
 			href="/c/{id}"
+			aria-current={id === $chatId ? 'page' : undefined}
 			on:click={() => {
 				dispatch('select');
 
@@ -475,7 +476,7 @@
 			? 'from-gray-100 dark:from-gray-900 selected'
 			: selected
 				? 'from-gray-100 dark:from-gray-950 selected'
-				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
+				: 'invisible group-hover:visible group-focus-within:visible from-gray-100 dark:from-gray-950'}
             absolute {className === 'pr-2'
 			? 'right-[8px]'
 			: 'right-1'} top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-linear-to-l from-80%
@@ -497,6 +498,7 @@
 						class=" self-center dark:hover:text-white transition disabled:cursor-not-allowed"
 						id="generate-title-button"
 						disabled={generating}
+						aria-label={$i18n.t('Generate')}
 						on:click={() => {
 							generateTitleHandler();
 						}}
@@ -510,6 +512,7 @@
 				<Tooltip content={$i18n.t('Archive')} className="flex items-center">
 					<button
 						class=" self-center dark:hover:text-white transition"
+						aria-label={$i18n.t('Archive')}
 						on:click={() => {
 							archiveChatHandler(id);
 						}}
@@ -522,6 +525,7 @@
 				<Tooltip content={$i18n.t('Delete')}>
 					<button
 						class=" self-center dark:hover:text-white transition"
+						aria-label={$i18n.t('Delete')}
 						on:click={() => {
 							deleteChatHandler(id);
 						}}

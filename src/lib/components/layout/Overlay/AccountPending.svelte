@@ -21,6 +21,9 @@
 <div class="fixed w-full h-full flex z-999">
 	<div
 		class="absolute w-full h-full backdrop-blur-lg bg-white/10 dark:bg-gray-900/50 flex justify-center"
+		role="dialog"
+		aria-modal="true"
+		aria-label={$i18n.t('Account Activation Pending')}
 	>
 		<div class="m-auto pb-10 flex flex-col justify-center">
 			<div class="max-w-md">
@@ -61,7 +64,7 @@
 
 				<div class=" mt-6 mx-auto relative group w-fit">
 					<button
-						class="relative z-20 flex px-5 py-2 rounded-full bg-white border border-gray-100 dark:border-none hover:bg-gray-100 text-gray-700 transition font-medium text-sm"
+						class="relative z-20 flex px-5 py-2 rounded-full bg-white border border-gray-100 dark:border-none hover:bg-gray-100 text-gray-700 transition font-medium text-sm focus:outline-hidden focus:ring-2 focus:ring-gray-800"
 						on:click={async () => {
 							location.href = '/';
 						}}
@@ -70,7 +73,7 @@
 					</button>
 
 					<button
-						class="text-xs text-center w-full mt-2 text-gray-400 underline"
+						class="text-xs text-center w-full mt-2 text-gray-400 underline focus:outline-hidden focus:ring-2 focus:ring-gray-400"
 						on:click={async () => {
 							localStorage.removeItem('token');
 							location.href = '/auth';

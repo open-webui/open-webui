@@ -204,6 +204,7 @@
 			<Search />
 		</div>
 
+		<label for="search-input" class="sr-only">{$i18n.t('Search')}</label>
 		<input
 			id="search-input"
 			class="w-full rounded-r-xl py-1.5 pl-2.5 text-sm bg-transparent dark:text-gray-300 outline-hidden"
@@ -288,6 +289,7 @@
 			<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 				<button
 					class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					aria-label={$i18n.t('Clear search')}
 					on:click={clearSearchInput}
 				>
 					<XMark className="size-3" strokeWidth="2" />
@@ -301,6 +303,7 @@
 		<div
 			class="absolute top-0 mt-8 left-0 right-1 border border-gray-100 dark:border-gray-900 bg-gray-50 dark:bg-gray-950 rounded-2xl z-10 shadow-lg"
 			id="search-options-container"
+			role="listbox"
 			in:fade={{ duration: 50 }}
 			on:mouseenter={() => {
 				hovering = true;
@@ -324,6 +327,8 @@
 								itemIdx
 									? 'bg-gray-100 dark:bg-gray-900'
 									: ''}"
+								role="option"
+								aria-selected={selectedIdx === itemIdx}
 								data-selected={selectedIdx === itemIdx}
 								id="search-item-{itemIdx}"
 								on:click|stopPropagation={async () => {
@@ -360,6 +365,8 @@
 								optionIdx
 									? 'bg-gray-100 dark:bg-gray-900'
 									: ''}"
+								role="option"
+								aria-selected={selectedIdx === optionIdx}
 								id="search-option-{optionIdx}"
 								on:click|stopPropagation={async () => {
 									const words = value.split(' ');

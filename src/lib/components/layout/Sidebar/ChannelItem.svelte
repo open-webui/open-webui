@@ -231,11 +231,12 @@
 		</div>
 	{:else if $user?.role === 'admin' || channel.user_id === $user?.id}
 		<div
-			class="ml-0.5 mr-1 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
+			class="ml-0.5 mr-1 invisible group-hover:visible group-focus-within:visible self-center flex items-center dark:text-gray-300"
 		>
 			<button
 				type="button"
 				class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
+				aria-label={$i18n.t('Settings')}
 				on:click={(e) => {
 					e.stopImmediatePropagation();
 					e.stopPropagation();

@@ -649,14 +649,16 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 
 {#if $showSidebar}
-	<div
+	<button
 		class=" {$isApp
 			? ' ml-[4.5rem] md:ml-0'
-			: ''} fixed md:hidden z-40 top-0 right-0 left-0 bottom-0 bg-black/60 w-full min-h-screen h-screen flex justify-center overflow-hidden overscroll-contain"
+			: ''} fixed md:hidden z-40 top-0 right-0 left-0 bottom-0 bg-black/60 w-full min-h-screen h-screen flex justify-center overflow-hidden overscroll-contain cursor-default outline-none"
 		on:mousedown={() => {
 			showSidebar.set(!$showSidebar);
 		}}
-	/>
+		aria-label={$i18n.t('Close Sidebar')}
+		tabindex="-1"
+	></button>
 {/if}
 
 <SearchModal
@@ -688,15 +690,18 @@
 />
 
 {#if !$mobile && !$showSidebar}
-	<div
+	<nav
 		class=" pt-[7px] pb-2 px-2 flex flex-col justify-between text-black dark:text-white hover:bg-gray-50/30 dark:hover:bg-gray-950/30 h-full z-10 transition-all border-e-[0.5px] border-gray-50 dark:border-gray-850/30"
 		id="sidebar"
+		aria-label={$i18n.t('Sidebar')}
 	>
 		<button
 			class="flex flex-col flex-1 {isWindows ? 'cursor-pointer' : 'cursor-[e-resize]'}"
 			on:click={async () => {
 				showSidebar.set(!$showSidebar);
 			}}
+			aria-expanded={$showSidebar}
+			aria-controls="sidebar"
 		>
 			<div class="pb-1.5">
 				<Tooltip
@@ -708,6 +713,9 @@
 							? 'cursor-pointer'
 							: 'cursor-[e-resize]'}"
 						aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+						aria-expanded={$showSidebar}
+						aria-controls="sidebar"
+						tabindex="-1"
 					>
 						<div class=" self-center flex items-center justify-center size-9">
 							<img
@@ -871,14 +879,14 @@
 				</div>
 			</div>
 		</div>
-	</div>
+	</nav>
 {/if}
 
 <!-- {$i18n.t('New Folder')} -->
 <!-- {$i18n.t('Pinned')} -->
 
 {#if $showSidebar}
-	<div
+	<nav
 		bind:this={navElement}
 		id="sidebar"
 		class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
@@ -889,6 +897,7 @@
         "
 		transition:slide={{ duration: 250, axis: 'x' }}
 		data-state={$showSidebar}
+		aria-label={$i18n.t('Sidebar')}
 	>
 		<div
 			class=" my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[var(--sidebar-width)] overflow-x-hidden scrollbar-hidden z-50 {$showSidebar
@@ -932,6 +941,8 @@
 							showSidebar.set(!$showSidebar);
 						}}
 						aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+						aria-expanded={$showSidebar}
+						aria-controls="sidebar"
 					>
 						<div class=" self-center p-1.5">
 							<Sidebar />
@@ -1440,7 +1451,7 @@
 				</div>
 			</div>
 		</div>
-	</div>
+	</nav>
 
 	{#if !$mobile}
 		<div
@@ -1448,6 +1459,7 @@
 			id="sidebar-resizer"
 			on:mousedown={resizeStartHandler}
 			role="separator"
+			aria-label={$i18n.t('Resize sidebar')}
 		>
 			<div
 				class=" absolute -left-1.5 -right-1.5 -top-0 -bottom-0 z-20 cursor-col-resize bg-transparent"

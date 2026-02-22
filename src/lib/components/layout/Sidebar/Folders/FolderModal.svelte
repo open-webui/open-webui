@@ -181,11 +181,11 @@
 					/>
 
 					<div class="flex justify-between w-full mt-1 items-center">
-						<div class="text-xs text-gray-500">{$i18n.t('Folder Background Image')}</div>
+						<div class="text-xs text-gray-500" id="folder-background-label">{$i18n.t('Folder Background Image')}</div>
 
 						<div class="">
 							<button
-								aria-labelledby="chat-background-label background-image-url-state"
+								aria-labelledby="folder-background-label folder-background-image-url-state"
 								class="p-1 px-3 text-xs flex rounded-sm transition"
 								on:click={() => {
 									if (meta?.background_image_url !== null) {
@@ -199,11 +199,10 @@
 								}}
 								type="button"
 							>
-								<span class="ml-2 self-center" id="background-image-url-state"
+								<span class="ml-2 self-center" id="folder-background-image-url-state"
 									>{(meta?.background_image_url ?? null) === null
 										? $i18n.t('Upload')
-										: $i18n.t('Reset')}</span
-								>
+										: $i18n.t('Reset')}</span>
 							</button>
 						</div>
 					</div>

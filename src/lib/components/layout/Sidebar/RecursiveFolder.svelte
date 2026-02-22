@@ -480,6 +480,17 @@
 				folderId
 					? 'bg-gray-100 dark:bg-gray-900 selected'
 					: ''}"
+				role="button"
+				tabindex="0"
+				on:keydown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault();
+						const folderButton = document.getElementById(`folder-${folderId}-button`);
+						if (folderButton) {
+							folderButton.click();
+						}
+					}
+				}}
 				on:dblclick={(e) => {
 					if (clickTimer) {
 						clearTimeout(clickTimer); // cancel the single-click action
@@ -518,6 +529,8 @@
 			>
 				<button
 					class="text-gray-500 dark:text-gray-500 transition-all p-1 hover:bg-gray-200 dark:hover:bg-gray-850 rounded-lg"
+					aria-expanded={open}
+					aria-label={$i18n.t('Toggle folder')}
 					on:click={(e) => {
 						e.stopPropagation();
 						e.stopImmediatePropagation();
