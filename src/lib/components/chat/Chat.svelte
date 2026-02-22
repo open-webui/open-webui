@@ -185,7 +185,7 @@
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
 
-		const storageChatInput = sessionStorage.getItem(
+		const storageChatInput = localStorage.getItem(
 			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
 		);
 
@@ -606,6 +606,7 @@
 		loading = true;
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
+		window.addEventListener('beforeunload', handleBeforeUnload);
 		$socket?.on('events', chatEventHandler);
 
 		audioQueue.set(new AudioQueue(document.getElementById('audioElement')));
@@ -697,6 +698,8 @@
 			selectedFolderSubscribe();
 			chatIdUnsubscriber?.();
 			window.removeEventListener('message', onMessageHandler);
+			window.removeEventListener('beforeunload', handleBeforeUnload);
+			handleBeforeUnload(); // Flush any pending draft on component destroy
 			$socket?.off('events', chatEventHandler);
 			$audioQueue?.destroy();
 		} catch (e) {
@@ -2470,22 +2473,27 @@
 	};
 
 	const MAX_DRAFT_LENGTH = 5000;
+	const DRAFT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 	let saveDraftTimeout: ReturnType<typeof setTimeout> | null = null;
+	let pendingDraft: { key: string; value: string } | null = null;
 
 	const saveDraft = async (draft, chatId = null) => {
 		if (saveDraftTimeout) {
 			clearTimeout(saveDraftTimeout);
 		}
 
+		const key = `chat-input${chatId ? `-${chatId}` : ''}`;
+
 		if (draft.prompt !== null && draft.prompt.length < MAX_DRAFT_LENGTH) {
-			saveDraftTimeout = setTimeout(async () => {
-				await sessionStorage.setItem(
-					`chat-input${chatId ? `-${chatId}` : ''}`,
-					JSON.stringify(draft)
-				);
+			const value = JSON.stringify({ ...draft, _savedAt: Date.now() });
+			pendingDraft = { key, value };
+			saveDraftTimeout = setTimeout(() => {
+				localStorage.setItem(key, value);
+				pendingDraft = null;
 			}, 500);
 		} else {
-			sessionStorage.removeItem(`chat-input${chatId ? `-${chatId}` : ''}`);
+			pendingDraft = null;
+			localStorage.removeItem(key);
 		}
 	};
 
@@ -2493,8 +2501,41 @@
 		if (saveDraftTimeout) {
 			clearTimeout(saveDraftTimeout);
 		}
-		await sessionStorage.removeItem(`chat-input${chatId ? `-${chatId}` : ''}`);
+		pendingDraft = null;
+		localStorage.removeItem(`chat-input${chatId ? `-${chatId}` : ''}`);
 	};
+
+	// Flush any pending debounced draft on tab close
+	const handleBeforeUnload = () => {
+		if (pendingDraft) {
+			localStorage.setItem(pendingDraft.key, pendingDraft.value);
+			pendingDraft = null;
+		}
+	};
+
+	// Clean up stale drafts older than 7 days
+	const cleanupStaleDrafts = () => {
+		const keysToRemove: string[] = [];
+		for (let i = 0; i < localStorage.length; i++) {
+			const key = localStorage.key(i);
+			if (key && key.startsWith('chat-input')) {
+				try {
+					const data = JSON.parse(localStorage.getItem(key) ?? '');
+					if (data._savedAt && Date.now() - data._savedAt > DRAFT_EXPIRY_MS) {
+						keysToRemove.push(key);
+					}
+				} catch (e) {
+					// Invalid entry, clean it up
+					keysToRemove.push(key);
+				}
+			}
+		}
+		for (const key of keysToRemove) {
+			localStorage.removeItem(key);
+		}
+	};
+
+	cleanupStaleDrafts();
 
 	const moveChatHandler = async (chatId, folderId) => {
 		if (chatId && folderId) {
