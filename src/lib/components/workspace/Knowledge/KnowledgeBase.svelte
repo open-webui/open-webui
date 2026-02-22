@@ -44,6 +44,7 @@
 
 	import AddContentMenu from './KnowledgeBase/AddContentMenu.svelte';
 	import AddTextContentModal from './KnowledgeBase/AddTextContentModal.svelte';
+	import ConfluenceImportModal from './KnowledgeBase/ConfluenceImportModal.svelte';
 
 	import SyncConfirmDialog from '../../common/ConfirmDialog.svelte';
 	import Drawer from '$lib/components/common/Drawer.svelte';
@@ -63,6 +64,7 @@
 
 	let showAddWebpageModal = false;
 	let showAddTextContentModal = false;
+	let showConfluenceImportModal = false;
 
 	let showSyncConfirmModal = false;
 	let showAccessControlModal = false;
@@ -257,6 +259,31 @@
 				// remove the item from fileItems
 				fileItems = fileItems.filter((item) => item.itemId !== fileItem.itemId);
 				toast.error(`${e}`);
+			}
+		}
+	};
+
+	const uploadConfluenceDocuments = async (documents: any[]) => {
+		for (const doc of documents) {
+			try {
+				const title = doc.metadata?.title || $i18n.t('Confluence Page');
+				const content = doc.page_content || '';
+
+				if (!content.trim()) continue;
+
+				const file = createFileFromText(
+					title.replace(/[^a-z0-9]/gi, '_').toLowerCase().slice(0, 50),
+					content
+				);
+
+				await uploadFileHandler(file);
+			} catch (e) {
+				console.error('Error uploading Confluence page:', e);
+				toast.error(
+					$i18n.t('Failed to upload page: {{title}}', {
+						title: doc.metadata?.title || 'Unknown'
+					})
+				);
 			}
 		}
 	};
@@ -806,6 +833,13 @@
 	}}
 />
 
+<ConfluenceImportModal
+	bind:show={showConfluenceImportModal}
+	onImport={(documents) => {
+		uploadConfluenceDocuments(documents);
+	}}
+/>
+
 <input
 	id="files-input"
 	bind:files={inputFiles}
@@ -941,6 +975,8 @@
 										showAddWebpageModal = true;
 									} else if (data.type === 'text') {
 										showAddTextContentModal = true;
+									} else if (data.type === 'confluence') {
+										showConfluenceImportModal = true;
 									} else {
 										document.getElementById('files-input').click();
 									}

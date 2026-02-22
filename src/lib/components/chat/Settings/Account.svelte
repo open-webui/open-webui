@@ -4,6 +4,7 @@
 
 	import { user, config, settings } from '$lib/stores';
 	import { updateUserProfile, createAPIKey, getAPIKey, getSessionUser } from '$lib/apis/auths';
+	import { updateUserSettings } from '$lib/apis/users';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
@@ -40,6 +41,42 @@
 	let APIKey = '';
 	let APIKeyCopied = false;
 	let profileImageInputElement: HTMLInputElement;
+
+	// Confluence credentials (only visible when admin has enabled the integration)
+	let confluenceEmail = '';
+	let confluenceApiToken = '';
+	let confluencePersonalAccessToken = '';
+	let confluenceUsername = '';
+	let confluenceSaving = false;
+
+	$: adminDeploymentType = ($config?.confluence?.deployment_type ?? 'cloud') as
+		| 'cloud'
+		| 'datacenter';
+
+	const saveConfluenceCredentials = async () => {
+		confluenceSaving = true;
+		try {
+			const confluenceSettings: Record<string, string> = {};
+			if (adminDeploymentType === 'cloud') {
+				confluenceSettings.email = confluenceEmail.trim();
+				confluenceSettings.api_token = confluenceApiToken.trim();
+			} else {
+				if (confluencePersonalAccessToken.trim()) {
+					confluenceSettings.personal_access_token = confluencePersonalAccessToken.trim();
+				}
+				if (confluenceUsername.trim()) {
+					confluenceSettings.username = confluenceUsername.trim();
+				}
+			}
+			await settings.set({ ...$settings, confluence: confluenceSettings });
+			await updateUserSettings(localStorage.token, { ui: $settings });
+			toast.success($i18n.t('Confluence credentials saved.'));
+		} catch (e) {
+			toast.error(`${e}`);
+		} finally {
+			confluenceSaving = false;
+		}
+	};
 
 	const submitHandler = async () => {
 		if (name !== $user?.name) {
@@ -107,6 +144,13 @@
 		}
 
 		webhookUrl = $settings?.notifications?.webhook_url ?? '';
+
+		// Load saved Confluence credentials
+		const savedConfluence = $settings?.confluence ?? {};
+		confluenceEmail = savedConfluence.email ?? '';
+		confluenceApiToken = savedConfluence.api_token ?? '';
+		confluencePersonalAccessToken = savedConfluence.personal_access_token ?? '';
+		confluenceUsername = savedConfluence.username ?? '';
 
 		// Only fetch API key if the feature is enabled and user has permission
 		if (
@@ -413,6 +457,92 @@
 					{/if}
 				</div>
 			{/if}
+		{/if}
+
+		{#if $config?.features?.enable_confluence_integration && $config?.confluence?.base_url}
+			<hr class="border-gray-50 dark:border-gray-850/30 my-4" />
+
+			<div class="mt-2">
+				<div class="flex justify-between items-start mb-3">
+					<div>
+						<div class="font-medium">{$i18n.t('Confluence Credentials')}</div>
+						<div class="text-xs text-gray-500 mt-0.5">
+							{$i18n.t('Your personal API credentials for Confluence.')}
+							<span class="font-medium">{$config.confluence.base_url}</span>
+							<span class="ml-1 text-gray-400">
+								({adminDeploymentType === 'cloud'
+									? $i18n.t('Cloud')
+									: $i18n.t('Data Center')})
+							</span>
+						</div>
+					</div>
+				</div>
+
+				{#if adminDeploymentType === 'cloud'}
+					<div class="flex flex-col gap-2">
+						<div>
+							<div class="mb-1 text-xs font-medium">{$i18n.t('Email')}</div>
+							<input
+								class="w-full text-sm dark:text-gray-300 bg-transparent outline-hidden"
+								type="email"
+								placeholder="you@company.com"
+								bind:value={confluenceEmail}
+							/>
+						</div>
+						<div>
+							<div class="mb-1 text-xs font-medium">{$i18n.t('API Token')}</div>
+							<SensitiveInput
+								placeholder={$i18n.t('Atlassian API Token')}
+								bind:value={confluenceApiToken}
+								required={false}
+							/>
+							<p class="text-xs text-gray-400 mt-1">
+								{$i18n.t('Generate at id.atlassian.com > Security > API tokens')}
+							</p>
+						</div>
+					</div>
+				{:else}
+					<div class="flex flex-col gap-2">
+						<div>
+							<div class="mb-1 text-xs font-medium">
+								{$i18n.t('Personal Access Token')}
+							</div>
+							<SensitiveInput
+								placeholder={$i18n.t('Personal Access Token (recommended)')}
+								bind:value={confluencePersonalAccessToken}
+								required={false}
+							/>
+						</div>
+
+						<div class="flex items-center gap-2 text-xs text-gray-400">
+							<div class="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
+							<span>{$i18n.t('or username')}</span>
+							<div class="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
+						</div>
+
+						<div>
+							<div class="mb-1 text-xs font-medium">{$i18n.t('Username')}</div>
+							<input
+								class="w-full text-sm dark:text-gray-300 bg-transparent outline-hidden"
+								type="text"
+								placeholder={$i18n.t('Username')}
+								bind:value={confluenceUsername}
+							/>
+						</div>
+					</div>
+				{/if}
+
+				<div class="flex justify-end mt-3">
+					<button
+						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full disabled:opacity-50"
+						type="button"
+						disabled={confluenceSaving}
+						on:click={saveConfluenceCredentials}
+					>
+						{confluenceSaving ? $i18n.t('Saving...') : $i18n.t('Save Credentials')}
+					</button>
+				</div>
+			</div>
 		{/if}
 	</div>
 

@@ -263,6 +263,7 @@ type Config = {
 		enable_web_search?: boolean;
 		enable_google_drive_integration: boolean;
 		enable_onedrive_integration: boolean;
+		enable_confluence_integration: boolean;
 		enable_image_generation: boolean;
 		enable_admin_export: boolean;
 		enable_admin_chat_access: boolean;
@@ -278,6 +279,10 @@ type Config = {
 		providers: {
 			[key: string]: string;
 		};
+	};
+	confluence?: {
+		base_url: string;
+		deployment_type: 'cloud' | 'datacenter';
 	};
 	ui?: {
 		pending_user_overlay_title?: string;
