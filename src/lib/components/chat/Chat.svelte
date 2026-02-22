@@ -1065,6 +1065,8 @@
 
 		chatFiles = [];
 		params = {};
+		taskIds = null;
+		messageQueue = [];
 
 		if ($page.url.searchParams.get('youtube')) {
 			await uploadWeb(`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`);
