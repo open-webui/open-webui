@@ -333,72 +333,25 @@ def get_citation_source_from_tool_result(
         ]
 
 
-def get_condensed_tool_result(
-    tool_name: str, tool_result: str, citation_sources: list
-) -> str:
+def make_reference_sources(sources: list) -> list:
     """
-    Replace full content in a tool result with a condensed metadata reference.
+    Create lightweight copies of citation sources with document content
+    replaced by a reference pointer.
 
-    The RAG <source> injection already provides the full content with citation
-    IDs for proper citing. The tool result message only needs to confirm what
-    was retrieved, avoiding content duplication in the model prompt.
+    Used for the post-tool RAG injection: the full content is already in
+    the tool result message, so the RAG <source> tags only need to carry
+    the source ID and name for citation mapping — not the content itself.
     """
-    try:
-        parsed = json.loads(tool_result) if isinstance(tool_result, str) else tool_result
-    except (json.JSONDecodeError, TypeError):
-        parsed = tool_result
-
-    if tool_name == "view_knowledge_file":
-        if isinstance(parsed, dict):
-            condensed = {
-                "id": parsed.get("id", ""),
-                "filename": parsed.get("filename", ""),
-                "status": "content_loaded",
-                "note": "Full content available in cited sources above.",
-            }
-        else:
-            condensed = {
-                "status": "content_loaded",
-                "note": "Full content available in cited sources above.",
-            }
-        return json.dumps(condensed)
-
-    elif tool_name == "query_knowledge_files":
-        count = len(parsed) if isinstance(parsed, list) else 1
-        condensed = {
-            "status": "results_loaded",
-            "count": count,
-            "note": "Retrieved content available in cited sources above.",
-        }
-        return json.dumps(condensed)
-
-    elif tool_name == "search_web":
-        if isinstance(parsed, list):
-            condensed = {
-                "status": "results_loaded",
-                "count": len(parsed),
-                "results": [
-                    {"title": r.get("title", ""), "link": r.get("link", "")}
-                    for r in parsed
-                ],
-                "note": "Search result details available in cited sources above.",
-            }
-        else:
-            condensed = {
-                "status": "results_loaded",
-                "note": "Search results available in cited sources above.",
-            }
-        return json.dumps(condensed)
-
-    elif tool_name == "fetch_url":
-        condensed = {
-            "status": "content_loaded",
-            "note": "Page content available in cited sources above.",
-        }
-        return json.dumps(condensed)
-
-    # Fallback: return original
-    return tool_result if isinstance(tool_result, str) else json.dumps(tool_result)
+    reference_sources = []
+    for source in sources:
+        reference_sources.append({
+            **source,
+            "document": [
+                "(Content provided in tool response above)"
+                for _ in source.get("document", [""])
+            ],
+        })
+    return reference_sources
 
 
 def is_source_already_injected(source: dict, injected_source_ids: set) -> bool:
@@ -1338,14 +1291,6 @@ async def chat_completion_tools_handler(
                             "tool_result": True,
                         }
                     )
-
-                    # Condense the tool result for builtin citation tools
-                    # to avoid content duplication between tool result
-                    # and RAG source injection
-                    if tool_function_name in CITATION_TOOL_NAMES:
-                        tool_result = get_condensed_tool_result(
-                            tool_function_name, tool_result, []
-                        )
 
                     if (
                         tools[tool_function_name]
@@ -4268,15 +4213,6 @@ async def streaming_chat_response_handler(response, ctx):
                                     tool_id=tool.get("tool_id", "") if tool else "",
                                 )
                                 tool_call_sources.extend(citation_sources)
-
-                                # Replace tool result with condensed version
-                                # to avoid content duplication between the
-                                # tool result message and RAG source injection
-                                tool_result = get_condensed_tool_result(
-                                    tool_function_name,
-                                    tool_result,
-                                    citation_sources,
-                                )
                             except Exception as e:
                                 log.exception(f"Error extracting citation source: {e}")
 
@@ -4365,10 +4301,13 @@ async def streaming_chat_response_handler(response, ctx):
                     if tool_call_sources:
                         user_msg = get_last_user_message(form_data["messages"])
                         if user_msg:
+                            # Use reference-only sources: the full content is
+                            # already in the tool result message, so the RAG
+                            # tags only need source IDs for citation mapping
                             form_data["messages"] = apply_source_context_to_messages(
                                 request,
                                 form_data["messages"],
-                                tool_call_sources,
+                                make_reference_sources(tool_call_sources),
                                 user_msg,
                             )
 
