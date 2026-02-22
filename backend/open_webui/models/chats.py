@@ -631,7 +631,7 @@ class ChatTable:
             with get_db_context(db) as db:
                 # Use subquery to delete chat_messages for shared chats
                 shared_chat_id_subquery = (
-                    db.query(Chat.id).filter_by(user_id=f"shared-{chat_id}").subquery()
+                    db.query(Chat.id).filter_by(user_id=f"shared-{chat_id}").scalar_subquery()
                 )
                 db.query(ChatMessage).filter(
                     ChatMessage.chat_id.in_(shared_chat_id_subquery)
