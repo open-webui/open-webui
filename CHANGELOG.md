@@ -91,6 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🚀 **Startup model pre-fetch error handling.** If model pre-fetching fails during app startup, the application now logs a warning and continues instead of crashing entirely. [Commit](https://github.com/open-webui/open-webui/commit/337109e99ce390f55a9085d0a301853637923779)
 - ⚙️ **Function module loading error handling.** Function modules that fail to load during startup or model processing are now caught and logged, preventing crashes when models reference functions with loading errors. [Commit](https://github.com/open-webui/open-webui/commit/15b893e651de71b033408e1b713e0b51f6829ab8)
 - 🗄️ **PostgreSQL group query fix.** The '/api/v1/groups/' endpoint no longer fails with a GROUP BY error when using PostgreSQL; member counts are now calculated using correlated subqueries for better database compatibility. [#21458](https://github.com/open-webui/open-webui/pull/21458), [#21467](https://github.com/open-webui/open-webui/issues/21467)
+- 🐛 **Scroll jumping fix.** Deleting a message pair after stopping generation no longer causes the chat to visually jump around, making message deletion smoother. [#21743](https://github.com/open-webui/open-webui/pull/21743)
 
 ## [0.8.2] - 2026-02-16
 
