@@ -44,9 +44,7 @@
 				<Confetti x={[-1, -0.25]} y={[0, 0.5]} />
 			</h2>
 			<button class="self-center" on:click={closeModal} aria-label={$i18n.t('Close')}>
-				<XMark className={'size-5'}>
-					<p class="sr-only">{$i18n.t('Close')}</p>
-				</XMark>
+				<XMark className={'size-5'} />
 			</button>
 		</div>
 		<div class="flex items-center mt-1">
