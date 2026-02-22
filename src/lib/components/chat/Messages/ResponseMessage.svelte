@@ -679,7 +679,10 @@
 						{/if}
 
 						{#if message?.embeds && message.embeds.length > 0}
-							<div class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap">
+							<div
+								class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap"
+								id={`${message.id}-embeds-container`}
+							>
 								{#each message.embeds as embed, idx}
 									<div class="my-2 w-full" id={`${message.id}-embeds-${idx}`}>
 										<FullHeightIframe

@@ -240,6 +240,7 @@ from open_webui.config import (
     RAG_EMBEDDING_ENGINE,
     RAG_EMBEDDING_BATCH_SIZE,
     ENABLE_ASYNC_EMBEDDING,
+    RAG_EMBEDDING_CONCURRENT_REQUESTS,
     RAG_TOP_K,
     RAG_TOP_K_RERANKER,
     RAG_RELEVANCE_THRESHOLD,
@@ -361,6 +362,7 @@ from open_webui.config import (
     YANDEX_WEB_SEARCH_URL,
     YANDEX_WEB_SEARCH_API_KEY,
     YANDEX_WEB_SEARCH_CONFIG,
+    YOUCOM_API_KEY,
     # WebUI
     WEBUI_AUTH,
     WEBUI_NAME,
@@ -434,6 +436,7 @@ from open_webui.config import (
     RESPONSE_WATERMARK,
     # Admin
     ENABLE_ADMIN_CHAT_ACCESS,
+    ENABLE_ADMIN_ANALYTICS,
     BYPASS_ADMIN_ACCESS_CONTROL,
     ENABLE_ADMIN_EXPORT,
     # Tasks
@@ -984,6 +987,7 @@ app.state.config.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE
 app.state.config.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
 app.state.config.RAG_EMBEDDING_BATCH_SIZE = RAG_EMBEDDING_BATCH_SIZE
 app.state.config.ENABLE_ASYNC_EMBEDDING = ENABLE_ASYNC_EMBEDDING
+app.state.config.RAG_EMBEDDING_CONCURRENT_REQUESTS = RAG_EMBEDDING_CONCURRENT_REQUESTS
 
 app.state.config.RAG_RERANKING_ENGINE = RAG_RERANKING_ENGINE
 app.state.config.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
@@ -1069,6 +1073,7 @@ app.state.config.EXTERNAL_WEB_LOADER_API_KEY = EXTERNAL_WEB_LOADER_API_KEY
 app.state.config.YANDEX_WEB_SEARCH_URL = YANDEX_WEB_SEARCH_URL
 app.state.config.YANDEX_WEB_SEARCH_API_KEY = YANDEX_WEB_SEARCH_API_KEY
 app.state.config.YANDEX_WEB_SEARCH_CONFIG = YANDEX_WEB_SEARCH_CONFIG
+app.state.config.YOUCOM_API_KEY = YOUCOM_API_KEY
 
 
 app.state.config.PLAYWRIGHT_WS_URL = PLAYWRIGHT_WS_URL
@@ -1137,6 +1142,7 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
         else None
     ),
     enable_async=app.state.config.ENABLE_ASYNC_EMBEDDING,
+    concurrent_requests=app.state.config.RAG_EMBEDDING_CONCURRENT_REQUESTS,
 )
 
 app.state.RERANKING_FUNCTION = get_reranking_function(
@@ -1446,6 +1452,16 @@ async def check_url(request: Request, call_next):
             scheme="Bearer", credentials=request.cookies.get("token")
         )
 
+    # Fallback to x-api-key header for Anthropic Messages API routes
+    if request.state.token is None and request.headers.get("x-api-key"):
+        request_path = request.url.path
+        if request_path in ("/api/message", "/api/v1/messages"):
+            from fastapi.security import HTTPAuthorizationCredentials
+
+            request.state.token = HTTPAuthorizationCredentials(
+                scheme="Bearer", credentials=request.headers.get("x-api-key")
+            )
+
     request.state.enable_api_keys = app.state.config.ENABLE_API_KEYS
     response = await call_next(request)
     process_time = int(time.time()) - start_time
@@ -1519,7 +1535,8 @@ app.include_router(functions.router, prefix="/api/v1/functions", tags=["function
 app.include_router(
     evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
 )
-app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
+if ENABLE_ADMIN_ANALYTICS:
+    app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 
 # SCIM 2.0 API for identity management
@@ -1749,9 +1766,12 @@ async def chat_completion(
                 "local:"
             ):  # temporary chats are not stored
 
-                # Verify chat ownership
-                chat = Chats.get_chat_by_id_and_user_id(metadata["chat_id"], user.id)
-                if chat is None and user.role != "admin":  # admins can access any chat
+                # Verify chat ownership — lightweight EXISTS check avoids
+                # deserializing the full chat JSON blob just to confirm the row exists
+                if (
+                    not Chats.is_chat_owner(metadata["chat_id"], user.id)
+                    and user.role != "admin"
+                ):  # admins can access any chat
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
                         detail=ERROR_MESSAGES.DEFAULT(),
@@ -1895,6 +1915,68 @@ async def chat_completion(
 # Alias for chat_completion (Legacy)
 generate_chat_completions = chat_completion
 generate_chat_completion = chat_completion
+
+
+##################################
+#
+# Anthropic Messages API Compatible Endpoint
+#
+##################################
+
+
+from open_webui.utils.anthropic import (
+    convert_anthropic_to_openai_payload,
+    convert_openai_to_anthropic_response,
+    openai_stream_to_anthropic_stream,
+)
+
+
+@app.post("/api/message")
+@app.post("/api/v1/messages")  # Anthropic Messages API compatible endpoint
+async def generate_messages(
+    request: Request,
+    form_data: dict,
+    user=Depends(get_verified_user),
+):
+    """
+    Anthropic Messages API compatible endpoint.
+
+    Accepts the Anthropic Messages API format, converts internally to OpenAI
+    Chat Completions format, routes through the existing chat completion
+    pipeline, then converts the response back to Anthropic Messages format.
+
+    Supports both streaming and non-streaming requests.
+    All models configured in Open WebUI are accessible via this endpoint.
+
+    Authentication: Supports both standard Authorization header and
+    Anthropic's x-api-key header (via middleware translation).
+    """
+    # Convert Anthropic payload to OpenAI format
+    requested_model = form_data.get("model", "")
+
+    openai_payload = convert_anthropic_to_openai_payload(form_data)
+
+    # Route through the existing chat_completion handler
+    response = await chat_completion(request, openai_payload, user)
+
+    # Convert response back to Anthropic format
+    if isinstance(response, StreamingResponse):
+        # Streaming response: wrap the generator to convert SSE format
+        return StreamingResponse(
+            openai_stream_to_anthropic_stream(
+                response.body_iterator, model=requested_model
+            ),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+            },
+        )
+    elif isinstance(response, dict):
+        return convert_openai_to_anthropic_response(response, model=requested_model)
+    else:
+        # Passthrough for error responses (JSONResponse, PlainTextResponse, etc.)
+        return response
 
 
 @app.post("/api/chat/completed")
@@ -2046,6 +2128,7 @@ async def get_app_config(request: Request):
                     "enable_user_status": app.state.config.ENABLE_USER_STATUS,
                     "enable_admin_export": ENABLE_ADMIN_EXPORT,
                     "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
+                    "enable_admin_analytics": ENABLE_ADMIN_ANALYTICS,
                     "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
                     "enable_onedrive_integration": app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
                     "enable_memories": app.state.config.ENABLE_MEMORIES,
