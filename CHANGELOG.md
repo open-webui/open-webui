@@ -75,6 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📝 **Console log spam fix.** Requesting deleted or missing files no longer floods the backend console with Python traceback logs, thanks to proper exception handling for expected 404 errors. [#21687](https://github.com/open-webui/open-webui/pull/21687)
 - 🐛 **Firefox avatar overflow fix.** Fixed a visual bug in Firefox where broken model or user avatar images would display overflowing alt text that overlapped adjacent labels on the Analytics and Leaderboard pages. Failed avatar images now properly show fallback icons instead. [#21730](https://github.com/open-webui/open-webui/pull/21730)
 - 🎨 **Dark mode select background fix.** Fixed an issue where select inputs and dropdown menus had inconsistent lighter background colors in dark mode by removing conflicting dark theme overrides, ensuring a cohesive transparent look. [#21728](https://github.com/open-webui/open-webui/pull/21728)
+- 💾 **Prompt import fix.** Importing prompts that were previously exported no longer fails with a "[object Object]" error toast, making prompt backup and restore work correctly. [#21594](https://github.com/open-webui/open-webui/issues/21594)
 
 ## [0.8.3] - 2026-02-17
 
