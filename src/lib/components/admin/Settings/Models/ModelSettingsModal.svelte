@@ -228,7 +228,7 @@
 											bind:modelIds={defaultModelIds}
 										/>
 
-										<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
+										<hr class=" border-gray-50 dark:border-gray-800/10 my-2.5 w-full" />
 
 										<ModelSelector
 											title={$i18n.t('Pinned Models')}
@@ -239,7 +239,7 @@
 											bind:modelIds={defaultPinnedModelIds}
 										/>
 
-										<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
+										<hr class=" border-gray-50 dark:border-gray-800/10 my-2.5 w-full" />
 
 										<div>
 											<button
@@ -295,7 +295,7 @@
 											{/if}
 										</div>
 
-										<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
+										<hr class=" border-gray-50 dark:border-gray-800/10 my-2.5 w-full" />
 
 										<div>
 											<button
@@ -370,27 +370,25 @@
 											</div>
 										</div>
 
-										<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
-
-										<div>
-											<Tooltip
-												content={$i18n.t('This will delete all models including custom models')}
-											>
-												<button
-													class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-950 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
-													type="button"
-													on:click={() => {
-														showResetModal = true;
-													}}
-												>
-													{$i18n.t('Reset All Models')}
-												</button>
-											</Tooltip>
-										</div>
 									{/if}
 								</div>
 
-								<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
+								<div class="flex justify-between items-center pt-3 text-sm font-medium gap-1.5">
+									<div>
+										<Tooltip
+											content={$i18n.t('This will delete all models including custom models')}
+										>
+											<button
+												class="text-sm font-normal text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition hover:underline"
+												type="button"
+												on:click={() => {
+													showResetModal = true;
+												}}
+											>
+												{$i18n.t('Reset')}
+											</button>
+										</Tooltip>
+									</div>
 									<button
 										class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
 											? ' cursor-not-allowed'

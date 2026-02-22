@@ -31,7 +31,7 @@
 	import Badge from '$lib/components/common/Badge.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
-	import ConfigureModelsModal from './Models/ConfigureModelsModal.svelte';
+	import ModelSettingsModal from './Models/ModelSettingsModal.svelte';
 	import Wrench from '$lib/components/icons/Wrench.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
 	import ManageModelsModal from './Models/ManageModelsModal.svelte';
@@ -305,7 +305,7 @@
 	});
 </script>
 
-<ConfigureModelsModal bind:show={showConfigModal} initHandler={init} />
+<ModelSettingsModal bind:show={showConfigModal} initHandler={init} />
 <ManageModelsModal bind:show={showManageModal} />
 
 {#if models !== null}
