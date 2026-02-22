@@ -191,7 +191,7 @@
 		{#if groups.length > 0}
 			<select
 				bind:value={selectedGroupId}
-				class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-none text-right"
+				class="w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-none text-right"
 			>
 				<option value={null}>{$i18n.t('All Users')}</option>
 				{#each groups as group}
@@ -201,7 +201,7 @@
 		{/if}
 		<select
 			bind:value={selectedPeriod}
-			class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-none text-right"
+			class="w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-none text-right"
 		>
 			{#each periods as period}
 				<option value={period.value}>{$i18n.t(period.label)}</option>

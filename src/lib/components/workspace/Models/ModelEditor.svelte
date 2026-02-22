@@ -583,7 +583,7 @@
 
 									<div>
 										<select
-											class="dark:bg-gray-900 text-sm w-full bg-transparent outline-hidden"
+											class="text-sm w-full bg-transparent outline-hidden"
 											placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
 											bind:value={info.base_model_id}
 											required
