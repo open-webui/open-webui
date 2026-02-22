@@ -3,7 +3,7 @@
 
 	const i18n = getContext('i18n');
 
-	import { user as _user, channels, socket } from '$lib/stores';
+	import { user as _user, channels, socket, config } from '$lib/stores';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { getChannels, getDMChannelByUserId } from '$lib/apis/channels';
 
@@ -73,7 +73,7 @@
 			</div>
 		</div>
 
-		{#if user?.status_emoji || user?.status_message}
+		{#if (user?.status_emoji || user?.status_message) && ($config?.features?.enable_user_status ?? true)}
 			<div class="mx-2 mt-2">
 				<Tooltip content={user?.status_message}>
 					<div
