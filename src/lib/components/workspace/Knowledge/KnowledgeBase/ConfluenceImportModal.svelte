@@ -10,6 +10,9 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import Minus from '$lib/components/icons/Minus.svelte';
 
 	import {
 		testConfluenceConnection,
@@ -39,13 +42,24 @@
 
 	// State
 	type Step = 'config' | 'spaces' | 'pages';
+	
+	type PageNode = ConfluencePage & {
+		children: PageNode[];
+		level: number;
+		expanded: boolean;
+		parent?: PageNode;
+	};
+
 	let step: Step = 'config';
 	let loading = false;
 	let connectionTested = false;
 	let spaces: ConfluenceSpace[] = [];
 	let selectedSpaceKeys: Set<string> = new Set();
-	let spacePages: Record<string, ConfluencePage[]> = {};
+	let spacePages: Record<string, PageNode[]> = {};
 	let selectedPageIds: Set<string> = new Set();
+	type NodeCheckState = 'checked' | 'indeterminate' | 'unchecked';
+	let nodeStateCache: Map<string, NodeCheckState> = new Map();
+	let spaceCheckState: Record<string, NodeCheckState> = {};
 	let importing = false;
 	let fetchingPages = false;
 	let fetchingSpaces = false;
@@ -69,6 +83,151 @@
 	});
 
 	$: allFilteredPagesSelected = allFilteredPages.length > 0 && allFilteredPages.every((p) => selectedPageIds.has(p.id));
+
+	$: {
+		const _ids = selectedPageIds;
+		const cache = new Map<string, NodeCheckState>();
+
+		function computeNodeState(node: PageNode): NodeCheckState {
+			const selfSelected = _ids.has(node.id);
+			if (node.children.length === 0) {
+				const s: NodeCheckState = selfSelected ? 'checked' : 'unchecked';
+				cache.set(node.id, s);
+				return s;
+			}
+			let allChecked = selfSelected;
+			let anyChecked = selfSelected;
+			for (const child of node.children) {
+				const cs = computeNodeState(child);
+				if (cs !== 'checked') allChecked = false;
+				if (cs !== 'unchecked') anyChecked = true;
+			}
+			const s: NodeCheckState = allChecked ? 'checked' : anyChecked ? 'indeterminate' : 'unchecked';
+			cache.set(node.id, s);
+			return s;
+		}
+
+		for (const nodes of Object.values(spacePages)) {
+			for (const root of nodes.filter(n => !n.parent)) computeNodeState(root);
+		}
+		nodeStateCache = cache;
+	}
+
+	$: {
+		const _cache = nodeStateCache;
+		const result: Record<string, NodeCheckState> = {};
+		for (const [spaceKey, nodes] of Object.entries(spacePages)) {
+			if (!selectedSpaceKeys.has(spaceKey)) continue;
+			const roots = nodes.filter(n => !n.parent);
+			if (roots.length === 0) { result[spaceKey] = 'unchecked'; continue; }
+			let allChecked = true, anyChecked = false;
+			for (const root of roots) {
+				const s = _cache.get(root.id) ?? 'unchecked';
+				if (s !== 'checked') allChecked = false;
+				if (s !== 'unchecked') anyChecked = true;
+			}
+			result[spaceKey] = allChecked ? 'checked' : anyChecked ? 'indeterminate' : 'unchecked';
+		}
+		spaceCheckState = result;
+	}
+
+	// Helper to build tree structure from flat list of pages
+	function buildPageTree(pages: ConfluencePage[]): PageNode[] {
+		const pageMap = new Map<string, PageNode>();
+		
+		// 1. Create nodes
+		pages.forEach(p => {
+			pageMap.set(p.id, {
+				...p,
+				children: [],
+				level: 0,
+				expanded: true, // Expand by default to show hierarchy
+			});
+		});
+
+		const roots: PageNode[] = [];
+
+		// 2. Link nodes
+		pages.forEach(p => {
+			const node = pageMap.get(p.id)!;
+			// The last ancestor is the direct parent
+			const parentId = p.ancestors && p.ancestors.length > 0
+				? p.ancestors[p.ancestors.length - 1].id
+				: null;
+
+			if (parentId && pageMap.has(parentId)) {
+				const parent = pageMap.get(parentId)!;
+				parent.children.push(node);
+				node.parent = parent;
+			} else {
+				roots.push(node);
+			}
+		});
+
+		// 3. Set levels
+		const setLevel = (nodes: PageNode[], level: number) => {
+			nodes.forEach(node => {
+				node.level = level;
+				if (node.children.length > 0) {
+					setLevel(node.children, level + 1);
+				}
+			});
+		};
+		setLevel(roots, 0);
+
+		// 4. Sort by title
+		const sortNodes = (nodes: PageNode[]) => {
+			nodes.sort((a, b) => a.title.localeCompare(b.title));
+			nodes.forEach(n => sortNodes(n.children));
+		};
+		sortNodes(roots);
+
+		// Return all nodes (linked)
+		return Array.from(pageMap.values());
+	}
+
+	// Helper to get visible nodes (flattened tree) based on expanded state
+	function getVisibleNodes(nodes: PageNode[]): PageNode[] {
+		// Roots are nodes without a parent in the current set
+		const roots = nodes.filter(n => !n.parent).sort((a, b) => a.title.localeCompare(b.title));
+		const visible: PageNode[] = [];
+
+		const traverse = (node: PageNode) => {
+			visible.push(node);
+			if (node.expanded && node.children.length > 0) {
+				// Children are already sorted in buildPageTree
+				node.children.forEach(traverse);
+			}
+		};
+
+		roots.forEach(traverse);
+		return visible;
+	}
+
+	function toggleNodeExpanded(node: PageNode) {
+		node.expanded = !node.expanded;
+		// Trigger reactivity
+		spacePages = { ...spacePages };
+	}
+
+	function toggleNodeSelection(node: PageNode, recursive: boolean = false) {
+		const currentState = nodeStateCache.get(node.id) ?? 'unchecked';
+		const shouldSelect = currentState !== 'checked'; // indeterminate → select-all
+
+		if (recursive) {
+			const traverse = (n: PageNode) => {
+				if (shouldSelect) selectedPageIds.add(n.id);
+				else selectedPageIds.delete(n.id);
+				for (const child of n.children) traverse(child);
+			};
+			traverse(node);
+		} else {
+			if (selectedPageIds.has(node.id)) selectedPageIds.delete(node.id);
+			else selectedPageIds.add(node.id);
+		}
+
+		selectedPageIds = selectedPageIds;
+	}
 
 	// Load saved credentials from user settings
 	function loadFromSettings() {
@@ -212,15 +371,6 @@
 		selectedSpaceKeys = selectedSpaceKeys;
 	}
 
-	function togglePage(id: string) {
-		if (selectedPageIds.has(id)) {
-			selectedPageIds.delete(id);
-		} else {
-			selectedPageIds.add(id);
-		}
-		selectedPageIds = selectedPageIds;
-	}
-
 	function toggleAllFilteredPages() {
 		if (allFilteredPagesSelected) {
 			for (const p of allFilteredPages) {
@@ -234,6 +384,16 @@
 		selectedPageIds = selectedPageIds;
 	}
 
+	function toggleSpacePages(spaceKey: string) {
+		const state = spaceCheckState[spaceKey] ?? 'unchecked';
+		const shouldSelect = state !== 'checked';
+		for (const node of (spacePages[spaceKey] ?? [])) {
+			if (shouldSelect) selectedPageIds.add(node.id);
+			else selectedPageIds.delete(node.id);
+		}
+		selectedPageIds = selectedPageIds;
+	}
+
 	async function handleNextToPages() {
 		if (selectedSpaceKeys.size === 0) {
 			toast.error($i18n.t('Please select at least one space.'));
@@ -243,11 +403,12 @@
 		fetchingPages = true;
 		try {
 			const cfg = getConfig();
-			const newSpacePages: Record<string, ConfluencePage[]> = {};
+			const newSpacePages: Record<string, PageNode[]> = {};
 			for (const spaceKey of selectedSpaceKeys) {
 				const res = await getConfluenceSpacePages(localStorage.token, spaceKey, cfg);
 				if (res && res.pages) {
-					newSpacePages[spaceKey] = res.pages;
+					// Build tree structure
+					newSpacePages[spaceKey] = buildPageTree(res.pages);
 				} else {
 					newSpacePages[spaceKey] = [];
 				}
@@ -734,22 +895,41 @@
 						</div>
 					{:else}
 						{#each Array.from(selectedSpaceKeys) as spaceKey}
-							{#if spacePages[spaceKey] && spacePages[spaceKey].filter(p => p.title.toLowerCase().includes(pageFilter.toLowerCase())).length > 0}
+							{#if spacePages[spaceKey] && spacePages[spaceKey].length > 0}
+								{@const spaceState = spaceCheckState[spaceKey] ?? 'unchecked'}
 								<div class="px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-800/50 text-xs font-semibold text-gray-600 dark:text-gray-300 sticky top-0 z-10 shadow-sm flex items-center justify-between">
 									<span>{spaces.find(s => s.key === spaceKey)?.name || spaceKey}</span>
-								</div>
-								{#each spacePages[spaceKey].filter(p => p.title.toLowerCase().includes(pageFilter.toLowerCase())) as page (page.id)}
 									<button
-										class="w-full flex items-start gap-3 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition border-b border-gray-50 dark:border-gray-800/50 last:border-b-0"
-										on:click={() => togglePage(page.id)}
+										class="flex items-center gap-1.5 transition"
+										on:click={() => toggleSpacePages(spaceKey)}
+										title={spaceState === 'checked' ? $i18n.t('Deselect all in space') : $i18n.t('Select all in space')}
 									>
-										<div class="mt-0.5">
-											<div
-												class="w-4 h-4 rounded border-2 flex items-center justify-center transition {selectedPageIds.has(page.id)
-													? 'bg-black dark:bg-white border-black dark:border-white'
-													: 'border-gray-300 dark:border-gray-600'}"
+										<div class="w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition
+											{spaceState === 'unchecked' ? 'border-gray-300 dark:border-gray-600' : 'bg-black dark:bg-white border-black dark:border-white'}">
+											{#if spaceState === 'checked'}
+												<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-3 h-3 text-white dark:text-black">
+													<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+												</svg>
+											{:else if spaceState === 'indeterminate'}
+												<Minus className="w-3 h-3 text-white dark:text-black" strokeWidth="3" />
+											{/if}
+										</div>
+									</button>
+								</div>
+								
+								{#if pageFilter}
+									<!-- Flat list when filtering -->
+									{#each spacePages[spaceKey].filter(p => p.title.toLowerCase().includes(pageFilter.toLowerCase())) as page (page.id)}
+										{@const pageState = nodeStateCache.get(page.id) ?? 'unchecked'}
+										<button
+											class="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition border-b border-gray-50 dark:border-gray-800/50 last:border-b-0"
+											on:click={() => toggleNodeSelection(page, true)}
+										>
+											<div class="w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition {pageState === 'unchecked'
+												? 'border-gray-300 dark:border-gray-600'
+												: 'bg-black dark:bg-white border-black dark:border-white'}"
 											>
-												{#if selectedPageIds.has(page.id)}
+												{#if pageState === 'checked'}
 													<svg
 														xmlns="http://www.w3.org/2000/svg"
 														fill="none"
@@ -764,16 +944,73 @@
 															d="M4.5 12.75l6 6 9-13.5"
 														/>
 													</svg>
+												{:else if pageState === 'indeterminate'}
+													<Minus className="w-3 h-3 text-white dark:text-black" strokeWidth="3" />
 												{/if}
 											</div>
-										</div>
-										<div class="flex-1 min-w-0">
-											<div class="text-sm font-medium truncate">
-												{page.title || $i18n.t('Untitled')}
+											<div class="flex-1 min-w-0">
+												<div class="text-sm font-medium truncate">
+													{page.title || $i18n.t('Untitled')}
+												</div>
 											</div>
+										</button>
+									{/each}
+								{:else}
+									<!-- Tree view -->
+									{#each getVisibleNodes(spacePages[spaceKey]) as node (node.id)}
+										{@const nodeState = nodeStateCache.get(node.id) ?? 'unchecked'}
+										<div
+											class="flex items-center gap-2 px-3 py-1.5 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition border-b border-gray-50 dark:border-gray-800/50 last:border-b-0"
+											style="padding-left: {node.level * 1.5 + 0.75}rem"
+										>
+											<button
+												class="w-4 h-4 flex items-center justify-center text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition shrink-0"
+												on:click={() => toggleNodeExpanded(node)}
+											>
+												{#if node.children.length > 0}
+													{#if node.expanded}
+														<ChevronDown className="size-3.5" />
+													{:else}
+														<ChevronRight className="size-3.5" />
+													{/if}
+												{:else}
+													<!-- Placeholder for alignment -->
+													<span class="size-3.5"></span>
+												{/if}
+											</button>
+
+											<button
+												class="flex-1 flex items-center gap-3 min-w-0"
+												on:click={() => toggleNodeSelection(node, true)}
+											>
+												<div class="w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition
+													{nodeState === 'unchecked' ? 'border-gray-300 dark:border-gray-600' : 'bg-black dark:bg-white border-black dark:border-white'}">
+													{#if nodeState === 'checked'}
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															fill="none"
+															viewBox="0 0 24 24"
+															stroke-width="3"
+															stroke="currentColor"
+															class="w-3 h-3 text-white dark:text-black"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																d="M4.5 12.75l6 6 9-13.5"
+															/>
+														</svg>
+													{:else if nodeState === 'indeterminate'}
+														<Minus className="w-3 h-3 text-white dark:text-black" strokeWidth="3" />
+													{/if}
+												</div>
+												<div class="truncate text-sm font-medium">
+													{node.title || $i18n.t('Untitled')}
+												</div>
+											</button>
 										</div>
-									</button>
-								{/each}
+									{/each}
+								{/if}
 							{/if}
 						{/each}
 					{/if}

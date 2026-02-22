@@ -3016,6 +3016,10 @@ async def get_confluence_space_pages(
                     "id": p.get("id", ""),
                     "title": p.get("title", ""),
                     "type": p.get("type", "page"),
+                    "ancestors": [
+                        {"id": a.get("id", ""), "title": a.get("title", "")}
+                        for a in p.get("ancestors", [])
+                    ],
                 }
                 for p in pages
             ],

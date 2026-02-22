@@ -557,6 +557,7 @@ export type ConfluencePage = {
 	id: string;
 	title: string;
 	type: string;
+	ancestors?: { id: string; title: string }[];
 };
 
 export const testConfluenceConnection = async (
