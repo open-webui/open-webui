@@ -70,6 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🐛 **Playground nav drag fix.** Fixed ghost drag images when dragging top navigation tabs in the Playground panel by adding proper drag constraints and text selection prevention. [#21704](https://github.com/open-webui/open-webui/pull/21704)
 - 📝 **Console log spam fix.** Requesting deleted or missing files no longer floods the backend console with Python traceback logs, thanks to proper exception handling for expected 404 errors. [#21687](https://github.com/open-webui/open-webui/pull/21687)
 - 🐛 **Firefox avatar overflow fix.** Fixed a visual bug in Firefox where broken model or user avatar images would display overflowing alt text that overlapped adjacent labels on the Analytics and Leaderboard pages. Failed avatar images now properly show fallback icons instead. [#21730](https://github.com/open-webui/open-webui/pull/21730)
+- 🎨 **Dark mode select background fix.** Fixed an issue where select inputs and dropdown menus had inconsistent lighter background colors in dark mode by removing conflicting dark theme overrides, ensuring a cohesive transparent look. [#21728](https://github.com/open-webui/open-webui/pull/21728)
 
 ## [0.8.3] - 2026-02-17
 
