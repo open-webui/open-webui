@@ -3,7 +3,7 @@
 
 	import { onMount, getContext, tick } from 'svelte';
 	import { models, tools, functions, user } from '$lib/stores';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_URL, DEFAULT_CAPABILITIES } from '$lib/constants';
 
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
@@ -95,18 +95,7 @@
 	let filterIds = [];
 	let defaultFilterIds = [];
 
-	let capabilities = {
-		file_context: true,
-		vision: true,
-		file_upload: true,
-		web_search: true,
-		image_generation: true,
-		code_interpreter: true,
-		citations: true,
-		status_updates: true,
-		usage: undefined,
-		builtin_tools: true
-	};
+	let capabilities = { ...DEFAULT_CAPABILITIES };
 	let defaultFeatureIds = [];
 	let builtinTools = {};
 

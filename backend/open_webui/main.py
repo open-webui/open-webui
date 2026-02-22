@@ -394,6 +394,8 @@ from open_webui.config import (
     DEFAULT_PINNED_MODELS,
     DEFAULT_ARENA_MODEL,
     MODEL_ORDER_LIST,
+    DEFAULT_MODEL_METADATA,
+    DEFAULT_MODEL_PARAMS,
     EVALUATION_ARENA_MODELS,
     # WebUI (OAuth)
     ENABLE_OAUTH_ROLE_MANAGEMENT,
@@ -822,6 +824,8 @@ app.state.config.ADMIN_EMAIL = ADMIN_EMAIL
 app.state.config.DEFAULT_MODELS = DEFAULT_MODELS
 app.state.config.DEFAULT_PINNED_MODELS = DEFAULT_PINNED_MODELS
 app.state.config.MODEL_ORDER_LIST = MODEL_ORDER_LIST
+app.state.config.DEFAULT_MODEL_METADATA = DEFAULT_MODEL_METADATA
+app.state.config.DEFAULT_MODEL_PARAMS = DEFAULT_MODEL_PARAMS
 
 
 app.state.config.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
@@ -1688,9 +1692,14 @@ async def chat_completion(
             request.state.direct = True
             request.state.model = model
 
-        model_info_params = (
-            model_info.params.model_dump() if model_info and model_info.params else {}
+        # Model params: global defaults as base, per-model overrides win
+        default_model_params = (
+            getattr(request.app.state.config, "DEFAULT_MODEL_PARAMS", None) or {}
         )
+        model_info_params = {
+            **default_model_params,
+            **(model_info.params.model_dump() if model_info and model_info.params else {}),
+        }
 
         # Check base model existence for custom models
         if model_info_params.get("base_model_id"):

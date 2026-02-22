@@ -1263,6 +1263,18 @@ MODEL_ORDER_LIST = PersistentConfig(
     [],
 )
 
+DEFAULT_MODEL_METADATA = PersistentConfig(
+    "DEFAULT_MODEL_METADATA",
+    "models.default_metadata",
+    {},
+)
+
+DEFAULT_MODEL_PARAMS = PersistentConfig(
+    "DEFAULT_MODEL_PARAMS",
+    "models.default_params",
+    {},
+)
+
 DEFAULT_USER_ROLE = PersistentConfig(
     "DEFAULT_USER_ROLE",
     "ui.default_user_role",

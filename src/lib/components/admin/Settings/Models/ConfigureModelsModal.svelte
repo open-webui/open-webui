@@ -6,6 +6,7 @@
 	const dispatch = createEventDispatcher();
 
 	import { models } from '$lib/stores';
+	import { DEFAULT_CAPABILITIES } from '$lib/constants';
 	import { deleteAllModels } from '$lib/apis/models';
 	import { getModelsConfig, setModelsConfig } from '$lib/apis/configs';
 
@@ -21,11 +22,21 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import ModelSelector from './ModelSelector.svelte';
 	import Model from '../Evaluations/Model.svelte';
+	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
+
+	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
+	import DefaultFeatures from '$lib/components/workspace/Models/DefaultFeatures.svelte';
+	import BuiltinTools from '$lib/components/workspace/Models/BuiltinTools.svelte';
+
+	import AdjustmentsHorizontal from '$lib/components/icons/AdjustmentsHorizontal.svelte';
+	import Eye from '$lib/components/icons/Eye.svelte';
 
 	export let show = false;
 	export let initHandler = () => {};
 
 	let config = null;
+
+	let selectedTab = 'defaults';
 
 	let selectedModelId = '';
 	let defaultModelIds = [];
@@ -40,6 +51,13 @@
 
 	let loading = false;
 	let showResetModal = false;
+	let showDefaultCapabilities = false;
+	let showDefaultParams = false;
+
+	let defaultCapabilities = {};
+	let defaultFeatureIds = [];
+	let defaultParams = {};
+	let builtinTools = {};
 
 	$: if (show) {
 		init();
@@ -74,14 +92,36 @@
 
 		sortKey = '';
 		sortOrder = '';
+
+		const savedMeta = config?.DEFAULT_MODEL_METADATA;
+		if (savedMeta && Object.keys(savedMeta).length > 0) {
+			defaultCapabilities = savedMeta.capabilities ?? { ...DEFAULT_CAPABILITIES };
+			defaultFeatureIds = savedMeta.defaultFeatureIds ?? [];
+			builtinTools = savedMeta.builtinTools ?? {};
+		} else {
+			defaultCapabilities = { ...DEFAULT_CAPABILITIES };
+			defaultFeatureIds = [];
+			builtinTools = {};
+		}
+		defaultParams = config?.DEFAULT_MODEL_PARAMS ?? {};
 	};
 	const submitHandler = async () => {
 		loading = true;
 
+		const metadata = {
+			capabilities: defaultCapabilities,
+			...(defaultFeatureIds.length > 0 ? { defaultFeatureIds } : {}),
+			...(Object.keys(builtinTools).length > 0 ? { builtinTools } : {})
+		};
+
 		const res = await setModelsConfig(localStorage.token, {
 			DEFAULT_MODELS: defaultModelIds.join(','),
 			DEFAULT_PINNED_MODELS: defaultPinnedModelIds.join(','),
-			MODEL_ORDER_LIST: modelIds
+			MODEL_ORDER_LIST: modelIds,
+			DEFAULT_MODEL_METADATA: metadata,
+			DEFAULT_MODEL_PARAMS: Object.fromEntries(
+				Object.entries(defaultParams).filter(([_, v]) => v !== null && v !== '' && v !== undefined)
+			)
 		});
 
 		if (res) {
@@ -113,7 +153,7 @@
 	}}
 />
 
-<Modal size="sm" bind:show>
+<Modal size="lg" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
 			<div class=" text-lg font-medium self-center font-primary">
@@ -129,7 +169,7 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-5 pb-4 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				{#if config}
 					<form
@@ -138,97 +178,236 @@
 							submitHandler();
 						}}
 					>
-						<div>
-							<div class="flex flex-col w-full">
-								<button
-									class="mb-1 flex gap-2"
-									type="button"
-									on:click={() => {
-										sortKey = 'model';
-
-										if (sortOrder === 'asc') {
-											sortOrder = 'desc';
-										} else {
-											sortOrder = 'asc';
-										}
-
-										modelIds = modelIds
-											.filter((id) => id !== '')
-											.sort((a, b) => {
-												const nameA = $models.find((model) => model.id === a)?.name || a;
-												const nameB = $models.find((model) => model.id === b)?.name || b;
-												return sortOrder === 'desc'
-													? nameA.localeCompare(nameB)
-													: nameB.localeCompare(nameA);
-											});
-									}}
-								>
-									<div class="text-xs text-gray-500">{$i18n.t('Reorder Models')}</div>
-
-									{#if sortKey === 'model'}
-										<span class="font-normal self-center">
-											{#if sortOrder === 'asc'}
-												<ChevronUp className="size-3" />
-											{:else}
-												<ChevronDown className="size-3" />
-											{/if}
-										</span>
-									{:else}
-										<span class="invisible">
-											<ChevronUp className="size-3" />
-										</span>
-									{/if}
-								</button>
-
-								<ModelList bind:modelIds />
-							</div>
-						</div>
-
-						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
-
-						<ModelSelector
-							title={$i18n.t('Default Models')}
-							models={$models}
-							bind:modelIds={defaultModelIds}
-						/>
-
-						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
-
-						<ModelSelector
-							title={$i18n.t('Default Pinned Models')}
-							models={$models}
-							bind:modelIds={defaultPinnedModelIds}
-						/>
-
-						<div class="flex justify-between pt-3 text-sm font-medium gap-1.5">
-							<Tooltip content={$i18n.t('This will delete all models including custom models')}>
-								<button
-									class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-950 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
-									type="button"
-									on:click={() => {
-										showResetModal = true;
-									}}
-								>
-									<!-- {$i18n.t('Delete All Models')} -->
-									{$i18n.t('Reset All Models')}
-								</button>
-							</Tooltip>
-
-							<button
-								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
-									? ' cursor-not-allowed'
-									: ''}"
-								type="submit"
-								disabled={loading}
+						<div class="flex flex-col lg:flex-row w-full h-full pb-2 lg:space-x-4">
+							<div
+								id="admin-settings-tabs-container"
+								class="tabs flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"
 							>
-								{$i18n.t('Save')}
-
-								{#if loading}
-									<div class="ml-2 self-center">
-										<Spinner />
+								<button
+									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+									'defaults'
+										? ''
+										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									on:click={() => {
+										selectedTab = 'defaults';
+									}}
+									type="button"
+								>
+									<div class=" self-center mr-2">
+										<AdjustmentsHorizontal />
 									</div>
-								{/if}
-							</button>
+									<div class=" self-center">{$i18n.t('Defaults')}</div>
+								</button>
+
+								<button
+									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+									'display'
+										? ''
+										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									on:click={() => {
+										selectedTab = 'display';
+									}}
+									type="button"
+								>
+									<div class=" self-center mr-2">
+										<Eye />
+									</div>
+									<div class=" self-center">{$i18n.t('Display')}</div>
+								</button>
+							</div>
+
+							<div class="flex-1 mt-1 lg:mt-1 lg:h-[30rem] lg:max-h-[30rem] flex flex-col min-w-0">
+								<div class="w-full h-full overflow-y-auto overflow-x-hidden scrollbar-hidden">
+									{#if selectedTab === 'defaults'}
+										<ModelSelector
+											title={$i18n.t('Selected Models')}
+											tooltip={$i18n.t(
+												'Set the default models that are automatically selected for all users when a new chat is created.'
+											)}
+											models={$models}
+											bind:modelIds={defaultModelIds}
+										/>
+
+										<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
+
+										<ModelSelector
+											title={$i18n.t('Pinned Models')}
+											tooltip={$i18n.t(
+												'Set the models that are automatically pinned to the sidebar for all users.'
+											)}
+											models={$models}
+											bind:modelIds={defaultPinnedModelIds}
+										/>
+
+										<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
+
+										<div>
+											<button
+												class="flex w-full justify-between items-center"
+												type="button"
+												on:click={() => {
+													showDefaultCapabilities = !showDefaultCapabilities;
+												}}
+											>
+												<div class="text-xs text-gray-500 font-medium">
+													{$i18n.t('Model Capabilities')}
+												</div>
+												<div>
+													{#if showDefaultCapabilities}
+														<ChevronUp className="size-3" />
+													{:else}
+														<ChevronDown className="size-3" />
+													{/if}
+												</div>
+											</button>
+
+											{#if showDefaultCapabilities}
+												<div class="mt-2">
+													<Capabilities bind:capabilities={defaultCapabilities} />
+
+													{#if Object.keys(defaultCapabilities).filter((key) => defaultCapabilities[key]).length > 0}
+														{@const availableFeatures = Object.entries(defaultCapabilities)
+															.filter(
+																([key, value]) =>
+																	value &&
+																	['web_search', 'code_interpreter', 'image_generation'].includes(
+																		key
+																	)
+															)
+															.map(([key, value]) => key)}
+
+														{#if availableFeatures.length > 0}
+															<div class="mt-4">
+																<DefaultFeatures
+																	{availableFeatures}
+																	bind:featureIds={defaultFeatureIds}
+																/>
+															</div>
+														{/if}
+													{/if}
+
+													{#if defaultCapabilities.builtin_tools}
+														<div class="mt-4">
+															<BuiltinTools bind:builtinTools />
+														</div>
+													{/if}
+												</div>
+											{/if}
+										</div>
+
+										<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
+
+										<div>
+											<button
+												class="flex w-full justify-between items-center"
+												type="button"
+												on:click={() => {
+													showDefaultParams = !showDefaultParams;
+												}}
+											>
+												<div class="text-xs text-gray-500 font-medium">
+													{$i18n.t('Model Parameters')}
+												</div>
+												<div>
+													{#if showDefaultParams}
+														<ChevronUp className="size-3" />
+													{:else}
+														<ChevronDown className="size-3" />
+													{/if}
+												</div>
+											</button>
+
+											{#if showDefaultParams}
+												<div class="mt-2">
+													<AdvancedParams admin={true} bind:params={defaultParams} />
+												</div>
+											{/if}
+										</div>
+									{:else if selectedTab === 'display'}
+										<div>
+											<div class="flex flex-col w-full">
+												<button
+													class="mb-1 flex gap-2"
+													type="button"
+													on:click={() => {
+														sortKey = 'model';
+
+														if (sortOrder === 'asc') {
+															sortOrder = 'desc';
+														} else {
+															sortOrder = 'asc';
+														}
+
+														modelIds = modelIds
+															.filter((id) => id !== '')
+															.sort((a, b) => {
+																const nameA = $models.find((model) => model.id === a)?.name || a;
+																const nameB = $models.find((model) => model.id === b)?.name || b;
+																return sortOrder === 'desc'
+																	? nameA.localeCompare(nameB)
+																	: nameB.localeCompare(nameA);
+															});
+													}}
+												>
+													<div class="text-xs text-gray-500">{$i18n.t('Reorder Models')}</div>
+
+													{#if sortKey === 'model'}
+														<span class="font-normal self-center">
+															{#if sortOrder === 'asc'}
+																<ChevronUp className="size-3" />
+															{:else}
+																<ChevronDown className="size-3" />
+															{/if}
+														</span>
+													{:else}
+														<span class="invisible">
+															<ChevronUp className="size-3" />
+														</span>
+													{/if}
+												</button>
+
+												<ModelList bind:modelIds />
+											</div>
+										</div>
+
+										<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
+
+										<div>
+											<Tooltip
+												content={$i18n.t('This will delete all models including custom models')}
+											>
+												<button
+													class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-950 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+													type="button"
+													on:click={() => {
+														showResetModal = true;
+													}}
+												>
+													{$i18n.t('Reset All Models')}
+												</button>
+											</Tooltip>
+										</div>
+									{/if}
+								</div>
+
+								<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
+									<button
+										class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
+											? ' cursor-not-allowed'
+											: ''}"
+										type="submit"
+										disabled={loading}
+									>
+										{$i18n.t('Save')}
+
+										{#if loading}
+											<div class="ml-2 self-center">
+												<Spinner />
+											</div>
+										{/if}
+									</button>
+								</div>
+							</div>
 						</div>
 					</form>
 				{:else}
