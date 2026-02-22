@@ -856,6 +856,7 @@
 								type="text"
 								class="text-left w-full text-lg bg-transparent outline-hidden flex-1"
 								bind:value={knowledge.name}
+								aria-label={$i18n.t('Knowledge Name')}
 								placeholder={$i18n.t('Knowledge Name')}
 								disabled={!knowledge?.write_access}
 								on:input={() => {
@@ -903,6 +904,7 @@
 							type="text"
 							class="text-left text-xs w-full text-gray-500 bg-transparent outline-hidden"
 							bind:value={knowledge.description}
+							aria-label={$i18n.t('Knowledge Description')}
 							placeholder={$i18n.t('Knowledge Description')}
 							disabled={!knowledge?.write_access}
 							on:input={() => {
@@ -925,7 +927,8 @@
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 						bind:value={query}
-						placeholder={`${$i18n.t('Search Collection')}`}
+						aria-label={$i18n.t('Search Collection')}
+						placeholder={$i18n.t('Search Collection')}
 						on:focus={() => {
 							selectedFileId = null;
 						}}
@@ -1071,6 +1074,7 @@
 										<div class="mr-2">
 											<button
 												class="w-full text-left text-sm p-1.5 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
+												aria-label={$i18n.t('Close')}
 												on:click={() => {
 													selectedFileId = null;
 													selectedFile = null;
@@ -1108,6 +1112,7 @@
 											class="w-full h-full text-sm outline-none resize-none px-3 py-2"
 											bind:value={selectedFileContent}
 											disabled={!knowledge?.write_access}
+											aria-label={$i18n.t('File content')}
 											placeholder={$i18n.t('Add content here')}
 										/>
 									{/key}

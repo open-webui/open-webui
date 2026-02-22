@@ -67,6 +67,7 @@
 							<button
 								id="sidebar-toggle-button"
 								class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+								aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 								on:click={() => {
 									showSidebar.set(!$showSidebar);
 								}}
@@ -86,6 +87,7 @@
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
 							<a
 								draggable="false"
+								aria-current={$page.url.pathname.includes('/workspace/models') ? 'page' : null}
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/models')
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
@@ -96,6 +98,7 @@
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
 							<a
 								draggable="false"
+								aria-current={$page.url.pathname.includes('/workspace/knowledge') ? 'page' : null}
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/knowledge')
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
@@ -108,6 +111,7 @@
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts}
 							<a
 								draggable="false"
+								aria-current={$page.url.pathname.includes('/workspace/prompts') ? 'page' : null}
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/prompts')
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
@@ -118,6 +122,7 @@
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.skills}
 							<a
 								draggable="false"
+								aria-current={$page.url.pathname.includes('/workspace/skills') ? 'page' : null}
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/skills')
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
@@ -130,6 +135,7 @@
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.tools}
 							<a
 								draggable="false"
+								aria-current={$page.url.pathname.includes('/workspace/tools') ? 'page' : null}
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/tools')
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
