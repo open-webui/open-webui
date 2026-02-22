@@ -321,15 +321,14 @@
 		<!-- {$i18n.t('Pipelines')} -->
 		<!-- {$i18n.t('Database')} -->
 		{#each filteredSettings as tab (tab.id)}
-			<button
+			<a
 				id={tab.id}
-				class="px-0.5 py-1 min-w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+				href={tab.route}
+				draggable="false"
+				class="px-0.5 py-1 min-w-fit rounded-lg flex-1 lg:flex-none flex text-right transition select-none {selectedTab ===
 				tab.id
 					? ''
 					: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-				on:click={() => {
-					goto(tab.route);
-				}}
 			>
 				<div class=" self-center mr-2">
 					{#if tab.id === 'general'}
@@ -500,7 +499,7 @@
 					{/if}
 				</div>
 				<div class=" self-center">{$i18n.t(tab.title)}</div>
-			</button>
+			</a>
 		{/each}
 	</div>
 
