@@ -151,6 +151,16 @@ DEFAULT_REASONING_TAGS = [
 DEFAULT_SOLUTION_TAGS = [("<|begin_of_solution|>", "<|end_of_solution|>")]
 DEFAULT_CODE_INTERPRETER_TAGS = [("<code_interpreter>", "</code_interpreter>")]
 
+# Builtin tool names whose results should be extracted as citation sources
+# and whose tool result content should be condensed to avoid duplication
+# with the RAG <source> injection.
+CITATION_TOOL_NAMES = frozenset([
+    "search_web",
+    "fetch_url",
+    "view_knowledge_file",
+    "query_knowledge_files",
+])
+
 
 def output_id(prefix: str) -> str:
     """Generate OR-style ID: prefix + 24-char hex UUID."""
@@ -321,6 +331,119 @@ def get_citation_source_from_tool_result(
                 "metadata": [{"source": tool_name}],
             }
         ]
+
+
+def get_condensed_tool_result(
+    tool_name: str, tool_result: str, citation_sources: list
+) -> str:
+    """
+    Replace full content in a tool result with a condensed metadata reference.
+
+    The RAG <source> injection already provides the full content with citation
+    IDs for proper citing. The tool result message only needs to confirm what
+    was retrieved, avoiding content duplication in the model prompt.
+    """
+    try:
+        parsed = json.loads(tool_result) if isinstance(tool_result, str) else tool_result
+    except (json.JSONDecodeError, TypeError):
+        parsed = tool_result
+
+    if tool_name == "view_knowledge_file":
+        if isinstance(parsed, dict):
+            condensed = {
+                "id": parsed.get("id", ""),
+                "filename": parsed.get("filename", ""),
+                "status": "content_loaded",
+                "note": "Full content available in cited sources above.",
+            }
+        else:
+            condensed = {
+                "status": "content_loaded",
+                "note": "Full content available in cited sources above.",
+            }
+        return json.dumps(condensed)
+
+    elif tool_name == "query_knowledge_files":
+        count = len(parsed) if isinstance(parsed, list) else 1
+        condensed = {
+            "status": "results_loaded",
+            "count": count,
+            "note": "Retrieved content available in cited sources above.",
+        }
+        return json.dumps(condensed)
+
+    elif tool_name == "search_web":
+        if isinstance(parsed, list):
+            condensed = {
+                "status": "results_loaded",
+                "count": len(parsed),
+                "results": [
+                    {"title": r.get("title", ""), "link": r.get("link", "")}
+                    for r in parsed
+                ],
+                "note": "Search result details available in cited sources above.",
+            }
+        else:
+            condensed = {
+                "status": "results_loaded",
+                "note": "Search results available in cited sources above.",
+            }
+        return json.dumps(condensed)
+
+    elif tool_name == "fetch_url":
+        condensed = {
+            "status": "content_loaded",
+            "note": "Page content available in cited sources above.",
+        }
+        return json.dumps(condensed)
+
+    # Fallback: return original
+    return tool_result if isinstance(tool_result, str) else json.dumps(tool_result)
+
+
+def is_source_already_injected(source: dict, injected_source_ids: set) -> bool:
+    """
+    Check whether a citation source was already injected in the initial RAG pass.
+
+    Compares file_id and source identifiers from the source's metadata against
+    the set of already-injected IDs to prevent duplicate content injection.
+    """
+    if not injected_source_ids:
+        return False
+
+    # Check source-level ID
+    src_info = source.get("source", {})
+    if src_info.get("id") and src_info["id"] in injected_source_ids:
+        return True
+
+    # Check metadata-level IDs
+    for meta in source.get("metadata", []):
+        if meta.get("file_id") and meta["file_id"] in injected_source_ids:
+            return True
+        if meta.get("source") and meta["source"] in injected_source_ids:
+            return True
+
+    return False
+
+
+def collect_source_ids(sources: list) -> set:
+    """
+    Collect all identifying IDs from a list of citation sources.
+
+    Extracts source-level IDs, metadata file_ids, and metadata source names
+    into a flat set for deduplication lookups.
+    """
+    source_ids = set()
+    for source in sources:
+        source_info = source.get("source", {})
+        if source_info.get("id"):
+            source_ids.add(source_info["id"])
+        for meta in source.get("metadata", []):
+            if meta.get("file_id"):
+                source_ids.add(meta["file_id"])
+            if meta.get("source"):
+                source_ids.add(meta["source"])
+    return source_ids
 
 
 def split_content_and_whitespace(content):
@@ -1215,6 +1338,14 @@ async def chat_completion_tools_handler(
                             "tool_result": True,
                         }
                     )
+
+                    # Condense the tool result for builtin citation tools
+                    # to avoid content duplication between tool result
+                    # and RAG source injection
+                    if tool_function_name in CITATION_TOOL_NAMES:
+                        tool_result = get_condensed_tool_result(
+                            tool_function_name, tool_result, []
+                        )
 
                     if (
                         tools[tool_function_name]
@@ -2543,6 +2674,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         form_data["messages"] = apply_source_context_to_messages(
             request, form_data["messages"], sources, prompt
         )
+
+        # Track which sources were already injected for deduplication in tool calls
+        metadata["injected_source_ids"] = collect_source_ids(sources)
 
     # If there are citations, add them to the data_items
     sources = [
@@ -3981,6 +4115,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                 tool_call_retries = 0
                 tool_call_sources = []  # Track citation sources from tool results
+                injected_source_ids = metadata.get("injected_source_ids", set())
 
                 while (
                     len(tool_calls) > 0
@@ -4122,13 +4257,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                         # Extract citation sources from tool results
                         if (
-                            tool_function_name
-                            in [
-                                "search_web",
-                                "fetch_url",
-                                "view_knowledge_file",
-                                "query_knowledge_files",
-                            ]
+                            tool_function_name in CITATION_TOOL_NAMES
                             and tool_result
                         ):
                             try:
@@ -4139,6 +4268,15 @@ async def streaming_chat_response_handler(response, ctx):
                                     tool_id=tool.get("tool_id", "") if tool else "",
                                 )
                                 tool_call_sources.extend(citation_sources)
+
+                                # Replace tool result with condensed version
+                                # to avoid content duplication between the
+                                # tool result message and RAG source injection
+                                tool_result = get_condensed_tool_result(
+                                    tool_function_name,
+                                    tool_result,
+                                    citation_sources,
+                                )
                             except Exception as e:
                                 log.exception(f"Error extracting citation source: {e}")
 
@@ -4218,6 +4356,13 @@ async def streaming_chat_response_handler(response, ctx):
 
                     # Apply source context to messages for model
                     if tool_call_sources:
+                        # Deduplicate: skip sources already in the initial RAG context
+                        tool_call_sources = [
+                            s for s in tool_call_sources
+                            if not is_source_already_injected(s, injected_source_ids)
+                        ]
+
+                    if tool_call_sources:
                         user_msg = get_last_user_message(form_data["messages"])
                         if user_msg:
                             form_data["messages"] = apply_source_context_to_messages(
@@ -4226,6 +4371,10 @@ async def streaming_chat_response_handler(response, ctx):
                                 tool_call_sources,
                                 user_msg,
                             )
+
+                        # Track newly injected sources for subsequent tool calls
+                        injected_source_ids.update(collect_source_ids(tool_call_sources))
+
                         tool_call_sources.clear()
 
                     await event_emitter(
