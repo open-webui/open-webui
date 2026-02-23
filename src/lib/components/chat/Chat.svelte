@@ -120,6 +120,7 @@
 	let eventConfirmationInput = false;
 	let eventConfirmationInputPlaceholder = '';
 	let eventConfirmationInputValue = '';
+	let eventConfirmationInputType = '';
 	let eventCallback = null;
 
 	let chatIdUnsubscriber: Unsubscriber | undefined;
@@ -524,6 +525,7 @@
 					eventConfirmationMessage = data.message;
 					eventConfirmationInputPlaceholder = data.placeholder;
 					eventConfirmationInputValue = data?.value ?? '';
+					eventConfirmationInputType = data?.type ?? '';
 				} else {
 					console.log('Unknown message type', data);
 				}
@@ -2537,6 +2539,7 @@
 	input={eventConfirmationInput}
 	inputPlaceholder={eventConfirmationInputPlaceholder}
 	inputValue={eventConfirmationInputValue}
+	inputType={eventConfirmationInputType}
 	on:confirm={(e) => {
 		if (e.detail) {
 			eventCallback(e.detail);
