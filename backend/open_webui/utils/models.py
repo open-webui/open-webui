@@ -459,7 +459,7 @@ def get_filtered_models(models, user, db=None):
             if model_info:
                 if (
                     (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
-                    or user.id == model_info["user_id"]
+                    or user.id == model_info.get("user_id")
                     or model["id"] in accessible_model_ids
                 ):
                     filtered_models.append(model)
