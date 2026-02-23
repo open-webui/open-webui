@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- 📝 **RAG template duplication.** RAG templates are no longer duplicated in chat messages when models make multiple tool calls, preventing hallucinations and incorrect tool usage. [#21780](https://github.com/open-webui/open-webui/issues/21780), [Commit](https://github.com/open-webui/open-webui/commit/8f49725aa5f2d9b87e559e7d3f02f037335b7914)
 - 📋 **Audit log stdout.** Audit logs now correctly appear on stdout when the ENABLE_AUDIT_STDOUT environment variable is set to true, aligning runtime behavior with the intended configuration. [#21777](https://github.com/open-webui/open-webui/pull/21777)
 
 ## [0.8.5] - 2026-02-23
