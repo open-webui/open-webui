@@ -2531,16 +2531,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     {"type": "function", "function": tool.get("spec", {})}
                     for tool in tools_dict.values()
                 ]
-
-        else:
-            # If the function calling is not native, then call the tools function calling handler
-            try:
-                form_data, flags = await chat_completion_tools_handler(
-                    request, form_data, extra_params, user, models, tools_dict
-                )
-                sources.extend(flags.get("sources", []))
-            except Exception as e:
-                log.exception(e)
+            else:
+                # If the function calling is not native, then call the tools function calling handler
+                try:
+                    form_data, flags = await chat_completion_tools_handler(
+                        request, form_data, extra_params, user, models, tools_dict
+                    )
+                    sources.extend(flags.get("sources", []))
+                except Exception as e:
+                    log.exception(e)
 
     # Check if file context extraction is enabled for this model (default True)
     file_context_enabled = (
@@ -4322,7 +4321,8 @@ async def streaming_chat_response_handler(response, ctx):
                                 code = sanitize_code(code)
 
                                 if CODE_INTERPRETER_BLOCKED_MODULES:
-                                    blocking_code = textwrap.dedent(f"""
+                                    blocking_code = textwrap.dedent(
+                                        f"""
                                         import builtins
     
                                         BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
@@ -4338,7 +4338,8 @@ async def streaming_chat_response_handler(response, ctx):
                                             return _real_import(name, globals, locals, fromlist, level)
     
                                         builtins.__import__ = restricted_import
-                                    """)
+                                    """
+                                    )
                                     code = blocking_code + "\n" + code
 
                                 if (
