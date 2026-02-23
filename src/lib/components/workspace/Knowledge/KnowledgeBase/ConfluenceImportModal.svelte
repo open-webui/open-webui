@@ -36,8 +36,6 @@
 	// User credentials
 	let email = '';
 	let apiToken = '';
-	let username = '';
-	let password = '';
 	let personalAccessToken = '';
 
 	// State
@@ -234,9 +232,7 @@
 		const confluenceSettings = $settings?.confluence ?? {};
 		email = confluenceSettings.email ?? '';
 		apiToken = confluenceSettings.api_token ?? '';
-		username = confluenceSettings.username ?? '';
 		personalAccessToken = confluenceSettings.personal_access_token ?? '';
-		// Note: password is NOT persisted for security
 	}
 
 	// Save credentials to user settings (persisted server-side)
@@ -249,10 +245,6 @@
 			if (personalAccessToken.trim()) {
 				confluenceSettings.personal_access_token = personalAccessToken.trim();
 			}
-			if (username.trim()) {
-				confluenceSettings.username = username.trim();
-			}
-			// Note: password is NOT persisted for security
 		}
 
 		await settings.set({ ...$settings, confluence: confluenceSettings });
@@ -274,12 +266,7 @@
 			cfg.email = email.trim();
 			cfg.api_token = apiToken.trim();
 		} else {
-			if (personalAccessToken.trim()) {
-				cfg.personal_access_token = personalAccessToken.trim();
-			} else {
-				cfg.username = username.trim();
-				cfg.password = password;
-			}
+			cfg.personal_access_token = personalAccessToken.trim();
 		}
 		return cfg;
 	}
@@ -299,10 +286,8 @@
 				return false;
 			}
 		} else {
-			if (!personalAccessToken.trim() && (!username.trim() || !password)) {
-				toast.error(
-					$i18n.t('Please enter a personal access token, or username and password.')
-				);
+			if (!personalAccessToken.trim()) {
+				toast.error($i18n.t('Please enter your Personal Access Token.'));
 				return false;
 			}
 		}
@@ -614,7 +599,7 @@
 							</p>
 						</div>
 					{:else}
-						<!-- Data Center: PAT or Username/Password -->
+						<!-- Data Center: PAT only -->
 						<div>
 							<label
 								class="block text-xs text-gray-500 dark:text-gray-400 mb-1"
@@ -623,60 +608,15 @@
 								{$i18n.t('Personal Access Token')}
 							</label>
 							<SensitiveInput
-								placeholder={$i18n.t('Personal Access Token (recommended)')}
+								placeholder={$i18n.t('Personal Access Token')}
 								bind:value={personalAccessToken}
-								required={false}
-								on:input={() => {
-									connectionTested = false;
-								}}
-							/>
-						</div>
-
-						<div class="flex items-center gap-2 text-xs text-gray-400">
-							<div class="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
-							<span>{$i18n.t('or')}</span>
-							<div class="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
-						</div>
-
-						<div>
-							<label
-								class="block text-xs text-gray-500 dark:text-gray-400 mb-1"
-								for="confluence-username"
-							>
-								{$i18n.t('Username')}
-							</label>
-							<input
-								id="confluence-username"
-								type="text"
-								class="w-full text-sm bg-gray-50 dark:bg-gray-850 rounded-xl px-3 py-2 outline-none"
-								bind:value={username}
-								placeholder={$i18n.t('Username')}
-								on:input={() => {
-									connectionTested = false;
-								}}
-							/>
-						</div>
-						<div>
-							<label
-								class="block text-xs text-gray-500 dark:text-gray-400 mb-1"
-								for="confluence-password"
-							>
-								{$i18n.t('Password')}
-							</label>
-							<input
-								id="confluence-password"
-								type="password"
-								class="w-full text-sm bg-gray-50 dark:bg-gray-850 rounded-xl px-3 py-2 outline-none"
-								bind:value={password}
-								placeholder={$i18n.t('Password (not saved)')}
+								required={true}
 								on:input={() => {
 									connectionTested = false;
 								}}
 							/>
 							<p class="text-xs text-gray-400 mt-1">
-								{$i18n.t(
-									'Password is not saved. Use a Personal Access Token for persistent access.'
-								)}
+								{$i18n.t('Generate in Confluence: Profile → Personal Access Tokens')}
 							</p>
 						</div>
 					{/if}

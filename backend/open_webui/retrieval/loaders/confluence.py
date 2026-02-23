@@ -7,7 +7,7 @@ Supports:
 
 Authentication:
 - Cloud: email + API token
-- Data Center: username + personal access token (PAT), or username + password
+- Data Center: Personal Access Token (PAT)
 """
 
 import logging
@@ -45,17 +45,13 @@ class ConfluenceClient:
                 )
             self.session.auth = (email, api_token)
         elif auth_type == "datacenter":
-            if personal_access_token:
-                self.session.headers.update(
-                    {"Authorization": f"Bearer {personal_access_token}"}
-                )
-            elif username and password:
-                self.session.auth = (username, password)
-            else:
+            if not personal_access_token:
                 raise ValueError(
-                    "Data Center authentication requires personal_access_token, "
-                    "or username and password"
+                    "Data Center authentication requires a Personal Access Token"
                 )
+            self.session.headers.update(
+                {"Authorization": f"Bearer {personal_access_token}"}
+            )
         else:
             raise ValueError(f"Unknown auth_type: {auth_type}")
 
@@ -95,11 +91,15 @@ class ConfluenceClient:
             params["type"] = space_type
 
         # Try wiki-prefixed URL first (Cloud), then plain (Data Center)
-        for prefix in ["/wiki/rest/api/space", "/rest/api/space"]:
+        for i, prefix in enumerate(["/wiki/rest/api/space", "/rest/api/space"]):
             try:
                 return self._get(prefix, params)
             except requests.exceptions.HTTPError as e:
-                if e.response is not None and e.response.status_code == 404:
+                sc = e.response.status_code if e.response is not None else None
+                if sc == 404:
+                    continue
+                # Wiki path is Cloud-only; for DC skip auth errors there too
+                if i == 0 and self.auth_type == "datacenter" and sc in (401, 403):
                     continue
                 raise
             except requests.exceptions.JSONDecodeError:
@@ -134,12 +134,15 @@ class ConfluenceClient:
             space_key = f"~{user_id}"
             
             # 2. Fetch just this specific space
-            for prefix in ["/wiki/rest/api/space", "/rest/api/space"]:
+            for i, prefix in enumerate(["/wiki/rest/api/space", "/rest/api/space"]):
                 try:
                     space = self._get(f"{prefix}/{space_key}", {"expand": "description.plain"})
                     return [space]
                 except requests.exceptions.HTTPError as e:
-                    if e.response is not None and e.response.status_code == 404:
+                    sc = e.response.status_code if e.response is not None else None
+                    if sc == 404:
+                        continue
+                    if i == 0 and self.auth_type == "datacenter" and sc in (401, 403):
                         continue
                     raise
                 except requests.exceptions.JSONDecodeError:
@@ -166,11 +169,14 @@ class ConfluenceClient:
             "limit": limit,
             "expand": expand,
         }
-        for prefix in ["/wiki/rest/api/content", "/rest/api/content"]:
+        for i, prefix in enumerate(["/wiki/rest/api/content", "/rest/api/content"]):
             try:
                 return self._get(prefix, params)
             except requests.exceptions.HTTPError as e:
-                if e.response is not None and e.response.status_code == 404:
+                sc = e.response.status_code if e.response is not None else None
+                if sc == 404:
+                    continue
+                if i == 0 and self.auth_type == "datacenter" and sc in (401, 403):
                     continue
                 raise
             except requests.exceptions.JSONDecodeError:
@@ -207,14 +213,17 @@ class ConfluenceClient:
     ) -> dict:
         """Get a specific page by ID."""
         params = {"expand": expand}
-        for prefix in [
+        for i, prefix in enumerate([
             f"/wiki/rest/api/content/{page_id}",
             f"/rest/api/content/{page_id}",
-        ]:
+        ]):
             try:
                 return self._get(prefix, params)
             except requests.exceptions.HTTPError as e:
-                if e.response is not None and e.response.status_code == 404:
+                sc = e.response.status_code if e.response is not None else None
+                if sc == 404:
+                    continue
+                if i == 0 and self.auth_type == "datacenter" and sc in (401, 403):
                     continue
                 raise
             except requests.exceptions.JSONDecodeError:

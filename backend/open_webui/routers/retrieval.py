@@ -4,7 +4,7 @@ import mimetypes
 import os
 import shutil
 import asyncio
-
+import requests
 import re
 import uuid
 from datetime import datetime
@@ -48,6 +48,10 @@ from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 # Document loaders
 from open_webui.retrieval.loaders.main import Loader
 from open_webui.retrieval.loaders.youtube import YoutubeLoader
+from open_webui.retrieval.loaders.confluence import (
+    ConfluenceClient,
+    confluence_page_to_document,
+)
 
 # Web search engines
 from open_webui.retrieval.web.main import SearchResult
@@ -2882,7 +2886,6 @@ def _get_confluence_client(request: Request, form_data):
     The admin sets the Confluence endpoint (base_url and deployment type) via admin
     settings. Users only supply their own credentials (API token / PAT / password).
     """
-    from open_webui.retrieval.loaders.confluence import ConfluenceClient
 
     # Admin-configured values take precedence as the canonical endpoint;
     # form-provided values (if any) are only used when the admin config is empty,
@@ -2899,10 +2902,9 @@ def _get_confluence_client(request: Request, form_data):
     )
 
     if not base_url:
-        from fastapi import HTTPException, status as http_status
 
         raise HTTPException(
-            status_code=http_status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Confluence base URL is not configured. Please ask your administrator to set the Confluence endpoint in the admin settings.",
         )
 
@@ -2986,6 +2988,17 @@ async def get_confluence_spaces(
                 for s in spaces
             ],
         }
+    except requests.exceptions.HTTPError as http_err:
+        sc = http_err.response.status_code if http_err.response is not None else 500
+        if sc == 401:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication failed: Your Personal Access Token is invalid or has been revoked. Generate a new one in Confluence: Profile → Personal Access Tokens.",
+            )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to fetch spaces: {str(http_err)}",
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -3024,6 +3037,17 @@ async def get_confluence_space_pages(
                 for p in pages
             ],
         }
+    except requests.exceptions.HTTPError as http_err:
+        sc = http_err.response.status_code if http_err.response is not None else 500
+        if sc == 401:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication failed: Your Personal Access Token is invalid or has been revoked. Generate a new one in Confluence: Profile → Personal Access Tokens.",
+            )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to fetch pages: {str(http_err)}",
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -3045,7 +3069,6 @@ async def import_confluence_content(
     Returns a list of documents with page_content and metadata that can be
     uploaded as files and added to a knowledge base.
     """
-    from open_webui.retrieval.loaders.confluence import confluence_page_to_document
 
     try:
         client = _get_confluence_client(request, form_data)
@@ -3074,6 +3097,17 @@ async def import_confluence_content(
             "documents": all_documents,
             "count": len(all_documents),
         }
+    except requests.exceptions.HTTPError as http_err:
+        sc = http_err.response.status_code if http_err.response is not None else 500
+        if sc == 401:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication failed: Your Personal Access Token is invalid or has been revoked. Generate a new one in Confluence: Profile → Personal Access Tokens.",
+            )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to import content: {str(http_err)}",
+        )
     except HTTPException:
         raise
     except Exception as e:
