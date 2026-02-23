@@ -22,7 +22,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/components/common/sonner';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import ConfigureModelsModal from './Models/ConfigureModelsModal.svelte';

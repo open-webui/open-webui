@@ -15,7 +15,7 @@
  0822: How to get "Questions Asked?"
  -->
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/components/common/sonner';
 	import { getContext, onMount } from 'svelte';
 	import { user } from '$lib/stores'; // This is how you get user data
 

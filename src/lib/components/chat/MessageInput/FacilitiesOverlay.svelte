@@ -5,7 +5,7 @@
 	import { generateFacilitiesResponse, generateFacilitiesSection, downloadFacilitiesDocument, extractFormDataFromFiles } from '$lib/apis/facilities';
 	import { updateChatById, getChatList } from '$lib/apis/chats';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/components/common/sonner';
 	
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');

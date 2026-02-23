@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/components/common/sonner';
 	import { getContext, onMount } from 'svelte';
 	import dayjs from 'dayjs';
 	const i18n = getContext('i18n');

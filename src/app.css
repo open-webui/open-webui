@@ -396,3 +396,71 @@ input[type='number'] {
 [data-sonner-toast] {
 	z-index: 9999 !important;
 }
+
+/* Sonner default hides content for stacked (collapsed) toasts.
+   We keep the stack but show content even when not expanded. */
+[data-sonner-toast][data-expanded='false'][data-front='false'][data-styled='true'] > * {
+	opacity: 1 !important;
+}
+
+.owui-toast {
+	font-size: 13px;
+	line-height: 1.35;
+	border-radius: 0.75rem;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+	border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+html.dark .owui-toast {
+	border-color: rgba(255, 255, 255, 0.12);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.owui-toast__title {
+	font-weight: 600;
+}
+
+.owui-toast__description {
+	font-size: 12px;
+	opacity: 0.9;
+}
+
+.owui-toast--success {
+	background: #e7f7ef;
+	color: #0b5b3b;
+}
+
+.owui-toast--error {
+	background: #fdecec;
+	color: #8a1f1f;
+}
+
+.owui-toast--warning {
+	background: #fff4cf;
+	color: #7a5400;
+}
+
+.owui-toast--info {
+	background: #eaf2ff;
+	color: #1f3c7a;
+}
+
+html.dark .owui-toast--success {
+	background: #123326;
+	color: #b6f0d2;
+}
+
+html.dark .owui-toast--error {
+	background: #3a1717;
+	color: #f3b6b6;
+}
+
+html.dark .owui-toast--warning {
+	background: #3a2d0a;
+	color: #f3d58a;
+}
+
+html.dark .owui-toast--info {
+	background: #14253d;
+	color: #b7cdf8;
+}

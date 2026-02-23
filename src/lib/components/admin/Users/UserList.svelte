@@ -10,7 +10,7 @@
 	dayjs.extend(relativeTime);
 	dayjs.extend(localizedFormat);
 
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/components/common/sonner';
 
 	import { updateUserRole, getUsers, deleteUserById, toggleCoAdminStatus, checkIfSuperAdmin } from '$lib/apis/users';
 

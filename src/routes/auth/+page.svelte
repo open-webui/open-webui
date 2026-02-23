@@ -1,5 +1,5 @@
 <script>
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/components/common/sonner';
 
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';

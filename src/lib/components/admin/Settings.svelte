@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, tick, onMount } from 'svelte';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/components/common/sonner';
 
 	import { config } from '$lib/stores';
 	import { getBackendConfig } from '$lib/apis';

@@ -3,7 +3,7 @@
 	import { showFacilitiesOverlay, showControls, models } from '$lib/stores';
 	import { slide } from 'svelte/transition';
 	import { generateFacilitiesResponse, getFacilitiesSections } from '$lib/apis/facilities';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/components/common/sonner';
 	
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');

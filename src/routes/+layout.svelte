@@ -29,7 +29,7 @@
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { Toaster, toast } from 'svelte-sonner';
+	import { toast, Toaster } from '$lib/components/common/sonner';
 
 	import { getBackendConfig } from '$lib/apis';
 	import { getSessionUser } from '$lib/apis/auths';
@@ -600,6 +600,18 @@
 	position="top-right"
 	closeButton
 	toastOptions={{
-		style: 'z-index: 9999;'
+		duration: 5000,
+		style: 'z-index: 9999;',
+		classNames: {
+			toast: 'owui-toast',
+			title: 'owui-toast__title',
+			description: 'owui-toast__description',
+			actionButton: 'owui-toast__action',
+			cancelButton: 'owui-toast__cancel',
+			success: 'owui-toast--success',
+			error: 'owui-toast--error',
+			warning: 'owui-toast--warning',
+			info: 'owui-toast--info'
+		}
 	}}
 />

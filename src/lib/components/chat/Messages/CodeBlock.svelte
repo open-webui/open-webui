@@ -9,7 +9,7 @@
 	import SvgPanZoom from '$lib/components/common/SVGPanZoom.svelte';
 	import { config } from '$lib/stores';
 	import { executeCode } from '$lib/apis/utils';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/components/common/sonner';
 	import { mermaidService } from '$lib/services/mermaid.service';
 	import { mermaidStore } from '$lib/stores/mermaid.store';
 	import { MERMAID_CONFIG } from '$lib/constants';

@@ -8,7 +8,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Minus from '$lib/components/icons/Minus.svelte';
 	import PencilSolid from '$lib/components/icons/PencilSolid.svelte';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/components/common/sonner';
 	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 
 	export let show = false;

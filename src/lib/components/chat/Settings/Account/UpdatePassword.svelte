@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/components/common/sonner';
 	import { updateUserPassword } from '$lib/apis/auths';
 
 	const i18n = getContext('i18n');

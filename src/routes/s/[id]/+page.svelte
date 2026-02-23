@@ -15,7 +15,7 @@
 
 	import { getUserById } from '$lib/apis/users';
 	import { getModels } from '$lib/apis';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/components/common/sonner';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 	const i18n = getContext('i18n');

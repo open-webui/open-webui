@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/components/common/sonner';
 	import { getContext } from 'svelte';
 	import { acceptTerms } from '$lib/apis/users';
 	import { user as userStore } from '$lib/stores';

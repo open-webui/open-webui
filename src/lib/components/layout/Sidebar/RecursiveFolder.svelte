@@ -21,7 +21,7 @@
 		updateFolderNameById,
 		updateFolderParentIdById
 	} from '$lib/apis/folders';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/components/common/sonner';
 	import {
 		getChatById,
 		getChatsByFolderId,

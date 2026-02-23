@@ -353,6 +353,10 @@ async def get_embedding_config(request: Request, user=Depends(get_verified_user)
             # 3. NOT accessible to other admins or their groups
             "key": embedding_api_key,
         },
+        "ollama_config": {
+            "url": request.app.state.config.RAG_OLLAMA_BASE_URL,
+            "key": request.app.state.config.RAG_OLLAMA_API_KEY,
+        },
     }
 
 

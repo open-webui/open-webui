@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/components/common/sonner';
 
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
 
@@ -52,6 +52,7 @@
 	let scanDirLoading = false;
 	let updateEmbeddingModelLoading = false;
 	let updateRerankingModelLoading = false;
+	let saveInProgress = false;
 
 	let showResetConfirm = false;
 	let showResetUploadDirConfirm = false;
@@ -96,6 +97,76 @@
 		r: 0.0,
 		k: 4,
 		hybrid: false
+	};
+
+	const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+	const normalizeText = (value: string | null | undefined) =>
+		value === null || value === undefined ? '' : String(value);
+	const normalizeNumber = (value: number | string | null | undefined, fallback: number) => {
+		if (value === '' || value === null || value === undefined) return fallback;
+		const num = Number(value);
+		return Number.isFinite(num) ? num : fallback;
+	};
+
+	const verifyRagConfig = async (expected: {
+		pdf_extract_images: boolean;
+		enable_google_drive_integration: boolean;
+		enable_onedrive_integration: boolean;
+		file_max_size: number;
+		file_max_count: number;
+		RAG_FULL_CONTEXT: boolean;
+		BYPASS_EMBEDDING_AND_RETRIEVAL: boolean;
+		chunk: { text_splitter: string; chunk_size: number; chunk_overlap: number };
+		content_extraction: {
+			engine: string;
+			tika_server_url: string;
+			document_intelligence_endpoint: string;
+			document_intelligence_key: string;
+		};
+	}) => {
+		const res = await getRAGConfig(localStorage.token, $user.email).catch(() => null);
+		if (!res) return false;
+
+		const chunkSize = normalizeNumber(res?.chunk?.chunk_size, 1000);
+		const chunkOverlap = normalizeNumber(res?.chunk?.chunk_overlap, 200);
+		const textSplitterValue = normalizeText(res?.chunk?.text_splitter);
+		const tikaUrl = normalizeText(res?.content_extraction?.tika_server_url);
+		const docEndpoint = normalizeText(res?.content_extraction?.document_intelligence_config?.endpoint);
+		const docKey = normalizeText(res?.content_extraction?.document_intelligence_config?.key);
+
+		return (
+			res?.pdf_extract_images === expected.pdf_extract_images &&
+			res?.enable_google_drive_integration === expected.enable_google_drive_integration &&
+			res?.enable_onedrive_integration === expected.enable_onedrive_integration &&
+			res?.file?.max_size === expected.file_max_size &&
+			res?.file?.max_count === expected.file_max_count &&
+			res?.RAG_FULL_CONTEXT === expected.RAG_FULL_CONTEXT &&
+			res?.BYPASS_EMBEDDING_AND_RETRIEVAL === expected.BYPASS_EMBEDDING_AND_RETRIEVAL &&
+			textSplitterValue === normalizeText(expected.chunk.text_splitter) &&
+			chunkSize === expected.chunk.chunk_size &&
+			chunkOverlap === expected.chunk.chunk_overlap &&
+			normalizeText(res?.content_extraction?.engine) === normalizeText(expected.content_extraction.engine) &&
+			tikaUrl === normalizeText(expected.content_extraction.tika_server_url) &&
+			docEndpoint === normalizeText(expected.content_extraction.document_intelligence_endpoint) &&
+			docKey === normalizeText(expected.content_extraction.document_intelligence_key)
+		);
+	};
+
+	const verifyQuerySettings = async (expected: {
+		k: number | null;
+		r: number | null;
+		template: string | null;
+		hybrid: boolean;
+	}) => {
+		const res = await getQuerySettings(localStorage.token, $user.email).catch(() => null);
+		if (!res) return false;
+		return (
+			res?.k === expected.k &&
+			res?.r === expected.r &&
+			normalizeText(res?.template) === normalizeText(expected.template) &&
+			res?.hybrid === expected.hybrid
+		);
 	};
 
 	const embeddingModelUpdateHandler = async () => {
@@ -215,87 +286,146 @@
 	};
 
 	const submitHandler = async () => {
-		if (contentExtractionEngine === 'tika' && tikaServerUrl === '') {
-			toast.error($i18n.t('Tika Server URL required.'));
-			return;
-		}
-		if (
-			contentExtractionEngine === 'document_intelligence' &&
-			(documentIntelligenceEndpoint === '' || documentIntelligenceKey === '')
-		) {
-			toast.error($i18n.t('Document Intelligence endpoint and key required.'));
-			return;
-		}
-
-		if (!BYPASS_EMBEDDING_AND_RETRIEVAL) {
-			await embeddingModelUpdateHandler();
-
-			if (querySettings.hybrid) {
-				await rerankingModelUpdateHandler();
+		saveInProgress = true;
+		try {
+			if (contentExtractionEngine === 'tika' && tikaServerUrl === '') {
+				toast.error($i18n.t('Tika Server URL required.'));
+				return;
 			}
-		}
+			if (
+				contentExtractionEngine === 'document_intelligence' &&
+				(documentIntelligenceEndpoint === '' || documentIntelligenceKey === '')
+			) {
+				toast.error($i18n.t('Document Intelligence endpoint and key required.'));
+				return;
+			}
 
-		console.log('BEFORE SAVE - chunkSize:', chunkSize, 'chunkOverlap:', chunkOverlap);
-		
-		const res = await updateRAGConfig(localStorage.token, {
-			email: $user.email,
-			pdf_extract_images: pdfExtractImages,
-			enable_google_drive_integration: enableGoogleDriveIntegration,
-			enable_onedrive_integration: enableOneDriveIntegration,
-			file: {
-				max_size: fileMaxSize === '' || fileMaxSize === null ? 5 : fileMaxSize,
-				max_count: fileMaxCount === '' || fileMaxCount === null ? 2 : fileMaxCount
-			},
-			RAG_FULL_CONTEXT: RAG_FULL_CONTEXT,
-			BYPASS_EMBEDDING_AND_RETRIEVAL: BYPASS_EMBEDDING_AND_RETRIEVAL,
-			chunk: {
-				text_splitter: textSplitter,
-				chunk_overlap: (chunkOverlap === '' || chunkOverlap === null || isNaN(Number(chunkOverlap)) || Number(chunkOverlap) < 0) ? 200 : Number(chunkOverlap),
-				chunk_size: (chunkSize === '' || chunkSize === null || isNaN(Number(chunkSize)) || Number(chunkSize) <= 0) ? 1000 : Number(chunkSize)
-			},
-			content_extraction: {
-				engine: contentExtractionEngine,
-				tika_server_url: tikaServerUrl,
-				document_intelligence_config: {
-					key: documentIntelligenceKey,
-					endpoint: documentIntelligenceEndpoint
+			if (!BYPASS_EMBEDDING_AND_RETRIEVAL) {
+				await embeddingModelUpdateHandler();
+
+				if (querySettings.hybrid) {
+					await rerankingModelUpdateHandler();
 				}
 			}
-		});
 
-		console.log('AFTER SAVE - Response:', res);
-		console.log('AFTER SAVE - res.chunk:', res?.chunk);
-		
-		// CRITICAL: Update UI state from backend response (backend may have corrected 0 values to defaults)
-		if (res && res.chunk) {
-			const newChunkSize = (res.chunk.chunk_size && res.chunk.chunk_size > 0) ? res.chunk.chunk_size : 1000;
-			const newChunkOverlap = (res.chunk.chunk_overlap && res.chunk.chunk_overlap > 0) ? res.chunk.chunk_overlap : 200;
-			console.log('UPDATING UI - newChunkSize:', newChunkSize, 'newChunkOverlap:', newChunkOverlap);
-			textSplitter = res.chunk.text_splitter;
-			chunkSize = newChunkSize;
-			chunkOverlap = newChunkOverlap;
-			console.log('AFTER UPDATE - chunkSize:', chunkSize, 'chunkOverlap:', chunkOverlap);
-		} else {
-			console.error('NO RESPONSE OR NO CHUNK IN RESPONSE!', res);
-			// Force re-fetch if response is missing
-			const refreshRes = await getRAGConfig(localStorage.token, $user.email);
-			if (refreshRes && refreshRes.chunk) {
-				chunkSize = (refreshRes.chunk.chunk_size && refreshRes.chunk.chunk_size > 0) ? refreshRes.chunk.chunk_size : 1000;
-				chunkOverlap = (refreshRes.chunk.chunk_overlap && refreshRes.chunk.chunk_overlap > 0) ? refreshRes.chunk.chunk_overlap : 200;
-				textSplitter = refreshRes.chunk.text_splitter;
+			console.log('BEFORE SAVE - chunkSize:', chunkSize, 'chunkOverlap:', chunkOverlap);
+
+			const expectedChunkOverlap = normalizeNumber(chunkOverlap, 200);
+			const expectedChunkSize = normalizeNumber(chunkSize, 1000);
+			const expectedFileMaxSize = normalizeNumber(fileMaxSize, 5);
+			const expectedFileMaxCount = normalizeNumber(fileMaxCount, 2);
+
+			const expectedRagConfig = {
+				pdf_extract_images: pdfExtractImages,
+				enable_google_drive_integration: enableGoogleDriveIntegration,
+				enable_onedrive_integration: enableOneDriveIntegration,
+				file_max_size: expectedFileMaxSize,
+				file_max_count: expectedFileMaxCount,
+				RAG_FULL_CONTEXT: RAG_FULL_CONTEXT,
+				BYPASS_EMBEDDING_AND_RETRIEVAL: BYPASS_EMBEDDING_AND_RETRIEVAL,
+				chunk: {
+					text_splitter: textSplitter,
+					chunk_overlap: expectedChunkOverlap,
+					chunk_size: expectedChunkSize
+				},
+				content_extraction: {
+					engine: contentExtractionEngine,
+					tika_server_url: normalizeText(tikaServerUrl),
+					document_intelligence_endpoint: normalizeText(documentIntelligenceEndpoint),
+					document_intelligence_key: normalizeText(documentIntelligenceKey)
+				}
+			};
+
+			const res = await updateRAGConfig(localStorage.token, {
+				email: $user.email,
+				pdf_extract_images: pdfExtractImages,
+				enable_google_drive_integration: enableGoogleDriveIntegration,
+				enable_onedrive_integration: enableOneDriveIntegration,
+				file: {
+					max_size: expectedFileMaxSize,
+					max_count: expectedFileMaxCount
+				},
+				RAG_FULL_CONTEXT: RAG_FULL_CONTEXT,
+				BYPASS_EMBEDDING_AND_RETRIEVAL: BYPASS_EMBEDDING_AND_RETRIEVAL,
+				chunk: {
+					text_splitter: textSplitter,
+					chunk_overlap: expectedChunkOverlap,
+					chunk_size: expectedChunkSize
+				},
+				content_extraction: {
+					engine: contentExtractionEngine,
+					tika_server_url: tikaServerUrl,
+					document_intelligence_config: {
+						key: documentIntelligenceKey,
+						endpoint: documentIntelligenceEndpoint
+					}
+				}
+			});
+
+			console.log('AFTER SAVE - Response:', res);
+			console.log('AFTER SAVE - res.chunk:', res?.chunk);
+
+			// CRITICAL: Update UI state from backend response (backend may have corrected 0 values to defaults)
+			if (res && res.chunk) {
+				const newChunkSize = (res.chunk.chunk_size && res.chunk.chunk_size > 0) ? res.chunk.chunk_size : 1000;
+				const newChunkOverlap = (res.chunk.chunk_overlap && res.chunk.chunk_overlap > 0) ? res.chunk.chunk_overlap : 200;
+				console.log('UPDATING UI - newChunkSize:', newChunkSize, 'newChunkOverlap:', newChunkOverlap);
+				textSplitter = res.chunk.text_splitter;
+				chunkSize = newChunkSize;
+				chunkOverlap = newChunkOverlap;
+				console.log('AFTER UPDATE - chunkSize:', chunkSize, 'chunkOverlap:', chunkOverlap);
+			} else {
+				console.error('NO RESPONSE OR NO CHUNK IN RESPONSE!', res);
+				// Force re-fetch if response is missing
+				const refreshRes = await getRAGConfig(localStorage.token, $user.email);
+				if (refreshRes && refreshRes.chunk) {
+					chunkSize = (refreshRes.chunk.chunk_size && refreshRes.chunk.chunk_size > 0) ? refreshRes.chunk.chunk_size : 1000;
+					chunkOverlap = (refreshRes.chunk.chunk_overlap && refreshRes.chunk.chunk_overlap > 0) ? refreshRes.chunk.chunk_overlap : 200;
+					textSplitter = refreshRes.chunk.text_splitter;
+				}
 			}
-		}
 
-		await updateQuerySettings(localStorage.token, {email: $user.email, ...querySettings});
+			await updateQuerySettings(localStorage.token, {email: $user.email, ...querySettings});
 
-		if (fileMaxSize === '' || fileMaxSize === null) {
-			fileMaxSize = 5;
-		}
-		if (fileMaxCount === '' || fileMaxCount === null) {
-			fileMaxCount = 2;
-		}
+			if (fileMaxSize === '' || fileMaxSize === null) {
+				fileMaxSize = 5;
+			}
+			if (fileMaxCount === '' || fileMaxCount === null) {
+				fileMaxCount = 2;
+			}
 
-		dispatch('save');
+			dispatch('save');
+
+			const expectedQuerySettings = {
+				k: querySettings.k,
+				r: querySettings.r,
+				template: querySettings.template,
+				hybrid: querySettings.hybrid
+			};
+
+			let verified = false;
+			let delayMs = 800;
+			for (let attempt = 0; attempt < 3; attempt += 1) {
+				const ragOk = await verifyRagConfig(expectedRagConfig);
+				const queryOk = await verifyQuerySettings(expectedQuerySettings);
+				if (ragOk && queryOk) {
+					verified = true;
+					break;
+				}
+				await sleep(delayMs);
+				delayMs += 700;
+			}
+
+			if (!verified) {
+				toast.warning($i18n.t('Server not responding, your changes might not be saved.'), {
+					duration: 8000
+				});
+			} else {
+				toast.success($i18n.t('Settings saved successfully!'));
+			}
+		} finally {
+			saveInProgress = false;
+		}
 	};
 
 	const setEmbeddingConfig = async () => {
@@ -321,8 +451,8 @@
 
 
 			if (embeddingConfig.ollama_config) {
-				OllamaKey = embeddingConfig.ollama_config.key ?? OllamaKey;
-				OllamaUrl = embeddingConfig.ollama_config.url ?? OllamaUrl;
+				OllamaKey = embeddingConfig.ollama_config?.key ?? OllamaKey;
+				OllamaUrl = embeddingConfig.ollama_config?.url ?? OllamaUrl;
 			}
 		} else {
 			// No embedding config yet for this admin; force explicit entry.
@@ -1021,11 +1151,102 @@
 		</div>
 	</div>
 	<div class="flex justify-end pt-3 text-sm font-medium">
-		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-			type="submit"
-		>
-			{$i18n.t('Save')}
-		</button>
+		<div class="relative">
+			<button
+				class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+				type="submit"
+				disabled={saveInProgress}
+			>
+				{$i18n.t('Save')}
+			</button>
+			<!-- Animation temporarily disabled per request.
+				We keep the markup for future re-enable. -->
+			<!-- {#if saveInProgress}
+				<div class="save-spinner" aria-hidden="true">
+					<svg
+						width="24"
+						height="24"
+						viewBox="0 0 124 124"
+						fill="none"
+						xmlns="http://www.w3.org/2000/svg"
+						class="save-spinner__icon"
+					>
+						<path
+							d="M38.842 88.036C60.159 88.8118 61.6817 69.3878 61.7712 62.1075C61.7712 61.6898 61.5622 61.66 61.4727 61.9583C60.8457 63.48 58.0691 68.8806 50.3663 72.1925C43.4995 75.1464 39.3794 81.8299 38.6629 87.8272C38.633 87.9763 38.7525 88.0658 38.842 88.0658V88.036Z"
+							class="save-spinner__path"
+						/>
+						<path
+							d="M27.0489 64.1066C41.5887 79.7114 56.3971 67.0605 61.592 61.9882C61.8906 61.6898 61.7712 61.5108 61.5025 61.66C59.9798 62.2865 54.1878 64.1663 46.4253 61.0632C39.4988 58.2884 31.8258 60.1084 27.0788 63.8381C26.9593 63.9276 26.9892 64.0768 27.0788 64.1364L27.0489 64.1066Z"
+							class="save-spinner__path"
+						/>
+						<path
+							d="M35.4981 38.8346C34.7219 60.1383 54.158 61.66 61.4428 61.7495C61.8608 61.7495 61.8906 61.5406 61.592 61.4511C60.0694 60.8246 54.6655 58.0497 51.3515 50.3517C48.3958 43.4892 41.7081 39.3716 35.7071 38.6556C35.5578 38.6257 35.4683 38.7451 35.4683 38.8346H35.4981Z"
+							class="save-spinner__path"
+						/>
+						<path
+							d="M59.4426 27.0489C43.828 41.5796 56.4869 56.3788 61.5624 61.5705C61.8609 61.8688 62.04 61.7495 61.8908 61.481C61.2638 59.9593 59.3829 54.1708 62.4879 46.4132C65.2645 39.491 63.4433 31.8228 59.7113 27.0787C59.6217 26.9594 59.4725 26.9892 59.4127 27.0787L59.4426 27.0489Z"
+							class="save-spinner__path"
+						/>
+						<path
+							d="M84.7005 35.4928C63.3835 34.717 61.8608 54.141 61.7712 61.4213C61.7712 61.839 61.9802 61.8688 62.0698 61.5705C62.6968 60.0488 65.4734 54.6482 73.1761 51.3363C80.043 48.3824 84.1631 41.6989 84.8796 35.7016C84.9094 35.5525 84.79 35.463 84.7005 35.463V35.4928Z"
+							class="save-spinner__path"
+						/>
+						<path
+							d="M96.4935 59.4222C81.9537 43.8174 67.1452 56.4683 61.9503 61.5406C61.6518 61.839 61.7712 62.018 62.0399 61.8689C63.5626 61.2423 69.3546 59.3625 77.1171 62.4656C84.0436 65.2405 91.7165 63.4204 96.4636 59.6907C96.583 59.6012 96.5532 59.452 96.4636 59.3924L96.4935 59.4222Z"
+							class="save-spinner__path"
+						/>
+						<path
+							d="M88.0742 84.6644C88.8504 63.3607 69.4143 61.839 62.1295 61.7495C61.7116 61.7495 61.6817 61.9584 61.9803 62.0479C63.5029 62.6745 68.9068 65.4493 72.2208 73.1473C75.1765 80.0098 81.8642 84.1274 87.8652 84.8435C88.0145 84.8733 88.104 84.754 88.104 84.6644H88.0742Z"
+							class="save-spinner__path"
+						/>
+						<path
+							d="M64.1298 96.7783C79.7443 82.2476 67.0855 67.4484 62.01 62.2567C61.7115 61.9583 61.5323 62.0777 61.6816 62.3462C62.3086 63.8679 64.1895 69.6563 61.0845 77.414C58.3079 84.3362 60.1291 92.0043 63.8611 96.7484C63.9506 96.8678 64.0999 96.838 64.1596 96.7484L64.1298 96.7783Z"
+							class="save-spinner__path"
+						/>
+					</svg>
+				</div>
+			{/if} -->
+		</div>
 	</div>
 </form>
+
+<style>
+	.save-spinner {
+		position: absolute;
+		right: -32px;
+		top: 50%;
+		transform: translateY(-50%);
+		z-index: 20;
+		pointer-events: none;
+	}
+
+	.save-spinner__icon {
+		animation: save-spinner-spin 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+	}
+
+	@keyframes save-spinner-spin {
+		0% {
+			transform: rotate(0deg);
+		}
+		20% {
+			transform: rotate(360deg);
+		}
+		50% {
+			transform: rotate(2160deg);
+		}
+		80% {
+			transform: rotate(360deg);
+		}
+		100% {
+			transform: rotate(0deg);
+		}
+	}
+
+	.save-spinner__path {
+		fill: #502d86;
+	}
+
+	:global(html.dark) .save-spinner__path {
+		fill: #ffffff;
+	}
+</style>
