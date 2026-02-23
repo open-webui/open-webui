@@ -978,6 +978,21 @@
 
 						<div class="  mb-2.5 flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Retry count')}
+							</div>
+							<div class="flex items-center relative">
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									type="number"
+									min="0"
+									placeholder={$i18n.t('Retry count')}
+									bind:value={webConfig.WEB_LOADER_RETRY_COUNT}
+								/>
+							</div>
+						</div>
+
+						<div class="  mb-2.5 flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
 								{$i18n.t('Verify SSL Certificate')}
 							</div>
 							<div class="flex items-center relative">

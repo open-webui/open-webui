@@ -25,7 +25,7 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import run_in_threadpool
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import tiktoken
 
 
@@ -575,6 +575,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "SOUGOU_API_SK": request.app.state.config.SOUGOU_API_SK,
             "WEB_LOADER_ENGINE": request.app.state.config.WEB_LOADER_ENGINE,
             "WEB_LOADER_TIMEOUT": request.app.state.config.WEB_LOADER_TIMEOUT,
+            "WEB_LOADER_RETRY_COUNT": request.app.state.config.WEB_LOADER_RETRY_COUNT,
             "ENABLE_WEB_LOADER_SSL_VERIFICATION": request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
             "PLAYWRIGHT_WS_URL": request.app.state.config.PLAYWRIGHT_WS_URL,
             "PLAYWRIGHT_TIMEOUT": request.app.state.config.PLAYWRIGHT_TIMEOUT,
@@ -642,6 +643,7 @@ class WebConfig(BaseModel):
     SOUGOU_API_SK: Optional[str] = None
     WEB_LOADER_ENGINE: Optional[str] = None
     WEB_LOADER_TIMEOUT: Optional[str] = None
+    WEB_LOADER_RETRY_COUNT: Optional[int] = Field(None, ge=0)
     ENABLE_WEB_LOADER_SSL_VERIFICATION: Optional[bool] = None
     PLAYWRIGHT_WS_URL: Optional[str] = None
     PLAYWRIGHT_TIMEOUT: Optional[int] = None
@@ -1172,6 +1174,7 @@ async def update_rag_config(
         # Web loader settings
         request.app.state.config.WEB_LOADER_ENGINE = form_data.web.WEB_LOADER_ENGINE
         request.app.state.config.WEB_LOADER_TIMEOUT = form_data.web.WEB_LOADER_TIMEOUT
+        request.app.state.config.WEB_LOADER_RETRY_COUNT = form_data.web.WEB_LOADER_RETRY_COUNT
 
         request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION = (
             form_data.web.ENABLE_WEB_LOADER_SSL_VERIFICATION
@@ -1327,6 +1330,7 @@ async def update_rag_config(
             "SOUGOU_API_SK": request.app.state.config.SOUGOU_API_SK,
             "WEB_LOADER_ENGINE": request.app.state.config.WEB_LOADER_ENGINE,
             "WEB_LOADER_TIMEOUT": request.app.state.config.WEB_LOADER_TIMEOUT,
+            "WEB_LOADER_RETRY_COUNT": request.app.state.config.WEB_LOADER_RETRY_COUNT,
             "ENABLE_WEB_LOADER_SSL_VERIFICATION": request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
             "PLAYWRIGHT_WS_URL": request.app.state.config.PLAYWRIGHT_WS_URL,
             "PLAYWRIGHT_TIMEOUT": request.app.state.config.PLAYWRIGHT_TIMEOUT,

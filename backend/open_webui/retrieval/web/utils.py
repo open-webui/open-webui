@@ -42,6 +42,7 @@ from open_webui.config import (
     EXTERNAL_WEB_LOADER_URL,
     EXTERNAL_WEB_LOADER_API_KEY,
     WEB_FETCH_FILTER_LIST,
+    WEB_LOADER_RETRY_COUNT,
 )
 from open_webui.utils.misc import is_string_allowed
 
@@ -551,20 +552,25 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
 class SafeWebBaseLoader(WebBaseLoader):
     """WebBaseLoader with enhanced error handling for URLs."""
 
-    def __init__(self, trust_env: bool = False, *args, **kwargs):
+    def __init__(self, trust_env: bool = False, retry_count: int = 3, *args, **kwargs):
         """Initialize SafeWebBaseLoader
         Args:
             trust_env (bool, optional): set to True if using proxy to make web requests, for example
                 using http(s)_proxy environment variables. Defaults to False.
+            retry_count (int, optional): number of retries for failed requests. Defaults to 3.
         """
         super().__init__(*args, **kwargs)
         self.trust_env = trust_env
+        self.retry_count = retry_count
 
     async def _fetch(
-        self, url: str, retries: int = 3, cooldown: int = 2, backoff: float = 1.5
+        self, url: str, retries: Optional[int] = None, cooldown: int = 2, backoff: float = 1.5
     ) -> str:
+        if retries is None:
+            retries = self.retry_count
+
         async with aiohttp.ClientSession(trust_env=self.trust_env) as session:
-            for i in range(retries):
+            for i in range(retries + 1):
                 try:
                     kwargs: Dict = dict(
                         headers=self.session.headers,
@@ -581,7 +587,7 @@ class SafeWebBaseLoader(WebBaseLoader):
                         if self.raise_for_status:
                             response.raise_for_status()
                         return await response.text()
-                except aiohttp.ClientConnectionError as e:
+                except (aiohttp.ClientConnectionError, asyncio.TimeoutError) as e:
                     if i == retries - 1:
                         raise
                     else:
@@ -676,6 +682,7 @@ def get_web_loader(
 
     if WEB_LOADER_ENGINE.value == "" or WEB_LOADER_ENGINE.value == "safe_web":
         WebLoaderClass = SafeWebBaseLoader
+        web_loader_args["retry_count"] = WEB_LOADER_RETRY_COUNT.value
 
         request_kwargs = {}
         if WEB_LOADER_TIMEOUT.value:

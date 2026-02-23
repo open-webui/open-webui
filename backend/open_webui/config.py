@@ -3205,10 +3205,18 @@ WEB_LOADER_CONCURRENT_REQUESTS = PersistentConfig(
     int(os.getenv("WEB_LOADER_CONCURRENT_REQUESTS", "10")),
 )
 
+
 WEB_LOADER_TIMEOUT = PersistentConfig(
     "WEB_LOADER_TIMEOUT",
     "rag.web.loader.timeout",
     os.getenv("WEB_LOADER_TIMEOUT", ""),
+)
+
+
+WEB_LOADER_RETRY_COUNT = PersistentConfig(
+    "WEB_LOADER_RETRY_COUNT",
+    "rag.web.loader.retry_count",
+    int(os.getenv("WEB_LOADER_RETRY_COUNT", "3")),
 )
 
 
