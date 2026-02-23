@@ -551,6 +551,26 @@
 											<span>{$i18n.t('Continue with {{provider}}', { provider: 'Feishu' })}</span>
 										</button>
 									{/if}
+									{#if $config?.oauth?.providers?.facebook}
+										<button
+											class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
+											on:click={() => {
+												window.location.href = `${WEBUI_BASE_URL}/oauth/facebook/login`;
+											}}
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 24 24"
+												class="size-6 mr-3"
+											>
+												<path
+													fill="currentColor"
+													d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"
+												/>
+											</svg>
+											<span>{$i18n.t('Continue with {{provider}}', { provider: 'Facebook' })}</span>
+										</button>
+									{/if}
 								</div>
 							{/if}
 
