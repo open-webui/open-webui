@@ -93,8 +93,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- 🎯 **Prompt suggestions moved.** Prompt suggestions have been relocated from Admin Settings Interface to Admin Settings Models, where they can now be configured on a per-model basis or universally via the new model defaults. See the "Global model defaults" entry for more details.
-- 📢 **Banners moved.** Banners configuration has been relocated from Admin Settings Interface to Admin Settings General.
+- 🎯 **Prompt suggestions relocated.** Prompt suggestions have been moved from Admin Panel - Settings - Interface to Admin Panel - Settings - Models, where they can now be configured per-model or globally via the new model defaults.
+- 📢 **Banners relocated.** Banners configuration has been moved from Admin Panel - Settings - Interface to Admin Panel - Settings - General.
 
 ## [0.8.3] - 2026-02-17
 
