@@ -35,15 +35,36 @@ class RedisLock:
         return self.lock_obtained
 
     def renew_lock(self):
-        # xx=True will only set this key if it _has_ already been set
-        return self.redis.set(
-            self.lock_name, self.lock_id, xx=True, ex=self.timeout_secs
+        # Atomically verify ownership before renewing
+        result = self.redis.eval(
+            """
+            if redis.call("get", KEYS[1]) == ARGV[1] then
+                return redis.call("set", KEYS[1], ARGV[1], "EX", tonumber(ARGV[2]))
+            else
+                return nil
+            end
+            """,
+            1,
+            self.lock_name,
+            self.lock_id,
+            self.timeout_secs,
         )
+        return result is not None
 
     def release_lock(self):
-        lock_value = self.redis.get(self.lock_name)
-        if lock_value and lock_value == self.lock_id:
-            self.redis.delete(self.lock_name)
+        # Atomically verify ownership before deleting
+        self.redis.eval(
+            """
+            if redis.call("get", KEYS[1]) == ARGV[1] then
+                return redis.call("del", KEYS[1])
+            else
+                return 0
+            end
+            """,
+            1,
+            self.lock_name,
+            self.lock_id,
+        )
 
 
 class RedisDict:
