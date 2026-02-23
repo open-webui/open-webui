@@ -213,21 +213,8 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
             )
 
         elif item_type == 'reasoning':
-            if raw:
-                # Include reasoning with original tags for LLM re-processing
-                reasoning_text = ''
-                source_list = item.get('summary', []) or item.get('content', [])
-                for part in source_list:
-                    if part.get('type') == 'output_text':
-                        reasoning_text += part.get('text', '')
-                    elif 'text' in part:
-                        reasoning_text += part.get('text', '')
-
-                if reasoning_text:
-                    start_tag = item.get('start_tag', '<think>')
-                    end_tag = item.get('end_tag', '</think>')
-                    pending_content.append(f'{start_tag}{reasoning_text}{end_tag}')
-            # else: skip reasoning blocks for normal LLM messages
+            # Skip reasoning blocks to prevent models from mimicking <think> tags
+            pass
 
         elif item_type == 'open_webui:code_interpreter':
             # Always include code interpreter content so the LLM knows
