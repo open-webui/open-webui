@@ -135,7 +135,7 @@ class OAuthSessionTable:
                 db.refresh(result)
 
                 if result:
-                    db.expunge(result)
+                    db.expunge(result)  # Detach so dict swap is never flushed
                     result.token = token  # Return decrypted token
                     return OAuthSessionModel.model_validate(result)
                 else:

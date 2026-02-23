@@ -95,6 +95,7 @@ jobs:
           outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
           cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
+          sbom: true
           build-args: |
             BUILD_HASH=${{ github.sha }}
 
@@ -199,6 +200,7 @@ jobs:
           outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
           cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
+          sbom: true
           build-args: |
             BUILD_HASH=${{ github.sha }}
             USE_CUDA=true
@@ -304,6 +306,7 @@ jobs:
           outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
           cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
+          sbom: true
           build-args: |
             BUILD_HASH=${{ github.sha }}
             USE_CUDA=true
@@ -407,6 +410,7 @@ jobs:
           outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
           cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
+          sbom: true
           build-args: |
             BUILD_HASH=${{ github.sha }}
             USE_OLLAMA=true
@@ -509,6 +513,7 @@ jobs:
           outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
           cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
+          sbom: true
           build-args: |
             BUILD_HASH=${{ github.sha }}
             USE_SLIM=true
