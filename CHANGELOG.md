@@ -167,6 +167,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - ⚠️ **Database Migrations:** This release includes database schema changes; we strongly recommend backing up your database and all associated data before upgrading in production environments. If you are running a multi-worker, multi-server, or load-balanced deployment, all instances must be updated simultaneously, rolling updates are not supported and will cause application failures due to schema incompatibility.
+- 🎯 **Prompt suggestions moved.** Prompt suggestions have been relocated from Admin Settings Interface to Admin Settings Models, where they can now be configured on a per-model basis or universally via the new model defaults. See the "Global model defaults" entry for more details.
+- 📢 **Banners moved.** Banners configuration has been relocated from Admin Settings Interface to Admin Settings General.
 
 ## [0.8.0] - 2026-02-12
 
