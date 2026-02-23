@@ -55,6 +55,7 @@ from open_webui.config import (
     OAUTH_ADMIN_ROLES,
     OAUTH_ALLOWED_DOMAINS,
     OAUTH_UPDATE_PICTURE_ON_LOGIN,
+    OAUTH_SYNC_PROFILE_ON_LOGIN,
     OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID,
     OAUTH_AUDIENCE,
     WEBHOOK_URL,
@@ -129,6 +130,7 @@ auth_manager_config.OAUTH_ALLOWED_DOMAINS = OAUTH_ALLOWED_DOMAINS
 auth_manager_config.WEBHOOK_URL = WEBHOOK_URL
 auth_manager_config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN = OAUTH_UPDATE_PICTURE_ON_LOGIN
+auth_manager_config.OAUTH_SYNC_PROFILE_ON_LOGIN = OAUTH_SYNC_PROFILE_ON_LOGIN
 auth_manager_config.OAUTH_AUDIENCE = OAUTH_AUDIENCE
 
 
@@ -1542,6 +1544,38 @@ class OAuthManager:
                         Users.update_user_oauth_by_id(user.id, provider, sub, db=db)
 
             if user:
+                if auth_manager_config.OAUTH_SYNC_PROFILE_ON_LOGIN:
+                    # fields (name/email) only when explicitly enabled.
+                    profile_updates = {}
+
+                    username_claim = auth_manager_config.OAUTH_USERNAME_CLAIM
+                    new_name = (
+                        user_data.get(username_claim) if username_claim else None
+                    )
+                    if new_name and new_name != user.name:
+                        profile_updates["name"] = new_name
+
+                    if email and email != user.email:
+                        existing_email_user = Users.get_user_by_email(email, db=db)
+                        if not existing_email_user or existing_email_user.id == user.id:
+                            profile_updates["email"] = email
+                        else:
+                            log.warning(
+                                "Skipping OAuth email sync for user %s because %s is already used by user %s",
+                                user.id,
+                                email,
+                                existing_email_user.id,
+                            )
+
+                    if profile_updates:
+                        Users.update_user_by_id(user.id, profile_updates, db=db)
+                        if "email" in profile_updates:
+                            Auths.update_email_by_id(
+                                user.id, profile_updates["email"], db=db
+                            )
+                        for key, value in profile_updates.items():
+                            setattr(user, key, value)
+
                 determined_role = self.get_user_role(user, user_data)
                 if user.role != determined_role:
                     Users.update_user_role_by_id(user.id, determined_role, db=db)

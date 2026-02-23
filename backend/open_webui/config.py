@@ -642,6 +642,12 @@ OAUTH_UPDATE_PICTURE_ON_LOGIN = PersistentConfig(
     os.environ.get("OAUTH_UPDATE_PICTURE_ON_LOGIN", "False").lower() == "true",
 )
 
+OAUTH_SYNC_PROFILE_ON_LOGIN = PersistentConfig(
+    "OAUTH_SYNC_PROFILE_ON_LOGIN",
+    "oauth.sync_profile_on_login",
+    os.environ.get("OAUTH_SYNC_PROFILE_ON_LOGIN", "False").lower() == "true",
+)
+
 OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID = (
     os.environ.get("OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID", "False").lower()
     == "true"
