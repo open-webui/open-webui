@@ -36,7 +36,8 @@
 		toolServers,
 		showSearch,
 		showSidebar,
-		sidebarPinned
+		sidebarPinned,
+		brandingConfig
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
@@ -337,6 +338,9 @@
 	<div class="app relative">
 		<div
 			class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
+			style={$brandingConfig?.post_login_background_color || $brandingConfig?.post_login_background_url
+				? `${$brandingConfig?.post_login_background_color ? `background-color: ${$brandingConfig.post_login_background_color};` : ''}${$brandingConfig?.post_login_background_url ? ` background-image: url('${$brandingConfig.post_login_background_url}'); background-size: cover; background-position: center;` : ''}`
+				: ''}
 		>
 			{#if !['user', 'admin'].includes($user?.role)}
 				<AccountPending />

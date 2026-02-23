@@ -38,7 +38,7 @@
 	import ChatPlus from '../icons/ChatPlus.svelte';
 	import ChatCheck from '../icons/ChatCheck.svelte';
 	import Knobs from '../icons/Knobs.svelte';
-	import { WEBUI_API_BASE_URL } from '$lib/constants';
+
 
 	const i18n = getContext('i18n');
 
@@ -59,6 +59,45 @@
 
 	let showShareChatModal = false;
 	let showDownloadChatModal = false;
+
+	// Navbar profile image error handling with initials fallback
+	let navbarProfileImageFailed = false;
+	$: if ($user?.id) navbarProfileImageFailed = false;
+
+	const NAVBAR_AVATAR_COLORS = [
+		'#E67E22',
+		'#3498DB',
+		'#2ECC71',
+		'#9B59B6',
+		'#1ABC9C',
+		'#E74C3C',
+		'#F39C12',
+		'#2980B9',
+		'#27AE60',
+		'#8E44AD',
+		'#16A085',
+		'#C0392B',
+		'#D35400',
+		'#7F8C8D',
+		'#2C3E50'
+	];
+	function getNavbarUserColor(userId: string): string {
+		let hash = 0;
+		for (let i = 0; i < userId.length; i++) {
+			hash = ((hash << 5) - hash + userId.charCodeAt(i)) | 0;
+		}
+		return NAVBAR_AVATAR_COLORS[Math.abs(hash) % NAVBAR_AVATAR_COLORS.length];
+	}
+	$: navbarUserInitials = $user?.name
+		? $user.name
+				.split(' ')
+				.map((w: string) => w[0])
+				.filter(Boolean)
+				.slice(0, 2)
+				.join('')
+				.toUpperCase()
+		: '';
+	$: navbarUserColor = $user?.id ? getNavbarUserColor($user.id) : '#E67E22';
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
@@ -242,12 +281,22 @@
 							>
 								<div class=" self-center">
 									<span class="sr-only">{$i18n.t('User menu')}</span>
-									<img
-										src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
-										class="size-6 object-cover rounded-full"
-										alt=""
-										draggable="false"
-									/>
+									{#if !navbarProfileImageFailed && $user?.profile_image_url}
+										<img
+											src={$user.profile_image_url}
+											class="size-6 object-cover rounded-full"
+											alt=""
+											draggable="false"
+											on:error={() => (navbarProfileImageFailed = true)}
+										/>
+									{:else}
+										<div
+											class="flex size-6 items-center justify-center rounded-full text-[10px] font-semibold text-white"
+											style="background-color: {navbarUserColor};"
+										>
+											{navbarUserInitials}
+										</div>
+									{/if}
 								</div>
 							</div>
 						</UserMenu>

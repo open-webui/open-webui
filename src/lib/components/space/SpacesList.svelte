@@ -5,18 +5,21 @@
 	import { goto } from '$app/navigation';
 
 	import { showSidebar, sidebarPinned, user, WEBUI_NAME } from '$lib/stores';
-	import { getSpaces, getBookmarkedSpaces, getPinnedSpaces, getTemplates } from '$lib/apis/spaces';
-	import type { Space } from '$lib/apis/spaces';
+	import { getSpaces, getBookmarkedSpaces, getPinnedSpaces, getTemplates, getPendingInvitations, respondToInvitation } from '$lib/apis/spaces';
+	import type { Space, InvitationWithSpace } from '$lib/apis/spaces';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import SpaceSettingsModal from '$lib/components/layout/Sidebar/SpaceSettingsModal.svelte';
 
 	let loading = true;
+	let showCreateSpace = false;
 
 	let pinnedSpaces: Space[] = [];
 	let bookmarkedSpaces: Space[] = [];
 	let mySpaces: Space[] = [];
 	let sharedSpaces: Space[] = [];
 	let templateSpaces: Space[] = [];
+	let invitedSpaces: InvitationWithSpace[] = [];
 
 	onMount(async () => {
 		await loadAllSpaces();
@@ -26,19 +29,20 @@
 		loading = true;
 
 		try {
-			const [pinnedRes, bookmarkedRes, myRes, sharedRes, templatesRes] = await Promise.all([
+			const [pinnedRes, bookmarkedRes, myRes, sharedRes, templatesRes, invitesRes] = await Promise.all([
 				getPinnedSpaces(localStorage.token).catch(() => []),
 				getBookmarkedSpaces(localStorage.token).catch(() => []),
 				getSpaces(localStorage.token, null, 'private').catch(() => ({ items: [], total: 0 })),
 				getSpaces(localStorage.token, null, 'shared').catch(() => ({ items: [], total: 0 })),
-				getTemplates(localStorage.token).catch(() => [])
+				getTemplates(localStorage.token).catch(() => []),
+				getPendingInvitations(localStorage.token).catch(() => [])
 			]);
-
 			pinnedSpaces = pinnedRes;
 			bookmarkedSpaces = bookmarkedRes;
 			mySpaces = myRes.items;
 			sharedSpaces = sharedRes.items;
 			templateSpaces = templatesRes;
+			invitedSpaces = invitesRes;
 		} catch (err) {
 			console.error('Failed to load spaces:', err);
 		}
@@ -51,7 +55,17 @@
 		bookmarkedSpaces.length +
 		mySpaces.length +
 		sharedSpaces.length +
-		templateSpaces.length;
+		templateSpaces.length +
+		invitedSpaces.length;
+
+	const handleRespondToInvite = async (spaceId: string, accept: boolean) => {
+		try {
+			await respondToInvitation(localStorage.token, spaceId, accept);
+			await loadAllSpaces();
+		} catch (err) {
+			console.error('Failed to respond to invitation:', err);
+		}
+	};
 </script>
 
 <svelte:head>
@@ -85,7 +99,7 @@
 
 				<button
 					class="px-3.5 py-1.5 rounded-lg bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 transition text-xs font-medium flex items-center gap-1.5"
-					on:click={() => goto('/')}
+					on:click={() => (showCreateSpace = true)}
 				>
 					<svg
 						class="size-3.5"
@@ -116,7 +130,7 @@
 						</p>
 						<button
 							class="px-4 py-2.5 rounded-xl bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 transition text-sm font-medium inline-flex items-center gap-2"
-							on:click={() => goto('/')}
+							on:click={() => (showCreateSpace = true)}
 						>
 							<svg
 								class="size-4"
@@ -280,6 +294,88 @@
 											</div>
 										</div>
 									</button>
+								{/each}
+							</div>
+						</section>
+					{/if}
+
+
+					{#if invitedSpaces.length > 0}
+						<section>
+							<div class="flex items-center gap-2 mb-4">
+								<svg
+									class="size-4 text-amber-500 dark:text-amber-400"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.5"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"
+									/>
+								</svg>
+								<h2
+									class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500"
+								>
+									{$i18n.t('Pending Invitations')}
+								</h2>
+								<span class="text-xs text-gray-300 dark:text-gray-600">{invitedSpaces.length}</span>
+							</div>
+							<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+								{#each invitedSpaces as invitation (invitation.space_id)}
+									<div
+										class="group p-4 rounded-xl border border-amber-200 dark:border-amber-700/60 bg-amber-50/50 dark:bg-amber-900/10"
+									>
+										<div class="flex items-start gap-3">
+											{#if invitation.space_emoji}
+												<span class="text-2xl flex-shrink-0 mt-0.5">{invitation.space_emoji}</span>
+											{:else}
+												<div
+													class="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-800/30 flex items-center justify-center flex-shrink-0 mt-0.5"
+												>
+													<svg
+														class="size-4 text-amber-500 dark:text-amber-400"
+														viewBox="0 0 24 24"
+														fill="none"
+														stroke="currentColor"
+														stroke-width="1.5"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"
+														/>
+													</svg>
+												</div>
+											{/if}
+											<div class="min-w-0 flex-1">
+												<h3
+													class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate"
+												>
+													{invitation.space_name}
+												</h3>
+												<p class="text-xs text-amber-600 dark:text-amber-400 mt-1">
+													{$i18n.t('You have been invited to join this space')}
+												</p>
+												<div class="flex gap-2 mt-3">
+													<button
+														class="px-3 py-1.5 text-xs font-medium rounded-lg bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 transition"
+														on:click={() => handleRespondToInvite(invitation.space_id, true)}
+													>
+														{$i18n.t('Accept')}
+													</button>
+													<button
+														class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+														on:click={() => handleRespondToInvite(invitation.space_id, false)}
+													>
+														{$i18n.t('Decline')}
+													</button>
+												</div>
+											</div>
+										</div>
+									</div>
 								{/each}
 							</div>
 						</section>
@@ -541,3 +637,12 @@
 		</div>
 	</div>
 {/if}
+
+<SpaceSettingsModal
+	bind:show={showCreateSpace}
+	onSubmit={async (space) => {
+		showCreateSpace = false;
+		await loadAllSpaces();
+		goto(`/spaces/${space.slug}`);
+	}}
+/>

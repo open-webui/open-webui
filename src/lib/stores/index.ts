@@ -83,6 +83,8 @@ export const brandingConfig: Writable<{
 	logo_dark_url?: string;
 	login_background_url?: string;
 	login_background_color?: string;
+	post_login_background_url?: string;
+	post_login_background_color?: string;
 	app_name?: string;
 	accent_color?: string;
 } | null> = writable(null);

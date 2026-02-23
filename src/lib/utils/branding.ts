@@ -17,6 +17,8 @@ export interface BrandingPreset {
 	favicon_data?: string;
 	login_background_url?: string;
 	login_background_color?: string;
+	post_login_background_url?: string;
+	post_login_background_color?: string;
 }
 
 export interface DomainMapping {
@@ -34,6 +36,8 @@ export interface BrandingConfig {
 	favicon_data?: string;
 	login_background_url?: string;
 	login_background_color?: string;
+	post_login_background_url?: string;
+	post_login_background_color?: string;
 	presets?: BrandingPreset[];
 	domain_mappings?: DomainMapping[];
 }
@@ -179,10 +183,11 @@ export function getEffectiveBranding(config: BrandingConfig): {
 	favicon_data: string;
 	login_background_url: string;
 	login_background_color: string;
+	post_login_background_url: string;
+	post_login_background_color: string;
 	app_name: string;
 } {
 	const preset = findPresetForDomain(config);
-
 	return {
 		accent_color: preset?.accent_color || config.accent_color || '#e3530f',
 		logo_url: preset?.logo_url || config.logo_url || '',
@@ -191,6 +196,8 @@ export function getEffectiveBranding(config: BrandingConfig): {
 		favicon_data: preset?.favicon_data || config.favicon_data || '',
 		login_background_url: preset?.login_background_url || config.login_background_url || '',
 		login_background_color: preset?.login_background_color || config.login_background_color || '',
+		post_login_background_url: preset?.post_login_background_url || config.post_login_background_url || '',
+		post_login_background_color: preset?.post_login_background_color || config.post_login_background_color || '',
 		app_name: preset?.app_name || config.app_name || ''
 	};
 }

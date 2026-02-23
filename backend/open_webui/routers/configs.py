@@ -559,6 +559,8 @@ class BrandingPreset(BaseModel):
     favicon_data: Optional[str] = ""
     login_background_url: Optional[str] = ""
     login_background_color: Optional[str] = ""
+    post_login_background_url: Optional[str] = ""
+    post_login_background_color: Optional[str] = ""
 
 
 class DomainMapping(BaseModel):
@@ -576,6 +578,8 @@ class BrandingConfigForm(BaseModel):
     favicon_data: Optional[str] = ""
     login_background_url: Optional[str] = ""
     login_background_color: Optional[str] = ""
+    post_login_background_url: Optional[str] = ""
+    post_login_background_color: Optional[str] = ""
     presets: Optional[list[BrandingPreset]] = []
     domain_mappings: Optional[list[DomainMapping]] = []
 

@@ -27,6 +27,8 @@
 		favicon_url: string;
 		login_background_url: string;
 		login_background_color: string;
+		post_login_background_url: string;
+		post_login_background_color: string;
 	};
 
 	type DomainMapping = {
@@ -57,6 +59,8 @@
 		favicon_url: string;
 		login_background_url: string;
 		login_background_color: string;
+		post_login_background_url: string;
+		post_login_background_color: string;
 		presets: BrandingPreset[];
 		domain_mappings: DomainMapping[];
 	} = {
@@ -68,6 +72,8 @@
 		favicon_url: '',
 		login_background_url: '',
 		login_background_color: '',
+		post_login_background_url: '',
+		post_login_background_color: '',
 		presets: [],
 		domain_mappings: []
 	};
@@ -594,7 +600,6 @@
 					</div>
 				{/if}
 			</div>
-
 			<!-- ═══════════════════════════════════════════ -->
 			<!-- THEME PRESETS -->
 			<!-- ═══════════════════════════════════════════ -->
@@ -824,6 +829,35 @@
 													<input
 														class="flex-1 rounded py-1.5 px-2.5 text-xs bg-white dark:bg-gray-800 outline-hidden border border-gray-200 dark:border-gray-700 font-mono"
 														bind:value={preset.login_background_color}
+														placeholder="#1a2744"
+													/>
+												</div>
+											</div>
+										</div>
+										<div class="grid grid-cols-2 gap-2">
+											<div>
+												<div class="text-[10px] font-medium text-gray-500 mb-0.5">
+													{$i18n.t('Post-Login Background')}
+												</div>
+												<input
+													class="w-full rounded py-1.5 px-2.5 text-xs bg-white dark:bg-gray-800 outline-hidden border border-gray-200 dark:border-gray-700"
+													bind:value={preset.post_login_background_url}
+													placeholder="https://..."
+												/>
+											</div>
+											<div>
+												<div class="text-[10px] font-medium text-gray-500 mb-0.5">
+													{$i18n.t('Post-Login BG Color')}
+												</div>
+												<div class="flex gap-1">
+													<input
+														type="color"
+														class="w-8 h-7 rounded cursor-pointer border border-gray-200 dark:border-gray-700"
+														bind:value={preset.post_login_background_color}
+													/>
+													<input
+														class="flex-1 rounded py-1.5 px-2.5 text-xs bg-white dark:bg-gray-800 outline-hidden border border-gray-200 dark:border-gray-700 font-mono"
+														bind:value={preset.post_login_background_color}
 														placeholder="#1a2744"
 													/>
 												</div>

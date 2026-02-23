@@ -52,7 +52,7 @@
 	import { chatCompletion } from '$lib/apis/openai';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
-	import { bestMatchingLanguage, generateInitialsImage } from '$lib/utils';
+	import { bestMatchingLanguage } from '$lib/utils';
 	import { setTextScale } from '$lib/utils/text-scale';
 
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
@@ -835,18 +835,7 @@
 						await user.set(sessionUser);
 						await config.set(await getBackendConfig());
 
-						if (
-							sessionUser.profile_image_url &&
-							sessionUser.profile_image_url.startsWith('data:image')
-						) {
-							const freshImage = generateInitialsImage(sessionUser.name);
-							if (freshImage !== sessionUser.profile_image_url) {
-								updateUserProfile(localStorage.token, {
-									name: sessionUser.name,
-									profile_image_url: freshImage
-								}).catch(() => {});
-							}
-						}
+
 
 						if (sessionUser.must_change_password && $page.url.pathname !== '/auth/reset-password') {
 							await goto('/auth/reset-password');
