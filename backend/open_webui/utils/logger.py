@@ -133,7 +133,7 @@ def start_logger():
         level=GLOBAL_LOG_LEVEL,
         format=stdout_format,
         filter=lambda record: (
-            "auditable" not in record["extra"] if ENABLE_AUDIT_STDOUT else True
+            True if ENABLE_AUDIT_STDOUT else "auditable" not in record["extra"]
         ),
     )
     if AUDIT_LOG_LEVEL != "NONE" and ENABLE_AUDIT_LOGS_FILE:
