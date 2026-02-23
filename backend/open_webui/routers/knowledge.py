@@ -1058,7 +1058,6 @@ async def add_files_to_knowledge_batch(
             request=request,
             form_data=BatchProcessFilesForm(files=files, collection_name=id),
             user=user,
-            db=db,
         )
     except Exception as e:
         log.error(
