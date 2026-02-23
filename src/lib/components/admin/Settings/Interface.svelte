@@ -2,6 +2,7 @@
 	import { getModels, getTaskConfig, updateTaskConfig } from '$lib/apis';
 	import { config, settings } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { toast } from 'svelte-sonner';
 
 	import { getBaseModels } from '$lib/apis/models';
 
@@ -44,31 +45,39 @@
 	let models = null;
 
 	const init = async () => {
-		taskConfig = await getTaskConfig(localStorage.token);
+		try {
+			taskConfig = await getTaskConfig(localStorage.token);
 
-		workspaceModels = await getBaseModels(localStorage.token);
-		baseModels = await getModels(localStorage.token, null, false);
+			workspaceModels = await getBaseModels(localStorage.token);
+			baseModels = await getModels(localStorage.token, null, false);
 
-		models = baseModels.map((m) => {
-			const workspaceModel = workspaceModels.find((wm) => wm.id === m.id);
+			models = baseModels.map((m) => {
+				const workspaceModel = workspaceModels.find((wm) => wm.id === m.id);
 
-			if (workspaceModel) {
-				return {
-					...m,
-					...workspaceModel
-				};
-			} else {
-				return {
-					...m,
-					id: m.id,
-					name: m.name,
+				if (workspaceModel) {
+					return {
+						...m,
+						...workspaceModel
+					};
+				} else {
+					return {
+						...m,
+						id: m.id,
+						name: m.name,
 
-					is_active: true
-				};
-			}
-		});
+						is_active: true
+					};
+				}
+			});
 
-		console.debug('models', models);
+			console.debug('models', models);
+		} catch (err) {
+			console.error('Failed to initialize Interface settings:', err);
+			toast.error(
+				err?.detail ?? err?.message ?? $i18n.t('Failed to load Interface settings')
+			);
+			models = [];
+		}
 	};
 
 	onMount(async () => {
