@@ -69,6 +69,15 @@
 	const perPage = 30;
 	let currentPage = 1;
 
+	const isPublicModel = (model) => {
+		return (model?.access_grants ?? []).some(
+			(g) =>
+				g.principal_type === 'user' &&
+				g.principal_id === '*' &&
+				g.permission === 'read'
+		);
+	};
+
 	$: if (models) {
 		filteredModels = models
 			.filter((m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase()))
@@ -77,6 +86,8 @@
 				if (viewOption === 'disabled') return !(m?.is_active ?? true);
 				if (viewOption === 'visible') return !(m?.meta?.hidden ?? false);
 				if (viewOption === 'hidden') return m?.meta?.hidden === true;
+				if (viewOption === 'public') return isPublicModel(m);
+				if (viewOption === 'private') return !isPublicModel(m);
 				return true; // All
 			})
 			.sort((a, b) => {
