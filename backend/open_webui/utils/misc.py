@@ -91,14 +91,22 @@ def get_message_list(messages_map, message_id):
 
     # Reconstruct the chain by following the parentId links
     message_list = []
+    visited_message_ids = set()
 
     while current_message:
-        message_list.insert(
-            0, current_message
-        )  # Insert the message at the beginning of the list
+        message_id = current_message.get("id")
+        if message_id in visited_message_ids:
+            # Cycle detected, break to prevent infinite loop
+            break
+
+        if message_id is not None:
+            visited_message_ids.add(message_id)
+
+        message_list.append(current_message)
         parent_id = current_message.get("parentId")  # Use .get() for safety
         current_message = messages_map.get(parent_id) if parent_id else None
 
+    message_list.reverse()
     return message_list
 
 
@@ -267,6 +275,26 @@ def get_last_user_message(messages: list[dict]) -> Optional[str]:
     if message is None:
         return None
     return get_content_from_message(message)
+
+
+def set_last_user_message_content(
+    content: str, messages: list[dict]
+) -> list[dict]:
+    """
+    Replace the text content of the last user message in-place.
+    Handles both plain-string and list-of-parts content formats.
+    """
+    for message in reversed(messages):
+        if message.get("role") == "user":
+            if isinstance(message.get("content"), list):
+                for item in message["content"]:
+                    if item.get("type") == "text":
+                        item["text"] = content
+                        break
+            else:
+                message["content"] = content
+            break
+    return messages
 
 
 def get_last_assistant_message_item(messages: list[dict]) -> Optional[dict]:

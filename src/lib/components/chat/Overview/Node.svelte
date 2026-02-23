@@ -56,6 +56,9 @@
 
 						<button
 							class={data?.message?.favorite ? '' : 'invisible group-hover:visible'}
+							aria-label={data?.message?.favorite
+								? $i18n.t('Remove from favorites')
+								: $i18n.t('Add to favorites')}
 							on:click={() => {
 								data.message.favorite = !(data?.message?.favorite ?? false);
 							}}

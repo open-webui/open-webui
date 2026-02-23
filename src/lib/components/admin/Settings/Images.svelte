@@ -402,7 +402,7 @@
 							</div>
 
 							<select
-								class=" dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+								class="w-fit pr-8 cursor-pointer rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 								bind:value={config.IMAGE_GENERATION_ENGINE}
 								placeholder={$i18n.t('Select Engine')}
 							>
@@ -867,7 +867,7 @@
 								</div>
 
 								<select
-									class=" dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+									class="w-fit pr-8 cursor-pointer rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 									bind:value={config.IMAGES_GEMINI_ENDPOINT_METHOD}
 									placeholder={$i18n.t('Select Method')}
 								>
@@ -950,7 +950,7 @@
 							</div>
 
 							<select
-								class=" dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+								class="w-fit pr-8 cursor-pointer rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 								bind:value={config.IMAGE_EDIT_ENGINE}
 								placeholder={$i18n.t('Select Engine')}
 							>

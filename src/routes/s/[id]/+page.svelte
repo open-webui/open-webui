@@ -161,19 +161,22 @@
 						: 'max-w-5xl'} mx-auto"
 				>
 					<div class="px-3">
-						<div class=" text-2xl font-medium line-clamp-1">
+						<h1 class=" text-2xl font-medium line-clamp-1 m-0">
 							{title}
-						</div>
+						</h1>
 
 						<div class="flex text-sm justify-between items-center mt-1">
-							<div class="text-gray-400">
+							<time
+								class="text-gray-400"
+								datetime={new Date(chat?.chat?.timestamp || Date.now()).toISOString()}
+							>
 								{dayjs(chat.chat.timestamp).format('LLL')}
-							</div>
+							</time>
 						</div>
 					</div>
 				</div>
 
-				<div class=" h-full w-full flex flex-col py-2">
+				<div class=" h-full w-full flex flex-col py-2" role="main">
 					<div class="w-full">
 						<Messages
 							className="h-full flex pt-4 pb-8 "

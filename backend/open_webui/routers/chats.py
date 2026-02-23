@@ -723,10 +723,7 @@ async def get_chat_list_by_folder_id(
 async def get_user_pinned_chats(
     user=Depends(get_verified_user), db: Session = Depends(get_session)
 ):
-    return [
-        ChatTitleIdResponse(**chat.model_dump())
-        for chat in Chats.get_pinned_chats_by_user_id(user.id, db=db)
-    ]
+    return Chats.get_pinned_chats_by_user_id(user.id, db=db)
 
 
 ############################
@@ -821,18 +818,13 @@ async def get_archived_session_user_chat_list(
     if direction:
         filter["direction"] = direction
 
-    chat_list = [
-        ChatTitleIdResponse(**chat.model_dump())
-        for chat in Chats.get_archived_chat_list_by_user_id(
-            user.id,
-            filter=filter,
-            skip=skip,
-            limit=limit,
-            db=db,
-        )
-    ]
-
-    return chat_list
+    return Chats.get_archived_chat_list_by_user_id(
+        user.id,
+        filter=filter,
+        skip=skip,
+        limit=limit,
+        db=db,
+    )
 
 
 ############################
@@ -887,18 +879,13 @@ async def get_shared_session_user_chat_list(
     if direction:
         filter["direction"] = direction
 
-    chat_list = [
-        SharedChatResponse(**chat.model_dump())
-        for chat in Chats.get_shared_chat_list_by_user_id(
-            user.id,
-            filter=filter,
-            skip=skip,
-            limit=limit,
-            db=db,
-        )
-    ]
-
-    return chat_list
+    return Chats.get_shared_chat_list_by_user_id(
+        user.id,
+        filter=filter,
+        skip=skip,
+        limit=limit,
+        db=db,
+    )
 
 
 ############################
@@ -1147,7 +1134,7 @@ async def delete_chat_by_id(
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
 
-        chat = Chats.get_chat_by_id(id, db=db)
+        chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
         if not chat:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

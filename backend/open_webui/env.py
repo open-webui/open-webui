@@ -5,6 +5,9 @@ import os
 import pkgutil
 import sys
 import shutil
+import traceback
+from datetime import datetime, timezone
+from typing import Any
 from uuid import uuid4
 from pathlib import Path
 from cryptography.hazmat.primitives import serialization
@@ -72,9 +75,51 @@ except Exception:
 # LOGGING
 ####################################
 
+_LEVEL_MAP = {
+    "DEBUG": "debug",
+    "INFO": "info",
+    "WARNING": "warn",
+    "ERROR": "error",
+    "CRITICAL": "fatal",
+}
+
+
+class JSONFormatter(logging.Formatter):
+    """Format log records as single-line JSON objects for structured logging."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        log_entry: dict[str, Any] = {
+            "ts": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(
+                timespec="milliseconds"
+            ),
+            "level": _LEVEL_MAP.get(record.levelname, record.levelname.lower()),
+            "msg": record.getMessage(),
+            "caller": record.name,
+        }
+
+        if record.exc_info and record.exc_info[0] is not None:
+            log_entry["error"] = "".join(
+                traceback.format_exception(*record.exc_info)
+            ).rstrip()
+        elif record.exc_text:
+            log_entry["error"] = record.exc_text
+
+        if record.stack_info:
+            log_entry["stacktrace"] = record.stack_info
+
+        return json.dumps(log_entry, ensure_ascii=False, default=str)
+
+
+LOG_FORMAT = os.environ.get("LOG_FORMAT", "").lower()
+
 GLOBAL_LOG_LEVEL = os.environ.get("GLOBAL_LOG_LEVEL", "").upper()
 if GLOBAL_LOG_LEVEL in logging.getLevelNamesMapping():
-    logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL, force=True)
+    if LOG_FORMAT == "json":
+        _handler = logging.StreamHandler(sys.stdout)
+        _handler.setFormatter(JSONFormatter())
+        logging.basicConfig(handlers=[_handler], level=GLOBAL_LOG_LEVEL, force=True)
+    else:
+        logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL, force=True)
 else:
     GLOBAL_LOG_LEVEL = "INFO"
 
@@ -557,6 +602,10 @@ OAUTH_SESSION_TOKEN_ENCRYPTION_KEY = os.environ.get(
     "OAUTH_SESSION_TOKEN_ENCRYPTION_KEY", WEBUI_SECRET_KEY
 )
 
+# Maximum number of concurrent OAuth sessions per user per provider
+# This prevents unbounded session growth while allowing multi-device usage
+OAUTH_MAX_SESSIONS_PER_USER = int(os.environ.get("OAUTH_MAX_SESSIONS_PER_USER", "10"))
+
 # Token Exchange Configuration
 # Allows external apps to exchange OAuth tokens for OpenWebUI tokens
 ENABLE_OAUTH_TOKEN_EXCHANGE = (
@@ -977,6 +1026,11 @@ OTEL_LOGS_OTLP_SPAN_EXPORTER = os.environ.get(
 ####################################
 # TOOLS/FUNCTIONS PIP OPTIONS
 ####################################
+
+ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS = (
+    os.environ.get("ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS", "True").lower()
+    == "true"
+)
 
 PIP_OPTIONS = os.getenv("PIP_OPTIONS", "").split()
 PIP_PACKAGE_INDEX_OPTIONS = os.getenv("PIP_PACKAGE_INDEX_OPTIONS", "").split()
