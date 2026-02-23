@@ -110,6 +110,78 @@ from open_webui.utils.payload import apply_system_prompt_to_body
 from open_webui.utils.response import normalize_usage
 from open_webui.utils.mcp.client import MCPClient
 
+try:
+    from mcp import types as mcp_types
+
+    HAS_MCP_ELICITATION = hasattr(mcp_types, "ElicitResult")
+except ImportError:
+    HAS_MCP_ELICITATION = False
+
+
+def make_elicitation_callback(event_caller, metadata):
+    """Create an MCP elicitation callback that relays requests to the frontend via Socket.IO."""
+
+    async def elicitation_callback(context, params):
+        log.info(
+            f"[MCP Elicitation] Callback invoked - message: {getattr(params, 'message', 'N/A')}"
+        )
+
+        if not event_caller:
+            log.warning("[MCP Elicitation] No event_caller available, declining")
+            if HAS_MCP_ELICITATION:
+                return mcp_types.ElicitResult(action="decline")
+            return {"action": "decline"}
+
+        try:
+            schema = getattr(params, "requestedSchema", None)
+            schema_dict = None
+            if schema is not None:
+                if hasattr(schema, "model_dump"):
+                    schema_dict = schema.model_dump(mode="json")
+                elif isinstance(schema, dict):
+                    schema_dict = schema
+
+            log.info(
+                f"[MCP Elicitation] Sending to frontend - schema: {schema_dict}"
+            )
+
+            response = await event_caller(
+                {
+                    "type": "elicit:mcp",
+                    "data": {
+                        "id": str(uuid4()),
+                        "session_id": metadata.get("session_id", None),
+                        "message": params.message,
+                        "requestedSchema": schema_dict,
+                    },
+                },
+                timeout=300,  # 5 min for user to respond to elicitation
+            )
+
+            log.info(
+                f"[MCP Elicitation] Got frontend response: {response}"
+            )
+
+            if not response:
+                if HAS_MCP_ELICITATION:
+                    return mcp_types.ElicitResult(action="cancel")
+                return {"action": "cancel"}
+
+            action = response.get("action", "cancel")
+            content = response.get("content", None)
+
+            if HAS_MCP_ELICITATION:
+                return mcp_types.ElicitResult(action=action, content=content)
+            return {"action": action, "content": content}
+
+        except Exception as e:
+            log.error(f"[MCP Elicitation] Error: {e}")
+            if HAS_MCP_ELICITATION:
+                return mcp_types.ElicitResult(action="decline")
+            return {"action": "decline"}
+
+    return elicitation_callback
+
 
 from open_webui.config import (
     CACHE_DIR,
@@ -2400,7 +2472,25 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                     metadata.get("message_id")
                                 )
 
-                        mcp_clients[server_id] = MCPClient()
+                        elicitation_cb = None
+                        if HAS_MCP_ELICITATION and event_caller:
+                            elicitation_cb = make_elicitation_callback(
+                                event_caller, metadata
+                            )
+                            log.info(
+                                f"[MCP Elicitation] Created callback for server {server_id} "
+                                f"(session_id={metadata.get('session_id', 'N/A')})"
+                            )
+                        else:
+                            log.warning(
+                                f"[MCP Elicitation] NOT creating callback: "
+                                f"HAS_MCP_ELICITATION={HAS_MCP_ELICITATION}, "
+                                f"event_caller={'set' if event_caller else 'None'}"
+                            )
+
+                        mcp_clients[server_id] = MCPClient(
+                            elicitation_callback=elicitation_cb
+                        )
                         await mcp_clients[server_id].connect(
                             url=mcp_server_connection.get("url", ""),
                             headers=headers if headers else None,
@@ -4045,6 +4135,7 @@ async def streaming_chat_response_handler(response, ctx):
                             "name", ""
                         )
                         tool_args = tool_call.get("function", {}).get("arguments", "{}")
+                        log.info(f"[ToolExec] Processing tool call: {tool_function_name} id={tool_call_id} args={tool_args}")
 
                         tool_function_params = {}
                         try:
@@ -4120,11 +4211,14 @@ async def streaming_chat_response_handler(response, ctx):
                                         },
                                     )
 
+                                    log.info(f"[ToolExec] Calling tool function: {tool_function_name} with params={tool_function_params} type={tool_type}")
                                     tool_result = await tool_function(
                                         **tool_function_params
                                     )
+                                    log.info(f"[ToolExec] Tool function returned: {tool_function_name} result_type={type(tool_result)}")
 
                             except Exception as e:
+                                log.error(f"[ToolExec] Tool function EXCEPTION: {tool_function_name} error={e}")
                                 tool_result = str(e)
 
                         tool_result, tool_result_files, tool_result_embeds = (

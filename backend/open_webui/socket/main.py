@@ -896,7 +896,7 @@ def get_event_emitter(request_info, update_db=True):
 
 
 def get_event_call(request_info):
-    async def __event_caller__(event_data):
+    async def __event_caller__(event_data, timeout=60):
         response = await sio.call(
             "events",
             {
@@ -905,6 +905,7 @@ def get_event_call(request_info):
                 "data": event_data,
             },
             to=request_info["session_id"],
+            timeout=timeout,
         )
         return response
 

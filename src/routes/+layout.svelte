@@ -55,6 +55,7 @@
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 	import SyncStatsModal from '$lib/components/chat/Settings/SyncStatsModal.svelte';
+	import McpElicitationModal from '$lib/components/chat/McpElicitationModal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { getUserSettings } from '$lib/apis/users';
 	import dayjs from 'dayjs';
@@ -326,6 +327,48 @@
 		}
 	};
 
+	// MCP Elicitation state
+	let showElicitation = false;
+	let elicitationMessage = '';
+	let elicitationSchema = null;
+	let elicitationResolve = null;
+
+	const handleElicitation = async (data, cb) => {
+		console.log('elicit:mcp', data);
+		elicitationMessage = data?.message ?? '';
+		elicitationSchema = data?.requestedSchema ?? null;
+
+		const result = await new Promise((resolve) => {
+			elicitationResolve = resolve;
+			showElicitation = true;
+		});
+
+		if (cb) {
+			cb(JSON.parse(JSON.stringify(result)));
+		}
+	};
+
+	const onElicitationAccept = (content) => {
+		if (elicitationResolve) {
+			elicitationResolve({ action: 'accept', content });
+			elicitationResolve = null;
+		}
+	};
+
+	const onElicitationDecline = () => {
+		if (elicitationResolve) {
+			elicitationResolve({ action: 'decline' });
+			elicitationResolve = null;
+		}
+	};
+
+	const onElicitationCancel = () => {
+		if (elicitationResolve) {
+			elicitationResolve({ action: 'cancel' });
+			elicitationResolve = null;
+		}
+	};
+
 	const chatEventHandler = async (event, cb) => {
 		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
 
@@ -401,6 +444,8 @@
 			} else if (type === 'execute:tool') {
 				console.log('execute:tool', data);
 				executeTool(data, cb);
+			} else if (type === 'elicit:mcp') {
+				handleElicitation(data, cb);
 			} else if (type === 'request:chat:completion') {
 				console.log(data, $socket.id);
 				const { session_id, channel, form_data, model } = data;
@@ -914,6 +959,15 @@
 {#if $config?.features.enable_community_sharing}
 	<SyncStatsModal bind:show={showSyncStatsModal} eventData={syncStatsEventData} />
 {/if}
+
+<McpElicitationModal
+	bind:show={showElicitation}
+	message={elicitationMessage}
+	requestedSchema={elicitationSchema}
+	onAccept={onElicitationAccept}
+	onDecline={onElicitationDecline}
+	onCancel={onElicitationCancel}
+/>
 
 <Toaster
 	theme={$theme.includes('dark')
