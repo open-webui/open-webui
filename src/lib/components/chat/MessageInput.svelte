@@ -797,7 +797,10 @@
 		}
 	};
 
-	const onDragLeave = () => {
+	const onDragLeave = (e) => {
+		if (e.currentTarget.contains(e.relatedTarget)) {
+			return;
+		}
 		dragged = false;
 	};
 

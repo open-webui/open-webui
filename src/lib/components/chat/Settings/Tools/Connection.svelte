@@ -71,7 +71,7 @@
 	<div class="flex gap-1 items-center">
 		<Tooltip content={$i18n.t('Configure')} className="self-start">
 			<button
-				class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
+				class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition"
 				on:click={() => {
 					showConfigModal = true;
 				}}
@@ -81,7 +81,9 @@
 			</button>
 		</Tooltip>
 
-		<Tooltip content={(connection?.config?.enable ?? true) ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
+		<Tooltip
+			content={(connection?.config?.enable ?? true) ? $i18n.t('Enabled') : $i18n.t('Disabled')}
+		>
 			<Switch
 				state={connection?.config?.enable ?? true}
 				on:change={() => {

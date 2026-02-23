@@ -1233,23 +1233,47 @@
 					{'think'} ({$i18n.t('Ollama')})
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition"
-					on:click={() => {
-						params.think = (params?.think ?? null) === null ? true : params.think ? false : null;
-					}}
-					type="button"
-				>
-					{#if params.think === true}
-						<span class="ml-2 self-center">{$i18n.t('On')}</span>
-					{:else if params.think === false}
-						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-					{:else}
-						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-					{/if}
-				</button>
+				class="p-1 px-3 text-xs flex rounded-sm transition"
+				on:click={() => {
+					if ((params?.think ?? null) === null) {
+						params.think = true;
+					} else if (params.think === true) {
+						params.think = 'medium';
+					} else if (typeof params.think === 'string') {
+						params.think = false;
+					} else {
+						params.think = null;
+					}
+				}}
+				type="button"
+			>
+				{#if params.think === true}
+					<span class="ml-2 self-center">{$i18n.t('On')}</span>
+				{:else if params.think === false}
+					<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+				{:else if typeof params.think === 'string'}
+					<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+				{:else}
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+				{/if}
+			</button>
+		</div>
+	</Tooltip>
+
+	{#if typeof params.think === 'string'}
+		<div class="flex mt-0.5 space-x-2">
+			<div class=" flex-1">
+				<input
+					class="text-sm w-full bg-transparent outline-hidden outline-none"
+					type="text"
+					placeholder={$i18n.t("e.g. 'low', 'medium', 'high'")}
+					bind:value={params.think}
+					autocomplete="off"
+				/>
 			</div>
-		</Tooltip>
-	</div>
+		</div>
+	{/if}
+</div>
 
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip

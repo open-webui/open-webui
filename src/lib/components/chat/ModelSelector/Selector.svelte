@@ -159,9 +159,11 @@
 					})
 	).filter((item) => !(item.model?.info?.meta?.hidden ?? false));
 
-	$: if (selectedTag || selectedConnectionType) {
-		resetView();
-	} else {
+	$: if (
+		selectedTag !== undefined ||
+		selectedConnectionType !== undefined ||
+		searchValue !== undefined
+	) {
 		resetView();
 	}
 
@@ -400,7 +402,7 @@
 		class="relative w-full {($settings?.highContrastMode ?? false)
 			? ''
 			: 'outline-hidden focus:outline-hidden'}"
-		aria-label={placeholder}
+		aria-label={selectedModel ? $i18n.t('Selected model: {{modelName}}', { modelName: selectedModel.label }) : placeholder}
 		id="model-selector-{id}-button"
 	>
 		<div
@@ -598,6 +600,8 @@
 					<!-- svelte-ignore a11y-no-static-element-interactions -->
 					<div
 						class="max-h-64 overflow-y-auto"
+						role="listbox"
+						aria-label={$i18n.t('Available models')}
 						bind:this={listContainer}
 						on:scroll={() => {
 							listScrollTop = listContainer.scrollTop;
@@ -679,6 +683,7 @@
 							<Tooltip content={$i18n.t('Cancel')}>
 								<button
 									class="text-gray-800 dark:text-gray-100"
+									aria-label={$i18n.t('Cancel download of {{model}}', { model: model })}
 									on:click={() => {
 										cancelModelPullHandler(model);
 									}}

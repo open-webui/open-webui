@@ -97,12 +97,19 @@ class PromptsTable:
         return AccessGrants.get_grants_by_resource("prompt", prompt_id, db=db)
 
     def _to_prompt_model(
-        self, prompt: Prompt, db: Optional[Session] = None
+        self,
+        prompt: Prompt,
+        access_grants: Optional[list[AccessGrantModel]] = None,
+        db: Optional[Session] = None,
     ) -> PromptModel:
         prompt_data = PromptModel.model_validate(prompt).model_dump(
             exclude={"access_grants"}
         )
-        prompt_data["access_grants"] = self._get_access_grants(prompt_data["id"], db=db)
+        prompt_data["access_grants"] = (
+            access_grants
+            if access_grants is not None
+            else self._get_access_grants(prompt_data["id"], db=db)
+        )
         return PromptModel.model_validate(prompt_data)
 
     def insert_new_prompt(
@@ -206,9 +213,13 @@ class PromptsTable:
             )
 
             user_ids = list(set(prompt.user_id for prompt in all_prompts))
+            prompt_ids = [prompt.id for prompt in all_prompts]
 
             users = Users.get_users_by_user_ids(user_ids, db=db) if user_ids else []
             users_dict = {user.id: user for user in users}
+            grants_map = AccessGrants.get_grants_by_resources(
+                "prompt", prompt_ids, db=db
+            )
 
             prompts = []
             for prompt in all_prompts:
@@ -216,7 +227,11 @@ class PromptsTable:
                 prompts.append(
                     PromptUserResponse.model_validate(
                         {
-                            **self._to_prompt_model(prompt, db=db).model_dump(),
+                            **self._to_prompt_model(
+                                prompt,
+                                access_grants=grants_map.get(prompt.id, []),
+                                db=db,
+                            ).model_dump(),
                             "user": user.model_dump() if user else None,
                         }
                     )
@@ -329,11 +344,20 @@ class PromptsTable:
 
             items = query.all()
 
+            prompt_ids = [prompt.id for prompt, _ in items]
+            grants_map = AccessGrants.get_grants_by_resources(
+                "prompt", prompt_ids, db=db
+            )
+
             prompts = []
             for prompt, user in items:
                 prompts.append(
                     PromptUserResponse(
-                        **self._to_prompt_model(prompt, db=db).model_dump(),
+                        **self._to_prompt_model(
+                            prompt,
+                            access_grants=grants_map.get(prompt.id, []),
+                            db=db,
+                        ).model_dump(),
                         user=(
                             UserResponse(**UserModel.model_validate(user).model_dump())
                             if user
