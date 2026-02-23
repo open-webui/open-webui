@@ -277,6 +277,26 @@ def get_last_user_message(messages: list[dict]) -> Optional[str]:
     return get_content_from_message(message)
 
 
+def set_last_user_message_content(
+    content: str, messages: list[dict]
+) -> list[dict]:
+    """
+    Replace the text content of the last user message in-place.
+    Handles both plain-string and list-of-parts content formats.
+    """
+    for message in reversed(messages):
+        if message.get("role") == "user":
+            if isinstance(message.get("content"), list):
+                for item in message["content"]:
+                    if item.get("type") == "text":
+                        item["text"] = content
+                        break
+            else:
+                message["content"] = content
+            break
+    return messages
+
+
 def get_last_assistant_message_item(messages: list[dict]) -> Optional[dict]:
     for message in reversed(messages):
         if message["role"] == "assistant":

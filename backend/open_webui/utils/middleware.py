@@ -86,6 +86,7 @@ from open_webui.utils.misc import (
     get_message_list,
     add_or_update_system_message,
     add_or_update_user_message,
+    set_last_user_message_content,
     get_last_user_message,
     get_last_user_message_item,
     get_last_assistant_message,
@@ -4241,8 +4242,8 @@ async def streaming_chat_response_handler(response, ctx):
                     all_tool_call_sources.extend(tool_call_sources)
                     if all_tool_call_sources and user_message:
                         # Restore original user message before re-applying to avoid recursive nesting
-                        form_data["messages"] = add_or_update_user_message(
-                            user_message, form_data["messages"], append=False
+                        set_last_user_message_content(
+                            user_message, form_data["messages"]
                         )
                         form_data["messages"] = apply_source_context_to_messages(
                             request,
