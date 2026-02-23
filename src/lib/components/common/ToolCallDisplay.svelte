@@ -16,6 +16,7 @@
 	import CheckCircle from '../icons/CheckCircle.svelte';
 	import Image from './Image.svelte';
 	import FullHeightIframe from './FullHeightIframe.svelte';
+	import { settings } from '$lib/stores';
 
 	export let id: string = '';
 	export let attributes: {
@@ -50,7 +51,7 @@
 			if (typeof parsed === 'object') {
 				return JSON.stringify(parsed, null, 2);
 			} else {
-				return `${JSON.stringify(String(parsed))}`;
+				return String(parsed);
 			}
 		} catch (e) {
 			return str;
@@ -77,6 +78,7 @@
 	$: isExecuting = attributes?.done && attributes?.done !== 'true';
 
 	$: parsedArgs = parseArguments(args);
+	$: parsedResult = parseJSONString(result);
 </script>
 
 <div {id} class={className}>
@@ -92,8 +94,8 @@
 						src={embed}
 						{args}
 						allowScripts={true}
-						allowForms={true}
-						allowSameOrigin={true}
+						allowForms={$settings?.iframeSandboxAllowForms ?? false}
+						allowSameOrigin={$settings?.iframeSandboxAllowSameOrigin ?? false}
 						allowPopups={true}
 					/>
 				</div>
@@ -208,10 +210,17 @@
 								{$i18n.t('Output')}
 							</div>
 							<div class="w-full max-w-none!">
-								<Markdown
-									id={`${componentId}-tool-call-result`}
-									content={`\`\`\`json\n${formatJSONString(result)}\n\`\`\``}
-								/>
+								{#if typeof parsedResult === 'object' && parsedResult !== null}
+									<Markdown
+										id={`${componentId}-tool-call-result`}
+										content={`\`\`\`json\n${JSON.stringify(parsedResult, null, 2)}\n\`\`\``}
+									/>
+								{:else}
+									<pre
+										class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre-wrap break-words font-mono">{String(
+											parsedResult
+										)}</pre>
+								{/if}
 							</div>
 						</div>
 					{/if}

@@ -120,6 +120,7 @@
 	let eventConfirmationInput = false;
 	let eventConfirmationInputPlaceholder = '';
 	let eventConfirmationInputValue = '';
+	let eventConfirmationInputType = '';
 	let eventCallback = null;
 
 	let chatIdUnsubscriber: Unsubscriber | undefined;
@@ -329,24 +330,34 @@
 
 			// Set Default Features
 			if (model?.info?.meta?.defaultFeatureIds) {
-				if (model.info?.meta?.capabilities?.['image_generation']) {
+				if (
+					model.info?.meta?.capabilities?.['image_generation'] &&
+					$config?.features?.enable_image_generation &&
+					($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
+				) {
 					imageGenerationEnabled = model.info.meta.defaultFeatureIds.includes('image_generation');
 				}
 
-				if (model.info?.meta?.capabilities?.['web_search']) {
+				if (
+					model.info?.meta?.capabilities?.['web_search'] &&
+					$config?.features?.enable_web_search &&
+					($user?.role === 'admin' || $user?.permissions?.features?.web_search)
+				) {
 					webSearchEnabled = model.info.meta.defaultFeatureIds.includes('web_search');
 				}
 
-				if (model.info?.meta?.capabilities?.['code_interpreter']) {
+				if (
+					model.info?.meta?.capabilities?.['code_interpreter'] &&
+					$config?.features?.enable_code_interpreter &&
+					($user?.role === 'admin' || $user?.permissions?.features?.code_interpreter)
+				) {
 					codeInterpreterEnabled = model.info.meta.defaultFeatureIds.includes('code_interpreter');
 				}
 			}
 		}
 	};
 
-	const showMessage = async (message, ignoreSettings = false) => {
-		await tick();
-
+	const showMessage = async (message, scroll = true) => {
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 		let _messageId = JSON.parse(JSON.stringify(message.id));
 
@@ -367,17 +378,18 @@
 		history.currentId = _messageId;
 
 		await tick();
-		await tick();
-		await tick();
 
-		if (($settings?.scrollOnBranchChange ?? true) || ignoreSettings) {
+		if (($settings?.scrollOnBranchChange ?? true) && scroll) {
 			const messageElement = document.getElementById(`message-${message.id}`);
 			if (messageElement) {
-				messageElement.scrollIntoView({ behavior: 'smooth' });
+				messageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
 			}
 		}
 
 		await tick();
+		await tick();
+		await tick();
+
 		saveChatHandler(_chatId, history);
 	};
 
@@ -415,6 +427,15 @@
 					message.files = data.files;
 				} else if (type === 'chat:message:embeds' || type === 'embeds') {
 					message.embeds = data.embeds;
+
+					// Auto-scroll to the embed once it's rendered in the DOM
+					await tick();
+					setTimeout(() => {
+						const embedEl = document.getElementById(`${event.message_id}-embeds-container`);
+						if (embedEl) {
+							embedEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+						}
+					}, 100);
 				} else if (type === 'chat:message:error') {
 					message.error = data.error;
 				} else if (type === 'chat:message:follow_ups') {
@@ -504,6 +525,7 @@
 					eventConfirmationMessage = data.message;
 					eventConfirmationInputPlaceholder = data.placeholder;
 					eventConfirmationInputValue = data?.value ?? '';
+					eventConfirmationInputType = data?.type ?? '';
 				} else {
 					console.log('Unknown message type', data);
 				}
@@ -811,6 +833,11 @@
 	};
 
 	const uploadWeb = async (urls) => {
+		if ($user?.role !== 'admin' && !($user?.permissions?.chat?.web_upload ?? true)) {
+			toast.error($i18n.t('You do not have permission to upload web content.'));
+			return;
+		}
+
 		if (!Array.isArray(urls)) {
 			urls = [urls];
 		}
@@ -1011,12 +1038,16 @@
 		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
 			if (availableModels.length > 0) {
 				if (defaultModels && defaultModels.length > 0) {
-					// Set from default models
 					selectedModels = defaultModels.filter((modelId) => availableModels.includes(modelId));
 				}
 
-				// Set to first available model
-				selectedModels = [availableModels?.at(0) ?? ''];
+				if (
+					selectedModels.length === 0 ||
+					(selectedModels.length === 1 && selectedModels[0] === '')
+				) {
+					// Only fall back to first available model if default models didn't resolve
+					selectedModels = [availableModels?.at(0) ?? ''];
+				}
 			} else {
 				selectedModels = [''];
 			}
@@ -1044,6 +1075,8 @@
 
 		chatFiles = [];
 		params = {};
+		taskIds = null;
+		messageQueue = [];
 
 		if ($page.url.searchParams.get('youtube')) {
 			await uploadWeb(`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`);
@@ -2514,6 +2547,7 @@
 	input={eventConfirmationInput}
 	inputPlaceholder={eventConfirmationInputPlaceholder}
 	inputValue={eventConfirmationInputValue}
+	inputType={eventConfirmationInputType}
 	on:confirm={(e) => {
 		if (e.detail) {
 			eventCallback(e.detail);

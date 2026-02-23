@@ -225,6 +225,7 @@ class Tools:
 							<Tooltip content={$i18n.t('Back')}>
 								<button
 									class="w-full text-left text-sm py-1.5 px-1 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
+									aria-label={$i18n.t('Back')}
 									on:click={() => {
 										goto('/workspace/tools');
 									}}
@@ -241,6 +242,7 @@ class Tools:
 									class="w-full text-2xl bg-transparent outline-hidden"
 									type="text"
 									placeholder={$i18n.t('Tool Name')}
+									aria-label={$i18n.t('Tool Name')}
 									bind:value={name}
 									required
 								/>
@@ -275,6 +277,7 @@ class Tools:
 									class="w-full text-sm disabled:text-gray-500 bg-transparent outline-hidden"
 									type="text"
 									placeholder={$i18n.t('Tool ID')}
+									aria-label={$i18n.t('Tool ID')}
 									bind:value={id}
 									required
 									disabled={edit}
@@ -291,6 +294,7 @@ class Tools:
 								class="w-full text-sm bg-transparent outline-hidden"
 								type="text"
 								placeholder={$i18n.t('Tool Description')}
+								aria-label={$i18n.t('Tool Description')}
 								bind:value={meta.description}
 								required
 							/>

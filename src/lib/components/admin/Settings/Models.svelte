@@ -28,9 +28,10 @@
 
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
 	import { toast } from 'svelte-sonner';
+	import Badge from '$lib/components/common/Badge.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
-	import ConfigureModelsModal from './Models/ConfigureModelsModal.svelte';
+	import ModelSettingsModal from './Models/ModelSettingsModal.svelte';
 	import Wrench from '$lib/components/icons/Wrench.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
 	import ManageModelsModal from './Models/ManageModelsModal.svelte';
@@ -304,7 +305,7 @@
 	});
 </script>
 
-<ConfigureModelsModal bind:show={showConfigModal} initHandler={init} />
+<ModelSettingsModal bind:show={showConfigModal} initHandler={init} />
 <ManageModelsModal bind:show={showManageModal} />
 
 {#if models !== null}
@@ -322,6 +323,69 @@
 				</div>
 
 				<div class="flex w-full justify-end gap-1.5">
+					{#if $user?.role === 'admin'}
+						<input
+							id="models-import-input"
+							bind:this={modelsImportInputElement}
+							bind:files={importFiles}
+							type="file"
+							accept=".json"
+							hidden
+							on:change={() => {
+								if (importFiles.length > 0) {
+									const reader = new FileReader();
+									reader.onload = async (event) => {
+										modelsImportInProgress = true;
+
+										try {
+											const models = JSON.parse(String(event.target.result));
+											const res = await importModels(localStorage.token, models);
+
+											if (res) {
+												toast.success($i18n.t('Models imported successfully'));
+												await init();
+											} else {
+												toast.error($i18n.t('Failed to import models'));
+											}
+										} catch (e) {
+											toast.error(e?.detail ?? $i18n.t('Invalid JSON file'));
+											console.error(e);
+										}
+
+										modelsImportInProgress = false;
+									};
+									reader.readAsText(importFiles[0]);
+								}
+							}}
+						/>
+
+						<button
+							class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+							disabled={modelsImportInProgress}
+							on:click={() => {
+								modelsImportInputElement.click();
+							}}
+						>
+							{#if modelsImportInProgress}
+								<Spinner className="size-3" />
+							{/if}
+							<div class=" self-center font-medium line-clamp-1">
+								{$i18n.t('Import')}
+							</div>
+						</button>
+
+						<button
+							class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+							on:click={async () => {
+								downloadModels(models);
+							}}
+						>
+							<div class=" self-center font-medium line-clamp-1">
+								{$i18n.t('Export')}
+							</div>
+						</button>
+					{/if}
+
 					<button
 						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
 						type="button"
@@ -335,7 +399,7 @@
 					</button>
 
 					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black transition font-medium"
 						type="button"
 						on:click={() => {
 							showConfigModal = true;
@@ -405,7 +469,7 @@
 							transition={flyAndScale}
 						>
 							<DropdownMenu.Item
-								class="flex gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								class="select-none flex gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 								on:click={() => {
 									enableAllHandler();
 								}}
@@ -415,7 +479,7 @@
 							</DropdownMenu.Item>
 
 							<DropdownMenu.Item
-								class="flex gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								class="select-none flex gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 								on:click={() => {
 									disableAllHandler();
 								}}
@@ -445,7 +509,7 @@
 									selectedModelId = model.id;
 								}}
 							>
-								<div class=" self-center w-8">
+								<div class=" self-center w-9">
 									<div
 										class=" rounded-full object-cover {(model?.is_active ?? true)
 											? ''
@@ -473,9 +537,32 @@
 										className=" w-fit"
 										placement="top-start"
 									>
-										<div class="  font-semibold line-clamp-1">{model.name}</div>
+										<div class="font-medium line-clamp-1 flex items-center gap-2">
+											{model.name}
+
+											<Badge
+												type={(model?.access_grants ?? []).some(
+													(g) =>
+														g.principal_type === 'user' &&
+														g.principal_id === '*' &&
+														g.permission === 'read'
+												)
+													? 'success'
+													: 'muted'}
+												content={(model?.access_grants ?? []).some(
+													(g) =>
+														g.principal_type === 'user' &&
+														g.principal_id === '*' &&
+														g.permission === 'read'
+												)
+													? $i18n.t('Public')
+													: $i18n.t('Private')}
+											/>
+										</div>
 									</Tooltip>
-									<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
+									<div
+										class=" text-xs overflow-hidden text-ellipsis line-clamp-1 flex items-center gap-1 text-gray-500"
+									>
 										<span class=" line-clamp-1">
 											{!!model?.meta?.description
 												? model?.meta?.description
@@ -590,103 +677,6 @@
 				<Pagination bind:page={currentPage} count={filteredModels.length} {perPage} />
 			{/if}
 		</div>
-
-		{#if $user?.role === 'admin'}
-			<div class=" flex justify-end w-full mb-3">
-				<div class="flex space-x-1">
-					<input
-						id="models-import-input"
-						bind:this={modelsImportInputElement}
-						bind:files={importFiles}
-						type="file"
-						accept=".json"
-						hidden
-						on:change={() => {
-							if (importFiles.length > 0) {
-								const reader = new FileReader();
-								reader.onload = async (event) => {
-									modelsImportInProgress = true;
-
-									try {
-										const models = JSON.parse(String(event.target.result));
-										const res = await importModels(localStorage.token, models);
-
-										if (res) {
-											toast.success($i18n.t('Models imported successfully'));
-											await init();
-										} else {
-											toast.error($i18n.t('Failed to import models'));
-										}
-									} catch (e) {
-										toast.error(e?.detail ?? $i18n.t('Invalid JSON file'));
-										console.error(e);
-									}
-
-									modelsImportInProgress = false;
-								};
-								reader.readAsText(importFiles[0]);
-							}
-						}}
-					/>
-
-					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
-						disabled={modelsImportInProgress}
-						on:click={() => {
-							modelsImportInputElement.click();
-						}}
-					>
-						{#if modelsImportInProgress}
-							<Spinner className="size-3" />
-						{/if}
-						<div class=" self-center mr-2 font-medium line-clamp-1">
-							{$i18n.t('Import Presets')}
-						</div>
-
-						<div class=" self-center">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 16 16"
-								fill="currentColor"
-								class="w-3.5 h-3.5"
-							>
-								<path
-									fill-rule="evenodd"
-									d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
-									clip-rule="evenodd"
-								/>
-							</svg>
-						</div>
-					</button>
-
-					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
-						on:click={async () => {
-							downloadModels(models);
-						}}
-					>
-						<div class=" self-center mr-2 font-medium line-clamp-1">
-							{$i18n.t('Export Presets')} ({models.length})
-						</div>
-
-						<div class=" self-center">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 16 16"
-								fill="currentColor"
-								class="w-3.5 h-3.5"
-							>
-								<path
-									fill-rule="evenodd"
-									d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
-									clip-rule="evenodd"
-								/>
-							</svg>
-						</div>
-					</button>
-				</div>
-			</div>
-		{/if}
 	{:else}
 		<ModelEditor
 			edit
@@ -697,8 +687,9 @@
 				upsertModelHandler(model);
 				selectedModelId = null;
 			}}
-			onBack={() => {
+			onBack={async () => {
 				selectedModelId = null;
+				await init();
 			}}
 		/>
 	{/if}

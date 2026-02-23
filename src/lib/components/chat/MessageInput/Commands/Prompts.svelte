@@ -3,21 +3,23 @@
 	import { tick, getContext, onMount, onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
+	import { getPrompts } from '$lib/apis/prompts';
+
 	const i18n = getContext('i18n');
 
 	export let query = '';
-	export let prompts = [];
 	export let onSelect = (e) => {};
 
 	let selectedPromptIdx = 0;
 	export let filteredItems = [];
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
-	let debouncedQuery = '';
+
+	let items = [];
 
 	$: if (query !== undefined) {
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
-			debouncedQuery = query;
+			getItems();
 		}, 200);
 	}
 
@@ -25,13 +27,20 @@
 		clearTimeout(searchDebounceTimer);
 	});
 
-	$: filteredItems = prompts
-		.filter((p) => p.command.toLowerCase().includes(debouncedQuery.toLowerCase()))
+	$: filteredItems = items
+		.filter((p) => p.command.toLowerCase().includes(query.toLowerCase()))
 		.sort((a, b) => a.name.localeCompare(b.name));
 
 	$: if (query) {
 		selectedPromptIdx = 0;
 	}
+
+	const getItems = async () => {
+		const res = await getPrompts(localStorage.token).catch(() => null);
+		if (res) {
+			items = res;
+		}
+	};
 
 	export const selectUp = () => {
 		selectedPromptIdx = Math.max(0, selectedPromptIdx - 1);

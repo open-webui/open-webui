@@ -184,8 +184,9 @@
 					<div class=" self-center text-xs font-medium">{$i18n.t('Speech-to-Text Engine')}</div>
 					<div class="flex items-center relative">
 						<select
-							class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+							class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 							bind:value={STTEngine}
+							aria-label={$i18n.t('Speech-to-Text Engine')}
 							placeholder={$i18n.t('Select an engine')}
 						>
 							<option value="">{$i18n.t('Default')}</option>
@@ -207,6 +208,7 @@
 							<input
 								type="text"
 								bind:value={STTLanguage}
+								aria-label={$i18n.t('Speech-to-Text Language')}
 								placeholder={$i18n.t('e.g. en')}
 								class=" text-sm text-right bg-transparent dark:text-gray-300 outline-hidden"
 							/>
@@ -226,6 +228,8 @@
 						toggleSpeechAutoSend();
 					}}
 					type="button"
+					role="switch"
+					aria-checked={speechAutoSend}
 				>
 					{#if speechAutoSend === true}
 						<span class="ml-2 self-center">{$i18n.t('On')}</span>
@@ -243,8 +247,9 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Text-to-Speech Engine')}</div>
 				<div class="flex items-center relative">
 					<select
-						class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+						class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 						bind:value={TTSEngine}
+						aria-label={$i18n.t('Text-to-Speech Engine')}
 						placeholder={$i18n.t('Select an engine')}
 					>
 						<option value="">{$i18n.t('Default')}</option>
@@ -258,8 +263,9 @@
 					<div class=" self-center text-xs font-medium">{$i18n.t('Kokoro.js Dtype')}</div>
 					<div class="flex items-center relative">
 						<select
-							class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+							class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 							bind:value={TTSEngineConfig.dtype}
+							aria-label={$i18n.t('Kokoro.js Dtype')}
 							placeholder={$i18n.t('Select dtype')}
 						>
 							<option value="" disabled selected>{$i18n.t('Select dtype')}</option>
@@ -281,6 +287,8 @@
 						toggleResponseAutoPlayback();
 					}}
 					type="button"
+					role="switch"
+					aria-checked={responseAutoPlayback}
 				>
 					{#if responseAutoPlayback === true}
 						<span class="ml-2 self-center">{$i18n.t('On')}</span>
@@ -299,6 +307,7 @@
 						min="0"
 						step="0.01"
 						bind:value={playbackRate}
+						aria-label={$i18n.t('Speech Playback Speed')}
 						class=" text-sm text-right bg-transparent dark:text-gray-300 outline-hidden"
 					/>
 					x
@@ -318,6 +327,7 @@
 								list="voice-list"
 								class="w-full text-sm bg-transparent dark:text-gray-300 outline-hidden"
 								bind:value={voice}
+								aria-label={$i18n.t('Voice')}
 								placeholder={$i18n.t('Select a voice')}
 							/>
 
@@ -353,8 +363,9 @@
 				<div class="flex w-full">
 					<div class="flex-1">
 						<select
-							class="dark:bg-gray-900 w-full text-sm bg-transparent dark:text-gray-300 outline-hidden"
+							class="w-full text-sm bg-transparent dark:text-gray-300 outline-hidden"
 							bind:value={voice}
+							aria-label={$i18n.t('Voice')}
 						>
 							<option value="" selected={voice !== ''}>{$i18n.t('Default')}</option>
 							{#each voices.filter((v) => nonLocalVoices || v.localService === true) as _voice}
@@ -386,6 +397,7 @@
 							list="voice-list"
 							class="w-full text-sm bg-transparent dark:text-gray-300 outline-hidden"
 							bind:value={voice}
+							aria-label={$i18n.t('Voice')}
 							placeholder={$i18n.t('Select a voice')}
 						/>
 
