@@ -314,7 +314,8 @@
 			</DropdownMenu.Item> -->
 
 			{#if $mobile && ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true))}
-				<DropdownMenu.Item draggable="false"
+				<DropdownMenu.Item
+					draggable="false"
 					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
 					id="chat-controls-button"
 					on:click={async () => {
@@ -329,7 +330,8 @@
 				</DropdownMenu.Item>
 			{/if}
 
-			<DropdownMenu.Item draggable="false"
+			<DropdownMenu.Item
+				draggable="false"
 				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
 				id="chat-overview-button"
 				on:click={async () => {
@@ -344,7 +346,8 @@
 			</DropdownMenu.Item>
 
 			{#if ($artifactContents ?? []).length > 0}
-				<DropdownMenu.Item draggable="false"
+				<DropdownMenu.Item
+					draggable="false"
 					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
 					id="chat-overview-button"
 					on:click={async () => {
@@ -362,7 +365,8 @@
 			<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
 
 			{#if !$temporaryChatEnabled && ($user?.role === 'admin' || ($user.permissions?.chat?.share ?? true))}
-				<DropdownMenu.Item draggable="false"
+				<DropdownMenu.Item
+					draggable="false"
 					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
 					id="chat-share-button"
 					on:click={() => {
@@ -375,7 +379,8 @@
 			{/if}
 
 			<DropdownMenu.Sub>
-				<DropdownMenu.SubTrigger draggable="false"
+				<DropdownMenu.SubTrigger
+					draggable="false"
 					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
 				>
 					<Download strokeWidth="1.5" />
@@ -388,7 +393,8 @@
 					sideOffset={8}
 				>
 					{#if $user?.role === 'admin' || ($user.permissions?.chat?.export ?? true)}
-						<DropdownMenu.Item draggable="false"
+						<DropdownMenu.Item
+							draggable="false"
 							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
 							on:click={() => {
 								downloadJSONExport();
@@ -397,7 +403,8 @@
 							<div class="flex items-center line-clamp-1">{$i18n.t('Export chat (.json)')}</div>
 						</DropdownMenu.Item>
 					{/if}
-					<DropdownMenu.Item draggable="false"
+					<DropdownMenu.Item
+						draggable="false"
 						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
 						on:click={() => {
 							downloadTxt();
@@ -406,7 +413,8 @@
 						<div class="flex items-center line-clamp-1">{$i18n.t('Plain text (.txt)')}</div>
 					</DropdownMenu.Item>
 
-					<DropdownMenu.Item draggable="false"
+					<DropdownMenu.Item
+						draggable="false"
 						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
 						on:click={() => {
 							downloadPdf();
@@ -417,7 +425,8 @@
 				</DropdownMenu.SubContent>
 			</DropdownMenu.Sub>
 
-			<DropdownMenu.Item draggable="false"
+			<DropdownMenu.Item
+				draggable="false"
 				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
 				id="chat-copy-button"
 				on:click={async () => {
@@ -439,7 +448,8 @@
 
 				{#if $folders.length > 0}
 					<DropdownMenu.Sub>
-						<DropdownMenu.SubTrigger draggable="false"
+						<DropdownMenu.SubTrigger
+							draggable="false"
 							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
 						>
 							<Folder strokeWidth="1.5" />
@@ -453,7 +463,8 @@
 						>
 							{#each $folders.sort((a, b) => b.updated_at - a.updated_at) as folder}
 								{#if folder?.id}
-									<DropdownMenu.Item draggable="false"
+									<DropdownMenu.Item
+										draggable="false"
 										class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 										on:click={() => {
 											moveChatHandler(chat.id, folder.id);
@@ -469,7 +480,8 @@
 					</DropdownMenu.Sub>
 				{/if}
 
-				<DropdownMenu.Item draggable="false"
+				<DropdownMenu.Item
+					draggable="false"
 					class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 					on:click={() => {
 						archiveChatHandler();

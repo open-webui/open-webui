@@ -518,7 +518,9 @@
 																	<button
 																		class="self-center w-fit text-sm p-1.5 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 																		type="button"
-																		aria-label={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}
+																		aria-label={model?.meta?.hidden
+																			? $i18n.t('Show')
+																			: $i18n.t('Hide')}
 																		on:click={(e) => {
 																			e.stopPropagation();
 																			hideModelHandler(model);

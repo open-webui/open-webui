@@ -165,9 +165,7 @@ def process_uploaded_file(
                     request.app.state.config, "STT_SUPPORTED_CONTENT_TYPES", []
                 )
 
-                if strict_match_mime_type(
-                    stt_supported_content_types, content_type
-                ):
+                if strict_match_mime_type(stt_supported_content_types, content_type):
                     file_path_processed = Storage.get_file(file_path)
                     result = transcribe(
                         request, file_path_processed, file_metadata, user

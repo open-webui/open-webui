@@ -1041,7 +1041,10 @@
 					selectedModels = defaultModels.filter((modelId) => availableModels.includes(modelId));
 				}
 
-				if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
+				if (
+					selectedModels.length === 0 ||
+					(selectedModels.length === 1 && selectedModels[0] === '')
+				) {
 					// Only fall back to first available model if default models didn't resolve
 					selectedModels = [availableModels?.at(0) ?? ''];
 				}

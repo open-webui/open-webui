@@ -138,7 +138,9 @@
 								>
 									<SensitiveInput
 										id="event-confirm-input"
-										placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
+										placeholder={inputPlaceholder
+											? inputPlaceholder
+											: $i18n.t('Enter your message')}
 										bind:value={inputValue}
 										required={true}
 									/>

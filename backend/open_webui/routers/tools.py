@@ -65,12 +65,18 @@ async def get_tools(
 
     # Local Tools
     for tool in Tools.get_tools(defer_content=True, db=db):
-        tool_module = request.app.state.TOOLS.get(tool.id) if hasattr(request.app.state, 'TOOLS') else None
+        tool_module = (
+            request.app.state.TOOLS.get(tool.id)
+            if hasattr(request.app.state, "TOOLS")
+            else None
+        )
         tools.append(
             ToolUserResponse(
                 **{
                     **tool.model_dump(),
-                    "has_user_valves": hasattr(tool_module, "UserValves") if tool_module else False,
+                    "has_user_valves": (
+                        hasattr(tool_module, "UserValves") if tool_module else False
+                    ),
                 }
             )
         )
@@ -212,8 +218,13 @@ async def get_tool_list(
             or any(
                 g.permission == "write"
                 and (
-                    (g.principal_type == "user" and (g.principal_id == user.id or g.principal_id == "*"))
-                    or (g.principal_type == "group" and g.principal_id in user_group_ids)
+                    (
+                        g.principal_type == "user"
+                        and (g.principal_id == user.id or g.principal_id == "*")
+                    )
+                    or (
+                        g.principal_type == "group" and g.principal_id in user_group_ids
+                    )
                 )
                 for g in tool.access_grants
             )

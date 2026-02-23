@@ -38,7 +38,6 @@
 		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
 	};
 
-
 	let workspaceModels = null;
 	let baseModels = null;
 
@@ -73,9 +72,7 @@
 			console.debug('models', models);
 		} catch (err) {
 			console.error('Failed to initialize Interface settings:', err);
-			toast.error(
-				err?.detail ?? err?.message ?? $i18n.t('Failed to load Interface settings')
-			);
+			toast.error(err?.detail ?? err?.message ?? $i18n.t('Failed to load Interface settings'));
 			models = [];
 		}
 	};

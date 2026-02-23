@@ -2330,7 +2330,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         ) in request.app.state.config.TOOL_SERVER_CONNECTIONS:
                             if (
                                 server_connection.get("type", "") == "mcp"
-                                and server_connection.get("info", {}).get("id") == server_id
+                                and server_connection.get("info", {}).get("id")
+                                == server_id
                             ):
                                 mcp_server_connection = server_connection
                                 break
@@ -2391,8 +2392,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         if ENABLE_FORWARD_USER_INFO_HEADERS and user:
                             headers = include_user_info_headers(headers, user)
                             if metadata and metadata.get("chat_id"):
-                                headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get(
-                                    "chat_id"
+                                headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = (
+                                    metadata.get("chat_id")
                                 )
                             if metadata and metadata.get("message_id"):
                                 headers[FORWARD_SESSION_INFO_HEADER_MESSAGE_ID] = (
@@ -2410,7 +2411,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         ).get("function_name_filter_list", "")
 
                         if isinstance(function_name_filter_list, str):
-                            function_name_filter_list = function_name_filter_list.split(",")
+                            function_name_filter_list = function_name_filter_list.split(
+                                ","
+                            )
 
                         tool_specs = await mcp_clients[server_id].list_tool_specs()
                         for tool_spec in tool_specs:

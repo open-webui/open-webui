@@ -58,8 +58,6 @@
 		}
 	}
 
-
-
 	function parseArguments(str: string): Record<string, unknown> | null {
 		try {
 			const parsed = parseJSONString(str);
@@ -218,7 +216,10 @@
 										content={`\`\`\`json\n${JSON.stringify(parsedResult, null, 2)}\n\`\`\``}
 									/>
 								{:else}
-									<pre class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre-wrap break-words font-mono">{String(parsedResult)}</pre>
+									<pre
+										class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre-wrap break-words font-mono">{String(
+											parsedResult
+										)}</pre>
 								{/if}
 							</div>
 						</div>

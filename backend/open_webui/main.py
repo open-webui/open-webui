@@ -1700,7 +1700,11 @@ async def chat_completion(
         )
         model_info_params = {
             **default_model_params,
-            **(model_info.params.model_dump() if model_info and model_info.params else {}),
+            **(
+                model_info.params.model_dump()
+                if model_info and model_info.params
+                else {}
+            ),
         }
 
         # Check base model existence for custom models
@@ -1716,7 +1720,10 @@ async def chat_completion(
                         default_models[0].strip() if default_models[0] else None
                     )
 
-                    if fallback_model_id and fallback_model_id in request.app.state.MODELS:
+                    if (
+                        fallback_model_id
+                        and fallback_model_id in request.app.state.MODELS
+                    ):
                         # Update model and form_data so routing uses the fallback model's type
                         model = request.app.state.MODELS[fallback_model_id]
                         form_data["model"] = fallback_model_id

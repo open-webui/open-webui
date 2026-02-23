@@ -57,8 +57,7 @@
 		($user?.role === 'admin' || $user?.permissions?.chat?.file_upload);
 
 	let webUploadEnabled = true;
-	$: webUploadEnabled =
-		$user?.role === 'admin' || ($user?.permissions?.chat?.web_upload ?? true);
+	$: webUploadEnabled = $user?.role === 'admin' || ($user?.permissions?.chat?.web_upload ?? true);
 
 	$: if (!fileUploadEnabled && files.length > 0) {
 		files = [];

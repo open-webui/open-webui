@@ -202,7 +202,11 @@
 					exportHandler();
 				}}
 			>
-				<button class="p-1.5 dark:hover:bg-gray-850 rounded-full touch-auto" aria-label={$i18n.t('Folder options')} on:click={(e) => {}}>
+				<button
+					class="p-1.5 dark:hover:bg-gray-850 rounded-full touch-auto"
+					aria-label={$i18n.t('Folder options')}
+					on:click={(e) => {}}
+				>
 					<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
 				</button>
 			</FolderMenu>
