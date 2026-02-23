@@ -1433,6 +1433,10 @@ USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING = (
     == "true"
 )
 
+USER_PERMISSIONS_ACCESS_GRANTS_ALLOW_USERS = (
+    os.environ.get("USER_PERMISSIONS_ACCESS_GRANTS_ALLOW_USERS", "True").lower() == "true"
+)
+
 
 USER_PERMISSIONS_CHAT_CONTROLS = (
     os.environ.get("USER_PERMISSIONS_CHAT_CONTROLS", "True").lower() == "true"
@@ -1589,6 +1593,9 @@ DEFAULT_USER_PERMISSIONS = {
         "public_skills": USER_PERMISSIONS_WORKSPACE_SKILLS_ALLOW_PUBLIC_SHARING,
         "notes": USER_PERMISSIONS_NOTES_ALLOW_SHARING,
         "public_notes": USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING,
+    },
+    "access_grants": {
+        "allow_users": USER_PERMISSIONS_ACCESS_GRANTS_ALLOW_USERS,
     },
     "chat": {
         "controls": USER_PERMISSIONS_CHAT_CONTROLS,

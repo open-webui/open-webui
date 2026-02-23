@@ -33,6 +33,7 @@
 
 	export let share = true;
 	export let sharePublic = true;
+	export let shareUsers = true;
 
 	let groups: any[] = [];
 	const resolvingGroupIds = new Set<string>();
@@ -419,7 +420,7 @@
 	});
 </script>
 
-<AddAccessModal bind:show={showAddAccessModal} onAdd={handleAddAccess} />
+<AddAccessModal bind:show={showAddAccessModal} {shareUsers} onAdd={handleAddAccess} />
 
 <div class=" rounded-lg flex flex-col gap-1">
 	<div class="py-2">
@@ -562,6 +563,7 @@
 			{/each}
 
 			<!-- Users -->
+			{#if shareUsers}
 			{#each selectedUsers as user}
 				<div
 					class="flex items-center gap-3 justify-between text-sm w-full transition border-b border-gray-50 dark:border-gray-850 pb-2 last:border-0"
@@ -607,6 +609,7 @@
 					</div>
 				</div>
 			{/each}
+			{/if}
 
 			{#if !hasPublicReadGrant(accessGrants ?? []) && accessGroups.length === 0 && selectedUsers.length === 0}
 				<div class="text-xs text-gray-500 text-center py-4">

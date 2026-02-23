@@ -30,7 +30,7 @@ from open_webui.storage.provider import Storage
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_verified_user, get_admin_user
 from open_webui.utils.access_control import has_permission
-from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant
+from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant, has_user_access_grant, strip_user_access_grants
 
 
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
@@ -274,6 +274,18 @@ async def create_new_knowledge(
     ):
         form_data.access_grants = []
 
+    # Strip individual user sharing if user lacks permission
+    if (
+        user.role != "admin"
+        and has_user_access_grant(form_data.access_grants)
+        and not has_permission(
+            user.id,
+            "access_grants.allow_users",
+            request.app.state.config.USER_PERMISSIONS,
+        )
+    ):
+        form_data.access_grants = strip_user_access_grants(form_data.access_grants)
+
     knowledge = Knowledges.insert_new_knowledge(user.id, form_data)
 
     if knowledge:
@@ -494,6 +506,18 @@ async def update_knowledge_by_id(
     ):
         form_data.access_grants = []
 
+    # Strip individual user sharing if user lacks permission
+    if (
+        user.role != "admin"
+        and has_user_access_grant(form_data.access_grants)
+        and not has_permission(
+            user.id,
+            "access_grants.allow_users",
+            request.app.state.config.USER_PERMISSIONS,
+        )
+    ):
+        form_data.access_grants = strip_user_access_grants(form_data.access_grants)
+
     knowledge = Knowledges.update_knowledge_by_id(id=id, form_data=form_data)
     if knowledge:
         # Re-embed knowledge base for semantic search
@@ -572,6 +596,18 @@ async def update_knowledge_access_by_id(
                 and grant.get("principal_id") == "*"
             )
         ]
+
+    # Strip individual user sharing if user lacks permission
+    if (
+        user.role != "admin"
+        and has_user_access_grant(form_data.access_grants)
+        and not has_permission(
+            user.id,
+            "access_grants.allow_users",
+            request.app.state.config.USER_PERMISSIONS,
+        )
+    ):
+        form_data.access_grants = strip_user_access_grants(form_data.access_grants)
 
     AccessGrants.set_access_grants("knowledge", id, form_data.access_grants, db=db)
 

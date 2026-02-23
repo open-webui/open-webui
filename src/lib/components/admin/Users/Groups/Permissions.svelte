@@ -396,6 +396,28 @@
 	<hr class=" border-gray-100/30 dark:border-gray-850/30" />
 
 	<div>
+		<div class=" mb-2 text-sm font-medium">{$i18n.t('Access Grants')}</div>
+
+		<div class="flex flex-col w-full">
+			<div class="flex w-full justify-between my-1">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Allow Sharing With Users')}
+				</div>
+				<Switch bind:state={permissions.access_grants.allow_users} />
+			</div>
+			{#if defaultPermissions?.access_grants?.allow_users && !permissions.access_grants.allow_users}
+				<div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+		</div>
+	</div>
+
+	<hr class=" border-gray-100/30 dark:border-gray-850/30" />
+
+	<div>
 		<div class=" mb-2 text-sm font-medium">{$i18n.t('Chat Permissions')}</div>
 
 		<div class="flex flex-col w-full">

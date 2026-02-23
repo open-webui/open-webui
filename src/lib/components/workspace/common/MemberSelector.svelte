@@ -19,6 +19,7 @@
 	import { getGroups } from '$lib/apis/groups';
 
 	export let includeGroups = true;
+	export let includeUsers = true;
 	export let pagination = false;
 
 	export let groupIds = [];
@@ -237,6 +238,7 @@
 							</div>
 						{/if}
 
+						{#if includeUsers}
 						<div class="text-xs text-gray-500 mb-1 mx-1">
 							{$i18n.t('Users')}
 						</div>
@@ -295,6 +297,7 @@
 								{/if}
 							{/each}
 						</div>
+						{/if}
 					</div>
 				</div>
 			</div>

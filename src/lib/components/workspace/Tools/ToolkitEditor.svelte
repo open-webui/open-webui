@@ -193,6 +193,7 @@ class Tools:
 	accessRoles={['read', 'write']}
 	share={$user?.permissions?.sharing?.tools || $user?.role === 'admin'}
 	sharePublic={$user?.permissions?.sharing?.public_tools || $user?.role === 'admin'}
+	shareUsers={$user?.permissions?.access_grants?.allow_users || $user?.role === 'admin'}
 	onChange={async () => {
 		if (edit && id) {
 			try {
