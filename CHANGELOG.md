@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - 🛡️ **Docker image SBOM attestation.** Docker images now include a Software Bill of Materials (SBOM) for vulnerability scanning and supply chain security compliance. [#21779](https://github.com/open-webui/open-webui/issues/21779), [Commit](https://github.com/open-webui/open-webui/commit/febc66ef2bb05606b59719e737ac5ad839002977)
+- 🎯 **Action button priority sorting.** Action buttons under assistant messages now appear in a consistent order based on the priority field from function Valves, allowing developers to control button placement. [#21790](https://github.com/open-webui/open-webui/pull/21790)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 **Translation updates.** Translations for Simplified Chinese and Traditional Chinese were enhanced and expanded.
 
