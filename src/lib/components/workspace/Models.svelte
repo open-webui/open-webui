@@ -11,6 +11,12 @@
 	import { goto } from '$app/navigation';
 	const i18n = getContext('i18n');
 
+	export let kind: 'model' | 'agent' = 'model';
+	$: isAgentWorkspace = kind === 'agent';
+	$: workspaceBasePath = isAgentWorkspace ? '/workspace/agents' : '/workspace/models';
+	$: itemLabel = isAgentWorkspace ? 'Agent' : 'Model';
+	$: itemsLabel = isAgentWorkspace ? 'Agents' : 'Models';
+
 	import { WEBUI_NAME, config, mobile, models as _models, settings, user } from '$lib/stores';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import {
@@ -87,7 +93,8 @@
 				selectedTag,
 				null,
 				null,
-				page
+				page,
+				kind
 			).catch((error) => {
 				toast.error(`${error}`);
 				return null;
@@ -98,7 +105,7 @@
 				total = res.total;
 
 				// get tags
-				tags = await getModelTags(localStorage.token).catch((error) => {
+				tags = await getModelTags(localStorage.token, kind).catch((error) => {
 					toast.error(`${error}`);
 					return [];
 				});
@@ -135,7 +142,7 @@
 			id: `${model.id}-clone`,
 			name: `${model.name} (Clone)`
 		});
-		goto('/workspace/models/create');
+		goto(`${workspaceBasePath}/create`);
 	};
 
 	const shareModelHandler = async (model) => {
@@ -168,7 +175,7 @@
 
 		if (res) {
 			toast.success(
-				$i18n.t(`Model {{name}} is now {{status}}`, {
+				$i18n.t(`${itemLabel} {{name}} is now {{status}}`, {
 					name: model.id,
 					status: model.meta.hidden ? 'hidden' : 'visible'
 				})
@@ -264,7 +271,7 @@
 
 <svelte:head>
 	<title>
-		{$i18n.t('Models')} • {$WEBUI_NAME}
+		{$i18n.t(itemsLabel)} • {$WEBUI_NAME}
 	</title>
 </svelte:head>
 
@@ -338,7 +345,7 @@
 		<div class="flex justify-between items-center">
 			<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
 				<div>
-					{$i18n.t('Models')}
+					{$i18n.t(itemsLabel)}
 				</div>
 
 				<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
@@ -374,11 +381,11 @@
 				{/if}
 				<a
 					class=" px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
-					href="/workspace/models/create"
+					href={`${workspaceBasePath}/create`}
 				>
 					<Plus className="size-3" strokeWidth="2.5" />
 
-					<div class=" hidden md:block md:ml-1 text-xs">{$i18n.t('New Model')}</div>
+					<div class=" hidden md:block md:ml-1 text-xs">{$i18n.t(`New ${itemLabel}`)}</div>
 				</a>
 			</div>
 		</div>
@@ -395,7 +402,7 @@
 				<input
 					class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={query}
-					placeholder={$i18n.t('Search Models')}
+					placeholder={$i18n.t(`Search ${itemsLabel}`)}
 					maxlength="500"
 					on:input={() => {
 						clearTimeout(searchDebounceTimer);
@@ -466,7 +473,7 @@
 							id="model-item-{model.id}"
 							on:click={() => {
 								if (model.write_access) {
-									goto(`/workspace/models/edit?id=${encodeURIComponent(model.id)}`);
+									goto(`${workspaceBasePath}/edit?id=${encodeURIComponent(model.id)}`);
 								}
 							}}
 						>
@@ -548,7 +555,7 @@
 																	writeAccess={model.write_access}
 																	editHandler={() => {
 																		goto(
-																			`/workspace/models/edit?id=${encodeURIComponent(model.id)}`
+																			`${workspaceBasePath}/edit?id=${encodeURIComponent(model.id)}`
 																		);
 																	}}
 																	shareHandler={() => {
@@ -661,7 +668,9 @@
 				<div class=" w-full h-full flex flex-col justify-center items-center my-16 mb-24">
 					<div class="max-w-md text-center">
 						<div class=" text-3xl mb-3">😕</div>
-						<div class=" text-lg font-medium mb-1">{$i18n.t('No models found')}</div>
+						<div class=" text-lg font-medium mb-1">
+							{$i18n.t(`No ${itemsLabel.toLowerCase()} found`)}
+						</div>
 						<div class=" text-gray-500 text-center text-xs">
 							{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
 						</div>
@@ -687,7 +696,7 @@
 				target="_blank"
 			>
 				<div class=" self-center">
-					<div class=" font-medium line-clamp-1">{$i18n.t('Discover a model')}</div>
+					<div class=" font-medium line-clamp-1">{$i18n.t(`Discover a ${itemLabel.toLowerCase()}`)}</div>
 					<div class=" text-sm line-clamp-1">
 						{$i18n.t('Discover, download, and explore model presets')}
 					</div>

@@ -173,13 +173,15 @@ async def get_tools(
                     db=db,
                 )
                 if str(tool.id).startswith("server:")
-                else AccessGrants.has_access(
-                    user_id=user.id,
-                    resource_type="tool",
-                    resource_id=tool.id,
-                    permission="read",
-                    user_group_ids=user_group_ids,
-                    db=db,
+                else (
+                    AccessGrants.has_access(
+                        user_id=user.id,
+                        resource_type="tool",
+                        resource_id=tool.id,
+                        permission="read",
+                        user_group_ids=user_group_ids,
+                        db=db,
+                    )
                 )
             )
         ]

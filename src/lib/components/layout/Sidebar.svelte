@@ -917,7 +917,7 @@
 						id="sidebar-webui-name"
 						class=" self-center font-medium text-gray-850 dark:text-white font-primary"
 					>
-						{$WEBUI_NAME}
+						ChatOI
 					</div>
 				</a>
 				<Tooltip

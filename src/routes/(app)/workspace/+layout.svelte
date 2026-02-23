@@ -36,6 +36,11 @@
 				goto('/');
 			} else if ($page.url.pathname.includes('/tools') && !$user?.permissions?.workspace?.tools) {
 				goto('/');
+			} else if (
+				$page.url.pathname.includes('/agents') &&
+				!$user?.permissions?.workspace?.models
+			) {
+				goto('/');
 			} else if ($page.url.pathname.includes('/skills') && !$user?.permissions?.workspace?.skills) {
 				goto('/');
 			}
@@ -90,6 +95,15 @@
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 								href="/workspace/models">{$i18n.t('Models')}</a
+							>
+						{/if}
+
+						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
+							<a
+								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/agents')
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/workspace/agents">{$i18n.t('Agents')}</a
 							>
 						{/if}
 

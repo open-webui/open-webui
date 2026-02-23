@@ -7,11 +7,13 @@
 
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
+	import { getAgents } from '$lib/apis/models';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
 	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
+	import AgentsSelector from '$lib/components/workspace/Models/AgentsSelector.svelte';
 	import SkillsSelector from '$lib/components/workspace/Models/SkillsSelector.svelte';
 	import FiltersSelector from '$lib/components/workspace/Models/FiltersSelector.svelte';
 	import ActionsSelector from '$lib/components/workspace/Models/ActionsSelector.svelte';
@@ -90,10 +92,12 @@
 
 	let knowledge = [];
 	let toolIds = [];
+	let agentIds = [];
 	let skillIds = [];
 
 	let filterIds = [];
 	let defaultFilterIds = [];
+	let availableAgents = [];
 
 	let capabilities = {
 		file_context: true,
@@ -160,11 +164,27 @@
 			}
 		}
 
-		if (toolIds.length > 0) {
-			info.meta.toolIds = toolIds;
+		const sanitizedToolIds = (toolIds ?? []).filter(
+			(toolId) => !toolId.startsWith('agent:') && !toolId.startsWith('model:')
+		);
+		const selfAgentId = id ? `agent:${id}` : null;
+		const sanitizedAgentIds = (agentIds ?? []).filter(
+			(agentId) => agentId.startsWith('agent:') && (!selfAgentId || agentId !== selfAgentId)
+		);
+
+		if (sanitizedToolIds.length > 0) {
+			info.meta.toolIds = sanitizedToolIds;
 		} else {
 			if (info.meta.toolIds) {
 				delete info.meta.toolIds;
+			}
+		}
+
+		if (sanitizedAgentIds.length > 0) {
+			info.meta.agentIds = sanitizedAgentIds;
+		} else {
+			if (info.meta.agentIds) {
+				delete info.meta.agentIds;
 			}
 		}
 
@@ -245,6 +265,7 @@
 	onMount(async () => {
 		await tools.set(await getTools(localStorage.token));
 		await functions.set(await getFunctions(localStorage.token));
+		availableAgents = (await getAgents(localStorage.token).catch(() => [])) ?? [];
 
 		// Scroll to top 'workspace-container' element
 		const workspaceContainer = document.getElementById('workspace-container');
@@ -302,7 +323,22 @@
 				}
 			});
 
-			toolIds = model?.meta?.toolIds ?? [];
+			const legacyToolIds = model?.meta?.toolIds ?? [];
+			const existingAgentIds = model?.meta?.agentIds ?? [];
+
+			toolIds = legacyToolIds.filter(
+				(toolId) => !toolId.startsWith('model:') && !toolId.startsWith('agent:')
+			);
+			agentIds = [
+				...new Set([
+					...existingAgentIds.map((agentId) =>
+						agentId.startsWith('model:') ? `agent:${agentId.replace(/^model:/, '')}` : agentId
+					),
+					...legacyToolIds
+						.filter((toolId) => toolId.startsWith('model:'))
+						.map((toolId) => `agent:${toolId.replace(/^model:/, '')}`)
+				])
+			].filter((agentId) => agentId.startsWith('agent:') && agentId !== `agent:${model.id}`);
 			skillIds = model?.meta?.skillIds ?? [];
 			filterIds = model?.meta?.filterIds ?? [];
 			defaultFilterIds = model?.meta?.defaultFilterIds ?? [];
@@ -744,7 +780,18 @@
 					</div>
 
 					<div class="my-4">
-						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools ?? []} />
+						<ToolsSelector
+							bind:selectedToolIds={toolIds}
+							tools={($tools ?? []).filter((tool) => !String(tool?.id ?? '').startsWith('agent:'))}
+						/>
+					</div>
+
+					<div class="my-4">
+						<AgentsSelector
+							bind:selectedAgentIds={agentIds}
+							currentModelId={id}
+							agents={availableAgents}
+						/>
 					</div>
 
 					<div class="my-4">

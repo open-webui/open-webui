@@ -18,32 +18,31 @@
 	onMount(async () => {
 		const _id = $page.url.searchParams.get('id');
 		if (_id) {
-			model = await getModelById(localStorage.token, _id).catch((e) => {
+			model = await getModelById(localStorage.token, _id).catch(() => {
 				return null;
 			});
 
 			if (!model) {
-				goto('/workspace/models');
+				goto('/workspace/agents');
 			}
 
-			if (model?.kind === 'agent') {
-				goto(`/workspace/agents/edit?id=${encodeURIComponent(model.id)}`);
-				return;
+			if (model?.kind !== 'agent') {
+				goto('/workspace/agents');
 			}
 
 			if (!model?.write_access) {
 				toast.error($i18n.t('You do not have permission to edit this model'));
-				goto('/workspace/models');
+				goto('/workspace/agents');
 			}
 		} else {
-			goto('/workspace/models');
+			goto('/workspace/agents');
 		}
 	});
 
 	const onSubmit = async (modelInfo) => {
 		const res = await updateModelById(localStorage.token, modelInfo.id, {
 			...modelInfo,
-			kind: 'model'
+			kind: 'agent'
 		});
 
 		if (res) {
@@ -53,8 +52,8 @@
 					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 				)
 			);
-			toast.success($i18n.t('Model updated successfully'));
-			await goto('/workspace/models');
+			toast.success($i18n.t('Agent updated successfully'));
+			await goto('/workspace/agents');
 		}
 	};
 </script>

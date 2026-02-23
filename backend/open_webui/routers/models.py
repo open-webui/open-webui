@@ -11,6 +11,7 @@ from open_webui.models.models import (
     ModelMeta,
     ModelModel,
     ModelParams,
+    ModelUserResponse,
     ModelResponse,
     ModelListResponse,
     ModelAccessListResponse,
@@ -60,6 +61,7 @@ PAGE_ITEM_COUNT = 30
 )  # do NOT use "/" as path, conflicts with main.py
 async def get_models(
     query: Optional[str] = None,
+    kind: Optional[str] = "model",
     view_option: Optional[str] = None,
     tag: Optional[str] = None,
     order_by: Optional[str] = None,
@@ -96,7 +98,9 @@ async def get_models(
 
         filter["user_id"] = user.id
 
-    result = Models.search_models(user.id, filter=filter, skip=skip, limit=limit, db=db)
+    result = Models.search_models(
+        user.id, kind=kind or "model", filter=filter, skip=skip, limit=limit, db=db
+    )
 
     # Batch-fetch writable model IDs in a single query instead of N has_access calls
     model_ids = [model.id for model in result.items]
@@ -132,9 +136,11 @@ async def get_models(
 
 @router.get("/base", response_model=list[ModelResponse])
 async def get_base_models(
-    user=Depends(get_admin_user), db: Session = Depends(get_session)
+    kind: Optional[str] = "model",
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
 ):
-    return Models.get_base_models(db=db)
+    return Models.get_base_models(kind=kind or "model", db=db)
 
 
 ###########################
@@ -144,12 +150,13 @@ async def get_base_models(
 
 @router.get("/tags", response_model=list[str])
 async def get_model_tags(
+    kind: Optional[str] = "model",
     user=Depends(get_verified_user), db: Session = Depends(get_session)
 ):
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
-        models = Models.get_models(db=db)
+        models = Models.get_models(kind=kind or "model", db=db)
     else:
-        models = Models.get_models_by_user_id(user.id, db=db)
+        models = Models.get_models_by_user_id(user.id, kind=kind or "model", db=db)
 
     tags_set = set()
     for model in models:
@@ -161,6 +168,18 @@ async def get_model_tags(
     tags = [tag for tag in tags_set]
     tags.sort()
     return tags
+
+
+@router.get("/agents", response_model=list[ModelUserResponse])
+async def get_agents(
+    user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
+    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
+        agents = Models.get_models(kind="agent", db=db)
+    else:
+        agents = Models.get_models_by_user_id(user.id, permission="read", kind="agent", db=db)
+
+    return [agent for agent in agents if agent.is_active]
 
 
 ############################
@@ -230,9 +249,9 @@ async def export_models(
         )
 
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
-        return Models.get_models(db=db)
+        return Models.get_models(kind="model", db=db)
     else:
-        return Models.get_models_by_user_id(user.id, db=db)
+        return Models.get_models_by_user_id(user.id, kind="model", db=db)
 
 
 ############################

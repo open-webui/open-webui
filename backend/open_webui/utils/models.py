@@ -149,6 +149,10 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
     custom_models = Models.get_all_models()
     for custom_model in custom_models:
+        if getattr(custom_model, "kind", "model") != "model":
+            # Agents are workspace resources and should not appear in chat model lists.
+            continue
+
         if custom_model.base_model_id is None:
             # Applied directly to a base model
             for model in models:

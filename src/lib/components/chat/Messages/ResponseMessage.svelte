@@ -52,6 +52,7 @@
 
 	import Error from './Error.svelte';
 	import Citations from './Citations.svelte';
+	import AgentsUsed from './AgentsUsed.svelte';
 	import CodeExecutions from './CodeExecutions.svelte';
 	import ContentRenderer from './ContentRenderer.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
@@ -87,6 +88,7 @@
 		done: boolean;
 		error?: boolean | { content: string };
 		sources?: string[];
+		agents?: string[];
 		code_executions?: {
 			uuid: string;
 			name: string;
@@ -159,6 +161,16 @@
 
 	let model = null;
 	$: model = $models.find((m) => m.id === message.model);
+	$: agentsFromSources = [
+		...new Set(
+			((message?.sources ?? []) as any[])
+				.map((source) => source?.source?.name ?? '')
+				.filter((name) => typeof name === 'string' && name.startsWith('agent:'))
+				.map((name) => name.replace(/^agent:/, '').trim())
+				.filter(Boolean)
+		)
+	];
+	$: messageAgents = [...new Set([...(message?.agents ?? []), ...agentsFromSources])];
 
 	let edit = false;
 	let editedContent = '';
@@ -650,8 +662,11 @@
 			<div>
 				<div class="chat-{message.role} w-full min-w-full markdown-prose">
 					<div>
-						{#if model?.info?.meta?.capabilities?.status_updates ?? true}
-							<StatusHistory statusHistory={message?.statusHistory} />
+						{#if (model?.info?.meta?.capabilities?.status_updates ?? true) || (message?.agents ?? []).length > 0 || (message?.statusHistory ?? []).length > 0}
+							<StatusHistory
+								statusHistory={message?.statusHistory}
+								agents={message?.agents ?? []}
+							/>
 						{/if}
 
 						{#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}
@@ -817,14 +832,22 @@
 								<Error content={message?.error?.content ?? message.content} />
 							{/if}
 
-							{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
-								<Citations
-									bind:this={citationsElement}
-									id={message?.id}
-									{chatId}
-									sources={message?.sources ?? message?.citations}
-									{readOnly}
-								/>
+							{#if (((message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)) || (message?.done && messageAgents.length > 0))}
+								<div class="flex items-center gap-2 flex-wrap">
+									{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
+										<Citations
+											bind:this={citationsElement}
+											id={message?.id}
+											{chatId}
+											sources={message?.sources ?? message?.citations}
+											{readOnly}
+										/>
+									{/if}
+
+									{#if message?.done && messageAgents.length > 0}
+										<AgentsUsed agents={messageAgents} />
+									{/if}
+								</div>
 							{/if}
 
 							{#if message.code_executions}

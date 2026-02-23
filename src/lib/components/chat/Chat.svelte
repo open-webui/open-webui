@@ -312,10 +312,19 @@
 		const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
 		if (model) {
 			// Set Default Tools
-			if (model?.info?.meta?.toolIds) {
+			const defaultToolIds = [
+				...(model?.info?.meta?.toolIds ?? []),
+				...(model?.info?.meta?.agentIds ?? [])
+			];
+			if (defaultToolIds.length > 0) {
 				selectedToolIds = [
 					...new Set(
-						[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
+						defaultToolIds.filter(
+							(id) =>
+								id?.startsWith?.('agent:') ||
+								id?.startsWith?.('model:') ||
+								$tools.find((t) => t.id === id)
+						)
 					)
 				];
 			}
@@ -397,6 +406,10 @@
 						message.statusHistory.push(data);
 					} else {
 						message.statusHistory = [data];
+					}
+
+					if (data?.action === 'agent_spawn' && data?.agent) {
+						message.agents = [...new Set([...(message?.agents ?? []), data.agent])];
 					}
 				} else if (type === 'chat:completion') {
 					chatCompletionEventHandler(data, message, event.chat_id);
@@ -1455,6 +1468,64 @@
 			message.output = output;
 		}
 
+		const extractSpawnedAgentsFromContent = (text = '') => {
+			if (!text || typeof text !== 'string') {
+				return [];
+			}
+
+			const matches = text.matchAll(
+				/<details\s+[^>]*type="tool_calls"[^>]*name="([^"]+)"[^>]*>/g
+			);
+			const names = [];
+			for (const match of matches) {
+				const name = match?.[1] ?? '';
+				if (name.startsWith('Spawn Agent:')) {
+					names.push(name.replace(/^Spawn Agent:\s*/i, '').trim());
+				}
+			}
+
+			// Fallback: plain text/markdown appearances of the display label
+			const fallbackMatches = text.matchAll(/Spawn Agent:\s*([^\n<]+)/g);
+			for (const match of fallbackMatches) {
+				const fallbackName = (match?.[1] ?? '').trim();
+				if (fallbackName) {
+					names.push(fallbackName);
+				}
+			}
+
+			return [...new Set(names.filter(Boolean))];
+		};
+
+		const extractSpawnedAgentsFromOutput = (items = []) => {
+			if (!Array.isArray(items)) {
+				return [];
+			}
+
+			const names = [];
+			for (const item of items) {
+				if (item?.type !== 'function_call') {
+					continue;
+				}
+				const name = String(item?.name ?? '');
+				if (name.startsWith('Spawn Agent:')) {
+					names.push(name.replace(/^Spawn Agent:\s*/i, '').trim());
+				}
+			}
+			return [...new Set(names.filter(Boolean))];
+		};
+
+		const updateMessageAgents = () => {
+			const fromContent = extractSpawnedAgentsFromContent(message?.content ?? '');
+			const fromOutput = extractSpawnedAgentsFromOutput(message?.output ?? []);
+			const merged = [...new Set([...(message?.agents ?? []), ...fromContent, ...fromOutput])];
+
+			if (merged.length > 0) {
+				message.agents = merged;
+			}
+		};
+
+		updateMessageAgents();
+
 		if (error) {
 			await handleOpenAIError(error, message);
 		}
@@ -1467,13 +1538,15 @@
 			if (choices[0]?.message?.content) {
 				// Non-stream response
 				message.content += choices[0]?.message?.content;
+				updateMessageAgents();
 			} else {
 				// Stream response
 				let value = choices[0]?.delta?.content ?? '';
 				if (message.content == '' && value == '\n') {
 					console.log('Empty response');
-				} else {
-					message.content += value;
+					} else {
+						message.content += value;
+						updateMessageAgents();
 
 					if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 						navigator.vibrate(5);
@@ -1508,6 +1581,7 @@
 		if (content) {
 			// REALTIME_CHAT_SAVE is disabled
 			message.content = content;
+			updateMessageAgents();
 
 			if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 				navigator.vibrate(5);

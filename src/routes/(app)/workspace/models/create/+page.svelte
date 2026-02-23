@@ -32,6 +32,7 @@
 		if (modelInfo) {
 			const res = await createNewModel(localStorage.token, {
 				...modelInfo,
+				kind: 'model',
 				meta: {
 					...modelInfo.meta,
 					profile_image_url:

@@ -1854,6 +1854,8 @@ async def chat_completion(
                 if mcp_clients := metadata.get("mcp_clients"):
                     for client in reversed(mcp_clients.values()):
                         await client.disconnect()
+                    # Drop references after disconnect to help GC and avoid accidental reuse.
+                    metadata["mcp_clients"] = {}
             except Exception as e:
                 log.debug(f"Error cleaning up: {e}")
                 pass

@@ -6,6 +6,7 @@ import aiohttp
 import asyncio
 import yaml
 import json
+import copy
 
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
@@ -28,6 +29,7 @@ from functools import update_wrapper, partial
 
 from fastapi import Request
 from pydantic import BaseModel, Field, create_model
+from starlette.responses import Response
 
 from langchain_core.utils.function_calling import (
     convert_to_openai_function as convert_pydantic_model_to_openai_function_spec,
@@ -36,6 +38,7 @@ from langchain_core.utils.function_calling import (
 
 from open_webui.utils.misc import is_string_allowed
 from open_webui.models.tools import Tools
+from open_webui.models.models import Models
 from open_webui.models.users import UserModel
 from open_webui.models.groups import Groups
 from open_webui.models.access_grants import AccessGrants
@@ -82,9 +85,357 @@ from open_webui.tools.builtin import (
     view_skill,
 )
 
-import copy
-
 log = logging.getLogger(__name__)
+WORKSPACE_AGENT_TOOL_PREFIX = "agent:"
+# Legacy prefix retained for backward compatibility with older saved configs/chats.
+LEGACY_WORKSPACE_MODEL_TOOL_PREFIX = "model:"
+MAX_WORKSPACE_MODEL_TOOL_DEPTH = 3
+AGENT_ORCHESTRATION_PROTOCOL = """You are a spawned sub-agent collaborating with an orchestrator model.
+Always respond with either:
+1) JSON object:
+{
+  "message_to_orchestrator": "your concise update or result",
+  "recommended_next_instruction": "optional suggestion for what the orchestrator could ask you next"
+}
+2) Plain text if JSON is not possible.
+The orchestrator decides whether your task is complete.
+Focus on agent-to-orchestrator communication, not end-user formatting."""
+
+
+def sanitize_workspace_model_tool_name(model_id: str) -> str:
+    sanitized_id = re.sub(r"[^a-zA-Z0-9_]", "_", model_id).strip("_").lower()
+    if not sanitized_id:
+        sanitized_id = "workspace_model"
+    return f"workspace_model_{sanitized_id}"
+
+
+def extract_workspace_model_tool_result(response_payload: dict | list | str) -> str:
+    if isinstance(response_payload, str):
+        return response_payload
+
+    if isinstance(response_payload, dict):
+        choices = response_payload.get("choices", [])
+        if choices and isinstance(choices, list):
+            message = choices[0].get("message", {})
+            content = message.get("content", "")
+            if isinstance(content, str):
+                return content
+            if isinstance(content, list):
+                return "\n".join(
+                    [
+                        item.get("text", "")
+                        for item in content
+                        if isinstance(item, dict)
+                        and item.get("type") in ("text", "output_text")
+                    ]
+                )
+            return str(content)
+
+        output = response_payload.get("output", [])
+        if output and isinstance(output, list):
+            chunks = []
+            for item in output:
+                if item.get("type") != "message":
+                    continue
+                for content_item in item.get("content", []):
+                    if content_item.get("type") in ("output_text", "text"):
+                        chunks.append(content_item.get("text", ""))
+            if chunks:
+                return "\n".join(chunks)
+
+        if "response" in response_payload and isinstance(response_payload["response"], str):
+            return response_payload["response"]
+
+    try:
+        return json.dumps(response_payload, ensure_ascii=False)
+    except Exception:
+        return str(response_payload)
+
+
+def extract_workspace_model_tool_sources(
+    response_payload: dict | list | str,
+) -> list[dict]:
+    if not isinstance(response_payload, dict):
+        return []
+
+    sources = response_payload.get("sources") or response_payload.get("citations") or []
+    if not isinstance(sources, list):
+        return []
+
+    normalized_sources = []
+    for source in sources:
+        if not isinstance(source, dict):
+            continue
+
+        source_obj = source.get("source", {}) if isinstance(source.get("source"), dict) else {}
+        source_name = source_obj.get("name", "")
+        if isinstance(source_name, str) and source_name.startswith("agent:"):
+            # Avoid turning agent labels into inline citation source names.
+            continue
+
+        normalized_sources.append(source)
+
+    return normalized_sources
+
+
+def extract_workspace_model_tool_annotations(
+    response_payload: dict | list | str,
+) -> list[dict]:
+    if not isinstance(response_payload, dict):
+        return []
+
+    annotations: list[dict] = []
+
+    choices = response_payload.get("choices", [])
+    if isinstance(choices, list) and choices:
+        message = choices[0].get("message", {})
+        message_annotations = message.get("annotations", [])
+        if isinstance(message_annotations, list):
+            annotations.extend(
+                [annotation for annotation in message_annotations if isinstance(annotation, dict)]
+            )
+
+    output = response_payload.get("output", [])
+    if isinstance(output, list):
+        for item in output:
+            if not isinstance(item, dict):
+                continue
+            if item.get("type") != "message":
+                continue
+            for content_item in item.get("content", []):
+                if not isinstance(content_item, dict):
+                    continue
+                content_annotations = content_item.get("annotations", [])
+                if isinstance(content_annotations, list):
+                    annotations.extend(
+                        [annotation for annotation in content_annotations if isinstance(annotation, dict)]
+                    )
+
+    return annotations
+
+
+def parse_response_to_payload(response: Any) -> dict | list | str:
+    if isinstance(response, Response):
+        body = response.body.decode("utf-8") if response.body else ""
+        if response.status_code >= 400:
+            detail = body
+            try:
+                parsed_error = json.loads(body) if body else {}
+                detail = parsed_error.get("detail", body)
+            except Exception:
+                pass
+            raise Exception(detail or "Failed to call workspace model tool")
+
+        if body:
+            try:
+                return json.loads(body)
+            except Exception:
+                return body
+        return ""
+
+    return response
+
+
+def extract_model_description(target_model: dict, target_model_id: str) -> str:
+    info = target_model.get("info", {}) if isinstance(target_model, dict) else {}
+    meta = info.get("meta", {}) if isinstance(info, dict) else {}
+
+    for value in [
+        meta.get("description"),
+        info.get("description") if isinstance(info, dict) else None,
+        target_model.get("description")
+        if isinstance(target_model, dict)
+        else None,
+    ]:
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    return f"Workspace model {target_model_id}"
+
+
+def get_target_model_tool_ids(target_model: dict, target_model_id: str) -> list[str]:
+    info = target_model.get("info", {}) if isinstance(target_model, dict) else {}
+    meta = info.get("meta", {}) if isinstance(info, dict) else {}
+
+    raw_tool_ids = meta.get("toolIds") or meta.get("tool_ids") or []
+    raw_agent_ids = meta.get("agentIds") or meta.get("agent_ids") or []
+
+    tool_ids: list[str] = []
+    for item in [*raw_tool_ids, *raw_agent_ids]:
+        if not isinstance(item, str) or not item.strip():
+            continue
+        normalized_item = item
+        if item.startswith(LEGACY_WORKSPACE_MODEL_TOOL_PREFIX):
+            normalized_item = (
+                f"{WORKSPACE_AGENT_TOOL_PREFIX}{item[len(LEGACY_WORKSPACE_MODEL_TOOL_PREFIX):]}"
+            )
+
+        if normalized_item == f"{WORKSPACE_AGENT_TOOL_PREFIX}{target_model_id}":
+            # Prevent direct self-recursion by tool selection.
+            continue
+        tool_ids.append(normalized_item)
+
+    return list(dict.fromkeys(tool_ids))
+
+
+def parse_agent_channel_response(response_text: str) -> tuple[str, str, str]:
+    """
+    Returns (status_suggestion, message_to_orchestrator, recommended_next_instruction).
+    """
+    status_suggestion = ""
+    message_to_orchestrator = response_text.strip()
+    recommended_next_instruction = ""
+
+    if not response_text:
+        return status_suggestion, message_to_orchestrator, recommended_next_instruction
+
+    try:
+        parsed = json.loads(response_text)
+        if isinstance(parsed, dict):
+            parsed_status = str(parsed.get("status", "")).strip().lower()
+            if parsed_status in ("needs_more_input", "completed"):
+                status_suggestion = parsed_status
+
+            msg = parsed.get("message_to_orchestrator")
+            if isinstance(msg, str) and msg.strip():
+                message_to_orchestrator = msg.strip()
+
+            next_request = (
+                parsed.get("recommended_next_instruction")
+                or parsed.get("next_instruction_request")
+            )
+            if isinstance(next_request, str):
+                recommended_next_instruction = next_request.strip()
+    except Exception:
+        pass
+
+    return status_suggestion, message_to_orchestrator, recommended_next_instruction
+
+
+async def call_workspace_model_tool(
+    request: Request,
+    user: UserModel,
+    target_model_id: str,
+    target_model: dict,
+    prompt: str,
+    context: str | None = None,
+    system: str | None = None,
+    metadata: Optional[dict] = None,
+) -> str:
+    from open_webui.functions import (
+        generate_function_chat_completion as generate_function_model_chat_completion,
+    )
+    from open_webui.routers.openai import (
+        generate_chat_completion as generate_openai_chat_completion,
+    )
+    from open_webui.routers.ollama import (
+        generate_chat_completion as generate_ollama_chat_completion,
+    )
+
+    if not prompt or not isinstance(prompt, str):
+        raise Exception("'prompt' must be a non-empty string")
+
+    call_depth = int((metadata or {}).get("model_tool_depth", 0))
+    if call_depth >= MAX_WORKSPACE_MODEL_TOOL_DEPTH:
+        raise Exception("Maximum workspace model tool call depth reached")
+
+    agent_name = target_model.get("name", target_model_id)
+    agent_description = extract_model_description(target_model, target_model_id)
+    protocol_system_prompt = (
+        f"{AGENT_ORCHESTRATION_PROTOCOL}\n\n"
+        f"Agent Name: {agent_name}\n"
+        f"Agent Description: {agent_description}"
+    )
+
+    messages: list[dict] = []
+    if system:
+        messages.append(
+            {
+                "role": "system",
+                "content": f"{system.rstrip()}\n\n{protocol_system_prompt}",
+            }
+        )
+    else:
+        messages.append({"role": "system", "content": protocol_system_prompt})
+
+    user_content = prompt if not context else f"{context}\n\n{prompt}"
+    messages.append({"role": "user", "content": user_content})
+
+    nested_tool_ids = get_target_model_tool_ids(target_model, target_model_id)
+    parent_features = (metadata or {}).get("features", {})
+
+    nested_form_data = {
+        "model": target_model_id,
+        "messages": messages,
+        "stream": False,
+        "tool_ids": nested_tool_ids,
+        "features": parent_features if isinstance(parent_features, dict) else {},
+        "metadata": {
+            "model_tool_call": True,
+            "model_tool_depth": call_depth + 1,
+            "user_id": user.id,
+        },
+        "params": {"function_calling": "default"},
+    }
+
+    if target_model.get("pipe"):
+        response = await generate_function_model_chat_completion(
+            request, nested_form_data, user=user, models=request.app.state.MODELS
+        )
+    elif target_model.get("owned_by") == "ollama":
+        response = await generate_ollama_chat_completion(
+            request=request,
+            form_data=nested_form_data,
+            user=user,
+            bypass_filter=False,
+            bypass_system_prompt=False,
+        )
+    else:
+        response = await generate_openai_chat_completion(
+            request=request,
+            form_data=nested_form_data,
+            user=user,
+            bypass_filter=False,
+            bypass_system_prompt=False,
+        )
+
+    response_payload = parse_response_to_payload(response)
+    response_text = extract_workspace_model_tool_result(response_payload).strip()
+    response_sources = extract_workspace_model_tool_sources(response_payload)
+    response_annotations = extract_workspace_model_tool_annotations(response_payload)
+    (
+        agent_status_suggestion,
+        message_to_orchestrator,
+        recommended_next_instruction,
+    ) = parse_agent_channel_response(response_text)
+
+    # Include explicit provenance so the parent model can attribute information to the spawned agent.
+    result = (
+        f"[Agent Channel]\n"
+        f"agent_name: {agent_name}\n"
+        f"agent_model_id: {target_model_id}\n"
+        f"orchestrator_decides_completion: true\n"
+        f"agent_status_suggestion: {agent_status_suggestion}\n"
+        f"message_to_orchestrator:\n{message_to_orchestrator}\n"
+        f"recommended_next_instruction:\n{recommended_next_instruction}\n"
+        f"raw_agent_response:\n{response_text}"
+    )
+
+    if response_sources:
+        result = (
+            f"{result}\n"
+            f"[Agent Sources JSON]\n"
+            f"{json.dumps(response_sources, ensure_ascii=False)}"
+        )
+
+    if response_annotations:
+        result = (
+            f"{result}\n"
+            f"[Agent Annotations JSON]\n"
+            f"{json.dumps(response_annotations, ensure_ascii=False)}"
+        )
+
+    return result
 
 
 def get_async_tool_function_and_apply_extra_params(
@@ -167,6 +518,130 @@ async def get_tools(
     user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
 
     for tool_id in tool_ids:
+        if tool_id.startswith(WORKSPACE_AGENT_TOOL_PREFIX) or tool_id.startswith(
+            LEGACY_WORKSPACE_MODEL_TOOL_PREFIX
+        ):
+            if tool_id.startswith(WORKSPACE_AGENT_TOOL_PREFIX):
+                target_model_id = tool_id[len(WORKSPACE_AGENT_TOOL_PREFIX) :]
+            else:
+                target_model_id = tool_id[len(LEGACY_WORKSPACE_MODEL_TOOL_PREFIX) :]
+            target_model_info = Models.get_model_by_id(target_model_id)
+
+            if not target_model_info:
+                log.warning(f"Workspace model tool target not found: {target_model_id}")
+                continue
+
+            target_model = request.app.state.MODELS.get(target_model_id)
+            if not target_model:
+                base_model = request.app.state.MODELS.get(target_model_info.base_model_id)
+                if not base_model:
+                    log.warning(
+                        f"Workspace agent target base model not found: {target_model_info.base_model_id}"
+                    )
+                    continue
+
+                target_model = {
+                    "id": target_model_info.id,
+                    "name": target_model_info.name,
+                    "info": target_model_info.model_dump(),
+                    "pipe": base_model.get("pipe"),
+                    "owned_by": base_model.get("owned_by"),
+                }
+
+            if target_model_info.base_model_id is None:
+                log.warning(
+                    f"Model {target_model_id} is not a workspace model tool target"
+                )
+                continue
+
+            if getattr(target_model_info, "kind", "model") != "agent":
+                log.warning(f"Model {target_model_id} is not an agent")
+                continue
+
+            if (
+                not (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                and target_model_info.user_id != user.id
+                and not AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type="model",
+                    resource_id=target_model_id,
+                    permission="read",
+                    user_group_ids=user_group_ids,
+                )
+            ):
+                log.warning(
+                    f"Access denied to workspace model tool {target_model_id} for user {user.id}"
+                )
+                continue
+
+            function_name = sanitize_workspace_model_tool_name(target_model_id)
+            spec = {
+                "name": function_name,
+                "description": (
+                    f"Spawn and message workspace agent '{target_model.get('name', target_model_id)}'. "
+                    "Use repeated calls for back-and-forth coordination until status is completed."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "prompt": {
+                            "type": "string",
+                            "description": "Instruction/message to send to the spawned agent.",
+                        },
+                        "context": {
+                            "type": "string",
+                            "description": "Optional prior agent/orchestrator context for continued back-and-forth.",
+                        },
+                        "system": {
+                            "type": "string",
+                            "description": "Optional system prompt for this model call.",
+                        },
+                    },
+                    "required": ["prompt"],
+                },
+            }
+
+            async def workspace_model_tool_function(
+                prompt: str,
+                context: str | None = None,
+                system: str | None = None,
+                __target_model_id__: str = target_model_id,
+                __target_model__: dict = target_model,
+            ):
+                return await call_workspace_model_tool(
+                    request=request,
+                    user=user,
+                    target_model_id=__target_model_id__,
+                    target_model=__target_model__,
+                    prompt=prompt,
+                    context=context,
+                    system=system,
+                    metadata=extra_params.get("__metadata__", {}),
+                )
+
+            callable = get_async_tool_function_and_apply_extra_params(
+                workspace_model_tool_function,
+                {},
+            )
+
+            tool_dict = {
+                "tool_id": f"{WORKSPACE_AGENT_TOOL_PREFIX}{target_model_id}",
+                "callable": callable,
+                "spec": spec,
+                "type": "workspace_agent",
+                "agent_name": target_model.get("name", target_model_id),
+                "display_name": f"Spawn Agent: {target_model.get('name', target_model_id)}",
+            }
+
+            while function_name in tools_dict:
+                log.warning(
+                    f"Workspace model tool {function_name} already exists in another tools!"
+                )
+                function_name = f"{target_model_id}_{function_name}"
+
+            tools_dict[function_name] = tool_dict
+            continue
+
         tool = Tools.get_tool_by_id(tool_id)
         if tool:
             # Check access control for local tools

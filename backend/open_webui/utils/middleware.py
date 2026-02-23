@@ -1098,11 +1098,32 @@ async def chat_completion_tools_handler(
                 tool = None
                 tool_type = ""
                 direct_tool = False
+                agent_name = None
 
                 try:
                     tool = tools[tool_function_name]
                     tool_type = tool.get("type", "")
                     direct_tool = tool.get("direct", False)
+                    display_name = tool.get("display_name", "")
+                    if (
+                        event_emitter
+                        and isinstance(display_name, str)
+                        and display_name.startswith("Spawn Agent:")
+                    ):
+                        agent_name = display_name.replace(
+                            "Spawn Agent:", "", 1
+                        ).strip()
+                        await event_emitter(
+                            {
+                                "type": "status",
+                                "data": {
+                                    "action": "agent_spawn",
+                                    "description": f"Spawning agent {agent_name}",
+                                    "agent": agent_name,
+                                    "done": False,
+                                },
+                            }
+                        )
 
                     spec = tool.get("spec", {})
                     allowed_params = (
@@ -1133,6 +1154,19 @@ async def chat_completion_tools_handler(
 
                 except Exception as e:
                     tool_result = str(e)
+                finally:
+                    if event_emitter and agent_name:
+                        await event_emitter(
+                            {
+                                "type": "status",
+                                "data": {
+                                    "action": "agent_spawn",
+                                    "description": f"Agent {agent_name} spawned",
+                                    "agent": agent_name,
+                                    "done": True,
+                                },
+                            }
+                        )
 
                 tool_result, tool_result_files, tool_result_embeds = (
                     process_tool_result(
@@ -4030,6 +4064,7 @@ async def streaming_chat_response_handler(response, ctx):
                         tool = None
                         tool_type = None
                         direct_tool = False
+                        agent_name = None
 
                         if tool_function_name in tools:
                             tool = tools[tool_function_name]
@@ -4037,6 +4072,24 @@ async def streaming_chat_response_handler(response, ctx):
 
                             tool_type = tool.get("type", "")
                             direct_tool = tool.get("direct", False)
+                            display_name = tool.get("display_name", "")
+                            if isinstance(display_name, str) and display_name.startswith(
+                                "Spawn Agent:"
+                            ):
+                                agent_name = display_name.replace(
+                                    "Spawn Agent:", "", 1
+                                ).strip()
+                                await event_emitter(
+                                    {
+                                        "type": "status",
+                                        "data": {
+                                            "action": "agent_spawn",
+                                            "description": f"Spawning agent {agent_name}",
+                                            "agent": agent_name,
+                                            "done": False,
+                                        },
+                                    }
+                                )
 
                             try:
                                 allowed_params = (
@@ -4084,6 +4137,19 @@ async def streaming_chat_response_handler(response, ctx):
 
                             except Exception as e:
                                 tool_result = str(e)
+                            finally:
+                                if agent_name:
+                                    await event_emitter(
+                                        {
+                                            "type": "status",
+                                            "data": {
+                                                "action": "agent_spawn",
+                                                "description": f"Agent {agent_name} spawned",
+                                                "agent": agent_name,
+                                                "done": True,
+                                            },
+                                        }
+                                    )
 
                         tool_result, tool_result_files, tool_result_embeds = (
                             process_tool_result(

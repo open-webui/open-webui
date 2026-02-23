@@ -14,6 +14,7 @@
 	import Markdown from '../chat/Messages/Markdown.svelte';
 	import WrenchSolid from '../icons/WrenchSolid.svelte';
 	import CheckCircle from '../icons/CheckCircle.svelte';
+	import Sparkles from '../icons/Sparkles.svelte';
 	import Image from './Image.svelte';
 	import FullHeightIframe from './FullHeightIframe.svelte';
 
@@ -77,6 +78,7 @@
 	$: isExecuting = attributes?.done && attributes?.done !== 'true';
 
 	$: parsedArgs = parseArguments(args);
+	$: isAgentSpawn = /^Spawn Agent:/i.test(attributes?.name ?? '');
 </script>
 
 <div {id} class={className}>
@@ -119,19 +121,36 @@
 						<Spinner className="size-4" />
 					</div>
 				{:else if isDone}
-					<div class="text-emerald-500 dark:text-emerald-400">
+					<div class={isAgentSpawn
+						? 'text-sky-500 dark:text-sky-400'
+						: 'text-emerald-500 dark:text-emerald-400'}>
 						<CheckCircle className="size-4" strokeWidth="2" />
 					</div>
 				{:else}
-					<div class="text-gray-400 dark:text-gray-500">
-						<WrenchSolid className="size-3.5" />
-					</div>
+					{#if isAgentSpawn}
+						<div class="text-sky-500 dark:text-sky-400">
+							<Sparkles className="size-3.5" />
+						</div>
+					{:else}
+						<div class="text-gray-400 dark:text-gray-500">
+							<WrenchSolid className="size-3.5" />
+						</div>
+					{/if}
 				{/if}
 
 				<!-- Label -->
 				<div class="flex-1 line-clamp-1">
 					<!-- Short label (below md) -->
-					<span class="@md:hidden font-semibold text-black dark:text-white">{attributes.name}</span>
+					<div class="@md:hidden flex items-center gap-1.5">
+						{#if isAgentSpawn}
+							<span
+								class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300"
+							>
+								Agent
+							</span>
+						{/if}
+						<span class="font-semibold text-black dark:text-white">{attributes.name}</span>
+					</div>
 					<!-- Full label (md and above) -->
 					<span class="hidden @md:inline">
 						{#if isDone}

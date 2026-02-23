@@ -7,13 +7,17 @@ export const getModelItems = async (
 	selectedTag,
 	orderBy,
 	direction,
-	page
+	page,
+	kind = 'model'
 ) => {
 	let error = null;
 
 	const searchParams = new URLSearchParams();
 	if (query) {
 		searchParams.append('query', query);
+	}
+	if (kind) {
+		searchParams.append('kind', kind);
 	}
 	if (viewOption) {
 		searchParams.append('view_option', viewOption);
@@ -59,10 +63,44 @@ export const getModelItems = async (
 	return res;
 };
 
-export const getModelTags = async (token: string = '') => {
+export const getModelTags = async (token: string = '', kind: string = 'model') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models/tags`, {
+	const searchParams = new URLSearchParams();
+	searchParams.append('kind', kind);
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/tags?${searchParams.toString()}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getAgents = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/agents`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',

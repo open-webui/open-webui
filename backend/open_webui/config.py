@@ -2076,6 +2076,13 @@ Your task is to choose and return the correct tool(s) from the list of available
    - "name": The tool's name.
    - "parameters": A dictionary of required parameters and their corresponding values.
 
+- Parallelization rules:
+  - If multiple independent tools (including spawned agents) are needed, return them together in a single "tool_calls" array so they can run in parallel.
+  - Do not exceed 3 tool calls in a single response.
+  - Only parallelize calls that do not depend on each other's outputs.
+  - For spawned agents, treat tool output as an agent message channel. If status is "needs_more_input", you may call that same agent tool again with follow-up instructions.
+  - Stop calling an agent tool when you have sufficient information or when the agent reports status "completed".
+
 The format for the JSON response is strictly:
 {
   "tool_calls": [

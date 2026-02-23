@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import { getContext, onMount } from 'svelte';
+	import { getContext } from 'svelte';
 
 	export let tools = [];
 
@@ -11,7 +11,7 @@
 
 	const i18n = getContext('i18n');
 
-	onMount(() => {
+	$: {
 		// Filter out OAuth2.1 MCP tools - these cannot be set as model defaults
 		// because OAuth authentication is per-user and would fail for users
 		// who haven't completed the OAuth flow.
@@ -26,7 +26,7 @@
 
 			return acc;
 		}, {});
-	});
+	}
 </script>
 
 <div>
