@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.5] - 2026-02-23
+
+### Fixed
+
+- 🚫 **Model access KeyError fix.** The /api/models endpoint no longer crashes with a 500 error when models have incomplete info metadata missing the user_id field (e.g. models using global default metadata).
+- 🔄 **Frontend initialization resilience.** The app layout now gracefully handles individual API failures during initialization (getModels, getBanners, getTools, getUserSettings, setToolServers) instead of blocking the entire page load when any single call fails.
+- 🛡️ **Backend config null safety.** Language detection during app initialization no longer crashes when the backend config fetch fails, preventing a secondary cause of infinite loading.
+
 ## [0.8.4] - 2026-02-23
 
 ### Added
