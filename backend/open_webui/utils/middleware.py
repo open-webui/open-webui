@@ -2298,11 +2298,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # When the caller provides an explicit OpenAI-style `tools` array in the
     # request body, skip all server-side tool resolution and pass the caller's
     # tools through to the model unchanged.
-    if payload_tools:
-        log.debug(
-            "Caller provided explicit tools — skipping server-side tool resolution"
-        )
-    else:
+    if not payload_tools:
         # Server side tools
         tool_ids = metadata.get("tool_ids", None)
         # Client side tools
