@@ -331,7 +331,8 @@ export const processWeb = async (
 	token: string,
 	collection_name: string,
 	url: string,
-	process: boolean = true
+	process: boolean = true,
+	overwrite: boolean = true
 ) => {
 	let error = null;
 
@@ -339,6 +340,9 @@ export const processWeb = async (
 
 	if (!process) {
 		searchParams.append('process', 'false');
+	}
+	if (!overwrite) {
+		searchParams.append('overwrite', 'false');
 	}
 
 	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/web?${searchParams.toString()}`, {
