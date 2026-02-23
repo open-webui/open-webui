@@ -91,6 +91,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔧 **Ollama reasoning effort fix.** Reasoning effort now works correctly with Ollama models that require string values ("low", "medium", "high") instead of boolean, fixing "invalid option provided" errors when using models like GPT-OSS. [#20921](https://github.com/open-webui/open-webui/issues/20921), [#20928](https://github.com/open-webui/open-webui/pull/20928), [Commit](https://github.com/open-webui/open-webui/commit/30a13b9b2fb2c6da7e1ddbf52edb93a58d09cc56)
 - 📋 **SQLAlchemy warning fix.** Fixed a SQLAlchemy warning that appeared in logs when deleting shared chats, improving log clarity. [Commit](https://github.com/open-webui/open-webui/commit/0185f3340d2778f3b75a8036b0e81a0aec78037f)
 
+### Changed
+
+- 🎯 **Prompt suggestions moved.** Prompt suggestions have been relocated from Admin Settings Interface to Admin Settings Models, where they can now be configured on a per-model basis or universally via the new model defaults. See the "Global model defaults" entry for more details.
+- 📢 **Banners moved.** Banners configuration has been relocated from Admin Settings Interface to Admin Settings General.
+
 ## [0.8.3] - 2026-02-17
 
 ### Added
@@ -167,8 +172,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - ⚠️ **Database Migrations:** This release includes database schema changes; we strongly recommend backing up your database and all associated data before upgrading in production environments. If you are running a multi-worker, multi-server, or load-balanced deployment, all instances must be updated simultaneously, rolling updates are not supported and will cause application failures due to schema incompatibility.
-- 🎯 **Prompt suggestions moved.** Prompt suggestions have been relocated from Admin Settings Interface to Admin Settings Models, where they can now be configured on a per-model basis or universally via the new model defaults. See the "Global model defaults" entry for more details.
-- 📢 **Banners moved.** Banners configuration has been relocated from Admin Settings Interface to Admin Settings General.
 
 ## [0.8.0] - 2026-02-12
 
