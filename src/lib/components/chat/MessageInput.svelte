@@ -824,6 +824,19 @@
 			shiftKey = true;
 		}
 
+		// Cmd/Ctrl+Shift+L to toggle dictation
+		if (e.key.toLowerCase() === 'l' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
+			e.preventDefault();
+			if (recording) {
+				// Confirm and stop recording
+				document.getElementById('confirm-recording-button')?.click();
+			} else {
+				// Start recording (same logic as voice-input-button click)
+				document.getElementById('voice-input-button')?.click();
+			}
+			return;
+		}
+
 		if (e.key === 'Escape') {
 			console.log('Escape');
 			dragged = false;
