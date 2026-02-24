@@ -1978,7 +1978,7 @@ def process_messages_with_output(messages: list[dict]) -> list[dict]:
     for message in messages:
         if message.get("role") == "assistant" and message.get("output"):
             # Use output items for clean OpenAI-format messages
-            output_messages = convert_output_to_messages(message["output"])
+            output_messages = convert_output_to_messages(message["output"], raw=True)
             if output_messages:
                 processed.extend(output_messages)
                 continue
