@@ -102,44 +102,84 @@
 
 	const enableAllHandler = async () => {
 		const modelsToEnable = filteredModels.filter((m) => !(m.is_active ?? true));
-		// Optimistic UI update
-		modelsToEnable.forEach((m) => (m.is_active = true));
-		models = models;
-		// Sync with server
-		await Promise.all(modelsToEnable.map((model) => toggleModelById(localStorage.token, model.id)));
+		if (modelsToEnable.length) {
+			// Optimistic UI update
+			modelsToEnable.forEach((m) => (m.is_active = true));
+			models = models;
+			// Sync with server
+			const res = await Promise.all(
+				modelsToEnable.map((model) => toggleModelById(localStorage.token, model.id))
+			).catch((error) => {
+				return null;
+			});
+			if (res) {
+				toast.success($i18n.t('Models enabled successfully'));
+			}
+		}
 	};
 
 	const disableAllHandler = async () => {
 		const modelsToDisable = filteredModels.filter((m) => m.is_active ?? true);
-		// Optimistic UI update
-		modelsToDisable.forEach((m) => (m.is_active = false));
-		models = models;
-		// Sync with server
-		await Promise.all(
-			modelsToDisable.map((model) => toggleModelById(localStorage.token, model.id))
-		);
+		if (modelsToDisable.length) {
+			// Optimistic UI update
+			modelsToDisable.forEach((m) => (m.is_active = false));
+			models = models;
+			// Sync with server
+			const res = await Promise.all(
+				modelsToDisable.map((model) => toggleModelById(localStorage.token, model.id))
+			).catch((error) => {
+				return null;
+			});
+			if (res) {
+				toast.success($i18n.t('Models disabled successfully'));
+			}
+		}
 	};
 
 	const showAllHandler = async () => {
-		const modelsToShow = filteredModels.filter((m) => m?.meta?.hidden === true);
-		// Optimistic UI update
-		modelsToShow.forEach((m) => {
-			m.meta = { ...m.meta, hidden: false };
-		});
-		models = models;
-		// Sync with server
-		await Promise.all(modelsToShow.map((model) => upsertModelHandler(model)));
+		const modelsToShow = filteredModels.filter((m) => m.meta?.hidden ?? false);
+		if (modelsToShow.length) {
+			// Optimistic UI update
+			modelsToShow.forEach((m) => (
+				m.meta = {
+					...m.meta,
+					hidden: false
+				}
+			));
+			models = models;
+			// Sync with server
+			const res = await Promise.all(
+				modelsToShow.map((model) => updateModelById(localStorage.token, model.id, model))
+			).catch((error) => {
+				return null;
+			});
+			if (res) {
+				toast.success($i18n.t('Models made visible successfully'));
+			}
+		}
 	};
 
 	const hideAllHandler = async () => {
-		const modelsToHide = filteredModels.filter((m) => !(m?.meta?.hidden ?? false));
-		// Optimistic UI update
-		modelsToHide.forEach((m) => {
-			m.meta = { ...m.meta, hidden: true };
-		});
-		models = models;
-		// Sync with server
-		await Promise.all(modelsToHide.map((model) => upsertModelHandler(model)));
+		const modelsToHide = filteredModels.filter((m) => !(m.meta?.hidden ?? false));
+		if (modelsToHide.length) {
+			// Optimistic UI update
+			modelsToHide.forEach((m) => (
+				m.meta = {
+					...m.meta,
+					hidden: true
+				}
+			));
+			models = models;
+			// Sync with server
+			const res = await Promise.all(
+				modelsToHide.map((model) => updateModelById(localStorage.token, model.id, model))
+			).catch((error) => {
+				return null;
+			});
+			if (res) {
+				toast.success($i18n.t('Models hidden successfully'));
+			}
+		}
 	};
 
 	const downloadModels = async (models) => {
