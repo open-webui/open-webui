@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher, onMount, tick } from 'svelte';
+	import { slide } from 'svelte/transition';
 	import { toast } from 'svelte-sonner';
 	import { DropdownMenu } from 'bits-ui';
 	import Fuse from 'fuse.js';
@@ -36,6 +37,7 @@
 	const RECENT_DRIVES_KEY = 'sharepoint_recent_drives';
 	const MAX_RECENT_DRIVES = 5;
 
+	// ===== PRESERVED STATE =====
 	let authStatus: SharePointAuthStatus | null = null;
 	let tenants: TenantInfo[] = [];
 	let currentTenant: TenantInfo | null = null;
@@ -58,6 +60,7 @@
 	let abortController: AbortController | null = null;
 	let importProgress = { current: 0, total: 0 };
 
+	// Preserved dropdown state (kept for API compatibility)
 	let siteDropdownOpen = false;
 	let siteSearchValue = '';
 	let selectedSiteIdx = 0;
@@ -97,45 +100,279 @@
 
 	$: filteredDrives = (() => {
 		let result = driveSearchValue ? fuse.search(driveSearchValue).map((r) => r.item) : drives;
-
 		if (selectedDriveType) {
 			result = result.filter((d) => d.drive_type === selectedDriveType);
 		}
-
 		return result;
 	})();
 
-	$: if (siteSearchValue) {
-		resetSiteSelection();
+	// ===== TREE STATE (NEW) =====
+
+	interface TreeNode {
+		key: string;
+		type: 'tenant' | 'site' | 'drive' | 'folder';
+		label: string;
+		tenant: TenantInfo;
+		site?: SiteInfo;
+		drive?: DriveInfo;
+		folder?: DriveItem;
+		/** Path from drive root to this folder node (inclusive), for setting folderStack */
+		folderPath: { id: string; name: string }[];
 	}
 
-	$: if (selectedDriveType || driveSearchValue) {
-		resetDriveSelection();
+	interface FlatTreeItem {
+		node: TreeNode;
+		depth: number;
+		isExpanded: boolean;
+		isLoading: boolean;
+		hasChildren: boolean;
 	}
 
-	async function resetSiteSelection() {
-		await tick();
-		const idx = filteredSites.findIndex((s) => s.id === currentSite?.id);
-		selectedSiteIdx = idx >= 0 ? idx : 0;
-		scrollToSelectedSite();
+	let treeChildrenCache = new Map<string, TreeNode[]>();
+	let expandedKeys = new Set<string>();
+	let loadingKeys = new Set<string>();
+	let sidebarSearch = '';
+	let sidebarCollapsed = false;
+
+	const treeFuse = new Fuse<TreeNode>([], { keys: ['label'], threshold: 0.4 });
+
+	// Root nodes derived from tenants
+	$: treeRootNodes = tenants.map(
+		(t): TreeNode => ({
+			key: `t:${t.id}`,
+			type: 'tenant',
+			label: t.name,
+			tenant: t,
+			folderPath: []
+		})
+	);
+
+	// Active key: highlights the current location in the tree
+	$: activeKey = (() => {
+		if (!currentDrive || !currentTenant || !currentSite) return '';
+		if (folderStack.length === 0) {
+			return `drive:${currentTenant.id}:${currentSite.id}:${currentDrive.id}`;
+		}
+		return `folder:${currentDrive.id}:${folderStack[folderStack.length - 1].id}`;
+	})();
+
+	// All loaded nodes for fuzzy search
+	$: allTreeNodes = collectAllNodes(treeRootNodes, treeChildrenCache);
+	$: {
+		treeFuse.setCollection(allTreeNodes);
 	}
 
-	function scrollToSelectedSite() {
-		const item = document.querySelector('[data-site-selected="true"]');
-		item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+	// Flat list for rendering: either search results (grouped by tenant) or full tree
+	$: flatTree = sidebarSearch
+		? computeSearchResults(treeFuse.search(sidebarSearch).map((r) => r.item))
+		: computeFlatTree(treeRootNodes, expandedKeys, loadingKeys, treeChildrenCache);
+
+	// Group search results by tenant, showing tenant header + matching items
+	function computeSearchResults(matches: TreeNode[]): FlatTreeItem[] {
+		if (matches.length === 0) return [];
+		
+		// Group by tenant
+		const byTenant = new Map<string, TreeNode[]>();
+		for (const node of matches) {
+			const tenantKey = node.tenant.id;
+			if (!byTenant.has(tenantKey)) byTenant.set(tenantKey, []);
+			byTenant.get(tenantKey)!.push(node);
+		}
+		
+		const result: FlatTreeItem[] = [];
+		for (const [tenantId, nodes] of byTenant) {
+			// Add tenant header
+			const tenant = tenants.find((t) => t.id === tenantId);
+			if (tenant) {
+				result.push({
+					node: { key: `t:${tenantId}`, type: 'tenant', label: tenant.name, tenant, folderPath: [] },
+					depth: 0,
+					isExpanded: true,
+					isLoading: false,
+					hasChildren: false
+				});
+			}
+			// Add matching items under it
+			for (const node of nodes) {
+				// Skip tenant nodes themselves (they're already headers)
+				if (node.type === 'tenant') continue;
+				result.push({
+					node,
+					depth: 1,
+					isExpanded: false,
+					isLoading: false,
+					hasChildren: false
+				});
+			}
+		}
+		return result;
 	}
 
-	async function resetDriveSelection() {
-		await tick();
-		const idx = filteredDrives.findIndex((d) => d.id === currentDrive?.id);
-		selectedDriveIdx = idx >= 0 ? idx : 0;
-		scrollToSelectedDrive();
+	function collectAllNodes(roots: TreeNode[], cache: Map<string, TreeNode[]>): TreeNode[] {
+		const result: TreeNode[] = [];
+		const traverse = (nodes: TreeNode[]) => {
+			for (const n of nodes) {
+				result.push(n);
+				const children = cache.get(n.key);
+				if (children) traverse(children);
+			}
+		};
+		traverse(roots);
+		return result;
 	}
 
-	function scrollToSelectedDrive() {
-		const item = document.querySelector('[data-drive-selected="true"]');
-		item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+	function computeFlatTree(
+		nodes: TreeNode[],
+		expanded: Set<string>,
+		loading: Set<string>,
+		cache: Map<string, TreeNode[]>,
+		depth = 0
+	): FlatTreeItem[] {
+		const result: FlatTreeItem[] = [];
+		for (const node of nodes) {
+			const isExpanded = expanded.has(node.key);
+			const isLoading = loading.has(node.key);
+			const children = cache.get(node.key);
+			// Tenant/site/drive always expandable; folder expandable if not loaded or has subfolders
+			const hasChildren =
+				node.type === 'tenant' ||
+				node.type === 'site' ||
+				node.type === 'drive' ||
+				children === undefined ||
+				children.length > 0;
+
+			result.push({ node, depth, isExpanded, isLoading, hasChildren });
+
+			if (isExpanded && children && children.length > 0) {
+				result.push(...computeFlatTree(children, expanded, loading, cache, depth + 1));
+			}
+		}
+		return result;
 	}
+
+	async function toggleTreeNode(node: TreeNode, event?: Event) {
+		event?.stopPropagation();
+		const key = node.key;
+		if (expandedKeys.has(key)) {
+			expandedKeys.delete(key);
+			expandedKeys = new Set(expandedKeys);
+		} else {
+			expandedKeys.add(key);
+			expandedKeys = new Set(expandedKeys);
+			if (!treeChildrenCache.has(key)) {
+				await loadTreeChildren(node);
+			}
+		}
+	}
+
+	async function loadTreeChildren(node: TreeNode) {
+		loadingKeys.add(node.key);
+		loadingKeys = new Set(loadingKeys);
+		try {
+			let children: TreeNode[] = [];
+
+			if (node.type === 'tenant') {
+				const sitesData = await getSharepointSites(token, node.tenant.id);
+				children = sitesData.map(
+					(s): TreeNode => ({
+						key: `site:${node.tenant.id}:${s.id}`,
+						type: 'site',
+						label: s.display_name,
+						tenant: node.tenant,
+						site: s,
+						folderPath: []
+					})
+				);
+			} else if (node.type === 'site' && node.site) {
+				const drivesData = await getSharepointSiteDrives(token, node.tenant.id, node.site.id);
+				children = drivesData.map(
+					(d): TreeNode => ({
+						key: `drive:${node.tenant.id}:${node.site!.id}:${d.id}`,
+						type: 'drive',
+						label: d.name,
+						tenant: node.tenant,
+						site: node.site,
+						drive: d,
+						folderPath: []
+					})
+				);
+			} else if ((node.type === 'drive' || node.type === 'folder') && node.drive) {
+				const folderId = node.type === 'folder' ? node.folder?.id : undefined;
+				const folderItems = await getSharepointFiles(
+					token,
+					node.tenant.id,
+					node.drive.id,
+					folderId
+				);
+				const basePath = node.type === 'folder' ? node.folderPath : [];
+				children = folderItems
+					.filter((i) => i.is_folder)
+					.map(
+						(i): TreeNode => ({
+							key: `folder:${node.drive!.id}:${i.id}`,
+							type: 'folder',
+							label: i.name,
+							tenant: node.tenant,
+							site: node.site,
+							drive: node.drive!,
+							folder: i,
+							folderPath: [...basePath, { id: i.id, name: i.name }]
+						})
+					);
+			}
+
+			treeChildrenCache.set(node.key, children);
+			treeChildrenCache = new Map(treeChildrenCache);
+		} catch (e) {
+			console.error('Failed to load tree children:', e);
+			treeChildrenCache.set(node.key, []);
+			treeChildrenCache = new Map(treeChildrenCache);
+		} finally {
+			loadingKeys.delete(node.key);
+			loadingKeys = new Set(loadingKeys);
+		}
+	}
+
+	async function navigateToTreeNode(node: TreeNode) {
+		// Tenants: just toggle expand
+		if (node.type === 'tenant') {
+			await toggleTreeNode(node);
+			return;
+		}
+		// Sites: select the site (loads its drives, auto-selects first drive)
+		if (node.type === 'site' && node.site) {
+			currentTenant = node.tenant;
+			await selectSite(node.site);
+			if (!expandedKeys.has(node.key)) {
+				expandedKeys.add(node.key);
+				expandedKeys = new Set(expandedKeys);
+				if (!treeChildrenCache.has(node.key)) {
+					await loadTreeChildren(node);
+				}
+			}
+			return;
+		}
+		// Drives: navigate to drive root
+		if (node.type === 'drive' && node.drive) {
+			currentTenant = node.tenant;
+			if (node.site) currentSite = node.site;
+			await selectDrive(node.drive);
+			return;
+		}
+		// Folders: navigate directly into folder
+		if (node.type === 'folder' && node.folder && node.drive) {
+			currentTenant = node.tenant;
+			if (node.site) currentSite = node.site;
+			currentDrive = node.drive;
+			folderStack = node.folderPath;
+			selectedItems = new Set();
+			selectedFolders = new Set();
+			await loadItems(node.folder.id);
+			return;
+		}
+	}
+
+	// ===== PRESERVED FUNCTIONS =====
 
 	function loadRecentDrives() {
 		try {
@@ -174,6 +411,11 @@
 		scrollToSelectedSite();
 	}
 
+	function scrollToSelectedSite() {
+		const item = document.querySelector('[data-site-selected="true"]');
+		item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+	}
+
 	function handleDriveKeydown(e: KeyboardEvent) {
 		if (e.code === 'Enter' && filteredDrives.length > 0) {
 			selectDrive(filteredDrives[selectedDriveIdx]);
@@ -190,6 +432,25 @@
 		} else {
 			selectedDriveIdx = 0;
 		}
+		scrollToSelectedDrive();
+	}
+
+	function scrollToSelectedDrive() {
+		const item = document.querySelector('[data-drive-selected="true"]');
+		item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+	}
+
+	async function resetSiteSelection() {
+		await tick();
+		const idx = filteredSites.findIndex((s) => s.id === currentSite?.id);
+		selectedSiteIdx = idx >= 0 ? idx : 0;
+		scrollToSelectedSite();
+	}
+
+	async function resetDriveSelection() {
+		await tick();
+		const idx = filteredDrives.findIndex((d) => d.id === currentDrive?.id);
+		selectedDriveIdx = idx >= 0 ? idx : 0;
 		scrollToSelectedDrive();
 	}
 
@@ -250,6 +511,21 @@
 			if (sites.length > 0) {
 				await selectSite(sites[0]);
 			}
+			// Populate tree cache and auto-expand this tenant
+			const tenantKey = `t:${currentTenant.id}`;
+			const tenant = currentTenant;
+			const siteNodes: TreeNode[] = sites.map((s) => ({
+				key: `site:${tenant.id}:${s.id}`,
+				type: 'site' as const,
+				label: s.display_name,
+				tenant,
+				site: s,
+				folderPath: []
+			}));
+			treeChildrenCache.set(tenantKey, siteNodes);
+			treeChildrenCache = new Map(treeChildrenCache);
+			expandedKeys.add(tenantKey);
+			expandedKeys = new Set(expandedKeys);
 		} catch (error) {
 			console.error('Failed to load sites:', error);
 			toast.error('Failed to load departments');
@@ -268,13 +544,28 @@
 		selectedItems.clear();
 		selectedFolders.clear();
 
-		// Load drives for this site and auto-select first one
 		loadingDrives = true;
 		try {
 			drives = await getSharepointSiteDrives(token, currentTenant!.id, site.id);
 			if (drives.length > 0) {
 				await selectDrive(drives[0]);
 			}
+			// Populate tree cache and auto-expand this site
+			const siteKey = `site:${currentTenant!.id}:${site.id}`;
+			const tenant = currentTenant!;
+			const driveNodes: TreeNode[] = drives.map((d) => ({
+				key: `drive:${tenant.id}:${site.id}:${d.id}`,
+				type: 'drive' as const,
+				label: d.name,
+				tenant,
+				site,
+				drive: d,
+				folderPath: []
+			}));
+			treeChildrenCache.set(siteKey, driveNodes);
+			treeChildrenCache = new Map(treeChildrenCache);
+			expandedKeys.add(siteKey);
+			expandedKeys = new Set(expandedKeys);
 		} catch (error) {
 			console.error('Failed to load site drives:', error);
 			toast.error('Failed to load document libraries');
@@ -286,10 +577,8 @@
 	async function startAuth() {
 		try {
 			const { url } = await getSharepointAuthUrl(token);
-			// Open OAuth popup
 			const popup = window.open(url, '_blank', 'width=600,height=700');
 
-			// Poll for auth completion
 			const pollInterval = setInterval(async () => {
 				try {
 					const status = await getSharepointAuthStatus(token);
@@ -304,7 +593,6 @@
 				}
 			}, 2000);
 
-			// Clear polling after 5 minutes
 			setTimeout(() => clearInterval(pollInterval), 5 * 60 * 1000);
 		} catch (error) {
 			console.error('Failed to start auth:', error);
@@ -326,6 +614,10 @@
 			selectedItems.clear();
 			selectedFolders.clear();
 			folderStack = [];
+			// Reset tree state
+			treeChildrenCache = new Map();
+			expandedKeys = new Set();
+			loadingKeys = new Set();
 			toast.success('Disconnected from SharePoint');
 		} catch (error) {
 			console.error('Failed to logout:', error);
@@ -447,7 +739,6 @@
 		const signal = abortController.signal;
 
 		try {
-			// When spaceId is provided and folders are selected, use bulk folder import
 			if (spaceId && selectedFolders.size > 0) {
 				let totalAdded = 0;
 				let totalSkipped = 0;
@@ -487,7 +778,6 @@
 					importProgress = importProgress;
 				}
 
-				// Also handle individually selected files
 				for (const itemId of selectedItems) {
 					if (signal.aborted) break;
 
@@ -519,7 +809,6 @@
 					toast.success(message);
 				}
 			} else {
-				// Original flow: enumerate and download files one by one
 				const filesToDownload = items.filter(
 					(item) => selectedItems.has(item.id) && !item.is_folder
 				);
@@ -619,6 +908,25 @@
 		return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
 	}
 
+	function formatDate(dateStr?: string): string {
+		if (!dateStr) return '';
+		try {
+			const d = new Date(dateStr);
+			const now = new Date();
+			const diff = now.getTime() - d.getTime();
+			const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+			if (days === 0) return 'Today';
+			if (days === 1) return 'Yesterday';
+			if (days < 7) return `${days}d ago`;
+			if (days < 365) {
+				return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+			}
+			return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
+		} catch {
+			return '';
+		}
+	}
+
 	function getFileIcon(item: DriveItem): string {
 		if (item.is_folder) return '📁';
 		const ext = item.name.split('.').pop()?.toLowerCase();
@@ -661,16 +969,16 @@
 	}
 </script>
 
-<Modal bind:show size="lg">
-	<div class="flex flex-col max-h-[85vh]">
-		<!-- Header -->
-		<div class="flex items-center justify-between px-6 pt-5 pb-4">
-			<div class="flex items-center gap-3">
+<Modal bind:show size="xl">
+	<div class="flex flex-col" style="height: 80vh; max-height: 80vh;">
+		<!-- ── Header ────────────────────────────────────────────── -->
+		<div class="flex items-center justify-between px-5 pt-4 pb-3 shrink-0">
+			<div class="flex items-center gap-2.5">
 				<div
-					class="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 shadow-sm"
+					class="flex items-center justify-center w-7 h-7 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 shadow-sm shrink-0"
 				>
 					<svg
-						class="w-4 h-4 text-white"
+						class="w-3.5 h-3.5 text-white"
 						fill="none"
 						stroke="currentColor"
 						stroke-width="2"
@@ -683,23 +991,15 @@
 						/>
 					</svg>
 				</div>
-				<div>
-					<h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
-						SharePoint Files
-					</h2>
-					{#if authStatus?.authenticated && currentSite}
-						<p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-							{sites.length} department{sites.length === 1 ? '' : 's'} available
-						</p>
-					{/if}
-				</div>
+				<h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
+					SharePoint Files
+				</h2>
 			</div>
-			<div class="flex items-center gap-2">
+			<div class="flex items-center gap-1.5">
 				{#if authStatus?.authenticated}
 					<button
 						class="text-xs text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors px-2 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
 						on:click={logout}
-						aria-label="Disconnect from SharePoint"
 					>
 						Disconnect
 					</button>
@@ -713,7 +1013,7 @@
 					aria-label="Close"
 				>
 					<svg
-						class="w-4 h-4"
+						class="w-3.5 h-3.5"
 						fill="none"
 						stroke="currentColor"
 						stroke-width="2"
@@ -725,13 +1025,14 @@
 			</div>
 		</div>
 
+		<!-- ── Body ─────────────────────────────────────────────── -->
 		{#if loadingAuth}
-			<div class="flex flex-col items-center justify-center py-20 px-6">
+			<div class="flex flex-col items-center justify-center flex-1 pb-8">
 				<Spinner className="size-5" />
 				<p class="text-sm text-gray-400 dark:text-gray-500 mt-3">Connecting to SharePoint...</p>
 			</div>
 		{:else if !authStatus?.enabled}
-			<div class="flex flex-col items-center justify-center py-20 px-6">
+			<div class="flex flex-col items-center justify-center flex-1 pb-8 px-6">
 				<div
 					class="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4"
 				>
@@ -755,7 +1056,7 @@
 				</p>
 			</div>
 		{:else if !authStatus?.authenticated}
-			<div class="flex flex-col items-center justify-center py-16 px-6">
+			<div class="flex flex-col items-center justify-center flex-1 pb-8 px-6">
 				<div
 					class="w-16 h-16 rounded-2xl bg-gradient-to-br from-sky-50 to-blue-100 dark:from-sky-900/30 dark:to-blue-900/30 flex items-center justify-center mb-5 shadow-sm"
 				>
@@ -795,64 +1096,254 @@
 				</button>
 			</div>
 		{:else}
-			<!-- Connected state -->
-			<div class="flex flex-col flex-1 min-h-0">
-				<!-- Controls bar -->
-				<div class="px-6 pb-3 space-y-3">
-					<!-- Tenant selector (segmented control) -->
-					{#if tenants.length > 1}
-						<div class="flex items-center gap-3">
-							<div class="inline-flex p-0.5 rounded-lg bg-gray-100 dark:bg-gray-800">
-								{#each tenants as tenant}
-									<button
-										class="relative px-3.5 py-1.5 text-xs font-medium rounded-md transition-all duration-200 {currentTenant?.id ===
-										tenant.id
-											? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-											: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
-										on:click={() => selectTenant(tenant)}
-										aria-label="Switch to {tenant.name}"
+			<!-- ── Connected: Split-Pane Explorer ──────────────── -->
+			<div
+				class="flex flex-1 min-h-0 overflow-hidden border-t border-gray-100 dark:border-gray-800/60"
+			>
+				<!-- ── Left Sidebar ─────────────────────────────── -->
+				<div
+					class="flex flex-col border-r border-gray-200/70 dark:border-gray-700/50 bg-gray-50/60 dark:bg-gray-900/30 transition-all duration-200 {sidebarCollapsed
+						? 'w-0 overflow-hidden'
+						: 'w-52 sm:w-56 shrink-0'}"
+				>
+					<!-- Search bar -->
+					<div class="px-2.5 py-2 border-b border-gray-200/60 dark:border-gray-700/40 shrink-0">
+						<div
+							class="flex items-center gap-1.5 px-2.5 py-1.5 bg-white dark:bg-gray-800/70 rounded-lg border border-gray-200/80 dark:border-gray-700/60"
+						>
+							<Search className="size-3 text-gray-400 shrink-0" />
+							<input
+								bind:value={sidebarSearch}
+								class="flex-1 text-xs bg-transparent outline-none text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 min-w-0"
+								placeholder="Search..."
+								autocomplete="off"
+							/>
+							{#if sidebarSearch}
+								<button
+									class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors shrink-0"
+									on:click={() => (sidebarSearch = '')}
+									aria-label="Clear search"
+								>
+									<svg
+										class="w-3 h-3"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										viewBox="0 0 24 24"
 									>
-										{tenant.name}
-									</button>
-								{/each}
+										<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+									</svg>
+								</button>
+							{/if}
+						</div>
+					</div>
+
+					<!-- Tree -->
+					<div class="flex-1 min-h-0 overflow-y-auto overscroll-contain py-1 px-1">
+						{#if loadingTenants || loadingSites}
+							<div class="flex items-center gap-2 px-3 py-2 mt-1">
+								<Spinner className="size-3 text-gray-400" />
+								<span class="text-xs text-gray-400 dark:text-gray-500">Loading...</span>
 							</div>
+						{:else if flatTree.length === 0 && sidebarSearch}
+							<div class="px-3 py-4 text-xs text-gray-400 dark:text-gray-500 text-center">
+								No results for "<span class="text-gray-600 dark:text-gray-400">{sidebarSearch}</span
+								>"
+							</div>
+						{:else}
+							{#each flatTree as item (item.node.key)}
+								<!-- svelte-ignore a11y_click_events_have_key_events -->
+								<!-- svelte-ignore a11y_no_static_element_interactions -->
+								<div
+									class="group flex items-center min-w-0 h-[26px] cursor-pointer select-none rounded-md transition-colors duration-100
+										{activeKey === item.node.key
+										? 'bg-blue-500/10 dark:bg-blue-500/15'
+										: 'hover:bg-gray-100/80 dark:hover:bg-gray-800/60'}"
+									style="padding-left: {6 + item.depth * 10}px; padding-right: 4px;"
+									on:click={() => navigateToTreeNode(item.node)}
+								>
+									<!-- Expand/collapse chevron -->
+									<div
+										class="flex items-center justify-center w-4 h-4 shrink-0 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors mr-0.5"
+										on:click|stopPropagation={() => toggleTreeNode(item.node)}
+										role="button"
+										aria-label={item.isExpanded ? 'Collapse' : 'Expand'}
+										tabindex="-1"
+									>
+										{#if item.isLoading}
+											<Spinner className="size-2.5 text-gray-400" />
+										{:else if item.hasChildren}
+											<ChevronDown
+												className="size-2.5 text-gray-400 dark:text-gray-500 transition-transform duration-150 {item.isExpanded
+													? ''
+													: '-rotate-90'}"
+											/>
+										{/if}
+									</div>
+
+									<!-- Node icon -->
+									<span class="text-xs mr-1 shrink-0 leading-none">
+										{#if item.node.type === 'tenant'}🏢
+										{:else if item.node.type === 'site'}🏛️
+										{:else if item.node.type === 'drive'}💼
+										{:else}📁
+										{/if}
+									</span>
+
+									<!-- Label -->
+									<span
+										class="text-xs truncate leading-tight transition-colors
+											{activeKey === item.node.key
+											? 'text-blue-700 dark:text-blue-300 font-medium'
+											: 'text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white'}"
+									>
+										{item.node.label}
+									</span>
+
+									<!-- Active indicator dot -->
+									{#if activeKey === item.node.key}
+										<div class="w-1 h-1 rounded-full bg-blue-500 shrink-0 ml-auto mr-1" />
+									{/if}
+								</div>
+							{/each}
+						{/if}
+					</div>
+				</div>
+
+				<!-- ── Right Main Pane ───────────────────────────── -->
+				<div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+					<!-- Breadcrumb + sidebar toggle -->
+					<div
+						class="flex items-center gap-0.5 px-3 py-2 border-b border-gray-100 dark:border-gray-800/60 bg-white/50 dark:bg-gray-900/20 overflow-x-auto scrollbar-none shrink-0"
+					>
+						<!-- Sidebar toggle (mobile / compact) -->
+						<button
+							class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 shrink-0 mr-0.5 transition-colors"
+							on:click={() => (sidebarCollapsed = !sidebarCollapsed)}
+							aria-label="Toggle sidebar"
+						>
+							<svg
+								class="w-3.5 h-3.5"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								viewBox="0 0 24 24"
+							>
+								<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+							</svg>
+						</button>
+
+						{#if currentDrive}
+							<!-- Tenant context (only with multiple tenants) -->
+							{#if currentTenant && tenants.length > 1}
+								<span
+									class="text-xs text-gray-400 dark:text-gray-600 shrink-0 truncate max-w-[6rem]"
+									>{currentTenant.name}</span
+								>
+								<svg
+									class="w-2.5 h-2.5 text-gray-300 dark:text-gray-700 shrink-0"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									viewBox="0 0 24 24"
+								>
+									<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+								</svg>
+							{/if}
+
+							<!-- Site name -->
+							{#if currentSite}
+								<span
+									class="text-xs text-gray-400 dark:text-gray-600 truncate max-w-[8rem] shrink-0"
+									>{currentSite.display_name}</span
+								>
+								<svg
+									class="w-2.5 h-2.5 text-gray-300 dark:text-gray-700 shrink-0"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									viewBox="0 0 24 24"
+								>
+									<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+								</svg>
+							{/if}
+
+							<!-- Drive root (clickable) -->
+							<button
+								class="text-xs px-1 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0 font-medium text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white max-w-[8rem] truncate"
+								on:click={() => navigateToBreadcrumb(-1)}
+							>
+								{currentDrive.name}
+							</button>
+
+							<!-- Folder breadcrumbs -->
+							{#each folderStack as folder, i}
+								<svg
+									class="w-2.5 h-2.5 text-gray-300 dark:text-gray-700 shrink-0"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									viewBox="0 0 24 24"
+								>
+									<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+								</svg>
+								<button
+									class="text-xs px-1 py-0.5 rounded transition-colors shrink-0 truncate max-w-[10rem]
+										{i === folderStack.length - 1
+										? 'text-gray-800 dark:text-gray-100 font-semibold cursor-default'
+										: 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'}"
+									on:click={() => navigateToBreadcrumb(i)}
+								>
+									{folder.name}
+								</button>
+							{/each}
+						{:else}
+							<span class="text-xs text-gray-400 dark:text-gray-500 italic">
+								Select a location from the sidebar
+							</span>
+						{/if}
+					</div>
+
+					<!-- Column headers (shown when there are items) -->
+					{#if !loading && items.length > 0 && currentDrive}
+						<div
+							class="flex items-center px-4 py-1.5 border-b border-gray-100 dark:border-gray-800/50 bg-gray-50/40 dark:bg-gray-900/10 shrink-0"
+						>
+							<div class="w-5 shrink-0 mr-3" />
+							<div class="w-8 shrink-0 mr-2.5" />
+							<div
+								class="flex-1 text-[10px] font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider"
+							>
+								Name
+							</div>
+							<div
+								class="w-20 text-right text-[10px] font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider shrink-0 hidden sm:block"
+							>
+								Size
+							</div>
+							<div
+								class="w-24 text-right text-[10px] font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider shrink-0 hidden md:block"
+							>
+								Modified
+							</div>
+							<div class="w-4 shrink-0 ml-1" />
 						</div>
 					{/if}
 
-					<!-- Department selector -->
-					{#if loadingTenants || loadingSites}
-						<div
-							class="flex items-center gap-3 px-4 py-4 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-800"
-						>
-							<Spinner className="size-4" />
-							<div>
-								<p class="text-sm font-medium text-gray-700 dark:text-gray-300">
-									Loading departments
-								</p>
-								<p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-									Fetching SharePoint sites...
-								</p>
+					<!-- File list -->
+					<div class="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+						{#if loading}
+							<div class="flex flex-col items-center justify-center h-full">
+								<Spinner className="size-5" />
+								<p class="text-xs text-gray-400 dark:text-gray-500 mt-3">Loading files...</p>
 							</div>
-						</div>
-					{:else}
-						<DropdownMenu.Root
-							bind:open={siteDropdownOpen}
-							onOpenChange={() => {
-								siteSearchValue = '';
-								selectedSiteIdx = 0;
-								window.setTimeout(() => document.getElementById('site-search-input')?.focus(), 0);
-							}}
-							closeFocus={false}
-						>
-							<DropdownMenu.Trigger
-								class="w-full flex items-center gap-3 px-3.5 py-2.5 bg-gray-50 dark:bg-gray-800/60 border border-gray-200/80 dark:border-gray-700/60 rounded-xl hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-100/50 dark:hover:bg-gray-800 transition-all text-left group"
-								aria-label="Select department"
-							>
+						{:else if !currentDrive}
+							<div class="flex flex-col items-center justify-center h-full text-center px-6">
 								<div
-									class="flex items-center justify-center w-8 h-8 rounded-lg bg-white dark:bg-gray-700 border border-gray-200/80 dark:border-gray-600/50 shadow-sm shrink-0"
+									class="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3"
 								>
 									<svg
-										class="w-4 h-4 text-gray-500 dark:text-gray-400"
+										class="w-6 h-6 text-gray-400 dark:text-gray-500"
 										fill="none"
 										stroke="currentColor"
 										stroke-width="1.5"
@@ -861,164 +1352,19 @@
 										<path
 											stroke-linecap="round"
 											stroke-linejoin="round"
-											d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3H21m-3.75 3H21"
+											d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"
 										/>
 									</svg>
 								</div>
-								<div class="flex-1 min-w-0">
-									{#if currentSite}
-										<div class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
-											{currentSite.display_name}
-										</div>
-										<div class="text-xs text-gray-400 dark:text-gray-500 truncate">
-											Department{currentDrive ? ` · ${currentDrive.name}` : ''}
-										</div>
-									{:else}
-										<div class="text-sm text-gray-400 dark:text-gray-500">Select a department</div>
-									{/if}
-								</div>
-								{#if loadingDrives}
-									<Spinner className="size-3.5 shrink-0" />
-								{:else}
-									<ChevronDown
-										className="size-4 text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400 transition-colors shrink-0"
-									/>
-								{/if}
-							</DropdownMenu.Trigger>
-
-							<DropdownMenu.Content
-								class="z-[10000] w-[22rem] max-w-[calc(100vw-2rem)] rounded-xl bg-white dark:bg-gray-850 shadow-xl shadow-black/10 dark:shadow-black/30 border border-gray-200 dark:border-gray-700 outline-none overflow-hidden"
-								transition={flyAndScale}
-								side="bottom"
-								sideOffset={4}
-							>
-								<!-- Search -->
-								<div
-									class="flex items-center gap-2.5 px-3.5 py-3 border-b border-gray-100 dark:border-gray-700/80"
-								>
-									<Search className="size-4 text-gray-400 shrink-0" />
-									<input
-										id="site-search-input"
-										bind:value={siteSearchValue}
-										class="flex-1 text-sm bg-transparent outline-none text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
-										placeholder="Search {sites.length} departments..."
-										autocomplete="off"
-										on:keydown={handleSiteKeydown}
-									/>
-									{#if siteSearchValue}
-										<button
-											class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-											on:click={() => (siteSearchValue = '')}
-											aria-label="Clear search"
-										>
-											<svg
-												class="w-3.5 h-3.5"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
-												viewBox="0 0 24 24"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M6 18L18 6M6 6l12 12"
-												/>
-											</svg>
-										</button>
-									{/if}
-								</div>
-
-								<!-- Site list -->
-								<div class="max-h-64 overflow-y-auto overscroll-contain">
-									{#each filteredSites as site, idx}
-										<button
-											data-site-selected={idx === selectedSiteIdx}
-											class="w-full flex items-center gap-2.5 px-3.5 py-2 text-left transition-colors {currentSite?.id ===
-											site.id
-												? 'bg-blue-50/60 dark:bg-blue-900/15'
-												: ''} {idx === selectedSiteIdx
-												? 'bg-gray-50 dark:bg-gray-800'
-												: 'hover:bg-gray-50 dark:hover:bg-gray-800'}"
-											on:click={() => selectSite(site)}
-										>
-											<div class="flex-1 min-w-0">
-												<div class="text-sm text-gray-800 dark:text-gray-200 truncate">
-													{site.display_name}
-												</div>
-												{#if site.web_url}
-													<div class="text-xs text-gray-400 dark:text-gray-500 truncate">
-														Department
-													</div>
-												{/if}
-											</div>
-											{#if currentSite?.id === site.id}
-												<Check className="size-3.5 text-blue-500 dark:text-blue-400 shrink-0" />
-											{/if}
-										</button>
-									{:else}
-										<div class="px-3.5 py-6 text-sm text-center text-gray-400 dark:text-gray-500">
-											No departments match your search
-										</div>
-									{/each}
-								</div>
-							</DropdownMenu.Content>
-						</DropdownMenu.Root>
-					{/if}
-				</div>
-
-				<!-- Breadcrumbs -->
-				<div class="flex items-center gap-1 px-6 pb-2 text-xs overflow-x-auto scrollbar-none">
-					<button
-						class="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all shrink-0"
-						on:click={() => navigateToBreadcrumb(-1)}
-						aria-label="Navigate to root"
-					>
-						<svg
-							class="w-3.5 h-3.5"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-							/>
-						</svg>
-						<span class="max-w-[8rem] truncate">{currentDrive?.name || 'Root'}</span>
-					</button>
-					{#each folderStack as folder, i}
-						<svg
-							class="w-3 h-3 text-gray-300 dark:text-gray-600 shrink-0"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							viewBox="0 0 24 24"
-						>
-							<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-						</svg>
-						<button
-							class="px-1.5 py-0.5 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all truncate max-w-[10rem] shrink-0"
-							on:click={() => navigateToBreadcrumb(i)}
-						>
-							{folder.name}
-						</button>
-					{/each}
-				</div>
-
-				<!-- File list -->
-				<div
-					class="flex-1 min-h-0 mx-6 mb-3 border border-gray-200/80 dark:border-gray-700/60 rounded-xl overflow-hidden bg-white dark:bg-gray-850"
-				>
-					<div class="h-full max-h-[24rem] overflow-y-auto overscroll-contain">
-						{#if loading}
-							<div class="flex flex-col items-center justify-center py-16">
-								<Spinner className="size-5" />
-								<p class="text-xs text-gray-400 dark:text-gray-500 mt-3">Loading files...</p>
+								<p class="text-sm font-medium text-gray-600 dark:text-gray-400">
+									Choose a location
+								</p>
+								<p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+									Expand the sidebar tree to navigate to a drive or folder
+								</p>
 							</div>
 						{:else if items.length === 0}
-							<div class="flex flex-col items-center justify-center py-16">
+							<div class="flex flex-col items-center justify-center h-full">
 								<div
 									class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3"
 								>
@@ -1039,17 +1385,18 @@
 								<p class="text-sm text-gray-500 dark:text-gray-400">This folder is empty</p>
 							</div>
 						{:else}
-							<!-- Navigate up -->
+							<!-- Navigate up row -->
 							{#if folderStack.length > 0}
 								<button
-									class="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/60 text-left border-b border-gray-100 dark:border-gray-700/50 transition-colors group"
+									class="w-full flex items-center gap-0 px-4 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/40 border-b border-gray-100/80 dark:border-gray-800/40 text-left transition-colors group"
 									on:click={navigateUp}
 								>
+									<div class="w-5 shrink-0 mr-3" />
 									<div
-										class="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center group-hover:bg-gray-200 dark:group-hover:bg-gray-700 transition-colors"
+										class="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center group-hover:bg-gray-200 dark:group-hover:bg-gray-700 transition-colors shrink-0 mr-2.5"
 									>
 										<svg
-											class="w-4 h-4 text-gray-500 dark:text-gray-400"
+											class="w-3.5 h-3.5 text-gray-500 dark:text-gray-400"
 											fill="none"
 											stroke="currentColor"
 											stroke-width="2"
@@ -1062,195 +1409,252 @@
 											/>
 										</svg>
 									</div>
-									<span class="text-sm text-gray-500 dark:text-gray-400">..</span>
+									<span class="text-xs text-gray-500 dark:text-gray-400">..</span>
 								</button>
 							{/if}
-							<!-- Items -->
+
+							<!-- File/folder rows -->
 							{#each items as item}
-								<button
-									class="w-full px-4 py-2.5 flex items-center gap-3 text-left transition-all group
+								<!-- svelte-ignore a11y_click_events_have_key_events -->
+								<!-- svelte-ignore a11y_no_static_element_interactions -->
+								<div
+									class="group flex items-center px-4 py-1.5 border-b border-gray-50 dark:border-gray-800/30 last:border-0 transition-colors
 										{selectedItems.has(item.id) || selectedFolders.has(item.id)
-										? 'bg-blue-50/70 dark:bg-blue-900/15 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-										: 'hover:bg-gray-50 dark:hover:bg-gray-800/60'}"
-									on:click={() => toggleSelection(item)}
+										? 'bg-blue-50/60 dark:bg-blue-900/10'
+										: 'hover:bg-gray-50/70 dark:hover:bg-gray-800/30'}"
+									on:click={() => {
+										if (!item.is_folder) {
+											// File: toggle selection on row click
+											if (selectedItems.has(item.id)) {
+												selectedItems.delete(item.id);
+											} else {
+												selectedItems.add(item.id);
+											}
+											selectedItems = selectedItems;
+										}
+									}}
+									on:dblclick={() => {
+										if (item.is_folder) navigateToFolder(item);
+									}}
 								>
-									<!-- Checkbox for files and folders -->
-									<div class="shrink-0">
-										{#if item.is_folder}
-											<!-- svelte-ignore a11y_click_events_have_key_events -->
-											<!-- svelte-ignore a11y_no_static_element_interactions -->
-											<div
-												class="w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all cursor-pointer
-												{selectedFolders.has(item.id)
-													? 'bg-amber-500 border-amber-500 dark:bg-amber-500 dark:border-amber-500'
-													: 'border-gray-300 dark:border-gray-600 hover:border-amber-400 dark:hover:border-amber-500'}"
-												on:click={(e) => toggleFolderSelection(item, e)}
-												title="Select folder to import all files"
-											>
-												{#if selectedFolders.has(item.id)}
-													<svg
-														class="w-3 h-3 text-white"
-														fill="none"
-														stroke="currentColor"
-														stroke-width="3"
-														viewBox="0 0 24 24"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															d="M4.5 12.75l6 6 9-13.5"
-														/>
-													</svg>
-												{/if}
-											</div>
-										{:else}
-											<div
-												class="w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all
-												{selectedItems.has(item.id)
-													? 'bg-blue-500 border-blue-500 dark:bg-blue-500 dark:border-blue-500'
-													: 'border-gray-300 dark:border-gray-600 group-hover:border-gray-400 dark:group-hover:border-gray-500'}"
-											>
-												{#if selectedItems.has(item.id)}
-													<svg
-														class="w-3 h-3 text-white"
-														fill="none"
-														stroke="currentColor"
-														stroke-width="3"
-														viewBox="0 0 24 24"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															d="M4.5 12.75l6 6 9-13.5"
-														/>
-													</svg>
-												{/if}
-											</div>
-										{/if}
-									</div>
-									<!-- Icon -->
+									<!-- Checkbox -->
+									<!-- svelte-ignore a11y_click_events_have_key_events -->
+									<!-- svelte-ignore a11y_no_static_element_interactions -->
 									<div
-										class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0
-										{item.is_folder ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-gray-50 dark:bg-gray-800'}"
+										class="w-5 shrink-0 mr-3 flex items-center justify-center"
+										on:click|stopPropagation={() => {
+											if (item.is_folder) {
+												if (selectedFolders.has(item.id)) {
+													selectedFolders.delete(item.id);
+												} else {
+													selectedFolders.add(item.id);
+												}
+												selectedFolders = selectedFolders;
+											} else {
+												if (selectedItems.has(item.id)) {
+													selectedItems.delete(item.id);
+												} else {
+													selectedItems.add(item.id);
+												}
+												selectedItems = selectedItems;
+											}
+										}}
 									>
-										<span class="text-base leading-none">{getFileIcon(item)}</span>
-									</div>
-									<!-- Name & meta -->
-									<div class="flex-1 min-w-0">
 										<div
-											class="text-sm text-gray-800 dark:text-gray-200 truncate group-hover:text-gray-900 dark:group-hover:text-white transition-colors"
+											class="w-4 h-4 rounded border-2 flex items-center justify-center transition-all cursor-pointer
+												{item.is_folder
+												? selectedFolders.has(item.id)
+													? 'bg-amber-500 border-amber-500'
+													: 'border-gray-300 dark:border-gray-600 hover:border-amber-400 dark:hover:border-amber-500'
+												: selectedItems.has(item.id)
+													? 'bg-blue-500 border-blue-500'
+													: 'border-gray-300 dark:border-gray-600 group-hover:border-gray-400 dark:group-hover:border-gray-500'}"
+										>
+											{#if selectedItems.has(item.id) || selectedFolders.has(item.id)}
+												<svg
+													class="w-2.5 h-2.5 text-white"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="3"
+													viewBox="0 0 24 24"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M4.5 12.75l6 6 9-13.5"
+													/>
+												</svg>
+											{/if}
+										</div>
+									</div>
+
+									<!-- File/folder icon -->
+									<!-- svelte-ignore a11y_click_events_have_key_events -->
+									<!-- svelte-ignore a11y_no_static_element_interactions -->
+									<div
+										class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mr-2.5 transition-colors
+											{item.is_folder
+											? 'bg-amber-50 dark:bg-amber-900/20 group-hover:bg-amber-100 dark:group-hover:bg-amber-900/30'
+											: 'bg-gray-50 dark:bg-gray-800/60 group-hover:bg-gray-100 dark:group-hover:bg-gray-800'}"
+										on:click|stopPropagation={() => {
+											if (item.is_folder) navigateToFolder(item);
+										}}
+									>
+										<span class="text-sm leading-none">{getFileIcon(item)}</span>
+									</div>
+
+									<!-- Name + subtitle -->
+									<!-- svelte-ignore a11y_click_events_have_key_events -->
+									<!-- svelte-ignore a11y_no_static_element_interactions -->
+									<div
+										class="flex-1 min-w-0 cursor-pointer"
+										on:click|stopPropagation={() => {
+											if (item.is_folder) navigateToFolder(item);
+										}}
+									>
+										<div
+											class="text-xs font-medium text-gray-800 dark:text-gray-200 truncate group-hover:text-gray-900 dark:group-hover:text-white transition-colors"
 										>
 											{item.name}
 										</div>
 										{#if item.is_folder}
-											<div class="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
-												Click row to browse · Check to import all files
-											</div>
-										{:else if item.size}
-											<div class="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
-												{formatFileSize(item.size)}
+											<div
+												class="text-[10px] text-gray-400 dark:text-gray-600 mt-0.5 hidden sm:block"
+											>
+												Folder · click to open
 											</div>
 										{/if}
 									</div>
-									<!-- Folder chevron -->
-									{#if item.is_folder}
-										<svg
-											class="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 dark:group-hover:text-gray-500 transition-colors shrink-0"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="2"
-											viewBox="0 0 24 24"
-										>
-											<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-										</svg>
-									{/if}
-								</button>
+
+									<!-- Size (files only) -->
+									<div
+										class="w-20 text-right text-[11px] text-gray-400 dark:text-gray-500 shrink-0 hidden sm:block"
+									>
+										{#if !item.is_folder && item.size}
+											{formatFileSize(item.size)}
+										{:else if item.is_folder}
+											—
+										{/if}
+									</div>
+
+									<!-- Modified date -->
+									<div
+										class="w-24 text-right text-[11px] text-gray-400 dark:text-gray-500 shrink-0 hidden md:block"
+									>
+										{formatDate(item.modified_at)}
+									</div>
+
+									<!-- Navigate arrow for folders -->
+									<!-- svelte-ignore a11y_click_events_have_key_events -->
+									<!-- svelte-ignore a11y_no_static_element_interactions -->
+									<div
+										class="ml-1 w-4 shrink-0"
+										on:click|stopPropagation={() => {
+											if (item.is_folder) navigateToFolder(item);
+										}}
+									>
+										{#if item.is_folder}
+											<svg
+												class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 dark:group-hover:text-gray-500 transition-colors"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"
+												viewBox="0 0 24 24"
+											>
+												<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+											</svg>
+										{/if}
+									</div>
+								</div>
 							{/each}
 						{/if}
 					</div>
 				</div>
+			</div>
 
-				<!-- Footer -->
-				<div
-					class="flex items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 rounded-b-4xl"
-				>
-					<div class="text-xs text-gray-500 dark:text-gray-400">
-						{#if downloading && importProgress.total > 0}
-							<span class="inline-flex items-center gap-2">
-								<Spinner className="size-3" />
-								<span class="font-medium text-gray-700 dark:text-gray-300">
-									Importing {importProgress.current} / {importProgress.total}...
-								</span>
+			<!-- ── Footer ────────────────────────────────────────── -->
+			<div
+				class="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-gray-800/80 bg-gray-50/40 dark:bg-gray-900/20 shrink-0"
+			>
+				<!-- Status / selection count -->
+				<div class="text-xs text-gray-500 dark:text-gray-400 min-w-0 mr-3">
+					{#if downloading && importProgress.total > 0}
+						<span class="inline-flex items-center gap-2">
+							<Spinner className="size-3 shrink-0" />
+							<span class="font-medium text-gray-700 dark:text-gray-300 truncate">
+								Importing {importProgress.current} / {importProgress.total}...
 							</span>
-						{:else if downloading}
-							<span class="inline-flex items-center gap-2">
-								<Spinner className="size-3" />
-								<span class="text-gray-500 dark:text-gray-400">Scanning folders...</span>
-							</span>
-						{:else if selectedItems.size > 0 || selectedFolders.size > 0}
-							<span class="inline-flex items-center gap-1.5 flex-wrap">
-								{#if selectedItems.size > 0}
-									<span
-										class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-500 text-white text-[10px] font-bold"
-									>
-										{selectedItems.size}
-									</span>
-									<span>file{selectedItems.size === 1 ? '' : 's'}</span>
-								{/if}
-								{#if selectedFolders.size > 0}
-									{#if selectedItems.size > 0}
-										<span class="text-gray-300 dark:text-gray-600">+</span>
-									{/if}
-									<span
-										class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-bold"
-									>
-										{selectedFolders.size}
-									</span>
-									<span>folder{selectedFolders.size === 1 ? '' : 's'}</span>
-								{/if}
-								<span class="text-gray-400">selected</span>
-							</span>
-						{:else}
-							Select files or folders to import
-						{/if}
-					</div>
-					<div class="flex items-center gap-2">
-						{#if downloading}
-							<button
-								class="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:text-white dark:hover:text-white hover:bg-red-500 dark:hover:bg-red-600 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg transition-all"
-								on:click={cancelImport}
-							>
-								Cancel Import
-							</button>
-						{:else}
-							<button
-								class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
-								on:click={() => (show = false)}
-							>
-								Cancel
-							</button>
-							<button
-								class="px-4 py-2 text-sm font-medium text-white bg-gray-900 dark:bg-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-900 dark:disabled:hover:bg-white flex items-center gap-2 shadow-sm active:scale-[0.98]"
-								disabled={selectedItems.size === 0 && selectedFolders.size === 0}
-								on:click={downloadSelected}
-							>
-								<svg
-									class="w-4 h-4"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									viewBox="0 0 24 24"
+						</span>
+					{:else if downloading}
+						<span class="inline-flex items-center gap-2">
+							<Spinner className="size-3 shrink-0" />
+							<span class="text-gray-500 dark:text-gray-400">Scanning folders...</span>
+						</span>
+					{:else if selectedItems.size > 0 || selectedFolders.size > 0}
+						<span class="inline-flex items-center gap-1.5 flex-wrap">
+							{#if selectedItems.size > 0}
+								<span
+									class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-blue-500 text-white text-[10px] font-bold"
 								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
-									/>
-								</svg>
-								Import Selected
-							</button>
-						{/if}
-					</div>
+									{selectedItems.size}
+								</span>
+								<span>file{selectedItems.size === 1 ? '' : 's'}</span>
+							{/if}
+							{#if selectedFolders.size > 0}
+								{#if selectedItems.size > 0}
+									<span class="text-gray-300 dark:text-gray-600">+</span>
+								{/if}
+								<span
+									class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-amber-500 text-white text-[10px] font-bold"
+								>
+									{selectedFolders.size}
+								</span>
+								<span>folder{selectedFolders.size === 1 ? '' : 's'}</span>
+							{/if}
+							<span class="text-gray-400 dark:text-gray-500">selected</span>
+						</span>
+					{:else}
+						<span class="text-gray-400 dark:text-gray-500">Select files or folders to import</span>
+					{/if}
+				</div>
+
+				<!-- Action buttons -->
+				<div class="flex items-center gap-2 shrink-0">
+					{#if downloading}
+						<button
+							class="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:text-white dark:hover:text-white hover:bg-red-500 dark:hover:bg-red-600 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg transition-all"
+							on:click={cancelImport}
+						>
+							Cancel Import
+						</button>
+					{:else}
+						<button
+							class="px-3 py-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
+							on:click={() => (show = false)}
+						>
+							Cancel
+						</button>
+						<button
+							class="px-3 py-1.5 text-xs font-medium text-white bg-gray-900 dark:bg-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-sm active:scale-[0.98]"
+							disabled={selectedItems.size === 0 && selectedFolders.size === 0}
+							on:click={downloadSelected}
+						>
+							<svg
+								class="w-3.5 h-3.5"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
+								/>
+							</svg>
+							Import Selected
+						</button>
+					{/if}
 				</div>
 			</div>
 		{/if}

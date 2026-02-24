@@ -948,6 +948,9 @@ def _filter_sites_for_user(sites: list, user) -> list:
             group_sp = (
                 group_data.get("sharepoint", {}) if isinstance(group_data, dict) else {}
             )
+            # Check for group-level allow_all
+            if group_sp.get("allow_all"):
+                return sites
             group_sites = group_sp.get("allowed_sites", [])
             if isinstance(group_sites, list):
                 allowed.update(group_sites)
