@@ -458,6 +458,7 @@ from open_webui.config import (
     TAGS_GENERATION_PROMPT_TEMPLATE,
     IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+    DEFAULT_FUNCTION_CALLING,
     VOICE_MODE_PROMPT_TEMPLATE,
     QUERY_GENERATION_PROMPT_TEMPLATE,
     AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
@@ -1307,6 +1308,7 @@ app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = IMAGE_PROMPT_GENERATI
 app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = FOLLOW_UP_GENERATION_PROMPT_TEMPLATE
 
 app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
+app.state.config.DEFAULT_FUNCTION_CALLING = DEFAULT_FUNCTION_CALLING
 app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE = QUERY_GENERATION_PROMPT_TEMPLATE
 app.state.config.AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE
 app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH
@@ -1725,12 +1727,9 @@ async def chat_completion(
                 'stream_delta_chunk_size': stream_delta_chunk_size,
                 'reasoning_tags': reasoning_tags,
                 'function_calling': (
-                    'native'
-                    if (
-                        form_data.get('params', {}).get('function_calling') == 'native'
-                        or model_info_params.get('function_calling') == 'native'
-                    )
-                    else 'default'
+                    form_data.get('params', {}).get('function_calling')
+                    or model_info_params.get('function_calling')
+                    or app.state.config.DEFAULT_FUNCTION_CALLING
                 ),
             },
         }
@@ -2095,6 +2094,7 @@ async def get_app_config(request: Request):
                 'default_models': app.state.config.DEFAULT_MODELS,
                 'default_pinned_models': app.state.config.DEFAULT_PINNED_MODELS,
                 'default_prompt_suggestions': app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
+                'default_function_calling': app.state.config.DEFAULT_FUNCTION_CALLING,
                 'user_count': user_count,
                 'code': {
                     'engine': app.state.config.CODE_EXECUTION_ENGINE,

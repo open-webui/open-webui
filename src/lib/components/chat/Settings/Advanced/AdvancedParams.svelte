@@ -4,6 +4,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import { getContext } from 'svelte';
+	import { config } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -150,7 +151,7 @@
 	<div>
 		<Tooltip
 			content={$i18n.t(
-				"Default mode works with a wider range of models by calling tools once before execution. Native mode leverages the model's built-in tool-calling capabilities, but requires the model to inherently support this feature."
+				"Prompt-Based mode works with a wider range of models by calling tools once before execution. Native mode leverages the model's built-in tool-calling capabilities, but requires the model to inherently support this feature."
 			)}
 			placement="top-start"
 			className="inline-tooltip"
@@ -162,14 +163,20 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded-sm transition"
 					on:click={() => {
-						params.function_calling = (params?.function_calling ?? null) === null ? 'native' : null;
+						const serverDefault = $config?.default_function_calling ?? 'default';
+						params.function_calling =
+							(params?.function_calling ?? null) === null
+								? serverDefault === 'native'
+									? 'default'
+									: 'native'
+								: null;
 					}}
 					type="button"
 				>
-					{#if params.function_calling === 'native'}
+					{#if (params.function_calling ?? $config?.default_function_calling ?? 'default') === 'native'}
 						<span class="ml-2 self-center">{$i18n.t('Native')}</span>
 					{:else}
-						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+						<span class="ml-2 self-center">{$i18n.t('Prompt-Based')}</span>
 					{/if}
 				</button>
 			</div>

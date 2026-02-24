@@ -1952,6 +1952,20 @@ TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
     os.environ.get('TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE', ''),
 )
 
+_DEFAULT_FUNCTION_CALLING_VALUE = os.environ.get('DEFAULT_FUNCTION_CALLING', 'default')
+if _DEFAULT_FUNCTION_CALLING_VALUE not in ('default', 'native'):
+    log.warning(
+        f'Invalid DEFAULT_FUNCTION_CALLING value "{_DEFAULT_FUNCTION_CALLING_VALUE}". '
+        'Must be "default" or "native". Falling back to "default".'
+    )
+    _DEFAULT_FUNCTION_CALLING_VALUE = 'default'
+
+DEFAULT_FUNCTION_CALLING = PersistentConfig(
+    'DEFAULT_FUNCTION_CALLING',
+    'task.tools.default_function_calling',
+    _DEFAULT_FUNCTION_CALLING_VALUE,
+)
+
 
 DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = """Available Tools: {{TOOLS}}
 
