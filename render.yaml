@@ -1,0 +1,27 @@
+# Render Blueprint for Open WebUI
+# Deploy: https://dashboard.render.com/blueprint/new?repo=https://github.com/open-webui/open-webui
+# Set WEBUI_SECRET_KEY (required) and OPENAI_API_KEY in the Dashboard. Ollama does not run on Render; use OpenAI/OpenRouter/Groq etc. only (or add OLLAMA_BASE_URL if you have an external Ollama server).
+
+services:
+  - type: web
+    name: open-webui
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+
+    # Open WebUI uses PORT from the environment (Render sets this automatically)
+    healthCheckPath: /health
+
+    # Optional: For data persistence (database, caches), upgrade to Starter+ and add a disk in the
+    # Dashboard (Disks tab): name e.g. open-webui-data, mountPath: /app/backend/data, sizeGB: 1
+
+    envVars:
+      - key: WEBUI_SECRET_KEY
+        sync: false  # Set in Render Dashboard (required for auth/sessions)
+      - key: OPENAI_API_KEY
+        sync: false  # Required for chat on Render (OpenAI, OpenRouter, Groq, etc.); Ollama does not run here
+      - key: SCARF_NO_ANALYTICS
+        value: "true"
+      - key: DO_NOT_TRACK
+        value: "true"

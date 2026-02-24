@@ -172,6 +172,38 @@ After installation, you can access Open WebUI at [http://localhost:3000](http://
 
 We offer various installation alternatives, including non-Docker native installation methods, Docker Compose, Kustomize, and Helm. Visit our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/) or join our [Discord community](https://discord.gg/5rJgQTnV4s) for comprehensive guidance.
 
+### Deploy on Render
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://dashboard.render.com/blueprint/new?repo=https://github.com/open-webui/open-webui)
+
+You can deploy Open WebUI to [Render](https://render.com/) using the included Blueprint. Render runs the app from the repository Dockerfile and does not require Docker-in-Docker, so Open WebUI works as a single web service.
+
+**Ollama does not run on Render.** This deployment is for **OpenAI-compatible APIs only** (OpenAI, OpenRouter, Groq, etc.). To use Ollama models you would need to run Ollama on another server and set `OLLAMA_BASE_URL` to that URL in the Dashboard (optional).
+
+**Steps:**
+
+1. **One-click deploy**  
+   Open the Blueprint and connect your fork or the main repo:
+   ```
+   https://dashboard.render.com/blueprint/new?repo=https://github.com/open-webui/open-webui
+   ```
+   Or, in the Render Dashboard: **New** → **Blueprint** → connect the Git repo that contains `render.yaml`.
+
+2. **Set environment variables**  
+   In the Render service **Environment** tab, set:
+   - **`WEBUI_SECRET_KEY`** (required) – e.g. a long random string for session/auth signing.
+   - **`OPENAI_API_KEY`** (required for chat on Render) – your OpenAI key, or an API key from an OpenAI-compatible provider (OpenRouter, Groq, etc.).
+
+   Optional: **`OLLAMA_BASE_URL`** – only if you have an Ollama server running elsewhere; leave unset for API-only usage.
+
+3. **Apply and deploy**  
+   Click **Apply** and wait for the build and deploy to finish. Open the generated URL to use Open WebUI.
+
+**Notes:**
+
+- **Free tier:** The filesystem is ephemeral; data (SQLite DB, caches) is lost on redeploy or after ~15 minutes of inactivity. Suitable for trying Open WebUI or API-only usage.
+- **Data persistence:** For a persistent database and caches, upgrade the service to a **Starter** (or higher) plan and add a [Persistent Disk](https://render.com/docs/disks) with mount path **`/app/backend/data`** in the service’s **Disks** tab.
+
 Look at the [Local Development Guide](https://docs.openwebui.com/getting-started/development) for instructions on setting up a local development environment.
 
 ### Troubleshooting
