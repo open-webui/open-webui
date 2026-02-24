@@ -322,6 +322,7 @@
 											<option value="https://api.groq.com/openai/v1" />
 											<option value="https://openrouter.ai/api/v1" />
 											<option value="https://api.x.ai/v1" />
+											<option value="https://api.minimax.io/v1" />
 										</datalist>
 									{/if}
 								</div>
