@@ -850,7 +850,16 @@ def apply_source_context_to_messages(
             if src_id not in citation_idx:
                 citation_idx[src_id] = len(citation_idx) + 1
             src_name = source.get("source", {}).get("name")
-            body = doc if include_content else ""
+            if include_content:
+                body = doc
+            else:
+                # Include a short reference so the model can map this
+                # source id to the corresponding tool-result message.
+                source_label = src_name or src_id
+                body = (
+                    f"[Use [{citation_idx[src_id]}] to cite this source."
+                    f" Content is in the tool result for: {source_label}]"
+                )
             context_string += (
                 f'<source id="{citation_idx[src_id]}"'
                 + (f' name="{src_name}"' if src_name else "")
