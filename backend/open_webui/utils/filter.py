@@ -22,10 +22,14 @@ def get_function_module(request, function_id, load_from_db=True):
 
 def get_sorted_filter_ids(request, model: dict, enabled_filter_ids: list = None):
     def get_priority(function_id):
-        function = Functions.get_function_by_id(function_id)
-        if function is not None:
-            valves = Functions.get_function_valves_by_id(function_id)
-            return valves.get("priority", 0) if valves else 0
+        try:
+            function_module = get_function_module(request, function_id)
+            if function_module and hasattr(function_module, "Valves"):
+                valves_db = Functions.get_function_valves_by_id(function_id)
+                valves = function_module.Valves(**(valves_db if valves_db else {}))
+                return getattr(valves, "priority", 0)
+        except Exception:
+            pass
         return 0
 
     filter_ids = [function.id for function in Functions.get_global_filter_functions()]
@@ -50,7 +54,7 @@ def get_sorted_filter_ids(request, model: dict, enabled_filter_ids: list = None)
     ]
 
     filter_ids = [fid for fid in filter_ids if fid in active_filter_ids]
-    filter_ids.sort(key=get_priority)
+    filter_ids.sort(key=lambda fid: (get_priority(fid), fid))
 
     return filter_ids
 
