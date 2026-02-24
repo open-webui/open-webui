@@ -39,6 +39,8 @@
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import Eye from '$lib/components/icons/Eye.svelte';
+	import CheckCircle from '$lib/components/icons/CheckCircle.svelte';
+	import Minus from '$lib/components/icons/Minus.svelte';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { goto } from '$app/navigation';
 	import { DropdownMenu } from 'bits-ui';
@@ -119,6 +121,28 @@
 		await Promise.all(
 			modelsToDisable.map((model) => toggleModelById(localStorage.token, model.id))
 		);
+	};
+
+	const showAllHandler = async () => {
+		const modelsToShow = filteredModels.filter((m) => m?.meta?.hidden === true);
+		// Optimistic UI update
+		modelsToShow.forEach((m) => {
+			m.meta = { ...m.meta, hidden: false };
+		});
+		models = models;
+		// Sync with server
+		await Promise.all(modelsToShow.map((model) => upsertModelHandler(model)));
+	};
+
+	const hideAllHandler = async () => {
+		const modelsToHide = filteredModels.filter((m) => !(m?.meta?.hidden ?? false));
+		// Optimistic UI update
+		modelsToHide.forEach((m) => {
+			m.meta = { ...m.meta, hidden: true };
+		});
+		models = models;
+		// Sync with server
+		await Promise.all(modelsToHide.map((model) => upsertModelHandler(model)));
 	};
 
 	const downloadModels = async (models) => {
@@ -485,7 +509,7 @@
 									enableAllHandler();
 								}}
 							>
-								<Eye className="size-4" />
+								<CheckCircle className="size-4" />
 								<div class="flex items-center">{$i18n.t('Enable All')}</div>
 							</DropdownMenu.Item>
 
@@ -495,8 +519,30 @@
 									disableAllHandler();
 								}}
 							>
-								<EyeSlash className="size-4" />
+								<Minus className="size-4" />
 								<div class="flex items-center">{$i18n.t('Disable All')}</div>
+							</DropdownMenu.Item>
+
+							<hr class="border-gray-100 dark:border-gray-800 my-1" />
+
+							<DropdownMenu.Item
+								class="select-none flex gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								on:click={() => {
+									showAllHandler();
+								}}
+							>
+								<Eye className="size-4" />
+								<div class="flex items-center">{$i18n.t('Show All')}</div>
+							</DropdownMenu.Item>
+
+							<DropdownMenu.Item
+								class="select-none flex gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								on:click={() => {
+									hideAllHandler();
+								}}
+							>
+								<EyeSlash className="size-4" />
+								<div class="flex items-center">{$i18n.t('Hide All')}</div>
 							</DropdownMenu.Item>
 						</DropdownMenu.Content>
 					</div>
