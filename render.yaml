@@ -1,5 +1,5 @@
-# Render Blueprint for Open WebUI
-# Deploy: https://dashboard.render.com/blueprint/new?repo=https://github.com/open-webui/open-webui
+# Render Blueprint for Open WebUI (one-click template)
+# Template deploy: https://render.com/deploy?repo=https://github.com/open-webui/open-webui
 # Render auto-generates WEBUI_SECRET_KEY. Set OPENAI_API_KEY in the Dashboard. Ollama does not run on Render; use OpenAI/OpenRouter/Groq etc. only.
 
 services:
@@ -9,6 +9,7 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     plan: free
+    autoDeployTrigger: "off"  # Template: don't auto-deploy on upstream repo pushes
 
     # Open WebUI uses PORT from the environment (Render sets this automatically)
     healthCheckPath: /health

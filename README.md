@@ -172,22 +172,22 @@ After installation, you can access Open WebUI at [http://localhost:3000](http://
 
 We offer various installation alternatives, including non-Docker native installation methods, Docker Compose, Kustomize, and Helm. Visit our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/) or join our [Discord community](https://discord.gg/5rJgQTnV4s) for comprehensive guidance.
 
-### Deploy on Render
+### Deploy on Render (template)
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://dashboard.render.com/blueprint/new?repo=https://github.com/open-webui/open-webui)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/open-webui/open-webui)
 
-You can deploy Open WebUI to [Render](https://render.com/) using the included Blueprint. Render runs the app from the repository Dockerfile and does not require Docker-in-Docker, so Open WebUI works as a single web service.
+Deploy Open WebUI to [Render](https://render.com/) as a one-click template. The button uses the repo’s Blueprint (`render.yaml`): Render creates a single web service from the Dockerfile and prompts for required env vars.
 
 **Ollama does not run on Render.** This deployment is for **OpenAI-compatible APIs only** (OpenAI, OpenRouter, Groq, etc.). To use Ollama models you would need to run Ollama on another server and set `OLLAMA_BASE_URL` to that URL in the Dashboard (optional).
 
 **Steps:**
 
 1. **One-click deploy**  
-   Open the Blueprint and connect your fork or the main repo:
+   Click the **Deploy to Render** button above, or open:
    ```
-   https://dashboard.render.com/blueprint/new?repo=https://github.com/open-webui/open-webui
+   https://render.com/deploy?repo=https://github.com/open-webui/open-webui
    ```
-   Or, in the Render Dashboard: **New** → **Blueprint** → connect the Git repo that contains `render.yaml`.
+   Render will clone the repo, read `render.yaml`, and create the web service. Alternatively: Render Dashboard → **New** → **Blueprint** → connect the repo (and branch) that contains `render.yaml`.
 
 2. **Set environment variables**  
    In the Render service **Environment** tab:
