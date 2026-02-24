@@ -39,6 +39,8 @@
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import Eye from '$lib/components/icons/Eye.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
+	import Minus from '$lib/components/icons/Minus.svelte';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { goto } from '$app/navigation';
 	import { DropdownMenu } from 'bits-ui';
@@ -118,6 +120,38 @@
 		// Sync with server
 		await Promise.all(
 			modelsToDisable.map((model) => toggleModelById(localStorage.token, model.id))
+		);
+	};
+
+	const unhideAllHandler = async () => {
+		const modelsToUnhide = filteredModels.filter((m) => m.meta?.hidden ?? false);
+		// Optimistic UI update
+		modelsToUnhide.forEach((m) => (
+			m.meta = {
+				...m.meta,
+				hidden: false
+			}
+		));
+		models = models;
+		// Sync with server
+		await Promise.all(
+			modelsToUnhide.map((model) => updateModelById(localStorage.token, model.id, model))
+		);
+	};
+
+	const hideAllHandler = async () => {
+		const modelsToHide = filteredModels.filter((m) => !(m.meta?.hidden ?? false));
+		// Optimistic UI update
+		modelsToHide.forEach((m) => (
+			m.meta = {
+				...m.meta,
+				hidden: true
+			}
+		));
+		models = models;
+		// Sync with server
+		await Promise.all(
+			modelsToHide.map((model) => updateModelById(localStorage.token, model.id, model))
 		);
 	};
 
@@ -497,6 +531,26 @@
 							>
 								<EyeSlash className="size-4" />
 								<div class="flex items-center">{$i18n.t('Disable All')}</div>
+							</DropdownMenu.Item>
+
+							<DropdownMenu.Item
+								class="select-none flex gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								on:click={() => {
+									unhideAllHandler();
+								}}
+							>
+								<Plus className="size-4" />
+								<div class="flex items-center">{$i18n.t('Unhide All')}</div>
+							</DropdownMenu.Item>
+
+							<DropdownMenu.Item
+								class="select-none flex gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								on:click={() => {
+									hideAllHandler();
+								}}
+							>
+								<Minus className="size-4" />
+								<div class="flex items-center">{$i18n.t('Hide All')}</div>
 							</DropdownMenu.Item>
 						</DropdownMenu.Content>
 					</div>
