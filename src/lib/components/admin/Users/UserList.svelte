@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { WEBUI_NAME, config, user, showSidebar } from '$lib/stores';
+    import { WEBUI_NAME, config, user, showSidebar, socket, activeUserIds } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { onMount, getContext, onDestroy } from 'svelte';
 
@@ -110,9 +110,20 @@
 		getUserList();
 	}
 
-	onDestroy(() => {
-		clearTimeout(searchDebounceTimer);
-	});
+    // Request initial active user IDs when component mounts
+    onMount(() => {
+        if ($socket) {
+            $socket.emit('get-active-users', {}, (response: { active_user_ids?: string[]; error?: string }) => {
+                if (response?.active_user_ids) {
+                    activeUserIds.set(response.active_user_ids);
+                }
+            });
+        }
+    });
+
+    onDestroy(() => {
+        clearTimeout(searchDebounceTimer);
+    });
 </script>
 
 <ConfirmDialog
@@ -380,7 +391,7 @@
 
 								<div class="font-medium truncate">{user.name}</div>
 
-								{#if user?.last_active_at && Date.now() / 1000 - user.last_active_at < 180}
+                                {#if $activeUserIds?.includes(user.id)}
 									<div>
 										<span class="relative flex size-1.5">
 											<span

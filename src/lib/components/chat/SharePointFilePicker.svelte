@@ -167,7 +167,7 @@
 		? computeSearchResults(treeFuse.search(sidebarSearch).map((r) => r.item))
 		: computeFlatTree(treeRootNodes, expandedKeys, loadingKeys, treeChildrenCache);
 
-	// Group search results by tenant, showing tenant header + matching items
+	// Group search results by tenant, showing tenant header + matching items + their children
 	function computeSearchResults(matches: TreeNode[]): FlatTreeItem[] {
 		if (matches.length === 0) return [];
 		
@@ -192,17 +192,38 @@
 					hasChildren: false
 				});
 			}
-			// Add matching items under it
+			// Add matching items under it, plus their cached children
 			for (const node of nodes) {
 				// Skip tenant nodes themselves (they're already headers)
 				if (node.type === 'tenant') continue;
+				
+				// Check if this node has cached children
+				const children = treeChildrenCache.get(node.key);
+				const hasChildren = children !== undefined && children.length > 0;
+				
 				result.push({
 					node,
 					depth: 1,
-					isExpanded: false,
-					isLoading: false,
-					hasChildren: false
+					isExpanded: hasChildren, // Auto-expand if has children
+					isLoading: loadingKeys.has(node.key),
+					hasChildren: hasChildren || node.type === 'site' || node.type === 'drive'
 				});
+				
+				// Include children (drives under sites, folders under drives)
+				if (children && children.length > 0) {
+					for (const child of children) {
+						const childChildren = treeChildrenCache.get(child.key);
+						const childHasChildren = childChildren !== undefined && childChildren.length > 0;
+						
+						result.push({
+							node: child,
+							depth: 2,
+							isExpanded: false,
+							isLoading: loadingKeys.has(child.key),
+							hasChildren: childHasChildren || child.type === 'drive' || child.type === 'folder'
+						});
+					}
+				}
 			}
 		}
 		return result;
@@ -284,18 +305,20 @@
 					})
 				);
 			} else if (node.type === 'site' && node.site) {
-				const drivesData = await getSharepointSiteDrives(token, node.tenant.id, node.site.id);
-				children = drivesData.map(
-					(d): TreeNode => ({
-						key: `drive:${node.tenant.id}:${node.site!.id}:${d.id}`,
-						type: 'drive',
-						label: d.name,
-						tenant: node.tenant,
-						site: node.site,
-						drive: d,
-						folderPath: []
-					})
-				);
+                let drivesData = await getSharepointSiteDrives(token, node.tenant.id, node.site.id);
+                // Filter out system libraries like Preservation Hold Library
+                drivesData = drivesData.filter((d) => !d.name.toLowerCase().includes('preservation hold'));
+                children = drivesData.map(
+                    (d): TreeNode => ({
+                        key: `drive:${node.tenant.id}:${node.site!.id}:${d.id}`,
+                        type: 'drive',
+                        label: d.name,
+                        tenant: node.tenant,
+                        site: node.site,
+                        drive: d,
+                        folderPath: []
+                    })
+                );
 			} else if ((node.type === 'drive' || node.type === 'folder') && node.drive) {
 				const folderId = node.type === 'folder' ? node.folder?.id : undefined;
 				const folderItems = await getSharepointFiles(
@@ -352,14 +375,22 @@
 			}
 			return;
 		}
-		// Drives: navigate to drive root
+		// Drives: navigate to drive root AND expand
 		if (node.type === 'drive' && node.drive) {
 			currentTenant = node.tenant;
 			if (node.site) currentSite = node.site;
 			await selectDrive(node.drive);
+			// Also expand to show subfolders
+			if (!expandedKeys.has(node.key)) {
+				expandedKeys.add(node.key);
+				expandedKeys = new Set(expandedKeys);
+				if (!treeChildrenCache.has(node.key)) {
+					await loadTreeChildren(node);
+				}
+			}
 			return;
 		}
-		// Folders: navigate directly into folder
+		// Folders: navigate directly into folder AND expand
 		if (node.type === 'folder' && node.folder && node.drive) {
 			currentTenant = node.tenant;
 			if (node.site) currentSite = node.site;
@@ -368,6 +399,14 @@
 			selectedItems = new Set();
 			selectedFolders = new Set();
 			await loadItems(node.folder.id);
+			// Also expand to show subfolders
+			if (!expandedKeys.has(node.key)) {
+				expandedKeys.add(node.key);
+				expandedKeys = new Set(expandedKeys);
+				if (!treeChildrenCache.has(node.key)) {
+					await loadTreeChildren(node);
+				}
+			}
 			return;
 		}
 	}
@@ -546,10 +585,10 @@
 
 		loadingDrives = true;
 		try {
-			drives = await getSharepointSiteDrives(token, currentTenant!.id, site.id);
-			if (drives.length > 0) {
-				await selectDrive(drives[0]);
-			}
+            drives = await getSharepointSiteDrives(token, currentTenant!.id, site.id);
+            // Filter out system libraries like Preservation Hold Library
+            drives = drives.filter((d) => !d.name.toLowerCase().includes('preservation hold'));
+            // Don't auto-select a drive - let user pick from the sidebar tree
 			// Populate tree cache and auto-expand this site
 			const siteKey = `site:${currentTenant!.id}:${site.id}`;
 			const tenant = currentTenant!;
@@ -632,10 +671,10 @@
 		}
 		loadingDrives = true;
 		try {
-			drives = await getSharepointDrives(token, currentTenant.id);
-			if (drives.length > 0) {
-				await selectDrive(drives[0]);
-			}
+            drives = await getSharepointDrives(token, currentTenant.id);
+            // Filter out system libraries like Preservation Hold Library
+            drives = drives.filter((d) => !d.name.toLowerCase().includes('preservation hold'));
+            // Don't auto-select a drive - let user pick from the sidebar tree
 		} catch (error) {
 			console.error('Failed to load drives:', error);
 			toast.error('Failed to load drives');
@@ -1336,6 +1375,45 @@
 							<div class="flex flex-col items-center justify-center h-full">
 								<Spinner className="size-5" />
 								<p class="text-xs text-gray-400 dark:text-gray-500 mt-3">Loading files...</p>
+							</div>
+						{:else if !currentDrive && currentSite && drives.length > 0}
+							<!-- Show available drives when site is selected but no drive chosen -->
+							<div class="p-4">
+								<div class="mb-3">
+									<p class="text-sm font-medium text-gray-700 dark:text-gray-300">
+										Document Libraries in {currentSite.display_name}
+									</p>
+									<p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+										Select a document library to browse files
+									</p>
+								</div>
+								<div class="grid gap-2">
+									{#each drives as drive}
+										<button
+											class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:border-gray-300 dark:hover:border-gray-600 transition-all text-left group"
+											on:click={() => selectDrive(drive)}
+										>
+											<div class="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 transition-colors">
+												<span class="text-lg">💼</span>
+											</div>
+											<div class="min-w-0 flex-1">
+												<p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate group-hover:text-gray-900 dark:group-hover:text-white">{drive.name}</p>
+												{#if drive.drive_type}
+													<p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{drive.drive_type}</p>
+												{/if}
+											</div>
+											<svg
+												class="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 dark:group-hover:text-gray-500 transition-colors shrink-0"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"
+												viewBox="0 0 24 24"
+											>
+												<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+											</svg>
+										</button>
+									{/each}
+								</div>
 							</div>
 						{:else if !currentDrive}
 							<div class="flex flex-col items-center justify-center h-full text-center px-6">

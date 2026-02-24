@@ -31,7 +31,8 @@
 		playingNotificationSound,
 		channels,
 		channelId,
-		brandingConfig
+        brandingConfig,
+        activeUserIds
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -181,6 +182,23 @@
 				console.log('Additional details:', details);
 			}
 		});
+
+        // ── User Presence (for admin users list) ───────────────────────────────
+        _socket.on('user-presence', (data) => {
+            activeUserIds.update((ids) => {
+                if (!ids) ids = [];
+                if (data.status === 'online') {
+                    // Add user if not already present
+                    if (!ids.includes(data.user_id)) {
+                        return [...ids, data.user_id];
+                    }
+                } else if (data.status === 'offline') {
+                    // Remove user
+                    return ids.filter((id) => id !== data.user_id);
+                }
+                return ids;
+            });
+        });
 	};
 
 	const executePythonAsWorker = async (id, code, cb) => {

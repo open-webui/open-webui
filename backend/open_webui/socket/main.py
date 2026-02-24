@@ -180,6 +180,28 @@ YDOC_MANAGER = YdocManager(
 )
 
 
+# ── Presence System ────────────────────────────────────────────────────────────
+# Tracks online users and notifies admins in real-time
+
+async def get_active_user_ids() -> list[str]:
+    """Get list of currently online user IDs from USER_POOL."""
+    return list(USER_POOL.keys())
+
+
+async def emit_user_presence_change(user_id: str, status: str):
+    """
+    Emit presence change to all admins in the admin:users room.
+    status: 'online' or 'offline'
+    """
+    await sio.emit(
+        "user-presence",
+        {"user_id": user_id, "status": status},
+        room="admin:users",
+    )
+
+
+
+
 async def periodic_session_pool_cleanup():
     """Reap orphaned SESSION_POOL entries that missed heartbeats (e.g. crashed instance)."""
     if not session_aquire_func():
@@ -368,8 +390,19 @@ async def connect(sid, environ, auth):
                 ),
                 "last_seen_at": int(time.time()),
             }
+            # Track if this is the user's first connection (going online)
+            was_offline = user.id not in USER_POOL or len(USER_POOL.get(user.id, set())) == 0
             USER_POOL.setdefault(user.id, set()).add(sid)
+            
+            # Emit presence change if user just came online
+            if was_offline:
+                await emit_user_presence_change(user.id, "online")
+            
             await sio.enter_room(sid, f"user:{user.id}")
+            
+            # Join admin:users room if user is admin (for presence notifications)
+            if user.role == "admin":
+                await sio.enter_room(sid, "admin:users")
 
 
 @sio.on("user-join")
@@ -386,6 +419,9 @@ async def user_join(sid, data):
     if not user:
         return
 
+    # Track if this is the user's first connection (going online)
+    was_offline = user.id not in USER_POOL or len(USER_POOL.get(user.id, set())) == 0
+    
     SESSION_POOL[sid] = {
         **user.model_dump(
             exclude=[
@@ -399,8 +435,16 @@ async def user_join(sid, data):
         "last_seen_at": int(time.time()),
     }
     USER_POOL.setdefault(user.id, set()).add(sid)
-
+    
+    # Emit presence change if user just came online
+    if was_offline:
+        await emit_user_presence_change(user.id, "online")
+    
     await sio.enter_room(sid, f"user:{user.id}")
+    
+    # Join admin:users room if user is admin (for presence notifications)
+    if user.role == "admin":
+        await sio.enter_room(sid, "admin:users")
 
     # Join all the channels only if user has channels permission
     if (
@@ -428,6 +472,20 @@ async def heartbeat(sid, data):
     if user:
         SESSION_POOL[sid] = {**user, "last_seen_at": int(time.time())}
         Users.update_last_active_by_id(user["id"])
+
+
+@sio.on("get-active-users")
+async def get_active_users(sid, data):
+    """
+    Admin-only: Return list of currently online user IDs.
+    Called when admin opens the users page to get initial state.
+    """
+    user = SESSION_POOL.get(sid)
+    if not user or user.get("role") != "admin":
+        return {"error": "Unauthorized"}
+    
+    active_ids = await get_active_user_ids()
+    return {"active_user_ids": active_ids}
 
 
 @sio.on("join-channels")
@@ -836,13 +894,14 @@ async def disconnect(sid):
                 else:
                     USAGE_POOL[model_id] = connections
 
-        # Clean up reverse-index
+        # Clean up reverse-index and emit offline status if this was the last session
         user_id = user.get("id")
         if user_id and user_id in USER_POOL:
             USER_POOL[user_id].discard(sid)
             if not USER_POOL[user_id]:
                 del USER_POOL[user_id]
-
+                # User's last session disconnected - they're now offline
+                await emit_user_presence_change(user_id, "offline")
         await YDOC_MANAGER.remove_user_from_all_documents(sid)
     else:
         pass
