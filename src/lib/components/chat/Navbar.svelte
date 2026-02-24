@@ -107,7 +107,7 @@
 				{/if}
 
 				<div
-					class="flex-1 overflow-hidden max-w-full py-0.5
+					class="flex-1 overflow-hidden max-w-full mt-1 py-0.5
 			{$showSidebar ? 'ml-1' : ''}
 			"
 				>
