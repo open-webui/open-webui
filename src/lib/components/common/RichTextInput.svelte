@@ -691,7 +691,12 @@
 			element: element,
 			extensions: [
 				StarterKit.configure({
-					link: link
+					link: link,
+					// When rich text is off, disable Strike from StarterKit so we can
+					// re-add it below without its Mod-Shift-s shortcut (which conflicts
+					// with the Toggle Sidebar shortcut). When rich text is on, the user
+					// can undo strikethrough via the toolbar, so the shortcut is fine.
+					...(richText ? {} : { strike: false })
 				}),
 				...(dragHandle ? [ListItemDragHandle] : []),
 				Placeholder.configure({ placeholder: () => _placeholder, showOnlyWhenEditable: false }),
@@ -895,6 +900,34 @@
 					},
 					compositionend: (view, event) => {
 						oncompositionend(event);
+						return false;
+					},
+					beforeinput: (view, event) => {
+						// Workaround for Gboard's clipboard suggestion strip which sends
+						// multi-line pastes as 'insertText' rather than a standard paste event.
+						// Manually insert with hard breaks to preserve multi-line formatting.
+						const isAndroid = /Android/i.test(navigator.userAgent);
+						if (isAndroid && event.inputType === 'insertText' && event.data?.includes('\n')) {
+							event.preventDefault();
+
+							const { state, dispatch } = view;
+							const { from, to } = state.selection;
+							const lines = event.data.split('\n');
+							const nodes = [];
+
+							lines.forEach((line, index) => {
+								if (index > 0) {
+									nodes.push(state.schema.nodes.hardBreak.create());
+								}
+								if (line.length > 0) {
+									nodes.push(state.schema.text(line));
+								}
+							});
+
+							const fragment = Fragment.fromArray(nodes);
+							dispatch(state.tr.replaceWith(from, to, fragment).scrollIntoView());
+							return true;
+						}
 						return false;
 					},
 					focus: (view, event) => {

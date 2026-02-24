@@ -1,5 +1,7 @@
 import inspect
 from urllib.parse import urlparse
+import asyncio
+import time
 
 import logging
 
@@ -12,6 +14,7 @@ from open_webui.env import (
     REDIS_SENTINEL_MAX_RETRY_COUNT,
     REDIS_SENTINEL_PORT,
     REDIS_URL,
+    REDIS_RECONNECT_DELAY,
 )
 
 log = logging.getLogger(__name__)
@@ -63,6 +66,8 @@ class SentinelRedisProxy:
                                         i + 1,
                                         REDIS_SENTINEL_MAX_RETRY_COUNT,
                                     )
+                                    if REDIS_RECONNECT_DELAY:
+                                        time.sleep(REDIS_RECONNECT_DELAY / 1000)
                                     continue
                                 log.error(
                                     "Redis operation failed after %s retries: %s",
@@ -94,6 +99,8 @@ class SentinelRedisProxy:
                                 i + 1,
                                 REDIS_SENTINEL_MAX_RETRY_COUNT,
                             )
+                            if REDIS_RECONNECT_DELAY:
+                                await asyncio.sleep(REDIS_RECONNECT_DELAY / 1000)
                             continue
                         log.error(
                             "Redis operation failed after %s retries: %s",
@@ -122,6 +129,8 @@ class SentinelRedisProxy:
                                 i + 1,
                                 REDIS_SENTINEL_MAX_RETRY_COUNT,
                             )
+                            if REDIS_RECONNECT_DELAY:
+                                time.sleep(REDIS_RECONNECT_DELAY / 1000)
                             continue
                         log.error(
                             "Redis operation failed after %s retries: %s",

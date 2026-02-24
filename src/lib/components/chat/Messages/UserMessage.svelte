@@ -50,6 +50,7 @@
 	let editedFiles = [];
 
 	let messageEditTextAreaElement: HTMLTextAreaElement;
+	let editScrollContainer: HTMLDivElement;
 
 	let message = JSON.parse(JSON.stringify(history.messages[messageId]));
 	$: if (history.messages) {
@@ -73,10 +74,14 @@
 		await tick();
 
 		if (messageEditTextAreaElement) {
+			const messagesContainer = document.getElementById('messages-container');
+			const savedScrollTop = messagesContainer?.scrollTop;
+
 			messageEditTextAreaElement.style.height = '';
 			messageEditTextAreaElement.style.height = `${messageEditTextAreaElement.scrollHeight}px`;
 
-			messageEditTextAreaElement?.focus();
+			if (messagesContainer) messagesContainer.scrollTop = savedScrollTop;
+			messageEditTextAreaElement?.focus({ preventScroll: true });
 		}
 	};
 
@@ -120,6 +125,7 @@
 	class=" flex w-full user-message group"
 	dir={$settings.chatDirection}
 	id="message-{message.id}"
+	style="scroll-margin-top: 3rem;"
 >
 	{#if !($settings?.chatBubble ?? true)}
 		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 mt-1`}>
@@ -283,15 +289,22 @@
 						</div>
 					{/if}
 
-					<div class="max-h-96 overflow-auto">
+					<div class="max-h-96 overflow-auto" bind:this={editScrollContainer}>
 						<textarea
 							id="message-edit-{message.id}"
 							bind:this={messageEditTextAreaElement}
 							class=" bg-transparent outline-hidden w-full resize-none"
 							bind:value={editedContent}
 							on:input={(e) => {
+								const messagesContainer = document.getElementById('messages-container');
+								const savedScrollTop = messagesContainer?.scrollTop;
+								const savedInnerScroll = editScrollContainer?.scrollTop;
+
 								e.target.style.height = '';
 								e.target.style.height = `${e.target.scrollHeight}px`;
+
+								if (messagesContainer) messagesContainer.scrollTop = savedScrollTop;
+								if (editScrollContainer) editScrollContainer.scrollTop = savedInnerScroll;
 							}}
 							on:keydown={(e) => {
 								if (e.key === 'Escape') {

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import TagInput from './Tags/TagInput.svelte';
 	import TagList from './Tags/TagList.svelte';
 	import { getContext, createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
@@ -8,21 +7,41 @@
 
 	export let tags = [];
 	export let suggestionTags = [];
+	export let disabled = false;
+
+	let inputValue = '';
+
+	const addTag = () => {
+		const value = inputValue.trim();
+		if (value !== '') {
+			dispatch('add', value);
+			inputValue = '';
+		}
+	};
 </script>
 
-<ul class="flex flex-row flex-wrap gap-[0.3rem] line-clamp-1">
+<div class="flex flex-wrap items-center gap-1 w-full">
 	<TagList
 		{tags}
+		{disabled}
 		on:delete={(e) => {
 			dispatch('delete', e.detail);
 		}}
 	/>
 
-	<TagInput
-		label={tags.length == 0 ? $i18n.t('Add Tags') : ''}
-		{suggestionTags}
-		on:add={(e) => {
-			dispatch('add', e.detail);
-		}}
-	/>
-</ul>
+	{#if !disabled}
+		<input
+			bind:value={inputValue}
+			class="flex-1 min-w-24 {tags.length > 0
+				? 'px-0.5'
+				: ''} text-xs bg-transparent outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-500"
+			placeholder={$i18n.t('Add a tag...')}
+			on:keydown={(event) => {
+				if (event.key === 'Enter' || event.key === ' ') {
+					event.preventDefault();
+					addTag();
+				}
+			}}
+		/>
+	{/if}
+</div>

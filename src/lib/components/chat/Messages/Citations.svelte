@@ -163,6 +163,10 @@
 	<div class=" py-1 -mx-0.5 w-full flex gap-1 items-center flex-wrap">
 		<button
 			class="text-xs font-medium text-gray-600 dark:text-gray-300 px-3.5 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition flex items-center gap-1 border border-gray-50 dark:border-gray-850/30"
+			aria-label={citations.length === 1
+				? $i18n.t('Toggle 1 source')
+				: $i18n.t('Toggle {{COUNT}} sources', { COUNT: citations.length })}
+			aria-expanded={showCitations}
 			on:click={() => {
 				showCitations = !showCitations;
 			}}
@@ -197,6 +201,9 @@
 			{#each citations as citation, idx}
 				<button
 					id={`source-${id}-${idx + 1}`}
+					aria-label={$i18n.t('View source: {{name}}', {
+						name: decodeString(citation.source.name)
+					})}
 					class="no-toggle outline-hidden flex dark:text-gray-300 bg-transparent text-gray-600 rounded-xl gap-1.5 items-center"
 					on:click={() => {
 						showCitationModal = true;

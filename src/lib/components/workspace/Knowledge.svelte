@@ -4,7 +4,7 @@
 	dayjs.extend(relativeTime);
 
 	import { toast } from 'svelte-sonner';
-	import { onMount, getContext, tick } from 'svelte';
+	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import { WEBUI_NAME, knowledge, user } from '$lib/stores';
@@ -36,6 +36,7 @@
 
 	let page = 1;
 	let query = '';
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 	let viewOption = '';
 
 	let items = null;
@@ -44,7 +45,18 @@
 	let allItemsLoaded = false;
 	let itemsLoading = false;
 
-	$: if (loaded && query !== undefined && viewOption !== undefined) {
+	$: if (query !== undefined) {
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(() => {
+			init();
+		}, 300);
+	}
+
+	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
+	});
+
+	$: if (viewOption !== undefined) {
 		init();
 	}
 
@@ -63,6 +75,8 @@
 	};
 
 	const init = async () => {
+		if (!loaded) return;
+
 		reset();
 		await getItemsPage();
 	};
@@ -183,12 +197,14 @@
 				<input
 					class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={query}
+					aria-label={$i18n.t('Search Knowledge')}
 					placeholder={$i18n.t('Search Knowledge')}
 				/>
 				{#if query}
 					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 						<button
 							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							aria-label={$i18n.t('Clear search')}
 							on:click={() => {
 								query = '';
 							}}

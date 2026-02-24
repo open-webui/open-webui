@@ -8,7 +8,7 @@ from fastapi import Request
 
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from open_webui.utils.headers import include_user_info_headers
-
+from open_webui.env import FORWARD_SESSION_INFO_HEADER_CHAT_ID
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ def search_external(
 
         chat_id = getattr(request.state, "chat_id", None)
         if chat_id:
-            headers["X-OpenWebUI-Chat-Id"] = str(chat_id)
+            headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = str(chat_id)
 
         response = requests.post(
             external_url,

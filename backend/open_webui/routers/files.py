@@ -43,6 +43,7 @@ from open_webui.models.files import (
 from open_webui.models.chats import Chats
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.groups import Groups
+from open_webui.models.access_grants import AccessGrants
 
 
 from open_webui.routers.retrieval import ProcessFileForm, process_file
@@ -52,8 +53,8 @@ from open_webui.routers.audio import transcribe
 from open_webui.storage.provider import Storage
 
 
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_access
 from open_webui.utils.misc import strict_match_mime_type
 from pydantic import BaseModel
 
@@ -97,8 +98,13 @@ def has_access_to_file(
         group.id for group in Groups.get_groups_by_member_id(user.id, db=db)
     }
     for knowledge_base in knowledge_bases:
-        if knowledge_base.user_id == user.id or has_access(
-            user.id, access_type, knowledge_base.access_control, user_group_ids, db=db
+        if knowledge_base.user_id == user.id or AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="knowledge",
+            resource_id=knowledge_base.id,
+            permission=access_type,
+            user_group_ids=user_group_ids,
+            db=db,
         ):
             return True
 
@@ -130,6 +136,27 @@ def has_access_to_file(
 ############################
 
 
+def _is_text_file(file_path: str, chunk_size: int = 8192) -> bool:
+    """Check if a file is likely a text file by reading a chunk and validating UTF-8.
+
+    This catches files whose extensions are mis-mapped by mimetypes/browsers
+    (e.g. TypeScript .ts → video/mp2t) without maintaining an extension whitelist.
+    """
+    try:
+        resolved = Storage.get_file(file_path)
+        with open(resolved, "rb") as f:
+            chunk = f.read(chunk_size)
+        if not chunk:
+            return False
+        # Null bytes are a strong indicator of binary content
+        if b"\x00" in chunk:
+            return False
+        chunk.decode("utf-8")
+        return True
+    except (UnicodeDecodeError, Exception):
+        return False
+
+
 def process_uploaded_file(
     request,
     file,
@@ -141,14 +168,19 @@ def process_uploaded_file(
 ):
     def _process_handler(db_session):
         try:
-            if file.content_type:
+            content_type = file.content_type
+
+            # Detect mis-labeled text files (e.g. .ts → video/mp2t)
+            if content_type and content_type.startswith(("image/", "video/")):
+                if _is_text_file(file_path):
+                    content_type = "text/plain"
+
+            if content_type:
                 stt_supported_content_types = getattr(
                     request.app.state.config, "STT_SUPPORTED_CONTENT_TYPES", []
                 )
 
-                if strict_match_mime_type(
-                    stt_supported_content_types, file.content_type
-                ):
+                if strict_match_mime_type(stt_supported_content_types, content_type):
                     file_path_processed = Storage.get_file(file_path)
                     result = transcribe(
                         request, file_path_processed, file_metadata, user
@@ -162,7 +194,7 @@ def process_uploaded_file(
                         user=user,
                         db=db_session,
                     )
-                elif (not file.content_type.startswith(("image/", "video/"))) or (
+                elif (not content_type.startswith(("image/", "video/"))) or (
                     request.app.state.config.CONTENT_EXTRACTION_ENGINE == "external"
                 ):
                     process_file(
@@ -173,7 +205,7 @@ def process_uploaded_file(
                     )
                 else:
                     raise Exception(
-                        f"File type {file.content_type} is not supported for processing"
+                        f"File type {content_type} is not supported for processing"
                     )
             else:
                 log.info(
@@ -297,7 +329,11 @@ def upload_file_handler(
                     },
                     "meta": {
                         "name": name,
-                        "content_type": file.content_type,
+                        "content_type": (
+                            file.content_type
+                            if isinstance(file.content_type, str)
+                            else None
+                        ),
                         "size": len(contents),
                         "data": file_metadata,
                     },
@@ -347,6 +383,8 @@ def upload_file_handler(
                     detail=ERROR_MESSAGES.DEFAULT("Error uploading file"),
                 )
 
+    except HTTPException as e:
+        raise e
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -368,6 +406,7 @@ async def list_files(
     limit: Optional[int] = Query(PAGE_ITEM_COUNT, ge=1, le=200, description="Number of files per page"),
     db: Session = Depends(get_session),
 ):
+
     """
     List files with pagination support.
     
@@ -377,6 +416,10 @@ async def list_files(
     """
     page = max(page, 1)
     skip = (page - 1) * limit
+    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
+        files = Files.get_files(db=db)
+    else:
+        files = Files.get_files_by_user_id(user.id, db=db)
 
     if user.role == "admin":
         result = Files.get_files_paginated(skip=skip, limit=limit, db=db)
@@ -425,8 +468,10 @@ async def search_files(
     page = max(page, 1)
     skip = (page - 1) * limit
 
-    # Determine user_id: null for admin (search all), user.id for regular users
-    user_id = None if user.role == "admin" else user.id
+    # Determine user_id: null for admin with bypass (search all), user.id otherwise
+    user_id = (
+        None if (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL) else user.id
+    )
 
     # Use optimized database query with pagination
     result = Files.search_files_paginated(
@@ -617,7 +662,7 @@ class ContentForm(BaseModel):
 
 
 @router.post("/{id}/data/content/update")
-async def update_file_data_content_by_id(
+def update_file_data_content_by_id(
     request: Request,
     id: str,
     form_data: ContentForm,
@@ -720,6 +765,8 @@ async def get_file_content_by_id(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=ERROR_MESSAGES.NOT_FOUND,
                 )
+        except HTTPException as e:
+            raise e
         except Exception as e:
             log.exception(e)
             log.error("Error getting file content")
@@ -771,6 +818,8 @@ async def get_html_file_content_by_id(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=ERROR_MESSAGES.NOT_FOUND,
                 )
+        except HTTPException as e:
+            raise e
         except Exception as e:
             log.exception(e)
             log.error("Error getting file content")
@@ -864,6 +913,23 @@ async def delete_file_by_id(
         or user.role == "admin"
         or has_access_to_file(id, "write", user, db=db)
     ):
+
+        # Clean up KB associations and embeddings before deleting
+        knowledges = Knowledges.get_knowledges_by_file_id(id, db=db)
+        for knowledge in knowledges:
+            # Remove KB-file relationship
+            Knowledges.remove_file_from_knowledge_by_id(knowledge.id, id, db=db)
+            # Clean KB embeddings (same logic as /knowledge/{id}/file/remove)
+            try:
+                VECTOR_DB_CLIENT.delete(
+                    collection_name=knowledge.id, filter={"file_id": id}
+                )
+                if file.hash:
+                    VECTOR_DB_CLIENT.delete(
+                        collection_name=knowledge.id, filter={"hash": file.hash}
+                    )
+            except Exception as e:
+                log.debug(f"KB embedding cleanup for {knowledge.id}: {e}")
 
         result = Files.delete_file_by_id(id, db=db)
         if result:

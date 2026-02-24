@@ -50,7 +50,7 @@
 					<div class="flex items-center gap-1">
 						<EllipsisVertical className="size-4 cursor-move model-item-handle" />
 
-						<div class=" text-sm flex-1 py-1 rounded-lg">
+						<div class=" text-sm flex-1 py-1 rounded-lg line-clamp-1">
 							{#if $models.find((model) => model.id === modelId)}
 								{$models.find((model) => model.id === modelId).name}
 							{:else}

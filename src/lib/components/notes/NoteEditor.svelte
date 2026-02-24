@@ -60,7 +60,12 @@
 	// Assuming $i18n.languages is an array of language codes
 	$: loadLocale($i18n.languages);
 
-	import { deleteNoteById, getNoteById, updateNoteById } from '$lib/apis/notes';
+	import {
+		deleteNoteById,
+		getNoteById,
+		updateNoteById,
+		updateNoteAccessGrants
+	} from '$lib/apis/notes';
 
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import Spinner from '../common/Spinner.svelte';
@@ -71,6 +76,7 @@
 
 	import Calendar from '../icons/Calendar.svelte';
 	import Users from '../icons/Users.svelte';
+	import LockClosed from '../icons/LockClosed.svelte';
 
 	import Image from '../common/Image.svelte';
 	import FileItem from '../common/FileItem.svelte';
@@ -108,8 +114,17 @@
 		},
 		// pages: [], // TODO: Implement pages for notes to allow users to create multiple pages in a note
 		meta: null,
-		access_control: {}
+		access_grants: []
 	};
+
+	const hasPublicReadGrant = (grants) =>
+		Array.isArray(grants) &&
+		grants.some(
+			(grant) =>
+				grant?.principal_type === 'user' &&
+				grant?.principal_id === '*' &&
+				grant?.permission === 'read'
+		);
 
 	let files = [];
 	let messages = [];
@@ -161,6 +176,9 @@
 
 		if (res) {
 			note = res;
+			if (!Array.isArray(note?.access_grants)) {
+				note.access_grants = [];
+			}
 			files = res.data.files || [];
 
 			if (note?.write_access) {
@@ -193,7 +211,7 @@
 				data: {
 					files: files
 				},
-				access_control: note?.access_control
+				access_grants: note?.access_grants ?? []
 			}).catch((e) => {
 				toast.error(`${e}`);
 			});
@@ -765,8 +783,8 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 		console.log('noteEventHandler', _note);
 		if (_note.id !== id) return;
 
-		if (_note.access_control && _note.access_control !== note.access_control) {
-			note.access_control = _note.access_control;
+		if (_note.access_grants && _note.access_grants !== note.access_grants) {
+			note.access_grants = _note.access_grants;
 		}
 
 		if (_note.data && _note.data.files) {
@@ -851,10 +869,17 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 {#if note}
 	<AccessControlModal
 		bind:show={showAccessControlModal}
-		bind:accessControl={note.access_control}
+		bind:accessGrants={note.access_grants}
 		accessRoles={['read', 'write']}
-		onChange={() => {
-			changeDebounceHandler();
+		onChange={async () => {
+			if (id) {
+				try {
+					await updateNoteAccessGrants(localStorage.token, id, note.access_grants ?? []);
+					toast.success($i18n.t('Saved'));
+				} catch (error) {
+					toast.error(`${error}`);
+				}
+			}
 		}}
 	/>
 {/if}
@@ -886,7 +911,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 			{:else}
 				<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
 					<div class="shrink-0 w-full flex justify-between items-center px-3.5 mb-1.5">
-						<div class="w-full flex items-center">
+						<div class="w-full min-w-0 flex items-center">
 							{#if $mobile}
 								<div
 									class="{$showSidebar
@@ -962,7 +987,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								</div>
 							{/if}
 
-							<div class="flex items-center gap-0.5 translate-x-1">
+							<div class="flex items-center gap-0.5 shrink-0 translate-x-1">
 								{#if note?.write_access}
 									{#if editor}
 										<div>
@@ -1065,6 +1090,23 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 										<EllipsisHorizontal className="size-5" />
 									</div>
 								</NoteMenu>
+
+								{#if note?.write_access}
+									<button
+										class="shrink-0 bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2.5 py-1 rounded-full flex gap-1.5 items-center text-sm"
+										on:click={() => {
+											showAccessControlModal = true;
+										}}
+										disabled={note?.user_id !== $user?.id && $user?.role !== 'admin'}
+									>
+										<LockClosed strokeWidth="2.5" className="size-3.5" />
+										{$i18n.t('Access')}
+									</button>
+								{:else}
+									<div class="shrink-0 text-xs text-gray-500 px-2 py-1">
+										{$i18n.t('Read-Only Access')}
+									</div>
+								{/if}
 							</div>
 						</div>
 					</div>
@@ -1105,22 +1147,6 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 										<span>{dayjs(note.created_at / 1000000).format($i18n.t('DD/MM/YYYY'))}</span>
 									{/if}
 								</button>
-
-								{#if note?.write_access}
-									<button
-										class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg min-w-fit"
-										on:click={() => {
-											showAccessControlModal = true;
-										}}
-										disabled={note?.user_id !== $user?.id && $user?.role !== 'admin'}
-									>
-										<span> {note?.access_control ? $i18n.t('Private') : $i18n.t('Everyone')} </span>
-									</button>
-								{:else}
-									<div>
-										{$i18n.t('Read-Only Access')}
-									</div>
-								{/if}
 
 								{#if editor}
 									<div class="flex items-center gap-1 px-1 min-w-fit">
