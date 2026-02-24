@@ -146,7 +146,7 @@
 					</div>
 				</div>
 			{:else}
-				<div class="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-8">
+				<div class="max-w-6xl mx-auto px-4 sm:px-6 pt-10 pb-6 space-y-12">
 					{#if pinnedSpaces.length > 0}
 						<section>
 							<div class="flex items-center gap-2 mb-4">
@@ -167,7 +167,7 @@
 									{$i18n.t('Pinned')}
 								</h2>
 							</div>
-							<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+							<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
 								{#each pinnedSpaces as space (space.id)}
 									<button
 										class="group text-left p-4 rounded-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-md ring-1 ring-inset ring-white/20 dark:ring-white/10 hover:bg-white/80 dark:hover:bg-gray-900/80 transition-all"
@@ -243,7 +243,7 @@
 									{$i18n.t('Bookmarked')}
 								</h2>
 							</div>
-							<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+							<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
 								{#each bookmarkedSpaces as space (space.id)}
 									<button
 										class="group text-left p-4 rounded-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-md ring-1 ring-inset ring-white/20 dark:ring-white/10 hover:bg-white/80 dark:hover:bg-gray-900/80 transition-all"
@@ -323,7 +323,7 @@
 								</h2>
 								<span class="text-xs text-gray-300 dark:text-gray-600">{invitedSpaces.length}</span>
 							</div>
-							<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+							<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
 								{#each invitedSpaces as invitation (invitation.space_id)}
 									<div
 										class="group p-4 rounded-xl border border-amber-200 dark:border-amber-700/60 bg-amber-50/50 dark:bg-amber-900/10"
@@ -412,7 +412,7 @@
 								</p>
 							</div>
 						{:else}
-							<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+							<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
 								{#each mySpaces as space (space.id)}
 									<button
 										class="group text-left p-4 rounded-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-md ring-1 ring-inset ring-white/20 dark:ring-white/10 hover:bg-white/80 dark:hover:bg-gray-900/80 transition-all"
@@ -499,7 +499,7 @@
 								</p>
 							</div>
 						{:else}
-							<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+							<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
 								{#each sharedSpaces as space (space.id)}
 									<button
 										class="group text-left p-4 rounded-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-md ring-1 ring-inset ring-white/20 dark:ring-white/10 hover:bg-white/80 dark:hover:bg-gray-900/80 transition-all"
@@ -579,7 +579,7 @@
 								<span class="text-xs text-gray-300 dark:text-gray-600">{templateSpaces.length}</span
 								>
 							</div>
-							<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+							<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
 								{#each templateSpaces as space (space.id)}
 									<button
 										class="group text-left p-4 rounded-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-md ring-1 ring-inset ring-white/20 dark:ring-white/10 hover:bg-white/80 dark:hover:bg-gray-900/80 transition-all"
