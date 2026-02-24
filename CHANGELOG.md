@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ⚡ **Duplicate model execution prevention.** Models are no longer called twice when no tools are configured, eliminating unnecessary API requests and reducing latency. [#21802](https://github.com/open-webui/open-webui/issues/21802), [Commit](https://github.com/open-webui/open-webui/commit/3c8d658160809f6d651837cf93d89dddc1d17caf)
 - 📝 **RAG template duplication.** RAG templates are no longer duplicated in chat messages when models make multiple tool calls, preventing hallucinations and incorrect tool usage. [#21780](https://github.com/open-webui/open-webui/issues/21780), [Commit](https://github.com/open-webui/open-webui/commit/8f49725aa5f2d9b87e559e7d3f02f037335b7914)
 - 📋 **Audit log stdout.** Audit logs now correctly appear on stdout when the ENABLE_AUDIT_STDOUT environment variable is set to true, aligning runtime behavior with the intended configuration. [#21777](https://github.com/open-webui/open-webui/pull/21777)
+- 🎯 **Function valve priority resolution.** Function priorities defined in code are now correctly applied when no custom value has been saved in the database, ensuring consistent action button and filter ordering. [#21841](https://github.com/open-webui/open-webui/pull/21841)
 
 ## [0.8.5] - 2026-02-23
 
