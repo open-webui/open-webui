@@ -403,7 +403,7 @@
 									{/if}
 								</Name>
 
-								<div class="mt-1 markdown-prose w-full min-w-full">
+								<div class="mt-1 markdown-prose w-full min-w-0">
 									{#if (message?.content ?? '') === ''}
 										<Skeleton />
 									{:else}
