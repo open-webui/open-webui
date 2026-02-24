@@ -2809,7 +2809,8 @@
 										messages: messages,
 										timestamp: Date.now()
 									},
-									null
+											null,
+											$currentSpaceId
 								);
 
 								if (savedChat) {

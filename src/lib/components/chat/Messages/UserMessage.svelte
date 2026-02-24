@@ -876,5 +876,22 @@
 			{/if}
 		</div>
 	</div>
+	{#if $settings?.chatBubble ?? true}
+		<div class={`shrink-0 ltr:ml-3 rtl:mr-3 mt-1 flex flex-col items-end`}>
+			<div class="font-semibold text-sm mb-1 text-right">
+				{#if message.user}
+					{$i18n.t('You')}
+				{:else if $settings.showUsername || $_user.name !== user.name}
+					{user.name}
+				{:else}
+					{$i18n.t('You')}
+				{/if}
+			</div>
+			<ProfileImage
+				src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
+				className={'size-8 user-message-profile-image'}
+			/>
+		</div>
+	{/if}
 </div>
 {/if}

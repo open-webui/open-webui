@@ -8,7 +8,7 @@
 
 	import { createSpace, updateSpaceById, deleteSpaceById, updateSpaceAccessLevel, SpaceAccessLevel } from '$lib/apis/spaces';
 	import type { Space } from '$lib/apis/spaces';
-	import { models } from '$lib/stores';
+	import { models, user } from '$lib/stores';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -130,6 +130,11 @@
 	} else {
 		resetHandler();
 	}
+
+	const isCurrentUserOwner = (): boolean => {
+		if (!space || !$user) return false;
+		return space.user_id === $user.id;
+	};
 
 	const resetHandler = () => {
 		name = '';
@@ -254,7 +259,7 @@
 						<Switch bind:state={enableWebByDefault} />
 					</div>
 
-					{#if edit}
+					{#if edit && isCurrentUserOwner()}
 						<div class="flex flex-col w-full mt-3">
 							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Access Level')}</div>
 							<div class="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 focus-within:border-gray-300 dark:focus-within:border-gray-600 transition">
@@ -277,7 +282,7 @@
 					{/if}
 
 					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
-						{#if edit}
+						{#if edit && isCurrentUserOwner()}
 							<button
 								class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-black/90 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
 								type="button"
