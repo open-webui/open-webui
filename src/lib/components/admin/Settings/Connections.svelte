@@ -219,7 +219,7 @@
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
 		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && connectionsConfig !== null}
 			<div class="mb-3.5">
-				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('API Connections')}</div>
 
 				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
