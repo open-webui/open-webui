@@ -105,12 +105,32 @@
 		await getVoices();
 	});
 
+	// Returns true only when a real WebGPU adapter can be obtained.
+	// navigator.gpu exists in some Firefox builds but requestAdapter() returns null,
+	// which causes Kokoro.js to throw "no available backend found" with no UI feedback.
+	const isWebGPUAvailable = async (): Promise<boolean> => {
+		try {
+			if (!navigator?.gpu) return false;
+			const adapter = await navigator.gpu.requestAdapter();
+			return adapter !== null;
+		} catch {
+			return false;
+		}
+	};
+
 	$: if (TTSEngine && TTSEngineConfig) {
 		onTTSEngineChange();
 	}
 
 	const onTTSEngineChange = async () => {
 		if (TTSEngine === 'browser-kokoro') {
+			if (!(await isWebGPUAvailable())) {
+				toast.warning(
+					$i18n.t(
+						'Kokoro.js (Browser) requires WebGPU, which is not available in your browser. Enable WebGPU support or use a Chromium-based browser.'
+					)
+				);
+			}
 			await loadKokoro();
 		}
 	};
@@ -126,17 +146,31 @@
 
 				const model_id = 'onnx-community/Kokoro-82M-v1.0-ONNX';
 
-				const { KokoroTTS } = await import('kokoro-js');
-				TTSModel = await KokoroTTS.from_pretrained(model_id, {
-					dtype: TTSEngineConfig.dtype, // Options: "fp32", "fp16", "q8", "q4", "q4f16"
-					device: !!navigator?.gpu ? 'webgpu' : 'wasm', // Detect WebGPU
-					progress_callback: (e) => {
-						TTSModelProgress = e;
-						console.log(e);
-					}
-				});
+				const webGPU = await isWebGPUAvailable();
 
-				await getVoices();
+				try {
+					const { KokoroTTS } = await import('kokoro-js');
+					TTSModel = await KokoroTTS.from_pretrained(model_id, {
+						dtype: TTSEngineConfig.dtype, // Options: "fp32", "fp16", "q8", "q4", "q4f16"
+						device: webGPU ? 'webgpu' : 'wasm',
+						progress_callback: (e) => {
+							TTSModelProgress = e;
+							console.log(e);
+						}
+					});
+
+					await getVoices();
+				} catch (e) {
+					console.error('Kokoro.js failed to load:', e);
+					TTSModel = null;
+					TTSModelProgress = null;
+					TTSModelLoading = false;
+					toast.error(
+						$i18n.t('Failed to load Kokoro.js: {{error}}', {
+							error: e?.message ?? String(e)
+						})
+					);
+				}
 
 				// const rawAudio = await tts.generate(inputText, {
 				// 	// Use `tts.list_voices()` to list all available voices
@@ -339,7 +373,7 @@
 						</div>
 					</div>
 				</div>
-			{:else}
+			{:else if TTSModelLoading}
 				<div>
 					<div class=" mb-2.5 text-sm font-medium flex gap-2 items-center">
 						<Spinner className="size-4" />
