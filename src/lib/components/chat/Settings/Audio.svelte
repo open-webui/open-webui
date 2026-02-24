@@ -125,9 +125,9 @@
 	const onTTSEngineChange = async () => {
 		if (TTSEngine === 'browser-kokoro') {
 			if (!(await isWebGPUAvailable())) {
-				toast.warning(
+				toast.info(
 					$i18n.t(
-						'Kokoro.js (Browser) requires WebGPU, which is not available in your browser. Enable WebGPU support or use a Chromium-based browser.'
+						'WebGPU is not available in your browser. Kokoro.js will use the WASM backend instead, which is slower. Consider enabling WebGPU or using a quantized dtype (q8, q4) for better performance.'
 					)
 				);
 			}
