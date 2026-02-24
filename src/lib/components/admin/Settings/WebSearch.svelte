@@ -156,7 +156,7 @@
 						</div>
 						<div class="flex items-center relative">
 							<select
-								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+								class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 								bind:value={webConfig.WEB_SEARCH_ENGINE}
 								placeholder={$i18n.t('Select a engine')}
 								required
@@ -950,7 +950,7 @@
 						</div>
 						<div class="flex items-center relative">
 							<select
-								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+								class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 								bind:value={webConfig.WEB_LOADER_ENGINE}
 								placeholder={$i18n.t('Select a engine')}
 							>

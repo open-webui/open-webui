@@ -402,7 +402,9 @@
 		class="relative w-full {($settings?.highContrastMode ?? false)
 			? ''
 			: 'outline-hidden focus:outline-hidden'}"
-		aria-label={selectedModel ? $i18n.t('Selected model: {{modelName}}', { modelName: selectedModel.label }) : placeholder}
+		aria-label={selectedModel
+			? $i18n.t('Selected model: {{modelName}}', { modelName: selectedModel.label })
+			: placeholder}
 		id="model-selector-{id}-button"
 	>
 		<div

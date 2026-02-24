@@ -1,3 +1,4 @@
+import copy
 import time
 import logging
 import asyncio
@@ -307,12 +308,41 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         except Exception as e:
             log.info(f"Failed to load function module for {function_id}: {e}")
 
+    # Apply global model defaults to all models
+    # Per-model overrides take precedence over global defaults
+    default_metadata = (
+        getattr(request.app.state.config, "DEFAULT_MODEL_METADATA", None) or {}
+    )
+
+    if default_metadata:
+        for model in models:
+            info = model.get("info")
+
+            if info is None:
+                model["info"] = {"meta": copy.deepcopy(default_metadata)}
+                continue
+
+            meta = info.setdefault("meta", {})
+            for key, value in default_metadata.items():
+                if key == "capabilities":
+                    # Merge capabilities: defaults as base, per-model overrides win
+                    existing = meta.get("capabilities") or {}
+                    meta["capabilities"] = {**value, **existing}
+                elif meta.get(key) is None:
+                    meta[key] = copy.deepcopy(value)
+
+    def get_action_priority(action_id):
+        valves = Functions.get_function_valves_by_id(action_id)
+        return valves.get("priority", 0) if valves else 0
+
     for model in models:
         action_ids = [
             action_id
             for action_id in list(set(model.pop("action_ids", []) + global_action_ids))
             if action_id in enabled_action_ids
         ]
+        action_ids.sort(key=get_action_priority)
+
         filter_ids = [
             filter_id
             for filter_id in list(set(model.pop("filter_ids", []) + global_filter_ids))
@@ -435,7 +465,7 @@ def get_filtered_models(models, user, db=None):
             if model_info:
                 if (
                     (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
-                    or user.id == model_info["user_id"]
+                    or user.id == model_info.get("user_id")
                     or model["id"] in accessible_model_ids
                 ):
                     filtered_models.append(model)

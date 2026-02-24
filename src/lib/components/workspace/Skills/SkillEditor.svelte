@@ -114,6 +114,7 @@
 	accessRoles={['read', 'write']}
 	share={$user?.permissions?.sharing?.skills || $user?.role === 'admin'}
 	sharePublic={$user?.permissions?.sharing?.public_skills || $user?.role === 'admin'}
+	shareUsers={$user?.permissions?.access_grants?.allow_users || $user?.role === 'admin'}
 	onChange={async () => {
 		if (edit && skill?.id) {
 			try {
@@ -136,6 +137,7 @@
 							<Tooltip content={$i18n.t('Back')}>
 								<button
 									class="w-full text-left text-sm py-1.5 px-1 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
+									aria-label={$i18n.t('Back')}
 									on:click={() => {
 										goto('/workspace/skills');
 									}}
@@ -152,6 +154,7 @@
 									class="w-full text-2xl bg-transparent outline-hidden"
 									type="text"
 									placeholder={$i18n.t('Skill Name')}
+									aria-label={$i18n.t('Skill Name')}
 									bind:value={name}
 									on:input={handleNameInput}
 									required
@@ -197,6 +200,7 @@
 									class="w-full text-sm disabled:text-gray-500 bg-transparent outline-hidden"
 									type="text"
 									placeholder={$i18n.t('Skill ID')}
+									aria-label={$i18n.t('Skill ID')}
 									bind:value={id}
 									on:input={handleIdInput}
 									required
@@ -214,6 +218,7 @@
 								class="w-full text-sm bg-transparent outline-hidden"
 								type="text"
 								placeholder={$i18n.t('Skill Description')}
+								aria-label={$i18n.t('Skill Description')}
 								bind:value={description}
 								on:input={handleDescriptionInput}
 								{disabled}
@@ -236,6 +241,7 @@
 									class="w-full flex-1 text-xs bg-transparent outline-hidden resize-none font-mono px-4 py-3"
 									bind:value={content}
 									placeholder={$i18n.t('Enter skill instructions in markdown...')}
+									aria-label={$i18n.t('Skill Instructions')}
 									required
 								/>
 							{/if}

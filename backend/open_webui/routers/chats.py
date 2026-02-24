@@ -1134,7 +1134,7 @@ async def delete_chat_by_id(
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
 
-        chat = Chats.get_chat_by_id(id, db=db)
+        chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
         if not chat:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

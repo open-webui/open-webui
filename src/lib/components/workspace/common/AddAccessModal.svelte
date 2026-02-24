@@ -7,6 +7,7 @@
 	import MemberSelector from '$lib/components/workspace/common/MemberSelector.svelte';
 
 	export let show = false;
+	export let shareUsers = true;
 	export let onAdd = (payload: { userIds: string[]; groupIds: string[] }) => {};
 
 	let userIds: string[] = [];
@@ -51,7 +52,7 @@
 					}}
 				>
 					<div class="flex flex-col w-full h-full pb-2">
-						<MemberSelector bind:userIds bind:groupIds includeGroups={true} />
+						<MemberSelector bind:userIds bind:groupIds includeGroups={true} includeUsers={shareUsers} />
 					</div>
 
 					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">

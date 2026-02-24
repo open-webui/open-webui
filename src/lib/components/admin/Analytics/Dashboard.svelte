@@ -158,6 +158,11 @@
 		if (modelOrderBy === 'name') {
 			return modelDirection === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
 		}
+		if (modelOrderBy === 'tokens') {
+			const aTokens = tokenStats[a.model_id]?.total_tokens ?? 0;
+			const bTokens = tokenStats[b.model_id]?.total_tokens ?? 0;
+			return modelDirection === 'asc' ? aTokens - bTokens : bTokens - aTokens;
+		}
 		return modelDirection === 'asc' ? a.count - b.count : b.count - a.count;
 	});
 
@@ -166,6 +171,11 @@
 			const nameA = a.name || a.user_id;
 			const nameB = b.name || b.user_id;
 			return userDirection === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+		}
+		if (userOrderBy === 'tokens') {
+			const aTokens = a.total_tokens ?? 0;
+			const bTokens = b.total_tokens ?? 0;
+			return userDirection === 'asc' ? aTokens - bTokens : bTokens - aTokens;
 		}
 		return userDirection === 'asc' ? a.count - b.count : b.count - a.count;
 	});
@@ -191,7 +201,7 @@
 		{#if groups.length > 0}
 			<select
 				bind:value={selectedGroupId}
-				class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-none text-right"
+				class="w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-none text-right"
 			>
 				<option value={null}>{$i18n.t('All Users')}</option>
 				{#each groups as group}
@@ -201,7 +211,7 @@
 		{/if}
 		<select
 			bind:value={selectedPeriod}
-			class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-none text-right"
+			class="w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-none text-right"
 		>
 			{#each periods as period}
 				<option value={period.value}>{$i18n.t(period.label)}</option>
@@ -329,8 +339,42 @@
 									{/if}
 								</div>
 							</th>
-							<th scope="col" class="px-2.5 py-2 text-right">{$i18n.t('Tokens')}</th>
-							<th scope="col" class="px-2.5 py-2 text-right w-16">%</th>
+							<th
+								scope="col"
+								class="px-2.5 py-2 cursor-pointer select-none text-right"
+								on:click={() => toggleModelSort('tokens')}
+							>
+								<div class="flex gap-1.5 items-center justify-end">
+									{$i18n.t('Tokens')}
+									{#if modelOrderBy === 'tokens'}
+										<span class="font-normal">
+											{#if modelDirection === 'asc'}<ChevronUp
+													className="size-2"
+												/>{:else}<ChevronDown className="size-2" />{/if}
+										</span>
+									{:else}
+										<span class="invisible"><ChevronUp className="size-2" /></span>
+									{/if}
+								</div>
+							</th>
+							<th
+								scope="col"
+								class="px-2.5 py-2 cursor-pointer select-none text-right w-16"
+								on:click={() => toggleModelSort('percentage')}
+							>
+								<div class="flex gap-1.5 items-center justify-end">
+									%
+									{#if modelOrderBy === 'percentage'}
+										<span class="font-normal">
+											{#if modelDirection === 'asc'}<ChevronUp
+													className="size-2"
+												/>{:else}<ChevronDown className="size-2" />{/if}
+										</span>
+									{:else}
+										<span class="invisible"><ChevronUp className="size-2" /></span>
+									{/if}
+								</div>
+							</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -349,6 +393,9 @@
 											src="{WEBUI_API_BASE_URL}/models/model/profile/image?id={model.model_id}"
 											alt={model.name}
 											class="size-5 rounded-full object-cover shrink-0"
+											on:error={(e) => {
+												e.target.src = '/favicon.png';
+											}}
 										/>
 										<span class="truncate max-w-[150px]">{model.name}</span>
 									</div>
@@ -422,7 +469,24 @@
 									{/if}
 								</div>
 							</th>
-							<th scope="col" class="px-2.5 py-2 text-right">{$i18n.t('Tokens')}</th>
+							<th
+								scope="col"
+								class="px-2.5 py-2 cursor-pointer select-none text-right"
+								on:click={() => toggleUserSort('tokens')}
+							>
+								<div class="flex gap-1.5 items-center justify-end">
+									{$i18n.t('Tokens')}
+									{#if userOrderBy === 'tokens'}
+										<span class="font-normal">
+											{#if userDirection === 'asc'}<ChevronUp
+													className="size-2"
+												/>{:else}<ChevronDown className="size-2" />{/if}
+										</span>
+									{:else}
+										<span class="invisible"><ChevronUp className="size-2" /></span>
+									{/if}
+								</div>
+							</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -435,6 +499,9 @@
 											src="{WEBUI_API_BASE_URL}/users/{user.user_id}/profile/image"
 											alt={user.name || 'User'}
 											class="size-5 rounded-full object-cover shrink-0"
+											on:error={(e) => {
+												e.target.src = '/user.png';
+											}}
 										/>
 										<span class="truncate max-w-[150px]"
 											>{user.name || user.email || user.user_id.substring(0, 8)}</span

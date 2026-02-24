@@ -1706,17 +1706,22 @@ class OAuthManager:
                 db=db,
             )
 
-            response.set_cookie(
-                key="oauth_session_id",
-                value=session.id,
-                httponly=True,
-                samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-                secure=WEBUI_AUTH_COOKIE_SECURE,
-            )
+            if session:
+                response.set_cookie(
+                    key="oauth_session_id",
+                    value=session.id,
+                    httponly=True,
+                    samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                    secure=WEBUI_AUTH_COOKIE_SECURE,
+                )
 
-            log.info(
-                f"Stored OAuth session server-side for user {user.id}, provider {provider}"
-            )
+                log.info(
+                    f"Stored OAuth session server-side for user {user.id}, provider {provider}"
+                )
+            else:
+                log.warning(
+                    f"Failed to create OAuth session for user {user.id}, provider {provider}"
+                )
         except Exception as e:
             log.error(f"Failed to store OAuth session server-side: {e}")
 

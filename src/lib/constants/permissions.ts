@@ -26,12 +26,16 @@ export const DEFAULT_PERMISSIONS = {
 		notes: false,
 		public_notes: false
 	},
+	access_grants: {
+		allow_users: true
+	},
 	chat: {
 		controls: true,
 		valves: true,
 		system_prompt: true,
 		params: true,
 		file_upload: true,
+		web_upload: true,
 		delete: true,
 		delete_message: true,
 		continue_response: true,

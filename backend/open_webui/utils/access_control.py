@@ -194,3 +194,53 @@ def migrate_access_control(
 
     data[grants_key] = grants
     data.pop(ac_key, None)
+
+from open_webui.models.access_grants import (
+    has_public_read_access_grant,
+    has_user_access_grant,
+    strip_user_access_grants,
+)
+
+
+def filter_allowed_access_grants(
+    default_permissions: Dict[str, Any],
+    user_id: str,
+    user_role: str,
+    access_grants: list,
+    public_permission_key: str,
+    db: Optional[Any] = None,
+) -> list:
+    """
+    Checks if the user has the required permissions to grant access to a resource.
+    Returns the filtered list of access grants if permissions are missing.
+    """
+    if user_role == "admin" or not access_grants:
+        return access_grants
+
+    # Check if user can share publicly
+    if has_public_read_access_grant(access_grants) and not has_permission(
+        user_id,
+        public_permission_key,
+        default_permissions,
+        db=db,
+    ):
+        access_grants = [
+            grant
+            for grant in access_grants
+            if not (
+                (grant.get("principal_type") if isinstance(grant, dict) else getattr(grant, "principal_type", None)) == "user"
+                and (grant.get("principal_id") if isinstance(grant, dict) else getattr(grant, "principal_id", None)) == "*"
+            )
+        ]
+
+    # Strip individual user sharing if user lacks permission
+    if has_user_access_grant(access_grants) and not has_permission(
+        user_id,
+        "access_grants.allow_users",
+        default_permissions,
+        db=db,
+    ):
+        access_grants = strip_user_access_grants(access_grants)
+
+    return access_grants
+

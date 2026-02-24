@@ -871,6 +871,9 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 		bind:show={showAccessControlModal}
 		bind:accessGrants={note.access_grants}
 		accessRoles={['read', 'write']}
+		share={$user?.permissions?.sharing?.notes || $user?.role === 'admin'}
+		sharePublic={$user?.permissions?.sharing?.public_notes || $user?.role === 'admin'}
+		shareUsers={$user?.permissions?.access_grants?.allow_users || $user?.role === 'admin'}
 		onChange={async () => {
 			if (id) {
 				try {

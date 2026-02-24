@@ -612,6 +612,7 @@
 		class=" flex w-full message-{message.id}"
 		id="message-{message.id}"
 		dir={$settings.chatDirection}
+		style="scroll-margin-top: 3rem;"
 	>
 		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 hidden @lg:flex mt-1 `}>
 			<ProfileImage

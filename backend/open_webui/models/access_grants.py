@@ -204,6 +204,33 @@ def has_public_read_access_grant(access_grants: Optional[list]) -> bool:
     return False
 
 
+def has_user_access_grant(access_grants: Optional[list]) -> bool:
+    """
+    Returns True when a direct grant list includes any non-wildcard user grant.
+    """
+    for grant in normalize_access_grants(access_grants):
+        if grant["principal_type"] == "user" and grant["principal_id"] != "*":
+            return True
+    return False
+
+
+def strip_user_access_grants(access_grants: Optional[list]) -> list:
+    """
+    Remove all non-wildcard user grants from the list.
+    Keeps group grants and the public wildcard (user:*) intact.
+    """
+    if not access_grants:
+        return []
+    return [
+        grant
+        for grant in access_grants
+        if not (
+            (grant.get("principal_type") if isinstance(grant, dict) else getattr(grant, "principal_type", None)) == "user"
+            and (grant.get("principal_id") if isinstance(grant, dict) else getattr(grant, "principal_id", None)) != "*"
+        )
+    ]
+
+
 def grants_to_access_control(grants: list) -> Optional[dict]:
     """
     Convert a list of grant objects (AccessGrantModel or AccessGrantResponse)

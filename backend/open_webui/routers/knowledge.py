@@ -29,8 +29,8 @@ from open_webui.storage.provider import Storage
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_verified_user, get_admin_user
-from open_webui.utils.access_control import has_permission
-from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant
+from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
+from open_webui.models.access_grants import AccessGrants
 
 
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
@@ -251,7 +251,7 @@ async def create_new_knowledge(
     user=Depends(get_verified_user),
 ):
     # NOTE: We intentionally do NOT use Depends(get_session) here.
-    # Database operations (has_permission, insert_new_knowledge) manage their own sessions.
+    # Database operations (has_permission, filter_allowed_access_grants, insert_new_knowledge) manage their own sessions.
     # This prevents holding a connection during embed_knowledge_base_metadata()
     # which makes external embedding API calls (1-5+ seconds).
     if user.role != "admin" and not has_permission(
@@ -262,17 +262,13 @@ async def create_new_knowledge(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    # Check if user can share publicly
-    if (
-        user.role != "admin"
-        and has_public_read_access_grant(form_data.access_grants)
-        and not has_permission(
-            user.id,
-            "sharing.public_knowledge",
-            request.app.state.config.USER_PERMISSIONS,
-        )
-    ):
-        form_data.access_grants = []
+    form_data.access_grants = filter_allowed_access_grants(
+        request.app.state.config.USER_PERMISSIONS,
+        user.id,
+        user.role,
+        form_data.access_grants,
+        "sharing.public_knowledge",
+    )
 
     knowledge = Knowledges.insert_new_knowledge(user.id, form_data)
 
@@ -482,17 +478,13 @@ async def update_knowledge_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    # Check if user can share publicly
-    if (
-        user.role != "admin"
-        and has_public_read_access_grant(form_data.access_grants)
-        and not has_permission(
-            user.id,
-            "sharing.public_knowledge",
-            request.app.state.config.USER_PERMISSIONS,
-        )
-    ):
-        form_data.access_grants = []
+    form_data.access_grants = filter_allowed_access_grants(
+        request.app.state.config.USER_PERMISSIONS,
+        user.id,
+        user.role,
+        form_data.access_grants,
+        "sharing.public_knowledge",
+    )
 
     knowledge = Knowledges.update_knowledge_by_id(id=id, form_data=form_data)
     if knowledge:
@@ -554,24 +546,13 @@ async def update_knowledge_access_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    # Strip public sharing if user lacks permission
-    if (
-        user.role != "admin"
-        and has_public_read_access_grant(form_data.access_grants)
-        and not has_permission(
-            user.id,
-            "sharing.public_knowledge",
-            request.app.state.config.USER_PERMISSIONS,
-        )
-    ):
-        form_data.access_grants = [
-            grant
-            for grant in form_data.access_grants
-            if not (
-                grant.get("principal_type") == "user"
-                and grant.get("principal_id") == "*"
-            )
-        ]
+    form_data.access_grants = filter_allowed_access_grants(
+        request.app.state.config.USER_PERMISSIONS,
+        user.id,
+        user.role,
+        form_data.access_grants,
+        "sharing.public_knowledge"
+    )
 
     AccessGrants.set_access_grants("knowledge", id, form_data.access_grants, db=db)
 

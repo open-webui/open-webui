@@ -19,9 +19,10 @@
 
 <div class=" dark:text-white">
 	<div class=" flex items-center justify-between dark:text-gray-100 mb-2">
-		<div class=" text-lg font-medium self-center font-primary">{$i18n.t('Chat Controls')}</div>
+		<div class=" text-md self-center font-primary">{$i18n.t('Controls')}</div>
 		<button
 			class="self-center"
+			aria-label={$i18n.t('Close chat controls')}
 			on:click={() => {
 				dispatch('close');
 			}}

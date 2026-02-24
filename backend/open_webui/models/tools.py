@@ -190,7 +190,11 @@ class ToolsTable:
             return tools
 
     def get_tools_by_user_id(
-        self, user_id: str, permission: str = "write", defer_content: bool = False, db: Optional[Session] = None
+        self,
+        user_id: str,
+        permission: str = "write",
+        defer_content: bool = False,
+        db: Optional[Session] = None,
     ) -> list[ToolUserModel]:
         tools = self.get_tools(defer_content=defer_content, db=db)
         user_group_ids = {

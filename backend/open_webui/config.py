@@ -1263,6 +1263,18 @@ MODEL_ORDER_LIST = PersistentConfig(
     [],
 )
 
+DEFAULT_MODEL_METADATA = PersistentConfig(
+    "DEFAULT_MODEL_METADATA",
+    "models.default_metadata",
+    {},
+)
+
+DEFAULT_MODEL_PARAMS = PersistentConfig(
+    "DEFAULT_MODEL_PARAMS",
+    "models.default_params",
+    {},
+)
+
 DEFAULT_USER_ROLE = PersistentConfig(
     "DEFAULT_USER_ROLE",
     "ui.default_user_role",
@@ -1421,6 +1433,10 @@ USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING = (
     == "true"
 )
 
+USER_PERMISSIONS_ACCESS_GRANTS_ALLOW_USERS = (
+    os.environ.get("USER_PERMISSIONS_ACCESS_GRANTS_ALLOW_USERS", "True").lower() == "true"
+)
+
 
 USER_PERMISSIONS_CHAT_CONTROLS = (
     os.environ.get("USER_PERMISSIONS_CHAT_CONTROLS", "True").lower() == "true"
@@ -1440,6 +1456,10 @@ USER_PERMISSIONS_CHAT_PARAMS = (
 
 USER_PERMISSIONS_CHAT_FILE_UPLOAD = (
     os.environ.get("USER_PERMISSIONS_CHAT_FILE_UPLOAD", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_WEB_UPLOAD = (
+    os.environ.get("USER_PERMISSIONS_CHAT_WEB_UPLOAD", "True").lower() == "true"
 )
 
 USER_PERMISSIONS_CHAT_DELETE = (
@@ -1574,12 +1594,16 @@ DEFAULT_USER_PERMISSIONS = {
         "notes": USER_PERMISSIONS_NOTES_ALLOW_SHARING,
         "public_notes": USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING,
     },
+    "access_grants": {
+        "allow_users": USER_PERMISSIONS_ACCESS_GRANTS_ALLOW_USERS,
+    },
     "chat": {
         "controls": USER_PERMISSIONS_CHAT_CONTROLS,
         "valves": USER_PERMISSIONS_CHAT_VALVES,
         "system_prompt": USER_PERMISSIONS_CHAT_SYSTEM_PROMPT,
         "params": USER_PERMISSIONS_CHAT_PARAMS,
         "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
+        "web_upload": USER_PERMISSIONS_CHAT_WEB_UPLOAD,
         "delete": USER_PERMISSIONS_CHAT_DELETE,
         "delete_message": USER_PERMISSIONS_CHAT_DELETE_MESSAGE,
         "continue_response": USER_PERMISSIONS_CHAT_CONTINUE_RESPONSE,

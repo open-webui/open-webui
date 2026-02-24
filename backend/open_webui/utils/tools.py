@@ -560,6 +560,7 @@ def get_builtin_tools(
         # Generate spec from function
         pydantic_model = convert_function_to_pydantic_model(func)
         spec = convert_pydantic_model_to_openai_function_spec(pydantic_model)
+        spec = clean_openai_tool_schema(spec)
 
         tools_dict[func.__name__] = {
             "tool_id": f"builtin:{func.__name__}",
@@ -668,6 +669,44 @@ def convert_function_to_pydantic_model(func: Callable) -> type[BaseModel]:
     return model
 
 
+def clean_properties(schema: dict):
+    if not isinstance(schema, dict):
+        return
+
+    if "anyOf" in schema:
+        non_null_types = [t for t in schema["anyOf"] if t.get("type") != "null"]
+        if len(non_null_types) == 1:
+            schema.update(non_null_types[0])
+            del schema["anyOf"]
+        else:
+            schema["anyOf"] = non_null_types
+
+    if "default" in schema and schema["default"] is None:
+        del schema["default"]
+
+    # fix missing type
+    if "type" not in schema and "anyOf" not in schema and "properties" not in schema:
+        schema["type"] = "string"
+
+    if "properties" in schema:
+        for prop_name, prop_schema in schema["properties"].items():
+            clean_properties(prop_schema)
+
+    if "items" in schema:
+        clean_properties(schema["items"])
+
+
+def clean_openai_tool_schema(spec: dict) -> dict:
+    import copy
+
+    cleaned_spec = copy.deepcopy(spec)
+
+    if "parameters" in cleaned_spec:
+        clean_properties(cleaned_spec["parameters"])
+
+    return cleaned_spec
+
+
 def get_functions_from_tool(tool: object) -> list[Callable]:
     return [
         getattr(tool, func)
@@ -690,7 +729,9 @@ def get_tool_specs(tool_module: object) -> list[dict]:
     )
 
     specs = [
-        convert_pydantic_model_to_openai_function_spec(function_model)
+        clean_openai_tool_schema(
+            convert_pydantic_model_to_openai_function_spec(function_model)
+        )
         for function_model in function_models
     ]
 

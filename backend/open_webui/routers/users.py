@@ -196,12 +196,17 @@ class SharingPermissions(BaseModel):
     public_notes: bool = True
 
 
+class AccessGrantsPermissions(BaseModel):
+    allow_users: bool = True
+
+
 class ChatPermissions(BaseModel):
     controls: bool = True
     valves: bool = True
     system_prompt: bool = True
     params: bool = True
     file_upload: bool = True
+    web_upload: bool = True
     delete: bool = True
     delete_message: bool = True
     continue_response: bool = True
@@ -238,6 +243,7 @@ class SettingsPermissions(BaseModel):
 class UserPermissions(BaseModel):
     workspace: WorkspacePermissions
     sharing: SharingPermissions
+    access_grants: AccessGrantsPermissions
     chat: ChatPermissions
     features: FeaturesPermissions
     settings: SettingsPermissions
@@ -251,6 +257,9 @@ async def get_default_user_permissions(request: Request, user=Depends(get_admin_
         ),
         "sharing": SharingPermissions(
             **request.app.state.config.USER_PERMISSIONS.get("sharing", {})
+        ),
+        "access_grants": AccessGrantsPermissions(
+            **request.app.state.config.USER_PERMISSIONS.get("access_grants", {})
         ),
         "chat": ChatPermissions(
             **request.app.state.config.USER_PERMISSIONS.get("chat", {})

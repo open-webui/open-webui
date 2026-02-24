@@ -88,6 +88,14 @@ def get_content_from_url(request, url: str) -> str:
     return content, docs
 
 
+CHUNK_HASH_KEY = "_chunk_hash"
+
+
+def _content_hash(text: str) -> str:
+    """SHA-256 hash of text, used as a stable chunk identifier for RRF dedup."""
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
 class VectorSearchRetriever(BaseRetriever):
     collection_name: Any
     embedding_function: Any
@@ -126,9 +134,11 @@ class VectorSearchRetriever(BaseRetriever):
 
         results = []
         for idx in range(len(ids)):
+            metadata = metadatas[idx]
+            metadata[CHUNK_HASH_KEY] = _content_hash(documents[idx])
             results.append(
                 Document(
-                    metadata=metadatas[idx],
+                    metadata=metadata,
                     page_content=documents[idx],
                 )
             )
@@ -240,15 +250,21 @@ async def query_doc_with_hybrid_search(
 
         log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
 
+        original_texts = collection_result.documents[0]
+        bm25_metadatas = [
+            {**meta, CHUNK_HASH_KEY: _content_hash(original_texts[idx])}
+            for idx, meta in enumerate(collection_result.metadatas[0])
+        ]
+
         bm25_texts = (
             get_enriched_texts(collection_result)
             if enable_enriched_texts
-            else collection_result.documents[0]
+            else original_texts
         )
 
         bm25_retriever = BM25Retriever.from_texts(
             texts=bm25_texts,
-            metadatas=collection_result.metadatas[0],
+            metadatas=bm25_metadatas,
         )
         bm25_retriever.k = k
 
@@ -258,18 +274,24 @@ async def query_doc_with_hybrid_search(
             top_k=k,
         )
 
+        # Use CHUNK_HASH_KEY for dedup so enriched BM25 texts don't defeat RRF
         if hybrid_bm25_weight <= 0:
             ensemble_retriever = EnsembleRetriever(
-                retrievers=[vector_search_retriever], weights=[1.0]
+                retrievers=[vector_search_retriever],
+                weights=[1.0],
+                id_key=CHUNK_HASH_KEY,
             )
         elif hybrid_bm25_weight >= 1:
             ensemble_retriever = EnsembleRetriever(
-                retrievers=[bm25_retriever], weights=[1.0]
+                retrievers=[bm25_retriever],
+                weights=[1.0],
+                id_key=CHUNK_HASH_KEY,
             )
         else:
             ensemble_retriever = EnsembleRetriever(
                 retrievers=[bm25_retriever, vector_search_retriever],
                 weights=[hybrid_bm25_weight, 1.0 - hybrid_bm25_weight],
+                id_key=CHUNK_HASH_KEY,
             )
 
         compressor = RerankCompressor(
