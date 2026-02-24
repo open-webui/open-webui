@@ -6,6 +6,7 @@ import uuid
 
 from sqlalchemy.orm import Session
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
+from open_webui.config import DEFAULT_GROUP_SHARE_PERMISSION
 
 from open_webui.models.files import FileMetadataResponse
 
@@ -130,13 +131,26 @@ class GroupListResponse(BaseModel):
 
 
 class GroupTable:
+    def _ensure_default_share_config(self, group_data: dict) -> dict:
+        """Ensure the group data dict has a default share config if not already set."""
+        if "data" not in group_data or group_data["data"] is None:
+            group_data["data"] = {}
+        if "config" not in group_data["data"]:
+            group_data["data"]["config"] = {}
+        if "share" not in group_data["data"]["config"]:
+            group_data["data"]["config"]["share"] = DEFAULT_GROUP_SHARE_PERMISSION
+        return group_data
+
     def insert_new_group(
         self, user_id: str, form_data: GroupForm, db: Optional[Session] = None
     ) -> Optional[GroupModel]:
         with get_db_context(db) as db:
+            group_data = self._ensure_default_share_config(
+                form_data.model_dump(exclude_none=True)
+            )
             group = GroupModel(
                 **{
-                    **form_data.model_dump(exclude_none=True),
+                    **group_data,
                     "id": str(uuid.uuid4()),
                     "user_id": user_id,
                     "created_at": int(time.time()),
@@ -504,6 +518,11 @@ class GroupTable:
                         user_id=user_id,
                         name=group_name,
                         description="",
+                        data={
+                            "config": {
+                                "share": DEFAULT_GROUP_SHARE_PERMISSION,
+                            }
+                        },
                         created_at=int(time.time()),
                         updated_at=int(time.time()),
                     )
