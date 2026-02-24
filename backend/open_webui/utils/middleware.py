@@ -2006,10 +2006,22 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if chat_id and parent_message_id and not chat_id.startswith("local:"):
         db_messages = load_messages_from_db(chat_id, parent_message_id)
         if db_messages:
-            system_message = get_system_message(form_data.get("messages", []))
+            # Check if the frontend included an assistant pre-fill (e.g., "Continue Response")
+            original_messages = form_data.get("messages", [])
+            assistant_prefill = None
+            if original_messages and original_messages[-1].get("role") == "assistant":
+                prefill_content = original_messages[-1].get("content", "")
+                if isinstance(prefill_content, str) and prefill_content.strip():
+                    assistant_prefill = original_messages[-1]
+
+            system_message = get_system_message(original_messages)
             form_data["messages"] = (
                 [system_message, *db_messages] if system_message else db_messages
             )
+
+            # Re-append assistant pre-fill so compatible models can continue generation
+            if assistant_prefill:
+                form_data["messages"].append(assistant_prefill)
 
             # Inject image files into content as image_url parts (mirrors frontend logic)
             for message in form_data["messages"]:
