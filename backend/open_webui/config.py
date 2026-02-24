@@ -3995,6 +3995,12 @@ AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS = PersistentConfig(
     os.getenv("AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS", "false").lower() == "true",
 )
 
+AUDIO_STT_GLADIA_API_KEY = PersistentConfig(
+    "AUDIO_STT_GLADIA_API_KEY",
+    "audio.stt.gladia.api_key",
+    os.getenv("AUDIO_STT_GLADIA_API_KEY", ""),
+)
+
 AUDIO_TTS_OPENAI_API_BASE_URL = PersistentConfig(
     "AUDIO_TTS_OPENAI_API_BASE_URL",
     "audio.tts.openai.api_base_url",

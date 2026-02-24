@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 import os
+import time
 import uuid
 import html
 import base64
@@ -186,6 +187,7 @@ class STTConfigForm(BaseModel):
     MISTRAL_API_KEY: str
     MISTRAL_API_BASE_URL: str
     MISTRAL_USE_CHAT_COMPLETIONS: bool
+    GLADIA_API_KEY: str
 
 
 class AudioConfigUpdateForm(BaseModel):
@@ -225,6 +227,7 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             "MISTRAL_API_KEY": request.app.state.config.AUDIO_STT_MISTRAL_API_KEY,
             "MISTRAL_API_BASE_URL": request.app.state.config.AUDIO_STT_MISTRAL_API_BASE_URL,
             "MISTRAL_USE_CHAT_COMPLETIONS": request.app.state.config.AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS,
+            "GLADIA_API_KEY": request.app.state.config.AUDIO_STT_GLADIA_API_KEY,
         },
     }
 
@@ -273,6 +276,7 @@ async def update_audio_config(
     request.app.state.config.AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS = (
         form_data.stt.MISTRAL_USE_CHAT_COMPLETIONS
     )
+    request.app.state.config.AUDIO_STT_GLADIA_API_KEY = form_data.stt.GLADIA_API_KEY
 
     if request.app.state.config.STT_ENGINE == "":
         request.app.state.faster_whisper_model = set_faster_whisper_model(
@@ -311,6 +315,7 @@ async def update_audio_config(
             "MISTRAL_API_KEY": request.app.state.config.AUDIO_STT_MISTRAL_API_KEY,
             "MISTRAL_API_BASE_URL": request.app.state.config.AUDIO_STT_MISTRAL_API_BASE_URL,
             "MISTRAL_USE_CHAT_COMPLETIONS": request.app.state.config.AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS,
+            "GLADIA_API_KEY": request.app.state.config.AUDIO_STT_GLADIA_API_KEY,
         },
     }
 
@@ -1038,6 +1043,151 @@ def transcription_handler(request, file_path, metadata, user=None):
                     res = r.json()
                     if "error" in res:
                         detail = f"External: {res['error'].get('message', '')}"
+                    else:
+                        detail = f"External: {r.text}"
+            except Exception:
+                detail = f"External: {e}"
+
+            raise HTTPException(
+                status_code=getattr(r, "status_code", 500) if r else 500,
+                detail=detail if detail else "Open WebUI: Server Connection Error",
+            )
+
+    elif request.app.state.config.STT_ENGINE == "gladia":
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=400, detail="Audio file not found")
+
+        file_size = os.path.getsize(file_path)
+        if file_size > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File size exceeds limit of {MAX_FILE_SIZE_MB}MB",
+            )
+
+        api_key = request.app.state.config.AUDIO_STT_GLADIA_API_KEY
+
+        if not api_key:
+            raise HTTPException(
+                status_code=400,
+                detail="Gladia API key is required for Gladia STT",
+            )
+
+        r = None
+        try:
+            headers = {
+                "x-gladia-key": api_key,
+            }
+
+            mime_type, _ = mimetypes.guess_type(file_path)
+            if not mime_type:
+                mime_type = "audio/mpeg"
+
+            with open(file_path, "rb") as audio_file:
+                r = requests.post(
+                    "https://api.gladia.io/v2/upload",
+                    headers=headers,
+                    files={"audio": (filename, audio_file, mime_type)},
+                    timeout=AIOHTTP_CLIENT_TIMEOUT,
+                )
+
+            r.raise_for_status()
+            upload_response = r.json()
+            audio_url = upload_response.get("audio_url")
+
+            if not audio_url:
+                raise ValueError("No audio_url returned from Gladia upload")
+
+            transcription_payload = {
+                "audio_url": audio_url,
+            }
+
+            language = metadata.get("language", None) if metadata else None
+            if language:
+                transcription_payload["language"] = language
+
+            r = requests.post(
+                "https://api.gladia.io/v2/pre-recorded",
+                headers={
+                    "x-gladia-key": api_key,
+                    "Content-Type": "application/json",
+                },
+                json=transcription_payload,
+                timeout=AIOHTTP_CLIENT_TIMEOUT,
+            )
+
+            r.raise_for_status()
+            transcription_response = r.json()
+            result_url = transcription_response.get("result_url")
+
+            if not result_url:
+                raise ValueError("No result_url returned from Gladia transcription")
+
+            max_poll_attempts = 120
+            poll_interval = 1
+            for _ in range(max_poll_attempts):
+                r = requests.get(
+                    result_url,
+                    headers={"x-gladia-key": api_key},
+                    timeout=AIOHTTP_CLIENT_TIMEOUT,
+                )
+                r.raise_for_status()
+                poll_response = r.json()
+                status_val = poll_response.get("status")
+
+                if status_val == "done":
+                    break
+                elif status_val == "error":
+                    raise ValueError(
+                        f"Gladia transcription failed: {poll_response.get('error', 'Unknown error')}"
+                    )
+
+                time.sleep(poll_interval)
+            else:
+                raise ValueError("Gladia transcription timed out")
+
+            transcript_parts = []
+            result = poll_response.get("result", {})
+            transcription = result.get("transcription", {})
+            utterances = transcription.get("utterances", [])
+
+            if utterances:
+                for utterance in utterances:
+                    text = utterance.get("text", "")
+                    if text:
+                        transcript_parts.append(text)
+            else:
+                full_transcript = transcription.get("full_transcript", "")
+                if full_transcript:
+                    transcript_parts.append(full_transcript)
+
+            transcript = " ".join(transcript_parts).strip()
+            if not transcript:
+                raise ValueError("Empty transcript in Gladia response")
+
+            data = {"text": transcript}
+
+            transcript_file = f"{file_dir}/{id}.json"
+            with open(transcript_file, "w") as f:
+                json.dump(data, f)
+
+            log.debug(data)
+            return data
+
+        except ValueError as e:
+            log.exception("Error parsing Gladia response")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to parse Gladia response: {str(e)}",
+            )
+        except requests.exceptions.RequestException as e:
+            log.exception(e)
+            detail = None
+
+            try:
+                if r is not None and r.status_code != 200:
+                    res = r.json()
+                    if "error" in res:
+                        detail = f"External: {res['error'].get('message', '') if isinstance(res['error'], dict) else res['error']}"
                     else:
                         detail = f"External: {r.text}"
             except Exception:

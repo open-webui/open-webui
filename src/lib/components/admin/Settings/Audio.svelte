@@ -53,6 +53,7 @@
 	let STT_MISTRAL_API_KEY = '';
 	let STT_MISTRAL_API_BASE_URL = '';
 	let STT_MISTRAL_USE_CHAT_COMPLETIONS = false;
+	let STT_GLADIA_API_KEY = '';
 
 	let STT_WHISPER_MODEL_LOADING = false;
 
@@ -141,7 +142,8 @@
 				AZURE_MAX_SPEAKERS: STT_AZURE_MAX_SPEAKERS,
 				MISTRAL_API_KEY: STT_MISTRAL_API_KEY,
 				MISTRAL_API_BASE_URL: STT_MISTRAL_API_BASE_URL,
-				MISTRAL_USE_CHAT_COMPLETIONS: STT_MISTRAL_USE_CHAT_COMPLETIONS
+				MISTRAL_USE_CHAT_COMPLETIONS: STT_MISTRAL_USE_CHAT_COMPLETIONS,
+				GLADIA_API_KEY: STT_GLADIA_API_KEY
 			}
 		});
 
@@ -193,6 +195,7 @@
 			STT_MISTRAL_API_KEY = res.stt.MISTRAL_API_KEY;
 			STT_MISTRAL_API_BASE_URL = res.stt.MISTRAL_API_BASE_URL;
 			STT_MISTRAL_USE_CHAT_COMPLETIONS = res.stt.MISTRAL_USE_CHAT_COMPLETIONS;
+			STT_GLADIA_API_KEY = res.stt.GLADIA_API_KEY;
 		}
 
 		await getVoices();
@@ -245,6 +248,7 @@
 							<option value="deepgram">{$i18n.t('Deepgram')}</option>
 							<option value="azure">{$i18n.t('Azure AI Speech')}</option>
 							<option value="mistral">{$i18n.t('MistralAI')}</option>
+							<option value="gladia">{$i18n.t('Gladia')}</option>
 						</select>
 					</div>
 				</div>
@@ -436,6 +440,12 @@
 							{$i18n.t(
 								'Use /v1/chat/completions endpoint instead of /v1/audio/transcriptions for potentially better accuracy.'
 							)}
+						</div>
+					</div>
+				{:else if STT_ENGINE === 'gladia'}
+					<div>
+						<div class="mt-1 flex gap-2 mb-1">
+							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={STT_GLADIA_API_KEY} />
 						</div>
 					</div>
 				{:else if STT_ENGINE === ''}
