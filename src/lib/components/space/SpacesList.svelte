@@ -170,7 +170,7 @@
 							<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
 								{#each pinnedSpaces as space (space.id)}
 									<button
-										class="group text-left p-4 rounded-xl border border-gray-200 dark:border-gray-700/60 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:border-gray-300 dark:hover:border-gray-600 transition-all"
+										class="group text-left p-4 rounded-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-md ring-1 ring-inset ring-white/20 dark:ring-white/10 hover:bg-white/80 dark:hover:bg-gray-900/80 transition-all"
 										on:click={() => goto(`/spaces/${space.slug}`)}
 									>
 										<div class="flex items-start gap-3">
@@ -246,7 +246,7 @@
 							<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
 								{#each bookmarkedSpaces as space (space.id)}
 									<button
-										class="group text-left p-4 rounded-xl border border-gray-200 dark:border-gray-700/60 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:border-gray-300 dark:hover:border-gray-600 transition-all"
+										class="group text-left p-4 rounded-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-md ring-1 ring-inset ring-white/20 dark:ring-white/10 hover:bg-white/80 dark:hover:bg-gray-900/80 transition-all"
 										on:click={() => goto(`/spaces/${space.slug}`)}
 									>
 										<div class="flex items-start gap-3">
@@ -415,7 +415,7 @@
 							<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
 								{#each mySpaces as space (space.id)}
 									<button
-										class="group text-left p-4 rounded-xl border border-gray-200 dark:border-gray-700/60 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:border-gray-300 dark:hover:border-gray-600 transition-all"
+										class="group text-left p-4 rounded-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-md ring-1 ring-inset ring-white/20 dark:ring-white/10 hover:bg-white/80 dark:hover:bg-gray-900/80 transition-all"
 										on:click={() => goto(`/spaces/${space.slug}`)}
 									>
 										<div class="flex items-start gap-3">
@@ -502,7 +502,7 @@
 							<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
 								{#each sharedSpaces as space (space.id)}
 									<button
-										class="group text-left p-4 rounded-xl border border-gray-200 dark:border-gray-700/60 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:border-gray-300 dark:hover:border-gray-600 transition-all"
+										class="group text-left p-4 rounded-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-md ring-1 ring-inset ring-white/20 dark:ring-white/10 hover:bg-white/80 dark:hover:bg-gray-900/80 transition-all"
 										on:click={() => goto(`/spaces/${space.slug}`)}
 									>
 										<div class="flex items-start gap-3">
@@ -582,7 +582,7 @@
 							<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
 								{#each templateSpaces as space (space.id)}
 									<button
-										class="group text-left p-4 rounded-xl border border-gray-200 dark:border-gray-700/60 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:border-gray-300 dark:hover:border-gray-600 transition-all"
+										class="group text-left p-4 rounded-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-md ring-1 ring-inset ring-white/20 dark:ring-white/10 hover:bg-white/80 dark:hover:bg-gray-900/80 transition-all"
 										on:click={() => goto(`/spaces/${space.slug}`)}
 									>
 										<div class="flex items-start gap-3">

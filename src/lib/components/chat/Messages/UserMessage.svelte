@@ -232,7 +232,7 @@
 				<div class="w-full">
 					<div class="flex pb-1">
 						<div
-							class="rounded-3xl max-w-[90%] px-4 py-1.5 bg-gray-50 dark:bg-gray-850 {message.files ? 'rounded-tl-lg' : ''}"
+							class="rounded-2xl max-w-[90%] px-4 py-2.5 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm ring-1 ring-inset ring-gray-200/50 dark:ring-white/10 {message.files ? 'rounded-tl-lg' : ''}"
 						>
 							{#if message.content}
 								<Markdown
@@ -307,7 +307,7 @@
 						<button
 							class="{($settings?.highContrastMode ?? false)
 								? ''
-								: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+								: 'visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 							on:click={() => {
 								copyToClipboard(message.content);
 							}}
@@ -573,11 +573,11 @@
 				<div class="w-full">
 					<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
 						<div
-							class="rounded-3xl {($settings?.chatBubble ?? true)
-								? `max-w-[90%] px-4 py-1.5  bg-gray-50 dark:bg-gray-850 ${
+							class="rounded-2xl {($settings?.chatBubble ?? true)
+								? `max-w-[90%] px-4 py-2.5 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm ring-1 ring-inset ring-gray-200/50 dark:ring-white/10 ${
 										message.files ? 'rounded-tr-lg' : ''
 									}`
-								: ' w-full'}"
+								: 'w-full'}"
 						>
 							{#if message.content}
 								<Markdown
@@ -594,9 +594,9 @@
 
 			{#if edit !== true}
 				<div
-					class=" flex {($settings?.chatBubble ?? true)
+					class="flex {($settings?.chatBubble ?? true)
 						? 'justify-end'
-						: ''}  text-gray-600 dark:text-gray-500"
+						: ''} text-gray-600 dark:text-gray-500 {($settings?.chatBubble ?? true) ? 'bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm rounded-lg px-1 py-0.5 w-fit ml-auto mt-1' : ''}"
 				>
 					{#if !($settings?.chatBubble ?? true)}
 						{#if siblings.length > 1}
@@ -697,7 +697,7 @@
 							<button
 								class="{($settings?.highContrastMode ?? false)
 									? ''
-									: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition edit-user-message-button"
+									: 'visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition edit-user-message-button"
 								on:click={() => {
 									editMessageHandler();
 								}}
@@ -725,7 +725,7 @@
 							<button
 								class="{($settings?.highContrastMode ?? false)
 									? ''
-									: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+									: 'visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 								on:click={() => {
 									copyToClipboard(message.content);
 								}}
@@ -754,7 +754,7 @@
 								<button
 									class="{($settings?.highContrastMode ?? false)
 										? ''
-										: 'invisible group-hover:visible'} p-1 rounded-sm dark:hover:text-white hover:text-black transition"
+										: 'visible'} p-1 rounded-sm dark:hover:text-white hover:text-black transition"
 									on:click={() => {
 										showDeleteConfirm = true;
 									}}

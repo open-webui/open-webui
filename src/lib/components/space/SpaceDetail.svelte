@@ -918,7 +918,7 @@
 						</div>
 
 						<!-- Threads Section -->
-						<div>
+						<div class="mt-8 bg-white/60 dark:bg-gray-900/60 backdrop-blur-md rounded-2xl ring-1 ring-inset ring-white/20 dark:ring-white/10 p-4">
 							<div class="flex items-center gap-2 mb-4">
 								<ChatBubbleOval className="size-4 text-accent-500 dark:text-accent-400" />
 								<h3
@@ -1066,7 +1066,7 @@
 
 					<!-- Right Sidebar -->
 					<div class="w-full md:w-60 flex-shrink-0">
-						<div class="md:sticky md:top-16 space-y-6">
+						<div class="md:sticky md:top-24 space-y-6 bg-white/60 dark:bg-gray-900/60 backdrop-blur-md rounded-2xl ring-1 ring-inset ring-white/20 dark:ring-white/10 p-4">
 							<!-- Knowledge Bases -->
 							<div>
 								<div class="flex items-center gap-2 mb-3">

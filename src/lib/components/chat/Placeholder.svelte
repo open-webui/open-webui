@@ -83,6 +83,9 @@
 		</Tooltip>
 	{/if}
 
+	<!-- Frosted glass container for landing page content -->
+	<div class="mx-auto max-w-3xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-md rounded-3xl ring-1 ring-inset ring-white/20 dark:ring-white/10 p-6 pb-10 @sm:p-8 @sm:pb-12 shadow-2xl">
+
 	<div
 		class="w-full text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4 font-primary"
 	>
@@ -247,4 +250,5 @@
 			</div>
 		</div>
 	{/if}
+	</div>
 </div>
