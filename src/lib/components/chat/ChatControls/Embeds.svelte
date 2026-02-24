@@ -40,9 +40,9 @@
 </script>
 
 {#if $embed}
-	<div class="h-full w-full">
+	<div class="h-full w-full flex flex-col">
 		<div
-			class="pointer-events-auto z-20 flex justify-between items-center py-3 px-2 font-primar text-gray-900 dark:text-white"
+			class="pointer-events-auto z-20 flex justify-between items-center py-3 px-2 font-primar text-gray-900 dark:text-white flex-shrink-0"
 		>
 			<div class="flex-1 flex items-center justify-between pl-2">
 				<a
@@ -68,7 +68,7 @@
 			</button>
 		</div>
 
-		<div class=" w-full h-full relative">
+		<div class="w-full flex-1 min-h-0 relative">
 			{#if overlay}
 				<div class=" absolute top-0 left-0 right-0 bottom-0 z-10"></div>
 			{/if}
