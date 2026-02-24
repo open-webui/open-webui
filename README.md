@@ -190,9 +190,9 @@ You can deploy Open WebUI to [Render](https://render.com/) using the included Bl
    Or, in the Render Dashboard: **New** → **Blueprint** → connect the Git repo that contains `render.yaml`.
 
 2. **Set environment variables**  
-   In the Render service **Environment** tab, set:
-   - **`WEBUI_SECRET_KEY`** (required) – e.g. a long random string for session/auth signing.
-   - **`OPENAI_API_KEY`** (required for chat on Render) – your OpenAI key, or an API key from an OpenAI-compatible provider (OpenRouter, Groq, etc.).
+   In the Render service **Environment** tab:
+   - **`WEBUI_SECRET_KEY`** – generated automatically by Render (no action needed).
+   - **`OPENAI_API_KEY`** (required for chat) – your OpenAI key, or an API key from an OpenAI-compatible provider (OpenRouter, Groq, etc.).
 
    Optional: **`OLLAMA_BASE_URL`** – only if you have an Ollama server running elsewhere; leave unset for API-only usage.
 

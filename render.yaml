@@ -1,6 +1,6 @@
 # Render Blueprint for Open WebUI
 # Deploy: https://dashboard.render.com/blueprint/new?repo=https://github.com/open-webui/open-webui
-# Set WEBUI_SECRET_KEY (required) and OPENAI_API_KEY in the Dashboard. Ollama does not run on Render; use OpenAI/OpenRouter/Groq etc. only (or add OLLAMA_BASE_URL if you have an external Ollama server).
+# Render auto-generates WEBUI_SECRET_KEY. Set OPENAI_API_KEY in the Dashboard. Ollama does not run on Render; use OpenAI/OpenRouter/Groq etc. only.
 
 services:
   - type: web
@@ -18,7 +18,7 @@ services:
 
     envVars:
       - key: WEBUI_SECRET_KEY
-        sync: false  # Set in Render Dashboard (required for auth/sessions)
+        generateValue: true  # Render generates a random secret automatically
       - key: OPENAI_API_KEY
         sync: false  # Required for chat on Render (OpenAI, OpenRouter, Groq, etc.); Ollama does not run here
       - key: SCARF_NO_ANALYTICS
