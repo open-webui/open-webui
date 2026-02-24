@@ -7,7 +7,7 @@ const blockRules = {
 };
 
 const inlineRules = {
-	singleDollar: /^\$([^$\n]+?)\$/,
+	singleDollar: /^\$(?!\s)([^$\n]*?[^\s$])\$(?!\d)/,
 	paren: /^\\\(([\s\S]+?)\\\)/
 };
 
