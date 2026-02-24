@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔐 **Individual user sharing control.** Administrators can now disable individual user sharing via the USER_PERMISSIONS_ACCESS_GRANTS_ALLOW_USERS environment variable, allowing only group-based sharing when set to false. [#21793](https://github.com/open-webui/open-webui/issues/21793), [Commit](https://github.com/open-webui/open-webui/commit/3d99de67716774af2f95f2e3c8e7cc4879464c71), [Commit](https://github.com/open-webui/open-webui/commit/176f9a781619d836be003d28d53904639cad4128)
 - 👥 **Default group share permission.** Administrators can now configure the default sharing permission for new groups via the DEFAULT_GROUP_SHARE_PERMISSION environment variable, controlling whether anyone, no one, or only members can share to new groups. [Commit](https://github.com/open-webui/open-webui/commit/538501c88da034434bcd1969f15341dbbaf154e4)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 **Translation updates.** Translations for Simplified Chinese and Traditional Chinese were enhanced and expanded.
+- 🌐 **Translation updates.** Translations for German, Simplified Chinese, and Traditional Chinese were enhanced and expanded.
 
 ### Fixed
 
