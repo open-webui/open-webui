@@ -176,6 +176,7 @@
 
 		<div>
 			<div class="mb-1 text-sm font-medium">{$i18n.t('Chats')}</div>
+			<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 			<div>
 				<div class="py-0.5 flex w-full justify-between">
@@ -272,6 +273,7 @@
 
 		<div>
 			<div class="mb-1 text-sm font-medium">{$i18n.t('Files')}</div>
+			<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 			<div>
 				<div class="py-0.5 flex w-full justify-between">

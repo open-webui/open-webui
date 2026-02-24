@@ -178,6 +178,7 @@
 	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] md:max-h-full">
 		<div>
 			<div class=" mb-1 text-sm font-medium">{$i18n.t('STT Settings')}</div>
+			<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 			{#if $config.audio.stt.engine !== 'web'}
 				<div class=" py-0.5 flex w-full justify-between">
@@ -242,6 +243,7 @@
 
 		<div>
 			<div class=" mb-1 text-sm font-medium">{$i18n.t('TTS Settings')}</div>
+			<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 			<div class=" py-0.5 flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Text-to-Speech Engine')}</div>
@@ -315,12 +317,11 @@
 			</div>
 		</div>
 
-		<hr class=" border-gray-100/30 dark:border-gray-850/30" />
-
 		{#if TTSEngine === 'browser-kokoro'}
 			{#if TTSModel}
 				<div>
 					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 					<div class="flex w-full">
 						<div class="flex-1">
 							<input
@@ -360,6 +361,7 @@
 		{:else if $config.audio.tts.engine === ''}
 			<div>
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
+				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 				<div class="flex w-full">
 					<div class="flex-1">
 						<select
@@ -391,6 +393,7 @@
 		{:else if $config.audio.tts.engine !== ''}
 			<div>
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
+				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 				<div class="flex w-full">
 					<div class="flex-1">
 						<input
