@@ -2,6 +2,7 @@
 	import { marked } from 'marked';
 	import { replaceTokens, processResponseContent } from '$lib/utils';
 	import { user } from '$lib/stores';
+	import { onMount, onDestroy } from 'svelte';
 
 	import markedExtension from '$lib/utils/marked/extension';
 	import markedKatexExtension from '$lib/utils/marked/katex-extension';
@@ -25,11 +26,17 @@
 	export let onUpdate = () => {};
 
 	export let onPreview = () => {};
-
 	export let onSourceClick = () => {};
 	export let onTaskClick = () => {};
 
 	let tokens = [];
+	let pendingContent = null;
+	let parseTimeout = null;
+	let lastParsedContent = '';
+
+	// Throttle interval in ms - parse less frequently during streaming
+	const STREAMING_THROTTLE = 100; // 10 updates per second max during streaming
+	const DONE_DELAY = 50; // Small delay when done to ensure final parse
 
 	const options = {
 		throwOnError: false,
@@ -42,13 +49,54 @@
 		extensions: [mentionExtension({ triggerChar: '@' }), mentionExtension({ triggerChar: '#' })]
 	});
 
-	$: (async () => {
-		if (content) {
+	const parseContent = (contentToParse) => {
+		if (contentToParse && contentToParse !== lastParsedContent) {
+			lastParsedContent = contentToParse;
 			tokens = marked.lexer(
-				replaceTokens(processResponseContent(content), sourceIds, model?.name, $user?.name)
+				replaceTokens(processResponseContent(contentToParse), sourceIds, model?.name, $user?.name)
 			);
 		}
-	})();
+	};
+
+	const scheduleParse = () => {
+		if (parseTimeout) {
+			clearTimeout(parseTimeout);
+		}
+
+		// If done, parse immediately with minimal delay for final content
+		if (done) {
+			parseTimeout = setTimeout(() => {
+				if (pendingContent !== null) {
+					parseContent(pendingContent);
+					pendingContent = null;
+				}
+				parseTimeout = null;
+			}, DONE_DELAY);
+		} else {
+			// During streaming, throttle updates
+			parseTimeout = setTimeout(() => {
+				if (pendingContent !== null) {
+					parseContent(pendingContent);
+					pendingContent = null;
+				}
+				parseTimeout = null;
+			}, STREAMING_THROTTLE);
+		}
+	};
+
+	// Use a reactive statement that just schedules parsing instead of doing it immediately
+	$: {
+		if (content) {
+			pendingContent = content;
+			scheduleParse();
+		}
+	}
+
+	onDestroy(() => {
+		if (parseTimeout) {
+			clearTimeout(parseTimeout);
+		}
+	});
 </script>
 
 {#key id}

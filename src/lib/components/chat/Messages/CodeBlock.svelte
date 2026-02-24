@@ -42,6 +42,9 @@
 	export let stickyButtonsClassName = 'top-0';
 
 	let pyodideWorker = null;
+	let codeBlockElement = null;
+	let visible = false;
+	let observer = null;
 
 	let _code = '';
 	$: if (code) {
@@ -390,12 +393,27 @@
 	};
 
 	onMount(async () => {
+		observer = new IntersectionObserver((entries) => {
+			if (entries[0].isIntersecting) {
+				visible = true;
+				observer.disconnect();
+			}
+		});
+
+		if (codeBlockElement) {
+			observer.observe(codeBlockElement);
+		}
+
 		if (token) {
 			onUpdate(token);
 		}
 	});
 
 	onDestroy(() => {
+		if (observer) {
+			observer.disconnect();
+		}
+
 		if (pyodideWorker) {
 			pyodideWorker.terminate();
 		}
@@ -406,6 +424,7 @@
 	<div
 		class="relative {className} flex flex-col rounded-3xl border border-gray-100 dark:border-gray-850 my-0.5"
 		dir="ltr"
+		bind:this={codeBlockElement}
 	>
 		{#if lang === 'mermaid'}
 			{#if mermaidHtml}
@@ -532,8 +551,8 @@
 								result) &&
 								'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
 								class="language-{lang} rounded-t-none whitespace-pre text-sm"
-								>{@html hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value ||
-									code}</code
+								>{#if visible}{@html hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value ||
+									code}{:else}{code}{/if}</code
 							></pre>
 					{/if}
 				{:else}

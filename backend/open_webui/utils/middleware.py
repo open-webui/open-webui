@@ -2062,9 +2062,12 @@ async def process_chat_response(
 
                             if after_tag:
                                 content_blocks[-1]["content"] = after_tag
-                                tag_content_handler(
+                                after_tag, content_blocks, _ = tag_content_handler(
                                     content_type, tags, after_tag, content_blocks
                                 )
+                                content = before_tag + after_tag
+                            else:
+                                content = before_tag
 
                             break
                 elif content_blocks[-1]["type"] == content_type:
@@ -2157,12 +2160,10 @@ async def process_chat_response(
                                 rf"<{re.escape(start_tag[1:-1])}(\s.*?)?>"
                             )
 
-                        content = re.sub(
-                            rf"{start_tag_pattern}(.|\n)*?{re.escape(end_tag)}",
-                            "",
-                            content,
-                            flags=re.DOTALL,
-                        )
+                        # Since we are already inside the block, the start tag was removed from `content`.
+                        # `content` here is just the inner text, the end_tag, and leftover_content.
+                        # So we can just set `content` to `leftover_content`!
+                        content = leftover_content
 
                 return content, content_blocks, end_flag
 
@@ -2869,10 +2870,21 @@ async def process_chat_response(
                             # Process content
                             msg_content = message.get("content")
                             if msg_content:
-                                content_blocks.append({
-                                    "type": "text",
-                                    "content": msg_content
-                                })
+                                if not content_blocks or content_blocks[-1]["type"] != "text":
+                                    content_blocks.append({"type": "text", "content": ""})
+                                content_blocks[-1]["content"] += msg_content
+                                content = f"{content}{msg_content}"
+                                
+                                while True:
+                                    prev_content = content
+                                    if DETECT_REASONING_TAGS:
+                                        content, content_blocks, _ = tag_content_handler("reasoning", reasoning_tags, content, content_blocks)
+                                        content, content_blocks, _ = tag_content_handler("solution", DEFAULT_SOLUTION_TAGS, content, content_blocks)
+                                    if DETECT_CODE_INTERPRETER:
+                                        content, content_blocks, _ = tag_content_handler("code_interpreter", DEFAULT_CODE_INTERPRETER_TAGS, content, content_blocks)
+                                        
+                                    if content == prev_content:
+                                        break
                             
                             # Process tool calls
                             res_tool_calls = message.get("tool_calls")
@@ -3130,10 +3142,21 @@ async def process_chat_response(
                                 # Process content
                                 msg_content = message.get("content")
                                 if msg_content:
-                                    content_blocks.append({
-                                        "type": "text",
-                                        "content": msg_content
-                                    })
+                                    if not content_blocks or content_blocks[-1]["type"] != "text":
+                                        content_blocks.append({"type": "text", "content": ""})
+                                    content_blocks[-1]["content"] += msg_content
+                                    content = f"{content}{msg_content}"
+                                    
+                                    while True:
+                                        prev_content = content
+                                        if DETECT_REASONING_TAGS:
+                                            content, content_blocks, _ = tag_content_handler("reasoning", reasoning_tags, content, content_blocks)
+                                            content, content_blocks, _ = tag_content_handler("solution", DEFAULT_SOLUTION_TAGS, content, content_blocks)
+                                        if DETECT_CODE_INTERPRETER:
+                                            content, content_blocks, _ = tag_content_handler("code_interpreter", DEFAULT_CODE_INTERPRETER_TAGS, content, content_blocks)
+                                            
+                                        if content == prev_content:
+                                            break
                                 
                                 # Process tool calls
                                 res_tool_calls = message.get("tool_calls")

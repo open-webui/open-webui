@@ -11,6 +11,7 @@
 
 	import { get, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	import { throttle, debounce } from 'throttle-debounce';
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import {
@@ -153,6 +154,11 @@
 				console.error('Failed to save tool preferences:', error);
 			}
 		}, 1000); // Wait 1 second after last change before saving
+	}
+
+	// Sync webSearchEnabled to params for persistence
+	$: if ($chatId && webSearchEnabled !== params.webSearchEnabled) {
+		params = { ...params, webSearchEnabled };
 	}
 
 	let showCommands = false;
@@ -452,7 +458,15 @@
 
 	const onSelectedModelIdsChange = () => {
 		if (oldSelectedModelIds.filter((id) => id).length > 0) {
+			const _webSearchEnabled = webSearchEnabled;
 			resetInput();
+
+			if (_webSearchEnabled) {
+				const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
+				if (model?.info?.meta?.capabilities?.web_search ?? true) {
+					webSearchEnabled = true;
+				}
+			}
 		}
 		oldSelectedModelIds = selectedModelIds;
 	};
@@ -1287,6 +1301,14 @@
 				params = chatContent?.params ?? {};
 				chatFiles = chatContent?.files ?? [];
 
+				// Restore webSearchEnabled from saved params
+				if (params.webSearchEnabled !== undefined) {
+					const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
+					if (model?.info?.meta?.capabilities?.web_search ?? true) {
+						webSearchEnabled = params.webSearchEnabled;
+					}
+				}
+
 				autoScroll = true;
 				await tick();
 
@@ -1315,7 +1337,7 @@
 		}
 	};
 
-	const scrollToBottom = async (behavior = 'auto') => {
+	const scrollToBottom = debounce(100, async (behavior = 'auto') => {
 		await tick();
 		if (messagesContainerElement) {
 			messagesContainerElement.scrollTo({
@@ -1323,7 +1345,18 @@
 				behavior
 			});
 		}
-	};
+	});
+
+	const onScroll = throttle(100, (e) => {
+		autoScroll =
+			messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
+			messagesContainerElement.clientHeight + 5;
+	});
+
+	onDestroy(() => {
+		onScroll.cancel();
+		scrollToBottom.cancel();
+	});
 	const chatCompletedHandler = async (chatId, modelId, responseMessageId, messages) => {
 		const res = await chatCompleted(localStorage.token, {
 			model: modelId,
@@ -3103,11 +3136,7 @@
 								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
 								id="messages-container"
 								bind:this={messagesContainerElement}
-								on:scroll={(e) => {
-									autoScroll =
-										messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
-										messagesContainerElement.clientHeight + 5;
-								}}
+								on:scroll={onScroll}
 							>
 								<div class=" h-full w-full flex flex-col">
 									<Messages
