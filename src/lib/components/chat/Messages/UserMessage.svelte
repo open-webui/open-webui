@@ -383,22 +383,33 @@
 					{/if}
 				</Name>
 			</div>
-		{:else if message.timestamp}
-			<div class="flex justify-end pr-2 text-xs">
-				<div
-					class="text-[0.65rem] font-medium first-letter:capitalize mb-0.5 {($settings?.highContrastMode ??
-					false)
-						? 'dark:text-gray-100 text-gray-900'
-						: 'invisible group-hover:visible transition text-gray-400'}"
-				>
-					<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
-						<span class="line-clamp-1"
-							>{$i18n.t(formatDate(message.timestamp * 1000), {
-								LOCALIZED_TIME: dayjs(message.timestamp * 1000).format('LT'),
-								LOCALIZED_DATE: dayjs(message.timestamp * 1000).format('L')
-							})}</span
-						>
-					</Tooltip>
+		{:else}
+			<div class="flex justify-end items-baseline pr-2 gap-1.5 mb-0.5">
+				{#if message.timestamp}
+					<div
+						class="text-[0.65rem] font-medium first-letter:capitalize {($settings?.highContrastMode ??
+						false)
+							? 'dark:text-gray-100 text-gray-900'
+							: 'invisible group-hover:visible transition text-gray-400'}"
+					>
+						<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
+							<span class="line-clamp-1"
+								>{$i18n.t(formatDate(message.timestamp * 1000), {
+									LOCALIZED_TIME: dayjs(message.timestamp * 1000).format('LT'),
+									LOCALIZED_DATE: dayjs(message.timestamp * 1000).format('L')
+								})}</span
+							>
+						</Tooltip>
+					</div>
+				{/if}
+				<div class="font-semibold text-sm">
+					{#if message.user}
+						{$i18n.t('You')}
+					{:else if $settings.showUsername || $_user.name !== user.name}
+						{user.name}
+					{:else}
+						{$i18n.t('You')}
+					{/if}
 				</div>
 			</div>
 		{/if}
@@ -877,16 +888,7 @@
 		</div>
 	</div>
 	{#if $settings?.chatBubble ?? true}
-		<div class={`shrink-0 ltr:ml-3 rtl:mr-3 mt-1 flex flex-col items-end`}>
-			<div class="font-semibold text-sm mb-1 text-right">
-				{#if message.user}
-					{$i18n.t('You')}
-				{:else if $settings.showUsername || $_user.name !== user.name}
-					{user.name}
-				{:else}
-					{$i18n.t('You')}
-				{/if}
-			</div>
+		<div class={`shrink-0 ltr:ml-3 rtl:mr-3 mt-1`}>
 			<ProfileImage
 				src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
 				className={'size-8 user-message-profile-image'}
