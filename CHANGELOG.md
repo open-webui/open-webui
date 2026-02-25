@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔐 **OAuth profile sync on login.** Administrators can now enable automatic synchronization of user profile name and email from OAuth providers on login via the OAUTH_UPDATE_NAME_ON_LOGIN and OAUTH_UPDATE_EMAIL_ON_LOGIN environment variables. [#21787](https://github.com/open-webui/open-webui/pull/21787), [Commit](https://github.com/open-webui/open-webui/commit/9478c5e7ac8254b5f522c006da0c1c49bb282727)
 - 👥 **Default group share permission.** Administrators can now configure the default sharing permission for new groups via the DEFAULT_GROUP_SHARE_PERMISSION environment variable, controlling whether anyone, no one, or only members can share to new groups. [Commit](https://github.com/open-webui/open-webui/commit/538501c88da034434bcd1969f15341dbbaf154e4)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 **Translation updates.** Translations for German, Simplified Chinese, and Traditional Chinese were enhanced and expanded.
+- 🌐 **Translation updates.** Translations for German, Portuguese (Brazil), Simplified Chinese, and Traditional Chinese were enhanced and expanded.
 
 ### Fixed
 
