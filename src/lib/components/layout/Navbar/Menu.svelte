@@ -10,7 +10,6 @@
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
 
 	import {
-		showOverview,
 		showControls,
 		showArtifacts,
 		mobile,
@@ -27,7 +26,6 @@
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Tags from '$lib/components/chat/Tags.svelte';
-	import Map from '$lib/components/icons/Map.svelte';
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
 	import AdjustmentsHorizontal from '$lib/components/icons/AdjustmentsHorizontal.svelte';
 	import Cube from '$lib/components/icons/Cube.svelte';
@@ -320,7 +318,6 @@
 					id="chat-controls-button"
 					on:click={async () => {
 						await showControls.set(true);
-						await showOverview.set(false);
 						await showArtifacts.set(false);
 						await showEmbeds.set(false);
 					}}
@@ -329,31 +326,14 @@
 					<div class="flex items-center">{$i18n.t('Controls')}</div>
 				</DropdownMenu.Item>
 			{/if}
-
-			<DropdownMenu.Item
-				draggable="false"
-				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
-				id="chat-overview-button"
-				on:click={async () => {
-					await showControls.set(true);
-					await showOverview.set(true);
-					await showArtifacts.set(false);
-					await showEmbeds.set(false);
-				}}
-			>
-				<Map className=" size-4" strokeWidth="1.5" />
-				<div class="flex items-center">{$i18n.t('Overview')}</div>
-			</DropdownMenu.Item>
-
 			{#if ($artifactContents ?? []).length > 0}
 				<DropdownMenu.Item
 					draggable="false"
 					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
-					id="chat-overview-button"
+					id="chat-artifacts-button"
 					on:click={async () => {
 						await showControls.set(true);
 						await showArtifacts.set(true);
-						await showOverview.set(false);
 						await showEmbeds.set(false);
 					}}
 				>

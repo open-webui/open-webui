@@ -34,7 +34,9 @@
 		toolServers,
 		terminalServers,
 		showSearch,
-		showSidebar
+		showSidebar,
+		showControls,
+		mobile
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
@@ -322,6 +324,14 @@
 				checkForVersionUpdates();
 			}
 		}
+		// Persist showControls via chatControlsSize (0 = closed, >0 = open at that size)
+		await showControls.set(!$mobile ? parseInt(localStorage.chatControlsSize || '0') > 0 : false);
+		showControls.subscribe((value) => {
+			if (!value) {
+				localStorage.chatControlsSize = '0';
+			}
+		});
+
 		await tick();
 
 		loaded = true;

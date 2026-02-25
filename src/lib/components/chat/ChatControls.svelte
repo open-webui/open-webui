@@ -1,5 +1,5 @@
 <script context="module">
-	let savedTab = 'controls';
+	let savedTab: 'controls' | 'files' | 'overview' = 'controls';
 </script>
 
 <script lang="ts">
@@ -13,7 +13,6 @@
 		mobile,
 		showControls,
 		showCallOverlay,
-		showOverview,
 		showArtifacts,
 		showEmbeds,
 		settings
@@ -28,6 +27,7 @@
 	import Artifacts from './Artifacts.svelte';
 	import Embeds from './ChatControls/Embeds.svelte';
 	import FileNav from './FileNav.svelte';
+	import Overview from './Overview.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -52,11 +52,14 @@
 	let largeScreen = false;
 	let dragged = false;
 	let minSize = 0;
+	let paneReady = false;
 
 	// Tab state for Controls+Files panel
-	let activeTab: 'controls' | 'files' = savedTab as 'controls' | 'files';
+	let activeTab: 'controls' | 'files' | 'overview' = savedTab;
 	$: savedTab = activeTab;
 	$: hasTerminal = !!($settings?.terminalServers ?? []).find((s) => s.enabled)?.url;
+	$: hasMessages = history?.messages && Object.keys(history.messages).length > 0;
+	$: if (!hasMessages && activeTab === 'overview') activeTab = 'controls';
 
 	// Attach a terminal file to the chat input
 	const handleTerminalAttach = async (blob: Blob, name: string, contentType: string) => {
@@ -166,9 +169,20 @@
 
 		document.addEventListener('mousedown', onMouseDown);
 		document.addEventListener('mouseup', onMouseUp);
+
+		// Delay enabling onCollapse so the Pane's initial collapsed state
+		// (defaultSize=0) doesn't reset showControls
+		setTimeout(() => {
+			paneReady = true;
+			// If controls were persisted as open, expand the pane now that it's ready
+			if ($showControls && pane) {
+				openPane();
+			}
+		}, 0);
 	});
 
 	onDestroy(() => {
+		paneReady = false;
 		if (!largeScreen) {
 			showControls.set(false);
 		}
@@ -178,8 +192,9 @@
 	});
 
 	const closeHandler = () => {
-		showControls.set(false);
-		showOverview.set(false);
+		if (!largeScreen) {
+			showControls.set(false);
+		}
 		showArtifacts.set(false);
 		showEmbeds.set(false);
 		if ($showCallOverlay) showCallOverlay.set(false);
@@ -188,7 +203,7 @@
 	$: if (!chatId) closeHandler();
 
 	// Helper: is a "special" full-screen panel active?
-	$: specialPanel = $showCallOverlay || $showOverview || $showArtifacts || $showEmbeds;
+	$: specialPanel = $showCallOverlay || $showArtifacts || $showEmbeds;
 </script>
 
 {#if !largeScreen}
@@ -198,7 +213,7 @@
 			onClose={() => showControls.set(false)}
 			className="min-h-[100dvh] !bg-white dark:!bg-gray-850"
 		>
-			<div class="h-full flex flex-col">
+			<div class="h-[100dvh] flex flex-col">
 				{#if $showCallOverlay}
 					<div
 						class="h-full max-h-[100dvh] bg-white text-gray-700 dark:bg-black dark:text-gray-300 flex justify-center"
@@ -217,17 +232,6 @@
 					<Embeds />
 				{:else if $showArtifacts}
 					<Artifacts {history} />
-				{:else if $showOverview}
-					{#await import('./Overview.svelte') then { default: Overview }}
-						<Overview
-							{history}
-							onNodeClick={(e) => {
-								const node = e.node;
-								showMessage(node.data.message, true);
-							}}
-							onClose={() => showControls.set(false)}
-						/>
-					{/await}
 				{:else}
 					<!-- Controls + Files tabs -->
 					<div class="flex flex-col h-full min-h-0">
@@ -252,6 +256,16 @@
 										{$i18n.t('Files')}
 									</button>
 								{/if}
+								{#if hasMessages}
+									<button
+										class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'overview'
+											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
+											: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+										on:click={() => (activeTab = 'overview')}
+									>
+										{$i18n.t('Overview')}
+									</button>
+								{/if}
 							</div>
 							<button
 								class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
@@ -272,9 +286,22 @@
 						</div>
 
 						<div
-							class="flex-1 overflow-y-auto min-h-0 {activeTab === 'controls' ? 'px-3 pt-1' : ''}"
+							class="flex-1 min-h-0 {activeTab === 'overview'
+								? 'h-full'
+								: activeTab === 'controls'
+									? 'overflow-y-auto px-3 pt-1'
+									: 'overflow-y-auto'}"
 						>
-							{#if activeTab === 'files' && hasTerminal}
+							{#if activeTab === 'overview'}
+								<Overview
+									{history}
+									onNodeClick={(e) => {
+										const node = e.node;
+										showMessage(node.data.message, true);
+									}}
+									onClose={() => showControls.set(false)}
+								/>
+							{:else if activeTab === 'files' && hasTerminal}
 								<FileNav onAttach={handleTerminalAttach} />
 							{:else}
 								<Controls embed={true} {models} bind:chatFiles bind:params />
@@ -311,7 +338,9 @@
 				}
 			}
 		}}
-		onCollapse={() => showControls.set(false)}
+		onCollapse={() => {
+			if (paneReady) showControls.set(false);
+		}}
 		collapsible={true}
 		class="z-10 bg-white dark:bg-gray-850"
 	>
@@ -339,22 +368,6 @@
 						<Embeds overlay={dragged} />
 					{:else if $showArtifacts}
 						<Artifacts {history} overlay={dragged} />
-					{:else if $showOverview}
-						{#await import('./Overview.svelte') then { default: Overview }}
-							<Overview
-								{history}
-								onNodeClick={(e) => {
-									const node = e.node;
-									if (node?.data?.message?.favorite) {
-										history.messages[node.data.message.id].favorite = true;
-									} else {
-										history.messages[node.data.message.id].favorite = null;
-									}
-									showMessage(node.data.message, true);
-								}}
-								onClose={() => showControls.set(false)}
-							/>
-						{/await}
 					{:else}
 						<!-- Controls + Files tabs -->
 						<div class="flex flex-col h-full min-h-0">
@@ -379,6 +392,16 @@
 											{$i18n.t('Files')}
 										</button>
 									{/if}
+									{#if hasMessages}
+										<button
+											class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'overview'
+												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
+												: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+											on:click={() => (activeTab = 'overview')}
+										>
+											{$i18n.t('Overview')}
+										</button>
+									{/if}
 								</div>
 								<button
 									class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
@@ -399,9 +422,27 @@
 							</div>
 
 							<div
-								class="flex-1 overflow-y-auto min-h-0 {activeTab === 'controls' ? 'px-3 pt-1' : ''}"
+								class="flex-1 min-h-0 {activeTab === 'overview'
+									? 'h-full'
+									: activeTab === 'controls'
+										? 'overflow-y-auto px-3 pt-1'
+										: 'overflow-y-auto'}"
 							>
-								{#if activeTab === 'files' && hasTerminal}
+								{#if activeTab === 'overview'}
+									<Overview
+										{history}
+										onNodeClick={(e) => {
+											const node = e.node;
+											if (node?.data?.message?.favorite) {
+												history.messages[node.data.message.id].favorite = true;
+											} else {
+												history.messages[node.data.message.id].favorite = null;
+											}
+											showMessage(node.data.message, true);
+										}}
+										onClose={() => showControls.set(false)}
+									/>
+								{:else if activeTab === 'files' && hasTerminal}
 									<FileNav onAttach={handleTerminalAttach} />
 								{:else}
 									<Controls embed={true} {models} bind:chatFiles bind:params />

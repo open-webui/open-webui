@@ -15,7 +15,19 @@
 	export let params = {};
 	export let embed = false;
 
-	let showValves = false;
+	// Persist collapsible section open/close state
+	const getOpen = (key: string, fallback = true): boolean => {
+		const v = localStorage.getItem(`chatControls.${key}`);
+		return v !== null ? v === 'true' : fallback;
+	};
+	const setOpen = (key: string) => (open: boolean) => {
+		localStorage.setItem(`chatControls.${key}`, String(open));
+	};
+
+	let showFiles = getOpen('files');
+	let showValves = getOpen('valves', false);
+	let showSystemPrompt = getOpen('systemPrompt');
+	let showAdvancedParams = getOpen('advancedParams');
 </script>
 
 <div class=" dark:text-white">
@@ -37,7 +49,12 @@
 	{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
 		<div class=" dark:text-gray-200 text-sm py-0.5 px-0.5">
 			{#if chatFiles.length > 0}
-				<Collapsible title={$i18n.t('Files')} open={true} buttonClassName="w-full">
+				<Collapsible
+					title={$i18n.t('Files')}
+					bind:open={showFiles}
+					onChange={setOpen('files')}
+					buttonClassName="w-full"
+				>
 					<div class="flex flex-col gap-1 mt-1.5" slot="content">
 						{#each chatFiles as file, fileIdx}
 							<FileItem
@@ -68,7 +85,12 @@
 			{/if}
 
 			{#if $user?.role === 'admin' || ($user?.permissions.chat?.valves ?? true)}
-				<Collapsible bind:open={showValves} title={$i18n.t('Valves')} buttonClassName="w-full">
+				<Collapsible
+					bind:open={showValves}
+					onChange={setOpen('valves')}
+					title={$i18n.t('Valves')}
+					buttonClassName="w-full"
+				>
 					<div class="text-sm" slot="content">
 						<Valves show={showValves} />
 					</div>
@@ -78,7 +100,12 @@
 			{/if}
 
 			{#if $user?.role === 'admin' || ($user?.permissions.chat?.system_prompt ?? true)}
-				<Collapsible title={$i18n.t('System Prompt')} open={true} buttonClassName="w-full">
+				<Collapsible
+					title={$i18n.t('System Prompt')}
+					bind:open={showSystemPrompt}
+					onChange={setOpen('systemPrompt')}
+					buttonClassName="w-full"
+				>
 					<div class="" slot="content">
 						<textarea
 							bind:value={params.system}
@@ -95,7 +122,12 @@
 			{/if}
 
 			{#if $user?.role === 'admin' || ($user?.permissions.chat?.params ?? true)}
-				<Collapsible title={$i18n.t('Advanced Params')} open={true} buttonClassName="w-full">
+				<Collapsible
+					title={$i18n.t('Advanced Params')}
+					bind:open={showAdvancedParams}
+					onChange={setOpen('advancedParams')}
+					buttonClassName="w-full"
+				>
 					<div class="text-sm mt-1.5" slot="content">
 						<div>
 							<AdvancedParams admin={$user?.role === 'admin'} custom={true} bind:params />
