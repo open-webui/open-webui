@@ -52,338 +52,108 @@ export interface DownloadedFile {
 	created_at: number;
 }
 
-/**
- * Get SharePoint authentication status for the current user
- */
-export const getSharepointAuthStatus = async (token: string): Promise<SharePointAuthStatus> => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/sharepoint/auth/status`, {
-		method: 'GET',
+// ---------------------------------------------------------------------------
+// Internal fetch helper — centralises auth header, error parsing, JSON decode
+// ---------------------------------------------------------------------------
+async function spFetch<T>(token: string, url: string, opts: RequestInit = {}): Promise<T> {
+	const res = await fetch(url, {
+		...opts,
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
+			authorization: `Bearer ${token}`,
+			...opts.headers
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail || err.message || 'Failed to get SharePoint auth status';
-			console.error('SharePoint auth status error:', err);
-			return null;
-		});
+	});
 
-	if (error) {
-		throw error;
+	if (!res.ok) {
+		const body = await res.json().catch(() => ({}));
+		throw body.detail ?? body.message ?? `SharePoint API error: ${res.status}`;
 	}
 
-	return res;
-};
+	return res.json();
+}
 
-/**
- * Get the OAuth login URL for SharePoint
- * Returns a URL that should be opened with window.open()
- */
-export const getSharepointAuthUrl = async (token: string): Promise<SharePointAuthUrl> => {
-	let error = null;
+// ---------------------------------------------------------------------------
+// Auth
+// ---------------------------------------------------------------------------
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/sharepoint/auth/login`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail || err.message || 'Failed to get SharePoint auth URL';
-			console.error('SharePoint auth URL error:', err);
-			return null;
-		});
+export const getSharepointAuthStatus = (token: string): Promise<SharePointAuthStatus> =>
+	spFetch(token, `${WEBUI_API_BASE_URL}/sharepoint/auth/status`);
 
-	if (error) {
-		throw error;
-	}
+export const getSharepointAuthUrl = (token: string): Promise<SharePointAuthUrl> =>
+	spFetch(token, `${WEBUI_API_BASE_URL}/sharepoint/auth/login`);
 
-	return res;
-};
+export const logoutSharepoint = (token: string): Promise<{ status: string }> =>
+	spFetch(token, `${WEBUI_API_BASE_URL}/sharepoint/auth/logout`, { method: 'POST' });
 
-/**
- * Logout from SharePoint (delete OAuth session)
- */
-export const logoutSharepoint = async (token: string): Promise<{ status: string }> => {
-	let error = null;
+// ---------------------------------------------------------------------------
+// Tenants & Sites
+// ---------------------------------------------------------------------------
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/sharepoint/auth/logout`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail || err.message || 'Failed to logout from SharePoint';
-			console.error('SharePoint logout error:', err);
-			return null;
-		});
+export const getSharepointTenants = (token: string): Promise<TenantInfo[]> =>
+	spFetch<TenantInfo[]>(token, `${WEBUI_API_BASE_URL}/sharepoint/tenants`).then((r) => r ?? []);
 
-	if (error) {
-		throw error;
-	}
+export const getSharepointSites = (token: string, tenantId: string): Promise<SiteInfo[]> =>
+	spFetch<SiteInfo[]>(
+		token,
+		`${WEBUI_API_BASE_URL}/sharepoint/tenants/${encodeURIComponent(tenantId)}/sites`
+	).then((r) => r ?? []);
 
-	return res;
-};
+// ---------------------------------------------------------------------------
+// Drives
+// ---------------------------------------------------------------------------
 
-/**
- * Get list of available tenants
- */
-export const getSharepointTenants = async (token: string): Promise<TenantInfo[]> => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/sharepoint/tenants`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail || err.message || 'Failed to get SharePoint tenants';
-			console.error('SharePoint tenants error:', err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res || [];
-};
-
-/**
- * Get list of SharePoint sites (departments)
- */
-export const getSharepointSites = async (token: string, tenantId: string): Promise<SiteInfo[]> => {
-	let error = null;
-
-	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/sharepoint/tenants/${encodeURIComponent(tenantId)}/sites`,
-		{
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
-		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail || err.message || 'Failed to get SharePoint sites';
-			console.error('SharePoint sites error:', err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res || [];
-};
-
-/**
- * Get list of drives (document libraries) for a specific site
- */
-export const getSharepointSiteDrives = async (
+export const getSharepointSiteDrives = (
 	token: string,
 	tenantId: string,
 	siteId: string
-): Promise<DriveInfo[]> => {
-	let error = null;
+): Promise<DriveInfo[]> =>
+	spFetch<DriveInfo[]>(
+		token,
+		`${WEBUI_API_BASE_URL}/sharepoint/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(siteId)}/drives`
+	).then((r) => r ?? []);
 
-	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/sharepoint/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(siteId)}/drives`,
-		{
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
-		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail || err.message || 'Failed to get site drives';
-			console.error('SharePoint site drives error:', err);
-			return null;
-		});
+export const getSharepointDrives = (token: string, tenantId: string): Promise<DriveInfo[]> =>
+	spFetch<DriveInfo[]>(
+		token,
+		`${WEBUI_API_BASE_URL}/sharepoint/tenants/${encodeURIComponent(tenantId)}/drives`
+	).then((r) => r ?? []);
 
-	if (error) {
-		throw error;
-	}
+// ---------------------------------------------------------------------------
+// Files
+// ---------------------------------------------------------------------------
 
-	return res || [];
-};
-
-/**
- * Get list of available drives (OneDrive + SharePoint document libraries)
- */
-export const getSharepointDrives = async (
-	token: string,
-	tenantId: string
-): Promise<DriveInfo[]> => {
-	let error = null;
-
-	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/sharepoint/tenants/${encodeURIComponent(tenantId)}/drives`,
-		{
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
-		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail || err.message || 'Failed to get SharePoint drives';
-			console.error('SharePoint drives error:', err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res || [];
-};
-
-/**
- * Get files and folders in a drive or folder
- */
-export const getSharepointFiles = async (
+export const getSharepointFiles = (
 	token: string,
 	tenantId: string,
 	driveId: string,
 	folderId?: string
 ): Promise<DriveItem[]> => {
-	let error = null;
-
-	const params = new URLSearchParams();
-	if (folderId) {
-		params.append('folder_id', folderId);
-	}
-
-	const baseUrl = `${WEBUI_API_BASE_URL}/sharepoint/tenants/${encodeURIComponent(tenantId)}/drives/${encodeURIComponent(driveId)}/files`;
-	const url = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
-
-	const res = await fetch(url, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail || err.message || 'Failed to get SharePoint files';
-			console.error('SharePoint files error:', err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res || [];
+	const base = `${WEBUI_API_BASE_URL}/sharepoint/tenants/${encodeURIComponent(tenantId)}/drives/${encodeURIComponent(driveId)}/files`;
+	const url = folderId ? `${base}?folder_id=${encodeURIComponent(folderId)}` : base;
+	return spFetch<DriveItem[]>(token, url).then((r) => r ?? []);
 };
 
-/**
- * Recursively get all files in a folder (traverses subfolders)
- * Returns only files, not folders
- */
-export const getSharepointFilesRecursive = async (
+export const getSharepointFilesRecursive = (
 	token: string,
 	tenantId: string,
 	driveId: string,
 	folderId?: string,
-	maxDepth: number = 10,
+	maxDepth = 10,
 	signal?: AbortSignal
 ): Promise<DriveItem[]> => {
-	let error = null;
-
-	const params = new URLSearchParams();
-	if (folderId) {
-		params.append('folder_id', folderId);
-	}
-	params.append('max_depth', maxDepth.toString());
-
-	const baseUrl = `${WEBUI_API_BASE_URL}/sharepoint/tenants/${encodeURIComponent(tenantId)}/drives/${encodeURIComponent(driveId)}/files/recursive`;
-	const url = `${baseUrl}?${params.toString()}`;
-
-	const res = await fetch(url, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		signal
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail || err.message || 'Failed to get SharePoint files recursively';
-			console.error('SharePoint recursive files error:', err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res || [];
+	const params = new URLSearchParams({ max_depth: String(maxDepth) });
+	if (folderId) params.set('folder_id', folderId);
+	const url = `${WEBUI_API_BASE_URL}/sharepoint/tenants/${encodeURIComponent(tenantId)}/drives/${encodeURIComponent(driveId)}/files/recursive?${params}`;
+	return spFetch<DriveItem[]>(token, url, { signal }).then((r) => r ?? []);
 };
 
-/**
- * Download a file from SharePoint and store it in OpenWebUI
- * Returns the created file model
- */
-export const downloadSharepointFile = async (
+// ---------------------------------------------------------------------------
+// Download
+// ---------------------------------------------------------------------------
+
+export const downloadSharepointFile = (
 	token: string,
 	tenantId: string,
 	driveId: string,
@@ -391,33 +161,10 @@ export const downloadSharepointFile = async (
 	filename?: string,
 	signal?: AbortSignal
 ): Promise<DownloadedFile> => {
-	let error = null;
-
 	const url = `${WEBUI_API_BASE_URL}/sharepoint/tenants/${encodeURIComponent(tenantId)}/drives/${encodeURIComponent(driveId)}/files/${encodeURIComponent(fileId)}/download`;
-
-	const res = await fetch(url, {
+	return spFetch<DownloadedFile>(token, url, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		body: filename ? JSON.stringify({ filename }) : undefined,
 		signal
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail || err.message || 'Failed to download file from SharePoint';
-			console.error('SharePoint download error:', err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	});
 };

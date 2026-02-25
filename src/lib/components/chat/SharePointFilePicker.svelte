@@ -1,21 +1,16 @@
 <script lang="ts">
-	import { createEventDispatcher, onMount, tick } from 'svelte';
-	import { slide } from 'svelte/transition';
+	import { createEventDispatcher, onMount, onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { DropdownMenu } from 'bits-ui';
 	import Fuse from 'fuse.js';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { flyAndScale } from '$lib/utils/transitions';
 	import Search from '$lib/components/icons/Search.svelte';
-	import Check from '$lib/components/icons/Check.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import {
 		getSharepointAuthStatus,
 		getSharepointAuthUrl,
 		logoutSharepoint,
 		getSharepointTenants,
-		getSharepointDrives,
 		getSharepointSites,
 		getSharepointSiteDrives,
 		getSharepointFiles,
@@ -37,7 +32,7 @@
 	const RECENT_DRIVES_KEY = 'sharepoint_recent_drives';
 	const MAX_RECENT_DRIVES = 5;
 
-	// ===== PRESERVED STATE =====
+	// ===== STATE =====
 	let authStatus: SharePointAuthStatus | null = null;
 	let tenants: TenantInfo[] = [];
 	let currentTenant: TenantInfo | null = null;
@@ -59,54 +54,11 @@
 	let downloading = false;
 	let abortController: AbortController | null = null;
 	let importProgress = { current: 0, total: 0 };
-
-	// Preserved dropdown state (kept for API compatibility)
-	let siteDropdownOpen = false;
-	let siteSearchValue = '';
-	let selectedSiteIdx = 0;
-
-	let driveDropdownOpen = false;
-	let driveSearchValue = '';
-	let selectedDriveIdx = 0;
-	let selectedDriveType = '';
-
+	// Auth polling cleanup
+	let authPollCleanup: (() => void) | null = null;
 	let recentDriveIds: string[] = [];
 
-	$: recentDrives = recentDriveIds
-		.map((id) => drives.find((d) => d.id === id))
-		.filter((d): d is DriveInfo => d !== undefined);
-
-	$: driveTypes = [...new Set(drives.map((d) => d.drive_type).filter(Boolean))].sort();
-
-	const fuse = new Fuse<DriveInfo>([], {
-		keys: ['name', 'owner', 'drive_type'],
-		threshold: 0.4
-	});
-
-	const siteFuse = new Fuse<SiteInfo>([], {
-		keys: ['display_name', 'name'],
-		threshold: 0.4
-	});
-
-	$: if (drives.length > 0) {
-		fuse.setCollection(drives);
-	}
-
-	$: if (sites.length > 0) {
-		siteFuse.setCollection(sites);
-	}
-
-	$: filteredSites = siteSearchValue ? siteFuse.search(siteSearchValue).map((r) => r.item) : sites;
-
-	$: filteredDrives = (() => {
-		let result = driveSearchValue ? fuse.search(driveSearchValue).map((r) => r.item) : drives;
-		if (selectedDriveType) {
-			result = result.filter((d) => d.drive_type === selectedDriveType);
-		}
-		return result;
-	})();
-
-	// ===== TREE STATE (NEW) =====
+	// ===== TREE STATE =====
 
 	interface TreeNode {
 		key: string;
@@ -432,71 +384,14 @@
 		} catch {}
 	}
 
-	function handleSiteKeydown(e: KeyboardEvent) {
-		if (e.code === 'Enter' && filteredSites.length > 0) {
-			selectSite(filteredSites[selectedSiteIdx]);
-			return;
-		} else if (e.code === 'ArrowDown') {
-			e.preventDefault();
-			e.stopPropagation();
-			selectedSiteIdx = Math.min(selectedSiteIdx + 1, filteredSites.length - 1);
-		} else if (e.code === 'ArrowUp') {
-			e.preventDefault();
-			e.stopPropagation();
-			selectedSiteIdx = Math.max(selectedSiteIdx - 1, 0);
-		} else {
-			selectedSiteIdx = 0;
-		}
-		scrollToSelectedSite();
-	}
-
-	function scrollToSelectedSite() {
-		const item = document.querySelector('[data-site-selected="true"]');
-		item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
-	}
-
-	function handleDriveKeydown(e: KeyboardEvent) {
-		if (e.code === 'Enter' && filteredDrives.length > 0) {
-			selectDrive(filteredDrives[selectedDriveIdx]);
-			driveDropdownOpen = false;
-			return;
-		} else if (e.code === 'ArrowDown') {
-			e.preventDefault();
-			e.stopPropagation();
-			selectedDriveIdx = Math.min(selectedDriveIdx + 1, filteredDrives.length - 1);
-		} else if (e.code === 'ArrowUp') {
-			e.preventDefault();
-			e.stopPropagation();
-			selectedDriveIdx = Math.max(selectedDriveIdx - 1, 0);
-		} else {
-			selectedDriveIdx = 0;
-		}
-		scrollToSelectedDrive();
-	}
-
-	function scrollToSelectedDrive() {
-		const item = document.querySelector('[data-drive-selected="true"]');
-		item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
-	}
-
-	async function resetSiteSelection() {
-		await tick();
-		const idx = filteredSites.findIndex((s) => s.id === currentSite?.id);
-		selectedSiteIdx = idx >= 0 ? idx : 0;
-		scrollToSelectedSite();
-	}
-
-	async function resetDriveSelection() {
-		await tick();
-		const idx = filteredDrives.findIndex((d) => d.id === currentDrive?.id);
-		selectedDriveIdx = idx >= 0 ? idx : 0;
-		scrollToSelectedDrive();
-	}
-
 	onMount(async () => {
 		loadRecentDrives();
 		await checkAuthStatus();
 	});
+	onDestroy(() => {
+		authPollCleanup?.();
+	});
+
 
 	async function checkAuthStatus() {
 		loadingAuth = true;
@@ -538,7 +433,7 @@
 		drives = [];
 		items = [];
 		folderStack = [];
-		selectedItems.clear();
+		selectedItems = new Set();
 		await loadSites();
 	}
 
@@ -575,20 +470,18 @@
 
 	async function selectSite(site: SiteInfo) {
 		currentSite = site;
-		siteSearchValue = '';
-		siteDropdownOpen = false;
 		currentDrive = null;
 		drives = [];
 		folderStack = [];
-		selectedItems.clear();
-		selectedFolders.clear();
+		selectedItems = new Set();
+		selectedFolders = new Set();
 
 		loadingDrives = true;
 		try {
-            drives = await getSharepointSiteDrives(token, currentTenant!.id, site.id);
-            // Filter out system libraries like Preservation Hold Library
-            drives = drives.filter((d) => !d.name.toLowerCase().includes('preservation hold'));
-            // Don't auto-select a drive - let user pick from the sidebar tree
+			drives = await getSharepointSiteDrives(token, currentTenant!.id, site.id);
+			// Filter out system libraries like Preservation Hold Library
+			drives = drives.filter((d) => !d.name.toLowerCase().includes('preservation hold'));
+			// Don't auto-select a drive - let user pick from the sidebar tree
 			// Populate tree cache and auto-expand this site
 			const siteKey = `site:${currentTenant!.id}:${site.id}`;
 			const tenant = currentTenant!;
@@ -614,25 +507,42 @@
 	}
 
 	async function startAuth() {
+		// Kill any existing poll before starting a new one
+		authPollCleanup?.();
+
 		try {
 			const { url } = await getSharepointAuthUrl(token);
 			const popup = window.open(url, '_blank', 'width=600,height=700');
 
-			const pollInterval = setInterval(async () => {
+			let active = true;
+			const interval = setInterval(async () => {
+				// Stop if popup was manually closed
+				if (popup?.closed) {
+					authPollCleanup?.();
+					return;
+				}
+				if (!active) return;
 				try {
 					const status = await getSharepointAuthStatus(token);
 					if (status.authenticated) {
-						clearInterval(pollInterval);
+						authPollCleanup?.();
 						authStatus = status;
 						await loadTenants();
 						toast.success('Connected to SharePoint');
 					}
-				} catch (e) {
-					// Ignore polling errors
+				} catch {
+					// Ignore transient polling errors
 				}
 			}, 2000);
 
-			setTimeout(() => clearInterval(pollInterval), 5 * 60 * 1000);
+			const timeout = setTimeout(() => authPollCleanup?.(), 5 * 60 * 1000);
+
+			authPollCleanup = () => {
+				active = false;
+				clearInterval(interval);
+				clearTimeout(timeout);
+				authPollCleanup = null;
+			};
 		} catch (error) {
 			console.error('Failed to start auth:', error);
 			toast.error('Failed to start SharePoint authentication');
@@ -650,8 +560,8 @@
 			drives = [];
 			currentDrive = null;
 			items = [];
-			selectedItems.clear();
-			selectedFolders.clear();
+			selectedItems = new Set();
+			selectedFolders = new Set();
 			folderStack = [];
 			// Reset tree state
 			treeChildrenCache = new Map();
@@ -664,31 +574,14 @@
 		}
 	}
 
-	async function loadDrives() {
-		if (!currentTenant) {
-			console.error('No tenant selected');
-			return;
-		}
-		loadingDrives = true;
-		try {
-            drives = await getSharepointDrives(token, currentTenant.id);
-            // Filter out system libraries like Preservation Hold Library
-            drives = drives.filter((d) => !d.name.toLowerCase().includes('preservation hold'));
-            // Don't auto-select a drive - let user pick from the sidebar tree
-		} catch (error) {
-			console.error('Failed to load drives:', error);
-			toast.error('Failed to load drives');
-		} finally {
-			loadingDrives = false;
-		}
-	}
+
 
 	async function selectDrive(drive: DriveInfo) {
 		currentDrive = drive;
 		saveRecentDrive(drive.id);
 		folderStack = [];
-		selectedItems.clear();
-		selectedFolders.clear();
+		selectedItems = new Set();
+		selectedFolders = new Set();
 		await loadItems();
 	}
 
@@ -707,18 +600,34 @@
 	}
 
 	async function navigateToFolder(item: DriveItem) {
-		folderStack = [...folderStack, { id: item.id, name: item.name }];
-		selectedItems.clear();
-		selectedFolders.clear();
+		const newFolderStack = [...folderStack, { id: item.id, name: item.name }];
+		folderStack = newFolderStack;
+		selectedItems = new Set();
+		selectedFolders = new Set();
+		// Sync tree: expand the folder node if it exists in cache
+		if (currentDrive) {
+			const folderKey = `folder:${currentDrive.id}:${item.id}`;
+			expandedKeys.add(folderKey);
+			expandedKeys = new Set(expandedKeys);
+			if (!treeChildrenCache.has(folderKey)) {
+				// Lazy-load tree children for this folder so sidebar stays in sync
+				const folderNode: TreeNode | undefined = (() => {
+					for (const [, children] of treeChildrenCache) {
+						const found = children.find((n) => n.key === folderKey);
+						if (found) return found;
+					}
+				})();
+				if (folderNode) loadTreeChildren(folderNode);
+			}
+		}
 		await loadItems(item.id);
 	}
 
 	async function navigateUp() {
 		if (folderStack.length === 0) return;
-
 		folderStack = folderStack.slice(0, -1);
-		selectedItems.clear();
-		selectedFolders.clear();
+		selectedItems = new Set();
+		selectedFolders = new Set();
 		const parentId = folderStack.length > 0 ? folderStack[folderStack.length - 1].id : undefined;
 		await loadItems(parentId);
 	}
@@ -726,24 +635,21 @@
 	async function navigateToBreadcrumb(index: number) {
 		if (index < 0) {
 			folderStack = [];
-			selectedItems.clear();
-			selectedFolders.clear();
+			selectedItems = new Set();
+			selectedFolders = new Set();
 			await loadItems();
 		} else {
 			folderStack = folderStack.slice(0, index + 1);
-			selectedItems.clear();
-			selectedFolders.clear();
+			selectedItems = new Set();
+			selectedFolders = new Set();
 			await loadItems(folderStack[index].id);
 		}
 	}
 
 	function toggleFolderSelection(item: DriveItem, event: MouseEvent) {
 		event.stopPropagation();
-		if (selectedFolders.has(item.id)) {
-			selectedFolders.delete(item.id);
-		} else {
-			selectedFolders.add(item.id);
-		}
+		if (selectedFolders.has(item.id)) selectedFolders.delete(item.id);
+		else selectedFolders.add(item.id);
 		selectedFolders = selectedFolders;
 	}
 
@@ -752,176 +658,131 @@
 			navigateToFolder(item);
 			return;
 		}
-
-		if (selectedItems.has(item.id)) {
-			selectedItems.delete(item.id);
-		} else {
-			selectedItems.add(item.id);
-		}
+		if (selectedItems.has(item.id)) selectedItems.delete(item.id);
+		else selectedItems.add(item.id);
 		selectedItems = selectedItems;
 	}
 
+	// ===== IMPORT HELPERS =====
+
+	function buildItemsMap(): Map<string, DriveItem> {
+		return new Map(items.map((i) => [i.id, i]));
+	}
+
+	async function importToSpace(signal: AbortSignal) {
+		const itemsMap = buildItemsMap();
+		let totalAdded = 0;
+		let totalSkipped = 0;
+		let totalFailed = 0;
+
+		importProgress.total = selectedFolders.size + selectedItems.size;
+		importProgress = { ...importProgress };
+
+		for (const folderId of selectedFolders) {
+			if (signal.aborted) break;
+			const folderName = itemsMap.get(folderId)?.name ?? 'folder';
+			const result = await addSharePointFolderToSpace(
+				token, spaceId!, currentTenant!.id, currentDrive!.id,
+				folderId, folderName, currentSite?.display_name, true, 10, signal
+			);
+			if (signal.aborted) break;
+			totalAdded += result.added;
+			totalSkipped += result.skipped;
+			totalFailed += result.failed;
+			for (const file of result.files) dispatch('fileDownloaded', file);
+			importProgress = { ...importProgress, current: importProgress.current + 1 };
+		}
+
+		for (const itemId of selectedItems) {
+			if (signal.aborted) break;
+			const item = itemsMap.get(itemId);
+			if (!item || item.is_folder) continue;
+			const result = await downloadSharepointFile(
+				token, currentTenant!.id, currentDrive!.id, item.id, item.name, signal
+			);
+			if (signal.aborted) break;
+			dispatch('fileDownloaded', result);
+			totalAdded++;
+			importProgress = { ...importProgress, current: importProgress.current + 1 };
+		}
+
+		if (signal.aborted) {
+			toast.warning(`Cancelled. Imported ${totalAdded} file(s) before stopping.`);
+		} else {
+			const msg =
+				`Imported ${totalAdded} file(s)`
+				+ (totalSkipped > 0 ? `, ${totalSkipped} skipped` : '')
+				+ (totalFailed > 0 ? `, ${totalFailed} failed` : '');
+			toast.success(msg);
+		}
+	}
+
+	async function importDirect(signal: AbortSignal) {
+		const itemsMap = buildItemsMap();
+		const filesToDownload: DriveItem[] = items.filter(
+			(item) => selectedItems.has(item.id) && !item.is_folder
+		);
+
+		for (const folderId of selectedFolders) {
+			if (signal.aborted) break;
+			const folderName = itemsMap.get(folderId)?.name ?? 'folder';
+			toast.info(`Scanning ${folderName}...`);
+			const folderFiles = await getSharepointFilesRecursive(
+				token, currentTenant!.id, currentDrive!.id, folderId, 10, signal
+			);
+			if (signal.aborted) break;
+			filesToDownload.push(...folderFiles);
+		}
+
+		if (signal.aborted) {
+			toast.warning('Cancelled during folder scan.');
+			return;
+		}
+		if (filesToDownload.length === 0) {
+			toast.warning('No files to import');
+			return;
+		}
+
+		importProgress = { current: 0, total: filesToDownload.length };
+		for (const file of filesToDownload) {
+			if (signal.aborted) break;
+			const result = await downloadSharepointFile(
+				token, currentTenant!.id, currentDrive!.id, file.id, file.name, signal
+			);
+			if (signal.aborted) break;
+			dispatch('fileDownloaded', result);
+			importProgress = { ...importProgress, current: importProgress.current + 1 };
+		}
+
+		if (signal.aborted) {
+			toast.warning(`Cancelled. Imported ${importProgress.current} of ${importProgress.total} files.`);
+		} else {
+			toast.success(`Imported ${filesToDownload.length} file(s)`);
+		}
+	}
+
 	async function downloadSelected() {
-		if (!currentDrive || (selectedItems.size === 0 && selectedFolders.size === 0)) return;
+		if (!currentDrive || !currentTenant || (selectedItems.size === 0 && selectedFolders.size === 0)) return;
 
 		downloading = true;
 		abortController = new AbortController();
 		importProgress = { current: 0, total: 0 };
-
-		if (!currentTenant || !currentDrive) {
-			toast.error('No tenant or drive selected');
-			downloading = false;
-			abortController = null;
-			return;
-		}
-
 		const signal = abortController.signal;
 
 		try {
 			if (spaceId && selectedFolders.size > 0) {
-				let totalAdded = 0;
-				let totalSkipped = 0;
-				let totalFailed = 0;
-
-				importProgress.total = selectedFolders.size + selectedItems.size;
-
-				for (const folderId of selectedFolders) {
-					if (signal.aborted) break;
-
-					const folder = items.find((i) => i.id === folderId);
-					const folderName = folder?.name || 'folder';
-
-					const result = await addSharePointFolderToSpace(
-						token,
-						spaceId,
-						currentTenant.id,
-						currentDrive.id,
-						folderId,
-						folderName,
-						currentSite?.display_name,
-						true,
-						10,
-						signal
-					);
-
-					if (signal.aborted) break;
-
-					totalAdded += result.added;
-					totalSkipped += result.skipped;
-					totalFailed += result.failed;
-
-					for (const file of result.files) {
-						dispatch('fileDownloaded', file);
-					}
-					importProgress.current++;
-					importProgress = importProgress;
-				}
-
-				for (const itemId of selectedItems) {
-					if (signal.aborted) break;
-
-					const item = items.find((i) => i.id === itemId && !i.is_folder);
-					if (item) {
-						const result = await downloadSharepointFile(
-							token,
-							currentTenant.id,
-							currentDrive.id,
-							item.id,
-							item.name,
-							signal
-						);
-						if (signal.aborted) break;
-						dispatch('fileDownloaded', result);
-						totalAdded++;
-						importProgress.current++;
-						importProgress = importProgress;
-					}
-				}
-
-				if (signal.aborted) {
-					toast.warning(`Cancelled. Imported ${totalAdded} file(s) before stopping.`);
-				} else {
-					const message =
-						`Imported ${totalAdded} file(s)` +
-						(totalSkipped > 0 ? `, ${totalSkipped} skipped` : '') +
-						(totalFailed > 0 ? `, ${totalFailed} failed` : '');
-					toast.success(message);
-				}
+				await importToSpace(signal);
 			} else {
-				const filesToDownload = items.filter(
-					(item) => selectedItems.has(item.id) && !item.is_folder
-				);
-
-				for (const folderId of selectedFolders) {
-					if (signal.aborted) break;
-
-					const folder = items.find((i) => i.id === folderId);
-					const folderName = folder?.name || 'folder';
-					toast.info(`Scanning ${folderName}...`);
-
-					const folderFiles = await getSharepointFilesRecursive(
-						token,
-						currentTenant.id,
-						currentDrive.id,
-						folderId,
-						10,
-						signal
-					);
-					if (signal.aborted) break;
-					filesToDownload.push(...folderFiles);
-				}
-
-				if (signal.aborted) {
-					toast.warning('Cancelled during folder scan.');
-				} else if (filesToDownload.length === 0) {
-					toast.warning('No files to import');
-					downloading = false;
-					abortController = null;
-					importProgress = { current: 0, total: 0 };
-					return;
-				} else {
-					importProgress.total = filesToDownload.length;
-					importProgress = importProgress;
-
-					for (const file of filesToDownload) {
-						if (signal.aborted) break;
-
-						const result = await downloadSharepointFile(
-							token,
-							currentTenant.id,
-							currentDrive.id,
-							file.id,
-							file.name,
-							signal
-						);
-						if (signal.aborted) break;
-						dispatch('fileDownloaded', result);
-						importProgress.current++;
-						importProgress = importProgress;
-					}
-
-					if (signal.aborted) {
-						toast.warning(
-							`Cancelled. Imported ${importProgress.current} of ${importProgress.total} files.`
-						);
-					} else {
-						toast.success(`Imported ${filesToDownload.length} file(s)`);
-					}
-				}
+				await importDirect(signal);
 			}
-
 			if (!signal.aborted) {
-				selectedItems.clear();
-				selectedFolders.clear();
-				selectedItems = selectedItems;
-				selectedFolders = selectedFolders;
+				selectedItems = new Set();
+				selectedFolders = new Set();
 				show = false;
 			}
 		} catch (error) {
 			if (signal.aborted) {
-				toast.warning(
-					`Cancelled. Imported ${importProgress.current} of ${importProgress.total} files.`
-				);
+				toast.warning(`Cancelled. Imported ${importProgress.current} of ${importProgress.total} files.`);
 			} else {
 				console.error('Failed to download files:', error);
 				toast.error('Failed to download files');
@@ -1143,7 +1004,7 @@
 				<div
 					class="flex flex-col border-r border-gray-200/70 dark:border-gray-700/50 bg-gray-50/60 dark:bg-gray-900/30 transition-all duration-200 {sidebarCollapsed
 						? 'w-0 overflow-hidden'
-						: 'w-52 sm:w-56 shrink-0'}"
+						: 'w-60 sm:w-64 shrink-0'}"
 				>
 					<!-- Search bar -->
 					<div class="px-2.5 py-2 border-b border-gray-200/60 dark:border-gray-700/40 shrink-0">
@@ -1198,7 +1059,7 @@
 										{activeKey === item.node.key
 										? 'bg-blue-500/10 dark:bg-blue-500/15'
 										: 'hover:bg-gray-100/80 dark:hover:bg-gray-800/60'}"
-									style="padding-left: {6 + item.depth * 10}px; padding-right: 4px;"
+									style="padding-left: {6 + item.depth * 8}px; padding-right: 4px;"
 									on:click={() => navigateToTreeNode(item.node)}
 								>
 									<!-- Expand/collapse chevron -->
@@ -1520,23 +1381,18 @@
 									<!-- svelte-ignore a11y_no_static_element_interactions -->
 									<div
 										class="w-5 shrink-0 mr-3 flex items-center justify-center"
-										on:click|stopPropagation={() => {
-											if (item.is_folder) {
-												if (selectedFolders.has(item.id)) {
-													selectedFolders.delete(item.id);
-												} else {
-													selectedFolders.add(item.id);
-												}
-												selectedFolders = selectedFolders;
-											} else {
-												if (selectedItems.has(item.id)) {
-													selectedItems.delete(item.id);
-												} else {
-													selectedItems.add(item.id);
-												}
-												selectedItems = selectedItems;
-											}
-										}}
+										title={item.is_folder ? 'Import all files in this folder' : undefined}
+								on:click|stopPropagation={() => {
+									if (item.is_folder) {
+										const next = new Set(selectedFolders);
+										if (next.has(item.id)) next.delete(item.id); else next.add(item.id);
+										selectedFolders = next;
+									} else {
+										const next = new Set(selectedItems);
+										if (next.has(item.id)) next.delete(item.id); else next.add(item.id);
+										selectedItems = next;
+									}
+								}}
 									>
 										<div
 											class="w-4 h-4 rounded border-2 flex items-center justify-center transition-all cursor-pointer
@@ -1597,9 +1453,10 @@
 										</div>
 										{#if item.is_folder}
 											<div
-												class="text-[10px] text-gray-400 dark:text-gray-600 mt-0.5 hidden sm:block"
+												class="text-[10px] mt-0.5 hidden sm:block transition-colors
+													{selectedFolders.has(item.id) ? 'text-amber-500/80 dark:text-amber-400/70' : 'text-gray-400 dark:text-gray-600'}"
 											>
-												Folder · click to open
+												{selectedFolders.has(item.id) ? 'All contents will be imported' : 'Folder · click to open'}
 											</div>
 										{/if}
 									</div>
@@ -1651,88 +1508,95 @@
 			</div>
 
 			<!-- ── Footer ────────────────────────────────────────── -->
-			<div
-				class="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-gray-800/80 bg-gray-50/40 dark:bg-gray-900/20 shrink-0"
-			>
-				<!-- Status / selection count -->
-				<div class="text-xs text-gray-500 dark:text-gray-400 min-w-0 mr-3">
-					{#if downloading && importProgress.total > 0}
-						<span class="inline-flex items-center gap-2">
-							<Spinner className="size-3 shrink-0" />
-							<span class="font-medium text-gray-700 dark:text-gray-300 truncate">
-								Importing {importProgress.current} / {importProgress.total}...
-							</span>
-						</span>
-					{:else if downloading}
-						<span class="inline-flex items-center gap-2">
-							<Spinner className="size-3 shrink-0" />
-							<span class="text-gray-500 dark:text-gray-400">Scanning folders...</span>
-						</span>
-					{:else if selectedItems.size > 0 || selectedFolders.size > 0}
-						<span class="inline-flex items-center gap-1.5 flex-wrap">
-							{#if selectedItems.size > 0}
-								<span
-									class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-blue-500 text-white text-[10px] font-bold"
-								>
-									{selectedItems.size}
-								</span>
-								<span>file{selectedItems.size === 1 ? '' : 's'}</span>
-							{/if}
-							{#if selectedFolders.size > 0}
-								{#if selectedItems.size > 0}
-									<span class="text-gray-300 dark:text-gray-600">+</span>
-								{/if}
-								<span
-									class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-amber-500 text-white text-[10px] font-bold"
-								>
-									{selectedFolders.size}
-								</span>
-								<span>folder{selectedFolders.size === 1 ? '' : 's'}</span>
-							{/if}
-							<span class="text-gray-400 dark:text-gray-500">selected</span>
-						</span>
-					{:else}
-						<span class="text-gray-400 dark:text-gray-500">Select files or folders to import</span>
-					{/if}
-				</div>
+			<div class="shrink-0 border-t border-gray-100 dark:border-gray-800/80 bg-gray-50/40 dark:bg-gray-900/20">
+				<!-- Thin progress bar -->
+				{#if downloading}
+					<div class="h-0.5 bg-gray-200 dark:bg-gray-800 overflow-hidden">
+						{#if importProgress.total > 0}
+							<div
+								class="h-full bg-blue-500 dark:bg-blue-400 transition-all duration-500 ease-out"
+								style="width: {Math.round((importProgress.current / importProgress.total) * 100)}%"
+							/>
+						{:else}
+							<div class="h-full bg-blue-500/40 dark:bg-blue-400/40 animate-pulse" />
+						{/if}
+					</div>
+				{/if}
 
-				<!-- Action buttons -->
-				<div class="flex items-center gap-2 shrink-0">
-					{#if downloading}
-						<button
-							class="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:text-white dark:hover:text-white hover:bg-red-500 dark:hover:bg-red-600 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg transition-all"
-							on:click={cancelImport}
-						>
-							Cancel Import
-						</button>
-					{:else}
-						<button
-							class="px-3 py-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
-							on:click={() => (show = false)}
-						>
-							Cancel
-						</button>
-						<button
-							class="px-3 py-1.5 text-xs font-medium text-white bg-gray-900 dark:bg-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-sm active:scale-[0.98]"
-							disabled={selectedItems.size === 0 && selectedFolders.size === 0}
-							on:click={downloadSelected}
-						>
-							<svg
-								class="w-3.5 h-3.5"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								viewBox="0 0 24 24"
+				<div class="flex items-center justify-between px-4 py-3">
+					<!-- Status / selection count -->
+					<div class="text-xs text-gray-500 dark:text-gray-400 min-w-0 mr-3">
+						{#if downloading && importProgress.total > 0}
+							<span class="inline-flex items-center gap-2">
+								<Spinner className="size-3 shrink-0" />
+								<span class="font-medium text-gray-700 dark:text-gray-300 truncate tabular-nums">
+									{importProgress.current}<span class="text-gray-400 dark:text-gray-500 mx-0.5">/</span>{importProgress.total}
+								</span>
+								<span class="text-gray-400 dark:text-gray-500">imported</span>
+							</span>
+						{:else if downloading}
+							<span class="inline-flex items-center gap-2">
+								<Spinner className="size-3 shrink-0" />
+								<span class="text-gray-500 dark:text-gray-400">Scanning folders…</span>
+							</span>
+						{:else if selectedItems.size > 0 || selectedFolders.size > 0}
+							<span class="inline-flex items-center gap-1.5 flex-wrap">
+								{#if selectedItems.size > 0}
+									<span class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-blue-500/90 text-white text-[10px] font-bold tabular-nums">
+										{selectedItems.size}
+									</span>
+									<span>file{selectedItems.size === 1 ? '' : 's'}</span>
+								{/if}
+								{#if selectedFolders.size > 0}
+									{#if selectedItems.size > 0}
+										<span class="text-gray-300 dark:text-gray-600">·</span>
+									{/if}
+									<span class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-amber-500/90 text-white text-[10px] font-bold tabular-nums">
+										{selectedFolders.size}
+									</span>
+									<span>folder{selectedFolders.size === 1 ? '' : 's'}</span>
+								{/if}
+								<span class="text-gray-400 dark:text-gray-500">selected</span>
+							</span>
+						{:else}
+							<span class="text-gray-400 dark:text-gray-500">Select files or folders to import</span>
+						{/if}
+					</div>
+
+					<!-- Action buttons -->
+					<div class="flex items-center gap-2 shrink-0">
+						{#if downloading}
+							<button
+								class="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:text-white dark:hover:text-white hover:bg-red-500 dark:hover:bg-red-600 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg transition-all"
+								on:click={cancelImport}
 							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
-								/>
-							</svg>
-							Import Selected
-						</button>
-					{/if}
+								Cancel Import
+							</button>
+						{:else}
+							<button
+								class="px-3 py-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
+								on:click={() => (show = false)}
+							>
+								Cancel
+							</button>
+							<button
+								class="px-3.5 py-1.5 text-xs font-medium text-white bg-gray-900 dark:bg-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-sm active:scale-[0.98]"
+								disabled={selectedItems.size === 0 && selectedFolders.size === 0}
+								on:click={downloadSelected}
+							>
+								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+								</svg>
+								{#if selectedFolders.size > 0 && selectedItems.size === 0}
+									Import Folder{selectedFolders.size === 1 ? '' : 's'}
+								{:else if selectedItems.size > 0 && selectedFolders.size === 0}
+									Import File{selectedItems.size === 1 ? '' : 's'}
+								{:else}
+									Import Selected
+								{/if}
+							</button>
+						{/if}
+					</div>
 				</div>
 			</div>
 		{/if}
