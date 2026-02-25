@@ -66,6 +66,11 @@ def get_permissions(
     # Ensure all fields from default_permissions are present and filled in
     permissions = fill_missing_permissions(permissions, default_permissions)
 
+    # Also fill from the hardcoded defaults so that newly added permission keys
+    # (e.g. access_grants) are present even when the stored runtime config
+    # predates the code change that introduced them.
+    permissions = fill_missing_permissions(permissions, DEFAULT_USER_PERMISSIONS)
+
     return permissions
 
 
