@@ -80,21 +80,20 @@
 	});
 </script>
 
-{#key id}
-	<MarkdownTokens
-		{tokens}
-		{id}
-		{done}
-		{save}
-		{preview}
-		{paragraphTag}
-		{editCodeBlock}
-		{sourceIds}
-		{topPadding}
-		{onTaskClick}
-		{onSourceClick}
-		{onSave}
-		{onUpdate}
-		{onPreview}
-	/>
-{/key}
+<MarkdownTokens
+	{tokens}
+	{id}
+	{done}
+	{save}
+	{preview}
+	{paragraphTag}
+	{editCodeBlock}
+	{sourceIds}
+	{topPadding}
+	{onTaskClick}
+	{onSourceClick}
+	{onSave}
+	{onUpdate}
+	{onPreview}
+/>
+
