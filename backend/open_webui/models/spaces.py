@@ -1172,6 +1172,17 @@ class SpaceTable:
             log.exception(f"Error removing file from space: {e}")
             return False
 
+    def count_file_refs(self, file_id: str, db: Optional[Session] = None) -> int:
+        """Return number of SpaceFile rows referencing file_id across all spaces.
+        Returns -1 on error (caller should skip cleanup).
+        """
+        try:
+            with get_db_context(db) as db:
+                return db.query(SpaceFile).filter_by(file_id=file_id).count()
+        except Exception as e:
+            log.exception(f"Error counting file refs for {file_id}: {e}")
+            return -1
+
     def get_files_by_space_id(
         self,
         space_id: str,

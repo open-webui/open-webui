@@ -1955,6 +1955,11 @@ async def _download_sp_file(
 
 
 
+# Per-space set for concurrent sync prevention (asyncio is single-threaded,
+# so set operations between awaits are safe without a lock).
+_space_sync_in_progress: set = set()
+
+
 class SharePointSyncResult(BaseModel):
     """Result of SharePoint file sync operation."""
 
@@ -2029,6 +2034,14 @@ async def sync_sharepoint_files(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    # Prevent concurrent syncs for the same space
+    if id in _space_sync_in_progress:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Sync already in progress for this space. Try again shortly.",
+        )
+    _space_sync_in_progress.add(id)
+
     # Build lookup: sharepoint_item_id -> file record, for all SP files in space
     all_space_files = Spaces.get_files_by_space_id(id, db=db)
     sp_item_map = {}  # {item_id: file_record}
@@ -2042,6 +2055,8 @@ async def sync_sharepoint_files(
     errors = []
     up_to_date = 0
     failed = 0
+    # Tracks files removed from this space so we can GC orphans afterwards
+    removed_candidate_files: list = []  # list of (file_id, file_path)
 
     # Track which item IDs were covered by a tracked folder delta
     delta_covered_item_ids: set = set()
@@ -2119,6 +2134,7 @@ async def sync_sharepoint_files(
                                 removed_files_result.append({"id": existing_file.id, "filename": existing_file.filename})
                                 sp_item_map.pop(item_id, None)
                                 log.info(f"[spaces] Sync: removed deleted file {existing_file.filename} ({item_id})")
+                                removed_candidate_files.append((existing_file.id, existing_file.path or ""))
                             except Exception as del_e:
                                 log.warning(f"[spaces] Sync: failed to remove deleted item {item_id}: {del_e}")
                                 errors.append(f"remove:{item_id}: {del_e}")
@@ -2340,11 +2356,28 @@ async def sync_sharepoint_files(
             errors.append(f"{file.filename}: {e}")
             failed += 1
 
+    # ---- Orphan cleanup: delete File records with no remaining SpaceFile refs ----
+    for orphan_file_id, orphan_file_path in removed_candidate_files:
+        try:
+            refs = Spaces.count_file_refs(orphan_file_id, db=db)
+            if refs == 0:
+                Files.delete_file_by_id(orphan_file_id, db=db)
+                try:
+                    if orphan_file_path:
+                        Storage.delete_file(orphan_file_path)
+                except Exception as _se:
+                    log.warning(f"[spaces] Orphan cleanup: storage delete failed {orphan_file_path}: {_se}")
+                log.info(f"[spaces] Orphan cleanup: deleted unreferenced SP file {orphan_file_id}")
+        except Exception as _oe:
+            log.warning(f"[spaces] Orphan cleanup: error for file {orphan_file_id}: {_oe}")
+
     total_checked = len(sp_item_map) + len(individually_added)
     log.info(
         f"[spaces] Sync complete: added={len(added_files_result)}, updated={len(updated_files)}, "
         f"removed={len(removed_files_result)}, up_to_date={up_to_date}, failed={failed}"
     )
+
+    _space_sync_in_progress.discard(id)
 
     return SharePointSyncResult(
         total_checked=total_checked,
