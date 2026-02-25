@@ -163,6 +163,9 @@ async def get_tools(
     request: Request, tool_ids: list[str], user: UserModel, extra_params: dict
 ) -> dict[str, dict]:
     """Load tools for the given tool_ids, checking access control."""
+    if not tool_ids:
+        return {}
+
     tools_dict = {}
 
     # Get user's group memberships for access control checks
