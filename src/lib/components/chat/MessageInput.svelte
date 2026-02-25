@@ -55,6 +55,7 @@
 	import { getSessionUser } from '$lib/apis/auths';
 	import { getTools } from '$lib/apis/tools';
 	import { processFile } from '$lib/apis/retrieval';
+	import { getSpaceFiles } from '$lib/apis/spaces';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 	import { getEffectiveTTSEngine, DEFAULT_KOKORO_DTYPE } from '$lib/utils/audio';
@@ -127,6 +128,10 @@
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
 
+	// Space context for SharePoint picker pre-selection
+	export let spaceId: string | null = null;
+	let spaceFiles: any[] = [];
+
 	export let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
 	export let onQueueSendNow: (id: string) => void = () => {};
 	export let onQueueEdit: (id: string) => void = () => {};
@@ -146,6 +151,20 @@
 
 	$: if (!showValvesModal) {
 		integrationsMenuCloseOnOutsideClick = true;
+	}
+
+	// Fetch space files when spaceId is available (for SharePoint picker pre-selection)
+	$: if (spaceId) {
+		getSpaceFiles(localStorage.token, spaceId)
+			.then((files) => {
+				spaceFiles = files ?? [];
+			})
+			.catch((err) => {
+				console.warn('Failed to fetch space files for SharePoint picker:', err);
+				spaceFiles = [];
+			});
+	} else {
+		spaceFiles = [];
 	}
 
 	$: onChange({
@@ -1046,6 +1065,8 @@
 <SharePointFilePicker
 	bind:show={showSharePointPicker}
 	token={localStorage.token}
+	{spaceId}
+	existingFiles={spaceFiles}
 	on:fileDownloaded={async (e) => {
 		console.log('[SharePoint] fileDownloaded event received:', e.detail);
 		const result = e.detail;

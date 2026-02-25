@@ -692,6 +692,13 @@
 			extensions: [
 				StarterKit.configure({
 					link: link,
+					// Disable list extensions from StarterKit - we use ListKit instead for enhanced features
+					bulletList: false,
+					orderedList: false,
+					listItem: false,
+					listKeymap: false,
+					// Disable codeBlock from StarterKit - we use CodeBlockLowlight instead for syntax highlighting
+					codeBlock: false,
 					// When rich text is off, disable Strike from StarterKit so we can
 					// re-add it below without its Mod-Shift-s shortcut (which conflicts
 					// with the Toggle Sidebar shortcut). When rich text is on, the user

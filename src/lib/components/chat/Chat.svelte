@@ -1108,7 +1108,7 @@
 			await temporaryChatEnabled.set(false);
 		}
 
-		const availableModels = $models
+		const availableModels = (Array.isArray($models) ? $models : [])
 			.filter((m) => !(m?.info?.meta?.hidden ?? false))
 			.map((m) => m.id);
 
@@ -2894,6 +2894,7 @@
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}
+									spaceId={$currentSpaceId}
 									{generating}
 									{stopResponse}
 									{createMessagePair}

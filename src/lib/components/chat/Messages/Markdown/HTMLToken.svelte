@@ -36,7 +36,7 @@
 			{token.text}
 		{/if}
 	{:else if html && html.includes('<audio')}
-		{@const audio = html.match(/<audio[^>]*>([\s\S]*?)<\/audio>/)}
+		{@const audio = html.match(/<audio[^>]*\ssrc=["']([^"']+)["'][^>]*>/)}
 		{@const audioSrc = audio && audio[1]}
 		{#if audioSrc}
 			<!-- svelte-ignore a11y-media-has-caption -->
