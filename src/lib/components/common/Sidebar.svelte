@@ -17,7 +17,7 @@
 			show = false;
 		}}
 		transition:fade={{ duration: duration }}
-	/>
+	></div>
 
 	<div
 		class="absolute z-30 shadow-xl {side === 'right' ? 'right-0' : 'left-0'} top-0 bottom-0"

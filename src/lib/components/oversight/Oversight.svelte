@@ -301,38 +301,46 @@
 									</div>
 
 									{#if $user?.role === 'admin' && target.has_assignment}
-										<button
-											class="flex-shrink-0 size-6 flex items-center justify-center rounded text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100"
-											on:click|stopPropagation={async () => {
-												const res = await deleteOversightAssignment(
-													localStorage.token,
-													$user.id,
-													target.id
-												);
-												if (res) {
-													targets = targets.filter((t) => t.id !== target.id);
-													if (selectedTarget?.id === target.id) {
-														selectedTarget = null;
-														userChats = null;
-													}
-													toast.success($i18n.t('Assignment removed'));
-												} else {
-													toast.error($i18n.t('Failed to remove assignment'));
-												}
-											}}
-											title={$i18n.t('Remove assignment')}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 16 16"
-												fill="currentColor"
-												class="size-3.5"
-											>
-												<path
-													d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
-												/>
-											</svg>
-										</button>
+								<div
+									role="button"
+									tabindex="0"
+									class="flex-shrink-0 size-6 flex items-center justify-center rounded text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100"
+								on:click|stopPropagation={async () => {
+									const res = await deleteOversightAssignment(
+										localStorage.token,
+										$user.id,
+										target.id
+									);
+									if (res) {
+										targets = targets.filter((t) => t.id !== target.id);
+										if (selectedTarget?.id === target.id) {
+											selectedTarget = null;
+											userChats = null;
+										}
+										toast.success($i18n.t('Assignment removed'));
+									} else {
+										toast.error($i18n.t('Failed to remove assignment'));
+									}
+								}}
+								on:keydown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.preventDefault();
+										e.currentTarget.click();
+									}
+								}}
+									title={$i18n.t('Remove assignment')}
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="size-3.5"
+									>
+										<path
+											d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
+										/>
+									</svg>
+								</div>
 									{/if}
 								</button>
 							{/each}
@@ -372,38 +380,46 @@
 									</div>
 
 									{#if $user?.role === 'admin' && target.has_assignment}
-										<button
-											class="flex-shrink-0 size-6 flex items-center justify-center rounded text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100"
-											on:click|stopPropagation={async () => {
-												const res = await deleteOversightAssignment(
-													localStorage.token,
-													$user.id,
-													target.id
-												);
-												if (res) {
-													targets = targets.filter((t) => t.id !== target.id);
-													if (selectedTarget?.id === target.id) {
-														selectedTarget = null;
-														userChats = null;
-													}
-													toast.success($i18n.t('Assignment removed'));
-												} else {
-													toast.error($i18n.t('Failed to remove assignment'));
-												}
-											}}
-											title={$i18n.t('Remove assignment')}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 16 16"
-												fill="currentColor"
-												class="size-3.5"
-											>
-												<path
-													d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
-												/>
-											</svg>
-										</button>
+								<div
+									role="button"
+									tabindex="0"
+									class="flex-shrink-0 size-6 flex items-center justify-center rounded text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100"
+								on:click|stopPropagation={async () => {
+									const res = await deleteOversightAssignment(
+										localStorage.token,
+										$user.id,
+										target.id
+									);
+									if (res) {
+										targets = targets.filter((t) => t.id !== target.id);
+										if (selectedTarget?.id === target.id) {
+											selectedTarget = null;
+											userChats = null;
+										}
+										toast.success($i18n.t('Assignment removed'));
+									} else {
+										toast.error($i18n.t('Failed to remove assignment'));
+									}
+								}}
+								on:keydown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.preventDefault();
+										e.currentTarget.click();
+									}
+								}}
+									title={$i18n.t('Remove assignment')}
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="size-3.5"
+									>
+										<path
+											d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
+										/>
+									</svg>
+								</div>
 									{/if}
 								</button>
 							{/each}
@@ -515,13 +531,21 @@
 									</div>
 								{/if}
 
-								<button
-									class="mt-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 underline underline-offset-2 transition-colors"
-									on:click={() => (showUnmonitoredDetail = !showUnmonitoredDetail)}
-								>
-									{showUnmonitoredDetail ? $i18n.t('Hide details') : $i18n.t('Show users')}
-								</button>
+							<div
+								role="button"
+								tabindex="0"
+								class="mt-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 underline underline-offset-2 transition-colors"
+								on:click={() => (showUnmonitoredDetail = !showUnmonitoredDetail)}
+								on:keydown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.preventDefault();
+										e.currentTarget.click();
+									}
+								}}
+							>
+								{showUnmonitoredDetail ? $i18n.t('Hide details') : $i18n.t('Show users')}
 							</div>
+						</div>
 						</div>
 					{/if}
 
@@ -573,23 +597,31 @@
 										>
 											{dayjs(a.created_at * 1000).format('ll')}
 										</span>
-										<button
-											class="flex-shrink-0 size-6 flex items-center justify-center rounded text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100"
-											on:click={() => handleDeleteAssignment(a.overseer_id, a.target_id)}
-											title={$i18n.t('Remove assignment')}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 16 16"
-												fill="currentColor"
-												class="size-3.5"
-											>
-												<path
-													d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
-												/>
-											</svg>
-										</button>
-									</div>
+								<div
+									role="button"
+									tabindex="0"
+									class="flex-shrink-0 size-6 flex items-center justify-center rounded text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100"
+								on:click={() => handleDeleteAssignment(a.overseer_id, a.target_id)}
+								on:keydown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.preventDefault();
+										e.currentTarget.click();
+									}
+								}}
+									title={$i18n.t('Remove assignment')}
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="size-3.5"
+									>
+										<path
+											d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
+										/>
+									</svg>
+								</div>
+						</div>
 								{/each}
 							</div>
 						{/if}

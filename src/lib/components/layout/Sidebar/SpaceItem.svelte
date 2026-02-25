@@ -100,6 +100,8 @@
 	on:mouseenter={handleMouseEnter}
 	on:mouseleave={handleMouseLeave}
 	role="treeitem"
+	aria-selected="false"
+	tabindex="0"
 	aria-expanded={expanded}
 >
 	<div

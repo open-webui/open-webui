@@ -1127,7 +1127,7 @@ export let existingFiles: any[] = [];
 
 									<!-- Active indicator dot -->
 									{#if activeKey === item.node.key}
-										<div class="w-1 h-1 rounded-full bg-blue-500 shrink-0 ml-auto mr-1" />
+								<div class="w-1 h-1 rounded-full bg-blue-500 shrink-0 ml-auto mr-1"></div>
 									{/if}
 								</div>
 							{/each}
@@ -1234,8 +1234,8 @@ export let existingFiles: any[] = [];
 						<div
 							class="flex items-center px-4 py-1.5 border-b border-gray-100 dark:border-gray-800/50 bg-gray-50/40 dark:bg-gray-900/10 shrink-0"
 						>
-							<div class="w-5 shrink-0 mr-3" />
-							<div class="w-8 shrink-0 mr-2.5" />
+					<div class="w-5 shrink-0 mr-3"></div>
+					<div class="w-8 shrink-0 mr-2.5"></div>
 							<div
 								class="flex-1 text-[10px] font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider"
 							>
@@ -1251,7 +1251,7 @@ export let existingFiles: any[] = [];
 							>
 								Modified
 							</div>
-							<div class="w-4 shrink-0 ml-1" />
+					<div class="w-4 shrink-0 ml-1"></div>
 						</div>
 					{/if}
 
@@ -1355,7 +1355,7 @@ export let existingFiles: any[] = [];
 									class="w-full flex items-center gap-0 px-4 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/40 border-b border-gray-100/80 dark:border-gray-800/40 text-left transition-colors group"
 									on:click={navigateUp}
 								>
-									<div class="w-5 shrink-0 mr-3" />
+						<div class="w-5 shrink-0 mr-3"></div>
 									<div
 										class="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center group-hover:bg-gray-200 dark:group-hover:bg-gray-700 transition-colors shrink-0 mr-2.5"
 									>
@@ -1542,12 +1542,12 @@ export let existingFiles: any[] = [];
 				{#if downloading}
 					<div class="h-0.5 bg-gray-200 dark:bg-gray-800 overflow-hidden">
 						{#if importProgress.total > 0}
-							<div
-								class="h-full bg-blue-500 dark:bg-blue-400 transition-all duration-500 ease-out"
-								style="width: {Math.round((importProgress.current / importProgress.total) * 100)}%"
-							/>
+						<div
+							class="h-full bg-blue-500 dark:bg-blue-400 transition-all duration-500 ease-out"
+							style="width: {Math.round((importProgress.current / importProgress.total) * 100)}%"
+						></div>
 						{:else}
-							<div class="h-full bg-blue-500/40 dark:bg-blue-400/40 animate-pulse" />
+						<div class="h-full bg-blue-500/40 dark:bg-blue-400/40 animate-pulse"></div>
 						{/if}
 					</div>
 				{/if}

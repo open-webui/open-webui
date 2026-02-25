@@ -248,7 +248,7 @@
 									'Custom instructions for conversations in this space'
 								)}
 								rows="3"
-							/>
+							></textarea>
 						</div>
 					</div>
 

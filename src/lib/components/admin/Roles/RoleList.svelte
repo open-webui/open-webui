@@ -168,9 +168,9 @@
 				<div class="flex items-center gap-2.5 flex-1 min-w-0">
 					<div class="flex-shrink-0">
 						{#if isSystemRole}
-							<div class="size-2 rounded-full bg-gray-400 dark:bg-gray-600" />
+						<div class="size-2 rounded-full bg-gray-400 dark:bg-gray-600"></div>
 						{:else}
-							<div class="size-2 rounded-full bg-emerald-400 dark:bg-emerald-500" />
+						<div class="size-2 rounded-full bg-emerald-400 dark:bg-emerald-500"></div>
 						{/if}
 					</div>
 

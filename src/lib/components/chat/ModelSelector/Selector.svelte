@@ -408,6 +408,7 @@
 			false)
 				? 'dark:placeholder-gray-100 placeholder-gray-800'
 				: 'placeholder-gray-400'}"
+			role="region"
 			on:mouseenter={async () => {
 				models.set(
 					await getModels(
@@ -583,7 +584,7 @@
 							listScrollTop = listContainer.scrollTop;
 						}}
 					>
-						<div style="height: {visibleStart * ITEM_HEIGHT}px;" />
+						<div style="height: {visibleStart * ITEM_HEIGHT}px;"></div>
 						{#each filteredItems.slice(visibleStart, visibleEnd) as item, i (item.value)}
 							{@const index = visibleStart + i}
 							<ModelItem
@@ -601,7 +602,7 @@
 								}}
 							/>
 						{/each}
-						<div style="height: {(filteredItems.length - visibleEnd) * ITEM_HEIGHT}px;" />
+						<div style="height: {(filteredItems.length - visibleEnd) * ITEM_HEIGHT}px;"></div>
 					</div>
 				{/if}
 
@@ -657,9 +658,10 @@
 
 						<div class="mr-2 ml-1 translate-y-0.5">
 							<Tooltip content={$i18n.t('Cancel')}>
-								<button
-									class="text-gray-800 dark:text-gray-100"
-									on:click={() => {
+						<button
+							class="text-gray-800 dark:text-gray-100"
+							aria-label={$i18n.t('Cancel')}
+							on:click={() => {
 										cancelModelPullHandler(model);
 									}}
 								>
@@ -689,8 +691,8 @@
 
 			<div class="mb-2.5"></div>
 
-			<div class="hidden w-[42rem]" />
-			<div class="hidden w-[32rem]" />
+			<div class="hidden w-[42rem]"></div>
+			<div class="hidden w-[32rem]"></div>
 		</slot>
 	</DropdownMenu.Content>
 </DropdownMenu.Root>

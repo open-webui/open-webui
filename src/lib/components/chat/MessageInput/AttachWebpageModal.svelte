@@ -66,16 +66,15 @@
 					>
 				</div>
 
-				<textarea
-					id="webpage-url"
-					class={`w-full flex-1 text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-					type="text"
-					bind:value={url}
-					rows="3"
-					placeholder={'https://example.com'}
-					autocomplete="off"
-					required
-				/>
+			<textarea
+				id="webpage-url"
+				class={`w-full flex-1 text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+				bind:value={url}
+				rows="3"
+				placeholder={'https://example.com'}
+				autocomplete="off"
+				required
+			></textarea>
 
 				<div class="flex justify-end gap-2 pt-3 bg-gray-50 dark:bg-gray-900/50">
 					<button

@@ -136,7 +136,7 @@
 								class="w-full mt-2 rounded-lg px-4 py-2 text-sm dark:text-gray-300 dark:bg-gray-900 outline-hidden resize-none"
 								rows="3"
 								required
-							/>
+						></textarea>
 						{/if}
 					</div>
 				</slot>
@@ -168,18 +168,4 @@
 {/if}
 
 <style>
-	.modal-content {
-		animation: scaleUp 0.1s ease-out forwards;
-	}
-
-	@keyframes scaleUp {
-		from {
-			transform: scale(0.985);
-			opacity: 0;
-		}
-		to {
-			transform: scale(1);
-			opacity: 1;
-		}
-	}
 </style>

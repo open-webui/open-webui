@@ -254,6 +254,7 @@
 				<button
 					class=" text-xs font-medium text-gray-500"
 					type="button"
+					aria-label={$i18n.t('Toggle API Keys Visibility')}
 					on:click={() => {
 						showAPIKeys = !showAPIKeys;
 					}}>{showAPIKeys ? $i18n.t('Hide') : $i18n.t('Show')}</button
@@ -374,11 +375,13 @@
 									</button>
 
 									<Tooltip content={$i18n.t('Create new key')}>
-										<button
-											class=" px-1.5 py-1 dark:hover:bg-gray-850transition rounded-lg"
-											on:click={() => {
-												createAPIKeyHandler();
-											}}
+								<button
+									class=" px-1.5 py-1 dark:hover:bg-gray-850transition rounded-lg"
+									type="button"
+									aria-label={$i18n.t('Create new API key')}
+									on:click={() => {
+										createAPIKeyHandler();
+									}}
 										>
 											<svg
 												xmlns="http://www.w3.org/2000/svg"

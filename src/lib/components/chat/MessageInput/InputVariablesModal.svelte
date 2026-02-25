@@ -315,14 +315,14 @@
 														/>
 													</div>
 												{:else}
-													<textarea
-														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
-														placeholder={variables[variable]?.placeholder ?? ''}
-														bind:value={variableValues[variable]}
-														autocomplete="off"
-														id="input-variable-{idx}"
-														required={variables[variable]?.required ?? false}
-													/>
+									<textarea
+										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+										placeholder={variables[variable]?.placeholder ?? ''}
+										bind:value={variableValues[variable]}
+										autocomplete="off"
+										id="input-variable-{idx}"
+										required={variables[variable]?.required ?? false}
+									></textarea>
 												{/if}
 											</div>
 										</div>

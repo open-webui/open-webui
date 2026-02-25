@@ -277,7 +277,7 @@
 								/>
 
 								<datalist id="model-list">
-									<option value="whisper-1" />
+									<option value="whisper-1"></option>
 								</datalist>
 							</div>
 						</div>
@@ -597,13 +597,12 @@
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 										bind:value={TTS_VOICE}
 									>
-										<option value="" selected={TTS_VOICE !== ''}>{$i18n.t('Default')}</option>
+								<option value="" selected={TTS_VOICE !== ''}>{$i18n.t('Default')}</option>
 										{#each voices as voice}
 											<option
 												value={voice.voiceURI}
 												class="bg-gray-100 dark:bg-gray-700"
-												selected={TTS_VOICE === voice.voiceURI}>{voice.name}</option
-											>
+												selected={TTS_VOICE === voice.voiceURI}>{voice.name}</option>
 										{/each}
 									</select>
 								</div>
@@ -622,7 +621,7 @@
 									/>
 
 									<datalist id="model-list">
-										<option value="tts-1" />
+									<option value="tts-1"></option>
 									</datalist>
 								</div>
 							</div>
@@ -665,7 +664,7 @@
 
 										<datalist id="voice-list">
 											{#each voices as voice}
-												<option value={voice.id}>{voice.name}</option>
+										<option value={voice.id}>{voice.name}</option>
 											{/each}
 										</datalist>
 									</div>
@@ -684,7 +683,7 @@
 
 										<datalist id="tts-model-list">
 											{#each models as model}
-												<option value={model.id} class="bg-gray-50 dark:bg-gray-700" />
+										<option value={model.id} class="bg-gray-50 dark:bg-gray-700"></option>
 											{/each}
 										</datalist>
 									</div>
@@ -722,7 +721,7 @@
 
 										<datalist id="voice-list">
 											{#each voices as voice}
-												<option value={voice.id}>{voice.name}</option>
+										<option value={voice.id}>{voice.name}</option>
 											{/each}
 										</datalist>
 									</div>
@@ -741,7 +740,7 @@
 
 										<datalist id="tts-model-list">
 											{#each models as model}
-												<option value={model.id} class="bg-gray-50 dark:bg-gray-700" />
+										<option value={model.id} class="bg-gray-50 dark:bg-gray-700"></option>
 											{/each}
 										</datalist>
 									</div>
@@ -763,7 +762,7 @@
 
 										<datalist id="voice-list">
 											{#each voices as voice}
-												<option value={voice.id}>{voice.name}</option>
+										<option value={voice.id}>{voice.name}</option>
 											{/each}
 										</datalist>
 									</div>
@@ -803,9 +802,8 @@
 							bind:value={TTS_SPLIT_ON}
 						>
 							{#each Object.values(TTS_RESPONSE_SPLIT) as split}
-								<option value={split}
-									>{$i18n.t(split.charAt(0).toUpperCase() + split.slice(1))}</option
-								>
+							<option value={split}
+								>{$i18n.t(split.charAt(0).toUpperCase() + split.slice(1))}</option>
 							{/each}
 						</select>
 					</div>

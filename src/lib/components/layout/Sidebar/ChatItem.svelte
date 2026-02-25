@@ -54,7 +54,6 @@
 
 	export let selected = false;
 	export let shiftKey = false;
-	export let isStreaming = false;
 	export let unread = false;
 
 	export let onDragEnd = () => {};
@@ -520,7 +519,8 @@
 				class="flex self-center items-center space-x-1.5 z-10 translate-y-[0.5px] -translate-x-[0.5px]"
 			>
 				<Tooltip content={$i18n.t('Generate')}>
-					<button
+				<button
+					aria-label={$i18n.t('Generate')}
 						class=" self-center dark:hover:text-white transition disabled:cursor-not-allowed"
 						id="generate-title-button"
 						disabled={generating}
@@ -535,7 +535,8 @@
 		{:else if shiftKey && mouseOver}
 			<div class=" flex items-center self-center space-x-1.5">
 				<Tooltip content={$i18n.t('Archive')} className="flex items-center">
-					<button
+				<button
+					aria-label={$i18n.t('Archive')}
 						class=" self-center dark:hover:text-white transition"
 						on:click={() => {
 							archiveChatHandler(id);
@@ -547,7 +548,8 @@
 				</Tooltip>
 
 				<Tooltip content={$i18n.t('Delete')}>
-					<button
+				<button
+					aria-label={$i18n.t('Delete')}
 						class=" self-center dark:hover:text-white transition"
 						on:click={() => {
 							deleteChatHandler(id);
@@ -587,8 +589,8 @@
 						dispatch('tag', e.detail);
 					}}
 				>
-					<button
-						aria-label="Chat Menu"
+				<button
+					aria-label={$i18n.t('Chat Menu')}
 						class=" self-center dark:hover:text-white transition m-0"
 						on:click={() => {
 							dispatch('select');
@@ -609,7 +611,8 @@
 
 				{#if id === $chatId}
 					<!-- Shortcut support using "delete-chat-button" id -->
-					<button
+				<button
+					aria-label={$i18n.t('Delete Chat')}
 						id="delete-chat-button"
 						class="hidden"
 						on:click={() => {

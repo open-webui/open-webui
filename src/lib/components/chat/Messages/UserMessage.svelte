@@ -250,7 +250,13 @@
 			<div class="flex text-gray-600 dark:text-gray-500">
 				{#if siblings.length > 1}
 					<div class="flex self-center" dir="ltr">
-						<button
+					<button
+						aria-label={$i18n.t('Previous message')}
+						class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+						on:click={() => {
+							showPreviousMessage(message);
+						}}
+					>
 							class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 							on:click={() => {
 								showPreviousMessage(message);
@@ -264,11 +270,11 @@
 								stroke-width="2.5"
 								class="size-3.5"
 							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M15.75 19.5 8.25 12l7.5-7.5"
-								/>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M15.75 19.5 8.25 12l7.5-7.5"
+						></path>
 							</svg>
 						</button>
 
@@ -278,7 +284,13 @@
 							{siblings.indexOf(message.id) + 1}/{siblings.length}
 						</div>
 
-						<button
+					<button
+						aria-label={$i18n.t('Next message')}
+						class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+						on:click={() => {
+							showNextMessage(message);
+						}}
+					>
 							class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 							on:click={() => {
 								showNextMessage(message);
@@ -292,11 +304,11 @@
 								stroke-width="2.5"
 								class="size-3.5"
 							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="m8.25 4.5 7.5 7.5-7.5 7.5"
-								/>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="m8.25 4.5 7.5 7.5-7.5 7.5"
+						></path>
 							</svg>
 						</button>
 					</div>
@@ -304,7 +316,15 @@
 
 				{#if message?.content}
 					<Tooltip content={$i18n.t('Copy')} placement="bottom">
-						<button
+					<button
+						aria-label={$i18n.t('Copy')}
+						class="{($settings?.highContrastMode ?? false)
+							? ''
+							: 'visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+						on:click={() => {
+							copyToClipboard(message.content);
+						}}
+					>
 							class="{($settings?.highContrastMode ?? false)
 								? ''
 								: 'visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
@@ -320,11 +340,11 @@
 								stroke="currentColor"
 								class="w-4 h-4"
 							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"
-								/>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"
+						></path>
 							</svg>
 						</button>
 					</Tooltip>
@@ -464,7 +484,19 @@
 											/>
 										</div>
 										<div class=" absolute -top-1 -right-1">
-											<button
+								<button
+									aria-label={$i18n.t('Remove file')}
+									class=" bg-white text-black border border-white rounded-full {($settings?.highContrastMode ??
+									false)
+										? ''
+										: 'group-hover:visible invisible transition'}"
+									type="button"
+									on:click={() => {
+										editedFiles.splice(fileIdx, 1);
+
+										editedFiles = editedFiles;
+									}}
+								>
 												class=" bg-white text-black border border-white rounded-full {($settings?.highContrastMode ??
 												false)
 													? ''
@@ -482,9 +514,9 @@
 													fill="currentColor"
 													class="size-4"
 												>
-													<path
-														d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-													/>
+										<path
+											d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+										></path>
 												</svg>
 											</button>
 										</div>
@@ -541,7 +573,7 @@
 									document.getElementById('confirm-edit-message-button')?.click();
 								}
 							}}
-						/>
+							></textarea>
 					</div>
 
 					<div class=" mt-2 mb-1 flex justify-between text-sm font-medium">
@@ -612,7 +644,13 @@
 					{#if !($settings?.chatBubble ?? true)}
 						{#if siblings.length > 1}
 							<div class="flex self-center" dir="ltr">
-								<button
+						<button
+							aria-label={$i18n.t('Previous message')}
+							class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+							on:click={() => {
+								showPreviousMessage(message);
+							}}
+						>
 									class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 									on:click={() => {
 										showPreviousMessage(message);
@@ -626,11 +664,11 @@
 										stroke-width="2.5"
 										class="size-3.5"
 									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="M15.75 19.5 8.25 12l7.5-7.5"
-										/>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M15.75 19.5 8.25 12l7.5-7.5"
+									></path>
 									</svg>
 								</button>
 
@@ -679,7 +717,13 @@
 									</div>
 								{/if}
 
-								<button
+						<button
+							aria-label={$i18n.t('Next message')}
+							class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+							on:click={() => {
+								showNextMessage(message);
+							}}
+						>
 									class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 									on:click={() => {
 										showNextMessage(message);
@@ -693,11 +737,11 @@
 										stroke-width="2.5"
 										class="size-3.5"
 									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="m8.25 4.5 7.5 7.5-7.5 7.5"
-										/>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="m8.25 4.5 7.5 7.5-7.5 7.5"
+									></path>
 									</svg>
 								</button>
 							</div>
@@ -705,7 +749,15 @@
 					{/if}
 					{#if !readOnly}
 						<Tooltip content={$i18n.t('Edit')} placement="bottom">
-							<button
+						<button
+							aria-label={$i18n.t('Edit')}
+							class="{($settings?.highContrastMode ?? false)
+								? ''
+								: 'visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition edit-user-message-button"
+							on:click={() => {
+								editMessageHandler();
+							}}
+						>
 								class="{($settings?.highContrastMode ?? false)
 									? ''
 									: 'visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition edit-user-message-button"
@@ -721,11 +773,11 @@
 									stroke="currentColor"
 									class="w-4 h-4"
 								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
-									/>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
+								></path>
 								</svg>
 							</button>
 						</Tooltip>
@@ -733,7 +785,15 @@
 
 					{#if message?.content}
 						<Tooltip content={$i18n.t('Copy')} placement="bottom">
-							<button
+						<button
+							aria-label={$i18n.t('Copy')}
+							class="{($settings?.highContrastMode ?? false)
+								? ''
+								: 'visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+							on:click={() => {
+								copyToClipboard(message.content);
+							}}
+						>
 								class="{($settings?.highContrastMode ?? false)
 									? ''
 									: 'visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
@@ -749,11 +809,11 @@
 									stroke="currentColor"
 									class="w-4 h-4"
 								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"
-									/>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"
+								></path>
 								</svg>
 							</button>
 						</Tooltip>
@@ -762,7 +822,15 @@
 					{#if $_user?.role === 'admin' || ($_user?.permissions?.chat?.delete_message ?? false)}
 						{#if !readOnly && (!isFirstMessage || siblings.length > 1)}
 							<Tooltip content={$i18n.t('Delete')} placement="bottom">
-								<button
+						<button
+							aria-label={$i18n.t('Delete')}
+							class="{($settings?.highContrastMode ?? false)
+								? ''
+								: 'visible'} p-1 rounded-sm dark:hover:text-white hover:text-black transition"
+							on:click={() => {
+								showDeleteConfirm = true;
+							}}
+						>
 									class="{($settings?.highContrastMode ?? false)
 										? ''
 										: 'visible'} p-1 rounded-sm dark:hover:text-white hover:text-black transition"
@@ -778,11 +846,11 @@
 										stroke="currentColor"
 										class="w-4 h-4"
 									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-										/>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+								></path>
 									</svg>
 								</button>
 							</Tooltip>
@@ -792,7 +860,13 @@
 					{#if $settings?.chatBubble ?? true}
 						{#if siblings.length > 1}
 							<div class="flex self-center" dir="ltr">
-								<button
+						<button
+							aria-label={$i18n.t('Previous message')}
+							class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+							on:click={() => {
+								showPreviousMessage(message);
+							}}
+						>
 									class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 									on:click={() => {
 										showPreviousMessage(message);
@@ -806,11 +880,11 @@
 										stroke-width="2.5"
 										class="size-3.5"
 									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="M15.75 19.5 8.25 12l7.5-7.5"
-										/>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M15.75 19.5 8.25 12l7.5-7.5"
+									></path>
 									</svg>
 								</button>
 
@@ -859,7 +933,13 @@
 									</div>
 								{/if}
 
-								<button
+						<button
+							aria-label={$i18n.t('Next message')}
+							class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+							on:click={() => {
+								showNextMessage(message);
+							}}
+						>
 									class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 									on:click={() => {
 										showNextMessage(message);
@@ -873,11 +953,11 @@
 										stroke-width="2.5"
 										class="size-3.5"
 									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="m8.25 4.5 7.5 7.5-7.5 7.5"
-										/>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="m8.25 4.5 7.5 7.5-7.5 7.5"
+									></path>
 									</svg>
 								</button>
 							</div>

@@ -75,25 +75,27 @@
 	>
 		<div class=" absolute left-0 w-full flex justify-between select-none z-20">
 			<div>
-				<button
-					class=" p-5"
-					on:pointerdown={(e) => {
-						e.stopImmediatePropagation();
-						e.preventDefault();
-						show = false;
-					}}
-					on:click={(e) => {
-						show = false;
-					}}
-				>
+			<button
+				class=" p-5"
+				aria-label={$i18n.t('Close')}
+				on:pointerdown={(e) => {
+					e.stopImmediatePropagation();
+					e.preventDefault();
+					show = false;
+				}}
+				on:click={(e) => {
+					show = false;
+				}}
+			>
 					<XMark className={'size-6'} />
 				</button>
 			</div>
 
 			<div>
-				<button
-					class=" p-5 z-999"
-					on:click={() => {
+			<button
+				class=" p-5 z-999"
+				aria-label={$i18n.t('Download')}
+				on:click={() => {
 						if (src.startsWith('data:image/')) {
 							const base64Data = src.split(',')[1];
 							const blob = new Blob([Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0))], {

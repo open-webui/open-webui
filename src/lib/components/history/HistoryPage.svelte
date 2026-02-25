@@ -246,7 +246,8 @@
 											class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
 										>
 											<Tooltip content={$i18n.t('Archive')}>
-												<button
+								<button
+									aria-label={$i18n.t('Archive')}
 													class="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
 													on:click|preventDefault|stopPropagation={() => handleArchive(chat)}
 												>
@@ -266,7 +267,8 @@
 												</button>
 											</Tooltip>
 											<Tooltip content={$i18n.t('Delete')}>
-												<button
+								<button
+									aria-label={$i18n.t('Delete')}
 													class="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition"
 													on:click|preventDefault|stopPropagation={() => {
 														deleteChat = chat;
@@ -358,7 +360,8 @@
 											class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
 										>
 											<Tooltip content={$i18n.t('Archive')}>
-												<button
+								<button
+									aria-label={$i18n.t('Archive')}
 													class="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
 													on:click|preventDefault|stopPropagation={() => handleArchive(chat)}
 												>
@@ -378,7 +381,8 @@
 												</button>
 											</Tooltip>
 											<Tooltip content={$i18n.t('Delete')}>
-												<button
+								<button
+									aria-label={$i18n.t('Delete')}
 													class="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition"
 													on:click|preventDefault|stopPropagation={() => {
 														deleteChat = chat;

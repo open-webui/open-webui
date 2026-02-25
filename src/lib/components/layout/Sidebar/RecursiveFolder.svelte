@@ -512,6 +512,33 @@
 						clickTimer = null;
 					}, 100); // 100ms delay (typical double-click threshold)
 				}}
+			on:keydown={(e) => {
+				if (e.key === 'Enter' || e.key === ' ') {
+					e.preventDefault();
+					if (clickTimer) {
+						clearTimeout(clickTimer);
+						clickTimer = null;
+					}
+
+					clickTimer = setTimeout(async () => {
+						const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
+							toast.error(`${error}`);
+							return null;
+						});
+
+						if (folder) {
+							await selectedFolder.set(folder);
+						}
+
+						await goto('/');
+
+						if ($mobile) {
+							showSidebar.set(!$showSidebar);
+						}
+						clickTimer = null;
+					}, 100);
+				}
+			}}
 				on:pointerup={(e) => {
 					e.stopPropagation();
 				}}

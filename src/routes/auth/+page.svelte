@@ -229,7 +229,7 @@
 			: ''}
 	></div>
 
-	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region" />
+	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region"></div>
 
 	{#if loaded}
 		<div

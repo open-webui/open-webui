@@ -11,7 +11,7 @@
 	import AdvancedParams from './Advanced/AdvancedParams.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	export let saveSettings: Function;
-	export let getModels: Function;
+	let getModels: Function;
 
 	// General
 	let themes = ['dark', 'light', 'oled-dark'];

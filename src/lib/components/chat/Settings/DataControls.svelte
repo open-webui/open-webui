@@ -30,7 +30,7 @@
 
 	const i18n = getContext('i18n');
 
-	export let saveSettings: Function;
+	let saveSettings: Function;
 
 	// Chats
 	let importFiles;

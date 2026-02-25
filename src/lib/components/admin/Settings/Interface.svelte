@@ -447,24 +447,25 @@
 							{$i18n.t('Banners')}
 						</div>
 
-						<button
-							class="p-1 px-3 text-xs flex rounded-sm transition"
-							type="button"
-							on:click={() => {
-								if (banners.length === 0 || banners.at(-1).content !== '') {
-									banners = [
-										...banners,
-										{
-											id: uuidv4(),
-											type: '',
-											title: '',
-											content: '',
-											dismissible: true,
-											timestamp: Math.floor(Date.now() / 1000)
-										}
-									];
-								}
-							}}
+<button
+	class="p-1 px-3 text-xs flex rounded-sm transition"
+	type="button"
+	aria-label={$i18n.t('Add banner')}
+	on:click={() => {
+		if (banners.length === 0 || banners.at(-1).content !== '') {
+			banners = [
+				...banners,
+				{
+					id: uuidv4(),
+					type: '',
+					title: '',
+					content: '',
+					dismissible: true,
+					timestamp: Math.floor(Date.now() / 1000)
+				}
+			];
+		}
+	}}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"

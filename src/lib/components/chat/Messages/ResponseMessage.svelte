@@ -141,7 +141,7 @@
 	export let updateChat: Function;
 	export let editMessage: Function;
 	export let saveMessage: Function;
-	export let rateMessage: Function;
+	let rateMessage: Function;
 	export let actionMessage: Function;
 	export let deleteMessage: Function;
 
@@ -738,7 +738,7 @@
 											document.getElementById('confirm-edit-message-button')?.click();
 										}
 									}}
-								/>
+										></textarea>
 
 								<div class=" mt-2 mb-1 flex justify-between text-sm font-medium">
 									<div>
@@ -1283,7 +1283,8 @@
 														});
 													});
 												}}
-											/>
+											aria-label={$i18n.t('Regenerate')}
+										></button>
 
 											<RegenerateMenu
 												onRegenerate={(prompt = null) => {

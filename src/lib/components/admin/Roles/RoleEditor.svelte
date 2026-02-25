@@ -138,15 +138,15 @@
 				>
 					{$i18n.t('Description')}
 				</div>
-				<textarea
-					class="w-full text-sm bg-transparent border-b border-gray-200 dark:border-gray-700 pb-1 outline-none focus:border-gray-400 dark:focus:border-gray-500 transition resize-none placeholder:text-gray-300 dark:placeholder:text-gray-700 {isSystemRole
-						? 'opacity-60 cursor-not-allowed'
-						: ''}"
-					rows="2"
-					bind:value={description}
-					placeholder={$i18n.t('Describe what this role can do...')}
-					disabled={isSystemRole}
-				/>
+			<textarea
+				class="w-full text-sm bg-transparent border-b border-gray-200 dark:border-gray-700 pb-1 outline-none focus:border-gray-400 dark:focus:border-gray-500 transition resize-none placeholder:text-gray-300 dark:placeholder:text-gray-700 {isSystemRole
+					? 'opacity-60 cursor-not-allowed'
+					: ''}"
+				rows="2"
+				bind:value={description}
+				placeholder={$i18n.t('Describe what this role can do...')}
+				disabled={isSystemRole}
+			></textarea>
 			</div>
 
 			<hr class="border-gray-100/50 dark:border-gray-850/50 mb-4" />

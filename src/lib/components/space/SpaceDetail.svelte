@@ -626,6 +626,7 @@
 						content={isSubscribed ? $i18n.t('Unsubscribe') : $i18n.t('Subscribe for notifications')}
 					>
 						<button
+							aria-label={isSubscribed ? $i18n.t('Unsubscribe') : $i18n.t('Subscribe for notifications')}
 							class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition {isSubscribed
 								? 'text-accent-500'
 								: 'text-gray-400 hover:text-accent-500'}"
@@ -662,6 +663,7 @@
 
 					<Tooltip content={isBookmarked ? $i18n.t('Remove bookmark') : $i18n.t('Bookmark')}>
 						<button
+							aria-label={isBookmarked ? $i18n.t('Remove bookmark') : $i18n.t('Bookmark')}
 							class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition {isBookmarked
 								? 'text-amber-500'
 								: 'text-gray-400 hover:text-amber-500'}"
@@ -837,14 +839,15 @@
 								/>
 							{:else}
 								<div class="flex items-center gap-2 mb-1">
-									<h2
-										class="text-2xl font-bold text-gray-900 dark:text-gray-50 {space.write_access
+						<h2
+							{...(space.write_access ? { tabindex: 0 } : {})}
+							class="text-2xl font-bold text-gray-900 dark:text-gray-50 {space.write_access
 											? 'cursor-pointer hover:text-gray-700 dark:hover:text-gray-200 transition-colors'
 											: ''}"
 										on:click={startEditTitle}
 										on:keydown={(e) => e.key === 'Enter' && startEditTitle()}
 										role={space.write_access ? 'button' : undefined}
-										tabindex={space.write_access ? 0 : undefined}
+
 									>
 										{space.name}
 									</h2>
@@ -868,21 +871,22 @@
 									class="text-base text-gray-500 dark:text-gray-400 bg-transparent border-b-2 border-accent-500 outline-none w-full leading-relaxed resize-none"
 									rows="2"
 									placeholder={$i18n.t('Add a description...')}
-								/>
+						></textarea>
 							{:else if space.description}
-								<p
-									class="text-base text-gray-500 dark:text-gray-400 leading-relaxed {space.write_access
+						<div
+							{...(space.write_access ? { tabindex: 0 } : {})}
+							class="text-base text-gray-500 dark:text-gray-400 leading-relaxed {space.write_access
 										? 'cursor-pointer hover:text-gray-600 dark:hover:text-gray-300 transition-colors'
 										: ''}"
 									on:click={startEditDescription}
 									on:keydown={(e) => e.key === 'Enter' && startEditDescription()}
 									role={space.write_access ? 'button' : undefined}
-									tabindex={space.write_access ? 0 : undefined}
+
 								>
 									{space.description}
-								</p>
+						</div>
 							{:else if space.write_access}
-								<p
+						<div
 									class="text-base text-gray-400 dark:text-gray-600 italic cursor-pointer hover:text-gray-500 dark:hover:text-gray-500 transition-colors"
 									on:click={startEditDescription}
 									on:keydown={(e) => e.key === 'Enter' && startEditDescription()}
@@ -890,7 +894,7 @@
 									tabindex={0}
 								>
 									{$i18n.t('Add a description...')}
-								</p>
+						</div>
 							{/if}
 						</div>
 
@@ -992,10 +996,13 @@
 							{:else}
 								<div class="space-y-0.5">
 									{#each threads as thread (thread.id)}
-										<button
-											class="w-full text-left px-3.5 py-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition group flex items-center justify-between gap-3"
-											on:click={() => goto(`/c/${thread.id}`)}
-										>
+								<div
+									class="w-full text-left px-3.5 py-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition group flex items-center justify-between gap-3 cursor-pointer"
+								on:click={() => goto(`/c/${thread.id}`)}
+								on:keydown={(e) => e.key === 'Enter' && goto(`/c/${thread.id}`)}
+								role="button"
+									tabindex="0"
+								>
 											<div class="min-w-0 flex-1">
 												<div
 													class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate group-hover:text-gray-900 dark:group-hover:text-white transition"
@@ -1014,8 +1021,9 @@
 													<!-- svelte-ignore a11y-click-events-have-key-events -->
 													<!-- svelte-ignore a11y-no-static-element-interactions -->
 													<div class="relative">
-														<button
-															class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+									<button
+										aria-label={$i18n.t('Thread access')}
+										class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 															on:click|stopPropagation={() => {
 																threadAccessDropdown =
 																	threadAccessDropdown === thread.id ? null : thread.id;
@@ -1041,7 +1049,7 @@
 																on:click|stopPropagation={() => {
 																	threadAccessDropdown = null;
 																}}
-															/>
+												></div>
 															<div
 																class="absolute right-0 top-full mt-1 z-40 w-36 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-850 shadow-lg py-1"
 															>
@@ -1088,7 +1096,7 @@
 													className="size-3.5 text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100 transition"
 												/>
 											</div>
-										</button>
+								</div>
 									{/each}
 								</div>
 
@@ -1241,7 +1249,7 @@
 														on:click={() => {
 															showFileDropdown = false;
 														}}
-													/>
+												></div>
 													<div
 														class="absolute right-0 top-full mt-1 z-40 w-44 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-850 shadow-lg py-1"
 													>
@@ -1342,8 +1350,9 @@
 													{file.filename ?? file.meta?.name ?? $i18n.t('Untitled')}
 												</span>
 												{#if space.write_access}
-													<button
-														class="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+									<button
+										aria-label={$i18n.t('Remove file')}
+										class="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition"
 														on:click|stopPropagation={() => handleRemoveFile(file.id)}
 													>
 														<svg
@@ -1457,8 +1466,9 @@
 																			{file.filename ?? file.meta?.name ?? $i18n.t('Untitled')}
 																		</span>
 																		{#if space.write_access}
-																			<button
-																				class="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+														<button
+															aria-label={$i18n.t('Remove file')}
+															class="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition"
 																				on:click|stopPropagation={() => handleRemoveFile(file.id)}
 																			>
 																				<svg
@@ -1512,8 +1522,9 @@
 										</h3>
 									</div>
 									{#if space.write_access}
-										<button
-											class="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+							<button
+								aria-label={$i18n.t('Add link')}
+								class="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 											on:click={() => {
 												addingLink = !addingLink;
 											}}
@@ -1616,8 +1627,9 @@
 													{link.title || link.url}
 												</a>
 												{#if space.write_access}
-													<button
-														class="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+									<button
+										aria-label={$i18n.t('Remove link')}
+										class="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition"
 														on:click|stopPropagation={() => handleRemoveLink(link.id)}
 													>
 														<svg

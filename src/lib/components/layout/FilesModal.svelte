@@ -200,6 +200,7 @@
 			<div class="text-lg font-medium self-center">{$i18n.t('Files')}</div>
 			<button
 				class="self-center"
+				aria-label={$i18n.t('Close')}
 				on:click={() => {
 					show = false;
 				}}
@@ -246,11 +247,12 @@
 
 					{#if query}
 						<div class="self-center pl-1.5 pr-1 translate-y-[0.5px] rounded-l-xl bg-transparent">
-							<button
-								class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-								on:click={() => {
-									query = '';
-								}}
+						<button
+							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							aria-label={$i18n.t('Clear search')}
+							on:click={() => {
+								query = '';
+							}}
 							>
 								<XMark className="size-3" strokeWidth="2" />
 							</button>
@@ -320,10 +322,18 @@
 							{/if}
 
 							{#each files as file (file.id)}
-								<div
-									class="w-full flex justify-between items-center rounded-lg text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850 cursor-pointer"
-									on:click={() => openFileViewer(file)}
-								>
+						<div
+							class="w-full flex justify-between items-center rounded-lg text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850 cursor-pointer"
+							role="button"
+							tabindex="0"
+							on:click={() => openFileViewer(file)}
+							on:keydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.preventDefault();
+									openFileViewer(file);
+								}
+							}}
+						>
 									<div class="basis-3/5 min-w-0">
 										<div class="text-ellipsis line-clamp-1">{file.filename}</div>
 										<div class="text-xs text-gray-500">
@@ -338,18 +348,19 @@
 
 										<div class="flex justify-end pl-2.5 text-gray-600 dark:text-gray-300">
 											<Tooltip content={shiftKey ? $i18n.t('Delete File') : $i18n.t('Delete File')}>
-												<button
-													class="self-center w-fit px-1 text-sm rounded-xl {shiftKey
-														? 'text-red-500'
-														: ''}"
-													on:click|stopPropagation={() => {
-														if (shiftKey) {
-															deleteHandler(file.id);
-														} else {
-															selectedFileId = file.id;
-															showDeleteConfirmDialog = true;
-														}
-													}}
+								<button
+									class="self-center w-fit px-1 text-sm rounded-xl {shiftKey
+										? 'text-red-500'
+										: ''}"
+									aria-label={$i18n.t('Delete File')}
+									on:click|stopPropagation={() => {
+										if (shiftKey) {
+											deleteHandler(file.id);
+										} else {
+											selectedFileId = file.id;
+											showDeleteConfirmDialog = true;
+										}
+									}}
 												>
 													<GarbageBin class="size-4" strokeWidth="1.5" />
 												</button>

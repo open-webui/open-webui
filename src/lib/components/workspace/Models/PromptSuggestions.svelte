@@ -77,6 +77,7 @@
 			<button
 				class="flex text-xs items-center space-x-1 py-1 rounded-xl bg-transparent dark:text-gray-200 transition"
 				type="button"
+				aria-label={$i18n.t('Import')}
 				on:click={() => {
 					const input = document.getElementById('prompt-suggestions-import-input');
 					if (input) {
@@ -93,6 +94,7 @@
 				<button
 					class="flex text-xs items-center space-x-1 py-1 rounded-xl bg-transparent dark:text-gray-200 transition"
 					type="button"
+					aria-label={$i18n.t('Export')}
 					on:click={async () => {
 						let blob = new Blob([JSON.stringify(promptSuggestions)], {
 							type: 'application/json'
@@ -109,6 +111,7 @@
 			<button
 				class=" px-1.5 rounded-xl transition font-medium text-sm flex items-center"
 				type="button"
+				aria-label={$i18n.t('Add')}
 				on:click={() => {
 					if (promptSuggestions.length === 0 || promptSuggestions.at(-1).content !== '') {
 						promptSuggestions = [...promptSuggestions, { content: '', title: ['', ''] }];
@@ -145,23 +148,24 @@
 							</Tooltip>
 						</div>
 
-						<Tooltip
-							className="w-full self-center items-center flex"
-							content={$i18n.t('e.g. Tell me a fun fact about the Roman Empire')}
-							placement="top-start"
-						>
-							<textarea
-								class="text-sm w-full bg-transparent outline-hidden resize-none"
-								placeholder={$i18n.t('Prompt')}
-								rows="2"
-								bind:value={prompt.content}
-							/>
-						</Tooltip>
-					</div>
+					<Tooltip
+						className="w-full self-center items-center flex"
+						content={$i18n.t('e.g. Tell me a fun fact about the Roman Empire')}
+						placement="top-start"
+					>
+						<textarea
+							class="text-sm w-full bg-transparent outline-hidden resize-none"
+							placeholder={$i18n.t('Prompt')}
+							rows="2"
+							bind:value={prompt.content}
+						></textarea>
+					</Tooltip>
+				</div>
 
 					<button
 						class="p-1 self-start"
 						type="button"
+						aria-label={$i18n.t('Delete')}
 						on:click={() => {
 							promptSuggestions.splice(promptIdx, 1);
 							promptSuggestions = promptSuggestions;

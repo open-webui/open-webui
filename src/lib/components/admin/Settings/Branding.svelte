@@ -465,7 +465,7 @@
 									<div
 										class="flex-1 h-8 transition-all"
 										style="background-color: {brandingConfig.accent_color_scale[shade] || '#ccc'}"
-									/>
+									></div>
 								</Tooltip>
 							{/each}
 						</div>
@@ -622,13 +622,13 @@
 							>
 								<div class="flex items-center gap-2 p-3">
 									<!-- Color swatch -->
-									<div
-										class="w-8 h-8 rounded-md shrink-0 border border-gray-200 dark:border-gray-700"
-										style="background: linear-gradient(135deg, {preset.accent_color ||
-											'#e3530f'} 50%, {preset.background_color ||
-											preset.login_background_color ||
-											'#1a2744'} 50%)"
-									/>
+										<div
+											class="w-8 h-8 rounded-md shrink-0 border border-gray-200 dark:border-gray-700"
+											style="background: linear-gradient(135deg, {preset.accent_color ||
+												'#e3530f'} 50%, {preset.background_color ||
+												preset.login_background_color ||
+												'#1a2744'} 50%)"
+										></div>
 
 									<div class="flex-1 min-w-0">
 										{#if editingPresetIndex === index}
@@ -667,11 +667,12 @@
 
 									<div class="flex items-center gap-1 shrink-0">
 										<Tooltip content={$i18n.t('Load this preset')}>
-											<button
-												type="button"
-												class="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-												on:click={() => loadPreset(index)}
-											>
+										<button
+											type="button"
+											class="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+											aria-label={$i18n.t('Load this preset')}
+											on:click={() => loadPreset(index)}
+										>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
 													viewBox="0 0 20 20"
@@ -686,11 +687,12 @@
 										</Tooltip>
 
 										<Tooltip content={$i18n.t('Save current settings to this preset')}>
-											<button
-												type="button"
-												class="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-												on:click={() => saveToPreset(index)}
-											>
+										<button
+											type="button"
+											class="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+											aria-label={$i18n.t('Save current settings to this preset')}
+											on:click={() => saveToPreset(index)}
+										>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
 													viewBox="0 0 20 20"
@@ -706,11 +708,12 @@
 										</Tooltip>
 
 										<Tooltip content={$i18n.t('Delete preset')}>
-											<button
-												type="button"
-												class="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-												on:click={() => removePreset(index)}
-											>
+										<button
+											type="button"
+											class="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+											aria-label={$i18n.t('Delete preset')}
+											on:click={() => removePreset(index)}
+										>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
 													viewBox="0 0 20 20"
@@ -967,6 +970,7 @@
 								<button
 									type="button"
 									class="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition text-gray-400 hover:text-red-600 dark:hover:text-red-400 shrink-0"
+									aria-label={$i18n.t('Delete domain mapping')}
 									on:click={() => removeDomainMapping(index)}
 								>
 									<svg
@@ -1087,11 +1091,12 @@
 									<div class="flex items-center gap-1 shrink-0">
 										<!-- Edit button -->
 										<Tooltip content={$i18n.t('Edit')}>
-											<button
-												type="button"
-												class="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-												on:click={() => editTenantOAuth(cfg)}
-											>
+										<button
+											type="button"
+											class="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+											aria-label={$i18n.t('Edit')}
+											on:click={() => editTenantOAuth(cfg)}
+										>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
 													viewBox="0 0 20 20"
@@ -1131,11 +1136,12 @@
 											</div>
 										{:else}
 											<Tooltip content={$i18n.t('Delete')}>
-												<button
-													type="button"
-													class="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-													on:click={() => (deletingTenantOAuthId = cfg.id)}
-												>
+										<button
+											type="button"
+											class="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+											aria-label={$i18n.t('Delete')}
+											on:click={() => (deletingTenantOAuthId = cfg.id)}
+										>
 													<svg
 														xmlns="http://www.w3.org/2000/svg"
 														viewBox="0 0 20 20"

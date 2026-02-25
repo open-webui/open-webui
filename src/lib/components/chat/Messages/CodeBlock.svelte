@@ -428,7 +428,7 @@
 					content={_token.text}
 				/>
 			{:else}
-				<div class="p-3">
+<div class="p-3">
 					{#if renderError}
 						<div
 							class="flex gap-2.5 border px-4 py-3 border-red-600/10 bg-red-600/10 rounded-2xl mb-2"
@@ -562,10 +562,10 @@
 			</div>
 
 			{#if !collapsed}
-				<div
-					id="plt-canvas-{id}"
-					class="bg-gray-50 dark:bg-black dark:text-white max-w-full overflow-x-auto scrollbar-hidden"
-				/>
+<div
+	id="plt-canvas-{id}"
+	class="bg-gray-50 dark:bg-black dark:text-white max-w-full overflow-x-auto scrollbar-hidden"
+				></div>
 
 				{#if executing || stdout || stderr || result || files}
 					<div

@@ -124,7 +124,13 @@
 											selectedModelIdx = modelIdx;
 										}}
 									>
-										<img
+								<img
+									src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}`}
+									class=" size-9 @sm:size-10 rounded-full border-[1px] border-gray-100 dark:border-none"
+									alt={model?.name ?? 'Model'}
+									aria-hidden="true"
+									draggable="false"
+								/>
 											src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}`}
 											class=" size-9 @sm:size-10 rounded-full border-[1px] border-gray-100 dark:border-none"
 											aria-hidden="true"

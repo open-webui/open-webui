@@ -42,7 +42,7 @@
 
 	export let onShowValves: Function;
 	export let onClose: Function;
-	export let closeOnOutsideClick = true;
+	let closeOnOutsideClick = true;
 
 	let show = false;
 	let tab = '';
@@ -116,12 +116,13 @@
 				<div in:fly={{ x: -20, duration: 150 }}>
 					{#if tools}
 						{#if Object.keys(tools).length > 0}
-							<button
-								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
-								on:click={() => {
-									tab = 'tools';
-								}}
-							>
+					<button
+						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+						type="button"
+						on:click={() => {
+							tab = 'tools';
+						}}
+					>
 								<Wrench />
 
 								<div class="flex items-center w-full justify-between">
@@ -356,7 +357,7 @@
 						>
 							{#if !(tools[toolId]?.authenticated ?? true)}
 								<!-- make it slighly darker and not clickable -->
-								<div class="absolute inset-0 opacity-50 rounded-xl cursor-pointer z-10" />
+							<div class="absolute inset-0 opacity-50 rounded-xl cursor-pointer z-10"></div>
 							{/if}
 							<div class="flex-1 truncate">
 								<div class="flex flex-1 gap-2 items-center">

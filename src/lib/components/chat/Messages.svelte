@@ -29,7 +29,6 @@
 	export let chatId = '';
 	export let user = $_user;
 
-	export let prompt;
 	export let history = {};
 	export let selectedModels;
 	export let atSelectedModel;
@@ -428,10 +427,10 @@
 								}
 							}}
 						>
-							<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
+						<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
 								<Spinner className=" size-4" />
-								<div class=" ">{$i18n.t('Loading...')}</div>
-							</div>
+							<div class=" ">{$i18n.t('Loading...')}</div>
+						</div>
 						</Loader>
 					{/if}
 					<ul role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false">
@@ -466,9 +465,9 @@
 						{/each}
 					</ul>
 				</section>
-				<div class="pb-18" />
+				<div class="pb-18"></div>
 				{#if bottomPadding}
-					<div class="  pb-6" />
+					<div class="  pb-6"></div>
 				{/if}
 			{/key}
 		</div>

@@ -109,9 +109,9 @@
 								}`}
 								className="self-end"
 							>
-								<span class=" text-xs font-medium text-gray-600 dark:text-gray-400 line-clamp-1"
-									>{item.model.ollama?.details?.parameter_size ?? ''}</span
-								>
+						<span class=" text-xs font-medium text-gray-600 dark:text-gray-400 line-clamp-1">
+							{item.model.ollama?.details?.parameter_size ?? ''}
+						</span>
 							</Tooltip>
 						</div>
 					{/if}
@@ -125,10 +125,10 @@
 							>
 								<div class=" flex items-center">
 									<span class="relative flex size-2">
-										<span
-											class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
-										/>
-										<span class="relative inline-flex rounded-full size-2 bg-green-500" />
+								<span
+									class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
+								></span>
+								<span class="relative inline-flex rounded-full size-2 bg-green-500"></span>
 									</span>
 								</div>
 							</Tooltip>
@@ -167,11 +167,11 @@
 								fill="currentColor"
 								class="size-3"
 							>
-								<path
-									fill-rule="evenodd"
-									d="M2 2.75A.75.75 0 0 1 2.75 2C8.963 2 14 7.037 14 13.25a.75.75 0 0 1-1.5 0c0-5.385-4.365-9.75-9.75-9.75A.75.75 0 0 1 2 2.75Zm0 4.5a.75.75 0 0 1 .75-.75 6.75 6.75 0 0 1 6.75 6.75.75.75 0 0 1-1.5 0C8 10.35 5.65 8 2.75 8A.75.75 0 0 1 2 7.25ZM3.5 11a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
-									clip-rule="evenodd"
-								/>
+							<path
+								fill-rule="evenodd"
+								d="M2 2.75A.75.75 0 0 1 2.75 2C8.963 2 14 7.037 14 13.25a.75.75 0 0 1-1.5 0c0-5.385-4.365-9.75-9.75-9.75A.75.75 0 0 1 2 2.75Zm0 4.5a.75.75 0 0 1 .75-.75 6.75 6.75 0 0 1 6.75 6.75.75.75 0 0 1-1.5 0C8 10.35 5.65 8 2.75 8A.75.75 0 0 1 2 7.25ZM3.5 11a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
+								clip-rule="evenodd"
+							></path>
 							</svg>
 						</div>
 					</Tooltip>

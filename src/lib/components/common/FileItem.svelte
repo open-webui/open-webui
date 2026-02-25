@@ -178,19 +178,21 @@
 
 	{#if dismissible}
 		<div class=" absolute -top-1 -right-1">
-			<button
+			<div
+				role="button"
+				tabindex="0"
 				aria-label={$i18n.t('Remove File')}
 				class=" bg-white text-black border border-gray-50 rounded-full {($settings?.highContrastMode ??
 				false)
 					? ''
 					: 'outline-hidden focus:outline-hidden group-hover:visible invisible transition'}"
-				type="button"
 				on:click|stopPropagation={() => {
 					dispatch('dismiss');
 				}}
+				on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); dispatch('dismiss'); } }}
 			>
 				<XMark className={'size-4'} />
-			</button>
+			</div>
 
 			<!-- <button
 				class=" p-1 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-full group-hover:visible invisible transition"

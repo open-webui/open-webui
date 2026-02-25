@@ -30,7 +30,7 @@
 	export let show = false;
 
 	export let title = 'Chats';
-	export let emptyPlaceholder = '';
+	export const emptyPlaceholder = '';
 	export let shareUrl = false;
 	export let showUserInfo = false;
 	export let showSearch = true;
@@ -88,6 +88,7 @@
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
 			<div class=" text-lg font-medium self-center">{title}</div>
 			<button
+				aria-label={$i18n.t('Close')}
 				class="self-center"
 				on:click={() => {
 					show = false;
@@ -292,14 +293,15 @@
 											<div class="flex justify-end pl-2.5 text-gray-600 dark:text-gray-300">
 												{#if unarchiveHandler}
 													<Tooltip content={$i18n.t('Unarchive Chat')}>
-														<button
-															class="self-center w-fit px-1 text-sm rounded-xl"
-															on:click={async (e) => {
-																e.stopImmediatePropagation();
-																e.stopPropagation();
-																unarchiveHandler(chat.id);
-															}}
-														>
+									<button
+										aria-label={$i18n.t('Unarchive Chat')}
+										class="self-center w-fit px-1 text-sm rounded-xl"
+										on:click={async (e) => {
+											e.stopImmediatePropagation();
+											e.stopPropagation();
+											unarchiveHandler(chat.id);
+										}}
+									>
 															<svg
 																xmlns="http://www.w3.org/2000/svg"
 																fill="none"
@@ -320,16 +322,17 @@
 
 												{#if unshareHandler && chat.share_id}
 													<Tooltip content={$i18n.t('Copy Share Link')}>
-														<button
-															class="self-center w-fit px-1 text-sm rounded-xl"
-															on:click={async (e) => {
-																e.stopImmediatePropagation();
-																e.stopPropagation();
-																const shareUrl = `${window.location.origin}/s/${chat.share_id}`;
-																await navigator.clipboard.writeText(shareUrl);
-																toast.success($i18n.t('Share link copied to clipboard.'));
-															}}
-														>
+									<button
+										aria-label={$i18n.t('Copy Share Link')}
+										class="self-center w-fit px-1 text-sm rounded-xl"
+										on:click={async (e) => {
+											e.stopImmediatePropagation();
+											e.stopPropagation();
+											const shareUrl = `${window.location.origin}/s/${chat.share_id}`;
+											await navigator.clipboard.writeText(shareUrl);
+											toast.success($i18n.t('Share link copied to clipboard.'));
+										}}
+									>
 															<Clipboard class="size-4" strokeWidth="1.5" />
 														</button>
 													</Tooltip>
@@ -340,19 +343,22 @@
 														? $i18n.t('Unshare Chat')
 														: $i18n.t('Delete Chat')}
 												>
-													<button
-														class="self-center w-fit px-1 text-sm rounded-xl"
-														on:click={async (e) => {
-															e.stopImmediatePropagation();
-															e.stopPropagation();
-															if (unshareHandler) {
-																unshareHandler(chat.id);
-															} else {
-																selectedChatId = chat.id;
-																showDeleteConfirmDialog = true;
-															}
-														}}
-													>
+									<button
+										aria-label={unshareHandler
+											? $i18n.t('Unshare Chat')
+											: $i18n.t('Delete Chat')}
+										class="self-center w-fit px-1 text-sm rounded-xl"
+										on:click={async (e) => {
+											e.stopImmediatePropagation();
+											e.stopPropagation();
+											if (unshareHandler) {
+												unshareHandler(chat.id);
+											} else {
+												selectedChatId = chat.id;
+												showDeleteConfirmDialog = true;
+											}
+										}}
+									>
 														{#if unshareHandler}
 															<LinkSlash />
 														{:else}

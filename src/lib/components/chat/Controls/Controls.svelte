@@ -10,7 +10,7 @@
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 
 	import { user, settings } from '$lib/stores';
-	export let models = [];
+	let models = [];
 	export let chatFiles = [];
 	export let params = {};
 
@@ -76,14 +76,14 @@
 			{#if $user?.role === 'admin' || ($user?.permissions.chat?.system_prompt ?? true)}
 				<Collapsible title={$i18n.t('System Prompt')} open={true} buttonClassName="w-full">
 					<div class="" slot="content">
-						<textarea
-							bind:value={params.system}
-							class="w-full text-xs outline-hidden resize-vertical {$settings.highContrastMode
-								? 'border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 p-2.5'
-								: 'py-1.5 bg-transparent'}"
-							rows="4"
-							placeholder={$i18n.t('Enter system prompt')}
-						/>
+					<textarea
+						bind:value={params.system}
+						class="w-full text-xs outline-hidden resize-vertical {$settings.highContrastMode
+							? 'border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 p-2.5'
+							: 'py-1.5 bg-transparent'}"
+						rows="4"
+						placeholder={$i18n.t('Enter system prompt')}
+					></textarea>
 					</div>
 				</Collapsible>
 

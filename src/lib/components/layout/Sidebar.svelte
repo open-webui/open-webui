@@ -817,7 +817,7 @@
 		tabindex="-1"
 		aria-label="Close sidebar"
 		transition:fly={{ duration: 200, opacity: 0 }}
-	/>
+	></div>
 {/if}
 
 <!-- ═══════════════════════════════════════════════════════════════════
@@ -857,17 +857,18 @@
 				<button
 					class="flex size-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800"
 					on:click={() => showSidebar.set(false)}
+					aria-label={$i18n.t('Close sidebar')}
 				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-						class="size-5"
-					>
-						<path
-							d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"
-						/>
-					</svg>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="size-5"
+				>
+					<path
+						d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"
+					></path>
+				</svg>
 				</button>
 			</div>
 
@@ -893,19 +894,19 @@
 							on:click={() => (showPinnedModels = !showPinnedModels)}
 						>
 							<span>{$i18n.t('Pinned Models')}</span>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 20 20"
-								fill="currentColor"
-								class="size-4 transition-transform"
-								class:rotate-180={showPinnedModels}
-							>
-								<path
-									fill-rule="evenodd"
-									d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
-									clip-rule="evenodd"
-								/>
-							</svg>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							class="size-4 transition-transform"
+							class:rotate-180={showPinnedModels}
+						>
+							<path
+								fill-rule="evenodd"
+								d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
+								clip-rule="evenodd"
+							></path>
+						</svg>
 						</button>
 						{#if showPinnedModels}
 							<div class="mt-1" transition:fly={{ y: -10, duration: 150 }}>
@@ -925,36 +926,37 @@
 							</button>
 							<div class="flex items-center gap-1">
 								{#if $user?.role === 'admin'}
-									<button
-										class="rounded p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700"
-										on:click={() => (showCreateChannel = true)}
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 20 20"
-											fill="currentColor"
-											class="size-3.5"
-										>
-											<path
-												d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
-											/>
-										</svg>
+								<button
+									class="rounded p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700"
+									on:click={() => (showCreateChannel = true)}
+									aria-label={$i18n.t('Create channel')}
+								>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="size-3.5"
+								>
+									<path
+										d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
+									></path>
+								</svg>
 									</button>
 								{/if}
-								<button on:click={() => (showChannels = !showChannels)}>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="size-4 transition-transform"
-										class:rotate-180={showChannels}
-									>
-										<path
-											fill-rule="evenodd"
-											d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
-											clip-rule="evenodd"
-										/>
-									</svg>
+							<button on:click={() => (showChannels = !showChannels)} aria-label={$i18n.t('Toggle channels')}>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								class="size-4 transition-transform"
+								class:rotate-180={showChannels}
+							>
+								<path
+									fill-rule="evenodd"
+									d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
+									clip-rule="evenodd"
+								></path>
+							</svg>
 								</button>
 							</div>
 						</div>
@@ -977,35 +979,37 @@
 								{$i18n.t('Folders')}
 							</button>
 							<div class="flex items-center gap-1">
-								<button
-									class="rounded p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700"
-									on:click={() => (showCreateFolderModal = true)}
+							<button
+								class="rounded p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700"
+								on:click={() => (showCreateFolderModal = true)}
+								aria-label={$i18n.t('Create folder')}
+
 								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="size-3.5"
-									>
-										<path
-											d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
-										/>
-									</svg>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="size-3.5"
+								>
+									<path
+										d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
+									></path>
+								</svg>
 								</button>
-								<button on:click={() => (showFolders = !showFolders)}>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="size-4 transition-transform"
-										class:rotate-180={showFolders}
-									>
-										<path
-											fill-rule="evenodd"
-											d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
-											clip-rule="evenodd"
-										/>
-									</svg>
+							<button on:click={() => (showFolders = !showFolders)} aria-label={$i18n.t('Toggle folders')}>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								class="size-4 transition-transform"
+								class:rotate-180={showFolders}
+							>
+								<path
+									fill-rule="evenodd"
+									d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
+									clip-rule="evenodd"
+								></path>
+							</svg>
 								</button>
 							</div>
 						</div>
@@ -1152,7 +1156,7 @@
 								fill-rule="evenodd"
 								d="M10.5 3.75a6 6 0 0 0-5.98 6.496A5.25 5.25 0 0 0 6.75 20.25H18a4.5 4.5 0 0 0 2.206-8.423 3.75 3.75 0 0 0-4.133-4.303A6.001 6.001 0 0 0 10.5 3.75Zm2.03 5.47a.75.75 0 0 0-1.06 0l-3 3a.75.75 0 1 0 1.06 1.06l1.72-1.72v4.94a.75.75 0 0 0 1.5 0v-4.94l1.72 1.72a.75.75 0 1 0 1.06-1.06l-3-3Z"
 								clip-rule="evenodd"
-							/>
+							></path>
 						</svg>
 						<p class="mt-2 text-sm font-medium text-white">
 							{$i18n.t('Drop files to import chats')}
@@ -1223,6 +1227,7 @@
 				class:dark:text-accent-300={activeSubmenu === 'history'}
 				on:mouseenter={() => onSubmenuEnter('history')}
 				on:mouseleave={onSubmenuLeave}
+				aria-label={$i18n.t('History')}
 			>
 				<!-- Clock / history icon -->
 				<svg
@@ -1237,7 +1242,7 @@
 						stroke-linecap="round"
 						stroke-linejoin="round"
 						d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-					/>
+					></path>
 				</svg>
 			</button>
 
@@ -1249,6 +1254,7 @@
 				class:dark:bg-gray-700={$page.url.pathname.startsWith('/spaces')}
 				class:text-accent-600={$page.url.pathname.startsWith('/spaces')}
 				class:dark:text-accent-300={$page.url.pathname.startsWith('/spaces')}
+				aria-label={$i18n.t('Spaces')}
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
@@ -1262,12 +1268,12 @@
 						stroke-linecap="round"
 						stroke-linejoin="round"
 						d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"
-					/>
+					></path>
 				</svg>
 			</a>
 
 			<!-- Spacer -->
-			<div class="flex-1" />
+			<div class="flex-1"></div>
 
 			<!-- ── More icon (hover submenu trigger) ── -->
 			<button
@@ -1290,7 +1296,7 @@
 						fill-rule="evenodd"
 						d="M4.5 12a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Zm6 0a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Zm6 0a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Z"
 						clip-rule="evenodd"
-					/>
+					></path>
 				</svg>
 			</button>
 
@@ -1330,6 +1336,7 @@
 				class="submenu-panel pointer-events-auto flex h-full flex-col border-r border-gray-200/60 bg-gray-50/95 shadow-lg backdrop-blur-md dark:border-gray-700/40 dark:bg-gray-900/95"
 				style="width: {$sidebarWidth}px;"
 				transition:fly={{ x: -20, duration: 180, opacity: 0 }}
+				role="region"
 				on:mouseenter={onSubmenuPanelEnter}
 				on:mouseleave={onSubmenuPanelLeave}
 				on:dragover={onDragOver}
@@ -1372,19 +1379,19 @@
 								on:click={() => (showPinnedModels = !showPinnedModels)}
 							>
 								<span>{$i18n.t('Pinned Models')}</span>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 20 20"
-									fill="currentColor"
-									class="size-3.5 transition-transform"
-									class:rotate-180={showPinnedModels}
-								>
-									<path
-										fill-rule="evenodd"
-										d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
-										clip-rule="evenodd"
-									/>
-								</svg>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								class="size-3.5 transition-transform"
+								class:rotate-180={showPinnedModels}
+							>
+								<path
+									fill-rule="evenodd"
+									d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
+									clip-rule="evenodd"
+								></path>
+							</svg>
 							</button>
 							{#if showPinnedModels}
 								<div class="mt-1" transition:fly={{ y: -10, duration: 150 }}>
@@ -1405,36 +1412,37 @@
 								</button>
 								<div class="flex items-center gap-1">
 									{#if $user?.role === 'admin'}
-										<button
-											class="rounded p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700"
-											on:click={() => (showCreateChannel = true)}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 20 20"
-												fill="currentColor"
-												class="size-3.5"
-											>
-												<path
-													d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
-												/>
-											</svg>
+								<button
+									class="rounded p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700"
+									on:click={() => (showCreateChannel = true)}
+									aria-label={$i18n.t('Create channel')}
+								>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="size-3.5"
+								>
+									<path
+										d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
+									></path>
+								</svg>
 										</button>
 									{/if}
-									<button on:click={() => (showChannels = !showChannels)}>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 20 20"
-											fill="currentColor"
-											class="size-3.5 transition-transform"
-											class:rotate-180={showChannels}
-										>
-											<path
-												fill-rule="evenodd"
-												d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
-												clip-rule="evenodd"
-											/>
-										</svg>
+								<button on:click={() => (showChannels = !showChannels)} aria-label={$i18n.t('Toggle channels')}>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="size-3.5 transition-transform"
+									class:rotate-180={showChannels}
+								>
+									<path
+										fill-rule="evenodd"
+										d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
+										clip-rule="evenodd"
+									></path>
+								</svg>
 									</button>
 								</div>
 							</div>
@@ -1483,18 +1491,18 @@
 						<div
 							class="flex items-center gap-1.5 px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
 						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 16 16"
-								fill="currentColor"
-								class="size-2.5"
-							>
-								<path
-									fill-rule="evenodd"
-									d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z"
-									clip-rule="evenodd"
-								/>
-							</svg>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="size-2.5"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z"
+								clip-rule="evenodd"
+							></path>
+						</svg>
 							{$i18n.t('Private')}
 						</div>
 						{#if $chats}
@@ -1547,16 +1555,16 @@
 							<div
 								class="flex items-center gap-1.5 px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-accent-500 dark:text-accent-400"
 							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 16 16"
-									fill="currentColor"
-									class="size-2.5"
-								>
-									<path
-										d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12.735 14c.618 0 1.093-.561.872-1.139a6.002 6.002 0 0 0-11.215 0c-.22.578.254 1.139.872 1.139h9.47Z"
-									/>
-								</svg>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="size-2.5"
+						>
+							<path
+								d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12.735 14c.618 0 1.093-.561.872-1.139a6.002 6.002 0 0 0-11.215 0c-.22.578.254 1.139.872 1.139h9.47Z"
+							></path>
+						</svg>
 								{$i18n.t('Shared Spaces')}
 							</div>
 							{#each spacesShared as space (space.id)}
@@ -1570,18 +1578,18 @@
 							<div
 								class="flex items-center gap-1.5 px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
 							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 16 16"
-									fill="currentColor"
-									class="size-2.5"
-								>
-									<path
-										fill-rule="evenodd"
-										d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z"
-										clip-rule="evenodd"
-									/>
-								</svg>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="size-2.5"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z"
+								clip-rule="evenodd"
+							></path>
+						</svg>
 								{$i18n.t('Private Spaces')}
 							</div>
 							{#each spacesPrivate as space (space.id)}
@@ -1609,7 +1617,7 @@
 								stroke-linecap="round"
 								stroke-linejoin="round"
 								d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"
-							/>
+							></path>
 						</svg>
 						{$i18n.t('Archived Chats')}
 					</button>
@@ -1621,18 +1629,18 @@
 						transition:fly={{ duration: 150 }}
 					>
 						<div class="text-center">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 24 24"
-								fill="currentColor"
-								class="mx-auto size-10 text-white"
-							>
-								<path
-									fill-rule="evenodd"
-									d="M10.5 3.75a6 6 0 0 0-5.98 6.496A5.25 5.25 0 0 0 6.75 20.25H18a4.5 4.5 0 0 0 2.206-8.423 3.75 3.75 0 0 0-4.133-4.303A6.001 6.001 0 0 0 10.5 3.75Zm2.03 5.47a.75.75 0 0 0-1.06 0l-3 3a.75.75 0 1 0 1.06 1.06l1.72-1.72v4.94a.75.75 0 0 0 1.5 0v-4.94l1.72 1.72a.75.75 0 1 0 1.06-1.06l-3-3Z"
-									clip-rule="evenodd"
-								/>
-							</svg>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 24 24"
+							fill="currentColor"
+							class="mx-auto size-10 text-white"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M10.5 3.75a6 6 0 0 0-5.98 6.496A5.25 5.25 0 0 0 6.75 20.25H18a4.5 4.5 0 0 0 2.206-8.423 3.75 3.75 0 0 0-4.133-4.303A6.001 6.001 0 0 0 10.5 3.75Zm2.03 5.47a.75.75 0 0 0-1.06 0l-3 3a.75.75 0 1 0 1.06 1.06l1.72-1.72v4.94a.75.75 0 0 0 1.5 0v-4.94l1.72 1.72a.75.75 0 1 0 1.06-1.06l-3-3Z"
+								clip-rule="evenodd"
+							></path>
+						</svg>
 							<p class="mt-1 text-xs font-medium text-white">
 								{$i18n.t('Drop files to import chats')}
 							</p>
@@ -1648,6 +1656,7 @@
 				class="submenu-panel pointer-events-auto flex h-full flex-col border-r border-gray-200/60 bg-gray-50/95 shadow-lg backdrop-blur-md dark:border-gray-700/40 dark:bg-gray-900/95"
 				style="width: {$sidebarWidth}px;"
 				transition:fly={{ x: -20, duration: 180, opacity: 0 }}
+				role="region"
 				on:mouseenter={onSubmenuPanelEnter}
 				on:mouseleave={onSubmenuPanelLeave}
 			>
@@ -1656,10 +1665,11 @@
 					<h2 class="text-sm font-semibold tracking-tight text-gray-900 dark:text-gray-100">
 						{$i18n.t('Spaces')}
 					</h2>
-					<button
-						class="flex size-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-						on:click={() => (showCreateSpace = true)}
-					>
+				<button
+					class="flex size-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+					on:click={() => (showCreateSpace = true)}
+					aria-label={$i18n.t('Create space')}
+				>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 20 20"
@@ -1668,7 +1678,7 @@
 						>
 							<path
 								d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
-							/>
+							></path>
 						</svg>
 					</button>
 				</div>
@@ -1689,22 +1699,22 @@
 								<div
 									class="flex items-center gap-1.5 px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-accent-500 dark:text-accent-400"
 								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 16 16"
-										fill="currentColor"
-										class="size-2.5"
-									>
-										<path
-											d="M8.074.334a.75.75 0 0 0-1.148 0L4.203 3.57a.75.75 0 0 0 .722 1.212l.336-.034.067.067-.067 3.281a.75.75 0 0 0 .467.713l2.022.808a.75.75 0 0 0 .5 0l2.022-.808a.75.75 0 0 0 .467-.713L10.672 4.815l.067-.067.336.034a.75.75 0 0 0 .722-1.212L8.074.334Z"
-										/>
-										<path d="M6.428 9.628 8 12.236l1.572-2.608L8 10.256l-1.572-.628Z" />
-										<path
-											fill-rule="evenodd"
-											d="M3.5 13.5c0 .643.224 1.005.44 1.184.224.186.537.265.804.28a7.634 7.634 0 0 0 3.256-.378 7.634 7.634 0 0 0 3.256.378c.267-.015.58-.094.804-.28.216-.179.44-.541.44-1.184a3 3 0 0 0-1.605-2.656l-.29-.155-.776 1.29-.057.095a.75.75 0 0 1-.578.426H6.806a.75.75 0 0 1-.578-.426l-.057-.095-.776-1.29-.29.155A3 3 0 0 0 3.5 13.5Z"
-											clip-rule="evenodd"
-										/>
-									</svg>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 16 16"
+									fill="currentColor"
+									class="size-2.5"
+								>
+									<path
+										d="M8.074.334a.75.75 0 0 0-1.148 0L4.203 3.57a.75.75 0 0 0 .722 1.212l.336-.034.067.067-.067 3.281a.75.75 0 0 0 .467.713l2.022.808a.75.75 0 0 0 .5 0l2.022-.808a.75.75 0 0 0 .467-.713L10.672 4.815l.067-.067.336.034a.75.75 0 0 0 .722-1.212L8.074.334Z"
+									></path>
+									<path d="M6.428 9.628 8 12.236l1.572-2.608L8 10.256l-1.572-.628Z"></path>
+									<path
+										fill-rule="evenodd"
+										d="M3.5 13.5c0 .643.224 1.005.44 1.184.224.186.537.265.804.28a7.634 7.634 0 0 0 3.256-.378 7.634 7.634 0 0 0 3.256.378c.267-.015.58-.094.804-.28.216-.179.44-.541.44-1.184a3 3 0 0 0-1.605-2.656l-.29-.155-.776 1.29-.057.095a.75.75 0 0 1-.578.426H6.806a.75.75 0 0 1-.578-.426l-.057-.095-.776-1.29-.29.155A3 3 0 0 0 3.5 13.5Z"
+										clip-rule="evenodd"
+									></path>
+								</svg>
 									{$i18n.t('Pinned')}
 								</div>
 								{#each spacesPinned as space (space.id)}
@@ -1718,18 +1728,18 @@
 								<div
 									class="flex items-center gap-1.5 px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400"
 								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 16 16"
-										fill="currentColor"
-										class="size-2.5"
-									>
-										<path
-											fill-rule="evenodd"
-											d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z"
-											clip-rule="evenodd"
-										/>
-									</svg>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 16 16"
+									fill="currentColor"
+									class="size-2.5"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z"
+										clip-rule="evenodd"
+									></path>
+								</svg>
 									{$i18n.t('Bookmarked')}
 								</div>
 								{#each spacesBookmarked as space (space.id)}
@@ -1743,18 +1753,18 @@
 								<div
 									class="flex items-center gap-1.5 px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
 								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 16 16"
-										fill="currentColor"
-										class="size-2.5"
-									>
-										<path
-											fill-rule="evenodd"
-											d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z"
-											clip-rule="evenodd"
-										/>
-									</svg>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 16 16"
+									fill="currentColor"
+									class="size-2.5"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z"
+										clip-rule="evenodd"
+									></path>
+								</svg>
 									{$i18n.t('Private')}
 								</div>
 								{#each spacesPrivate as space (space.id)}
@@ -1768,16 +1778,16 @@
 								<div
 									class="flex items-center gap-1.5 px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-accent-500 dark:text-accent-400"
 								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 16 16"
-										fill="currentColor"
-										class="size-2.5"
-									>
-										<path
-											d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12.735 14c.618 0 1.093-.561.872-1.139a6.002 6.002 0 0 0-11.215 0c-.22.578.254 1.139.872 1.139h9.47Z"
-										/>
-									</svg>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 16 16"
+									fill="currentColor"
+									class="size-2.5"
+								>
+									<path
+										d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12.735 14c.618 0 1.093-.561.872-1.139a6.002 6.002 0 0 0-11.215 0c-.22.578.254 1.139.872 1.139h9.47Z"
+									></path>
+								</svg>
 									{$i18n.t('Shared')}
 								</div>
 								{#each spacesShared as space (space.id)}
@@ -1806,7 +1816,7 @@
 								stroke-linecap="round"
 								stroke-linejoin="round"
 								d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"
-							/>
+							></path>
 						</svg>
 						{$i18n.t('View all spaces')}
 					</a>
@@ -1820,6 +1830,7 @@
 				class="submenu-panel pointer-events-auto flex h-full flex-col border-r border-gray-200/60 bg-gray-50/95 shadow-lg backdrop-blur-md dark:border-gray-700/40 dark:bg-gray-900/95"
 				style="width: {$sidebarWidth}px;"
 				transition:fly={{ x: -20, duration: 180, opacity: 0 }}
+				role="region"
 				on:mouseenter={onSubmenuPanelEnter}
 				on:mouseleave={onSubmenuPanelLeave}
 			>
@@ -1842,10 +1853,11 @@
 									{$i18n.t('Folders')}
 								</button>
 								<div class="flex items-center gap-1">
-									<button
-										class="rounded p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700"
-										on:click={() => (showCreateFolderModal = true)}
-									>
+							<button
+								class="rounded p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700"
+								on:click={() => (showCreateFolderModal = true)}
+								aria-label={$i18n.t('Create folder')}
+							>
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
 											viewBox="0 0 20 20"
@@ -1857,7 +1869,7 @@
 											/>
 										</svg>
 									</button>
-									<button on:click={() => (showFolders = !showFolders)}>
+							<button on:click={() => (showFolders = !showFolders)} aria-label={$i18n.t('Toggle folders')}>
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
 											viewBox="0 0 20 20"
@@ -2080,7 +2092,8 @@
 		goto('/');
 		newChatHandler();
 	}}
-/>
+	aria-label={$i18n.t('New chat')}
+></button>
 
 <style>
 	.submenu-panel {

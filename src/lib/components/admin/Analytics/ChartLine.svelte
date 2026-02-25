@@ -49,6 +49,14 @@
 		viewBox="0 0 {w} {height - 20}"
 		class="h-[calc(100%-20px)] w-full"
 		preserveAspectRatio="none"
+		role="img"
+		aria-label="Line chart"
+		onmousemove={onMove}
+		onmouseleave={() => (hoveredIdx = null)}
+	>
+		viewBox="0 0 {w} {height - 20}"
+		class="h-[calc(100%-20px)] w-full"
+		preserveAspectRatio="none"
 		onmousemove={onMove}
 		onmouseleave={() => (hoveredIdx = null)}
 	>

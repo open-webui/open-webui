@@ -16,7 +16,7 @@
 	export let onSubmit: Function;
 	export let edit = false;
 	export let skill = null;
-	export let clone = false;
+	let clone = false;
 	export let disabled = false;
 
 	const i18n = getContext('i18n');
@@ -232,12 +232,12 @@
 									<pre class="text-xs whitespace-pre-wrap font-mono">{content}</pre>
 								</div>
 							{:else}
-								<textarea
-									class="w-full flex-1 text-xs bg-transparent outline-hidden resize-none font-mono px-4 py-3"
-									bind:value={content}
-									placeholder={$i18n.t('Enter skill instructions in markdown...')}
-									required
-								/>
+						<textarea
+							class="w-full flex-1 text-xs bg-transparent outline-hidden resize-none font-mono px-4 py-3"
+							bind:value={content}
+							placeholder={$i18n.t('Enter skill instructions in markdown...')}
+							required
+						></textarea>
 							{/if}
 						</div>
 					</div>

@@ -17,7 +17,7 @@
 
 	const i18n = getContext('i18n');
 
-	export let saveHandler: Function;
+	let saveHandler: Function;
 
 	let loading = true;
 	let limits: MessageLimit[] = [];

@@ -28,49 +28,52 @@
 
 		<div class="flex items-center gap-2">
 			<Tooltip placement="top" content={$i18n.t('Insert')}>
-				<button
-					class=" text-transparent group-hover:text-gray-500 dark:hover:text-gray-300 transition"
-					on:click={() => {
-						onInsert();
-					}}
-				>
-					<ArrowUpLeft className="size-3.5" strokeWidth="2" />
-				</button>
+			<button
+				aria-label={$i18n.t('Insert')}
+				class=" text-transparent group-hover:text-gray-500 dark:hover:text-gray-300 transition"
+				on:click={() => {
+					onInsert();
+				}}
+			>
+				<ArrowUpLeft className="size-3.5" strokeWidth="2" />
+			</button>
 			</Tooltip>
 
 			<Tooltip placement="top" content={$i18n.t('Edit')}>
-				<button
-					class=" text-transparent group-hover:text-gray-500 dark:hover:text-gray-300 transition"
-					on:click={() => {
-						onEdit();
-					}}
-				>
-					<Pencil className="size-3.5" strokeWidth="2" />
-				</button>
+			<button
+				aria-label={$i18n.t('Edit')}
+				class=" text-transparent group-hover:text-gray-500 dark:hover:text-gray-300 transition"
+				on:click={() => {
+					onEdit();
+				}}
+			>
+				<Pencil className="size-3.5" strokeWidth="2" />
+			</button>
 			</Tooltip>
 
 			<Tooltip placement="top" content={$i18n.t('Delete')}>
-				<button
-					class=" text-transparent group-hover:text-gray-500 dark:hover:text-gray-300 transition"
-					on:click={() => {
-						onDelete();
-					}}
+			<button
+				aria-label={$i18n.t('Delete')}
+				class=" text-transparent group-hover:text-gray-500 dark:hover:text-gray-300 transition"
+				on:click={() => {
+					onDelete();
+				}}
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke-width="2"
+					stroke="currentColor"
+					class="size-4"
 				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="2"
-						stroke="currentColor"
-						class="size-4"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-						/>
-					</svg>
-				</button>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+					/>
+				</svg>
+			</button>
 			</Tooltip>
 		</div>
 	</div>

@@ -567,14 +567,14 @@
 													class={`text-xs w-full self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
 												>
 													<label for="url-or-path" class="sr-only">{$i18n.t('JSON Spec')}</label>
-													<textarea
-														class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 text-black dark:text-white'}`}
-														bind:value={spec}
-														placeholder={$i18n.t('JSON Spec')}
-														autocomplete="off"
-														required
-														rows="5"
-													/>
+									<textarea
+										class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 text-black dark:text-white'}`}
+										bind:value={spec}
+										placeholder={$i18n.t('JSON Spec')}
+										autocomplete="off"
+										required
+										rows="5"
+									></textarea>
 												</div>
 											{/if}
 										</div>

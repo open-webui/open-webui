@@ -19,7 +19,7 @@
 	export let className = '';
 	export let buttonClassName = 'text-gray-400 dark:text-gray-500';
 
-	export let chevron = true;
+	let chevron = true;
 	export let onAddLabel: string = '';
 	export let onAdd: null | Function = null;
 

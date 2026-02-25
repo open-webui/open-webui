@@ -397,23 +397,24 @@
 		: 'bg-accent-300/10 dark:bg-accent-500/10 '} rounded-full flex justify-between {className}"
 >
 	<div class="flex items-center mr-1">
-		<button
-			type="button"
-			class="p-1.5
+	<button
+		type="button"
+		aria-label={$i18n.t('Stop recording')}
+		class="p-1.5
 
             {loading
-				? ' bg-gray-200 dark:bg-gray-700/50'
-				: 'bg-accent-400/20 text-accent-600 dark:text-accent-300 '} 
+			? ' bg-gray-200 dark:bg-gray-700/50'
+			: 'bg-accent-400/20 text-accent-600 dark:text-accent-300 '} 
 
 
              rounded-full"
-			on:click={async () => {
-				stopRecording();
-				onCancel();
-			}}
-		>
-			<XMark className={'size-4'} />
-		</button>
+		on:click={async () => {
+			stopRecording();
+			onCancel();
+		}}
+	>
+		<XMark className={'size-4'} />
+	</button>
 	</div>
 
 	<div
@@ -425,17 +426,17 @@
 		>
 			{#each visualizerData.slice().reverse() as rms}
 				<div class="flex items-center h-full">
-					<div
-						class="w-[2px] shrink-0
+				<div
+					class="w-[2px] shrink-0
                     
                     {loading
-							? ' bg-gray-500 dark:bg-gray-400   '
-							: 'bg-accent-500 dark:bg-accent-400  '} 
+						? ' bg-gray-500 dark:bg-gray-400   '
+						: 'bg-accent-500 dark:bg-accent-400  '} 
                     
                     inline-block h-full"
-						style="height: {Math.min(100, Math.max(14, rms * 100))}%;"
-					/>
-				</div>
+					style="height: {Math.min(100, Math.max(14, rms * 100))}%;"
+				></div>
+			</div>
 			{/each}
 		</div>
 	</div>
@@ -546,24 +547,25 @@
 					>
 				</div>
 			{:else}
-				<button
-					type="button"
-					class="p-1.5 bg-accent-500 text-white dark:bg-accent-500 dark:text-gray-950 rounded-full"
-					on:click={async () => {
-						await confirmRecording();
-					}}
+			<button
+				type="button"
+				aria-label={$i18n.t('Confirm recording')}
+				class="p-1.5 bg-accent-500 text-white dark:bg-accent-500 dark:text-gray-950 rounded-full"
+				on:click={async () => {
+					await confirmRecording();
+				}}
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke-width="2.5"
+					stroke="currentColor"
+					class="size-4"
 				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="2.5"
-						stroke="currentColor"
-						class="size-4"
-					>
-						<path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-					</svg>
-				</button>
+					<path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+				</svg>
+			</button>
 			{/if}
 		</div>
 	</div>

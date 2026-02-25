@@ -44,7 +44,7 @@
 	export let placeholder = $i18n.t('Type here...');
 	export let chatInputElement;
 
-	export let id = null;
+	export const id = null;
 	export let channel = null;
 
 	export let typingUsers = [];
@@ -59,7 +59,7 @@
 
 	export let disabled = false;
 	export let acceptFiles = true;
-	export let showFormattingToolbar = true;
+	export const showFormattingToolbar = true;
 
 	export let userSuggestions = false;
 	export let channelSuggestions = false;
@@ -694,7 +694,14 @@
 							<div
 								class=" absolute -top-12 left-0 right-0 flex justify-center z-30 pointer-events-none"
 							>
-								<button
+						<button
+							class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
+							aria-label={$i18n.t('Scroll to bottom')}
+							on:click={() => {
+								scrollEnd = true;
+								scrollToBottom();
+							}}
+						>
 									class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
 									on:click={() => {
 										scrollEnd = true;
@@ -821,7 +828,15 @@
 													/>
 												</div>
 												<div class=" absolute -top-1 -right-1">
-													<button
+									<button
+										class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
+										type="button"
+										aria-label={$i18n.t('Remove file')}
+										on:click={() => {
+											files.splice(fileIdx, 1);
+											files = files;
+										}}
+									>
 														class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
 														type="button"
 														on:click={() => {
@@ -1035,7 +1050,13 @@
 										{#if inputLoading && onStop}
 											<div class=" flex items-center">
 												<Tooltip content={$i18n.t('Stop')}>
-													<button
+									<button
+										class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
+										aria-label={$i18n.t('Stop')}
+										on:click={() => {
+											onStop();
+										}}
+									>
 														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
 														on:click={() => {
 															onStop();
@@ -1059,7 +1080,15 @@
 										{:else}
 											<div class=" flex items-center">
 												<Tooltip content={$i18n.t('Send message')}>
-													<button
+									<button
+										id="send-message-button"
+										class="{content !== '' || files.length !== 0
+											? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+											: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
+										type="submit"
+										disabled={content === '' && files.length === 0}
+										aria-label={$i18n.t('Send message')}
+									>
 														id="send-message-button"
 														class="{content !== '' || files.length !== 0
 															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '

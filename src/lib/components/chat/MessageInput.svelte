@@ -1149,7 +1149,8 @@
 							class=" absolute -top-12 left-0 right-0 flex justify-center z-30 pointer-events-none"
 						>
 							<button
-								class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
+							class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
+							aria-label={$i18n.t('Scroll to bottom')}
 								on:click={() => {
 									autoScroll = true;
 									scrollToBottom();
@@ -1234,8 +1235,9 @@
 						<button
 							id="generate-message-pair-button"
 							class="hidden"
+							aria-label="Generate message pair"
 							on:click={() => createMessagePair(prompt)}
-						/>
+						></button>
 
 						<!-- Queued messages display -->
 						{#if messageQueue.length > 0}
@@ -1645,7 +1647,7 @@
 									</InputMenu>
 
 									{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || (toggleFilters && toggleFilters.length > 0)}
-										<div class="w-[1px] h-4 bg-gray-200/50 dark:bg-gray-800/50" />
+								<div class="w-[1px] h-4 bg-gray-200/50 dark:bg-gray-800/50"></div>
 
 										<IntegrationsMenu
 											selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
@@ -1849,7 +1851,8 @@
 													class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
 													on:click={() => {
 														stopResponse();
-													}}
+									}}
+									aria-label={$i18n.t('Stop')}
 												>
 													<svg
 														xmlns="http://www.w3.org/2000/svg"
@@ -2012,7 +2015,8 @@
 															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
 														type="submit"
-														disabled={prompt === '' && files.length === 0}
+									disabled={prompt === '' && files.length === 0}
+									aria-label={$i18n.t('Send message')}
 													>
 														<svg
 															xmlns="http://www.w3.org/2000/svg"
@@ -2040,7 +2044,7 @@
 								{@html DOMPurify.sanitize(marked($config?.license_metadata?.input_footer))}
 							</div>
 						{:else}
-							<div class="mb-1" />
+							<div class="mb-1"></div>
 						{/if}
 					</form>
 				</div>

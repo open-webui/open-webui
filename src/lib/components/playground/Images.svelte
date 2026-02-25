@@ -134,10 +134,11 @@
 						{#if generatedImages.length > 0}
 							<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
 								{#each generatedImages as image, index}
-									<button
-										class="relative group cursor-pointer"
-										on:click={() => downloadImage(image.url, index)}
-									>
+							<button
+								class="relative group cursor-pointer"
+								aria-label={$i18n.t('Download image')}
+							on:click={() => downloadImage(image.url, index)}
+						>
 										<img
 											src={image.url}
 											alt=""
@@ -187,11 +188,12 @@
 										<img src={image} alt="" class="size-10 rounded-xl object-cover" />
 									</div>
 									<div class=" absolute -top-1 -right-1">
-										<button
-											class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
-											type="button"
-											on:click={() => removeImage(index)}
-										>
+								<button
+									class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
+									type="button"
+									aria-label={$i18n.t('Remove image')}
+							on:click={() => removeImage(index)}
+						>
 											<svg
 												xmlns="http://www.w3.org/2000/svg"
 												viewBox="0 0 20 20"
@@ -212,23 +214,23 @@
 
 					<!-- Prompt Textarea -->
 					<div class="py-0.5">
-						<textarea
-							bind:this={promptTextareaElement}
-							bind:value={prompt}
-							class=" w-full h-full bg-transparent resize-none outline-hidden text-sm"
-							placeholder={sourceImages.length > 0
-								? $i18n.t('Describe the edit...')
-								: $i18n.t('Describe the image...')}
-							on:input={resizePromptTextarea}
-							on:focus={resizePromptTextarea}
-							on:keydown={(e) => {
-								if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !loading) {
-									e.preventDefault();
-									submitHandler();
-								}
-							}}
-							rows="2"
-						/>
+					<textarea
+						bind:this={promptTextareaElement}
+						bind:value={prompt}
+						class=" w-full h-full bg-transparent resize-none outline-hidden text-sm"
+						placeholder={sourceImages.length > 0
+							? $i18n.t('Describe the edit...')
+							: $i18n.t('Describe the image...')}
+						on:input={resizePromptTextarea}
+						on:focus={resizePromptTextarea}
+						on:keydown={(e) => {
+							if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !loading) {
+								e.preventDefault();
+								submitHandler();
+							}
+						}}
+						rows="2"
+					></textarea>
 					</div>
 
 					<!-- Actions -->

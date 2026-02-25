@@ -615,7 +615,13 @@
 
 						<div>
 							<Tooltip content="Update All Models" placement="top">
-								<button
+							<button
+								class="flex gap-2 items-center bg-transparent rounded-lg transition"
+								aria-label={$i18n.t('Update All Models')}
+								on:click={() => {
+									updateModelsHandler();
+								}}
+							>
 									class="flex gap-2 items-center bg-transparent rounded-lg transition"
 									on:click={() => {
 										updateModelsHandler();
@@ -719,7 +725,13 @@
 							<div>Updating "{updateModelId}" {updateProgress ? `(${updateProgress}%)` : ''}</div>
 
 							<Tooltip content={$i18n.t('Cancel')}>
-								<button
+							<button
+								class="text-gray-800 dark:text-gray-100"
+								aria-label={$i18n.t('Cancel')}
+								on:click={() => {
+									cancelUpdateModelHandler(updateModelId);
+								}}
+							>
 									class="text-gray-800 dark:text-gray-100"
 									on:click={() => {
 										cancelUpdateModelHandler(updateModelId);
@@ -767,7 +779,13 @@
 											</div>
 
 											<Tooltip content={$i18n.t('Cancel')}>
-												<button
+									<button
+										class="text-gray-800 dark:text-gray-100"
+										aria-label={$i18n.t('Cancel')}
+										on:click={() => {
+											cancelModelPullHandler(model);
+										}}
+									>
 													class="text-gray-800 dark:text-gray-100"
 													on:click={() => {
 														cancelModelPullHandler(model);
@@ -826,7 +844,14 @@
 							</select>
 						</div>
 						<Tooltip content={$i18n.t('Delete Model')} placement="top">
-							<button
+						<button
+							class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+							aria-label={$i18n.t('Delete Model')}
+							on:click={() => {
+								showModelDeleteConfirm = true;
+							}}
+							disabled={deleteModelTag === ''}
+						>
 								class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
 								on:click={() => {
 									showModelDeleteConfirm = true;
@@ -863,18 +888,28 @@
 								disabled={createModelLoading}
 							/>
 
-							<textarea
-								bind:value={createModelObject}
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-100 dark:bg-gray-850 outline-hidden resize-none scrollbar-hidden"
-								rows="6"
-								placeholder={`e.g. {"model": "my-modelfile", "from": "ollama:7b"})`}
-								disabled={createModelLoading}
-							/>
+						<textarea
+							bind:value={createModelObject}
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-100 dark:bg-gray-850 outline-hidden resize-none scrollbar-hidden"
+							rows="6"
+							placeholder={`e.g. {"model": "my-modelfile", "from": "ollama:7b"})`}
+							disabled={createModelLoading}
+						></textarea>
+
 						</div>
 
 						<div class="flex self-start">
 							<Tooltip content={$i18n.t('Create Model')} placement="top">
-								<button
+							<button
+								class="px-2.5 py-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition disabled:cursor-not-allowed"
+								aria-label={$i18n.t('Create Model')}
+								on:click={() => {
+									createModelHandler();
+								}}
+								disabled={createModelLoading ||
+									createModelName.trim() === '' ||
+									createModelObject.trim() === ''}
+							>
 									class="px-2.5 py-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition disabled:cursor-not-allowed"
 									on:click={() => {
 										createModelHandler();
@@ -1076,7 +1111,11 @@
 									<div class=" my-2.5 text-sm font-medium">
 										{$i18n.t('Modelfile Content')}
 									</div>
-									<textarea
+								<textarea
+									bind:value={modelFileContent}
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-100 dark:bg-gray-850 outline-hidden resize-none"
+									rows="6"
+								></textarea>
 										bind:value={modelFileContent}
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-100 dark:bg-gray-850 outline-hidden resize-none"
 										rows="6"

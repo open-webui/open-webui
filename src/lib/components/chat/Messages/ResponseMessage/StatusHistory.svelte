@@ -55,9 +55,9 @@
 											</span>
 										</div>
 										{#if idx !== history.length - 1}
-											<div
-												class="w-[0.5px] ml-[6.5px] h-[calc(100%-14px)] bg-gray-300 dark:bg-gray-700"
-											/>
+<div
+	class="w-[0.5px] ml-[6.5px] h-[calc(100%-14px)] bg-gray-300 dark:bg-gray-700"
+											></div>
 										{/if}
 									</div>
 

@@ -97,7 +97,13 @@
 					<div class="text-sm mb-2">{$i18n.t('What are you trying to achieve?')}</div>
 
 					<div class=" w-full mt-1">
-						<textarea
+					<textarea
+						class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+						rows="4"
+						bind:value={description}
+						placeholder={$i18n.t('Describe your knowledge base and objectives')}
+						required
+					></textarea>
 							class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							rows="4"
 							bind:value={description}

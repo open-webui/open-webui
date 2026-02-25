@@ -339,16 +339,16 @@
 
 					<div slot="content">
 						<div class="pt-1 px-1.5">
-							<textarea
-								bind:this={systemTextareaElement}
-								class="w-full h-full bg-transparent resize-none outline-hidden text-sm"
-								bind:value={system}
-								placeholder={$i18n.t("You're a helpful assistant.")}
-								on:input={() => {
-									resizeSystemTextarea();
-								}}
-								rows="4"
-							/>
+					<textarea
+						bind:this={systemTextareaElement}
+						class="w-full h-full bg-transparent resize-none outline-hidden text-sm"
+						bind:value={system}
+						placeholder={$i18n.t("You're a helpful assistant.")}
+						on:input={() => {
+							resizeSystemTextarea();
+						}}
+						rows="4"
+					></textarea>
 						</div>
 					</div>
 				</Collapsible>
@@ -427,22 +427,22 @@
 					<div class="py-0.5">
 						<!-- $i18n.t('a user') -->
 						<!-- $i18n.t('an assistant') -->
-						<textarea
-							bind:value={message}
-							class=" w-full h-full bg-transparent resize-none outline-hidden text-sm"
-							placeholder={$i18n.t(`Enter {{role}} message here`, {
-								role: role === 'user' ? $i18n.t('a user') : $i18n.t('an assistant')
-							})}
-							on:input={(e) => {
-								e.target.style.height = '';
-								e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
-							}}
-							on:focus={(e) => {
-								e.target.style.height = '';
-								e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
-							}}
-							rows="2"
-						/>
+					<textarea
+						bind:value={message}
+						class=" w-full h-full bg-transparent resize-none outline-hidden text-sm"
+						placeholder={$i18n.t(`Enter {{role}} message here`, {
+							role: role === 'user' ? $i18n.t('a user') : $i18n.t('an assistant')
+						})}
+						on:input={(e) => {
+							e.target.style.height = '';
+							e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+						}}
+						on:focus={(e) => {
+							e.target.style.height = '';
+							e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+						}}
+						rows="2"
+					></textarea>
 					</div>
 
 					<div

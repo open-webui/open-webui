@@ -387,14 +387,14 @@
 				<div class="flex-1"></div>
 
 				<Dropdown>
-					<Tooltip content={$i18n.t('Actions')}>
-						<button
-							class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-							type="button"
-						>
-							<EllipsisHorizontal className="size-4" />
-						</button>
-					</Tooltip>
+<Tooltip content={$i18n.t('Actions')}>
+	<button
+		class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+		type="button"
+		aria-label={$i18n.t('Actions')}
+	>
+	</button>
+</Tooltip>
 
 					<div slot="content">
 						<DropdownMenu.Content
@@ -504,12 +504,13 @@
 										</button>
 									</Tooltip>
 								{:else}
-									<button
-										class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-										type="button"
-										on:click={() => {
-											selectedModelId = model.id;
-										}}
+<button
+	class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+	type="button"
+	aria-label={$i18n.t('Edit model')}
+	on:click={() => {
+		selectedModelId = model.id;
+	}}
 									>
 										<svg
 											xmlns="http://www.w3.org/2000/svg"

@@ -19,7 +19,8 @@ const packages = [
 
 import { loadPyodide } from 'pyodide';
 import { setGlobalDispatcher, ProxyAgent } from 'undici';
-import { writeFile, readFile, copyFile, readdir, rmdir } from 'fs/promises';
+import { writeFile, readFile, copyFile, readdir, rmdir, stat, mkdir } from 'fs/promises';
+import { createHash } from 'crypto';
 
 /**
  * Loading network proxy configurations from the environment variables.
@@ -51,7 +52,62 @@ function initNetworkProxyFromEnv() {
 	console.log(`Initialized network proxy "${preferedProxy}" from env`);
 }
 
-async function downloadPackages() {
+/**
+ * Generate a hash of the current configuration to detect changes
+ */
+function getConfigHash(pyodideVersion) {
+	// Use major.minor only for hash (patch versions are compatible)
+	const [major, minor] = pyodideVersion.split('.');
+	const config = {
+		pyodideMajorMinor: `${major}.${minor}`,
+		packages: packages.sort()
+	};
+	return createHash('md5').update(JSON.stringify(config)).digest('hex');
+}
+
+/**
+ * Check if pyodide cache is valid and up-to-date
+ */
+async function isCacheValid(pyodideVersion) {
+	try {
+		// Check if lock file exists
+		await stat('static/pyodide/pyodide-lock.json');
+
+		// Check if pyodide package.json exists and major.minor version matches
+		// (patch version differences are OK with semver ^)
+		const pyodidePackageJson = JSON.parse(await readFile('static/pyodide/package.json'));
+		const installedVersion = pyodidePackageJson.version;
+		
+		// Extract major.minor from both versions
+		const [reqMajor, reqMinor] = pyodideVersion.split('.');
+		const [instMajor, instMinor] = installedVersion.split('.');
+		
+		// For ^ (caret) ranges, major.minor must match, patch can differ
+		if (reqMajor !== instMajor || reqMinor !== instMinor) {
+			console.log(`Pyodide version mismatch: ${installedVersion} -> ${pyodideVersion}`);
+			return false;
+		}
+
+		// Check if config hash matches (packages list hasn't changed)
+		const expectedHash = getConfigHash(pyodideVersion);
+		try {
+			const storedHash = await readFile('static/pyodide/.config-hash', 'utf-8');
+			if (storedHash.trim() !== expectedHash) {
+				console.log('Package configuration changed');
+				return false;
+			}
+		} catch {
+			// Hash file doesn't exist, need to regenerate
+			return false;
+		}
+
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+async function downloadPackages(pyodideVersion) {
 	console.log('Setting up pyodide + micropip');
 
 	let pyodide;
@@ -63,9 +119,6 @@ async function downloadPackages() {
 		console.error('Failed to load Pyodide:', err);
 		return;
 	}
-
-	const packageJson = JSON.parse(await readFile('package.json'));
-	const pyodideVersion = packageJson.dependencies.pyodide.replace('^', '');
 
 	try {
 		const pyodidePackageJson = JSON.parse(await readFile('static/pyodide/package.json'));
@@ -101,6 +154,8 @@ async function downloadPackages() {
 		try {
 			const lockFile = await micropip.freeze();
 			await writeFile('static/pyodide/pyodide-lock.json', lockFile);
+			// Write config hash to detect future changes
+			await writeFile('static/pyodide/.config-hash', getConfigHash(pyodideVersion));
 		} catch (err) {
 			console.error('Failed to write lock file:', err);
 		}
@@ -111,12 +166,29 @@ async function downloadPackages() {
 
 async function copyPyodide() {
 	console.log('Copying Pyodide files into static directory');
+	// Ensure static/pyodide directory exists
+	try {
+		await mkdir('static/pyodide', { recursive: true });
+	} catch {
+		// Directory may already exist
+	}
 	// Copy all files from node_modules/pyodide to static/pyodide
 	for await (const entry of await readdir('node_modules/pyodide')) {
 		await copyFile(`node_modules/pyodide/${entry}`, `static/pyodide/${entry}`);
 	}
 }
 
+// Main execution
 initNetworkProxyFromEnv();
-await downloadPackages();
-await copyPyodide();
+
+const packageJson = JSON.parse(await readFile('package.json'));
+const pyodideVersion = packageJson.dependencies.pyodide.replace('^', '');
+
+// Check if we can skip the expensive work
+if (await isCacheValid(pyodideVersion)) {
+	console.log('✓ Pyodide cache is valid, skipping download');
+} else {
+	console.log('Pyodide cache invalid or missing, downloading packages...');
+	await downloadPackages(pyodideVersion);
+	await copyPyodide();
+}

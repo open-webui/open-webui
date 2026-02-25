@@ -71,13 +71,13 @@
 					}}
 				>
 					<div class="">
-						<textarea
-							bind:value={content}
-							class=" bg-transparent w-full text-sm rounded-xl p-3 outline outline-1 outline-gray-100 dark:outline-gray-800"
-							rows="6"
-							style="resize: vertical;"
-							placeholder={$i18n.t('Enter a detail about yourself for your LLMs to recall')}
-						/>
+					<textarea
+						bind:value={content}
+						class=" bg-transparent w-full text-sm rounded-xl p-3 outline outline-1 outline-gray-100 dark:outline-gray-800"
+						rows="6"
+						style="resize: vertical;"
+						placeholder={$i18n.t('Enter a detail about yourself for your LLMs to recall')}
+					></textarea>
 
 						<div class="text-xs text-gray-500">
 							ⓘ {$i18n.t('Refer to yourself as "User" (e.g., "User is learning Spanish")')}

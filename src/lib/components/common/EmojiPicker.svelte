@@ -18,7 +18,7 @@
 	export let onSubmit = (name) => {};
 	export let side = 'top';
 	export let align = 'start';
-	export let user = null;
+
 
 	let show = false;
 	let emojis = emojiShortCodes;

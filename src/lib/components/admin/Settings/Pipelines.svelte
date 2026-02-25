@@ -270,12 +270,13 @@
 								hidden
 							/>
 
-							<button
-								class="w-full text-sm font-medium py-2 bg-transparent hover:bg-gray-100 border border-dashed dark:border-gray-850 dark:hover:bg-gray-850 text-center rounded-xl"
-								type="button"
-								on:click={() => {
-									document.getElementById('pipelines-upload-input')?.click();
-								}}
+<button
+	class="w-full text-sm font-medium py-2 bg-transparent hover:bg-gray-100 border border-dashed dark:border-gray-850 dark:hover:bg-gray-850 text-center rounded-xl"
+	type="button"
+	aria-label={$i18n.t('Select a py file')}
+	on:click={() => {
+		document.getElementById('pipelines-upload-input')?.click();
+	}}
 							>
 								{#if pipelineFiles}
 									{pipelineFiles.length > 0 ? `${pipelineFiles.length}` : ''} pipeline(s) selected.
@@ -448,12 +449,13 @@
 										</select>
 									</div>
 
-									<button
-										class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
-										on:click={() => {
-											deletePipelineHandler();
-										}}
-										type="button"
+<button
+	class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+	aria-label={$i18n.t('Delete pipeline')}
+	on:click={() => {
+		deletePipelineHandler();
+	}}
+	type="button"
 									>
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
