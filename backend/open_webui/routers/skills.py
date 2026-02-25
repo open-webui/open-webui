@@ -346,7 +346,7 @@ async def update_skill_access_by_id(
         user.id,
         user.role,
         form_data.access_grants,
-        "sharing.public_skills"
+        "sharing.public_skills",
     )
 
     AccessGrants.set_access_grants("skill", id, form_data.access_grants, db=db)

@@ -277,9 +277,7 @@ def get_last_user_message(messages: list[dict]) -> Optional[str]:
     return get_content_from_message(message)
 
 
-def set_last_user_message_content(
-    content: str, messages: list[dict]
-) -> list[dict]:
+def set_last_user_message_content(content: str, messages: list[dict]) -> list[dict]:
     """
     Replace the text content of the last user message in-place.
     Handles both plain-string and list-of-parts content formats.

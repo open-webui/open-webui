@@ -551,7 +551,7 @@ async def update_knowledge_access_by_id(
         user.id,
         user.role,
         form_data.access_grants,
-        "sharing.public_knowledge"
+        "sharing.public_knowledge",
     )
 
     AccessGrants.set_access_grants("knowledge", id, form_data.access_grants, db=db)

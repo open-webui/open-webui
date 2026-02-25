@@ -195,6 +195,7 @@ def migrate_access_control(
     data[grants_key] = grants
     data.pop(ac_key, None)
 
+
 from open_webui.models.access_grants import (
     has_public_read_access_grant,
     has_user_access_grant,
@@ -228,8 +229,18 @@ def filter_allowed_access_grants(
             grant
             for grant in access_grants
             if not (
-                (grant.get("principal_type") if isinstance(grant, dict) else getattr(grant, "principal_type", None)) == "user"
-                and (grant.get("principal_id") if isinstance(grant, dict) else getattr(grant, "principal_id", None)) == "*"
+                (
+                    grant.get("principal_type")
+                    if isinstance(grant, dict)
+                    else getattr(grant, "principal_type", None)
+                )
+                == "user"
+                and (
+                    grant.get("principal_id")
+                    if isinstance(grant, dict)
+                    else getattr(grant, "principal_id", None)
+                )
+                == "*"
             )
         ]
 
@@ -243,4 +254,3 @@ def filter_allowed_access_grants(
         access_grants = strip_user_access_grants(access_grants)
 
     return access_grants
-
