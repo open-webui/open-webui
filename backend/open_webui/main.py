@@ -68,6 +68,7 @@ from open_webui.socket.main import (
     get_event_emitter,
     get_models_in_use,
 )
+from open_webui.utils.sharepoint_scheduler import periodic_sharepoint_sync
 from open_webui.routers import (
     analytics,
     anthropic,
@@ -660,6 +661,7 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     asyncio.create_task(periodic_session_pool_cleanup())
+    asyncio.create_task(periodic_sharepoint_sync())
 
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         try:

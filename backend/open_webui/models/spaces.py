@@ -152,6 +152,9 @@ class SpaceSharePointFolder(Base):
     tenant_id = Column(Text, nullable=False)
     delta_link = Column(Text, nullable=True)  # Opaque @odata.deltaLink URL from Graph
     last_synced_at = Column(BigInteger, nullable=True)
+    last_sync_added = Column(Integer, nullable=True)
+    last_sync_updated = Column(Integer, nullable=True)
+    last_sync_removed = Column(Integer, nullable=True)
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
 
@@ -374,6 +377,9 @@ class SpaceSharePointFolderModel(BaseModel):
     tenant_id: str
     delta_link: Optional[str] = None
     last_synced_at: Optional[int] = None
+    last_sync_added: Optional[int] = None
+    last_sync_updated: Optional[int] = None
+    last_sync_removed: Optional[int] = None
     created_at: int
     updated_at: int
 
@@ -556,6 +562,9 @@ class SpaceSharePointFolderTable:
         record_id: str,
         delta_link: str,
         last_synced_at: int,
+        added: Optional[int] = None,
+        updated: Optional[int] = None,
+        removed: Optional[int] = None,
         db: Optional[Session] = None,
     ) -> bool:
         try:
@@ -569,6 +578,12 @@ class SpaceSharePointFolderTable:
                     return False
                 record.delta_link = delta_link
                 record.last_synced_at = last_synced_at
+                if added is not None:
+                    record.last_sync_added = added
+                if updated is not None:
+                    record.last_sync_updated = updated
+                if removed is not None:
+                    record.last_sync_removed = removed
                 record.updated_at = int(time.time())
                 db.commit()
                 return True
@@ -576,6 +591,26 @@ class SpaceSharePointFolderTable:
             log.exception(f"Error updating delta_link: {e}")
             return False
 
+
+    def get_all(self, db: Optional[Session] = None) -> List[SpaceSharePointFolderModel]:
+        try:
+            with get_db_context(db) as db:
+                records = db.query(SpaceSharePointFolder).all()
+                return [SpaceSharePointFolderModel.model_validate(r) for r in records]
+        except Exception as e:
+            log.exception(f"Error fetching all SpaceSharePointFolders: {e}")
+            return []
+
+    def get_by_id(self, folder_id: str, db: Optional[Session] = None) -> Optional[SpaceSharePointFolderModel]:
+        try:
+            with get_db_context(db) as db:
+                record = db.query(SpaceSharePointFolder).filter_by(id=folder_id).first()
+                if record:
+                    return SpaceSharePointFolderModel.model_validate(record)
+                return None
+        except Exception as e:
+            log.exception(f"Error fetching SpaceSharePointFolder {folder_id}: {e}")
+            return None
 
 SpaceSharePointFolders = SpaceSharePointFolderTable()
 

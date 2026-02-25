@@ -961,6 +961,87 @@ export const syncSharePointFiles = async (
 	return res;
 };
 
+export interface SpaceSharePointFolder {
+	id: string;
+	space_id: string;
+	drive_id: string;
+	folder_id?: string;
+	folder_name?: string;
+	site_name?: string;
+	tenant_id: string;
+	delta_link?: string;
+	last_synced_at?: number;
+	last_sync_added?: number;
+	last_sync_updated?: number;
+	last_sync_removed?: number;
+	created_at: number;
+	updated_at: number;
+}
+
+export const getSpaceSharePointFolders = async (
+	token: string,
+	spaceId: string
+): Promise<SpaceSharePointFolder[]> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/spaces/${spaceId}/files/sharepoint/folders`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail || err.message || 'Failed to get SharePoint folders';
+			console.error(err);
+			return [];
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const syncSharePointFolder = async (
+	token: string,
+	spaceId: string,
+	folderId: string
+): Promise<SpaceSharePointFolder> => {
+	let error = null;
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/spaces/${spaceId}/files/sharepoint/folders/${folderId}/sync`,
+		{
+			method: 'POST',
+			headers: {
+				Accept: 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail || err.message || 'Failed to sync SharePoint folder';
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const removeLinkFromSpace = async (
 	token: string,
 	spaceId: string,

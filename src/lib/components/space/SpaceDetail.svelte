@@ -34,9 +34,11 @@
 		subscribeToSpace,
 		unsubscribeFromSpace,
 		getSubscriptionStatus,
-		syncSharePointFiles
+		syncSharePointFiles,
+		getSpaceSharePointFolders,
+		syncSharePointFolder
 	} from '$lib/apis/spaces';
-	import type { Space, SpaceLink, SpaceCloneForm } from '$lib/apis/spaces';
+	import type { Space, SpaceLink, SpaceCloneForm, SpaceSharePointFolder } from '$lib/apis/spaces';
 	import { getChatListBySpaceId } from '$lib/apis/chats';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -87,6 +89,8 @@
 	let isSubscribed = false;
 	let threadAccessDropdown: string | null = null;
 	let syncingSharePoint = false;
+	let trackedFolders: SpaceSharePointFolder[] = [];
+	let syncingFolders: Set<string> = new Set();
 
 	$: hasPendingInvitation =
 		space != null &&
@@ -210,6 +214,7 @@
 				knowledgeBases = kb ?? [];
 				files = await getSpaceFiles(localStorage.token, space.id).catch(() => []);
 				links = await getSpaceLinks(localStorage.token, space.id).catch(() => []);
+				trackedFolders = await getSpaceSharePointFolders(localStorage.token, space.id).catch(() => []);
 				const bookmarks = await getBookmarkedSpaces(localStorage.token).catch(() => []);
 				isBookmarked = bookmarks.some((b: Space) => b.id === space?.id);
 				const subStatus = await getSubscriptionStatus(localStorage.token, space.id).catch(
@@ -430,6 +435,7 @@
 			if (result.updated > 0) {
 				toast.success($i18n.t('Updated {{count}} file(s)', { count: result.updated }));
 				files = await getSpaceFiles(localStorage.token, space.id).catch(() => []);
+				trackedFolders = await getSpaceSharePointFolders(localStorage.token, space.id).catch(() => []);
 			} else {
 				toast.success($i18n.t('All files are up to date'));
 			}
@@ -437,6 +443,23 @@
 			toast.error(String(err));
 		} finally {
 			syncingSharePoint = false;
+		}
+	};
+
+	const handleSyncFolder = async (folderId: string) => {
+		if (!space || syncingFolders.has(folderId)) return;
+		syncingFolders = new Set([...syncingFolders, folderId]);
+		try {
+			const updated = await syncSharePointFolder(localStorage.token, space.id, folderId);
+			if (updated) {
+				trackedFolders = trackedFolders.map((f) => (f.id === folderId ? updated : f));
+			}
+			files = await getSpaceFiles(localStorage.token, space.id).catch(() => files);
+			toast.success($i18n.t('Folder synced'));
+		} catch (err) {
+			toast.error(String(err));
+		} finally {
+			syncingFolders = new Set([...syncingFolders].filter((id) => id !== folderId));
 		}
 	};
 
@@ -1348,6 +1371,41 @@
 															buttonClassName="text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
 														>
 															<div class="space-y-0.5 pl-2">
+											{@const trackedFolder = trackedFolders.find((tf) => tf.folder_id === folder.folderId)}
+											{#if trackedFolder}
+												<div class="flex items-center justify-between px-1 pb-1 mb-0.5 border-b border-gray-100 dark:border-gray-800">
+													<div class="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+														{#if trackedFolder.last_synced_at}
+															<span title={new Date(trackedFolder.last_synced_at * 1000).toLocaleString()}>
+																{$i18n.t('Synced')} {new Date(trackedFolder.last_synced_at * 1000).toLocaleDateString()}
+															</span>
+														{:else}
+															<span>{$i18n.t('Never synced')}</span>
+														{/if}
+														{#if trackedFolder.last_synced_at && (trackedFolder.last_sync_added != null || trackedFolder.last_sync_updated != null || trackedFolder.last_sync_removed != null)}
+															<span class="font-mono">
+																<span class="text-green-500">+{trackedFolder.last_sync_added ?? 0}</span>
+																<span class="text-yellow-500"> ~{trackedFolder.last_sync_updated ?? 0}</span>
+																<span class="text-red-500"> -{trackedFolder.last_sync_removed ?? 0}</span>
+															</span>
+														{/if}
+													</div>
+													{#if space.write_access}
+														<button
+															class="flex items-center gap-1 text-xs text-sky-500 hover:text-sky-600 dark:text-sky-400 dark:hover:text-sky-300 disabled:opacity-50 transition"
+															on:click|stopPropagation={() => handleSyncFolder(trackedFolder.id)}
+															disabled={syncingFolders.has(trackedFolder.id)}
+														>
+															{#if syncingFolders.has(trackedFolder.id)}
+																<Spinner className="size-3" />
+															{:else}
+																<svg class="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+															{/if}
+															{$i18n.t('Sync Now')}
+														</button>
+													{/if}
+												</div>
+											{/if}
 																{#each folder.files as file (file.id)}
 																	<div
 																		class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition group flex items-center gap-2.5"

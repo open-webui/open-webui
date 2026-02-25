@@ -2717,6 +2717,11 @@ SHAREPOINT_TENANTS = PersistentConfig(
     os.environ.get("SHAREPOINT_TENANTS", "[]"),
 )
 
+SHAREPOINT_SYNC_INTERVAL = PersistentConfig(
+    "SHAREPOINT_SYNC_INTERVAL",
+    "sharepoint.sync_interval",
+    int(os.environ.get("SHAREPOINT_SYNC_INTERVAL", "900")),
+)
 # RAG Content Extraction
 CONTENT_EXTRACTION_ENGINE = PersistentConfig(
     "CONTENT_EXTRACTION_ENGINE",

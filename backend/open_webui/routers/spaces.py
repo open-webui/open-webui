@@ -1975,6 +1975,67 @@ class SharePointSyncResult(BaseModel):
     errors: List[str]
 
 
+@router.get("/{id}/files/sharepoint/folders")
+async def get_space_sharepoint_folders(
+    id: str,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    """Return tracked SharePoint folders for a space, including last sync metadata."""
+    space = Spaces.get_space_by_id(id=id, db=db)
+    if not space:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    if not (
+        space.user_id == user.id
+        or has_access(user.id, "read", space.access_control, db=db)
+        or can_manage_all(user.id, "spaces")
+        or user.role == "admin"
+    ):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+    from open_webui.models.spaces import SpaceSharePointFolders
+    return SpaceSharePointFolders.get_by_space_id(id, db=db)
+
+
+@router.post("/{id}/files/sharepoint/folders/{folder_id}/sync")
+async def sync_sharepoint_folder(
+    id: str,
+    folder_id: str,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    """Trigger an immediate delta sync for a single tracked SharePoint folder."""
+    from open_webui.routers.sharepoint import ENABLE_SHAREPOINT_INTEGRATION
+    from open_webui.models.spaces import SpaceSharePointFolders
+    from open_webui.utils.sharepoint_scheduler import _sync_folder
+
+    if not ENABLE_SHAREPOINT_INTEGRATION.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="SharePoint integration is disabled",
+        )
+
+    space = Spaces.get_space_by_id(id=id, db=db)
+    if not space:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    if not (
+        space.user_id == user.id
+        or has_access(user.id, "write", space.access_control, db=db)
+        or can_manage_all(user.id, "spaces")
+        or user.role == "admin"
+    ):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
+    folder_rec = SpaceSharePointFolders.get_by_id(folder_id, db=db)
+    if not folder_rec or folder_rec.space_id != id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found")
+
+    await _sync_folder(folder_rec)
+
+    # Return updated folder record
+    updated = SpaceSharePointFolders.get_by_id(folder_id, db=db)
+    return updated
+
+
 @router.post("/{id}/files/sharepoint/sync")
 async def sync_sharepoint_files(
     request: Request,
@@ -2257,6 +2318,9 @@ async def sync_sharepoint_files(
                     record_id=folder_rec.id,
                     delta_link=new_delta_link,
                     last_synced_at=int(time.time()),
+                    added=len(added_files_result),
+                    updated=len(updated_files),
+                    removed=len(removed_files_result),
                 )
                 log.info(f"[spaces] Sync: stored new delta link for folder {folder_rec.id}")
 
