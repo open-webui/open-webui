@@ -704,6 +704,11 @@
 				}
 			}
 
+			// Persist controls panel state for desktop only
+			if (!$mobile) {
+				localStorage.setItem('showControls', JSON.stringify(value));
+			}
+
 			if (!value) {
 				showCallOverlay.set(false);
 				showOverview.set(false);
@@ -711,6 +716,18 @@
 				showEmbeds.set(false);
 			}
 		});
+
+		// Restore controls panel state on desktop
+		if (!$mobile) {
+			try {
+				const savedShowControls = localStorage.getItem('showControls');
+				if (savedShowControls !== null && JSON.parse(savedShowControls)) {
+					showControls.set(true);
+				}
+			} catch (e) {
+				// ignore
+			}
+		}
 
 		selectedFolderSubscribe = selectedFolder.subscribe(async (folder) => {
 			if (
@@ -1089,7 +1106,9 @@
 			}
 		}
 
-		await showControls.set(false);
+		if ($mobile) {
+			await showControls.set(false);
+		}
 		await showCallOverlay.set(false);
 		await showOverview.set(false);
 		await showArtifacts.set(false);

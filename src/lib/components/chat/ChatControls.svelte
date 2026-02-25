@@ -169,7 +169,9 @@
 	});
 
 	onDestroy(() => {
-		showControls.set(false);
+		if (!largeScreen) {
+			showControls.set(false);
+		}
 		mediaQuery.removeEventListener('change', handleMediaQuery);
 		document.removeEventListener('mousedown', onMouseDown);
 		document.removeEventListener('mouseup', onMouseUp);
