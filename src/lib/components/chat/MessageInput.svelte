@@ -1071,8 +1071,28 @@
 		console.log('[SharePoint] fileDownloaded event received:', e.detail);
 		const result = e.detail;
 		if (result && result.id) {
+			// Check for duplicate before adding
+			const existingFile = files.find((f) => f.id === result.id);
+			if (existingFile) {
+				console.log('[SharePoint] DUPLICATE DETECTED - file already in files array:', result.id, result.filename);
+				console.log('[SharePoint] Existing file:', existingFile);
+				return;
+			}
+			
+			// Also check by sharepoint_item_id in meta
+			const spItemId = result.meta?.sharepoint_item_id;
+			if (spItemId) {
+				const existingBySpId = files.find((f) => f.meta?.sharepoint_item_id === spItemId);
+				if (existingBySpId) {
+					console.log('[SharePoint] DUPLICATE DETECTED - same sharepoint_item_id already exists:', spItemId);
+					console.log('[SharePoint] Existing file:', existingBySpId);
+					return;
+				}
+			}
+			
 			console.log('[SharePoint] Adding file to chat:', result.id, result.filename);
-
+			console.log('[SharePoint] Current files array before add:', files.map(f => ({ id: f.id, name: f.name, meta: f.meta })));
+			
 			const fileEntry = {
 				type: 'file',
 				id: result.id,
@@ -1083,22 +1103,21 @@
 				meta: result.meta ?? {}
 			};
 			files = [...files, fileEntry];
-
+			
+			console.log('[SharePoint] Files array after add:', files.map(f => ({ id: f.id, name: f.name })));
+			
 			try {
 				console.log('[SharePoint] Processing file for RAG:', result.id);
 				const processResult = await processFile(localStorage.token, result.id);
 				console.log('[SharePoint] File processed:', processResult);
-
+				
 				if (processResult && processResult.collection_name) {
 					files = files.map((f) =>
 						f.id === result.id
 							? { ...f, collection_name: processResult.collection_name, status: 'uploaded' }
 							: f
 					);
-					console.log(
-						'[SharePoint] File ready for RAG with collection:',
-						processResult.collection_name
-					);
+					console.log('[SharePoint] File ready for RAG with collection:', processResult.collection_name);
 				} else {
 					files = files.map((f) => (f.id === result.id ? { ...f, status: 'uploaded' } : f));
 					console.warn('[SharePoint] File processed but no collection_name returned');
@@ -1108,8 +1127,8 @@
 				files = files.map((f) => (f.id === result.id ? { ...f, status: 'error' } : f));
 				toast.error(`Failed to process file: ${err}`);
 			}
-
-			console.log('[SharePoint] Files array now:', files);
+			
+			console.log('[SharePoint] Final files array:', files.map(f => ({ id: f.id, name: f.name, status: f.status })));
 		} else {
 			console.error('[SharePoint] Invalid result - missing id:', result);
 		}

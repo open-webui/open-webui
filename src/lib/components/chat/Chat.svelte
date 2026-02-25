@@ -226,10 +226,13 @@
 
 			// Restore queue from sessionStorage
 			const storedQueueData = sessionStorage.getItem(`chat-queue-${chatIdProp}`);
+			console.log('[Chat] Checking sessionStorage queue:', storedQueueData ? 'found' : 'not found');
 			if (storedQueueData) {
 				try {
 					const restoredQueue = JSON.parse(storedQueueData);
-
+					console.log('[Chat] Restored queue:', restoredQueue);
+					console.log('[Chat] Queue files:', restoredQueue.flatMap((m) => m.files));
+					
 					if (restoredQueue.length > 0) {
 						sessionStorage.removeItem(`chat-queue-${chatIdProp}`);
 						// Check if there are pending tasks (still generating)
@@ -237,6 +240,7 @@
 						if (!hasPendingTask) {
 							// No pending tasks - process the queue
 							files = restoredQueue.flatMap((m) => m.files);
+							console.log('[Chat] Files restored from queue:', files.map(f => ({ id: f.id, name: f.name })));
 							await tick();
 							const combinedPrompt = restoredQueue.map((m) => m.prompt).join('\n\n');
 							await submitPrompt(combinedPrompt);
@@ -245,23 +249,31 @@
 							messageQueue = restoredQueue;
 						}
 					}
-				} catch (e) {}
+				} catch (e) {
+					console.error('[Chat] Failed to parse queue from sessionStorage:', e);
+				}
 			}
 
 			if (storageChatInput) {
 				try {
 					const input = JSON.parse(storageChatInput);
-
+					console.log('[Chat] Restored input from sessionStorage:', input);
+					console.log('[Chat] Input files:', input.files?.map(f => ({ id: f.id, name: f.name })));
+					
 					if (!$temporaryChatEnabled) {
 						messageInput?.setText(input.prompt);
 						files = input.files;
+						console.log('[Chat] Files set from input:', files.map(f => ({ id: f.id, name: f.name })));
 						selectedToolIds = input.selectedToolIds;
 						selectedFilterIds = input.selectedFilterIds;
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
 					}
-				} catch (e) {}
+				} catch (e) {
+					console.error('[Chat] Failed to parse input from sessionStorage:', e);
+				}
+			}
 			} else {
 				await setDefaults();
 			}
@@ -1313,6 +1325,7 @@
 
 				params = chatContent?.params ?? {};
 				chatFiles = chatContent?.files ?? [];
+				console.log('[Chat] loadChat - chatFiles loaded from DB:', chatFiles.map(f => ({ id: f.id, name: f.name, meta: f.meta })));
 
 				autoScroll = true;
 				await tick();

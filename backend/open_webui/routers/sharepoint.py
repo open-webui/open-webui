@@ -1500,6 +1500,20 @@ async def download_file(
 
     item_id = file_id
 
+    # Check for existing file with same SharePoint item_id (deduplication)
+    log.info(f"[SharePoint Download] Checking for existing file with sharepoint_item_id={item_id}")
+    existing_file = Files.get_file_by_sharepoint_item_id(item_id)
+    if existing_file:
+        log.info(f"[SharePoint Download] REUSING existing file: id={existing_file.id}, filename={existing_file.filename}")
+        return {
+            "id": existing_file.id,
+            "filename": existing_file.filename,
+            "meta": existing_file.meta,
+            "created_at": existing_file.created_at,
+        }
+
+    log.info(f"[SharePoint Download] No existing file found, downloading new: drive_id={drive_id}, item_id={item_id}")
+
     metadata_endpoint = f"/drives/{drive_id}/items/{item_id}"
     params = {"$select": "id,name,size,file,@microsoft.graph.downloadUrl"}
 
