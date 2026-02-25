@@ -221,14 +221,18 @@
 		},
 		{
 			id: 'tools',
-			title: 'External Tools',
+			title: 'Integrations',
 			keywords: [
 				'addconnection',
 				'add connection',
+				'integrations',
 				'managetools',
 				'manage tools',
 				'manage tool servers',
 				'managetoolservers',
+				'open terminal',
+				'openterminal',
+				'terminal',
 				'settings'
 			]
 		},
@@ -720,7 +724,7 @@
 									<div class=" self-center mr-2">
 										<WrenchAlt strokeWidth="2" />
 									</div>
-									<div class=" self-center">{$i18n.t('External Tools')}</div>
+									<div class=" self-center">{$i18n.t('Integrations')}</div>
 								</button>
 							{/if}
 						{:else if tabId === 'personalization'}
