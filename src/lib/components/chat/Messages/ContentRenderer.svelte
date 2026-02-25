@@ -43,6 +43,40 @@
 	let contentContainerElement;
 	let floatingButtonsElement;
 
+	// Memoize sourceIds so it only recomputes when sources or model change,
+	// not on every content update during streaming
+	let sourceIds = [];
+	$: sourceIds = (sources ?? []).reduce((acc, source) => {
+		let ids = [];
+		source.document.forEach((document, index) => {
+			if (model?.info?.meta?.capabilities?.citations == false) {
+				ids.push('N/A');
+				return ids;
+			}
+
+			const metadata = source.metadata?.[index];
+			const id = metadata?.source ?? 'N/A';
+
+			if (metadata?.name) {
+				ids.push(metadata.name);
+				return ids;
+			}
+
+			if (id.startsWith('http://') || id.startsWith('https://')) {
+				ids.push(id);
+			} else {
+				ids.push(source?.source?.name ?? id);
+			}
+
+			return ids;
+		});
+
+		acc = [...acc, ...ids];
+
+		// remove duplicates
+		return acc.filter((item, index) => acc.indexOf(item) === index);
+	}, []);
+
 	const updateButtonPosition = (event) => {
 		const buttonsContainerElement = document.getElementById(`floating-buttons-${id}`);
 		if (
@@ -143,36 +177,7 @@
 		{done}
 		{editCodeBlock}
 		{topPadding}
-		sourceIds={(sources ?? []).reduce((acc, source) => {
-			let ids = [];
-			source.document.forEach((document, index) => {
-				if (model?.info?.meta?.capabilities?.citations == false) {
-					ids.push('N/A');
-					return ids;
-				}
-
-				const metadata = source.metadata?.[index];
-				const id = metadata?.source ?? 'N/A';
-
-				if (metadata?.name) {
-					ids.push(metadata.name);
-					return ids;
-				}
-
-				if (id.startsWith('http://') || id.startsWith('https://')) {
-					ids.push(id);
-				} else {
-					ids.push(source?.source?.name ?? id);
-				}
-
-				return ids;
-			});
-
-			acc = [...acc, ...ids];
-
-			// remove duplicates
-			return acc.filter((item, index) => acc.indexOf(item) === index);
-		}, [])}
+		{sourceIds}
 		{onSourceClick}
 		{onTaskClick}
 		{onSave}
