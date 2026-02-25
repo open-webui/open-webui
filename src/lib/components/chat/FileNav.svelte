@@ -4,6 +4,7 @@
 </script>
 
 <script lang="ts">
+	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, onDestroy, tick, afterUpdate } from 'svelte';
 	import { settings } from '$lib/stores';
 	import {
@@ -12,10 +13,20 @@
 		readFile,
 		downloadFileBlob,
 		uploadToTerminal,
+		createDirectory,
+		deleteEntry,
+		setCwd,
 		type FileEntry
 	} from '$lib/apis/terminal';
+	import { DropdownMenu } from 'bits-ui';
+	import { flyAndScale } from '$lib/utils/transitions';
 	import Folder from '../icons/Folder.svelte';
+	import NewFolderAlt from '../icons/NewFolderAlt.svelte';
+	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
+	import GarbageBin from '../icons/GarbageBin.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
+	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -38,6 +49,14 @@
 
 	let isDragOver = false;
 	let uploading = false;
+
+	let creatingFolder = false;
+	let newFolderName = '';
+	let newFolderInput: HTMLInputElement;
+
+	let deleteTarget: { path: string; name: string } | null = null;
+	let showDeleteConfirm = false;
+	let shiftKey = false;
 
 	let breadcrumbEl: HTMLDivElement;
 
@@ -85,6 +104,9 @@
 		savedPath = path;
 		const result = await listFiles(terminalUrl, terminalKey, path);
 		loading = false;
+
+		// Set working directory on the terminal server (fire-and-forget)
+		setCwd(terminalUrl, terminalKey, path);
 		if (result === null) {
 			error =
 				'Failed to load directory. Check your Terminal connection in Settings → Integrations.';
@@ -167,6 +189,36 @@
 		await loadDir(currentPath);
 	};
 
+	const startNewFolder = () => {
+		creatingFolder = true;
+		newFolderName = '';
+		tick().then(() => newFolderInput?.focus());
+	};
+
+	const submitNewFolder = async () => {
+		const name = newFolderName.trim();
+		creatingFolder = false;
+		newFolderName = '';
+		if (!name) return;
+		const result = await createDirectory(terminalUrl, terminalKey, `${currentPath}${name}`);
+		if (result) {
+			toast.success($i18n.t('Folder created'));
+		} else {
+			toast.error($i18n.t('Failed to create folder'));
+		}
+		await loadDir(currentPath);
+	};
+
+	const handleDelete = async (path: string, name: string) => {
+		const result = await deleteEntry(terminalUrl, terminalKey, path);
+		if (result) {
+			toast.success($i18n.t('{{name}} deleted', { name }));
+		} else {
+			toast.error($i18n.t('Failed to delete {{name}}', { name }));
+		}
+		await loadDir(currentPath);
+	};
+
 	onMount(async () => {
 		if (!configured) return;
 		// On first ever open, resolve the server's CWD instead of defaulting to /
@@ -175,6 +227,24 @@
 			if (cwd) savedPath = cwd.endsWith('/') ? cwd : cwd + '/';
 		}
 		loadDir(savedPath);
+
+		const onKeyDown = (e: KeyboardEvent) => {
+			if (e.key === 'Shift') shiftKey = true;
+		};
+		const onKeyUp = (e: KeyboardEvent) => {
+			if (e.key === 'Shift') shiftKey = false;
+		};
+		const onBlur = () => (shiftKey = false);
+
+		window.addEventListener('keydown', onKeyDown);
+		window.addEventListener('keyup', onKeyUp);
+		window.addEventListener('blur', onBlur);
+
+		return () => {
+			window.removeEventListener('keydown', onKeyDown);
+			window.removeEventListener('keyup', onKeyUp);
+			window.removeEventListener('blur', onBlur);
+		};
 	});
 
 	onDestroy(() => {
@@ -182,6 +252,16 @@
 		if (filePdfUrl) URL.revokeObjectURL(filePdfUrl);
 	});
 </script>
+
+<ConfirmDialog
+	bind:show={showDeleteConfirm}
+	on:confirm={() => {
+		if (deleteTarget) {
+			handleDelete(deleteTarget.path, deleteTarget.name);
+			deleteTarget = null;
+		}
+	}}
+/>
 
 {#if !configured}
 	<div class="flex-1 flex flex-col items-center justify-center p-6 text-center gap-3">
@@ -224,33 +304,49 @@
 			</div>
 		{/if}
 
-		<!-- Breadcrumb — always visible, scrolls to end -->
-		<div
-			bind:this={breadcrumbEl}
-			class="flex items-center px-2 pb-1.5 shrink-0 overflow-x-auto scrollbar-hidden"
-		>
-			{#each breadcrumbs as crumb, i}
-				{#if i > 1}
+		<!-- Breadcrumb + actions — always visible, scrolls to end -->
+		<div class="flex items-center px-2 pb-1.5 shrink-0 gap-1">
+			<div
+				bind:this={breadcrumbEl}
+				class="flex items-center flex-1 min-w-0 overflow-x-auto scrollbar-none"
+			>
+				{#each breadcrumbs as crumb, i}
+					{#if i > 1}
+						<span class="text-gray-300 dark:text-gray-600 text-xs shrink-0 select-none mx-0.5"
+							>/</span
+						>
+					{/if}
+					<button
+						class="text-xs shrink-0 px-1 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition
+							{!selectedFile && i === breadcrumbs.length - 1
+							? 'text-gray-700 dark:text-gray-300'
+							: 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400'}"
+						on:click={() => loadDir(crumb.path)}
+					>
+						{crumb.label}
+					</button>
+				{/each}
+				{#if selectedFile}
 					<span class="text-gray-300 dark:text-gray-600 text-xs shrink-0 select-none mx-0.5">/</span
 					>
+					<span
+						class="text-xs shrink-0 px-1.5 py-0.5 text-gray-700 dark:text-gray-300 truncate max-w-[120px]"
+					>
+						{selectedFile.split('/').pop()}
+					</span>
 				{/if}
-				<button
-					class="text-xs shrink-0 px-1 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition
-						{!selectedFile && i === breadcrumbs.length - 1
-						? 'text-gray-700 dark:text-gray-300'
-						: 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400'}"
-					on:click={() => loadDir(crumb.path)}
-				>
-					{crumb.label}
-				</button>
-			{/each}
-			{#if selectedFile}
-				<span class="text-gray-300 dark:text-gray-600 text-xs shrink-0 select-none mx-0.5">/</span>
-				<span
-					class="text-xs shrink-0 px-1.5 py-0.5 text-gray-700 dark:text-gray-300 truncate max-w-[120px]"
-				>
-					{selectedFile.split('/').pop()}
-				</span>
+			</div>
+
+			{#if !selectedFile}
+				<Tooltip content={$i18n.t('New Folder')}>
+					<button
+						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+						on:click={startNewFolder}
+						aria-label={$i18n.t('New Folder')}
+					>
+						<NewFolderAlt className="size-3.5" />
+					</button>
+				</Tooltip>
 			{/if}
 		</div>
 
@@ -308,59 +404,150 @@
 					<div class="flex justify-center pt-8"><Spinner className="size-5" /></div>
 				{:else if error}
 					<div class="p-4 text-xs text-red-500 dark:text-red-400">{error}</div>
-				{:else if entries.length === 0}
+				{:else if entries.length === 0 && !creatingFolder}
 					<div class="p-4 text-xs text-gray-400 text-center">
 						{$i18n.t('Empty — drop files here to upload')}
 					</div>
-				{:else}
-					<ul>
-						{#each entries as entry}
-							<li>
-								<button
-									class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-left"
-									draggable={entry.type === 'file'}
-									on:dragstart={(e) => {
-										if (entry.type !== 'file') return;
-										e.dataTransfer?.setData(
-											'application/x-terminal-file',
-											JSON.stringify({
-												path: `${currentPath}${entry.name}`,
-												name: entry.name,
-												url: terminalUrl,
-												key: terminalKey
-											})
-										);
-									}}
-									on:click={() => openEntry(entry)}
-								>
-									{#if entry.type === 'directory'}
-										<Folder className="size-4 shrink-0 text-blue-400 dark:text-blue-300" />
-									{:else}
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 24 24"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="1.5"
-											class="size-4 shrink-0 text-gray-400"
+				{/if}
+
+				{#if !loading && !error && !uploading && !selectedFile}
+					{#if creatingFolder}
+						<div class="flex items-center gap-2 px-3 py-1.5">
+							<Folder className="size-4 shrink-0 text-blue-400 dark:text-blue-300" />
+							<input
+								bind:this={newFolderInput}
+								bind:value={newFolderName}
+								class="flex-1 text-xs bg-transparent border border-gray-200 dark:border-gray-700 rounded px-1.5 py-0.5 outline-none focus:border-blue-400 dark:focus:border-blue-500"
+								placeholder={$i18n.t('Folder name')}
+								on:keydown={(e) => {
+									if (e.key === 'Enter') submitNewFolder();
+									if (e.key === 'Escape') {
+										creatingFolder = false;
+										newFolderName = '';
+									}
+								}}
+								on:blur={submitNewFolder}
+							/>
+						</div>
+					{/if}
+
+					{#if entries.length > 0 || creatingFolder}
+						<ul>
+							{#each entries as entry}
+								<li class="group">
+									<div
+										class="w-full flex items-center hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+									>
+										<button
+											class="flex-1 flex items-center gap-2 px-3 py-1.5 text-left min-w-0"
+											draggable={entry.type === 'file'}
+											on:dragstart={(e) => {
+												if (entry.type !== 'file') return;
+												e.dataTransfer?.setData(
+													'application/x-terminal-file',
+													JSON.stringify({
+														path: `${currentPath}${entry.name}`,
+														name: entry.name,
+														url: terminalUrl,
+														key: terminalKey
+													})
+												);
+											}}
+											on:click={() => openEntry(entry)}
 										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
-											/>
-										</svg>
-									{/if}
-									<span class="flex-1 text-xs text-gray-800 dark:text-gray-200 truncate">
-										{entry.name}
-									</span>
-									{#if entry.type === 'file' && entry.size !== undefined}
-										<span class="text-xs text-gray-400 shrink-0">{formatSize(entry.size)}</span>
-									{/if}
-								</button>
-							</li>
-						{/each}
-					</ul>
+											{#if entry.type === 'directory'}
+												<Folder className="size-4 shrink-0 text-blue-400 dark:text-blue-300" />
+											{:else}
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="1.5"
+													class="size-4 shrink-0 text-gray-400"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
+													/>
+												</svg>
+											{/if}
+											<span class="flex-1 text-xs text-gray-800 dark:text-gray-200 truncate">
+												{entry.name}
+											</span>
+											{#if entry.type === 'file' && entry.size !== undefined}
+												<span class="text-xs text-gray-400 shrink-0">{formatSize(entry.size)}</span>
+											{/if}
+										</button>
+
+										<DropdownMenu.Root>
+											<DropdownMenu.Trigger
+												class="shrink-0 p-0.5 mr-1 rounded-lg transition
+													text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400
+													hover:bg-gray-100 dark:hover:bg-gray-800"
+												on:click={(e) => e.stopPropagation()}
+												aria-label={$i18n.t('More')}
+											>
+												<EllipsisHorizontal className="size-3.5" />
+											</DropdownMenu.Trigger>
+
+											<DropdownMenu.Content
+												strategy="fixed"
+												class="w-full max-w-[150px] rounded-2xl p-1 z-[9999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800"
+												sideOffset={4}
+												side="bottom"
+												align="end"
+												transition={flyAndScale}
+											>
+												{#if entry.type !== "directory"}
+												<DropdownMenu.Item
+													type="button"
+													class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+													on:click={(e) => {
+														e.stopPropagation();
+														downloadFile(`${currentPath}${entry.name}`);
+													}}
+												>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 20 20"
+														fill="currentColor"
+														class="size-4"
+													>
+														<path
+															d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z"
+														/>
+														<path
+															d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"
+														/>
+													</svg>
+													<div class="flex items-center">{$i18n.t('Download')}</div>
+												</DropdownMenu.Item>
+												{/if}
+
+												<DropdownMenu.Item
+													type="button"
+													class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+													on:click={(e) => {
+														e.stopPropagation();
+														deleteTarget = {
+															path: `${currentPath}${entry.name}`,
+															name: entry.name
+														};
+														showDeleteConfirm = true;
+													}}
+												>
+													<GarbageBin className="size-4" />
+													<div class="flex items-center">{$i18n.t('Delete')}</div>
+												</DropdownMenu.Item>
+											</DropdownMenu.Content>
+										</DropdownMenu.Root>
+									</div>
+								</li>
+							{/each}
+						</ul>
+					{/if}
 				{/if}
 			{/if}
 		</div>

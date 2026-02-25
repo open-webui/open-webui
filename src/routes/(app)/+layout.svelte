@@ -153,6 +153,7 @@
 				}
 				return true;
 			});
+
 			terminalServers.set(terminalServersData);
 		} else {
 			terminalServers.set([]);

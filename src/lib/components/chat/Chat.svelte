@@ -46,6 +46,7 @@
 		showEmbeds
 	} from '$lib/stores';
 
+	import { getCwd } from '$lib/apis/terminal';
 	import {
 		convertMessagesToHistory,
 		copyToClipboard,
@@ -2126,6 +2127,22 @@
 			});
 		}
 
+		// Build terminal servers with current CWD injected into run_command descriptions
+		const terminalServersWithCwd = await (async () => {
+			const terminals = JSON.parse(JSON.stringify($terminalServers ?? []));
+			const configs = ($settings?.terminalServers ?? []).filter((s) => s.enabled);
+			await Promise.all(
+				configs.map(async (t) => {
+					const cwd = await getCwd(t.url, t.key ?? '').catch(() => null);
+					if (!cwd) return;
+					const server = terminals.find((s) => s.url === t.url);
+					const spec = server?.specs?.find((s) => s.name === 'run_command');
+					if (spec) spec.description += `\n\nThe current working directory is: ${cwd}`;
+				})
+			);
+			return terminals;
+		})();
+
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
 			{
@@ -2152,7 +2169,7 @@
 					...($toolServers ?? []).filter(
 						(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
 					),
-					...($terminalServers ?? [])
+					...terminalServersWithCwd
 				],
 				features: getFeatures(),
 				variables: {

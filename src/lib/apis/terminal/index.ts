@@ -112,3 +112,74 @@ export const uploadToTerminal = async (
 		});
 	return res;
 };
+
+export const createDirectory = async (
+	baseUrl: string,
+	apiKey: string,
+	path: string
+): Promise<{ path: string } | null> => {
+	const url = `${baseUrl.replace(/\/$/, '')}/files/mkdir`;
+	const res = await fetch(url, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${apiKey}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({ path })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error('open-terminal createDirectory error:', err);
+			return null;
+		});
+	return res;
+};
+
+export const deleteEntry = async (
+	baseUrl: string,
+	apiKey: string,
+	path: string
+): Promise<{ path: string; type: string } | null> => {
+	const url = `${baseUrl.replace(/\/$/, '')}/files/delete?path=${encodeURIComponent(path)}`;
+	const res = await fetch(url, {
+		method: 'DELETE',
+		headers: { Authorization: `Bearer ${apiKey}` }
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error('open-terminal deleteEntry error:', err);
+			return null;
+		});
+	return res;
+};
+
+export const setCwd = async (
+	baseUrl: string,
+	apiKey: string,
+	path: string
+): Promise<{ cwd: string } | null> => {
+	const url = `${baseUrl.replace(/\/$/, '')}/files/cwd`;
+	const res = await fetch(url, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${apiKey}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({ path })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error('open-terminal setCwd error:', err);
+			return null;
+		});
+	return res;
+};
