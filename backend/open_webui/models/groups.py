@@ -6,7 +6,7 @@ import uuid
 
 from sqlalchemy.orm import Session
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
-from open_webui.config import DEFAULT_GROUP_SHARE_PERMISSION
+from open_webui.env import DEFAULT_GROUP_SHARE_PERMISSION
 
 from open_webui.models.files import FileMetadataResponse
 
