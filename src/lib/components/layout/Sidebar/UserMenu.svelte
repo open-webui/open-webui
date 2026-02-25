@@ -29,6 +29,7 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import { updateUserStatus } from '$lib/apis/users';
 	import { toast } from 'svelte-sonner';
+	import { trackUmamiEvent } from '$lib/utils/umami';
 
 	const i18n = getContext('i18n');
 
@@ -345,6 +346,12 @@
 			<DropdownMenu.Item
 				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
 				on:click={async () => {
+					trackUmamiEvent('auth_logout_clicked', {
+						flow: 'auth',
+						surface: 'user_menu',
+						trigger: 'click'
+					});
+
 					const res = await userSignOut();
 					user.set(null);
 					localStorage.removeItem('token');
