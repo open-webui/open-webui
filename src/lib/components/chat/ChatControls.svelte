@@ -173,8 +173,6 @@
 		document.addEventListener('mousedown', onMouseDown);
 		document.addEventListener('mouseup', onMouseUp);
 
-		// Delay enabling onCollapse so the Pane's initial collapsed state
-		// (defaultSize=0) doesn't reset showControls
 		setTimeout(() => { paneReady = true; }, 0);
 
 		// If controls were persisted as open, set the pane to the saved size
@@ -202,7 +200,7 @@
 		if ($showCallOverlay) showCallOverlay.set(false);
 	};
 
-	$: if (!chatId) closeHandler();
+	$: if (paneReady && !chatId) closeHandler();
 
 	// Helper: is a "special" full-screen panel active?
 	$: specialPanel = $showCallOverlay || $showArtifacts || $showEmbeds;
