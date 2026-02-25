@@ -621,7 +621,7 @@ export let existingFiles: any[] = [];
 			toast.error('Failed to load files');
 		} finally {
 			loading = false;
-	}
+		}
 
 	async function navigateToFolder(item: DriveItem) {
 		const newFolderStack = [...folderStack, { id: item.id, name: item.name }];
