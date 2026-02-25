@@ -107,16 +107,25 @@
 	}
 
 	// Individual files not from SharePoint folders
-	$: individualFiles = files.filter(
-		(f) => !f.meta?.sharepoint_folder_id || f.meta?.source !== 'sharepoint'
-	);
+	$: individualFiles = (() => {
+		const seen = new Set<string>();
+		return files.filter((f) => {
+			if (seen.has(f.id)) return false;
+			seen.add(f.id);
+			return !f.meta?.sharepoint_folder_id || f.meta?.source !== 'sharepoint';
+		});
+	})();
 
 	// SharePoint files grouped by site, then folder
 	$: siteGroups = (() => {
 		const sites: Map<string, Map<string, FolderGroup>> = new Map();
+		const seenFileIds = new Set<string>(); // dedup guard
 
 		for (const file of files) {
 			if (file.meta?.source !== 'sharepoint' || !file.meta?.sharepoint_folder_id) continue;
+			// Skip duplicate file IDs
+			if (seenFileIds.has(file.id)) continue;
+			seenFileIds.add(file.id);
 
 			const siteName = file.meta?.sharepoint_site_name || 'SharePoint';
 			const folderId = file.meta.sharepoint_folder_id;
@@ -1734,6 +1743,7 @@
 		bind:show={showSharePointPicker}
 		token={localStorage.token}
 		spaceId={space?.id ?? null}
+		existingFiles={files}
 		on:fileDownloaded={handleSharePointFileDownloaded}
 		on:close={() => {
 			showSharePointPicker = false;

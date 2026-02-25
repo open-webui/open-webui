@@ -26,7 +26,9 @@
 
 	export let show = false;
 	export let token: string;
-	export let spaceId: string | null = null;
+export let spaceId: string | null = null;
+/** Files already in the space — used to pre-check matching items when the picker opens */
+export let existingFiles: any[] = [];
 
 	const dispatch = createEventDispatcher();
 	const RECENT_DRIVES_KEY = 'sharepoint_recent_drives';
@@ -41,6 +43,20 @@
 	let items: DriveItem[] = [];
 	let selectedItems: Set<string> = new Set();
 	let selectedFolders: Set<string> = new Set();
+
+	// Derived sets of IDs already present in the space
+	$: existingItemIds = new Set<string>(
+		existingFiles.filter((f) => f.meta?.sharepoint_item_id).map((f) => f.meta.sharepoint_item_id)
+	);
+	$: existingFolderIds = new Set<string>(
+		existingFiles.filter((f) => f.meta?.sharepoint_folder_id).map((f) => f.meta.sharepoint_folder_id)
+	);
+
+	// When the picker opens, pre-populate selection from existing space files
+	$: if (show) {
+		selectedItems = new Set(existingItemIds);
+		selectedFolders = new Set(existingFolderIds);
+	}
 	let folderStack: { id: string; name: string }[] = [];
 
 	let sites: SiteInfo[] = [];
@@ -1395,15 +1411,19 @@
 								}}
 									>
 										<div
-											class="w-4 h-4 rounded border-2 flex items-center justify-center transition-all cursor-pointer
-												{item.is_folder
-												? selectedFolders.has(item.id)
-													? 'bg-amber-500 border-amber-500'
-													: 'border-gray-300 dark:border-gray-600 hover:border-amber-400 dark:hover:border-amber-500'
-												: selectedItems.has(item.id)
-													? 'bg-blue-500 border-blue-500'
-													: 'border-gray-300 dark:border-gray-600 group-hover:border-gray-400 dark:group-hover:border-gray-500'}"
-										>
+										class="w-4 h-4 rounded border-2 flex items-center justify-center transition-all cursor-pointer
+											{item.is_folder
+											? selectedFolders.has(item.id)
+												? existingFolderIds.has(item.id)
+													? 'bg-green-500 border-green-500'
+													: 'bg-amber-500 border-amber-500'
+												: 'border-gray-300 dark:border-gray-600 hover:border-amber-400 dark:hover:border-amber-500'
+											: selectedItems.has(item.id)
+												? existingItemIds.has(item.id)
+													? 'bg-green-500 border-green-500'
+													: 'bg-blue-500 border-blue-500'
+												: 'border-gray-300 dark:border-gray-600 group-hover:border-gray-400 dark:group-hover:border-gray-500'}"
+									>
 											{#if selectedItems.has(item.id) || selectedFolders.has(item.id)}
 												<svg
 													class="w-2.5 h-2.5 text-white"
