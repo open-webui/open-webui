@@ -324,12 +324,11 @@
 				checkForVersionUpdates();
 			}
 		}
-		// Persist showControls via chatControlsSize (0 = closed, >0 = open at that size)
-		await showControls.set(!$mobile ? parseInt(localStorage.chatControlsSize || '0') > 0 : false);
+		// Persist showControls: track open/close state separately from saved size
+		// chatControlsSize always retains the last width for openPane()
+		await showControls.set(!$mobile ? localStorage.showControls === 'true' : false);
 		showControls.subscribe((value) => {
-			if (!value) {
-				localStorage.chatControlsSize = '0';
-			}
+			localStorage.showControls = value ? 'true' : 'false';
 		});
 
 		await tick();
