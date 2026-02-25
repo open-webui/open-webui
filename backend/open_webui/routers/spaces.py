@@ -2151,12 +2151,14 @@ async def sync_sharepoint_files(
 
                         # Modified — re-download and re-index
                         try:
+                            old_path = existing_file.path
                             file_bytes = await _download_sp_file(
                                 download_url, folder_rec.drive_id, item_id, tokens
                             )
                             file_obj = io.BytesIO(file_bytes)
                             storage_tags = {"source": "sharepoint", "content_type": mime_type}
-                            _contents, _new_path = Storage.upload_file(file_obj, item_name, storage_tags)
+
+                            _contents, new_path = Storage.upload_file(file_obj, item_name, storage_tags)
                             existing_meta = existing_file.meta or {}
                             Files.update_file_metadata_by_id(existing_file.id, {
                                 **existing_meta,
@@ -2166,8 +2168,14 @@ async def sync_sharepoint_files(
                                 "sharepoint_modified_at": item_modified,
                                 "last_synced_at": int(time.time()),
                             })
+                            Files.update_file_path_by_id(existing_file.id, new_path)
                             if item_quick_xor_hash:
                                 Files.update_file_hash_by_id(existing_file.id, item_quick_xor_hash)
+                            try:
+                                if old_path and old_path != new_path:
+                                    Storage.delete_file(old_path)
+                            except Exception as del_e:
+                                log.warning(f"[spaces] Sync: failed to delete old storage object {old_path}: {del_e}")
                             background_tasks.add_task(_process_file_background, request, existing_file.id, user)
                             updated_files.append({"id": existing_file.id, "filename": item_name})
                             log.info(f"[spaces] Sync: updated {item_name} (delta)")
@@ -2301,10 +2309,11 @@ async def sync_sharepoint_files(
             file_size = current_metadata.get("size", 0)
             mime_type = current_metadata.get("file", {}).get("mimeType", "application/octet-stream")
 
+            old_path = file.path
             file_bytes = await _download_sp_file(download_url, drive_id, item_id, file_tokens)
             file_obj = io.BytesIO(file_bytes)
             storage_tags = {"source": "sharepoint", "content_type": mime_type}
-            Storage.upload_file(file_obj, filename, storage_tags)
+            _contents, new_path = Storage.upload_file(file_obj, filename, storage_tags)
             existing_meta = file.meta or {}
             Files.update_file_metadata_by_id(file.id, {
                 **existing_meta,
@@ -2314,8 +2323,14 @@ async def sync_sharepoint_files(
                 "sharepoint_modified_at": current_modified_at,
                 "last_synced_at": int(time.time()),
             })
+            Files.update_file_path_by_id(file.id, new_path)
             if current_quick_xor_hash:
                 Files.update_file_hash_by_id(file.id, current_quick_xor_hash)
+            try:
+                if old_path and old_path != new_path:
+                    Storage.delete_file(old_path)
+            except Exception as del_e:
+                log.warning(f"[spaces] Sync: failed to delete old storage object {old_path}: {del_e}")
             background_tasks.add_task(_process_file_background, request, file.id, user)
             updated_files.append({"id": file.id, "filename": filename})
             log.info(f"[spaces] Sync: updated {filename} (individual)")

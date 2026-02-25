@@ -811,6 +811,7 @@ class SpaceTable:
                 db.query(SpaceKnowledge).filter_by(space_id=id).delete()
                 db.query(SpaceContributor).filter_by(space_id=id).delete()
                 db.query(SpaceFile).filter_by(space_id=id).delete()
+                db.query(SpaceSharePointFolder).filter_by(space_id=id).delete()
                 db.query(SpaceLink).filter_by(space_id=id).delete()
                 db.query(SpaceBookmark).filter_by(space_id=id).delete()
                 db.query(SpacePin).filter_by(space_id=id).delete()
