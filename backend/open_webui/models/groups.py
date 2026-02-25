@@ -6,7 +6,6 @@ import uuid
 
 from sqlalchemy.orm import Session
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
-from open_webui.config import DEFAULT_GROUP_SHARE_PERMISSION
 
 from open_webui.models.files import FileMetadataResponse
 
@@ -133,6 +132,8 @@ class GroupListResponse(BaseModel):
 class GroupTable:
     def _ensure_default_share_config(self, group_data: dict) -> dict:
         """Ensure the group data dict has a default share config if not already set."""
+        from open_webui.config import DEFAULT_GROUP_SHARE_PERMISSION
+
         if "data" not in group_data or group_data["data"] is None:
             group_data["data"] = {}
         if "config" not in group_data["data"]:
@@ -503,6 +504,7 @@ class GroupTable:
     def create_groups_by_group_names(
         self, user_id: str, group_names: list[str], db: Optional[Session] = None
     ) -> list[GroupModel]:
+        from open_webui.config import DEFAULT_GROUP_SHARE_PERMISSION
 
         # check for existing groups
         existing_groups = self.get_all_groups(db=db)
