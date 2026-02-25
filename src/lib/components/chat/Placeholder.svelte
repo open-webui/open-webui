@@ -37,7 +37,7 @@
 	export let autoScroll = false;
 
 	export let atSelectedModel: Model | undefined;
-	export let selectedModels: [''];
+	export let selectedModels = [''];
 
 	export let history;
 
@@ -152,7 +152,44 @@
 						{/if}
 					</div>
 				</div>
-
+								
+				<div class="flex flex-row gap-2 justify-center my-2">
+					{#each [
+						{
+							id: 'gpt-5.2',
+							label: 'Smart All-Rounder',
+							desc: 'Great at most everyday tasks: chatting, writing, explaining ideas, brainstorming, and coding help'
+						},
+						{
+							id: 'claude-sonnet-4-5',
+							label: 'Autonomous Builder',
+							desc: 'Best for complex, long-running tasks: advanced coding, coordinating many steps, using multiple tools, and working independently with little supervision.'
+						},
+						{
+							id: 'gemini-3-pro-preview',
+							label: 'Deep Thinker',
+							desc: 'Best for hard problems that need advanced reasoning, careful analysis, and multi-step thinking.'
+						}
+					] as btn}
+						{#if $_models.find((m) => m?.id === btn.id)}
+							<Tooltip content={btn.desc} placement="top">
+								<button
+									class="px-3 py-1 rounded-lg text-sm font-semibold transition
+									{models[selectedModelIdx]?.id === btn.id
+										? ' bg-blue-600 text-white dark:bg-blue-500 dark:text-white'
+										: ' bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700'}"
+									on:click={() => {
+										selectedModels = [btn.id];
+										selectedModelIdx = 0;
+									}}
+								>
+									{btn.label}
+								</button>
+							</Tooltip>
+						{/if}
+					{/each}
+				</div>
+				
 				<div class="flex mt-1 mb-2">
 					<div in:fade={{ duration: 100, delay: 50 }}>
 						{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
