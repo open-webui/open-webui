@@ -31,8 +31,8 @@
 		playingNotificationSound,
 		channels,
 		channelId,
-        brandingConfig,
-        activeUserIds
+		brandingConfig,
+		activeUserIds
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -101,6 +101,31 @@
 	let heartbeatInterval = null;
 
 	const BREAKPOINT = 768;
+	const BACKEND_CONFIG_RETRY_COUNT = 10;
+	const BACKEND_CONFIG_RETRY_DELAY_MS = 1000;
+
+	const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+	const loadBackendConfigWithRetry = async () => {
+		for (let attempt = 1; attempt <= BACKEND_CONFIG_RETRY_COUNT; attempt += 1) {
+			try {
+				const backendConfig = await getBackendConfig();
+				if (backendConfig) {
+					return backendConfig;
+				}
+			} catch (error) {
+				if (attempt === BACKEND_CONFIG_RETRY_COUNT) {
+					console.error('Error loading backend config:', error);
+				}
+			}
+
+			if (attempt < BACKEND_CONFIG_RETRY_COUNT) {
+				await sleep(BACKEND_CONFIG_RETRY_DELAY_MS);
+			}
+		}
+
+		return null;
+	};
 
 	const setupSocket = async (enableWebsocket) => {
 		const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
@@ -183,22 +208,22 @@
 			}
 		});
 
-        // ── User Presence (for admin users list) ───────────────────────────────
-        _socket.on('user-presence', (data) => {
-            activeUserIds.update((ids) => {
-                if (!ids) ids = [];
-                if (data.status === 'online') {
-                    // Add user if not already present
-                    if (!ids.includes(data.user_id)) {
-                        return [...ids, data.user_id];
-                    }
-                } else if (data.status === 'offline') {
-                    // Remove user
-                    return ids.filter((id) => id !== data.user_id);
-                }
-                return ids;
-            });
-        });
+		// ── User Presence (for admin users list) ───────────────────────────────
+		_socket.on('user-presence', (data) => {
+			activeUserIds.update((ids) => {
+				if (!ids) ids = [];
+				if (data.status === 'online') {
+					// Add user if not already present
+					if (!ids.includes(data.user_id)) {
+						return [...ids, data.user_id];
+					}
+				} else if (data.status === 'offline') {
+					// Remove user
+					return ids.filter((id) => id !== data.user_id);
+				}
+				return ids;
+			});
+		});
 	};
 
 	const executePythonAsWorker = async (id, code, cb) => {
@@ -792,12 +817,9 @@
 			}
 		});
 
-		let backendConfig = null;
-		try {
-			backendConfig = await getBackendConfig();
+		const backendConfig = await loadBackendConfigWithRetry();
+		if (backendConfig) {
 			console.log('Backend config:', backendConfig);
-		} catch (error) {
-			console.error('Error loading backend config:', error);
 		}
 		// Initialize i18n even if we didn't get a backend config,
 		// so `/error` can show something that's not `undefined`.
@@ -852,8 +874,6 @@
 					if (sessionUser) {
 						await user.set(sessionUser);
 						await config.set(await getBackendConfig());
-
-
 
 						if (sessionUser.must_change_password && $page.url.pathname !== '/auth/reset-password') {
 							await goto('/auth/reset-password');

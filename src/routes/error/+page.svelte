@@ -1,18 +1,50 @@
 <script>
 	import { goto } from '$app/navigation';
+	import { getBackendConfig } from '$lib/apis';
 	import { WEBUI_NAME, config } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 
 	const i18n = getContext('i18n');
 
 	let loaded = false;
+	let checkInProgress = false;
+	const POLL_INTERVAL_MS = 2000;
 
-	onMount(async () => {
-		if ($config) {
-			await goto('/');
+	const checkBackendAvailability = async () => {
+		if (checkInProgress) {
+			return;
 		}
 
+		checkInProgress = true;
+		try {
+			const backendConfig = await getBackendConfig();
+			if (backendConfig) {
+				await config.set(backendConfig);
+				await goto('/');
+			}
+		} catch {
+			// Keep polling until backend is available.
+		} finally {
+			checkInProgress = false;
+		}
+	};
+
+	onMount(() => {
+		if ($config) {
+			void goto('/');
+			return;
+		}
+
+		void checkBackendAvailability();
+		const pollId = setInterval(() => {
+			void checkBackendAvailability();
+		}, POLL_INTERVAL_MS);
+
 		loaded = true;
+
+		return () => {
+			clearInterval(pollId);
+		};
 	});
 </script>
 
@@ -47,7 +79,7 @@
 						<button
 							class="relative z-20 flex px-5 py-2 rounded-full bg-gray-100 hover:bg-gray-200 transition font-medium text-sm text-black"
 							on:click={() => {
-								location.href = '/';
+								void checkBackendAvailability();
 							}}
 						>
 							{$i18n.t('Check Again')}

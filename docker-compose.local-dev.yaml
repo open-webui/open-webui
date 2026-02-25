@@ -11,12 +11,12 @@ services:
       - ./backend/open_webui:/app/backend/open_webui
       # Mount branding assets
       - ./backend/static:/app/backend/static
-      # Mount local build (frontend)
-      - ./build:/app/build
+      # Shared named volume for frontend build (avoids EBUSY bind-mount lock)
+      - frontend-build:/app/build
     environment:
       - WEBUI_SECRET_KEY=local-dev-secret
       - STATIC_DIR=/app/backend/static
-      - FRONTEND_BUILD_DIR=/app/build
+      - FRONTEND_BUILD_DIR=/app/build/dist
       - ENV=dev
       - RAG_EMBEDDING_ENGINE=openai
       - RAG_OPENAI_API_BASE_URL=http://localhost:11434
@@ -29,9 +29,21 @@ services:
     image: node:22-slim
     container_name: open-webui-frontend-watch
     working_dir: /app
-    command: sh -c "npm ci && npm run build:watch"
+    command: sh -c "until npm ci --prefer-offline --no-audit; do echo 'npm ci failed, retrying in 10s'; sleep 10; done; SVELTE_BUILD_DIR=build/dist npm run build:watch"
     volumes:
       - .:/app
+      - frontend-build:/app/build
       - /app/node_modules
+      - npm-cache:/root/.npm
     environment:
       - NODE_ENV=development
+      - CYPRESS_INSTALL_BINARY=0
+      - NODE_OPTIONS=--max-old-space-size=12288
+    restart: unless-stopped
+    depends_on:
+      - open-webui-dev
+    init: true
+
+volumes:
+  npm-cache:
+  frontend-build:
