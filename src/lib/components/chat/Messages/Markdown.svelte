@@ -8,6 +8,8 @@
 	import { disableSingleTilde } from '$lib/utils/marked/strikethrough-extension';
 	import { mentionExtension } from '$lib/utils/marked/mention-extension';
 
+	import { onDestroy } from 'svelte';
+
 	import MarkdownTokens from './Markdown/MarkdownTokens.svelte';
 	import footnoteExtension from '$lib/utils/marked/footnote-extension';
 	import citationExtension from '$lib/utils/marked/citation-extension';
@@ -53,13 +55,33 @@
 		]
 	});
 
-	$: (async () => {
-		if (content) {
-			tokens = marked.lexer(
-				replaceTokens(processResponseContent(content), model?.name, $user?.name)
-			);
+	let rafId = null;
+
+	function lexContent() {
+		tokens = marked.lexer(
+			replaceTokens(processResponseContent(content), model?.name, $user?.name)
+		);
+	}
+
+	// Throttle lexer to once per animation frame while streaming
+	$: if (content) {
+		if (done) {
+			if (rafId) {
+				cancelAnimationFrame(rafId);
+				rafId = null;
+			}
+			lexContent();
+		} else if (!rafId) {
+			rafId = requestAnimationFrame(() => {
+				rafId = null;
+				lexContent();
+			});
 		}
-	})();
+	}
+
+	onDestroy(() => {
+		if (rafId) cancelAnimationFrame(rafId);
+	});
 </script>
 
 {#key id}
