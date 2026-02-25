@@ -837,7 +837,7 @@
 			bind:accessGrants={knowledge.access_grants}
 			share={$user?.permissions?.sharing?.knowledge || $user?.role === 'admin'}
 			sharePublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
-			shareUsers={$user?.permissions?.access_grants?.allow_users || $user?.role === "admin"}
+			shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) || $user?.role === "admin"}
 			onChange={async () => {
 				try {
 					await updateKnowledgeAccessGrants(localStorage.token, id, knowledge.access_grants ?? []);

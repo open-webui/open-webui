@@ -283,7 +283,7 @@
 	accessRoles={['read', 'write']}
 	share={$user?.permissions?.sharing?.prompts || $user?.role === 'admin'}
 	sharePublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin'}
-	shareUsers={$user?.permissions?.access_grants?.allow_users || $user?.role === 'admin'}
+	shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) || $user?.role === 'admin'}
 	onChange={async () => {
 		if (edit && prompt?.id) {
 			try {
