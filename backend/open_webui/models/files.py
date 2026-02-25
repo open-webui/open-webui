@@ -247,6 +247,26 @@ class FilesTable:
                 for file in db.query(File).filter_by(user_id=user_id).all()
             ]
 
+    def get_file_by_sharepoint_item_id(
+        self, item_id: str, db: Optional[Session] = None
+    ) -> Optional[FileModel]:
+        """Find any File record with the given sharepoint_item_id in meta.
+        Used for cross-space deduplication: if the same SharePoint item has already
+        been imported into any space, reuse that File record instead of re-downloading.
+        """
+        try:
+            with get_db_context(db) as db:
+                file = (
+                    db.query(File)
+                    .filter(File.meta["sharepoint_item_id"].as_string() == item_id)
+                    .first()
+                )
+                if file:
+                    return FileModel.model_validate(file)
+                return None
+        except Exception as e:
+            log.exception(f"Error looking up file by sharepoint_item_id {item_id}: {e}")
+            return None
     @staticmethod
     def _glob_to_like_pattern(glob: str) -> str:
         """

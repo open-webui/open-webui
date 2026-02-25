@@ -1699,6 +1699,18 @@ async def add_sharepoint_folder_to_space(
             continue
 
         try:
+            # Extract quickXorHash for content dedup and change detection
+            item_quick_xor_hash = item.get("file", {}).get("hashes", {}).get("quickXorHash")
+
+            # Cross-space dedup: reuse existing File record if already imported globally
+            existing_global = Files.get_file_by_sharepoint_item_id(item_id)
+            if existing_global:
+                Spaces.add_file_to_space(space_id=id, file_id=existing_global.id, user_id=user.id, db=db)
+                background_tasks.add_task(_process_file_background, request, existing_global.id, user)
+                added_files.append({"id": existing_global.id, "filename": existing_global.filename, "meta": existing_global.meta})
+                log.info(f"[spaces] Linked existing file {filename} from another space (item_id={item_id})")
+                continue
+
             download_url = item.get("@microsoft.graph.downloadUrl")
             log.info(
                 f"[spaces] {filename}: download_url={'present' if download_url else 'MISSING - will use content endpoint'}"
@@ -1737,6 +1749,7 @@ async def add_sharepoint_folder_to_space(
 
             file_form = FileForm(
                 id=file_id,
+                hash=item_quick_xor_hash,
                 filename=filename,
                 path=file_path,
                 meta={
@@ -1786,6 +1799,59 @@ async def add_sharepoint_folder_to_space(
     log.info(
         f"[spaces] Folder import complete: added={len(added_files)}, skipped={skipped}, failed={failed}"
     )
+
+    # --- Capture initial delta token for this folder ---
+    # This exhausts the initial delta pages (to get to the deltaLink) so future
+    # syncs only fetch changes since this import, not the full file list.
+    try:
+        from open_webui.models.spaces import SpaceSharePointFolders
+
+        if folder_id:
+            delta_endpoint = f"/drives/{drive_id}/items/{folder_id}/delta"
+        else:
+            delta_endpoint = f"/drives/{drive_id}/root/delta"
+
+        delta_link = None
+        next_url = None  # will use endpoint for first call
+        page = 0
+
+        # First page via graph_api_request (path-based)
+        delta_resp = await graph_api_request("GET", delta_endpoint, tokens)
+        delta_link = delta_resp.get("@odata.deltaLink")
+        next_url = delta_resp.get("@odata.nextLink")
+
+        # Exhaust pagination — we only need the final deltaLink
+        while next_url and not delta_link:
+            page += 1
+            if page > 50:  # safety cap
+                break
+            async with aiohttp.ClientSession() as _session:
+                _headers = {"Authorization": tokens.authorization_header()}
+                async with _session.get(next_url, headers=_headers) as _r:
+                    if _r.status < 400:
+                        _data = await _r.json()
+                        delta_link = _data.get("@odata.deltaLink")
+                        next_url = _data.get("@odata.nextLink")
+                    else:
+                        break
+
+        if delta_link:
+            SpaceSharePointFolders.upsert(
+                space_id=id,
+                drive_id=drive_id,
+                folder_id=folder_id,
+                folder_name=form_data.folder_name,
+                site_name=form_data.site_name,
+                tenant_id=form_data.tenant_id,
+                delta_link=delta_link,
+            )
+            log.info(f"[spaces] Stored initial delta link for drive={drive_id}, folder={folder_id}")
+        else:
+            log.warning(f"[spaces] Could not obtain delta link for drive={drive_id}, folder={folder_id}")
+    except Exception as _delta_exc:
+        log.warning(f"[spaces] Failed to capture initial delta link: {_delta_exc}")
+    # --- End delta token capture ---
+
 
     return SharePointFolderResponse(
         added=len(added_files),
@@ -1860,14 +1926,47 @@ async def remove_file_from_space(
     return result
 
 
+async def _download_sp_file(
+    download_url: Optional[str],
+    drive_id: str,
+    item_id: str,
+    tokens,
+) -> bytes:
+    """Download a SharePoint file by download_url (preferred) or Graph content endpoint."""
+    import aiohttp
+
+    if download_url:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(download_url) as response:
+                if response.status >= 400:
+                    raise Exception(f"Download failed with status {response.status}")
+                return await response.read()
+    else:
+        content_endpoint = f"/drives/{drive_id}/items/{item_id}/content"
+        async with aiohttp.ClientSession() as session:
+            headers = {"Authorization": tokens.authorization_header()}
+            async with session.get(
+                f"https://graph.microsoft.com/v1.0{content_endpoint}",
+                headers=headers,
+            ) as resp:
+                if resp.status >= 400:
+                    raise Exception(f"Download failed with status {resp.status}")
+                return await resp.read()
+
+
+
 class SharePointSyncResult(BaseModel):
     """Result of SharePoint file sync operation."""
 
     total_checked: int
     updated: int
+    added: int
+    removed: int
     failed: int
     up_to_date: int
     updated_files: List[dict]
+    added_files: List[dict]
+    removed_files: List[dict]
     errors: List[str]
 
 
@@ -1880,23 +1979,29 @@ async def sync_sharepoint_files(
     db: Session = Depends(get_session),
 ) -> SharePointSyncResult:
     """
-    Check SharePoint files in this space for updates and re-sync changed files.
+    Sync SharePoint files in this space using delta tokens for efficiency.
 
-    For each file sourced from SharePoint:
-    1. Fetch current lastModifiedDateTime from Microsoft Graph
-    2. Compare with stored sharepoint_modified_at
-    3. If changed: re-download file and re-process for RAG
+    For each tracked SharePoint folder:
+    1. Use stored @odata.deltaLink (if available) to fetch only changes
+    2. Process additions, modifications, and deletions
+    3. Store new delta link for the next sync
+
+    Falls back to per-file lastModifiedDateTime check for individually-added
+    SharePoint files not covered by a tracked folder.
 
     Returns summary of sync operation.
     """
     import io
     import aiohttp
+    import uuid
     from open_webui.routers.sharepoint import (
-        get_tokens,
+        get_tokens_for_tenant,
+        get_tenant_by_id,
         graph_api_request,
         ENABLE_SHAREPOINT_INTEGRATION,
     )
-    from open_webui.models.files import Files
+    from open_webui.models.files import Files, FileForm
+    from open_webui.models.spaces import SpaceSharePointFolders
     from open_webui.storage.provider import Storage
 
     if not ENABLE_SHAREPOINT_INTEGRATION.value:
@@ -1924,145 +2029,318 @@ async def sync_sharepoint_files(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    # Get auth tokens
-    try:
-        tokens = await get_tokens(user, request)
-    except HTTPException as e:
-        raise HTTPException(
-            status_code=e.status_code,
-            detail=f"SharePoint authentication failed: {e.detail}",
-        )
-
-    # Get all files in this space that came from SharePoint
-    all_files = Spaces.get_files_by_space_id(id, db=db)
-    sharepoint_files = [
-        f
-        for f in all_files
-        if f.meta
-        and f.meta.get("source") == "sharepoint"
-        and f.meta.get("sharepoint_drive_id")
-        and f.meta.get("sharepoint_item_id")
-    ]
-
-    log.info(
-        f"[spaces] Sync: checking {len(sharepoint_files)} SharePoint files in space {id}"
-    )
+    # Build lookup: sharepoint_item_id -> file record, for all SP files in space
+    all_space_files = Spaces.get_files_by_space_id(id, db=db)
+    sp_item_map = {}  # {item_id: file_record}
+    for f in all_space_files:
+        if f.meta and f.meta.get("source") == "sharepoint" and f.meta.get("sharepoint_item_id"):
+            sp_item_map[f.meta["sharepoint_item_id"]] = f
 
     updated_files = []
+    added_files_result = []
+    removed_files_result = []
     errors = []
     up_to_date = 0
     failed = 0
 
-    for file in sharepoint_files:
-        # file.meta is guaranteed to be non-None by our filter above
+    # Track which item IDs were covered by a tracked folder delta
+    delta_covered_item_ids: set = set()
+
+    # ---- Phase 1: Delta-based sync for tracked folders ----
+    tracked_folders = SpaceSharePointFolders.get_by_space_id(id, db=db)
+    log.info(f"[spaces] Sync: {len(tracked_folders)} tracked folders for space {id}")
+
+    for folder_rec in tracked_folders:
+        try:
+            tenant = get_tenant_by_id(folder_rec.tenant_id)
+            if not tenant:
+                log.warning(f"[spaces] Sync: tenant {folder_rec.tenant_id} not found for folder {folder_rec.id}")
+                continue
+
+            tokens = await get_tokens_for_tenant(tenant, user, request)
+
+            # Determine starting URL
+            if folder_rec.delta_link:
+                # Resume from stored delta link (full opaque URL)
+                start_url = folder_rec.delta_link
+                use_full_url = True
+            else:
+                # First-ever delta call for this folder (shouldn't happen normally)
+                if folder_rec.folder_id:
+                    start_url = f"/drives/{folder_rec.drive_id}/items/{folder_rec.folder_id}/delta"
+                else:
+                    start_url = f"/drives/{folder_rec.drive_id}/root/delta"
+                use_full_url = False
+
+            new_delta_link = None
+            next_url = start_url
+            is_full_url = use_full_url
+            auth_header = {"Authorization": tokens.authorization_header()}
+            page = 0
+
+            while next_url:
+                page += 1
+                if page > 200:  # safety cap
+                    log.warning("[spaces] Sync: delta pagination exceeded 200 pages, stopping")
+                    break
+
+                if is_full_url:
+                    async with aiohttp.ClientSession() as _s:
+                        async with _s.get(next_url, headers=auth_header) as _r:
+                            if _r.status >= 400:
+                                err_text = await _r.text()
+                                raise Exception(f"Delta request failed {_r.status}: {err_text}")
+                            resp_data = await _r.json()
+                else:
+                    resp_data = await graph_api_request("GET", next_url, tokens)
+                    is_full_url = True  # subsequent pages always use full URLs
+
+                items = resp_data.get("value", [])
+                new_delta_link = resp_data.get("@odata.deltaLink")
+                next_url = resp_data.get("@odata.nextLink")
+
+                for item in items:
+                    item_id = item.get("id")
+                    if not item_id:
+                        continue
+
+                    # Skip folders
+                    if item.get("folder"):
+                        continue
+
+                    delta_covered_item_ids.add(item_id)
+
+                    if item.get("deleted"):
+                        # --- Deleted item ---
+                        existing_file = sp_item_map.get(item_id)
+                        if existing_file:
+                            try:
+                                Spaces.remove_file_from_space(space_id=id, file_id=existing_file.id, db=db)
+                                removed_files_result.append({"id": existing_file.id, "filename": existing_file.filename})
+                                sp_item_map.pop(item_id, None)
+                                log.info(f"[spaces] Sync: removed deleted file {existing_file.filename} ({item_id})")
+                            except Exception as del_e:
+                                log.warning(f"[spaces] Sync: failed to remove deleted item {item_id}: {del_e}")
+                                errors.append(f"remove:{item_id}: {del_e}")
+                                failed += 1
+                        continue
+
+                    # It's a file (not deleted, not folder)
+                    existing_file = sp_item_map.get(item_id)
+                    item_name = item.get("name", "")
+                    item_modified = item.get("lastModifiedDateTime")
+                    mime_type = item.get("file", {}).get("mimeType", "application/octet-stream")
+                    file_size = item.get("size", 0)
+                    item_quick_xor_hash = item.get("file", {}).get("hashes", {}).get("quickXorHash")
+
+                    download_url = item.get("@microsoft.graph.downloadUrl")
+
+                    if existing_file:
+                        # Use quickXorHash for change detection; fall back to lastModifiedDateTime
+                        if item_quick_xor_hash and existing_file.hash:
+                            if existing_file.hash == item_quick_xor_hash:
+                                up_to_date += 1
+                                continue
+                        elif item_quick_xor_hash is None or existing_file.hash is None:
+                            stored_modified = (existing_file.meta or {}).get("sharepoint_modified_at")
+                            if stored_modified == item_modified:
+                                if item_quick_xor_hash and existing_file.hash is None:
+                                    Files.update_file_hash_by_id(existing_file.id, item_quick_xor_hash)
+                                up_to_date += 1
+                                continue
+
+                        # Modified — re-download and re-index
+                        try:
+                            file_bytes = await _download_sp_file(
+                                download_url, folder_rec.drive_id, item_id, tokens
+                            )
+                            file_obj = io.BytesIO(file_bytes)
+                            storage_tags = {"source": "sharepoint", "content_type": mime_type}
+                            _contents, _new_path = Storage.upload_file(file_obj, item_name, storage_tags)
+                            existing_meta = existing_file.meta or {}
+                            Files.update_file_metadata_by_id(existing_file.id, {
+                                **existing_meta,
+                                "name": item_name,
+                                "content_type": mime_type,
+                                "size": file_size,
+                                "sharepoint_modified_at": item_modified,
+                                "last_synced_at": int(time.time()),
+                            })
+                            if item_quick_xor_hash:
+                                Files.update_file_hash_by_id(existing_file.id, item_quick_xor_hash)
+                            background_tasks.add_task(_process_file_background, request, existing_file.id, user)
+                            updated_files.append({"id": existing_file.id, "filename": item_name})
+                            log.info(f"[spaces] Sync: updated {item_name} (delta)")
+                        except Exception as upd_e:
+                            log.warning(f"[spaces] Sync: failed to update {item_name}: {upd_e}")
+                            errors.append(f"{item_name}: {upd_e}")
+                            failed += 1
+                    else:
+                        # New file — import it
+                        try:
+                            # Cross-space dedup: if item already imported in another space, link it
+                            existing_global = Files.get_file_by_sharepoint_item_id(item_id)
+                            if existing_global:
+                                Spaces.add_file_to_space(space_id=id, file_id=existing_global.id, user_id=user.id, db=db)
+                                background_tasks.add_task(_process_file_background, request, existing_global.id, user)
+                                added_files_result.append({"id": existing_global.id, "filename": existing_global.filename})
+                                sp_item_map[item_id] = existing_global
+                                log.info(f"[spaces] Sync: linked existing file {item_name} from another space (delta)")
+                                continue
+
+                            file_bytes = await _download_sp_file(
+                                download_url, folder_rec.drive_id, item_id, tokens
+                            )
+                            new_file_id = str(uuid.uuid4())
+                            file_obj = io.BytesIO(file_bytes)
+                            storage_tags = {"source": "sharepoint", "content_type": mime_type}
+                            _contents, file_path = Storage.upload_file(file_obj, item_name, storage_tags)
+                            file_form = FileForm(
+                                id=new_file_id,
+                                hash=item_quick_xor_hash,
+                                filename=item_name,
+                                path=file_path,
+                                meta={
+                                    "name": item_name,
+                                    "content_type": mime_type,
+                                    "size": file_size,
+                                    "source": "sharepoint",
+                                    "sharepoint_drive_id": folder_rec.drive_id,
+                                    "sharepoint_item_id": item_id,
+                                    "sharepoint_tenant_id": folder_rec.tenant_id,
+                                    "sharepoint_folder_id": folder_rec.folder_id,
+                                    "sharepoint_folder_name": folder_rec.folder_name,
+                                    "sharepoint_site_name": folder_rec.site_name,
+                                    "sharepoint_modified_at": item_modified,
+                                },
+                            )
+                            new_file_rec = Files.insert_new_file(user.id, file_form)
+                            if not new_file_rec:
+                                raise Exception("Failed to create file record")
+                            Spaces.add_file_to_space(space_id=id, file_id=new_file_id, user_id=user.id, db=db)
+                            background_tasks.add_task(_process_file_background, request, new_file_id, user)
+                            added_files_result.append({"id": new_file_id, "filename": item_name})
+                            sp_item_map[item_id] = new_file_rec
+                            log.info(f"[spaces] Sync: added new file {item_name} (delta)")
+                        except Exception as add_e:
+                            log.warning(f"[spaces] Sync: failed to add new file {item_name}: {add_e}")
+                            errors.append(f"add:{item_name}: {add_e}")
+                            failed += 1
+
+            # Save the new delta link
+            if new_delta_link:
+                SpaceSharePointFolders.update_delta_link(
+                    record_id=folder_rec.id,
+                    delta_link=new_delta_link,
+                    last_synced_at=int(time.time()),
+                )
+                log.info(f"[spaces] Sync: stored new delta link for folder {folder_rec.id}")
+
+        except Exception as folder_exc:
+            log.warning(f"[spaces] Sync: folder {folder_rec.id} delta sync failed: {folder_exc}")
+            errors.append(f"folder:{folder_rec.id}: {folder_exc}")
+            failed += 1
+
+    # ---- Phase 2: Per-file fallback for individually-added SP files ----
+    # These are SharePoint files NOT covered by any tracked folder's delta run.
+    individually_added = [
+        f for f in all_space_files
+        if (
+            f.meta
+            and f.meta.get("source") == "sharepoint"
+            and f.meta.get("sharepoint_drive_id")
+            and f.meta.get("sharepoint_item_id")
+            and f.meta["sharepoint_item_id"] not in delta_covered_item_ids
+        )
+    ]
+    log.info(f"[spaces] Sync: {len(individually_added)} individually-added SP files to check")
+
+    # We may need tokens for multiple tenants; cache by tenant_id
+    _token_cache: dict = {}
+
+    for file in individually_added:
         meta = file.meta or {}
         drive_id = meta.get("sharepoint_drive_id")
         item_id = meta.get("sharepoint_item_id")
+        tenant_id = meta.get("sharepoint_tenant_id")
         stored_modified_at = meta.get("sharepoint_modified_at")
 
         try:
-            # Fetch current metadata from Microsoft Graph
+            # Get tokens for the appropriate tenant
+            if tenant_id and tenant_id not in _token_cache:
+                t = get_tenant_by_id(tenant_id)
+                if t:
+                    _token_cache[tenant_id] = await get_tokens_for_tenant(t, user, request)
+            file_tokens = _token_cache.get(tenant_id) if tenant_id else None
+            if not file_tokens:
+                # Try generic tokens (user OAuth)
+                from open_webui.routers.sharepoint import get_tokens
+                file_tokens = await get_tokens(user, request)
+
             endpoint = f"/drives/{drive_id}/items/{item_id}"
-            params = {
-                "$select": "id,name,size,file,lastModifiedDateTime,@microsoft.graph.downloadUrl"
-            }
-
-            current_metadata = await graph_api_request(
-                "GET", endpoint, tokens, params=params
-            )
+            params = {"$select": "id,name,size,file,lastModifiedDateTime,@microsoft.graph.downloadUrl"}
+            current_metadata = await graph_api_request("GET", endpoint, file_tokens, params=params)
             current_modified_at = current_metadata.get("lastModifiedDateTime")
+            current_quick_xor_hash = current_metadata.get("file", {}).get("hashes", {}).get("quickXorHash")
 
-            # Compare modification times
-            if stored_modified_at == current_modified_at:
-                log.debug(f"[spaces] Sync: {file.filename} is up to date")
-                up_to_date += 1
-                continue
+            # Use quickXorHash for change detection; fall back to lastModifiedDateTime
+            if current_quick_xor_hash and file.hash:
+                if file.hash == current_quick_xor_hash:
+                    up_to_date += 1
+                    continue
+            elif current_quick_xor_hash is None or file.hash is None:
+                if stored_modified_at == current_modified_at:
+                    if current_quick_xor_hash and file.hash is None:
+                        Files.update_file_hash_by_id(file.id, current_quick_xor_hash)
+                    up_to_date += 1
+                    continue
 
-            log.info(
-                f"[spaces] Sync: {file.filename} changed ({stored_modified_at} -> {current_modified_at})"
-            )
-
-            # Download updated file
+            log.info(f"[spaces] Sync: {file.filename} changed (individual check)")
             download_url = current_metadata.get("@microsoft.graph.downloadUrl")
             filename = current_metadata.get("name", file.filename)
             file_size = current_metadata.get("size", 0)
-            mime_type = current_metadata.get("file", {}).get(
-                "mimeType", "application/octet-stream"
-            )
+            mime_type = current_metadata.get("file", {}).get("mimeType", "application/octet-stream")
 
-            if download_url:
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(download_url) as response:
-                        if response.status >= 400:
-                            raise Exception(
-                                f"Download failed with status {response.status}"
-                            )
-                        file_bytes = await response.read()
-            else:
-                content_endpoint = f"/drives/{drive_id}/items/{item_id}/content"
-                async with aiohttp.ClientSession() as session:
-                    headers = {"Authorization": f"Bearer {tokens.access_token}"}
-                    async with session.get(
-                        f"https://graph.microsoft.com/v1.0{content_endpoint}",
-                        headers=headers,
-                    ) as resp:
-                        if resp.status >= 400:
-                            raise Exception(
-                                f"Download failed with status {resp.status}"
-                            )
-                        file_bytes = await resp.read()
-
-            # Update file in storage
+            file_bytes = await _download_sp_file(download_url, drive_id, item_id, file_tokens)
             file_obj = io.BytesIO(file_bytes)
             storage_tags = {"source": "sharepoint", "content_type": mime_type}
-            contents, new_file_path = Storage.upload_file(
-                file_obj, filename, storage_tags
-            )
-
-            # Update file record with new metadata
-            existing_meta = file.meta if file.meta else {}
-            updated_meta = {
+            Storage.upload_file(file_obj, filename, storage_tags)
+            existing_meta = file.meta or {}
+            Files.update_file_metadata_by_id(file.id, {
                 **existing_meta,
                 "name": filename,
                 "content_type": mime_type,
                 "size": file_size,
                 "sharepoint_modified_at": current_modified_at,
                 "last_synced_at": int(time.time()),
-            }
-
-            Files.update_file_metadata_by_id(file.id, updated_meta)
-
-            # Re-process for RAG
+            })
+            if current_quick_xor_hash:
+                Files.update_file_hash_by_id(file.id, current_quick_xor_hash)
             background_tasks.add_task(_process_file_background, request, file.id, user)
-
-            updated_files.append(
-                {
-                    "id": file.id,
-                    "filename": filename,
-                    "previous_modified_at": stored_modified_at,
-                    "current_modified_at": current_modified_at,
-                }
-            )
-
-            log.info(
-                f"[spaces] Sync: updated {filename} and queued for RAG reprocessing"
-            )
+            updated_files.append({"id": file.id, "filename": filename})
+            log.info(f"[spaces] Sync: updated {filename} (individual)")
 
         except Exception as e:
-            log.warning(f"[spaces] Sync: failed to check/update {file.filename}: {e}")
-            errors.append(f"{file.filename}: {str(e)}")
+            log.warning(f"[spaces] Sync: failed individual check for {file.filename}: {e}")
+            errors.append(f"{file.filename}: {e}")
             failed += 1
 
+    total_checked = len(sp_item_map) + len(individually_added)
     log.info(
-        f"[spaces] Sync complete: {len(updated_files)} updated, {up_to_date} up-to-date, {failed} failed"
+        f"[spaces] Sync complete: added={len(added_files_result)}, updated={len(updated_files)}, "
+        f"removed={len(removed_files_result)}, up_to_date={up_to_date}, failed={failed}"
     )
 
     return SharePointSyncResult(
-        total_checked=len(sharepoint_files),
+        total_checked=total_checked,
         updated=len(updated_files),
+        added=len(added_files_result),
+        removed=len(removed_files_result),
         failed=failed,
         up_to_date=up_to_date,
         updated_files=updated_files,
+        added_files=added_files_result,
+        removed_files=removed_files_result,
         errors=errors,
     )
 

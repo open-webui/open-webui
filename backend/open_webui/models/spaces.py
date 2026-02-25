@@ -136,6 +136,30 @@ class SpaceFile(Base):
 
 
 ####################
+# SpaceSharePointFolder DB Schema
+####################
+
+
+class SpaceSharePointFolder(Base):
+    __tablename__ = "space_sharepoint_folder"
+
+    id = Column(Text, unique=True, primary_key=True)
+    space_id = Column(Text, ForeignKey("space.id", ondelete="CASCADE"), nullable=False)
+    drive_id = Column(Text, nullable=False)
+    folder_id = Column(Text, nullable=True)  # None = root of drive
+    folder_name = Column(Text, nullable=True)
+    site_name = Column(Text, nullable=True)
+    tenant_id = Column(Text, nullable=False)
+    delta_link = Column(Text, nullable=True)  # Opaque @odata.deltaLink URL from Graph
+    last_synced_at = Column(BigInteger, nullable=True)
+    created_at = Column(BigInteger)
+    updated_at = Column(BigInteger)
+
+    __table_args__ = (
+        UniqueConstraint("space_id", "drive_id", "folder_id", name="uq_space_sp_folder"),
+    )
+
+####################
 # SpaceLink DB Schema
 ####################
 
@@ -338,6 +362,23 @@ class SpaceNotificationModel(BaseModel):
     created_at: int
 
 
+class SpaceSharePointFolderModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    space_id: str
+    drive_id: str
+    folder_id: Optional[str] = None
+    folder_name: Optional[str] = None
+    site_name: Optional[str] = None
+    tenant_id: str
+    delta_link: Optional[str] = None
+    last_synced_at: Optional[int] = None
+    created_at: int
+    updated_at: int
+
+
+
 class SpaceResponse(SpaceModel):
     user: Optional[UserResponse] = None
     knowledge_bases: Optional[List[KnowledgeResponse]] = None
@@ -415,6 +456,129 @@ def generate_slug(name: str) -> str:
     slug = re.sub(r"-+", "-", slug)
     slug = slug.strip("-")
     return slug[:50] if slug else "space"
+
+
+####################
+# SpaceSharePointFolderTable
+####################
+
+
+class SpaceSharePointFolderTable:
+    def upsert(
+        self,
+        space_id: str,
+        drive_id: str,
+        folder_id: Optional[str],
+        folder_name: Optional[str],
+        site_name: Optional[str],
+        tenant_id: str,
+        delta_link: Optional[str] = None,
+        db: Optional[Session] = None,
+    ) -> Optional[SpaceSharePointFolderModel]:
+        try:
+            with get_db_context(db) as db:
+                now = int(time.time())
+                # Try to find existing record
+                record = (
+                    db.query(SpaceSharePointFolder)
+                    .filter_by(space_id=space_id, drive_id=drive_id, folder_id=folder_id)
+                    .first()
+                )
+                if record:
+                    record.folder_name = folder_name
+                    record.site_name = site_name
+                    record.tenant_id = tenant_id
+                    if delta_link is not None:
+                        record.delta_link = delta_link
+                    record.updated_at = now
+                else:
+                    record = SpaceSharePointFolder(
+                        id=str(uuid.uuid4()),
+                        space_id=space_id,
+                        drive_id=drive_id,
+                        folder_id=folder_id,
+                        folder_name=folder_name,
+                        site_name=site_name,
+                        tenant_id=tenant_id,
+                        delta_link=delta_link,
+                        last_synced_at=None,
+                        created_at=now,
+                        updated_at=now,
+                    )
+                    db.add(record)
+                db.commit()
+                db.refresh(record)
+                return SpaceSharePointFolderModel.model_validate(record)
+        except Exception as e:
+            log.exception(f"Error upserting SpaceSharePointFolder: {e}")
+            return None
+
+    def get_by_space_id(
+        self,
+        space_id: str,
+        db: Optional[Session] = None,
+    ) -> List[SpaceSharePointFolderModel]:
+        try:
+            with get_db_context(db) as db:
+                records = (
+                    db.query(SpaceSharePointFolder)
+                    .filter_by(space_id=space_id)
+                    .all()
+                )
+                return [SpaceSharePointFolderModel.model_validate(r) for r in records]
+        except Exception as e:
+            log.exception(f"Error getting SpaceSharePointFolders by space_id: {e}")
+            return []
+
+    def get_by_space_and_folder(
+        self,
+        space_id: str,
+        drive_id: str,
+        folder_id: Optional[str],
+        db: Optional[Session] = None,
+    ) -> Optional[SpaceSharePointFolderModel]:
+        try:
+            with get_db_context(db) as db:
+                record = (
+                    db.query(SpaceSharePointFolder)
+                    .filter_by(space_id=space_id, drive_id=drive_id, folder_id=folder_id)
+                    .first()
+                )
+                if not record:
+                    return None
+                return SpaceSharePointFolderModel.model_validate(record)
+        except Exception as e:
+            log.exception(f"Error getting SpaceSharePointFolder: {e}")
+            return None
+
+    def update_delta_link(
+        self,
+        record_id: str,
+        delta_link: str,
+        last_synced_at: int,
+        db: Optional[Session] = None,
+    ) -> bool:
+        try:
+            with get_db_context(db) as db:
+                record = (
+                    db.query(SpaceSharePointFolder)
+                    .filter_by(id=record_id)
+                    .first()
+                )
+                if not record:
+                    return False
+                record.delta_link = delta_link
+                record.last_synced_at = last_synced_at
+                record.updated_at = int(time.time())
+                db.commit()
+                return True
+        except Exception as e:
+            log.exception(f"Error updating delta_link: {e}")
+            return False
+
+
+SpaceSharePointFolders = SpaceSharePointFolderTable()
+
 
 
 ####################
@@ -1567,5 +1731,6 @@ try:
     SpacePin.__table__.create(bind=engine, checkfirst=True)
     SpaceSubscription.__table__.create(bind=engine, checkfirst=True)
     SpaceNotification.__table__.create(bind=engine, checkfirst=True)
+    SpaceSharePointFolder.__table__.create(bind=engine, checkfirst=True)
 except Exception:
     pass
