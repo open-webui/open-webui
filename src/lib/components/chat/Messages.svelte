@@ -9,7 +9,7 @@
 		currentChatPage,
 		temporaryChatEnabled
 	} from '$lib/stores';
-	import { tick, getContext, onMount, createEventDispatcher } from 'svelte';
+	import { tick, getContext, onMount, onDestroy, createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
 
 	import { toast } from 'svelte-sonner';
@@ -73,7 +73,10 @@
 		messagesLoading = false;
 	};
 
-	$: if (history.currentId) {
+	let pendingRebuild = null;
+	let lastCurrentId = null;
+
+	const buildMessages = () => {
 		let _messages = [];
 
 		let message = history.messages[history.currentId];
@@ -91,6 +94,28 @@
 		}
 
 		messages = _messages;
+	};
+
+	// Throttle message list rebuilds to once per animation frame during streaming.
+	// Structural changes (currentId change) always rebuild immediately.
+	$: if (history.currentId) {
+		const currentIdChanged = history.currentId !== lastCurrentId;
+		lastCurrentId = history.currentId;
+
+		if (currentIdChanged) {
+			// Structural change: new chat, navigation, new message — rebuild immediately
+			cancelAnimationFrame(pendingRebuild);
+			pendingRebuild = null;
+			buildMessages();
+		} else if (history.messages) {
+			// Content update (streaming) — throttle to once per frame
+			if (!pendingRebuild) {
+				pendingRebuild = requestAnimationFrame(() => {
+					pendingRebuild = null;
+					buildMessages();
+				});
+			}
+		}
 	} else {
 		messages = [];
 	}
@@ -394,6 +419,10 @@
 
 		showMessage({ id: parentMessageId }, false);
 	};
+
+	onDestroy(() => {
+		cancelAnimationFrame(pendingRebuild);
+	});
 
 	const triggerScroll = () => {
 		if (autoScroll) {
