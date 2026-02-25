@@ -93,11 +93,18 @@ async def process_filter_functions(
             if filter_type == "stream":
                 params = {"event": form_data}
 
+            # Resolve per-filter selected option from metadata
+            filter_options = extra_params.get("__metadata__", {}).get(
+                "filter_options", {}
+            )
+            selected_option = filter_options.get(filter_id)
+
             params = params | {
                 k: v
                 for k, v in {
                     **extra_params,
                     "__id__": filter_id,
+                    "__selected_option__": selected_option,
                 }.items()
                 if k in sig.parameters
             }

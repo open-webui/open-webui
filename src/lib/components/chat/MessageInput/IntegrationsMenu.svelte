@@ -29,9 +29,16 @@
 	export let selectedModels: string[] = [];
 	export let fileUploadCapableModels: string[] = [];
 
-	export let toggleFilters: { id: string; name: string; description?: string; icon?: string }[] =
-		[];
+	export let toggleFilters: {
+		id: string;
+		name: string;
+		description?: string;
+		icon?: string;
+		toggle_options?: (string | { value: string; label: string })[];
+		toggle_default?: string;
+	}[] = [];
 	export let selectedFilterIds: string[] = [];
+	export let selectedFilterOptions: Record<string, string> = {};
 
 	export let showWebSearchButton = false;
 	export let webSearchEnabled = false;
@@ -144,72 +151,114 @@
 
 					{#if toggleFilters && toggleFilters.length > 0}
 						{#each toggleFilters.sort( (a, b) => a.name.localeCompare( b.name, undefined, { sensitivity: 'base' } ) ) as filter, filterIdx (filter.id)}
-							<Tooltip content={filter?.description} placement="top-start">
-								<button
-									class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
-									on:click={() => {
-										if (selectedFilterIds.includes(filter.id)) {
-											selectedFilterIds = selectedFilterIds.filter((id) => id !== filter.id);
-										} else {
-											selectedFilterIds = [...selectedFilterIds, filter.id];
-										}
-									}}
-								>
-									<div class="flex-1 truncate">
-										<div class="flex flex-1 gap-2 items-center">
-											<div class="shrink-0">
-												{#if filter?.icon}
-													<div class="size-4 items-center flex justify-center">
-														<img
-															src={filter.icon}
-															class="size-3.5 {filter.icon.includes('data:image/svg')
-																? 'dark:invert-[80%]'
-																: ''}"
-															style="fill: currentColor;"
-															alt={filter.name}
-														/>
-													</div>
-												{:else}
-													<Sparkles className="size-4" strokeWidth="1.75" />
-												{/if}
+							<div>
+								<Tooltip content={filter?.description} placement="top-start">
+									<button
+										class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+										on:click={() => {
+											if (selectedFilterIds.includes(filter.id)) {
+												selectedFilterIds = selectedFilterIds.filter((id) => id !== filter.id);
+												const { [filter.id]: _, ...rest } = selectedFilterOptions;
+												selectedFilterOptions = rest;
+											} else {
+												selectedFilterIds = [...selectedFilterIds, filter.id];
+												if (filter?.toggle_options?.length) {
+													const defaultVal = filter.toggle_default;
+													const firstOpt = typeof filter.toggle_options[0] === 'object'
+														? filter.toggle_options[0].value
+														: filter.toggle_options[0];
+													selectedFilterOptions = {
+														...selectedFilterOptions,
+														[filter.id]: defaultVal || firstOpt
+													};
+												}
+											}
+										}}
+									>
+										<div class="flex-1 truncate">
+											<div class="flex flex-1 gap-2 items-center">
+												<div class="shrink-0">
+													{#if filter?.icon}
+														<div class="size-4 items-center flex justify-center">
+															<img
+																src={filter.icon}
+																class="size-3.5 {filter.icon.includes('data:image/svg')
+																	? 'dark:invert-[80%]'
+																	: ''}"
+																style="fill: currentColor;"
+																alt={filter.name}
+															/>
+														</div>
+													{:else}
+														<Sparkles className="size-4" strokeWidth="1.75" />
+													{/if}
+												</div>
+
+												<div class=" truncate">{filter?.name}</div>
 											</div>
-
-											<div class=" truncate">{filter?.name}</div>
 										</div>
-									</div>
 
-									{#if filter?.has_user_valves && ($user?.role === 'admin' || ($user?.permissions?.chat?.valves ?? true))}
+										{#if filter?.has_user_valves && ($user?.role === 'admin' || ($user?.permissions?.chat?.valves ?? true))}
+											<div class=" shrink-0">
+												<Tooltip content={$i18n.t('Valves')}>
+													<button
+														class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
+														type="button"
+														on:click={(e) => {
+															e.stopPropagation();
+															e.preventDefault();
+															onShowValves({
+																type: 'function',
+																id: filter.id
+															});
+														}}
+													>
+														<Knobs />
+													</button>
+												</Tooltip>
+											</div>
+										{/if}
+
 										<div class=" shrink-0">
-											<Tooltip content={$i18n.t('Valves')}>
-												<button
-													class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
-													type="button"
-													on:click={(e) => {
-														e.stopPropagation();
-														e.preventDefault();
-														onShowValves({
-															type: 'function',
-															id: filter.id
-														});
-													}}
-												>
-													<Knobs />
-												</button>
-											</Tooltip>
+											<Switch
+												state={selectedFilterIds.includes(filter.id)}
+												on:change={async (e) => {
+													const state = e.detail;
+													await tick();
+												}}
+											/>
 										</div>
-									{/if}
+									</button>
+								</Tooltip>
 
-									<div class=" shrink-0">
-										<Switch
-											state={selectedFilterIds.includes(filter.id)}
-											on:change={async (e) => {
-												const state = e.detail;
-												await tick();
+								{#if selectedFilterIds.includes(filter.id) && filter?.toggle_options?.length}
+									<!-- svelte-ignore a11y-click-events-have-key-events -->
+									<!-- svelte-ignore a11y-no-static-element-interactions -->
+									<div
+										class="px-3 pb-1.5"
+										on:click|stopPropagation
+									>
+										<select
+											class="w-full rounded-lg py-1.5 px-3 text-xs bg-transparent dark:text-gray-300 outline-hidden border border-gray-200 dark:border-gray-700 cursor-pointer"
+											value={selectedFilterOptions[filter.id] ?? ''}
+											on:change={(e) => {
+												selectedFilterOptions = {
+													...selectedFilterOptions,
+													[filter.id]: e.target.value
+												};
 											}}
-										/>
+										>
+											{#each filter.toggle_options as option}
+												{#if typeof option === 'object' && option !== null}
+													<option value={option.value}>{option.label ?? option.value}</option>
+												{:else}
+													<option value={option}>{option}</option>
+												{/if}
+											{/each}
+										</select>
 									</div>
-								</button>
-							</Tooltip>
+								{/if}
+							</div>
 						{/each}
 					{/if}
 

@@ -136,6 +136,7 @@
 
 	let selectedToolIds = [];
 	let selectedFilterIds = [];
+	let selectedFilterOptions: Record<string, string> = {};
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
@@ -183,6 +184,7 @@
 		messageQueue = [];
 		selectedToolIds = [];
 		selectedFilterIds = [];
+		selectedFilterOptions = {};
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
 
@@ -230,6 +232,7 @@
 						files = input.files;
 						selectedToolIds = input.selectedToolIds;
 						selectedFilterIds = input.selectedFilterIds;
+						selectedFilterOptions = input.selectedFilterOptions ?? {};
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
@@ -290,6 +293,7 @@
 	const resetInput = () => {
 		selectedToolIds = [];
 		selectedFilterIds = [];
+		selectedFilterOptions = {};
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
@@ -636,6 +640,7 @@
 			files = [];
 			selectedToolIds = [];
 			selectedFilterIds = [];
+			selectedFilterOptions = {};
 			webSearchEnabled = false;
 			imageGenerationEnabled = false;
 			codeInterpreterEnabled = false;
@@ -648,6 +653,7 @@
 					files = input.files;
 					selectedToolIds = input.selectedToolIds;
 					selectedFilterIds = input.selectedFilterIds;
+					selectedFilterOptions = input.selectedFilterOptions ?? {};
 					webSearchEnabled = input.webSearchEnabled;
 					imageGenerationEnabled = input.imageGenerationEnabled;
 					codeInterpreterEnabled = input.codeInterpreterEnabled;
@@ -1230,6 +1236,7 @@
 				...(m.sources ? { sources: m.sources } : {})
 			})),
 			filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
+			filter_options: Object.keys(selectedFilterOptions).length > 0 ? selectedFilterOptions : undefined,
 			model_item: $models.find((m) => m.id === modelId),
 			chat_id: _chatId,
 			session_id: $socket?.id,
@@ -2111,6 +2118,7 @@
 				files: (files?.length ?? 0) > 0 ? files : undefined,
 
 				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
+				filter_options: Object.keys(selectedFilterOptions).length > 0 ? selectedFilterOptions : undefined,
 				tool_ids: toolIds.length > 0 ? toolIds : undefined,
 				skill_ids: skillIds.length > 0 ? skillIds : undefined,
 				tool_servers: ($toolServers ?? []).filter(
@@ -2698,6 +2706,7 @@
 									bind:autoScroll
 									bind:selectedToolIds
 									bind:selectedFilterIds
+									bind:selectedFilterOptions
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
@@ -2768,6 +2777,7 @@
 									bind:autoScroll
 									bind:selectedToolIds
 									bind:selectedFilterIds
+									bind:selectedFilterOptions
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled

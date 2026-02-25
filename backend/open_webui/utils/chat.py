@@ -321,6 +321,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
         "chat_id": data["chat_id"],
         "message_id": data["id"],
         "filter_ids": data.get("filter_ids", []),
+        "filter_options": data.get("filter_options", {}),
         "session_id": data["session_id"],
         "user_id": user.id,
     }
