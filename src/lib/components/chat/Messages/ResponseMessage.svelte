@@ -121,8 +121,16 @@
 
 	let message: MessageType = JSON.parse(JSON.stringify(history.messages[messageId]));
 	$: if (history.messages) {
-		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
-			message = JSON.parse(JSON.stringify(history.messages[messageId]));
+		const source = history.messages[messageId];
+		if (source) {
+			// Fast path: O(1) check on the fields that change most often (content during streaming, done at end)
+			// Avoids 2x O(n) JSON.stringify calls that are always true during streaming anyway
+			if (message.content !== source.content || message.done !== source.done) {
+				message = JSON.parse(JSON.stringify(source));
+			} else if (JSON.stringify(message) !== JSON.stringify(source)) {
+				// Slow path: full comparison for infrequent changes (sources, annotations, status, etc.)
+				message = JSON.parse(JSON.stringify(source));
+			}
 		}
 	}
 
