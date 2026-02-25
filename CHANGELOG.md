@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- 🗄️ **Database migration execution.** Database migrations now run correctly on startup, fixing a circular import issue that caused schema updates to fail silently. [#21848](https://github.com/open-webui/open-webui/pull/21848), [Commit](https://github.com/open-webui/open-webui/commit/87d33f6e18196876603eee7d1bf8e4977c7fa9c1)
 - 🧠 **Reasoning model KV cache preservation.** Reasoning model thinking tags are no longer stored as HTML in the database, preserving KV cache efficiency for backends like llama.cpp and ensuring faster subsequent conversation turns. [#21815](https://github.com/open-webui/open-webui/issues/21815), [Commit](https://github.com/open-webui/open-webui/commit/81781e6495dcc788c863bbf6b4aa4cf0ddd9fdcc)
 - ⚡ **Duplicate model execution prevention.** Models are no longer called twice when no tools are configured, eliminating unnecessary API requests and reducing latency. [#21802](https://github.com/open-webui/open-webui/issues/21802), [Commit](https://github.com/open-webui/open-webui/commit/3c8d658160809f6d651837cf93d89dddc1d17caf)
 - ⚡ **Tool query optimization.** Tool access control now skips an unnecessary database query when no tools are attached to the request, slightly improving performance. [#21873](https://github.com/open-webui/open-webui/pull/21873)
