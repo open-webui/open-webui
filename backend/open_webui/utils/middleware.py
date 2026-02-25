@@ -128,7 +128,6 @@ from open_webui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
     ENABLE_REALTIME_CHAT_SAVE,
     ENABLE_QUERIES_CACHE,
-    RAG_SYSTEM_CONTEXT,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     FORWARD_SESSION_INFO_HEADER_MESSAGE_ID,
@@ -862,22 +861,13 @@ def apply_source_context_to_messages(
     if not context_string:
         return messages
 
-    if RAG_SYSTEM_CONTEXT:
-        return add_or_update_system_message(
-            rag_template(
-                request.app.state.config.RAG_TEMPLATE, context_string, user_message
-            ),
-            messages,
-            append=True,
-        )
-    else:
-        return add_or_update_user_message(
-            rag_template(
-                request.app.state.config.RAG_TEMPLATE, context_string, user_message
-            ),
-            messages,
-            append=False,
-        )
+    return add_or_update_system_message(
+        rag_template(
+            request.app.state.config.RAG_TEMPLATE, context_string, user_message
+        ),
+        messages,
+        append=True,
+    )
 
 
 def process_tool_result(
