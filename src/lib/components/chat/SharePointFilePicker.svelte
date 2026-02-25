@@ -622,6 +622,7 @@ export let existingFiles: any[] = [];
 		} finally {
 			loading = false;
 		}
+	}
 
 	async function navigateToFolder(item: DriveItem) {
 		const newFolderStack = [...folderStack, { id: item.id, name: item.name }];
