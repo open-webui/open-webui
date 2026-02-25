@@ -273,7 +273,6 @@
 				} catch (e) {
 					console.error('[Chat] Failed to parse input from sessionStorage:', e);
 				}
-			}
 			} else {
 				await setDefaults();
 			}
