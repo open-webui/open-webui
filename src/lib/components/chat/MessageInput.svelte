@@ -56,6 +56,7 @@
 	import { getTools } from '$lib/apis/tools';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
+	import { trackUmamiEvent } from '$lib/utils/umami';
 
 	import { createNoteHandler } from '../notes/utils';
 	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
@@ -616,6 +617,15 @@
 					fileItem.content_type = uploadedFile.meta?.content_type || uploadedFile.content_type;
 					fileItem.url = `${uploadedFile.id}`;
 
+					trackUmamiEvent('file_upload_added', {
+						flow: 'chat',
+						surface: 'message_input',
+						trigger: 'upload_complete',
+						source: 'file_picker',
+						file_type: file.type || 'unknown',
+						temporary_chat: false
+					});
+
 					files = files;
 				} else {
 					files = files.filter((item) => item?.itemId !== tempItemId);
@@ -649,6 +659,15 @@
 				fileItem.type = 'text';
 				fileItem.content = content;
 				fileItem.id = uuidv4(); // Temporary ID for the file
+
+				trackUmamiEvent('file_upload_added', {
+					flow: 'chat',
+					surface: 'message_input',
+					trigger: 'upload_complete',
+					source: 'file_picker',
+					file_type: file.type || 'unknown',
+					temporary_chat: true
+				});
 
 				files = files;
 			}
@@ -752,6 +771,15 @@
 								url: imageUrl
 							}
 						];
+
+						trackUmamiEvent('file_upload_added', {
+							flow: 'chat',
+							surface: 'message_input',
+							trigger: 'upload_complete',
+							source: 'file_picker',
+							file_type: file.type || 'image',
+							temporary_chat: true
+						});
 					} else {
 						const blob = await (await fetch(imageUrl)).blob();
 						const compressedFile = new File([blob], file.name, { type: file.type });

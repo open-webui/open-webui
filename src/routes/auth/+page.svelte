@@ -19,6 +19,7 @@
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
+	import { trackUmamiEvent } from '$lib/utils/umami';
 
 	import { generateInitialsImage, canvasPixelTest, getUserTimezone } from '$lib/utils';
 
@@ -69,6 +70,13 @@
 	};
 
 	const signInHandler = async () => {
+		trackUmamiEvent('auth_signin_submitted', {
+			flow: 'auth',
+			surface: 'auth_page',
+			trigger: 'submit',
+			method: 'password'
+		});
+
 		const sessionUser = await userSignIn(email, password).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -78,6 +86,13 @@
 	};
 
 	const signUpHandler = async () => {
+		trackUmamiEvent('auth_signup_submitted', {
+			flow: 'auth',
+			surface: 'auth_page',
+			trigger: 'submit',
+			method: 'password'
+		});
+
 		if ($config?.features?.enable_signup_password_confirmation) {
 			if (password !== confirmPassword) {
 				toast.error($i18n.t('Passwords do not match.'));
@@ -96,11 +111,28 @@
 	};
 
 	const ldapSignInHandler = async () => {
+		trackUmamiEvent('auth_signin_submitted', {
+			flow: 'auth',
+			surface: 'auth_page',
+			trigger: 'submit',
+			method: 'ldap'
+		});
+
 		const sessionUser = await ldapUserSignIn(ldapUsername, password).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 		await setSessionUser(sessionUser);
+	};
+
+	const startOAuthLogin = (provider: string) => {
+		trackUmamiEvent('auth_oauth_started', {
+			flow: 'auth',
+			surface: 'auth_page',
+			trigger: 'click',
+			provider
+		});
+		window.location.href = `${WEBUI_BASE_URL}/oauth/${provider}/login`;
 	};
 
 	const submitHandler = async () => {
@@ -433,7 +465,7 @@
 										<button
 											class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
 											on:click={() => {
-												window.location.href = `${WEBUI_BASE_URL}/oauth/google/login`;
+												startOAuthLogin('google');
 											}}
 										>
 											<svg
@@ -463,7 +495,7 @@
 										<button
 											class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
 											on:click={() => {
-												window.location.href = `${WEBUI_BASE_URL}/oauth/microsoft/login`;
+												startOAuthLogin('microsoft');
 											}}
 										>
 											<svg
@@ -494,7 +526,7 @@
 										<button
 											class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
 											on:click={() => {
-												window.location.href = `${WEBUI_BASE_URL}/oauth/github/login`;
+												startOAuthLogin('github');
 											}}
 										>
 											<svg
@@ -515,7 +547,7 @@
 										<button
 											class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
 											on:click={() => {
-												window.location.href = `${WEBUI_BASE_URL}/oauth/oidc/login`;
+												startOAuthLogin('oidc');
 											}}
 										>
 											<svg
@@ -545,7 +577,7 @@
 										<button
 											class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
 											on:click={() => {
-												window.location.href = `${WEBUI_BASE_URL}/oauth/feishu/login`;
+												startOAuthLogin('feishu');
 											}}
 										>
 											<span>{$i18n.t('Continue with {{provider}}', { provider: 'Feishu' })}</span>

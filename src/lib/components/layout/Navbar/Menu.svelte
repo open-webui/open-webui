@@ -8,6 +8,7 @@
 
 	import { downloadChatAsPDF } from '$lib/apis/utils';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
+	import { trackUmamiEvent } from '$lib/utils/umami';
 
 	import {
 		showOverview,
@@ -71,6 +72,12 @@
 		});
 
 		saveAs(blob, `chat-${chat.chat.title}.txt`);
+		trackUmamiEvent('chat_exported', {
+			flow: 'chat',
+			surface: 'chat_menu',
+			trigger: 'click',
+			format: 'txt'
+		});
 	};
 
 	const downloadPdf = async () => {
@@ -174,6 +181,12 @@
 					}
 
 					pdf.save(`chat-${chat.chat.title}.pdf`);
+					trackUmamiEvent('chat_exported', {
+						flow: 'chat',
+						surface: 'chat_menu',
+						trigger: 'click',
+						format: 'pdf'
+					});
 
 					showFullMessages = false;
 				} catch (error) {
@@ -226,6 +239,12 @@
 			}
 
 			doc.save(`chat-${chat.chat.title}.pdf`);
+			trackUmamiEvent('chat_exported', {
+				flow: 'chat',
+				surface: 'chat_menu',
+				trigger: 'click',
+				format: 'pdf'
+			});
 		}
 	};
 
@@ -243,6 +262,12 @@
 				type: 'application/json'
 			});
 			saveAs(blob, `chat-export-${Date.now()}.json`);
+			trackUmamiEvent('chat_exported', {
+				flow: 'chat',
+				surface: 'chat_menu',
+				trigger: 'click',
+				format: 'json'
+			});
 		}
 	};
 </script>

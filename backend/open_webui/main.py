@@ -504,6 +504,8 @@ from open_webui.env import (
     WEBUI_ADMIN_NAME,
     ENABLE_EASTER_EGGS,
     LOG_FORMAT,
+    UMAMI_DOMAIN,
+    UMAMI_WEBSITE_ID,
 )
 
 
@@ -905,6 +907,8 @@ app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER
 app.state.AUTH_TRUSTED_NAME_HEADER = WEBUI_AUTH_TRUSTED_NAME_HEADER
 app.state.WEBUI_AUTH_SIGNOUT_REDIRECT_URL = WEBUI_AUTH_SIGNOUT_REDIRECT_URL
 app.state.EXTERNAL_PWA_MANIFEST_URL = EXTERNAL_PWA_MANIFEST_URL
+app.state.UMAMI_DOMAIN = UMAMI_DOMAIN
+app.state.UMAMI_WEBSITE_ID = UMAMI_WEBSITE_ID
 
 app.state.USER_COUNT = None
 
@@ -1781,7 +1785,6 @@ async def chat_completion(
             if not metadata["chat_id"].startswith(
                 "local:"
             ):  # temporary chats are not stored
-
                 # Verify chat ownership — lightweight EXISTS check avoids
                 # deserializing the full chat JSON blob just to confirm the row exists
                 if (
@@ -2102,6 +2105,10 @@ async def get_app_config(request: Request):
     if user is None:
         onboarding = user_count == 0
 
+    umami_domain = (app.state.UMAMI_DOMAIN or "https://cloud.umami.is").rstrip("/")
+    umami_website_id = (app.state.UMAMI_WEBSITE_ID or "").strip()
+    umami_enabled = bool(umami_website_id)
+
     return {
         **({"onboarding": True} if onboarding else {}),
         "status": True,
@@ -2160,6 +2167,14 @@ async def get_app_config(request: Request):
                 if user is not None
                 else {}
             ),
+        },
+        "analytics": {
+            "umami": {
+                "enabled": umami_enabled,
+                "domain": umami_domain,
+                "website_id": umami_website_id,
+                "script_url": f"{umami_domain}/script.js",
+            }
         },
         **(
             {
