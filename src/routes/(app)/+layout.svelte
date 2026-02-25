@@ -32,6 +32,7 @@
 		showChangelog,
 		temporaryChatEnabled,
 		toolServers,
+		terminalServers,
 		showSearch,
 		showSidebar
 	} from '$lib/stores';
@@ -128,6 +129,34 @@
 			return true;
 		});
 		toolServers.set(toolServersData);
+
+		// Inject enabled terminal servers as always-on tool servers
+		const enabledTerminals = ($settings?.terminalServers ?? []).filter((s) => s.enabled);
+		if (enabledTerminals.length > 0) {
+			let terminalServersData = await getToolServersData(
+				enabledTerminals.map((t) => ({
+					url: t.url,
+					auth_type: t.auth_type ?? 'bearer',
+					key: t.key ?? '',
+					path: t.path ?? '/openapi.json',
+					config: { enable: true }
+				}))
+			);
+			terminalServersData = terminalServersData.filter((data) => {
+				if (!data || data.error) {
+					toast.error(
+						$i18n.t(`Failed to connect to {{URL}} terminal server`, {
+							URL: data?.url
+						})
+					);
+					return false;
+				}
+				return true;
+			});
+			terminalServers.set(terminalServersData);
+		} else {
+			terminalServers.set([]);
+		}
 	};
 
 	const setBanners = async () => {

@@ -39,6 +39,7 @@
 		artifactContents,
 		tools,
 		toolServers,
+		terminalServers,
 		functions,
 		selectedFolder,
 		pinnedChats,
@@ -139,6 +140,26 @@
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
+
+	// Auto-inject terminal servers into selected tool IDs so they act like toggled-on tools
+	$: if ($terminalServers && $terminalServers.length > 0) {
+		const terminalIds = $terminalServers.map((_, i) => `direct_server:terminal_${i}`);
+		const missingIds = terminalIds.filter((id) => !selectedToolIds.includes(id));
+		if (missingIds.length > 0) {
+			selectedToolIds = [...selectedToolIds, ...missingIds];
+		}
+	}
+
+	// Remove disabled terminal servers from selectedToolIds automatically
+	$: if (selectedToolIds.length > 0) {
+		const terminalIds = ($terminalServers ?? []).map((_, i) => `direct_server:terminal_${i}`);
+		const invalidTerminalIds = selectedToolIds.filter(
+			(id) => id.startsWith('direct_server:terminal_') && !terminalIds.includes(id)
+		);
+		if (invalidTerminalIds.length > 0) {
+			selectedToolIds = selectedToolIds.filter((id) => !invalidTerminalIds.includes(id));
+		}
+	}
 
 	let showCommands = false;
 
@@ -319,6 +340,20 @@
 						[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
 					)
 				];
+			} else if (
+				$settings?.tools &&
+				$settings.tools.some((id) => !id.startsWith('direct_server:terminal_'))
+			) {
+				selectedToolIds = $settings.tools;
+			} else {
+				// Don't wipe existing terminal servers if no default tool IDs
+				selectedToolIds = selectedToolIds.filter((id) => !id.startsWith('direct_server:'));
+			}
+
+			// Auto-inject terminal servers
+			if ($terminalServers && $terminalServers.length > 0) {
+				const terminalIds = $terminalServers.map((_, i) => `direct_server:terminal_${i}`);
+				selectedToolIds = [...new Set([...selectedToolIds, ...terminalIds])];
 			}
 
 			// Set Default Filters (Toggleable only)
@@ -2113,9 +2148,12 @@
 				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
 				tool_ids: toolIds.length > 0 ? toolIds : undefined,
 				skill_ids: skillIds.length > 0 ? skillIds : undefined,
-				tool_servers: ($toolServers ?? []).filter(
-					(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
-				),
+				tool_servers: [
+					...($toolServers ?? []).filter(
+						(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
+					),
+					...($terminalServers ?? [])
+				],
 				features: getFeatures(),
 				variables: {
 					...getPromptVariables(

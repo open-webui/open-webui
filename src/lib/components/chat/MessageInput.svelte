@@ -69,6 +69,7 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import FileItem from '../common/FileItem.svelte';
 	import Image from '../common/Image.svelte';
+	import Spinner from '../common/Spinner.svelte';
 
 	import XMark from '../icons/XMark.svelte';
 	import GlobeAlt from '../icons/GlobeAlt.svelte';
@@ -78,7 +79,7 @@
 
 	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
 	import Voice from '../icons/Voice.svelte';
-	import Terminal from '../icons/Terminal.svelte';
+	import Cloud from '../icons/Cloud.svelte';
 	import IntegrationsMenu from './MessageInput/IntegrationsMenu.svelte';
 	import Component from '../icons/Component.svelte';
 	import PlusAlt from '../icons/PlusAlt.svelte';
@@ -102,6 +103,7 @@
 
 	export let autoScroll = false;
 	export let generating = false;
+	export let uploadPending = false;
 
 	export let atSelectedModel: Model | undefined = undefined;
 	export let selectedModels: [''];
@@ -1619,10 +1621,12 @@
 									{/if}
 
 									<div class="ml-1 flex gap-1.5">
-										{#if (selectedToolIds ?? []).length > 0}
+										{#if (selectedToolIds ?? []).filter((id) => !id.startsWith('direct_server:terminal_')).length > 0}
 											<Tooltip
 												content={$i18n.t('{{COUNT}} Available Tools', {
-													COUNT: selectedToolIds.length
+													COUNT: (selectedToolIds ?? []).filter(
+														(id) => !id.startsWith('direct_server:terminal_')
+													).length
 												})}
 											>
 												<button
@@ -1636,7 +1640,9 @@
 													<Wrench className="size-4" strokeWidth="1.75" />
 
 													<span class="text-sm">
-														{selectedToolIds.length}
+														{(selectedToolIds ?? []).filter(
+															(id) => !id.startsWith('direct_server:terminal_')
+														).length}
 													</span>
 												</button>
 											</Tooltip>
@@ -1732,7 +1738,7 @@
 														? 'm-1'
 														: 'focus:outline-hidden rounded-full'}"
 												>
-													<Terminal className="size-3.5" strokeWidth="2" />
+													<Cloud className="size-3.5" strokeWidth="2" />
 
 													<div class="hidden group-hover:block">
 														<XMark className="size-4" strokeWidth="1.75" />
@@ -1787,6 +1793,24 @@
 										{/if}
 
 										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
+											<!-- Active Terminal Indicator (Always On) -->
+											{@const activeTerminal = ($settings?.terminalServers ?? []).find(
+												(s) => s.enabled
+											)}
+											{#if activeTerminal}
+												<div class="flex items-end mr-0.5">
+													<div
+														class="flex items-center gap-1.5 px-2.5 py-1 text-sm hover:bg-gray-50 hover:dark:bg-gray-850 transition-all rounded-lg cursor-pointer select-none max-w-[120px] sm:max-w-[200px] truncate"
+													>
+														<Cloud className="size-3 shrink-0" strokeWidth="2" />
+														<span class="truncate"
+															>{activeTerminal.name ||
+																activeTerminal.url.replace(/^https?:\/\//, '')}</span
+														>
+													</div>
+												</div>
+											{/if}
+
 											<!-- {$i18n.t('Record voice')} -->
 											<Tooltip content={$i18n.t('Dictate')}>
 												<button
@@ -1901,27 +1925,35 @@
 											</div>
 										{:else}
 											<div class=" flex items-center">
-												<Tooltip content={$i18n.t('Send message')}>
+												<Tooltip
+													content={uploadPending
+														? $i18n.t('Waiting for upload...')
+														: $i18n.t('Send message')}
+												>
 													<button
 														id="send-message-button"
-														class="{!(prompt === '' && files.length === 0)
+														class="{!(prompt === '' && files.length === 0) || uploadPending
 															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
 														type="submit"
-														disabled={prompt === '' && files.length === 0}
+														disabled={(prompt === '' && files.length === 0) || uploadPending}
 													>
-														<svg
-															xmlns="http://www.w3.org/2000/svg"
-															viewBox="0 0 16 16"
-															fill="currentColor"
-															class="size-5"
-														>
-															<path
-																fill-rule="evenodd"
-																d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
-																clip-rule="evenodd"
-															/>
-														</svg>
+														{#if uploadPending}
+															<Spinner className="size-5" />
+														{:else}
+															<svg
+																xmlns="http://www.w3.org/2000/svg"
+																viewBox="0 0 16 16"
+																fill="currentColor"
+																class="size-5"
+															>
+																<path
+																	fill-rule="evenodd"
+																	d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
+																	clip-rule="evenodd"
+																/>
+															</svg>
+														{/if}
 													</button>
 												</Tooltip>
 											</div>

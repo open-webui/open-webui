@@ -30,7 +30,8 @@
 		toolServers,
 		playingNotificationSound,
 		channels,
-		channelId
+		channelId,
+		terminalServers
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -283,8 +284,28 @@
 	};
 
 	const executeTool = async (data, cb) => {
-		const toolServer = $settings?.toolServers?.find((server) => server.url === data.server?.url);
-		const toolServerData = $toolServers?.find((server) => server.url === data.server?.url);
+		let toolServer = $settings?.toolServers?.find((server) => server.url === data.server?.url);
+		let toolServerData = $toolServers?.find((server) => server.url === data.server?.url);
+
+		// Also check terminal servers if not found in regular tool servers
+		if (!toolServer) {
+			const terminalServer = ($settings?.terminalServers ?? []).find(
+				(server) => server.url === data.server?.url
+			);
+			if (terminalServer) {
+				toolServer = {
+					url: terminalServer.url,
+					auth_type: terminalServer.auth_type ?? 'bearer',
+					key: terminalServer.key ?? '',
+					path: terminalServer.path ?? '/openapi.json'
+				};
+			}
+		}
+
+		// Check terminal server data if not found in regular tool servers data
+		if (!toolServerData) {
+			toolServerData = $terminalServers?.find((server) => server.url === data.server?.url);
+		}
 
 		console.log('executeTool', data, toolServer);
 

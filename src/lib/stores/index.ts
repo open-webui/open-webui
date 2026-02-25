@@ -69,6 +69,7 @@ export const skills = writable(null);
 export const functions = writable(null);
 
 export const toolServers = writable([]);
+export const terminalServers = writable([]);
 
 export const banners: Writable<Banner[]> = writable([]);
 
@@ -90,6 +91,7 @@ export const showEmbeds = writable(false);
 export const showOverview = writable(false);
 export const showArtifacts = writable(false);
 export const showCallOverlay = writable(false);
+export const showFileNav = writable(false);
 
 export const artifactCode = writable(null);
 export const artifactContents = writable(null);

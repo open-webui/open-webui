@@ -73,10 +73,7 @@
 
 	const isPublicModel = (model) => {
 		return (model?.access_grants ?? []).some(
-			(g) =>
-				g.principal_type === 'user' &&
-				g.principal_id === '*' &&
-				g.permission === 'read'
+			(g) => g.principal_type === 'user' && g.principal_id === '*' && g.permission === 'read'
 		);
 	};
 

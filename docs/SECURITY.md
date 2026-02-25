@@ -48,10 +48,12 @@ We appreciate the community's interest in identifying potential vulnerabilities.
 5. **Remediation is required**:
 
 Along with the PoC, you must provide **either**:
+
 1. **A patch/PR**, **or**
 2. **a remediation plan** ("actionable steps") that a maintainer can apply without guesswork.
 
 Your remediation guidance can include, for example:
+
 - The **likely root cause** (what's wrong and where)
 - The **location(s)** to change (file/module/function names if known)
 - The **recommended fix approach** (validation/sanitization rules, auth checks, safe defaults, etc.)

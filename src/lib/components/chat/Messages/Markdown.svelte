@@ -56,9 +56,7 @@
 	});
 
 	const parseTokens = () => {
-		tokens = marked.lexer(
-			replaceTokens(processResponseContent(content), model?.name, $user?.name)
-		);
+		tokens = marked.lexer(replaceTokens(processResponseContent(content), model?.name, $user?.name));
 	};
 
 	// Throttle parsing to once per animation frame while streaming
