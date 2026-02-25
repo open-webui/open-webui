@@ -24,3 +24,14 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
+
+  frontend-watch:
+    image: node:22-slim
+    container_name: open-webui-frontend-watch
+    working_dir: /app
+    command: sh -c "npm ci && npm run build:watch"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development

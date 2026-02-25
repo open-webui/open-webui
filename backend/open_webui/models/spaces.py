@@ -612,6 +612,16 @@ class SpaceSharePointFolderTable:
             log.exception(f"Error fetching SpaceSharePointFolder {folder_id}: {e}")
             return None
 
+    def delete_by_id(self, folder_id: str, db: Optional[Session] = None) -> bool:
+        try:
+            with get_db_context(db) as db:
+                result = db.query(SpaceSharePointFolder).filter_by(id=folder_id).delete()
+                db.commit()
+                return result > 0
+        except Exception as e:
+            log.exception(f"Error deleting SpaceSharePointFolder {folder_id}: {e}")
+            return False
+
 SpaceSharePointFolders = SpaceSharePointFolderTable()
 
 

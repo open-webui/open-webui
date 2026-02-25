@@ -1042,6 +1042,40 @@ export const syncSharePointFolder = async (
 	return res;
 };
 
+export const removeSharePointFolderFromSpace = async (
+	token: string,
+	spaceId: string,
+	folderId: string
+): Promise<{ removed_files: number; folder_id: string }> => {
+	let error = null;
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/spaces/${spaceId}/files/sharepoint/folders/${folderId}`,
+		{
+			method: 'DELETE',
+			headers: {
+				Accept: 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail || err.message || 'Failed to remove SharePoint folder';
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const removeLinkFromSpace = async (
 	token: string,
 	spaceId: string,

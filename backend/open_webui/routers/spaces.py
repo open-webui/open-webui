@@ -2036,6 +2036,47 @@ async def sync_sharepoint_folder(
     return updated
 
 
+@router.delete("/{id}/files/sharepoint/folders/{folder_id}")
+async def remove_sharepoint_folder_from_space(
+    id: str,
+    folder_id: str,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    """Remove a tracked SharePoint folder and all its files from the space."""
+    from open_webui.models.spaces import SpaceSharePointFolders
+    from open_webui.models.files import Files
+
+    space = Spaces.get_space_by_id(id=id, db=db)
+    if not space:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    if not (
+        space.user_id == user.id
+        or has_access(user.id, "write", space.access_control, db=db)
+        or can_manage_all(user.id, "spaces")
+        or user.role == "admin"
+    ):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
+    folder_rec = SpaceSharePointFolders.get_by_id(folder_id, db=db)
+    if not folder_rec or folder_rec.space_id != id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found")
+
+    # Find all files in this space that belong to this tracked folder
+    space_files = Spaces.get_files_by_space_id(space_id=id, db=db)
+    removed_count = 0
+    for f in space_files:
+        meta = f.meta or {}
+        if meta.get("sharepoint_folder_id") == folder_rec.folder_id:
+            Spaces.remove_file_from_space(space_id=id, file_id=f.id, db=db)
+            removed_count += 1
+
+    # Delete the tracking record
+    SpaceSharePointFolders.delete_by_id(folder_id, db=db)
+
+    return {"removed_files": removed_count, "folder_id": folder_id}
+
+
 @router.post("/{id}/files/sharepoint/sync")
 async def sync_sharepoint_files(
     request: Request,

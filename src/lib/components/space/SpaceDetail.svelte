@@ -36,7 +36,8 @@
 		getSubscriptionStatus,
 		syncSharePointFiles,
 		getSpaceSharePointFolders,
-		syncSharePointFolder
+		syncSharePointFolder,
+		removeSharePointFolderFromSpace
 	} from '$lib/apis/spaces';
 	import type { Space, SpaceLink, SpaceCloneForm, SpaceSharePointFolder } from '$lib/apis/spaces';
 	import { getChatListBySpaceId } from '$lib/apis/chats';
@@ -460,6 +461,19 @@
 			toast.error(String(err));
 		} finally {
 			syncingFolders = new Set([...syncingFolders].filter((id) => id !== folderId));
+		}
+	};
+
+	const handleRemoveFolder = async (folderId: string, folderName: string) => {
+		if (!space) return;
+		if (!confirm($i18n.t('Remove folder "{{name}}" and all its files from this space?', { name: folderName }))) return;
+		try {
+			const result = await removeSharePointFolderFromSpace(localStorage.token, space.id, folderId);
+			toast.success($i18n.t('Removed {{count}} file(s)', { count: result.removed_files }));
+			files = await getSpaceFiles(localStorage.token, space.id).catch(() => files);
+			trackedFolders = trackedFolders.filter((tf) => tf.id !== folderId);
+		} catch (err) {
+			toast.error(String(err));
 		}
 	};
 
@@ -1362,6 +1376,7 @@
 											>
 												<div class="space-y-0.5 pl-2">
 													{#each site.folders as folder (folder.folderId)}
+														{@const trackedFolder = trackedFolders.find((tf) => tf.folder_id === folder.folderId)}
 														<Folder
 															id="sp-folder-{folder.folderId}"
 															name="{folder.folderName} ({folder.files.length})"
@@ -1371,7 +1386,6 @@
 															buttonClassName="text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
 														>
 															<div class="space-y-0.5 pl-2">
-											{@const trackedFolder = trackedFolders.find((tf) => tf.folder_id === folder.folderId)}
 											{#if trackedFolder}
 												<div class="flex items-center justify-between px-1 pb-1 mb-0.5 border-b border-gray-100 dark:border-gray-800">
 													<div class="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
@@ -1391,18 +1405,27 @@
 														{/if}
 													</div>
 													{#if space.write_access}
-														<button
-															class="flex items-center gap-1 text-xs text-sky-500 hover:text-sky-600 dark:text-sky-400 dark:hover:text-sky-300 disabled:opacity-50 transition"
-															on:click|stopPropagation={() => handleSyncFolder(trackedFolder.id)}
-															disabled={syncingFolders.has(trackedFolder.id)}
-														>
-															{#if syncingFolders.has(trackedFolder.id)}
-																<Spinner className="size-3" />
-															{:else}
-																<svg class="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-															{/if}
-															{$i18n.t('Sync Now')}
-														</button>
+														<div class="flex items-center gap-1.5">
+															<button
+																class="flex items-center gap-1 text-xs text-sky-500 hover:text-sky-600 dark:text-sky-400 dark:hover:text-sky-300 disabled:opacity-50 transition"
+																on:click|stopPropagation={() => handleSyncFolder(trackedFolder.id)}
+																disabled={syncingFolders.has(trackedFolder.id)}
+															>
+																{#if syncingFolders.has(trackedFolder.id)}
+																	<Spinner className="size-3" />
+																{:else}
+																	<svg class="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+																{/if}
+																{$i18n.t('Sync Now')}
+															</button>
+															<button
+																class="p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 transition"
+																title={$i18n.t('Remove folder')}
+																on:click|stopPropagation={() => handleRemoveFolder(trackedFolder.id, folder.folderName)}
+															>
+																<svg class="size-3 text-gray-400 hover:text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+															</button>
+														</div>
 													{/if}
 												</div>
 											{/if}
