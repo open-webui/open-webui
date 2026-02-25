@@ -102,6 +102,7 @@ class SharePointFileRequest(BaseModel):
     filename: Optional[str] = None
     tenant_id: Optional[str] = None  # Optional tenant ID for multi-tenant
 
+
 class SharePointFolderRequest(BaseModel):
     """Request to import all files from a SharePoint folder to a space."""
 
@@ -1340,7 +1341,6 @@ async def add_sharepoint_file_to_space(
     import aiohttp
 
     from open_webui.routers.sharepoint import (
-        get_tokens,
         get_tokens_for_tenant,
         get_tenant_by_id,
         graph_api_request,
@@ -1356,17 +1356,21 @@ async def add_sharepoint_file_to_space(
         f"[spaces] sharepoint download: space_id={id}, drive_id={drive_id}, item_id={item_id}, user={user.id}"
     )
 
-    # 1. Get auth tokens for the user
-    # Use tenant-specific tokens when tenant_id is provided (multi-tenant support)
-    if form_data.tenant_id:
-        tenant = get_tenant_by_id(form_data.tenant_id)
-        if tenant:
-            tokens = await get_tokens_for_tenant(tenant, user, request)
-        else:
-            log.warning(f"[spaces] Tenant '{form_data.tenant_id}' not found, falling back to default tokens")
-            tokens = await get_tokens(user, request)
-    else:
-        tokens = await get_tokens(user, request)
+    # 1. Get tenant-specific auth tokens
+    if not form_data.tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="tenant_id is required for SharePoint imports",
+        )
+
+    tenant = get_tenant_by_id(form_data.tenant_id)
+    if not tenant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"SharePoint tenant '{form_data.tenant_id}' not found",
+        )
+
+    tokens = await get_tokens_for_tenant(tenant, user, request)
 
     # 2. Get file metadata from Graph API
     metadata_endpoint = f"/drives/{drive_id}/items/{item_id}"
@@ -1426,6 +1430,7 @@ async def add_sharepoint_file_to_space(
             "source": "sharepoint",
             "sharepoint_drive_id": drive_id,
             "sharepoint_item_id": item_id,
+            "sharepoint_tenant_id": form_data.tenant_id,
             "sharepoint_modified_at": metadata.get("lastModifiedDateTime"),
         },
     )
@@ -1510,7 +1515,6 @@ async def add_sharepoint_folder_to_space(
     import aiohttp
 
     from open_webui.routers.sharepoint import (
-        get_tokens,
         get_tokens_for_tenant,
         get_tenant_by_id,
         graph_api_request,
@@ -1524,19 +1528,30 @@ async def add_sharepoint_folder_to_space(
 
     log.info(
         f"[spaces] sharepoint folder import: space_id={id}, drive_id={drive_id}, "
-        f"folder_id={folder_id}, recursive={form_data.recursive}, max_depth={max_depth}"
+        f"folder_id={folder_id}, tenant_id={form_data.tenant_id}, recursive={form_data.recursive}, max_depth={max_depth}"
     )
 
-    # Use tenant-specific tokens when tenant_id is provided (multi-tenant support)
-    if form_data.tenant_id:
-        tenant = get_tenant_by_id(form_data.tenant_id)
-        if tenant:
-            tokens = await get_tokens_for_tenant(tenant, user, request)
-        else:
-            log.warning(f"[spaces] Tenant '{form_data.tenant_id}' not found, falling back to default tokens")
-            tokens = await get_tokens(user, request)
-    else:
-        tokens = await get_tokens(user, request)
+    if not form_data.tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="tenant_id is required for SharePoint imports",
+        )
+
+    tenant = get_tenant_by_id(form_data.tenant_id)
+    if not tenant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"SharePoint tenant '{form_data.tenant_id}' not found",
+        )
+
+    log.info(
+        f"[spaces] Using tenant-specific tokens for tenant: {tenant.name} ({form_data.tenant_id})"
+    )
+    tokens = await get_tokens_for_tenant(tenant, user, request)
+
+    log.info(
+        f"[spaces] Got tokens, access_token prefix: {tokens.access_token[:20] if tokens.access_token else 'NONE'}..."
+    )
 
     existing_files = Spaces.get_files_by_space_id(id, db=db)
     existing_sharepoint_ids = set()
@@ -1563,21 +1578,40 @@ async def add_sharepoint_folder_to_space(
             "$top": "200",
         }
 
+        log.info(f"[spaces] Fetching folder contents: {endpoint}")
         items = []
-        response = await graph_api_request("GET", endpoint, tokens, params=params)
-        items.extend(response.get("value", []))
-        next_link = response.get("@odata.nextLink")
+        try:
+            response = await graph_api_request("GET", endpoint, tokens, params=params)
+            log.info(
+                f"[spaces] Graph API response keys: {list(response.keys())}, item count: {len(response.get('value', []))}"
+            )
+            items.extend(response.get("value", []))
+            next_link = response.get("@odata.nextLink")
+        except Exception as e:
+            log.error(
+                f"[spaces] graph_api_request FAILED for {endpoint}: {type(e).__name__}: {e}"
+            )
+            raise
 
         while next_link:
             async with aiohttp.ClientSession() as session:
                 headers = {"Authorization": f"Bearer {tokens.access_token}"}
                 async with session.get(next_link, headers=headers) as resp:
                     if resp.status >= 400:
+                        log.warning(
+                            f"[spaces] nextLink fetch failed with status {resp.status}"
+                        )
                         break
                     data = await resp.json()
                     items.extend(data.get("value", []))
                     next_link = data.get("@odata.nextLink")
 
+        log.info(f"[spaces] fetch_folder_contents({fid}) returned {len(items)} items")
+        if items:
+            sample = items[0]
+            log.info(
+                f"[spaces] Sample item keys: {list(sample.keys())}, is_folder: {'folder' in sample}, name: {sample.get('name')}"
+            )
         return items
 
     while queue:
@@ -1593,8 +1627,13 @@ async def add_sharepoint_folder_to_space(
 
         try:
             items = await fetch_folder_contents(current_folder_id)
+            log.info(
+                f"[spaces] Queue depth={depth} folder={current_folder_id}: got {len(items)} items ({sum(1 for i in items if 'folder' in i)} folders, {sum(1 for i in items if 'folder' not in i)} files)"
+            )
         except Exception as e:
-            log.warning(f"[spaces] Failed to fetch folder {current_folder_id}: {e}")
+            log.error(
+                f"[spaces] FAILED to fetch folder {current_folder_id}: {type(e).__name__}: {e}"
+            )
             continue
 
         for item in items:
@@ -1614,7 +1653,9 @@ async def add_sharepoint_folder_to_space(
                     }
                 )
 
-    log.info(f"[spaces] Found {len(all_files)} files in SharePoint folder")
+    log.info(
+        f"[spaces] Enumeration complete: found {len(all_files)} files total, {len(existing_sharepoint_ids)} already in space"
+    )
 
     added_files = []
     skipped = 0
@@ -1636,25 +1677,32 @@ async def add_sharepoint_folder_to_space(
 
         item_id = item["id"]
         filename = item.get("name", f"file_{item_id}")
+        log.info(
+            f"[spaces] Processing [{file_idx + 1}/{len(all_files)}]: {filename} (id={item_id})"
+        )
 
         if item_id in existing_sharepoint_ids:
-            log.debug(f"[spaces] Skipping {filename} - already in space")
+            log.info(f"[spaces] SKIP {filename}: already in space")
             skipped += 1
             continue
 
         mime_type = item.get("file", {}).get("mimeType", "application/octet-stream")
+        log.info(f"[spaces] {filename}: mime_type={mime_type}")
 
         unsupported_types = [
             "application/vnd.ms-outlook",
             "application/x-msdownload",
         ]
         if mime_type in unsupported_types:
-            log.debug(f"[spaces] Skipping {filename} - unsupported type {mime_type}")
+            log.info(f"[spaces] SKIP {filename}: unsupported mime type {mime_type}")
             skipped += 1
             continue
 
         try:
             download_url = item.get("@microsoft.graph.downloadUrl")
+            log.info(
+                f"[spaces] {filename}: download_url={'present' if download_url else 'MISSING - will use content endpoint'}"
+            )
 
             if download_url:
                 async with aiohttp.ClientSession() as session:
@@ -1664,8 +1712,12 @@ async def add_sharepoint_folder_to_space(
                                 f"Download failed with status {response.status}"
                             )
                         file_bytes = await response.read()
+                    log.info(
+                        f"[spaces] {filename}: downloaded via download_url, size={len(file_bytes)} bytes"
+                    )
             else:
                 content_endpoint = f"/drives/{drive_id}/items/{item_id}/content"
+                log.info(f"[spaces] {filename}: using content endpoint fallback")
                 async with aiohttp.ClientSession() as session:
                     headers = {"Authorization": f"Bearer {tokens.access_token}"}
                     async with session.get(
@@ -1694,6 +1746,7 @@ async def add_sharepoint_folder_to_space(
                     "source": "sharepoint",
                     "sharepoint_drive_id": drive_id,
                     "sharepoint_item_id": item_id,
+                    "sharepoint_tenant_id": form_data.tenant_id,
                     "sharepoint_folder_id": parent_folder_id,
                     "sharepoint_folder_name": parent_folder_name,
                     "sharepoint_site_name": form_data.site_name,

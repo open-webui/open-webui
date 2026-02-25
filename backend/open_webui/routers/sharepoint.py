@@ -933,7 +933,11 @@ def _filter_sites_for_user(sites: list, user) -> list:
     user_info = user.info if user.info else {}
     sp_config = user_info.get("sharepoint", {}) if isinstance(user_info, dict) else {}
 
-    # Admin override: allow_all bypasses all restrictions
+    # Admins always see all sites; regular users filtered by allow_all / allowed_sites
+    # Admin role bypass: admins always see all sites
+    if getattr(user, 'role', None) == 'admin':
+        return sites
+
     if sp_config.get("allow_all"):
         return sites
 

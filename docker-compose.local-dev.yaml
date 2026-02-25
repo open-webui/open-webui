@@ -1,0 +1,26 @@
+services:
+  open-webui-dev:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui-dev
+    ports:
+      - '3002:8080'
+    volumes:
+      # Mount local DB and data
+      - ./backend/data:/app/backend/data
+      # Mount local backend python code so changes take effect immediately
+      - ./backend/open_webui:/app/backend/open_webui
+      # Mount branding assets
+      - ./backend/static:/app/backend/static
+      # Mount local build (frontend)
+      - ./build:/app/build
+    environment:
+      - WEBUI_SECRET_KEY=local-dev-secret
+      - STATIC_DIR=/app/backend/static
+      - FRONTEND_BUILD_DIR=/app/build
+      - ENV=dev
+      - RAG_EMBEDDING_ENGINE=openai
+      - RAG_OPENAI_API_BASE_URL=http://localhost:11434
+      - DEVICE_TYPE=cpu
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    restart: unless-stopped
