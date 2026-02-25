@@ -3,8 +3,11 @@ import { browser, dev } from '$app/environment';
 
 export const APP_NAME = 'Open WebUI';
 
-export const WEBUI_HOSTNAME = browser ? (dev ? `${location.hostname}:8080` : ``) : '';
-export const WEBUI_BASE_URL = browser ? (dev ? `http://${WEBUI_HOSTNAME}` : ``) : ``;
+// In dev mode, use current origin (works for both vite dev server and docker-compose.local-dev)
+// When served from backend (production or local-dev container), WEBUI_BASE_URL should be empty
+// to use relative URLs, allowing the browser to resolve against the current origin.
+export const WEBUI_HOSTNAME = browser ? (dev ? `${location.host}` : ``) : '';
+export const WEBUI_BASE_URL = browser ? (dev ? `${location.protocol}//${WEBUI_HOSTNAME}` : ``) : ``;
 export const WEBUI_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1`;
 
 export const OLLAMA_API_BASE_URL = `${WEBUI_BASE_URL}/ollama`;
