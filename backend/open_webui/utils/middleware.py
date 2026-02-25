@@ -91,6 +91,7 @@ from open_webui.utils.misc import (
     get_last_user_message_item,
     get_last_assistant_message,
     get_system_message,
+    replace_system_message_content,
     prepend_to_first_user_message_content,
     convert_logit_bias_input_to_json,
     get_content_from_message,
@@ -4000,6 +4001,12 @@ async def streaming_chat_response_handler(response, ctx):
                 tool_call_sources = []  # Track citation sources from tool results
                 all_tool_call_sources = []  # Accumulated sources across all iterations
                 user_message = get_last_user_message(form_data["messages"])
+                system_message_obj = get_system_message(form_data["messages"])
+                original_system_content = (
+                    get_content_from_message(system_message_obj)
+                    if system_message_obj
+                    else None
+                )
 
                 while (
                     len(tool_calls) > 0
@@ -4240,10 +4247,14 @@ async def streaming_chat_response_handler(response, ctx):
                     # that is already in the tool result message.
                     all_tool_call_sources.extend(tool_call_sources)
                     if all_tool_call_sources and user_message:
-                        # Restore original user message before re-applying to avoid recursive nesting
+                        # Restore original messages before re-applying to avoid recursive nesting
                         set_last_user_message_content(
                             user_message, form_data["messages"]
                         )
+                        if original_system_content is not None:
+                            replace_system_message_content(
+                                original_system_content, form_data["messages"]
+                            )
                         form_data["messages"] = apply_source_context_to_messages(
                             request,
                             form_data["messages"],
