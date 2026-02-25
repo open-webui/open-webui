@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.6] - 2026-02-23
+## [0.8.6] - 2026-02-25
 
 ### Added
 
@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔐 **Individual user sharing control.** Administrators can now disable individual user sharing via the USER_PERMISSIONS_ACCESS_GRANTS_ALLOW_USERS environment variable, allowing only group-based sharing when set to false. [#21793](https://github.com/open-webui/open-webui/issues/21793), [Commit](https://github.com/open-webui/open-webui/commit/3d99de67716774af2f95f2e3c8e7cc4879464c71), [Commit](https://github.com/open-webui/open-webui/commit/176f9a781619d836be003d28d53904639cad4128)
 - 🔐 **OAuth profile sync on login.** Administrators can now enable automatic synchronization of user profile name and email from OAuth providers on login via the OAUTH_UPDATE_NAME_ON_LOGIN and OAUTH_UPDATE_EMAIL_ON_LOGIN environment variables. [#21787](https://github.com/open-webui/open-webui/pull/21787), [Commit](https://github.com/open-webui/open-webui/commit/9478c5e7ac8254b5f522c006da0c1c49bb282727)
 - 👥 **Default group share permission.** Administrators can now configure the default sharing permission for new groups via the DEFAULT_GROUP_SHARE_PERMISSION environment variable, controlling whether anyone, no one, or only members can share to new groups. [Commit](https://github.com/open-webui/open-webui/commit/538501c88da034434bcd1969f15341dbbaf154e4)
+- 💨 **Streaming performance.** Chat responses now render more efficiently during streaming, reducing CPU usage and improving responsiveness. [Commit](https://github.com/open-webui/open-webui/commit/484ba91b0777042eb848134f206ef3921f968dea)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 **Translation updates.** Translations for German, Portuguese (Brazil), Simplified Chinese, and Traditional Chinese were enhanced and expanded.
 
