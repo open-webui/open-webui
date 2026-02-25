@@ -640,6 +640,7 @@ def update_file_data_content_by_id(
                 request,
                 ProcessFileForm(file_id=id, content=form_data.content),
                 user=user,
+                db=db,
             )
             file = Files.get_file_by_id(id=id, db=db)
         except Exception as e:
@@ -868,7 +869,6 @@ async def delete_file_by_id(
         or user.role == "admin"
         or has_access_to_file(id, "write", user, db=db)
     ):
-
         # Clean up KB associations and embeddings before deleting
         knowledges = Knowledges.get_knowledges_by_file_id(id, db=db)
         for knowledge in knowledges:
