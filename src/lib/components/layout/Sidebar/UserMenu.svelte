@@ -88,7 +88,8 @@
 			class="w-full {className}  rounded-2xl px-1 py-1  border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg text-sm"
 			sideOffset={4}
 			side="top"
-			align="end"
+			align="start"
+			avoidCollisions={false}
 			transition={(e) => fade(e, { duration: 100 })}
 		>
 			{#if profile}
