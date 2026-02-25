@@ -311,21 +311,6 @@
 				<div class="flex items-center">{$i18n.t('Settings')}</div>
 			</DropdownMenu.Item> -->
 
-			{#if $mobile && ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true))}
-				<DropdownMenu.Item
-					draggable="false"
-					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
-					id="chat-controls-button"
-					on:click={async () => {
-						await showControls.set(true);
-						await showArtifacts.set(false);
-						await showEmbeds.set(false);
-					}}
-				>
-					<AdjustmentsHorizontal className=" size-4" strokeWidth="1.5" />
-					<div class="flex items-center">{$i18n.t('Controls')}</div>
-				</DropdownMenu.Item>
-			{/if}
 			{#if ($artifactContents ?? []).length > 0}
 				<DropdownMenu.Item
 					draggable="false"
@@ -340,9 +325,9 @@
 					<Cube className=" size-4" strokeWidth="1.5" />
 					<div class="flex items-center">{$i18n.t('Artifacts')}</div>
 				</DropdownMenu.Item>
-			{/if}
 
-			<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
+				<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
+			{/if}
 
 			{#if !$temporaryChatEnabled && ($user?.role === 'admin' || ($user.permissions?.chat?.share ?? true))}
 				<DropdownMenu.Item
