@@ -54,8 +54,14 @@ export let existingFiles: any[] = [];
 
 	// When the picker opens, pre-populate selection from existing space files
 	$: if (show) {
+		console.log('[SharePointPicker] Picker opened, pre-populating selection');
+		console.log('[SharePointPicker] existingFiles:', existingFiles);
+		console.log('[SharePointPicker] existingItemIds:', [...existingItemIds]);
+		console.log('[SharePointPicker] existingFolderIds:', [...existingFolderIds]);
 		selectedItems = new Set(existingItemIds);
 		selectedFolders = new Set(existingFolderIds);
+		console.log('[SharePointPicker] selectedItems after pre-population:', [...selectedItems]);
+		console.log('[SharePointPicker] selectedFolders after pre-population:', [...selectedFolders]);
 	}
 	let folderStack: { id: string; name: string }[] = [];
 
@@ -607,12 +613,14 @@ export let existingFiles: any[] = [];
 		loading = true;
 		try {
 			items = await getSharepointFiles(token, currentTenant.id, currentDrive.id, folderId);
+			console.log('[SharePointPicker] Loaded items:', items.map(i => ({ id: i.id, name: i.name, is_folder: i.is_folder })));
+			console.log('[SharePointPicker] Checking selection match - selectedItems:', [...selectedItems]);
+			console.log('[SharePointPicker] Items that match selection:', items.filter(i => selectedItems.has(i.id)).map(i => i.name));
 		} catch (error) {
 			console.error('Failed to load files:', error);
 			toast.error('Failed to load files');
 		} finally {
 			loading = false;
-		}
 	}
 
 	async function navigateToFolder(item: DriveItem) {
