@@ -862,22 +862,17 @@ def apply_source_context_to_messages(
     if not context_string:
         return messages
 
-    if RAG_SYSTEM_CONTEXT:
-        return add_or_update_system_message(
-            rag_template(
-                request.app.state.config.RAG_TEMPLATE, context_string, user_message
-            ),
-            messages,
-            append=True,
-        )
+    rag_content = rag_template(
+        request.app.state.config.RAG_TEMPLATE, context_string, user_message
+    )
+
+    # Citation-only context (include_content=False) always goes into the
+    # system prompt so models don't hallucinate the RAG template into tool
+    # calls.  Full document context respects the RAG_SYSTEM_CONTEXT setting.
+    if not include_content or RAG_SYSTEM_CONTEXT:
+        return add_or_update_system_message(rag_content, messages, append=True)
     else:
-        return add_or_update_user_message(
-            rag_template(
-                request.app.state.config.RAG_TEMPLATE, context_string, user_message
-            ),
-            messages,
-            append=False,
-        )
+        return add_or_update_user_message(rag_content, messages, append=False)
 
 
 def process_tool_result(
