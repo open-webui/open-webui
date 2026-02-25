@@ -13,7 +13,7 @@ PyJWT[crypto]==2.11.0
 authlib==1.6.7
 
 requests==2.32.5
-aiohttp==3.13.2 # do not update to 3.13.3 - broken
+aiohttp==3.13.3 # do not update to 3.13.3 - broken
 async-timeout
 aiocache
 aiofiles
@@ -56,7 +56,7 @@ chromadb==1.4.1
 weaviate-client==4.19.2
 opensearch-py==3.1.0
 
-transformers==5.1.0
+transformers==5.2.0
 sentence-transformers==5.2.2
 accelerate
 pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
@@ -64,14 +64,14 @@ einops==0.8.2
 
 ftfy==6.3.1
 chardet==5.2.0
-pypdf==6.7.0
+pypdf==6.7.2
 fpdf2==2.8.5
-pymdown-extensions==10.20.1
+pymdown-extensions==10.21
 docx2txt==0.9
 python-pptx==1.0.2
 unstructured==0.18.31
 msoffcrypto-tool==6.0.0
-nltk==3.9.2
+nltk==3.9.3
 Markdown==3.10.1
 pypandoc==1.16.2
 pandas==3.0.0
