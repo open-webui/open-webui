@@ -814,6 +814,7 @@ export const linkExistingFileToSpace = async (
 export const addSharePointFileToSpace = async (
 	token: string,
 	spaceId: string,
+	tenantId: string,
 	driveId: string,
 	itemId: string,
 	filename?: string
@@ -828,6 +829,7 @@ export const addSharePointFileToSpace = async (
 			authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
+			tenant_id: tenantId,
 			drive_id: driveId,
 			item_id: itemId,
 			filename: filename

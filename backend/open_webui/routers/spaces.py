@@ -100,7 +100,7 @@ class SharePointFileRequest(BaseModel):
     drive_id: str
     item_id: str
     filename: Optional[str] = None
-
+    tenant_id: Optional[str] = None  # Optional tenant ID for multi-tenant
 
 class SharePointFolderRequest(BaseModel):
     """Request to import all files from a SharePoint folder to a space."""
@@ -1341,6 +1341,8 @@ async def add_sharepoint_file_to_space(
 
     from open_webui.routers.sharepoint import (
         get_tokens,
+        get_tokens_for_tenant,
+        get_tenant_by_id,
         graph_api_request,
         graph_api_download,
     )
@@ -1355,7 +1357,16 @@ async def add_sharepoint_file_to_space(
     )
 
     # 1. Get auth tokens for the user
-    tokens = await get_tokens(user, request)
+    # Use tenant-specific tokens when tenant_id is provided (multi-tenant support)
+    if form_data.tenant_id:
+        tenant = get_tenant_by_id(form_data.tenant_id)
+        if tenant:
+            tokens = await get_tokens_for_tenant(tenant, user, request)
+        else:
+            log.warning(f"[spaces] Tenant '{form_data.tenant_id}' not found, falling back to default tokens")
+            tokens = await get_tokens(user, request)
+    else:
+        tokens = await get_tokens(user, request)
 
     # 2. Get file metadata from Graph API
     metadata_endpoint = f"/drives/{drive_id}/items/{item_id}"
@@ -1500,6 +1511,8 @@ async def add_sharepoint_folder_to_space(
 
     from open_webui.routers.sharepoint import (
         get_tokens,
+        get_tokens_for_tenant,
+        get_tenant_by_id,
         graph_api_request,
     )
     from open_webui.models.files import Files, FileForm
@@ -1514,7 +1527,16 @@ async def add_sharepoint_folder_to_space(
         f"folder_id={folder_id}, recursive={form_data.recursive}, max_depth={max_depth}"
     )
 
-    tokens = await get_tokens(user, request)
+    # Use tenant-specific tokens when tenant_id is provided (multi-tenant support)
+    if form_data.tenant_id:
+        tenant = get_tenant_by_id(form_data.tenant_id)
+        if tenant:
+            tokens = await get_tokens_for_tenant(tenant, user, request)
+        else:
+            log.warning(f"[spaces] Tenant '{form_data.tenant_id}' not found, falling back to default tokens")
+            tokens = await get_tokens(user, request)
+    else:
+        tokens = await get_tokens(user, request)
 
     existing_files = Spaces.get_files_by_space_id(id, db=db)
     existing_sharepoint_ids = set()
