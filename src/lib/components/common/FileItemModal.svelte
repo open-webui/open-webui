@@ -24,6 +24,7 @@
 	import Tooltip from './Tooltip.svelte';
 	import dayjs from 'dayjs';
 	import Spinner from './Spinner.svelte';
+	import PDFViewer from './PDFViewer.svelte';
 
 	export let item;
 	export let show = false;
@@ -443,10 +444,9 @@
 							playsinline
 						/>
 					{:else if isPDF}
-						<iframe
-							title={item?.name}
-							src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
-							class="w-full h-[70vh] border-0 rounded-lg"
+						<PDFViewer
+							url={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
+							className="w-full h-[70vh] border-0 rounded-lg"
 						/>
 					{:else if isExcel}
 						{#if excelError}

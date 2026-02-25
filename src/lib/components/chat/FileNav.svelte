@@ -26,6 +26,7 @@
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
+	import PDFViewer from '../common/PDFViewer.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 
 	const i18n = getContext('i18n');
@@ -40,7 +41,7 @@
 	let selectedFile: string | null = null;
 	let fileContent: string | null = null;
 	let fileImageUrl: string | null = null;
-	let filePdfUrl: string | null = null;
+	let filePdfData: ArrayBuffer | null = null;
 	let fileLoading = false;
 
 	const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif']);
@@ -88,10 +89,7 @@
 			URL.revokeObjectURL(fileImageUrl);
 			fileImageUrl = null;
 		}
-		if (filePdfUrl) {
-			URL.revokeObjectURL(filePdfUrl);
-			filePdfUrl = null;
-		}
+		filePdfData = null;
 	};
 
 	const loadDir = async (path: string) => {
@@ -132,10 +130,7 @@
 				if (result) fileImageUrl = URL.createObjectURL(result.blob);
 			} else if (isPdf(filePath)) {
 				const result = await downloadFileBlob(terminalUrl, terminalKey, filePath);
-				if (result)
-					filePdfUrl = URL.createObjectURL(
-						new Blob([await result.blob.arrayBuffer()], { type: 'application/pdf' })
-					);
+				if (result) filePdfData = await result.blob.arrayBuffer();
 			} else {
 				fileContent = await readFile(terminalUrl, terminalKey, filePath);
 			}
@@ -236,20 +231,29 @@
 		};
 		const onBlur = () => (shiftKey = false);
 
+		// Auto-reload directory when the browser tab regains focus
+		const onVisibilityChange = () => {
+			if (document.visibilityState === 'visible' && !selectedFile && configured && !loading) {
+				loadDir(currentPath);
+			}
+		};
+
 		window.addEventListener('keydown', onKeyDown);
 		window.addEventListener('keyup', onKeyUp);
 		window.addEventListener('blur', onBlur);
+		document.addEventListener('visibilitychange', onVisibilityChange);
 
 		return () => {
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp);
 			window.removeEventListener('blur', onBlur);
+			document.removeEventListener('visibilitychange', onVisibilityChange);
 		};
 	});
 
 	onDestroy(() => {
 		if (fileImageUrl) URL.revokeObjectURL(fileImageUrl);
-		if (filePdfUrl) URL.revokeObjectURL(filePdfUrl);
+
 	});
 </script>
 
@@ -338,6 +342,26 @@
 			</div>
 
 			{#if !selectedFile}
+				<Tooltip content={$i18n.t('Refresh')}>
+					<button
+						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+						on:click={() => loadDir(currentPath)}
+						aria-label={$i18n.t('Refresh')}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							class="size-3.5 {loading ? 'animate-spin' : ''}"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.451a.75.75 0 0 0 0-1.5H4.5a.75.75 0 0 0-.75.75v3.75a.75.75 0 0 0 1.5 0v-2.127l.13.13a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm-10.624-2.85a5.5 5.5 0 0 1 9.201-2.465l.312.31H11.75a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 .75-.75V3.42a.75.75 0 0 0-1.5 0v2.126l-.13-.129A7 7 0 0 0 3.239 8.555a.75.75 0 0 0 1.449.39Z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</button>
+				</Tooltip>
 				<Tooltip content={$i18n.t('New Folder')}>
 					<button
 						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
@@ -376,15 +400,15 @@
 				</button>
 				<!-- File preview -->
 				{#if fileLoading}
-					<div class="flex justify-center pt-8"><Spinner className="size-5" /></div>
+					<div class="flex justify-center pt-8"><Spinner className="size-4" /></div>
 				{:else if fileImageUrl !== null}
 					<img
 						src={fileImageUrl}
 						alt={selectedFile?.split('/').pop()}
 						class="w-full h-auto object-contain p-3"
 					/>
-				{:else if filePdfUrl !== null}
-					<embed src={filePdfUrl} type="application/pdf" class="w-full h-full min-h-[400px]" />
+				{:else if filePdfData !== null}
+					<PDFViewer data={filePdfData} className="w-full h-full min-h-[400px]" />
 				{:else if fileContent !== null}
 					<pre
 						class="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all leading-relaxed p-3">{fileContent}</pre>
@@ -401,7 +425,7 @@
 						{$i18n.t('Uploading...')}
 					</div>
 				{:else if loading}
-					<div class="flex justify-center pt-8"><Spinner className="size-5" /></div>
+					<div class="flex justify-center pt-8"><Spinner className="size-4" /></div>
 				{:else if error}
 					<div class="p-4 text-xs text-red-500 dark:text-red-400">{error}</div>
 				{:else if entries.length === 0 && !creatingFolder}

@@ -68,22 +68,14 @@ export const downloadFileBlob = async (
 	apiKey: string,
 	path: string
 ): Promise<{ blob: Blob; filename: string } | null> => {
-	const url = `${baseUrl.replace(/\/$/, '')}/files/read?path=${encodeURIComponent(path)}`;
+	const url = `${baseUrl.replace(/\/$/, '')}/files/view?path=${encodeURIComponent(path)}`;
 	const res = await fetch(url, {
 		headers: { Authorization: `Bearer ${apiKey}` }
 	}).catch(() => null);
 
 	if (!res || !res.ok) return null;
 
-	const contentType = res.headers.get('content-type') ?? '';
 	const filename = path.split('/').pop() ?? 'file';
-
-	if (contentType.includes('application/json')) {
-		const json = await res.json().catch(() => null);
-		const blob = new Blob([json?.content ?? ''], { type: 'text/plain' });
-		return { blob, filename };
-	}
-
 	const blob = await res.blob();
 	return { blob, filename };
 };
