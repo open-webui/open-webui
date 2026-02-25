@@ -1066,7 +1066,7 @@
 	bind:show={showSharePointPicker}
 	token={localStorage.token}
 	{spaceId}
-	existingFiles={spaceFiles}
+	existingFiles={[...spaceFiles, ...files]}
 	on:fileDownloaded={async (e) => {
 		console.log('[SharePoint] fileDownloaded event received:', e.detail);
 		const result = e.detail;
@@ -1079,7 +1079,8 @@
 				name: result.filename,
 				collection_name: '',
 				status: 'processing',
-				url: result.id
+				url: result.id,
+				meta: result.meta ?? {}
 			};
 			files = [...files, fileEntry];
 
