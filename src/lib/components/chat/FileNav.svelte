@@ -6,7 +6,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, onDestroy, tick } from 'svelte';
-	import { settings } from '$lib/stores';
+	import { settings, showFileNavPath } from '$lib/stores';
 	import {
 		getCwd,
 		listFiles,
@@ -224,12 +224,42 @@
 
 	onMount(async () => {
 		if (!configured) return;
-		// On first ever open, resolve the server's CWD instead of defaulting to /
-		if (savedPath === '/') {
-			const cwd = await getCwd(terminalUrl, terminalKey);
-			if (cwd) savedPath = cwd.endsWith('/') ? cwd : cwd + '/';
+
+		let handledDisplayFile = false;
+
+		// Subscribe to display_file requests
+		const unsubFileNav = showFileNavPath.subscribe(async (filePath) => {
+			if (!filePath || !configured) return;
+			handledDisplayFile = true;
+			// Clear the store so it can be re-triggered for the same path
+			showFileNavPath.set(null);
+
+			// Navigate to the parent directory
+			const lastSlash = filePath.lastIndexOf('/');
+			const dir = lastSlash > 0 ? filePath.substring(0, lastSlash + 1) : '/';
+			const fileName = filePath.substring(lastSlash + 1);
+
+			if (dir !== currentPath) {
+				await loadDir(dir);
+			}
+
+			// Open the file for preview
+			await tick();
+			const entry = entries.find((e) => e.name === fileName);
+			if (entry) {
+				await openEntry(entry);
+			}
+		});
+
+		// Only load the default directory if a display_file wasn't pending
+		if (!handledDisplayFile) {
+			// On first ever open, resolve the server's CWD instead of defaulting to /
+			if (savedPath === '/') {
+				const cwd = await getCwd(terminalUrl, terminalKey);
+				if (cwd) savedPath = cwd.endsWith('/') ? cwd : cwd + '/';
+			}
+			loadDir(savedPath);
 		}
-		loadDir(savedPath);
 
 		const onKeyDown = (e: KeyboardEvent) => {
 			if (e.key === 'Shift') shiftKey = true;

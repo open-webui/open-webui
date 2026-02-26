@@ -31,7 +31,9 @@
 		playingNotificationSound,
 		channels,
 		channelId,
-		terminalServers
+		terminalServers,
+		showControls,
+		showFileNavPath
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -283,14 +285,11 @@
 		};
 	};
 
-	const executeTool = async (data, cb) => {
-		let toolServer = $settings?.toolServers?.find((server) => server.url === data.server?.url);
-		let toolServerData = $toolServers?.find((server) => server.url === data.server?.url);
-
-		// Also check terminal servers if not found in regular tool servers
+	const resolveToolServer = (serverUrl) => {
+		let toolServer = $settings?.toolServers?.find((server) => server.url === serverUrl);
 		if (!toolServer) {
 			const terminalServer = ($settings?.terminalServers ?? []).find(
-				(server) => server.url === data.server?.url
+				(server) => server.url === serverUrl
 			);
 			if (terminalServer) {
 				toolServer = {
@@ -302,28 +301,28 @@
 			}
 		}
 
-		// Check terminal server data if not found in regular tool servers data
-		if (!toolServerData) {
-			toolServerData = $terminalServers?.find((server) => server.url === data.server?.url);
+		let toolServerData =
+			$toolServers?.find((server) => server.url === serverUrl) ??
+			$terminalServers?.find((server) => server.url === serverUrl);
+
+		let token = null;
+		if (toolServer) {
+			const auth_type = toolServer?.auth_type ?? 'bearer';
+			if (auth_type === 'bearer') token = toolServer?.key;
+			else if (auth_type === 'session') token = localStorage.token;
 		}
+
+		return { toolServer, toolServerData, token };
+	};
+
+	const executeTool = async (data, cb) => {
+		const { toolServer, toolServerData, token } = resolveToolServer(data.server?.url);
 
 		console.log('executeTool', data, toolServer);
 
 		if (toolServer) {
-			console.log(toolServer);
-
-			let toolServerToken = null;
-			const auth_type = toolServer?.auth_type ?? 'bearer';
-			if (auth_type === 'bearer') {
-				toolServerToken = toolServer?.key;
-			} else if (auth_type === 'none') {
-				// No authentication
-			} else if (auth_type === 'session') {
-				toolServerToken = localStorage.token;
-			}
-
 			const res = await executeToolServer(
-				toolServerToken,
+				token,
 				toolServer.url,
 				data?.name,
 				data?.params,
@@ -331,6 +330,15 @@
 			);
 
 			console.log('executeToolServer', res);
+
+			// Intercept display_file result to handle UI
+			if (data?.name === 'display_file' && data?.params?.path) {
+				if (res?.exists !== false) {
+					showControls.set(true);
+					showFileNavPath.set(data.params.path);
+				}
+			}
+
 			if (cb) {
 				cb(JSON.parse(JSON.stringify(res)));
 			}

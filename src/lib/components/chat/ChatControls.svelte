@@ -15,7 +15,8 @@
 		showCallOverlay,
 		showArtifacts,
 		showEmbeds,
-		settings
+		settings,
+		showFileNavPath
 	} from '$lib/stores';
 
 	import { uploadFile } from '$lib/apis/files';
@@ -60,6 +61,12 @@
 	$: hasTerminal = !!($settings?.terminalServers ?? []).find((s) => s.enabled)?.url;
 	$: hasMessages = history?.messages && Object.keys(history.messages).length > 0;
 	$: if (!hasMessages && activeTab === 'overview') activeTab = 'controls';
+
+	// Auto-switch to Files tab when display_file is triggered
+	$: if ($showFileNavPath) {
+		activeTab = 'files';
+		showControls.set(true);
+	}
 
 	// Attach a terminal file to the chat input
 	const handleTerminalAttach = async (blob: Blob, name: string, contentType: string) => {

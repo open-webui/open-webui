@@ -92,6 +92,7 @@ export const showOverview = writable(false);
 export const showArtifacts = writable(false);
 export const showCallOverlay = writable(false);
 export const showFileNav = writable(false);
+export const showFileNavPath: Writable<string | null> = writable(null);
 
 export const artifactCode = writable(null);
 export const artifactContents = writable(null);
