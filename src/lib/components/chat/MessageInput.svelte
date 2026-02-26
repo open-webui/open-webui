@@ -62,7 +62,7 @@
 
 	import InputMenu from './MessageInput/InputMenu.svelte';
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
-	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
+
 	import ToolServersModal from './ToolServersModal.svelte';
 
 	import RichTextInput from '../common/RichTextInput.svelte';
@@ -437,7 +437,7 @@
 
 	let showInputModal = false;
 
-	let dragged = false;
+	export let dragged = false;
 	let shiftKey = false;
 
 	let user = null;
@@ -992,7 +992,7 @@
 
 		await tick();
 
-		const dropzoneElement = document.getElementById('chat-container');
+		const dropzoneElement = document.getElementById('chat-pane');
 
 		dropzoneElement?.addEventListener('dragover', onDragOver);
 		dropzoneElement?.addEventListener('drop', onDrop);
@@ -1009,7 +1009,7 @@
 		window.removeEventListener('focus', onFocus);
 		window.removeEventListener('blur', onBlur);
 
-		const dropzoneElement = document.getElementById('chat-container');
+		const dropzoneElement = document.getElementById('chat-pane');
 
 		if (dropzoneElement) {
 			dropzoneElement?.removeEventListener('dragover', onDragOver);
@@ -1019,7 +1019,7 @@
 	});
 </script>
 
-<FilesOverlay show={dragged} />
+
 <ToolServersModal bind:show={showTools} {selectedToolIds} />
 
 <InputVariablesModal

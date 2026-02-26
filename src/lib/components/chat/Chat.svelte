@@ -93,6 +93,7 @@
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
+	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -164,6 +165,7 @@
 	let showCommands = false;
 
 	let generating = false;
+	let dragged = false;
 	let generationController = null;
 
 	let chat = null;
@@ -2645,6 +2647,7 @@
 
 			<PaneGroup direction="horizontal" class="w-full h-full">
 				<Pane defaultSize={50} minSize={30} class="h-full flex relative max-w-full flex-col">
+					<FilesOverlay show={dragged} />
 					<Navbar
 						bind:this={navbarElement}
 						chat={{
@@ -2703,7 +2706,7 @@
 						}}
 					/>
 
-					<div class="flex flex-col flex-auto z-10 w-full @container overflow-auto">
+					<div id="chat-pane" class="flex flex-col flex-auto z-10 w-full @container overflow-auto">
 						{#if ($settings?.landingPageMode === 'chat' && !$selectedFolder) || createMessagesList(history, history.currentId).length > 0}
 							<div
 								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
@@ -2757,6 +2760,7 @@
 									bind:webSearchEnabled
 									bind:atSelectedModel
 									bind:showCommands
+									bind:dragged
 									toolServers={$toolServers}
 									{generating}
 									{stopResponse}
@@ -2827,6 +2831,7 @@
 									bind:webSearchEnabled
 									bind:atSelectedModel
 									bind:showCommands
+									bind:dragged
 									toolServers={$toolServers}
 									{stopResponse}
 									{createMessagePair}

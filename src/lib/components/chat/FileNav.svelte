@@ -54,6 +54,7 @@
 	let creatingFolder = false;
 	let newFolderName = '';
 	let newFolderInput: HTMLInputElement;
+	let uploadInput: HTMLInputElement;
 
 	let deleteTarget: { path: string; name: string } | null = null;
 	let showDeleteConfirm = false;
@@ -370,6 +371,44 @@
 						<NewFolderAlt className="size-3.5" />
 					</button>
 				</Tooltip>
+				<Tooltip content={$i18n.t('Upload')}>
+					<button
+						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+						on:click={() => uploadInput?.click()}
+						aria-label={$i18n.t('Upload')}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.5"
+							class="size-3.5"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
+							/>
+						</svg>
+					</button>
+				</Tooltip>
+				<input
+					bind:this={uploadInput}
+					type="file"
+					multiple
+					hidden
+					on:change={async () => {
+						if (!uploadInput?.files?.length || !configured) return;
+						uploading = true;
+						for (const file of Array.from(uploadInput.files)) {
+							await uploadToTerminal(terminalUrl, terminalKey, currentPath, file);
+						}
+						uploading = false;
+						uploadInput.value = '';
+						await loadDir(currentPath);
+					}}
+				/>
 			{/if}
 		</div>
 

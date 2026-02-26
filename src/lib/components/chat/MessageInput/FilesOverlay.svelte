@@ -1,25 +1,12 @@
 <script lang="ts">
-	import { showSidebar } from '$lib/stores';
 	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
 
 	export let show = false;
-	let overlayElement = null;
-
-	$: if (show && overlayElement) {
-		document.body.appendChild(overlayElement);
-		document.body.style.overflow = 'hidden';
-	} else if (overlayElement) {
-		document.body.removeChild(overlayElement);
-		document.body.style.overflow = 'unset';
-	}
 </script>
 
 {#if show}
 	<div
-		bind:this={overlayElement}
-		class="fixed {$showSidebar
-			? 'left-0 md:left-[var(--sidebar-width)] md:w-[calc(100%-var(--sidebar-width))]'
-			: 'left-0'}  fixed top-0 right-0 bottom-0 w-full h-full flex z-9999 touch-none pointer-events-none"
+		class="absolute inset-0 w-full h-full flex z-[9999] touch-none pointer-events-none"
 		id="dropzone"
 		role="region"
 		aria-label="Drag and Drop Container"
