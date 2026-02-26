@@ -5,7 +5,7 @@
 
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { getContext, onMount, onDestroy, tick, afterUpdate } from 'svelte';
+	import { getContext, onMount, onDestroy, tick } from 'svelte';
 	import { settings } from '$lib/stores';
 	import {
 		getCwd,
@@ -18,22 +18,13 @@
 		setCwd,
 		type FileEntry
 	} from '$lib/apis/terminal';
-	import { DropdownMenu } from 'bits-ui';
-	import { flyAndScale } from '$lib/utils/transitions';
 	import Folder from '../icons/Folder.svelte';
-	import NewFolderAlt from '../icons/NewFolderAlt.svelte';
-	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
-	import GarbageBin from '../icons/GarbageBin.svelte';
 	import Spinner from '../common/Spinner.svelte';
-	import Tooltip from '../common/Tooltip.svelte';
-	import PDFViewer from '../common/PDFViewer.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
-	import Reset from '../icons/Reset.svelte';
 
-	import panzoom, { type PanZoom } from 'panzoom';
-
-	let pzInstance: PanZoom | null = null;
-	let imageSceneElement: HTMLElement | null = null;
+	import FileNavToolbar from './FileNav/FileNavToolbar.svelte';
+	import FilePreview from './FileNav/FilePreview.svelte';
+	import FileEntryRow from './FileNav/FileEntryRow.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -50,6 +41,8 @@
 	let filePdfData: ArrayBuffer | null = null;
 	let fileLoading = false;
 
+	let filePreviewRef: FilePreview;
+
 	const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif']);
 	const isImage = (path: string) => IMAGE_EXTS.has(path.split('.').pop()?.toLowerCase() ?? '');
 	const isPdf = (path: string) => path.split('.').pop()?.toLowerCase() === 'pdf';
@@ -60,13 +53,10 @@
 	let creatingFolder = false;
 	let newFolderName = '';
 	let newFolderInput: HTMLInputElement;
-	let uploadInput: HTMLInputElement;
 
 	let deleteTarget: { path: string; name: string } | null = null;
 	let showDeleteConfirm = false;
 	let shiftKey = false;
-
-	let breadcrumbEl: HTMLDivElement;
 
 	$: activeTerminal = ($settings?.terminalServers ?? []).find((s) => s.enabled);
 	$: terminalUrl = activeTerminal?.url ?? '';
@@ -85,38 +75,14 @@
 			[{ label: '/', path: '/' }]
 		);
 
-	// Scroll breadcrumb to the end after every DOM update
-	afterUpdate(() => {
-		if (breadcrumbEl) breadcrumbEl.scrollLeft = breadcrumbEl.scrollWidth;
-	});
-
 	const clearFilePreview = () => {
 		fileContent = null;
-		if (pzInstance) {
-			pzInstance.dispose();
-			pzInstance = null;
-		}
+		filePreviewRef?.disposePanzoom();
 		if (fileImageUrl) {
 			URL.revokeObjectURL(fileImageUrl);
 			fileImageUrl = null;
 		}
 		filePdfData = null;
-	};
-
-	const initImagePanzoom = (node: HTMLElement) => {
-		imageSceneElement = node;
-		pzInstance = panzoom(node, {
-			bounds: true,
-			boundsPadding: 0.1,
-			zoomSpeed: 0.065
-		});
-	};
-
-	const resetImageView = () => {
-		if (pzInstance) {
-			pzInstance.moveTo(0, 0);
-			pzInstance.zoomAbs(0, 0, 1);
-		}
 	};
 
 	const loadDir = async (path: string) => {
@@ -211,6 +177,16 @@
 		await loadDir(currentPath);
 	};
 
+	const handleUploadFiles = async (files: File[]) => {
+		if (!files.length || !configured) return;
+		uploading = true;
+		for (const file of files) {
+			await uploadToTerminal(terminalUrl, terminalKey, currentPath, file);
+		}
+		uploading = false;
+		await loadDir(currentPath);
+	};
+
 	const startNewFolder = () => {
 		creatingFolder = true;
 		newFolderName = '';
@@ -239,6 +215,11 @@
 			toast.error($i18n.t('Failed to delete {{name}}', { name }));
 		}
 		await loadDir(currentPath);
+	};
+
+	const requestDelete = (path: string, name: string) => {
+		deleteTarget = { path, name };
+		showDeleteConfirm = true;
 	};
 
 	onMount(async () => {
@@ -279,7 +260,6 @@
 	});
 
 	onDestroy(() => {
-		pzInstance?.dispose();
 		if (fileImageUrl) URL.revokeObjectURL(fileImageUrl);
 	});
 </script>
@@ -335,169 +315,28 @@
 			</div>
 		{/if}
 
-		<!-- Breadcrumb + actions — always visible, scrolls to end -->
-		<div class="flex items-center px-2 pb-1.5 shrink-0 gap-1">
-			<div
-				bind:this={breadcrumbEl}
-				class="flex items-center flex-1 min-w-0 overflow-x-auto scrollbar-none"
-			>
-				{#each breadcrumbs as crumb, i}
-					{#if i > 1}
-						<span class="text-gray-300 dark:text-gray-600 text-xs shrink-0 select-none mx-0.5"
-							>/</span
-						>
-					{/if}
-					<button
-						class="text-xs shrink-0 px-1 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition
-							{!selectedFile && i === breadcrumbs.length - 1
-							? 'text-gray-700 dark:text-gray-300'
-							: 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400'}"
-						on:click={() => loadDir(crumb.path)}
-					>
-						{crumb.label}
-					</button>
-				{/each}
-				{#if selectedFile}
-					<span class="text-gray-300 dark:text-gray-600 text-xs shrink-0 select-none mx-0.5">/</span
-					>
-					<span
-						class="text-xs shrink-0 px-1.5 py-0.5 text-gray-700 dark:text-gray-300"
-					>
-						{selectedFile.split('/').pop()}
-					</span>
-				{/if}
-			</div>
-
-			{#if !selectedFile}
-				<Tooltip content={$i18n.t('Refresh')}>
-					<button
-						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
-						on:click={() => loadDir(currentPath)}
-						aria-label={$i18n.t('Refresh')}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="size-3.5 {loading ? 'animate-spin' : ''}"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.451a.75.75 0 0 0 0-1.5H4.5a.75.75 0 0 0-.75.75v3.75a.75.75 0 0 0 1.5 0v-2.127l.13.13a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm-10.624-2.85a5.5 5.5 0 0 1 9.201-2.465l.312.31H11.75a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 .75-.75V3.42a.75.75 0 0 0-1.5 0v2.126l-.13-.129A7 7 0 0 0 3.239 8.555a.75.75 0 0 0 1.449.39Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</button>
-				</Tooltip>
-				<Tooltip content={$i18n.t('New Folder')}>
-					<button
-						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
-						on:click={startNewFolder}
-						aria-label={$i18n.t('New Folder')}
-					>
-						<NewFolderAlt className="size-3.5" />
-					</button>
-				</Tooltip>
-				<Tooltip content={$i18n.t('Upload')}>
-					<button
-						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
-						on:click={() => uploadInput?.click()}
-						aria-label={$i18n.t('Upload')}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.5"
-							class="size-3.5"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
-							/>
-						</svg>
-					</button>
-				</Tooltip>
-				<input
-					bind:this={uploadInput}
-					type="file"
-					multiple
-					hidden
-					on:change={async () => {
-						if (!uploadInput?.files?.length || !configured) return;
-						uploading = true;
-						for (const file of Array.from(uploadInput.files)) {
-							await uploadToTerminal(terminalUrl, terminalKey, currentPath, file);
-						}
-						uploading = false;
-						uploadInput.value = '';
-						await loadDir(currentPath);
-					}}
-				/>
-			{/if}
-		</div>
+		<FileNavToolbar
+			{breadcrumbs}
+			{selectedFile}
+			{loading}
+			onNavigate={loadDir}
+			onRefresh={() => loadDir(currentPath)}
+			onNewFolder={startNewFolder}
+			onUploadFiles={handleUploadFiles}
+		/>
 
 		<!-- Content -->
-		<div class="flex-1 {fileImageUrl !== null ? 'overflow-hidden' : 'overflow-y-auto'} min-h-0 relative">
+		<div class="flex-1 overflow-y-auto min-h-0">
 			{#if selectedFile !== null}
-				<!-- Floating action buttons -->
-				<div class="absolute top-2 right-2 z-10 flex gap-1">
-					{#if fileImageUrl !== null}
-						<Tooltip content={$i18n.t('Reset view')}>
-							<button
-								class="p-1.5 rounded-lg bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
-								on:click={resetImageView}
-								aria-label={$i18n.t('Reset view')}
-							>
-								<Reset className="size-4" />
-							</button>
-						</Tooltip>
-					{/if}
-					<button
-						class="p-1.5 rounded-lg bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
-						on:click={() => downloadFile(selectedFile)}
-						aria-label={$i18n.t('Download')}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.5"
-							class="size-4"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
-							/>
-						</svg>
-					</button>
-				</div>
-				<!-- File preview -->
-				{#if fileLoading}
-					<div class="flex justify-center pt-8"><Spinner className="size-4" /></div>
-				{:else if fileImageUrl !== null}
-					<div class="w-full h-full" use:initImagePanzoom>
-						<img
-							src={fileImageUrl}
-							alt={selectedFile?.split('/').pop()}
-							class="w-full h-auto object-contain p-3"
-							draggable="false"
-						/>
-					</div>
-				{:else if filePdfData !== null}
-					<PDFViewer data={filePdfData} className="w-full h-full min-h-[400px]" />
-				{:else if fileContent !== null}
-					<pre
-						class="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all leading-relaxed p-3">{fileContent}</pre>
-				{:else}
-					<div class="text-sm text-gray-400 text-center pt-8">
-						{$i18n.t('Could not read file.')}
-					</div>
-				{/if}
+				<FilePreview
+					bind:this={filePreviewRef}
+					{selectedFile}
+					{fileLoading}
+					{fileImageUrl}
+					{filePdfData}
+					{fileContent}
+					onDownload={() => downloadFile(selectedFile)}
+				/>
 			{:else}
 				<!-- Directory listing -->
 				{#if uploading}
@@ -539,117 +378,16 @@
 					{#if entries.length > 0 || creatingFolder}
 						<ul>
 							{#each entries as entry}
-								<li class="group">
-									<div
-										class="w-full flex items-center hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-									>
-										<button
-											class="flex-1 flex items-center gap-2 px-3 py-1.5 text-left min-w-0"
-											draggable={entry.type === 'file'}
-											on:dragstart={(e) => {
-												if (entry.type !== 'file') return;
-												e.dataTransfer?.setData(
-													'application/x-terminal-file',
-													JSON.stringify({
-														path: `${currentPath}${entry.name}`,
-														name: entry.name,
-														url: terminalUrl,
-														key: terminalKey
-													})
-												);
-											}}
-											on:click={() => openEntry(entry)}
-										>
-											{#if entry.type === 'directory'}
-												<Folder className="size-4 shrink-0 text-blue-400 dark:text-blue-300" />
-											{:else}
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="currentColor"
-													stroke-width="1.5"
-													class="size-4 shrink-0 text-gray-400"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
-													/>
-												</svg>
-											{/if}
-											<span class="flex-1 text-xs text-gray-800 dark:text-gray-200 truncate">
-												{entry.name}
-											</span>
-											{#if entry.type === 'file' && entry.size !== undefined}
-												<span class="text-xs text-gray-400 shrink-0">{formatSize(entry.size)}</span>
-											{/if}
-										</button>
-
-										<DropdownMenu.Root>
-											<DropdownMenu.Trigger
-												class="shrink-0 p-0.5 mr-1 rounded-lg transition
-													text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400
-													hover:bg-gray-100 dark:hover:bg-gray-800"
-												on:click={(e) => e.stopPropagation()}
-												aria-label={$i18n.t('More')}
-											>
-												<EllipsisHorizontal className="size-3.5" />
-											</DropdownMenu.Trigger>
-
-											<DropdownMenu.Content
-												strategy="fixed"
-												class="w-full max-w-[150px] rounded-2xl p-1 z-[9999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800"
-												sideOffset={4}
-												side="bottom"
-												align="end"
-												transition={flyAndScale}
-											>
-												{#if entry.type !== 'directory'}
-													<DropdownMenu.Item
-														type="button"
-														class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
-														on:click={(e) => {
-															e.stopPropagation();
-															downloadFile(`${currentPath}${entry.name}`);
-														}}
-													>
-														<svg
-															xmlns="http://www.w3.org/2000/svg"
-															viewBox="0 0 20 20"
-															fill="currentColor"
-															class="size-4"
-														>
-															<path
-																d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z"
-															/>
-															<path
-																d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"
-															/>
-														</svg>
-														<div class="flex items-center">{$i18n.t('Download')}</div>
-													</DropdownMenu.Item>
-												{/if}
-
-												<DropdownMenu.Item
-													type="button"
-													class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
-													on:click={(e) => {
-														e.stopPropagation();
-														deleteTarget = {
-															path: `${currentPath}${entry.name}`,
-															name: entry.name
-														};
-														showDeleteConfirm = true;
-													}}
-												>
-													<GarbageBin className="size-4" />
-													<div class="flex items-center">{$i18n.t('Delete')}</div>
-												</DropdownMenu.Item>
-											</DropdownMenu.Content>
-										</DropdownMenu.Root>
-									</div>
-								</li>
+								<FileEntryRow
+									{entry}
+									{currentPath}
+									{terminalUrl}
+									{terminalKey}
+									onOpen={openEntry}
+									onDownload={downloadFile}
+									onDelete={requestDelete}
+									{formatSize}
+								/>
 							{/each}
 						</ul>
 					{/if}
