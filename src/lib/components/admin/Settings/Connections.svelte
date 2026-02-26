@@ -41,6 +41,7 @@
 	let OPENAI_API_CONFIGS = {};
 
 	let ENABLE_OPENAI_API: null | boolean = null;
+	let ENABLE_ZAPS_PRIVACY_FILTER: null | boolean = null;
 	let ENABLE_OLLAMA_API: null | boolean = null;
 
 	let connectionsConfig = null;
@@ -72,6 +73,7 @@
 
 			const res = await updateOpenAIConfig(localStorage.token, {
 				ENABLE_OPENAI_API: ENABLE_OPENAI_API,
+				ENABLE_ZAPS_PRIVACY_FILTER: ENABLE_ZAPS_PRIVACY_FILTER,
 				OPENAI_API_BASE_URLS: OPENAI_API_BASE_URLS,
 				OPENAI_API_KEYS: OPENAI_API_KEYS,
 				OPENAI_API_CONFIGS: OPENAI_API_CONFIGS
@@ -154,6 +156,7 @@
 			]);
 
 			ENABLE_OPENAI_API = openaiConfig.ENABLE_OPENAI_API;
+			ENABLE_ZAPS_PRIVACY_FILTER = openaiConfig.ENABLE_ZAPS_PRIVACY_FILTER;
 			ENABLE_OLLAMA_API = ollamaConfig.ENABLE_OLLAMA_API;
 
 			OPENAI_API_BASE_URLS = openaiConfig.OPENAI_API_BASE_URLS;
@@ -241,6 +244,23 @@
 						</div>
 
 						{#if ENABLE_OPENAI_API}
+							<div class="mb-2">
+								<div class="flex justify-between items-center text-sm">
+									<div class="font-medium">{$i18n.t('Privacy Filter (Zaps)')}</div>
+									<div class="flex items-center">
+										<Switch
+											bind:state={ENABLE_ZAPS_PRIVACY_FILTER}
+											on:change={async () => {
+												updateOpenAIHandler();
+											}}
+										/>
+									</div>
+								</div>
+								<div class="text-xs text-gray-400 dark:text-gray-500">
+									{$i18n.t('Routes all OpenAI requests through Zaps Privacy Shield to redact PII.')}
+								</div>
+							</div>
+
 							<div class="">
 								<div class="flex justify-between items-center">
 									<div class="font-medium text-xs">{$i18n.t('Manage OpenAI API Connections')}</div>

@@ -1101,6 +1101,18 @@ ENABLE_OPENAI_API = PersistentConfig(
     os.environ.get("ENABLE_OPENAI_API", "True").lower() == "true",
 )
 
+ENABLE_ZAPS_PRIVACY_FILTER = PersistentConfig(
+    "ENABLE_ZAPS_PRIVACY_FILTER",
+    "openai.zaps_privacy_filter",
+    os.environ.get("ENABLE_ZAPS_PRIVACY_FILTER", "False").lower() == "true",
+)
+
+ZAPS_API_BASE_URL = PersistentConfig(
+    "ZAPS_API_BASE_URL",
+    "openai.zaps_api_base_url",
+    os.environ.get("ZAPS_API_BASE_URL", "http://localhost:3000"),
+)
+
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_API_BASE_URL = os.environ.get("OPENAI_API_BASE_URL", "")
