@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ⚡ **Streaming message comparison.** Chat message updates during streaming are now faster thanks to an optimization that skips expensive comparisons when content changes. [#21884](https://github.com/open-webui/open-webui/pull/21884)
 - 🛠️ **Tool server advanced options toggle.** Advanced OpenAPI configuration options in the tool server modal are now hidden by default behind a toggle, simplifying the interface for basic setups. [Commit](https://github.com/open-webui/open-webui/commit/f0c71e5a6d971af7322d4245313e5e04620253f0)
 - ⚡ **Tool query optimization.** Tool access control now skips an unnecessary database query when no tools are attached to the request, slightly improving performance. [#21873](https://github.com/open-webui/open-webui/pull/21873)
+- 🚀 **Math rendering performance.** Mathematical notation now renders more efficiently, improving responsiveness when displaying equations in chat. [#21880](https://github.com/open-webui/open-webui/pull/21880)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 **Translation updates.** Translations for German, Portuguese (Brazil), Simplified Chinese, Traditional Chinese, and Catalan were enhanced and expanded.
 
