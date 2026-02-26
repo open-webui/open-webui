@@ -208,3 +208,27 @@ ignore-words-list = 'ans'
 dev = [
     "pytest-asyncio>=1.0.0",
 ]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = [
+    "backend/open_webui/internal/migrations",
+    "backend/open_webui/migrations/versions",
+]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+ignore = [
+    "E402",
+    "E711",
+    "E712",
+    "E722",
+    "E731",
+    "F401",
+    "F403",
+    "F405",
+    "F541",
+    "F811",
+    "F841",
+]

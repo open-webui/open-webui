@@ -6,7 +6,7 @@
 
 	export let overlay = false;
 
-	const getSrcUrl = (url: string, chatId?: string, messageId?: string, sourceId: string) => {
+	const getSrcUrl = (url: string, chatId?: string, messageId?: string, sourceId?: string) => {
 		try {
 			const parsed = new URL(url);
 

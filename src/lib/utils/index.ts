@@ -891,6 +891,11 @@ export const processDetails = (content) => {
 
 // This regular expression matches code blocks marked by triple backticks
 const codeBlockRegex = /```[\s\S]*?```/g;
+const placeholderDelimiter = String.fromCharCode(0);
+const codeBlockPlaceholderRegex = new RegExp(
+	`${placeholderDelimiter}(\\d+)${placeholderDelimiter}`,
+	'g'
+);
 
 export const extractSentences = (text: string) => {
 	const codeBlocks: string[] = [];
@@ -909,7 +914,7 @@ export const extractSentences = (text: string) => {
 	// Restore code blocks and process sentences
 	sentences = sentences.map((sentence) => {
 		// Check if the sentence includes a placeholder for a code block
-		return sentence.replace(/\u0000(\d+)\u0000/g, (_, idx) => codeBlocks[idx]);
+		return sentence.replace(codeBlockPlaceholderRegex, (_, idx) => codeBlocks[idx]);
 	});
 
 	return sentences.map(cleanText).filter(Boolean);
@@ -932,7 +937,7 @@ export const extractParagraphsForAudio = (text: string) => {
 	// Restore code blocks and process paragraphs
 	paragraphs = paragraphs.map((paragraph) => {
 		// Check if the paragraph includes a placeholder for a code block
-		return paragraph.replace(/\u0000(\d+)\u0000/g, (_, idx) => codeBlocks[idx]);
+		return paragraph.replace(codeBlockPlaceholderRegex, (_, idx) => codeBlocks[idx]);
 	});
 
 	return paragraphs.map(cleanText).filter(Boolean);

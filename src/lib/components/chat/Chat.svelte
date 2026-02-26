@@ -231,8 +231,11 @@
 				try {
 					const restoredQueue = JSON.parse(storedQueueData);
 					console.log('[Chat] Restored queue:', restoredQueue);
-					console.log('[Chat] Queue files:', restoredQueue.flatMap((m) => m.files));
-					
+					console.log(
+						'[Chat] Queue files:',
+						restoredQueue.flatMap((m) => m.files)
+					);
+
 					if (restoredQueue.length > 0) {
 						sessionStorage.removeItem(`chat-queue-${chatIdProp}`);
 						// Check if there are pending tasks (still generating)
@@ -240,7 +243,10 @@
 						if (!hasPendingTask) {
 							// No pending tasks - process the queue
 							files = restoredQueue.flatMap((m) => m.files);
-							console.log('[Chat] Files restored from queue:', files.map(f => ({ id: f.id, name: f.name })));
+							console.log(
+								'[Chat] Files restored from queue:',
+								files.map((f) => ({ id: f.id, name: f.name }))
+							);
 							await tick();
 							const combinedPrompt = restoredQueue.map((m) => m.prompt).join('\n\n');
 							await submitPrompt(combinedPrompt);
@@ -258,12 +264,18 @@
 				try {
 					const input = JSON.parse(storageChatInput);
 					console.log('[Chat] Restored input from sessionStorage:', input);
-					console.log('[Chat] Input files:', input.files?.map(f => ({ id: f.id, name: f.name })));
-					
+					console.log(
+						'[Chat] Input files:',
+						input.files?.map((f) => ({ id: f.id, name: f.name }))
+					);
+
 					if (!$temporaryChatEnabled) {
 						messageInput?.setText(input.prompt);
 						files = input.files;
-						console.log('[Chat] Files set from input:', files.map(f => ({ id: f.id, name: f.name })));
+						console.log(
+							'[Chat] Files set from input:',
+							files.map((f) => ({ id: f.id, name: f.name }))
+						);
 						selectedToolIds = input.selectedToolIds;
 						selectedFilterIds = input.selectedFilterIds;
 						webSearchEnabled = input.webSearchEnabled;
@@ -1050,7 +1062,7 @@
 		messages.forEach((message) => {
 			if (message?.role !== 'user' && message?.content) {
 				const {
-					codeBlocks: codeBlocks,
+					codeBlocks,
 					html: htmlContent,
 					css: cssContent,
 					js: jsContent
@@ -1324,7 +1336,10 @@
 
 				params = chatContent?.params ?? {};
 				chatFiles = chatContent?.files ?? [];
-				console.log('[Chat] loadChat - chatFiles loaded from DB:', chatFiles.map(f => ({ id: f.id, name: f.name, meta: f.meta })));
+				console.log(
+					'[Chat] loadChat - chatFiles loaded from DB:',
+					chatFiles.map((f) => ({ id: f.id, name: f.name, meta: f.meta }))
+				);
 
 				autoScroll = true;
 				await tick();
@@ -2758,24 +2773,24 @@
 	{#if !loading}
 		<div in:fade={{ duration: 50 }} class="w-full h-full flex flex-col">
 			{#if $selectedFolder && $selectedFolder?.meta?.background_image_url}
-			<div
-				class="absolute top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
-				style="background-image: url({$selectedFolder?.meta?.background_image_url})  "
-			></div>
+				<div
+					class="absolute top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
+					style="background-image: url({$selectedFolder?.meta?.background_image_url})  "
+				></div>
 
-			<div
-				class="absolute top-0 left-0 w-full h-full bg-linear-to-t from-white to-white/85 dark:from-gray-900 dark:to-gray-900/90 z-0"
-			></div>
+				<div
+					class="absolute top-0 left-0 w-full h-full bg-linear-to-t from-white to-white/85 dark:from-gray-900 dark:to-gray-900/90 z-0"
+				></div>
 			{:else if $settings?.backgroundImageUrl ?? $config?.license_metadata?.background_image_url ?? null}
-			<div
-				class="absolute top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
-				style="background-image: url({$settings?.backgroundImageUrl ??
-					$config?.license_metadata?.background_image_url})  "
-			></div>
+				<div
+					class="absolute top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
+					style="background-image: url({$settings?.backgroundImageUrl ??
+						$config?.license_metadata?.background_image_url})  "
+				></div>
 
-			<div
-				class="absolute top-0 left-0 w-full h-full bg-linear-to-t from-white to-white/85 dark:from-gray-900 dark:to-gray-900/90 z-0"
-			></div>
+				<div
+					class="absolute top-0 left-0 w-full h-full bg-linear-to-t from-white to-white/85 dark:from-gray-900 dark:to-gray-900/90 z-0"
+				></div>
 			{/if}
 
 			<PaneGroup direction="horizontal" class="w-full h-full">
@@ -2821,8 +2836,8 @@
 										messages: messages,
 										timestamp: Date.now()
 									},
-											null,
-											$currentSpaceId
+									null,
+									$currentSpaceId
 								);
 
 								if (savedChat) {

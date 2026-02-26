@@ -41,7 +41,7 @@
 		pinnedModels = $settings?.pinnedModels ?? [];
 
 		if (pinnedModels.length === 0 && $config?.default_pinned_models) {
-			const defaultPinnedModels = ($config?.default_pinned_models).split(',').filter((id) => id);
+			const defaultPinnedModels = $config.default_pinned_models.split(',').filter((id) => id);
 			pinnedModels = defaultPinnedModels.filter((id) => $models.find((model) => model.id === id));
 
 			settings.set({ ...$settings, pinnedModels });

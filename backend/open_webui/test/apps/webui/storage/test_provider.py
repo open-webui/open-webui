@@ -7,7 +7,7 @@ from moto import mock_aws
 from open_webui.storage import provider
 from gcp_storage_emulator.server import create_server
 from google.cloud import storage
-from azure.storage.blob import BlobServiceClient, ContainerClient, BlobClient
+import azure.storage.blob as azure_blob
 from unittest.mock import MagicMock
 
 
@@ -99,7 +99,6 @@ class TestLocalStorageProvider:
 
 @mock_aws
 class TestS3StorageProvider:
-
     def __init__(self):
         self.Storage = provider.S3StorageProvider()
         self.Storage.bucket_name = "my-bucket"
@@ -278,10 +277,7 @@ class TestGCSStorageProvider:
         object = self.Storage.bucket.get_blob(self.filename_extra)
         assert (upload_dir / self.filename_extra).exists()
         assert (upload_dir / self.filename_extra).read_bytes() == self.file_content
-        assert (
-            self.Storage.bucket.get_blob(self.filename_extra).name
-            == self.filename_extra
-        )
+        assert self.Storage.bucket.get_blob(self.filename_extra).name == self.filename_extra
         assert self.file_content == object.download_as_bytes()
 
         self.Storage.delete_all_files()
@@ -303,25 +299,21 @@ class TestAzureStorageProvider:
         mock_blob_client = MagicMock()
 
         # Set up return values for the mock
-        mock_blob_service_client.get_container_client.return_value = (
-            mock_container_client
-        )
+        mock_blob_service_client.get_container_client.return_value = mock_container_client
         mock_container_client.get_blob_client.return_value = mock_blob_client
 
         # Monkeypatch the Azure classes to return our mocks
         monkeypatch.setattr(
-            azure.storage.blob,
+            azure_blob,
             "BlobServiceClient",
             lambda *args, **kwargs: mock_blob_service_client,
         )
         monkeypatch.setattr(
-            azure.storage.blob,
+            azure_blob,
             "ContainerClient",
             lambda *args, **kwargs: mock_container_client,
         )
-        monkeypatch.setattr(
-            azure.storage.blob, "BlobClient", lambda *args, **kwargs: mock_blob_client
-        )
+        monkeypatch.setattr(azure_blob, "BlobClient", lambda *args, **kwargs: mock_blob_client)
 
         self.Storage = provider.AzureStorageProvider()
         self.Storage.endpoint = "https://myaccount.blob.core.windows.net"
@@ -379,7 +371,9 @@ class TestAzureStorageProvider:
             self.file_content
         )
 
-        file_url = f"https://myaccount.blob.core.windows.net/{self.Storage.container_name}/{self.filename}"
+        file_url = (
+            f"https://myaccount.blob.core.windows.net/{self.Storage.container_name}/{self.filename}"
+        )
         file_path = self.Storage.get_file(file_url)
 
         assert file_path == str(upload_dir / self.filename)
@@ -395,7 +389,9 @@ class TestAzureStorageProvider:
         # Mock deletion
         self.Storage.container_client.get_blob_client().delete_blob.return_value = None
 
-        file_url = f"https://myaccount.blob.core.windows.net/{self.Storage.container_name}/{self.filename}"
+        file_url = (
+            f"https://myaccount.blob.core.windows.net/{self.Storage.container_name}/{self.filename}"
+        )
         self.Storage.delete_file(file_url)
 
         self.Storage.container_client.get_blob_client().delete_blob.assert_called_once()
@@ -426,10 +422,12 @@ class TestAzureStorageProvider:
     def test_get_file_not_found(self, monkeypatch):
         self.Storage.create_container()
 
-        file_url = f"https://myaccount.blob.core.windows.net/{self.Storage.container_name}/{self.filename}"
+        file_url = (
+            f"https://myaccount.blob.core.windows.net/{self.Storage.container_name}/{self.filename}"
+        )
         # Mock behavior to raise an error for missing blobs
-        self.Storage.container_client.get_blob_client().download_blob.side_effect = (
-            Exception("Blob not found")
+        self.Storage.container_client.get_blob_client().download_blob.side_effect = Exception(
+            "Blob not found"
         )
         with pytest.raises(Exception, match="Blob not found"):
             self.Storage.get_file(file_url)

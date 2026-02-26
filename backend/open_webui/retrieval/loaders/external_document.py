@@ -1,5 +1,6 @@
 import requests
-import logging, os
+import logging
+import os
 from typing import Iterator, List, Union
 from urllib.parse import quote
 
@@ -58,7 +59,6 @@ class ExternalDocumentLoader(BaseLoader):
             raise Exception(f"Error connecting to endpoint: {e}")
 
         if response.ok:
-
             response_data = response.json()
             if response_data:
                 if isinstance(response_data, dict):
@@ -84,6 +84,4 @@ class ExternalDocumentLoader(BaseLoader):
             else:
                 raise Exception("Error loading document: No content returned")
         else:
-            raise Exception(
-                f"Error loading document: {response.status_code} {response.text}"
-            )
+            raise Exception(f"Error loading document: {response.status_code} {response.text}")

@@ -46,7 +46,7 @@
 			});
 
 			if (_skill) {
-				disabled = !_skill.write_access ?? true;
+				disabled = !_skill.write_access;
 				skill = {
 					id: _skill.id,
 					name: _skill.name,

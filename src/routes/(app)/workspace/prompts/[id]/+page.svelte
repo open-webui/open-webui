@@ -49,7 +49,7 @@
 			});
 
 			if (_prompt) {
-				disabled = !_prompt.write_access ?? true;
+				disabled = !_prompt.write_access;
 				prompt = {
 					id: _prompt.id,
 					name: _prompt.name,

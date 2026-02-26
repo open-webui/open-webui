@@ -550,7 +550,7 @@ ${content}
 		}
 
 		if (file['type'].startsWith('image/')) {
-			const uploadImagePromise = new Promise(async (resolve, reject) => {
+			const uploadImagePromise = new Promise((resolve, reject) => {
 				let reader = new FileReader();
 				reader.onload = async (event) => {
 					try {
@@ -574,7 +574,10 @@ ${content}
 					}
 				};
 
-				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
+				void (async () => {
+					const imageFile = file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file;
+					reader.readAsDataURL(imageFile);
+				})().catch((err) => reject(err));
 			});
 
 			return await uploadImagePromise;
@@ -792,7 +795,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 			note.data.files = files;
 		}
 
-		if (_note.title && _note.title) {
+		if (_note.title) {
 			note.title = _note.title;
 		}
 

@@ -1,0 +1,21 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"rules": {
+		"no-unassigned-vars": "off",
+		"no-self-assign": "off",
+		"no-unused-vars": "off",
+		"no-useless-escape": "off",
+		"no-useless-fallback-in-spread": "off",
+		"no-useless-spread": "off",
+		"no-extra-boolean-cast": "off"
+	},
+	"overrides": [
+		{
+			"files": ["**/*.svelte"],
+			"rules": {
+				"no-unassigned-vars": "off",
+				"no-unused-vars": "off"
+			}
+		}
+	]
+}

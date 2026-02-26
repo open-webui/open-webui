@@ -254,7 +254,7 @@
 					<div class="w-full">
 						<div class="flex pb-1">
 							<div
-								class="rounded-2xl max-w-[90%] px-4 py-2.5 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm ring-1 ring-inset ring-gray-200/50 dark:ring-white/10 {message.files
+								class="rounded-2xl max-w-[85%] sm:max-w-[90%] px-4 py-2.5 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm ring-1 ring-inset ring-gray-200/50 dark:ring-white/10 {message.files
 									? 'rounded-tl-lg'
 									: ''}"
 							>
@@ -610,7 +610,7 @@
 						<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
 							<div
 								class="rounded-2xl {($settings?.chatBubble ?? true)
-									? `max-w-[90%] px-4 py-2.5 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm ring-1 ring-inset ring-gray-200/50 dark:ring-white/10 ${
+									? `max-w-[85%] sm:max-w-[90%] px-4 py-2.5 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm ring-1 ring-inset ring-gray-200/50 dark:ring-white/10 ${
 											message.files ? 'rounded-tr-lg' : ''
 										}`
 									: 'w-full'}"
@@ -633,7 +633,7 @@
 						class="flex {($settings?.chatBubble ?? true)
 							? 'justify-end'
 							: ''} text-gray-600 dark:text-gray-500 {($settings?.chatBubble ?? true)
-							? 'bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm rounded-lg px-1 py-0.5 w-fit ml-auto mt-1'
+							? 'bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm rounded-lg px-1.5 py-1 w-fit ml-auto mt-1.5'
 							: ''}"
 					>
 						{#if !($settings?.chatBubble ?? true)}

@@ -185,13 +185,17 @@
 
 		if (res) {
 			if (func.is_global) {
-				func.type === 'filter'
-					? toast.success($i18n.t('Filter is now globally enabled'))
-					: toast.success($i18n.t('Function is now globally enabled'));
+				if (func.type === 'filter') {
+					toast.success($i18n.t('Filter is now globally enabled'));
+				} else {
+					toast.success($i18n.t('Function is now globally enabled'));
+				}
 			} else {
-				func.type === 'filter'
-					? toast.success($i18n.t('Filter is now globally disabled'))
-					: toast.success($i18n.t('Function is now globally disabled'));
+				if (func.type === 'filter') {
+					toast.success($i18n.t('Filter is now globally disabled'));
+				} else {
+					toast.success($i18n.t('Function is now globally disabled'));
+				}
 			}
 
 			_functions.set(await getFunctions(localStorage.token));
@@ -297,18 +301,19 @@
 
 					<div class="flex w-full justify-end gap-1.5">
 						{#if $user?.role === 'admin'}
-						<button
-							class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
-							aria-label={$i18n.t('Import')}
-							on:click={() => {
-								functionsImportInputElement.click();
-							}}
-						>
+							<button
 								class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+								aria-label={$i18n.t('Import')}
 								on:click={() => {
 									functionsImportInputElement.click();
 								}}
 							>
+								class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50
+								hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200
+								transition" on:click={() => {
+									functionsImportInputElement.click();
+								}}
+								>
 								<div class=" self-center font-medium line-clamp-1">
 									{$i18n.t('Import')}
 								</div>

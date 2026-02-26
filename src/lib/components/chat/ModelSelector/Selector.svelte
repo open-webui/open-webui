@@ -286,11 +286,10 @@
 					}
 				} catch (error) {
 					console.log(error);
-					if (typeof error !== 'string') {
-						error = error.message;
-					}
+					const errorMessage =
+						typeof error === 'string' ? error : error instanceof Error ? error.message : `${error}`;
 
-					toast.error(`${error}`);
+					toast.error(errorMessage);
 					// opts.callback({ success: false, error, modelName: opts.modelName });
 					break;
 				}
@@ -658,10 +657,10 @@
 
 						<div class="mr-2 ml-1 translate-y-0.5">
 							<Tooltip content={$i18n.t('Cancel')}>
-						<button
-							class="text-gray-800 dark:text-gray-100"
-							aria-label={$i18n.t('Cancel')}
-							on:click={() => {
+								<button
+									class="text-gray-800 dark:text-gray-100"
+									aria-label={$i18n.t('Cancel')}
+									on:click={() => {
 										cancelModelPullHandler(model);
 									}}
 								>

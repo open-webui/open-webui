@@ -285,9 +285,15 @@
 
 			console.log(id, data);
 
-			data['stdout'] && (stdout = data['stdout']);
-			data['stderr'] && (stderr = data['stderr']);
-			data['result'] && (result = data['result']);
+			if (data['stdout']) {
+				stdout = data['stdout'];
+			}
+			if (data['stderr']) {
+				stderr = data['stderr'];
+			}
+			if (data['result']) {
+				result = data['result'];
+			}
 
 			if (cb) {
 				cb(

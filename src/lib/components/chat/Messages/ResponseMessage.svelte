@@ -663,7 +663,9 @@
 				{/if}
 			</Name>
 
-			<div class="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md rounded-2xl ring-1 ring-inset ring-white/20 dark:ring-white/10 p-4 -ml-4">
+			<div
+				class="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md rounded-2xl ring-1 ring-inset ring-white/20 dark:ring-white/10 px-4 py-3 -ml-2"
+			>
 				<div class="chat-{message.role} w-full min-w-full markdown-prose">
 					<div>
 						{#if model?.info?.meta?.capabilities?.status_updates ?? true}
@@ -738,7 +740,7 @@
 											document.getElementById('confirm-edit-message-button')?.click();
 										}
 									}}
-										></textarea>
+								></textarea>
 
 								<div class=" mt-2 mb-1 flex justify-between text-sm font-medium">
 									<div>
@@ -853,7 +855,7 @@
 				{#if !edit}
 					<div
 						bind:this={buttonsContainerElement}
-						class="flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
+						class="flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-1.5"
 					>
 						{#if message.done || siblings.length > 1}
 							{#if siblings.length > 1}
@@ -1283,8 +1285,8 @@
 														});
 													});
 												}}
-											aria-label={$i18n.t('Regenerate')}
-										></button>
+												aria-label={$i18n.t('Regenerate')}
+											></button>
 
 											<RegenerateMenu
 												onRegenerate={(prompt = null) => {
@@ -1455,7 +1457,7 @@
 					{/if}
 
 					{#if (isLastMessage || ($settings?.keepFollowUpPrompts ?? false)) && message.done && !readOnly && (message?.followUps ?? []).length > 0}
-						<div class="mt-2.5" in:fade={{ duration: 100 }}>
+						<div class="mt-2" in:fade={{ duration: 100 }}>
 							<FollowUps
 								followUps={message?.followUps}
 								onClick={(prompt) => {

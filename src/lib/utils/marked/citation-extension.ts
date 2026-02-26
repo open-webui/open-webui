@@ -11,7 +11,7 @@ export function citationExtension() {
 
 		tokenizer(src: string) {
 			// Avoid matching footnotes
-			if (/^\[\^/.test(src)) return;
+			if (src.startsWith('[^')) return;
 
 			// Match ONE OR MORE adjacent [1], [1,2], or [1#foo] blocks
 			// Example matched: "[1][2,3][4#bar]"
