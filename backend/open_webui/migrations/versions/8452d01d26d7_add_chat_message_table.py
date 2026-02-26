@@ -130,7 +130,7 @@ def upgrade() -> None:
             # Coerce timestamp to numeric — chat data may contain
             # non-numeric strings from security scanners or corrupted data
             try:
-                timestamp = int(timestamp)
+                timestamp = int(float(timestamp))
             except (TypeError, ValueError):
                 timestamp = now
 
