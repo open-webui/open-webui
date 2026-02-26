@@ -349,8 +349,14 @@
 				{:else if error}
 					<div class="p-4 text-xs text-red-500 dark:text-red-400">{error}</div>
 				{:else if entries.length === 0 && !creatingFolder}
-					<div class="p-4 text-xs text-gray-400 text-center">
-						{$i18n.t('Empty — drop files here to upload')}
+					<div class="flex flex-col items-center justify-center gap-1.5 py-12 text-center">
+						<Folder className="size-6 text-gray-200 dark:text-gray-700" />
+						<div class="text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t('This folder is empty')}
+						</div>
+						<div class="text-[11px] text-gray-300 dark:text-gray-600">
+							{$i18n.t('Drop files here to upload')}
+						</div>
 					</div>
 				{/if}
 
