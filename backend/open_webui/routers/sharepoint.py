@@ -179,6 +179,9 @@ _tenant_drives_cache: dict[str, tuple[List[DriveInfo], float]] = {}
 # Per-tenant sites cache: {tenant_id: (sites_list, cache_time)}
 _tenant_sites_cache: dict[str, tuple[List[SiteInfo], float]] = {}
 
+# Per-site drives cache: {tenant_id:site_id: (drives_list, cache_time)}
+_site_drives_cache: dict[str, tuple[List[DriveInfo], float]] = {}
+
 
 # ============================================================================
 # Utility Functions
@@ -919,6 +922,7 @@ async def test_client_credentials(request: Request, user=Depends(get_verified_us
 # ============================================================================
 
 SITES_CACHE_TTL_SECONDS = 300  # 5 minutes
+SITE_DRIVES_CACHE_TTL_SECONDS = 300  # 5 minutes
 
 
 def _filter_sites_for_user(sites: list, user) -> list:
@@ -935,7 +939,7 @@ def _filter_sites_for_user(sites: list, user) -> list:
 
     # Admins always see all sites; regular users filtered by allow_all / allowed_sites
     # Admin role bypass: admins always see all sites
-    if getattr(user, 'role', None) == 'admin':
+    if getattr(user, "role", None) == "admin":
         return sites
 
     if sp_config.get("allow_all"):
@@ -1090,6 +1094,18 @@ async def list_site_drives(
     if not tenant:
         raise HTTPException(status_code=404, detail=f"Tenant '{tenant_id}' not found")
 
+    global _site_drives_cache
+
+    cache_key = f"{tenant.id}:{site_id}"
+    if cache_key in _site_drives_cache:
+        cached_drives, cache_time = _site_drives_cache[cache_key]
+        cache_age = time.time() - cache_time
+        if cache_age < SITE_DRIVES_CACHE_TTL_SECONDS:
+            log.info(
+                f"Returning cached site drives for tenant '{tenant.name}' site '{site_id}' ({len(cached_drives)} drives, {int(cache_age)}s old)"
+            )
+            return cached_drives
+
     # Get tokens for this tenant
     tokens = await get_tokens_for_tenant(tenant, user, request)
 
@@ -1111,6 +1127,7 @@ async def list_site_drives(
             )
 
         log.info(f"Found {len(drives)} drives for site {site_id}")
+        _site_drives_cache[cache_key] = (drives, time.time())
 
     except HTTPException:
         raise
@@ -1501,10 +1518,14 @@ async def download_file(
     item_id = file_id
 
     # Check for existing file with same SharePoint item_id (deduplication)
-    log.info(f"[SharePoint Download] Checking for existing file with sharepoint_item_id={item_id}")
+    log.info(
+        f"[SharePoint Download] Checking for existing file with sharepoint_item_id={item_id}"
+    )
     existing_file = Files.get_file_by_sharepoint_item_id(item_id)
     if existing_file:
-        log.info(f"[SharePoint Download] REUSING existing file: id={existing_file.id}, filename={existing_file.filename}")
+        log.info(
+            f"[SharePoint Download] REUSING existing file: id={existing_file.id}, filename={existing_file.filename}"
+        )
         return {
             "id": existing_file.id,
             "filename": existing_file.filename,
@@ -1512,7 +1533,9 @@ async def download_file(
             "created_at": existing_file.created_at,
         }
 
-    log.info(f"[SharePoint Download] No existing file found, downloading new: drive_id={drive_id}, item_id={item_id}")
+    log.info(
+        f"[SharePoint Download] No existing file found, downloading new: drive_id={drive_id}, item_id={item_id}"
+    )
 
     metadata_endpoint = f"/drives/{drive_id}/items/{item_id}"
     params = {"$select": "id,name,size,file,@microsoft.graph.downloadUrl"}
