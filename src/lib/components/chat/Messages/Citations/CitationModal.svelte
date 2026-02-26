@@ -364,10 +364,8 @@
 					{$i18n.t('Citation')}
 				{/if}
 			</div>
-			
-			<!-- Action buttons -->
+
 			<div class="flex items-center gap-2">
-				<!-- Copy Button -->
 				<Tooltip content={copySuccess ? $i18n.t('Copied!') : $i18n.t('Copy to clipboard')}>
 					<button
 						class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -384,8 +382,7 @@
 						{/if}
 					</button>
 				</Tooltip>
-				
-				<!-- Email Button -->
+
 				<Tooltip content={emailSuccess ? $i18n.t('Sent!') : emailError || $i18n.t('Email report to yourself')}>
 					<button
 						class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
@@ -412,10 +409,10 @@
 						{/if}
 					</button>
 				</Tooltip>
-				
-				<!-- Close Button -->
+
 				<button
 					class="self-center p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+					aria-label={$i18n.t('Close citation modal')}
 					on:click={() => {
 						show = false;
 					}}

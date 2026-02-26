@@ -13,7 +13,7 @@
 
 <div
 	class=" text-xs font-medium {classNames[type] ??
-		classNames['info']} w-fit px-1.5 py-[1px] rounded-lg uppercase line-clamp-1 mr-0.5"
+		classNames['info']} w-fit px-[5px] rounded-lg uppercase line-clamp-1 mr-0.5"
 >
 	{content}
 </div>

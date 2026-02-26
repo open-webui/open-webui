@@ -32,6 +32,7 @@ export const DEFAULT_PERMISSIONS = {
 		system_prompt: true,
 		params: true,
 		file_upload: true,
+		web_upload: true,
 		delete: true,
 		delete_message: true,
 		continue_response: true,

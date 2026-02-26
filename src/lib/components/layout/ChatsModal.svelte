@@ -430,7 +430,7 @@
 											{#each chats as chat, idx}
 												<tr
 													class="bg-transparent {idx !== chats.length - 1 &&
-														'border-b'} dark:bg-gray-900 border-gray-50 dark:border-gray-850/30 text-xs"
+														'border-b'} border-gray-50 dark:border-gray-850/30 text-xs"
 												>
 													<td class="px-3 py-1 w-2/3">
 														<a href="/c/{chat.id}" target="_blank">

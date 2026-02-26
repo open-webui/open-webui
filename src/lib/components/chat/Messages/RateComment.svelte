@@ -121,6 +121,7 @@
 		<!-- <div class=" text-sm">{$i18n.t('Tell us more:')}</div> -->
 
 		<button
+			aria-label={$i18n.t('Close feedback')}
 			on:click={() => {
 				show = false;
 			}}
@@ -135,6 +136,7 @@
 				<!-- 1-10 scale -->
 				{#each Array.from({ length: 10 }).map((_, i) => i + 1) as rating}
 					<button
+						aria-label={$i18n.t('Rate {{rating}} out of 10', { rating })}
 						class="size-7 text-sm border border-gray-100/30 dark:border-gray-850/30 hover:bg-gray-50 dark:hover:bg-gray-850 {detailedRating ===
 						rating
 							? 'bg-gray-100 dark:bg-gray-800'
@@ -218,6 +220,7 @@
 			bind:value={comment}
 			class="w-full text-sm px-1 py-2 bg-transparent outline-hidden resize-none rounded-xl"
 			placeholder={$i18n.t('Feel free to add specific details')}
+			aria-label={$i18n.t('Additional feedback comments')}
 			rows="3"
 		/>
 	</div>

@@ -65,63 +65,63 @@
 			align="start"
 			transition={flyAndScale}
 		>
-			{#if tab === ''}
-				<div in:fly={{ x: -20, duration: 150 }}>
-					<DropdownMenu.Item
-						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
-						on:click={() => {
-							uploadFilesHandler();
-						}}
-					>
-						<Clip />
-						<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
-					</DropdownMenu.Item>
+		{#if tab === ''}
+			<div in:fly={{ x: -20, duration: 150 }}>
+				<DropdownMenu.Item
+					class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
+					on:click={() => {
+						uploadFilesHandler();
+					}}
+				>
+					<Clip />
+					<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
+				</DropdownMenu.Item>
 
-					<DropdownMenu.Item
-						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
-						on:click={() => {
-							screenCaptureHandler();
-						}}
-					>
-						<Camera />
-						<div class="line-clamp-1">{$i18n.t('Capture')}</div>
-					</DropdownMenu.Item>
+				<DropdownMenu.Item
+					class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
+					on:click={() => {
+						screenCaptureHandler();
+					}}
+				>
+					<Camera />
+					<div class="line-clamp-1">{$i18n.t('Capture')}</div>
+				</DropdownMenu.Item>
 
-					{#if ($knowledge ?? []).length > 0}
-						<button
-							class="flex gap-2 w-full items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
-							on:click={() => {
-								tab = 'knowledge';
-							}}
-						>
-							<Database />
-
-							<div class="flex items-center w-full justify-between">
-								<div class="line-clamp-1">{$i18n.t('Attach Knowledge')}</div>
-								<div class="text-gray-500">
-									<ChevronRight />
-								</div>
-							</div>
-						</button>
-					{/if}
-				</div>
-			{:else if tab === 'knowledge'}
-				<div in:fly={{ x: 20, duration: 150 }}>
+				{#if ($knowledge ?? []).length > 0}
 					<button
-						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+						class="flex gap-2 w-full items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
 						on:click={() => {
-							tab = '';
+							tab = 'knowledge';
 						}}
 					>
-						<ChevronLeft />
+						<Database />
+
 						<div class="flex items-center w-full justify-between">
-							<div>{$i18n.t('Knowledge')}</div>
+							<div class="line-clamp-1">{$i18n.t('Attach Knowledge')}</div>
+							<div class="text-gray-500">
+								<ChevronRight />
+							</div>
 						</div>
 					</button>
+				{/if}
+			</div>
+		{:else if tab === 'knowledge'}
+			<div in:fly={{ x: 20, duration: 150 }}>
+				<button
+					class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+					on:click={() => {
+						tab = '';
+					}}
+				>
+					<ChevronLeft />
+					<div class="flex items-center w-full justify-between">
+						<div>{$i18n.t('Knowledge')}</div>
+					</div>
+				</button>
 
-					<Knowledge {onSelect} />
-				</div>
-			{/if}
+				<Knowledge {onSelect} />
+			</div>
+		{/if}
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>

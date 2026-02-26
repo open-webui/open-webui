@@ -770,7 +770,7 @@
 			const browserLanguages = navigator.languages
 				? navigator.languages
 				: [navigator.language || navigator.userLanguage];
-			const lang = backendConfig.default_locale
+			const lang = backendConfig?.default_locale
 				? backendConfig.default_locale
 				: bestMatchingLanguage(languages, browserLanguages, 'en-US');
 			changeLanguage(lang);
@@ -797,7 +797,11 @@
 
 					if (sessionUser) {
 						await user.set(sessionUser);
-						await config.set(await getBackendConfig());
+						try {
+							await config.set(await getBackendConfig());
+						} catch (error) {
+							console.error('Error refreshing backend config:', error);
+						}
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');

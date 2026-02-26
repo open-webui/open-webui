@@ -511,6 +511,8 @@ async def channel_events(sid, data):
 async def ydoc_document_join(sid, data):
     """Handle user joining a document"""
     user = SESSION_POOL.get(sid)
+    if not user:
+        return
 
     try:
         document_id = data["document_id"]
@@ -683,11 +685,13 @@ async def yjs_document_update(sid, data):
             skip_sid=sid,
         )
 
+        user = SESSION_POOL.get(sid)
+        if not user:
+            return
+
         async def debounced_save():
             await asyncio.sleep(0.5)
-            await document_save_handler(
-                document_id, data.get("data", {}), SESSION_POOL.get(sid)
-            )
+            await document_save_handler(document_id, data.get("data", {}), user)
 
         if data.get("data"):
             await create_task(REDIS, debounced_save(), document_id)

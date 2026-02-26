@@ -64,13 +64,19 @@ async def get_tools(
     tools = []
 
     # Local Tools
-    for tool in Tools.get_tools(db=db):
-        tool_module = get_tool_module(request, tool.id)
+    for tool in Tools.get_tools(defer_content=True, db=db):
+        tool_module = (
+            request.app.state.TOOLS.get(tool.id)
+            if hasattr(request.app.state, "TOOLS")
+            else None
+        )
         tools.append(
             ToolUserResponse(
                 **{
                     **tool.model_dump(),
-                    "has_user_valves": hasattr(tool_module, "UserValves"),
+                    "has_user_valves": (
+                        hasattr(tool_module, "UserValves") if tool_module else False
+                    ),
                 }
             )
         )
@@ -196,27 +202,40 @@ async def get_tool_list(
     user=Depends(get_verified_user), db: Session = Depends(get_session)
 ):
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
-        tools = Tools.get_tools(db=db)
+        tools = Tools.get_tools(defer_content=True, db=db)
     else:
-        tools = Tools.get_tools_by_user_id(user.id, "read", db=db)
+        tools = Tools.get_tools_by_user_id(user.id, "read", defer_content=True, db=db)
 
-    return [
-        ToolAccessResponse(
-            **tool.model_dump(),
-            write_access=(
-                (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
-                or user.id == tool.user_id
-                or AccessGrants.has_access(
-                    user_id=user.id,
-                    resource_type="tool",
-                    resource_id=tool.id,
-                    permission="write",
-                    db=db,
+    user_group_ids = {
+        group.id for group in Groups.get_groups_by_member_id(user.id, db=db)
+    }
+
+    result = []
+    for tool in tools:
+        has_write = (
+            (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+            or user.id == tool.user_id
+            or any(
+                g.permission == "write"
+                and (
+                    (
+                        g.principal_type == "user"
+                        and (g.principal_id == user.id or g.principal_id == "*")
+                    )
+                    or (
+                        g.principal_type == "group" and g.principal_id in user_group_ids
+                    )
                 )
-            ),
+                for g in tool.access_grants
+            )
         )
-        for tool in tools
-    ]
+        result.append(
+            ToolAccessResponse(
+                **tool.model_dump(),
+                write_access=has_write,
+            )
+        )
+    return result
 
 
 ############################

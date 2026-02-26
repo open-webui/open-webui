@@ -5,12 +5,12 @@
 
 	import { goto } from '$app/navigation';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
-	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
+	import { WEBUI_NAME, config, user } from '$lib/stores';
 
 	import {
 		createNewPrompt,
 		deletePromptById,
-		getPrompts,
+		togglePromptById,
 		getPromptItems,
 		getPromptTags
 	} from '$lib/apis/prompts';
@@ -31,6 +31,7 @@
 	import ViewSelector from './common/ViewSelector.svelte';
 	import TagSelector from './common/TagSelector.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
+	import Switch from '../common/Switch.svelte';
 	import Pagination from '../common/Pagination.svelte';
 
 	let shiftKey = false;
@@ -169,7 +170,6 @@
 
 		page = 1;
 		getPromptList();
-		await _prompts.set(await getPrompts(localStorage.token));
 	};
 
 	onMount(async () => {
@@ -238,30 +238,31 @@
 			hidden
 			on:change={() => {
 				console.log(importFiles);
+				if (!importFiles || importFiles.length === 0) return;
 
 				const reader = new FileReader();
 				reader.onload = async (event) => {
 					const savedPrompts = JSON.parse(event.target.result);
 					console.log(savedPrompts);
 
-					for (const prompt of savedPrompts) {
-						await createNewPrompt(localStorage.token, {
-							command: prompt.command.charAt(0) === '/' ? prompt.command.slice(1) : prompt.command,
-							title: prompt.title,
-							content: prompt.content
-						}).catch((error) => {
-							toast.error(`${error}`);
-							return null;
-						});
+					try {
+						for (const prompt of savedPrompts) {
+							await createNewPrompt(localStorage.token, {
+								command: prompt.command,
+								name: prompt.name,
+								content: prompt.content
+							}).catch((error) => {
+								toast.error(typeof error === 'string' ? error : JSON.stringify(error));
+								return null;
+							});
+						}
+
+						page = 1;
+						await getPromptList();
+					} finally {
+						importFiles = null;
+						promptsImportInputElement.value = '';
 					}
-
-					prompts = null;
-					page = 1;
-					getPromptList();
-					await _prompts.set(await getPrompts(localStorage.token));
-
-					importFiles = [];
-					promptsImportInputElement.value = '';
 				};
 
 				reader.readAsText(importFiles[0]);
@@ -330,6 +331,7 @@
 				<input
 					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={query}
+					aria-label={$i18n.t('Search Prompts')}
 					placeholder={$i18n.t('Search Prompts')}
 				/>
 
@@ -337,6 +339,7 @@
 					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 						<button
 							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							aria-label={$i18n.t('Clear search')}
 							on:click={() => {
 								query = '';
 							}}
@@ -386,7 +389,7 @@
 		{:else if (prompts ?? []).length !== 0}
 			<!-- Before they call, I will answer; while they are yet speaking, I will hear. -->
 			<div class="gap-2 grid my-2 px-3 lg:grid-cols-2">
-				{#each prompts as prompt}
+				{#each prompts as prompt (prompt.id)}
 					<a
 						class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2.5 dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl"
 						href={`/workspace/prompts/${prompt.id}`}
@@ -436,6 +439,7 @@
 									<button
 										class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 										type="button"
+										aria-label={$i18n.t('Delete')}
 										on:click={() => {
 											deleteHandler(prompt);
 										}}
@@ -448,6 +452,7 @@
 									<button
 										class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 										type="button"
+										aria-label={$i18n.t('Copy Prompt')}
 										on:click={(e) => {
 											e.preventDefault();
 											e.stopPropagation();
@@ -484,6 +489,19 @@
 										<EllipsisHorizontal className="size-5" />
 									</button>
 								</PromptMenu>
+
+								<button on:click|stopPropagation|preventDefault>
+									<Tooltip
+										content={prompt.is_active !== false ? $i18n.t('Enabled') : $i18n.t('Disabled')}
+									>
+										<Switch
+											bind:state={prompt.is_active}
+											on:change={async () => {
+												togglePromptById(localStorage.token, prompt.id);
+											}}
+										/>
+									</Tooltip>
+								</button>
 							{/if}
 						</div>
 					</a>
