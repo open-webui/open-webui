@@ -42,12 +42,13 @@
 	export let triggerScroll;
 	export let readOnly = false;
 	export let editCodeBlock = true;
+export let exportMode = false;
 	export let topPadding = false;
 </script>
 
 <div
 	role="listitem"
-	class="flex flex-col justify-between px-5 mb-3 w-full {($settings?.widescreenMode ?? null)
+	class="flex flex-col justify-between w-full {exportMode ? '' : 'px-5 mb-3'} {exportMode || ($settings?.widescreenMode ?? null)
 		? 'max-w-full'
 		: 'max-w-5xl'} mx-auto rounded-lg group"
 >
@@ -71,9 +72,12 @@
 				{deleteMessage}
 				{readOnly}
 				{editCodeBlock}
+				{exportMode}
 				{topPadding}
 			/>
-		{:else if (history.messages[history.messages[messageId].parentId]?.models?.length ?? 1) === 1}
+		{:else if
+			(history.messages[history.messages[messageId].parentId]?.models?.length ?? 1) === 1 ||
+			exportMode}
 			<ResponseMessage
 				{chatId}
 				{history}
@@ -97,6 +101,7 @@
 				{addMessages}
 				{readOnly}
 				{editCodeBlock}
+				{exportMode}
 				{topPadding}
 			/>
 		{:else}
@@ -122,6 +127,7 @@
 					{addMessages}
 					{readOnly}
 					{editCodeBlock}
+					{exportMode}
 					{topPadding}
 				/>
 			{/key}

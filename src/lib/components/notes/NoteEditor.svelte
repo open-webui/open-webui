@@ -38,8 +38,6 @@
 		WEBUI_NAME
 	} from '$lib/stores';
 
-	import { downloadPdf } from './utils';
-
 	import Controls from './NoteEditor/Controls.svelte';
 	import Chat from './NoteEditor/Chat.svelte';
 
@@ -600,9 +598,12 @@ ${content}
 			saveAs(blob, `${note.title}.md`);
 		} else if (type === 'pdf') {
 			try {
-				await downloadPdf(note);
+				const { exportPDFFromHTML } = await import('$lib/utils/pdf');
+				await exportPDFFromHTML(note.data?.content?.html || '', { title: note.title });
+				toast.success($i18n.t('PDF exported successfully.'));
 			} catch (error) {
-				toast.error(`${error}`);
+				console.error(error);
+				toast.error($i18n.t('Failed to export PDF.'));
 			}
 		}
 	};

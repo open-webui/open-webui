@@ -1,19 +1,25 @@
 <script lang="ts">
-	import type { renderToString as katexRenderToString } from 'katex';
+	import type renderToStringType from '$lib/utils/katex';
 	import { onMount } from 'svelte';
+	import { getContextAsyncTaskTracker } from '$lib/utils/AsyncTaskTracker';
 
 	export let content: string;
 	export let displayMode: boolean = false;
 
-	let renderToString: typeof katexRenderToString | null = null;
+	let renderToString: typeof renderToStringType | null = null;
+	const asyncTaskTracker = getContextAsyncTaskTracker();
 
 	onMount(async () => {
-		const [katex] = await Promise.all([
-			import('katex'),
-			import('katex/contrib/mhchem'),
-			import('katex/dist/katex.min.css')
-		]);
-		renderToString = katex.renderToString;
+		const loadKatex = () => import('$lib/utils/katex').then((module) => {
+			renderToString = module.default;
+		});
+
+		if (asyncTaskTracker) {
+			await asyncTaskTracker.track(loadKatex, 'katex-renderer-load');
+			return;
+		}
+
+		await loadKatex();
 	});
 </script>
 

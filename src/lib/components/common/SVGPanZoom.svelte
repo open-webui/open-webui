@@ -21,6 +21,7 @@
 	export let className = '';
 	export let svg = '';
 	export let content = '';
+	export let hideButtons = false;
 
 	let instance: PanZoom;
 
@@ -90,7 +91,7 @@
 		})}
 	</div>
 
-	{#if content}
+	{#if !hideButtons && content}
 		<div class=" absolute top-2.5 right-2.5">
 			<div class="flex gap-1">
 				<Tooltip content={$i18n.t('Download as SVG')}>

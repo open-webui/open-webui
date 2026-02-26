@@ -32,6 +32,7 @@
 	export let floatingButtons = true;
 
 	export let editCodeBlock = true;
+	export let exportMode = false;
 	export let topPadding = false;
 
 	export let onSave = (e) => {};
@@ -141,6 +142,7 @@
 		{preview}
 		{done}
 		{editCodeBlock}
+		{exportMode}
 		{topPadding}
 		sourceIds={(sources ?? []).reduce((acc, source) => {
 			let ids = [];
@@ -179,6 +181,7 @@
 			const { lang, text: code } = token;
 
 			if (
+				!exportMode &&
 				($settings?.detectArtifacts ?? true) &&
 				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
 				!$mobile &&
@@ -190,6 +193,10 @@
 			}
 		}}
 		onPreview={async (value) => {
+			if (exportMode) {
+				return;
+			}
+
 			console.log('Preview', value);
 			await artifactCode.set(value);
 			await showControls.set(true);

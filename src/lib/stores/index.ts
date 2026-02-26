@@ -106,6 +106,17 @@ export const currentChatPage = writable(1);
 export const isLastActiveTab = writable(true);
 export const playingNotificationSound = writable(false);
 
+export const exportOverlay = writable<ExportOverlayState>({
+	show: false,
+	stage: 'preparing',
+	progress: 0,
+	currentChunk: 0,
+	totalChunks: 0,
+	pagesGenerated: 0,
+	estimatedRemainingMinutes: null,
+	onCancel: undefined
+});
+
 export type Model = OpenAIModel | OllamaModel;
 
 type BaseModel = {
@@ -300,4 +311,16 @@ export type SessionUser = {
 	name: string;
 	role: string;
 	profile_image_url: string;
+};
+
+export type ExportOverlayStage = 'preparing' | 'rendering' | 'saving' | 'done';
+export interface ExportOverlayState {
+	show: boolean;
+	stage: ExportOverlayStage;
+	progress: number;
+	currentChunk: number;
+	totalChunks: number;
+	pagesGenerated: number;
+	estimatedRemainingMinutes: number | null;
+	onCancel?: () => void;
 };
