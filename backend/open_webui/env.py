@@ -314,7 +314,7 @@ DATABASE_SCHEMA = os.environ.get("DATABASE_SCHEMA", None)
 
 DATABASE_POOL_SIZE = os.environ.get("DATABASE_POOL_SIZE", None)
 
-if DATABASE_POOL_SIZE != None:
+if DATABASE_POOL_SIZE is not None:
     try:
         DATABASE_POOL_SIZE = int(DATABASE_POOL_SIZE)
     except Exception:
@@ -350,9 +350,7 @@ else:
     except Exception:
         DATABASE_POOL_RECYCLE = 3600
 
-DATABASE_ENABLE_SQLITE_WAL = (
-    os.environ.get("DATABASE_ENABLE_SQLITE_WAL", "False").lower() == "true"
-)
+DATABASE_ENABLE_SQLITE_WAL = os.environ.get("DATABASE_ENABLE_SQLITE_WAL", "False").lower() == "true"
 
 DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = os.environ.get(
     "DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL", None
@@ -375,13 +373,9 @@ ENABLE_PUBLIC_ACTIVE_USERS_COUNT = (
     os.environ.get("ENABLE_PUBLIC_ACTIVE_USERS_COUNT", "True").lower() == "true"
 )
 
-RESET_CONFIG_ON_START = (
-    os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"
-)
+RESET_CONFIG_ON_START = os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"
 
-ENABLE_REALTIME_CHAT_SAVE = (
-    os.environ.get("ENABLE_REALTIME_CHAT_SAVE", "False").lower() == "true"
-)
+ENABLE_REALTIME_CHAT_SAVE = os.environ.get("ENABLE_REALTIME_CHAT_SAVE", "False").lower() == "true"
 
 ENABLE_QUERIES_CACHE = os.environ.get("ENABLE_QUERIES_CACHE", "False").lower() == "true"
 
@@ -464,18 +458,12 @@ WEBUI_ADMIN_EMAIL = os.environ.get("WEBUI_ADMIN_EMAIL", "")
 WEBUI_ADMIN_PASSWORD = os.environ.get("WEBUI_ADMIN_PASSWORD", "")
 WEBUI_ADMIN_NAME = os.environ.get("WEBUI_ADMIN_NAME", "Admin")
 
-WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
-    "WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None
-)
+WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get("WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None)
 WEBUI_AUTH_TRUSTED_NAME_HEADER = os.environ.get("WEBUI_AUTH_TRUSTED_NAME_HEADER", None)
-WEBUI_AUTH_TRUSTED_GROUPS_HEADER = os.environ.get(
-    "WEBUI_AUTH_TRUSTED_GROUPS_HEADER", None
-)
+WEBUI_AUTH_TRUSTED_GROUPS_HEADER = os.environ.get("WEBUI_AUTH_TRUSTED_GROUPS_HEADER", None)
 
 
-ENABLE_PASSWORD_VALIDATION = (
-    os.environ.get("ENABLE_PASSWORD_VALIDATION", "False").lower() == "true"
-)
+ENABLE_PASSWORD_VALIDATION = os.environ.get("ENABLE_PASSWORD_VALIDATION", "False").lower() == "true"
 PASSWORD_VALIDATION_REGEX_PATTERN = os.environ.get(
     "PASSWORD_VALIDATION_REGEX_PATTERN",
     r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$",
@@ -498,9 +486,7 @@ BYPASS_MODEL_ACCESS_CONTROL = (
     os.environ.get("BYPASS_MODEL_ACCESS_CONTROL", "False").lower() == "true"
 )
 
-WEBUI_AUTH_SIGNOUT_REDIRECT_URL = os.environ.get(
-    "WEBUI_AUTH_SIGNOUT_REDIRECT_URL", None
-)
+WEBUI_AUTH_SIGNOUT_REDIRECT_URL = os.environ.get("WEBUI_AUTH_SIGNOUT_REDIRECT_URL", None)
 
 ####################################
 # WEBUI_SECRET_KEY
@@ -568,8 +554,7 @@ ENABLE_OAUTH_TOKEN_EXCHANGE = (
 ####################################
 
 ENABLE_SCIM = (
-    os.environ.get("ENABLE_SCIM", os.environ.get("SCIM_ENABLED", "False")).lower()
-    == "true"
+    os.environ.get("ENABLE_SCIM", os.environ.get("SCIM_ENABLED", "False")).lower() == "true"
 )
 SCIM_TOKEN = os.environ.get("SCIM_TOKEN", "")
 SCIM_AUTH_PROVIDER = os.environ.get("SCIM_AUTH_PROVIDER", "")
@@ -597,11 +582,13 @@ LICENSE_PUBLIC_KEY = os.environ.get("LICENSE_PUBLIC_KEY", "")
 
 pk = None
 if LICENSE_PUBLIC_KEY:
-    pk = serialization.load_pem_public_key(f"""
+    pk = serialization.load_pem_public_key(
+        f"""
 -----BEGIN PUBLIC KEY-----
 {LICENSE_PUBLIC_KEY}
 -----END PUBLIC KEY-----
-""".encode("utf-8"))
+""".encode("utf-8")
+    )
 
 
 ####################################
@@ -627,28 +614,21 @@ else:
 ####################################
 
 ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION = (
-    os.environ.get("ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION", "False").lower()
-    == "true"
+    os.environ.get("ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION", "False").lower() == "true"
 )
 
-CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = os.environ.get(
-    "CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE", "1"
-)
+CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = os.environ.get("CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE", "1")
 
 if CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE == "":
     CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = 1
 else:
     try:
-        CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = int(
-            CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE
-        )
+        CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = int(CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE)
     except Exception:
         CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = 1
 
 
-CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = os.environ.get(
-    "CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES", "30"
-)
+CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = os.environ.get("CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES", "30")
 
 if CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES == "":
     CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = 30
@@ -667,9 +647,7 @@ if CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE == "":
     CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE = None
 else:
     try:
-        CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE = int(
-            CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
-        )
+        CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE = int(CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE)
     except Exception:
         CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE = None
 
@@ -678,9 +656,7 @@ else:
 # WEBSOCKET SUPPORT
 ####################################
 
-ENABLE_WEBSOCKET_SUPPORT = (
-    os.environ.get("ENABLE_WEBSOCKET_SUPPORT", "True").lower() == "true"
-)
+ENABLE_WEBSOCKET_SUPPORT = os.environ.get("ENABLE_WEBSOCKET_SUPPORT", "True").lower() == "true"
 
 
 WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "")
@@ -690,9 +666,7 @@ WEBSOCKET_REDIS_OPTIONS = os.environ.get("WEBSOCKET_REDIS_OPTIONS", "")
 
 if WEBSOCKET_REDIS_OPTIONS == "":
     if REDIS_SOCKET_CONNECT_TIMEOUT:
-        WEBSOCKET_REDIS_OPTIONS = {
-            "socket_connect_timeout": REDIS_SOCKET_CONNECT_TIMEOUT
-        }
+        WEBSOCKET_REDIS_OPTIONS = {"socket_connect_timeout": REDIS_SOCKET_CONNECT_TIMEOUT}
     else:
         log.debug("No WEBSOCKET_REDIS_OPTIONS provided, defaulting to None")
         WEBSOCKET_REDIS_OPTIONS = None
@@ -717,9 +691,7 @@ except ValueError:
 
 WEBSOCKET_SENTINEL_HOSTS = os.environ.get("WEBSOCKET_SENTINEL_HOSTS", "")
 WEBSOCKET_SENTINEL_PORT = os.environ.get("WEBSOCKET_SENTINEL_PORT", "26379")
-WEBSOCKET_SERVER_LOGGING = (
-    os.environ.get("WEBSOCKET_SERVER_LOGGING", "False").lower() == "true"
-)
+WEBSOCKET_SERVER_LOGGING = os.environ.get("WEBSOCKET_SERVER_LOGGING", "False").lower() == "true"
 WEBSOCKET_SERVER_ENGINEIO_LOGGING = (
     os.environ.get(
         "WEBSOCKET_SERVER_ENGINEIO_LOGGING",
@@ -753,9 +725,7 @@ else:
         AIOHTTP_CLIENT_TIMEOUT = 300
 
 
-AIOHTTP_CLIENT_SESSION_SSL = (
-    os.environ.get("AIOHTTP_CLIENT_SESSION_SSL", "True").lower() == "true"
-)
+AIOHTTP_CLIENT_SESSION_SSL = os.environ.get("AIOHTTP_CLIENT_SESSION_SSL", "True").lower() == "true"
 
 AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = os.environ.get(
     "AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST",
@@ -779,9 +749,7 @@ if AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA == "":
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = None
 else:
     try:
-        AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = int(
-            AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA
-        )
+        AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = int(AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA)
     except Exception:
         AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = 10
 
@@ -812,16 +780,12 @@ if SENTENCE_TRANSFORMERS_BACKEND == "":
     SENTENCE_TRANSFORMERS_BACKEND = "torch"
 
 
-SENTENCE_TRANSFORMERS_MODEL_KWARGS = os.environ.get(
-    "SENTENCE_TRANSFORMERS_MODEL_KWARGS", ""
-)
+SENTENCE_TRANSFORMERS_MODEL_KWARGS = os.environ.get("SENTENCE_TRANSFORMERS_MODEL_KWARGS", "")
 if SENTENCE_TRANSFORMERS_MODEL_KWARGS == "":
     SENTENCE_TRANSFORMERS_MODEL_KWARGS = None
 else:
     try:
-        SENTENCE_TRANSFORMERS_MODEL_KWARGS = json.loads(
-            SENTENCE_TRANSFORMERS_MODEL_KWARGS
-        )
+        SENTENCE_TRANSFORMERS_MODEL_KWARGS = json.loads(SENTENCE_TRANSFORMERS_MODEL_KWARGS)
     except Exception:
         SENTENCE_TRANSFORMERS_MODEL_KWARGS = None
 
@@ -887,9 +851,7 @@ AUDIT_LOG_FILE_ROTATION_SIZE = os.getenv("AUDIT_LOG_FILE_ROTATION_SIZE", "10MB")
 # Comma separated list of logger names to use for audit logging
 # Default is "uvicorn.access" which is the access log for Uvicorn
 # You can add more logger names to this list if you want to capture more logs
-AUDIT_UVICORN_LOGGER_NAMES = os.getenv(
-    "AUDIT_UVICORN_LOGGER_NAMES", "uvicorn.access"
-).split(",")
+AUDIT_UVICORN_LOGGER_NAMES = os.getenv("AUDIT_UVICORN_LOGGER_NAMES", "uvicorn.access").split(",")
 
 # METADATA | REQUEST | REQUEST_RESPONSE
 AUDIT_LOG_LEVEL = os.getenv("AUDIT_LOG_LEVEL", "NONE").upper()
@@ -899,9 +861,7 @@ except ValueError:
     MAX_BODY_LOG_SIZE = 2048
 
 # Comma separated list for urls to exclude from audit
-AUDIT_EXCLUDED_PATHS = os.getenv("AUDIT_EXCLUDED_PATHS", "/chats,/chat,/folders").split(
-    ","
-)
+AUDIT_EXCLUDED_PATHS = os.getenv("AUDIT_EXCLUDED_PATHS", "/chats,/chat,/folders").split(",")
 AUDIT_EXCLUDED_PATHS = [path.strip() for path in AUDIT_EXCLUDED_PATHS]
 AUDIT_EXCLUDED_PATHS = [path.lstrip("/") for path in AUDIT_EXCLUDED_PATHS]
 
@@ -915,9 +875,7 @@ ENABLE_OTEL_TRACES = os.environ.get("ENABLE_OTEL_TRACES", "False").lower() == "t
 ENABLE_OTEL_METRICS = os.environ.get("ENABLE_OTEL_METRICS", "False").lower() == "true"
 ENABLE_OTEL_LOGS = os.environ.get("ENABLE_OTEL_LOGS", "False").lower() == "true"
 
-OTEL_EXPORTER_OTLP_ENDPOINT = os.environ.get(
-    "OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"
-)
+OTEL_EXPORTER_OTLP_ENDPOINT = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
 OTEL_METRICS_EXPORTER_OTLP_ENDPOINT = os.environ.get(
     "OTEL_METRICS_EXPORTER_OTLP_ENDPOINT", OTEL_EXPORTER_OTLP_ENDPOINT
 )
@@ -928,24 +886,18 @@ OTEL_EXPORTER_OTLP_INSECURE = (
     os.environ.get("OTEL_EXPORTER_OTLP_INSECURE", "False").lower() == "true"
 )
 OTEL_METRICS_EXPORTER_OTLP_INSECURE = (
-    os.environ.get(
-        "OTEL_METRICS_EXPORTER_OTLP_INSECURE", str(OTEL_EXPORTER_OTLP_INSECURE)
-    ).lower()
+    os.environ.get("OTEL_METRICS_EXPORTER_OTLP_INSECURE", str(OTEL_EXPORTER_OTLP_INSECURE)).lower()
     == "true"
 )
 OTEL_LOGS_EXPORTER_OTLP_INSECURE = (
-    os.environ.get(
-        "OTEL_LOGS_EXPORTER_OTLP_INSECURE", str(OTEL_EXPORTER_OTLP_INSECURE)
-    ).lower()
+    os.environ.get("OTEL_LOGS_EXPORTER_OTLP_INSECURE", str(OTEL_EXPORTER_OTLP_INSECURE)).lower()
     == "true"
 )
 OTEL_SERVICE_NAME = os.environ.get("OTEL_SERVICE_NAME", "open-webui")
 OTEL_RESOURCE_ATTRIBUTES = os.environ.get(
     "OTEL_RESOURCE_ATTRIBUTES", ""
 )  # e.g. key1=val1,key2=val2
-OTEL_TRACES_SAMPLER = os.environ.get(
-    "OTEL_TRACES_SAMPLER", "parentbased_always_on"
-).lower()
+OTEL_TRACES_SAMPLER = os.environ.get("OTEL_TRACES_SAMPLER", "parentbased_always_on").lower()
 OTEL_BASIC_AUTH_USERNAME = os.environ.get("OTEL_BASIC_AUTH_USERNAME", "")
 OTEL_BASIC_AUTH_PASSWORD = os.environ.get("OTEL_BASIC_AUTH_PASSWORD", "")
 
@@ -962,9 +914,7 @@ OTEL_LOGS_BASIC_AUTH_PASSWORD = os.environ.get(
     "OTEL_LOGS_BASIC_AUTH_PASSWORD", OTEL_BASIC_AUTH_PASSWORD
 )
 
-OTEL_OTLP_SPAN_EXPORTER = os.environ.get(
-    "OTEL_OTLP_SPAN_EXPORTER", "grpc"
-).lower()  # grpc or http
+OTEL_OTLP_SPAN_EXPORTER = os.environ.get("OTEL_OTLP_SPAN_EXPORTER", "grpc").lower()  # grpc or http
 
 OTEL_METRICS_OTLP_SPAN_EXPORTER = os.environ.get(
     "OTEL_METRICS_OTLP_SPAN_EXPORTER", OTEL_OTLP_SPAN_EXPORTER

@@ -69,9 +69,7 @@ if WEBSOCKET_MANAGER == "redis":
             redis_options=WEBSOCKET_REDIS_OPTIONS,
         )
     else:
-        mgr = socketio.AsyncRedisManager(
-            WEBSOCKET_REDIS_URL, redis_options=WEBSOCKET_REDIS_OPTIONS
-        )
+        mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL, redis_options=WEBSOCKET_REDIS_OPTIONS)
     sio = socketio.AsyncServer(
         cors_allowed_origins=SOCKETIO_CORS_ORIGINS,
         async_mode="asgi",
@@ -108,16 +106,12 @@ if WEBSOCKET_MANAGER == "redis":
     log.debug("Using Redis to manage websockets.")
     REDIS = get_redis_connection(
         redis_url=WEBSOCKET_REDIS_URL,
-        redis_sentinels=get_sentinels_from_env(
-            WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
-        ),
+        redis_sentinels=get_sentinels_from_env(WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT),
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
         async_mode=True,
     )
 
-    redis_sentinels = get_sentinels_from_env(
-        WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
-    )
+    redis_sentinels = get_sentinels_from_env(WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT)
 
     MODELS = RedisDict(
         f"{REDIS_KEY_PREFIX}:models",
@@ -183,6 +177,7 @@ YDOC_MANAGER = YdocManager(
 # ── Presence System ────────────────────────────────────────────────────────────
 # Tracks online users and notifies admins in real-time
 
+
 async def get_active_user_ids() -> list[str]:
     """Get list of currently online user IDs from USER_POOL."""
     return list(USER_POOL.keys())
@@ -198,8 +193,6 @@ async def emit_user_presence_change(user_id: str, status: str):
         {"user_id": user_id, "status": status},
         room="admin:users",
     )
-
-
 
 
 async def periodic_session_pool_cleanup():
@@ -218,9 +211,7 @@ async def periodic_session_pool_cleanup():
             for sid in list(SESSION_POOL.keys()):
                 entry = SESSION_POOL.get(sid)
                 if entry and now - entry.get("last_seen_at", 0) > SESSION_POOL_TIMEOUT:
-                    log.warning(
-                        f"Reaping orphaned session {sid} (user {entry.get('id')})"
-                    )
+                    log.warning(f"Reaping orphaned session {sid} (user {entry.get('id')})")
                     del SESSION_POOL[sid]
             await asyncio.sleep(SESSION_POOL_TIMEOUT)
     finally:
@@ -229,9 +220,7 @@ async def periodic_session_pool_cleanup():
 
 async def periodic_usage_pool_cleanup():
     max_retries = 2
-    retry_delay = random.uniform(
-        WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, WEBSOCKET_REDIS_LOCK_TIMEOUT
-    )
+    retry_delay = random.uniform(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, WEBSOCKET_REDIS_LOCK_TIMEOUT)
     for attempt in range(max_retries + 1):
         if aquire_func():
             break
@@ -242,9 +231,7 @@ async def periodic_usage_pool_cleanup():
                 )
                 await asyncio.sleep(retry_delay)
             else:
-                log.warning(
-                    "Failed to acquire cleanup lock after retries. Skipping cleanup."
-                )
+                log.warning("Failed to acquire cleanup lock after retries. Skipping cleanup.")
                 return
 
     log.debug("Running periodic_cleanup")
@@ -393,13 +380,13 @@ async def connect(sid, environ, auth):
             # Track if this is the user's first connection (going online)
             was_offline = user.id not in USER_POOL or len(USER_POOL.get(user.id, set())) == 0
             USER_POOL.setdefault(user.id, set()).add(sid)
-            
+
             # Emit presence change if user just came online
             if was_offline:
                 await emit_user_presence_change(user.id, "online")
-            
+
             await sio.enter_room(sid, f"user:{user.id}")
-            
+
             # Join admin:users room if user is admin (for presence notifications)
             if user.role == "admin":
                 await sio.enter_room(sid, "admin:users")
@@ -421,7 +408,7 @@ async def user_join(sid, data):
 
     # Track if this is the user's first connection (going online)
     was_offline = user.id not in USER_POOL or len(USER_POOL.get(user.id, set())) == 0
-    
+
     SESSION_POOL[sid] = {
         **user.model_dump(
             exclude=[
@@ -435,13 +422,13 @@ async def user_join(sid, data):
         "last_seen_at": int(time.time()),
     }
     USER_POOL.setdefault(user.id, set()).add(sid)
-    
+
     # Emit presence change if user just came online
     if was_offline:
         await emit_user_presence_change(user.id, "online")
-    
+
     await sio.enter_room(sid, f"user:{user.id}")
-    
+
     # Join admin:users room if user is admin (for presence notifications)
     if user.role == "admin":
         await sio.enter_room(sid, "admin:users")
@@ -483,7 +470,7 @@ async def get_active_users(sid, data):
     user = SESSION_POOL.get(sid)
     if not user or user.get("role") != "admin":
         return {"error": "Unauthorized"}
-    
+
     active_ids = await get_active_user_ids()
     return {"active_user_ids": active_ids}
 
@@ -632,9 +619,7 @@ async def ydoc_document_join(sid, data):
                     permission="read",
                 )
             ):
-                log.error(
-                    f"User {user.get('id')} does not have access to note {note_id}"
-                )
+                log.error(f"User {user.get('id')} does not have access to note {note_id}")
                 return
 
         user_id = data.get("user_id", sid)
@@ -758,7 +743,7 @@ async def yjs_document_update(sid, data):
 
         try:
             await stop_item_tasks(REDIS, document_id)
-        except:
+        except Exception:
             pass
 
         user_id = data.get("user_id", sid)
@@ -785,9 +770,7 @@ async def yjs_document_update(sid, data):
 
         async def debounced_save():
             await asyncio.sleep(0.5)
-            await document_save_handler(
-                document_id, data.get("data", {}), SESSION_POOL.get(sid)
-            )
+            await document_save_handler(document_id, data.get("data", {}), SESSION_POOL.get(sid))
 
         if data.get("data"):
             await create_task(REDIS, debounced_save(), document_id)
@@ -939,11 +922,7 @@ def get_event_emitter(request_info, update_db=True):
                 room=f"space:{space_id}",
                 skip_sid=sender_sids,
             )
-        if (
-            update_db
-            and message_id
-            and not request_info.get("chat_id", "").startswith("local:")
-        ):
+        if update_db and message_id and not request_info.get("chat_id", "").startswith("local:"):
             if "type" in event_data and event_data["type"] == "status":
                 Chats.add_message_status_to_chat_by_id_and_message_id(
                     request_info["chat_id"],
@@ -1016,7 +995,7 @@ def get_event_emitter(request_info, update_db=True):
 
             if event_data.get("type") in ["source", "citation"]:
                 data = event_data.get("data", {})
-                if data.get("type") == None:
+                if data.get("type") is None:
                     message = Chats.get_message_by_id_and_message_id(
                         request_info["chat_id"],
                         request_info["message_id"],
@@ -1033,11 +1012,7 @@ def get_event_emitter(request_info, update_db=True):
                         },
                     )
 
-    if (
-        "user_id" in request_info
-        and "chat_id" in request_info
-        and "message_id" in request_info
-    ):
+    if "user_id" in request_info and "chat_id" in request_info and "message_id" in request_info:
         return __event_emitter__
     else:
         return None
@@ -1056,11 +1031,7 @@ def get_event_call(request_info):
         )
         return response
 
-    if (
-        "session_id" in request_info
-        and "chat_id" in request_info
-        and "message_id" in request_info
-    ):
+    if "session_id" in request_info and "chat_id" in request_info and "message_id" in request_info:
         return __event_caller__
     else:
         return None

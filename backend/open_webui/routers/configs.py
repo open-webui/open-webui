@@ -83,12 +83,8 @@ async def set_connections_config(
     form_data: ConnectionsConfigForm,
     user=Depends(get_admin_user),
 ):
-    request.app.state.config.ENABLE_DIRECT_CONNECTIONS = (
-        form_data.ENABLE_DIRECT_CONNECTIONS
-    )
-    request.app.state.config.ENABLE_BASE_MODELS_CACHE = (
-        form_data.ENABLE_BASE_MODELS_CACHE
-    )
+    request.app.state.config.ENABLE_DIRECT_CONNECTIONS = form_data.ENABLE_DIRECT_CONNECTIONS
+    request.app.state.config.ENABLE_BASE_MODELS_CACHE = form_data.ENABLE_BASE_MODELS_CACHE
 
     return {
         "ENABLE_DIRECT_CONNECTIONS": request.app.state.config.ENABLE_DIRECT_CONNECTIONS,
@@ -114,16 +110,12 @@ async def register_oauth_client(
         if type:
             oauth_client_id = f"{type}:{form_data.client_id}"
 
-        oauth_client_info = (
-            await get_oauth_client_info_with_dynamic_client_registration(
-                request, oauth_client_id, form_data.url
-            )
+        oauth_client_info = await get_oauth_client_info_with_dynamic_client_registration(
+            request, oauth_client_id, form_data.url
         )
         return {
             "status": True,
-            "oauth_client_info": encrypt_data(
-                oauth_client_info.model_dump(mode="json")
-            ),
+            "oauth_client_info": encrypt_data(oauth_client_info.model_dump(mode="json")),
         }
     except Exception as e:
         log.debug(f"Failed to register OAuth client: {e}")
@@ -178,7 +170,7 @@ async def set_tool_servers_config(
 
             try:
                 request.app.state.oauth_client_manager.remove_client(client_key)
-            except:
+            except Exception:
                 pass
 
     # Set new tool server connections
@@ -196,9 +188,7 @@ async def set_tool_servers_config(
 
             if auth_type == "oauth_2.1" and server_id:
                 try:
-                    oauth_client_info = connection.get("info", {}).get(
-                        "oauth_client_info", ""
-                    )
+                    oauth_client_info = connection.get("info", {}).get("oauth_client_info", "")
                     oauth_client_info = decrypt_data(oauth_client_info)
 
                     request.app.state.oauth_client_manager.add_client(
@@ -226,22 +216,16 @@ async def verify_tool_servers_config(
             if form_data.auth_type == "oauth_2.1":
                 discovery_urls = await get_discovery_urls(form_data.url)
                 for discovery_url in discovery_urls:
-                    log.debug(
-                        f"Trying to fetch OAuth 2.1 discovery document from {discovery_url}"
-                    )
+                    log.debug(f"Trying to fetch OAuth 2.1 discovery document from {discovery_url}")
                     async with aiohttp.ClientSession(
                         trust_env=True,
                         timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
                     ) as session:
-                        async with session.get(
-                            discovery_url
-                        ) as oauth_server_metadata_response:
+                        async with session.get(discovery_url) as oauth_server_metadata_response:
                             if oauth_server_metadata_response.status == 200:
                                 try:
-                                    oauth_server_metadata = (
-                                        OAuthMetadata.model_validate(
-                                            await oauth_server_metadata_response.json()
-                                        )
+                                    oauth_server_metadata = OAuthMetadata.model_validate(
+                                        await oauth_server_metadata_response.json()
                                     )
                                     return {
                                         "status": True,
@@ -250,9 +234,7 @@ async def verify_tool_servers_config(
                                         ),
                                     }
                                 except Exception as e:
-                                    log.info(
-                                        f"Failed to parse OAuth 2.1 discovery document: {e}"
-                                    )
+                                    log.info(f"Failed to parse OAuth 2.1 discovery document: {e}")
                                     raise HTTPException(
                                         status_code=400,
                                         detail=f"Failed to parse OAuth 2.1 discovery document from {discovery_url}",
@@ -321,11 +303,9 @@ async def verify_tool_servers_config(
             elif form_data.auth_type == "system_oauth":
                 try:
                     if request.cookies.get("oauth_session_id", None):
-                        oauth_token = (
-                            await request.app.state.oauth_manager.get_oauth_token(
-                                user.id,
-                                request.cookies.get("oauth_session_id", None),
-                            )
+                        oauth_token = await request.app.state.oauth_manager.get_oauth_token(
+                            user.id,
+                            request.cookies.get("oauth_session_id", None),
                         )
 
                         if oauth_token:
@@ -403,12 +383,8 @@ async def set_code_execution_config(
     request.app.state.config.ENABLE_CODE_EXECUTION = form_data.ENABLE_CODE_EXECUTION
 
     request.app.state.config.CODE_EXECUTION_ENGINE = form_data.CODE_EXECUTION_ENGINE
-    request.app.state.config.CODE_EXECUTION_JUPYTER_URL = (
-        form_data.CODE_EXECUTION_JUPYTER_URL
-    )
-    request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH = (
-        form_data.CODE_EXECUTION_JUPYTER_AUTH
-    )
+    request.app.state.config.CODE_EXECUTION_JUPYTER_URL = form_data.CODE_EXECUTION_JUPYTER_URL
+    request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH = form_data.CODE_EXECUTION_JUPYTER_AUTH
     request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_TOKEN = (
         form_data.CODE_EXECUTION_JUPYTER_AUTH_TOKEN
     )
@@ -425,13 +401,9 @@ async def set_code_execution_config(
         form_data.CODE_INTERPRETER_PROMPT_TEMPLATE
     )
 
-    request.app.state.config.CODE_INTERPRETER_JUPYTER_URL = (
-        form_data.CODE_INTERPRETER_JUPYTER_URL
-    )
+    request.app.state.config.CODE_INTERPRETER_JUPYTER_URL = form_data.CODE_INTERPRETER_JUPYTER_URL
 
-    request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH = (
-        form_data.CODE_INTERPRETER_JUPYTER_AUTH
-    )
+    request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH = form_data.CODE_INTERPRETER_JUPYTER_AUTH
 
     request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN = (
         form_data.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN
@@ -621,11 +593,7 @@ async def _fetch_favicon_as_data_uri(url: str) -> str:
                 elif "gif" in content_type or url.endswith(".gif"):
                     mime = "image/gif"
                 else:
-                    mime = (
-                        content_type
-                        if content_type.startswith("image/")
-                        else "image/png"
-                    )
+                    mime = content_type if content_type.startswith("image/") else "image/png"
                 b64 = base64.b64encode(data).decode("ascii")
                 return f"data:{mime};base64,{b64}"
     except Exception as e:
@@ -649,15 +617,11 @@ async def set_branding_config(
     # Auto-convert favicon URLs to base64 data URIs for CORS-free rendering.
     # Only re-fetch if the URL changed (i.e. existing favicon_data doesn't match).
     if config_data.get("favicon_url") and not config_data.get("favicon_data"):
-        config_data["favicon_data"] = await _fetch_favicon_as_data_uri(
-            config_data["favicon_url"]
-        )
+        config_data["favicon_data"] = await _fetch_favicon_as_data_uri(config_data["favicon_url"])
 
     for preset in config_data.get("presets", []):
         if preset.get("favicon_url") and not preset.get("favicon_data"):
-            preset["favicon_data"] = await _fetch_favicon_as_data_uri(
-                preset["favicon_url"]
-            )
+            preset["favicon_data"] = await _fetch_favicon_as_data_uri(preset["favicon_url"])
 
     request.app.state.config.BRANDING_CONFIG = config_data
     return request.app.state.config.BRANDING_CONFIG
@@ -757,9 +721,7 @@ async def get_tenant_oauth_config(domain: str, user=Depends(get_admin_user)):
     """Get tenant OAuth config for a specific domain (admin only)."""
     config = TenantOAuthConfigs.get_by_domain(domain)
     if not config:
-        raise HTTPException(
-            status_code=404, detail="No OAuth config found for this domain"
-        )
+        raise HTTPException(status_code=404, detail="No OAuth config found for this domain")
     return TenantOAuthConfigResponse.from_model(config)
 
 
@@ -769,9 +731,7 @@ async def create_tenant_oauth_config(
     user=Depends(get_admin_user),
 ):
     """Create a new tenant OAuth config (admin only)."""
-    existing = TenantOAuthConfigs.get_by_domain_and_provider(
-        form_data.domain, form_data.provider
-    )
+    existing = TenantOAuthConfigs.get_by_domain_and_provider(form_data.domain, form_data.provider)
     if existing:
         raise HTTPException(
             status_code=409,
@@ -779,9 +739,7 @@ async def create_tenant_oauth_config(
         )
     config = TenantOAuthConfigs.create(form_data)
     if not config:
-        raise HTTPException(
-            status_code=500, detail="Failed to create tenant OAuth config"
-        )
+        raise HTTPException(status_code=500, detail="Failed to create tenant OAuth config")
     return TenantOAuthConfigResponse.from_model(config)
 
 

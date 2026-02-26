@@ -145,9 +145,7 @@ class ModelsTable:
         return AccessGrants.get_grants_by_resource("model", model_id, db=db)
 
     def _to_model_model(self, model: Model, db: Optional[Session] = None) -> ModelModel:
-        model_data = ModelModel.model_validate(model).model_dump(
-            exclude={"access_grants"}
-        )
+        model_data = ModelModel.model_validate(model).model_dump(exclude={"access_grants"})
         model_data["access_grants"] = self._get_access_grants(model_data["id"], db=db)
         return ModelModel.model_validate(model_data)
 
@@ -167,9 +165,7 @@ class ModelsTable:
                 db.add(result)
                 db.commit()
                 db.refresh(result)
-                AccessGrants.set_access_grants(
-                    "model", result.id, form_data.access_grants, db=db
-                )
+                AccessGrants.set_access_grants("model", result.id, form_data.access_grants, db=db)
 
                 if result:
                     return self._to_model_model(result, db=db)
@@ -181,13 +177,11 @@ class ModelsTable:
 
     def get_all_models(self, db: Optional[Session] = None) -> list[ModelModel]:
         with get_db_context(db) as db:
-            return [
-                self._to_model_model(model, db=db) for model in db.query(Model).all()
-            ]
+            return [self._to_model_model(model, db=db) for model in db.query(Model).all()]
 
     def get_models(self, db: Optional[Session] = None) -> list[ModelUserResponse]:
         with get_db_context(db) as db:
-            all_models = db.query(Model).filter(Model.base_model_id != None).all()
+            all_models = db.query(Model).filter(Model.base_model_id.is_not(None)).all()
 
             user_ids = list(set(model.user_id for model in all_models))
 
@@ -211,16 +205,14 @@ class ModelsTable:
         with get_db_context(db) as db:
             return [
                 self._to_model_model(model, db=db)
-                for model in db.query(Model).filter(Model.base_model_id == None).all()
+                for model in db.query(Model).filter(Model.base_model_id.is_(None)).all()
             ]
 
     def get_models_by_user_id(
         self, user_id: str, permission: str = "write", db: Optional[Session] = None
     ) -> list[ModelUserResponse]:
         models = self.get_models(db=db)
-        user_group_ids = {
-            group.id for group in Groups.get_groups_by_member_id(user_id, db=db)
-        }
+        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user_id, db=db)}
         return [
             model
             for model in models
@@ -256,7 +248,7 @@ class ModelsTable:
         with get_db_context(db) as db:
             # Join GroupMember so we can order by group_id when requested
             query = db.query(Model, User).outerjoin(User, User.id == Model.user_id)
-            query = query.filter(Model.base_model_id != None)
+            query = query.filter(Model.base_model_id.is_not(None))
 
             if filter:
                 query_key = filter.get("query")
@@ -340,9 +332,7 @@ class ModelsTable:
 
             return ModelListResponse(items=models, total=total)
 
-    def get_model_by_id(
-        self, id: str, db: Optional[Session] = None
-    ) -> Optional[ModelModel]:
+    def get_model_by_id(self, id: str, db: Optional[Session] = None) -> Optional[ModelModel]:
         try:
             with get_db_context(db) as db:
                 model = db.get(Model, id)
@@ -350,9 +340,7 @@ class ModelsTable:
         except Exception:
             return None
 
-    def get_models_by_ids(
-        self, ids: list[str], db: Optional[Session] = None
-    ) -> list[ModelModel]:
+    def get_models_by_ids(self, ids: list[str], db: Optional[Session] = None) -> list[ModelModel]:
         try:
             with get_db_context(db) as db:
                 models = db.query(Model).filter(Model.id.in_(ids)).all()
@@ -360,9 +348,7 @@ class ModelsTable:
         except Exception:
             return []
 
-    def toggle_model_by_id(
-        self, id: str, db: Optional[Session] = None
-    ) -> Optional[ModelModel]:
+    def toggle_model_by_id(self, id: str, db: Optional[Session] = None) -> Optional[ModelModel]:
         with get_db_context(db) as db:
             try:
                 model = db.query(Model).filter_by(id=id).first()
@@ -389,9 +375,7 @@ class ModelsTable:
 
                 db.commit()
                 if model.access_grants is not None:
-                    AccessGrants.set_access_grants(
-                        "model", id, model.access_grants, db=db
-                    )
+                    AccessGrants.set_access_grants("model", id, model.access_grants, db=db)
 
                 return self.get_model_by_id(id, db=db)
         except Exception as e:
@@ -453,9 +437,7 @@ class ModelsTable:
                             }
                         )
                         db.add(new_model)
-                    AccessGrants.set_access_grants(
-                        "model", model.id, model.access_grants, db=db
-                    )
+                    AccessGrants.set_access_grants("model", model.id, model.access_grants, db=db)
 
                 # Remove models that are no longer present
                 for model in existing_models:
@@ -465,10 +447,7 @@ class ModelsTable:
 
                 db.commit()
 
-                return [
-                    self._to_model_model(model, db=db)
-                    for model in db.query(Model).all()
-                ]
+                return [self._to_model_model(model, db=db) for model in db.query(Model).all()]
         except Exception as e:
             log.exception(f"Error syncing models for user {user_id}: {e}")
             return []

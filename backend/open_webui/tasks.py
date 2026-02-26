@@ -6,7 +6,7 @@ import json
 import logging
 from redis.asyncio import Redis
 from fastapi import Request
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from open_webui.env import REDIS_KEY_PREFIX
 
@@ -119,9 +119,7 @@ async def create_task(redis, coroutine, id=None):
         raise
 
     # Add a done callback for cleanup
-    task.add_done_callback(
-        lambda t: asyncio.create_task(cleanup_task(redis, task_id, id))
-    )
+    task.add_done_callback(lambda t: asyncio.create_task(cleanup_task(redis, task_id, id)))
     tasks[task_id] = task
     print(f"[DEBUG TASK 5] Task stored in tasks dict")
 

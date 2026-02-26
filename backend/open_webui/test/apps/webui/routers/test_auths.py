@@ -64,13 +64,9 @@ class TestAuths(AbstractPostgresTest):
             )
         assert response.status_code == 200
 
-        old_auth = self.auths.authenticate_user(
-            "john.doe@openwebui.com", "old_password"
-        )
+        old_auth = self.auths.authenticate_user("john.doe@openwebui.com", "old_password")
         assert old_auth is None
-        new_auth = self.auths.authenticate_user(
-            "john.doe@openwebui.com", "new_password"
-        )
+        new_auth = self.auths.authenticate_user("john.doe@openwebui.com", "new_password")
         assert new_auth is not None
 
     def test_signin(self):
@@ -181,7 +177,7 @@ class TestAuths(AbstractPostgresTest):
         with mock_webui_user(id=user.id):
             response = self.fast_api_client.delete(self.create_url("/api_key"))
         assert response.status_code == 200
-        assert response.json() == True
+        assert response.json() is True
         db_user = self.users.get_user_by_id(user.id)
         assert db_user.api_key is None
 

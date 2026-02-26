@@ -104,9 +104,7 @@ class AuthsTable:
 
             id = str(uuid.uuid4())
 
-            auth = AuthModel(
-                **{"id": id, "email": email, "password": password, "active": True}
-            )
+            auth = AuthModel(**{"id": id, "email": email, "password": password, "active": True})
             result = Auth(**auth.model_dump())
             db.add(result)
 
@@ -168,7 +166,7 @@ class AuthsTable:
                 result = (
                     db.query(Auth, User)
                     .join(User, Auth.id == User.id)
-                    .filter(Auth.email == email, Auth.active == True)
+                    .filter(Auth.email == email, Auth.active.is_(True))
                     .first()
                 )
                 if result:
@@ -183,17 +181,13 @@ class AuthsTable:
     ) -> bool:
         try:
             with get_db_context(db) as db:
-                result = (
-                    db.query(Auth).filter_by(id=id).update({"password": new_password})
-                )
+                result = db.query(Auth).filter_by(id=id).update({"password": new_password})
                 db.commit()
                 return True if result == 1 else False
         except Exception:
             return False
 
-    def update_email_by_id(
-        self, id: str, email: str, db: Optional[Session] = None
-    ) -> bool:
+    def update_email_by_id(self, id: str, email: str, db: Optional[Session] = None) -> bool:
         try:
             with get_db_context(db) as db:
                 result = db.query(Auth).filter_by(id=id).update({"email": email})

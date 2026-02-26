@@ -194,9 +194,7 @@ async def generate_chat_completion(
     model = models[model_id]
 
     if getattr(request.state, "direct", False):
-        return await generate_direct_chat_completion(
-            request, form_data, user=user, models=models
-        )
+        return await generate_direct_chat_completion(request, form_data, user=user, models=models)
     else:
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
@@ -228,7 +226,7 @@ async def generate_chat_completion(
 
             form_data["model"] = selected_model_id
 
-            if form_data.get("stream") == True:
+            if form_data.get("stream"):
 
                 async def stream_wrapper(stream):
                     yield f"data: {json.dumps({'selected_model_id': selected_model_id})}\n\n"
@@ -358,9 +356,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
     }
 
     try:
-        filter_ids = get_sorted_filter_ids(
-            request, model, metadata.get("filter_ids", [])
-        )
+        filter_ids = get_sorted_filter_ids(request, model, metadata.get("filter_ids", []))
         filter_functions = Functions.get_functions_by_ids(filter_ids)
 
         result, _ = await process_filter_functions(

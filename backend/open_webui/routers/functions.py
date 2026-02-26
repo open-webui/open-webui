@@ -40,16 +40,12 @@ router = APIRouter()
 
 
 @router.get("/", response_model=list[FunctionResponse])
-async def get_functions(
-    user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
+async def get_functions(user=Depends(get_verified_user), db: Session = Depends(get_session)):
     return Functions.get_functions(db=db)
 
 
 @router.get("/list", response_model=list[FunctionUserResponse])
-async def get_function_list(
-    user=Depends(get_admin_user), db: Session = Depends(get_session)
-):
+async def get_function_list(user=Depends(get_admin_user), db: Session = Depends(get_session)):
     return Functions.get_function_list(db=db)
 
 
@@ -59,7 +55,7 @@ async def get_function_list(
 
 
 @router.get("/export", response_model=list[FunctionModel | FunctionWithValvesModel])
-async def get_functions(
+async def export_functions(
     include_valves: bool = False,
     user=Depends(get_admin_user),
     db: Session = Depends(get_session),
@@ -87,9 +83,7 @@ def github_url_to_raw_url(url: str) -> str:
     m2 = re.match(r"https://github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.*)", url)
     if m2:
         org, repo, branch, path = m2.groups()
-        return (
-            f"https://raw.githubusercontent.com/{org}/{repo}/refs/heads/{branch}/{path}"
-        )
+        return f"https://raw.githubusercontent.com/{org}/{repo}/refs/heads/{branch}/{path}"
 
     # No match; return as-is
     return url
@@ -117,25 +111,23 @@ async def load_function_from_url(
             file_name.endswith(".py")
             and (not file_name.startswith(("main.py", "index.py", "__init__.py")))
         )
-        else url_parts[-2] if len(url_parts) > 1 else "function"
+        else url_parts[-2]
+        if len(url_parts) > 1
+        else "function"
     )
 
     try:
         async with aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         ) as session:
-            async with session.get(
-                url, headers={"Content-Type": "application/json"}
-            ) as resp:
+            async with session.get(url, headers={"Content-Type": "application/json"}) as resp:
                 if resp.status != 200:
                     raise HTTPException(
                         status_code=resp.status, detail="Failed to fetch the function"
                     )
                 data = await resp.text()
                 if not data:
-                    raise HTTPException(
-                        status_code=400, detail="No data received from the URL"
-                    )
+                    raise HTTPException(status_code=400, detail="No data received from the URL")
         return {
             "name": function_name,
             "content": data,
@@ -171,13 +163,9 @@ async def sync_functions(
             if hasattr(function_module, "Valves") and function.valves:
                 Valves = function_module.Valves
                 try:
-                    Valves(
-                        **{k: v for k, v in function.valves.items() if v is not None}
-                    )
+                    Valves(**{k: v for k, v in function.valves.items() if v is not None})
                 except Exception as e:
-                    log.exception(
-                        f"Error validating valves for function {function.id}: {e}"
-                    )
+                    log.exception(f"Error validating valves for function {function.id}: {e}")
                     raise e
 
         return Functions.sync_functions(user.id, form_data.functions, db=db)
@@ -222,17 +210,13 @@ async def create_new_function(
             FUNCTIONS = request.app.state.FUNCTIONS
             FUNCTIONS[form_data.id] = function_module
 
-            function = Functions.insert_new_function(
-                user.id, function_type, form_data, db=db
-            )
+            function = Functions.insert_new_function(user.id, function_type, form_data, db=db)
 
             function_cache_dir = CACHE_DIR / "functions" / form_data.id
             function_cache_dir.mkdir(parents=True, exist_ok=True)
 
             if function_type == "filter" and getattr(function_module, "toggle", None):
-                Functions.update_function_metadata_by_id(
-                    form_data.id, {"toggle": True}, db=db
-                )
+                Functions.update_function_metadata_by_id(form_data.id, {"toggle": True}, db=db)
 
             if function:
                 return function
@@ -285,9 +269,7 @@ async def toggle_function_by_id(
 ):
     function = Functions.get_function_by_id(id, db=db)
     if function:
-        function = Functions.update_function_by_id(
-            id, {"is_active": not function.is_active}, db=db
-        )
+        function = Functions.update_function_by_id(id, {"is_active": not function.is_active}, db=db)
 
         if function:
             return function
@@ -314,9 +296,7 @@ async def toggle_global_by_id(
 ):
     function = Functions.get_function_by_id(id, db=db)
     if function:
-        function = Functions.update_function_by_id(
-            id, {"is_global": not function.is_global}, db=db
-        )
+        function = Functions.update_function_by_id(id, {"is_global": not function.is_global}, db=db)
 
         if function:
             return function
@@ -440,9 +420,7 @@ async def get_function_valves_spec_by_id(
 ):
     function = Functions.get_function_by_id(id, db=db)
     if function:
-        function_module, function_type, frontmatter = get_function_module_from_cache(
-            request, id
-        )
+        function_module, function_type, frontmatter = get_function_module_from_cache(request, id)
 
         if hasattr(function_module, "Valves"):
             Valves = function_module.Valves
@@ -473,9 +451,7 @@ async def update_function_valves_by_id(
 ):
     function = Functions.get_function_by_id(id, db=db)
     if function:
-        function_module, function_type, frontmatter = get_function_module_from_cache(
-            request, id
-        )
+        function_module, function_type, frontmatter = get_function_module_from_cache(request, id)
 
         if hasattr(function_module, "Valves"):
             Valves = function_module.Valves
@@ -518,9 +494,7 @@ async def get_function_user_valves_by_id(
     function = Functions.get_function_by_id(id, db=db)
     if function:
         try:
-            user_valves = Functions.get_user_valves_by_id_and_user_id(
-                id, user.id, db=db
-            )
+            user_valves = Functions.get_user_valves_by_id_and_user_id(id, user.id, db=db)
             return user_valves
         except Exception as e:
             raise HTTPException(
@@ -543,9 +517,7 @@ async def get_function_user_valves_spec_by_id(
 ):
     function = Functions.get_function_by_id(id, db=db)
     if function:
-        function_module, function_type, frontmatter = get_function_module_from_cache(
-            request, id
-        )
+        function_module, function_type, frontmatter = get_function_module_from_cache(request, id)
 
         if hasattr(function_module, "UserValves"):
             UserValves = function_module.UserValves
@@ -572,9 +544,7 @@ async def update_function_user_valves_by_id(
     function = Functions.get_function_by_id(id, db=db)
 
     if function:
-        function_module, function_type, frontmatter = get_function_module_from_cache(
-            request, id
-        )
+        function_module, function_type, frontmatter = get_function_module_from_cache(request, id)
 
         if hasattr(function_module, "UserValves"):
             UserValves = function_module.UserValves
@@ -583,9 +553,7 @@ async def update_function_user_valves_by_id(
                 form_data = {k: v for k, v in form_data.items() if v is not None}
                 user_valves = UserValves(**form_data)
                 user_valves_dict = user_valves.model_dump(exclude_unset=True)
-                Functions.update_user_valves_by_id_and_user_id(
-                    id, user.id, user_valves_dict, db=db
-                )
+                Functions.update_user_valves_by_id_and_user_id(id, user.id, user_valves_dict, db=db)
                 return user_valves_dict
             except Exception as e:
                 log.exception(f"Error updating function user valves by id {id}: {e}")

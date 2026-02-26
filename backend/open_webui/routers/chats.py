@@ -137,10 +137,7 @@ def get_session_user_chat_usage_stats(
                                 history_models[model] += 1
 
                     average_user_message_content_length = (
-                        sum(
-                            len(message.get("content", ""))
-                            for message in history_user_messages
-                        )
+                        sum(len(message.get("content", "")) for message in history_user_messages)
                         / len(history_user_messages)
                         if len(history_user_messages) > 0
                         else 0
@@ -160,16 +157,14 @@ def get_session_user_chat_usage_stats(
                         user_message_id = message.get("parentId", None)
                         if user_message_id and user_message_id in messages_map:
                             user_message = messages_map[user_message_id]
-                            response_time = message.get(
+                            response_time = message.get("timestamp", 0) - user_message.get(
                                 "timestamp", 0
-                            ) - user_message.get("timestamp", 0)
+                            )
 
                             response_times.append(response_time)
 
                     average_response_time = (
-                        sum(response_times) / len(response_times)
-                        if len(response_times) > 0
-                        else 0
+                        sum(response_times) / len(response_times) if len(response_times) > 0 else 0
                     )
 
                     message_list = get_message_list(messages_map, message_id)
@@ -194,9 +189,7 @@ def get_session_user_chat_usage_stats(
                             "history_models": history_models,
                             "history_message_count": history_message_count,
                             "history_user_message_count": len(history_user_messages),
-                            "history_assistant_message_count": len(
-                                history_assistant_messages
-                            ),
+                            "history_assistant_message_count": len(history_assistant_messages),
                             "average_response_time": average_response_time,
                             "average_user_message_content_length": average_user_message_content_length,
                             "average_assistant_message_content_length": average_assistant_message_content_length,
@@ -242,9 +235,7 @@ def _process_chat_for_export(chat) -> Optional[ChatStatsExport]:
                 return len(content)
             elif isinstance(content, list):
                 return sum(
-                    len(item.get("text", ""))
-                    for item in content
-                    if item.get("type") == "text"
+                    len(item.get("text", "")) for item in content if item.get("type") == "text"
                 )
             return 0
 
@@ -320,9 +311,7 @@ def _process_chat_for_export(chat) -> Optional[ChatStatsExport]:
                 if t1 and t0:
                     response_times.append(t1 - t0)
 
-        average_response_time = (
-            sum(response_times) / len(response_times) if response_times else 0
-        )
+        average_response_time = sum(response_times) / len(response_times) if response_times else 0
 
         # Current Message List Logic (Main path)
         message_list = get_message_list(messages_map, message_id)
@@ -467,9 +456,7 @@ async def export_chat_stats(
                 calculate_chat_stats, user.id, skip, limit, filter
             )
 
-            return ChatStatsExportList(
-                items=chat_stats_export_list, total=total, page=page
-            )
+            return ChatStatsExportList(items=chat_stats_export_list, total=total, page=page)
 
     except Exception as e:
         log.debug(f"Error exporting chat stats: {e}")
@@ -735,9 +722,7 @@ async def get_chat_list_by_space_id(
 
         space = Spaces.get_space_by_id(space_id, db=db)
         if not space:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Space not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Space not found")
 
         if not (
             can_access_user_chats(user.id)
@@ -787,17 +772,13 @@ async def get_chats_by_folder_id(
     folder_id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
 ):
     folder_ids = [folder_id]
-    children_folders = Folders.get_children_folders_by_id_and_user_id(
-        folder_id, user.id, db=db
-    )
+    children_folders = Folders.get_children_folders_by_id_and_user_id(folder_id, user.id, db=db)
     if children_folders:
         folder_ids.extend([folder.id for folder in children_folders])
 
     return [
         ChatResponse(**chat.model_dump())
-        for chat in Chats.get_chats_by_folder_ids_and_user_id(
-            folder_ids, user.id, db=db
-        )
+        for chat in Chats.get_chats_by_folder_ids_and_user_id(folder_ids, user.id, db=db)
     ]
 
 
@@ -847,9 +828,7 @@ async def get_user_pinned_chats(
 
 
 @router.get("/all", response_model=list[ChatResponse])
-async def get_user_chats(
-    user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
+async def get_user_chats(user=Depends(get_verified_user), db: Session = Depends(get_session)):
     result = Chats.get_chats_by_user_id(user.id, db=db)
     return [ChatResponse(**chat.model_dump()) for chat in result.items]
 
@@ -875,9 +854,7 @@ async def get_user_archived_chats(
 
 
 @router.get("/all/tags", response_model=list[TagModel])
-async def get_all_user_tags(
-    user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
+async def get_all_user_tags(user=Depends(get_verified_user), db: Session = Depends(get_session)):
     try:
         tags = Tags.get_tags_by_user_id(user.id, db=db)
         return tags
@@ -953,9 +930,7 @@ async def get_archived_session_user_chat_list(
 
 
 @router.post("/archive/all", response_model=bool)
-async def archive_all_chats(
-    user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
+async def archive_all_chats(user=Depends(get_verified_user), db: Session = Depends(get_session)):
     return Chats.archive_all_chats_by_user_id(user.id, db=db)
 
 
@@ -965,9 +940,7 @@ async def archive_all_chats(
 
 
 @router.post("/unarchive/all", response_model=bool)
-async def unarchive_all_chats(
-    user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
+async def unarchive_all_chats(user=Depends(get_verified_user), db: Session = Depends(get_session)):
     return Chats.unarchive_all_chats_by_user_id(user.id, db=db)
 
 
@@ -1145,8 +1118,7 @@ async def get_chat_by_id(
                 ):
                     chat = None
         elif chat and (
-            can_access_user_chats(user.id)
-            or can_read_user_chats_in_group(user.id, chat.user_id)
+            can_access_user_chats(user.id) or can_read_user_chats_in_group(user.id, chat.user_id)
         ):
             pass  # oversight or global chat access — allow
         else:
@@ -1155,9 +1127,7 @@ async def get_chat_by_id(
     if chat:
         return ChatResponse(**chat.model_dump())
 
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
-    )
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
 
 ############################
@@ -1173,9 +1143,7 @@ async def mark_chat_viewed(
 ):
     chat = Chats.get_chat_by_id(id, db=db)
     if not chat:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
     result = ChatUserViews.upsert_view(user.id, id, db=db)
     return result is not None
@@ -1384,7 +1352,7 @@ async def send_chat_message_event_by_id(
         else:
             return False
         return True
-    except:
+    except Exception:
         return False
 
 
@@ -1407,17 +1375,13 @@ async def delete_chat_by_id(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=ERROR_MESSAGES.NOT_FOUND,
             )
-        Chats.delete_orphan_tags_for_user(
-            chat.meta.get("tags", []), user.id, threshold=1, db=db
-        )
+        Chats.delete_orphan_tags_for_user(chat.meta.get("tags", []), user.id, threshold=1, db=db)
 
         result = Chats.delete_chat_by_id(id, db=db)
 
         return result
     else:
-        if not has_permission(
-            user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS
-        ):
+        if not has_permission(user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -1429,9 +1393,7 @@ async def delete_chat_by_id(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=ERROR_MESSAGES.NOT_FOUND,
             )
-        Chats.delete_orphan_tags_for_user(
-            chat.meta.get("tags", []), user.id, threshold=1, db=db
-        )
+        Chats.delete_orphan_tags_for_user(chat.meta.get("tags", []), user.id, threshold=1, db=db)
 
         result = Chats.delete_chat_by_id_and_user_id(id, user.id, db=db)
         return result
@@ -1545,9 +1507,7 @@ async def clone_shared_chat_by_id(
         if not chat:
             # Try direct lookup for group oversight
             potential_chat = Chats.get_chat_by_id(id, db=db)
-            if potential_chat and can_read_user_chats_in_group(
-                user.id, potential_chat.user_id
-            ):
+            if potential_chat and can_read_user_chats_in_group(user.id, potential_chat.user_id):
                 chat = potential_chat
 
     if chat:
@@ -1628,9 +1588,7 @@ async def share_chat_by_id(
     db: Session = Depends(get_session),
 ):
     if (user.role != "admin") and (
-        not has_permission(
-            user.id, "chat.share", request.app.state.config.USER_PERMISSIONS
-        )
+        not has_permission(user.id, "chat.share", request.app.state.config.USER_PERMISSIONS)
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -1676,7 +1634,7 @@ async def delete_shared_chat_by_id(
         result = Chats.delete_shared_chat_by_chat_id(id, db=db)
         update_result = Chats.update_chat_share_id_by_id(id, None, db=db)
 
-        return result and update_result != None
+        return result and update_result is not None
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -1752,9 +1710,7 @@ async def get_chat_tags_by_id(
         tags = chat.meta.get("tags", [])
         return Tags.get_tags_by_ids_and_user_id(tags, user.id, db=db)
 
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
-    )
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
 
 ############################
@@ -1781,9 +1737,7 @@ async def add_tag_by_id_and_tag_name(
             )
 
         if tag_id not in tags:
-            Chats.add_chat_tag_by_id_and_user_id_and_tag_name(
-                id, user.id, form_data.name, db=db
-            )
+            Chats.add_chat_tag_by_id_and_user_id_and_tag_name(id, user.id, form_data.name, db=db)
 
         chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
         tags = chat.meta.get("tags", [])
@@ -1808,14 +1762,9 @@ async def delete_tag_by_id_and_tag_name(
 ):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
-        Chats.delete_tag_by_id_and_user_id_and_tag_name(
-            id, user.id, form_data.name, db=db
-        )
+        Chats.delete_tag_by_id_and_user_id_and_tag_name(id, user.id, form_data.name, db=db)
 
-        if (
-            Chats.count_chats_by_tag_name_and_user_id(form_data.name, user.id, db=db)
-            == 0
-        ):
+        if Chats.count_chats_by_tag_name_and_user_id(form_data.name, user.id, db=db) == 0:
             Tags.delete_tag_by_name_and_user_id(form_data.name, user.id, db=db)
 
         chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
