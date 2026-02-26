@@ -25,6 +25,9 @@
 	import dayjs from 'dayjs';
 	import Spinner from './Spinner.svelte';
 	import PDFViewer from './PDFViewer.svelte';
+	import Reset from '../icons/Reset.svelte';
+
+	import panzoom, { type PanZoom } from 'panzoom';
 
 	export let item;
 	export let show = false;
@@ -45,6 +48,23 @@
 	let excelHtml = '';
 	let excelError = '';
 	let rowCount = 0;
+
+	let pzInstance: PanZoom | null = null;
+
+	const initImagePanzoom = (node: HTMLElement) => {
+		pzInstance = panzoom(node, {
+			bounds: true,
+			boundsPadding: 0.1,
+			zoomSpeed: 0.065
+		});
+	};
+
+	const resetImageView = () => {
+		if (pzInstance) {
+			pzInstance.moveTo(0, 0);
+			pzInstance.zoomAbs(0, 0, 1);
+		}
+	};
 
 	$: isPDF =
 		item?.meta?.content_type === 'application/pdf' ||
@@ -197,6 +217,10 @@
 		if (item?.context === 'full') {
 			enableFullContent = true;
 		}
+
+		return () => {
+			pzInstance?.dispose();
+		};
 	});
 </script>
 
@@ -361,14 +385,27 @@
 				{/if}
 
 				{#if isImage}
-					<div class="w-full max-h-[70vh] overflow-auto">
+				<div class="relative w-full max-h-[70vh] overflow-hidden">
+					<div class="absolute top-2 right-2 z-10">
+						<Tooltip content={$i18n.t('Reset view')}>
+							<button
+								class="p-1.5 rounded-lg bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+								on:click={resetImageView}
+							>
+								<Reset className="size-4" />
+							</button>
+						</Tooltip>
+					</div>
+					<div use:initImagePanzoom>
 						<img
 							src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
 							alt={item?.name ?? 'Image'}
 							class="w-full object-contain rounded-lg"
 							loading="lazy"
+							draggable="false"
 						/>
 					</div>
+				</div>
 				{:else if selectedTab === ''}
 					{#if item?.file?.data}
 						{@const rawContent = (item?.file?.data?.content ?? '').trim() || 'No content'}

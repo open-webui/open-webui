@@ -1,29 +1,56 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, getContext } from 'svelte';
 	import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
+	import panzoom, { type PanZoom } from 'panzoom';
 	import Spinner from './Spinner.svelte';
+	import Tooltip from './Tooltip.svelte';
+	import Reset from '../icons/Reset.svelte';
+
+	const i18n = getContext('i18n');
 
 	export let url: string | null = null;
 	export let data: ArrayBuffer | Uint8Array | null = null;
 	export let className = 'w-full h-[70vh]';
 
-	let container: HTMLDivElement;
+	let outerContainer: HTMLDivElement;
+	let sceneElement: HTMLDivElement;
 	let loading = true;
 	let error = '';
 	let pdfDoc: any = null;
+	let pzInstance: PanZoom | null = null;
+
+	const initPanzoom = () => {
+		if (pzInstance) {
+			pzInstance.dispose();
+		}
+		if (sceneElement) {
+			pzInstance = panzoom(sceneElement, {
+				bounds: true,
+				boundsPadding: 0.1,
+				zoomSpeed: 0.065
+			});
+		}
+	};
+
+	const resetView = () => {
+		if (pzInstance) {
+			pzInstance.moveTo(0, 0);
+			pzInstance.zoomAbs(0, 0, 1);
+		}
+	};
 
 	const renderAllPages = async () => {
-		if (!pdfDoc || !container) return;
+		if (!pdfDoc || !sceneElement) return;
 
 		// Clear previous canvases
-		container.innerHTML = '';
+		sceneElement.innerHTML = '';
 
 		for (let i = 1; i <= pdfDoc.numPages; i++) {
 			const page = await pdfDoc.getPage(i);
 			const viewport = page.getViewport({ scale: 1 });
 
 			// Scale to fit container width
-			const containerWidth = container.clientWidth || 800;
+			const containerWidth = outerContainer?.clientWidth || 800;
 			const scale = containerWidth / viewport.width;
 			const scaledViewport = page.getViewport({ scale });
 
@@ -38,7 +65,7 @@
 				canvas.style.marginTop = '4px';
 			}
 
-			container.appendChild(canvas);
+			sceneElement.appendChild(canvas);
 
 			const ctx = canvas.getContext('2d');
 			await page.render({
@@ -46,6 +73,8 @@
 				viewport: scaledViewport
 			}).promise;
 		}
+
+		initPanzoom();
 	};
 
 	const loadPdf = async () => {
@@ -77,24 +106,12 @@
 		}
 	};
 
-	// Re-render on resize
-	let resizeObserver: ResizeObserver | null = null;
-
 	onMount(() => {
 		loadPdf();
-
-		resizeObserver = new ResizeObserver(() => {
-			if (pdfDoc && !loading) {
-				renderAllPages();
-			}
-		});
-		if (container) {
-			resizeObserver.observe(container);
-		}
 	});
 
 	onDestroy(() => {
-		resizeObserver?.disconnect();
+		pzInstance?.dispose();
 		if (pdfDoc) {
 			pdfDoc.destroy();
 			pdfDoc = null;
@@ -102,16 +119,31 @@
 	});
 </script>
 
-<div class="overflow-auto {className}" bind:this={container}>
-	{#if loading}
-		<div class="flex items-center justify-center h-full">
-			<Spinner className="size-5" />
-		</div>
-	{/if}
+<div class="relative overflow-hidden {className}" bind:this={outerContainer}>
+	<div bind:this={sceneElement} class="w-full">
+		{#if loading}
+			<div class="flex items-center justify-center h-full">
+				<Spinner className="size-5" />
+			</div>
+		{/if}
 
-	{#if error}
-		<div class="flex items-center justify-center h-full text-sm text-red-500">
-			{error}
+		{#if error}
+			<div class="flex items-center justify-center h-full text-sm text-red-500">
+				{error}
+			</div>
+		{/if}
+	</div>
+
+	{#if !loading && !error && pdfDoc}
+		<div class="absolute top-2 right-2 z-10">
+			<Tooltip content={$i18n.t('Reset view')}>
+				<button
+					class="p-1.5 rounded-lg bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+					on:click={resetView}
+				>
+					<Reset className="size-4" />
+				</button>
+			</Tooltip>
 		</div>
 	{/if}
 </div>
