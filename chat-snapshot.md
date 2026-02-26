@@ -1,0 +1,257 @@
+- generic [ref=e5]:
+  - generic [ref=e7]:
+    - generic [ref=e146]:
+      - generic [ref=e8]:
+        - link "logo" [ref=e9] [cursor=pointer]:
+          - /url: /
+          - img "logo" [ref=e10]
+        - link [ref=e12] [cursor=pointer]:
+          - /url: /
+          - img [ref=e13]
+        - button [ref=e16] [cursor=pointer]:
+          - img [ref=e17]
+        - button "History" [ref=e19] [cursor=pointer]:
+          - img [ref=e20]
+        - link "Spaces" [ref=e22] [cursor=pointer]:
+          - /url: /spaces
+          - img [ref=e23]
+        - button [ref=e25] [cursor=pointer]:
+          - img [ref=e26]
+        - button "Cole leavitt" [ref=e28] [cursor=pointer]:
+          - button "Cole leavitt" [ref=e29]:
+            - img "Cole leavitt" [ref=e30]
+      - region [ref=e147]:
+        - generic [ref=e148]:
+          - heading "History" [level=2] [ref=e149]
+          - button [ref=e150] [cursor=pointer]:
+            - img [ref=e151]
+        - generic [ref=e153]:
+          - generic [ref=e154]:
+            - generic [ref=e155]:
+              - img [ref=e156]
+              - text: Private
+            - generic [ref=e158]:
+              - generic [ref=e159]:
+                - link "📊 Financial Production Report Overview" [ref=e160] [cursor=pointer]:
+                  - /url: /c/860d6600-3152-42f3-82bb-0891d267f814
+                  - generic [ref=e162]: 📊 Financial Production Report Overview
+                - button "Chat Menu" [ref=e249] [cursor=pointer]:
+                  - button "Chat Menu" [ref=e251]:
+                    - img [ref=e252]
+              - link "👋 Casual Greeting Exchange" [ref=e164] [cursor=pointer]:
+                - /url: /c/4a528cf3-d8da-4ed4-9df6-9d135517896d
+                - generic [ref=e166]: 👋 Casual Greeting Exchange
+              - link "New Chat" [ref=e168] [cursor=pointer]:
+                - /url: /c/ccc8142a-bcce-4690-affb-74375d9c933b
+                - generic [ref=e170]: New Chat
+              - link "👋 Friendly Greeting and Chat" [ref=e172] [cursor=pointer]:
+                - /url: /c/61a3def0-c7a5-48f9-913d-a8c6ad896b7d
+                - generic [ref=e174]: 👋 Friendly Greeting and Chat
+              - link "Phase5 Thread Test" [ref=e176] [cursor=pointer]:
+                - /url: /c/68022af2-8a15-4b8d-987f-e44b5df1453b
+                - generic [ref=e178]: Phase5 Thread Test
+              - link "📘 Employee Handbook Overview" [ref=e180] [cursor=pointer]:
+                - /url: /c/f7f845ee-b12c-4daf-bf93-1d71ba4a1f29
+                - generic [ref=e182]: 📘 Employee Handbook Overview
+              - link "📄 File Reading Request" [ref=e184] [cursor=pointer]:
+                - /url: /c/31d6409f-9767-4aca-9c00-f6ac1be3c239
+                - generic [ref=e186]: 📄 File Reading Request
+              - link "👋 Casual Greeting Chat" [ref=e188] [cursor=pointer]:
+                - /url: /c/2e72632a-ceaf-4941-9eb3-da6cccad73b9
+                - generic [ref=e190]: 👋 Casual Greeting Chat
+              - link "👋 Casual Greeting and Chat" [ref=e192] [cursor=pointer]:
+                - /url: /c/23d7252a-6cd8-4b1d-bfbc-b7e7ab1aba11
+                - generic [ref=e194]: 👋 Casual Greeting and Chat
+              - link "📅 Asking Today's Date" [ref=e196] [cursor=pointer]:
+                - /url: /c/e58a64eb-e920-4bbf-b969-9f6c386a35f2
+                - generic [ref=e198]: 📅 Asking Today's Date
+              - link "👋 Friendly Greeting Exchange" [ref=e200] [cursor=pointer]:
+                - /url: /c/33c94944-8dd2-43cc-a8a0-520dc7a595e9
+                - generic [ref=e202]: 👋 Friendly Greeting Exchange
+              - link "New Chat" [ref=e204] [cursor=pointer]:
+                - /url: /c/56bf8c6c-9b8b-457b-ab1e-86c80e8dc384
+                - generic [ref=e206]: New Chat
+              - link "New Chat" [ref=e208] [cursor=pointer]:
+                - /url: /c/ec80d602-aff8-48f9-a7d5-0141ef915584
+                - generic [ref=e210]: New Chat
+              - link "👋 Casual Greeting Exchange" [ref=e212] [cursor=pointer]:
+                - /url: /c/b7c3cb7a-dc1d-4286-a01c-2b4dded08282
+                - generic [ref=e214]: 👋 Casual Greeting Exchange
+              - link "New Chat" [ref=e216] [cursor=pointer]:
+                - /url: /c/767ffc2b-b74b-4e6e-ad6c-461a052d24ab
+                - generic [ref=e218]: New Chat
+            - button "View All (20)" [ref=e219] [cursor=pointer]
+          - generic [ref=e220]:
+            - generic [ref=e221]:
+              - img [ref=e222]
+              - text: Private Spaces
+            - treeitem "Test Suite Space (Updated)" [ref=e224]:
+              - generic [ref=e225] [cursor=pointer]:
+                - button "Pin open" [ref=e226]:
+                  - img [ref=e227]
+                - link "Test Suite Space (Updated)" [ref=e229]:
+                  - /url: /spaces/test-suite-space
+                  - img [ref=e231]
+                  - generic [ref=e233]: Test Suite Space (Updated)
+            - treeitem "🔬 Research Hub v2" [ref=e234]:
+              - generic [ref=e235] [cursor=pointer]:
+                - button "Pin open" [ref=e236]:
+                  - img [ref=e237]
+                - link "🔬 Research Hub v2" [ref=e239]:
+                  - /url: /spaces/research-hub
+                  - generic [ref=e241]: 🔬
+                  - generic [ref=e242]: Research Hub v2
+        - button "Archived Chats" [ref=e244] [cursor=pointer]:
+          - img [ref=e245]
+          - text: Archived Chats
+    - generic [ref=e257]:
+      - navigation [ref=e258]:
+        - generic [ref=e263]:
+          - button [ref=e264] [cursor=pointer]:
+            - button [ref=e265]:
+              - img [ref=e267]
+          - button "Controls" [ref=e270] [cursor=pointer]:
+            - img [ref=e272]
+          - button "User menu" [ref=e274] [cursor=pointer]:
+            - generic [ref=e277]: User menu
+      - generic [ref=e278]:
+        - region "Chat Conversation" [ref=e283]:
+          - heading "Chat Conversation" [level=2] [ref=e284]
+          - log [ref=e285]:
+            - listitem [ref=e286]:
+              - generic [ref=e287]:
+                - generic [ref=e288]:
+                  - generic [ref=e290]: You
+                  - generic [ref=e291]:
+                    - button "Foundations 2025 Production.xlsx file" [ref=e294] [cursor=pointer]:
+                      - img [ref=e297]
+                      - generic [ref=e302]:
+                        - generic [ref=e303]: Foundations 2025 Production.xlsx
+                        - generic [ref=e304]: file
+                    - paragraph [ref=e308]: what is this document all about?
+                    - generic [ref=e309]:
+                      - button "Edit" [ref=e311] [cursor=pointer]:
+                        - img [ref=e312]
+                      - button "Copy" [ref=e315] [cursor=pointer]:
+                        - img [ref=e316]
+                - img [ref=e319]
+            - listitem [ref=e320]:
+              - generic [ref=e321]:
+                - img [ref=e323]
+                - generic [ref=e324]:
+                  - generic [ref=e327]: Claude Opus 4.6
+                  - generic [ref=e328]:
+                    - generic [ref=e330]:
+                      - button "Retrieved 1 source" [ref=e332] [cursor=pointer]:
+                        - generic [ref=e336]: Retrieved 1 source
+                      - generic [ref=e337]:
+                        - generic [ref=e338]:
+                          - heading "Overview of the Document" [level=1] [ref=e339]
+                          - paragraph [ref=e340]:
+                            - text: Based on the context provided, this document appears to be a
+                            - strong [ref=e341]: production report or financial tracking spreadsheet
+                            - text: for the year 2025, likely titled "Foundations 2025 Production"
+                            - button "Foundations 202...ction.xlsx" [ref=e342] [cursor=pointer]:
+                              - generic [ref=e343]: Foundations 202...ction.xlsx
+                            - text: .
+                          - paragraph [ref=e344]: "Here's what it contains:"
+                          - heading "Key Elements:" [level=2] [ref=e345]
+                          - list [ref=e346]:
+                            - listitem [ref=e347]:
+                              - paragraph [ref=e348]:
+                                - strong [ref=e349]: Financial Advisors/Representatives
+                                - text: ": The document lists individual financial professionals (e.g., Tammie Tirres, Richard Breedwell, Isaiah Porter, Jeffrey Truchon, Matthew Goolsby, etc.) along with their associated firms or companies (e.g., Tirres Consulting LLC, Capitol Planning Group, Sovereign Wealth Management, Market Investment Group LLC, etc.)"
+                                - button "Foundations 202...ction.xlsx" [ref=e350] [cursor=pointer]:
+                                  - generic [ref=e351]: Foundations 202...ction.xlsx
+                                - text: .
+                            - listitem [ref=e352]:
+                              - paragraph [ref=e353]:
+                                - strong [ref=e354]: Production/Financial Figures
+                                - text: ": Each entry includes multiple numerical columns that likely represent financial metrics such as:"
+                              - list [ref=e355]:
+                                - listitem [ref=e356]:
+                                  - strong [ref=e357]: Production or revenue figures
+                                  - text: (e.g., premiums, commissions, or sales)
+                                - listitem [ref=e358]:
+                                  - strong [ref=e359]: Assets under management (AUM)
+                                  - text: or account values
+                                - listitem [ref=e360]:
+                                  - strong [ref=e361]: A third metric
+                                  - text: (often showing "0" or smaller values, possibly new business or pending amounts)
+                            - listitem [ref=e362]:
+                              - paragraph [ref=e363]:
+                                - strong [ref=e364]: Team/Group Codes
+                                - text: ": Entries are organized under code names or team identifiers (e.g., \"Tum Tum,\" \"Waterman,\" \"Satoshi,\" \"Seabiscuit,\" \"Scarsp,\" \"SBear,\" etc.), which likely represent office groups, teams, or branches"
+                                - button "Foundations 202...ction.xlsx" [ref=e365] [cursor=pointer]:
+                                  - generic [ref=e366]: Foundations 202...ction.xlsx
+                                - text: .
+                            - listitem [ref=e367]:
+                              - paragraph [ref=e368]:
+                                - strong [ref=e369]: Shared Cases
+                                - text: ": Some entries note \"Shared Cases\" between multiple advisors, indicating collaborative or split-production arrangements"
+                                - button "Foundations 202...ction.xlsx" [ref=e370] [cursor=pointer]:
+                                  - generic [ref=e371]: Foundations 202...ction.xlsx
+                                - text: .
+                            - listitem [ref=e372]:
+                              - paragraph [ref=e373]:
+                                - strong [ref=e374]: Subtotals
+                                - text: ": Each advisor and team has subtotals calculated, suggesting this is a"
+                                - strong [ref=e375]: performance tracking or accounting document
+                                - text: used to monitor production across different advisors and groups.
+                          - heading "In Summary:" [level=2] [ref=e376]
+                          - paragraph [ref=e377]:
+                            - text: This is a
+                            - strong [ref=e378]: financial services production report
+                            - text: — likely used by an insurance, wealth management, or financial planning organization — to track the business production, assets, and revenue generated by individual advisors and their teams across various locations or divisions.
+                        - button "1 Source" [ref=e380] [cursor=pointer]:
+                          - generic [ref=e381]: 1 Source
+                    - generic [ref=e382]:
+                      - button "Edit" [ref=e384] [cursor=pointer]:
+                        - img [ref=e385]
+                      - button "Copy" [ref=e388] [cursor=pointer]:
+                        - img [ref=e389]
+                      - button "Read Aloud" [ref=e392] [cursor=pointer]:
+                        - img [ref=e393]
+                      - button "Good Response" [ref=e396] [cursor=pointer]:
+                        - img [ref=e397]
+                      - button "Bad Response" [ref=e400] [cursor=pointer]:
+                        - img [ref=e401]
+                      - button "Continue Response" [ref=e404] [cursor=pointer]:
+                        - img [ref=e405]
+                      - button "Regenerate" [ref=e408] [cursor=pointer]:
+                        - generic "Regenerate" [ref=e410]:
+                          - img [ref=e411]
+                    - generic [ref=e414]:
+                      - generic [ref=e415]: Follow up
+                      - generic [ref=e416]:
+                        - generic "Which financial advisor or team has the highest production figures in this report?" [ref=e418] [cursor=pointer]:
+                          - generic [ref=e419]: Which financial advisor or team has the highest production figures in this report?
+                        - generic "Can you break down what each numerical column represents in more detail?" [ref=e421] [cursor=pointer]:
+                          - generic [ref=e422]: Can you break down what each numerical column represents in more detail?
+                        - generic "What are the shared cases mentioned, and how do they affect production tracking?" [ref=e424] [cursor=pointer]:
+                          - generic [ref=e425]: What are the shared cases mentioned, and how do they affect production tracking?
+                        - generic "Can you summarize the total production across all teams or groups?" [ref=e427] [cursor=pointer]:
+                          - generic [ref=e428]: Can you summarize the total production across all teams or groups?
+                        - generic "Are there any notable trends or patterns in the data across different advisors or teams?" [ref=e430] [cursor=pointer]:
+                          - generic [ref=e431]: Are there any notable trends or patterns in the data across different advisors or teams?
+        - generic [ref=e434]:
+          - button "Scroll to bottom" [ref=e476] [cursor=pointer]:
+            - img [ref=e477]
+          - generic [ref=e439]:
+            - paragraph [ref=e444]: Send a Message
+            - generic [ref=e445]:
+              - generic [ref=e446]:
+                - button [ref=e447] [cursor=pointer]:
+                  - img [ref=e450]
+                - button [ref=e453] [cursor=pointer]:
+                  - img [ref=e456]
+              - generic [ref=e461]:
+                - button "Model" [ref=e463] [cursor=pointer]:
+                  - region [ref=e464]:
+                    - text: Claude Opus 4.6
+                    - img [ref=e465]
+                - button "Voice Input" [ref=e468] [cursor=pointer]:
+                  - img [ref=e469]
+                - button "Voice mode" [ref=e474] [cursor=pointer]:
+                  - img [ref=e475]
+  - generic [ref=e145]: Open WebUI
