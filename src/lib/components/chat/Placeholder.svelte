@@ -155,22 +155,22 @@
 				</div>
 								
 				<div class="flex flex-row gap-2 justify-center items-center my-2">
-					<span class="text-xs text-gray-500 font-medium mr-2">Recommended models</span>
+					<span class="text-xs text-gray-500 font-medium mr-2">{$i18n.t('Recommended models')}</span>
 					{#each [
 						{
 							id: 'gpt-5.2',
-							label: 'Smart All-Rounder',
-							desc: 'Great at most everyday tasks: chatting, writing, explaining ideas, brainstorming, and coding help'
+							label: $i18n.t('Smart All-Rounder'),
+							desc: $i18n.t('Great at most everyday tasks: chatting, writing, explaining ideas, brainstorming, and coding help')
 						},
 						{
 							id: 'claude-sonnet-4-5',
-							label: 'Analytical Helper',
-							desc: 'Best for complex, long-running tasks: advanced coding, coordinating many steps, using multiple tools, and working independently with little supervision.'
+							label: $i18n.t('Analytical Helper'),
+							desc: $i18n.t('Best for complex, long-running tasks: advanced coding, coordinating many steps, using multiple tools, and working independently with little supervision.')
 						},
 						{
 							id: 'gemini-3-pro-preview',
-							label: 'Deep Thinker',
-							desc: 'Best for hard problems that need advanced reasoning, careful analysis, and multi-step thinking.'
+							label: $i18n.t('Deep Thinker'),
+							desc: $i18n.t('Best for hard problems that need advanced reasoning, careful analysis, and multi-step thinking.')
 						}
 					] as btn}
 						{#if $_models.find((m) => m?.id === btn.id)}

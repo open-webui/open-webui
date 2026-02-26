@@ -95,6 +95,13 @@
 							</button>
 						</Tooltip>
 					</div>
+					<!-- Arrow and 'More model choices' text -->
+					<div class="flex items-center mb-2 mt-2 whitespace-nowrap">
+						<svg class="w-4 h-4 mr-1 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+						</svg>
+						<span class="text-sm text-black-500 font-medium">{$i18n.t('More model choices')}</span>
+					</div>
 				{:else}
 					<div
 						class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
