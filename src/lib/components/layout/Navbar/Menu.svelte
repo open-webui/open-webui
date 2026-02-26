@@ -422,7 +422,7 @@
 							<div class="flex items-center">{$i18n.t('Move')}</div>
 						</DropdownMenu.SubTrigger>
 						<DropdownMenu.SubContent
-							class="select-none w-full rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white border border-gray-100  dark:border-gray-800 shadow-lg max-h-52 overflow-y-auto scrollbar-hidden"
+							class="select-none w-full max-w-[200px] rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white border border-gray-100  dark:border-gray-800 shadow-lg max-h-52 overflow-y-auto scrollbar-hidden"
 							transition={flyAndScale}
 							sideOffset={8}
 						>
@@ -430,14 +430,16 @@
 								{#if folder?.id}
 									<DropdownMenu.Item
 										draggable="false"
-										class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+										class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl overflow-hidden"
 										on:click={() => {
 											moveChatHandler(chat.id, folder.id);
 										}}
 									>
-										<Folder strokeWidth="1.5" />
+										<div class="shrink-0">
+											<Folder strokeWidth="1.5" />
+										</div>
 
-										<div class="flex items-center">{folder.name ?? 'Folder'}</div>
+										<div class="truncate">{folder.name ?? 'Folder'}</div>
 									</DropdownMenu.Item>
 								{/if}
 							{/each}
