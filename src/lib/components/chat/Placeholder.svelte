@@ -21,6 +21,7 @@
 	} from '$lib/stores';
 	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { MODEL_NAME_MAPPING } from '$lib/constants/model_names';
 
 	import Suggestions from './Suggestions.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -139,12 +140,12 @@
 					>
 						{#if models[selectedModelIdx]?.name}
 							<Tooltip
-								content={models[selectedModelIdx]?.name}
+								content={MODEL_NAME_MAPPING[models[selectedModelIdx]?.id] ?? models[selectedModelIdx]?.name}
 								placement="top"
 								className=" flex items-center "
 							>
 								<span class="line-clamp-1">
-									{models[selectedModelIdx]?.name}
+									{MODEL_NAME_MAPPING[models[selectedModelIdx]?.id] ?? models[selectedModelIdx]?.name}
 								</span>
 							</Tooltip>
 						{:else}
@@ -153,7 +154,8 @@
 					</div>
 				</div>
 								
-				<div class="flex flex-row gap-2 justify-center my-2">
+				<div class="flex flex-row gap-2 justify-center items-center my-2">
+					<span class="text-xs text-gray-500 font-medium mr-2">Recommended models</span>
 					{#each [
 						{
 							id: 'gpt-5.2',
@@ -162,7 +164,7 @@
 						},
 						{
 							id: 'claude-sonnet-4-5',
-							label: 'Autonomous Builder',
+							label: 'Analytical Helper',
 							desc: 'Best for complex, long-running tasks: advanced coding, coordinating many steps, using multiple tools, and working independently with little supervision.'
 						},
 						{
@@ -188,6 +190,13 @@
 							</Tooltip>
 						{/if}
 					{/each}
+				</div>
+				<!-- INFO label and link below the buttons -->
+				<div class="flex flex-row justify-center items-center gap-2 mt-2">
+					<span class="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded">INFO</span>
+					<a href="https://centrotec.sharepoint.com/sites/CH-GLOBAL-AI/SitePages/de/CENTROTEC-AI_Home.aspx" target="_blank" rel="noopener noreferrer" class="text-blue-700 underline text-xs font-medium hover:text-blue-900">
+						https://centrotec.sharepoint.com/sites/CH-GLOBAL-AI/SitePages/de/CENTROTEC-AI_Home.aspx
+					</a>
 				</div>
 				
 				<div class="flex mt-1 mb-2">

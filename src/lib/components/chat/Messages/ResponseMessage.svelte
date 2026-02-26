@@ -37,6 +37,7 @@
 		removeAllDetails
 	} from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { MODEL_NAME_MAPPING } from '$lib/constants/model_names';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
@@ -623,9 +624,9 @@
 
 		<div class="flex-auto w-0 pl-1 relative">
 			<Name>
-				<Tooltip content={model?.name ?? message.model} placement="top-start">
+				<Tooltip content={MODEL_NAME_MAPPING[model?.id ?? message.model] ?? model?.name ?? message.model} placement="top-start">
 					<span id="response-message-model-name" class="line-clamp-1 text-black dark:text-white">
-						{model?.name ?? message.model}
+						{MODEL_NAME_MAPPING[model?.id ?? message.model] ?? model?.name ?? message.model}
 					</span>
 				</Tooltip>
 
