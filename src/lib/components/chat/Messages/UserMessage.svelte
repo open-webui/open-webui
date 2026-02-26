@@ -281,11 +281,6 @@
 									showPreviousMessage(message);
 								}}
 							>
-								class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white
-								hover:text-black rounded-md transition" on:click={() => {
-									showPreviousMessage(message);
-								}}
-								>
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
 									fill="none"
@@ -315,11 +310,6 @@
 									showNextMessage(message);
 								}}
 							>
-								class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white
-								hover:text-black rounded-md transition" on:click={() => {
-									showNextMessage(message);
-								}}
-								>
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
 									fill="none"
@@ -346,11 +336,6 @@
 									copyToClipboard(message.content);
 								}}
 							>
-								class="{($settings?.highContrastMode ?? false) ? '' : 'visible'} p-1.5 hover:bg-black/5
-								dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition" on:click={() => {
-									copyToClipboard(message.content);
-								}}
-								>
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
 									fill="none"
@@ -516,15 +501,6 @@
 														editedFiles = editedFiles;
 													}}
 												>
-													class=" bg-white text-black border border-white rounded-full {($settings?.highContrastMode ??
-													false)
-														? ''
-														: 'group-hover:visible invisible transition'}" type="button" on:click={() => {
-														editedFiles.splice(fileIdx, 1);
-
-														editedFiles = editedFiles;
-													}}
-													>
 													<svg
 														xmlns="http://www.w3.org/2000/svg"
 														viewBox="0 0 20 20"
@@ -670,11 +646,6 @@
 											showPreviousMessage(message);
 										}}
 									>
-										class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5
-										dark:hover:text-white hover:text-black rounded-md transition" on:click={() => {
-											showPreviousMessage(message);
-										}}
-										>
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
 											fill="none"
