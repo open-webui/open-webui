@@ -20,7 +20,7 @@
 
 	import Evaluations from './Settings/Evaluations.svelte';
 	import CodeExecution from './Settings/CodeExecution.svelte';
-	import Tools from './Settings/Tools.svelte';
+	import Integrations from './Settings/Integrations.svelte';
 
 	import ChartBar from '../icons/ChartBar.svelte';
 	import DocumentChartBar from '../icons/DocumentChartBar.svelte';
@@ -133,9 +133,9 @@
 		},
 		{
 			id: 'tools',
-			title: 'External Tools',
+			title: 'Integrations',
 			route: '/admin/settings/tools',
-			keywords: ['tools', 'plugins', 'extensions', 'functions', 'openapi', 'server']
+			keywords: ['tools', 'integrations', 'plugins', 'extensions', 'functions', 'openapi', 'server']
 		},
 		{
 			id: 'documents',
@@ -311,7 +311,7 @@
 		<!-- {$i18n.t('Connections')} -->
 		<!-- {$i18n.t('Models')} -->
 		<!-- {$i18n.t('Evaluations')} -->
-		<!-- {$i18n.t('External Tools')} -->
+		<!-- {$i18n.t('Integrations')} -->
 		<!-- {$i18n.t('Documents')} -->
 		<!-- {$i18n.t('Web Search')} -->
 		<!-- {$i18n.t('Code Execution')} -->
@@ -526,7 +526,7 @@
 		{:else if selectedTab === 'evaluations'}
 			<Evaluations />
 		{:else if selectedTab === 'tools'}
-			<Tools />
+			<Integrations />
 		{:else if selectedTab === 'documents'}
 			<Documents
 				on:save={async () => {
