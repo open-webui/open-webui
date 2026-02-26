@@ -62,6 +62,7 @@
 		"@joplin/turndown-plugin-gfm": "^1.0.62",
 		"@mediapipe/tasks-vision": "^0.10.17",
 		"@pyscript/core": "^0.4.32",
+		"@sentry/sveltekit": "^10.40.0",
 		"@sveltejs/adapter-node": "^2.0.0",
 		"@sveltejs/svelte-virtual-list": "^3.0.1",
 		"@tiptap/core": "^3.0.7",

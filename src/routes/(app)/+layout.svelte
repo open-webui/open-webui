@@ -17,6 +17,9 @@
 	import { WEBUI_VERSION } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
 
+	import * as Sentry from "@sentry/sveltekit";
+	import { env } from "$env/dynamic/public";
+
 	import {
 		config,
 		user,
@@ -51,6 +54,32 @@
 	let localDBChats = [];
 
 	let version;
+	
+	const SENTRY_DSN = env.PUBLIC_SENTRY_DSN;
+
+	if (SENTRY_DSN) {
+		Sentry.init({
+			dsn: SENTRY_DSN,
+			integrations: [
+				Sentry.feedbackIntegration({
+					showEmail: false,
+					nameLabel: "Name (Optional)",
+					buttonLabel: "Feedback",
+					triggerLabel: "Feedback",
+					submitButtonLabel: "Send Feedback",
+					formTitle: "Send Feedback",
+					autoInject: true,
+				}),
+			],
+		});
+		// Get the instance returned by `feedbackIntegration()`
+		const feedback = Sentry.getFeedback();
+		// Create and render the button
+		const widget = feedback?.createWidget();
+		// Later, when it's time to clean up:
+		widget.removeFromDom();
+	}
+
 
 	const clearChatInputStorage = () => {
 		const chatInputKeys = Object.keys(localStorage).filter((key) => key.startsWith('chat-input'));
