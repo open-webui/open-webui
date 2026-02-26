@@ -420,6 +420,77 @@
 		} catch {}
 	}
 
+	function toSiteNodes(tenant: TenantInfo, tenantSites: SiteInfo[]): TreeNode[] {
+		return tenantSites.map(
+			(site): TreeNode => ({
+				key: `site:${tenant.id}:${site.id}`,
+				type: 'site',
+				label: site.display_name,
+				tenant,
+				site,
+				folderPath: []
+			})
+		);
+	}
+
+	function toDriveNodes(tenant: TenantInfo, site: SiteInfo, siteDrives: DriveInfo[]): TreeNode[] {
+		return siteDrives.map(
+			(drive): TreeNode => ({
+				key: `drive:${tenant.id}:${site.id}:${drive.id}`,
+				type: 'drive',
+				label: drive.name,
+				tenant,
+				site,
+				drive,
+				folderPath: []
+			})
+		);
+	}
+
+	async function preloadAllTenantTrees() {
+		if (!authStatus?.authenticated || tenants.length === 0) return;
+
+		for (const tenant of tenants) {
+			const tenantKey = `t:${tenant.id}`;
+			let tenantSites = sites;
+
+			if (tenant.id !== currentTenant?.id) {
+				try {
+					tenantSites = await getSharepointSites(token, tenant.id);
+				} catch (error) {
+					console.warn('[SharePointPicker] Failed to preload tenant sites', {
+						tenantId: tenant.id,
+						error
+					});
+					continue;
+				}
+			}
+
+			treeChildrenCache.set(tenantKey, toSiteNodes(tenant, tenantSites));
+
+			for (const site of tenantSites) {
+				const siteKey = `site:${tenant.id}:${site.id}`;
+				if (treeChildrenCache.has(siteKey)) continue;
+
+				try {
+					let siteDrives = await getSharepointSiteDrives(token, tenant.id, site.id);
+					siteDrives = siteDrives.filter(
+						(drive) => !drive.name.toLowerCase().includes('preservation hold')
+					);
+					treeChildrenCache.set(siteKey, toDriveNodes(tenant, site, siteDrives));
+				} catch (error) {
+					console.warn('[SharePointPicker] Failed to preload site drives', {
+						tenantId: tenant.id,
+						siteId: site.id,
+						error
+					});
+				}
+			}
+		}
+
+		treeChildrenCache = new Map(treeChildrenCache);
+	}
+
 	onMount(async () => {
 		loadRecentDrives();
 		await checkAuthStatus();
@@ -449,6 +520,7 @@
 			tenants = await getSharepointTenants(token);
 			if (tenants.length > 0) {
 				await selectTenant(tenants[0]);
+				void preloadAllTenantTrees();
 			} else {
 				await loadSites();
 			}
