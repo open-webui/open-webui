@@ -26,9 +26,9 @@
 
 	export let show = false;
 	export let token: string;
-export let spaceId: string | null = null;
-/** Files already in the space — used to pre-check matching items when the picker opens */
-export let existingFiles: any[] = [];
+	export let spaceId: string | null = null;
+	/** Files already in the space — used to pre-check matching items when the picker opens */
+	export let existingFiles: any[] = [];
 
 	const dispatch = createEventDispatcher();
 	const RECENT_DRIVES_KEY = 'sharepoint_recent_drives';
@@ -49,19 +49,27 @@ export let existingFiles: any[] = [];
 		existingFiles.filter((f) => f.meta?.sharepoint_item_id).map((f) => f.meta.sharepoint_item_id)
 	);
 	$: existingFolderIds = new Set<string>(
-		existingFiles.filter((f) => f.meta?.sharepoint_folder_id).map((f) => f.meta.sharepoint_folder_id)
+		existingFiles
+			.filter((f) => f.meta?.sharepoint_folder_id)
+			.map((f) => f.meta.sharepoint_folder_id)
 	);
+	let wasOpen = false;
 
-	// When the picker opens, pre-populate selection from existing space files
-	$: if (show) {
-		console.log('[SharePointPicker] Picker opened, pre-populating selection');
+	// Pre-populate selection once per open cycle (false -> true)
+	$: if (show && !wasOpen) {
+		console.log('[SharePointPicker] Picker opened, pre-populating selection once');
 		console.log('[SharePointPicker] existingFiles:', existingFiles);
 		console.log('[SharePointPicker] existingItemIds:', [...existingItemIds]);
 		console.log('[SharePointPicker] existingFolderIds:', [...existingFolderIds]);
 		selectedItems = new Set(existingItemIds);
 		selectedFolders = new Set(existingFolderIds);
+		wasOpen = true;
 		console.log('[SharePointPicker] selectedItems after pre-population:', [...selectedItems]);
 		console.log('[SharePointPicker] selectedFolders after pre-population:', [...selectedFolders]);
+	}
+
+	$: if (!show && wasOpen) {
+		wasOpen = false;
 	}
 	let folderStack: { id: string; name: string }[] = [];
 
@@ -144,7 +152,7 @@ export let existingFiles: any[] = [];
 	// Group search results by tenant, showing tenant header + matching items + their children
 	function computeSearchResults(matches: TreeNode[]): FlatTreeItem[] {
 		if (matches.length === 0) return [];
-		
+
 		// Group by tenant
 		const byTenant = new Map<string, TreeNode[]>();
 		for (const node of matches) {
@@ -152,14 +160,20 @@ export let existingFiles: any[] = [];
 			if (!byTenant.has(tenantKey)) byTenant.set(tenantKey, []);
 			byTenant.get(tenantKey)!.push(node);
 		}
-		
+
 		const result: FlatTreeItem[] = [];
 		for (const [tenantId, nodes] of byTenant) {
 			// Add tenant header
 			const tenant = tenants.find((t) => t.id === tenantId);
 			if (tenant) {
 				result.push({
-					node: { key: `t:${tenantId}`, type: 'tenant', label: tenant.name, tenant, folderPath: [] },
+					node: {
+						key: `t:${tenantId}`,
+						type: 'tenant',
+						label: tenant.name,
+						tenant,
+						folderPath: []
+					},
 					depth: 0,
 					isExpanded: true,
 					isLoading: false,
@@ -170,11 +184,11 @@ export let existingFiles: any[] = [];
 			for (const node of nodes) {
 				// Skip tenant nodes themselves (they're already headers)
 				if (node.type === 'tenant') continue;
-				
+
 				// Check if this node has cached children
 				const children = treeChildrenCache.get(node.key);
 				const hasChildren = children !== undefined && children.length > 0;
-				
+
 				result.push({
 					node,
 					depth: 1,
@@ -182,13 +196,13 @@ export let existingFiles: any[] = [];
 					isLoading: loadingKeys.has(node.key),
 					hasChildren: hasChildren || node.type === 'site' || node.type === 'drive'
 				});
-				
+
 				// Include children (drives under sites, folders under drives)
 				if (children && children.length > 0) {
 					for (const child of children) {
 						const childChildren = treeChildrenCache.get(child.key);
 						const childHasChildren = childChildren !== undefined && childChildren.length > 0;
-						
+
 						result.push({
 							node: child,
 							depth: 2,
@@ -279,20 +293,20 @@ export let existingFiles: any[] = [];
 					})
 				);
 			} else if (node.type === 'site' && node.site) {
-                let drivesData = await getSharepointSiteDrives(token, node.tenant.id, node.site.id);
-                // Filter out system libraries like Preservation Hold Library
-                drivesData = drivesData.filter((d) => !d.name.toLowerCase().includes('preservation hold'));
-                children = drivesData.map(
-                    (d): TreeNode => ({
-                        key: `drive:${node.tenant.id}:${node.site!.id}:${d.id}`,
-                        type: 'drive',
-                        label: d.name,
-                        tenant: node.tenant,
-                        site: node.site,
-                        drive: d,
-                        folderPath: []
-                    })
-                );
+				let drivesData = await getSharepointSiteDrives(token, node.tenant.id, node.site.id);
+				// Filter out system libraries like Preservation Hold Library
+				drivesData = drivesData.filter((d) => !d.name.toLowerCase().includes('preservation hold'));
+				children = drivesData.map(
+					(d): TreeNode => ({
+						key: `drive:${node.tenant.id}:${node.site!.id}:${d.id}`,
+						type: 'drive',
+						label: d.name,
+						tenant: node.tenant,
+						site: node.site,
+						drive: d,
+						folderPath: []
+					})
+				);
 			} else if ((node.type === 'drive' || node.type === 'folder') && node.drive) {
 				const folderId = node.type === 'folder' ? node.folder?.id : undefined;
 				const folderItems = await getSharepointFiles(
@@ -413,7 +427,6 @@ export let existingFiles: any[] = [];
 	onDestroy(() => {
 		authPollCleanup?.();
 	});
-
 
 	async function checkAuthStatus() {
 		loadingAuth = true;
@@ -596,8 +609,6 @@ export let existingFiles: any[] = [];
 		}
 	}
 
-
-
 	async function selectDrive(drive: DriveInfo) {
 		currentDrive = drive;
 		saveRecentDrive(drive.id);
@@ -613,9 +624,17 @@ export let existingFiles: any[] = [];
 		loading = true;
 		try {
 			items = await getSharepointFiles(token, currentTenant.id, currentDrive.id, folderId);
-			console.log('[SharePointPicker] Loaded items:', items.map(i => ({ id: i.id, name: i.name, is_folder: i.is_folder })));
-			console.log('[SharePointPicker] Checking selection match - selectedItems:', [...selectedItems]);
-			console.log('[SharePointPicker] Items that match selection:', items.filter(i => selectedItems.has(i.id)).map(i => i.name));
+			console.log(
+				'[SharePointPicker] Loaded items:',
+				items.map((i) => ({ id: i.id, name: i.name, is_folder: i.is_folder }))
+			);
+			console.log('[SharePointPicker] Checking selection match - selectedItems:', [
+				...selectedItems
+			]);
+			console.log(
+				'[SharePointPicker] Items that match selection:',
+				items.filter((i) => selectedItems.has(i.id)).map((i) => i.name)
+			);
 		} catch (error) {
 			console.error('Failed to load files:', error);
 			toast.error('Failed to load files');
@@ -707,8 +726,16 @@ export let existingFiles: any[] = [];
 			if (signal.aborted) break;
 			const folderName = itemsMap.get(folderId)?.name ?? 'folder';
 			const result = await addSharePointFolderToSpace(
-				token, spaceId!, currentTenant!.id, currentDrive!.id,
-				folderId, folderName, currentSite?.display_name, true, 10, signal
+				token,
+				spaceId!,
+				currentTenant!.id,
+				currentDrive!.id,
+				folderId,
+				folderName,
+				currentSite?.display_name,
+				true,
+				10,
+				signal
 			);
 			if (signal.aborted) break;
 			totalAdded += result.added;
@@ -723,7 +750,12 @@ export let existingFiles: any[] = [];
 			const item = itemsMap.get(itemId);
 			if (!item || item.is_folder) continue;
 			const result = await downloadSharepointFile(
-				token, currentTenant!.id, currentDrive!.id, item.id, item.name, signal
+				token,
+				currentTenant!.id,
+				currentDrive!.id,
+				item.id,
+				item.name,
+				signal
 			);
 			if (signal.aborted) break;
 			dispatch('fileDownloaded', result);
@@ -735,9 +767,9 @@ export let existingFiles: any[] = [];
 			toast.warning(`Cancelled. Imported ${totalAdded} file(s) before stopping.`);
 		} else {
 			const msg =
-				`Imported ${totalAdded} file(s)`
-				+ (totalSkipped > 0 ? `, ${totalSkipped} skipped` : '')
-				+ (totalFailed > 0 ? `, ${totalFailed} failed` : '');
+				`Imported ${totalAdded} file(s)` +
+				(totalSkipped > 0 ? `, ${totalSkipped} skipped` : '') +
+				(totalFailed > 0 ? `, ${totalFailed} failed` : '');
 			toast.success(msg);
 		}
 	}
@@ -753,7 +785,12 @@ export let existingFiles: any[] = [];
 			const folderName = itemsMap.get(folderId)?.name ?? 'folder';
 			toast.info(`Scanning ${folderName}...`);
 			const folderFiles = await getSharepointFilesRecursive(
-				token, currentTenant!.id, currentDrive!.id, folderId, 10, signal
+				token,
+				currentTenant!.id,
+				currentDrive!.id,
+				folderId,
+				10,
+				signal
 			);
 			if (signal.aborted) break;
 			filesToDownload.push(...folderFiles);
@@ -772,7 +809,12 @@ export let existingFiles: any[] = [];
 		for (const file of filesToDownload) {
 			if (signal.aborted) break;
 			const result = await downloadSharepointFile(
-				token, currentTenant!.id, currentDrive!.id, file.id, file.name, signal
+				token,
+				currentTenant!.id,
+				currentDrive!.id,
+				file.id,
+				file.name,
+				signal
 			);
 			if (signal.aborted) break;
 			dispatch('fileDownloaded', result);
@@ -780,14 +822,17 @@ export let existingFiles: any[] = [];
 		}
 
 		if (signal.aborted) {
-			toast.warning(`Cancelled. Imported ${importProgress.current} of ${importProgress.total} files.`);
+			toast.warning(
+				`Cancelled. Imported ${importProgress.current} of ${importProgress.total} files.`
+			);
 		} else {
 			toast.success(`Imported ${filesToDownload.length} file(s)`);
 		}
 	}
 
 	async function downloadSelected() {
-		if (!currentDrive || !currentTenant || (selectedItems.size === 0 && selectedFolders.size === 0)) return;
+		if (!currentDrive || !currentTenant || (selectedItems.size === 0 && selectedFolders.size === 0))
+			return;
 
 		downloading = true;
 		abortController = new AbortController();
@@ -807,7 +852,9 @@ export let existingFiles: any[] = [];
 			}
 		} catch (error) {
 			if (signal.aborted) {
-				toast.warning(`Cancelled. Imported ${importProgress.current} of ${importProgress.total} files.`);
+				toast.warning(
+					`Cancelled. Imported ${importProgress.current} of ${importProgress.total} files.`
+				);
 			} else {
 				console.error('Failed to download files:', error);
 				toast.error('Failed to download files');
@@ -1127,7 +1174,7 @@ export let existingFiles: any[] = [];
 
 									<!-- Active indicator dot -->
 									{#if activeKey === item.node.key}
-								<div class="w-1 h-1 rounded-full bg-blue-500 shrink-0 ml-auto mr-1"></div>
+										<div class="w-1 h-1 rounded-full bg-blue-500 shrink-0 ml-auto mr-1"></div>
 									{/if}
 								</div>
 							{/each}
@@ -1234,8 +1281,8 @@ export let existingFiles: any[] = [];
 						<div
 							class="flex items-center px-4 py-1.5 border-b border-gray-100 dark:border-gray-800/50 bg-gray-50/40 dark:bg-gray-900/10 shrink-0"
 						>
-					<div class="w-5 shrink-0 mr-3"></div>
-					<div class="w-8 shrink-0 mr-2.5"></div>
+							<div class="w-5 shrink-0 mr-3"></div>
+							<div class="w-8 shrink-0 mr-2.5"></div>
 							<div
 								class="flex-1 text-[10px] font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider"
 							>
@@ -1251,7 +1298,7 @@ export let existingFiles: any[] = [];
 							>
 								Modified
 							</div>
-					<div class="w-4 shrink-0 ml-1"></div>
+							<div class="w-4 shrink-0 ml-1"></div>
 						</div>
 					{/if}
 
@@ -1279,13 +1326,21 @@ export let existingFiles: any[] = [];
 											class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:border-gray-300 dark:hover:border-gray-600 transition-all text-left group"
 											on:click={() => selectDrive(drive)}
 										>
-											<div class="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 transition-colors">
+											<div
+												class="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 transition-colors"
+											>
 												<span class="text-lg">💼</span>
 											</div>
 											<div class="min-w-0 flex-1">
-												<p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate group-hover:text-gray-900 dark:group-hover:text-white">{drive.name}</p>
+												<p
+													class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate group-hover:text-gray-900 dark:group-hover:text-white"
+												>
+													{drive.name}
+												</p>
 												{#if drive.drive_type}
-													<p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{drive.drive_type}</p>
+													<p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+														{drive.drive_type}
+													</p>
 												{/if}
 											</div>
 											<svg
@@ -1355,7 +1410,7 @@ export let existingFiles: any[] = [];
 									class="w-full flex items-center gap-0 px-4 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/40 border-b border-gray-100/80 dark:border-gray-800/40 text-left transition-colors group"
 									on:click={navigateUp}
 								>
-						<div class="w-5 shrink-0 mr-3"></div>
+									<div class="w-5 shrink-0 mr-3"></div>
 									<div
 										class="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center group-hover:bg-gray-200 dark:group-hover:bg-gray-700 transition-colors shrink-0 mr-2.5"
 									>
@@ -1382,19 +1437,32 @@ export let existingFiles: any[] = [];
 								<!-- svelte-ignore a11y_click_events_have_key_events -->
 								<!-- svelte-ignore a11y_no_static_element_interactions -->
 								<div
-									class="group flex items-center px-4 py-1.5 border-b border-gray-50 dark:border-gray-800/30 last:border-0 transition-colors
+									class="group flex items-center px-4 py-1.5 border-b border-gray-50 dark:border-gray-800/30 last:border-0 transition-colors cursor-pointer
 										{selectedItems.has(item.id) || selectedFolders.has(item.id)
 										? 'bg-blue-50/60 dark:bg-blue-900/10'
 										: 'hover:bg-gray-50/70 dark:hover:bg-gray-800/30'}"
 									on:click={() => {
-										if (!item.is_folder) {
-											// File: toggle selection on row click
+										if (item.is_folder) {
+											console.log('[SharePointPicker] Row click -> navigate folder', {
+												id: item.id,
+												name: item.name
+											});
+											navigateToFolder(item);
+										} else {
+											console.log('[SharePointPicker] Row click -> toggle file before', {
+												id: item.id,
+												selected: selectedItems.has(item.id)
+											});
 											if (selectedItems.has(item.id)) {
 												selectedItems.delete(item.id);
 											} else {
 												selectedItems.add(item.id);
 											}
 											selectedItems = selectedItems;
+											console.log('[SharePointPicker] Row click -> toggle file after', {
+												id: item.id,
+												selected: selectedItems.has(item.id)
+											});
 										}
 									}}
 									on:dblclick={() => {
@@ -1407,32 +1475,55 @@ export let existingFiles: any[] = [];
 									<div
 										class="w-5 shrink-0 mr-3 flex items-center justify-center"
 										title={item.is_folder ? 'Import all files in this folder' : undefined}
-								on:click|stopPropagation={() => {
-									if (item.is_folder) {
-										const next = new Set(selectedFolders);
-										if (next.has(item.id)) next.delete(item.id); else next.add(item.id);
-										selectedFolders = next;
-									} else {
-										const next = new Set(selectedItems);
-										if (next.has(item.id)) next.delete(item.id); else next.add(item.id);
-										selectedItems = next;
-									}
-								}}
+										on:click|stopPropagation={() => {
+											if (item.is_folder) {
+												console.log('[SharePointPicker] Checkbox click -> folder before', {
+													id: item.id,
+													name: item.name,
+													selected: selectedFolders.has(item.id),
+													selectedFolders: [...selectedFolders]
+												});
+												const next = new Set(selectedFolders);
+												if (next.has(item.id)) next.delete(item.id);
+												else next.add(item.id);
+												selectedFolders = next;
+												console.log('[SharePointPicker] Checkbox click -> folder after', {
+													id: item.id,
+													selected: selectedFolders.has(item.id),
+													selectedFolders: [...selectedFolders]
+												});
+											} else {
+												console.log('[SharePointPicker] Checkbox click -> file before', {
+													id: item.id,
+													selected: selectedItems.has(item.id),
+													selectedItems: [...selectedItems]
+												});
+												const next = new Set(selectedItems);
+												if (next.has(item.id)) next.delete(item.id);
+												else next.add(item.id);
+												selectedItems = next;
+												console.log('[SharePointPicker] Checkbox click -> file after', {
+													id: item.id,
+													selected: selectedItems.has(item.id),
+													selectedItems: [...selectedItems]
+												});
+											}
+										}}
 									>
 										<div
-										class="w-4 h-4 rounded border-2 flex items-center justify-center transition-all cursor-pointer
+											class="w-4 h-4 rounded border-2 flex items-center justify-center transition-all cursor-pointer
 											{item.is_folder
-											? selectedFolders.has(item.id)
-												? existingFolderIds.has(item.id)
-													? 'bg-green-500 border-green-500'
-													: 'bg-amber-500 border-amber-500'
-												: 'border-gray-300 dark:border-gray-600 hover:border-amber-400 dark:hover:border-amber-500'
-											: selectedItems.has(item.id)
-												? existingItemIds.has(item.id)
-													? 'bg-green-500 border-green-500'
-													: 'bg-blue-500 border-blue-500'
-												: 'border-gray-300 dark:border-gray-600 group-hover:border-gray-400 dark:group-hover:border-gray-500'}"
-									>
+												? selectedFolders.has(item.id)
+													? existingFolderIds.has(item.id)
+														? 'bg-green-500 border-green-500'
+														: 'bg-amber-500 border-amber-500'
+													: 'border-gray-300 dark:border-gray-600 hover:border-amber-400 dark:hover:border-amber-500'
+												: selectedItems.has(item.id)
+													? existingItemIds.has(item.id)
+														? 'bg-green-500 border-green-500'
+														: 'bg-blue-500 border-blue-500'
+													: 'border-gray-300 dark:border-gray-600 group-hover:border-gray-400 dark:group-hover:border-gray-500'}"
+										>
 											{#if selectedItems.has(item.id) || selectedFolders.has(item.id)}
 												<svg
 													class="w-2.5 h-2.5 text-white"
@@ -1459,9 +1550,6 @@ export let existingFiles: any[] = [];
 											{item.is_folder
 											? 'bg-amber-50 dark:bg-amber-900/20 group-hover:bg-amber-100 dark:group-hover:bg-amber-900/30'
 											: 'bg-gray-50 dark:bg-gray-800/60 group-hover:bg-gray-100 dark:group-hover:bg-gray-800'}"
-										on:click|stopPropagation={() => {
-											if (item.is_folder) navigateToFolder(item);
-										}}
 									>
 										<span class="text-sm leading-none">{getFileIcon(item)}</span>
 									</div>
@@ -1469,12 +1557,7 @@ export let existingFiles: any[] = [];
 									<!-- Name + subtitle -->
 									<!-- svelte-ignore a11y_click_events_have_key_events -->
 									<!-- svelte-ignore a11y_no_static_element_interactions -->
-									<div
-										class="flex-1 min-w-0 cursor-pointer"
-										on:click|stopPropagation={() => {
-											if (item.is_folder) navigateToFolder(item);
-										}}
-									>
+									<div class="flex-1 min-w-0">
 										<div
 											class="text-xs font-medium text-gray-800 dark:text-gray-200 truncate group-hover:text-gray-900 dark:group-hover:text-white transition-colors"
 										>
@@ -1483,9 +1566,13 @@ export let existingFiles: any[] = [];
 										{#if item.is_folder}
 											<div
 												class="text-[10px] mt-0.5 hidden sm:block transition-colors
-													{selectedFolders.has(item.id) ? 'text-amber-500/80 dark:text-amber-400/70' : 'text-gray-400 dark:text-gray-600'}"
+													{selectedFolders.has(item.id)
+													? 'text-amber-500/80 dark:text-amber-400/70'
+													: 'text-gray-400 dark:text-gray-600'}"
 											>
-												{selectedFolders.has(item.id) ? 'All contents will be imported' : 'Folder · click to open'}
+												{selectedFolders.has(item.id)
+													? 'All contents will be imported'
+													: 'Folder · click to open'}
 											</div>
 										{/if}
 									</div>
@@ -1537,17 +1624,19 @@ export let existingFiles: any[] = [];
 			</div>
 
 			<!-- ── Footer ────────────────────────────────────────── -->
-			<div class="shrink-0 border-t border-gray-100 dark:border-gray-800/80 bg-gray-50/40 dark:bg-gray-900/20">
+			<div
+				class="shrink-0 border-t border-gray-100 dark:border-gray-800/80 bg-gray-50/40 dark:bg-gray-900/20"
+			>
 				<!-- Thin progress bar -->
 				{#if downloading}
 					<div class="h-0.5 bg-gray-200 dark:bg-gray-800 overflow-hidden">
 						{#if importProgress.total > 0}
-						<div
-							class="h-full bg-blue-500 dark:bg-blue-400 transition-all duration-500 ease-out"
-							style="width: {Math.round((importProgress.current / importProgress.total) * 100)}%"
-						></div>
+							<div
+								class="h-full bg-blue-500 dark:bg-blue-400 transition-all duration-500 ease-out"
+								style="width: {Math.round((importProgress.current / importProgress.total) * 100)}%"
+							></div>
 						{:else}
-						<div class="h-full bg-blue-500/40 dark:bg-blue-400/40 animate-pulse"></div>
+							<div class="h-full bg-blue-500/40 dark:bg-blue-400/40 animate-pulse"></div>
 						{/if}
 					</div>
 				{/if}
@@ -1559,7 +1648,9 @@ export let existingFiles: any[] = [];
 							<span class="inline-flex items-center gap-2">
 								<Spinner className="size-3 shrink-0" />
 								<span class="font-medium text-gray-700 dark:text-gray-300 truncate tabular-nums">
-									{importProgress.current}<span class="text-gray-400 dark:text-gray-500 mx-0.5">/</span>{importProgress.total}
+									{importProgress.current}<span class="text-gray-400 dark:text-gray-500 mx-0.5"
+										>/</span
+									>{importProgress.total}
 								</span>
 								<span class="text-gray-400 dark:text-gray-500">imported</span>
 							</span>
@@ -1571,7 +1662,9 @@ export let existingFiles: any[] = [];
 						{:else if selectedItems.size > 0 || selectedFolders.size > 0}
 							<span class="inline-flex items-center gap-1.5 flex-wrap">
 								{#if selectedItems.size > 0}
-									<span class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-blue-500/90 text-white text-[10px] font-bold tabular-nums">
+									<span
+										class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-blue-500/90 text-white text-[10px] font-bold tabular-nums"
+									>
 										{selectedItems.size}
 									</span>
 									<span>file{selectedItems.size === 1 ? '' : 's'}</span>
@@ -1580,7 +1673,9 @@ export let existingFiles: any[] = [];
 									{#if selectedItems.size > 0}
 										<span class="text-gray-300 dark:text-gray-600">·</span>
 									{/if}
-									<span class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-amber-500/90 text-white text-[10px] font-bold tabular-nums">
+									<span
+										class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-amber-500/90 text-white text-[10px] font-bold tabular-nums"
+									>
 										{selectedFolders.size}
 									</span>
 									<span>folder{selectedFolders.size === 1 ? '' : 's'}</span>
@@ -1588,7 +1683,8 @@ export let existingFiles: any[] = [];
 								<span class="text-gray-400 dark:text-gray-500">selected</span>
 							</span>
 						{:else}
-							<span class="text-gray-400 dark:text-gray-500">Select files or folders to import</span>
+							<span class="text-gray-400 dark:text-gray-500">Select files or folders to import</span
+							>
 						{/if}
 					</div>
 
@@ -1613,8 +1709,18 @@ export let existingFiles: any[] = [];
 								disabled={selectedItems.size === 0 && selectedFolders.size === 0}
 								on:click={downloadSelected}
 							>
-								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+								<svg
+									class="w-3.5 h-3.5"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
+									/>
 								</svg>
 								{#if selectedFolders.size > 0 && selectedItems.size === 0}
 									Import Folder{selectedFolders.size === 1 ? '' : 's'}

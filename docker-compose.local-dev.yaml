@@ -13,13 +13,16 @@ services:
       - ./backend/static:/app/backend/static
       # Shared named volume for frontend build (avoids EBUSY bind-mount lock)
       - frontend-build:/app/build
+      # Persist HuggingFace model cache (container runs as root)
+      - hf-cache:/root/.cache/huggingface
     environment:
       - WEBUI_SECRET_KEY=local-dev-secret
       - STATIC_DIR=/app/backend/static
       - FRONTEND_BUILD_DIR=/app/build/dist
       - ENV=dev
-      - RAG_EMBEDDING_ENGINE=openai
-      - RAG_OPENAI_API_BASE_URL=http://localhost:11434
+      #- BYPASS_EMBEDDING_AND_RETRIEVAL=true
+      - RAG_EMBEDDING_ENGINE=
+      - RAG_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
       - DEVICE_TYPE=cpu
     extra_hosts:
       - host.docker.internal:host-gateway
@@ -29,7 +32,7 @@ services:
     image: node:22-slim
     container_name: open-webui-frontend-watch
     working_dir: /app
-    command: sh -c "until npm ci --prefer-offline --no-audit; do echo 'npm ci failed, retrying in 10s'; sleep 10; done; SVELTE_BUILD_DIR=build/dist npm run build:watch"
+    command: sh -c "until npm ci --prefer-offline --no-audit --legacy-peer-deps; do echo 'npm ci failed, retrying in 10s'; sleep 10; done; SVELTE_BUILD_DIR=build/dist npm run build:watch"
     volumes:
       - .:/app
       - frontend-build:/app/build
@@ -47,3 +50,4 @@ services:
 volumes:
   npm-cache:
   frontend-build:
+  hf-cache:

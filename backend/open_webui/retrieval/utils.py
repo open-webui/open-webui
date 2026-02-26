@@ -808,6 +808,14 @@ def get_embedding_function(
     if embedding_engine == "":
         # Sentence transformers: CPU-bound sync operation
         async def async_embedding_function(query, prefix=None, user=None):
+            if embedding_function is None:
+                configured_model = embedding_model if embedding_model else "<empty>"
+                raise ValueError(
+                    "Local embedding model is unavailable. "
+                    "RAG_EMBEDDING_ENGINE='' and "
+                    f"RAG_EMBEDDING_MODEL={configured_model}. "
+                    "Set a valid local embedding model or switch the embedding engine to ollama/openai/azure_openai."
+                )
             return await asyncio.to_thread(
                 (
                     lambda query, prefix=None: embedding_function.encode(

@@ -887,12 +887,6 @@
 								stopCamera();
 							}}
 						>
-							type="button"
-							class="p-1.5 text-white cursor-pointer backdrop-blur-xl bg-black/10 rounded-full"
-							on:click={() => {
-								stopCamera();
-							}}
-						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 16 16"
@@ -921,7 +915,11 @@
 							await startVideoStream();
 						}}
 					>
-						<button class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900" type="button" aria-label={$i18n.t('Switch camera input')}>
+						<button
+							class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900"
+							type="button"
+							aria-label={$i18n.t('Switch camera input')}
+						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 20 20"
@@ -942,13 +940,6 @@
 							class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900"
 							type="button"
 							aria-label={$i18n.t('Start camera')}
-							on:click={async () => {
-								await navigator.mediaDevices.getUserMedia({ video: true });
-								startCamera();
-							}}
-						>
-							class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900"
-							type="button"
 							on:click={async () => {
 								await navigator.mediaDevices.getUserMedia({ video: true });
 								startCamera();
@@ -1001,26 +992,13 @@
 
 			<div>
 				<button
-						class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900"
-						aria-label={$i18n.t('End call')}
-						on:click={async () => {
-							await stopAudioStream();
-							await stopVideoStream();
-							console.log(audioStream);
-							console.log(cameraStream);
-							showCallOverlay.set(false);
-							dispatch('close');
-						}}
-						type="button"
-					>
 					class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900"
+					aria-label={$i18n.t('End call')}
 					on:click={async () => {
 						await stopAudioStream();
 						await stopVideoStream();
-
 						console.log(audioStream);
 						console.log(cameraStream);
-
 						showCallOverlay.set(false);
 						dispatch('close');
 					}}
