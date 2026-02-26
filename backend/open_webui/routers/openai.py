@@ -91,6 +91,12 @@ async def send_get_request(url, key=None, user: UserModel = None):
         return None
 
 
+def get_target_url(config, url):
+    if config.ENABLE_ZAPS_PRIVACY_FILTER:
+        return config.ZAPS_API_BASE_URL
+    return url
+
+
 def openai_reasoning_model_handler(payload):
     """
     Handle reasoning model specific parameters
@@ -205,6 +211,8 @@ router = APIRouter()
 async def get_config(request: Request, user=Depends(get_admin_user)):
     return {
         "ENABLE_OPENAI_API": request.app.state.config.ENABLE_OPENAI_API,
+        "ENABLE_ZAPS_PRIVACY_FILTER": request.app.state.config.ENABLE_ZAPS_PRIVACY_FILTER,
+        "ZAPS_API_BASE_URL": request.app.state.config.ZAPS_API_BASE_URL,
         "OPENAI_API_BASE_URLS": request.app.state.config.OPENAI_API_BASE_URLS,
         "OPENAI_API_KEYS": request.app.state.config.OPENAI_API_KEYS,
         "OPENAI_API_CONFIGS": request.app.state.config.OPENAI_API_CONFIGS,
@@ -213,6 +221,8 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
 
 class OpenAIConfigForm(BaseModel):
     ENABLE_OPENAI_API: Optional[bool] = None
+    ENABLE_ZAPS_PRIVACY_FILTER: Optional[bool] = None
+    ZAPS_API_BASE_URL: Optional[str] = None
     OPENAI_API_BASE_URLS: list[str]
     OPENAI_API_KEYS: list[str]
     OPENAI_API_CONFIGS: dict
@@ -223,6 +233,8 @@ async def update_config(
     request: Request, form_data: OpenAIConfigForm, user=Depends(get_admin_user)
 ):
     request.app.state.config.ENABLE_OPENAI_API = form_data.ENABLE_OPENAI_API
+    request.app.state.config.ENABLE_ZAPS_PRIVACY_FILTER = form_data.ENABLE_ZAPS_PRIVACY_FILTER
+    request.app.state.config.ZAPS_API_BASE_URL = form_data.ZAPS_API_BASE_URL
     request.app.state.config.OPENAI_API_BASE_URLS = form_data.OPENAI_API_BASE_URLS
     request.app.state.config.OPENAI_API_KEYS = form_data.OPENAI_API_KEYS
 
@@ -256,6 +268,8 @@ async def update_config(
 
     return {
         "ENABLE_OPENAI_API": request.app.state.config.ENABLE_OPENAI_API,
+        "ENABLE_ZAPS_PRIVACY_FILTER": request.app.state.config.ENABLE_ZAPS_PRIVACY_FILTER,
+        "ZAPS_API_BASE_URL": request.app.state.config.ZAPS_API_BASE_URL,
         "OPENAI_API_BASE_URLS": request.app.state.config.OPENAI_API_BASE_URLS,
         "OPENAI_API_KEYS": request.app.state.config.OPENAI_API_KEYS,
         "OPENAI_API_CONFIGS": request.app.state.config.OPENAI_API_CONFIGS,
@@ -282,7 +296,9 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         if file_path.is_file():
             return FileResponse(file_path)
 
-        url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+        url = get_target_url(
+            request.app.state.config, request.app.state.config.OPENAI_API_BASE_URLS[idx]
+        )
         key = request.app.state.config.OPENAI_API_KEYS[idx]
         api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
             str(idx),
@@ -367,7 +383,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
         if (str(idx) not in api_configs) and (url not in api_configs):  # Legacy support
             request_tasks.append(
                 send_get_request(
-                    f"{url}/models",
+                    f"{get_target_url(request.app.state.config, url)}/models",
                     api_keys[idx],
                     user=user,
                 )
@@ -385,7 +401,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
                 if len(model_ids) == 0:
                     request_tasks.append(
                         send_get_request(
-                            f"{url}/models",
+                            f"{get_target_url(request.app.state.config, url)}/models",
                             api_keys[idx],
                             user=user,
                         )
@@ -571,7 +587,10 @@ async def get_models(
     if url_idx is None:
         models = await get_all_models(request, user=user)
     else:
-        url = request.app.state.config.OPENAI_API_BASE_URLS[url_idx]
+        url = get_target_url(
+            request.app.state.config,
+            request.app.state.config.OPENAI_API_BASE_URLS[url_idx],
+        )
         key = request.app.state.config.OPENAI_API_KEYS[url_idx]
 
         api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
@@ -664,7 +683,7 @@ async def verify_connection(
     form_data: ConnectionVerificationForm,
     user=Depends(get_admin_user),
 ):
-    url = form_data.url
+    url = get_target_url(request.app.state.config, form_data.url)
     key = form_data.key
 
     api_config = form_data.config or {}
@@ -1031,7 +1050,9 @@ async def generate_chat_completion(
             "role": user.role,
         }
 
-    url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+    url = get_target_url(
+        request.app.state.config, request.app.state.config.OPENAI_API_BASE_URLS[idx]
+    )
     key = request.app.state.config.OPENAI_API_KEYS[idx]
 
     # Check if model is a reasoning model that needs special handling
@@ -1166,7 +1187,9 @@ async def embeddings(request: Request, form_data: dict, user):
     if model_id in models:
         idx = models[model_id]["urlIdx"]
 
-    url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+    url = get_target_url(
+        request.app.state.config, request.app.state.config.OPENAI_API_BASE_URLS[idx]
+    )
     key = request.app.state.config.OPENAI_API_KEYS[idx]
     api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
         str(idx),
@@ -1266,7 +1289,9 @@ async def responses(
         if model_id in models:
             idx = models[model_id]["urlIdx"]
 
-    url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+    url = get_target_url(
+        request.app.state.config, request.app.state.config.OPENAI_API_BASE_URLS[idx]
+    )
     key = request.app.state.config.OPENAI_API_KEYS[idx]
     api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
         str(idx),
@@ -1372,7 +1397,9 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         if model_id in models:
             idx = models[model_id]["urlIdx"]
 
-    url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+    url = get_target_url(
+        request.app.state.config, request.app.state.config.OPENAI_API_BASE_URLS[idx]
+    )
     key = request.app.state.config.OPENAI_API_KEYS[idx]
     api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
         str(idx),
