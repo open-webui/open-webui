@@ -2355,6 +2355,50 @@ ENABLE_QDRANT_MULTITENANCY_MODE = (
 )
 QDRANT_COLLECTION_PREFIX = os.environ.get("QDRANT_COLLECTION_PREFIX", "open-webui")
 
+# SurrealDB
+SURREALDB_URL = os.environ.get("SURREALDB_URL", "ws://localhost:8000")
+SURREALDB_NAMESPACE = os.environ.get("SURREALDB_NAMESPACE", "openwebui")
+SURREALDB_DATABASE = os.environ.get("SURREALDB_DATABASE", "openwebui")
+SURREALDB_USER = os.environ.get("SURREALDB_USER", "")
+SURREALDB_PASSWORD = os.environ.get("SURREALDB_PASSWORD", "")
+SURREALDB_TABLE = os.environ.get("SURREALDB_TABLE", "open_webui_chunks")
+SURREALDB_VECTOR_INDEX_ENABLED = (
+    os.environ.get("SURREALDB_VECTOR_INDEX_ENABLED", "false").lower() == "true"
+)
+SURREALDB_VECTOR_INDEX_DIMENSION = int(
+    os.environ.get("SURREALDB_VECTOR_INDEX_DIMENSION", "1536")
+)
+SURREALDB_VECTOR_INDEX_DISTANCE = (
+    os.environ.get("SURREALDB_VECTOR_INDEX_DISTANCE", "COSINE").strip().upper()
+)
+SURREALDB_VECTOR_INDEX_M = int(os.environ.get("SURREALDB_VECTOR_INDEX_M", "12"))
+SURREALDB_VECTOR_INDEX_EFC = int(os.environ.get("SURREALDB_VECTOR_INDEX_EFC", "150"))
+if SURREALDB_VECTOR_INDEX_DISTANCE not in {"COSINE", "EUCLIDEAN", "MANHATTAN"}:
+    SURREALDB_VECTOR_INDEX_DISTANCE = "COSINE"
+
+if VECTOR_DB == "surrealdb":
+    missing_surreal = []
+    if not SURREALDB_URL:
+        missing_surreal.append("SURREALDB_URL")
+    if not SURREALDB_NAMESPACE:
+        missing_surreal.append("SURREALDB_NAMESPACE")
+    if not SURREALDB_DATABASE:
+        missing_surreal.append("SURREALDB_DATABASE")
+    if not SURREALDB_USER:
+        missing_surreal.append("SURREALDB_USER")
+    if not SURREALDB_PASSWORD:
+        missing_surreal.append("SURREALDB_PASSWORD")
+    if missing_surreal:
+        raise ValueError(
+            "SurrealDB requires setting: " + ", ".join(sorted(missing_surreal))
+        )
+    if SURREALDB_VECTOR_INDEX_ENABLED and SURREALDB_VECTOR_INDEX_DIMENSION <= 0:
+        raise ValueError("SURREALDB_VECTOR_INDEX_DIMENSION must be greater than 0.")
+    if SURREALDB_VECTOR_INDEX_ENABLED and SURREALDB_VECTOR_INDEX_M <= 0:
+        raise ValueError("SURREALDB_VECTOR_INDEX_M must be greater than 0.")
+    if SURREALDB_VECTOR_INDEX_ENABLED and SURREALDB_VECTOR_INDEX_EFC <= 0:
+        raise ValueError("SURREALDB_VECTOR_INDEX_EFC must be greater than 0.")
+
 WEAVIATE_HTTP_HOST = os.environ.get("WEAVIATE_HTTP_HOST", "")
 WEAVIATE_GRPC_HOST = os.environ.get("WEAVIATE_GRPC_HOST", "")
 WEAVIATE_HTTP_PORT = int(os.environ.get("WEAVIATE_HTTP_PORT", "8080"))

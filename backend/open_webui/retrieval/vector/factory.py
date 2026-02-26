@@ -75,6 +75,10 @@ class Vector:
                 from open_webui.retrieval.vector.dbs.weaviate import WeaviateClient
 
                 return WeaviateClient()
+            case VectorType.SURREALDB:
+                from open_webui.retrieval.vector.dbs.surrealdb import SurrealDBClient
+
+                return SurrealDBClient()
             case _:
                 raise ValueError(f"Unsupported vector type: {vector_type}")
 
