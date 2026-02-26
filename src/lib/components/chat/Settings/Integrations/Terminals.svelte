@@ -28,6 +28,11 @@
 		onChange(servers);
 	};
 
+	const disableServer = (idx: number) => {
+		servers = servers.map((s, i) => (i === idx ? { ...s, enabled: false } : s));
+		onChange(servers);
+	};
+
 	const updateServer = (idx: number, updated: (typeof servers)[0]) => {
 		servers = servers.map((s, i) => (i === idx ? updated : s));
 		onChange(servers);
@@ -69,6 +74,7 @@
 				onSubmit={(updated) => updateServer(idx, updated)}
 				onDelete={() => deleteServer(idx)}
 				onEnable={() => enableServer(idx)}
+				onDisable={() => disableServer(idx)}
 			/>
 		{/each}
 	</div>

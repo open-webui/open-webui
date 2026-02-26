@@ -13,6 +13,7 @@
 	export let onSubmit: (c: typeof connection) => void = () => {};
 	export let onDelete: () => void = () => {};
 	export let onEnable: () => void = () => {};
+	export let onDisable: () => void = () => {};
 
 	let showConfigModal = false;
 	let showDeleteConfirmDialog = false;
@@ -70,7 +71,7 @@
 		</Tooltip>
 
 		<Tooltip content={connection.enabled ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
-			<Switch state={connection.enabled} on:change={() => onEnable()} />
+			<Switch state={connection.enabled} on:change={() => connection.enabled ? onDisable() : onEnable()} />
 		</Tooltip>
 	</div>
 </div>
