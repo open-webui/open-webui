@@ -129,12 +129,14 @@
 										<input
 											class=" self-center text-xs outline-none w-20"
 											placeholder={$i18n.t('Button Label')}
+											aria-label={$i18n.t('Button Label')}
 											bind:value={button.label}
 										/>
 
 										<input
 											class=" self-center text-xs outline-none w-20 text-gray-600 dark:text-gray-400"
 											placeholder={$i18n.t('Button ID')}
+											aria-label={$i18n.t('Button ID')}
 											bind:value={button.id}
 										/>
 									</div>
@@ -143,12 +145,14 @@
 										<Textarea
 											className=" self-center text-xs w-full outline-none"
 											placeholder={$i18n.t('Button Prompt')}
+											ariaLabel={$i18n.t('Button Prompt')}
 											minSize={30}
 											bind:value={button.prompt}
 										/>
 									</div>
 									<button
 										class="pl-3 text-xs flex rounded-sm transition"
+										aria-label={$i18n.t('Remove action')}
 										on:click={() => {
 											floatingActionButtons = floatingActionButtons.filter(
 												(b) => b.id !== button.id

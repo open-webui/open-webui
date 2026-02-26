@@ -35,15 +35,15 @@
 			{align}
 			transition={flyAndScale}
 		>
-			<DropdownMenu.Item class="flex items-center px-3 py-2 text-sm  font-medium">
+			<DropdownMenu.Item class="select-none flex items-center px-3 py-2 text-sm  font-medium">
 				<div class="flex items-center">{$i18n.t('Profile')}</div>
 			</DropdownMenu.Item>
 
-			<DropdownMenu.Item class="flex items-center px-3 py-2 text-sm  font-medium">
+			<DropdownMenu.Item class="select-none flex items-center px-3 py-2 text-sm  font-medium">
 				<div class="flex items-center">{$i18n.t('Profile')}</div>
 			</DropdownMenu.Item>
 
-			<DropdownMenu.Item class="flex items-center px-3 py-2 text-sm  font-medium">
+			<DropdownMenu.Item class="select-none flex items-center px-3 py-2 text-sm  font-medium">
 				<div class="flex items-center">{$i18n.t('Profile')}</div>
 			</DropdownMenu.Item>
 		</DropdownMenu.Content>

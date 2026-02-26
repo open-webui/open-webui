@@ -3,7 +3,7 @@
 
 	import { onMount, getContext, tick } from 'svelte';
 	import { models, tools, functions, user } from '$lib/stores';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_URL, DEFAULT_CAPABILITIES } from '$lib/constants';
 
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
@@ -95,18 +95,7 @@
 	let filterIds = [];
 	let defaultFilterIds = [];
 
-	let capabilities = {
-		file_context: true,
-		vision: true,
-		file_upload: true,
-		web_search: true,
-		image_generation: true,
-		code_interpreter: true,
-		citations: true,
-		status_updates: true,
-		usage: undefined,
-		builtin_tools: true
-	};
+	let capabilities = { ...DEFAULT_CAPABILITIES };
 	let defaultFeatureIds = [];
 	let builtinTools = {};
 
@@ -346,7 +335,12 @@
 		onChange={async () => {
 			if (edit && model?.id) {
 				try {
-					await updateModelAccessGrants(localStorage.token, model.id, accessGrants);
+					await updateModelAccessGrants(
+						localStorage.token,
+						model.id,
+						model.name ?? name,
+						accessGrants
+					);
 					toast.success($i18n.t('Saved'));
 				} catch (error) {
 					toast.error(error?.detail ?? `${error}`);
@@ -475,6 +469,7 @@
 										? 'bg-transparent'
 										: 'bg-white'} shadow-xl group relative"
 									type="button"
+									aria-label={$i18n.t('Upload profile image')}
 									on:click={() => {
 										filesInputElement.click();
 									}}
@@ -583,7 +578,7 @@
 
 									<div>
 										<select
-											class="dark:bg-gray-900 text-sm w-full bg-transparent outline-hidden"
+											class="text-sm w-full bg-transparent outline-hidden"
 											placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
 											bind:value={info.base_model_id}
 											required

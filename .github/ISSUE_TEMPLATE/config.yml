@@ -1,1 +1,0 @@
-blank_issues_enabled: false

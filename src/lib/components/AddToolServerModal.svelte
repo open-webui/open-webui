@@ -250,8 +250,12 @@
 	const submitHandler = async () => {
 		loading = true;
 
-		// remove trailing slash from url
-		url = url.replace(/\/$/, '');
+		// remove trailing slash from url for non-MCP connections
+		// MCP servers may require a trailing slash; stripping it can cause
+		// 301 redirects that lose auth headers (see #21179)
+		if (type !== 'mcp') {
+			url = url.replace(/\/$/, '');
+		}
 		if (id.includes(':') || id.includes('|')) {
 			toast.error($i18n.t('ID cannot contain ":" or "|" characters'));
 			loading = false;
@@ -486,7 +490,7 @@
 										className="shrink-0 flex items-center mr-1"
 									>
 										<button
-											class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
+											class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition"
 											on:click={() => {
 												verifyHandler();
 											}}

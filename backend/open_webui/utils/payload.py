@@ -187,7 +187,7 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
     ollama_root_params = {
         "format": lambda x: parse_json(x),
         "keep_alive": lambda x: parse_json(x),
-        "think": bool,
+        "think": lambda x: x,
     }
 
     for key, value in ollama_root_params.items():
@@ -326,7 +326,7 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
         ollama_root_params = {
             "format": lambda x: parse_json(x),
             "keep_alive": lambda x: parse_json(x),
-            "think": bool,
+            "think": lambda x: x,
         }
 
         # Ollama's options field can contain parameters that should be at the root level.

@@ -7,9 +7,9 @@ echo $(head -c 12 /dev/random | base64) > .webui_secret_key
 export PORT=8000
 export HOST=0.0.0.0  212.41.21.72
 
-PYTHONPATH=. WEBUI_SECRET_KEY=$(cat .webui_secret_key)  ./venv/bin/python3.10 -m uvicorn open_webui.main:app --host=212.41.21.72 --port 8503 --reload
+PYTHONPATH=. WEBUI_SECRET_KEY=$(cat .webui_secret_key)  ./venv/bin/python3.11 -m uvicorn open_webui.main:app --host=212.41.21.72 --port 8503 --reload
 
-export PYTHONPATH=. && export WEBUI_SECRET_KEY=$(cat .webui_secret_key) && export PYTHONUNBUFFERED=1 && exec ./venv/bin/python3.10 -u -m uvicorn open_webui.main:app --host 212.41.21.72 --port 8503 --reload > webui.log 2>&1
+export PYTHONPATH=. && export WEBUI_SECRET_KEY=$(cat .webui_secret_key) && export PYTHONUNBUFFERED=1 && exec ./venv/bin/python3.11 -u -m uvicorn open_webui.main:app --host 212.41.21.72 --port 8503 --reload > webui.log 2>&1
 
 
 

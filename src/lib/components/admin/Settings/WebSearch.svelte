@@ -37,7 +37,8 @@
 		'sougou',
 		'firecrawl',
 		'external',
-		'yandex'
+		'yandex',
+		'youcom'
 	];
 	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'external'];
 
@@ -155,7 +156,7 @@
 						</div>
 						<div class="flex items-center relative">
 							<select
-								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+								class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 								bind:value={webConfig.WEB_SEARCH_ENGINE}
 								placeholder={$i18n.t('Select a engine')}
 								required
@@ -786,6 +787,19 @@
 									</Tooltip>
 								</div>
 							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'youcom'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('You.com API Key')}
+									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter You.com API Key')}
+										bind:value={webConfig.YOUCOM_API_KEY}
+									/>
+								</div>
+							</div>
 						{/if}
 
 						{#if webConfig.WEB_SEARCH_ENGINE === 'duckduckgo'}
@@ -936,7 +950,7 @@
 						</div>
 						<div class="flex items-center relative">
 							<select
-								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+								class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 								bind:value={webConfig.WEB_LOADER_ENGINE}
 								placeholder={$i18n.t('Select a engine')}
 							>

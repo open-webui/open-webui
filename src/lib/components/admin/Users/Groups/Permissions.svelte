@@ -327,6 +327,40 @@
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
 				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Skills Sharing')}
+				</div>
+				<Switch bind:state={permissions.sharing.skills} />
+			</div>
+			{#if defaultPermissions?.sharing?.skills && !permissions.sharing.skills}
+				<div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		{#if permissions.sharing.skills}
+			<div class="flex flex-col w-full">
+				<div class="flex w-full justify-between my-1">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Skills Public Sharing')}
+					</div>
+					<Switch bind:state={permissions.sharing.public_skills} />
+				</div>
+				{#if defaultPermissions?.sharing?.public_skills && !permissions.sharing.public_skills}
+					<div>
+						<div class="text-xs text-gray-500">
+							{$i18n.t('This is a default user permission and will remain enabled.')}
+						</div>
+					</div>
+				{/if}
+			</div>
+		{/if}
+
+		<div class="flex flex-col w-full">
+			<div class="flex w-full justify-between my-1">
+				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Notes Sharing')}
 				</div>
 				<Switch bind:state={permissions.sharing.notes} />
@@ -372,6 +406,22 @@
 				<Switch bind:state={permissions.chat.file_upload} />
 			</div>
 			{#if defaultPermissions?.chat?.file_upload && !permissions.chat.file_upload}
+				<div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		<div class="flex flex-col w-full">
+			<div class="flex w-full justify-between my-1">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Allow Web Upload')}
+				</div>
+				<Switch bind:state={permissions.chat.web_upload} />
+			</div>
+			{#if defaultPermissions?.chat?.web_upload && !permissions.chat.web_upload}
 				<div>
 					<div class="text-xs text-gray-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}

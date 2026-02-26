@@ -1,285 +1,251 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
+import { toast } from 'svelte-sonner';
+import DOMPurify from 'dompurify';
+import { marked } from 'marked';
+import { getContext, tick, onDestroy, onMount } from 'svelte';
+const i18n = getContext('i18n');
 
-	import DOMPurify from 'dompurify';
-	import { marked } from 'marked';
+import { chatId, models, socket } from '$lib/stores';
 
-	import { getContext, tick, onDestroy, onMount } from 'svelte';
-	const i18n = getContext('i18n');
+import { chatCompletion } from '$lib/apis/openai';
+import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
+import LightBulb from '$lib/components/icons/LightBulb.svelte';
+import XMark from '$lib/components/icons/XMark.svelte';
+import Markdown from '../Messages/Markdown.svelte';
+import Skeleton from '../Messages/Skeleton.svelte';
 
-	import { chatCompletion } from '$lib/apis/openai';
+export let id = '';
+export let messageId = '';
+export let model = null;
+export let messages = [];
+export let actions = [];
+export let onAdd = (e) => {};
 
-	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
-	import LightBulb from '$lib/components/icons/LightBulb.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
-	import Markdown from '../Messages/Markdown.svelte';
-	import Skeleton from '../Messages/Skeleton.svelte';
-	import { chatId, models, socket } from '$lib/stores';
+let floatingInput = false;
+let selectedAction = null;
+let sidebarOpen = false;
 
-	export let id = '';
-	export let messageId = '';
+let selectedText = '';
+let floatingInputValue = '';
 
-	export let model = null;
-	export let messages = [];
-	export let actions = [];
-	export let onAdd = (e) => {};
+let content = '';
+let responseContent = null;
+let responseDone = false;
+let controller = null;
 
-	let floatingInput = false;
-	let selectedAction = null;
-	let sidebarOpen = false;
+$: if (actions.length === 0) {
+	actions = DEFAULT_ACTIONS;
+}
 
-	let selectedText = '';
-	let floatingInputValue = '';
+const DEFAULT_ACTIONS = [
+	{
+		id: 'ask',
+		label: $i18n.t('Ask'),
+		icon: ChatBubble,
+		input: true,
+		prompt: `{{SELECTED_CONTENT}}\n\n\n{{INPUT_CONTENT}}`
+	},
+	{
+		id: 'explain',
+		label: $i18n.t('Explain'),
+		icon: LightBulb,
+		prompt: `{{SELECTED_CONTENT}}\n\n\n${$i18n.t('Explain')}`
+	}
+];
 
-	let content = '';
-	let responseContent = null;
-	let responseDone = false;
-	let controller = null;
+const responseContainerId = () => `response-container-${id}`;
+const floatingInputId = () => `floating-message-input-${id}`;
 
-	$: if (actions.length === 0) {
-		actions = DEFAULT_ACTIONS;
+const autoScroll = async () => {
+	const responseContainer = document.getElementById(responseContainerId());
+	if (responseContainer) {
+		if (
+			responseContainer.scrollHeight - responseContainer.clientHeight <=
+			responseContainer.scrollTop + 50
+		) {
+			responseContainer.scrollTop = responseContainer.scrollHeight;
+		}
+	}
+};
+
+const openSidebar = async () => {
+	sidebarOpen = true;
+	window.dispatchEvent(
+		new CustomEvent('openwebui:floatingSidebarOpen', {
+			detail: { id }
+		})
+	);
+};
+
+const resetForNewAction = () => {
+	if (controller) {
+		controller.abort();
+	}
+	responseContent = null;
+	responseDone = false;
+	content = '';
+	floatingInput = false;
+	floatingInputValue = '';
+};
+
+export const isSidebarOpen = () => sidebarOpen;
+
+const actionHandler = async (actionId) => {
+	if (!model) {
+		toast.error($i18n.t('Model not selected'));
+		return;
 	}
 
-	const DEFAULT_ACTIONS = [
-		{
-			id: 'ask',
-			label: $i18n.t('Ask'),
-			icon: ChatBubble,
-			input: true,
-			prompt: `{{SELECTED_CONTENT}}\n\n\n{{INPUT_CONTENT}}`
-		},
-		{
-			id: 'explain',
-			label: $i18n.t('Explain'),
-			icon: LightBulb,
-			prompt: `{{SELECTED_CONTENT}}\n\n\n${$i18n.t('Explain')}`
-		}
-	];
+	let selectedContent = selectedText
+		.split('\n')
+		.map((line) => `> ${line}`)
+		.join('\n');
 
-	const responseContainerId = () => `response-container-${id}`;
-	const floatingInputId = () => `floating-message-input-${id}`;
+	let selectedAction = actions.find((action) => action.id === actionId);
+	if (!selectedAction) {
+		toast.error($i18n.t('Action not found'));
+		return;
+	}
 
-	const autoScroll = async () => {
-		const responseContainer = document.getElementById(responseContainerId());
-		if (responseContainer) {
-			// Scroll to bottom only if the scroll is at the bottom give 50px buffer
-			if (
-				responseContainer.scrollHeight - responseContainer.clientHeight <=
-				responseContainer.scrollTop + 50
-			) {
-				responseContainer.scrollTop = responseContainer.scrollHeight;
-			}
-		}
-	};
+	let prompt = selectedAction?.prompt ?? '';
+	let toolIds = [];
 
-	const openSidebar = async () => {
-		sidebarOpen = true;
-		window.dispatchEvent(
-			new CustomEvent('openwebui:floatingSidebarOpen', {
-				detail: { id }
-			})
-		);
-	};
+	// Handle: {{variableId|tool:id="toolId"}} pattern
+	const varToolPattern = /\{\{(.*?)\|tool:id="([^"]+)"\}\}/g;
+	prompt = prompt.replace(varToolPattern, (match, variableId, toolId) => {
+		toolIds.push(toolId);
+		return variableId;
+	});
 
-	const resetForNewAction = () => {
-		if (controller) {
-			controller.abort();
-		}
+	// legacy {{TOOL:toolId}} pattern
+	let toolIdPattern = /\{\{TOOL:([^\}]+)\}\}/g;
+	let match;
+	while ((match = toolIdPattern.exec(prompt)) !== null) {
+		toolIds.push(match[1]);
+	}
+	prompt = prompt.replace(toolIdPattern, '');
 
-		responseContent = null;
-		responseDone = false;
-		content = '';
-		floatingInput = false;
+	if (prompt.includes('{{INPUT_CONTENT}}') && floatingInput) {
+		prompt = prompt.replace('{{INPUT_CONTENT}}', floatingInputValue);
 		floatingInputValue = '';
-	};
+	}
 
-	export const isSidebarOpen = () => sidebarOpen;
+	prompt = prompt.replace('{{CONTENT}}', selectedText);
+	prompt = prompt.replace('{{SELECTED_CONTENT}}', selectedContent);
 
-	const actionHandler = async (actionId) => {
-		if (!model) {
-			toast.error($i18n.t('Model not selected'));
-			return;
-		}
+	content = prompt;
+	responseContent = '';
 
-		let selectedContent = selectedText
-			.split('\n')
-			.map((line) => `> ${line}`)
-			.join('\n');
+	let res;
+	[res, controller] = await chatCompletion(localStorage.token, {
+		model: model,
+		model_item: $models.find((m) => m.id === model),
+		session_id: $socket?.id,
+		chat_id: $chatId,
+		messages: [
+			...messages,
+			{
+				role: 'user',
+				content: content
+			}
+		].map((message) => ({
+			role: message.role,
+			content: message.content
+		})),
+		...(toolIds.length > 0 ? { tool_ids: toolIds } : {}),
+		stream: true
+	});
 
-		let selectedAction = actions.find((action) => action.id === actionId);
-		if (!selectedAction) {
-			toast.error($i18n.t('Action not found'));
-			return;
-		}
+	if (res && res.ok) {
+		const reader = res.body.getReader();
+		const decoder = new TextDecoder();
 
-		let prompt = selectedAction?.prompt ?? '';
-		let toolIds = [];
-
-		// Handle: {{variableId|tool:id="toolId"}} pattern
-		// This regex captures variableId and toolId from {{variableId|tool:id="toolId"}}
-		const varToolPattern = /\{\{(.*?)\|tool:id="([^"]+)"\}\}/g;
-		prompt = prompt.replace(varToolPattern, (match, variableId, toolId) => {
-			toolIds.push(toolId);
-			return variableId; // Replace with just variableId
-		});
-
-		// legacy {{TOOL:toolId}} pattern (for backward compatibility)
-		let toolIdPattern = /\{\{TOOL:([^\}]+)\}\}/g;
-		let match;
-		while ((match = toolIdPattern.exec(prompt)) !== null) {
-			toolIds.push(match[1]);
-		}
-
-		// Remove all TOOL placeholders from the prompt
-		prompt = prompt.replace(toolIdPattern, '');
-
-		if (prompt.includes('{{INPUT_CONTENT}}') && floatingInput) {
-			prompt = prompt.replace('{{INPUT_CONTENT}}', floatingInputValue);
-			floatingInputValue = '';
-		}
-
-		prompt = prompt.replace('{{CONTENT}}', selectedText);
-		prompt = prompt.replace('{{SELECTED_CONTENT}}', selectedContent);
-
-		content = prompt;
-		responseContent = '';
-
-		let res;
-		[res, controller] = await chatCompletion(localStorage.token, {
-			model: model,
-			model_item: $models.find((m) => m.id === model),
-			session_id: $socket?.id,
-			chat_id: $chatId,
-			messages: [
-				...messages,
-				{
-					role: 'user',
-					content: content
-				}
-			].map((message) => ({
-				role: message.role,
-				content: message.content
-			})),
-			...(toolIds.length > 0
-				? {
-						tool_ids: toolIds
-						// params: {
-						// 	function_calling: 'native'
-						// }
-					}
-				: {}),
-
-			stream: true // Enable streaming
-		});
-
-		if (res && res.ok) {
-			const reader = res.body.getReader();
-			const decoder = new TextDecoder();
-
-			const processStream = async () => {
-				while (true) {
-					// Read data chunks from the response stream
-					const { done, value } = await reader.read();
-					if (done) {
-						break;
-					}
-
-					// Decode the received chunk
-					const chunk = decoder.decode(value, { stream: true });
-
-					// Process lines within the chunk
-					const lines = chunk.split('\n').filter((line) => line.trim() !== '');
-
-					for (const line of lines) {
-						if (line.startsWith('data: ')) {
-							if (line.startsWith('data: [DONE]')) {
-								responseDone = true;
-
-								await tick();
-								autoScroll();
-								continue;
-							} else {
-								// Parse the JSON chunk
-								try {
-									const data = JSON.parse(line.slice(6));
-
-									// Append the `content` field from the "choices" object
-									if (data.choices && data.choices[0]?.delta?.content) {
-										responseContent += data.choices[0].delta.content;
-
-										autoScroll();
-									}
-								} catch (e) {
-									console.error(e);
+		const processStream = async () => {
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				const chunk = decoder.decode(value, { stream: true });
+				const lines = chunk.split('\n').filter((line) => line.trim() !== '');
+				for (const line of lines) {
+					if (line.startsWith('data: ')) {
+						if (line.startsWith('data: [DONE]')) {
+							responseDone = true;
+							await tick();
+							autoScroll();
+							continue;
+						} else {
+							try {
+								const data = JSON.parse(line.slice(6));
+								if (data.choices && data.choices[0]?.delta?.content) {
+									responseContent += data.choices[0].delta.content;
+									autoScroll();
 								}
+							} catch (e) {
+								console.error(e);
 							}
 						}
 					}
 				}
-			};
-
-			// Process the stream in the background
-			try {
-				await processStream();
-			} catch (e) {
-				if (e.name !== 'AbortError') {
-					console.error(e);
-				}
-			}
-		} else {
-			toast.error($i18n.t('An error occurred while fetching the explanation'));
-		}
-	};
-
-	const addHandler = async () => {
-		const messages = [
-			{
-				role: 'user',
-				content: content
-			},
-			{
-				role: 'assistant',
-				content: responseContent
-			}
-		];
-
-		onAdd({
-			modelId: model,
-			parentId: messageId,
-			messages: messages
-		});
-	};
-
-	export const closeHandler = () => {
-		if (controller) {
-			controller.abort();
-		}
-
-		sidebarOpen = false;
-		selectedAction = null;
-		selectedText = '';
-		responseContent = null;
-		responseDone = false;
-		floatingInput = false;
-		floatingInputValue = '';
-	};
-
-	onMount(() => {
-		const handler = (e) => {
-			if (e?.detail?.id && e.detail.id !== id) {
-				closeHandler();
 			}
 		};
-
-		window.addEventListener('openwebui:floatingSidebarOpen', handler);
-		return () => window.removeEventListener('openwebui:floatingSidebarOpen', handler);
-	});
-
-	onDestroy(() => {
-		if (controller) {
-			controller.abort();
+		try {
+			await processStream();
+		} catch (e) {
+			if (e.name !== 'AbortError') {
+				console.error(e);
+			}
 		}
+	} else {
+		toast.error($i18n.t('An error occurred while fetching the explanation'));
+	}
+};
+
+const addHandler = async () => {
+	const messages = [
+		{
+			role: 'user',
+			content: content
+		},
+		{
+			role: 'assistant',
+			content: responseContent
+		}
+	];
+	onAdd({
+		modelId: model,
+		parentId: messageId,
+		messages: messages
 	});
+};
+
+export const closeHandler = () => {
+	if (controller) {
+		controller.abort();
+	}
+	sidebarOpen = false;
+	selectedAction = null;
+	selectedText = '';
+	responseContent = null;
+	responseDone = false;
+	floatingInput = false;
+	floatingInputValue = '';
+};
+
+onMount(() => {
+	const handler = (e) => {
+		if (e?.detail?.id && e.detail.id !== id) {
+			closeHandler();
+		}
+	};
+	window.addEventListener('openwebui:floatingSidebarOpen', handler);
+	return () => window.removeEventListener('openwebui:floatingSidebarOpen', handler);
+});
+
+onDestroy(() => {
+	if (controller) {
+		controller.abort();
+	}
+});
 </script>
 
 <div
@@ -298,16 +264,12 @@
 					const selection = window.getSelection();
 					selectedText = selection ? selection.toString() : '';
 					selectedAction = action;
-
 					await openSidebar();
-					// Hide the floating menu once an action is selected.
 					const floating = document.getElementById(`floating-buttons-${id}`);
 					if (floating) floating.style.display = 'none';
-
 					if (action.prompt.includes('{{INPUT_CONTENT}}')) {
 						floatingInput = true;
 						floatingInputValue = '';
-
 						await tick();
 						setTimeout(() => {
 							const input = document.getElementById(floatingInputId());
@@ -339,13 +301,15 @@
 			<div class="text-sm font-medium dark:text-gray-100">
 				{selectedAction?.label ?? $i18n.t('Quick Actions')}
 			</div>
-			<button
-				class="p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition"
-				aria-label={$i18n.t('Close')}
-				on:click={() => closeHandler()}
-			>
-				<XMark className="size-5" />
-			</button>
+			<div class="flex items-center gap-1.5">
+				<button
+					class="p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition"
+					aria-label={$i18n.t('Close')}
+					on:click={() => closeHandler()}
+				>
+					<XMark className="size-5" />
+				</button>
+			</div>
 		</div>
 
 		<div class="flex-1 overflow-y-auto">
@@ -364,7 +328,6 @@
 								}
 							}}
 						/>
-
 						<div class="ml-1 mr-1">
 							<button
 								class="{floatingInputValue !== ''
@@ -396,7 +359,6 @@
 					<div class="text-sm font-medium dark:text-gray-100">
 						<Markdown id={`${id}-sidebar-prompt`} {content} />
 					</div>
-
 					<div
 						class="min-h-24 markdown-prose-xs"
 						id={responseContainerId()}
@@ -406,7 +368,6 @@
 						{:else}
 							<Markdown id={`${id}-sidebar-response`} content={responseContent} />
 						{/if}
-
 						<div class="flex items-center justify-between pt-3 text-sm font-medium">
 							<button
 								class="px-3.5 py-1.5 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-100 transition rounded-full"
@@ -414,7 +375,6 @@
 							>
 								{$i18n.t('Close')}
 							</button>
-
 							{#if responseDone}
 								<button
 									class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
@@ -432,7 +392,6 @@
 				</div>
 			{/if}
 		</div>
-
 		{#if responseContent === null}
 			<div class="px-4 py-3 border-t border-gray-100 dark:border-gray-800">
 				<button

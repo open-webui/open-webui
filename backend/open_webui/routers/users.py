@@ -190,6 +190,8 @@ class SharingPermissions(BaseModel):
     public_prompts: bool = False
     tools: bool = False
     public_tools: bool = True
+    skills: bool = False
+    public_skills: bool = False
     notes: bool = False
     public_notes: bool = True
 
@@ -200,6 +202,7 @@ class ChatPermissions(BaseModel):
     system_prompt: bool = True
     params: bool = True
     file_upload: bool = True
+    web_upload: bool = True
     delete: bool = True
     delete_message: bool = True
     continue_response: bool = True

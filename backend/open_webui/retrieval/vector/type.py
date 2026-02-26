@@ -3,6 +3,7 @@ try:
 except ImportError:
     from strenum import StrEnum  # Backport for older Python
 
+
 class VectorType(StrEnum):
     MILVUS = "milvus"
     QDRANT = "qdrant"

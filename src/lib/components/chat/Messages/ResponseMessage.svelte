@@ -365,8 +365,13 @@
 
 		await tick();
 
+		const messagesContainer = document.getElementById('messages-container');
+		const savedScrollTop = messagesContainer?.scrollTop;
+
 		editTextAreaElement.style.height = '';
 		editTextAreaElement.style.height = `${editTextAreaElement.scrollHeight}px`;
+
+		if (messagesContainer) messagesContainer.scrollTop = savedScrollTop;
 	};
 
 	const editMessageConfirmHandler = async () => {
@@ -607,6 +612,7 @@
 		class=" flex w-full message-{message.id}"
 		id="message-{message.id}"
 		dir={$settings.chatDirection}
+		style="scroll-margin-top: 3rem;"
 	>
 		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 hidden @lg:flex mt-1 `}>
 			<ProfileImage
@@ -674,7 +680,10 @@
 						{/if}
 
 						{#if message?.embeds && message.embeds.length > 0}
-							<div class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap">
+							<div
+								class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap"
+								id={`${message.id}-embeds-container`}
+							>
 								{#each message.embeds as embed, idx}
 									<div class="my-2 w-full" id={`${message.id}-embeds-${idx}`}>
 										<FullHeightIframe
@@ -697,8 +706,13 @@
 									class=" bg-transparent outline-hidden w-full resize-none"
 									bind:value={editedContent}
 									on:input={(e) => {
+										const messagesContainer = document.getElementById('messages-container');
+										const savedScrollTop = messagesContainer?.scrollTop;
+
 										e.target.style.height = '';
 										e.target.style.height = `${e.target.scrollHeight}px`;
+
+										if (messagesContainer) messagesContainer.scrollTop = savedScrollTop;
 									}}
 									on:keydown={(e) => {
 										if (e.key === 'Escape') {

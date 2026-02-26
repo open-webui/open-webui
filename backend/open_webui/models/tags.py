@@ -115,5 +115,45 @@ class TagTable:
             log.error(f"delete_tag: {e}")
             return False
 
+    def delete_tags_by_ids_and_user_id(
+        self, ids: list[str], user_id: str, db: Optional[Session] = None
+    ) -> bool:
+        """Delete all tags whose id is in *ids* for the given user, in one query."""
+        if not ids:
+            return True
+        try:
+            with get_db_context(db) as db:
+                db.query(Tag).filter(Tag.id.in_(ids), Tag.user_id == user_id).delete(
+                    synchronize_session=False
+                )
+                db.commit()
+                return True
+        except Exception as e:
+            log.error(f"delete_tags_by_ids: {e}")
+            return False
+
+    def ensure_tags_exist(
+        self, names: list[str], user_id: str, db: Optional[Session] = None
+    ) -> None:
+        """Create tag rows for any *names* that don't already exist for *user_id*."""
+        if not names:
+            return
+        ids = [n.replace(" ", "_").lower() for n in names]
+        with get_db_context(db) as db:
+            existing = {
+                t.id
+                for t in db.query(Tag.id)
+                .filter(Tag.id.in_(ids), Tag.user_id == user_id)
+                .all()
+            }
+            new_tags = [
+                Tag(id=tag_id, name=name, user_id=user_id)
+                for tag_id, name in zip(ids, names)
+                if tag_id not in existing
+            ]
+            if new_tags:
+                db.add_all(new_tags)
+                db.commit()
+
 
 Tags = TagTable()

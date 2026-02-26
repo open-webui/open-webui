@@ -2,7 +2,7 @@ import logging
 import time
 from typing import Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 from open_webui.models.users import Users, UserResponse
 from open_webui.models.groups import Groups
@@ -100,9 +100,18 @@ class ToolsTable:
     ) -> list[AccessGrantModel]:
         return AccessGrants.get_grants_by_resource("tool", tool_id, db=db)
 
-    def _to_tool_model(self, tool: Tool, db: Optional[Session] = None) -> ToolModel:
+    def _to_tool_model(
+        self,
+        tool: Tool,
+        access_grants: Optional[list[AccessGrantModel]] = None,
+        db: Optional[Session] = None,
+    ) -> ToolModel:
         tool_data = ToolModel.model_validate(tool).model_dump(exclude={"access_grants"})
-        tool_data["access_grants"] = self._get_access_grants(tool_data["id"], db=db)
+        tool_data["access_grants"] = (
+            access_grants
+            if access_grants is not None
+            else self._get_access_grants(tool_data["id"], db=db)
+        )
         return ToolModel.model_validate(tool_data)
 
     def insert_new_tool(
@@ -147,14 +156,21 @@ class ToolsTable:
         except Exception:
             return None
 
-    def get_tools(self, db: Optional[Session] = None) -> list[ToolUserModel]:
+    def get_tools(
+        self, defer_content: bool = False, db: Optional[Session] = None
+    ) -> list[ToolUserModel]:
         with get_db_context(db) as db:
-            all_tools = db.query(Tool).order_by(Tool.updated_at.desc()).all()
+            query = db.query(Tool).order_by(Tool.updated_at.desc())
+            if defer_content:
+                query = query.options(defer(Tool.content), defer(Tool.specs))
+            all_tools = query.all()
 
             user_ids = list(set(tool.user_id for tool in all_tools))
+            tool_ids = [tool.id for tool in all_tools]
 
             users = Users.get_users_by_user_ids(user_ids, db=db) if user_ids else []
             users_dict = {user.id: user for user in users}
+            grants_map = AccessGrants.get_grants_by_resources("tool", tool_ids, db=db)
 
             tools = []
             for tool in all_tools:
@@ -162,7 +178,11 @@ class ToolsTable:
                 tools.append(
                     ToolUserModel.model_validate(
                         {
-                            **self._to_tool_model(tool, db=db).model_dump(),
+                            **self._to_tool_model(
+                                tool,
+                                access_grants=grants_map.get(tool.id, []),
+                                db=db,
+                            ).model_dump(),
                             "user": user.model_dump() if user else None,
                         }
                     )
@@ -170,9 +190,13 @@ class ToolsTable:
             return tools
 
     def get_tools_by_user_id(
-        self, user_id: str, permission: str = "write", db: Optional[Session] = None
+        self,
+        user_id: str,
+        permission: str = "write",
+        defer_content: bool = False,
+        db: Optional[Session] = None,
     ) -> list[ToolUserModel]:
-        tools = self.get_tools(db=db)
+        tools = self.get_tools(defer_content=defer_content, db=db)
         user_group_ids = {
             group.id for group in Groups.get_groups_by_member_id(user_id, db=db)
         }

@@ -60,6 +60,8 @@ from open_webui.tools.builtin import (
     search_memories,
     add_memory,
     replace_memory_content,
+    delete_memory,
+    list_memories,
     get_current_timestamp,
     calculate_timestamp,
     search_notes,
@@ -77,6 +79,7 @@ from open_webui.tools.builtin import (
     query_knowledge_bases,
     search_knowledge_files,
     query_knowledge_files,
+    view_file,
     view_knowledge_file,
     view_skill,
 )
@@ -445,6 +448,12 @@ def get_builtin_tools(
         if model_knowledge:
             # Model has attached knowledge - only allow semantic search within it
             builtin_functions.append(query_knowledge_files)
+
+            knowledge_types = {item.get("type") for item in model_knowledge}
+            if "file" in knowledge_types or "collection" in knowledge_types:
+                builtin_functions.append(view_file)
+            if "note" in knowledge_types:
+                builtin_functions.append(view_note)
         else:
             # No model knowledge - allow full KB browsing
             builtin_functions.extend(
@@ -464,13 +473,22 @@ def get_builtin_tools(
 
     # Add memory tools if builtin category enabled AND enabled for this chat
     if is_builtin_tool_enabled("memory") and features.get("memory"):
-        builtin_functions.extend([search_memories, add_memory, replace_memory_content])
+        builtin_functions.extend(
+            [
+                search_memories,
+                add_memory,
+                replace_memory_content,
+                delete_memory,
+                list_memories,
+            ]
+        )
 
     # Add web search tools if builtin category enabled AND enabled globally AND model has web_search capability
     if (
         is_builtin_tool_enabled("web_search")
         and getattr(request.app.state.config, "ENABLE_WEB_SEARCH", False)
         and get_model_capability("web_search")
+        and features.get("web_search")
     ):
         builtin_functions.extend([search_web, fetch_url])
 
@@ -479,12 +497,14 @@ def get_builtin_tools(
         is_builtin_tool_enabled("image_generation")
         and getattr(request.app.state.config, "ENABLE_IMAGE_GENERATION", False)
         and get_model_capability("image_generation")
+        and features.get("image_generation")
     ):
         builtin_functions.append(generate_image)
     if (
         is_builtin_tool_enabled("image_generation")
         and getattr(request.app.state.config, "ENABLE_IMAGE_EDIT", False)
         and get_model_capability("image_generation")
+        and features.get("image_generation")
     ):
         builtin_functions.append(edit_image)
 
@@ -493,6 +513,7 @@ def get_builtin_tools(
         is_builtin_tool_enabled("code_interpreter")
         and getattr(request.app.state.config, "ENABLE_CODE_INTERPRETER", True)
         and get_model_capability("code_interpreter")
+        and features.get("code_interpreter")
     ):
         builtin_functions.append(execute_code)
 

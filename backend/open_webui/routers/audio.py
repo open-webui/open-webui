@@ -639,13 +639,14 @@ def transcription_handler(request, file_path, metadata, user=None):
                 if user and ENABLE_FORWARD_USER_INFO_HEADERS:
                     headers = include_user_info_headers(headers, user)
 
-                r = requests.post(
-                    url=f"{request.app.state.config.STT_OPENAI_API_BASE_URL}/audio/transcriptions",
-                    headers=headers,
-                    files={"file": (filename, open(file_path, "rb"))},
-                    data=payload,
-                    timeout=AIOHTTP_CLIENT_TIMEOUT,
-                )
+                with open(file_path, "rb") as audio_file:
+                    r = requests.post(
+                        url=f"{request.app.state.config.STT_OPENAI_API_BASE_URL}/audio/transcriptions",
+                        headers=headers,
+                        files={"file": (filename, audio_file)},
+                        data=payload,
+                        timeout=AIOHTTP_CLIENT_TIMEOUT,
+                    )
 
                 if r.status_code == 200:
                     # Successful transcription

@@ -12,13 +12,15 @@ from open_webui.env import (
     AUDIT_LOG_FILE_ROTATION_SIZE,
     AUDIT_LOG_LEVEL,
     GLOBAL_LOG_LEVEL,
+    LOG_FORMAT,
     AUDIT_UVICORN_LOGGER_NAMES,
     ENABLE_OTEL,
     ENABLE_OTEL_LOGS,
+    _LEVEL_MAP,
 )
 
 if TYPE_CHECKING:
-    from loguru import Record
+    from loguru import Message, Record
 
 
 def stdout_format(record: "Record") -> str:
@@ -41,6 +43,29 @@ def stdout_format(record: "Record") -> str:
         "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
         "<level>{message}</level>" + extra_format + "\n{exception}"
     )
+
+
+def _json_sink(message: "Message") -> None:
+    """Write log records as single-line JSON to stdout.
+
+    Used as a Loguru sink when LOG_FORMAT is set to "json".
+    """
+    record = message.record
+    log_entry = {
+        "ts": record["time"].strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
+        "level": _LEVEL_MAP.get(record["level"].name, record["level"].name.lower()),
+        "msg": record["message"],
+        "caller": f"{record['name']}:{record['function']}:{record['line']}",
+    }
+
+    if record["extra"]:
+        log_entry["extra"] = record["extra"]
+
+    if record["exception"] is not None:
+        log_entry["error"] = "".join(record["exception"].format_exception()).rstrip()
+
+    sys.stdout.write(json.dumps(log_entry, ensure_ascii=False, default=str) + "\n")
+    sys.stdout.flush()
 
 
 class InterceptHandler(logging.Handler):
@@ -127,14 +152,22 @@ def start_logger():
     """
     logger.remove()
 
-    logger.add(
-        sys.stdout,
-        level=GLOBAL_LOG_LEVEL,
-        format=stdout_format,
-        filter=lambda record: (
-            "auditable" not in record["extra"] if ENABLE_AUDIT_STDOUT else True
-        ),
+    audit_filter = lambda record: (
+        "auditable" not in record["extra"] if ENABLE_AUDIT_STDOUT else True
     )
+    if LOG_FORMAT == "json":
+        logger.add(
+            _json_sink,
+            level=GLOBAL_LOG_LEVEL,
+            filter=audit_filter,
+        )
+    else:
+        logger.add(
+            sys.stdout,
+            level=GLOBAL_LOG_LEVEL,
+            format=stdout_format,
+            filter=audit_filter,
+        )
     if AUDIT_LOG_LEVEL != "NONE" and ENABLE_AUDIT_LOGS_FILE:
         try:
             logger.add(

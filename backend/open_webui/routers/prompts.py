@@ -498,6 +498,48 @@ async def update_prompt_access_by_id(
 
 
 ############################
+# TogglePromptActiveById
+############################
+
+
+@router.post("/id/{prompt_id}/toggle", response_model=Optional[PromptModel])
+async def toggle_prompt_active(
+    prompt_id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
+    prompt = Prompts.get_prompt_by_id(prompt_id, db=db)
+
+    if not prompt:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        prompt.user_id != user.id
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="prompt",
+            resource_id=prompt.id,
+            permission="write",
+            db=db,
+        )
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    result = Prompts.toggle_prompt_active(prompt.id, db=db)
+    if result:
+        return result
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=ERROR_MESSAGES.DEFAULT(),
+    )
+
+
+############################
 # DeletePromptById
 ############################
 

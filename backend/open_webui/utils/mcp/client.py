@@ -9,14 +9,27 @@ from mcp.client.auth import OAuthClientProvider, TokenStorage
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata, OAuthToken
 import httpx
-from mcp.shared._httpx_utils import create_mcp_http_client
 from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
 
 
 def create_insecure_httpx_client(headers=None, timeout=None, auth=None):
-    client = create_mcp_http_client(headers=headers, timeout=timeout, auth=auth)
-    client.verify = False
-    return client
+    """Create an httpx AsyncClient with SSL verification disabled.
+
+    Note: verify=False must be passed at construction time because httpx
+    configures the SSL context during __init__. Setting client.verify = False
+    after construction does not affect the underlying transport's SSL context.
+    """
+    kwargs = {
+        "follow_redirects": True,
+        "verify": False,
+    }
+    if timeout is not None:
+        kwargs["timeout"] = timeout
+    if headers is not None:
+        kwargs["headers"] = headers
+    if auth is not None:
+        kwargs["auth"] = auth
+    return httpx.AsyncClient(**kwargs)
 
 
 class MCPClient:

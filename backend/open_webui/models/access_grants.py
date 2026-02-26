@@ -402,7 +402,7 @@ class AccessGrantsTable:
             results = []
             for grant_dict in normalized_grants:
                 grant = AccessGrant(
-                    id=grant_dict["id"],
+                    id=str(uuid.uuid4()),
                     resource_type=resource_type,
                     resource_id=resource_id,
                     principal_type=grant_dict["principal_type"],
@@ -455,6 +455,31 @@ class AccessGrantsTable:
                 .all()
             )
             return [AccessGrantModel.model_validate(g) for g in grants]
+
+    def get_grants_by_resources(
+        self,
+        resource_type: str,
+        resource_ids: list[str],
+        db: Optional[Session] = None,
+    ) -> dict[str, list[AccessGrantModel]]:
+        """Batch-fetch grants for multiple resources. Returns {resource_id: [grants]}."""
+        if not resource_ids:
+            return {}
+        with get_db_context(db) as db:
+            grants = (
+                db.query(AccessGrant)
+                .filter(
+                    AccessGrant.resource_type == resource_type,
+                    AccessGrant.resource_id.in_(resource_ids),
+                )
+                .all()
+            )
+            result: dict[str, list[AccessGrantModel]] = {
+                rid: [] for rid in resource_ids
+            }
+            for g in grants:
+                result[g.resource_id].append(AccessGrantModel.model_validate(g))
+            return result
 
     def has_access(
         self,

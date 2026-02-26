@@ -261,13 +261,19 @@ class ChannelTable:
         return AccessGrants.get_grants_by_resource("channel", channel_id, db=db)
 
     def _to_channel_model(
-        self, channel: Channel, db: Optional[Session] = None
+        self,
+        channel: Channel,
+        access_grants: Optional[list[AccessGrantModel]] = None,
+        db: Optional[Session] = None,
     ) -> ChannelModel:
         channel_data = ChannelModel.model_validate(channel).model_dump(
             exclude={"access_grants"}
         )
-        access_grants = self._get_access_grants(channel_data["id"], db=db)
-        channel_data["access_grants"] = access_grants
+        channel_data["access_grants"] = (
+            access_grants
+            if access_grants is not None
+            else self._get_access_grants(channel_data["id"], db=db)
+        )
         return ChannelModel.model_validate(channel_data)
 
     def _collect_unique_user_ids(
@@ -368,7 +374,18 @@ class ChannelTable:
     def get_channels(self, db: Optional[Session] = None) -> list[ChannelModel]:
         with get_db_context(db) as db:
             channels = db.query(Channel).all()
-            return [self._to_channel_model(channel, db=db) for channel in channels]
+            channel_ids = [channel.id for channel in channels]
+            grants_map = AccessGrants.get_grants_by_resources(
+                "channel", channel_ids, db=db
+            )
+            return [
+                self._to_channel_model(
+                    channel,
+                    access_grants=grants_map.get(channel.id, []),
+                    db=db,
+                )
+                for channel in channels
+            ]
 
     def _has_permission(self, db, query, filter: dict, permission: str = "read"):
         return AccessGrants.has_permission_filter(
@@ -417,7 +434,14 @@ class ChannelTable:
             standard_channels = query.all()
 
             all_channels = membership_channels + standard_channels
-            return [self._to_channel_model(c, db=db) for c in all_channels]
+            channel_ids = [c.id for c in all_channels]
+            grants_map = AccessGrants.get_grants_by_resources(
+                "channel", channel_ids, db=db
+            )
+            return [
+                self._to_channel_model(c, access_grants=grants_map.get(c.id, []), db=db)
+                for c in all_channels
+            ]
 
     def get_dm_channel_by_user_ids(
         self, user_ids: list[str], db: Optional[Session] = None
@@ -724,7 +748,17 @@ class ChannelTable:
             )
             channel_ids = [cf.channel_id for cf in channel_files]
             channels = db.query(Channel).filter(Channel.id.in_(channel_ids)).all()
-            return [self._to_channel_model(channel, db=db) for channel in channels]
+            grants_map = AccessGrants.get_grants_by_resources(
+                "channel", channel_ids, db=db
+            )
+            return [
+                self._to_channel_model(
+                    channel,
+                    access_grants=grants_map.get(channel.id, []),
+                    db=db,
+                )
+                for channel in channels
+            ]
 
     def get_channels_by_file_id_and_user_id(
         self, file_id: str, user_id: str, db: Optional[Session] = None

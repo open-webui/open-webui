@@ -358,6 +358,7 @@
 				<div class="text-lg font-medium self-center">{$i18n.t('Sync Usage Stats')}</div>
 				<button
 					class="self-center"
+					aria-label={$i18n.t('Close modal')}
 					on:click={() => {
 						show = false;
 					}}

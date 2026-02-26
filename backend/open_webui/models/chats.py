@@ -431,29 +431,36 @@ class ChatTable:
     def update_chat_tags_by_id(
         self, id: str, tags: list[str], user
     ) -> Optional[ChatModel]:
-        chat = self.get_chat_by_id(id)
-        if chat is None:
-            return None
+        with get_db_context() as db:
+            chat = db.get(Chat, id)
+            if chat is None:
+                return None
 
-        self.delete_all_tags_by_id_and_user_id(id, user.id)
+            old_tags = chat.meta.get("tags", [])
+            new_tags = [t for t in tags if t.replace(" ", "_").lower() != "none"]
+            new_tag_ids = [t.replace(" ", "_").lower() for t in new_tags]
 
-        for tag in chat.meta.get("tags", []):
-            if self.count_chats_by_tag_name_and_user_id(tag, user.id) == 0:
-                Tags.delete_tag_by_name_and_user_id(tag, user.id)
+            # Single meta update
+            chat.meta = {**chat.meta, "tags": new_tag_ids}
+            db.commit()
+            db.refresh(chat)
 
-        for tag_name in tags:
-            if tag_name.lower() == "none":
-                continue
+            # Batch-create any missing tag rows
+            Tags.ensure_tags_exist(new_tags, user.id, db=db)
 
-            self.add_chat_tag_by_id_and_user_id_and_tag_name(id, user.id, tag_name)
-        return self.get_chat_by_id(id)
+            # Clean up orphaned old tags in one query
+            removed = set(old_tags) - set(new_tag_ids)
+            if removed:
+                self.delete_orphan_tags_for_user(list(removed), user.id, db=db)
+
+            return ChatModel.model_validate(chat)
 
     def get_chat_title_by_id(self, id: str) -> Optional[str]:
-        chat = self.get_chat_by_id(id)
-        if chat is None:
-            return None
-
-        return chat.chat.get("title", "New Chat")
+        with get_db_context() as db:
+            result = db.query(Chat.title).filter_by(id=id).first()
+            if result is None:
+                return None
+            return result[0] or "New Chat"
 
     def get_messages_map_by_chat_id(self, id: str) -> Optional[dict]:
         chat = self.get_chat_by_id(id)
@@ -482,6 +489,7 @@ class ChatTable:
         if isinstance(message.get("content"), str):
             message["content"] = sanitize_text_for_db(message["content"])
 
+        user_id = chat.user_id
         chat = chat.chat
         history = chat.get("history", {})
 
@@ -502,7 +510,7 @@ class ChatTable:
             ChatMessages.upsert_message(
                 message_id=message_id,
                 chat_id=id,
-                user_id=self.get_chat_by_id(id).user_id,
+                user_id=user_id,
                 data=history["messages"][message_id],
             )
         except Exception as e:
@@ -623,7 +631,9 @@ class ChatTable:
             with get_db_context(db) as db:
                 # Use subquery to delete chat_messages for shared chats
                 shared_chat_id_subquery = (
-                    db.query(Chat.id).filter_by(user_id=f"shared-{chat_id}").subquery()
+                    db.query(Chat.id)
+                    .filter_by(user_id=f"shared-{chat_id}")
+                    .scalar_subquery()
                 )
                 db.query(ChatMessage).filter(
                     ChatMessage.chat_id.in_(shared_chat_id_subquery)
@@ -706,7 +716,7 @@ class ChatTable:
         skip: int = 0,
         limit: int = 50,
         db: Optional[Session] = None,
-    ) -> list[ChatModel]:
+    ) -> list[ChatTitleIdResponse]:
 
         with get_db_context(db) as db:
             query = db.query(Chat).filter_by(user_id=user_id, archived=True)
@@ -732,13 +742,27 @@ class ChatTable:
             else:
                 query = query.order_by(Chat.updated_at.desc())
 
+            query = query.with_entities(
+                Chat.id, Chat.title, Chat.updated_at, Chat.created_at
+            )
+
             if skip:
                 query = query.offset(skip)
             if limit:
                 query = query.limit(limit)
 
             all_chats = query.all()
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+            return [
+                ChatTitleIdResponse.model_validate(
+                    {
+                        "id": chat[0],
+                        "title": chat[1],
+                        "updated_at": chat[2],
+                        "created_at": chat[3],
+                    }
+                )
+                for chat in all_chats
+            ]
 
     def get_shared_chat_list_by_user_id(
         self,
@@ -747,7 +771,7 @@ class ChatTable:
         skip: int = 0,
         limit: int = 50,
         db: Optional[Session] = None,
-    ) -> list[ChatModel]:
+    ) -> list[SharedChatResponse]:
 
         with get_db_context(db) as db:
             query = (
@@ -777,13 +801,34 @@ class ChatTable:
             else:
                 query = query.order_by(Chat.updated_at.desc())
 
+            # Select only the columns needed for SharedChatResponse
+            # to avoid loading the heavy chat JSON blob
+            query = query.with_entities(
+                Chat.id,
+                Chat.title,
+                Chat.share_id,
+                Chat.updated_at,
+                Chat.created_at,
+            )
+
             if skip:
                 query = query.offset(skip)
             if limit:
                 query = query.limit(limit)
 
             all_chats = query.all()
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+            return [
+                SharedChatResponse.model_validate(
+                    {
+                        "id": chat[0],
+                        "title": chat[1],
+                        "share_id": chat[2],
+                        "updated_at": chat[3],
+                        "created_at": chat[4],
+                    }
+                )
+                for chat in all_chats
+            ]
 
     def get_chat_list_by_user_id(
         self,
@@ -931,6 +976,37 @@ class ChatTable:
         except Exception:
             return None
 
+    def is_chat_owner(
+        self, id: str, user_id: str, db: Optional[Session] = None
+    ) -> bool:
+        """
+        Lightweight ownership check — uses EXISTS subquery instead of loading
+        the full Chat row (which includes the potentially large JSON blob).
+        """
+        try:
+            with get_db_context(db) as db:
+                return db.query(
+                    exists().where(and_(Chat.id == id, Chat.user_id == user_id))
+                ).scalar()
+        except Exception:
+            return False
+
+    def get_chat_folder_id(
+        self, id: str, user_id: str, db: Optional[Session] = None
+    ) -> Optional[str]:
+        """
+        Fetch only the folder_id column for a chat, without loading the full
+        JSON blob. Returns None if chat doesn't exist or doesn't belong to user.
+        """
+        try:
+            with get_db_context(db) as db:
+                result = (
+                    db.query(Chat.folder_id).filter_by(id=id, user_id=user_id).first()
+                )
+                return result[0] if result else None
+        except Exception:
+            return None
+
     def get_chats(
         self, skip: int = 0, limit: int = 50, db: Optional[Session] = None
     ) -> list[ChatModel]:
@@ -990,14 +1066,25 @@ class ChatTable:
 
     def get_pinned_chats_by_user_id(
         self, user_id: str, db: Optional[Session] = None
-    ) -> list[ChatModel]:
+    ) -> list[ChatTitleIdResponse]:
         with get_db_context(db) as db:
             all_chats = (
                 db.query(Chat)
                 .filter_by(user_id=user_id, pinned=True, archived=False)
                 .order_by(Chat.updated_at.desc())
+                .with_entities(Chat.id, Chat.title, Chat.updated_at, Chat.created_at)
             )
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+            return [
+                ChatTitleIdResponse.model_validate(
+                    {
+                        "id": chat[0],
+                        "title": chat[1],
+                        "updated_at": chat[2],
+                        "created_at": chat[3],
+                    }
+                )
+                for chat in all_chats
+            ]
 
     def get_archived_chats_by_user_id(
         self, user_id: str, db: Optional[Session] = None
@@ -1267,8 +1354,8 @@ class ChatTable:
     ) -> list[TagModel]:
         with get_db_context(db) as db:
             chat = db.get(Chat, id)
-            tags = chat.meta.get("tags", [])
-            return [Tags.get_tag_by_name_and_user_id(tag, user_id) for tag in tags]
+            tag_ids = chat.meta.get("tags", [])
+            return Tags.get_tags_by_ids_and_user_id(tag_ids, user_id, db=db)
 
     def get_chat_list_by_user_id_and_tag_name(
         self,
@@ -1309,20 +1396,16 @@ class ChatTable:
     def add_chat_tag_by_id_and_user_id_and_tag_name(
         self, id: str, user_id: str, tag_name: str, db: Optional[Session] = None
     ) -> Optional[ChatModel]:
-        tag = Tags.get_tag_by_name_and_user_id(tag_name, user_id)
-        if tag is None:
-            tag = Tags.insert_new_tag(tag_name, user_id)
+        tag_id = tag_name.replace(" ", "_").lower()
+        Tags.ensure_tags_exist([tag_name], user_id, db=db)
         try:
             with get_db_context(db) as db:
                 chat = db.get(Chat, id)
-
-                tag_id = tag.id
                 if tag_id not in chat.meta.get("tags", []):
                     chat.meta = {
                         **chat.meta,
                         "tags": list(set(chat.meta.get("tags", []) + [tag_id])),
                     }
-
                 db.commit()
                 db.refresh(chat)
                 return ChatModel.model_validate(chat)
@@ -1332,40 +1415,53 @@ class ChatTable:
     def count_chats_by_tag_name_and_user_id(
         self, tag_name: str, user_id: str, db: Optional[Session] = None
     ) -> int:
-        with get_db_context(db) as db:  # Assuming `get_db()` returns a session object
+        with get_db_context(db) as db:
             query = db.query(Chat).filter_by(user_id=user_id, archived=False)
-
-            # Normalize the tag_name for consistency
             tag_id = tag_name.replace(" ", "_").lower()
 
             if db.bind.dialect.name == "sqlite":
-                # SQLite JSON1 support for querying the tags inside the `meta` JSON field
                 query = query.filter(
                     text(
-                        f"EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)"
+                        "EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)"
                     )
                 ).params(tag_id=tag_id)
-
             elif db.bind.dialect.name == "postgresql":
-                # PostgreSQL JSONB support for querying the tags inside the `meta` JSON field
                 query = query.filter(
                     text(
                         "EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)"
                     )
                 ).params(tag_id=tag_id)
-
             else:
                 raise NotImplementedError(
                     f"Unsupported dialect: {db.bind.dialect.name}"
                 )
 
-            # Get the count of matching records
-            count = query.count()
+            return query.count()
 
-            # Debugging output for inspection
-            log.info(f"Count of chats for tag '{tag_name}': {count}")
+    def delete_orphan_tags_for_user(
+        self,
+        tag_ids: list[str],
+        user_id: str,
+        threshold: int = 0,
+        db: Optional[Session] = None,
+    ) -> None:
+        """Delete tag rows from *tag_ids* that appear in at most *threshold*
+        non-archived chats for *user_id*.  One query to find orphans, one to
+        delete them.
 
-            return count
+        Use threshold=0 after a tag is already removed from a chat's meta.
+        Use threshold=1 when the chat itself is about to be deleted (the
+        referencing chat still exists at query time).
+        """
+        if not tag_ids:
+            return
+        with get_db_context(db) as db:
+            orphans = []
+            for tag_id in tag_ids:
+                count = self.count_chats_by_tag_name_and_user_id(tag_id, user_id, db=db)
+                if count <= threshold:
+                    orphans.append(tag_id)
+            Tags.delete_tags_by_ids_and_user_id(orphans, user_id, db=db)
 
     def count_chats_by_folder_id_and_user_id(
         self, folder_id: str, user_id: str, db: Optional[Session] = None

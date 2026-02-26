@@ -523,13 +523,17 @@ async def get_schemas():
 @router.get("/Users", response_model=SCIMListResponse)
 async def get_users(
     request: Request,
-    startIndex: int = Query(1, ge=1),
-    count: int = Query(20, ge=1, le=100),
+    startIndex: int = Query(1),
+    count: int = Query(20),
     filter: Optional[str] = None,
     _: bool = Depends(get_scim_auth),
     db: Session = Depends(get_session),
 ):
     """List SCIM Users"""
+    # Clamp per SCIM 2.0 spec (RFC 7644 §3.4.2.4):
+    # startIndex < 1 SHALL be treated as 1; count < 0 SHALL be treated as 0.
+    startIndex = max(1, startIndex)
+    count = max(0, min(100, count))
     skip = startIndex - 1
     limit = count
 
@@ -794,13 +798,18 @@ async def delete_user(
 @router.get("/Groups", response_model=SCIMListResponse)
 async def get_groups(
     request: Request,
-    startIndex: int = Query(1, ge=1),
-    count: int = Query(20, ge=1, le=100),
+    startIndex: int = Query(1),
+    count: int = Query(20),
     filter: Optional[str] = None,
     _: bool = Depends(get_scim_auth),
     db: Session = Depends(get_session),
 ):
     """List SCIM Groups"""
+    # Clamp per SCIM 2.0 spec (RFC 7644 §3.4.2.4):
+    # startIndex < 1 SHALL be treated as 1; count < 0 SHALL be treated as 0.
+    startIndex = max(1, startIndex)
+    count = max(0, min(100, count))
+
     # Get all groups
     groups_list = Groups.get_all_groups(db=db)
 

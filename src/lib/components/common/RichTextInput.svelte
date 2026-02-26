@@ -691,7 +691,12 @@
 			element: element,
 			extensions: [
 				StarterKit.configure({
-					link: link
+					link: link,
+					// When rich text is off, disable Strike from StarterKit so we can
+					// re-add it below without its Mod-Shift-s shortcut (which conflicts
+					// with the Toggle Sidebar shortcut). When rich text is on, the user
+					// can undo strikethrough via the toolbar, so the shortcut is fine.
+					...(richText ? {} : { strike: false })
 				}),
 				...(dragHandle ? [ListItemDragHandle] : []),
 				Placeholder.configure({ placeholder: () => _placeholder, showOnlyWhenEditable: false }),
