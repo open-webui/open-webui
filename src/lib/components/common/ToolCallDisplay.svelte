@@ -224,7 +224,9 @@
 									{@const resultStr = String(parsedResult)}
 									{@const isTruncated = resultStr.length > RESULT_PREVIEW_LIMIT && !expandedResult}
 									<pre
-										class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre-wrap break-words font-mono">{isTruncated ? resultStr.slice(0, RESULT_PREVIEW_LIMIT) : resultStr}</pre>
+										class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre-wrap break-words font-mono">{isTruncated
+											? resultStr.slice(0, RESULT_PREVIEW_LIMIT)
+											: resultStr}</pre>
 									{#if isTruncated}
 										<button
 											class="mt-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
