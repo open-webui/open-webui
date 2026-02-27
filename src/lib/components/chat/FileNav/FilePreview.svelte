@@ -213,7 +213,7 @@
 				{@html renderedHtml}
 			</div>
 		{:else if isCsv && !showRaw && csvRows.length > 0}
-			<div class="overflow-auto h-full p-3">
+			<div class="overflow-auto h-full px-3 pb-3">
 				<table class="csv-table w-full text-xs font-mono border-collapse">
 					<thead>
 						<tr>
