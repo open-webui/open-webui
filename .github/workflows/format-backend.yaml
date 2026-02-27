@@ -36,6 +36,11 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: '${{ matrix.python-version }}'
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
 
       - name: Install dependencies
         run: |
