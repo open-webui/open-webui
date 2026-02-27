@@ -8,47 +8,47 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import AccessControlModal from '$lib/components/workspace/common/AccessControlModal.svelte';
+	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 
 	export let show = false;
 	export let edit = false;
 	export let admin = false;
-	export let connection: {
-		url: string;
-		key: string;
-		name?: string;
-		path?: string;
-		enabled: boolean;
-	} | null = null;
+	export let connection = null;
 
-	export let onSubmit: (c: {
-		url: string;
-		key: string;
-		name?: string;
-		path?: string;
-		enabled: boolean;
-	}) => void = () => {};
+	export let onSubmit: Function = () => {};
 	export let onDelete: () => void = () => {};
 
 	let url = '';
 	let key = '';
 	let name = '';
+	let id = '';
 	let auth_type = 'bearer';
 	let path = '/openapi.json';
+	let enabled = true;
 	let showAdvanced = false;
+	let showAccessControlModal = false;
+	let accessGrants: any[] = [];
 
 	const init = () => {
 		if (connection) {
+			id = connection?.id ?? '';
 			url = connection.url;
-			key = connection.key;
-			name = connection.name ?? '';
-			auth_type = connection.auth_type ?? 'bearer';
-			path = connection.path ?? '/openapi.json';
+			key = connection?.key ?? '';
+			name = connection?.name ?? '';
+			auth_type = connection?.auth_type ?? 'bearer';
+			path = connection?.path ?? '/openapi.json';
+			enabled = connection?.enabled ?? true;
+			accessGrants = connection?.config?.access_grants ?? [];
 		} else {
+			id = '';
 			url = '';
 			key = '';
 			name = '';
 			auth_type = 'bearer';
 			path = '/openapi.json';
+			enabled = true;
+			accessGrants = [];
 		}
 	};
 
@@ -66,12 +66,16 @@
 		url = url.replace(/\/$/, '');
 
 		const result = {
+			...(admin && id.trim() ? { id: id.trim() } : {}),
 			url,
 			key,
 			name,
 			path,
 			auth_type,
-			enabled: connection?.enabled ?? false
+			enabled: enabled,
+			config: {
+				...(admin ? { access_grants: accessGrants } : {})
+			}
 		};
 
 		onSubmit(result);
@@ -106,7 +110,7 @@
 				<form class="flex flex-col w-full" on:submit|preventDefault={submitHandler}>
 					<div class="px-1">
 						<div class="flex gap-2">
-							<div class="flex flex-col w-full">
+							<div class="flex flex-col flex-1">
 								<div class="flex justify-between mb-0.5">
 									<label
 										for="terminal-name"
@@ -126,6 +130,26 @@
 									/>
 								</div>
 							</div>
+							{#if admin}
+								<div class="flex flex-col flex-1">
+									<div class="flex justify-between mb-0.5">
+										<label
+											for="terminal-id"
+											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										>{$i18n.t('ID')} <span class="opacity-50">({$i18n.t('optional')})</span></label>
+									</div>
+									<div class="flex flex-1 items-center">
+										<input
+											id="terminal-id"
+											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											type="text"
+											bind:value={id}
+											placeholder="auto"
+											autocomplete="off"
+										/>
+									</div>
+								</div>
+							{/if}
 						</div>
 
 						<div class="flex gap-2 mt-2">
@@ -152,25 +176,43 @@
 							</div>
 						</div>
 
-						<button
-							type="button"
-							class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition mt-2"
-							on:click={() => (showAdvanced = !showAdvanced)}
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 20 20"
-								fill="currentColor"
-								class="w-3 h-3 transition-transform {showAdvanced ? 'rotate-90' : ''}"
+						<div class="flex items-center justify-between">
+							<button
+								type="button"
+								class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition mt-2"
+								on:click={() => (showAdvanced = !showAdvanced)}
 							>
-								<path
-									fill-rule="evenodd"
-									d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-									clip-rule="evenodd"
-								/>
-							</svg>
-							{$i18n.t('Advanced')}
-						</button>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="w-3 h-3 transition-transform {showAdvanced ? 'rotate-90' : ''}"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+								{$i18n.t('Advanced')}
+							</button>
+
+							{#if admin}
+								<button
+									class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 object-cover rounded-full flex gap-1 items-center mt-2"
+									type="button"
+									on:click={() => {
+										showAccessControlModal = true;
+									}}
+								>
+									<LockClosed strokeWidth="2.5" className="size-3.5 shrink-0" />
+
+									<div class="text-xs font-medium shrink-0">
+										{$i18n.t('Access')}
+									</div>
+								</button>
+							{/if}
+						</div>
 
 						{#if showAdvanced}
 							<div class="flex gap-2 mt-2">
@@ -305,3 +347,5 @@
 		</div>
 	</div>
 </Modal>
+
+<AccessControlModal bind:show={showAccessControlModal} bind:accessGrants />
