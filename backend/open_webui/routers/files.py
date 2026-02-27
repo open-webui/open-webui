@@ -1,4 +1,5 @@
 import logging
+import mimetypes
 import os
 import uuid
 import json
@@ -271,21 +272,45 @@ def upload_file_handler(
         filename = os.path.basename(unsanitized_filename)
 
         file_extension = os.path.splitext(filename)[1]
-        # Remove the leading dot from the file extension
-        file_extension = file_extension[1:] if file_extension else ""
+        file_extension = file_extension[1:].lower() if file_extension else ""
 
         if process and request.app.state.config.ALLOWED_FILE_EXTENSIONS:
-            request.app.state.config.ALLOWED_FILE_EXTENSIONS = [
-                ext for ext in request.app.state.config.ALLOWED_FILE_EXTENSIONS if ext
-            ]
 
-            if file_extension not in request.app.state.config.ALLOWED_FILE_EXTENSIONS:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.DEFAULT(
-                        f"File type {file_extension} is not allowed"
-                    ),
-                )
+            # Creates a clean case insensitive list.
+            allowed_exts = {
+                normalized
+                for ext in request.app.state.config.ALLOWED_FILE_EXTENSIONS
+                if ext and ext.strip()
+                for normalized in [ext.strip().lower().lstrip(".")]
+                if normalized
+            }
+
+            if file_extension not in allowed_exts:
+                inferred_ext = ""
+
+                if not file_extension:
+                    content_type = (file.content_type or "").split(";", 1)[0].strip().lower()
+                    if content_type and content_type != "application/octet-stream":
+                        guessed = mimetypes.guess_extension(content_type)
+                        if guessed and guessed.lstrip(".").lower() in allowed_exts:
+                            inferred_ext = guessed.lstrip(".").lower()
+                        else:
+                            for ext in mimetypes.guess_all_extensions(content_type):
+                                ext_clean = ext.lstrip(".").lower()
+                                if ext_clean in allowed_exts:
+                                    inferred_ext = ext_clean
+                                    break
+
+                if inferred_ext:
+                    filename = f"{filename.rstrip('.')}.{inferred_ext}"
+                    file_extension = inferred_ext
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=ERROR_MESSAGES.DEFAULT(
+                            f"File type {file_extension or 'unknown'} is not allowed"
+                        ),
+                    )
 
         # replace filename with uuid
         id = str(uuid.uuid4())
