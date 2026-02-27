@@ -37,7 +37,7 @@
 		removeAllDetails
 	} from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { MODEL_NAME_MAPPING } from '$lib/constants/model_names';
+	import { MODEL_NAME_MAPPING } from '$lib/constants';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';

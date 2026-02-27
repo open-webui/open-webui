@@ -114,3 +114,34 @@ export const PASTED_TEXT_CHARACTER_LIMIT = 1000;
 // This feature, akin to $env/static/private, exclusively incorporates environment variables
 // that are prefixed with config.kit.env.publicPrefix (usually set to PUBLIC_).
 // Consequently, these variables can be securely exposed to client-side code.
+
+export const MODEL_NAME_MAPPING = {
+  "gemma3": "Gemma 3",
+  "openthinker": "OpenThinker",
+  "qwen3": "Qwen 3",
+  "qwen3-8b": "Qwen 3 Small",
+  "text-embedding-3-small": "Text Embedding 3 Small",
+  "text-embedding-3-large": "Text Embedding 3 Large",
+  "qwen3-embedding": "Qwen 3 Embedding",
+  "bge-m3-embedding": "BGE M3 Embedding",
+  "qwen3-rerank": "Qwen 3 Reranker",
+  "o3-deep-research": "O3 Deep Research",
+  "o4-mini-deep-research": "O4 Mini Deep Research",
+  "gpt-5": "GPT 5",
+  "gpt-5.2": "GPT 5.2",
+  "gpt-5.2-codex": "GPT 5.2 Codex",
+  "gpt-5-mini": "GPT 5 Mini",
+  "gpt-5-nano": "GPT 5 Nano",
+  "o4-mini": "O4 Mini",
+  "claude-sonnet-4-5": "Claude Sonnet 4.5",
+  "claude-sonnet-4-6": "Claude Sonnet 4.6",
+  "claude-opus-4-6": "Claude Opus 4.6",
+  "gemini-3.1-pro-preview": "Gemini 3.1 Pro Preview",
+  "gpt-4o-mini-tts": "GPT-4o Mini Text-to-Speech",
+  "gpt-4o-transcribe": "GPT-4o Transcription",
+  "dall-e-3": "DALL·E 3",
+  "gpt-image-1.5": "GPT Image 1.5",
+  "qwen3-coder": "Qwen 3 Coder",
+  "whisper": "Whisper",
+  "kokoro": "Kokoro"
+}

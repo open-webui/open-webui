@@ -6,7 +6,7 @@
 
 	import { mobile, settings, user } from '$lib/stores';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { MODEL_NAME_MAPPING } from '$lib/constants/model_names.ts';
+	import { MODEL_NAME_MAPPING } from '$lib/constants';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { copyToClipboard, sanitizeResponseContent } from '$lib/utils';

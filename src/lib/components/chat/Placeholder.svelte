@@ -21,7 +21,7 @@
 	} from '$lib/stores';
 	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { MODEL_NAME_MAPPING } from '$lib/constants/model_names';
+	import { MODEL_NAME_MAPPING } from '$lib/constants';
 
 	import Suggestions from './Suggestions.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -168,7 +168,7 @@
 							desc: $i18n.t('Best for complex, long-running tasks: advanced coding, coordinating many steps, using multiple tools, and working independently with little supervision.')
 						},
 						{
-							id: 'gemini-3-pro-preview',
+							id: 'gemini-3.1-pro-preview',
 							label: $i18n.t('Deep Thinker'),
 							desc: $i18n.t('Best for hard problems that need advanced reasoning, careful analysis, and multi-step thinking.')
 						}

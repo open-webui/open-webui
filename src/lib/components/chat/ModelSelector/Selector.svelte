@@ -36,7 +36,7 @@
 	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
 
 	import ModelItem from './ModelItem.svelte';
-	import { MODEL_NAME_MAPPING } from '$lib/constants/model_names';
+	import { MODEL_NAME_MAPPING } from '$lib/constants';
 
 	import { get } from 'svelte/store';
 	const i18n = getContext('i18n');

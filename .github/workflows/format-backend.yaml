@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - dev
+      - develop
     paths:
       - 'backend/**'
       - 'pyproject.toml'
@@ -12,7 +12,7 @@ on:
   pull_request:
     branches:
       - main
-      - dev
+      - develop
     paths:
       - 'backend/**'
       - 'pyproject.toml'
