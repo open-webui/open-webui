@@ -19,6 +19,9 @@
 	$: directTerminals = ($settings?.terminalServers ?? []).filter((s) => s.url);
 
 	const refreshTerminalServersStore = async (servers: typeof directTerminals) => {
+		// Preserve system terminals (those with an `id`) — only refresh direct ones
+		const existingSystemTerminals = ($terminalServers ?? []).filter((t) => t.id);
+
 		const activeTerminals = servers.filter((s) => s.enabled);
 		if (activeTerminals.length > 0) {
 			let data = await getToolServersData(
@@ -31,9 +34,9 @@
 				}))
 			);
 			data = data.filter((d) => d && !d.error);
-			terminalServers.set(data);
+			terminalServers.set([...data, ...existingSystemTerminals]);
 		} else {
-			terminalServers.set([]);
+			terminalServers.set(existingSystemTerminals);
 		}
 	};
 
