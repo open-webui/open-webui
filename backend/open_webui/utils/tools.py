@@ -40,7 +40,7 @@ from open_webui.models.users import UserModel
 from open_webui.models.groups import Groups
 from open_webui.models.access_grants import AccessGrants
 from open_webui.utils.plugin import load_tool_module_by_id
-from open_webui.utils.access_control import has_access
+from open_webui.utils.access_control import has_access, has_connection_access
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
@@ -144,19 +144,6 @@ def get_updated_tool_function(function: Callable, extra_params: dict):
     return function
 
 
-def has_tool_server_access(
-    user: UserModel, server_connection: dict, user_group_ids: set = None
-) -> bool:
-    """Check if user has access to a tool server (MCP or OpenAPI)."""
-    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
-        return True
-
-    if user_group_ids is None:
-        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
-
-    server_config = server_connection.get("config", {})
-    access_grants = server_config.get("access_grants", [])
-    return has_access(user.id, "read", access_grants, user_group_ids)
 
 
 async def get_tools(
@@ -297,7 +284,7 @@ async def get_tools(
                     )
 
                     # Check access control for tool server
-                    if not has_tool_server_access(
+                    if not has_connection_access(
                         user, tool_server_connection, user_group_ids
                     ):
                         log.warning(
@@ -394,7 +381,7 @@ async def get_tools(
                         tool_dict = {
                             "tool_id": tool_id,
                             "callable": callable,
-                            "spec": spec,
+                            "spec": clean_openai_tool_schema(spec),
                             # Misc info
                             "type": "external",
                         }
@@ -810,13 +797,18 @@ def convert_openapi_to_tool_payload(openapi_spec):
                             f". Possible values: {', '.join(param_schema.get('enum'))}"
                         )
                     param_property = {
-                        "type": param_schema.get("type"),
+                        "type": param_schema.get("type") or "string",
                         "description": description,
                     }
 
                     # Include items property for array types (required by OpenAI)
                     if param_schema.get("type") == "array" and "items" in param_schema:
                         param_property["items"] = param_schema["items"]
+
+                    # Filter out None values to prevent schema validation errors
+                    param_property = {
+                        k: v for k, v in param_property.items() if v is not None
+                    }
 
                     tool["parameters"]["properties"][param_name] = param_property
                     if param.get("required"):
@@ -879,6 +871,180 @@ async def get_tool_servers(request: Request):
         tool_servers = await set_tool_servers(request)
 
     return tool_servers
+
+
+async def get_terminal_cwd(
+    base_url: str,
+    headers: dict,
+    cookies: Optional[dict] = None,
+) -> Optional[str]:
+    """Fetch the current working directory from a terminal server."""
+    try:
+        cwd_url = f"{base_url.rstrip('/')}/files/cwd"
+        async with aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=5),
+            trust_env=True,
+        ) as session:
+            async with session.get(
+                cwd_url, headers=headers, cookies=cookies or {}
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    return data.get("cwd")
+    except Exception as e:
+        log.debug(f"Failed to fetch terminal CWD: {e}")
+    return None
+
+
+async def set_terminal_servers(request: Request):
+    """Load and cache OpenAPI specs from all TERMINAL_SERVER_CONNECTIONS."""
+    connections = request.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
+
+    # Build server configs with info containing the connection ID
+    server_configs = []
+    for connection in connections:
+        conn_id = connection.get("id", "")
+        if not connection.get("url"):
+            continue
+
+        auth_type = connection.get("auth_type", "bearer")
+        token = None
+        if auth_type == "bearer":
+            token = connection.get("key", "")
+
+        server_configs.append({
+            "url": connection.get("url", ""),
+            "key": token or "",
+            "auth_type": auth_type,
+            "path": "openapi.json",
+            "spec_type": "url",
+            "config": {"enable": True},
+            "info": {"id": conn_id, "name": connection.get("name", "")},
+        })
+
+    request.app.state.TERMINAL_SERVERS = await get_tool_servers_data(server_configs)
+
+    if request.app.state.redis is not None:
+        await request.app.state.redis.set(
+            "terminal_servers", json.dumps(request.app.state.TERMINAL_SERVERS)
+        )
+
+    return request.app.state.TERMINAL_SERVERS
+
+
+async def get_terminal_servers(request: Request):
+    """Return cached terminal server specs, loading if needed."""
+    terminal_servers = []
+    if request.app.state.redis is not None:
+        try:
+            terminal_servers = json.loads(
+                await request.app.state.redis.get("terminal_servers")
+            )
+            request.app.state.TERMINAL_SERVERS = terminal_servers
+        except Exception as e:
+            log.error(f"Error fetching terminal_servers from Redis: {e}")
+
+    if not terminal_servers:
+        terminal_servers = await set_terminal_servers(request)
+
+    return terminal_servers
+
+
+async def get_terminal_tools(
+    request: Request,
+    terminal_id: str,
+    user: UserModel,
+    extra_params: dict,
+) -> dict[str, dict]:
+    """Resolve tools for a terminal server identified by terminal_id.
+
+    - Finds the connection in TERMINAL_SERVER_CONNECTIONS
+    - Checks access_grants
+    - Loads specs from cache
+    - Builds callables that route through the terminal proxy
+    """
+    connections = request.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
+    connection = next(
+        (c for c in connections if c.get("id") == terminal_id), None
+    )
+    if connection is None:
+        log.warning(f"Terminal server not found: {terminal_id}")
+        return {}
+
+    user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
+    if not has_connection_access(user, connection, user_group_ids):
+        log.warning(f"Access denied to terminal {terminal_id} for user {user.id}")
+        return {}
+
+    # Find the cached spec data for this terminal
+    terminal_servers = await get_terminal_servers(request)
+    server_data = next(
+        (s for s in terminal_servers if s.get("id") == terminal_id), None
+    )
+    if server_data is None:
+        log.warning(f"Terminal server spec not found for {terminal_id}")
+        return {}
+
+    specs = server_data.get("specs", [])
+    if not specs:
+        return {}
+
+    # Build auth headers
+    auth_type = connection.get("auth_type", "bearer")
+    cookies = {}
+    headers = {"Content-Type": "application/json", "X-User-Id": user.id}
+
+    if auth_type == "bearer":
+        headers["Authorization"] = f"Bearer {connection.get('key', '')}"
+    elif auth_type == "session":
+        cookies = request.cookies
+        headers["Authorization"] = f"Bearer {request.state.token.credentials}"
+    elif auth_type == "system_oauth":
+        cookies = request.cookies
+        oauth_token = extra_params.get("__oauth_token__", None)
+        if oauth_token:
+            headers["Authorization"] = f"Bearer {oauth_token.get('access_token', '')}"
+    # auth_type == "none": no Authorization header
+
+    terminal_cwd = await get_terminal_cwd(
+        connection.get("url", ""), headers, cookies
+    )
+
+    tools_dict = {}
+    for spec in specs:
+        function_name = spec["name"]
+
+        # Inject CWD into run_command description
+        tool_spec = clean_openai_tool_schema(spec)
+        if function_name == "run_command" and terminal_cwd:
+            tool_spec["description"] = (
+                tool_spec.get("description", "")
+                + f"\n\nThe current working directory is: {terminal_cwd}"
+            )
+
+        def make_tool_function(fn_name, srv_data, hdrs, cks):
+            async def tool_function(**kwargs):
+                return await execute_tool_server(
+                    url=srv_data["url"],
+                    headers=hdrs,
+                    cookies=cks,
+                    name=fn_name,
+                    params=kwargs,
+                    server_data=srv_data,
+                )
+            return tool_function
+
+        tool_function = make_tool_function(function_name, server_data, headers, cookies)
+        callable = get_async_tool_function_and_apply_extra_params(tool_function, {})
+
+        tools_dict[function_name] = {
+            "tool_id": f"terminal:{terminal_id}",
+            "callable": callable,
+            "spec": tool_spec,
+            "type": "terminal",
+        }
+
+    return tools_dict
 
 
 async def get_tool_server_data(url: str, headers: Optional[dict]) -> Dict[str, Any]:
@@ -995,6 +1161,11 @@ async def get_tool_servers_data(servers: List[Dict[str, Any]]) -> List[Dict[str,
     for (id, idx, server, url, info, _), response in zip(server_entries, responses):
         if isinstance(response, Exception):
             log.error(f"Failed to connect to {url} OpenAPI tool server")
+            continue
+
+        # Guard against invalid or non-OpenAPI specs (e.g., MCP-style configs)
+        if not isinstance(response, dict) or "paths" not in response:
+            log.warning(f"Invalid OpenAPI spec from {url}: missing 'paths'")
             continue
 
         response = {

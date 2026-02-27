@@ -96,6 +96,7 @@ from open_webui.routers import (
     users,
     utils,
     scim,
+    terminals,
 )
 
 from open_webui.routers.retrieval import (
@@ -132,6 +133,8 @@ from open_webui.config import (
     THREAD_POOL_SIZE,
     # Tool Server Configs
     TOOL_SERVER_CONNECTIONS,
+    # Terminal Server
+    TERMINAL_SERVER_CONNECTIONS,
     # Code Execution
     ENABLE_CODE_EXECUTION,
     CODE_EXECUTION_ENGINE,
@@ -524,7 +527,7 @@ from open_webui.utils.middleware import (
     process_chat_payload,
     process_chat_response,
 )
-from open_webui.utils.tools import set_tool_servers
+from open_webui.utils.tools import set_tool_servers, set_terminal_servers
 
 from open_webui.utils.auth import (
     get_license_data,
@@ -690,8 +693,11 @@ async def lifespan(app: FastAPI):
             )
             await set_tool_servers(mock_request)
             log.info(f"Initialized {len(app.state.TOOL_SERVERS)} tool server(s)")
+
+            await set_terminal_servers(mock_request)
+            log.info(f"Initialized {len(app.state.TERMINAL_SERVERS)} terminal server(s)")
         except Exception as e:
-            log.warning(f"Failed to initialize tool servers at startup: {e}")
+            log.warning(f"Failed to initialize tool/terminal servers at startup: {e}")
 
     yield
 
@@ -774,6 +780,15 @@ app.state.OPENAI_MODELS = {}
 
 app.state.config.TOOL_SERVER_CONNECTIONS = TOOL_SERVER_CONNECTIONS
 app.state.TOOL_SERVERS = []
+
+########################################
+#
+# TERMINAL SERVER
+#
+########################################
+
+app.state.config.TERMINAL_SERVER_CONNECTIONS = TERMINAL_SERVER_CONNECTIONS
+app.state.TERMINAL_SERVERS = []
 
 ########################################
 #
@@ -1540,6 +1555,7 @@ app.include_router(
 if ENABLE_ADMIN_ANALYTICS:
     app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
+app.include_router(terminals.router, prefix="/api/v1/terminals", tags=["terminals"])
 
 # SCIM 2.0 API for identity management
 if ENABLE_SCIM:
@@ -2204,6 +2220,7 @@ async def get_app_config(request: Request):
                     "pending_user_overlay_content": app.state.config.PENDING_USER_OVERLAY_CONTENT,
                     "response_watermark": app.state.config.RESPONSE_WATERMARK,
                 },
+
                 "license_metadata": app.state.LICENSE_METADATA,
                 **(
                     {

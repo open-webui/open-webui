@@ -6,7 +6,8 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, onDestroy, tick } from 'svelte';
-	import { settings, showFileNavPath } from '$lib/stores';
+	import { terminalServers, settings, showFileNavPath } from '$lib/stores';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import {
 		getCwd,
 		listFiles,
@@ -58,9 +59,10 @@
 	let showDeleteConfirm = false;
 	let shiftKey = false;
 
-	$: activeTerminal = ($settings?.terminalServers ?? []).find((s) => s.enabled);
-	$: terminalUrl = activeTerminal?.url ?? '';
-	$: terminalKey = activeTerminal?.key ?? '';
+	$: firstTerminal = $terminalServers?.[0] ?? null;
+	$: activeUserTerminal = ($settings?.terminalServers ?? []).find((s) => s.enabled);
+	$: terminalUrl = firstTerminal?.url ?? activeUserTerminal?.url ?? '';
+	$: terminalKey = firstTerminal?.key ?? activeUserTerminal?.key ?? '';
 	$: configured = !!terminalUrl;
 
 	$: breadcrumbs = currentPath

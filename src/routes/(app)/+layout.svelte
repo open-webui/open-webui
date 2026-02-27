@@ -12,9 +12,10 @@
 	import { getModels, getToolServersData, getVersionUpdates } from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
 	import { getBanners } from '$lib/apis/configs';
+	import { getTerminalServers } from '$lib/apis/terminal';
 	import { getUserSettings } from '$lib/apis/users';
 
-	import { WEBUI_VERSION } from '$lib/constants';
+	import { WEBUI_VERSION, WEBUI_API_BASE_URL } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
 
 	import {
@@ -144,21 +145,39 @@
 					config: { enable: true }
 				}))
 			);
-			terminalServersData = terminalServersData.filter((data) => {
-				if (!data || data.error) {
-					toast.error(
-						$i18n.t(`Failed to connect to {{URL}} terminal server`, {
-							URL: data?.url
-						})
-					);
-					return false;
-				}
-				return true;
-			});
+			terminalServersData = terminalServersData
+				.filter((data) => {
+					if (!data || data.error) {
+						toast.error(
+							$i18n.t(`Failed to connect to {{URL}} terminal server`, {
+								URL: data?.url
+							})
+						);
+						return false;
+					}
+					return true;
+				})
+				.map((data, i) => ({
+					...data,
+					key: enabledTerminals[i]?.key ?? ''
+				}));
 
 			terminalServers.set(terminalServersData);
 		} else {
 			terminalServers.set([]);
+		}
+
+		// Fetch terminal servers the user has access to (for FileNav + terminal_id)
+		const backendTerminals = await getTerminalServers(localStorage.token);
+		if (backendTerminals.length > 0) {
+			// Store with proxy URL and session key for FileNav file browsing
+			const terminalEntries = backendTerminals.map((t) => ({
+				id: t.id,
+				url: `${WEBUI_API_BASE_URL}/terminals/${t.id}`,
+				name: t.name,
+				key: localStorage.token
+			}));
+			terminalServers.update((existing) => [...existing, ...terminalEntries]);
 		}
 	};
 

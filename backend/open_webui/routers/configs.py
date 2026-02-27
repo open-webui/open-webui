@@ -15,6 +15,7 @@ from open_webui.utils.tools import (
     get_tool_server_data,
     get_tool_server_url,
     set_tool_servers,
+    set_terminal_servers,
 )
 from open_webui.utils.mcp.client import MCPClient
 from open_webui.models.oauth_sessions import OAuthSessions
@@ -211,6 +212,45 @@ async def set_tool_servers_config(
 
     return {
         "TOOL_SERVER_CONNECTIONS": request.app.state.config.TOOL_SERVER_CONNECTIONS,
+    }
+
+
+class TerminalServerConnection(BaseModel):
+    id: str
+    url: str
+    key: Optional[str] = ""
+    name: Optional[str] = ""
+    auth_type: Optional[str] = "bearer"
+    config: Optional[dict] = None  # holds access_grants, etc.
+
+    model_config = ConfigDict(extra="allow")
+
+
+class TerminalServersConfigForm(BaseModel):
+    TERMINAL_SERVER_CONNECTIONS: list[TerminalServerConnection]
+
+
+@router.get("/terminal_servers")
+async def get_terminal_servers_config(request: Request, user=Depends(get_admin_user)):
+    return {
+        "TERMINAL_SERVER_CONNECTIONS": request.app.state.config.TERMINAL_SERVER_CONNECTIONS,
+    }
+
+
+@router.post("/terminal_servers")
+async def set_terminal_servers_config(
+    request: Request,
+    form_data: TerminalServersConfigForm,
+    user=Depends(get_admin_user),
+):
+    request.app.state.config.TERMINAL_SERVER_CONNECTIONS = [
+        connection.model_dump() for connection in form_data.TERMINAL_SERVER_CONNECTIONS
+    ]
+
+    await set_terminal_servers(request)
+
+    return {
+        "TERMINAL_SERVER_CONNECTIONS": request.app.state.config.TERMINAL_SERVER_CONNECTIONS,
     }
 
 

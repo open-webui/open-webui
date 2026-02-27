@@ -1184,6 +1184,20 @@ TOOL_SERVER_CONNECTIONS = PersistentConfig(
 )
 
 ####################################
+# TERMINAL_SERVER
+####################################
+
+terminal_server_connections = json.loads(
+    os.environ.get("TERMINAL_SERVER_CONNECTIONS", "[]")
+)
+
+TERMINAL_SERVER_CONNECTIONS = PersistentConfig(
+    "TERMINAL_SERVER_CONNECTIONS",
+    "terminal_server.connections",
+    terminal_server_connections,
+)
+
+####################################
 # WEBUI
 ####################################
 

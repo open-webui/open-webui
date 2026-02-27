@@ -5,6 +5,26 @@ export type FileEntry = {
 	modified?: number;
 };
 
+import { WEBUI_API_BASE_URL } from '$lib/constants';
+
+export type TerminalServer = {
+	id: string;
+	url: string;
+	name: string;
+};
+
+export const getTerminalServers = async (
+	token: string
+): Promise<TerminalServer[]> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/terminals/`, {
+		headers: {
+			Authorization: `Bearer ${token}`
+		}
+	}).catch(() => null);
+	if (!res || !res.ok) return [];
+	return res.json().catch(() => []);
+};
+
 export const getCwd = async (baseUrl: string, apiKey: string): Promise<string | null> => {
 	const url = `${baseUrl.replace(/\/$/, '')}/files/cwd`;
 	const res = await fetch(url, {

@@ -10,6 +10,7 @@
 
 	import { onDestroy, onMount, tick, getContext } from 'svelte';
 	import {
+		terminalServers,
 		mobile,
 		showControls,
 		showCallOverlay,
@@ -58,7 +59,8 @@
 	// Tab state for Controls+Files panel
 	let activeTab: 'controls' | 'files' | 'overview' = savedTab;
 	$: savedTab = activeTab;
-	$: hasTerminal = !!($settings?.terminalServers ?? []).find((s) => s.enabled)?.url;
+	$: hasTerminal = !!($settings?.terminalServers ?? []).find((s) => s.enabled)?.url
+		|| $terminalServers.length > 0;
 	$: hasMessages = history?.messages && Object.keys(history.messages).length > 0;
 	$: if (!hasMessages && activeTab === 'overview') activeTab = 'controls';
 

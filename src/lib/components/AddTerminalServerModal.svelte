@@ -11,6 +11,7 @@
 
 	export let show = false;
 	export let edit = false;
+	export let admin = false;
 	export let connection: {
 		url: string;
 		key: string;
@@ -236,7 +237,10 @@
 										>
 											<option value="none">{$i18n.t('None')}</option>
 											<option value="bearer">{$i18n.t('Bearer')}</option>
-											<option value="session">{$i18n.t('Session')}</option>
+											{#if admin}
+												<option value="session">{$i18n.t('Session')}</option>
+												<option value="system_oauth">{$i18n.t('OAuth')}</option>
+											{/if}
 										</select>
 									</div>
 
@@ -258,6 +262,12 @@
 												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
 											>
 												{$i18n.t('Forwards system user session credentials to authenticate')}
+											</div>
+										{:else if auth_type === 'system_oauth'}
+											<div
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											>
+												{$i18n.t('Forwards system user OAuth access token to authenticate')}
 											</div>
 										{/if}
 									</div>

@@ -99,8 +99,9 @@ from open_webui.utils.misc import (
 from open_webui.utils.tools import (
     get_tools,
     get_updated_tool_function,
-    has_tool_server_access,
+    get_terminal_tools,
 )
+from open_webui.utils.access_control import has_connection_access
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.filter import (
     get_sorted_filter_ids,
@@ -2225,6 +2226,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
 
     tool_ids = form_data.pop("tool_ids", None)
+    terminal_id = form_data.pop("terminal_id", None)
     files = form_data.pop("files", None)
 
     # Caller-provided OpenAI-style tools take precedence over server-side
@@ -2298,6 +2300,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     metadata = {
         **metadata,
         "tool_ids": tool_ids,
+        "terminal_id": terminal_id,
         "files": files,
     }
     form_data["metadata"] = metadata
@@ -2342,7 +2345,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             continue
 
                         # Check access control for MCP server
-                        if not has_tool_server_access(user, mcp_server_connection):
+                        if not has_connection_access(user, mcp_server_connection):
                             log.warning(
                                 f"Access denied to MCP server {server_id} for user {user.id}"
                             )
@@ -2478,6 +2481,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
             if mcp_tools_dict:
                 tools_dict = {**tools_dict, **mcp_tools_dict}
+
+            # Resolve terminal tools if terminal_id is set
+            if terminal_id:
+                terminal_tools = await get_terminal_tools(
+                    request,
+                    terminal_id,
+                    user,
+                    extra_params,
+                )
+                if terminal_tools:
+                    tools_dict = {**tools_dict, **terminal_tools}
 
         if direct_tool_servers:
             for tool_server in direct_tool_servers:

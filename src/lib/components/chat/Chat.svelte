@@ -45,7 +45,9 @@
 		showEmbeds
 	} from '$lib/stores';
 
-	import { getCwd } from '$lib/apis/terminal';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
+
+
 	import {
 		convertMessagesToHistory,
 		copyToClipboard,
@@ -2128,21 +2130,9 @@
 			});
 		}
 
-		// Build terminal servers with current CWD injected into run_command descriptions
-		const terminalServersWithCwd = await (async () => {
-			const terminals = JSON.parse(JSON.stringify($terminalServers ?? []));
-			const configs = ($settings?.terminalServers ?? []).filter((s) => s.enabled);
-			await Promise.all(
-				configs.map(async (t) => {
-					const cwd = await getCwd(t.url, t.key ?? '').catch(() => null);
-					if (!cwd) return;
-					const server = terminals.find((s) => s.url === t.url);
-					const spec = server?.specs?.find((s) => s.name === 'run_command');
-					if (spec) spec.description += `\n\nThe current working directory is: ${cwd}`;
-				})
-			);
-			return terminals;
-		})();
+		// Determine the active terminal (first accessible backend terminal, or user-configured)
+		const activeTerminal = $terminalServers?.[0] ?? null;
+		const activeTerminalId = activeTerminal?.id ?? null;
 
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
@@ -2166,11 +2156,11 @@
 				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
 				tool_ids: toolIds.length > 0 ? toolIds : undefined,
 				skill_ids: skillIds.length > 0 ? skillIds : undefined,
+				terminal_id: activeTerminalId ?? undefined,
 				tool_servers: [
 					...($toolServers ?? []).filter(
 						(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
-					),
-					...terminalServersWithCwd
+					)
 				],
 				features: getFeatures(),
 				variables: {
