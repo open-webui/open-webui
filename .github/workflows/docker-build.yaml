@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - main
-      - dev
+      - develop
     tags:
       - v*
 
