@@ -40,7 +40,7 @@
 			'connections',
 			'models',
 			'evaluations',
-			'tools',
+			'integrations',
 			'documents',
 			'web',
 			'code-execution',
@@ -132,9 +132,9 @@
 			keywords: ['evaluations', 'feedback', 'rating', 'arena', 'leaderboard', 'preference']
 		},
 		{
-			id: 'tools',
+			id: 'integrations',
 			title: 'Integrations',
-			route: '/admin/settings/tools',
+			route: '/admin/settings/integrations',
 			keywords: ['tools', 'integrations', 'plugins', 'extensions', 'functions', 'openapi', 'server']
 		},
 		{
@@ -370,7 +370,7 @@
 						</svg>
 					{:else if tab.id === 'evaluations'}
 						<DocumentChartBar />
-					{:else if tab.id === 'tools'}
+					{:else if tab.id === 'integrations'}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 24 24"
@@ -525,7 +525,7 @@
 			<Models />
 		{:else if selectedTab === 'evaluations'}
 			<Evaluations />
-		{:else if selectedTab === 'tools'}
+		{:else if selectedTab === 'integrations'}
 			<Integrations />
 		{:else if selectedTab === 'documents'}
 			<Documents
