@@ -2,7 +2,6 @@
 	import DOMPurify from 'dompurify';
 
 	import { onMount, getContext } from 'svelte';
-	import { Confetti } from 'svelte-confetti';
 
 	import { WEBUI_NAME, config, settings } from '$lib/stores';
 
@@ -41,7 +40,6 @@
 			<h2 class="text-xl font-medium m-0">
 				{$i18n.t("What's New in")}
 				{$WEBUI_NAME}
-				<Confetti x={[-1, -0.25]} y={[0, 0.5]} />
 			</h2>
 			<button class="self-center" on:click={closeModal} aria-label={$i18n.t('Close')}>
 				<XMark className={'size-5'} />
