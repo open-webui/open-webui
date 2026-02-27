@@ -267,6 +267,23 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
     # Flush remaining content/tool_calls
     flush_pending()
 
+    # Fix orphaned tool calls: if the last message is an assistant with
+    # tool_calls but no following tool response messages, add synthetic
+    # tool responses so providers don't reject the conversation.
+    if (
+        messages
+        and messages[-1].get("role") == "assistant"
+        and messages[-1].get("tool_calls")
+    ):
+        for tc in messages[-1]["tool_calls"]:
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tc.get("id", ""),
+                    "content": "[Tool execution did not return a result]",
+                }
+            )
+
     return messages
 
 
