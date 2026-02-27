@@ -7,13 +7,7 @@
 	import Connection from './Terminals/Connection.svelte';
 	import AddTerminalServerModal from '$lib/components/AddTerminalServerModal.svelte';
 
-	export let servers: {
-		url: string;
-		key: string;
-		name?: string;
-		path?: string;
-		enabled: boolean;
-	}[] = [];
+	export let servers = [];
 	export let onChange: (servers: typeof servers) => void = () => {};
 
 	let showAddModal = false;
