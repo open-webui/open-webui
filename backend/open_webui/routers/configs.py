@@ -217,12 +217,16 @@ async def set_tool_servers_config(
 
 class TerminalServerConnection(BaseModel):
     id: Optional[str] = ""
+    name: Optional[str] = ""
+
+    enabled: Optional[bool] = True
+
     url: str
     path: Optional[str] = "/openapi.json"
-    auth_type: Optional[str] = "bearer"
+
     key: Optional[str] = ""
-    name: Optional[str] = ""
-    enabled: Optional[bool] = True
+    auth_type: Optional[str] = "bearer"
+
     config: Optional[dict] = None
 
     model_config = ConfigDict(extra="allow")
