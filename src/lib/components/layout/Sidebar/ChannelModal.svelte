@@ -173,11 +173,11 @@
 							<div class="flex-1">
 								<Tooltip
 									content={type === 'dm'
-										? $i18n.t('A private conversation between you and selected users')
+										? $i18n.t('Private conversation between selected users')
 										: type === 'group'
-											? $i18n.t('A collaboration channel where people join as members')
+											? $i18n.t('Collaboration channel where people join as members')
 											: $i18n.t(
-													'A discussion channel where access is controlled by groups and permissions'
+													'Discussion channel where access is based on groups and permissions'
 												)}
 									placement="top-start"
 								>
