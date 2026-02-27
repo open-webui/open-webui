@@ -322,7 +322,6 @@
 					{$i18n.t('Your usage stats have been successfully synced.')}
 				</div>
 
-
 				<div class="flex justify-end">
 					<button
 						class="flex items-center justify-center gap-2 rounded-full bg-black px-4 py-2 text-sm text-white transition hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100"
