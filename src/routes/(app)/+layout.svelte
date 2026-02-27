@@ -168,10 +168,10 @@
 		}
 
 		// Fetch terminal servers the user has access to (for FileNav + terminal_id)
-		const backendTerminals = await getTerminalServers(localStorage.token);
-		if (backendTerminals.length > 0) {
+		const systemTerminals = await getTerminalServers(localStorage.token);
+		if (systemTerminals.length > 0) {
 			// Store with proxy URL and session key for FileNav file browsing
-			const terminalEntries = backendTerminals.map((t) => ({
+			const terminalEntries = systemTerminals.map((t) => ({
 				id: t.id,
 				url: `${WEBUI_API_BASE_URL}/terminals/${t.id}`,
 				name: t.name,
