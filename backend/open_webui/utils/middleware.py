@@ -1494,10 +1494,51 @@ def get_image_urls(delta_images, request, metadata, user) -> list[str]:
     return image_urls
 
 
-def add_file_context(messages: list, chat_id: str, user) -> list:
+def add_file_context(messages: list, chat_id: str, user, model: dict = None) -> list:
     """
-    Add file URLs to messages for native function calling.
+    Add file and knowledge metadata to messages for native function calling.
     """
+    from open_webui.models.files import Files
+
+    # Inject knowledge base metadata into first user message
+    model_knowledge = (model or {}).get("info", {}).get("meta", {}).get("knowledge", [])
+    if model_knowledge:
+        from open_webui.models.knowledge import Knowledges
+
+        knowledge_tags = []
+        for item in model_knowledge:
+            if item.get("type") == "collection":
+                kb = Knowledges.get_knowledge_by_id(item["id"])
+                if kb:
+                    knowledge_tags.append(
+                        f'<knowledge id="{kb.id}" name="{kb.name}" type="collection"/>'
+                    )
+            elif item.get("type") == "file":
+                file_attrs = f'id="{item["id"]}"'
+                kb_file = Files.get_file_by_id(item["id"])
+                if kb_file:
+                    if kb_file.filename:
+                        file_attrs += f' name="{kb_file.filename}"'
+                    if kb_file.meta and kb_file.meta.get("size") is not None:
+                        file_attrs += f' size="{kb_file.meta["size"]}"'
+                file_attrs += ' type="file"'
+                knowledge_tags.append(f"<knowledge {file_attrs}/>")
+
+        if knowledge_tags:
+            knowledge_context = (
+                "<attached_knowledge>\n"
+                + "\n".join(knowledge_tags)
+                + "\n</attached_knowledge>\n\n"
+            )
+            for msg in messages:
+                if msg.get("role") == "user":
+                    content = msg.get("content", "")
+                    if isinstance(content, list):
+                        msg["content"] = [{"type": "text", "text": knowledge_context}] + content
+                    else:
+                        msg["content"] = knowledge_context + content
+                    break
+
     if not chat_id or chat_id.startswith("local:"):
         return messages
 
@@ -1516,6 +1557,12 @@ def add_file_context(messages: list, chat_id: str, user) -> list:
             attrs += f' content_type="{file["content_type"]}"'
         if file.get("name"):
             attrs += f' name="{file["name"]}"'
+        # Include file size from backend metadata
+        db_file = Files.get_file_by_id(file.get("url", ""))
+        if db_file and db_file.meta:
+            size = db_file.meta.get("size")
+            if size is not None:
+                attrs += f' size="{size}"'
         return f"<file {attrs}/>"
 
     for message, stored_message in zip(messages, stored_messages):
@@ -2505,7 +2552,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             # Add file context to user messages
             chat_id = metadata.get("chat_id")
             form_data["messages"] = add_file_context(
-                form_data.get("messages", []), chat_id, user
+                form_data.get("messages", []), chat_id, user, model
             )
             builtin_tools = get_builtin_tools(
                 request,
