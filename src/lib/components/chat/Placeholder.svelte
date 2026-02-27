@@ -140,12 +140,14 @@
 					>
 						{#if models[selectedModelIdx]?.name}
 							<Tooltip
-								content={MODEL_NAME_MAPPING[models[selectedModelIdx]?.id] ?? models[selectedModelIdx]?.name}
+								content={MODEL_NAME_MAPPING[models[selectedModelIdx]?.id] ??
+									models[selectedModelIdx]?.name}
 								placement="top"
 								className=" flex items-center "
 							>
 								<span class="line-clamp-1">
-									{MODEL_NAME_MAPPING[models[selectedModelIdx]?.id] ?? models[selectedModelIdx]?.name}
+									{MODEL_NAME_MAPPING[models[selectedModelIdx]?.id] ??
+										models[selectedModelIdx]?.name}
 								</span>
 							</Tooltip>
 						{:else}
@@ -153,26 +155,11 @@
 						{/if}
 					</div>
 				</div>
-								
+
 				<div class="flex flex-row gap-2 justify-center items-center my-2">
-					<span class="text-xs text-gray-500 font-medium mr-2">{$i18n.t('Recommended models')}</span>
-					{#each [
-						{
-							id: 'gpt-5.2',
-							label: $i18n.t('Smart All-Rounder'),
-							desc: $i18n.t('Great at most everyday tasks: chatting, writing, explaining ideas, brainstorming, and coding help')
-						},
-						{
-							id: 'claude-sonnet-4-5',
-							label: $i18n.t('Analytical Helper'),
-							desc: $i18n.t('Best for complex, long-running tasks: advanced coding, coordinating many steps, using multiple tools, and working independently with little supervision.')
-						},
-						{
-							id: 'gemini-3.1-pro-preview',
-							label: $i18n.t('Deep Thinker'),
-							desc: $i18n.t('Best for hard problems that need advanced reasoning, careful analysis, and multi-step thinking.')
-						}
-					] as btn}
+					<span class="text-xs text-gray-500 font-medium mr-2">{$i18n.t('Recommended models')}</span
+					>
+					{#each [{ id: 'gpt-5.2', label: $i18n.t('Smart All-Rounder'), desc: $i18n.t('Great at most everyday tasks: chatting, writing, explaining ideas, brainstorming, and coding help') }, { id: 'claude-sonnet-4-5', label: $i18n.t('Analytical Helper'), desc: $i18n.t('Best for complex, long-running tasks: advanced coding, coordinating many steps, using multiple tools, and working independently with little supervision.') }, { id: 'gemini-3.1-pro-preview', label: $i18n.t('Deep Thinker'), desc: $i18n.t('Best for hard problems that need advanced reasoning, careful analysis, and multi-step thinking.') }] as btn}
 						{#if $_models.find((m) => m?.id === btn.id)}
 							<Tooltip content={btn.desc} placement="top">
 								<button
@@ -194,11 +181,16 @@
 				<!-- INFO label and link below the buttons -->
 				<div class="flex flex-row justify-center items-center gap-2 mt-2">
 					<span class="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded">INFO</span>
-					<a href="https://centrotec.sharepoint.com/sites/CH-GLOBAL-AI/SitePages/de/CENTROTEC-AI_Home.aspx" target="_blank" rel="noopener noreferrer" class="text-blue-700 underline text-xs font-medium hover:text-blue-900">
+					<a
+						href="https://centrotec.sharepoint.com/sites/CH-GLOBAL-AI/SitePages/de/CENTROTEC-AI_Home.aspx"
+						target="_blank"
+						rel="noopener noreferrer"
+						class="text-blue-700 underline text-xs font-medium hover:text-blue-900"
+					>
 						https://centrotec.sharepoint.com/sites/CH-GLOBAL-AI/SitePages/de/CENTROTEC-AI_Home.aspx
 					</a>
 				</div>
-				
+
 				<div class="flex mt-1 mb-2">
 					<div in:fade={{ duration: 100, delay: 50 }}>
 						{#if models[selectedModelIdx]?.info?.meta?.description ?? null}

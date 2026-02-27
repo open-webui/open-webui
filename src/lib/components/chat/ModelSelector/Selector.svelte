@@ -45,11 +45,9 @@
 	export let id = '';
 	export let value = '';
 
-
 	export let placeholder = $i18n.t('Select a model');
 	export let searchEnabled = true;
 	export let searchPlaceholder = $i18n.t('Search a model');
-
 
 	export let items: Array<{
 		label: string;
@@ -58,30 +56,33 @@
 		[key: string]: any;
 	}> = [];
 
-		// Model name mapping
-		const MODEL_NAME_MAP: Record<string, string> = {
-			'gpt-5.2': 'Smart All-Rounder',
-			'claude-sonnet-4-5': 'Autonomous Builder',
-			'gemini-3-pro-preview': 'Deep Thinker'
-		};
+	// Model name mapping
+	const MODEL_NAME_MAP: Record<string, string> = {
+		'gpt-5.2': 'Smart All-Rounder',
+		'claude-sonnet-4-5': 'Autonomous Builder',
+		'gemini-3-pro-preview': 'Deep Thinker'
+	};
 
-		// Map model names after API call
-		function mapModelNames(models: Array<{ label: string; value: string; model: Model; [key: string]: any }>): Array<{ label: string; value: string; model: Model; [key: string]: any }> {
-			return models.map((item) => {
-				const mappedName = item.model && MODEL_NAME_MAP[item.model.name as keyof typeof MODEL_NAME_MAP];
-				if (mappedName) {
-					return {
-						...item,
-						label: mappedName,
-						model: {
-							...item.model,
-							name: mappedName
-						}
-					};
-				}
-				return item;
-			});
-		}
+	// Map model names after API call
+	function mapModelNames(
+		models: Array<{ label: string; value: string; model: Model; [key: string]: any }>
+	): Array<{ label: string; value: string; model: Model; [key: string]: any }> {
+		return models.map((item) => {
+			const mappedName =
+				item.model && MODEL_NAME_MAP[item.model.name as keyof typeof MODEL_NAME_MAP];
+			if (mappedName) {
+				return {
+					...item,
+					label: mappedName,
+					model: {
+						...item.model,
+						name: mappedName
+					}
+				};
+			}
+			return item;
+		});
+	}
 
 	export let className = 'w-[32rem]';
 	export let triggerClassName = 'text-lg';
@@ -93,7 +94,8 @@
 	let show = false;
 	let tags: string[] = [];
 
-	let selectedModel: { label: string; value: string; model: Model; [key: string]: any } | null = null;
+	let selectedModel: { label: string; value: string; model: Model; [key: string]: any } | null =
+		null;
 	$: selectedModel = items.find((item) => item.value === value) ?? null;
 
 	let searchValue = '';
@@ -357,7 +359,6 @@
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
 	};
 
-
 	onMount(async () => {
 		if (items) {
 			// Map model names if needed
@@ -435,32 +436,32 @@
 		class="relative w-full {($settings?.highContrastMode ?? false)
 			? ''
 			: 'outline-hidden focus:outline-hidden'}"
-		aria-label={ selectedModel
+		aria-label={selectedModel
 			? $i18n.t('Selected model: {{modelName}}', { modelName: selectedModel.label })
 			: placeholder}
 		id="model-selector-{id}-button"
 	>
-		   <div
-			   class="flex w-full text-left px-0.5 bg-transparent truncate {triggerClassName} justify-between {($settings?.highContrastMode ??
-			   false)
-				   ? 'dark:placeholder-gray-100 placeholder-gray-800'
-				   : 'placeholder-gray-400'}"
-			   role="button"
-			   tabindex="0"
-			   on:mouseenter={async () => {
-				   models.set(
-					   await getModels(
-						   localStorage.token,
-						   $config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-					   )
-				   );
-			   }}
-		   >
-			   {#if selectedModel}
-				   {MODEL_NAME_MAPPING[selectedModel.value] ?? selectedModel.label}
-			   {:else}
-				   {placeholder}
-			   {/if}
+		<div
+			class="flex w-full text-left px-0.5 bg-transparent truncate {triggerClassName} justify-between {($settings?.highContrastMode ??
+			false)
+				? 'dark:placeholder-gray-100 placeholder-gray-800'
+				: 'placeholder-gray-400'}"
+			role="button"
+			tabindex="0"
+			on:mouseenter={async () => {
+				models.set(
+					await getModels(
+						localStorage.token,
+						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					)
+				);
+			}}
+		>
+			{#if selectedModel}
+				{MODEL_NAME_MAPPING[selectedModel.value] ?? selectedModel.label}
+			{:else}
+				{placeholder}
+			{/if}
 			<ChevronDown className=" self-center ml-2 size-3" strokeWidth="2.5" />
 		</div>
 	</DropdownMenu.Trigger>
@@ -644,7 +645,7 @@
 							listScrollTop = listContainer.scrollTop;
 						}}
 					>
-						   <div style="height: {visibleStart * ITEM_HEIGHT}px;"></div>
+						<div style="height: {visibleStart * ITEM_HEIGHT}px;"></div>
 						{#each filteredItems.slice(visibleStart, visibleEnd) as item, i (item.value)}
 							{@const index = visibleStart + i}
 							<ModelItem
@@ -662,7 +663,7 @@
 								}}
 							/>
 						{/each}
-						   <div style="height: {(filteredItems.length - visibleEnd) * ITEM_HEIGHT}px;"></div>
+						<div style="height: {(filteredItems.length - visibleEnd) * ITEM_HEIGHT}px;"></div>
 					</div>
 				{/if}
 
@@ -751,8 +752,8 @@
 
 			<div class="mb-2.5"></div>
 
-			   <div class="hidden w-[42rem]"></div>
-			   <div class="hidden w-[32rem]"></div>
+			<div class="hidden w-[42rem]"></div>
+			<div class="hidden w-[32rem]"></div>
 		</slot>
 	</DropdownMenu.Content>
 </DropdownMenu.Root>
