@@ -112,7 +112,7 @@
 			transition={flyAndScale}
 		>
 			<!-- Direct terminals (gated by permission) -->
-			{#if $user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true)}
+			{#if directTerminals.length > 0 && ($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))}
 				<div class="flex items-center justify-between px-3 py-1">
 					<span
 						class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider"
