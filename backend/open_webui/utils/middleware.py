@@ -895,6 +895,7 @@ def process_tool_result(
     user=None,
 ):
     tool_result_embeds = []
+    EXTERNAL_TOOL_TYPES = ("external", "action", "terminal")
 
     if isinstance(tool_result, HTMLResponse):
         content_disposition = tool_result.headers.get("Content-Disposition", "")
@@ -929,7 +930,6 @@ def process_tool_result(
         else:
             tool_result = tool_result.body.decode("utf-8", "replace")
 
-    EXTERNAL_TOOL_TYPES = ("external", "action", "terminal")
     elif (
         tool_type in EXTERNAL_TOOL_TYPES
         and isinstance(tool_result, tuple)
