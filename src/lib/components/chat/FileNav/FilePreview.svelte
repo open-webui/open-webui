@@ -19,15 +19,16 @@
 	export let onDownload: () => void = () => {};
 
 	const MD_EXTS = new Set(['md', 'markdown', 'mdx']);
-	$: isMarkdown = MD_EXTS.has(selectedFile?.split('.').pop()?.toLowerCase() ?? '');
+	const getExt = (path: string | null) => path?.split('.').pop()?.toLowerCase() ?? '';
+
+	$: isMarkdown = MD_EXTS.has(getExt(selectedFile));
 	$: renderedHtml =
 		isMarkdown && fileContent
 			? DOMPurify.sanitize(marked.parse(fileContent, { async: false }) as string)
 			: '';
 
 	let showRaw = false;
-	// Reset to preview mode when switching files
-	$: if (selectedFile) showRaw = false;
+	$: selectedFile, (showRaw = false); // reset to preview mode when switching files
 
 	let pzInstance: PanZoom | null = null;
 

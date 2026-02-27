@@ -7,7 +7,6 @@
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, onDestroy, tick } from 'svelte';
 	import { terminalServers, settings, showFileNavPath, selectedTerminalId } from '$lib/stores';
-	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import {
 		getCwd,
 		listFiles,
@@ -31,71 +30,89 @@
 
 	export let onAttach: ((blob: Blob, name: string, contentType: string) => void) | null = null;
 
+	// ── Directory state ──────────────────────────────────────────────────
 	let currentPath = savedPath;
 	let entries: FileEntry[] = [];
 	let loading = false;
 	let error: string | null = null;
 
+	// ── File preview state ───────────────────────────────────────────────
 	let selectedFile: string | null = null;
 	let fileContent: string | null = null;
 	let fileImageUrl: string | null = null;
 	let filePdfData: ArrayBuffer | null = null;
 	let fileLoading = false;
-
 	let filePreviewRef: FilePreview;
 
-	const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif']);
-	const isImage = (path: string) => IMAGE_EXTS.has(path.split('.').pop()?.toLowerCase() ?? '');
-	const isPdf = (path: string) => path.split('.').pop()?.toLowerCase() === 'pdf';
-
+	// ── Upload / folder creation ─────────────────────────────────────────
 	let isDragOver = false;
 	let uploading = false;
-
 	let creatingFolder = false;
 	let newFolderName = '';
 	let newFolderInput: HTMLInputElement;
 
+	// ── Delete confirmation ──────────────────────────────────────────────
 	let deleteTarget: { path: string; name: string } | null = null;
 	let showDeleteConfirm = false;
 	let shiftKey = false;
 
-	$: firstTerminal = $selectedTerminalId
-		? ($terminalServers ?? []).find((t) => t.id === $selectedTerminalId) ?? null
-		: ($terminalServers?.[0] ?? null);
-	$: activeUserTerminal = ($settings?.terminalServers ?? []).find(
-		(s) => s.url === $selectedTerminalId
-	);
-	// System terminals go through the open-webui proxy and need the session token.
-	// Direct user terminals talk directly to the server and need the terminal's own key.
-	$: isSystemTerminal = !!firstTerminal;
-	$: terminalUrl = firstTerminal?.url ?? activeUserTerminal?.url ?? '';
-	$: terminalKey = isSystemTerminal ? localStorage.token : (activeUserTerminal?.key ?? '');
-	$: configured = !!terminalUrl;
+	// ── Terminal resolution ──────────────────────────────────────────────
+	let selectedTerminal: { url: string; key: string } | null = null;
 
-	// Reload file list when terminal is swapped
-	let prevTerminalUrl = '';
-	$: if (terminalUrl && terminalUrl !== prevTerminalUrl) {
-		prevTerminalUrl = terminalUrl;
-		(async () => {
-			const cwd = await getCwd(terminalUrl, terminalKey);
-			const dir = cwd ? (cwd.endsWith('/') ? cwd : cwd + '/') : '/';
-			savedPath = dir;
-			loadDir(dir);
-		})();
-	}
+	const getTerminal = (): { url: string; key: string } | null => {
+		const systemTerminal = $selectedTerminalId
+			? ($terminalServers ?? []).find((t) => t.id === $selectedTerminalId) ?? null
+			: $terminalServers?.[0] ?? null;
 
-	$: breadcrumbs = currentPath
-		.split('/')
-		.filter(Boolean)
-		.reduce(
-			(acc, part) => {
-				const prev = acc[acc.length - 1];
-				acc.push({ label: part, path: `${prev.path}${part}/` });
-				return acc;
-			},
-			[{ label: '/', path: '/' }]
+		const userTerminal = ($settings?.terminalServers ?? []).find(
+			(s) => s.url === $selectedTerminalId
 		);
 
+		const isSystem = !!systemTerminal;
+		const url = systemTerminal?.url ?? userTerminal?.url ?? '';
+		const key = isSystem ? localStorage.token : (userTerminal?.key ?? '');
+
+		return url ? { url, key } : null;
+	};
+
+	// Detect terminal changes — the explicit store references ensure
+	// Svelte re-runs this block when any of them update.
+	let prevTerminalUrl = '';
+	$: {
+		$selectedTerminalId, $terminalServers, $settings;
+		const terminal = getTerminal();
+		selectedTerminal = terminal;
+
+		if (terminal && terminal.url !== prevTerminalUrl) {
+			prevTerminalUrl = terminal.url;
+			(async () => {
+				const cwd = await getCwd(terminal.url, terminal.key);
+				const dir = cwd ? (cwd.endsWith('/') ? cwd : cwd + '/') : '/';
+				savedPath = dir;
+				loadDir(dir);
+			})();
+		}
+	}
+
+	// ── Helpers ──────────────────────────────────────────────────────────
+	const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif']);
+	const isImage = (path: string) => IMAGE_EXTS.has(path.split('.').pop()?.toLowerCase() ?? '');
+	const isPdf = (path: string) => path.split('.').pop()?.toLowerCase() === 'pdf';
+
+	const buildBreadcrumbs = (path: string) =>
+		path
+			.split('/')
+			.filter(Boolean)
+			.reduce(
+				(acc, part) => {
+					const prev = acc[acc.length - 1];
+					acc.push({ label: part, path: `${prev.path}${part}/` });
+					return acc;
+				},
+				[{ label: '/', path: '/' }]
+			);
+
+	// ── File preview management ──────────────────────────────────────────
 	const clearFilePreview = () => {
 		fileContent = null;
 		filePreviewRef?.disposePanzoom();
@@ -106,19 +123,24 @@
 		filePdfData = null;
 	};
 
+	// ── Directory operations ─────────────────────────────────────────────
 	const loadDir = async (path: string) => {
-		if (!configured) return;
+		const terminal = selectedTerminal;
+		if (!terminal) return;
+
 		loading = true;
 		error = null;
 		selectedFile = null;
 		clearFilePreview();
 		currentPath = path;
 		savedPath = path;
-		const result = await listFiles(terminalUrl, terminalKey, path);
+
+		const result = await listFiles(terminal.url, terminal.key, path);
 		loading = false;
 
 		// Set working directory on the terminal server (fire-and-forget)
-		setCwd(terminalUrl, terminalKey, path);
+		setCwd(terminal.url, terminal.key, path);
+
 		if (result === null) {
 			error =
 				'Failed to load directory. Check your Terminal connection in Settings → Integrations.';
@@ -134,26 +156,34 @@
 	const openEntry = async (entry: FileEntry) => {
 		if (entry.type === 'directory') {
 			await loadDir(`${currentPath}${entry.name}/`);
-		} else {
-			const filePath = `${currentPath}${entry.name}`;
-			selectedFile = filePath;
-			fileLoading = true;
-			clearFilePreview();
-			if (isImage(filePath)) {
-				const result = await downloadFileBlob(terminalUrl, terminalKey, filePath);
-				if (result) fileImageUrl = URL.createObjectURL(result.blob);
-			} else if (isPdf(filePath)) {
-				const result = await downloadFileBlob(terminalUrl, terminalKey, filePath);
-				if (result) filePdfData = await result.blob.arrayBuffer();
-			} else {
-				fileContent = await readFile(terminalUrl, terminalKey, filePath);
-			}
-			fileLoading = false;
+			return;
 		}
+
+		const terminal = selectedTerminal;
+		if (!terminal) return;
+
+		const filePath = `${currentPath}${entry.name}`;
+		selectedFile = filePath;
+		fileLoading = true;
+		clearFilePreview();
+
+		if (isImage(filePath)) {
+			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			if (result) fileImageUrl = URL.createObjectURL(result.blob);
+		} else if (isPdf(filePath)) {
+			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			if (result) filePdfData = await result.blob.arrayBuffer();
+		} else {
+			fileContent = await readFile(terminal.url, terminal.key, filePath);
+		}
+		fileLoading = false;
 	};
 
 	const downloadFile = async (path: string) => {
-		const result = await downloadFileBlob(terminalUrl, terminalKey, path);
+		const terminal = selectedTerminal;
+		if (!terminal) return;
+
+		const result = await downloadFileBlob(terminal.url, terminal.key, path);
 		if (!result) return;
 		const url = URL.createObjectURL(result.blob);
 		const a = document.createElement('a');
@@ -163,13 +193,7 @@
 		URL.revokeObjectURL(url);
 	};
 
-	const formatSize = (bytes?: number) => {
-		if (bytes === undefined) return '';
-		if (bytes < 1024) return `${bytes} B`;
-		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-		return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-	};
-
+	// ── Drag-and-drop upload ─────────────────────────────────────────────
 	const handleDragOver = (e: DragEvent) => {
 		if (selectedFile) return;
 		if (!e.dataTransfer?.types.includes('Files')) return;
@@ -178,40 +202,43 @@
 		isDragOver = true;
 	};
 
-	const handleDragLeave = () => {
-		isDragOver = false;
-	};
-
 	const handleDrop = async (e: DragEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
 		isDragOver = false;
-		if (selectedFile) return;
+
+		const terminal = selectedTerminal;
+		if (selectedFile || !terminal) return;
+
 		const droppedFiles = Array.from(e.dataTransfer?.files ?? []);
-		if (!droppedFiles.length || !configured) return;
+		if (!droppedFiles.length) return;
 
 		uploading = true;
 		for (const file of droppedFiles) {
-			await uploadToTerminal(terminalUrl, terminalKey, currentPath, file);
+			await uploadToTerminal(terminal.url, terminal.key, currentPath, file);
 		}
 		uploading = false;
 		await loadDir(currentPath);
 	};
 
 	const handleUploadFiles = async (files: File[]) => {
-		if (!files.length || !configured) return;
+		const terminal = selectedTerminal;
+		if (!files.length || !terminal) return;
+
 		uploading = true;
 		for (const file of files) {
-			await uploadToTerminal(terminalUrl, terminalKey, currentPath, file);
+			await uploadToTerminal(terminal.url, terminal.key, currentPath, file);
 		}
 		uploading = false;
 		await loadDir(currentPath);
 	};
 
-	const startNewFolder = () => {
+	// ── Folder creation ──────────────────────────────────────────────────
+	const startNewFolder = async () => {
 		creatingFolder = true;
 		newFolderName = '';
-		tick().then(() => newFolderInput?.focus());
+		await tick();
+		newFolderInput?.focus();
 	};
 
 	const submitNewFolder = async () => {
@@ -219,22 +246,26 @@
 		creatingFolder = false;
 		newFolderName = '';
 		if (!name) return;
-		const result = await createDirectory(terminalUrl, terminalKey, `${currentPath}${name}`);
-		if (result) {
-			toast.success($i18n.t('Folder created'));
-		} else {
-			toast.error($i18n.t('Failed to create folder'));
-		}
+
+		const terminal = selectedTerminal;
+		if (!terminal) return;
+
+		const result = await createDirectory(terminal.url, terminal.key, `${currentPath}${name}`);
+		toast[result ? 'success' : 'error'](
+			$i18n.t(result ? 'Folder created' : 'Failed to create folder')
+		);
 		await loadDir(currentPath);
 	};
 
+	// ── Delete ───────────────────────────────────────────────────────────
 	const handleDelete = async (path: string, name: string) => {
-		const result = await deleteEntry(terminalUrl, terminalKey, path);
-		if (result) {
-			toast.success($i18n.t('{{name}} deleted', { name }));
-		} else {
-			toast.error($i18n.t('Failed to delete {{name}}', { name }));
-		}
+		const terminal = selectedTerminal;
+		if (!terminal) return;
+
+		const result = await deleteEntry(terminal.url, terminal.key, path);
+		toast[result ? 'success' : 'error'](
+			$i18n.t(result ? '{{name}} deleted' : 'Failed to delete {{name}}', { name })
+		);
 		await loadDir(currentPath);
 	};
 
@@ -243,19 +274,18 @@
 		showDeleteConfirm = true;
 	};
 
+	// ── Lifecycle ────────────────────────────────────────────────────────
 	onMount(async () => {
-		if (!configured) return;
+		const terminal = getTerminal();
+		if (!terminal) return;
 
 		let handledDisplayFile = false;
 
-		// Subscribe to display_file requests
 		const unsubFileNav = showFileNavPath.subscribe(async (filePath) => {
-			if (!filePath || !configured) return;
+			if (!filePath || !selectedTerminal) return;
 			handledDisplayFile = true;
-			// Clear the store so it can be re-triggered for the same path
 			showFileNavPath.set(null);
 
-			// Navigate to the parent directory
 			const lastSlash = filePath.lastIndexOf('/');
 			const dir = lastSlash > 0 ? filePath.substring(0, lastSlash + 1) : '/';
 			const fileName = filePath.substring(lastSlash + 1);
@@ -264,19 +294,14 @@
 				await loadDir(dir);
 			}
 
-			// Open the file for preview
 			await tick();
 			const entry = entries.find((e) => e.name === fileName);
-			if (entry) {
-				await openEntry(entry);
-			}
+			if (entry) await openEntry(entry);
 		});
 
-		// Only load the default directory if a display_file wasn't pending
 		if (!handledDisplayFile) {
-			// On first ever open, resolve the server's CWD instead of defaulting to /
 			if (savedPath === '/') {
-				const cwd = await getCwd(terminalUrl, terminalKey);
+				const cwd = await getCwd(terminal.url, terminal.key);
 				if (cwd) savedPath = cwd.endsWith('/') ? cwd : cwd + '/';
 			}
 			loadDir(savedPath);
@@ -290,9 +315,8 @@
 		};
 		const onBlur = () => (shiftKey = false);
 
-		// Auto-reload directory when the browser tab regains focus
 		const onVisibilityChange = () => {
-			if (document.visibilityState === 'visible' && !selectedFile && configured && !loading) {
+			if (document.visibilityState === 'visible' && !selectedFile && selectedTerminal && !loading) {
 				loadDir(currentPath);
 			}
 		};
@@ -325,7 +349,7 @@
 	}}
 />
 
-{#if !configured}
+{#if !selectedTerminal}
 	<div class="flex-1 flex flex-col items-center justify-center p-6 text-center gap-3">
 		<Folder className="size-10 text-gray-300 dark:text-gray-600" />
 		<div class="text-sm text-gray-500 dark:text-gray-400">
@@ -339,7 +363,7 @@
 	<div
 		class="flex flex-col h-full min-h-0 relative"
 		on:dragover={handleDragOver}
-		on:dragleave={handleDragLeave}
+		on:dragleave={() => (isDragOver = false)}
 		on:drop={handleDrop}
 		role="region"
 		aria-label={$i18n.t('File browser')}
@@ -367,7 +391,7 @@
 		{/if}
 
 		<FileNavToolbar
-			{breadcrumbs}
+			breadcrumbs={buildBreadcrumbs(currentPath)}
 			{selectedFile}
 			{loading}
 			onNavigate={loadDir}
@@ -389,7 +413,6 @@
 					onDownload={() => downloadFile(selectedFile)}
 				/>
 			{:else}
-				<!-- Directory listing -->
 				{#if uploading}
 					<div class="flex items-center justify-center gap-2 p-4 text-xs text-gray-500">
 						<Spinner className="size-4" />
@@ -411,7 +434,7 @@
 					</div>
 				{/if}
 
-				{#if !loading && !error && !uploading && !selectedFile}
+				{#if !loading && !error && !uploading}
 					{#if creatingFolder}
 						<div class="flex items-center gap-2 px-3 py-1.5">
 							<Folder className="size-4 shrink-0 text-blue-400 dark:text-blue-300" />
@@ -438,12 +461,11 @@
 								<FileEntryRow
 									{entry}
 									{currentPath}
-									{terminalUrl}
-									{terminalKey}
+									terminalUrl={selectedTerminal.url}
+									terminalKey={selectedTerminal.key}
 									onOpen={openEntry}
 									onDownload={downloadFile}
 									onDelete={requestDelete}
-									{formatSize}
 								/>
 							{/each}
 						</ul>

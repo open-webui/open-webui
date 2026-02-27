@@ -2,6 +2,7 @@
 	import { getContext } from 'svelte';
 	import { DropdownMenu } from 'bits-ui';
 	import { flyAndScale } from '$lib/utils/transitions';
+	import { formatFileSize } from '$lib/utils';
 	import type { FileEntry } from '$lib/apis/terminal';
 	import Folder from '../../icons/Folder.svelte';
 	import EllipsisHorizontal from '../../icons/EllipsisHorizontal.svelte';
@@ -17,8 +18,6 @@
 	export let onOpen: (entry: FileEntry) => void = () => {};
 	export let onDownload: (path: string) => void = () => {};
 	export let onDelete: (path: string, name: string) => void = () => {};
-
-	export let formatSize: (bytes?: number) => string = () => '';
 </script>
 
 <li class="group">
@@ -62,7 +61,7 @@
 				{entry.name}
 			</span>
 			{#if entry.type === 'file' && entry.size !== undefined}
-				<span class="text-xs text-gray-400 shrink-0">{formatSize(entry.size)}</span>
+				<span class="text-xs text-gray-400 shrink-0">{formatFileSize(entry.size)}</span>
 			{/if}
 		</button>
 
