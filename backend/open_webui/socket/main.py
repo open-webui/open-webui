@@ -145,7 +145,7 @@ if WEBSOCKET_MANAGER == "redis":
         redis_sentinels=redis_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
     )
-    aquire_func = clean_up_lock.aquire_lock
+    acquire_func = clean_up_lock.acquire_lock
     renew_func = clean_up_lock.renew_lock
     release_func = clean_up_lock.release_lock
 
@@ -156,7 +156,7 @@ if WEBSOCKET_MANAGER == "redis":
         redis_sentinels=redis_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
     )
-    session_aquire_func = session_cleanup_lock.aquire_lock
+    session_acquire_func = session_cleanup_lock.acquire_lock
     session_renew_func = session_cleanup_lock.renew_lock
     session_release_func = session_cleanup_lock.release_lock
 else:
@@ -165,8 +165,8 @@ else:
     SESSION_POOL = {}
     USAGE_POOL = {}
 
-    aquire_func = release_func = renew_func = lambda: True
-    session_aquire_func = session_release_func = session_renew_func = lambda: True
+    acquire_func = release_func = renew_func = lambda: True
+    session_acquire_func = session_release_func = session_renew_func = lambda: True
 
 
 YDOC_MANAGER = YdocManager(
@@ -177,7 +177,7 @@ YDOC_MANAGER = YdocManager(
 
 async def periodic_session_pool_cleanup():
     """Reap orphaned SESSION_POOL entries that missed heartbeats (e.g. crashed instance)."""
-    if not session_aquire_func():
+    if not session_acquire_func():
         log.debug("Session cleanup lock held by another node. Skipping.")
         return
 
@@ -206,7 +206,7 @@ async def periodic_usage_pool_cleanup():
         WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, WEBSOCKET_REDIS_LOCK_TIMEOUT
     )
     for attempt in range(max_retries + 1):
-        if aquire_func():
+        if acquire_func():
             break
         else:
             if attempt < max_retries:
