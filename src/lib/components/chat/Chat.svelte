@@ -43,7 +43,8 @@
 		selectedFolder,
 		pinnedChats,
 		showEmbeds,
-		selectedTerminalId
+		selectedTerminalId,
+		showFileNavPath
 	} from '$lib/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -57,7 +58,8 @@
 		processDetails,
 		removeAllDetails,
 		getCodeBlockContents,
-		isYoutubeUrl
+		isYoutubeUrl,
+		displayFileHandler
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
 
@@ -576,6 +578,10 @@
 					eventConfirmationInputPlaceholder = data.placeholder;
 					eventConfirmationInputValue = data?.value ?? '';
 					eventConfirmationInputType = data?.type ?? '';
+				} else if (type === 'display_file') {
+					if (data?.path) {
+						displayFileHandler(data.path, { showControls, showFileNavPath });
+					}
 				} else {
 					console.log('Unknown message type', data);
 				}

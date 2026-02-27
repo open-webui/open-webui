@@ -52,7 +52,7 @@
 	import { chatCompletion } from '$lib/apis/openai';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
-	import { bestMatchingLanguage } from '$lib/utils';
+	import { bestMatchingLanguage, displayFileHandler } from '$lib/utils';
 	import { setTextScale } from '$lib/utils/text-scale';
 
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
@@ -331,11 +331,9 @@
 
 			console.log('executeToolServer', res);
 
-			// Intercept display_file result to handle UI
 			if (data?.name === 'display_file' && data?.params?.path) {
 				if (res?.exists !== false) {
-					showControls.set(true);
-					showFileNavPath.set(data.params.path);
+					displayFileHandler(data.params.path, { showControls, showFileNavPath });
 				}
 			}
 
