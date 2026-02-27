@@ -1440,12 +1440,27 @@ async def chat_web_search_handler(
 
     except Exception as e:
         log.exception(e)
+
+        error_detail = str(e).strip() or type(e).__name__
+        if len(error_detail) > 300:
+            error_detail = f"{error_detail[:297]}..."
+
+        form_data["messages"] = add_or_update_system_message(
+            (
+                "Web search failed and no live web results were retrieved. "
+                f"Error: {error_detail}. "
+                "Be transparent that you are answering without fresh web data."
+            ),
+            form_data["messages"],
+            append=True,
+        )
+
         await event_emitter(
             {
                 "type": "status",
                 "data": {
                     "action": "web_search",
-                    "description": "An error occurred while searching the web",
+                    "description": f"Web search failed: {error_detail}",
                     "queries": queries,
                     "done": True,
                     "error": True,
