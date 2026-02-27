@@ -80,6 +80,7 @@ from open_webui.tools.builtin import (
     search_knowledge_files,
     query_knowledge_files,
     view_file,
+    query_file,
     view_knowledge_file,
     view_skill,
 )
@@ -454,7 +455,7 @@ def get_builtin_tools(
 
             knowledge_types = {item.get("type") for item in model_knowledge}
             if "file" in knowledge_types or "collection" in knowledge_types:
-                builtin_functions.append(view_file)
+                builtin_functions.extend([view_file, query_file])
             if "note" in knowledge_types:
                 builtin_functions.append(view_note)
         else:
@@ -467,6 +468,8 @@ def get_builtin_tools(
                     search_knowledge_files,
                     query_knowledge_files,
                     view_knowledge_file,
+                    view_file,
+                    query_file,
                 ]
             )
 

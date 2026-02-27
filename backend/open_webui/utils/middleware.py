@@ -255,7 +255,30 @@ def get_citation_source_from_tool_result(
                 }
             ]
 
-        elif tool_name == "query_knowledge_files":
+        elif tool_name == "view_file":
+            file_data = tool_result
+            filename = file_data.get("filename", "Unknown File")
+            file_id = file_data.get("id", "")
+
+            return [
+                {
+                    "source": {
+                        "id": file_id,
+                        "name": filename,
+                        "type": "file",
+                    },
+                    "document": [file_data.get("content", "")],
+                    "metadata": [
+                        {
+                            "file_id": file_id,
+                            "name": filename,
+                            "source": filename,
+                        }
+                    ],
+                }
+            ]
+
+        elif tool_name in ("query_knowledge_files", "query_file"):
             chunks = tool_result
 
             # Group chunks by source for better citation display
@@ -2546,7 +2569,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         model.get("info", {}).get("meta", {}).get("capabilities") or {}
     ).get("file_context", True)
 
-    if file_context_enabled:
+    if file_context_enabled and metadata.get("params", {}).get("function_calling") != "native":
         try:
             form_data, flags = await chat_completion_files_handler(
                 request, form_data, extra_params, user
@@ -4146,7 +4169,9 @@ async def streaming_chat_response_handler(response, ctx):
                                 "search_web",
                                 "fetch_url",
                                 "view_knowledge_file",
+                                "view_file",
                                 "query_knowledge_files",
+                                "query_file",
                             ]
                             and tool_result
                         ):

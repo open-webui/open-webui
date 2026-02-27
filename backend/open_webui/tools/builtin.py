@@ -1670,6 +1670,81 @@ async def view_file(
         return json.dumps({"error": str(e)})
 
 
+async def query_file(
+    file_id: str,
+    query: str,
+    count: int = 5,
+    __request__: Request = None,
+    __user__: dict = None,
+) -> str:
+    """
+    Search within a file using semantic/vector search. Returns the most relevant chunks.
+
+    :param file_id: The ID of the file to search within
+    :param query: The search query to find relevant content in the file
+    :param count: Maximum number of results to return (default: 5)
+    :return: JSON with relevant chunks containing content and relevance score
+    """
+    if __request__ is None:
+        return json.dumps({"error": "Request context not available"})
+
+    if not __user__:
+        return json.dumps({"error": "User context not available"})
+
+    if isinstance(count, str):
+        try:
+            count = int(count)
+        except ValueError:
+            count = 5
+
+    try:
+        from open_webui.models.files import Files
+        from open_webui.retrieval.utils import query_collection
+
+        user_id = __user__.get("id")
+        user_role = __user__.get("role", "user")
+
+        file = Files.get_file_by_id(file_id)
+        if not file:
+            return json.dumps({"error": "File not found"})
+
+        if file.user_id != user_id and user_role != "admin":
+            return json.dumps({"error": "File not found"})
+
+        embedding_function = __request__.app.state.EMBEDDING_FUNCTION
+        if not embedding_function:
+            return json.dumps({"error": "Embedding function not configured"})
+
+        collection_name = f"file-{file_id}"
+        query_results = await query_collection(
+            collection_names=[collection_name],
+            queries=[query],
+            embedding_function=embedding_function,
+            k=count,
+        )
+
+        chunks = []
+        if query_results and "documents" in query_results:
+            documents = query_results.get("documents", [[]])[0]
+            metadatas = query_results.get("metadatas", [[]])[0]
+            distances = query_results.get("distances", [[]])[0]
+
+            for idx, doc in enumerate(documents):
+                chunk_info = {
+                    "content": doc,
+                    "source": file.filename,
+                    "file_id": file_id,
+                }
+                if idx < len(distances):
+                    chunk_info["distance"] = distances[idx]
+                chunks.append(chunk_info)
+
+        return json.dumps(chunks[:count], ensure_ascii=False)
+    except Exception as e:
+        log.exception(f"query_file error: {e}")
+        return json.dumps({"error": str(e)})
+
+
 async def view_knowledge_file(
     file_id: str,
     __request__: Request = None,
