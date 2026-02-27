@@ -29,6 +29,7 @@
 	import {
 		copyToClipboard as _copyToClipboard,
 		approximateToHumanReadable,
+		formatUsageToHumanReadable,
 		getMessageContentParts,
 		sanitizeResponseContent,
 		createMessagesList,
@@ -1101,15 +1102,7 @@
 								{#if message.usage}
 									<Tooltip
 										content={message.usage
-											? `<pre>${sanitizeResponseContent(
-													JSON.stringify(message.usage, null, 2)
-														.replace(/"([^(")"]+)":/g, '$1:')
-														.slice(1, -1)
-														.split('\n')
-														.map((line) => line.slice(2))
-														.map((line) => (line.endsWith(',') ? line.slice(0, -1) : line))
-														.join('\n')
-												)}</pre>`
+											? `<pre>${formatUsageToHumanReadable(message.usage)}</pre>`
 											: ''}
 										placement="bottom"
 									>

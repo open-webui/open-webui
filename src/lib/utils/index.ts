@@ -1052,6 +1052,116 @@ export const approximateToHumanReadable = (nanoseconds: number) => {
 	return results.reverse().join(' ');
 };
 
+export const formatUsageToHumanReadable = (usage: Record<string, any>) => {
+	if (!usage) return '';
+
+	// Helper: format a number with commas (e.g. 1603 → "1,603")
+	const fmt = (n: number) => n?.toLocaleString() ?? String(n);
+
+	// Helper: convert nanoseconds to human-readable with fractional seconds
+	const ns = (n: number) => {
+		if (n >= 3.6e12) {
+			const h = Math.floor(n / 3.6e12);
+			const m = Math.floor((n % 3.6e12) / 60e9);
+			const s = ((n % 60e9) / 1e9).toFixed(2);
+			return `${h}h ${m}m ${s}s`;
+		}
+		if (n >= 60e9) {
+			const m = Math.floor(n / 60e9);
+			const s = ((n % 60e9) / 1e9).toFixed(2);
+			return `${m}m ${s}s`;
+		}
+		if (n >= 1e9) return `${(n / 1e9).toFixed(2)}s`;
+		if (n >= 1e6) return `${(n / 1e6).toFixed(1)}ms`;
+		if (n >= 1e3) return `${(n / 1e3).toFixed(1)}µs`;
+		return `${n}ns`;
+	};
+
+	// Helper: format token/s speed
+	const speed = (n: number) => `${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} tok/s`;
+
+	// Known field formatting rules
+	const DURATION_FIELDS = new Set(['total_duration', 'load_duration', 'prompt_eval_duration', 'eval_duration']);
+	const SPEED_FIELDS = new Set(['prompt_token/s', 'response_token/s']);
+	const COUNT_FIELDS = new Set([
+		'prompt_tokens', 'completion_tokens', 'input_tokens', 'output_tokens', 'total_tokens',
+		'prompt_eval_count', 'eval_count'
+	]);
+	// OpenAI/Groq-style time fields — values are in seconds (not nanoseconds)
+	const TIME_SECONDS_FIELDS = new Set(['queue_time', 'prompt_time', 'completion_time', 'total_time']);
+
+	// Pretty labels for known keys
+	const LABELS: Record<string, string> = {
+		input_tokens: 'Input tokens',
+		output_tokens: 'Output tokens',
+		total_tokens: 'Total tokens',
+		prompt_tokens: 'Prompt tokens',
+		completion_tokens: 'Completion tokens',
+		'response_token/s': 'Response speed',
+		'prompt_token/s': 'Prompt speed',
+		total_duration: 'Total duration',
+		load_duration: 'Load duration',
+		prompt_eval_count: 'Prompt eval count',
+		prompt_eval_duration: 'Prompt eval time',
+		eval_count: 'Eval count',
+		eval_duration: 'Eval duration',
+		approximate_total: 'Approximate total',
+		queue_time: 'Queue time',
+		prompt_time: 'Prompt time',
+		completion_time: 'Completion time',
+		total_time: 'Total time'
+	};
+
+	const rows: [string, string][] = [];
+
+	const formatValue = (key: string, value: unknown): string => {
+		if (typeof value !== 'number') return String(value);
+		if (DURATION_FIELDS.has(key)) return ns(value);
+		if (SPEED_FIELDS.has(key)) return speed(value);
+		if (TIME_SECONDS_FIELDS.has(key)) return `${value.toFixed(3)}s`;
+		if (COUNT_FIELDS.has(key)) return fmt(value);
+		return fmt(value);
+	};
+
+	for (const [key, value] of Object.entries(usage)) {
+		if (key === 'openai' || key === 'usage') continue; // skip meta flags
+
+		if (value !== null && value !== undefined && typeof value === 'object') {
+			// Nested object: flatten sub-keys at the same level, no indentation
+			for (const [subKey, subVal] of Object.entries(value as Record<string, any>)) {
+				if (subVal === null || subVal === undefined) continue;
+				const label = subKey.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+				rows.push([label, typeof subVal === 'number' ? fmt(subVal) : String(subVal)]);
+			}
+			continue;
+		}
+
+		const label = LABELS[key] ?? key.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+
+		// Format "Approximate total": strip leading zero components from "XhYmZs" (e.g. "0h0m14s" → "14s")
+		if (key === 'approximate_total' && typeof value === 'string') {
+			const match = value.match(/^(\d+)h(\d+)m(\d+)s$/);
+			if (match) {
+				const [, h, m, s] = match.map(Number);
+				const parts = [];
+				if (h > 0) parts.push(`${h}h`);
+				if (m > 0) parts.push(`${m}m`);
+				parts.push(`${s}s`);
+				rows.push([label, parts.join(' ')]);
+				continue;
+			}
+		}
+
+		rows.push([label, formatValue(key, value)]);
+	}
+
+	if (rows.length === 0) return '';
+
+	// Render as "Label: value" — no manual padding needed
+	return rows.map(([label, value]) => `${label}: ${value}`).join('\n');
+};
+
+
 export const getTimeRange = (timestamp) => {
 	const now = new Date();
 	const date = new Date(timestamp * 1000); // Convert Unix timestamp to milliseconds
