@@ -71,7 +71,10 @@
 		</Tooltip>
 
 		<Tooltip content={connection.enabled ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
-			<Switch state={connection.enabled} on:change={() => connection.enabled ? onDisable() : onEnable()} />
+			<Switch
+				state={connection.enabled}
+				on:change={() => (connection.enabled ? onDisable() : onEnable())}
+			/>
 		</Tooltip>
 	</div>
 </div>

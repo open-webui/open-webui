@@ -31,4 +31,3 @@
 {#if renderToString}
 	{@html renderToString(content, { displayMode, throwOnError: false })}
 {/if}
-
