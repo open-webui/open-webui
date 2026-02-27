@@ -60,6 +60,8 @@
 	import SyncStatsModal from '$lib/components/chat/Settings/SyncStatsModal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { getUserSettings } from '$lib/apis/users';
+	import { getInterfaceDefaults } from '$lib/apis/configs';
+	import { deepMerge } from '$lib/utils';
 	import dayjs from 'dayjs';
 	import { getChannels } from '$lib/apis/channels';
 
@@ -765,8 +767,21 @@
 				$socket?.on('events:channel', channelEventHandler);
 
 				const userSettings = await getUserSettings(localStorage.token);
+
+				// Fetch admin-configured interface defaults and merge with user settings
+				let effectiveSettings = {};
+				try {
+					const adminDefaults = await getInterfaceDefaults(localStorage.token);
+					const userUI = userSettings?.ui ?? {};
+					// Admin defaults are base, user settings override
+					effectiveSettings = deepMerge(adminDefaults, userUI);
+				} catch (e) {
+					// Fall back to user settings if admin defaults unavailable
+					effectiveSettings = userSettings?.ui ?? {};
+				}
+
 				if (userSettings) {
-					settings.set(userSettings.ui);
+					settings.set(effectiveSettings);
 				} else {
 					settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
 				}
