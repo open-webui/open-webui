@@ -440,78 +440,81 @@
 				</div>
 			{/if}
 		{:else}
-			<div
-				class="absolute left-0 right-0 py-1.5 pr-3 text-text-300 pl-4.5 text-xs font-medium dark:text-white"
-			>
-				{lang}
-			</div>
+			{#snippet renderCodeBlockHeader(isLanguageBlock = false)}
+				<div
+					class="py-1.5 px-3 flex text-xs text-black dark:text-white items-center gap-4 justify-between overflow-y-visible {
+						isLanguageBlock ? 'absolute left-0 right-0' : `sticky z-10 ${stickyButtonsClassName}`
+					}"
+				>
+					<div class="text-xs truncate flex-shrink-1 font-medium {isLanguageBlock ? '' : 'invisible pointer-events-none'}">{lang}</div>
 
-			<div
-				class="sticky {stickyButtonsClassName} left-0 right-0 py-1.5 pr-3 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white"
-			>
-				<div class="flex items-center gap-0.5">
-					<button
-						class="flex gap-1 items-center bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
-						on:click={collapseCodeBlock}
-					>
-						<div class=" -translate-y-[0.5px]">
-							<ChevronUpDown className="size-3" />
-						</div>
-
-						<div>
-							{collapsed ? $i18n.t('Expand') : $i18n.t('Collapse')}
-						</div>
-					</button>
-
-					{#if ($config?.features?.enable_code_execution ?? true) && (lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code)))}
-						{#if executing}
-							<div
-								class="run-code-button bg-none border-none p-0.5 cursor-not-allowed bg-white dark:bg-black"
-							>
-								{$i18n.t('Running')}
+					<div class="flex gap-0.5 items-center flex-shrink-0 {isLanguageBlock ? 'invisible pointer-events-none' : ''}">
+						<button
+							class="flex gap-1 items-center bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black hover:opacity-80"
+							on:click={collapseCodeBlock}
+						>
+							<div class=" -translate-y-[0.5px]">
+								<ChevronUpDown className="size-3" />
 							</div>
-						{:else if run}
+
+							<div>
+								{collapsed ? $i18n.t('Expand') : $i18n.t('Collapse')}
+							</div>
+						</button>
+
+						{#if ($config?.features?.enable_code_execution ?? true) && (lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code)))}
+							{#if executing}
+								<div
+									class="run-code-button bg-none border-none p-0.5 cursor-not-allowed bg-white dark:bg-black hover:opacity-80"
+								>
+									{$i18n.t('Running')}
+								</div>
+							{:else if run}
+								<button
+									class="flex gap-1 items-center run-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black hover:opacity-80"
+									on:click={async () => {
+										code = _code;
+										await tick();
+										executePython(code);
+									}}
+								>
+									<div>
+										{$i18n.t('Run')}
+									</div>
+								</button>
+							{/if}
+						{/if}
+
+						{#if save}
 							<button
-								class="flex gap-1 items-center run-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
-								on:click={async () => {
-									code = _code;
-									await tick();
-									executePython(code);
-								}}
+								class="save-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black hover:opacity-80"
+								on:click={saveCode}
+							>
+								{saved ? $i18n.t('Saved') : $i18n.t('Save')}
+							</button>
+						{/if}
+
+						<button
+							class="copy-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black hover:opacity-80"
+							on:click={copyCode}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
+						>
+
+						{#if preview && ['html', 'svg'].includes(lang)}
+							<button
+								class="flex gap-1 items-center run-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black hover:opacity-80"
+								on:click={previewCode}
 							>
 								<div>
-									{$i18n.t('Run')}
+									{$i18n.t('Preview')}
 								</div>
 							</button>
 						{/if}
-					{/if}
-
-					{#if save}
-						<button
-							class="save-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
-							on:click={saveCode}
-						>
-							{saved ? $i18n.t('Saved') : $i18n.t('Save')}
-						</button>
-					{/if}
-
-					<button
-						class="copy-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
-						on:click={copyCode}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
-					>
-
-					{#if preview && ['html', 'svg'].includes(lang)}
-						<button
-							class="flex gap-1 items-center run-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
-							on:click={previewCode}
-						>
-							<div>
-								{$i18n.t('Preview')}
-							</div>
-						</button>
-					{/if}
+					</div>
 				</div>
-			</div>
+			{/snippet}
+
+			{@render renderCodeBlockHeader(true)}
+			{@render renderCodeBlockHeader()}
 
 			<div
 				class="language-{lang} rounded-t-2xl -mt-8 {editorClassName
