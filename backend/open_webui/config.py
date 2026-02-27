@@ -1223,31 +1223,31 @@ except Exception as e:
 if default_prompt_suggestions == []:
     default_prompt_suggestions = [
         {
-            "title": ["Help me study", "vocabulary for a college entrance exam"],
-            "content": "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
+            "title": ["Simplify this document", "into plain language"],
+            "content": "Simplify this document: help me understand medical terminology the average person wouldn't understand, and give me an overview of the implications for my health.",
         },
         {
-            "title": ["Give me ideas", "for what to do with my kids' art"],
-            "content": "What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter.",
+            "title": ["Explain my lab results", "and what they could mean"],
+            "content": "Explain what the test(s) measure, whether the results are abnormal, levels are high, low or average, and a general explanation of what this could mean. Do not give a diagnosis and remind the patient that they should only take medical advice from their doctor.",
         },
         {
-            "title": ["Tell me a fun fact", "about the Roman Empire"],
-            "content": "Tell me a random fun fact about the Roman Empire",
+            "title": ["Summarize this billing document", "in understandable terms"],
+            "content": "Tell me what each charge is for, what insurance covers, and what the patient owes.",
         },
         {
-            "title": ["Show me a code snippet", "of a website's sticky header"],
-            "content": "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
+            "title": ["Replace medical terminology", "with plain-language explanations"],
+            "content": "Replace complex medical terminology with plain language. Keep the structure the same.",
         },
         {
             "title": [
-                "Explain options trading",
-                "if I'm familiar with buying and selling stocks",
+                "Summarize this document",
+                "in 5-8 bullet points",
             ],
-            "content": "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
+            "content": "Summarize this document in 8 bullet points or less. Include only the key points a patient would need to know.",
         },
         {
-            "title": ["Overcome procrastination", "give me tips"],
-            "content": "Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?",
+            "title": ["Rewrite this discharge summary", "so I know what to do after leaving."],
+            "content": "Summarize any discharge instructions by highlighting medications and dosages. Use simple, clear language and make sure I am aware of any warnings and when to call the doctor or return to the hospital.",
         },
     ]
 
