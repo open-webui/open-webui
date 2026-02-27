@@ -113,7 +113,7 @@
 								}}
 							>
 								<Link />
-								<div class="flex items-center">{$i18n.t('Copy link')}</div>
+								<div class="flex items-center">{$i18n.t('Copy Link')}</div>
 							</DropdownMenu.Item>
 						{/if}
 
