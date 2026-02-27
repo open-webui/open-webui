@@ -1842,6 +1842,11 @@ async def chat_completion(
                         )
                 except:
                     pass
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=str(e),
+                )
 
             ctx = build_chat_response_context(
                 request, form_data, user, model, metadata, tasks, events
