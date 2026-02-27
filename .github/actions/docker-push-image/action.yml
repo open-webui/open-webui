@@ -1,0 +1,103 @@
+name: "⬆️ Push Docker Image"
+description: "Push a Docker image to the xcnt registry"
+
+inputs:
+  event_type:
+    description: "The event type that triggered the workflow"
+    required: true
+  docker_service_prefix:
+    description: "The Docker service prefix"
+    required: false
+    default: "eu.gcr.io/xcnt-infrastructure/"
+  image_name:
+    description: "The image to push"
+    required: true
+  service_name:
+    description: "Service name to push"
+    required: true
+  tag_name:
+    description: "Tag to push"
+    required: true
+  github_token:
+    description: "GitHub token for authentication"
+    required: true
+  password:
+    description: "The password for the Docker registry"
+    required: true
+  harbor_password:
+    description: "The password for the Harbor registry"
+    required: false
+    default: ""
+  pull_image:
+    description: "Whether or not to pull the image before pushing. Defaults to true, set to false if the image is already present on the runner."
+    required: false
+    default: "true"
+
+outputs:
+  docker-image: 
+    description: "The pushed image tag"
+    value: ${{ steps.build.push.docker-image }}
+
+runs:
+  using: "composite"
+  steps:
+      - name: 🔀 Checkout
+        uses: actions/checkout@v5
+      - name: 🐳 Set Up Docker
+        uses: ./.github/actions/docker-setup
+        with:
+          password: ${{ inputs.password }}
+          harbor_password: ${{ inputs.harbor_password }}
+      - name: 🐳 Push image
+        shell: bash
+        id: push
+        run: |
+          if [ "${{ inputs.pull_image }}" == "true" ]; then
+            docker pull ${{ inputs.image_name }}
+          fi
+          TARGET_IMAGE="${{ inputs.docker_service_prefix }}${{ inputs.service_name }}:${{ inputs.tag_name }}"
+          LATEST_IMAGE="${{ inputs.docker_service_prefix }}${{ inputs.service_name }}:latest"
+          docker tag ${{ inputs.image_name }} $TARGET_IMAGE
+          docker push $TARGET_IMAGE
+          if [[ "${{ inputs.event_type }}" == "tag" ]]; then
+            docker tag $TARGET_IMAGE $LATEST_IMAGE
+            docker push $LATEST_IMAGE
+          fi
+          echo "docker-image=${TARGET_IMAGE}" >> $GITHUB_OUTPUT
+      - name: ✏️ Post docker image to step output
+        shell: bash
+        run: |
+          echo '# 🐳 Docker Image' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo '${{ steps.push.outputs.docker-image }}' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+      - name: 🔎 Get current PR
+        uses: 8BitJonny/gh-get-current-pr@2.2.0
+        continue-on-error: true
+        id: pr
+        with:
+          github-token: ${{ inputs.github_token }}
+      - name: 🔎 Get docker comment
+        uses: peter-evans/find-comment@v2
+        continue-on-error: true
+        id: docker_image_comment
+        with:
+          issue-number: ${{ steps.pr.outputs.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: Docker image ${{ inputs.service_name }}
+      - name: ✏️ Post docker image to comment
+        uses: peter-evans/create-or-update-comment@v3
+        continue-on-error: true
+        with:
+          comment-id: ${{ steps.docker_image_comment.outputs.comment-id }}
+          issue-number: ${{ steps.pr.outputs.number }}
+          body: |
+            ## Docker image ${{ inputs.service_name }}
+            ```
+            ${{ steps.push.outputs.docker-image }}
+            ```
+            :recycle: This comment has been updated with latest results.
+          edit-mode: replace
+      - name: 🐳 Docker Cleanup
+        uses: ./.github/actions/docker-cleanup
+        if: ${{ always() }}

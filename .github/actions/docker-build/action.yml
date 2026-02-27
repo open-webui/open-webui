@@ -1,0 +1,206 @@
+name: "🏗️ Build Docker Image"
+description: "Build a Docker image"
+
+inputs:
+  service_name:
+    description: "Service name"
+    required: true
+  image_name:
+    description: "Image name. If not set, use service_name instead prefixed by eu.gcr.io/xcnt-infrastructure"
+    required: false
+    default: ""
+  tag_name:
+    description: "Tag to push"
+    required: true
+  cache_name:
+    description: "Cache name for the Docker image. If not set the tag_name with cache- prefix will be used."
+    required: false
+    default: ""
+  dockerfile:
+    description: "The Dockerfile to use"
+    required: false
+    default: ""
+  docker_password:
+    description: "The password for the Docker registry"
+    required: true
+  docker_build_directory:
+    description: "The build directory to create"
+    required: false
+    default: "."
+  docker_build_target:
+    description: "The build target for multi-stage builds. Leave empty to build the default target."
+    required: false
+    default: ""
+  docker_build_args:
+    description: |
+      Arguments in combination with the Docker build command.
+
+      Should be in the format
+
+      DOCTYPE=xxxx
+      CACHEBUST=xxxx
+    required: false
+  docker_s3_cache_region:
+    description: "S3 region for Docker cache"
+    required: false
+    default: "hel1"
+  docker_s3_cache_bucket:
+    description: "S3 bucket for Docker cache"
+    required: false
+    default: "ci-build-cache"
+  docker_s3_endpoint:
+    description: "S3 endpoint for Docker cache"
+    required: false
+    default: "https://hel1.your-objectstorage.com"
+  docker_s3_access_key:
+    description: "S3 access key for Docker cache"
+    required: false
+    default: ""
+  docker_s3_access_secret:
+    description: "S3 access secret for Docker cache"
+    required: false
+    default: ""
+  docker_s3_blobs_prefix:
+    description: "S3 blobs prefix for Docker cache"
+    required: false
+    default: ""
+  docker_s3_upload_parallelism:
+    description: "S3 upload parallelism for Docker cache"
+    required: false
+    default: "4"
+  docker_s3_touch_refresh:
+    description: "S3 touch refresh for Docker cache"
+    required: false
+    default: "24h"
+  docker_s3_manifest_prefix:
+    description: "S3 manifest prefix for Docker cache"
+    required: false
+    default: ""
+  docker_s3_use_path_style:
+    description: "Use path style to access the S3 cache"
+    required: false
+    default: "false"
+  docker_s3_cache_mode:
+    description: "S3 cache mode for Docker cache"
+    required: false
+    default: "max"
+  docker_s3_cache_ignore_error:
+    description: "Ignore S3 cache errors"
+    required: false
+    default: "false"
+  docker_args:
+    description: "Additional docker build arguments"
+    required: false
+    default: ""
+  harbor_password:
+    description: "The password for the Harbor registry"
+    required: false
+    default: ""
+  docker_push:
+    description: "Specify whether or not the build image should be pushed. This can be set to false to generate a cache layer which is used during the remaining build."
+    required: false
+    default: "true"
+
+outputs:
+  docker_image_tag: 
+    description: "The built Docker image tag"
+    value: ${{ steps.build.outputs.IMAGE }}
+  image: 
+    description: "The built Docker image"
+    value: ${{ steps.build.outputs.IMAGE }}
+
+runs:
+  using: "composite"
+  steps:
+      - name: 🔀 Checkout
+        uses: actions/checkout@v5
+      - name: 🐳 Set Up Docker
+        uses: ./.github/actions/docker-setup
+        with:
+          password: ${{ inputs.docker_password }}
+          harbor_password: ${{ inputs.harbor_password }}
+      - name: 🖋️ Generating image name
+        id: name
+        shell: bash
+        run: |
+          if [ -z "${{ inputs.image_name }}" ]; then
+            echo "image=eu.gcr.io/xcnt-infrastructure/${{ inputs.service_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "image=${{ inputs.image_name }}" >> $GITHUB_OUTPUT
+          fi
+      - name: 🐳 Prepare docker cache images
+        uses: ./.github/actions/docker-cache-url-generation
+        id: generate-cache-urls
+        with:
+          cache_name: ${{ inputs.cache_name || inputs.tag_name }}
+          docker_s3_cache_region: ${{ inputs.docker_s3_cache_region }}
+          docker_s3_cache_bucket: ${{ inputs.docker_s3_cache_bucket }}
+          docker_s3_endpoint: ${{ inputs.docker_s3_endpoint }}
+          docker_s3_access_key: ${{ inputs.docker_s3_access_key }}
+          docker_s3_access_secret: ${{ inputs.docker_s3_access_secret }}
+          docker_s3_blobs_prefix: ${{ inputs.docker_s3_blobs_prefix }}
+          docker_s3_upload_parallelism: ${{ inputs.docker_s3_upload_parallelism }}
+          docker_s3_touch_refresh: ${{ inputs.docker_s3_touch_refresh }}
+          docker_s3_manifest_prefix: ${{ inputs.docker_s3_manifest_prefix }}
+          docker_s3_use_path_style: ${{ inputs.docker_s3_use_path_style }}
+          docker_s3_cache_mode: ${{ inputs.docker_s3_cache_mode }}
+          docker_s3_cache_ignore_error: ${{ inputs.docker_s3_cache_ignore_error }}
+          image_names: ${{ steps.name.outputs.image }}:cache-${{ inputs.tag_name }}
+      - name: 🏗️ Build image (cache)
+        shell: bash
+        id: build
+        run: |
+          DOCKER_COMMON_ARGS="${{ steps.generate-cache-urls.outputs.cache-to-parameters }} ${{ steps.generate-cache-urls.outputs.cache-from-parameters}}"
+          DOCKER_IMAGE_CACHE_NAME="${{ steps.name.outputs.image }}:cache-${{ inputs.tag_name }}"
+          DOCKER_ARGS_STRING="${{ inputs.docker_args }}"
+          mapfile -t DOCKER_ARGS <<< "$DOCKER_ARGS_STRING"
+          for arg in "${DOCKER_ARGS[@]}"; do
+            arg=$(echo $arg | awk '{$1=$1};1')  # trim whitespace
+            if [ -n "${arg}" ]; then
+              echo "Adding $arg to docker build"
+              DOCKER_COMMON_ARGS="${DOCKER_COMMON_ARGS} ${arg}"
+            fi
+          done
+
+          if [ -n "${{ inputs.docker_build_target }}" ]; then
+            DOCKER_COMMON_ARGS="${DOCKER_COMMON_ARGS} --target ${{ inputs.docker_build_target }}"
+          fi
+
+          BUILD_ARGS_STRING="${{inputs.docker_build_args}}"
+          mapfile -t BUILD_ARGS <<< "$BUILD_ARGS_STRING"
+          for arg in "${BUILD_ARGS[@]}"; do
+            arg=$(echo $arg | awk '{$1=$1};1')  # trim whitespace
+            if [ -n "${arg}" ]; then
+              echo "Adding build arg ${arg} to docker build"
+              DOCKER_COMMON_ARGS="${DOCKER_COMMON_ARGS} --build-arg ${arg}"
+            fi
+          done
+
+          if [ -n "${{ inputs.dockerfile }}" ]; then
+           DOCKER_COMMON_ARGS="${DOCKER_COMMON_ARGS} -f ${{ inputs.dockerfile }}"
+          fi
+
+          echo "Running docker buildx command"
+          echo "docker buildx build \
+            ${DOCKER_COMMON_ARGS} \
+            --platform linux/amd64 \
+            --tag ${DOCKER_IMAGE_CACHE_NAME} \
+            --load \
+            ${{ inputs.docker_build_directory || '.' }}"
+
+          docker buildx build \
+            ${DOCKER_COMMON_ARGS} \
+            --platform linux/amd64 \
+            --tag ${DOCKER_IMAGE_CACHE_NAME} \
+            --load \
+            ${{ inputs.docker_build_directory || '.' }}
+
+          echo "IMAGE=${DOCKER_IMAGE_CACHE_NAME}" >> $GITHUB_OUTPUT
+      - name: 🐳⬆️ Docker Push
+        if: ${{ inputs.docker_push == 'true' }}
+        shell: bash
+        run: |
+          docker push ${{steps.build.outputs.IMAGE}}
+      - name: 🐳 Docker Cleanup
+        uses: ./.github/actions/docker-cleanup
+        if: ${{ always() }}

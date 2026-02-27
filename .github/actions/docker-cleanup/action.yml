@@ -1,0 +1,13 @@
+name: "🐳 Docker Cleanup"
+description: "Clean up Docker environment"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Docker Cleanup
+      shell: bash
+      run: |
+          docker stop $(docker ps -a -q) || true
+          docker rm $(docker ps -a -q) || true
+          docker volume rm $(docker volume ls -q) || true
+          docker network rm $(docker network ls | grep compose | awk '{print $1}') || true

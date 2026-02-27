@@ -1,0 +1,27 @@
+name: "🐳 Docker Login"
+description: "Log in to a Docker registry"
+
+inputs:
+  registry:
+    description: "Docker registry URL"
+    required: false
+    default: "europe-docker.pkg.dev"
+  username:
+    description: "Docker username"
+    required: false
+    default: "_json_key"
+  password:
+    description: "Docker password"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Docker Login
+      shell: bash
+      run: |
+        echo "${{ inputs.password }}" | base64 -d | docker login ${{ inputs.registry }} --username ${{ inputs.username }} --password-stdin
+        # Special case for backwards compatibility with GAR.
+        if [[ "${{ inputs.registry }}" == "europe-docker.pkg.dev" ]]; then
+          echo "${{ inputs.password }}" | base64 -d | docker login eu.gcr.io --username ${{ inputs.username }} --password-stdin
+        fi

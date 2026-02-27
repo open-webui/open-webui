@@ -36,7 +36,7 @@ jobs:
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
           echo "FULL_IMAGE_NAME=eu.gcr.io/xcnt-infrastructure/${IMAGE_NAME,,}" >>${GITHUB_ENV}
         env:
-          IMAGE_NAME: '${{ github.repository }}'
+          IMAGE_NAME: 'xcnt-open-webui'
 
       - name: Prepare
         run: |
@@ -46,18 +46,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Checkout xcnt/ci actions
-        uses: actions/checkout@v5
-        with:
-          repository: xcnt/ci
-          token: ${{ secrets.GITHUB_TOKEN }}
-          path: ./.github/xcnt-ci
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
       - name: 🐳 Set Up Docker
-        uses: ./.github/xcnt-ci/github/actions/docker-setup@main
+        uses: ./.github/actions/docker-setup
         with:
           password: ${{ secrets.GAR_KEY }}
 
@@ -531,7 +524,7 @@ jobs:
   #         retention-days: 1
 
   merge-main-images:
-    runs-on: ubuntu-latest
+    runs-on: default
     needs: [build-main-image]
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase
@@ -539,9 +532,9 @@ jobs:
       - name: Set repository and image name to lowercase
         run: |
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
-          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=eu.gcr.io/xcnt-infrastructure/${IMAGE_NAME,,}" >>${GITHUB_ENV}
         env:
-          IMAGE_NAME: '${{ github.repository }}'
+          IMAGE_NAME: 'xcnt-open-webui'
 
       - name: Download digests
         uses: actions/download-artifact@v5
@@ -550,8 +543,14 @@ jobs:
           path: /tmp/digests
           merge-multiple: true
 
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: 🐳 Set Up Docker
-        uses: xcnt/ci/.github/actions/docker-setup@main
+        uses: ./.github/actions/docker-setup
         with:
           password: ${{ secrets.GAR_KEY }}
 

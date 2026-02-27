@@ -1,0 +1,49 @@
+name: "🐳 Docker Setup"
+description: "Prepares the runner to run Docker commands with buildx against a Docker registry"
+
+inputs:
+  registry:
+    description: "Docker registry URL"
+    required: false
+    default: "europe-docker.pkg.dev"
+  username:
+    description: "Docker username"
+    required: false
+    default: "_json_key"
+  password:
+    description: "Docker password"
+    required: true
+  harbor_registry:
+    description: "The registry to use for the own harbor deployment"
+    required: false
+    default: "harbor.drivr.dev"
+  harbor_username:
+    description: "The username for the Harbor registry"
+    required: false
+    default: "robot$ci"
+  harbor_password:
+    description: "The password for the Harbor registry"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - uses: ./.github/actions/docker-cleanup
+    - uses: ./.github/actions/docker-login
+      with:
+        registry: ${{ inputs.registry }}
+        username: ${{ inputs.username }}
+        password: ${{ inputs.password }}
+    - uses: ./.github/actions/docker-login
+      if: ${{ inputs.harbor_password != '' }}
+      with:
+        registry: ${{ inputs.harbor_registry }}
+        username: ${{ inputs.harbor_username }}
+        password: ${{ inputs.harbor_password }}
+    - name: Set up Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        driver-opts:
+          image=harbor.drivr.dev/dh/moby/buildkit:buildx-stable-1
