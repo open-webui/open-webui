@@ -11,6 +11,9 @@ on:
 
 env:
   REGISTRY: ghcr.io
+  # Local quick repro (subset, no push):
+  # docker buildx build --platform linux/amd64 --build-arg BUILD_HASH=<sha> -t open-webui:local .
+  # docker buildx build --platform linux/amd64 --build-arg BUILD_HASH=<sha> --build-arg USE_CUDA=true -t open-webui:cuda-local .
 
 jobs:
   build-main-image:
@@ -79,6 +82,7 @@ jobs:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
             type=ref,event=branch
+            # On version tags, also reuse the main cache key to maximize cache hits for release builds.
             ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
           flavor: |
             prefix=cache-${{ matrix.platform }}-
@@ -572,6 +576,7 @@ jobs:
             latest=${{ github.ref == 'refs/heads/main' }}
 
       - name: Create manifest list and push
+        # This merges per-platform digests uploaded by build-main-image into a single multi-arch tag.
         working-directory: /tmp/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
@@ -808,6 +813,7 @@ jobs:
   # Copy images from GHCR to Docker Hub (best-effort, won't block GHCR)
   copy-to-dockerhub:
     runs-on: ubuntu-latest
+    # Docker Hub sync runs only for main pushes and version tags, and is best-effort by design.
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     needs: [merge-main-images, merge-cuda-images, merge-cuda126-images, merge-ollama-images, merge-slim-images]
     continue-on-error: true
