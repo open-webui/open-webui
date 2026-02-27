@@ -44,7 +44,7 @@
 	<Tooltip className="w-full relative" content={''} placement="top-start">
 		<div class="flex w-full">
 			<div
-				class="flex-1 relative flex gap-1.5 items-center {!connection.enabled ? 'opacity-50' : ''}"
+				class="flex-1 relative flex gap-1.5 items-center {!connection?.enabled ? 'opacity-50' : ''}"
 			>
 				<Tooltip content={$i18n.t('Terminal')}>
 					<Cloud className="size-4" strokeWidth="1.5" />
@@ -70,10 +70,10 @@
 			</button>
 		</Tooltip>
 
-		<Tooltip content={connection.enabled ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
+		<Tooltip content={connection?.enabled ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
 			<Switch
-				state={connection.enabled}
-				on:change={() => (connection.enabled ? onDisable() : onEnable())}
+				state={connection?.enabled}
+				on:change={() => (connection?.enabled ? onDisable() : onEnable())}
 			/>
 		</Tooltip>
 	</div>
