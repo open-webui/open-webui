@@ -929,9 +929,11 @@ def process_tool_result(
         else:
             tool_result = tool_result.body.decode("utf-8", "replace")
 
-    elif (tool_type in ("external", "action") and isinstance(tool_result, tuple)) or (
-        direct_tool and isinstance(tool_result, list) and len(tool_result) == 2
-    ):
+    EXTERNAL_TOOL_TYPES = ("external", "action", "terminal")
+    elif (
+        tool_type in EXTERNAL_TOOL_TYPES
+        and isinstance(tool_result, tuple)
+    ) or (direct_tool and isinstance(tool_result, list) and len(tool_result) == 2):
         tool_result, tool_response_headers = tool_result
 
         try:
@@ -1024,6 +1026,20 @@ def process_tool_result(
 
     if isinstance(tool_result, dict) or isinstance(tool_result, list):
         tool_result = json.dumps(tool_result, indent=2, ensure_ascii=False)
+
+    # Safety: ensure tool_result is always a string (or None) to prevent
+    # downstream TypeError when concatenating (e.g. if an upstream callable
+    # returned a tuple that was not unpacked by the branches above).
+    if tool_result is not None and not isinstance(tool_result, str):
+        if isinstance(tool_result, tuple):
+            # execute_tool_server returns (data, headers); unpack the data part
+            tool_result = (
+                json.dumps(tool_result[0], indent=2, ensure_ascii=False)
+                if len(tool_result) > 0
+                else ""
+            )
+        else:
+            tool_result = str(tool_result)
 
     return tool_result, tool_result_files, tool_result_embeds
 
@@ -2487,8 +2503,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             if mcp_tools_dict:
                 tools_dict = {**tools_dict, **mcp_tools_dict}
 
-            # Resolve terminal tools if terminal_id is set
-            if terminal_id:
+        # Resolve terminal tools if terminal_id is set (outside tool_ids check
+        # so system terminals work even when no other tools are selected)
+        if terminal_id:
+            try:
                 terminal_tools = await get_terminal_tools(
                     request,
                     terminal_id,
@@ -2497,6 +2515,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
                 if terminal_tools:
                     tools_dict = {**tools_dict, **terminal_tools}
+            except Exception as e:
+                log.exception(e)
 
         if direct_tool_servers:
             for tool_server in direct_tool_servers:
@@ -4183,7 +4203,7 @@ async def streaming_chat_response_handler(response, ctx):
                         results.append(
                             {
                                 "tool_call_id": tool_call_id,
-                                "content": tool_result or "",
+                                "content": str(tool_result) if tool_result else "",
                                 **(
                                     {"files": tool_result_files}
                                     if tool_result_files
@@ -4340,7 +4360,8 @@ async def streaming_chat_response_handler(response, ctx):
                                 code = sanitize_code(code)
 
                                 if CODE_INTERPRETER_BLOCKED_MODULES:
-                                    blocking_code = textwrap.dedent(f"""
+                                    blocking_code = textwrap.dedent(
+                                        f"""
                                         import builtins
     
                                         BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
@@ -4356,7 +4377,8 @@ async def streaming_chat_response_handler(response, ctx):
                                             return _real_import(name, globals, locals, fromlist, level)
     
                                         builtins.__import__ = restricted_import
-                                    """)
+                                    """
+                                    )
                                     code = blocking_code + "\n" + code
 
                                 if (
