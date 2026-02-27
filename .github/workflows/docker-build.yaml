@@ -10,11 +10,11 @@ on:
       - v*
 
 env:
-  REGISTRY: ghcr.io
+  REGISTRY: eu.gcr.io/xcnt-infrastructure/
 
 jobs:
   build-main-image:
-    runs-on: ${{ matrix.runner }}
+    runs-on: default
     permissions:
       contents: read
       packages: write
@@ -24,8 +24,8 @@ jobs:
         include:
           - platform: linux/amd64
             runner: ubuntu-latest
-          - platform: linux/arm64
-            runner: ubuntu-24.04-arm
+          # - platform: linux/arm64
+          #   runner: ubuntu-24.04-arm
 
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase
