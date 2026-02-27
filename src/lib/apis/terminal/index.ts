@@ -13,9 +13,7 @@ export type TerminalServer = {
 	name: string;
 };
 
-export const getTerminalServers = async (
-	token: string
-): Promise<TerminalServer[]> => {
+export const getTerminalServers = async (token: string): Promise<TerminalServer[]> => {
 	const res = await fetch(`${WEBUI_API_BASE_URL}/terminals/`, {
 		headers: {
 			Authorization: `Bearer ${token}`
