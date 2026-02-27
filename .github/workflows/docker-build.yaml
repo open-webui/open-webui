@@ -9,6 +9,7 @@ on:
     tags:
       - v*
 
+
 env:
   REGISTRY: eu.gcr.io/xcnt-infrastructure/
 
@@ -45,11 +46,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Checkout xcnt/ci actions
+        uses: actions/checkout@v5
+        with:
+          repository: xcnt/ci
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: ./.github/xcnt-ci
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
       - name: 🐳 Set Up Docker
-        uses: xcnt/ci/.github/actions/docker-setup@main
+        uses: ./.github/xcnt-ci/github/actions/docker-setup@main
         with:
           password: ${{ secrets.GAR_KEY }}
 
