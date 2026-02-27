@@ -28,8 +28,11 @@
 		showCallOverlay,
 		tools,
 		toolServers,
+		terminalServers,
 		user as _user,
 		showControls,
+		showSettings,
+		selectedTerminalId,
 		TTSWorker,
 		temporaryChatEnabled
 	} from '$lib/stores';
@@ -81,8 +84,13 @@
 	import Voice from '../icons/Voice.svelte';
 	import Cloud from '../icons/Cloud.svelte';
 	import IntegrationsMenu from './MessageInput/IntegrationsMenu.svelte';
+	import TerminalMenu from './MessageInput/TerminalMenu.svelte';
 	import Component from '../icons/Component.svelte';
 	import PlusAlt from '../icons/PlusAlt.svelte';
+	import Dropdown from '../common/Dropdown.svelte';
+
+	import { DropdownMenu } from 'bits-ui';
+	import { flyAndScale } from '$lib/utils/transitions';
 
 	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
 	import Knobs from '../icons/Knobs.svelte';
@@ -123,6 +131,8 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
+
+	let showTerminalMenu = false;
 
 	export let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
 	export let onQueueSendNow: (id: string) => void = () => {};
@@ -1019,7 +1029,6 @@
 	});
 </script>
 
-
 <ToolServersModal bind:show={showTools} {selectedToolIds} />
 
 <InputVariablesModal
@@ -1793,23 +1802,8 @@
 										{/if}
 
 										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
-											<!-- Active Terminal Indicator (Always On) -->
-											{@const activeTerminal = ($settings?.terminalServers ?? []).find(
-												(s) => s.enabled
-											)}
-											{#if activeTerminal}
-												<div class="flex items-end mr-0.5">
-													<div
-														class="flex items-center gap-1.5 px-2.5 py-1 text-sm hover:bg-gray-50 hover:dark:bg-gray-850 transition-all rounded-lg cursor-pointer select-none max-w-[120px] sm:max-w-[200px] truncate"
-													>
-														<Cloud className="size-3 shrink-0" strokeWidth="2" />
-														<span class="truncate"
-															>{activeTerminal.name ||
-																activeTerminal.url.replace(/^https?:\/\//, '')}</span
-														>
-													</div>
-												</div>
-											{/if}
+											<!-- Terminal Server Selector -->
+											<TerminalMenu bind:show={showTerminalMenu} />
 
 											<!-- {$i18n.t('Record voice')} -->
 											<Tooltip content={$i18n.t('Dictate')}>

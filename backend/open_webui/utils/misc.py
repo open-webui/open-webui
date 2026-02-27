@@ -210,7 +210,8 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
             content = ""
             for part in output_parts:
                 if part.get("type") == "input_text":
-                    content += part.get("text", "")
+                    text_val = part.get("text", "")
+                    content += str(text_val) if not isinstance(text_val, str) else text_val
 
             messages.append(
                 {

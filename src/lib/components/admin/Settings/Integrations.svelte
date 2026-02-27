@@ -35,7 +35,7 @@
 	let showConnectionModal = false;
 
 	// Terminal server admin connections
-	let terminalConnections: { id: string; url: string; key: string; name: string }[] = [];
+	let terminalConnections = [];
 	let showAddTerminalModal = false;
 	let editTerminalIdx: number | null = null;
 	let showDeleteTerminalConfirm = false;
@@ -72,20 +72,17 @@
 		}
 	};
 
-	const addTerminalConnection = (server: { url: string; key: string; name?: string }) => {
+	const addTerminalConnection = (server) => {
 		terminalConnections = [
 			...terminalConnections,
-			{ id: uuidv4(), url: server.url, key: server.key, name: server.name ?? '' }
+			{ ...server, id: server.id ?? uuidv4() }
 		];
 		saveTerminalServers();
 	};
 
-	const updateTerminalConnection = (
-		idx: number,
-		updated: { url: string; key: string; name?: string }
-	) => {
+	const updateTerminalConnection = (idx: number, updated) => {
 		terminalConnections = terminalConnections.map((c, i) =>
-			i === idx ? { ...c, url: updated.url, key: updated.key, name: updated.name ?? '' } : c
+			i === idx ? { ...c, ...updated, id: updated.id ?? c.id } : c
 		);
 		saveTerminalServers();
 	};
@@ -191,15 +188,15 @@
 							{/each}
 						</div>
 
-					{#if servers.length === 0}
-						<div class="text-xs text-gray-400 dark:text-gray-500">
-							{$i18n.t('No tool server connections configured.')}
-						</div>
-					{/if}
+						{#if servers.length === 0}
+							<div class="text-xs text-gray-400 dark:text-gray-500">
+								{$i18n.t('No tool server connections configured.')}
+							</div>
+						{/if}
 
-					<div class="my-1.5">
-						<div class="text-xs text-gray-500">
-							{$i18n.t('Connect to your own OpenAPI compatible external tool servers.')}
+						<div class="my-1.5">
+							<div class="text-xs text-gray-500">
+								{$i18n.t('Connect to your own OpenAPI compatible external tool servers.')}
 							</div>
 						</div>
 					</div>
@@ -235,7 +232,7 @@
 								<div class="flex w-full gap-2 items-center">
 									<Tooltip className="w-full relative" content={''} placement="top-start">
 										<div class="flex w-full">
-											<div class="flex-1 relative flex gap-1.5 items-center">
+											<div class="flex-1 relative flex gap-1.5 items-center {connection?.enabled === false ? 'opacity-50' : ''}">
 												<Tooltip content={$i18n.t('Terminal')}>
 													<Cloud className="size-4" strokeWidth="1.5" />
 												</Tooltip>
@@ -259,6 +256,18 @@
 											>
 												<Cog6 />
 											</button>
+										</Tooltip>
+
+										<Tooltip content={(connection?.enabled !== false) ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
+											<Switch
+												state={connection?.enabled !== false}
+												on:change={() => {
+													terminalConnections = terminalConnections.map((c, i) =>
+														i === idx ? { ...c, enabled: !(c?.enabled !== false) } : c
+													);
+													saveTerminalServers();
+												}}
+											/>
 										</Tooltip>
 									</div>
 								</div>

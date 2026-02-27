@@ -900,26 +900,27 @@ async def set_terminal_servers(request: Request):
     """Load and cache OpenAPI specs from all TERMINAL_SERVER_CONNECTIONS."""
     connections = request.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
 
-    # Build server configs with info containing the connection ID
+    # Build server configs compatible with get_tool_servers_data
+    # Terminal connections store id/name at top level; translate to info dict
     server_configs = []
     for connection in connections:
-        conn_id = connection.get("id", "")
         if not connection.get("url"):
             continue
 
-        auth_type = connection.get("auth_type", "bearer")
-        token = None
-        if auth_type == "bearer":
-            token = connection.get("key", "")
+        enabled = connection.get("enabled", True)
 
         server_configs.append({
             "url": connection.get("url", ""),
-            "key": token or "",
-            "auth_type": auth_type,
-            "path": "openapi.json",
+            "key": connection.get("key", ""),
+            "auth_type": connection.get("auth_type", "bearer"),
+            "path": connection.get("path", "/openapi.json"),
             "spec_type": "url",
-            "config": {"enable": True},
-            "info": {"id": conn_id, "name": connection.get("name", "")},
+            # get_tool_servers_data reads config.enable to filter active servers
+            "config": {"enable": enabled},
+            "info": {
+                "id": connection.get("id", ""),
+                "name": connection.get("name", ""),
+            },
         })
 
     request.app.state.TERMINAL_SERVERS = await get_tool_servers_data(server_configs)

@@ -6,7 +6,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, onDestroy, tick } from 'svelte';
-	import { terminalServers, settings, showFileNavPath } from '$lib/stores';
+	import { terminalServers, settings, showFileNavPath, selectedTerminalId } from '$lib/stores';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import {
 		getCwd,
@@ -59,11 +59,30 @@
 	let showDeleteConfirm = false;
 	let shiftKey = false;
 
-	$: firstTerminal = $terminalServers?.[0] ?? null;
-	$: activeUserTerminal = ($settings?.terminalServers ?? []).find((s) => s.enabled);
+	$: firstTerminal = $selectedTerminalId
+		? ($terminalServers ?? []).find((t) => t.id === $selectedTerminalId) ?? null
+		: ($terminalServers?.[0] ?? null);
+	$: activeUserTerminal = ($settings?.terminalServers ?? []).find(
+		(s) => s.url === $selectedTerminalId
+	);
+	// System terminals go through the open-webui proxy and need the session token.
+	// Direct user terminals talk directly to the server and need the terminal's own key.
+	$: isSystemTerminal = !!firstTerminal;
 	$: terminalUrl = firstTerminal?.url ?? activeUserTerminal?.url ?? '';
-	$: terminalKey = firstTerminal?.key ?? activeUserTerminal?.key ?? '';
+	$: terminalKey = isSystemTerminal ? localStorage.token : (activeUserTerminal?.key ?? '');
 	$: configured = !!terminalUrl;
+
+	// Reload file list when terminal is swapped
+	let prevTerminalUrl = '';
+	$: if (terminalUrl && terminalUrl !== prevTerminalUrl) {
+		prevTerminalUrl = terminalUrl;
+		(async () => {
+			const cwd = await getCwd(terminalUrl, terminalKey);
+			const dir = cwd ? (cwd.endsWith('/') ? cwd : cwd + '/') : '/';
+			savedPath = dir;
+			loadDir(dir);
+		})();
+	}
 
 	$: breadcrumbs = currentPath
 		.split('/')

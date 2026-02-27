@@ -35,7 +35,7 @@ async def list_terminal_servers(request: Request, user=Depends(get_verified_user
     return [
         {"id": connection.get("id", ""), "url": connection.get("url", ""), "name": connection.get("name", "")}
         for connection in connections
-        if has_connection_access(user, connection, user_group_ids)
+        if connection.get("enabled", True) and has_connection_access(user, connection, user_group_ids)
     ]
 
 

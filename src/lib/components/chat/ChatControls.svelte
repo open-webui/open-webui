@@ -17,7 +17,9 @@
 		showArtifacts,
 		showEmbeds,
 		settings,
-		showFileNavPath
+		showFileNavPath,
+		selectedTerminalId,
+		user
 	} from '$lib/stores';
 
 	import { uploadFile } from '$lib/apis/files';
@@ -59,13 +61,33 @@
 	// Tab state for Controls+Files panel
 	let activeTab: 'controls' | 'files' | 'overview' = savedTab;
 	$: savedTab = activeTab;
-	$: hasTerminal = !!($settings?.terminalServers ?? []).find((s) => s.enabled)?.url
-		|| $terminalServers.length > 0;
 	$: hasMessages = history?.messages && Object.keys(history.messages).length > 0;
-	$: if (!hasMessages && activeTab === 'overview') activeTab = 'controls';
+
+	$: showControlsTab = $user?.role === 'admin' || ($user?.permissions?.chat?.controls ?? true);
+	$: showFilesTab = !!$selectedTerminalId;
+	$: showOverviewTab = hasMessages;
+
+	// Tab fallback: if active tab becomes hidden, switch to next available
+	$: if (!showOverviewTab && activeTab === 'overview') activeTab = 'controls';
+	$: if (!showFilesTab && activeTab === 'files') activeTab = 'controls';
+	$: if (!showControlsTab && activeTab === 'controls') {
+		if (showFilesTab) activeTab = 'files';
+		else if (showOverviewTab) activeTab = 'overview';
+	}
+
+	// Auto-close if there are no visible tabs
+	$: if (!showControlsTab && !showFilesTab && !showOverviewTab) {
+		showControls.set(false);
+	}
 
 	// Auto-switch to Files tab when display_file is triggered
 	$: if ($showFileNavPath) {
+		activeTab = 'files';
+		showControls.set(true);
+	}
+
+	// Auto-open Files tab when a terminal is selected
+	$: if ($selectedTerminalId) {
 		activeTab = 'files';
 		showControls.set(true);
 	}
@@ -182,7 +204,9 @@
 		document.addEventListener('mousedown', onMouseDown);
 		document.addEventListener('mouseup', onMouseUp);
 
-		setTimeout(() => { paneReady = true; }, 0);
+		setTimeout(() => {
+			paneReady = true;
+		}, 0);
 
 		// If controls were persisted as open, set the pane to the saved size
 		if ($showControls && pane) {
@@ -247,15 +271,17 @@
 						<!-- Tab bar -->
 						<div class="flex items-center justify-between px-2 pt-2.5 pb-2 shrink-0">
 							<div class="flex gap-1">
-								<button
-									class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'controls'
-										? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
-										: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
-									on:click={() => (activeTab = 'controls')}
-								>
-									{$i18n.t('Controls')}
-								</button>
-								{#if hasTerminal}
+								{#if showControlsTab}
+									<button
+										class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'controls'
+											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
+											: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+										on:click={() => (activeTab = 'controls')}
+									>
+										{$i18n.t('Controls')}
+									</button>
+								{/if}
+								{#if showFilesTab}
 									<button
 										class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'files'
 											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
@@ -265,7 +291,7 @@
 										{$i18n.t('Files')}
 									</button>
 								{/if}
-								{#if hasMessages}
+								{#if showOverviewTab}
 									<button
 										class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'overview'
 											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
@@ -310,7 +336,7 @@
 									}}
 									onClose={() => showControls.set(false)}
 								/>
-							{:else if activeTab === 'files' && hasTerminal}
+							{:else if activeTab === 'files' && $selectedTerminalId}
 								<FileNav onAttach={handleTerminalAttach} />
 							{:else}
 								<Controls embed={true} {models} bind:chatFiles bind:params />
@@ -383,15 +409,17 @@
 							<!-- Tab bar -->
 							<div class="flex items-center justify-between px-2 pt-2.5 pb-2 shrink-0">
 								<div class="flex gap-1">
-									<button
-										class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'controls'
-											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
-											: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
-										on:click={() => (activeTab = 'controls')}
-									>
-										{$i18n.t('Controls')}
-									</button>
-									{#if hasTerminal}
+									{#if showControlsTab}
+										<button
+											class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'controls'
+												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
+												: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+											on:click={() => (activeTab = 'controls')}
+										>
+											{$i18n.t('Controls')}
+										</button>
+									{/if}
+									{#if showFilesTab}
 										<button
 											class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'files'
 												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
@@ -401,7 +429,7 @@
 											{$i18n.t('Files')}
 										</button>
 									{/if}
-									{#if hasMessages}
+									{#if showOverviewTab}
 										<button
 											class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'overview'
 												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
@@ -451,7 +479,7 @@
 										}}
 										onClose={() => showControls.set(false)}
 									/>
-								{:else if activeTab === 'files' && hasTerminal}
+								{:else if activeTab === 'files' && $selectedTerminalId}
 									<FileNav onAttach={handleTerminalAttach} />
 								{:else}
 									<Controls embed={true} {models} bind:chatFiles bind:params />
