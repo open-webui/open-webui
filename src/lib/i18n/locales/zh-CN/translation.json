@@ -1062,7 +1062,7 @@
 	"Invalid JSON format in {{NAME}}": "{{NAME}} 的 JSON 格式无效",
 	"Invalid JSON format in Additional Config": "额外配置项的 JSON 格式无效",
 	"Invalid JSON format in MinerU Parameters": "MinerU 参数的 JSON 格式无效",
-	"is typing...": "输入中...",
+	"is typing...": "正在输入中...",
 	"Italic": "斜体",
 	"January": "一月",
 	"Jina API Base URL": "Jina 接口地址",
