@@ -3213,15 +3213,17 @@ WEB_SEARCH_RESULT_COUNT = PersistentConfig(
 
 # You can provide a list of your own websites to filter after performing a web search.
 # This ensures the highest level of safety and reliability of the information sources.
+try:
+    web_search_domain_filter_list = json.loads(
+        os.environ.get("WEB_SEARCH_DOMAIN_FILTER_LIST", "[]")
+    )
+except Exception as e:
+    log.exception(f"Error loading WEB_SEARCH_DOMAIN_FILTER_LIST: {e}")
+    web_search_domain_filter_list = []
 WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
     "WEB_SEARCH_DOMAIN_FILTER_LIST",
     "rag.web.search.domain.filter_list",
-    [
-        # "wikipedia.com",
-        # "wikimedia.org",
-        # "wikidata.org",
-        # "!stackoverflow.com",
-    ],
+    web_search_domain_filter_list,
 )
 
 WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
