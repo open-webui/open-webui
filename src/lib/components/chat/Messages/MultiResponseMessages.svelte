@@ -60,10 +60,10 @@
 
 	let selectedModelIdx = null;
 
-	let message = JSON.parse(JSON.stringify(history.messages[messageId]));
+	let message = structuredClone(history.messages[messageId]);
 	$: if (history.messages) {
 		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
-			message = JSON.parse(JSON.stringify(history.messages[messageId]));
+			message = structuredClone(history.messages[messageId]);
 		}
 	}
 
