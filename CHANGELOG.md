@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🎯 **Function valve priority resolution.** Function priorities defined in code are now correctly applied when no custom value has been saved in the database, ensuring consistent action button and filter ordering. [#21841](https://github.com/open-webui/open-webui/pull/21841)
 - 📄 **Web content knowledge base append.** Processing web URLs with overwrite=false now correctly appends content to existing knowledge bases instead of silently doing nothing, fixing a regression where no content was being added. [#21786](https://github.com/open-webui/open-webui/pull/21786), [Commit](https://github.com/open-webui/open-webui/commit/5ee509325970f01524348b0f91081110340f2e7e)
 - 🧹 **Tooltip memory leak.** Tooltip instances are now properly destroyed when elements change, fixing a memory leak that could cause performance issues over time. [#21969](https://github.com/open-webui/open-webui/pull/21969)
+- 🧹 **MessageInput memory leak.** Event listeners in the message input component are now properly cleaned up, preventing a memory leak that could cause page crashes during extended use. [#21968](https://github.com/open-webui/open-webui/pull/21968)
 - 🎨 **Sidebar user menu positioning.** The sidebar user menu no longer drifts rightward when the sidebar is resized, keeping the menu properly aligned with its trigger. [#21853](https://github.com/open-webui/open-webui/pull/21853)
 
 ### Changed
