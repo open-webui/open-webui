@@ -130,8 +130,6 @@
 	let eventConfirmationInputType = '';
 	let eventCallback = null;
 
-	let chatIdUnsubscriber: Unsubscriber | undefined;
-
 	let selectedModels = [''];
 	let atSelectedModel: Model | undefined;
 	let selectedModelIds = [];
@@ -769,7 +767,6 @@
 				pageSubscribe();
 				showControlsSubscribe();
 				selectedFolderSubscribe();
-				chatIdUnsubscriber?.();
 				window.removeEventListener('message', onMessageHandler);
 				$socket?.off('events', chatEventHandler);
 				audioQueueInstance?.destroy();
