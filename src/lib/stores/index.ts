@@ -210,6 +210,8 @@ type Settings = {
 	ctrlEnterToSend?: boolean;
 	renderMarkdownInPreviews?: boolean;
 
+	defaultUploadContext?: 'full' | 'focused';
+
 	system?: string;
 	seed?: number;
 	temperature?: string;
