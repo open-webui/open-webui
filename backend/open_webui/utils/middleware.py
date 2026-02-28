@@ -99,8 +99,9 @@ from open_webui.utils.misc import (
 from open_webui.utils.tools import (
     get_tools,
     get_updated_tool_function,
-    has_tool_server_access,
+    get_terminal_tools,
 )
+from open_webui.utils.access_control import has_connection_access
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.filter import (
     get_sorted_filter_ids,
@@ -374,9 +375,14 @@ def serialize_output(output: list) -> str:
             result_item = tool_outputs.get(call_id)
             if result_item:
                 result_text = ""
-                for out in result_item.get("output", []):
-                    if "text" in out:
-                        result_text += out.get("text", "")
+                for output in result_item.get("output", []):
+                    if "text" in output:
+                        output_text = output.get("text", "")
+                        result_text += (
+                            str(output_text)
+                            if not isinstance(output_text, str)
+                            else output_text
+                        )
                 files = result_item.get("files")
                 embeds = result_item.get("embeds", "")
 
@@ -889,6 +895,7 @@ def process_tool_result(
     user=None,
 ):
     tool_result_embeds = []
+    EXTERNAL_TOOL_TYPES = ("external", "action", "terminal")
 
     if isinstance(tool_result, HTMLResponse):
         content_disposition = tool_result.headers.get("Content-Disposition", "")
@@ -923,9 +930,10 @@ def process_tool_result(
         else:
             tool_result = tool_result.body.decode("utf-8", "replace")
 
-    elif (tool_type in ("external", "action") and isinstance(tool_result, tuple)) or (
-        direct_tool and isinstance(tool_result, list) and len(tool_result) == 2
-    ):
+    elif (
+        tool_type in EXTERNAL_TOOL_TYPES
+        and isinstance(tool_result, tuple)
+    ) or (direct_tool and isinstance(tool_result, list) and len(tool_result) == 2):
         tool_result, tool_response_headers = tool_result
 
         try:
@@ -1019,7 +1027,54 @@ def process_tool_result(
     if isinstance(tool_result, dict) or isinstance(tool_result, list):
         tool_result = json.dumps(tool_result, indent=2, ensure_ascii=False)
 
+    # Safety: ensure tool_result is always a string (or None) to prevent
+    # downstream TypeError when concatenating (e.g. if an upstream callable
+    # returned a tuple that was not unpacked by the branches above).
+    if tool_result is not None and not isinstance(tool_result, str):
+        if isinstance(tool_result, tuple):
+            # execute_tool_server returns (data, headers); unpack the data part
+            tool_result = (
+                json.dumps(tool_result[0], indent=2, ensure_ascii=False)
+                if len(tool_result) > 0
+                else ""
+            )
+        else:
+            tool_result = str(tool_result)
+
     return tool_result, tool_result_files, tool_result_embeds
+
+
+async def display_file_handler(
+    tool_function_name: str,
+    tool_function_params: dict,
+    tool_result,
+    event_emitter,
+):
+    """Emit a display_file event if the tool is display_file and the file exists."""
+    if not event_emitter or tool_function_name != "display_file":
+        return
+
+    path = tool_function_params.get("path", "")
+    if not path:
+        return
+
+    # Parse the result to check if the file exists
+    parsed = tool_result
+    if isinstance(parsed, str):
+        try:
+            parsed = json.loads(parsed)
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    if isinstance(parsed, dict) and parsed.get("exists") is False:
+        return
+
+    await event_emitter(
+        {
+            "type": "display_file",
+            "data": {"path": path},
+        }
+    )
 
 
 async def chat_completion_tools_handler(
@@ -1176,6 +1231,10 @@ async def chat_completion_tools_handler(
                 )
 
                 if event_emitter:
+                    await display_file_handler(
+                        tool_function_name, tool_function_params, tool_result, event_emitter
+                    )
+
                     if tool_result_files:
                         await event_emitter(
                             {
@@ -1978,7 +2037,7 @@ def process_messages_with_output(messages: list[dict]) -> list[dict]:
     for message in messages:
         if message.get("role") == "assistant" and message.get("output"):
             # Use output items for clean OpenAI-format messages
-            output_messages = convert_output_to_messages(message["output"])
+            output_messages = convert_output_to_messages(message["output"], raw=True)
             if output_messages:
                 processed.extend(output_messages)
                 continue
@@ -2225,6 +2284,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
 
     tool_ids = form_data.pop("tool_ids", None)
+    terminal_id = form_data.pop("terminal_id", None)
     files = form_data.pop("files", None)
 
     # Caller-provided OpenAI-style tools take precedence over server-side
@@ -2298,6 +2358,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     metadata = {
         **metadata,
         "tool_ids": tool_ids,
+        "terminal_id": terminal_id,
         "files": files,
     }
     form_data["metadata"] = metadata
@@ -2342,7 +2403,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             continue
 
                         # Check access control for MCP server
-                        if not has_tool_server_access(user, mcp_server_connection):
+                        if not has_connection_access(user, mcp_server_connection):
                             log.warning(
                                 f"Access denied to MCP server {server_id} for user {user.id}"
                             )
@@ -2478,6 +2539,21 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
             if mcp_tools_dict:
                 tools_dict = {**tools_dict, **mcp_tools_dict}
+
+        # Resolve terminal tools if terminal_id is set (outside tool_ids check
+        # so system terminals work even when no other tools are selected)
+        if terminal_id:
+            try:
+                terminal_tools = await get_terminal_tools(
+                    request,
+                    terminal_id,
+                    user,
+                    extra_params,
+                )
+                if terminal_tools:
+                    tools_dict = {**tools_dict, **terminal_tools}
+            except Exception as e:
+                log.exception(e)
 
         if direct_tool_servers:
             for tool_server in direct_tool_servers:
@@ -4139,6 +4215,10 @@ async def streaming_chat_response_handler(response, ctx):
                             )
                         )
 
+                        await display_file_handler(
+                            tool_function_name, tool_function_params, tool_result, event_emitter
+                        )
+
                         # Extract citation sources from tool results
                         if (
                             tool_function_name
@@ -4164,7 +4244,7 @@ async def streaming_chat_response_handler(response, ctx):
                         results.append(
                             {
                                 "tool_call_id": tool_call_id,
-                                "content": tool_result or "",
+                                "content": str(tool_result) if tool_result else "",
                                 **(
                                     {"files": tool_result_files}
                                     if tool_result_files

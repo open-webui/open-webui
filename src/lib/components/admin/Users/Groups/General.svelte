@@ -78,7 +78,7 @@
 			<div class="flex items-center gap-2 p-1">
 				<select
 					class="text-sm bg-transparent outline-hidden rounded-lg px-2"
-					value={data?.config?.share ?? true}
+					value={data?.config?.share ?? 'members'}
 					on:change={(e) => {
 						const value = e.target.value;
 						let shareValue;

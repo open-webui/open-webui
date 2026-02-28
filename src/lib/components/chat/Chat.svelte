@@ -33,17 +33,21 @@
 		currentChatPage,
 		temporaryChatEnabled,
 		mobile,
-		showOverview,
 		chatTitle,
 		showArtifacts,
 		artifactContents,
 		tools,
 		toolServers,
+		terminalServers,
 		functions,
 		selectedFolder,
 		pinnedChats,
-		showEmbeds
+		showEmbeds,
+		selectedTerminalId,
+		showFileNavPath
 	} from '$lib/stores';
+
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import {
 		convertMessagesToHistory,
@@ -54,7 +58,8 @@
 		processDetails,
 		removeAllDetails,
 		getCodeBlockContents,
-		isYoutubeUrl
+		isYoutubeUrl,
+		displayFileHandler
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
 
@@ -92,6 +97,7 @@
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
+	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -141,9 +147,37 @@
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
 
+	// Auto-inject direct terminal servers into selected tool IDs so they act like toggled-on tools
+	// System terminals (with id field) are handled server-side via terminal_id, not as direct tool servers
+	$: if ($terminalServers && $terminalServers.length > 0) {
+		const directTerminalServers = $terminalServers.filter((t) => !t.id);
+		const terminalIds = directTerminalServers.map(
+			(_, i) => `direct_server:terminal_${$terminalServers.indexOf(directTerminalServers[i])}`
+		);
+		const missingIds = terminalIds.filter((id) => !selectedToolIds.includes(id));
+		if (missingIds.length > 0) {
+			selectedToolIds = [...selectedToolIds, ...missingIds];
+		}
+	}
+
+	// Remove disabled terminal servers from selectedToolIds automatically
+	$: if (selectedToolIds.length > 0) {
+		const directTerminalServers = ($terminalServers ?? []).filter((t) => !t.id);
+		const terminalIds = directTerminalServers.map(
+			(_, i) => `direct_server:terminal_${($terminalServers ?? []).indexOf(directTerminalServers[i])}`
+		);
+		const invalidTerminalIds = selectedToolIds.filter(
+			(id) => id.startsWith('direct_server:terminal_') && !terminalIds.includes(id)
+		);
+		if (invalidTerminalIds.length > 0) {
+			selectedToolIds = selectedToolIds.filter((id) => !invalidTerminalIds.includes(id));
+		}
+	}
+
 	let showCommands = false;
 
 	let generating = false;
+	let dragged = false;
 	let generationController = null;
 
 	let chat = null;
@@ -323,6 +357,23 @@
 						[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
 					)
 				];
+			} else if (
+				$settings?.tools &&
+				$settings.tools.some((id) => !id.startsWith('direct_server:terminal_'))
+			) {
+				selectedToolIds = $settings.tools;
+			} else {
+				// Don't wipe existing terminal servers if no default tool IDs
+				selectedToolIds = selectedToolIds.filter((id) => !id.startsWith('direct_server:'));
+			}
+
+			// Auto-inject direct terminal servers (system ones are handled via terminal_id)
+			if ($terminalServers && $terminalServers.length > 0) {
+				const directTerminalServers = $terminalServers.filter((t) => !t.id);
+				const terminalIds = directTerminalServers.map(
+					(_, i) => `direct_server:terminal_${$terminalServers.indexOf(directTerminalServers[i])}`
+				);
+				selectedToolIds = [...new Set([...selectedToolIds, ...terminalIds])];
 			}
 
 			// Set Default Filters (Toggleable only)
@@ -530,6 +581,10 @@
 					eventConfirmationInputPlaceholder = data.placeholder;
 					eventConfirmationInputValue = data?.value ?? '';
 					eventConfirmationInputType = data?.type ?? '';
+				} else if (type === 'display_file') {
+					if (data?.path) {
+						displayFileHandler(data.path, { showControls, showFileNavPath });
+					}
 				} else {
 					console.log('Unknown message type', data);
 				}
@@ -615,6 +670,14 @@
 
 		audioQueue.set(new AudioQueue(document.getElementById('audioElement')));
 
+		// Reset direct terminal enabled states — selectedTerminalId starts null on every page load
+		if ($settings?.terminalServers?.some((s) => s.enabled)) {
+			settings.set({
+				...$settings,
+				terminalServers: ($settings.terminalServers ?? []).map((s) => ({ ...s, enabled: false }))
+			});
+		}
+
 		pageSubscribe = page.subscribe(async (p) => {
 			if (p.url.pathname === '/') {
 				await tick();
@@ -676,7 +739,6 @@
 
 			if (!value) {
 				showCallOverlay.set(false);
-				showOverview.set(false);
 				showArtifacts.set(false);
 				showEmbeds.set(false);
 			}
@@ -1059,9 +1121,10 @@
 			}
 		}
 
-		await showControls.set(false);
+		if ($mobile) {
+			await showControls.set(false);
+		}
 		await showCallOverlay.set(false);
-		await showOverview.set(false);
 		await showArtifacts.set(false);
 
 		if ($page.url.pathname.includes('/c/')) {
@@ -1220,6 +1283,16 @@
 			messagesContainerElement.scrollTo({
 				top: messagesContainerElement.scrollHeight,
 				behavior
+			});
+		}
+	};
+
+	let scrollRAF = null;
+	const scheduleScrollToBottom = () => {
+		if (!scrollRAF) {
+			scrollRAF = requestAnimationFrame(async () => {
+				scrollRAF = null;
+				await scrollToBottom();
 			});
 		}
 	};
@@ -1641,7 +1714,7 @@
 		await tick();
 
 		if (autoScroll) {
-			scrollToBottom();
+			scheduleScrollToBottom();
 		}
 	};
 
@@ -2098,6 +2171,9 @@
 			});
 		}
 
+		// Use the user-selected terminal from the dropdown
+		const activeTerminalId = $selectedTerminalId ?? null;
+
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
 			{
@@ -2121,9 +2197,12 @@
 				filter_options: Object.keys(selectedFilterOptions).length > 0 ? selectedFilterOptions : undefined,
 				tool_ids: toolIds.length > 0 ? toolIds : undefined,
 				skill_ids: skillIds.length > 0 ? skillIds : undefined,
-				tool_servers: ($toolServers ?? []).filter(
-					(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
-				),
+				terminal_id: activeTerminalId ?? undefined,
+				tool_servers: [
+					...($toolServers ?? []).filter(
+						(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
+					)
+				],
 				features: getFeatures(),
 				variables: {
 					...getPromptVariables(
@@ -2420,7 +2499,7 @@
 					}
 
 					if (autoScroll) {
-						scrollToBottom();
+						scheduleScrollToBottom();
 					}
 				}
 
@@ -2599,6 +2678,7 @@
 
 			<PaneGroup direction="horizontal" class="w-full h-full">
 				<Pane defaultSize={50} minSize={30} class="h-full flex relative max-w-full flex-col">
+					<FilesOverlay show={dragged} />
 					<Navbar
 						bind:this={navbarElement}
 						chat={{
@@ -2657,7 +2737,7 @@
 						}}
 					/>
 
-					<div class="flex flex-col flex-auto z-10 w-full @container overflow-auto">
+					<div id="chat-pane" class="flex flex-col flex-auto z-10 w-full @container overflow-auto">
 						{#if ($settings?.landingPageMode === 'chat' && !$selectedFolder) || createMessagesList(history, history.currentId).length > 0}
 							<div
 								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
@@ -2712,6 +2792,7 @@
 									bind:webSearchEnabled
 									bind:atSelectedModel
 									bind:showCommands
+									bind:dragged
 									toolServers={$toolServers}
 									{generating}
 									{stopResponse}
@@ -2783,6 +2864,7 @@
 									bind:webSearchEnabled
 									bind:atSelectedModel
 									bind:showCommands
+									bind:dragged
 									toolServers={$toolServers}
 									{stopResponse}
 									{createMessagePair}

@@ -1971,6 +1971,7 @@ async def process_web(
                     docs,
                     collection_name,
                     overwrite=overwrite,
+                    add=(not overwrite),
                     user=user,
                 )
             else:

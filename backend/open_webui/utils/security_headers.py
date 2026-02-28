@@ -28,6 +28,7 @@ def set_security_headers() -> Dict[str, str]:
     - x-frame-options
     - x-permitted-cross-domain-policies
     - content-security-policy
+    - reporting-endpoints
 
     Each environment variable is associated with a specific setter function
     that constructs the header. If the environment variable is set, the
@@ -47,6 +48,7 @@ def set_security_headers() -> Dict[str, str]:
         "XFRAME_OPTIONS": set_xframe,
         "XPERMITTED_CROSS_DOMAIN_POLICIES": set_xpermitted_cross_domain_policies,
         "CONTENT_SECURITY_POLICY": set_content_security_policy,
+        "REPORTING_ENDPOINTS": set_reporting_endpoints,
     }
 
     for env_var, setter in header_setters.items():
@@ -131,3 +133,8 @@ def set_xpermitted_cross_domain_policies(value: str):
 # Set Content-Security-Policy response header
 def set_content_security_policy(value: str):
     return {"Content-Security-Policy": value}
+
+
+# Set Reporting-Endpoints response header
+def set_reporting_endpoints(value: str):
+    return {"Reporting-Endpoints": value}

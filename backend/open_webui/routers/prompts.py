@@ -478,7 +478,7 @@ async def update_prompt_access_by_id(
         user.id,
         user.role,
         form_data.access_grants,
-        "sharing.public_prompts"
+        "sharing.public_prompts",
     )
 
     AccessGrants.set_access_grants("prompt", prompt_id, form_data.access_grants, db=db)

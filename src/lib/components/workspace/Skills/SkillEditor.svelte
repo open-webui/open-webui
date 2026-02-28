@@ -114,7 +114,7 @@
 	accessRoles={['read', 'write']}
 	share={$user?.permissions?.sharing?.skills || $user?.role === 'admin'}
 	sharePublic={$user?.permissions?.sharing?.public_skills || $user?.role === 'admin'}
-	shareUsers={$user?.permissions?.access_grants?.allow_users || $user?.role === 'admin'}
+	shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) || $user?.role === 'admin'}
 	onChange={async () => {
 		if (edit && skill?.id) {
 			try {
