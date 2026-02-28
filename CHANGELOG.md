@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🌐 **Web search domain filter config.** The WEB_SEARCH_DOMAIN_FILTER_LIST environment variable is now correctly read and applied, fixing an issue where domain filtering for web searches always used an empty default value. [#21964](https://github.com/open-webui/open-webui/pull/21964), [#20186](https://github.com/open-webui/open-webui/issues/20186)
 - 🧹 **Tooltip memory leak.** Tooltip instances are now properly destroyed when elements change, fixing a memory leak that could cause performance issues over time. [#21969](https://github.com/open-webui/open-webui/pull/21969)
 - 🧹 **MessageInput memory leak.** Event listeners in the message input component are now properly cleaned up, preventing a memory leak that could cause page crashes during extended use. [#21968](https://github.com/open-webui/open-webui/pull/21968)
+- 🧹 **Notes memory leak.** Event listeners in the Notes component are now properly cleaned up, fixing a memory leak that could cause page crashes during extended use. [#21963](https://github.com/open-webui/open-webui/pull/21963)
 - 🎨 **Sidebar user menu positioning.** The sidebar user menu no longer drifts rightward when the sidebar is resized, keeping the menu properly aligned with its trigger. [#21853](https://github.com/open-webui/open-webui/pull/21853)
 
 ### Changed
