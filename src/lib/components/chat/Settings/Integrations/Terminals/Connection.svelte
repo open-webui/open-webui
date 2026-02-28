@@ -50,7 +50,7 @@
 					<Cloud className="size-4" strokeWidth="1.5" />
 				</Tooltip>
 
-				<div class="capitalize outline-hidden w-full bg-transparent text-sm">
+				<div class="outline-hidden w-full bg-transparent text-sm">
 					{connection.name || connection.url || $i18n.t('New Terminal')}
 				</div>
 			</div>
