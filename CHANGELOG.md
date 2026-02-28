@@ -5,11 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.6] - 2026-02-25
+## [0.8.6] - 2026-03-01
 
 ### Added
 
-- 🖥️ **Open Terminal integration.** Users can now connect to Open Terminal instances to browse, read, and upload files directly in chat, with the terminal acting as an always-on tool. File navigation includes folder browsing, image and PDF previews, drag-and-drop uploads, directory creation, and file deletion. The current working directory is automatically injected into tool descriptions for context-aware commands. [Commit](https://github.com/open-webui/open-webui/commit/636ab99ad8e5b71b32dd37ba7c62c32368585b2a), [Commit](https://github.com/open-webui/open-webui/commit/64ff15a5365e2c4122fccab582782669f06ec58d)
+- 🖥️ **Open Terminal integration.** Users can now connect to Open Terminal instances to browse, read, and upload files directly in chat, with the terminal acting as an always-on tool. File navigation includes folder browsing, image and PDF previews, drag-and-drop uploads, directory creation, and file deletion. The current working directory is automatically injected into tool descriptions for context-aware commands. [Commit](https://github.com/open-webui/open-webui/commit/636ab99ad8e5b71b32dd37ba7c62c32368585b2a), [Commit](https://github.com/open-webui/open-webui/commit/64ff15a5365e2c4122fccab582782669f06ec58d), [Commit](https://github.com/open-webui/open-webui/commit/4737e1f11847d057859ec78892fa89e24cbcd83b)
 - 🛡️ **Docker image SBOM attestation.** Docker images now include a Software Bill of Materials (SBOM) for vulnerability scanning and supply chain security compliance. [#21779](https://github.com/open-webui/open-webui/issues/21779), [Commit](https://github.com/open-webui/open-webui/commit/febc66ef2bb05606b59719e737ac5ad839002977)
 - 🛡️ **Reporting-Endpoints security header.** Administrators can now configure a Reporting-Endpoints header via the REPORTING_ENDPOINTS environment variable to receive CSP violation reports directly, aiding in security policy debugging and hardening. [#21830](https://github.com/open-webui/open-webui/issues/21830)
 - 🎯 **Action button priority sorting.** Action buttons under assistant messages now appear in a consistent order based on the priority field from function Valves, allowing developers to control button placement. [#21790](https://github.com/open-webui/open-webui/pull/21790)
@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ⚡ **Streaming message comparison.** Chat message updates during streaming are now faster thanks to an optimization that skips expensive comparisons when content changes. [#21884](https://github.com/open-webui/open-webui/pull/21884)
 - 🚀 **Streaming scroll optimization.** Chat auto-scroll during streaming is now more efficient by batching scroll operations via requestAnimationFrame, reducing unnecessary layout reflows when tokens arrive faster than the browser can paint. [#21946](https://github.com/open-webui/open-webui/pull/21946)
 - 💨 **Message cloning performance.** Chat message cloning during streaming is now more efficient thanks to the use of structuredClone() instead of JSON.parse(JSON.stringify(...)). [#21948](https://github.com/open-webui/open-webui/pull/21948)
-- 🛠️ **Tool server advanced options toggle.** Advanced OpenAPI configuration options in the tool server modal are now hidden by default behind a toggle, simplifying the interface for basic setups. [Commit](https://github.com/open-webui/open-webui/commit/f0c71e5a6d971af7322d4245313e5e04620253f0)
+- 🛠️ **Tool server advanced options toggle.** Advanced OpenAPI configuration options in the tool server modal are now hidden by default behind a toggle, simplifying the interface for basic setups. The admin settings tab was also renamed from "Tools" to "Integrations" for clearer organization. [Commit](https://github.com/open-webui/open-webui/commit/f0c71e5a6d971af7322d4245313e5e04620253f0), [Commit](https://github.com/open-webui/open-webui/commit/4731ccb73c4b4bab78fd86fec7b2c231af8cca8b)
 - ⚡ **Tool query optimization.** Tool access control now skips an unnecessary database query when no tools are attached to the request, slightly improving performance. [#21873](https://github.com/open-webui/open-webui/pull/21873)
 - 🚀 **Math rendering performance.** Mathematical notation now renders more efficiently, improving responsiveness when displaying equations in chat. [#21880](https://github.com/open-webui/open-webui/pull/21880)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
@@ -50,8 +50,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🎨 **TailwindCSS gray color theme.** Custom gray color palette is now correctly applied to the CSS root theme layer, fixing an issue where --color-gray-x variables were missing. [#21900](https://github.com/open-webui/open-webui/pull/21900), [#21899](https://github.com/open-webui/open-webui/issues/21899)
 
 ### Changed
-
-- 🗂️ **Tools tab renamed to Integrations.** The admin settings navigation tab previously labeled "Tools" has been renamed to "Integrations" for clearer organization. [Commit](https://github.com/open-webui/open-webui/commit/4731ccb73c4b4bab78fd86fec7b2c231af8cca8b)
 
 ## [0.8.5] - 2026-02-23
 
