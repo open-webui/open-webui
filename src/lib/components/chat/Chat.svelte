@@ -690,7 +690,8 @@
 			stopAudio();
 		});
 
-		const showControlsSubscribe = showControls.subscribe((value) => {
+		const showControlsSubscribe = showControls.subscribe(async (value) => {
+			await tick();
 			if (controlPane && !$mobile) {
 				try {
 					if (value) {
@@ -710,7 +711,8 @@
 			}
 		});
 
-		const selectedFolderSubscribe = selectedFolder.subscribe((folder) => {
+		const selectedFolderSubscribe = selectedFolder.subscribe(async (folder) => {
+			await tick();
 			if (
 				folder?.data?.model_ids &&
 				JSON.stringify(selectedModels) !== JSON.stringify(folder.data.model_ids)
