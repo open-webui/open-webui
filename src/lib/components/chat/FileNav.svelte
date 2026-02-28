@@ -61,8 +61,8 @@
 
 	const getTerminal = (): { url: string; key: string } | null => {
 		const systemTerminal = $selectedTerminalId
-			? ($terminalServers ?? []).find((t) => t.id === $selectedTerminalId) ?? null
-			: $terminalServers?.[0] ?? null;
+			? (($terminalServers ?? []).find((t) => t.id === $selectedTerminalId) ?? null)
+			: ($terminalServers?.[0] ?? null);
 
 		const userTerminal = ($settings?.terminalServers ?? []).find(
 			(s) => s.url === $selectedTerminalId
@@ -421,7 +421,7 @@
 				{:else if loading}
 					<div class="flex justify-center pt-8"><Spinner className="size-4" /></div>
 				{:else if error}
-					<div class="p-4 text-xs text-red-500 dark:text-red-400">{error}</div>
+					<div class="p-4 text-xs">{error}</div>
 				{:else if entries.length === 0 && !creatingFolder}
 					<div class="flex flex-col items-center justify-center gap-1.5 py-12 text-center">
 						<Folder className="size-6 text-gray-200 dark:text-gray-700" />
