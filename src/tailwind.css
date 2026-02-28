@@ -2,6 +2,21 @@
 
 @config '../tailwind.config.js';
 
+@theme {
+	--color-gray-50: oklch(0.98 0 0);
+	--color-gray-100: oklch(0.94 0 0);
+	--color-gray-200: oklch(0.92 0 0);
+	--color-gray-300: oklch(0.85 0 0);
+	--color-gray-400: oklch(0.77 0 0);
+	--color-gray-500: oklch(0.69 0 0);
+	--color-gray-600: oklch(0.51 0 0);
+	--color-gray-700: oklch(0.42 0 0);
+	--color-gray-800: oklch(0.32 0 0);
+	--color-gray-850: oklch(0.27 0 0);
+	--color-gray-900: oklch(0.2 0 0);
+	--color-gray-950: oklch(0.16 0 0);
+}
+
 /*
   The default border color has changed to `currentColor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still
@@ -11,6 +26,7 @@
   color utility to any element that depends on these defaults.
 */
 @layer base {
+
 	*,
 	::after,
 	::before,
@@ -21,6 +37,7 @@
 }
 
 @layer base {
+
 	html,
 	pre {
 		font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Vazirmatn', ui-sans-serif, system-ui,
@@ -47,9 +64,11 @@
 		display: inline-block;
 		position: relative;
 	}
+
 	input[type='checkbox']:checked {
 		@apply bg-blue-600 border-blue-600;
 	}
+
 	input[type='checkbox']:after {
 		content: '';
 		display: block;
@@ -63,9 +82,9 @@
 		left: 0;
 		pointer-events: none;
 		/* SVG checkmark as background image */
-		background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M4 8l3 3l5-5"/></svg>')
-			center/80% no-repeat;
+		background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M4 8l3 3l5-5"/></svg>') center/80% no-repeat;
 	}
+
 	input[type='checkbox']:checked:after {
 		opacity: 1;
 	}
