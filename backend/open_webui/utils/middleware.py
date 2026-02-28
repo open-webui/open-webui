@@ -4047,6 +4047,7 @@ async def streaming_chat_response_handler(response, ctx):
                         tool_args = tool_call.get("function", {}).get("arguments", "{}")
 
                         tool_function_params = {}
+                        tool_args_parse_error = False
                         try:
                             # json.loads cannot be used because some models do not produce valid JSON
                             tool_function_params = ast.literal_eval(tool_args)
@@ -4056,9 +4057,10 @@ async def streaming_chat_response_handler(response, ctx):
                             try:
                                 tool_function_params = json.loads(tool_args)
                             except Exception as e:
-                                log.error(
-                                    f"Error parsing tool call arguments: {tool_args}"
+                                log.warning(
+                                    f"Failed to parse tool call arguments for '{tool_function_name}': {tool_args}"
                                 )
+                                tool_args_parse_error = True
 
                         # Ensure arguments are valid JSON for downstream LLM integrations
                         log.debug(
@@ -4073,7 +4075,10 @@ async def streaming_chat_response_handler(response, ctx):
                         tool_type = None
                         direct_tool = False
 
-                        if tool_function_name in tools:
+                        if tool_args_parse_error:
+                            tool_result = f"Error: Failed to parse tool call arguments for '{tool_function_name}'. The arguments were malformed or incomplete. Please try calling the tool again with valid, complete JSON arguments."
+
+                        elif tool_function_name in tools:
                             tool = tools[tool_function_name]
                             spec = tool.get("spec", {})
 
