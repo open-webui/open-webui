@@ -44,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧹 **Tooltip memory leak.** Tooltip instances are now properly destroyed when elements change, fixing a memory leak that could cause performance issues over time. [#21969](https://github.com/open-webui/open-webui/pull/21969)
 - 🧹 **MessageInput memory leak.** Event listeners in the message input component are now properly cleaned up, preventing a memory leak that could cause page crashes during extended use. [#21968](https://github.com/open-webui/open-webui/pull/21968)
 - 🧹 **Notes memory leak.** Event listeners in the Notes component are now properly cleaned up, fixing a memory leak that could cause page crashes during extended use. [#21963](https://github.com/open-webui/open-webui/pull/21963)
+- 🧹 **Model create memory leak.** Event listeners in the model creation page are now properly cleaned up, fixing a memory leak that could cause page crashes during extended use. [#21966](https://github.com/open-webui/open-webui/pull/21966)
 - 🎨 **Sidebar user menu positioning.** The sidebar user menu no longer drifts rightward when the sidebar is resized, keeping the menu properly aligned with its trigger. [#21853](https://github.com/open-webui/open-webui/pull/21853)
 - 🎨 **Code block UI.** Code block headers are now sticky and properly positioned, with language labels now showing tooltips for truncated text. [Commit](https://github.com/open-webui/open-webui/commit/6b462ff121d28cd2d335db7763052622d374e3a5)
 
