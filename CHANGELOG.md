@@ -40,6 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📄 **Web content knowledge base append.** Processing web URLs with overwrite=false now correctly appends content to existing knowledge bases instead of silently doing nothing, fixing a regression where no content was being added. [#21786](https://github.com/open-webui/open-webui/pull/21786), [Commit](https://github.com/open-webui/open-webui/commit/5ee509325970f01524348b0f91081110340f2e7e)
 - 🎨 **Sidebar user menu positioning.** The sidebar user menu no longer drifts rightward when the sidebar is resized, keeping the menu properly aligned with its trigger. [#21853](https://github.com/open-webui/open-webui/pull/21853)
 
+### Changed
+
+- 🗂️ **Tools tab renamed to Integrations.** The admin settings navigation tab previously labeled "Tools" has been renamed to "Integrations" for clearer organization. [Commit](https://github.com/open-webui/open-webui/commit/4731ccb73c4b4bab78fd86fec7b2c231af8cca8b)
+
 ## [0.8.5] - 2026-02-23
 
 ### Added
