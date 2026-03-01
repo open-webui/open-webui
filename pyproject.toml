@@ -31,7 +31,7 @@ dependencies = [
     "starsessions[redis]==2.2.1",
     "python-mimeparse==2.0.0",
 
-    "sqlalchemy==2.0.46",
+    "sqlalchemy==2.0.47",
     "alembic==1.18.3",
     "peewee==3.19.0",
     "peewee-migrate==1.14.3",
