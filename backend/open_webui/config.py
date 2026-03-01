@@ -35,7 +35,7 @@ from open_webui.env import (
     WEBUI_NAME,
     log,
 )
-from open_webui.internal.db import Base, get_db
+from open_webui.internal.db import Base, get_db, release_migration_lock_if_held
 from open_webui.utils.redis import get_redis_connection
 
 
@@ -68,6 +68,9 @@ def run_migrations():
         command.upgrade(alembic_cfg, "head")
     except Exception as e:
         log.exception(f"Error running migrations: {e}")
+    finally:
+        # Release Redis migration lock so other pods can proceed (no-op when Redis was not used)
+        release_migration_lock_if_held()
 
 
 if ENABLE_DB_MIGRATIONS:
