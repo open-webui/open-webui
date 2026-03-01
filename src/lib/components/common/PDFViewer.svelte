@@ -195,20 +195,18 @@
 </script>
 
 <div class="relative {className}">
-	<div class="overflow-y-auto h-full" bind:this={outerContainer}>
-		<div bind:this={sceneElement} class="w-full">
-			{#if loading}
-				<div class="flex items-center justify-center h-full">
-					<Spinner className="size-5" />
-				</div>
-			{/if}
-
-			{#if error}
-				<div class="flex items-center justify-center h-full text-sm text-red-500">
-					{error}
-				</div>
-			{/if}
+	{#if loading}
+		<div class="absolute inset-0 flex items-center justify-center">
+			<Spinner className="size-5" />
 		</div>
+	{:else if error}
+		<div class="absolute inset-0 flex items-center justify-center text-sm text-red-500">
+			{error}
+		</div>
+	{/if}
+
+	<div class="overflow-y-auto h-full" bind:this={outerContainer}>
+		<div bind:this={sceneElement} class="w-full"></div>
 	</div>
 
 	{#if !loading && !error && pdfDoc}
