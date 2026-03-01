@@ -97,7 +97,7 @@ dependencies = [
     "rapidocr-onnxruntime==1.4.4",
     "rank-bm25==0.2.2",
 
-    "onnxruntime==1.24.1",
+    "onnxruntime==1.24.2",
     "faster-whisper==1.2.1",
 
     "black==26.1.0",
