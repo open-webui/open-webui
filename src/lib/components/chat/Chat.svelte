@@ -451,7 +451,7 @@
 		if (!data?.path) return;
 		if (type === 'terminal:display_file') {
 			displayFileHandler(data.path, { showControls, showFileNavPath });
-		} else if (type === 'terminal:write_file' || type === 'terminal:replace_file_content') {
+		} else if (type === 'terminal:write_file') {
 			showFileNavDir.set(data.path);
 		}
 	};
