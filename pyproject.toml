@@ -72,7 +72,7 @@ dependencies = [
 
     "ftfy==6.3.1",
     "chardet==5.2.0",
-    "pypdf==6.7.0",
+    "pypdf==6.7.4",
     "fpdf2==2.8.5",
     "pymdown-extensions==10.20.1",
     "docx2txt==0.9",
