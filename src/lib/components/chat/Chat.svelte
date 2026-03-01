@@ -321,7 +321,7 @@
 
 	const onSelectedModelIdsChange = () => {
 		resetInput();
-		oldSelectedModelIds = JSON.parse(JSON.stringify(selectedModelIds));
+		oldSelectedModelIds = structuredClone(selectedModelIds);
 	};
 
 	const resetInput = () => {
@@ -1241,7 +1241,7 @@
 					selectedModels = selectedModels.length > 0 ? [selectedModels[0]] : [''];
 				}
 
-				oldSelectedModelIds = JSON.parse(JSON.stringify(selectedModels));
+				oldSelectedModelIds = structuredClone(selectedModels);
 
 				history =
 					(chatContent?.history ?? undefined) !== undefined
@@ -1771,7 +1771,7 @@
 		if (taskIds !== null && taskIds.length > 0) {
 			if ($settings?.enableMessageQueue ?? true) {
 				// Queue the message
-				const _files = JSON.parse(JSON.stringify(files));
+				const _files = structuredClone(files);
 				messageQueue = [
 					...messageQueue,
 					{
@@ -1806,7 +1806,7 @@
 		prompt = '';
 
 		const messages = createMessagesList(history, history.currentId);
-		const _files = JSON.parse(JSON.stringify(files));
+		const _files = structuredClone(files);
 
 		chatFiles.push(
 			..._files.filter(
@@ -1875,7 +1875,7 @@
 		}
 
 		let _chatId = JSON.parse(JSON.stringify($chatId));
-		_history = JSON.parse(JSON.stringify(_history));
+		_history = structuredClone(_history);
 
 		const responseMessageIds: Record<PropertyKey, string> = {};
 		// If modelId is provided, use it, else use selected model
@@ -1928,7 +1928,7 @@
 
 		await tick();
 
-		_history = JSON.parse(JSON.stringify(history));
+		_history = structuredClone(history);
 		// Save chat after all messages have been created
 		await saveChatHandler(_chatId, _history);
 
@@ -2039,7 +2039,7 @@
 			return fileExists;
 		});
 
-		let files = JSON.parse(JSON.stringify(chatFiles));
+		let files = structuredClone(chatFiles);
 		files.push(
 			...(userMessage?.files ?? []).filter(
 				(item) =>
