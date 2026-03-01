@@ -411,8 +411,8 @@
 	};
 
 	const showMessage = async (message, scroll = true) => {
-		const _chatId = JSON.parse(JSON.stringify($chatId));
-		let _messageId = JSON.parse(JSON.stringify(message.id));
+		const _chatId = $chatId;
+		let _messageId = message.id;
 
 		let messageChildrenIds = [];
 		if (_messageId === null) {
@@ -1866,7 +1866,7 @@
 			scrollToBottom();
 		}
 
-		let _chatId = JSON.parse(JSON.stringify($chatId));
+		let _chatId = $chatId;
 		_history = JSON.parse(JSON.stringify(_history));
 
 		const responseMessageIds: Record<PropertyKey, string> = {};
@@ -2429,7 +2429,7 @@
 
 	const continueResponse = async () => {
 		console.log('continueResponse');
-		const _chatId = JSON.parse(JSON.stringify($chatId));
+		const _chatId = $chatId;
 
 		if (history.currentId && history.messages[history.currentId].done == true) {
 			const responseMessage = history.messages[history.currentId];
