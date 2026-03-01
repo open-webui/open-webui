@@ -86,6 +86,12 @@ def get_image_model(request):
             if request.app.state.config.IMAGE_GENERATION_MODEL
             else "imagen-3.0-generate-002"
         )
+    elif request.app.state.config.IMAGE_GENERATION_ENGINE == "modelslab":
+        return (
+            request.app.state.config.IMAGE_GENERATION_MODEL
+            if request.app.state.config.IMAGE_GENERATION_MODEL
+            else "flux"
+        )
     elif request.app.state.config.IMAGE_GENERATION_ENGINE == "comfyui":
         return (
             request.app.state.config.IMAGE_GENERATION_MODEL
@@ -135,6 +141,8 @@ class ImagesConfig(BaseModel):
     IMAGES_GEMINI_API_KEY: str
     IMAGES_GEMINI_ENDPOINT_METHOD: str
 
+    IMAGES_MODELSLAB_API_KEY: str
+
     ENABLE_IMAGE_EDIT: bool
     IMAGE_EDIT_ENGINE: str
     IMAGE_EDIT_MODEL: str
@@ -174,6 +182,8 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
         "IMAGES_GEMINI_API_BASE_URL": request.app.state.config.IMAGES_GEMINI_API_BASE_URL,
         "IMAGES_GEMINI_API_KEY": request.app.state.config.IMAGES_GEMINI_API_KEY,
         "IMAGES_GEMINI_ENDPOINT_METHOD": request.app.state.config.IMAGES_GEMINI_ENDPOINT_METHOD,
+        "IMAGES_MODELSLAB_API_KEY": request.app.state.config.IMAGES_MODELSLAB_API_KEY,
+        "IMAGES_MODELSLAB_API_KEY": request.app.state.config.IMAGES_MODELSLAB_API_KEY,
         "ENABLE_IMAGE_EDIT": request.app.state.config.ENABLE_IMAGE_EDIT,
         "IMAGE_EDIT_ENGINE": request.app.state.config.IMAGE_EDIT_ENGINE,
         "IMAGE_EDIT_MODEL": request.app.state.config.IMAGE_EDIT_MODEL,
@@ -260,6 +270,9 @@ async def update_config(
     request.app.state.config.IMAGES_GEMINI_API_KEY = form_data.IMAGES_GEMINI_API_KEY
     request.app.state.config.IMAGES_GEMINI_ENDPOINT_METHOD = (
         form_data.IMAGES_GEMINI_ENDPOINT_METHOD
+    )
+    request.app.state.config.IMAGES_MODELSLAB_API_KEY = (
+        form_data.IMAGES_MODELSLAB_API_KEY
     )
 
     # Edit Image
@@ -393,6 +406,15 @@ def get_models(request: Request, user=Depends(get_verified_user)):
         elif request.app.state.config.IMAGE_GENERATION_ENGINE == "gemini":
             return [
                 {"id": "imagen-3.0-generate-002", "name": "imagen-3.0 generate-002"},
+            ]
+        elif request.app.state.config.IMAGE_GENERATION_ENGINE == "modelslab":
+            return [
+                {"id": "flux", "name": "Flux"},
+                {"id": "fluxpro", "name": "Flux Pro"},
+                {"id": "sdxl", "name": "SDXL"},
+                {"id": "sd3.5", "name": "SD 3.5"},
+                {"id": "realistic-vision-v6", "name": "Realistic Vision v6"},
+                {"id": "juggernautxl-v10", "name": "JuggernautXL v10"},
             ]
         elif request.app.state.config.IMAGE_GENERATION_ENGINE == "comfyui":
             # TODO - get models from comfyui
@@ -719,6 +741,74 @@ async def image_generations(
                                 user,
                             )
                             images.append({"url": url})
+
+            return images
+
+        elif request.app.state.config.IMAGE_GENERATION_ENGINE == "modelslab":
+            # ModelsLab uses key-in-body authentication
+            modelslab_api_key = request.app.state.config.IMAGES_MODELSLAB_API_KEY
+            if not modelslab_api_key:
+                raise HTTPException(
+                    status_code=400,
+                    detail="IMAGES_MODELSLAB_API_KEY is not configured",
+                )
+
+            data = {
+                "key": modelslab_api_key,
+                "model_id": model,
+                "prompt": form_data.prompt,
+                "width": width,
+                "height": height,
+                "samples": form_data.n,
+                "num_inference_steps": 30,
+                "safety_checker": "no",
+                "enhance_prompt": "yes",
+            }
+
+            r = await asyncio.to_thread(
+                requests.post,
+                url="https://modelslab.com/api/v6/images/text2img",
+                json=data,
+                headers={"Content-Type": "application/json"},
+            )
+            r.raise_for_status()
+            res = r.json()
+
+            # ModelsLab may return status: processing — poll fetch endpoint
+            if res.get("status") == "processing":
+                request_id = str(res.get("id", ""))
+                if not request_id:
+                    raise HTTPException(
+                        status_code=500,
+                        detail="ModelsLab returned processing status without request ID",
+                    )
+                deadline = asyncio.get_event_loop().time() + 300
+                while asyncio.get_event_loop().time() < deadline:
+                    await asyncio.sleep(5)
+                    fetch_r = await asyncio.to_thread(
+                        requests.post,
+                        url=f"https://modelslab.com/api/v6/images/fetch/{request_id}",
+                        json={"key": modelslab_api_key},
+                        headers={"Content-Type": "application/json"},
+                    )
+                    fetch_r.raise_for_status()
+                    res = fetch_r.json()
+                    if res.get("status") in ("success", "error"):
+                        break
+
+            if res.get("status") == "error":
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"ModelsLab generation failed: {res.get('message', 'Unknown error')}",
+                )
+
+            images = []
+            for image_url in res.get("output", []):
+                image_data, content_type = get_image_data(image_url)
+                _, url = upload_image(
+                    request, image_data, content_type, {**data, **metadata}, user
+                )
+                images.append({"url": url})
 
             return images
 

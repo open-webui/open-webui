@@ -3788,6 +3788,12 @@ IMAGES_GEMINI_ENDPOINT_METHOD = PersistentConfig(
     os.getenv("IMAGES_GEMINI_ENDPOINT_METHOD", ""),
 )
 
+IMAGES_MODELSLAB_API_KEY = PersistentConfig(
+    "IMAGES_MODELSLAB_API_KEY",
+    "image_generation.modelslab.api_key",
+    os.getenv("IMAGES_MODELSLAB_API_KEY", ""),
+)
+
 ENABLE_IMAGE_EDIT = PersistentConfig(
     "ENABLE_IMAGE_EDIT",
     "images.edit.enable",

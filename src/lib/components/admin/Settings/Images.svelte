@@ -410,6 +410,7 @@
 								<option value="comfyui">{$i18n.t('ComfyUI')}</option>
 								<option value="automatic1111">{$i18n.t('Automatic1111')}</option>
 								<option value="gemini">{$i18n.t('Gemini')}</option>
+								<option value="modelslab">{$i18n.t('ModelsLab')}</option>
 							</select>
 						</div>
 					</div>
@@ -816,6 +817,27 @@
 								</div>
 							</div>
 						{/if}
+					{:else if config?.IMAGE_GENERATION_ENGINE === 'modelslab'}
+						<div class="mb-2.5">
+							<div class="flex w-full justify-between items-center">
+								<div class="text-xs pr-2 shrink-0">
+									<div class="">
+										{$i18n.t('ModelsLab API Key')}
+									</div>
+								</div>
+
+								<div class="flex w-full">
+									<div class="flex-1">
+										<SensitiveInput
+											inputClassName="text-right w-full"
+											placeholder={$i18n.t('API Key')}
+											bind:value={config.IMAGES_MODELSLAB_API_KEY}
+											required={true}
+										/>
+									</div>
+								</div>
+							</div>
+						</div>
 					{:else if config?.IMAGE_GENERATION_ENGINE === 'gemini'}
 						<div class="mb-2.5">
 							<div class="flex w-full justify-between items-center">
