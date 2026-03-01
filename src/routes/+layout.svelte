@@ -338,17 +338,11 @@
 			}
 
 			if (cb) {
-				cb(JSON.parse(JSON.stringify(res)));
+				cb(structuredClone(res));
 			}
 		} else {
 			if (cb) {
-				cb(
-					JSON.parse(
-						JSON.stringify({
-							error: 'Tool Server Not Found'
-						})
-					)
-				);
+				cb({ error: 'Tool Server Not Found' });
 			}
 		}
 	};
