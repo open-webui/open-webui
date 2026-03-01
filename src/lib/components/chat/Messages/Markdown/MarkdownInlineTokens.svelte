@@ -2,7 +2,7 @@
 	import DOMPurify from 'dompurify';
 	import { toast } from 'svelte-sonner';
 
-	import type { Token } from 'marked';
+	import type { Token } from '$lib/utils/marked';
 	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 

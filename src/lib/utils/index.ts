@@ -18,9 +18,7 @@ import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
 
-import { marked } from 'marked';
-import markedExtension from '$lib/utils/marked/extension';
-import markedKatexExtension from '$lib/utils/marked/katex-extension';
+import { renderMarkdownToHTML } from '$lib/utils/marked';
 import hljs from 'highlight.js';
 
 //////////////////////////
@@ -388,18 +386,12 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 	if (formatted) {
 		let styledHtml = '';
 		if (!html) {
-			const options = {
-				throwOnError: false,
-				highlight: function (code, lang) {
+			const htmlContent = renderMarkdownToHTML(text, {
+				highlight(code: string, lang: string) {
 					const language = hljs.getLanguage(lang) ? lang : 'plaintext';
 					return hljs.highlight(code, { language }).value;
 				}
-			};
-			marked.use(markedKatexExtension(options));
-			marked.use(markedExtension(options));
-			// DEVELOPER NOTE: Go to `$lib/components/chat/Messages/Markdown.svelte` to add extra markdown extensions for rendering.
-
-			const htmlContent = marked.parse(text);
+			}) as string;
 
 			// Add basic styling to make the content look better when pasted
 			styledHtml = `

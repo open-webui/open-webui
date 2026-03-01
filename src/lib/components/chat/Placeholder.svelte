@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { marked } from 'marked';
+	import { renderMarkdownToHTML } from '$lib/utils/marked';
 
 	import { onMount, getContext, tick, createEventDispatcher } from 'svelte';
 	import { blur, fade } from 'svelte/transition';
@@ -160,21 +160,21 @@
 						{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
 							<Tooltip
 								className=" w-fit"
-								content={marked.parse(
-									sanitizeResponseContent(
-										models[selectedModelIdx]?.info?.meta?.description ?? ''
-									).replaceAll('\n', '<br>')
-								)}
+content={(renderMarkdownToHTML(
+								sanitizeResponseContent(
+									models[selectedModelIdx]?.info?.meta?.description ?? ''
+								).replaceAll('\n', '<br>')
+							) as string)}
 								placement="top"
 							>
 								<div
 									class="mt-0.5 px-2 text-sm font-normal text-gray-500 dark:text-gray-400 line-clamp-2 max-w-xl markdown"
 								>
-									{@html marked.parse(
-										sanitizeResponseContent(
-											models[selectedModelIdx]?.info?.meta?.description ?? ''
-										).replaceAll('\n', '<br>')
-									)}
+{@html (renderMarkdownToHTML(
+									sanitizeResponseContent(
+										models[selectedModelIdx]?.info?.meta?.description ?? ''
+									).replaceAll('\n', '<br>')
+								) as string)}
 								</div>
 							</Tooltip>
 

@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { getContext, onDestroy, tick } from 'svelte';
 	import panzoom, { type PanZoom } from 'panzoom';
-	import { marked } from 'marked';
-	import DOMPurify from 'dompurify';
+	import { renderMarkdownToHTMLSanitized } from '$lib/utils/marked';
 	import Spinner from '../../common/Spinner.svelte';
 	import PDFViewer from '../../common/PDFViewer.svelte';
 
@@ -62,7 +61,7 @@
 	$: csvDelimiter = getExt(selectedFile) === 'tsv' ? '\t' : ',';
 	$: renderedHtml =
 		isMarkdown && fileContent
-			? DOMPurify.sanitize(marked.parse(fileContent, { async: false }) as string)
+			? renderMarkdownToHTMLSanitized(fileContent)
 			: '';
 
 	// Simple CSV parser that handles quoted fields
