@@ -396,7 +396,6 @@
 
 		resetView();
 	}}
-	closeFocus={false}
 >
 	<DropdownMenu.Trigger
 		class="relative w-full {($settings?.highContrastMode ?? false)
@@ -450,6 +449,12 @@
 						class="w-full text-sm bg-transparent outline-hidden"
 						placeholder={searchPlaceholder}
 						autocomplete="off"
+						role="combobox"
+						aria-expanded={show}
+						aria-controls="model-option-listbox"
+						aria-activedescendant={show && filteredItems.length > 0
+							? `model-option-${selectedModelIdx}`
+							: undefined}
 						aria-label={$i18n.t('Search In Models')}
 						on:keydown={(e) => {
 							if (e.code === 'Enter' && filteredItems.length > 0) {
@@ -457,9 +462,11 @@
 								show = false;
 								return; // dont need to scroll on selection
 							} else if (e.code === 'ArrowDown') {
+								e.preventDefault();
 								e.stopPropagation();
 								selectedModelIdx = Math.min(selectedModelIdx + 1, filteredItems.length - 1);
 							} else if (e.code === 'ArrowUp') {
+								e.preventDefault();
 								e.stopPropagation();
 								selectedModelIdx = Math.max(selectedModelIdx - 1, 0);
 							} else {
@@ -601,6 +608,7 @@
 				{:else}
 					<!-- svelte-ignore a11y-no-static-element-interactions -->
 					<div
+						id="model-option-listbox"
 						class="max-h-64 overflow-y-auto"
 						role="listbox"
 						aria-label={$i18n.t('Available models')}

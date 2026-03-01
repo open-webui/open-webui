@@ -107,6 +107,13 @@ export const currentChatPage = writable(1);
 export const isLastActiveTab = writable(true);
 export const playingNotificationSound = writable(false);
 
+// Accessibility: global live-region stores.
+// Written by Messages.svelte, consumed by the root +layout.svelte live regions
+// which live outside all content regions so NVDA browse-mode navigation never
+// lands on them.
+export const a11yLiveAnnouncement = writable('');
+export const a11yGenerationStatus = writable('');
+
 export type Model = OpenAIModel | OllamaModel;
 
 type BaseModel = {
