@@ -57,7 +57,7 @@ weaviate-client==4.19.2
 opensearch-py==3.1.0
 
 transformers==5.1.0
-sentence-transformers==5.2.2
+sentence-transformers==5.2.3
 accelerate
 pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
 einops==0.8.2 
