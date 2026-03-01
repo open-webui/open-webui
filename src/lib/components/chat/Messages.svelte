@@ -7,14 +7,17 @@
 		user as _user,
 		mobile,
 		currentChatPage,
-		temporaryChatEnabled
+		temporaryChatEnabled,
+		a11yLiveAnnouncement,
+		a11yGenerationStatus
 	} from '$lib/stores';
 	import { tick, getContext, onMount, onDestroy, createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
 
 	import { toast } from 'svelte-sonner';
+	import { marked } from 'marked';
 	import { getChatList, updateChatById } from '$lib/apis/chats';
-	import { copyToClipboard, extractCurlyBraceWords } from '$lib/utils';
+	import { copyToClipboard, extractCurlyBraceWords, removeDetails } from '$lib/utils';
 
 	import Message from './Messages/Message.svelte';
 	import Loader from '../common/Loader.svelte';
@@ -433,6 +436,100 @@
 			}, 100);
 		}
 	};
+
+	// Accessibility: live-region text is stored in global Svelte stores so the
+	// actual <div aria-live> elements can live in +layout.svelte, completely outside
+	// the chat content region. That way NVDA browse-mode navigation never lands on
+	// them — they fire announcements but are invisible to arrow-key navigation.
+	let lastAnnouncedId = '';
+	let generatingInterval: ReturnType<typeof setInterval> | null = null;
+
+	const markdownToPlainText = (markdown: string): string => {
+		if (typeof document === 'undefined') return markdown;
+		try {
+			// Strip thinking/reasoning blocks and code interpreter output before announcing —
+			// the user only needs to hear the final response text.
+			const stripped = removeDetails(markdown, ['reasoning', 'thinking', 'code_interpreter']);
+			const html = marked.parse(stripped) as string;
+
+			// Insert newlines after block-level closing tags before extracting textContent.
+			// Without this, adjacent blocks (list items, paragraphs, headings) are concatenated
+			// with no separator, causing NVDA to read a trailing period as "dot" before the
+			// next item begins.
+			const spaced = html
+				.replace(/<\/p>/gi, '\n')
+				.replace(/<\/li>/gi, '\n')
+				.replace(/<\/h[1-6]>/gi, '\n')
+				.replace(/<br\s*\/?>/gi, '\n');
+			const tmp = document.createElement('div');
+			tmp.innerHTML = spaced;
+			return (tmp.textContent ?? tmp.innerText ?? '').trim().replace(/\n{3,}/g, '\n\n');
+		} catch {
+			return markdown;
+		}
+	};
+
+	// "Clear then set" ensures NVDA always sees a content change on the live region,
+	// even when re-announcing after a regeneration with identical text.
+	const announceResponse = async (text: string) => {
+		a11yLiveAnnouncement.set('');
+		await tick();
+		a11yLiveAnnouncement.set(text);
+		console.log('[a11y] live region fired:', text.slice(0, 100));
+	};
+
+	const stopGeneratingAnnouncements = () => {
+		if (generatingInterval !== null) {
+			clearInterval(generatingInterval);
+			generatingInterval = null;
+		}
+	};
+
+	const startGeneratingAnnouncements = () => {
+		// Guard so repeated calls during streaming don't stack intervals.
+		if (generatingInterval !== null) return;
+
+		a11yGenerationStatus.set($i18n.t('Generating response...'));
+
+		// Every 6 seconds, clear-then-set so NVDA always detects a DOM change
+		// and re-reads the reminder. tick() alone isn't reliable inside interval
+		// callbacks because Svelte may batch both assignments — use setTimeout to
+		// guarantee two separate DOM updates that the AT can observe.
+		generatingInterval = setInterval(() => {
+			a11yGenerationStatus.set('');
+			setTimeout(() => {
+				if (generatingInterval !== null) {
+					a11yGenerationStatus.set($i18n.t('Still generating...'));
+				}
+			}, 50);
+		}, 6000);
+	};
+
+	onDestroy(stopGeneratingAnnouncements);
+
+	$: if (chatId) {
+		lastAnnouncedId = '';
+		a11yLiveAnnouncement.set('');
+		a11yGenerationStatus.set('');
+		stopGeneratingAnnouncements();
+	}
+
+	$: {
+		const lastMsg = messages.at(-1);
+		if (lastMsg && lastMsg.role !== 'user') {
+			if (!lastMsg.done) {
+				startGeneratingAnnouncements();
+			} else if (lastMsg.id !== lastAnnouncedId) {
+				lastAnnouncedId = lastMsg.id;
+				stopGeneratingAnnouncements();
+				a11yGenerationStatus.set('');
+				announceResponse(markdownToPlainText(lastMsg.content ?? ''));
+			}
+		} else {
+			stopGeneratingAnnouncements();
+			a11yGenerationStatus.set('');
+		}
+	}
 </script>
 
 <div class={className}>
@@ -458,7 +555,7 @@
 							</div>
 						</Loader>
 					{/if}
-					<ul role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false">
+					<div>
 						{#each messages as message, messageIdx (message.id)}
 							<Message
 								{chatId}
@@ -488,7 +585,7 @@
 								{topPadding}
 							/>
 						{/each}
-					</ul>
+					</div>
 				</section>
 				<div class="pb-18" />
 				{#if bottomPadding}

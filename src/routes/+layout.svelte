@@ -33,7 +33,9 @@
 		channelId,
 		terminalServers,
 		showControls,
-		showFileNavPath
+		showFileNavPath,
+		a11yLiveAnnouncement,
+		a11yGenerationStatus
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -954,3 +956,10 @@
 	position="top-right"
 	closeButton
 />
+
+<!-- Global ARIA live regions for chat assistant announcements.
+     Placed here (outside all content regions) so NVDA browse-mode navigation
+     never lands on them — they fire announcements but cannot be arrowed to.
+     Written by Messages.svelte via the a11yLiveAnnouncement / a11yGenerationStatus stores. -->
+<div role="status" aria-live="polite" aria-atomic="true" class="sr-only">{$a11yGenerationStatus}</div>
+<div aria-live="polite" aria-atomic="true" class="sr-only">{$a11yLiveAnnouncement}</div>

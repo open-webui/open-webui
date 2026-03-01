@@ -5,7 +5,7 @@
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
-	import { settings } from '$lib/stores';
+	import { settings, models } from '$lib/stores';
 	import { copyToClipboard } from '$lib/utils';
 
 	import MultiResponseMessages from './MultiResponseMessages.svelte';
@@ -53,6 +53,7 @@
 >
 	{#if history.messages[messageId]}
 		{#if history.messages[messageId].role === 'user'}
+			<h3 class="sr-only">{$i18n.t('You said:')}</h3>
 			<UserMessage
 				{user}
 				{chatId}
@@ -74,6 +75,12 @@
 				{topPadding}
 			/>
 		{:else if (history.messages[history.messages[messageId].parentId]?.models?.length ?? 1) === 1}
+			<h3 class="sr-only">
+				{$models.find((m) => m.id === history.messages[messageId].model)?.name ??
+					history.messages[messageId].model ??
+					$i18n.t('Assistant')}
+				{$i18n.t('said:')}
+			</h3>
 			<ResponseMessage
 				{chatId}
 				{history}
@@ -100,6 +107,7 @@
 				{topPadding}
 			/>
 		{:else}
+			<h3 class="sr-only">{$i18n.t('Assistants said:')}</h3>
 			{#key messageId}
 				<MultiResponseMessages
 					bind:history

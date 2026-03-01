@@ -1085,6 +1085,7 @@
 						>
 							<button
 								class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
+								aria-label={$i18n.t('Scroll to bottom')}
 								on:click={() => {
 									autoScroll = true;
 									scrollToBottom();
@@ -1169,6 +1170,7 @@
 						<button
 							id="generate-message-pair-button"
 							class="hidden"
+							aria-hidden="true"
 							on:click={() => createMessagePair(prompt)}
 						/>
 
@@ -1212,6 +1214,7 @@
 										<div>
 											<button
 												class="flex items-center dark:text-gray-500"
+												aria-label={$i18n.t('Remove selected model')}
 												on:click={() => {
 													atSelectedModel = undefined;
 												}}
@@ -1570,9 +1573,10 @@
 									>
 										<div
 											id="input-menu-button"
+											aria-label={$i18n.t('More')}
 											class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
 										>
-											<PlusAlt className="size-5.5" />
+											<PlusAlt className="size-5.5" aria-hidden="true" />
 										</div>
 									</InputMenu>
 
@@ -1609,9 +1613,10 @@
 										>
 											<div
 												id="integration-menu-button"
+												aria-label={$i18n.t('Integrations')}
 												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
 											>
-												<Component className="size-4.5" strokeWidth="1.5" />
+												<Component className="size-4.5" strokeWidth="1.5" aria-hidden="true" />
 											</div>
 										</IntegrationsMenu>
 									{/if}
@@ -1705,6 +1710,8 @@
 												<button
 													on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
 													type="button"
+													aria-label={webSearchEnabled ? $i18n.t('Disable Web Search') : $i18n.t('Enable Web Search')}
+													aria-pressed={webSearchEnabled}
 													class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
 													($settings?.webSearch ?? false) === 'always'
 														? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-600/10 border border-sky-200/40 dark:border-sky-500/20'
@@ -1724,6 +1731,8 @@
 													on:click|preventDefault={() =>
 														(imageGenerationEnabled = !imageGenerationEnabled)}
 													type="button"
+													aria-label={imageGenerationEnabled ? $i18n.t('Disable Image Generation') : $i18n.t('Enable Image Generation')}
+													aria-pressed={imageGenerationEnabled}
 													class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {imageGenerationEnabled
 														? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-700/10 border border-sky-200/40 dark:border-sky-500/20'
 														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
@@ -1770,6 +1779,7 @@
 											<Tooltip content={$i18n.t('Stop')}>
 												<button
 													class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
+													aria-label={$i18n.t('Stop generating')}
 													on:click={() => {
 														stopResponse();
 													}}
@@ -1938,6 +1948,7 @@
 															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
 														type="submit"
+														aria-label={$i18n.t('Send message')}
 														disabled={(prompt === '' && files.length === 0) || uploadPending}
 													>
 														{#if uploadPending}

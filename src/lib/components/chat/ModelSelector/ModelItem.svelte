@@ -43,10 +43,12 @@
 	let showMenu = false;
 </script>
 
-<button
+<div
+	id="model-option-{index}"
 	role="option"
+	tabindex="-1"
 	aria-selected={value === item.value}
-	aria-label={$i18n.t('Select {{modelName}} model', { modelName: item.label })}
+	aria-label={item.label}
 	class="flex group/item w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl cursor-pointer data-highlighted:bg-muted {index ===
 	selectedModelIdx
 		? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
@@ -55,6 +57,12 @@
 	data-value={item.value}
 	on:click={() => {
 		onClick();
+	}}
+	on:keydown={(e) => {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			onClick();
+		}
 	}}
 >
 	<div class="flex flex-col flex-1 gap-1.5">
@@ -275,4 +283,4 @@
 			</div>
 		{/if}
 	</div>
-</button>
+</div>
