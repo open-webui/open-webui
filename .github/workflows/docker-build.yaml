@@ -106,7 +106,7 @@ jobs:
           touch "/tmp/digests/${digest#sha256:}"
 
       - name: Upload digest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: digests-main-${{ env.PLATFORM_PAIR }}
           path: /tmp/digests/*
@@ -212,7 +212,7 @@ jobs:
           touch "/tmp/digests/${digest#sha256:}"
 
       - name: Upload digest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: digests-cuda-${{ env.PLATFORM_PAIR }}
           path: /tmp/digests/*
@@ -319,7 +319,7 @@ jobs:
           touch "/tmp/digests/${digest#sha256:}"
 
       - name: Upload digest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: digests-cuda126-${{ env.PLATFORM_PAIR }}
           path: /tmp/digests/*
@@ -422,7 +422,7 @@ jobs:
           touch "/tmp/digests/${digest#sha256:}"
 
       - name: Upload digest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: digests-ollama-${{ env.PLATFORM_PAIR }}
           path: /tmp/digests/*
@@ -525,7 +525,7 @@ jobs:
           touch "/tmp/digests/${digest#sha256:}"
 
       - name: Upload digest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: digests-slim-${{ env.PLATFORM_PAIR }}
           path: /tmp/digests/*
