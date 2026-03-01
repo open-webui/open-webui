@@ -145,7 +145,7 @@ all = [
     "moto[s3]>=5.0.26",
     "gcp-storage-emulator>=2024.8.3",
     "docker~=7.1.0",
-    "pytest~=8.3.2",
+    "pytest>=8.3.2,<9.1.0",
     "pytest-docker~=3.2.5",
     "playwright==1.58.0", # Caution: version must match docker-compose.playwright.yaml - Update the docker-compose.yaml if necessary
     "elasticsearch==9.3.0",
