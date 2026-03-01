@@ -6,6 +6,8 @@
 	import Spinner from '../../common/Spinner.svelte';
 	import PDFViewer from '../../common/PDFViewer.svelte';
 
+	let pdfViewerRef: PDFViewer;
+
 	const i18n = getContext('i18n');
 
 	export let selectedFile: string | null = null;
@@ -135,13 +137,17 @@
 		}
 	};
 
+	export const resetPdfView = () => {
+		pdfViewerRef?.resetView();
+	};
+
 	onDestroy(() => {
 		disposePanzoom();
 	});
 </script>
 
 <div
-	class="flex-1 {fileImageUrl !== null || filePdfData !== null
+	class="flex-1 {fileImageUrl !== null
 		? 'overflow-hidden'
 		: 'overflow-y-auto'} min-h-0 relative h-full"
 >
@@ -158,7 +164,7 @@
 			/>
 		</div>
 	{:else if filePdfData !== null}
-		<PDFViewer data={filePdfData} className="w-full h-full" />
+		<PDFViewer bind:this={pdfViewerRef} data={filePdfData} className="w-full h-full" />
 	{:else if fileContent !== null}
 		{#if isMarkdown && !showRaw}
 			<div class="prose dark:prose-invert max-w-full text-sm p-3">
