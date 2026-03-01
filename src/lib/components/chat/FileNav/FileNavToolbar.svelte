@@ -127,5 +127,7 @@
 				uploadInput.value = '';
 			}}
 		/>
+	{:else}
+		<slot />
 	{/if}
 </div>
