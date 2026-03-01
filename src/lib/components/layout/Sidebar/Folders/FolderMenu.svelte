@@ -11,11 +11,13 @@
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
+	import Folder from '$lib/components/icons/Folder.svelte';
 
 	export let align: 'start' | 'end' = 'start';
 	export let onEdit = () => {};
 	export let onExport = () => {};
 	export let onDelete = () => {};
+	export let onCreateSub = () => {};
 
 	let show = false;
 </script>
@@ -47,6 +49,16 @@
 			{align}
 			transition={flyAndScale}
 		>
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+				on:click={() => {
+					onCreateSub();
+				}}
+			>
+				<Folder />
+				<div class="flex items-center">{$i18n.t('Create Subfolder')}</div>
+			</DropdownMenu.Item>
+
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 				on:click={() => {
