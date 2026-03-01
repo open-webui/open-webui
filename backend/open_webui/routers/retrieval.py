@@ -2507,7 +2507,7 @@ def _validate_collection_access(collection_names: list[str], user) -> None:
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
         elif name.startswith("file-"):
-            file_id = name[len("file-"):]
+            file_id = name[len("file-") :]
             if not has_access_to_file(
                 file_id=file_id,
                 access_type="read",
