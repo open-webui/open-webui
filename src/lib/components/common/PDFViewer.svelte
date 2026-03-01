@@ -15,6 +15,8 @@
 	let pdfDoc: any = null;
 	let pzInstance: PanZoom | null = null;
 	let zoomLevel = 1;
+	let rerenderTimer: ReturnType<typeof setTimeout> | null = null;
+	let lastRenderedZoom = 1;
 
 	const initPanzoom = () => {
 		if (pzInstance) {
@@ -43,6 +45,13 @@
 			});
 			pzInstance.on('zoom', () => {
 				zoomLevel = pzInstance?.getTransform()?.scale ?? 1;
+				// Debounced re-render at new resolution so text stays crisp
+				if (rerenderTimer) clearTimeout(rerenderTimer);
+				rerenderTimer = setTimeout(() => {
+					if (Math.abs(zoomLevel - lastRenderedZoom) > 0.05) {
+						rerenderPages(zoomLevel);
+					}
+				}, 300);
 			});
 		}
 	};
@@ -68,7 +77,35 @@
 			pzInstance.moveTo(0, 0);
 			pzInstance.zoomAbs(0, 0, 1);
 			zoomLevel = 1;
+			rerenderPages(1);
 		}
+	};
+
+	// Re-render existing canvases at a new zoom level (preserves panzoom transform)
+	const rerenderPages = async (forZoom: number) => {
+		if (!pdfDoc || !sceneElement) return;
+		const dpr = window.devicePixelRatio || 1;
+		const containerWidth = outerContainer?.clientWidth || 800;
+
+		const canvases = sceneElement.querySelectorAll('canvas');
+
+		for (let i = 0; i < canvases.length; i++) {
+			const page = await pdfDoc.getPage(i + 1);
+			const viewport = page.getViewport({ scale: 1 });
+			const cssScale = containerWidth / viewport.width;
+			const renderScale = cssScale * forZoom * dpr;
+			const scaledViewport = page.getViewport({ scale: renderScale });
+
+			const canvas = canvases[i];
+			canvas.width = scaledViewport.width;
+			canvas.height = scaledViewport.height;
+
+			const ctx = canvas.getContext('2d');
+			if (ctx) {
+				await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+			}
+		}
+		lastRenderedZoom = forZoom;
 	};
 
 	const renderAllPages = async () => {
@@ -110,6 +147,7 @@
 			}).promise;
 		}
 
+		lastRenderedZoom = 1;
 		initPanzoom();
 	};
 
@@ -147,6 +185,7 @@
 	});
 
 	onDestroy(() => {
+		if (rerenderTimer) clearTimeout(rerenderTimer);
 		pzInstance?.dispose();
 		if (pdfDoc) {
 			pdfDoc.destroy();
