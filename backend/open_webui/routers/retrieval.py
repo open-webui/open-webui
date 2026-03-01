@@ -37,6 +37,7 @@ from langchain_text_splitters import (
 from langchain_core.documents import Document
 
 from open_webui.models.files import FileModel, FileUpdateForm, Files
+from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
 from open_webui.internal.db import get_session, get_db
@@ -2786,6 +2787,27 @@ async def process_files_batch(
 
     for file in form_data.files:
         try:
+            # Ownership check: verify the requesting user owns the file or is an admin
+            db_file = Files.get_file_by_id(file.id)
+            if not db_file:
+                file_errors.append(
+                    BatchProcessFilesResult(
+                        file_id=file.id,
+                        status="failed",
+                        error="File not found",
+                    )
+                )
+                continue
+            if db_file.user_id != user.id and user.role != "admin":
+                file_errors.append(
+                    BatchProcessFilesResult(
+                        file_id=file.id,
+                        status="failed",
+                        error="Permission denied: not file owner",
+                    )
+                )
+                continue
+
             text_content = file.data.get("content", "")
             docs: List[Document] = [
                 Document(

@@ -804,7 +804,7 @@ def get_event_emitter(request_info, update_db=True):
                     Chats.add_message_status_to_chat_by_id_and_message_id,
                     request_info["chat_id"],
                     request_info["message_id"],
-                    status_data,
+                    event_data.get("data", {}),
                 )
 
             elif event_type == "message":
