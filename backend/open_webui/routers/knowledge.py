@@ -745,6 +745,13 @@ def update_file_from_knowledge_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
+    # Validate the file actually belongs to this knowledge base
+    if not Knowledges.has_file(knowledge_id=id, file_id=form_data.file_id, db=db):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
     # Remove content from the vector database
     VECTOR_DB_CLIENT.delete(
         collection_name=knowledge.id, filter={"file_id": form_data.file_id}
@@ -814,6 +821,13 @@ def remove_file_from_knowledge_by_id(
 
     file = Files.get_file_by_id(form_data.file_id, db=db)
     if not file:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    # Validate the file actually belongs to this knowledge base
+    if not Knowledges.has_file(knowledge_id=id, file_id=form_data.file_id, db=db):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.NOT_FOUND,
