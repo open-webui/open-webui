@@ -53,7 +53,7 @@ langchain-text-splitters==1.1.0
 
 fake-useragent==2.2.0
 chromadb==1.4.1
-weaviate-client==4.19.2
+weaviate-client==4.20.1
 opensearch-py==3.1.0
 
 transformers==5.1.0
