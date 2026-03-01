@@ -26,6 +26,7 @@
 	import { toast } from 'svelte-sonner';
 	import { capitalizeFirstLetter, sanitizeResponseContent, splitStream } from '$lib/utils';
 	import { getModels } from '$lib/apis';
+	import { trackUmamiEvent } from '$lib/utils/umami';
 
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
@@ -380,6 +381,20 @@
 	let listScrollTop = 0;
 	let listContainer;
 
+	const trackModelSwitch = (item, source: 'search_enter' | 'click') => {
+		if (!item?.value) {
+			return;
+		}
+
+		trackUmamiEvent('model_switched', {
+			flow: 'chat',
+			surface: 'model_selector',
+			trigger: source === 'search_enter' ? 'keyboard' : 'click',
+			model_id: item.value,
+			source
+		});
+	};
+
 	$: visibleStart = Math.max(0, Math.floor(listScrollTop / ITEM_HEIGHT) - OVERSCAN);
 	$: visibleEnd = Math.min(
 		filteredItems.length,
@@ -453,7 +468,9 @@
 						aria-label={$i18n.t('Search In Models')}
 						on:keydown={(e) => {
 							if (e.code === 'Enter' && filteredItems.length > 0) {
-								value = filteredItems[selectedModelIdx].value;
+								const selectedItem = filteredItems[selectedModelIdx];
+								trackModelSwitch(selectedItem, 'search_enter');
+								value = selectedItem.value;
 								show = false;
 								return; // dont need to scroll on selection
 							} else if (e.code === 'ArrowDown') {
@@ -620,6 +637,7 @@
 								{pinModelHandler}
 								{unloadModelHandler}
 								onClick={() => {
+									trackModelSwitch(item, 'click');
 									value = item.value;
 									selectedModelIdx = index;
 

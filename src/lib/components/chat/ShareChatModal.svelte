@@ -5,6 +5,7 @@
 	import { toast } from 'svelte-sonner';
 	import { deleteSharedChatById, getChatById, shareChatById } from '$lib/apis/chats';
 	import { copyToClipboard } from '$lib/utils';
+	import { trackUmamiEvent } from '$lib/utils/umami';
 
 	import Modal from '../common/Modal.svelte';
 	import Link from '../icons/Link.svelte';
@@ -21,6 +22,11 @@
 
 		const sharedChat = await shareChatById(localStorage.token, chatId);
 		shareUrl = `${window.location.origin}/s/${sharedChat.id}`;
+		trackUmamiEvent('chat_share_link_created', {
+			flow: 'chat',
+			surface: 'share_modal',
+			trigger: 'click'
+		});
 		console.log(shareUrl);
 		chat = await getChatById(localStorage.token, chatId);
 
