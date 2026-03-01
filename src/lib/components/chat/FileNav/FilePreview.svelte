@@ -191,18 +191,16 @@
 					</tbody>
 				</table>
 			</div>
+		{:else if editing}
+			<textarea
+				bind:this={editTextarea}
+				bind:value={editContent}
+				class="w-full h-full text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre break-all leading-relaxed p-3 bg-transparent border-none outline-none resize-none"
+				spellcheck="false"
+			/>
 		{:else}
-			{#if editing}
-				<textarea
-					bind:this={editTextarea}
-					bind:value={editContent}
-					class="w-full h-full text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre break-all leading-relaxed p-3 bg-transparent border-none outline-none resize-none"
-					spellcheck="false"
-				/>
-			{:else}
-				<pre
-					class="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all leading-relaxed p-3">{fileContent}</pre>
-			{/if}
+			<pre
+				class="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all leading-relaxed p-3">{fileContent}</pre>
 		{/if}
 	{:else}
 		<div class="text-sm text-gray-400 text-center pt-8">
