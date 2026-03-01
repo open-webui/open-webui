@@ -1194,7 +1194,9 @@ def transcription(
         )
 
     try:
-        ext = file.filename.split(".")[-1]
+        ext = file.filename.split(".")[-1] if file.filename else ""
+        ext = ext.replace("/", "").replace("\\", "").replace("..", "")
+
         id = uuid.uuid4()
 
         filename = f"{id}.{ext}"
@@ -1203,6 +1205,10 @@ def transcription(
         file_dir = f"{CACHE_DIR}/audio/transcriptions"
         os.makedirs(file_dir, exist_ok=True)
         file_path = f"{file_dir}/{filename}"
+
+        # Defense-in-depth: ensure resolved path stays within intended directory
+        if not os.path.realpath(file_path).startswith(os.path.realpath(file_dir)):
+            raise ValueError("Invalid file path detected")
 
         with open(file_path, "wb") as f:
             f.write(contents)
