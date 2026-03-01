@@ -70,6 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔓 **OAuth session token decryption.** OAuth sessions are now properly detached from the database context before token decryption, preventing potential database session conflicts when reading encrypted tokens. [#21794](https://github.com/open-webui/open-webui/pull/21794)
 - 🕐 **Chat timestamp i18n fix.** Chat timestamps in the sidebar now display correctly, fixing an issue where the time ago format (e.g., "5m", "2h", "3d") was not being localized properly due to incorrect variable casing in the translation function. [Commit](https://github.com/open-webui/open-webui/commit/ae28e7d24530eb9f7909b293bcd0f33048a022a9)
 - 🍞 **Model toast notification fix.** Hiding or showing a single model now displays only one toast notification instead of two, removing the redundant generic "model updated" message when a specific action toast is shown. [#22079](https://github.com/open-webui/open-webui/pull/22079)
+- 📡 **Offline mode embedding model fix.** Open WebUI no longer attempts to download embedding models when in offline mode, fixing error logs that occurred when trying to fetch models that weren't cached locally. [#22106](https://github.com/open-webui/open-webui/pull/22106), [#21405](https://github.com/open-webui/open-webui/issues/21405)
 
 ## [0.8.5] - 2026-02-23
 
