@@ -857,9 +857,13 @@ def apply_source_context_to_messages(
                 citation_idx[src_id] = len(citation_idx) + 1
             src_name = source.get("source", {}).get("name")
             body = doc if include_content else ""
+            file_id = meta.get("file_id")
+            file_name = meta.get("name")
             context_string += (
                 f'<source id="{citation_idx[src_id]}"'
                 + (f' name="{src_name}"' if src_name else "")
+                + (f' file_id="{file_id}"' if file_id else "")
+                + (f' file_name="{file_name}"' if file_name else "")
                 + f">{body}</source>\n"
             )
 
