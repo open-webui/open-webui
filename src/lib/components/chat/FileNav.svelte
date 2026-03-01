@@ -477,7 +477,7 @@
 					</button>
 				</Tooltip>
 			{/if}
-			{#if (isMarkdown || isCsv) && fileContent !== null}
+			{#if (isMarkdown || isCsv) && fileContent !== null && !editing}
 				<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
 					<button
 						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
