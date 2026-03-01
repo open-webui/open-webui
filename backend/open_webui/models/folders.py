@@ -71,6 +71,7 @@ class FolderForm(BaseModel):
     name: str
     data: Optional[dict] = None
     meta: Optional[dict] = None
+    parent_id: Optional[str] = None
     model_config = ConfigDict(extra="allow")
 
 
