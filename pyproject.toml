@@ -158,7 +158,7 @@ all = [
     "oracledb==3.4.2",
     "colbert-ai==0.2.22",
 
-    "firecrawl-py==4.14.0",
+    "firecrawl-py==4.18.0",
     "azure-search-documents==11.6.0",
 ]
 
