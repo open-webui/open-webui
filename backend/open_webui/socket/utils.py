@@ -5,6 +5,15 @@ from open_webui.env import REDIS_KEY_PREFIX
 from typing import Optional, List, Tuple
 import pycrdt as Y
 
+# Redis has no "delete if value equals" command; this script runs check+delete atomically.
+_RELEASE_LOCK_IF_OWNER_SCRIPT = """
+if redis.call("get", KEYS[1]) == ARGV[1] then
+    return redis.call("del", KEYS[1])
+else
+    return 0
+end
+"""
+
 
 class RedisLock:
     def __init__(
@@ -26,8 +35,11 @@ class RedisLock:
             redis_cluster=redis_cluster,
             decode_responses=True,
         )
+        self._release_if_owner = self.redis.register_script(
+            _RELEASE_LOCK_IF_OWNER_SCRIPT
+        )
 
-    def aquire_lock(self):
+    def acquire_lock(self):
         # nx=True will only set this key if it _hasn't_ already been set
         self.lock_obtained = self.redis.set(
             self.lock_name, self.lock_id, nx=True, ex=self.timeout_secs
@@ -41,9 +53,10 @@ class RedisLock:
         )
 
     def release_lock(self):
-        lock_value = self.redis.get(self.lock_name)
-        if lock_value and lock_value == self.lock_id:
-            self.redis.delete(self.lock_name)
+        try:
+            self._release_if_owner(keys=[self.lock_name], args=[self.lock_id])
+        except Exception:
+            pass  # Best-effort; TTL will clear the key if we crash
 
 
 class RedisDict:
