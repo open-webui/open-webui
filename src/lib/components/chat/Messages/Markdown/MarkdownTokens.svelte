@@ -15,7 +15,7 @@
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
 	import MarkdownInlineTokens from '$lib/components/chat/Messages/Markdown/MarkdownInlineTokens.svelte';
 	import KatexRenderer from './KatexRenderer.svelte';
-	import AlertRenderer, { alertComponent } from './AlertRenderer.svelte';
+	import AlertRenderer, { alertComponent, cachedLexer } from './AlertRenderer.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 	import ToolCallDisplay from '$lib/components/common/ToolCallDisplay.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -343,7 +343,7 @@
 				<div class=" mb-1.5" slot="content">
 					<svelte:self
 						id={`${id}-${tokenIdx}-d`}
-						tokens={marked.lexer(decode(token.text))}
+						tokens={cachedLexer(decode(token.text))}
 						attributes={token?.attributes}
 						{done}
 						{editCodeBlock}
