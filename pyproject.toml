@@ -153,7 +153,7 @@ all = [
     "qdrant-client==1.16.2",
     
     "weaviate-client==4.19.2",
-    "pymilvus==2.6.8",
+    "pymilvus==2.6.9",
     "pinecone==6.0.2",
     "oracledb==3.4.2",
     "colbert-ai==0.2.22",
