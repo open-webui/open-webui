@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔧 **Tool query optimization.** Tool access control now skips an unnecessary database query when no tools are attached to the request, slightly improving performance. [#21873](https://github.com/open-webui/open-webui/pull/21873)
 - ➗ **Math rendering performance.** Mathematical notation now renders more efficiently, improving responsiveness when displaying equations in chat. [#21880](https://github.com/open-webui/open-webui/pull/21880)
 - 🏎️ **Message list rebuild throttle.** The chat message list now rebuilds at most once per animation frame during streaming instead of on every token, reducing CPU overhead while keeping immediate rebuilds for structural changes like new messages or chat switches. [#21885](https://github.com/open-webui/open-webui/pull/21885)
+- 📋 **Message building optimization.** Chat message rendering is now more efficient during streaming by passing message references directly instead of creating shallow copies, reducing garbage collection pressure. [#22086](https://github.com/open-webui/open-webui/pull/22086)
 - 🔀 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 **Translation updates.** Translations for German, Portuguese (Brazil), Simplified Chinese, Traditional Chinese, Catalan, and Spanish were enhanced and expanded.
 
