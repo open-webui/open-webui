@@ -37,6 +37,7 @@ from langchain_text_splitters import (
 from langchain_core.documents import Document
 
 from open_webui.models.files import FileModel, FileUpdateForm, Files
+from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
 from open_webui.internal.db import get_session, get_db
@@ -2579,6 +2580,30 @@ async def query_collection_handler(
     form_data: QueryCollectionsForm,
     user=Depends(get_verified_user),
 ):
+    # Ownership validation: prevent accessing other users' private collections
+    if user.role != "admin":
+        for collection_name in form_data.collection_names:
+            if collection_name.startswith("user-memory-"):
+                owner_id = collection_name[len("user-memory-") :]
+                if owner_id != user.id:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                    )
+            elif collection_name.startswith("file-"):
+                file_id = collection_name[len("file-") :]
+                file = Files.get_file_by_id(file_id)
+                if file and file.user_id != user.id:
+                    if not has_access_to_file(
+                        file_id=file_id,
+                        access_type="read",
+                        user=user,
+                    ):
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                        )
+
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (
             form_data.hybrid is None or form_data.hybrid
