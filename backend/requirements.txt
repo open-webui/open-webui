@@ -71,7 +71,7 @@ docx2txt==0.9
 python-pptx==1.0.2
 unstructured==0.18.31
 msoffcrypto-tool==6.0.0
-nltk==3.9.2
+nltk==3.9.3
 Markdown==3.10.1
 pypandoc==1.16.2
 pandas==3.0.0
