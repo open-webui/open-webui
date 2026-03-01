@@ -24,7 +24,7 @@ starsessions[redis]==2.2.1
 python-mimeparse==2.0.0
 
 sqlalchemy==2.0.46
-alembic==1.18.3
+alembic==1.18.4
 peewee==3.19.0
 peewee-migrate==1.14.3
 
