@@ -52,10 +52,15 @@
 	let messageEditTextAreaElement: HTMLTextAreaElement;
 	let editScrollContainer: HTMLDivElement;
 
-	let message = JSON.parse(JSON.stringify(history.messages[messageId]));
+	let message = structuredClone(history.messages[messageId]);
 	$: if (history.messages) {
-		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
-			message = JSON.parse(JSON.stringify(history.messages[messageId]));
+		const source = history.messages[messageId];
+		if (source) {
+			if (message.content !== source.content) {
+				message = structuredClone(source);
+			} else if (JSON.stringify(message) !== JSON.stringify(source)) {
+				message = structuredClone(source);
+			}
 		}
 	}
 
