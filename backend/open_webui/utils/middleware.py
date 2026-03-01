@@ -1043,37 +1043,49 @@ def process_tool_result(
     return tool_result, tool_result_files, tool_result_embeds
 
 
-async def display_file_handler(
+async def terminal_event_handler(
     tool_function_name: str,
     tool_function_params: dict,
     tool_result,
     event_emitter,
 ):
-    """Emit a display_file event if the tool is display_file and the file exists."""
-    if not event_emitter or tool_function_name != "display_file":
+    """Emit terminal:* events for Open Terminal tools.
+
+    - display_file  → emits 'terminal:display_file' to open the file preview.
+    - write_file / replace_file_content → emits 'terminal:write_file' or
+      'terminal:replace_file_content' to silently refresh the file browser.
+    """
+    if not event_emitter:
         return
 
     path = tool_function_params.get("path", "")
     if not path:
         return
 
-    # Parse the result to check if the file exists
-    parsed = tool_result
-    if isinstance(parsed, str):
-        try:
-            parsed = json.loads(parsed)
-        except (json.JSONDecodeError, TypeError):
-            pass
+    if tool_function_name == "display_file":
+        # Only emit if the file actually exists
+        parsed = tool_result
+        if isinstance(parsed, str):
+            try:
+                parsed = json.loads(parsed)
+            except (json.JSONDecodeError, TypeError):
+                pass
+        if isinstance(parsed, dict) and parsed.get("exists") is False:
+            return
 
-    if isinstance(parsed, dict) and parsed.get("exists") is False:
-        return
-
-    await event_emitter(
-        {
-            "type": "display_file",
-            "data": {"path": path},
-        }
-    )
+        await event_emitter(
+            {
+                "type": f"terminal:{tool_function_name}",
+                "data": {"path": path},
+            }
+        )
+    elif tool_function_name in ("write_file", "replace_file_content"):
+        await event_emitter(
+            {
+                "type": f"terminal:{tool_function_name}",
+                "data": {"path": path},
+            }
+        )
 
 
 async def chat_completion_tools_handler(
@@ -1230,7 +1242,7 @@ async def chat_completion_tools_handler(
                 )
 
                 if event_emitter:
-                    await display_file_handler(
+                    await terminal_event_handler(
                         tool_function_name,
                         tool_function_params,
                         tool_result,
@@ -4224,7 +4236,7 @@ async def streaming_chat_response_handler(response, ctx):
                             )
                         )
 
-                        await display_file_handler(
+                        await terminal_event_handler(
                             tool_function_name,
                             tool_function_params,
                             tool_result,

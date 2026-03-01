@@ -44,7 +44,8 @@
 		pinnedChats,
 		showEmbeds,
 		selectedTerminalId,
-		showFileNavPath
+		showFileNavPath,
+		showFileNavDir
 	} from '$lib/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -446,6 +447,15 @@
 		saveChatHandler(_chatId, history);
 	};
 
+	const terminalEventHandler = (type: string, data: any) => {
+		if (!data?.path) return;
+		if (type === 'terminal:display_file') {
+			displayFileHandler(data.path, { showControls, showFileNavPath });
+		} else if (type === 'terminal:write_file' || type === 'terminal:replace_file_content') {
+			showFileNavDir.set(data.path);
+		}
+	};
+
 	const chatEventHandler = async (event, cb) => {
 		console.log(event);
 
@@ -579,10 +589,8 @@
 					eventConfirmationInputPlaceholder = data.placeholder;
 					eventConfirmationInputValue = data?.value ?? '';
 					eventConfirmationInputType = data?.type ?? '';
-				} else if (type === 'display_file') {
-					if (data?.path) {
-						displayFileHandler(data.path, { showControls, showFileNavPath });
-					}
+				} else if (type.startsWith('terminal:')) {
+					terminalEventHandler(type, data);
 				} else {
 					console.log('Unknown message type', data);
 				}

@@ -33,7 +33,8 @@
 		channelId,
 		terminalServers,
 		showControls,
-		showFileNavPath
+		showFileNavPath,
+		showFileNavDir
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -335,6 +336,10 @@
 				if (res?.exists !== false) {
 					displayFileHandler(data.params.path, { showControls, showFileNavPath });
 				}
+			}
+
+			if (['write_file', 'replace_file_content'].includes(data?.name) && data?.params?.path) {
+				showFileNavDir.set(res?.path ?? data.params.path);
 			}
 
 			if (cb) {

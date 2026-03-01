@@ -6,7 +6,13 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, onDestroy, tick } from 'svelte';
-	import { terminalServers, settings, showFileNavPath, selectedTerminalId } from '$lib/stores';
+	import {
+		terminalServers,
+		settings,
+		showFileNavPath,
+		showFileNavDir,
+		selectedTerminalId
+	} from '$lib/stores';
 	import {
 		getCwd,
 		listFiles,
@@ -342,6 +348,23 @@
 			if (entry) await openEntry(entry);
 		});
 
+		const unsubFileNavDir = showFileNavDir.subscribe(async (filePath) => {
+			if (!filePath || !selectedTerminal) return;
+			showFileNavDir.set(null);
+
+			const lastSlash = filePath.lastIndexOf('/');
+			const dir = lastSlash > 0 ? filePath.substring(0, lastSlash + 1) : '/';
+
+			if (dir === currentPath) {
+				await loadDir(currentPath);
+			}
+			if (filePath === selectedFile) {
+				const fileName = filePath.substring(lastSlash + 1);
+				const entry = entries.find((e) => e.name === fileName);
+				if (entry) await openEntry(entry);
+			}
+		});
+
 		if (!handledDisplayFile) {
 			if (savedPath === '/') {
 				const cwd = await getCwd(terminal.url, terminal.key);
@@ -393,12 +416,12 @@
 />
 
 {#if !selectedTerminal}
-	<div class="flex-1 flex flex-col items-center justify-center p-6 text-center gap-3">
-		<Folder className="size-10 text-gray-300 dark:text-gray-600" />
-		<div class="text-sm text-gray-500 dark:text-gray-400">
+	<div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
+		<Folder className="size-6 text-gray-300 dark:text-gray-600 mb-2" />
+		<div class="text-xs text-gray-500 dark:text-gray-400 mb-1">
 			{$i18n.t('No Terminal connection configured.')}
 		</div>
-		<div class="text-xs text-gray-400 dark:text-gray-500">
+		<div class="text-[10px] text-gray-400 dark:text-gray-500">
 			{$i18n.t('Add your Open Terminal URL and API key in Settings → Integrations.')}
 		</div>
 	</div>
