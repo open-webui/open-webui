@@ -1,29 +1,34 @@
-export const disableSingleTilde = {
-	tokenizer: {
-		del(src) {
-			// 1. First check for the REAL strikethrough: ~~text~~
-			const doubleMatch = /^~~(?=\S)([\s\S]*?\S)~~/.exec(src);
-			if (doubleMatch) {
-				return {
-					type: 'del',
-					raw: doubleMatch[0],
-					text: doubleMatch[1],
-					tokens: this.lexer.inlineTokens(doubleMatch[1])
-				};
-			}
+import type { MarkedExtension, Tokens } from 'marked';
 
-			// 2. Check for single-tilde: ~text~
-			const singleMatch = /^~(?=\S)([\s\S]*?\S)~/.exec(src);
-			if (singleMatch) {
-				// return a plain-text token, NOT del
-				return {
-					type: 'text',
-					raw: singleMatch[0],
-					text: singleMatch[0] // include both tildes as literal text
-				};
-			}
+/**
+ * Replaces the default `del` tokenizer so that only ~~text~~ is strikethrough.
+ * Single tilde ~text~ is not matched as del (returns false), so it is rendered as plain text.
+ */
+export function disableSingleTildeExtension() {
+	const extension: MarkedExtension = {
+		tokenizer: {
+			del(this: { lexer: { inlineTokens: (src: string) => Tokens.Generic[] } }, src: string) {
+				// 1. Real strikethrough: ~~text~~
+				const doubleMatch = /^~~(?=\S)([\s\S]*?\S)~~/.exec(src);
+				if (doubleMatch) {
+					return {
+						type: 'del',
+						raw: doubleMatch[0],
+						text: doubleMatch[1],
+						tokens: this.lexer.inlineTokens(doubleMatch[1])
+					};
+				}
 
-			return false;
+				// 2. Single tilde ~text~: do not match as del, so it stays plain text
+				const singleMatch = /^~(?=\S)([\s\S]*?\S)~/.exec(src);
+				if (singleMatch) {
+					return false;
+				}
+
+				return false;
+			}
 		}
-	}
-};
+	};
+
+	return extension;
+}

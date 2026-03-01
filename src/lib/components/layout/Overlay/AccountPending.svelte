@@ -1,6 +1,5 @@
 <script lang="ts">
-	import DOMPurify from 'dompurify';
-	import { marked } from 'marked';
+	import { renderMarkdownToHTMLSanitized } from '$lib/utils/marked';
 
 	import { getAdminDetails } from '$lib/apis/auths';
 	import { onMount, tick, getContext } from 'svelte';
@@ -41,10 +40,8 @@
 					style="white-space: pre-wrap;"
 				>
 					{#if ($config?.ui?.pending_user_overlay_content ?? '').trim() !== ''}
-						{@html marked.parse(
-							DOMPurify.sanitize(
-								($config?.ui?.pending_user_overlay_content ?? '').replace(/\n/g, '<br>')
-							)
+						{@html renderMarkdownToHTMLSanitized(
+							($config?.ui?.pending_user_overlay_content ?? '').replace(/\n/g, '<br>')
 						)}
 					{:else}
 						{$i18n.t('Your account status is currently pending activation.')}{'\n'}{$i18n.t(

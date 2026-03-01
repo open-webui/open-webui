@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { marked } from 'marked';
+	import { renderMarkdownToHTML } from '$lib/utils/marked';
 
 	import { config, user, models as _models, temporaryChatEnabled } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
@@ -45,11 +45,11 @@
 						}}
 					>
 						<Tooltip
-							content={marked.parse(
+							content={(renderMarkdownToHTML(
 								sanitizeResponseContent(
 									models[selectedModelIdx]?.info?.meta?.description ?? ''
 								).replaceAll('\n', '<br>')
-							)}
+							) as string)}
 							placement="right"
 						>
 							<img
@@ -93,11 +93,11 @@
 						<div
 							class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400 line-clamp-3 markdown"
 						>
-							{@html marked.parse(
+							{@html (renderMarkdownToHTML(
 								sanitizeResponseContent(
 									models[selectedModelIdx]?.info?.meta?.description
 								).replaceAll('\n', '<br>')
-							)}
+							) as string)}
 						</div>
 						{#if models[selectedModelIdx]?.info?.meta?.user}
 							<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
