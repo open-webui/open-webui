@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, onDestroy } from 'svelte';
+	import { getContext, onDestroy, tick } from 'svelte';
 	import panzoom, { type PanZoom } from 'panzoom';
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
@@ -19,6 +19,7 @@
 	export let editing = false;
 	let editContent = '';
 	export let saving = false;
+	let editTextarea: HTMLTextAreaElement;
 
 	// Reset edit state when switching files
 	$: selectedFile, resetEdit();
@@ -29,10 +30,12 @@
 		saving = false;
 	};
 
-	export const startEdit = () => {
+	export const startEdit = async () => {
 		editContent = fileContent ?? '';
 		editing = true;
 		showRaw = true;
+		await tick();
+		editTextarea?.focus();
 	};
 
 	export const saveEdit = async () => {
@@ -191,6 +194,7 @@
 		{:else}
 			{#if editing}
 				<textarea
+					bind:this={editTextarea}
 					bind:value={editContent}
 					class="w-full h-full text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre break-all leading-relaxed p-3 bg-transparent border-none outline-none resize-none"
 					spellcheck="false"
