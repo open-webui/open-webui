@@ -55,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🎭 **TailwindCSS gray color theme.** Custom gray color palette is now correctly applied to the CSS root theme layer, fixing an issue where --color-gray-x variables were missing. [#21900](https://github.com/open-webui/open-webui/pull/21900), [#21899](https://github.com/open-webui/open-webui/issues/21899)
 - 📎 **Broken documentation links.** Fixed broken links in the backend config and admin settings that pointed to outdated documentation locations. [#21904](https://github.com/open-webui/open-webui/pull/21904)
 - 🔓 **OAuth session token decryption.** OAuth sessions are now properly detached from the database context before token decryption, preventing potential database session conflicts when reading encrypted tokens. [#21794](https://github.com/open-webui/open-webui/pull/21794)
+- 🕐 **Chat timestamp i18n fix.** Chat timestamps in the sidebar now display correctly, fixing an issue where the time ago format (e.g., "5m", "2h", "3d") was not being localized properly due to incorrect variable casing in the translation function. [Commit](https://github.com/open-webui/open-webui/commit/ae28e7d24530eb9f7909b293bcd0f33048a022a9)
 
 ## [0.8.5] - 2026-02-23
 
