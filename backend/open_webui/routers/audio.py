@@ -1194,8 +1194,8 @@ def transcription(
         )
 
     try:
-        ext = file.filename.split(".")[-1] if file.filename else ""
-        ext = ext.replace("/", "").replace("\\", "").replace("..", "")
+        safe_name = os.path.basename(file.filename) if file.filename else ""
+        ext = safe_name.rsplit(".", 1)[-1] if "." in safe_name else ""
 
         id = uuid.uuid4()
 
@@ -1231,7 +1231,7 @@ def transcription(
 
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(e),
+                detail="Transcription failed.",
             )
 
     except Exception as e:
@@ -1239,7 +1239,7 @@ def transcription(
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail="Transcription failed.",
         )
 
 
