@@ -89,7 +89,7 @@
 			}
 			visitedMessageIds.add(message.id);
 
-			_messages.unshift({ ...message });
+			_messages.unshift(message);
 			message = message.parentId !== null ? history.messages[message.parentId] : null;
 		}
 
