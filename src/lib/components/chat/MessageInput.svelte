@@ -127,6 +127,7 @@
 
 	export let selectedToolIds = [];
 	export let selectedFilterIds = [];
+	export let selectedFilterOptions: Record<string, string> = {};
 
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
@@ -168,6 +169,7 @@
 			}),
 		selectedToolIds,
 		selectedFilterIds,
+		selectedFilterOptions,
 		imageGenerationEnabled,
 		webSearchEnabled,
 		codeInterpreterEnabled
@@ -1465,6 +1467,7 @@
 															atSelectedModel = undefined;
 															selectedToolIds = [];
 															selectedFilterIds = [];
+															selectedFilterOptions = {};
 
 															webSearchEnabled = false;
 															imageGenerationEnabled = false;
@@ -1589,6 +1592,7 @@
 											{showCodeInterpreterButton}
 											bind:selectedToolIds
 											bind:selectedFilterIds
+											bind:selectedFilterOptions
 											bind:webSearchEnabled
 											bind:imageGenerationEnabled
 											bind:codeInterpreterEnabled

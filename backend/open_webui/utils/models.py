@@ -275,17 +275,22 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
     # Process filter_ids to get the filters
     def get_filter_items_from_module(function, module):
-        return [
-            {
-                "id": function.id,
-                "name": function.name,
-                "description": function.meta.description,
-                "icon": function.meta.manifest.get("icon_url", None)
-                or getattr(module, "icon_url", None)
-                or getattr(module, "icon", None),
-                "has_user_valves": hasattr(module, "UserValves"),
-            }
-        ]
+        item = {
+            "id": function.id,
+            "name": function.name,
+            "description": function.meta.description,
+            "icon": function.meta.manifest.get("icon_url", None)
+            or getattr(module, "icon_url", None)
+            or getattr(module, "icon", None),
+            "has_user_valves": hasattr(module, "UserValves"),
+        }
+        toggle_options = getattr(module, "toggle_options", None)
+        if toggle_options is not None:
+            item["toggle_options"] = toggle_options
+            toggle_default = getattr(module, "toggle_default", None)
+            if toggle_default is not None:
+                item["toggle_default"] = toggle_default
+        return [item]
 
     # Batch-prefetch all needed function records to avoid N+1 queries
     all_function_ids = set()
