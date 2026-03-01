@@ -75,21 +75,7 @@
 		return $i18n.t('1m', { context: 'time_ago' });
 	}
 
-	let chat = null;
-
 	let mouseOver = false;
-	let draggable = false;
-	$: if (mouseOver) {
-		loadChat();
-	}
-
-	const loadChat = async () => {
-		if (!chat) {
-			draggable = false;
-			chat = await getChatById(localStorage.token, id);
-			draggable = true;
-		}
-	};
 
 	let showShareChatModal = false;
 	let confirmEdit = false;
@@ -210,7 +196,6 @@
 			JSON.stringify({
 				type: 'chat',
 				id: id,
-				item: chat
 			})
 		);
 
@@ -303,9 +288,7 @@
 
 	const generateTitleHandler = async () => {
 		generating = true;
-		if (!chat) {
-			chat = await getChatById(localStorage.token, id);
-		}
+		const chat = await getChatById(localStorage.token, id);
 
 		const messages = (chat.chat?.messages ?? []).map((message) => {
 			return {
@@ -370,7 +353,7 @@
 	id="sidebar-chat-group"
 	bind:this={itemElement}
 	class=" w-full {className} relative group"
-	draggable={draggable && !confirmEdit}
+	draggable={!confirmEdit}
 >
 	{#if confirmEdit}
 		<div
