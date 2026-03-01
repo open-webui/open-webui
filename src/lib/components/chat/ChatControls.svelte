@@ -50,9 +50,8 @@
 	export let files;
 	export let modelId;
 
-	export let pane;
+	export let pane: Pane | null = null;
 
-	let mediaQuery;
 	let largeScreen = false;
 	let dragged = false;
 	let minSize = 0;
@@ -172,56 +171,67 @@
 		dragged = false;
 	};
 
-	onMount(async () => {
-		mediaQuery = window.matchMedia('(min-width: 1024px)');
+	onMount(() => {
+		const mediaQuery = window.matchMedia('(min-width: 1024px)');
 		mediaQuery.addEventListener('change', handleMediaQuery);
 		handleMediaQuery(mediaQuery);
 
+		let resizeObserver: ResizeObserver | null = null;
+		let isDestroyed = false;
+
 		// Wait for Svelte to render the Pane after largeScreen changed
-		await tick();
+		const init = async () => {
+			await tick();
 
-		const container = document.getElementById('chat-container');
-		minSize = Math.floor((350 / container.clientWidth) * 100);
+			if (isDestroyed) return;
 
-		const resizeObserver = new ResizeObserver((entries) => {
-			for (let entry of entries) {
-				const width = entry.contentRect.width;
-				minSize = Math.floor((350 / width) * 100);
-				if ($showControls) {
-					if (pane && pane.isExpanded() && pane.getSize() < minSize) {
-						pane.resize(minSize);
-					} else {
-						let size = Math.floor(
-							(parseInt(localStorage?.chatControlsSize) / container.clientWidth) * 100
-						);
-						if (size < minSize) pane.resize(minSize);
+			// If controls were persisted as open, set the pane to the saved size
+			if ($showControls && pane) {
+				openPane();
+			}
+
+			setTimeout(() => {
+				paneReady = true;
+			}, 0);
+
+			const container = document.getElementById('chat-container') as HTMLElement;
+			if (!container) return;
+
+			minSize = Math.floor((350 / container.clientWidth) * 100);
+			resizeObserver = new ResizeObserver((entries) => {
+				for (let entry of entries) {
+					const width = entry.contentRect.width;
+					minSize = Math.floor((350 / width) * 100);
+					if ($showControls) {
+						if (pane && pane.isExpanded() && pane.getSize() < minSize) {
+							pane.resize(minSize);
+						} else {
+							let size = Math.floor(
+								(parseInt(localStorage?.chatControlsSize) / container.clientWidth) * 100
+							);
+							if (size < minSize && pane) pane.resize(minSize);
+						}
 					}
 				}
-			}
-		});
-		resizeObserver.observe(container);
+			});
+			resizeObserver.observe(container);
+		};
+		init();
 
 		document.addEventListener('mousedown', onMouseDown);
 		document.addEventListener('mouseup', onMouseUp);
 
-		setTimeout(() => {
-			paneReady = true;
-		}, 0);
-
-		// If controls were persisted as open, set the pane to the saved size
-		if ($showControls && pane) {
-			openPane();
+		return () => {
+			isDestroyed = true;
+			paneReady = false;
+			resizeObserver?.disconnect();
+			if (!largeScreen) {
+				showControls.set(false);
+			}
+			mediaQuery.removeEventListener('change', handleMediaQuery);
+			document.removeEventListener('mousedown', onMouseDown);
+			document.removeEventListener('mouseup', onMouseUp);
 		}
-	});
-
-	onDestroy(() => {
-		paneReady = false;
-		if (!largeScreen) {
-			showControls.set(false);
-		}
-		mediaQuery.removeEventListener('change', handleMediaQuery);
-		document.removeEventListener('mousedown', onMouseDown);
-		document.removeEventListener('mouseup', onMouseUp);
 	});
 
 	const closeHandler = () => {
