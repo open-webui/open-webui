@@ -11,7 +11,7 @@
 	dayjs.extend(duration);
 	dayjs.extend(relativeTime);
 
-	import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
+	import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 
 	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
 	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
@@ -28,8 +28,11 @@
 		showCallOverlay,
 		tools,
 		toolServers,
+		terminalServers,
 		user as _user,
 		showControls,
+		showSettings,
+		selectedTerminalId,
 		TTSWorker,
 		temporaryChatEnabled
 	} from '$lib/stores';
@@ -62,13 +65,14 @@
 
 	import InputMenu from './MessageInput/InputMenu.svelte';
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
-	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
+
 	import ToolServersModal from './ToolServersModal.svelte';
 
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import FileItem from '../common/FileItem.svelte';
 	import Image from '../common/Image.svelte';
+	import Spinner from '../common/Spinner.svelte';
 
 	import XMark from '../icons/XMark.svelte';
 	import GlobeAlt from '../icons/GlobeAlt.svelte';
@@ -78,10 +82,15 @@
 
 	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
 	import Voice from '../icons/Voice.svelte';
-	import Terminal from '../icons/Terminal.svelte';
+	import Cloud from '../icons/Cloud.svelte';
 	import IntegrationsMenu from './MessageInput/IntegrationsMenu.svelte';
+	import TerminalMenu from './MessageInput/TerminalMenu.svelte';
 	import Component from '../icons/Component.svelte';
 	import PlusAlt from '../icons/PlusAlt.svelte';
+	import Dropdown from '../common/Dropdown.svelte';
+
+	import { DropdownMenu } from 'bits-ui';
+	import { flyAndScale } from '$lib/utils/transitions';
 
 	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
 	import Knobs from '../icons/Knobs.svelte';
@@ -102,6 +111,7 @@
 
 	export let autoScroll = false;
 	export let generating = false;
+	export let uploadPending = false;
 
 	export let atSelectedModel: Model | undefined = undefined;
 	export let selectedModels: [''];
@@ -121,6 +131,8 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
+
+	let showTerminalMenu = false;
 
 	export let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
 	export let onQueueSendNow: (id: string) => void = () => {};
@@ -435,7 +447,7 @@
 
 	let showInputModal = false;
 
-	let dragged = false;
+	export let dragged = false;
 	let shiftKey = false;
 
 	let user = null;
@@ -786,7 +798,7 @@
 		}
 	};
 
-	const onDragOver = (e) => {
+	const onDragOver = (e: DragEvent) => {
 		e.preventDefault();
 
 		// Check if a file is being dragged.
@@ -797,14 +809,14 @@
 		}
 	};
 
-	const onDragLeave = (e) => {
-		if (e.currentTarget.contains(e.relatedTarget)) {
+	const onDragLeave = (e: DragEvent) => {
+		if ((e.currentTarget as HTMLElement)?.contains(e.relatedTarget as Node)) {
 			return;
 		}
 		dragged = false;
 	};
 
-	const onDrop = async (e) => {
+	const onDrop = async (e: DragEvent) => {
 		e.preventDefault();
 		console.log(e);
 
@@ -819,7 +831,7 @@
 		dragged = false;
 	};
 
-	const onKeyDown = (e) => {
+	const onKeyDown = (e: KeyboardEvent) => {
 		if (e.key === 'Shift') {
 			shiftKey = true;
 		}
@@ -843,7 +855,7 @@
 		}
 	};
 
-	const onKeyUp = (e) => {
+	const onKeyUp = (e: KeyboardEvent) => {
 		if (e.key === 'Shift') {
 			shiftKey = false;
 		}
@@ -855,7 +867,7 @@
 		shiftKey = false;
 	};
 
-	onMount(async () => {
+	onMount(() => {
 		suggestions = [
 			{
 				char: '@',
@@ -988,36 +1000,41 @@
 		window.addEventListener('focus', onFocus);
 		window.addEventListener('blur', onBlur);
 
-		await tick();
+		let isDestroyed = false;
+		let dropzoneElement: HTMLElement | null = null;
+		const initialize = async () => {
+			await tick();
+			if (isDestroyed) return;
 
-		const dropzoneElement = document.getElementById('chat-container');
+			dropzoneElement = document.getElementById('chat-pane');
+			if (dropzoneElement) {
+				dropzoneElement.addEventListener('dragover', onDragOver);
+				dropzoneElement.addEventListener('drop', onDrop);
+				dropzoneElement.addEventListener('dragleave', onDragLeave);
+			}
 
-		dropzoneElement?.addEventListener('dragover', onDragOver);
-		dropzoneElement?.addEventListener('drop', onDrop);
-		dropzoneElement?.addEventListener('dragleave', onDragLeave);
+			tools.set(await getTools(localStorage.token));
+		};
+		initialize();
 
-		await tools.set(await getTools(localStorage.token));
-	});
+		return () => {
+			isDestroyed = true;
 
-	onDestroy(() => {
-		console.log('destroy');
-		window.removeEventListener('keydown', onKeyDown);
-		window.removeEventListener('keyup', onKeyUp);
+			window.removeEventListener('keydown', onKeyDown);
+			window.removeEventListener('keyup', onKeyUp);
 
-		window.removeEventListener('focus', onFocus);
-		window.removeEventListener('blur', onBlur);
+			window.removeEventListener('focus', onFocus);
+			window.removeEventListener('blur', onBlur);
 
-		const dropzoneElement = document.getElementById('chat-container');
-
-		if (dropzoneElement) {
-			dropzoneElement?.removeEventListener('dragover', onDragOver);
-			dropzoneElement?.removeEventListener('drop', onDrop);
-			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
-		}
+			if (dropzoneElement) {
+				dropzoneElement.removeEventListener('dragover', onDragOver);
+				dropzoneElement.removeEventListener('drop', onDrop);
+				dropzoneElement.removeEventListener('dragleave', onDragLeave);
+			}
+		};
 	});
 </script>
 
-<FilesOverlay show={dragged} />
 <ToolServersModal bind:show={showTools} {selectedToolIds} />
 
 <InputVariablesModal
@@ -1158,7 +1175,7 @@
 						<!-- Queued messages display -->
 						{#if messageQueue.length > 0}
 							<div
-								class="mb-1 mx-2 py-0.5 px-1.5 rounded-2xl bg-gray-900/60 border border-gray-800/50 overflow-hidden"
+								class="mb-1 mx-2 py-0.5 px-1.5 rounded-2xl bg-white dark:bg-gray-900/60 border border-gray-100 dark:border-gray-800/50 overflow-hidden"
 							>
 								{#each messageQueue as queuedMessage (queuedMessage.id)}
 									<QueuedMessageItem
@@ -1619,10 +1636,12 @@
 									{/if}
 
 									<div class="ml-1 flex gap-1.5">
-										{#if (selectedToolIds ?? []).length > 0}
+										{#if (selectedToolIds ?? []).filter((id) => !id.startsWith('direct_server:terminal_')).length > 0}
 											<Tooltip
 												content={$i18n.t('{{COUNT}} Available Tools', {
-													COUNT: selectedToolIds.length
+													COUNT: (selectedToolIds ?? []).filter(
+														(id) => !id.startsWith('direct_server:terminal_')
+													).length
 												})}
 											>
 												<button
@@ -1636,7 +1655,9 @@
 													<Wrench className="size-4" strokeWidth="1.75" />
 
 													<span class="text-sm">
-														{selectedToolIds.length}
+														{(selectedToolIds ?? []).filter(
+															(id) => !id.startsWith('direct_server:terminal_')
+														).length}
 													</span>
 												</button>
 											</Tooltip>
@@ -1732,7 +1753,7 @@
 														? 'm-1'
 														: 'focus:outline-hidden rounded-full'}"
 												>
-													<Terminal className="size-3.5" strokeWidth="2" />
+													<Cloud className="size-3.5" strokeWidth="2" />
 
 													<div class="hidden group-hover:block">
 														<XMark className="size-4" strokeWidth="1.75" />
@@ -1787,6 +1808,11 @@
 										{/if}
 
 										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
+											<!-- Terminal Server Selector -->
+											{#if ($terminalServers ?? []).length > 0 || ($settings?.terminalServers ?? []).some((s) => s.url)}
+												<TerminalMenu bind:show={showTerminalMenu} />
+											{/if}
+
 											<!-- {$i18n.t('Record voice')} -->
 											<Tooltip content={$i18n.t('Dictate')}>
 												<button
@@ -1901,27 +1927,35 @@
 											</div>
 										{:else}
 											<div class=" flex items-center">
-												<Tooltip content={$i18n.t('Send message')}>
+												<Tooltip
+													content={uploadPending
+														? $i18n.t('Waiting for upload...')
+														: $i18n.t('Send message')}
+												>
 													<button
 														id="send-message-button"
-														class="{!(prompt === '' && files.length === 0)
+														class="{!(prompt === '' && files.length === 0) || uploadPending
 															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
 														type="submit"
-														disabled={prompt === '' && files.length === 0}
+														disabled={(prompt === '' && files.length === 0) || uploadPending}
 													>
-														<svg
-															xmlns="http://www.w3.org/2000/svg"
-															viewBox="0 0 16 16"
-															fill="currentColor"
-															class="size-5"
-														>
-															<path
-																fill-rule="evenodd"
-																d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
-																clip-rule="evenodd"
-															/>
-														</svg>
+														{#if uploadPending}
+															<Spinner className="size-5" />
+														{:else}
+															<svg
+																xmlns="http://www.w3.org/2000/svg"
+																viewBox="0 0 16 16"
+																fill="currentColor"
+																class="size-5"
+															>
+																<path
+																	fill-rule="evenodd"
+																	d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
+																	clip-rule="evenodd"
+																/>
+															</svg>
+														{/if}
 													</button>
 												</Tooltip>
 											</div>

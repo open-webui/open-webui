@@ -225,8 +225,18 @@ def strip_user_access_grants(access_grants: Optional[list]) -> list:
         grant
         for grant in access_grants
         if not (
-            (grant.get("principal_type") if isinstance(grant, dict) else getattr(grant, "principal_type", None)) == "user"
-            and (grant.get("principal_id") if isinstance(grant, dict) else getattr(grant, "principal_id", None)) != "*"
+            (
+                grant.get("principal_type")
+                if isinstance(grant, dict)
+                else getattr(grant, "principal_type", None)
+            )
+            == "user"
+            and (
+                grant.get("principal_id")
+                if isinstance(grant, dict)
+                else getattr(grant, "principal_id", None)
+            )
+            != "*"
         )
     ]
 

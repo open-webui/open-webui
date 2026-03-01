@@ -37,6 +37,7 @@ from langchain_text_splitters import (
 from langchain_core.documents import Document
 
 from open_webui.models.files import FileModel, FileUpdateForm, Files
+from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
 from open_webui.internal.db import get_session, get_db
@@ -1989,6 +1990,7 @@ async def process_web(
                     docs,
                     collection_name,
                     overwrite=overwrite,
+                    add=(not overwrite),
                     user=user,
                 )
             else:
@@ -2507,6 +2509,34 @@ async def process_web_search(
         )
 
 
+def _validate_collection_access(collection_names: list[str], user) -> None:
+    """
+    Prevent users from querying collections they don't own.
+    Enforces ownership on user-memory-* and file-* collections.
+    Admins bypass this check.
+    """
+    if user.role == "admin":
+        return
+
+    for name in collection_names:
+        if name.startswith("user-memory-") and name != f"user-memory-{user.id}":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+        elif name.startswith("file-"):
+            file_id = name[len("file-") :]
+            if not has_access_to_file(
+                file_id=file_id,
+                access_type="read",
+                user=user,
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                )
+
+
 class QueryDocForm(BaseModel):
     collection_name: str
     query: str
@@ -2522,6 +2552,8 @@ async def query_doc_handler(
     form_data: QueryDocForm,
     user=Depends(get_verified_user),
 ):
+    _validate_collection_access([form_data.collection_name], user)
+
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (
             form_data.hybrid is None or form_data.hybrid
@@ -2596,6 +2628,8 @@ async def query_collection_handler(
     form_data: QueryCollectionsForm,
     user=Depends(get_verified_user),
 ):
+    _validate_collection_access(form_data.collection_names, user)
+
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (
             form_data.hybrid is None or form_data.hybrid
@@ -2774,6 +2808,27 @@ async def process_files_batch(
 
     for file in form_data.files:
         try:
+            # Ownership check: verify the requesting user owns the file or is an admin
+            db_file = Files.get_file_by_id(file.id)
+            if not db_file:
+                file_errors.append(
+                    BatchProcessFilesResult(
+                        file_id=file.id,
+                        status="failed",
+                        error="File not found",
+                    )
+                )
+                continue
+            if db_file.user_id != user.id and user.role != "admin":
+                file_errors.append(
+                    BatchProcessFilesResult(
+                        file_id=file.id,
+                        status="failed",
+                        error="Permission denied: not file owner",
+                    )
+                )
+                continue
+
             text_content = file.data.get("content", "")
             docs: List[Document] = [
                 Document(

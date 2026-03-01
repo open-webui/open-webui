@@ -288,7 +288,7 @@
 		dragged = false;
 	};
 
-	onMount(async () => {
+	onMount(() => {
 		viewOption = localStorage?.noteViewOption ?? null;
 		displayOption = localStorage?.noteDisplayOption ?? null;
 
@@ -298,18 +298,16 @@
 		dropzoneElement?.addEventListener('dragover', onDragOver);
 		dropzoneElement?.addEventListener('drop', onDrop);
 		dropzoneElement?.addEventListener('dragleave', onDragLeave);
-	});
 
-	onDestroy(() => {
-		clearTimeout(searchDebounceTimer);
-		console.log('destroy');
-		const dropzoneElement = document.getElementById('notes-container');
+		return () => {
+			clearTimeout(searchDebounceTimer);
 
-		if (dropzoneElement) {
-			dropzoneElement?.removeEventListener('dragover', onDragOver);
-			dropzoneElement?.removeEventListener('drop', onDrop);
-			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
-		}
+			if (dropzoneElement) {
+				dropzoneElement?.removeEventListener('dragover', onDragOver);
+				dropzoneElement?.removeEventListener('drop', onDrop);
+				dropzoneElement?.removeEventListener('dragleave', onDragLeave);
+			}
+		};
 	});
 </script>
 

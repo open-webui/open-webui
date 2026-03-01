@@ -570,7 +570,7 @@ async def update_model_access_by_id(
         user.id,
         user.role,
         form_data.access_grants,
-        "sharing.public_models"
+        "sharing.public_models",
     )
 
     AccessGrants.set_access_grants(

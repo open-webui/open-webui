@@ -10,7 +10,6 @@
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
 
 	import {
-		showOverview,
 		showControls,
 		showArtifacts,
 		mobile,
@@ -27,7 +26,6 @@
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Tags from '$lib/components/chat/Tags.svelte';
-	import Map from '$lib/components/icons/Map.svelte';
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
 	import AdjustmentsHorizontal from '$lib/components/icons/AdjustmentsHorizontal.svelte';
 	import Cube from '$lib/components/icons/Cube.svelte';
@@ -313,56 +311,23 @@
 				<div class="flex items-center">{$i18n.t('Settings')}</div>
 			</DropdownMenu.Item> -->
 
-			{#if $mobile && ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true))}
-				<DropdownMenu.Item
-					draggable="false"
-					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
-					id="chat-controls-button"
-					on:click={async () => {
-						await showControls.set(true);
-						await showOverview.set(false);
-						await showArtifacts.set(false);
-						await showEmbeds.set(false);
-					}}
-				>
-					<AdjustmentsHorizontal className=" size-4" strokeWidth="1.5" />
-					<div class="flex items-center">{$i18n.t('Controls')}</div>
-				</DropdownMenu.Item>
-			{/if}
-
-			<DropdownMenu.Item
-				draggable="false"
-				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
-				id="chat-overview-button"
-				on:click={async () => {
-					await showControls.set(true);
-					await showOverview.set(true);
-					await showArtifacts.set(false);
-					await showEmbeds.set(false);
-				}}
-			>
-				<Map className=" size-4" strokeWidth="1.5" />
-				<div class="flex items-center">{$i18n.t('Overview')}</div>
-			</DropdownMenu.Item>
-
 			{#if ($artifactContents ?? []).length > 0}
 				<DropdownMenu.Item
 					draggable="false"
 					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
-					id="chat-overview-button"
+					id="chat-artifacts-button"
 					on:click={async () => {
 						await showControls.set(true);
 						await showArtifacts.set(true);
-						await showOverview.set(false);
 						await showEmbeds.set(false);
 					}}
 				>
 					<Cube className=" size-4" strokeWidth="1.5" />
 					<div class="flex items-center">{$i18n.t('Artifacts')}</div>
 				</DropdownMenu.Item>
-			{/if}
 
-			<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
+				<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
+			{/if}
 
 			{#if !$temporaryChatEnabled && ($user?.role === 'admin' || ($user.permissions?.chat?.share ?? true))}
 				<DropdownMenu.Item
@@ -457,7 +422,7 @@
 							<div class="flex items-center">{$i18n.t('Move')}</div>
 						</DropdownMenu.SubTrigger>
 						<DropdownMenu.SubContent
-							class="select-none w-full rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white border border-gray-100  dark:border-gray-800 shadow-lg max-h-52 overflow-y-auto scrollbar-hidden"
+							class="select-none w-full max-w-[200px] rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white border border-gray-100  dark:border-gray-800 shadow-lg max-h-52 overflow-y-auto scrollbar-hidden"
 							transition={flyAndScale}
 							sideOffset={8}
 						>
@@ -465,14 +430,16 @@
 								{#if folder?.id}
 									<DropdownMenu.Item
 										draggable="false"
-										class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+										class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl overflow-hidden"
 										on:click={() => {
 											moveChatHandler(chat.id, folder.id);
 										}}
 									>
-										<Folder strokeWidth="1.5" />
+										<div class="shrink-0">
+											<Folder strokeWidth="1.5" />
+										</div>
 
-										<div class="flex items-center">{folder.name ?? 'Folder'}</div>
+										<div class="truncate">{folder.name ?? 'Folder'}</div>
 									</DropdownMenu.Item>
 								{/if}
 							{/each}

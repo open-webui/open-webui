@@ -52,7 +52,12 @@
 					}}
 				>
 					<div class="flex flex-col w-full h-full pb-2">
-						<MemberSelector bind:userIds bind:groupIds includeGroups={true} includeUsers={shareUsers} />
+						<MemberSelector
+							bind:userIds
+							bind:groupIds
+							includeGroups={true}
+							includeUsers={shareUsers}
+						/>
 					</div>
 
 					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">

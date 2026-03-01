@@ -152,6 +152,7 @@ class OAuthSessionTable:
             with get_db_context(db) as db:
                 session = db.query(OAuthSession).filter_by(id=session_id).first()
                 if session:
+                    db.expunge(session)
                     session.token = self._decrypt_token(session.token)
                     return OAuthSessionModel.model_validate(session)
 
@@ -172,6 +173,7 @@ class OAuthSessionTable:
                     .first()
                 )
                 if session:
+                    db.expunge(session)
                     session.token = self._decrypt_token(session.token)
                     return OAuthSessionModel.model_validate(session)
 
@@ -193,6 +195,7 @@ class OAuthSessionTable:
                     .first()
                 )
                 if session:
+                    db.expunge(session)
                     session.token = self._decrypt_token(session.token)
                     return OAuthSessionModel.model_validate(session)
 
@@ -212,6 +215,7 @@ class OAuthSessionTable:
                 results = []
                 for session in sessions:
                     try:
+                        db.expunge(session)
                         session.token = self._decrypt_token(session.token)
                         results.append(OAuthSessionModel.model_validate(session))
                     except Exception as e:
@@ -246,6 +250,7 @@ class OAuthSessionTable:
                 session = db.query(OAuthSession).filter_by(id=session_id).first()
 
                 if session:
+                    db.expunge(session)
                     session.token = self._decrypt_token(session.token)
                     return OAuthSessionModel.model_validate(session)
 

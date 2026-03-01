@@ -210,7 +210,12 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
             content = ""
             for part in output_parts:
                 if part.get("type") == "input_text":
-                    content += part.get("text", "")
+                    output_text = part.get("text", "")
+                    content += (
+                        str(output_text)
+                        if not isinstance(output_text, str)
+                        else output_text
+                    )
 
             messages.append(
                 {
@@ -277,9 +282,7 @@ def get_last_user_message(messages: list[dict]) -> Optional[str]:
     return get_content_from_message(message)
 
 
-def set_last_user_message_content(
-    content: str, messages: list[dict]
-) -> list[dict]:
+def set_last_user_message_content(content: str, messages: list[dict]) -> list[dict]:
     """
     Replace the text content of the last user message in-place.
     Handles both plain-string and list-of-parts content formats.

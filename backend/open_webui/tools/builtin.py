@@ -1627,7 +1627,7 @@ async def view_file(
 
     try:
         from open_webui.models.files import Files
-        from open_webui.routers.files import has_access_to_file
+        from open_webui.utils.access_control.files import has_access_to_file
 
         user_id = __user__.get("id")
         user_role = __user__.get("role", "user")
