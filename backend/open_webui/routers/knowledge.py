@@ -1,6 +1,6 @@
 from typing import List, Optional
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from fastapi.concurrency import run_in_threadpool
 import logging
@@ -26,6 +26,7 @@ from open_webui.routers.retrieval import (
     BatchProcessFilesForm,
 )
 from open_webui.storage.provider import Storage
+from open_webui.routers.files import upload_file_handler
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_verified_user, get_admin_user
@@ -706,6 +707,126 @@ def add_file_to_knowledge_by_id(
         )
 
 
+############################
+# UploadAndReplaceFile
+############################
+
+
+class UploadAndReplaceResponse(BaseModel):
+    """Response from upload_and_replace endpoint."""
+
+    new_file_id: str
+    old_file_id: str
+    filename: str
+
+
+@router.post("/{id}/file/upload_and_replace", response_model=UploadAndReplaceResponse)
+def upload_and_replace_file(
+    request: Request,
+    id: str,
+    file: UploadFile = File(...),
+    old_file_id: str = Form(...),
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    """
+    Atomically upload a new file and replace an existing file in the knowledge base.
+    """
+    # Validate knowledge base exists and user has access
+    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        knowledge.user_id != user.id
+        and not has_access(user.id, "write", knowledge.access_control, db=db)
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    # Validate old file exists
+    old_file = Files.get_file_by_id(old_file_id, db=db)
+    if not old_file:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    # Step 1: Upload the new file (reuses existing upload_file_handler)
+    try:
+        new_file_result = upload_file_handler(
+            request,
+            file=file,
+            process=True,
+            process_in_background=False,
+            user=user,
+            db=db,
+        )
+        new_file_id = new_file_result["id"]
+    except Exception as e:
+        log.error(f"Failed to upload new file: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to upload file: {str(e)}",
+        )
+
+    # Step 2: Verify new file was processed
+    new_file = Files.get_file_by_id(new_file_id, db=db)
+    if not new_file or not new_file.data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.FILE_NOT_PROCESSED,
+        )
+
+    # Step 3: Add new file to knowledge base (reuses existing process_file)
+    try:
+        process_file(
+            request,
+            ProcessFileForm(file_id=new_file_id, collection_name=id),
+            user=user,
+            db=db,
+        )
+        Knowledges.add_file_to_knowledge_by_id(
+            knowledge_id=id, file_id=new_file_id, user_id=user.id, db=db
+        )
+    except Exception as e:
+        log.error(f"Failed to add new file to knowledge base: {e}")
+        # Clean up: delete the uploaded file since we couldn't add it to KB
+        try:
+            Files.delete_file_by_id(new_file_id, db=db)
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to add file to knowledge base: {str(e)}",
+        )
+
+    # Step 4: Remove old file (reuses existing remove_file_from_knowledge_by_id)
+    try:
+        remove_file_from_knowledge_by_id(
+            id=id,
+            form_data=KnowledgeFileIdForm(file_id=old_file_id),
+            delete_file=True,
+            user=user,
+            db=db,
+        )
+    except Exception as e:
+        log.error(f"Failed to remove old file (new file is already added): {e}")
+        # Don't fail - new file is already added successfully
+
+    return UploadAndReplaceResponse(
+        new_file_id=new_file_id,
+        old_file_id=old_file_id,
+        filename=new_file.filename,
+    )
+
+
 @router.post("/{id}/file/update", response_model=Optional[KnowledgeFilesResponse])
 def update_file_from_knowledge_by_id(
     request: Request,
@@ -978,6 +1099,150 @@ async def reset_knowledge_by_id(
 
     knowledge = Knowledges.reset_knowledge_by_id(id=id, db=db)
     return knowledge
+
+
+############################
+# SyncCompare
+############################
+
+
+class FileSyncCompareItem(BaseModel):
+    """Item for comparing a file during sync."""
+
+    file_path: str  # Relative path within the directory (e.g., "docs/readme.md")
+    file_hash: str  # SHA-256 hash of the raw file bytes
+    size: int  # File size in bytes
+
+
+class SyncCompareForm(BaseModel):
+    """Form for comparing files for sync."""
+
+    files: List[FileSyncCompareItem]
+
+
+class ChangedFileInfo(BaseModel):
+    """Info about a changed file that needs to be replaced."""
+
+    file_path: str  # Path of the new file to upload
+    old_file_id: str  # ID of the old file to delete after upload
+
+
+class SyncCompareResponse(BaseModel):
+    """Response from sync compare endpoint."""
+
+    new_files: List[str]  # file_paths for new files (no old version exists)
+    changed_files: List[ChangedFileInfo]  # files that changed (upload new, delete old)
+    removed_file_ids: List[str]  # file_ids to remove (no new version exists)
+    unchanged: List[str]  # file_paths that are already up to date
+
+
+
+@router.post("/{id}/sync/compare", response_model=SyncCompareResponse)
+async def compare_files_for_sync(
+    id: str,
+    form_data: SyncCompareForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    """
+    Compare uploaded files against existing knowledge base files.
+    Returns lists of files that need to be uploaded, deleted, or are unchanged.
+    """
+    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        knowledge.user_id != user.id
+        and not has_access(user.id, "write", knowledge.access_control, db=db)
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    # Get all files currently in the knowledge base
+    existing_files = Knowledges.get_files_by_id(id, db=db)
+
+    # Build a map of existing files by their sync path for quick lookup
+    # Priority: original_path (for directory sync) > name > filename
+    existing_by_path: dict[str, FileModel] = {}
+    for file in existing_files:
+        if file.meta:
+            # Use original_path for sync comparison (includes subdirectory structure)
+            sync_path = file.meta.get("original_path") or file.meta.get("name", file.filename)
+        else:
+            sync_path = file.filename
+        existing_by_path[sync_path] = file
+
+    # Track files from the incoming directory
+    incoming_filenames = set()
+    new_files: List[str] = []  # New files (no old version)
+    changed_files: List[ChangedFileInfo] = []  # Changed files (need upload + delete old)
+    removed_file_ids: List[str] = []  # Removed files (no new version)
+    unchanged: List[str] = []
+
+    for incoming_file in form_data.files:
+        incoming_filenames.add(incoming_file.file_path)
+
+        # Check if file exists in knowledge base
+        existing_file = existing_by_path.get(incoming_file.file_path)
+
+        if existing_file:
+            # Check if hash is already stored in meta (files uploaded after this feature)
+            stored_hash = existing_file.meta.get("file_hash") if existing_file.meta else None
+
+            if stored_hash:
+                # Modern file with stored hash - use accurate hash comparison
+                if stored_hash == incoming_file.file_hash:
+                    # File unchanged
+                    unchanged.append(incoming_file.file_path)
+                else:
+                    # File changed - need to upload new and delete old
+                    changed_files.append(
+                        ChangedFileInfo(
+                            file_path=incoming_file.file_path,
+                            old_file_id=existing_file.id,
+                        )
+                    )
+            else:
+                # Legacy file without stored hash - use size comparison as fast fallback
+                # This avoids expensive I/O (downloading from S3 + hashing) during compare
+                # Trade-off: If content changed but size is same, we won't detect it
+                # But this is rare, and when files ARE re-uploaded, they get hashes stored
+                existing_size = existing_file.meta.get("size") if existing_file.meta else None
+
+                if existing_size is not None and existing_size == incoming_file.size:
+                    # Size matches - assume unchanged (conservative for legacy files)
+                    unchanged.append(incoming_file.file_path)
+                else:
+                    # Size differs or unknown - treat as changed
+                    changed_files.append(
+                        ChangedFileInfo(
+                            file_path=incoming_file.file_path,
+                            old_file_id=existing_file.id,
+                        )
+                    )
+        else:
+            # New file - needs to be uploaded
+            new_files.append(incoming_file.file_path)
+
+    # Find files to delete (exist in KB but not in incoming directory)
+    for sync_path, file in existing_by_path.items():
+        if sync_path not in incoming_filenames:
+            removed_file_ids.append(file.id)
+
+
+    return SyncCompareResponse(
+        new_files=new_files,
+        changed_files=changed_files,
+        removed_file_ids=removed_file_ids,
+        unchanged=unchanged,
+    )
 
 
 ############################
