@@ -7,6 +7,7 @@
 	import PDFViewer from '../../common/PDFViewer.svelte';
 	import Tooltip from '../../common/Tooltip.svelte';
 	import Reset from '../../icons/Reset.svelte';
+	import PenAlt from '../../icons/PenAlt.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -17,6 +18,41 @@
 	export let fileContent: string | null = null;
 
 	export let onDownload: () => void = () => {};
+	export let onSave: ((content: string) => Promise<void>) | null = null;
+
+	let editing = false;
+	let editContent = '';
+	let saving = false;
+
+	// Reset edit state when switching files
+	$: selectedFile, resetEdit();
+
+	const resetEdit = () => {
+		editing = false;
+		editContent = '';
+		saving = false;
+	};
+
+	const startEdit = () => {
+		editContent = fileContent ?? '';
+		editing = true;
+		showRaw = true;
+	};
+
+	const saveEdit = async () => {
+		if (!onSave) return;
+		saving = true;
+		await onSave(editContent);
+		saving = false;
+		editing = false;
+	};
+
+	const cancelEdit = () => {
+		editing = false;
+		editContent = '';
+	};
+
+	$: isTextFile = fileContent !== null && fileImageUrl === null && filePdfData === null;
 
 	const MD_EXTS = new Set(['md', 'markdown', 'mdx']);
 	const CSV_EXTS = new Set(['csv', 'tsv']);
@@ -127,7 +163,10 @@
 			<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
 				<button
 					class="p-1.5 rounded-lg bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
-					on:click={() => (showRaw = !showRaw)}
+					on:click={() => {
+						if (editing) cancelEdit();
+						showRaw = !showRaw;
+					}}
 					aria-label={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}
 				>
 					{#if showRaw}
@@ -170,6 +209,49 @@
 					{/if}
 				</button>
 			</Tooltip>
+		{/if}
+		{#if isTextFile && onSave}
+			{#if editing}
+				<Tooltip content={$i18n.t('Cancel')}>
+					<button
+						class="p-1.5 rounded-lg bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+						on:click={cancelEdit}
+						aria-label={$i18n.t('Cancel')}
+					>
+						<!-- X icon -->
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4">
+							<path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+						</svg>
+					</button>
+				</Tooltip>
+				<Tooltip content={$i18n.t('Save')}>
+					<button
+						class="p-1.5 rounded-lg bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+						on:click={saveEdit}
+						disabled={saving}
+						aria-label={$i18n.t('Save')}
+					>
+						{#if saving}
+							<Spinner className="size-4" />
+						{:else}
+							<!-- Check icon -->
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4">
+								<path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" />
+							</svg>
+						{/if}
+					</button>
+				</Tooltip>
+			{:else}
+				<Tooltip content={$i18n.t('Edit')}>
+					<button
+						class="p-1.5 rounded-lg bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+						on:click={startEdit}
+						aria-label={$i18n.t('Edit')}
+					>
+						<PenAlt className="size-4" />
+					</button>
+				</Tooltip>
+			{/if}
 		{/if}
 		<button
 			class="p-1.5 rounded-lg bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
@@ -240,8 +322,16 @@
 				</table>
 			</div>
 		{:else}
-			<pre
-				class="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all leading-relaxed p-3">{fileContent}</pre>
+			{#if editing}
+				<textarea
+					bind:value={editContent}
+					class="w-full h-full text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre break-all leading-relaxed p-3 bg-transparent border-none outline-none resize-none"
+					spellcheck="false"
+				/>
+			{:else}
+				<pre
+					class="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all leading-relaxed p-3">{fileContent}</pre>
+			{/if}
 		{/if}
 	{:else}
 		<div class="text-sm text-gray-400 text-center pt-8">

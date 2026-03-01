@@ -441,6 +441,18 @@
 					{filePdfData}
 					{fileContent}
 					onDownload={() => downloadFile(selectedFile)}
+					onSave={async (content) => {
+						const terminal = selectedTerminal;
+						if (!terminal || !selectedFile) return;
+						const fileName = selectedFile.split('/').pop() ?? 'file';
+						const dir = selectedFile.substring(0, selectedFile.lastIndexOf('/') + 1) || '/';
+						const file = new File([content], fileName, { type: 'text/plain' });
+						const result = await uploadToTerminal(terminal.url, terminal.key, dir, file);
+						toast[result ? 'success' : 'error'](
+							$i18n.t(result ? 'File saved' : 'Failed to save file')
+						);
+						if (result) fileContent = content;
+					}}
 				/>
 			{:else}
 				{#if uploading}
