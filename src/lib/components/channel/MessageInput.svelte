@@ -646,7 +646,7 @@
 				dropzoneElement.addEventListener('drop', onDrop);
 				dropzoneElement.addEventListener('dragleave', onDragLeave);
 			}
-		}
+		};
 		initialize();
 
 		return () => {
@@ -659,7 +659,7 @@
 				dropzoneElement.removeEventListener('drop', onDrop);
 				dropzoneElement.removeEventListener('dragleave', onDragLeave);
 			}
-		}
+		};
 	});
 </script>
 

@@ -26,7 +26,6 @@
   color utility to any element that depends on these defaults.
 */
 @layer base {
-
 	*,
 	::after,
 	::before,
@@ -37,7 +36,6 @@
 }
 
 @layer base {
-
 	html,
 	pre {
 		font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Vazirmatn', ui-sans-serif, system-ui,
@@ -82,7 +80,8 @@
 		left: 0;
 		pointer-events: none;
 		/* SVG checkmark as background image */
-		background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M4 8l3 3l5-5"/></svg>') center/80% no-repeat;
+		background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M4 8l3 3l5-5"/></svg>')
+			center/80% no-repeat;
 	}
 
 	input[type='checkbox']:checked:after {

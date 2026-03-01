@@ -695,7 +695,9 @@ async def lifespan(app: FastAPI):
             log.info(f"Initialized {len(app.state.TOOL_SERVERS)} tool server(s)")
 
             await set_terminal_servers(mock_request)
-            log.info(f"Initialized {len(app.state.TERMINAL_SERVERS)} terminal server(s)")
+            log.info(
+                f"Initialized {len(app.state.TERMINAL_SERVERS)} terminal server(s)"
+            )
         except Exception as e:
             log.warning(f"Failed to initialize tool/terminal servers at startup: {e}")
 
@@ -2220,7 +2222,6 @@ async def get_app_config(request: Request):
                     "pending_user_overlay_content": app.state.config.PENDING_USER_OVERLAY_CONTENT,
                     "response_watermark": app.state.config.RESPONSE_WATERMARK,
                 },
-
                 "license_metadata": app.state.LICENSE_METADATA,
                 **(
                     {

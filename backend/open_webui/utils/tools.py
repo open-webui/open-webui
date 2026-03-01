@@ -144,8 +144,6 @@ def get_updated_tool_function(function: Callable, extra_params: dict):
     return function
 
 
-
-
 async def get_tools(
     request: Request, tool_ids: list[str], user: UserModel, extra_params: dict
 ) -> dict[str, dict]:
@@ -909,19 +907,21 @@ async def set_terminal_servers(request: Request):
 
         enabled = connection.get("enabled", True)
 
-        server_configs.append({
-            "url": connection.get("url", ""),
-            "key": connection.get("key", ""),
-            "auth_type": connection.get("auth_type", "bearer"),
-            "path": connection.get("path", "/openapi.json"),
-            "spec_type": "url",
-            # get_tool_servers_data reads config.enable to filter active servers
-            "config": {"enable": enabled},
-            "info": {
-                "id": connection.get("id", ""),
-                "name": connection.get("name", ""),
-            },
-        })
+        server_configs.append(
+            {
+                "url": connection.get("url", ""),
+                "key": connection.get("key", ""),
+                "auth_type": connection.get("auth_type", "bearer"),
+                "path": connection.get("path", "/openapi.json"),
+                "spec_type": "url",
+                # get_tool_servers_data reads config.enable to filter active servers
+                "config": {"enable": enabled},
+                "info": {
+                    "id": connection.get("id", ""),
+                    "name": connection.get("name", ""),
+                },
+            }
+        )
 
     request.app.state.TERMINAL_SERVERS = await get_tool_servers_data(server_configs)
 
@@ -965,9 +965,7 @@ async def get_terminal_tools(
     - Builds callables that route through the terminal proxy
     """
     connections = request.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
-    connection = next(
-        (c for c in connections if c.get("id") == terminal_id), None
-    )
+    connection = next((c for c in connections if c.get("id") == terminal_id), None)
     if connection is None:
         log.warning(f"Terminal server not found: {terminal_id}")
         return {}
@@ -1007,9 +1005,7 @@ async def get_terminal_tools(
             headers["Authorization"] = f"Bearer {oauth_token.get('access_token', '')}"
     # auth_type == "none": no Authorization header
 
-    terminal_cwd = await get_terminal_cwd(
-        connection.get("url", ""), headers, cookies
-    )
+    terminal_cwd = await get_terminal_cwd(connection.get("url", ""), headers, cookies)
 
     tools_dict = {}
     for spec in specs:
@@ -1033,6 +1029,7 @@ async def get_terminal_tools(
                     params=kwargs,
                     server_data=srv_data,
                 )
+
             return tool_function
 
         tool_function = make_tool_function(function_name, server_data, headers, cookies)

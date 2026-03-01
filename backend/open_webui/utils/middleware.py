@@ -930,10 +930,9 @@ def process_tool_result(
         else:
             tool_result = tool_result.body.decode("utf-8", "replace")
 
-    elif (
-        tool_type in EXTERNAL_TOOL_TYPES
-        and isinstance(tool_result, tuple)
-    ) or (direct_tool and isinstance(tool_result, list) and len(tool_result) == 2):
+    elif (tool_type in EXTERNAL_TOOL_TYPES and isinstance(tool_result, tuple)) or (
+        direct_tool and isinstance(tool_result, list) and len(tool_result) == 2
+    ):
         tool_result, tool_response_headers = tool_result
 
         try:
@@ -1232,7 +1231,10 @@ async def chat_completion_tools_handler(
 
                 if event_emitter:
                     await display_file_handler(
-                        tool_function_name, tool_function_params, tool_result, event_emitter
+                        tool_function_name,
+                        tool_function_params,
+                        tool_result,
+                        event_emitter,
                     )
 
                     if tool_result_files:
@@ -4223,7 +4225,10 @@ async def streaming_chat_response_handler(response, ctx):
                         )
 
                         await display_file_handler(
-                            tool_function_name, tool_function_params, tool_result, event_emitter
+                            tool_function_name,
+                            tool_function_params,
+                            tool_result,
+                            event_emitter,
                         )
 
                         # Extract citation sources from tool results
@@ -4408,8 +4413,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 code = sanitize_code(code)
 
                                 if CODE_INTERPRETER_BLOCKED_MODULES:
-                                    blocking_code = textwrap.dedent(
-                                        f"""
+                                    blocking_code = textwrap.dedent(f"""
                                         import builtins
     
                                         BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
@@ -4425,8 +4429,7 @@ async def streaming_chat_response_handler(response, ctx):
                                             return _real_import(name, globals, locals, fromlist, level)
     
                                         builtins.__import__ = restricted_import
-                                    """
-                                    )
+                                    """)
                                     code = blocking_code + "\n" + code
 
                                 if (

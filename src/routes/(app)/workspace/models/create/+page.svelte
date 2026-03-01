@@ -81,7 +81,7 @@
 			} catch (e) {
 				console.error('Failed to parse message data:', e);
 			}
-		}
+		};
 		window.addEventListener('message', handleMessageEvent);
 
 		if (window.opener ?? false) {

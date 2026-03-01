@@ -164,7 +164,8 @@
 	$: if (selectedToolIds.length > 0) {
 		const directTerminalServers = ($terminalServers ?? []).filter((t) => !t.id);
 		const terminalIds = directTerminalServers.map(
-			(_, i) => `direct_server:terminal_${($terminalServers ?? []).indexOf(directTerminalServers[i])}`
+			(_, i) =>
+				`direct_server:terminal_${($terminalServers ?? []).indexOf(directTerminalServers[i])}`
 		);
 		const invalidTerminalIds = selectedToolIds.filter(
 			(id) => id.startsWith('direct_server:terminal_') && !terminalIds.includes(id)

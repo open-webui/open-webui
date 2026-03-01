@@ -33,9 +33,14 @@ async def list_terminal_servers(request: Request, user=Depends(get_verified_user
     user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
 
     return [
-        {"id": connection.get("id", ""), "url": connection.get("url", ""), "name": connection.get("name", "")}
+        {
+            "id": connection.get("id", ""),
+            "url": connection.get("url", ""),
+            "name": connection.get("name", ""),
+        }
         for connection in connections
-        if connection.get("enabled", True) and has_connection_access(user, connection, user_group_ids)
+        if connection.get("enabled", True)
+        and has_connection_access(user, connection, user_group_ids)
     ]
 
 
@@ -54,7 +59,9 @@ async def proxy_terminal(
     connection = next((c for c in connections if c.get("id") == server_id), None)
 
     if connection is None:
-        return JSONResponse({"error": f"Terminal server '{server_id}' not found"}, status_code=404)
+        return JSONResponse(
+            {"error": f"Terminal server '{server_id}' not found"}, status_code=404
+        )
 
     user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
     if not has_connection_access(user, connection, user_group_ids):
@@ -62,7 +69,9 @@ async def proxy_terminal(
 
     base_url = (connection.get("url") or "").rstrip("/")
     if not base_url:
-        return JSONResponse({"error": "Terminal server URL not configured"}, status_code=503)
+        return JSONResponse(
+            {"error": "Terminal server URL not configured"}, status_code=503
+        )
 
     target_url = f"{base_url}/{path}"
     if request.query_params:
@@ -112,6 +121,7 @@ async def proxy_terminal(
 
         # Stream binary responses directly
         if any(t in upstream_content_type for t in STREAMING_CONTENT_TYPES):
+
             async def cleanup():
                 await upstream_response.release()
                 await session.close()
@@ -129,9 +139,13 @@ async def proxy_terminal(
         await upstream_response.release()
         await session.close()
 
-        return Response(content=response_body, status_code=status_code, headers=filtered_headers)
+        return Response(
+            content=response_body, status_code=status_code, headers=filtered_headers
+        )
 
     except Exception as error:
         await session.close()
         log.exception("Terminal proxy error: %s", error)
-        return JSONResponse({"error": f"Terminal proxy error: {error}"}, status_code=502)
+        return JSONResponse(
+            {"error": f"Terminal proxy error: {error}"}, status_code=502
+        )
