@@ -1014,7 +1014,7 @@
 			}
 
 			tools.set(await getTools(localStorage.token));
-		}
+		};
 		initialize();
 
 		return () => {
@@ -1031,7 +1031,7 @@
 				dropzoneElement.removeEventListener('drop', onDrop);
 				dropzoneElement.removeEventListener('dragleave', onDragLeave);
 			}
-		}
+		};
 	});
 </script>
 
@@ -1809,7 +1809,9 @@
 
 										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
 											<!-- Terminal Server Selector -->
-											<TerminalMenu bind:show={showTerminalMenu} />
+											{#if ($terminalServers ?? []).length > 0 || ($settings?.terminalServers ?? []).some((s) => s.url)}
+												<TerminalMenu bind:show={showTerminalMenu} />
+											{/if}
 
 											<!-- {$i18n.t('Record voice')} -->
 											<Tooltip content={$i18n.t('Dictate')}>
