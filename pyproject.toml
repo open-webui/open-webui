@@ -114,7 +114,7 @@ dependencies = [
     "googleapis-common-protos==1.72.0",
     "google-cloud-storage==3.9.0",
 
-    "azure-identity==1.25.1",
+    "azure-identity==1.25.2",
     "azure-storage-blob==12.28.0",
 
     "ldap3==2.9.1",
