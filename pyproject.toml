@@ -64,7 +64,7 @@ dependencies = [
     "PyMySQL==1.1.2",
     "boto3==1.42.44",
     
-    "transformers==5.1.0",
+    "transformers==5.2.0",
     "sentence-transformers==5.2.2",
     "accelerate",
     "pyarrow==20.0.0", # fix: pin pyarrow version to 20 for rpi compatibility #15897
