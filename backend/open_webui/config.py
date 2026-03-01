@@ -1093,6 +1093,9 @@ ENABLE_OPENAI_API = PersistentConfig(
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_API_BASE_URL = os.environ.get("OPENAI_API_BASE_URL", "")
 
+INITIAL_OPENAI_API_KEY = OPENAI_API_KEY
+INITIAL_OPENAI_API_BASE_URL = OPENAI_API_BASE_URL
+
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_API_BASE_URL = os.environ.get("GEMINI_API_BASE_URL", "")
 
@@ -3067,12 +3070,12 @@ RAG_TEMPLATE = PersistentConfig(
 RAG_OPENAI_API_BASE_URL = PersistentConfig(
     "RAG_OPENAI_API_BASE_URL",
     "rag.openai_api_base_url",
-    os.getenv("RAG_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
+    os.getenv("RAG_OPENAI_API_BASE_URL", INITIAL_OPENAI_API_BASE_URL),
 )
 RAG_OPENAI_API_KEY = PersistentConfig(
     "RAG_OPENAI_API_KEY",
     "rag.openai_api_key",
-    os.getenv("RAG_OPENAI_API_KEY", OPENAI_API_KEY),
+    os.getenv("RAG_OPENAI_API_KEY", INITIAL_OPENAI_API_KEY),
 )
 
 RAG_AZURE_OPENAI_BASE_URL = PersistentConfig(
@@ -3745,7 +3748,7 @@ COMFYUI_WORKFLOW_NODES = PersistentConfig(
 IMAGES_OPENAI_API_BASE_URL = PersistentConfig(
     "IMAGES_OPENAI_API_BASE_URL",
     "image_generation.openai.api_base_url",
-    os.getenv("IMAGES_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
+    os.getenv("IMAGES_OPENAI_API_BASE_URL", INITIAL_OPENAI_API_BASE_URL),
 )
 IMAGES_OPENAI_API_VERSION = PersistentConfig(
     "IMAGES_OPENAI_API_VERSION",
@@ -3756,7 +3759,7 @@ IMAGES_OPENAI_API_VERSION = PersistentConfig(
 IMAGES_OPENAI_API_KEY = PersistentConfig(
     "IMAGES_OPENAI_API_KEY",
     "image_generation.openai.api_key",
-    os.getenv("IMAGES_OPENAI_API_KEY", OPENAI_API_KEY),
+    os.getenv("IMAGES_OPENAI_API_KEY", INITIAL_OPENAI_API_KEY),
 )
 
 images_openai_params = os.getenv("IMAGES_OPENAI_PARAMS", "")
@@ -3813,7 +3816,7 @@ IMAGE_EDIT_SIZE = PersistentConfig(
 IMAGES_EDIT_OPENAI_API_BASE_URL = PersistentConfig(
     "IMAGES_EDIT_OPENAI_API_BASE_URL",
     "images.edit.openai.api_base_url",
-    os.getenv("IMAGES_EDIT_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
+    os.getenv("IMAGES_EDIT_OPENAI_API_BASE_URL", INITIAL_OPENAI_API_BASE_URL),
 )
 IMAGES_EDIT_OPENAI_API_VERSION = PersistentConfig(
     "IMAGES_EDIT_OPENAI_API_VERSION",
@@ -3824,7 +3827,7 @@ IMAGES_EDIT_OPENAI_API_VERSION = PersistentConfig(
 IMAGES_EDIT_OPENAI_API_KEY = PersistentConfig(
     "IMAGES_EDIT_OPENAI_API_KEY",
     "images.edit.openai.api_key",
-    os.getenv("IMAGES_EDIT_OPENAI_API_KEY", OPENAI_API_KEY),
+    os.getenv("IMAGES_EDIT_OPENAI_API_KEY", INITIAL_OPENAI_API_KEY),
 )
 
 IMAGES_EDIT_GEMINI_API_BASE_URL = PersistentConfig(
@@ -3907,13 +3910,13 @@ ELEVENLABS_API_BASE_URL = os.getenv(
 AUDIO_STT_OPENAI_API_BASE_URL = PersistentConfig(
     "AUDIO_STT_OPENAI_API_BASE_URL",
     "audio.stt.openai.api_base_url",
-    os.getenv("AUDIO_STT_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
+    os.getenv("AUDIO_STT_OPENAI_API_BASE_URL", INITIAL_OPENAI_API_BASE_URL),
 )
 
 AUDIO_STT_OPENAI_API_KEY = PersistentConfig(
     "AUDIO_STT_OPENAI_API_KEY",
     "audio.stt.openai.api_key",
-    os.getenv("AUDIO_STT_OPENAI_API_KEY", OPENAI_API_KEY),
+    os.getenv("AUDIO_STT_OPENAI_API_KEY", INITIAL_OPENAI_API_KEY),
 )
 
 AUDIO_STT_ENGINE = PersistentConfig(
@@ -3991,12 +3994,12 @@ AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS = PersistentConfig(
 AUDIO_TTS_OPENAI_API_BASE_URL = PersistentConfig(
     "AUDIO_TTS_OPENAI_API_BASE_URL",
     "audio.tts.openai.api_base_url",
-    os.getenv("AUDIO_TTS_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
+    os.getenv("AUDIO_TTS_OPENAI_API_BASE_URL", INITIAL_OPENAI_API_BASE_URL),
 )
 AUDIO_TTS_OPENAI_API_KEY = PersistentConfig(
     "AUDIO_TTS_OPENAI_API_KEY",
     "audio.tts.openai.api_key",
-    os.getenv("AUDIO_TTS_OPENAI_API_KEY", OPENAI_API_KEY),
+    os.getenv("AUDIO_TTS_OPENAI_API_KEY", INITIAL_OPENAI_API_KEY),
 )
 
 audio_tts_openai_params = os.getenv("AUDIO_TTS_OPENAI_PARAMS", "")
