@@ -4135,6 +4135,13 @@ async def streaming_chat_response_handler(response, ctx):
                                 log.error(
                                     f"Error parsing tool call arguments: {tool_args}"
                                 )
+                                results.append(
+                                    {
+                                        "tool_call_id": tool_call_id,
+                                        "content": f"Error: Tool call arguments could not be parsed. The model generated malformed or incomplete JSON for `{tool_function_name}`. Please try again.",
+                                    }
+                                )
+                                continue
 
                         # Ensure arguments are valid JSON for downstream LLM integrations
                         log.debug(
