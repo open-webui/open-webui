@@ -3067,12 +3067,16 @@ RAG_TEMPLATE = PersistentConfig(
 RAG_OPENAI_API_BASE_URL = PersistentConfig(
     "RAG_OPENAI_API_BASE_URL",
     "rag.openai_api_base_url",
-    os.getenv("RAG_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
+    os.getenv(
+        "RAG_OPENAI_API_BASE_URL",
+        os.environ.get("OPENAI_API_BASE_URL", "").rstrip("/")
+        or "https://api.openai.com/v1",
+    ),
 )
 RAG_OPENAI_API_KEY = PersistentConfig(
     "RAG_OPENAI_API_KEY",
     "rag.openai_api_key",
-    os.getenv("RAG_OPENAI_API_KEY", OPENAI_API_KEY),
+    os.getenv("RAG_OPENAI_API_KEY", os.environ.get("OPENAI_API_KEY", "")),
 )
 
 RAG_AZURE_OPENAI_BASE_URL = PersistentConfig(
