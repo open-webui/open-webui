@@ -1573,9 +1573,10 @@
 									>
 										<div
 											id="input-menu-button"
+											aria-label={$i18n.t('More')}
 											class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
 										>
-											<PlusAlt className="size-5.5" />
+											<PlusAlt className="size-5.5" aria-hidden="true" />
 										</div>
 									</InputMenu>
 
@@ -1612,9 +1613,10 @@
 										>
 											<div
 												id="integration-menu-button"
+												aria-label={$i18n.t('Integrations')}
 												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
 											>
-												<Component className="size-4.5" strokeWidth="1.5" />
+												<Component className="size-4.5" strokeWidth="1.5" aria-hidden="true" />
 											</div>
 										</IntegrationsMenu>
 									{/if}
