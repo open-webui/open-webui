@@ -146,7 +146,7 @@ class AuthsTable:
     def authenticate_user_by_api_key(
         self, api_key: str, db: Optional[Session] = None
     ) -> Optional[UserModel]:
-        log.info(f"authenticate_user_by_api_key: {api_key}")
+        log.info(f"authenticate_user_by_api_key: ...{api_key[-4:]}" if api_key else "authenticate_user_by_api_key: <empty>")
         # if no api_key, return None
         if not api_key:
             return None
