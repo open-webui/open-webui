@@ -27,7 +27,7 @@ starsessions[redis]==2.2.1
 
 sqlalchemy==2.0.46
 alembic==1.18.3
-peewee==3.19.0
+peewee==4.0.0
 peewee-migrate==1.14.3
 
 pycrdt==0.12.46
