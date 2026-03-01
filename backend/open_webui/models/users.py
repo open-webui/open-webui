@@ -44,6 +44,27 @@ class UserSettings(BaseModel):
     pass
 
 
+class DirectConnectionsForm(BaseModel):
+    OPENAI_API_BASE_URLS: list[str] = []
+    OPENAI_API_KEYS: list[str] = []
+    OPENAI_API_CONFIGS: dict = {}
+
+    @model_validator(mode="after")
+    def validate_lengths(self):
+        if len(self.OPENAI_API_BASE_URLS) != len(self.OPENAI_API_KEYS):
+            raise ValueError(
+                "OPENAI_API_BASE_URLS and OPENAI_API_KEYS must have the same length"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def normalize_urls(self):
+        self.OPENAI_API_BASE_URLS = [
+            url.rstrip("/") for url in self.OPENAI_API_BASE_URLS
+        ]
+        return self
+
+
 class User(Base):
     __tablename__ = "user"
 

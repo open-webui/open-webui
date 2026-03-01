@@ -165,3 +165,114 @@ class TestUsers(AbstractPostgresTest):
         assert len(response.json()) == 1
         data = response.json()
         _assert_user(data, "1")
+
+    def test_direct_connections(self):
+        # GET empty direct connections
+        with mock_webui_user(id="3"):
+            response = self.fast_api_client.get(
+                self.create_url("/1/settings/direct-connections")
+            )
+        assert response.status_code == 200
+        assert response.json() == {}
+
+        # POST set direct connections
+        dc_payload = {
+            "OPENAI_API_BASE_URLS": ["http://localhost:4000/v1"],
+            "OPENAI_API_KEYS": ["sk-test-key"],
+            "OPENAI_API_CONFIGS": {"0": {"enable": True, "prefix_id": "litellm"}},
+        }
+        with mock_webui_user(id="3"):
+            response = self.fast_api_client.post(
+                self.create_url("/1/settings/direct-connections"),
+                json=dc_payload,
+            )
+        assert response.status_code == 200
+        assert response.json() == dc_payload
+
+        # GET returns stored direct connections
+        with mock_webui_user(id="3"):
+            response = self.fast_api_client.get(
+                self.create_url("/1/settings/direct-connections")
+            )
+        assert response.status_code == 200
+        assert response.json() == dc_payload
+
+        # POST preserves existing user settings
+        with mock_webui_user(id="1"):
+            self.fast_api_client.post(
+                self.create_url("/user/settings/update"),
+                json={"ui": {"theme": "dark"}},
+            )
+        with mock_webui_user(id="3"):
+            self.fast_api_client.post(
+                self.create_url("/1/settings/direct-connections"),
+                json=dc_payload,
+            )
+        with mock_webui_user(id="1"):
+            response = self.fast_api_client.get(self.create_url("/user/settings"))
+        assert response.status_code == 200
+        settings = response.json()
+        assert settings["ui"] == {"theme": "dark"}
+        assert settings["directConnections"] == dc_payload
+
+        # DELETE removes direct connections
+        with mock_webui_user(id="3"):
+            response = self.fast_api_client.delete(
+                self.create_url("/1/settings/direct-connections")
+            )
+        assert response.status_code == 200
+        assert response.json() == {"status": True}
+
+        # GET after delete returns empty
+        with mock_webui_user(id="3"):
+            response = self.fast_api_client.get(
+                self.create_url("/1/settings/direct-connections")
+            )
+        assert response.status_code == 200
+        assert response.json() == {}
+
+        # DELETE preserves other user settings
+        with mock_webui_user(id="1"):
+            response = self.fast_api_client.get(self.create_url("/user/settings"))
+        assert response.status_code == 200
+        assert response.json()["ui"] == {"theme": "dark"}
+
+        # Non-admin user gets 401
+        with mock_webui_user(id="1"):
+            response = self.fast_api_client.get(
+                self.create_url("/1/settings/direct-connections")
+            )
+        assert response.status_code == 401
+
+        # Invalid user_id returns 400
+        with mock_webui_user(id="3"):
+            response = self.fast_api_client.get(
+                self.create_url("/nonexistent/settings/direct-connections")
+            )
+        assert response.status_code == 400
+
+    def test_direct_connections_validation(self):
+        # Mismatched array lengths returns 422
+        with mock_webui_user(id="3"):
+            response = self.fast_api_client.post(
+                self.create_url("/1/settings/direct-connections"),
+                json={
+                    "OPENAI_API_BASE_URLS": ["http://a", "http://b"],
+                    "OPENAI_API_KEYS": ["sk-1"],
+                },
+            )
+        assert response.status_code == 422
+
+        # URL trailing slashes are normalized
+        with mock_webui_user(id="3"):
+            response = self.fast_api_client.post(
+                self.create_url("/1/settings/direct-connections"),
+                json={
+                    "OPENAI_API_BASE_URLS": ["http://localhost:4000/v1/"],
+                    "OPENAI_API_KEYS": ["sk-test"],
+                },
+            )
+        assert response.status_code == 200
+        assert response.json()["OPENAI_API_BASE_URLS"] == [
+            "http://localhost:4000/v1"
+        ]
