@@ -2592,17 +2592,15 @@ async def query_collection_handler(
                     )
             elif collection_name.startswith("file-"):
                 file_id = collection_name[len("file-") :]
-                file = Files.get_file_by_id(file_id)
-                if file and file.user_id != user.id:
-                    if not has_access_to_file(
-                        file_id=file_id,
-                        access_type="read",
-                        user=user,
-                    ):
-                        raise HTTPException(
-                            status_code=status.HTTP_403_FORBIDDEN,
-                            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-                        )
+                if not has_access_to_file(
+                    file_id=file_id,
+                    access_type="read",
+                    user=user,
+                ):
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                    )
 
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (

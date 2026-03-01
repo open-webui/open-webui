@@ -32,6 +32,10 @@ def has_access_to_file(
     if not file:
         return False
 
+    # Direct ownership
+    if file.user_id == user.id:
+        return True
+
     # Check if the file is associated with any knowledge bases the user has access to
     knowledge_bases = Knowledges.get_knowledges_by_file_id(file_id, db=db)
     user_group_ids = {
