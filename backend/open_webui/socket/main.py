@@ -790,6 +790,7 @@ def get_event_emitter(request_info, update_db=True):
             },
             room=f"user:{user_id}",
         )
+
         if (
             update_db
             and message_id
@@ -799,16 +800,12 @@ def get_event_emitter(request_info, update_db=True):
             event_type = event_data.get("type")
 
             if event_type == "status":
-                # Only persist final (done) status to DB; intermediate
-                # statuses are ephemeral UI-only data sent via socket.
-                status_data = event_data.get("data", {})
-                if status_data.get("done", False):
-                    await asyncio.to_thread(
-                        Chats.add_message_status_to_chat_by_id_and_message_id,
-                        request_info["chat_id"],
-                        request_info["message_id"],
-                        status_data,
-                    )
+                await asyncio.to_thread(
+                    Chats.add_message_status_to_chat_by_id_and_message_id,
+                    request_info["chat_id"],
+                    request_info["message_id"],
+                    status_data,
+                )
 
             elif event_type == "message":
                 message = await asyncio.to_thread(
