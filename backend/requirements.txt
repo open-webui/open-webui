@@ -46,7 +46,7 @@ openai
 anthropic
 google-genai==1.62.0
 
-langchain==1.2.9
+langchain==1.2.10
 langchain-community==0.4.1
 langchain-classic==1.0.1
 langchain-text-splitters==1.1.0
