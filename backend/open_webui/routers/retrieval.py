@@ -2490,6 +2490,23 @@ async def process_web_search(
         )
 
 
+def _validate_collection_access(collection_names: list[str], user) -> None:
+    """
+    Prevent users from querying collections they don't own.
+    Currently enforces ownership on user-memory-* collections.
+    Admins bypass this check.
+    """
+    if user.role == "admin":
+        return
+
+    for name in collection_names:
+        if name.startswith("user-memory-") and name != f"user-memory-{user.id}":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+
+
 class QueryDocForm(BaseModel):
     collection_name: str
     query: str
@@ -2505,6 +2522,8 @@ async def query_doc_handler(
     form_data: QueryDocForm,
     user=Depends(get_verified_user),
 ):
+    _validate_collection_access([form_data.collection_name], user)
+
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (
             form_data.hybrid is None or form_data.hybrid
@@ -2579,6 +2598,8 @@ async def query_collection_handler(
     form_data: QueryCollectionsForm,
     user=Depends(get_verified_user),
 ):
+    _validate_collection_access(form_data.collection_names, user)
+
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (
             form_data.hybrid is None or form_data.hybrid
