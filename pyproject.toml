@@ -59,7 +59,7 @@ dependencies = [
     "langchain-text-splitters==1.1.0",
 
     "fake-useragent==2.2.0",
-    "chromadb==1.4.1",
+    "chromadb==1.5.2",
     "opensearch-py==3.1.0",
     "PyMySQL==1.1.2",
     "boto3==1.42.44",

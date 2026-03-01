@@ -52,7 +52,7 @@ langchain-classic==1.0.1
 langchain-text-splitters==1.1.0
 
 fake-useragent==2.2.0
-chromadb==1.4.1
+chromadb==1.5.2
 weaviate-client==4.19.2
 opensearch-py==3.1.0
 
