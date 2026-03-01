@@ -26,6 +26,7 @@ from open_webui.models.users import (
     Users,
     UserSettings,
     UserUpdateForm,
+    DirectConnectionsForm,
 )
 
 from open_webui.constants import ERROR_MESSAGES
@@ -439,6 +440,79 @@ async def update_user_info_by_session_user(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.USER_NOT_FOUND,
         )
+
+
+############################
+# Admin: Direct Connections
+############################
+
+
+@router.post("/{user_id}/settings/direct-connections")
+async def admin_set_user_direct_connections(
+    user_id: str,
+    form_data: DirectConnectionsForm,
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
+):
+    target_user = Users.get_user_by_id(user_id, db=db)
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+
+    updated_user = Users.update_user_settings_by_id(
+        user_id, {"directConnections": form_data.model_dump()}, db=db
+    )
+    if not updated_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(),
+        )
+
+    return form_data.model_dump()
+
+
+@router.get("/{user_id}/settings/direct-connections")
+async def admin_get_user_direct_connections(
+    user_id: str,
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
+):
+    target_user = Users.get_user_by_id(user_id, db=db)
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+
+    if target_user.settings:
+        settings = target_user.settings.model_dump()
+        return settings.get("directConnections", {})
+    return {}
+
+
+@router.delete("/{user_id}/settings/direct-connections")
+async def admin_delete_user_direct_connections(
+    user_id: str,
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
+):
+    target_user = Users.get_user_by_id(user_id, db=db)
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+
+    # Need full replacement to remove a key (shallow merge can't delete)
+    current_settings = (
+        target_user.settings.model_dump() if target_user.settings else {}
+    )
+    current_settings.pop("directConnections", None)
+    Users.update_user_by_id(user_id, {"settings": current_settings}, db=db)
+
+    return {"status": True}
 
 
 ############################
