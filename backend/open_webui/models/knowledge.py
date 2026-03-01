@@ -613,6 +613,21 @@ class KnowledgeTable:
             except Exception:
                 return None
 
+    def has_file(
+        self, knowledge_id: str, file_id: str, db: Optional[Session] = None
+    ) -> bool:
+        """Check whether a file belongs to a knowledge base."""
+        try:
+            with get_db_context(db) as db:
+                return (
+                    db.query(KnowledgeFile)
+                    .filter_by(knowledge_id=knowledge_id, file_id=file_id)
+                    .first()
+                    is not None
+                )
+        except Exception:
+            return False
+
     def remove_file_from_knowledge_by_id(
         self, knowledge_id: str, file_id: str, db: Optional[Session] = None
     ) -> bool:

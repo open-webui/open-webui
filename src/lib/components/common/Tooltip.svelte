@@ -3,63 +3,75 @@
 
 	import { onDestroy } from 'svelte';
 
-	import tippy from 'tippy.js';
+	import tippy, {
+		type Instance as TippyInstance,
+		type Placement as TippyPlacement,
+		type Props as TippyProps
+	} from 'tippy.js';
 
 	export let elementId = '';
 
 	export let as = 'div';
 	export let className = 'flex';
 
-	export let placement = 'top';
+	export let placement: TippyPlacement = 'top';
 	export let content = `I'm a tooltip!`;
 	export let touch = true;
 	export let theme = '';
-	export let offset = [0, 4];
+	export let offset: TippyProps['offset'] = [0, 4];
 	export let allowHTML = true;
-	export let tippyOptions = {};
+	export let tippyOptions: Partial<TippyProps> = {};
 	export let interactive = false;
 
 	export let onClick = () => {};
 
-	let tooltipElement;
-	let tooltipInstance;
+	let tooltipElement: HTMLElement | null = null;
+	let tooltipInstance: TippyInstance | null = null;
+
+	function destroyInstance() {
+		if (tooltipInstance) {
+			tooltipInstance.destroy();
+			tooltipInstance = null;
+		}
+	}
 
 	$: if (tooltipElement && (content || elementId)) {
-		let tooltipContent = null;
+		let tooltipContent: string | Element | DocumentFragment | null = null;
 
 		if (elementId) {
-			tooltipContent = document.getElementById(`${elementId}`);
+			tooltipContent = document.getElementById(elementId);
 		} else {
 			tooltipContent = DOMPurify.sanitize(content);
 		}
 
+		// After the element changes, the old instance must be destroyed, otherwise the detached tippy floating DOM will be left behind
+		if (tooltipInstance && tooltipInstance.reference !== tooltipElement) {
+			destroyInstance();
+		}
+
 		if (tooltipInstance) {
-			tooltipInstance.setContent(tooltipContent);
+			tooltipInstance.setContent(tooltipContent ?? '');
 		} else {
 			if (content) {
 				tooltipInstance = tippy(tooltipElement, {
-					content: tooltipContent,
-					placement: placement,
-					allowHTML: allowHTML,
-					touch: touch,
+					content: tooltipContent ?? '',
+					placement,
+					allowHTML,
+					touch,
 					...(theme !== '' ? { theme } : { theme: 'dark' }),
 					arrow: false,
-					offset: offset,
+					offset,
 					...(interactive ? { interactive: true } : {}),
 					...tippyOptions
 				});
 			}
 		}
 	} else if (tooltipInstance && content === '') {
-		if (tooltipInstance) {
-			tooltipInstance.destroy();
-		}
+		destroyInstance();
 	}
 
 	onDestroy(() => {
-		if (tooltipInstance) {
-			tooltipInstance.destroy();
-		}
+		destroyInstance();
 	});
 </script>
 

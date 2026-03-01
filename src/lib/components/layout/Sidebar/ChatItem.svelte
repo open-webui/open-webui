@@ -67,21 +67,18 @@
 		const weeks = Math.floor(days / 7);
 		const years = Math.floor(days / 365);
 
-		if (years > 0) return `${years}y`;
-		if (weeks > 0) return `${weeks}w`;
-		if (days > 0) return `${days}d`;
-		if (hours > 0) return `${hours}h`;
-		if (minutes > 0) return `${minutes}m`;
-		return '1m';
+		if (years > 0) return $i18n.t('{{COUNT}}y', { COUNT: years, context: 'time_ago' });
+		if (weeks > 0) return $i18n.t('{{COUNT}}w', { COUNT: weeks, context: 'time_ago' });
+		if (days > 0) return $i18n.t('{{COUNT}}d', { COUNT: days, context: 'time_ago' });
+		if (hours > 0) return $i18n.t('{{COUNT}}h', { COUNT: hours, context: 'time_ago' });
+		if (minutes > 0) return $i18n.t('{{COUNT}}m', { COUNT: minutes, context: 'time_ago' });
+		return $i18n.t('1m', { context: 'time_ago' });
 	}
 
 	let chat = null;
 
 	let mouseOver = false;
 	let draggable = false;
-	$: if (mouseOver) {
-		loadChat();
-	}
 
 	const loadChat = async () => {
 		if (!chat) {
@@ -209,8 +206,7 @@
 			'text/plain',
 			JSON.stringify({
 				type: 'chat',
-				id: id,
-				item: chat
+				id: id
 			})
 		);
 

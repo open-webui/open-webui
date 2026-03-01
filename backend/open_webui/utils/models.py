@@ -331,12 +331,25 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 elif meta.get(key) is None:
                     meta[key] = copy.deepcopy(value)
 
+    def get_action_priority(action_id):
+        try:
+            function_module = request.app.state.FUNCTIONS.get(action_id)
+            if function_module and hasattr(function_module, "Valves"):
+                valves_db = Functions.get_function_valves_by_id(action_id)
+                valves = function_module.Valves(**(valves_db if valves_db else {}))
+                return getattr(valves, "priority", 0)
+        except Exception:
+            pass
+        return 0
+
     for model in models:
         action_ids = [
             action_id
             for action_id in list(set(model.pop("action_ids", []) + global_action_ids))
             if action_id in enabled_action_ids
         ]
+        action_ids.sort(key=lambda aid: (get_action_priority(aid), aid))
+
         filter_ids = [
             filter_id
             for filter_id in list(set(model.pop("filter_ids", []) + global_filter_ids))
