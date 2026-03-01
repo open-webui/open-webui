@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { marked } from 'marked';
+	import { renderMarkdownToHTML } from '$lib/utils/marked';
 
 	import { toast } from 'svelte-sonner';
 	import Sortable from 'sortablejs';
@@ -637,7 +637,7 @@
 												<div>·</div>
 
 												<Tooltip
-													content={marked.parse(model?.meta?.description ?? model.id)}
+													content={(renderMarkdownToHTML(model?.meta?.description ?? model.id) as string)}
 													className=" w-fit text-left"
 													placement="top-start"
 												>

@@ -1,6 +1,4 @@
 <script lang="ts">
-	import DOMPurify from 'dompurify';
-
 	import { onMount, getContext, createEventDispatcher, onDestroy, tick } from 'svelte';
 	import * as FocusTrap from 'focus-trap';
 
@@ -9,7 +7,7 @@
 
 	import { fade } from 'svelte/transition';
 	import { flyAndScale } from '$lib/utils/transitions';
-	import { marked } from 'marked';
+	import { renderMarkdownToHTMLSanitized } from '$lib/utils/marked';
 	import SensitiveInput from './SensitiveInput.svelte';
 
 	export let title = '';
@@ -125,7 +123,7 @@
 				<slot>
 					<div class=" text-sm text-gray-500 flex-1">
 						{#if message !== ''}
-							{@const html = DOMPurify.sanitize(marked.parse(message))}
+							{@const html = renderMarkdownToHTMLSanitized(message)}
 							{@html html}
 						{:else}
 							{$i18n.t('This action cannot be undone. Do you wish to continue?')}

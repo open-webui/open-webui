@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { marked } from 'marked';
+	import { renderMarkdownToHTML } from '$lib/utils/marked';
 
 	import { getContext, tick } from 'svelte';
 	import dayjs from '$lib/dayjs';
@@ -202,9 +202,9 @@
 
 				{#if item.model?.info?.meta?.description}
 					<Tooltip
-						content={`${marked.parse(
+						content={`${renderMarkdownToHTML(
 							sanitizeResponseContent(item.model?.info?.meta?.description).replaceAll('\n', '<br>')
-						)}`}
+						) as string}`}
 					>
 						<div class=" translate-y-[1px]">
 							<svg

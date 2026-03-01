@@ -2,7 +2,7 @@
 	import { getContext } from 'svelte';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import { marked } from 'marked';
+	import { renderMarkdownToHTML } from '$lib/utils/marked';
 
 	const i18n = getContext('i18n');
 
@@ -77,7 +77,7 @@
 				/>
 
 				<div class="py-0.5 text-sm">
-					<Tooltip content={marked.parse(toolLabels[tool].description)}>
+					<Tooltip content={renderMarkdownToHTML(toolLabels[tool].description) as string}>
 						{$i18n.t(toolLabels[tool].label)}
 					</Tooltip>
 				</div>
