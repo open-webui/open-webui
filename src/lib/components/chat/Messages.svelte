@@ -457,21 +457,13 @@
 			// with no separator, causing NVDA to read a trailing period as "dot" before the
 			// next item begins.
 			const spaced = html
-				.replace(/<\/p>/gi, '
-')
-				.replace(/<\/li>/gi, '
-')
-				.replace(/<\/h[1-6]>/gi, '
-')
-				.replace(/<br\s*\/?>/gi, '
-');
-
+				.replace(/<\/p>/gi, '\n')
+				.replace(/<\/li>/gi, '\n')
+				.replace(/<\/h[1-6]>/gi, '\n')
+				.replace(/<br\s*\/?>/gi, '\n');
 			const tmp = document.createElement('div');
 			tmp.innerHTML = spaced;
-			return (tmp.textContent ?? tmp.innerText ?? '').trim().replace(/
-{3,}/g, '
-
-');
+			return (tmp.textContent ?? tmp.innerText ?? '').trim().replace(/\n{3,}/g, '\n\n');
 		} catch {
 			return markdown;
 		}
