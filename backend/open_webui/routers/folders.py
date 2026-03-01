@@ -119,7 +119,7 @@ def create_folder(
     db: Session = Depends(get_session),
 ):
     folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
-        None, user.id, form_data.name, db=db
+        form_data.parent_id, user.id, form_data.name, db=db
     )
 
     if folder:
@@ -129,7 +129,7 @@ def create_folder(
         )
 
     try:
-        folder = Folders.insert_new_folder(user.id, form_data, db=db)
+        folder = Folders.insert_new_folder(user.id, form_data, form_data.parent_id, db=db)
         return folder
     except Exception as e:
         log.exception(e)

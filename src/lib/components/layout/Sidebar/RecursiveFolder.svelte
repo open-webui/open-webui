@@ -18,7 +18,8 @@
 		updateFolderIsExpandedById,
 		updateFolderById,
 		updateFolderParentIdById,
-		getFolderById
+		getFolderById,
+		createNewFolder
 	} from '$lib/apis/folders';
 	import {
 		getChatById,
@@ -63,6 +64,9 @@
 
 	let showFolderModal = false;
 	let edit = false;
+
+	let showCreateSubFolderModal = false;
+	let createSubFolderParentId = null;
 
 	let draggedOver = false;
 	let dragged = false;
@@ -348,6 +352,30 @@
 		}
 	};
 
+	const createSubFolderHandler = async ({ name, meta, data, parent_id }) => {
+		if (name === '') {
+			toast.error($i18n.t('Folder name cannot be empty.'));
+			return;
+		}
+
+		name = name.trim();
+
+		const res = await createNewFolder(localStorage.token, {
+			name,
+			data,
+			meta,
+			parent_id
+		}).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Subfolder created successfully'));
+			dispatch('update');
+		}
+	};
+
 	const isExpandedUpdateHandler = async () => {
 		const res = await updateFolderIsExpandedById(localStorage.token, folderId, open).catch(
 			(error) => {
@@ -443,6 +471,12 @@
 </DeleteConfirmDialog>
 
 <FolderModal bind:show={showFolderModal} edit={true} {folderId} onSubmit={updateHandler} />
+
+<FolderModal
+	bind:show={showCreateSubFolderModal}
+	parentId={createSubFolderParentId}
+	onSubmit={createSubFolderHandler}
+/>
 
 {#if dragged && x && y}
 	<DragGhost {x} {y}>
@@ -592,6 +626,10 @@
 						}}
 						onExport={() => {
 							exportHandler();
+						}}
+						onCreateSub={() => {
+							createSubFolderParentId = folderId;
+							showCreateSubFolderModal = true;
 						}}
 					>
 						<div class="p-1 dark:hover:bg-gray-850 rounded-lg touch-auto">
