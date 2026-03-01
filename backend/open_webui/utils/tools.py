@@ -1186,7 +1186,7 @@ async def get_tool_servers_data(servers: List[Dict[str, Any]]) -> List[Dict[str,
             {
                 "id": str(id),
                 "idx": idx,
-                "url": server.get("url"),
+                "url": (server.get("url") or "").rstrip("/"),
                 "openapi": openapi_data,
                 "info": response.get("info"),
                 "specs": response.get("specs"),
@@ -1249,7 +1249,7 @@ async def execute_tool_server(
                 elif param_in == "query":
                     query_params[param_name] = params[param_name]
 
-        final_url = f"{url}{route_path}"
+        final_url = f"{url.rstrip('/')}{route_path}"
         for key, value in path_params.items():
             final_url = final_url.replace(f"{{{key}}}", str(value))
 
@@ -1319,6 +1319,8 @@ def get_tool_server_url(url: Optional[str], path: str) -> str:
     if "://" in path:
         # If it contains "://", it's a full URL
         return path
+    if url:
+        url = url.rstrip("/")
     if not path.startswith("/"):
         # Ensure the path starts with a slash
         path = f"/{path}"
