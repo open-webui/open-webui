@@ -964,7 +964,11 @@
 	};
 
 	$: if (history) {
-		getContents();
+		cancelAnimationFrame(contentsRAF);
+		contentsRAF = requestAnimationFrame(() => {
+			getContents();
+			contentsRAF = null;
+		});
 	} else {
 		artifactContents.set([]);
 	}
@@ -1294,6 +1298,7 @@
 	};
 
 	let scrollRAF = null;
+	let contentsRAF = null;
 	const scheduleScrollToBottom = () => {
 		if (!scrollRAF) {
 			scrollRAF = requestAnimationFrame(async () => {
