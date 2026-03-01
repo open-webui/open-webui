@@ -3,6 +3,7 @@
 	import { tick } from 'svelte';
 	import Folder from '../../icons/Folder.svelte';
 	import NewFolderAlt from '../../icons/NewFolderAlt.svelte';
+	import FilePlusAlt from '../../icons/FilePlusAlt.svelte';
 	import Spinner from '../../common/Spinner.svelte';
 	import Tooltip from '../../common/Tooltip.svelte';
 
@@ -15,6 +16,7 @@
 	export let onNavigate: (path: string) => void = () => {};
 	export let onRefresh: () => void = () => {};
 	export let onNewFolder: () => void = () => {};
+	export let onNewFile: () => void = () => {};
 	export let onUploadFiles: (files: File[]) => void = () => {};
 
 	let uploadInput: HTMLInputElement;
@@ -81,6 +83,15 @@
 				aria-label={$i18n.t('New Folder')}
 			>
 				<NewFolderAlt className="size-3.5" />
+			</button>
+		</Tooltip>
+		<Tooltip content={$i18n.t('New File')}>
+			<button
+				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+				on:click={onNewFile}
+				aria-label={$i18n.t('New File')}
+			>
+				<FilePlusAlt className="size-3.5" />
 			</button>
 		</Tooltip>
 		<Tooltip content={$i18n.t('Upload')}>

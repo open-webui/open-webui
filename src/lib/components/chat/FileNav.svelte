@@ -19,6 +19,7 @@
 		type FileEntry
 	} from '$lib/apis/terminal';
 	import Folder from '../icons/Folder.svelte';
+	import Document from '../icons/Document.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 
@@ -50,6 +51,9 @@
 	let creatingFolder = false;
 	let newFolderName = '';
 	let newFolderInput: HTMLInputElement;
+	let creatingFile = false;
+	let newFileName = '';
+	let newFileInput: HTMLInputElement;
 
 	// ── Delete confirmation ──────────────────────────────────────────────
 	let deleteTarget: { path: string; name: string } | null = null;
@@ -257,6 +261,31 @@
 		await loadDir(currentPath);
 	};
 
+	// ── File creation ────────────────────────────────────────────────────
+	const startNewFile = async () => {
+		creatingFile = true;
+		newFileName = '';
+		await tick();
+		newFileInput?.focus();
+	};
+
+	const submitNewFile = async () => {
+		const name = newFileName.trim();
+		creatingFile = false;
+		newFileName = '';
+		if (!name) return;
+
+		const terminal = selectedTerminal;
+		if (!terminal) return;
+
+		const emptyFile = new File([''], name, { type: 'application/octet-stream' });
+		const result = await uploadToTerminal(terminal.url, terminal.key, currentPath, emptyFile);
+		toast[result ? 'success' : 'error'](
+			$i18n.t(result ? 'File created' : 'Failed to create file')
+		);
+		await loadDir(currentPath);
+	};
+
 	// ── Delete ───────────────────────────────────────────────────────────
 	const handleDelete = async (path: string, name: string) => {
 		const terminal = selectedTerminal;
@@ -397,6 +426,7 @@
 			onNavigate={loadDir}
 			onRefresh={() => loadDir(currentPath)}
 			onNewFolder={startNewFolder}
+			onNewFile={startNewFile}
 			onUploadFiles={handleUploadFiles}
 		/>
 
@@ -422,7 +452,7 @@
 					<div class="flex justify-center pt-8"><Spinner className="size-4" /></div>
 				{:else if error}
 					<div class="p-4 text-xs">{error}</div>
-				{:else if entries.length === 0 && !creatingFolder}
+				{:else if entries.length === 0 && !creatingFolder && !creatingFile}
 					<div class="flex flex-col items-center justify-center gap-1.5 py-12 text-center">
 						<Folder className="size-6 text-gray-200 dark:text-gray-700" />
 						<div class="text-xs text-gray-400 dark:text-gray-500">
@@ -454,8 +484,27 @@
 							/>
 						</div>
 					{/if}
+					{#if creatingFile}
+						<div class="flex items-center gap-2 px-3 py-1.5">
+							<Document className="size-4 shrink-0 text-gray-400 dark:text-gray-500" />
+							<input
+								bind:this={newFileInput}
+								bind:value={newFileName}
+								class="flex-1 text-xs bg-transparent border border-gray-200 dark:border-gray-700 rounded px-1.5 py-0.5 outline-none focus:border-blue-400 dark:focus:border-blue-500"
+								placeholder={$i18n.t('File name')}
+								on:keydown={(e) => {
+									if (e.key === 'Enter') submitNewFile();
+									if (e.key === 'Escape') {
+										creatingFile = false;
+										newFileName = '';
+									}
+								}}
+								on:blur={submitNewFile}
+							/>
+						</div>
+					{/if}
 
-					{#if entries.length > 0 || creatingFolder}
+					{#if entries.length > 0 || creatingFolder || creatingFile}
 						<ul>
 							{#each entries as entry}
 								<FileEntryRow
