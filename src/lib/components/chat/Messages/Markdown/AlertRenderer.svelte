@@ -43,6 +43,20 @@
 		}
 	};
 
+	// Simple text-keyed cache for marked.lexer() to avoid re-lexing unchanged content
+	// in hot paths (alert blockquotes, details blocks). Capped at 100 entries.
+	const lexerCache = new Map<string, Token[]>();
+	export function cachedLexer(text: string): Token[] {
+		const cached = lexerCache.get(text);
+		if (cached) return cached;
+		const tokens = marked.lexer(text);
+		lexerCache.set(text, tokens);
+		if (lexerCache.size > 100) {
+			lexerCache.delete(lexerCache.keys().next().value);
+		}
+		return tokens;
+	}
+
 	export function alertComponent(token: Token): AlertData | false {
 		const regExpStr = `^(?:\\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\\])\\s*?\n*`;
 		const regExp = new RegExp(regExpStr);
@@ -51,7 +65,7 @@
 		if (matches && matches.length) {
 			const alertType = matches[1] as AlertType;
 			const newText = token.text.replace(regExp, '');
-			const newTokens = marked.lexer(newText);
+			const newTokens = cachedLexer(newText);
 			return {
 				type: alertType,
 				text: newText,
