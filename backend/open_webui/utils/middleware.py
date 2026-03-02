@@ -375,9 +375,9 @@ def serialize_output(output: list) -> str:
             result_item = tool_outputs.get(call_id)
             if result_item:
                 result_text = ""
-                for output in result_item.get("output", []):
-                    if "text" in output:
-                        output_text = output.get("text", "")
+                for result_output in result_item.get("output", []):
+                    if "text" in result_output:
+                        output_text = result_output.get("text", "")
                         result_text += (
                             str(output_text)
                             if not isinstance(output_text, str)
@@ -4424,7 +4424,8 @@ async def streaming_chat_response_handler(response, ctx):
                                 code = sanitize_code(code)
 
                                 if CODE_INTERPRETER_BLOCKED_MODULES:
-                                    blocking_code = textwrap.dedent(f"""
+                                    blocking_code = textwrap.dedent(
+                                        f"""
                                         import builtins
     
                                         BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
@@ -4440,7 +4441,8 @@ async def streaming_chat_response_handler(response, ctx):
                                             return _real_import(name, globals, locals, fromlist, level)
     
                                         builtins.__import__ = restricted_import
-                                    """)
+                                    """
+                                    )
                                     code = blocking_code + "\n" + code
 
                                 if (
