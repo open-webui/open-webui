@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 🔧 **Middleware variable shadowing.** Fixed a variable shadowing issue in the middleware that could cause incorrect tool output processing during chat. [#22145](https://github.com/open-webui/open-webui/pull/22145)
 - ⚡ **ChatControls reactivity fix.** Fixed a Svelte reactivity issue where the active tab state in the ChatControls panel was not properly saved when switching between chats. [#22127](https://github.com/open-webui/open-webui/pull/22127)
-- 📜 **Chat history pagination.** Fixed an issue where older messages in long chats were not loaded when scrolling to the top. [Commit](https://github.com/open-webui/open-webui/commit/d7147d6cddfd314f0f1be77b15cec406a609ef36)
+- 📜 **Chat history pagination.** Fixed an issue where older messages in long chats were not loaded when scrolling to the top. [Commit](https://github.com/open-webui/open-webui/commit/d7147d6cddfd314f0f1be77b15cec406a609ef36), [Commit](https://github.com/open-webui/open-webui/commit/c701ebe07bd152eecb42b0bf6de26071358a5c76)
 
 ### Changed
 
