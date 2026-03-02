@@ -27,7 +27,7 @@ body:
     id: issue-check
     attributes:
       label: Check Existing Issues
-      description: Confirm that you’ve checked for existing reports before submitting a new one.
+      description: Confirm that you've checked for existing reports before submitting a new one.
       options:
         - label: I have searched for any existing and/or related issues.
           required: true
@@ -83,6 +83,60 @@ body:
     validations:
       required: false
 
+  - type: textarea
+    id: functions-pipelines
+    attributes:
+      label: Active Functions, Pipelines & Filters
+      description: |
+        **List ALL functions, pipelines, and filters in your Open WebUI instance** — even ones you installed a long time ago and may have forgotten about. Many bugs are caused by third-party functions/pipelines interfering with core behaviour.
+
+        Go to **Admin Panel → Functions** and **Admin Panel → Pipelines** and list everything, including:
+        - Function/pipeline name
+        - What it does (briefly)
+        - Where you got it (e.g. community, custom-written)
+
+        If you have none active, write "None".
+
+        **⚠️ Do not skip this field.** Issues with streaming, tool calling, or response formatting are very frequently caused by active functions or pipelines. Incomplete information here will significantly delay resolution.
+      placeholder: |
+        Example:
+        - "Thinking stream fixup" – patches </think> tokens for gpt-oss models – community function
+        - "Auto title" – generates chat titles automatically – built-in
+        Or: None
+    validations:
+      required: true
+
+  - type: textarea
+    id: reverse-proxy
+    attributes:
+      label: Reverse Proxy Configuration
+      description: |
+        If Open WebUI and/or your LLM backend are behind a reverse proxy (nginx, Traefik, Caddy, Apache, Cloudflare, etc.), you **must** provide the full relevant configuration here.
+
+        Specifically include any settings related to:
+        - Buffering (e.g. `proxy_buffering`, `maxResponseBodyBytes`)
+        - Caching
+        - Timeouts
+        - WebSocket/upgrade headers
+        - Compression (gzip)
+        - TCP settings
+
+        If you are not using a reverse proxy, write "None". If you are using one but have not checked its streaming/buffering config, please do so before submitting — misconfigured proxies are the most common cause of streaming issues.
+      placeholder: |
+        Example (nginx):
+          proxy_buffering off;
+          proxy_cache off;
+          proxy_read_timeout 1800;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection "upgrade";
+
+        Example (Traefik label):
+          traefik.http.middlewares.no-buffer.buffering.maxResponseBodyBytes: "0"
+
+        Or: None
+    validations:
+      required: true
+
   - type: checkboxes
     id: confirmation
     attributes:
@@ -101,6 +155,8 @@ body:
           required: true
         - label: I have clearly **listed every relevant configuration, custom setting, environment variable, and command-line option that influences my setup** (such as Docker Compose overrides, .env values, browser settings, authentication configurations, etc).
           required: true
+        - label: I have listed ALL active functions, pipelines, and filters in the relevant field above.
+          required: true
         - label: |
             I have documented **step-by-step reproduction instructions that are precise, sequential, and leave nothing to interpretation**. My steps:
             - Start with the initial platform/version/OS and dependencies used,
@@ -111,6 +167,7 @@ body:
             - Identify the expected and actual result at each stage,
             - Ensure any reasonably skilled user can follow and hit the same issue.
           required: true
+
   - type: textarea
     id: expected-behavior
     attributes:
@@ -151,6 +208,7 @@ body:
         Please list each step carefully and include all relevant configuration, settings, and options.
     validations:
       required: true
+
   - type: textarea
     id: logs-screenshots
     attributes:
