@@ -55,6 +55,8 @@ from open_webui.config import (
     OAUTH_ADMIN_ROLES,
     OAUTH_ALLOWED_DOMAINS,
     OAUTH_UPDATE_PICTURE_ON_LOGIN,
+    OAUTH_UPDATE_NAME_ON_LOGIN,
+    OAUTH_UPDATE_EMAIL_ON_LOGIN,
     OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID,
     OAUTH_AUDIENCE,
     WEBHOOK_URL,
@@ -129,6 +131,8 @@ auth_manager_config.OAUTH_ALLOWED_DOMAINS = OAUTH_ALLOWED_DOMAINS
 auth_manager_config.WEBHOOK_URL = WEBHOOK_URL
 auth_manager_config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN = OAUTH_UPDATE_PICTURE_ON_LOGIN
+auth_manager_config.OAUTH_UPDATE_NAME_ON_LOGIN = OAUTH_UPDATE_NAME_ON_LOGIN
+auth_manager_config.OAUTH_UPDATE_EMAIL_ON_LOGIN = OAUTH_UPDATE_EMAIL_ON_LOGIN
 auth_manager_config.OAUTH_AUDIENCE = OAUTH_AUDIENCE
 
 
@@ -1603,6 +1607,33 @@ class OAuthManager:
                     # Update the user object in memory as well,
                     # to avoid problems with the ENABLE_OAUTH_GROUP_MANAGEMENT check below
                     user.role = determined_role
+
+                if auth_manager_config.OAUTH_UPDATE_NAME_ON_LOGIN:
+                    username_claim = auth_manager_config.OAUTH_USERNAME_CLAIM
+                    if username_claim:
+                        new_name = user_data.get(username_claim)
+                        if new_name and new_name != user.name:
+                            Users.update_user_by_id(user.id, {"name": new_name}, db=db)
+                            user.name = new_name
+                            log.debug(f"Updated name for user {user.email}")
+
+                if auth_manager_config.OAUTH_UPDATE_EMAIL_ON_LOGIN:
+                    email_claim = auth_manager_config.OAUTH_EMAIL_CLAIM
+                    if email_claim:
+                        new_email = user_data.get(email_claim)
+                        if new_email and new_email.lower() != user.email.lower():
+                            existing_user = Users.get_user_by_email(new_email, db=db)
+                            if existing_user:
+                                log.error(
+                                    f"Cannot update email to {new_email} for user {user.id} because it is already taken."
+                                )
+                            else:
+                                Auths.update_email_by_id(
+                                    user.id, new_email.lower(), db=db
+                                )
+                                user.email = new_email.lower()
+                                log.debug(f"Updated email for user {user.id}")
+
                 # Update profile picture if enabled and different from current
                 if auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN:
                     picture_claim = auth_manager_config.OAUTH_PICTURE_CLAIM
@@ -1761,44 +1792,40 @@ class OAuthManager:
                 db=db,
             )
 
-            response.set_cookie(
-                key="oauth_session_id",
-                value=session.id,
-                httponly=True,
-                samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-                secure=WEBUI_AUTH_COOKIE_SECURE,
-            )
+            if session:
+                response.set_cookie(
+                    key="oauth_session_id",
+                    value=session.id,
+                    httponly=True,
+                    samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                    secure=WEBUI_AUTH_COOKIE_SECURE,
+                )
 
-            log.info(
-                f"Stored OAuth session server-side for user {user.id}, provider {provider}"
-            )
-            
-            # ✨ Trigger automatic Gmail sync if applicable (for Google OAuth)
-            # Check if this is a new OAuth session (first time logging in with this provider)
-            is_new_oauth_session = len([s for s in sessions if s.provider == provider]) == 0
-            
-            log.info(f"🔥 Gmail sync check: is_new_oauth_session={is_new_oauth_session}, provider={provider}")
-            
-            # Always check Gmail sync for Google OAuth (not just new sessions)
-            # The trigger function will check admin settings and user preferences
-            if provider == "google":
-                log.info(f"🚀 Checking Gmail sync eligibility for user {user.id}")
-                try:
-                    from open_webui.utils.gmail_auto_sync import trigger_gmail_sync_if_needed
-                    
-                    await trigger_gmail_sync_if_needed(
-                        request=request,
-                        user_id=user.id,
-                        provider=provider,
-                        token=token,
-                        is_new_user=is_new_oauth_session,
-                    )
-                except Exception as e:
-                    log.error(f"❌ Gmail auto-sync trigger failed for user {user.id}: {e}")
-                    # Don't fail OAuth callback if Gmail sync fails
+                log.info(
+                    f"Stored OAuth session server-side for user {user.id}, provider {provider}"
+                )
+
+                # Trigger automatic Gmail sync if applicable (for Google OAuth)
+                is_new_oauth_session = len([s for s in sessions if s.provider == provider]) == 0
+
+                if provider == "google":
+                    log.info(f"Checking Gmail sync eligibility for user {user.id}")
+                    try:
+                        from open_webui.utils.gmail_auto_sync import trigger_gmail_sync_if_needed
+
+                        await trigger_gmail_sync_if_needed(
+                            request=request,
+                            user_id=user.id,
+                            provider=provider,
+                            token=token,
+                            is_new_user=is_new_oauth_session,
+                        )
+                    except Exception as e:
+                        log.error(f"Gmail auto-sync trigger failed for user {user.id}: {e}")
             else:
-                log.info(f"⏭️  Skipping Gmail sync (provider={provider}, not Google)")
-                
+                log.warning(
+                    f"Failed to create OAuth session for user {user.id}, provider {provider}"
+                )
         except Exception as e:
             log.error(f"Failed to store OAuth session server-side: {e}")
 

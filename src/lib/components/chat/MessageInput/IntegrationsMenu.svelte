@@ -4,7 +4,15 @@
 	import { fly } from 'svelte/transition';
 	import { flyAndScale } from '$lib/utils/transitions';
 
-	import { config, user, tools as _tools, mobile, settings, toolServers } from '$lib/stores';
+	import {
+		config,
+		user,
+		tools as _tools,
+		mobile,
+		settings,
+		toolServers,
+		terminalServers
+	} from '$lib/stores';
 
 	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
 	import { getTools } from '$lib/apis/tools';
@@ -88,7 +96,9 @@
 			}
 		}
 
-		selectedToolIds = selectedToolIds.filter((id) => Object.keys(tools).includes(id));
+		selectedToolIds = selectedToolIds.filter(
+			(id) => Object.keys(tools).includes(id) || id.startsWith('direct_server:terminal_')
+		);
 	};
 </script>
 

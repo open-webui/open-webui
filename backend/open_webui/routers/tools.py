@@ -21,7 +21,7 @@ from open_webui.models.tools import (
     ToolAccessResponse,
     Tools,
 )
-from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant
+from open_webui.models.access_grants import AccessGrants
 from open_webui.utils.plugin import (
     load_tool_module_by_id,
     replace_imports,
@@ -576,24 +576,13 @@ async def update_tool_access_by_id(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    # Strip public sharing if user lacks permission
-    if (
-        user.role != "admin"
-        and has_public_read_access_grant(form_data.access_grants)
-        and not has_permission(
-            user.id,
-            "sharing.public_tools",
-            request.app.state.config.USER_PERMISSIONS,
-        )
-    ):
-        form_data.access_grants = [
-            grant
-            for grant in form_data.access_grants
-            if not (
-                grant.get("principal_type") == "user"
-                and grant.get("principal_id") == "*"
-            )
-        ]
+    form_data.access_grants = filter_allowed_access_grants(
+        request.app.state.config.USER_PERMISSIONS,
+        user.id,
+        user.role,
+        form_data.access_grants,
+        "sharing.public_tools",
+    )
 
     AccessGrants.set_access_grants("tool", id, form_data.access_grants, db=db)
 
