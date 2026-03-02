@@ -82,6 +82,7 @@ from open_webui.tools.builtin import (
     view_file,
     view_knowledge_file,
     view_skill,
+    upload_file_to_terminal,
 )
 
 import copy
@@ -529,6 +530,11 @@ def get_builtin_tools(
     # Skills tools - view_skill allows model to load full skill instructions on demand
     if extra_params.get("__skill_ids__"):
         builtin_functions.append(view_skill)
+
+    # Terminal tools - upload chat files to connected terminal server
+    terminal_id = (extra_params.get("__metadata__") or {}).get("terminal_id")
+    if is_builtin_tool_enabled("terminal") and terminal_id:
+        builtin_functions.append(upload_file_to_terminal)
 
     for func in builtin_functions:
         callable = get_async_tool_function_and_apply_extra_params(
