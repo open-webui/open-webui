@@ -60,7 +60,9 @@
 	// Tab state for Controls+Files panel
 	let activeTab = savedTab;
 	// svelte-ignore reactive_declaration_module_script_dependency
-	$: { savedTab = activeTab };
+	$: {
+		savedTab = activeTab;
+	}
 
 	$: hasMessages = history?.messages && Object.keys(history.messages).length > 0;
 
@@ -285,7 +287,8 @@
 							<div class="flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
 								{#if showControlsTab}
 									<button
-										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab === 'controls'
+										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+										'controls'
 											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 											: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
 										on:click={() => (activeTab = 'controls')}
@@ -295,7 +298,8 @@
 								{/if}
 								{#if showFilesTab}
 									<button
-										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab === 'files'
+										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+										'files'
 											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 											: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
 										on:click={() => (activeTab = 'files')}
@@ -305,7 +309,8 @@
 								{/if}
 								{#if showOverviewTab}
 									<button
-										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab === 'overview'
+										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+										'overview'
 											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 											: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
 										on:click={() => (activeTab = 'overview')}
@@ -423,7 +428,8 @@
 								<div class="flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
 									{#if showControlsTab}
 										<button
-											class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab === 'controls'
+											class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+											'controls'
 												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 												: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
 											on:click={() => (activeTab = 'controls')}
@@ -433,7 +439,8 @@
 									{/if}
 									{#if showFilesTab}
 										<button
-											class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab === 'files'
+											class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+											'files'
 												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 												: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
 											on:click={() => (activeTab = 'files')}
@@ -443,7 +450,8 @@
 									{/if}
 									{#if showOverviewTab}
 										<button
-											class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab === 'overview'
+											class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+											'overview'
 												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 												: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
 											on:click={() => (activeTab = 'overview')}

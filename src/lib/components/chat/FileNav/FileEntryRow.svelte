@@ -26,7 +26,9 @@
 <li class="group">
 	<div
 		class="w-full flex items-center hover:bg-gray-50 dark:hover:bg-gray-800 transition
-			{dragOverFolder ? 'bg-blue-50 dark:bg-blue-900/30 ring-1 ring-blue-400 dark:ring-blue-500 ring-inset' : ''}"
+			{dragOverFolder
+			? 'bg-blue-50 dark:bg-blue-900/30 ring-1 ring-blue-400 dark:ring-blue-500 ring-inset'
+			: ''}"
 		role={entry.type === 'directory' ? 'button' : undefined}
 		on:dragover={(e) => {
 			if (entry.type !== 'directory') return;

@@ -5,12 +5,7 @@
 	import { WebLinksAddon } from '@xterm/addon-web-links';
 	import '@xterm/xterm/css/xterm.css';
 
-	import {
-		terminalServers,
-		settings,
-		selectedTerminalId,
-		user
-	} from '$lib/stores';
+	import { terminalServers, settings, selectedTerminalId, user } from '$lib/stores';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
@@ -66,9 +61,7 @@
 				// Direct connection to open-terminal
 				const base = info.baseUrl.replace(/\/$/, '');
 				const directTerminals = ($settings?.terminalServers ?? []).filter((s: any) => s.url);
-				const directMatch = directTerminals.find(
-					(s: any) => s.url === $selectedTerminalId
-				);
+				const directMatch = directTerminals.find((s: any) => s.url === $selectedTerminalId);
 				const apiKey = directMatch?.key ?? '';
 				authToken = apiKey;
 
@@ -162,7 +155,8 @@
 		term = new Terminal({
 			cursorBlink: true,
 			fontSize: 13,
-			fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Monaco, 'Courier New', monospace",
+			fontFamily:
+				"'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Monaco, 'Courier New', monospace",
 			theme: {
 				background: '#1a1b26',
 				foreground: '#c0caf5',
@@ -263,9 +257,5 @@
 </script>
 
 <div class="h-full min-h-0 relative">
-	<div
-		bind:this={terminalEl}
-		class="absolute inset-0 p-1"
-		class:pointer-events-none={overlay}
-	/>
+	<div bind:this={terminalEl} class="absolute inset-0 p-1" class:pointer-events-none={overlay} />
 </div>
