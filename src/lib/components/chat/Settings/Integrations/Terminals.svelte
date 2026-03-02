@@ -7,13 +7,7 @@
 	import Connection from './Terminals/Connection.svelte';
 	import AddTerminalServerModal from '$lib/components/AddTerminalServerModal.svelte';
 
-	export let servers: {
-		url: string;
-		key: string;
-		name?: string;
-		path?: string;
-		enabled: boolean;
-	}[] = [];
+	export let servers = [];
 	export let onChange: (servers: typeof servers) => void = () => {};
 
 	let showAddModal = false;
@@ -25,6 +19,11 @@
 
 	const enableServer = (idx: number) => {
 		servers = servers.map((s, i) => ({ ...s, enabled: i === idx }));
+		onChange(servers);
+	};
+
+	const disableServer = (idx: number) => {
+		servers = servers.map((s, i) => (i === idx ? { ...s, enabled: false } : s));
 		onChange(servers);
 	};
 
@@ -69,6 +68,7 @@
 				onSubmit={(updated) => updateServer(idx, updated)}
 				onDelete={() => deleteServer(idx)}
 				onEnable={() => enableServer(idx)}
+				onDisable={() => disableServer(idx)}
 			/>
 		{/each}
 	</div>

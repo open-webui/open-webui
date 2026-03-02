@@ -13,6 +13,7 @@
 	export let onSubmit: (c: typeof connection) => void = () => {};
 	export let onDelete: () => void = () => {};
 	export let onEnable: () => void = () => {};
+	export let onDisable: () => void = () => {};
 
 	let showConfigModal = false;
 	let showDeleteConfirmDialog = false;
@@ -43,13 +44,13 @@
 	<Tooltip className="w-full relative" content={''} placement="top-start">
 		<div class="flex w-full">
 			<div
-				class="flex-1 relative flex gap-1.5 items-center {!connection.enabled ? 'opacity-50' : ''}"
+				class="flex-1 relative flex gap-1.5 items-center {!connection?.enabled ? 'opacity-50' : ''}"
 			>
 				<Tooltip content={$i18n.t('Terminal')}>
 					<Cloud className="size-4" strokeWidth="1.5" />
 				</Tooltip>
 
-				<div class="capitalize outline-hidden w-full bg-transparent text-sm">
+				<div class="outline-hidden w-full bg-transparent text-sm">
 					{connection.name || connection.url || $i18n.t('New Terminal')}
 				</div>
 			</div>
@@ -69,8 +70,11 @@
 			</button>
 		</Tooltip>
 
-		<Tooltip content={connection.enabled ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
-			<Switch state={connection.enabled} on:change={() => onEnable()} />
+		<Tooltip content={connection?.enabled ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
+			<Switch
+				state={connection?.enabled}
+				on:change={() => (connection?.enabled ? onDisable() : onEnable())}
+			/>
 		</Tooltip>
 	</div>
 </div>

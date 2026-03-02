@@ -3,6 +3,7 @@ import { type Writable, writable } from 'svelte/store';
 import type { ModelConfig } from '$lib/apis';
 import type { Banner } from '$lib/types';
 import type { Socket } from 'socket.io-client';
+import type { AudioQueue } from '$lib/utils/audio';
 
 import emojiShortCodes from '$lib/emoji-shortcodes.json';
 
@@ -75,7 +76,7 @@ export const banners: Writable<Banner[]> = writable([]);
 
 export const settings: Writable<Settings> = writable({});
 
-export const audioQueue = writable(null);
+export const audioQueue = writable<AudioQueue | null>(null);
 
 export const sidebarWidth = writable(260);
 
@@ -92,6 +93,9 @@ export const showOverview = writable(false);
 export const showArtifacts = writable(false);
 export const showCallOverlay = writable(false);
 export const showFileNav = writable(false);
+export const showFileNavPath: Writable<string | null> = writable(null);
+export const showFileNavDir: Writable<string | null> = writable(null);
+export const selectedTerminalId: Writable<string | null> = writable(null);
 
 export const artifactCode = writable(null);
 export const artifactContents = writable(null);

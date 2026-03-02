@@ -10,12 +10,16 @@
 
 	import { onDestroy, onMount, tick, getContext } from 'svelte';
 	import {
+		terminalServers,
 		mobile,
 		showControls,
 		showCallOverlay,
 		showArtifacts,
 		showEmbeds,
-		settings
+		settings,
+		showFileNavPath,
+		selectedTerminalId,
+		user
 	} from '$lib/stores';
 
 	import { uploadFile } from '$lib/apis/files';
@@ -46,9 +50,8 @@
 	export let files;
 	export let modelId;
 
-	export let pane;
+	export let pane: Pane | null = null;
 
-	let mediaQuery;
 	let largeScreen = false;
 	let dragged = false;
 	let minSize = 0;
@@ -57,9 +60,36 @@
 	// Tab state for Controls+Files panel
 	let activeTab: 'controls' | 'files' | 'overview' = savedTab;
 	$: savedTab = activeTab;
-	$: hasTerminal = !!($settings?.terminalServers ?? []).find((s) => s.enabled)?.url;
 	$: hasMessages = history?.messages && Object.keys(history.messages).length > 0;
-	$: if (!hasMessages && activeTab === 'overview') activeTab = 'controls';
+
+	$: showControlsTab = $user?.role === 'admin' || ($user?.permissions?.chat?.controls ?? true);
+	$: showFilesTab = !!$selectedTerminalId;
+	$: showOverviewTab = hasMessages;
+
+	// Tab fallback: if active tab becomes hidden, switch to next available
+	$: if (!showOverviewTab && activeTab === 'overview') activeTab = 'controls';
+	$: if (!showFilesTab && activeTab === 'files') activeTab = 'controls';
+	$: if (!showControlsTab && activeTab === 'controls') {
+		if (showFilesTab) activeTab = 'files';
+		else if (showOverviewTab) activeTab = 'overview';
+	}
+
+	// Auto-close if there are no visible tabs
+	$: if (!showControlsTab && !showFilesTab && !showOverviewTab) {
+		showControls.set(false);
+	}
+
+	// Auto-switch to Files tab when display_file is triggered
+	$: if ($showFileNavPath) {
+		activeTab = 'files';
+		showControls.set(true);
+	}
+
+	// Auto-open Files tab when a terminal is selected
+	$: if ($selectedTerminalId) {
+		activeTab = 'files';
+		showControls.set(true);
+	}
 
 	// Attach a terminal file to the chat input
 	const handleTerminalAttach = async (blob: Blob, name: string, contentType: string) => {
@@ -141,54 +171,67 @@
 		dragged = false;
 	};
 
-	onMount(async () => {
-		mediaQuery = window.matchMedia('(min-width: 1024px)');
+	onMount(() => {
+		const mediaQuery = window.matchMedia('(min-width: 1024px)');
 		mediaQuery.addEventListener('change', handleMediaQuery);
 		handleMediaQuery(mediaQuery);
 
+		let resizeObserver: ResizeObserver | null = null;
+		let isDestroyed = false;
+
 		// Wait for Svelte to render the Pane after largeScreen changed
-		await tick();
+		const init = async () => {
+			await tick();
 
-		const container = document.getElementById('chat-container');
-		minSize = Math.floor((350 / container.clientWidth) * 100);
+			if (isDestroyed) return;
 
-		const resizeObserver = new ResizeObserver((entries) => {
-			for (let entry of entries) {
-				const width = entry.contentRect.width;
-				minSize = Math.floor((350 / width) * 100);
-				if ($showControls) {
-					if (pane && pane.isExpanded() && pane.getSize() < minSize) {
-						pane.resize(minSize);
-					} else {
-						let size = Math.floor(
-							(parseInt(localStorage?.chatControlsSize) / container.clientWidth) * 100
-						);
-						if (size < minSize) pane.resize(minSize);
+			// If controls were persisted as open, set the pane to the saved size
+			if ($showControls && pane) {
+				openPane();
+			}
+
+			setTimeout(() => {
+				paneReady = true;
+			}, 0);
+
+			const container = document.getElementById('chat-container') as HTMLElement;
+			if (!container) return;
+
+			minSize = Math.floor((350 / container.clientWidth) * 100);
+			resizeObserver = new ResizeObserver((entries) => {
+				for (let entry of entries) {
+					const width = entry.contentRect.width;
+					minSize = Math.floor((350 / width) * 100);
+					if ($showControls) {
+						if (pane && pane.isExpanded() && pane.getSize() < minSize) {
+							pane.resize(minSize);
+						} else {
+							let size = Math.floor(
+								(parseInt(localStorage?.chatControlsSize) / container.clientWidth) * 100
+							);
+							if (size < minSize && pane) pane.resize(minSize);
+						}
 					}
 				}
-			}
-		});
-		resizeObserver.observe(container);
+			});
+			resizeObserver.observe(container);
+		};
+		init();
 
 		document.addEventListener('mousedown', onMouseDown);
 		document.addEventListener('mouseup', onMouseUp);
 
-		setTimeout(() => { paneReady = true; }, 0);
-
-		// If controls were persisted as open, set the pane to the saved size
-		if ($showControls && pane) {
-			openPane();
-		}
-	});
-
-	onDestroy(() => {
-		paneReady = false;
-		if (!largeScreen) {
-			showControls.set(false);
-		}
-		mediaQuery.removeEventListener('change', handleMediaQuery);
-		document.removeEventListener('mousedown', onMouseDown);
-		document.removeEventListener('mouseup', onMouseUp);
+		return () => {
+			isDestroyed = true;
+			paneReady = false;
+			resizeObserver?.disconnect();
+			if (!largeScreen) {
+				showControls.set(false);
+			}
+			mediaQuery.removeEventListener('change', handleMediaQuery);
+			document.removeEventListener('mousedown', onMouseDown);
+			document.removeEventListener('mouseup', onMouseUp);
+		};
 	});
 
 	const closeHandler = () => {
@@ -238,15 +281,17 @@
 						<!-- Tab bar -->
 						<div class="flex items-center justify-between px-2 pt-2.5 pb-2 shrink-0">
 							<div class="flex gap-1">
-								<button
-									class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'controls'
-										? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
-										: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
-									on:click={() => (activeTab = 'controls')}
-								>
-									{$i18n.t('Controls')}
-								</button>
-								{#if hasTerminal}
+								{#if showControlsTab}
+									<button
+										class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'controls'
+											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
+											: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+										on:click={() => (activeTab = 'controls')}
+									>
+										{$i18n.t('Controls')}
+									</button>
+								{/if}
+								{#if showFilesTab}
 									<button
 										class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'files'
 											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
@@ -256,7 +301,7 @@
 										{$i18n.t('Files')}
 									</button>
 								{/if}
-								{#if hasMessages}
+								{#if showOverviewTab}
 									<button
 										class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'overview'
 											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
@@ -301,7 +346,7 @@
 									}}
 									onClose={() => showControls.set(false)}
 								/>
-							{:else if activeTab === 'files' && hasTerminal}
+							{:else if activeTab === 'files' && $selectedTerminalId}
 								<FileNav onAttach={handleTerminalAttach} />
 							{:else}
 								<Controls embed={true} {models} bind:chatFiles bind:params />
@@ -374,15 +419,17 @@
 							<!-- Tab bar -->
 							<div class="flex items-center justify-between px-2 pt-2.5 pb-2 shrink-0">
 								<div class="flex gap-1">
-									<button
-										class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'controls'
-											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
-											: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
-										on:click={() => (activeTab = 'controls')}
-									>
-										{$i18n.t('Controls')}
-									</button>
-									{#if hasTerminal}
+									{#if showControlsTab}
+										<button
+											class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'controls'
+												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
+												: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+											on:click={() => (activeTab = 'controls')}
+										>
+											{$i18n.t('Controls')}
+										</button>
+									{/if}
+									{#if showFilesTab}
 										<button
 											class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'files'
 												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
@@ -392,7 +439,7 @@
 											{$i18n.t('Files')}
 										</button>
 									{/if}
-									{#if hasMessages}
+									{#if showOverviewTab}
 										<button
 											class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'overview'
 												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
@@ -442,7 +489,7 @@
 										}}
 										onClose={() => showControls.set(false)}
 									/>
-								{:else if activeTab === 'files' && hasTerminal}
+								{:else if activeTab === 'files' && $selectedTerminalId}
 									<FileNav onAttach={handleTerminalAttach} />
 								{:else}
 									<Controls embed={true} {models} bind:chatFiles bind:params />

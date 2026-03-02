@@ -45,7 +45,8 @@
 		});
 		toolServers.set(toolServersData);
 
-		// Refresh terminal servers store
+		// Refresh terminal servers store (preserve system terminals)
+		const existingSystemTerminals = ($terminalServers ?? []).filter((t) => t.id);
 		const activeTerminals = terminalServerConfigs.filter((s) => s.enabled);
 		if (activeTerminals.length > 0) {
 			let terminalServersData = await getToolServersData(
@@ -58,9 +59,9 @@
 				}))
 			);
 			terminalServersData = terminalServersData.filter((data) => data && !data.error);
-			terminalServers.set(terminalServersData);
+			terminalServers.set([...terminalServersData, ...existingSystemTerminals]);
 		} else {
-			terminalServers.set([]);
+			terminalServers.set(existingSystemTerminals);
 		}
 	};
 

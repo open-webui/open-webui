@@ -17,7 +17,7 @@
 	import Search from '../icons/Search.svelte';
 	import XMark from '../icons/XMark.svelte';
 	import Connections from './Settings/Connections.svelte';
-	import Tools from './Settings/Tools.svelte';
+	import Integrations from './Settings/Integrations.svelte';
 	import DatabaseSettings from '../icons/DatabaseSettings.svelte';
 	import SettingsAlt from '../icons/SettingsAlt.svelte';
 	import Link from '../icons/Link.svelte';
@@ -898,7 +898,7 @@
 						}}
 					/>
 				{:else if selectedTab === 'tools'}
-					<Tools
+					<Integrations
 						saveSettings={async (updated) => {
 							await saveSettings(updated);
 							toast.success($i18n.t('Settings saved successfully!'));

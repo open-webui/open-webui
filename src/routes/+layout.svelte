@@ -31,7 +31,10 @@
 		playingNotificationSound,
 		channels,
 		channelId,
-		terminalServers
+		terminalServers,
+		showControls,
+		showFileNavPath,
+		showFileNavDir
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -50,7 +53,7 @@
 	import { chatCompletion } from '$lib/apis/openai';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
-	import { bestMatchingLanguage } from '$lib/utils';
+	import { bestMatchingLanguage, displayFileHandler } from '$lib/utils';
 	import { setTextScale } from '$lib/utils/text-scale';
 
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
@@ -283,14 +286,11 @@
 		};
 	};
 
-	const executeTool = async (data, cb) => {
-		let toolServer = $settings?.toolServers?.find((server) => server.url === data.server?.url);
-		let toolServerData = $toolServers?.find((server) => server.url === data.server?.url);
-
-		// Also check terminal servers if not found in regular tool servers
+	const resolveToolServer = (serverUrl) => {
+		let toolServer = $settings?.toolServers?.find((server) => server.url === serverUrl);
 		if (!toolServer) {
 			const terminalServer = ($settings?.terminalServers ?? []).find(
-				(server) => server.url === data.server?.url
+				(server) => server.url === serverUrl
 			);
 			if (terminalServer) {
 				toolServer = {
@@ -302,28 +302,28 @@
 			}
 		}
 
-		// Check terminal server data if not found in regular tool servers data
-		if (!toolServerData) {
-			toolServerData = $terminalServers?.find((server) => server.url === data.server?.url);
+		let toolServerData =
+			$toolServers?.find((server) => server.url === serverUrl) ??
+			$terminalServers?.find((server) => server.url === serverUrl);
+
+		let token = null;
+		if (toolServer) {
+			const auth_type = toolServer?.auth_type ?? 'bearer';
+			if (auth_type === 'bearer') token = toolServer?.key;
+			else if (auth_type === 'session') token = localStorage.token;
 		}
+
+		return { toolServer, toolServerData, token };
+	};
+
+	const executeTool = async (data, cb) => {
+		const { toolServer, toolServerData, token } = resolveToolServer(data.server?.url);
 
 		console.log('executeTool', data, toolServer);
 
 		if (toolServer) {
-			console.log(toolServer);
-
-			let toolServerToken = null;
-			const auth_type = toolServer?.auth_type ?? 'bearer';
-			if (auth_type === 'bearer') {
-				toolServerToken = toolServer?.key;
-			} else if (auth_type === 'none') {
-				// No authentication
-			} else if (auth_type === 'session') {
-				toolServerToken = localStorage.token;
-			}
-
 			const res = await executeToolServer(
-				toolServerToken,
+				token,
 				toolServer.url,
 				data?.name,
 				data?.params,
@@ -331,18 +331,23 @@
 			);
 
 			console.log('executeToolServer', res);
+
+			if (data?.name === 'display_file' && data?.params?.path) {
+				if (res?.exists !== false) {
+					displayFileHandler(data.params.path, { showControls, showFileNavPath });
+				}
+			}
+
+			if (['write_file'].includes(data?.name) && data?.params?.path) {
+				showFileNavDir.set(res?.path ?? data.params.path);
+			}
+
 			if (cb) {
-				cb(JSON.parse(JSON.stringify(res)));
+				cb(structuredClone(res));
 			}
 		} else {
 			if (cb) {
-				cb(
-					JSON.parse(
-						JSON.stringify({
-							error: 'Tool Server Not Found'
-						})
-					)
-				);
+				cb({ error: 'Tool Server Not Found' });
 			}
 		}
 	};

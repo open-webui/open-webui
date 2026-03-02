@@ -11,7 +11,7 @@
 	dayjs.extend(duration);
 	dayjs.extend(relativeTime);
 
-	import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
+	import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 
 	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
 	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
@@ -28,8 +28,11 @@
 		showCallOverlay,
 		tools,
 		toolServers,
+		terminalServers,
 		user as _user,
 		showControls,
+		showSettings,
+		selectedTerminalId,
 		TTSWorker,
 		temporaryChatEnabled
 	} from '$lib/stores';
@@ -81,8 +84,13 @@
 	import Voice from '../icons/Voice.svelte';
 	import Cloud from '../icons/Cloud.svelte';
 	import IntegrationsMenu from './MessageInput/IntegrationsMenu.svelte';
+	import TerminalMenu from './MessageInput/TerminalMenu.svelte';
 	import Component from '../icons/Component.svelte';
 	import PlusAlt from '../icons/PlusAlt.svelte';
+	import Dropdown from '../common/Dropdown.svelte';
+
+	import { DropdownMenu } from 'bits-ui';
+	import { flyAndScale } from '$lib/utils/transitions';
 
 	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
 	import Knobs from '../icons/Knobs.svelte';
@@ -123,6 +131,8 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
+
+	let showTerminalMenu = false;
 
 	export let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
 	export let onQueueSendNow: (id: string) => void = () => {};
@@ -788,7 +798,7 @@
 		}
 	};
 
-	const onDragOver = (e) => {
+	const onDragOver = (e: DragEvent) => {
 		e.preventDefault();
 
 		// Check if a file is being dragged.
@@ -799,14 +809,14 @@
 		}
 	};
 
-	const onDragLeave = (e) => {
-		if (e.currentTarget.contains(e.relatedTarget)) {
+	const onDragLeave = (e: DragEvent) => {
+		if ((e.currentTarget as HTMLElement)?.contains(e.relatedTarget as Node)) {
 			return;
 		}
 		dragged = false;
 	};
 
-	const onDrop = async (e) => {
+	const onDrop = async (e: DragEvent) => {
 		e.preventDefault();
 		console.log(e);
 
@@ -821,7 +831,7 @@
 		dragged = false;
 	};
 
-	const onKeyDown = (e) => {
+	const onKeyDown = (e: KeyboardEvent) => {
 		if (e.key === 'Shift') {
 			shiftKey = true;
 		}
@@ -845,7 +855,7 @@
 		}
 	};
 
-	const onKeyUp = (e) => {
+	const onKeyUp = (e: KeyboardEvent) => {
 		if (e.key === 'Shift') {
 			shiftKey = false;
 		}
@@ -857,7 +867,7 @@
 		shiftKey = false;
 	};
 
-	onMount(async () => {
+	onMount(() => {
 		suggestions = [
 			{
 				char: '@',
@@ -990,35 +1000,40 @@
 		window.addEventListener('focus', onFocus);
 		window.addEventListener('blur', onBlur);
 
-		await tick();
+		let isDestroyed = false;
+		let dropzoneElement: HTMLElement | null = null;
+		const initialize = async () => {
+			await tick();
+			if (isDestroyed) return;
 
-		const dropzoneElement = document.getElementById('chat-pane');
+			dropzoneElement = document.getElementById('chat-pane');
+			if (dropzoneElement) {
+				dropzoneElement.addEventListener('dragover', onDragOver);
+				dropzoneElement.addEventListener('drop', onDrop);
+				dropzoneElement.addEventListener('dragleave', onDragLeave);
+			}
 
-		dropzoneElement?.addEventListener('dragover', onDragOver);
-		dropzoneElement?.addEventListener('drop', onDrop);
-		dropzoneElement?.addEventListener('dragleave', onDragLeave);
+			tools.set(await getTools(localStorage.token));
+		};
+		initialize();
 
-		await tools.set(await getTools(localStorage.token));
-	});
+		return () => {
+			isDestroyed = true;
 
-	onDestroy(() => {
-		console.log('destroy');
-		window.removeEventListener('keydown', onKeyDown);
-		window.removeEventListener('keyup', onKeyUp);
+			window.removeEventListener('keydown', onKeyDown);
+			window.removeEventListener('keyup', onKeyUp);
 
-		window.removeEventListener('focus', onFocus);
-		window.removeEventListener('blur', onBlur);
+			window.removeEventListener('focus', onFocus);
+			window.removeEventListener('blur', onBlur);
 
-		const dropzoneElement = document.getElementById('chat-pane');
-
-		if (dropzoneElement) {
-			dropzoneElement?.removeEventListener('dragover', onDragOver);
-			dropzoneElement?.removeEventListener('drop', onDrop);
-			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
-		}
+			if (dropzoneElement) {
+				dropzoneElement.removeEventListener('dragover', onDragOver);
+				dropzoneElement.removeEventListener('drop', onDrop);
+				dropzoneElement.removeEventListener('dragleave', onDragLeave);
+			}
+		};
 	});
 </script>
-
 
 <ToolServersModal bind:show={showTools} {selectedToolIds} />
 
@@ -1160,7 +1175,7 @@
 						<!-- Queued messages display -->
 						{#if messageQueue.length > 0}
 							<div
-								class="mb-1 mx-2 py-0.5 px-1.5 rounded-2xl bg-gray-900/60 border border-gray-800/50 overflow-hidden"
+								class="mb-1 mx-2 py-0.5 px-1.5 rounded-2xl bg-white dark:bg-gray-900/60 border border-gray-100 dark:border-gray-800/50 overflow-hidden"
 							>
 								{#each messageQueue as queuedMessage (queuedMessage.id)}
 									<QueuedMessageItem
@@ -1793,22 +1808,9 @@
 										{/if}
 
 										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
-											<!-- Active Terminal Indicator (Always On) -->
-											{@const activeTerminal = ($settings?.terminalServers ?? []).find(
-												(s) => s.enabled
-											)}
-											{#if activeTerminal}
-												<div class="flex items-end mr-0.5">
-													<div
-														class="flex items-center gap-1.5 px-2.5 py-1 text-sm hover:bg-gray-50 hover:dark:bg-gray-850 transition-all rounded-lg cursor-pointer select-none max-w-[120px] sm:max-w-[200px] truncate"
-													>
-														<Cloud className="size-3 shrink-0" strokeWidth="2" />
-														<span class="truncate"
-															>{activeTerminal.name ||
-																activeTerminal.url.replace(/^https?:\/\//, '')}</span
-														>
-													</div>
-												</div>
+											<!-- Terminal Server Selector -->
+											{#if ($terminalServers ?? []).length > 0 || ($settings?.terminalServers ?? []).some((s) => s.url)}
+												<TerminalMenu bind:show={showTerminalMenu} />
 											{/if}
 
 											<!-- {$i18n.t('Record voice')} -->

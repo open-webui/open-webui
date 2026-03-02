@@ -385,27 +385,27 @@
 				{/if}
 
 				{#if isImage}
-				<div class="relative w-full max-h-[70vh] overflow-hidden">
-					<div class="absolute top-2 right-2 z-10">
-						<Tooltip content={$i18n.t('Reset view')}>
-							<button
-								class="p-1.5 rounded-lg bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
-								on:click={resetImageView}
-							>
-								<Reset className="size-4" />
-							</button>
-						</Tooltip>
+					<div class="relative w-full max-h-[70vh] overflow-hidden">
+						<div class="absolute top-2 right-2 z-10">
+							<Tooltip content={$i18n.t('Reset view')}>
+								<button
+									class="p-1.5 rounded-lg bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+									on:click={resetImageView}
+								>
+									<Reset className="size-4" />
+								</button>
+							</Tooltip>
+						</div>
+						<div use:initImagePanzoom>
+							<img
+								src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
+								alt={item?.name ?? 'Image'}
+								class="w-full object-contain rounded-lg"
+								loading="lazy"
+								draggable="false"
+							/>
+						</div>
 					</div>
-					<div use:initImagePanzoom>
-						<img
-							src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
-							alt={item?.name ?? 'Image'}
-							class="w-full object-contain rounded-lg"
-							loading="lazy"
-							draggable="false"
-						/>
-					</div>
-				</div>
 				{:else if selectedTab === ''}
 					{#if item?.file?.data}
 						{@const rawContent = (item?.file?.data?.content ?? '').trim() || 'No content'}
