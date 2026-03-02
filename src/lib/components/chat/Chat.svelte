@@ -2210,6 +2210,11 @@
 				tool_servers: [
 					...($toolServers ?? []).filter(
 						(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
+					),
+					// Include direct terminal servers (user-configured, no id) whose
+					// index matches a "terminal_N" entry in toolServerIds
+					...($terminalServers ?? []).filter(
+						(server, idx) => !server.id && toolServerIds.includes(`terminal_${idx}`)
 					)
 				],
 				features: getFeatures(),
