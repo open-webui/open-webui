@@ -67,6 +67,7 @@
 
 		messagesLoading = true;
 		messagesCount += 20;
+		buildMessages();
 
 		await tick();
 
