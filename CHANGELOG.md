@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- ⚡ **ChatControls reactivity fix.** Fixed a Svelte reactivity issue where the active tab state in the ChatControls panel was not properly saved when switching between chats. [#22127](https://github.com/open-webui/open-webui/pull/22127)
 - 📜 **Chat history pagination.** Fixed an issue where older messages in long chats were not loaded when scrolling to the top. [Commit](https://github.com/open-webui/open-webui/commit/d7147d6cddfd314f0f1be77b15cec406a609ef36)
 
 ### Changed
