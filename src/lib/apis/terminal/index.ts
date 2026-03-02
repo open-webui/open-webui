@@ -5,6 +5,10 @@ export type FileEntry = {
 	modified?: number;
 };
 
+export type TerminalFeatures = {
+	terminal?: boolean;
+};
+
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export type TerminalServer = {
@@ -21,6 +25,18 @@ export const getTerminalServers = async (token: string): Promise<TerminalServer[
 	}).catch(() => null);
 	if (!res || !res.ok) return [];
 	return res.json().catch(() => []);
+};
+
+export const getTerminalConfig = async (
+	baseUrl: string,
+	apiKey: string
+): Promise<{ features: TerminalFeatures } | null> => {
+	const url = `${baseUrl.replace(/\/$/, '')}/api/config`;
+	const res = await fetch(url, {
+		headers: { Authorization: `Bearer ${apiKey}` }
+	}).catch(() => null);
+	if (!res || !res.ok) return null;
+	return res.json().catch(() => null);
 };
 
 export const getCwd = async (baseUrl: string, apiKey: string): Promise<string | null> => {

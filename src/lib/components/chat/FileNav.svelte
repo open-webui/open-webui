@@ -15,6 +15,7 @@
 	} from '$lib/stores';
 	import {
 		getCwd,
+		getTerminalConfig,
 		listFiles,
 		readFile,
 		downloadFileBlob,
@@ -50,6 +51,7 @@
 	let containerEl: HTMLElement;
 	let terminalConnected = false;
 	let terminalConnecting = false;
+	let terminalEnabled = true;
 
 	const toggleTerminal = () => {
 		terminalExpanded = !terminalExpanded;
@@ -151,6 +153,10 @@
 		if (terminal && terminal.url !== prevTerminalUrl) {
 			prevTerminalUrl = terminal.url;
 			(async () => {
+				// Discover server features (terminal enabled/disabled)
+				const config = await getTerminalConfig(terminal.url, terminal.key);
+				terminalEnabled = config?.features?.terminal !== false;
+
 				const cwd = await getCwd(terminal.url, terminal.key);
 				const dir = cwd ? (cwd.endsWith('/') ? cwd : cwd + '/') : '/';
 				savedPath = dir;
@@ -792,6 +798,7 @@
 		</div>
 
 		<!-- Terminal bottom panel -->
+		{#if terminalEnabled}
 		<div class="shrink-0 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850">
 			{#if terminalExpanded}
 				<!-- Drag handle (at top of panel) -->
@@ -840,5 +847,6 @@
 				</div>
 			{/if}
 		</div>
+		{/if}
 	</div>
 {/if}
