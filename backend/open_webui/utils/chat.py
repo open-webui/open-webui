@@ -76,16 +76,11 @@ async def generate_direct_chat_completion(
     logging.info(f"WebSocket channel: {channel}")
 
     if form_data.get("stream"):
-        q = asyncio.Queue()
+        # Use the channel subscription mechanism for multi-worker support
+        # This uses Redis pub/sub when available, falling back to local handling otherwise
+        from open_webui.socket.main import subscribe_to_channel, unsubscribe_from_channel
 
-        async def message_listener(sid, data):
-            """
-            Handle received socket messages and push them into the queue.
-            """
-            await q.put(data)
-
-        # Register the listener
-        sio.on(channel, message_listener)
+        q = subscribe_to_channel(channel)
 
         # Start processing chat completion in background
         res = await event_caller(
@@ -125,16 +120,14 @@ async def generate_direct_chat_completion(
 
             # Define a background task to run the event generator
             async def background():
-                try:
-                    del sio.handlers["/"][channel]
-                except Exception as e:
-                    pass
+                await unsubscribe_from_channel(channel)
 
             # Return the streaming response
             return StreamingResponse(
                 event_generator(), media_type="text/event-stream", background=background
             )
         else:
+            await unsubscribe_from_channel(channel)
             raise Exception(str(res))
     else:
         res = await event_caller(

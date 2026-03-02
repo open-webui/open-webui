@@ -25,7 +25,7 @@
 	let id = '';
 	let auth_type = 'bearer';
 	let path = '/openapi.json';
-	let enabled = true;
+	let enabled = false;
 	let showAdvanced = false;
 	let showAccessControlModal = false;
 	let accessGrants: any[] = [];
@@ -47,7 +47,7 @@
 			name = '';
 			auth_type = 'bearer';
 			path = '/openapi.json';
-			enabled = true;
+			enabled = false;
 			accessGrants = [];
 		}
 	};

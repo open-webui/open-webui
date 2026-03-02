@@ -753,6 +753,92 @@ async def yjs_awareness_update(sid, data):
         log.error(f"Error in yjs_awareness_update: {e}")
 
 
+# Channel event handler for direct connections (multi-worker support)
+# When using Redis websocket manager, channel events need to be published to Redis
+# so workers can subscribe to them regardless of which worker the WebSocket is connected to.
+import re
+
+CHANNEL_EVENT_PATTERN = re.compile(r"^[^:]+:[^:]+:[a-f0-9-]+$")
+
+
+# Set of active channel subscriptions (channel -> queue)
+CHANNEL_SUBSCRIPTIONS: Dict[str, asyncio.Queue] = {}
+
+
+async def publish_channel_event(channel: str, data: dict):
+    """Publish a channel event to Redis for cross-worker communication."""
+    if REDIS is not None:
+        redis_channel = f"{REDIS_KEY_PREFIX}:channel:{channel}"
+        await REDIS.publish(redis_channel, json.dumps(data))
+
+
+    else:
+        # Fallback to local handling if Redis is not available
+        if channel in CHANNEL_SUBSCRIPTIONS:
+            await CHANNEL_SUBSCRIPTIONS[channel].put(data)
+
+
+@sio.on("*")
+async def catch_all_channel_events(sid, event, data):
+    """Catch-all handler for channel events in direct connection mode.
+
+    When a frontend emits to a channel event (format: {user_id}:{session_id}:{request_id}),
+    this handler publishes it event to Redis so other workers can receive it.
+    """
+    # Check if this looks like a channel event (user_id:session_id:request_id)
+    if event and CHANNEL_EVENT_PATTERN.match(event):
+        log.debug(f"Publishing channel event '{event}' to Redis")
+        await publish_channel_event(event, data)
+
+
+def subscribe_to_channel(channel: str) -> asyncio.Queue:
+    """Subscribe to a channel for receiving messages.
+
+    Returns a queue that will receive messages published to the channel.
+    """
+    q = asyncio.Queue()
+
+    if REDIS is not None:
+        # Store the queue for local delivery
+        CHANNEL_SUBSCRIPTIONS[channel] = q
+
+        # Create a background task to listen to Redis
+        async def redis_listener():
+            redis_channel = f"{REDIS_KEY_PREFIX}:channel:{channel}"
+            pubsub = REDIS.pubsub()
+            try:
+                await pubsub.subscribe(redis_channel)
+                async for message in pubsub.listen():
+                    if message["type"] == "message":
+                        data = json.loads(message["data"])
+                        await q.put(data)
+            except asyncio.CancelledError:
+                pass
+            except Exception as e:
+                log.error(f"Error in Redis listener for channel {channel}: {e}")
+            finally:
+                if channel in CHANNEL_SUBSCRIPTIONS:
+                    del CHANNEL_SUBSCRIPTIONS[channel]
+                try:
+                    await pubsub.unsubscribe(redis_channel)
+                except:
+                    pass
+
+        # Start the listener task
+        asyncio.create_task(redis_listener())
+    else:
+        # Fallback to local handling if Redis is not available
+        CHANNEL_SUBSCRIPTIONS[channel] = q
+
+    return q
+
+
+async def unsubscribe_from_channel(channel: str):
+    """Unsubscribe from a channel."""
+    if channel in CHANNEL_SUBSCRIPTIONS:
+        del CHANNEL_SUBSCRIPTIONS[channel]
+
+
 @sio.event
 async def disconnect(sid):
     if sid in SESSION_POOL:
@@ -768,7 +854,6 @@ async def disconnect(sid):
                     del USAGE_POOL[model_id]
                 else:
                     USAGE_POOL[model_id] = connections
-
         await YDOC_MANAGER.remove_user_from_all_documents(sid)
     else:
         pass

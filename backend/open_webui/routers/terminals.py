@@ -8,13 +8,14 @@ Routes:
 import logging
 
 import aiohttp
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Request, Response, WebSocket
 from fastapi.responses import JSONResponse, StreamingResponse
 from starlette.background import BackgroundTask
 
 from open_webui.utils.auth import get_verified_user
 from open_webui.utils.access_control import has_connection_access
 from open_webui.models.groups import Groups
+from open_webui.models.users import Users
 
 log = logging.getLogger(__name__)
 
@@ -149,3 +150,155 @@ async def proxy_terminal(
         return JSONResponse(
             {"error": f"Terminal proxy error: {error}"}, status_code=502
         )
+
+
+# ---------------------------------------------------------------------------
+# WebSocket proxy for interactive terminal sessions
+# ---------------------------------------------------------------------------
+
+
+async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
+    """Authenticate a WebSocket via first-message auth and resolve the terminal server.
+
+    The client must send ``{"type": "auth", "token": "<jwt>"}`` as its first
+    message after connecting.
+
+    Returns ``(user, connection)`` on success, or ``None`` after closing *ws*
+    with an appropriate error code.
+    """
+    import asyncio
+    import json
+    from open_webui.utils.auth import decode_token
+
+    # First-message authentication
+    try:
+        raw = await asyncio.wait_for(ws.receive_text(), timeout=10.0)
+        payload = json.loads(raw)
+        if payload.get("type") != "auth":
+            await ws.close(code=4001, reason="Expected auth message")
+            return None
+        token = payload.get("token", "")
+        data = decode_token(token)
+        if data is None or "id" not in data:
+            await ws.close(code=4001, reason="Invalid token")
+            return None
+        user = Users.get_user_by_id(data["id"])
+        if user is None:
+            await ws.close(code=4001, reason="User not found")
+            return None
+    except (asyncio.TimeoutError, json.JSONDecodeError):
+        await ws.close(code=4001, reason="Auth timeout or invalid payload")
+        return None
+    except Exception:
+        await ws.close(code=4001, reason="Invalid token")
+        return None
+
+    # Resolve terminal server
+    connections = ws.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
+    connection = next((c for c in connections if c.get("id") == server_id), None)
+
+    if connection is None:
+        await ws.close(code=4004, reason="Terminal server not found")
+        return None
+
+    user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
+    if not has_connection_access(user, connection, user_group_ids):
+        await ws.close(code=4003, reason="Access denied")
+        return None
+
+    return user, connection
+
+
+@router.websocket("/{server_id}/api/terminals/{session_id}")
+async def ws_terminal(
+    ws: WebSocket,
+    server_id: str,
+    session_id: str,
+):
+    """Proxy an interactive WebSocket terminal session to a terminal server.
+
+    Uses first-message auth: the client sends ``{"type": "auth", "token": "<jwt>"}``
+    as its first message. The proxy validates the JWT, then connects to the
+    upstream terminal server and authenticates with the server's API key.
+    """
+    await ws.accept()
+
+    result = await _resolve_authenticated_connection(ws, server_id)
+    if result is None:
+        return
+    user, connection = result
+
+    base_url = (connection.get("url") or "").rstrip("/")
+    if not base_url:
+        await ws.close(code=4003, reason="Terminal server URL not configured")
+        return
+
+    # Build upstream WebSocket URL (no token in URL)
+    ws_base = base_url.replace("https://", "wss://").replace("http://", "ws://")
+
+    auth_type = connection.get("auth_type", "bearer")
+    upstream_params = {}
+    # For orchestrator-backed servers, pass user_id
+    upstream_params["user_id"] = user.id
+
+    import urllib.parse
+
+    upstream_url = f"{ws_base}/api/terminals/{session_id}"
+    if upstream_params:
+        upstream_url += f"?{urllib.parse.urlencode(upstream_params)}"
+
+    session = aiohttp.ClientSession()
+    try:
+        async with session.ws_connect(upstream_url) as upstream:
+            import asyncio
+            import json as _json
+
+            # First-message auth to upstream terminal server
+            auth_type = connection.get("auth_type", "bearer")
+            if auth_type == "bearer":
+                key = connection.get("key", "")
+                await upstream.send_str(_json.dumps({"type": "auth", "token": key}))
+
+            async def _client_to_upstream():
+                """Forward client → upstream."""
+                try:
+                    while True:
+                        msg = await ws.receive()
+                        if msg["type"] == "websocket.disconnect":
+                            break
+                        elif "bytes" in msg and msg["bytes"]:
+                            await upstream.send_bytes(msg["bytes"])
+                        elif "text" in msg and msg["text"]:
+                            await upstream.send_str(msg["text"])
+                except Exception:
+                    pass
+
+            async def _upstream_to_client():
+                """Forward upstream → client."""
+                try:
+                    async for msg in upstream:
+                        if msg.type == aiohttp.WSMsgType.BINARY:
+                            await ws.send_bytes(msg.data)
+                        elif msg.type == aiohttp.WSMsgType.TEXT:
+                            await ws.send_text(msg.data)
+                        elif msg.type in (
+                            aiohttp.WSMsgType.CLOSE,
+                            aiohttp.WSMsgType.ERROR,
+                        ):
+                            break
+                except Exception:
+                    pass
+
+            await asyncio.gather(
+                _client_to_upstream(),
+                _upstream_to_client(),
+                return_exceptions=True,
+            )
+    except Exception as e:
+        log.exception("Terminal WebSocket proxy error: %s", e)
+    finally:
+        await session.close()
+        try:
+            await ws.close()
+        except Exception:
+            pass
