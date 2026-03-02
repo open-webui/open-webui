@@ -1,4 +1,4 @@
-<script context="module">
+<script context="module" lang="ts">
 	let savedTab: 'controls' | 'files' | 'overview' = 'controls';
 </script>
 
