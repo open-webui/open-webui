@@ -375,9 +375,9 @@ def serialize_output(output: list) -> str:
             result_item = tool_outputs.get(call_id)
             if result_item:
                 result_text = ""
-                for output in result_item.get("output", []):
-                    if "text" in output:
-                        output_text = output.get("text", "")
+                for out in result_item.get("output", []):
+                    if "text" in out:
+                        output_text = out.get("text", "")
                         result_text += (
                             str(output_text)
                             if not isinstance(output_text, str)
