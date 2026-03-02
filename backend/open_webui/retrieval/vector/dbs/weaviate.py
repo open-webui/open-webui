@@ -12,9 +12,13 @@ from open_webui.retrieval.vector.main import (
 from open_webui.retrieval.vector.utils import process_metadata
 from open_webui.config import (
     WEAVIATE_HTTP_HOST,
+    WEAVIATE_GRPC_HOST,
     WEAVIATE_HTTP_PORT,
     WEAVIATE_GRPC_PORT,
     WEAVIATE_API_KEY,
+    WEAVIATE_HTTP_SECURE,
+    WEAVIATE_GRPC_SECURE,
+    WEAVIATE_SKIP_INIT_CHECKS,
 )
 
 
@@ -52,9 +56,13 @@ class WeaviateClient(VectorDBBase):
         try:
             # Build connection parameters
             connection_params = {
-                "host": WEAVIATE_HTTP_HOST,
-                "port": WEAVIATE_HTTP_PORT,
+                "http_host": WEAVIATE_HTTP_HOST,
+                "http_port": WEAVIATE_HTTP_PORT,
+                "http_secure": WEAVIATE_HTTP_SECURE,
+                "grpc_host": WEAVIATE_GRPC_HOST,
                 "grpc_port": WEAVIATE_GRPC_PORT,
+                "grpc_secure": WEAVIATE_GRPC_SECURE,
+                "skip_init_checks": WEAVIATE_SKIP_INIT_CHECKS,
             }
 
             # Only add auth_credentials if WEAVIATE_API_KEY exists and is not empty
@@ -63,7 +71,7 @@ class WeaviateClient(VectorDBBase):
                     weaviate.classes.init.Auth.api_key(WEAVIATE_API_KEY)
                 )
 
-            self.client = weaviate.connect_to_local(**connection_params)
+            self.client = weaviate.connect_to_custom(**connection_params)
             self.client.connect()
         except Exception as e:
             raise ConnectionError(f"Failed to connect to Weaviate: {e}") from e

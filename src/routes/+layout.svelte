@@ -30,7 +30,11 @@
 		toolServers,
 		playingNotificationSound,
 		channels,
-		channelId
+		channelId,
+		terminalServers,
+		showControls,
+		showFileNavPath,
+		showFileNavDir
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -49,7 +53,7 @@
 	import { chatCompletion } from '$lib/apis/openai';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
-	import { bestMatchingLanguage } from '$lib/utils';
+	import { bestMatchingLanguage, displayFileHandler } from '$lib/utils';
 	import { setTextScale } from '$lib/utils/text-scale';
 
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
@@ -282,27 +286,44 @@
 		};
 	};
 
+	const resolveToolServer = (serverUrl) => {
+		let toolServer = $settings?.toolServers?.find((server) => server.url === serverUrl);
+		if (!toolServer) {
+			const terminalServer = ($settings?.terminalServers ?? []).find(
+				(server) => server.url === serverUrl
+			);
+			if (terminalServer) {
+				toolServer = {
+					url: terminalServer.url,
+					auth_type: terminalServer.auth_type ?? 'bearer',
+					key: terminalServer.key ?? '',
+					path: terminalServer.path ?? '/openapi.json'
+				};
+			}
+		}
+
+		let toolServerData =
+			$toolServers?.find((server) => server.url === serverUrl) ??
+			$terminalServers?.find((server) => server.url === serverUrl);
+
+		let token = null;
+		if (toolServer) {
+			const auth_type = toolServer?.auth_type ?? 'bearer';
+			if (auth_type === 'bearer') token = toolServer?.key;
+			else if (auth_type === 'session') token = localStorage.token;
+		}
+
+		return { toolServer, toolServerData, token };
+	};
+
 	const executeTool = async (data, cb) => {
-		const toolServer = $settings?.toolServers?.find((server) => server.url === data.server?.url);
-		const toolServerData = $toolServers?.find((server) => server.url === data.server?.url);
+		const { toolServer, toolServerData, token } = resolveToolServer(data.server?.url);
 
 		console.log('executeTool', data, toolServer);
 
 		if (toolServer) {
-			console.log(toolServer);
-
-			let toolServerToken = null;
-			const auth_type = toolServer?.auth_type ?? 'bearer';
-			if (auth_type === 'bearer') {
-				toolServerToken = toolServer?.key;
-			} else if (auth_type === 'none') {
-				// No authentication
-			} else if (auth_type === 'session') {
-				toolServerToken = localStorage.token;
-			}
-
 			const res = await executeToolServer(
-				toolServerToken,
+				token,
 				toolServer.url,
 				data?.name,
 				data?.params,
@@ -310,24 +331,37 @@
 			);
 
 			console.log('executeToolServer', res);
+
+			if (data?.name === 'display_file' && data?.params?.path) {
+				if (res?.exists !== false) {
+					displayFileHandler(data.params.path, { showControls, showFileNavPath });
+				}
+			}
+
+			if (['write_file'].includes(data?.name) && data?.params?.path) {
+				showFileNavDir.set(res?.path ?? data.params.path);
+			}
+
 			if (cb) {
-				cb(JSON.parse(JSON.stringify(res)));
+				cb(structuredClone(res));
 			}
 		} else {
 			if (cb) {
-				cb(
-					JSON.parse(
-						JSON.stringify({
-							error: 'Tool Server Not Found'
-						})
-					)
-				);
+				cb({ error: 'Tool Server Not Found' });
 			}
 		}
 	};
 
 	const chatEventHandler = async (event, cb) => {
 		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
+
+		// Skip events from temporary chats that are not the current chat.
+		// This prevents notifications from being sent to other tabs/devices
+		// for privacy, since temporary chats are not meant to be persisted or visible elsewhere.
+		const isTemporaryChat = event.chat_id?.startsWith('local:');
+		if (isTemporaryChat && event.chat_id !== $chatId) {
+			return;
+		}
 
 		let isFocused = document.visibilityState !== 'visible';
 		if (window.electronAPI) {
@@ -346,6 +380,7 @@
 		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isFocused) {
 			if (type === 'chat:completion') {
 				const { done, content, title } = data;
+				const displayTitle = title || $i18n.t('New Chat');
 
 				if (done) {
 					if ($settings?.notificationSoundAlways ?? false) {
@@ -360,7 +395,7 @@
 
 					if ($isLastActiveTab) {
 						if ($settings?.notificationEnabled ?? false) {
-							new Notification(`${title} • Open WebUI`, {
+							new Notification(`${displayTitle} • Open WebUI`, {
 								body: content,
 								icon: `${WEBUI_BASE_URL}/static/favicon.png`
 							});
@@ -373,7 +408,7 @@
 								goto(`/c/${event.chat_id}`);
 							},
 							content: content,
-							title: title
+							title: displayTitle
 						},
 						duration: 15000,
 						unstyled: true
@@ -629,12 +664,12 @@
 			return nav && (el === nav || nav.contains(el));
 		}
 
-		document.addEventListener('touchstart', (e) => {
+		const touchstartHandler = (e) => {
 			if (!isNavOrDescendant(e.target)) return;
 			touchstartY = e.touches[0].clientY;
-		});
+		};
 
-		document.addEventListener('touchmove', (e) => {
+		const touchmoveHandler = (e) => {
 			if (!isNavOrDescendant(e.target)) return;
 			const touchY = e.touches[0].clientY;
 			const touchDiff = touchY - touchstartY;
@@ -642,15 +677,19 @@
 				showRefresh = true;
 				e.preventDefault();
 			}
-		});
+		};
 
-		document.addEventListener('touchend', (e) => {
+		const touchendHandler = (e) => {
 			if (!isNavOrDescendant(e.target)) return;
 			if (showRefresh) {
 				showRefresh = false;
 				location.reload();
 			}
-		});
+		};
+
+		document.addEventListener('touchstart', touchstartHandler);
+		document.addEventListener('touchmove', touchmoveHandler, { passive: false });
+		document.addEventListener('touchend', touchendHandler);
 
 		if (typeof window !== 'undefined') {
 			if (window.applyTheme) {
@@ -757,7 +796,7 @@
 			const browserLanguages = navigator.languages
 				? navigator.languages
 				: [navigator.language || navigator.userLanguage];
-			const lang = backendConfig.default_locale
+			const lang = backendConfig?.default_locale
 				? backendConfig.default_locale
 				: bestMatchingLanguage(languages, browserLanguages, 'en-US');
 			changeLanguage(lang);
@@ -784,7 +823,11 @@
 
 					if (sessionUser) {
 						await user.set(sessionUser);
-						await config.set(await getBackendConfig());
+						try {
+							await config.set(await getBackendConfig());
+						} catch (error) {
+							console.error('Error refreshing backend config:', error);
+						}
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');
@@ -836,17 +879,25 @@
 		}
 
 		// Auto-show SyncStatsModal when opened with ?sync=true (from community)
-		if ((window.opener ?? false) && $page.url.searchParams.get('sync') === 'true') {
+		if (
+			(window.opener ?? false) &&
+			$page.url.searchParams.get('sync') === 'true' &&
+			($config?.features?.enable_community_sharing ?? false)
+		) {
 			showSyncStatsModal = true;
 		}
 
 		return () => {
 			window.removeEventListener('resize', onResize);
+			window.removeEventListener('message', windowMessageEventHandler);
+			document.removeEventListener('touchstart', touchstartHandler);
+			document.removeEventListener('touchmove', touchmoveHandler);
+			document.removeEventListener('touchend', touchendHandler);
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
 		};
 	});
 
 	onDestroy(() => {
-		window.removeEventListener('message', windowMessageEventHandler);
 		bc.close();
 	});
 </script>

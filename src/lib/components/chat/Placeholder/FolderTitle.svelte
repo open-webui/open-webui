@@ -173,6 +173,7 @@
 				}}
 			>
 				<button
+					aria-label={$i18n.t('Change folder icon')}
 					class=" rounded-full bg-gray-50 dark:bg-gray-800 size-11 flex justify-center items-center"
 				>
 					{#if folder?.meta?.icon}
@@ -201,7 +202,11 @@
 					exportHandler();
 				}}
 			>
-				<button class="p-1.5 dark:hover:bg-gray-850 rounded-full touch-auto" on:click={(e) => {}}>
+				<button
+					class="p-1.5 dark:hover:bg-gray-850 rounded-full touch-auto"
+					aria-label={$i18n.t('Folder options')}
+					on:click={(e) => {}}
+				>
 					<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
 				</button>
 			</FolderMenu>

@@ -10,12 +10,11 @@ from open_webui.env import GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
 
 from open_webui.routers.openai import embeddings as openai_embeddings
 from open_webui.routers.ollama import (
-    embeddings as ollama_embeddings,
-    GenerateEmbeddingsForm,
+    embed as ollama_embed,
+    GenerateEmbedForm,
 )
 
-
-from open_webui.utils.payload import convert_embedding_payload_openai_to_ollama
+from open_webui.utils.payload import convert_embed_payload_openai_to_ollama
 from open_webui.utils.response import convert_embedding_response_ollama_to_openai
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -71,12 +70,12 @@ async def generate_embeddings(
         if not bypass_filter and user.role == "user":
             check_model_access(user, model)
 
-    # Ollama backend
+    # Ollama backend — use /api/embed which supports batch input natively
     if model.get("owned_by") == "ollama":
-        ollama_payload = convert_embedding_payload_openai_to_ollama(form_data)
-        response = await ollama_embeddings(
+        ollama_payload = convert_embed_payload_openai_to_ollama(form_data)
+        response = await ollama_embed(
             request=request,
-            form_data=GenerateEmbeddingsForm(**ollama_payload),
+            form_data=GenerateEmbedForm(**ollama_payload),
             user=user,
         )
         return convert_embedding_response_ollama_to_openai(response)

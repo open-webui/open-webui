@@ -1,3 +1,4 @@
+import type { Writable } from 'svelte/store';
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
 import { WEBUI_BASE_URL } from '$lib/constants';
@@ -28,9 +29,25 @@ import hljs from 'highlight.js';
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+export const formatNumber = (num: number): string => {
+	return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(
+		num
+	);
+};
+
 function escapeRegExp(string: string): string {
 	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+
+// Replace tokens outside code blocks only
+export const replaceOutsideCode = (content: string, replacer: (str: string) => string) => {
+	return content
+		.split(/(```[\s\S]*?```|`[\s\S]*?`)/)
+		.map((segment) => {
+			return segment.startsWith('```') || segment.startsWith('`') ? segment : replacer(segment);
+		})
+		.join('');
+};
 
 export const replaceTokens = (content, char, user) => {
 	const tokens = [
@@ -47,20 +64,8 @@ export const replaceTokens = (content, char, user) => {
 		}
 	];
 
-	// Replace tokens outside code blocks only
-	const processOutsideCodeBlocks = (text, replacementFn) => {
-		return text
-			.split(/(```[\s\S]*?```|`[\s\S]*?`)/)
-			.map((segment) => {
-				return segment.startsWith('```') || segment.startsWith('`')
-					? segment
-					: replacementFn(segment);
-			})
-			.join('');
-	};
-
 	// Apply replacements
-	content = processOutsideCodeBlocks(content, (segment) => {
+	content = replaceOutsideCode(content, (segment) => {
 		tokens.forEach(({ regex, replacement }) => {
 			if (replacement !== undefined && replacement !== null) {
 				segment = segment.replace(regex, replacement);
@@ -841,19 +846,21 @@ export const cleanText = (content: string) => {
 };
 
 export const removeDetails = (content, types) => {
-	for (const type of types) {
-		content = content.replace(
-			new RegExp(`<details\\s+type="${type}"[^>]*>.*?<\\/details>`, 'gis'),
-			''
-		);
-	}
-
-	return content;
+	return replaceOutsideCode(content, (segment) => {
+		for (const type of types) {
+			segment = segment.replace(
+				new RegExp(`<details\\s+type="${type}"[^>]*>.*?<\\/details>`, 'gis'),
+				''
+			);
+		}
+		return segment;
+	});
 };
 
 export const removeAllDetails = (content) => {
-	content = content.replace(/<details[^>]*>.*?<\/details>/gis, '');
-	return content;
+	return replaceOutsideCode(content, (segment) => {
+		return segment.replace(/<details[^>]*>.*?<\/details>/gis, '');
+	});
 };
 
 export const processDetails = (content) => {
@@ -872,7 +879,7 @@ export const processDetails = (content) => {
 			}
 
 			if (attributes.result) {
-				content = content.replace(match, `"${attributes.result}"`);
+				content = content.replace(match, unescapeHtml(attributes.result));
 			}
 		}
 	}
@@ -973,9 +980,10 @@ export const blobToFile = (blob, fileName) => {
 	return file;
 };
 
-export const getPromptVariables = (user_name, user_location) => {
+export const getPromptVariables = (user_name, user_location, user_email = '') => {
 	return {
 		'{{USER_NAME}}': user_name,
+		'{{USER_EMAIL}}': user_email || 'Unknown',
 		'{{USER_LOCATION}}': user_location || 'Unknown',
 		'{{CURRENT_DATETIME}}': getCurrentDateTime(),
 		'{{CURRENT_DATE}}': getFormattedDate(),
@@ -1270,17 +1278,20 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 				// Extract path and query parameters
 				if (operation.parameters) {
 					operation.parameters.forEach((param) => {
-						let description = param.schema.description || param.description || '';
-						if (param.schema.enum && Array.isArray(param.schema.enum)) {
-							description += `. Possible values: ${param.schema.enum.join(', ')}`;
+						const paramName = param?.name;
+						if (!paramName) return;
+						const paramSchema = param?.schema ?? {};
+						let description = paramSchema.description || param.description || '';
+						if (paramSchema.enum && Array.isArray(paramSchema.enum)) {
+							description += `. Possible values: ${paramSchema.enum.join(', ')}`;
 						}
-						tool.parameters.properties[param.name] = {
-							type: param.schema.type,
+						tool.parameters.properties[paramName] = {
+							type: paramSchema.type,
 							description: description
 						};
 
 						if (param.required) {
-							tool.parameters.required.push(param.name);
+							tool.parameters.required.push(paramName);
 						}
 					});
 				}
@@ -1654,6 +1665,10 @@ export const getCodeBlockContents = (content: string): object => {
 			}
 		});
 	} else {
+		// Remove details tags from the content to check if there are any code blocks
+		// hidden in the details tags (e.g. reasoning, etc.)
+		content = removeAllDetails(content);
+
 		const inlineHtml = content.match(/<html>[\s\S]*?<\/html>/gi);
 		const inlineCss = content.match(/<style>[\s\S]*?<\/style>/gi);
 		const inlineJs = content.match(/<script>[\s\S]*?<\/script>/gi);
@@ -1684,4 +1699,42 @@ export const getCodeBlockContents = (content: string): object => {
 		css: cssContent.trim(),
 		js: jsContent.trim()
 	};
+};
+export const parseFrontmatter = (content) => {
+	const match = content.match(/^---\s*\n([\s\S]*?)\n---/);
+	if (match) {
+		const frontmatter = {};
+		match[1].split('\n').forEach((line) => {
+			const [key, ...value] = line.split(':');
+			if (key && value) {
+				frontmatter[key.trim()] = value
+					.join(':')
+					.trim()
+					.replace(/^["']|["']$/g, '');
+			}
+		});
+		return frontmatter;
+	}
+	return {};
+};
+
+export const formatSkillName = (name) => {
+	return name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+/**
+ * Open the file browser panel to display a specific file.
+ * Used by both the direct tool execution path (client-side) and the
+ * backend event path (server-side) so behaviour is consistent.
+ *
+ * Stores are passed in by the caller to keep this utility pure.
+ */
+export const displayFileHandler = (
+	path: string,
+	stores: { showControls: Writable<boolean>; showFileNavPath: Writable<string | null> }
+) => {
+	if (path) {
+		stores.showControls.set(true);
+		stores.showFileNavPath.set(path);
+	}
 };
