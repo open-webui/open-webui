@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔧 **ChatControls TypeScript fix.** Fixed a TypeScript syntax error in ChatControls.svelte where the module script block was missing lang="ts", causing esbuild to fail during vite dev. [#22131](https://github.com/open-webui/open-webui/pull/22131)
 - 🔌 **Open Terminal tools for direct connections.** Fixed an issue where Open Terminal tools were not available to the model when the terminal was configured via direct connection settings, ensuring users can now interact with terminal files and operations through the AI. [#22137](https://github.com/open-webui/open-webui/issues/22137)
 - 📜 **Chat history pagination.** Fixed an issue where older messages in long chats were not loaded when scrolling to the top. [Commit](https://github.com/open-webui/open-webui/commit/d7147d6cddfd314f0f1be77b15cec406a609ef36), [Commit](https://github.com/open-webui/open-webui/commit/c701ebe07bd152eecb42b0bf6de26071358a5c76)
+- 🔧 **Terminal tool null parameter handling.** Fixed a bug where null parameters in terminal tool calls were sent as the string "None" instead of being omitted, causing 422 validation errors from the open-terminal server. [#22124](https://github.com/open-webui/open-webui/issues/22124), [#22144](https://github.com/open-webui/open-webui/pull/22144)
 
 ### Changed
 
