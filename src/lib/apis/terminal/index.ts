@@ -199,7 +199,7 @@ export const moveEntry = async (
 	apiKey: string,
 	source: string,
 	destination: string
-): Promise<{ source: string; destination: string } | null> => {
+): Promise<{ source: string; destination: string } | { error: string }> => {
 	const url = `${baseUrl.replace(/\/$/, '')}/files/move`;
 	const res = await fetch(url, {
 		method: 'POST',
@@ -215,7 +215,7 @@ export const moveEntry = async (
 		})
 		.catch((err) => {
 			console.error('open-terminal moveEntry error:', err);
-			return null;
+			return { error: err?.detail ?? 'Move failed' };
 		});
 	return res;
 };

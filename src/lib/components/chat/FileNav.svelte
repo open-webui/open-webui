@@ -339,9 +339,11 @@
 		if (destFolder.startsWith(sourceDir)) return;
 
 		const result = await moveEntry(terminal.url, terminal.key, source, destination);
-		toast[result ? 'success' : 'error'](
-			$i18n.t(result ? 'Moved {{name}}' : 'Failed to move {{name}}', { name: fileName })
-		);
+		if ('error' in result) {
+			toast.error(result.error);
+		} else {
+			toast.success($i18n.t('Moved {{name}}', { name: fileName }));
+		}
 		await loadDir(currentPath);
 	};
 
