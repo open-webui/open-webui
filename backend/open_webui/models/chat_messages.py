@@ -478,7 +478,10 @@ class ChatMessageTable:
 
             stmt = (
                 select(ChatMessage.user_id, func.count(ChatMessage.id).label('count'))
-                .filter(~ChatMessage.user_id.like('shared-%'))
+                .filter(
+                    ChatMessage.role == 'assistant',
+                    ~ChatMessage.user_id.like('shared-%'),
+                )
             )
 
             if start_date:
