@@ -17,6 +17,8 @@
 	export let filePdfData: ArrayBuffer | null = null;
 	export let fileContent: string | null = null;
 
+	export let overlay = false;
+
 	export let onSave: ((content: string) => Promise<void>) | null = null;
 
 	export let editing = false;
@@ -170,6 +172,9 @@
 		<PDFViewer bind:this={pdfViewerRef} data={filePdfData} className="w-full h-full" />
 	{:else if fileContent !== null}
 		{#if isHtml && !showRaw}
+			{#if overlay}
+				<div class="absolute top-0 left-0 right-0 bottom-0 z-10"></div>
+			{/if}
 			<iframe
 				srcdoc={fileContent}
 				sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
