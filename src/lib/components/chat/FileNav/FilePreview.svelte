@@ -3,6 +3,7 @@
 	import panzoom, { type PanZoom } from 'panzoom';
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
+	import { settings } from '$lib/stores';
 	import Spinner from '../../common/Spinner.svelte';
 	import PDFViewer from '../../common/PDFViewer.svelte';
 
@@ -57,10 +58,12 @@
 
 	const MD_EXTS = new Set(['md', 'markdown', 'mdx']);
 	const CSV_EXTS = new Set(['csv', 'tsv']);
+	const HTML_EXTS = new Set(['html', 'htm']);
 	const getExt = (path: string | null) => path?.split('.').pop()?.toLowerCase() ?? '';
 
 	$: isMarkdown = MD_EXTS.has(getExt(selectedFile));
 	$: isCsv = CSV_EXTS.has(getExt(selectedFile));
+	$: isHtml = HTML_EXTS.has(getExt(selectedFile));
 	$: csvDelimiter = getExt(selectedFile) === 'tsv' ? '\t' : ',';
 	$: renderedHtml =
 		isMarkdown && fileContent
@@ -166,7 +169,16 @@
 	{:else if filePdfData !== null}
 		<PDFViewer bind:this={pdfViewerRef} data={filePdfData} className="w-full h-full" />
 	{:else if fileContent !== null}
-		{#if isMarkdown && !showRaw}
+		{#if isHtml && !showRaw}
+			<iframe
+				srcdoc={fileContent}
+				sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
+					? ' allow-forms'
+					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
+				class="w-full h-full border-none bg-white"
+				title="HTML Preview"
+			/>
+		{:else if isMarkdown && !showRaw}
 			<div class="prose dark:prose-invert max-w-full text-sm p-3">
 				{@html renderedHtml}
 			</div>

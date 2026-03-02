@@ -62,10 +62,12 @@
 
 	const MD_EXTS = new Set(['md', 'markdown', 'mdx']);
 	const CSV_EXTS = new Set(['csv', 'tsv']);
+	const HTML_EXTS = new Set(['html', 'htm']);
 	const getFileExt = (path: string | null) => path?.split('.').pop()?.toLowerCase() ?? '';
 
 	$: isMarkdown = MD_EXTS.has(getFileExt(selectedFile));
 	$: isCsv = CSV_EXTS.has(getFileExt(selectedFile));
+	$: isHtml = HTML_EXTS.has(getFileExt(selectedFile));
 	$: isTextFile = fileContent !== null && fileImageUrl === null && filePdfData === null;
 
 	// ── Upload / folder creation ─────────────────────────────────────────
@@ -513,7 +515,7 @@
 					</button>
 				</Tooltip>
 			{/if}
-			{#if (isMarkdown || isCsv) && fileContent !== null && !editing}
+			{#if (isMarkdown || isCsv || isHtml) && fileContent !== null && !editing}
 				<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
 					<button
 						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
