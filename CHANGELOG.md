@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.8] - 2026-03-02
+
+### Added
+
+### Fixed
+
+- 🔧 **Middleware variable shadowing.** Fixed a variable shadowing issue in the middleware that could cause incorrect tool output processing during chat. [#22145](https://github.com/open-webui/open-webui/pull/22145)
+- ⚡ **ChatControls reactivity fix.** Fixed a Svelte reactivity issue where the active tab state in the ChatControls panel was not properly saved when switching between chats. [#22127](https://github.com/open-webui/open-webui/pull/22127)
+- 📜 **Chat history pagination.** Fixed an issue where older messages in long chats were not loaded when scrolling to the top. [Commit](https://github.com/open-webui/open-webui/commit/d7147d6cddfd314f0f1be77b15cec406a609ef36)
+
+### Changed
+
 ## [0.8.7] - 2026-03-01
 
 ### Fixed
@@ -13,18 +25,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧠 **ChatControls memory leak.** The ChatControls panel no longer leaks event listeners, ResizeObserver instances, and media query handlers when navigating between chats, fixing memory accumulation that could degrade performance during extended use. [#22112](https://github.com/open-webui/open-webui/pull/22112)
 - 💾 **Temporary chat params preservation.** Model parameters are now correctly saved when creating a temporary chat, ensuring custom settings like temperature and top_p persist across the session. [Commit](https://github.com/open-webui/open-webui/commit/fe837d80e)
 - ⚡ **Faster artifact content updates.** Artifact content extraction during streaming is now debounced via requestAnimationFrame, reducing redundant DOM reads and improving CPU efficiency when tokens arrive faster than the browser can paint. [Commit](https://github.com/open-webui/open-webui/commit/6863ca482)
-- 🔧 **Middleware variable shadowing.** Fixed a variable shadowing issue in the middleware that could cause incorrect tool output processing during chat. [#22145](https://github.com/open-webui/open-webui/pull/22145)
-
-## [0.8.8] - 2026-03-02
-
-### Added
-
-### Fixed
-
-- ⚡ **ChatControls reactivity fix.** Fixed a Svelte reactivity issue where the active tab state in the ChatControls panel was not properly saved when switching between chats. [#22127](https://github.com/open-webui/open-webui/pull/22127)
-- 📜 **Chat history pagination.** Fixed an issue where older messages in long chats were not loaded when scrolling to the top. [Commit](https://github.com/open-webui/open-webui/commit/d7147d6cddfd314f0f1be77b15cec406a609ef36)
-
-### Changed
 
 ## [0.8.6] - 2026-03-01
 
