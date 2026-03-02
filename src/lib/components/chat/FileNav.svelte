@@ -21,6 +21,7 @@
 		uploadToTerminal,
 		createDirectory,
 		deleteEntry,
+		moveEntry,
 		setCwd,
 		type FileEntry
 	} from '$lib/apis/terminal';
@@ -323,6 +324,29 @@
 		showDeleteConfirm = true;
 	};
 
+	// ── Move (drag-and-drop) ────────────────────────────────────────────
+	const handleMove = async (source: string, destFolder: string) => {
+		const terminal = selectedTerminal;
+		if (!terminal) return;
+
+		const fileName = source.split('/').pop() ?? '';
+		const destination = `${destFolder}${fileName}`;
+
+		if (source === destination) return;
+
+		// Prevent moving a folder into itself or its own subtree
+		const sourceDir = source.endsWith('/') ? source : source + '/';
+		if (destFolder.startsWith(sourceDir)) return;
+
+		const result = await moveEntry(terminal.url, terminal.key, source, destination);
+		if ('error' in result) {
+			toast.error(result.error);
+		} else {
+			toast.success($i18n.t('Moved {{name}}', { name: fileName }));
+		}
+		await loadDir(currentPath);
+	};
+
 	// ── Lifecycle ────────────────────────────────────────────────────────
 	onMount(async () => {
 		const terminal = getTerminal();
@@ -465,6 +489,7 @@
 			onNewFolder={startNewFolder}
 			onNewFile={startNewFile}
 			onUploadFiles={handleUploadFiles}
+			onMove={handleMove}
 		>
 			{#if fileImageUrl !== null}
 				<Tooltip content={$i18n.t('Reset view')}>
@@ -717,6 +742,7 @@
 									onOpen={openEntry}
 									onDownload={downloadFile}
 									onDelete={requestDelete}
+									onMove={handleMove}
 								/>
 							{/each}
 						</ul>
