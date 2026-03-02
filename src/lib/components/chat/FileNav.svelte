@@ -21,6 +21,7 @@
 		uploadToTerminal,
 		createDirectory,
 		deleteEntry,
+		moveEntry,
 		setCwd,
 		type FileEntry
 	} from '$lib/apis/terminal';
@@ -321,6 +322,23 @@
 	const requestDelete = (path: string, name: string) => {
 		deleteTarget = { path, name };
 		showDeleteConfirm = true;
+	};
+
+	// ── Move (drag-and-drop) ────────────────────────────────────────────
+	const handleMove = async (source: string, destFolder: string) => {
+		const terminal = selectedTerminal;
+		if (!terminal) return;
+
+		const fileName = source.split('/').pop() ?? '';
+		const destination = `${destFolder}${fileName}`;
+
+		if (source === destination) return;
+
+		const result = await moveEntry(terminal.url, terminal.key, source, destination);
+		toast[result ? 'success' : 'error'](
+			$i18n.t(result ? 'Moved {{name}}' : 'Failed to move {{name}}', { name: fileName })
+		);
+		await loadDir(currentPath);
 	};
 
 	// ── Lifecycle ────────────────────────────────────────────────────────
@@ -717,6 +735,7 @@
 									onOpen={openEntry}
 									onDownload={downloadFile}
 									onDelete={requestDelete}
+									onMove={handleMove}
 								/>
 							{/each}
 						</ul>
