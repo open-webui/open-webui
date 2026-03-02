@@ -104,7 +104,6 @@ dependencies = [
     "youtube-transcript-api==1.2.4",
     "pytube==15.0.0",
 
-    "pydub",
     "ddgs==9.10.0",
 
     "google-api-python-client",
