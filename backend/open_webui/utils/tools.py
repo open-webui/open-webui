@@ -533,6 +533,7 @@ def get_builtin_tools(
 
     # Terminal tools - upload chat files to connected terminal server
     terminal_id = (extra_params.get("__metadata__") or {}).get("terminal_id")
+    log.debug(f"get_builtin_tools: terminal_id={terminal_id!r}, is_builtin_tool_enabled('terminal')={is_builtin_tool_enabled('terminal')}")
     if is_builtin_tool_enabled("terminal") and terminal_id:
         builtin_functions.append(upload_file_to_terminal)
 
