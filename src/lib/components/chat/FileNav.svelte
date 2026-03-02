@@ -483,6 +483,7 @@
 			onNewFolder={startNewFolder}
 			onNewFile={startNewFile}
 			onUploadFiles={handleUploadFiles}
+			onMove={handleMove}
 		>
 			{#if fileImageUrl !== null}
 				<Tooltip content={$i18n.t('Reset view')}>
