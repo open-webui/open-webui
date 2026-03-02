@@ -33,7 +33,6 @@ from open_webui.config import (
 )
 from open_webui.retrieval.vector.utils import process_metadata
 
-
 NO_LIMIT = 10000  # Reasonable limit to avoid overwhelming the system
 BATCH_SIZE = 100  # Recommended batch size for Pinecone operations
 

@@ -26,7 +26,8 @@
 		models,
 		selectedFolder,
 		WEBUI_NAME,
-		sidebarWidth
+		sidebarWidth,
+		activeChatIds
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
@@ -42,6 +43,7 @@
 		importChats
 	} from '$lib/apis/chats';
 	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
+	import { checkActiveChats } from '$lib/apis/tasks';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 	import ArchivedChatsModal from './ArchivedChatsModal.svelte';
@@ -412,9 +414,7 @@
 		document.documentElement.style.setProperty('--sidebar-width', `${newSidebarWidth}px`);
 	};
 
-	let unsubscribers = [];
-
-	onMount(async () => {
+	onMount(() => {
 		try {
 			const width = Number(localStorage.getItem('sidebarWidth'));
 			if (!Number.isNaN(width) && width >= MIN_WIDTH && width <= MAX_WIDTH) {
@@ -427,9 +427,9 @@
 			document.documentElement.style.setProperty('--sidebar-width', `${w}px`);
 		});
 
-		await showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
+		showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
 
-		unsubscribers = [
+		const unsubscribers = [
 			mobile.subscribe((value) => {
 				if ($showSidebar && value) {
 					showSidebar.set(false);
@@ -469,6 +469,17 @@
 						await initChannels();
 					}
 					await initChatList();
+
+					// Check which chats have active tasks
+					const allChatIds = [...$chats.map((c) => c.id), ...$pinnedChats.map((c) => c.id)];
+					if (allChatIds.length > 0) {
+						try {
+							const res = await checkActiveChats(localStorage.token, allChatIds);
+							activeChatIds.set(new Set(res.active_chat_ids || []));
+						} catch (e) {
+							console.debug('Failed to check active chats:', e);
+						}
+					}
 				}
 			}),
 			settings.subscribe((value) => {
@@ -489,36 +500,56 @@
 		window.addEventListener('blur', onBlur);
 
 		const dropZone = document.getElementById('sidebar');
-
-		dropZone?.addEventListener('dragover', onDragOver);
-		dropZone?.addEventListener('drop', onDrop);
-		dropZone?.addEventListener('dragleave', onDragLeave);
-	});
-
-	onDestroy(() => {
-		if (unsubscribers && unsubscribers.length > 0) {
-			unsubscribers.forEach((unsubscriber) => {
-				if (unsubscriber) {
-					unsubscriber();
-				}
-			});
+		if (dropZone) {
+			dropZone.addEventListener('dragover', onDragOver);
+			dropZone.addEventListener('drop', onDrop);
+			dropZone.addEventListener('dragleave', onDragLeave);
 		}
 
-		window.removeEventListener('keydown', onKeyDown);
-		window.removeEventListener('keyup', onKeyUp);
+		const socketInstance = $socket;
+		socketInstance?.on('events', chatActiveEventHandler);
 
-		window.removeEventListener('touchstart', onTouchStart);
-		window.removeEventListener('touchend', onTouchEnd);
+		return () => {
+			unsubscribers.forEach((unsubscriber) => unsubscriber());
 
-		window.removeEventListener('focus', onFocus);
-		window.removeEventListener('blur', onBlur);
+			window.removeEventListener('keydown', onKeyDown);
+			window.removeEventListener('keyup', onKeyUp);
 
-		const dropZone = document.getElementById('sidebar');
+			window.removeEventListener('touchstart', onTouchStart);
+			window.removeEventListener('touchend', onTouchEnd);
 
-		dropZone?.removeEventListener('dragover', onDragOver);
-		dropZone?.removeEventListener('drop', onDrop);
-		dropZone?.removeEventListener('dragleave', onDragLeave);
+			window.removeEventListener('focus', onFocus);
+			window.removeEventListener('blur', onBlur);
+
+			if (dropZone) {
+				dropZone.removeEventListener('dragover', onDragOver);
+				dropZone.removeEventListener('drop', onDrop);
+				dropZone.removeEventListener('dragleave', onDragLeave);
+			}
+
+			socketInstance?.off('events', chatActiveEventHandler);
+		};
 	});
+
+	// Handler for chat:active events (defined outside onMount for proper cleanup)
+	const chatActiveEventHandler = (event: {
+		chat_id: string;
+		message_id: string;
+		data: { type: string; data: any };
+	}) => {
+		if (event.data?.type === 'chat:active') {
+			const { active } = event.data.data;
+			activeChatIds.update((ids) => {
+				const newSet = new Set(ids);
+				if (active) {
+					newSet.add(event.chat_id);
+				} else {
+					newSet.delete(event.chat_id);
+				}
+				return newSet;
+			});
+		}
+	};
 
 	const newChatHandler = async () => {
 		selectedChatId = null;
@@ -560,7 +591,8 @@
 
 <ChannelModal
 	bind:show={showCreateChannel}
-	onSubmit={async ({ type, name, is_private, access_control, group_ids, user_ids }) => {
+	onSubmit={async (payload: any) => {
+		let { type, name, is_private, access_grants, group_ids, user_ids } = payload ?? {};
 		name = name?.trim();
 
 		if (type === 'dm') {
@@ -579,7 +611,7 @@
 			type: type,
 			name: name,
 			is_private: is_private,
-			access_control: access_control,
+			access_grants: access_grants,
 			group_ids: group_ids,
 			user_ids: user_ids
 		}).catch((error) => {
@@ -815,9 +847,6 @@
 									{#if $config?.features?.enable_user_status}
 										<div class="absolute -bottom-0.5 -right-0.5">
 											<span class="relative flex size-2.5">
-												<span
-													class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
-												></span>
 												<span
 													class="relative inline-flex size-2.5 rounded-full {true
 														? 'bg-green-500'
@@ -1247,6 +1276,7 @@
 												className=""
 												id={chat.id}
 												title={chat.title}
+												createdAt={chat.created_at}
 												{shiftKey}
 												selected={selectedChatId === chat.id}
 												on:select={() => {
@@ -1307,6 +1337,7 @@
 										className=""
 										id={chat.id}
 										title={chat.title}
+										createdAt={chat.created_at}
 										{shiftKey}
 										selected={selectedChatId === chat.id}
 										on:select={() => {
@@ -1364,6 +1395,7 @@
 							role={$user?.role}
 							profile={$config?.features?.enable_user_status ?? true}
 							showActiveUsers={false}
+							className="max-w-[calc(var(--sidebar-width)-1rem)]"
 							on:show={(e) => {
 								if (e.detail === 'archived-chat') {
 									showArchivedChats.set(true);
@@ -1384,9 +1416,6 @@
 									{#if $config?.features?.enable_user_status}
 										<div class="absolute -bottom-0.5 -right-0.5">
 											<span class="relative flex size-2.5">
-												<span
-													class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
-												></span>
 												<span
 													class="relative inline-flex size-2.5 rounded-full {true
 														? 'bg-green-500'

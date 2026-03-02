@@ -64,6 +64,7 @@
 			permissions = {
 				workspace: { ...DEFAULT_PERMISSIONS.workspace, ...loadedPermissions.workspace },
 				sharing: { ...DEFAULT_PERMISSIONS.sharing, ...loadedPermissions.sharing },
+				access_grants: { ...DEFAULT_PERMISSIONS.access_grants, ...loadedPermissions.access_grants },
 				chat: { ...DEFAULT_PERMISSIONS.chat, ...loadedPermissions.chat },
 				features: { ...DEFAULT_PERMISSIONS.features, ...loadedPermissions.features },
 				settings: { ...DEFAULT_PERMISSIONS.settings, ...loadedPermissions.settings }

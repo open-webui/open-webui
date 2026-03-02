@@ -82,7 +82,8 @@ class MemoriesTable:
                 memory.updated_at = int(time.time())
 
                 db.commit()
-                return self.get_memory_by_id(id)
+                db.refresh(memory)
+                return MemoryModel.model_validate(memory)
             except Exception:
                 return None
 

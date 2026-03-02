@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import dayjs from 'dayjs';
@@ -30,6 +30,7 @@
 	let total = null;
 
 	let query = '';
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 	let orderBy = 'created_at'; // default sort key
 	let direction = 'desc'; // default sort order
 
@@ -79,13 +80,21 @@
 		getUserList();
 	};
 
-	$: if (page !== null && query !== null && orderBy !== null && direction !== null) {
+	$: if (page !== null && orderBy !== null && direction !== null) {
 		getUserList();
 	}
 
-	$: if (query) {
-		page = 1;
+	$: if (query !== undefined) {
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(() => {
+			page = 1;
+			getUserList();
+		}, 300);
 	}
+
+	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
+	});
 </script>
 
 <div class=" max-h-full h-full w-full flex flex-col overflow-y-hidden">

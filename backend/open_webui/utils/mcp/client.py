@@ -8,6 +8,28 @@ from mcp import ClientSession
 from mcp.client.auth import OAuthClientProvider, TokenStorage
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata, OAuthToken
+import httpx
+from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
+
+
+def create_insecure_httpx_client(headers=None, timeout=None, auth=None):
+    """Create an httpx AsyncClient with SSL verification disabled.
+
+    Note: verify=False must be passed at construction time because httpx
+    configures the SSL context during __init__. Setting client.verify = False
+    after construction does not affect the underlying transport's SSL context.
+    """
+    kwargs = {
+        "follow_redirects": True,
+        "verify": False,
+    }
+    if timeout is not None:
+        kwargs["timeout"] = timeout
+    if headers is not None:
+        kwargs["headers"] = headers
+    if auth is not None:
+        kwargs["auth"] = auth
+    return httpx.AsyncClient(**kwargs)
 
 
 class MCPClient:
@@ -18,7 +40,14 @@ class MCPClient:
     async def connect(self, url: str, headers: Optional[dict] = None):
         async with AsyncExitStack() as exit_stack:
             try:
-                self._streams_context = streamablehttp_client(url, headers=headers)
+                if AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL:
+                    self._streams_context = streamablehttp_client(url, headers=headers)
+                else:
+                    self._streams_context = streamablehttp_client(
+                        url,
+                        headers=headers,
+                        httpx_client_factory=create_insecure_httpx_client,
+                    )
 
                 transport = await exit_stack.enter_async_context(self._streams_context)
                 read_stream, write_stream, _ = transport

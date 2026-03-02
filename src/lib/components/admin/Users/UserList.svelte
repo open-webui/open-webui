@@ -1,8 +1,8 @@
-<script>
+<script lang="ts">
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, showSidebar } from '$lib/stores';
 	import { goto } from '$app/navigation';
-	import { onMount, getContext } from 'svelte';
+	import { onMount, getContext, onDestroy } from 'svelte';
 
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
@@ -43,6 +43,7 @@
 	let total = null;
 
 	let query = '';
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 	let orderBy = 'created_at'; // default sort key
 	let direction = 'asc'; // default sort order
 
@@ -97,9 +98,21 @@
 		}
 	};
 
-	$: if (query !== null && page !== null && orderBy !== null && direction !== null) {
+	$: if (query !== undefined) {
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(() => {
+			page = 1;
+			getUserList();
+		}, 300);
+	}
+
+	$: if (page !== null && orderBy !== null && direction !== null) {
 		getUserList();
 	}
+
+	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
+	});
 </script>
 
 <ConfirmDialog
@@ -195,6 +208,7 @@
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 						bind:value={query}
+						aria-label={$i18n.t('Search')}
 						placeholder={$i18n.t('Search')}
 					/>
 				</div>
@@ -344,6 +358,7 @@
 						<td class="px-3 py-1 min-w-[7rem] w-28">
 							<button
 								class=" translate-y-0.5"
+								aria-label={$i18n.t('Change User Role')}
 								on:click={() => {
 									selectedUser = user;
 									showEditUserModal = !showEditUserModal;
@@ -359,7 +374,7 @@
 							<div class="flex items-center gap-2">
 								<ProfilePreview {user} side="right" align="center" sideOffset={6}>
 									<img
-										class="rounded-full w-6 h-6 object-cover mr-0.5 flex-shrink-0"
+										class="rounded-full w-6 min-w-6 h-6 object-cover mr-0.5 flex-shrink-0"
 										src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
 										alt="user"
 									/>
@@ -395,6 +410,7 @@
 									<Tooltip content={$i18n.t('Chats')}>
 										<button
 											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+											aria-label={$i18n.t('Chats')}
 											on:click={async () => {
 												showUserChatsModal = !showUserChatsModal;
 												selectedUser = user;
@@ -408,6 +424,7 @@
 								<Tooltip content={$i18n.t('Edit User')}>
 									<button
 										class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+										aria-label={$i18n.t('Edit User')}
 										on:click={async () => {
 											showEditUserModal = !showEditUserModal;
 											selectedUser = user;
@@ -434,6 +451,7 @@
 									<Tooltip content={$i18n.t('Delete User')}>
 										<button
 											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+											aria-label={$i18n.t('Delete User')}
 											on:click={async () => {
 												showDeleteConfirmDialog = true;
 												selectedUser = user;

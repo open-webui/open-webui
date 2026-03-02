@@ -26,6 +26,25 @@
 	let showChannelPinnedMessagesModal = false;
 	let showChannelInfoModal = false;
 
+	const hasPublicReadGrant = (grants: any) =>
+		Array.isArray(grants) &&
+		grants.some(
+			(grant) =>
+				grant?.principal_type === 'user' &&
+				grant?.principal_id === '*' &&
+				grant?.permission === 'read'
+		);
+
+	const isPublicChannel = (channel: any): boolean => {
+		if (channel?.type === 'group') {
+			if (typeof channel?.is_private === 'boolean') {
+				return !channel.is_private;
+			}
+			return hasPublicReadGrant(channel?.access_grants);
+		}
+		return hasPublicReadGrant(channel?.access_grants);
+	};
+
 	export let channel;
 
 	export let onPin = (messageId, pinned) => {};
@@ -112,7 +131,7 @@
 							{/if}
 						{:else}
 							<div class=" size-4.5 justify-center flex items-center">
-								{#if channel?.type === 'group' ? !channel?.is_private : channel?.access_control === null}
+								{#if isPublicChannel(channel)}
 									<Hashtag className="size-3.5" strokeWidth="2.5" />
 								{:else}
 									<Lock className="size-5" strokeWidth="2" />

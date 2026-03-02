@@ -174,7 +174,7 @@ class URLProcessingMixin:
 
     def _safe_process_url_sync(self, url: str) -> bool:
         """Synchronous version of safety checks."""
-        if self.verify_ssl and not self._verify_ssl_cert(url):
+        if self.verify_ssl and not verify_ssl_cert(url):
             raise ValueError(f"SSL certificate verification failed for {url}")
         self._sync_wait_for_rate_limit()
         return True

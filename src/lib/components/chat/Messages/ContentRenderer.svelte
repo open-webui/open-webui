@@ -10,8 +10,7 @@
 		settings,
 		showArtifacts,
 		showControls,
-		showEmbeds,
-		showOverview
+		showEmbeds
 	} from '$lib/stores';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
 	import { createMessagesList } from '$lib/utils';
@@ -193,7 +192,6 @@
 			await artifactCode.set(value);
 			await showControls.set(true);
 			await showArtifacts.set(true);
-			await showOverview.set(false);
 			await showEmbeds.set(false);
 		}}
 	/>

@@ -35,7 +35,6 @@ from open_webui.utils.plugin import (
     get_function_module_from_cache,
 )
 from open_webui.utils.tools import get_tools
-from open_webui.utils.access_control import has_access
 
 from open_webui.env import GLOBAL_LOG_LEVEL
 
@@ -50,7 +49,6 @@ from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
 )
-
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)

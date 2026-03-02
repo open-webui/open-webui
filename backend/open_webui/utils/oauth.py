@@ -41,6 +41,7 @@ from open_webui.config import (
     ENABLE_OAUTH_ROLE_MANAGEMENT,
     ENABLE_OAUTH_GROUP_MANAGEMENT,
     ENABLE_OAUTH_GROUP_CREATION,
+    OAUTH_GROUP_DEFAULT_SHARE,
     OAUTH_BLOCKED_GROUPS,
     OAUTH_GROUPS_SEPARATOR,
     OAUTH_ROLES_SEPARATOR,
@@ -54,6 +55,8 @@ from open_webui.config import (
     OAUTH_ADMIN_ROLES,
     OAUTH_ALLOWED_DOMAINS,
     OAUTH_UPDATE_PICTURE_ON_LOGIN,
+    OAUTH_UPDATE_NAME_ON_LOGIN,
+    OAUTH_UPDATE_EMAIL_ON_LOGIN,
     OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID,
     OAUTH_AUDIENCE,
     WEBHOOK_URL,
@@ -69,6 +72,7 @@ from open_webui.env import (
     ENABLE_OAUTH_ID_TOKEN_COOKIE,
     ENABLE_OAUTH_EMAIL_FALLBACK,
     OAUTH_CLIENT_INFO_ENCRYPTION_KEY,
+    OAUTH_MAX_SESSIONS_PER_USER,
 )
 from open_webui.utils.misc import parse_duration
 from open_webui.utils.auth import get_password_hash, create_token
@@ -113,6 +117,7 @@ auth_manager_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL = OAUTH_MERGE_ACCOUNTS_BY_EMAI
 auth_manager_config.ENABLE_OAUTH_ROLE_MANAGEMENT = ENABLE_OAUTH_ROLE_MANAGEMENT
 auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT = ENABLE_OAUTH_GROUP_MANAGEMENT
 auth_manager_config.ENABLE_OAUTH_GROUP_CREATION = ENABLE_OAUTH_GROUP_CREATION
+auth_manager_config.OAUTH_GROUP_DEFAULT_SHARE = OAUTH_GROUP_DEFAULT_SHARE
 auth_manager_config.OAUTH_BLOCKED_GROUPS = OAUTH_BLOCKED_GROUPS
 auth_manager_config.OAUTH_ROLES_CLAIM = OAUTH_ROLES_CLAIM
 auth_manager_config.OAUTH_SUB_CLAIM = OAUTH_SUB_CLAIM
@@ -126,6 +131,8 @@ auth_manager_config.OAUTH_ALLOWED_DOMAINS = OAUTH_ALLOWED_DOMAINS
 auth_manager_config.WEBHOOK_URL = WEBHOOK_URL
 auth_manager_config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN = OAUTH_UPDATE_PICTURE_ON_LOGIN
+auth_manager_config.OAUTH_UPDATE_NAME_ON_LOGIN = OAUTH_UPDATE_NAME_ON_LOGIN
+auth_manager_config.OAUTH_UPDATE_EMAIL_ON_LOGIN = OAUTH_UPDATE_EMAIL_ON_LOGIN
 auth_manager_config.OAUTH_AUDIENCE = OAUTH_AUDIENCE
 
 
@@ -1245,7 +1252,11 @@ class OAuthManager:
                             name=group_name,
                             description=f"Group '{group_name}' created automatically via OAuth.",
                             permissions=default_permissions,  # Use default permissions from function args
-                            user_ids=[],  # Start with no users, user will be added later by subsequent logic
+                            data={
+                                "config": {
+                                    "share": auth_manager_config.OAUTH_GROUP_DEFAULT_SHARE
+                                }
+                            },
                         )
                         # Use determined creator ID (admin or fallback to current user)
                         created_group = Groups.insert_new_group(
@@ -1541,6 +1552,33 @@ class OAuthManager:
                     # Update the user object in memory as well,
                     # to avoid problems with the ENABLE_OAUTH_GROUP_MANAGEMENT check below
                     user.role = determined_role
+
+                if auth_manager_config.OAUTH_UPDATE_NAME_ON_LOGIN:
+                    username_claim = auth_manager_config.OAUTH_USERNAME_CLAIM
+                    if username_claim:
+                        new_name = user_data.get(username_claim)
+                        if new_name and new_name != user.name:
+                            Users.update_user_by_id(user.id, {"name": new_name}, db=db)
+                            user.name = new_name
+                            log.debug(f"Updated name for user {user.email}")
+
+                if auth_manager_config.OAUTH_UPDATE_EMAIL_ON_LOGIN:
+                    email_claim = auth_manager_config.OAUTH_EMAIL_CLAIM
+                    if email_claim:
+                        new_email = user_data.get(email_claim)
+                        if new_email and new_email.lower() != user.email.lower():
+                            existing_user = Users.get_user_by_email(new_email, db=db)
+                            if existing_user:
+                                log.error(
+                                    f"Cannot update email to {new_email} for user {user.id} because it is already taken."
+                                )
+                            else:
+                                Auths.update_email_by_id(
+                                    user.id, new_email.lower(), db=db
+                                )
+                                user.email = new_email.lower()
+                                log.debug(f"Updated email for user {user.id}")
+
                 # Update profile picture if enabled and different from current
                 if auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN:
                     picture_claim = auth_manager_config.OAUTH_PICTURE_CLAIM
@@ -1679,11 +1717,18 @@ class OAuthManager:
             if "expires_in" in token and "expires_at" not in token:
                 token["expires_at"] = datetime.now().timestamp() + token["expires_in"]
 
-            # Clean up any existing sessions for this user/provider first
+            # Enforce max concurrent sessions per user/provider to prevent
+            # unbounded growth while allowing multi-device usage
             sessions = OAuthSessions.get_sessions_by_user_id(user.id, db=db)
-            for session in sessions:
-                if session.provider == provider:
-                    OAuthSessions.delete_session_by_id(session.id, db=db)
+            provider_sessions = sorted(
+                [session for session in sessions if session.provider == provider],
+                key=lambda session: session.created_at,
+                reverse=True,
+            )
+            # Keep the newest sessions up to the limit, prune the rest
+            if len(provider_sessions) >= OAUTH_MAX_SESSIONS_PER_USER:
+                for old_session in provider_sessions[OAUTH_MAX_SESSIONS_PER_USER - 1 :]:
+                    OAuthSessions.delete_session_by_id(old_session.id, db=db)
 
             session = OAuthSessions.create_session(
                 user_id=user.id,
@@ -1692,17 +1737,22 @@ class OAuthManager:
                 db=db,
             )
 
-            response.set_cookie(
-                key="oauth_session_id",
-                value=session.id,
-                httponly=True,
-                samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-                secure=WEBUI_AUTH_COOKIE_SECURE,
-            )
+            if session:
+                response.set_cookie(
+                    key="oauth_session_id",
+                    value=session.id,
+                    httponly=True,
+                    samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                    secure=WEBUI_AUTH_COOKIE_SECURE,
+                )
 
-            log.info(
-                f"Stored OAuth session server-side for user {user.id}, provider {provider}"
-            )
+                log.info(
+                    f"Stored OAuth session server-side for user {user.id}, provider {provider}"
+                )
+            else:
+                log.warning(
+                    f"Failed to create OAuth session for user {user.id}, provider {provider}"
+                )
         except Exception as e:
             log.error(f"Failed to store OAuth session server-side: {e}")
 

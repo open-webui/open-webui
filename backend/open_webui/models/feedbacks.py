@@ -191,6 +191,23 @@ class FeedbackTable:
         except Exception:
             return None
 
+    def get_feedbacks_by_chat_id(
+        self, chat_id: str, db: Optional[Session] = None
+    ) -> list[FeedbackModel]:
+        """Get all feedbacks for a specific chat."""
+        try:
+            with get_db_context(db) as db:
+                # meta.chat_id stores the chat reference
+                feedbacks = (
+                    db.query(Feedback)
+                    .filter(Feedback.meta["chat_id"].as_string() == chat_id)
+                    .order_by(Feedback.created_at.desc())
+                    .all()
+                )
+                return [FeedbackModel.model_validate(fb) for fb in feedbacks]
+        except Exception:
+            return []
+
     def get_feedback_items(
         self,
         filter: dict = {},
@@ -460,23 +477,15 @@ class FeedbackTable:
         self, user_id: str, db: Optional[Session] = None
     ) -> bool:
         with get_db_context(db) as db:
-            feedbacks = db.query(Feedback).filter_by(user_id=user_id).all()
-            if not feedbacks:
-                return False
-            for feedback in feedbacks:
-                db.delete(feedback)
+            result = db.query(Feedback).filter_by(user_id=user_id).delete()
             db.commit()
-            return True
+            return result > 0
 
     def delete_all_feedbacks(self, db: Optional[Session] = None) -> bool:
         with get_db_context(db) as db:
-            feedbacks = db.query(Feedback).all()
-            if not feedbacks:
-                return False
-            for feedback in feedbacks:
-                db.delete(feedback)
+            result = db.query(Feedback).delete()
             db.commit()
-            return True
+            return result > 0
 
 
 Feedbacks = FeedbackTable()
