@@ -2209,10 +2209,27 @@ async def upload_file_to_terminal(
         import httpx
 
         async with httpx.AsyncClient(timeout=60.0) as client:
+            # Query the terminal's current working directory
+            upload_dir = "."
+            try:
+                cwd_resp = await client.get(
+                    f"{terminal_url}/files/cwd",
+                    headers=headers,
+                )
+                if cwd_resp.status_code == 200:
+                    upload_dir = cwd_resp.json().get("cwd", ".")
+            except Exception:
+                pass  # Fall back to "."
+
+            log.info(
+                f"upload_file_to_terminal: uploading '{file_record.filename}' "
+                f"to {terminal_url}/files/upload?directory={upload_dir}"
+            )
+
             with open(local_path, "rb") as fh:
                 response = await client.post(
                     f"{terminal_url}/files/upload",
-                    params={"directory": "."},
+                    params={"directory": upload_dir},
                     files={"file": (file_record.filename, fh)},
                     headers=headers,
                 )
