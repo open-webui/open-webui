@@ -7,6 +7,7 @@ node_modules
 /package
 .env
 .env.*
+ocr_service_account.json
 !.env.example
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
