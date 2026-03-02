@@ -36,11 +36,46 @@
 	import FileNavToolbar from './FileNav/FileNavToolbar.svelte';
 	import FilePreview from './FileNav/FilePreview.svelte';
 	import FileEntryRow from './FileNav/FileEntryRow.svelte';
+	import XTerminal from './XTerminal.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let onAttach: ((blob: Blob, name: string, contentType: string) => void) | null = null;
 	export let overlay = false;
+
+	// ── Terminal panel state ────────────────────────────────────────────
+	let terminalExpanded = false;
+	let terminalHeight = 200; // px, default when expanded
+	let isDraggingHandle = false;
+	let containerEl: HTMLElement;
+	let terminalConnected = false;
+	let terminalConnecting = false;
+
+	const toggleTerminal = () => {
+		terminalExpanded = !terminalExpanded;
+	};
+
+	const onHandleMouseDown = (e: MouseEvent) => {
+		e.preventDefault();
+		isDraggingHandle = true;
+		const startY = e.clientY;
+		const startHeight = terminalHeight;
+
+		const onMouseMove = (ev: MouseEvent) => {
+			const delta = startY - ev.clientY;
+			const maxH = containerEl ? containerEl.clientHeight - 100 : 500;
+			terminalHeight = Math.max(80, Math.min(maxH, startHeight + delta));
+		};
+
+		const onMouseUp = () => {
+			isDraggingHandle = false;
+			window.removeEventListener('mousemove', onMouseMove);
+			window.removeEventListener('mouseup', onMouseUp);
+		};
+
+		window.addEventListener('mousemove', onMouseMove);
+		window.addEventListener('mouseup', onMouseUp);
+	};
 
 	// ── Directory state ──────────────────────────────────────────────────
 	let currentPath = savedPath;
@@ -454,6 +489,7 @@
 	</div>
 {:else}
 	<div
+		bind:this={containerEl}
 		class="flex flex-col h-full min-h-0 relative"
 		on:dragover={handleDragOver}
 		on:dragleave={() => (isDragOver = false)}
@@ -752,6 +788,56 @@
 						</ul>
 					{/if}
 				{/if}
+			{/if}
+		</div>
+
+		<!-- Terminal bottom panel -->
+		<div class="shrink-0 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850">
+			{#if terminalExpanded}
+				<!-- Drag handle (at top of panel) -->
+				<!-- svelte-ignore a11y-no-static-element-interactions -->
+				<div
+					class="h-1 cursor-row-resize hover:bg-blue-400/30 transition group relative"
+					on:mousedown={onHandleMouseDown}
+				>
+					<div class="absolute inset-x-0 -top-1 -bottom-1" />
+				</div>
+			{/if}
+
+			<!-- Toggle header (full-width button) -->
+			<button
+				class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
+				on:click={toggleTerminal}
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-3.5">
+					<path fill-rule="evenodd" d="M3.25 3A2.25 2.25 0 0 0 1 5.25v9.5A2.25 2.25 0 0 0 3.25 17h13.5A2.25 2.25 0 0 0 19 14.75v-9.5A2.25 2.25 0 0 0 16.75 3H3.25Zm.943 8.752a.75.75 0 0 1 .055-1.06L6.128 9l-1.88-1.693a.75.75 0 1 1 1.004-1.114l2.5 2.25a.75.75 0 0 1 0 1.114l-2.5 2.25a.75.75 0 0 1-1.06-.055ZM9.75 10.25a.75.75 0 0 0 0 1.5h2.5a.75.75 0 0 0 0-1.5h-2.5Z" clip-rule="evenodd" />
+				</svg>
+				<span class="font-medium">{$i18n.t('Terminal')}</span>
+
+				{#if terminalExpanded}
+					<div
+						class="w-1.5 h-1.5 rounded-full transition-colors {terminalConnected
+							? 'bg-emerald-500'
+							: terminalConnecting
+								? 'bg-yellow-500 animate-pulse'
+								: 'bg-gray-400'}"
+					/>
+				{/if}
+
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="size-3 ml-auto transition-transform {terminalExpanded ? 'rotate-180' : ''}"
+				>
+					<path fill-rule="evenodd" d="M9.47 6.47a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 1 1-1.06 1.06L10 8.06l-3.72 3.72a.75.75 0 0 1-1.06-1.06l4.25-4.25Z" clip-rule="evenodd" />
+				</svg>
+			</button>
+
+			{#if terminalExpanded}
+				<div style="height: {terminalHeight}px" class="min-h-0">
+					<XTerminal {overlay} bind:connected={terminalConnected} bind:connecting={terminalConnecting} />
+				</div>
 			{/if}
 		</div>
 	</div>
