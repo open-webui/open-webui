@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - 📁 **Terminal file moving.** Users can now move files and folders between directories in the Open Terminal file browser by dragging and dropping them. [Commit](https://github.com/open-webui/open-webui/commit/0c42cd2c012f9f49816adac897e2b46573b3cb6c), [Commit](https://github.com/open-webui/open-webui/commit/72951324dfeef64e09f4776898d675bc1c44f040), [Commit](https://github.com/open-webui/open-webui/commit/395098c6f1b7499d37ad55145a5931431d3e72e9), [Commit](https://github.com/open-webui/open-webui/commit/11487d66fc1a2dfafbdaa2b7ef939a86caaf3872)
+- 📄 **Terminal HTML file preview.** Users can now preview HTML files directly in the Open Terminal file browser, with a rendered iframe view and source toggle, enabling iterative AI editing of HTML files. [Commit](https://github.com/open-webui/open-webui/commit/3909b62ffcf49839fa57346ed8487ae759811503), [Commit](https://github.com/open-webui/open-webui/commit/933a3bbbd3f4fc3eeb0ec52c7965e9ac1c4cea39)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for Simplified Chinese and Traditional Chinese were enhanced and expanded.
 
