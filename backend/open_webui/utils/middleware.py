@@ -3082,6 +3082,9 @@ async def non_streaming_chat_response_handler(response, ctx):
                     )
 
                     # Save message in the database
+                    raw_usage = response_data.get("usage", {}) or {}
+                    usage = normalize_usage(raw_usage) if raw_usage else None
+
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
@@ -3089,6 +3092,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                             "role": "assistant",
                             "content": content,
                             "output": response_output,
+                            **({"usage": usage} if usage else {}),
                         },
                     )
 
