@@ -71,10 +71,12 @@
 		<div class="overflow-y-scroll scrollbar-hidden h-full pr-1.5" style="padding-right: 4px;">
 			<!-- Tasks Section -->
 			<div class="mb-3.5" style="background: linear-gradient(to bottom, rgba(0,0,0,0.02), transparent); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.05);">
-				<div class="mb-4" style="display: flex; align-items: center; gap: 8px;">
-					<div style="width: 4px; height: 24px; background: linear-gradient(to bottom, #3b82f6, #8b5cf6); border-radius: 2px;"></div>
-					<div class="text-base font-medium" style="color: #1f2937; letter-spacing: -0.01em;">{$i18n.t('Tasks')}</div>
+				<div class="mb-4 flex items-center gap-2">
+				<div class="w-1 h-6 bg-orange-500 rounded-sm"></div>
+				<div class="text-base font-medium text-gray-800 dark:text-gray-200 tracking-tight">
+					{$i18n.t('Tasks')}
 				</div>
+			</div>
 
 				<div class="space-y-3" style="background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.06);">
 					<!-- Set Task Model -->
@@ -301,10 +303,12 @@
 
 			<!-- UI Section -->
 			<div class="mb-3.5" style="background: linear-gradient(to bottom, rgba(0,0,0,0.02), transparent); border-radius: 12px; padding: 20px; border: 1px solid rgba(0,0,0,0.05);">
-				<div class="mb-4" style="display: flex; align-items: center; gap: 8px;">
-					<div style="width: 4px; height: 24px; background: linear-gradient(to bottom, #10b981, #06b6d4); border-radius: 2px;"></div>
-					<div class="text-base font-medium" style="color: #1f2937; letter-spacing: -0.01em;">{$i18n.t('UI')}</div>
+				<div class="mb-4 flex items-center gap-2">
+				<div class="w-1 h-6 bg-orange-500 rounded-sm"></div>
+				<div class="text-base font-medium text-gray-800 dark:text-gray-200 tracking-tight">
+					{$i18n.t('UI')}
 				</div>
+			</div>
 
 				<!-- Banners -->
 				<div class="{banners.length > 0 ? 'mb-3' : ''}" style="background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.06); margin-bottom: 16px;">
@@ -331,7 +335,7 @@
 									];
 								}
 							}}
-							style="background: linear-gradient(135deg, #10b981, #06b6d4); color: white; border-radius: 8px; padding: 6px 12px; transition: all 0.2s; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25); border: none; display: flex; align-items: center; gap: 4px;"
+							style="background:#3b82f6;; color: white; border-radius: 8px; padding: 6px 12px; transition: all 0.2s; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25); border: none; display: flex; align-items: center; gap: 4px;"
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -425,7 +429,7 @@
 										promptSuggestions = [...promptSuggestions, { content: '', title: ['', ''] }];
 									}
 								}}
-								style="background: linear-gradient(135deg, #10b981, #06b6d4); color: white; border-radius: 8px; padding: 6px 12px; transition: all 0.2s; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25); border: none; display: flex; align-items: center; gap: 4px;"
+								style="background:#3b82f6; color: white; border-radius: 8px; padding: 6px 12px; transition: all 0.2s; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25); border: none; display: flex; align-items: center; gap: 4px;"
 							>
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
@@ -509,9 +513,9 @@
 
 		<div class="flex justify-end text-sm font-medium" style="border-top: 1px solid rgba(0,0,0,0.08); padding-top: 16px;">
 			<button
-				class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+				class="px-3.5 py-1.5 text-sm font-medium bg-orange-600 hover:bg-orange-700 text-white transition rounded-lg"
 				type="submit"
-				style="background: linear-gradient(135deg, #3b82f6, #8b5cf6); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); padding: 10px 24px; font-weight: 600; transition: all 0.3s; border: none;"
+				
 			>
 				{$i18n.t('Save')}
 			</button>

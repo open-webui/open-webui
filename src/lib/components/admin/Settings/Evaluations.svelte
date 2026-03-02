@@ -106,7 +106,7 @@
 				<!-- General Settings Section -->
 				<div class="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-5 border border-gray-200 dark:border-gray-800">
 					<div class="flex items-center gap-2 mb-4">
-						<div class="w-1 h-6 bg-emerald-500 rounded-full"></div>
+						<div class="w-1 h-6 bg-orange-500 rounded-full"></div>
 						<h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{$i18n.t('General')}</h3>
 					</div>
 
@@ -130,7 +130,7 @@
 					<div class="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-5 border border-gray-200 dark:border-gray-800">
 						<div class="flex items-center justify-between mb-4">
 							<div class="flex items-center gap-2">
-								<div class="w-1 h-6 bg-blue-500 rounded-full"></div>
+								<div class="w-1 h-6 bg-orange-500 rounded-full"></div>
 								<h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{$i18n.t('Manage')}</h3>
 							</div>
 
@@ -192,7 +192,7 @@
 
 	<div class="flex justify-end pt-4 px-1 border-t border-gray-200 dark:border-gray-800 mt-4">
 		<button
-			class="px-5 py-2.5 text-sm font-semibold bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white transition-all duration-200 rounded-lg shadow-sm hover:shadow-md active:scale-95"
+			class="px-3.5 py-1.5 text-sm font-medium bg-orange-600 hover:bg-orange-700 text-white transition rounded-lg"
 			type="submit"
 		>
 			{$i18n.t('Save')}

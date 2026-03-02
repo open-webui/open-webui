@@ -217,48 +217,45 @@
 	<div class="overflow-y-scroll scrollbar-hidden h-full" style="padding-right: 4px;">
 		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && directConnectionsConfig !== null}
 			<!-- OpenAI API Section -->
-			<div class="my-2" style="background: linear-gradient(to bottom, rgba(0,0,0,0.02), transparent); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.05);">
+			<div class="my-2 bg-gradient-to-b from-gray-50/50 to-transparent dark:from-gray-800/20 dark:to-transparent rounded-xl p-5 mb-5 border border-gray-200/60 dark:border-gray-700/30">
 				<div class="mt-2 space-y-2 pr-1.5">
-					<div class="flex justify-between items-center text-sm" style="margin-bottom: 12px;">
-						<div class="flex items-center" style="gap: 8px;">
-							<div style="width: 4px; height: 24px; background: linear-gradient(to bottom, #10b981, #06b6d4); border-radius: 2px;"></div>
-							<div class="font-medium" style="color: #1f2937; letter-spacing: -0.01em; font-size: 15px;">{$i18n.t('OpenAI API')}</div>
+					<div class="flex justify-between items-center text-sm mb-3">
+						<div class="flex items-center gap-2">
+							<div class="w-1 h-6 bg-orange-500 rounded-sm"></div>
+							<div class="font-semibold text-gray-900 dark:text-gray-100" style="letter-spacing: -0.01em;">{$i18n.t('OpenAI API')}</div>
 						</div>
 
 						<div class="flex items-center">
-							<div class="">
-								<Switch
-									bind:state={ENABLE_OPENAI_API}
-									on:change={async () => {
-										updateOpenAIHandler();
-									}}
-								/>
-							</div>
+							<Switch
+								bind:state={ENABLE_OPENAI_API}
+								on:change={async () => {
+									updateOpenAIHandler();
+								}}
+							/>
 						</div>
 					</div>
 
 					{#if ENABLE_OPENAI_API}
-						<div class="" style="background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.06); margin-top: 12px;">
-							<div class="flex justify-between items-center" style="margin-bottom: 12px;">
-								<div class="font-medium" style="color: #374151; font-size: 13px;">{$i18n.t('Manage OpenAI API Connections')}</div>
+						<div class="bg-white dark:bg-gray-800/50 rounded-lg p-4 shadow-sm border border-gray-200/80 dark:border-gray-700/50 mt-3">
+							<div class="flex justify-between items-center mb-3">
+								<div class="font-semibold text-gray-800 dark:text-gray-200 text-sm">{$i18n.t('Manage OpenAI API Connections')}</div>
 
 								<Tooltip content={$i18n.t(`Add Connection`)}>
 									<button
-										class="px-1"
+										class="bg-orange-500 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg px-2.5 py-1.5 transition-all shadow-md shadow-orange-500/25 dark:shadow-orange-500/20 flex items-center justify-center"
 										on:click={() => {
 											showAddOpenAIConnectionModal = true;
 										}}
 										type="button"
-										style="background: linear-gradient(135deg, #10b981, #06b6d4); color: white; border-radius: 8px; padding: 6px 10px; transition: all 0.2s; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25); border: none; display: flex; align-items: center; justify-content: center;"
 									>
 										<Plus />
 									</button>
 								</Tooltip>
 							</div>
 
-							<div class="flex flex-col gap-1.5 mt-1.5" style="gap: 10px;">
+							<div class="flex flex-col gap-2.5 mt-1.5">
 								{#each OPENAI_API_BASE_URLS as url, idx}
-									<div style="background: #f9fafb; border-radius: 8px; padding: 12px; border: 1px solid rgba(0,0,0,0.08); transition: all 0.2s;">
+									<div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3 border border-gray-200/80 dark:border-gray-700/50 transition-all">
 										<OpenAIConnection
 											pipeline={pipelineUrls[url] ? true : false}
 											bind:url
@@ -290,11 +287,11 @@
 			</div>
 
 			<!-- Ollama API Section -->
-			<div class="pr-1.5 my-2" style="background: linear-gradient(to bottom, rgba(0,0,0,0.02), transparent); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.05);">
-				<div class="flex justify-between items-center text-sm mb-2" style="margin-bottom: 12px;">
-					<div class="flex items-center" style="gap: 8px;">
-						<div style="width: 4px; height: 24px; background: linear-gradient(to bottom, #3b82f6, #8b5cf6); border-radius: 2px;"></div>
-						<div class="font-medium" style="color: #1f2937; letter-spacing: -0.01em; font-size: 15px;">{$i18n.t('Ollama API')}</div>
+			<div class="pr-1.5 my-2 bg-gradient-to-b from-gray-50/50 to-transparent dark:from-gray-800/20 dark:to-transparent rounded-xl p-5 mb-5 border border-gray-200/60 dark:border-gray-700/30">
+				<div class="flex justify-between items-center text-sm mb-2">
+					<div class="flex items-center gap-2">
+						<div class="w-1 h-6 bg-orange-500 rounded-sm"></div>
+						<div class="font-semibold text-gray-900 dark:text-gray-100" style="letter-spacing: -0.01em;">{$i18n.t('Ollama API')}</div>
 					</div>
 
 					<div class="mt-1">
@@ -308,18 +305,17 @@
 				</div>
 
 				{#if ENABLE_OLLAMA_API}
-					<div class="" style="background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.06); margin-top: 12px;">
-						<div class="flex justify-between items-center" style="margin-bottom: 12px;">
-							<div class="font-medium" style="color: #374151; font-size: 13px;">{$i18n.t('Manage Ollama API Connections')}</div>
+					<div class="bg-white dark:bg-gray-800/50 rounded-lg p-4 shadow-sm border border-gray-200/80 dark:border-gray-700/50 mt-3">
+						<div class="flex justify-between items-center mb-3">
+							<div class="font-semibold text-gray-800 dark:text-gray-200 text-sm">{$i18n.t('Manage Ollama API Connections')}</div>
 
 							<Tooltip content={$i18n.t(`Add Connection`)}>
 								<button
-									class="px-1"
+									class="bg-orange-500 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg px-2.5 py-1.5 transition-all shadow-md shadow-orange-500/25 dark:shadow-orange-500/20 flex items-center justify-center"
 									on:click={() => {
 										showAddOllamaConnectionModal = true;
 									}}
 									type="button"
-									style="background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; border-radius: 8px; padding: 6px 10px; transition: all 0.2s; box-shadow: 0 2px 6px rgba(59, 130, 246, 0.25); border: none; display: flex; align-items: center; justify-content: center;"
 								>
 									<Plus />
 								</button>
@@ -327,9 +323,9 @@
 						</div>
 
 						<div class="flex w-full gap-1.5">
-							<div class="flex-1 flex flex-col gap-1.5 mt-1.5" style="gap: 10px;">
+							<div class="flex-1 flex flex-col gap-2.5 mt-1.5">
 								{#each OLLAMA_BASE_URLS as url, idx}
-									<div style="background: #f9fafb; border-radius: 8px; padding: 12px; border: 1px solid rgba(0,0,0,0.08); transition: all 0.2s;">
+									<div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3 border border-gray-200/80 dark:border-gray-700/50 transition-all">
 										<OllamaConnection
 											bind:url
 											bind:config={OLLAMA_API_CONFIGS[idx]}
@@ -352,13 +348,12 @@
 							</div>
 						</div>
 
-						<div class="mt-1 text-xs text-gray-400 dark:text-gray-500" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.06); line-height: 1.5;">
+						<div class="mt-3 pt-3 border-t border-gray-200/80 dark:border-gray-700/50 text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
 							{$i18n.t('Trouble accessing Ollama?')}
 							<a
-								class="text-gray-300 font-medium underline"
+								class="text-blue-600 dark:text-blue-400 font-semibold underline hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
 								href="https://github.com/open-webui/open-webui#troubleshooting"
 								target="_blank"
-								style="color: #3b82f6; font-weight: 600; transition: color 0.2s;"
 							>
 								{$i18n.t('Click here for help.')}
 							</a>
@@ -368,27 +363,25 @@
 			</div>
 
 			<!-- Direct Connections Section -->
-			<div class="pr-1.5 my-2" style="background: linear-gradient(to bottom, rgba(0,0,0,0.02), transparent); border-radius: 12px; padding: 20px; border: 1px solid rgba(0,0,0,0.05);">
+			<div class="pr-1.5 my-2 bg-gradient-to-b from-gray-50/50 to-transparent dark:from-gray-800/20 dark:to-transparent rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/30">
 				<div class="flex justify-between items-center text-sm">
-					<div class="flex items-center" style="gap: 8px;">
-						<div style="width: 4px; height: 24px; background: linear-gradient(to bottom, #f59e0b, #ef4444); border-radius: 2px;"></div>
-						<div class="font-medium" style="color: #1f2937; letter-spacing: -0.01em; font-size: 15px;">{$i18n.t('Direct Connections')}</div>
+					<div class="flex items-center gap-2">
+						<div class="w-1 h-6 bg-gradient-to-b from-amber-500 to-red-500 rounded-sm"></div>
+						<div class="font-semibold text-gray-900 dark:text-gray-100" style="letter-spacing: -0.01em;">{$i18n.t('Direct Connections')}</div>
 					</div>
 
 					<div class="flex items-center">
-						<div class="">
-							<Switch
-								bind:state={directConnectionsConfig.ENABLE_DIRECT_CONNECTIONS}
-								on:change={async () => {
-									updateDirectConnectionsHandler();
-								}}
-							/>
-						</div>
+						<Switch
+							bind:state={directConnectionsConfig.ENABLE_DIRECT_CONNECTIONS}
+							on:change={async () => {
+								updateDirectConnectionsHandler();
+							}}
+						/>
 					</div>
 				</div>
 
-				<div class="mt-1.5" style="background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.06); margin-top: 12px;">
-					<div class="text-xs text-gray-500" style="line-height: 1.6; color: #6b7280;">
+				<div class="mt-3 bg-white dark:bg-gray-800/50 rounded-lg p-4 shadow-sm border border-gray-200/80 dark:border-gray-700/50">
+					<div class="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
 						{$i18n.t(
 							'Direct Connections allow users to connect to their own OpenAI compatible API endpoints.'
 						)}
@@ -397,19 +390,18 @@
 			</div>
 		{:else}
 			<div class="flex h-full justify-center">
-				<div class="my-auto" style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+				<div class="my-auto flex flex-col items-center gap-3">
 					<Spinner className="size-6" />
-					<div style="color: #6b7280; font-size: 13px; font-weight: 500;">Loading connections...</div>
+					<div class="text-gray-600 dark:text-gray-400 text-sm font-medium">Loading connections...</div>
 				</div>
 			</div>
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium" style="border-top: 1px solid rgba(0,0,0,0.08); margin-top: 8px; padding-top: 16px;">
+	<div class="flex justify-end pt-4 text-sm font-medium border-t border-gray-200 dark:border-gray-700/50 mt-2">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-medium bg-orange-600 hover:bg-orange-700 text-white transition rounded-lg"
 			type="submit"
-			style="background: linear-gradient(135deg, #3b82f6, #8b5cf6); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); padding: 10px 24px; font-weight: 600; transition: all 0.3s; border: none;"
 		>
 			{$i18n.t('Save')}
 		</button>

@@ -176,9 +176,11 @@
 		<div class="flex flex-col gap-3" style="gap: 20px;">
 			<!-- STT Settings Section -->
 			<div style="background: linear-gradient(to bottom, rgba(0,0,0,0.02), transparent); border-radius: 12px; padding: 20px; border: 1px solid rgba(0,0,0,0.05);">
-				<div class="mb-4" style="display: flex; align-items: center; gap: 8px;">
-					<div style="width: 4px; height: 24px; background: linear-gradient(to bottom, #3b82f6, #8b5cf6); border-radius: 2px;"></div>
-					<div class="text-sm font-medium" style="color: #1f2937; letter-spacing: -0.01em; font-size: 15px;">{$i18n.t('STT Settings')}</div>
+				<div class="mb-4 flex items-center gap-2">
+					<div class="w-1 h-6 bg-orange-500 rounded-sm"></div>
+					<div class="text-base font-medium text-gray-800 dark:text-gray-200 tracking-tight">
+						{$i18n.t('STT Settings')}
+					</div>
 				</div>
 
 				<div class="space-y-3" style="background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.06);">
@@ -318,13 +320,16 @@
 								</div>
 
 								<button
-									class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+									class="px-3 py-2 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 
+									text-white rounded-lg transition-all duration-200 
+									shadow-md hover:shadow-lg 
+									flex items-center justify-center"
 									on:click={() => {
 										sttModelUpdateHandler();
 									}}
 									disabled={STT_WHISPER_MODEL_LOADING}
-									style="background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; border-radius: 8px; padding: 10px 14px; transition: all 0.2s; box-shadow: 0 2px 6px rgba(59, 130, 246, 0.25); border: none;"
 								>
+
 									{#if STT_WHISPER_MODEL_LOADING}
 										<div class="self-center">
 											<svg
@@ -394,9 +399,11 @@
 
 			<!-- TTS Settings Section -->
 			<div style="background: linear-gradient(to bottom, rgba(0,0,0,0.02), transparent); border-radius: 12px; padding: 20px; border: 1px solid rgba(0,0,0,0.05);">
-				<div class="mb-4" style="display: flex; align-items: center; gap: 8px;">
-					<div style="width: 4px; height: 24px; background: linear-gradient(to bottom, #10b981, #06b6d4); border-radius: 2px;"></div>
-					<div class="text-sm font-medium" style="color: #1f2937; letter-spacing: -0.01em; font-size: 15px;">{$i18n.t('TTS Settings')}</div>
+				<div class="mb-4 flex items-center gap-2">
+					<div class="w-1 h-6 bg-orange-500 rounded-sm"></div>
+					<div class="text-base font-medium text-gray-800 dark:text-gray-200 tracking-tight">
+						{$i18n.t('TTS Settings')}
+					</div>
 				</div>
 
 				<div class="space-y-3" style="background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.06);">
@@ -718,9 +725,9 @@
 	</div>
 	<div class="flex justify-end text-sm font-medium" style="border-top: 1px solid rgba(0,0,0,0.08); padding-top: 16px;">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-medium bg-orange-600 hover:bg-orange-700 text-white transition rounded-lg"
 			type="submit"
-			style="background: linear-gradient(135deg, #3b82f6, #8b5cf6); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); padding: 10px 24px; font-weight: 600; transition: all 0.3s; border: none;"
+			
 		>
 			{$i18n.t('Save')}
 		</button>

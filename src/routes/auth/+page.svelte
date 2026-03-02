@@ -163,10 +163,16 @@
 </svelte:head>
 
 <style>
+	@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap');
+
+	* {
+		font-family: 'Nunito', sans-serif;
+	}
+
 	@keyframes fadeInUp {
 		from {
 			opacity: 0;
-			transform: translateY(20px);
+			transform: translateY(24px);
 		}
 		to {
 			opacity: 1;
@@ -177,7 +183,7 @@
 	@keyframes slideInLeft {
 		from {
 			opacity: 0;
-			transform: translateX(-30px);
+			transform: translateX(-40px);
 		}
 		to {
 			opacity: 1;
@@ -185,132 +191,407 @@
 		}
 	}
 
-	@keyframes pulse {
-		0%, 100% {
-			opacity: 1;
-		}
-		50% {
-			opacity: 0.8;
-		}
+	@keyframes blobFloat1 {
+		0%, 100% { transform: translate(0, 0) scale(1); }
+		33% { transform: translate(20px, -15px) scale(1.05); }
+		66% { transform: translate(-10px, 20px) scale(0.97); }
+	}
+
+	@keyframes blobFloat2 {
+		0%, 100% { transform: translate(0, 0) scale(1); }
+		33% { transform: translate(-25px, 10px) scale(1.04); }
+		66% { transform: translate(15px, -20px) scale(0.98); }
+	}
+
+	@keyframes blobFloat3 {
+		0%, 100% { transform: translate(0, 0) scale(1); }
+		33% { transform: translate(10px, 25px) scale(0.96); }
+		66% { transform: translate(-20px, -10px) scale(1.06); }
+	}
+
+	@keyframes decorFloat {
+		0%, 100% { transform: translateY(0); opacity: 0.6; }
+		50% { transform: translateY(-8px); opacity: 0.9; }
 	}
 
 	.animate-fade-up {
-		animation: fadeInUp 0.6s ease-out forwards;
+		animation: fadeInUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 	}
 
 	.animate-slide-left {
-		animation: slideInLeft 0.6s ease-out forwards;
+		animation: slideInLeft 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 	}
 
-	.stat-card {
-		background: rgba(255, 255, 255, 0.15);
-		backdrop-filter: blur(10px);
-		border: 1px solid rgba(255, 255, 255, 0.3);
-		transition: all 0.3s ease;
+	/* LEFT PANEL */
+	.left-panel {
+		position: relative;
+		overflow: hidden;
+		background: linear-gradient(145deg, #f97316 0%, #fb923c 30%, #ea580c 60%, #c2410c 100%);
 	}
 
-	.stat-card:hover {
-		background: rgba(255, 255, 255, 0.2);
-		transform: translateY(-5px);
-		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+	/* Blurred blob shapes */
+	.blob {
+		position: absolute;
+		border-radius: 50%;
+		filter: blur(60px);
+		opacity: 0.55;
 	}
 
-	.input-field {
-		transition: all 0.3s ease;
-		border: 2px solid #e5e7eb;
+	.blob-1 {
+		width: 380px;
+		height: 380px;
+		background: radial-gradient(circle, #fde68a 0%, #f59e0b 60%, transparent 100%);
+		top: -80px;
+		left: -80px;
+		animation: blobFloat1 8s ease-in-out infinite;
+	}
+
+	.blob-2 {
+		width: 320px;
+		height: 320px;
+		background: radial-gradient(circle, #fed7aa 0%, #fb923c 50%, transparent 100%);
+		bottom: -60px;
+		right: -60px;
+		animation: blobFloat2 10s ease-in-out infinite;
+	}
+
+	.blob-3 {
+		width: 260px;
+		height: 260px;
+		background: radial-gradient(circle, #fff7ed 0%, #fdba74 50%, transparent 100%);
+		top: 45%;
+		left: 35%;
+		animation: blobFloat3 12s ease-in-out infinite;
+	}
+
+	.blob-4 {
+		width: 200px;
+		height: 200px;
+		background: radial-gradient(circle, #dc2626 0%, #b91c1c 50%, transparent 100%);
+		top: 20%;
+		right: -30px;
+		animation: blobFloat1 9s ease-in-out infinite reverse;
+		opacity: 0.35;
+	}
+
+	/* Decorative dots grid */
+	.dots-grid {
+		position: absolute;
+		top: 20px;
+		right: 30px;
+		display: grid;
+		grid-template-columns: repeat(5, 8px);
+		gap: 6px;
+		opacity: 0.35;
+	}
+
+	.dot {
+		width: 4px;
+		height: 4px;
+		border-radius: 50%;
 		background: white;
 	}
 
-	.dark .input-field {
+	/* Decorative line circles */
+	.deco-circle {
+		position: absolute;
+		border-radius: 50%;
+		border: 1.5px solid rgba(255,255,255,0.35);
+		animation: decorFloat 4s ease-in-out infinite;
+	}
+
+	/* Decorative cross / plus */
+	.deco-plus {
+		position: absolute;
+		color: rgba(255,255,255,0.45);
+		font-size: 22px;
+		font-weight: 300;
+		line-height: 1;
+		animation: decorFloat 5s ease-in-out infinite;
+	}
+
+	/* Wavy SVG lines */
+	.wavy-lines {
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		width: 100%;
+		opacity: 0.18;
+		pointer-events: none;
+	}
+
+	/* Logo badge */
+	.logo-badge {
+		background: rgba(255,255,255,0.2);
+		backdrop-filter: blur(12px);
+		border: 1px solid rgba(255,255,255,0.35);
+		border-radius: 18px;
+		padding: 10px 14px;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+
+	/* RIGHT PANEL */
+	.right-panel {
+		background: #ffffff;
+	}
+
+	.dark .right-panel {
+		background: #111827;
+	}
+
+	/* Input */
+	.auth-input {
+		width: 100%;
+		padding: 12px 44px;
+		border-radius: 999px;
+		border: 1.5px solid #e5e7eb;
+		background: #f9fafb;
+		font-size: 14px;
+		color: #111827;
+		transition: all 0.25s ease;
+		outline: none;
+		font-family: 'Nunito', sans-serif;
+	}
+
+	.dark .auth-input {
 		border-color: #374151;
+		background: #1f2937;
+		color: #f9fafb;
+	}
+
+	.auth-input:focus {
+		border-color: #f97316;
+		background: #fff;
+		box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.12);
+	}
+
+	.dark .auth-input:focus {
 		background: #1f2937;
 	}
 
-	.input-field:focus {
-		outline: none;
-		border-color: #f97316;
-		box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+	.input-wrap {
+		position: relative;
 	}
 
-	.btn-orange {
+	.input-icon {
+		position: absolute;
+		left: 16px;
+		top: 50%;
+		transform: translateY(-50%);
+		color: #9ca3af;
+		width: 16px;
+		height: 16px;
+	}
+
+	/* Checkbox */
+	.checkbox-custom {
+		width: 16px;
+		height: 16px;
+		border-radius: 4px;
+		border: 1.5px solid #d1d5db;
+		appearance: none;
+		cursor: pointer;
+		transition: all 0.2s;
+		background: white;
+		position: relative;
+	}
+
+	.checkbox-custom:checked {
+		background: #f97316;
+		border-color: #f97316;
+	}
+
+	.checkbox-custom:checked::after {
+		content: '';
+		position: absolute;
+		left: 4px;
+		top: 1px;
+		width: 5px;
+		height: 8px;
+		border: 2px solid white;
+		border-top: none;
+		border-left: none;
+		transform: rotate(45deg);
+	}
+
+	/* Submit button */
+	.btn-submit {
+		width: 100%;
+		padding: 14px;
+		border-radius: 999px;
 		background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+		color: white;
+		font-weight: 800;
+		font-size: 15px;
+		letter-spacing: 0.02em;
+		border: none;
+		cursor: pointer;
 		transition: all 0.3s ease;
 		position: relative;
 		overflow: hidden;
+		font-family: 'Nunito', sans-serif;
 	}
 
-	.btn-orange:hover {
+	.btn-submit:hover {
 		transform: translateY(-2px);
-		box-shadow: 0 10px 25px rgba(249, 115, 22, 0.4);
+		box-shadow: 0 12px 30px rgba(249, 115, 22, 0.45);
 	}
 
-	.btn-orange::before {
+	.btn-submit::after {
 		content: '';
 		position: absolute;
-		top: 0;
-		left: -100%;
+		inset: 0;
+		background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%);
+		transform: translateX(-100%);
+		transition: transform 0.5s ease;
+	}
+
+	.btn-submit:hover::after {
+		transform: translateX(100%);
+	}
+
+	/* OAuth button */
+	.btn-oauth {
 		width: 100%;
-		height: 100%;
-		background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-		transition: left 0.5s;
-	}
-
-	.btn-orange:hover::before {
-		left: 100%;
-	}
-
-	.btn-outline {
-		transition: all 0.3s ease;
-		border: 2px solid #e5e7eb;
+		padding: 12px 20px;
+		border-radius: 999px;
+		border: 1.5px solid #e5e7eb;
 		background: white;
+		font-size: 14px;
+		font-weight: 600;
+		color: #374151;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 10px;
+		transition: all 0.25s ease;
+		font-family: 'Nunito', sans-serif;
 	}
 
-	.dark .btn-outline {
+	.dark .btn-oauth {
 		border-color: #374151;
 		background: #1f2937;
+		color: #d1d5db;
 	}
 
-	.btn-outline:hover {
+	.btn-oauth:hover {
 		border-color: #f97316;
-		background: rgba(249, 115, 22, 0.05);
+		background: #fff7ed;
+		box-shadow: 0 4px 15px rgba(249, 115, 22, 0.15);
 	}
 
-	.tab-button {
-		transition: all 0.3s ease;
-		position: relative;
+	.dark .btn-oauth:hover {
+		background: #292524;
 	}
 
-	.tab-button.active {
-		background: #f97316;
-		color: white;
+	/* Divider */
+	.divider {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		margin: 20px 0;
 	}
 
-	.tab-button:not(.active):hover {
-		background: rgba(249, 115, 22, 0.1);
+	.divider-line {
+		flex: 1;
+		height: 1px;
+		background: #e5e7eb;
 	}
 
-	.logo-glow {
-		filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.5));
+	.dark .divider-line {
+		background: #374151;
 	}
 
-	.orange-gradient {
-		background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+	.divider-text {
+		font-size: 13px;
+		color: #9ca3af;
+		white-space: nowrap;
+		font-weight: 500;
 	}
 
-	.auth-card {
-		background: white;
-		border-radius: 24px;
-		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+	/* Link */
+	.link-orange {
+		color: #f97316;
+		font-weight: 700;
+		cursor: pointer;
+		transition: color 0.2s;
+		background: none;
+		border: none;
+		font-family: 'Nunito', sans-serif;
+		font-size: inherit;
 	}
 
-	.dark .auth-card {
-		background: #1f2937;
-		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+	.link-orange:hover {
+		color: #ea580c;
 	}
 
-	.building-bg {
-		object-fit: cover;
-		object-position: center;
+	/* Auth card (right side) */
+	.auth-card-inner {
+		width: 100%;
+		max-width: 420px;
+	}
+
+	/* Heading */
+	.auth-title {
+		font-size: 32px;
+		font-weight: 900;
+		color: #111827;
+		margin-bottom: 6px;
+		line-height: 1.15;
+	}
+
+	.dark .auth-title {
+		color: #f9fafb;
+	}
+
+	.auth-subtitle {
+		font-size: 14px;
+		color: #6b7280;
+		font-weight: 500;
+	}
+
+	.dark .auth-subtitle {
+		color: #9ca3af;
+	}
+
+	/* Form label */
+	.form-label {
+		display: block;
+		font-size: 13px;
+		font-weight: 700;
+		color: #374151;
+		margin-bottom: 6px;
+		font-family: 'Nunito', sans-serif;
+	}
+
+	.dark .form-label {
+		color: #d1d5db;
+	}
+
+	/* Welcome badge on left */
+	.welcome-badge {
+		background: rgba(255,255,255,0.15);
+		backdrop-filter: blur(8px);
+		border: 1px solid rgba(255,255,255,0.3);
+		border-radius: 999px;
+		padding: 6px 16px;
+		display: inline-block;
+		font-size: 13px;
+		font-weight: 600;
+		color: rgba(255,255,255,0.9);
+		margin-bottom: 16px;
+	}
+
+	/* Security note */
+	.security-note {
+		background: rgba(255,255,255,0.12);
+		backdrop-filter: blur(8px);
+		border: 1px solid rgba(255,255,255,0.25);
+		border-radius: 16px;
+		padding: 14px 16px;
 	}
 </style>
 
@@ -326,228 +607,237 @@
 	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region z-50" />
 
 	{#if loaded}
-		<!-- Left Panel - Orange with Building Background -->
-		<div class="hidden lg:flex lg:w-1/2 text-white p-12 flex-col justify-between relative overflow-hidden">
-			<!-- Background Image -->
-			<div class="absolute inset-0">
-				<!-- Replace this src with your actual building image path in /static folder -->
-				<!-- For now, using a base64 or external URL as fallback -->
-				<div class="w-full h-full bg-gradient-to-br from-cyan-600 to-cyan-800 building-bg"></div>
+		<!-- ========== LEFT PANEL ========== -->
+		<div class="hidden lg:flex lg:w-1/2 left-panel flex-col justify-between p-12 text-white">
+			
+			<!-- Blurred blobs -->
+			<div class="blob blob-1"></div>
+			<div class="blob blob-2"></div>
+			<div class="blob blob-3"></div>
+			<div class="blob blob-4"></div>
+
+			<!-- Dots grid (top right) -->
+			<div class="dots-grid">
+				{#each Array(25) as _}
+					<div class="dot"></div>
+				{/each}
 			</div>
-			
-			<!-- Orange Overlay -->
-			<div class="absolute inset-0 orange-gradient opacity-85"></div>
-			
-			<!-- Gradient Overlay for better text readability -->
-			<div class="absolute inset-0 bg-gradient-to-br from-orange-600/50 via-orange-500/30 to-transparent"></div>
+
+			<!-- Dots grid (bottom left) -->
+			<div style="position:absolute; bottom:80px; left:40px; display:grid; grid-template-columns: repeat(5,8px); gap:6px; opacity:0.3;">
+				{#each Array(25) as _}
+					<div style="width:4px;height:4px;border-radius:50%;background:white;"></div>
+				{/each}
+			</div>
+
+			<!-- Decorative circles -->
+			<div class="deco-circle" style="width:50px;height:50px;top:35%;left:8%;animation-delay:0s;"></div>
+			<div class="deco-circle" style="width:28px;height:28px;bottom:25%;right:12%;animation-delay:1.5s;"></div>
+			<div class="deco-circle" style="width:18px;height:18px;top:65%;left:15%;animation-delay:0.8s;"></div>
+
+			<!-- Plus signs -->
+			<div class="deco-plus" style="top:10%;left:62%;animation-delay:0.3s;">+</div>
+			<div class="deco-plus" style="bottom:35%;left:5%;animation-delay:1s;">+</div>
+			<div class="deco-plus" style="top:50%;right:8%;animation-delay:2s;font-size:16px;">+</div>
+
+			<!-- Wavy SVG -->
+			<svg class="wavy-lines" viewBox="0 0 600 400" fill="none" xmlns="http://www.w3.org/2000/svg" style="height:220px;">
+				<path d="M-20 300 Q80 240 160 280 Q240 320 320 260 Q400 200 480 240 Q560 280 640 220" stroke="white" stroke-width="2.5" fill="none"/>
+				<path d="M-20 340 Q80 280 160 320 Q240 360 320 300 Q400 240 480 280 Q560 320 640 260" stroke="white" stroke-width="2" fill="none"/>
+				<path d="M-20 260 Q100 200 180 240 Q260 280 340 220 Q420 160 500 200 Q580 240 660 180" stroke="white" stroke-width="1.5" fill="none" opacity="0.6"/>
+			</svg>
 
 			<!-- Content -->
 			<div class="relative z-10 animate-slide-left">
 				<!-- Logo -->
-				<div class="flex items-center space-x-3 mb-16">
-					<div class="bg-white/20 backdrop-blur-sm p-3 rounded-2xl logo-glow">
-						<img
-							id="logo"
-							crossorigin="anonymous"
-							src="{WEBUI_BASE_URL}/static/splash.png"
-							class="w-8 h-8 rounded-lg"
-							alt="logo"
-						/>
-					</div>
-					<span class="text-2xl font-bold">{$WEBUI_NAME}</span>
+				<div class="logo-badge mb-16">
+					<img
+						id="logo"
+						crossorigin="anonymous"
+						src="{WEBUI_BASE_URL}/static/splash.png"
+						class="w-8 h-8 rounded-lg"
+						alt="logo"
+					/>
+					<span class="text-xl font-extrabold tracking-wide">{$WEBUI_NAME}</span>
 				</div>
 
-				<!-- Welcome Message -->
-				<div class="mb-12">
-					<h1 class="text-5xl font-bold mb-4">
-						{#if mode === 'signin'}
-							Welcome Back
-						{:else if mode === 'signup'}
-							Get Started
+				<!-- Welcome text -->
+				<div>
+					
+					<h1 class="font-black mb-4" style="font-size:52px; line-height:1.1; text-shadow: 0 2px 20px rgba(0,0,0,0.15);">
+						{#if mode === 'signup'}
+							Get<br/>Started!
 						{:else}
-							Welcome Back
+							Welcome to {$WEBUI_NAME}!
 						{/if}
 					</h1>
-					<p class="text-xl text-white/90">
+					<p style="font-size:16px; color:rgba(255,255,255,0.88); font-weight:600; max-width:280px; line-height:1.6;">
 						{#if $config?.onboarding ?? false}
-							Create your admin account to continue
+							Create your admin account to continue using {$WEBUI_NAME}.
+						{:else if mode === 'signin'}
+							You can sign in to access with your existing account.
 						{:else}
-							{mode === 'signin' ? 'Sign in to continue' : 'Create your account to get started'}
+							Fill in your details to create your new account.
 						{/if}
 					</p>
 				</div>
+			</div>
 
-				<!-- Stats Grid -->
-				{#if !($config?.onboarding ?? false)}
-					<div class="grid grid-cols-2 gap-4">
-						<div class="stat-card rounded-2xl p-6">
-							<div class="text-sm text-white/80 mb-1">Active Users</div>
-							<div class="text-3xl font-bold">10K+</div>
-						</div>
-						<div class="stat-card rounded-2xl p-6">
-							<div class="text-sm text-white/80 mb-1">Conversations</div>
-							<div class="text-3xl font-bold">50K+</div>
-						</div>
-						<div class="stat-card rounded-2xl p-6">
-							<div class="text-sm text-white/80 mb-1">Uptime</div>
-							<div class="text-3xl font-bold">99.9%</div>
-						</div>
-						<div class="stat-card rounded-2xl p-6">
-							<div class="text-sm text-white/80 mb-1">Support</div>
-							<div class="text-3xl font-bold">24/7</div>
-						</div>
+			<!-- Footer -->
+			<div class="relative z-10">
+				{#if $config?.onboarding ?? false}
+					<div class="security-note">
+						<p style="font-size:13px; color:rgba(255,255,255,0.92); font-weight:600;">
+							🔒 <strong>Secure & Private:</strong> {$WEBUI_NAME} does not make any external connections, and your data stays securely on your locally hosted server.
+						</p>
 					</div>
 				{/if}
 			</div>
-
-			<!-- Footer Info -->
-			{#if $config?.onboarding ?? false}
-				<div class="relative z-10 bg-white/15 backdrop-blur-md rounded-2xl p-4 border border-white/30">
-					<p class="text-sm text-white/95">
-						<span class="font-semibold">🔒 Secure & Private:</span> {$WEBUI_NAME}
-						{$i18n.t('does not make any external connections, and your data stays securely on your locally hosted server.')}
-					</p>
-				</div>
-			{/if}
 		</div>
 
-		<!-- Right Panel - Auth Form -->
-		<div class="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-gray-50 dark:bg-gray-900">
-			<div class="w-full max-w-md animate-fade-up">
+		<!-- ========== RIGHT PANEL ========== -->
+		<div class="w-full lg:w-1/2 right-panel flex items-center justify-center p-6 sm:p-12">
+			<div class="auth-card-inner animate-fade-up">
+
 				{#if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}
-					<div class="auth-card p-8 sm:p-10">
-						<div class="flex items-center justify-center gap-3 text-xl sm:text-2xl text-center font-semibold text-gray-900 dark:text-gray-100">
-							<div>
-								{$i18n.t('Signing in to {{WEBUI_NAME}}', { WEBUI_NAME: $WEBUI_NAME })}
-							</div>
-							<div>
-								<Spinner />
-							</div>
-						</div>
+					<div class="flex items-center justify-center gap-3 text-xl sm:text-2xl text-center font-semibold text-gray-900 dark:text-gray-100">
+						<div>{$i18n.t('Signing in to {{WEBUI_NAME}}', { WEBUI_NAME: $WEBUI_NAME })}</div>
+						<div><Spinner /></div>
 					</div>
 				{:else}
-					<div class="auth-card p-8 sm:p-10">
-						<!-- Mobile Logo -->
-						<div class="lg:hidden flex items-center justify-center mb-8">
-							<div class="bg-orange-500/10 p-3 rounded-2xl">
-								<img
-									crossorigin="anonymous"
-									src="{WEBUI_BASE_URL}/static/splash.png"
-									class="w-10 h-10 rounded-lg"
-									alt="logo"
-								/>
-							</div>
+
+					<!-- Mobile logo -->
+					<div class="lg:hidden flex items-center gap-3 mb-8">
+						<div style="background:rgba(249,115,22,0.12);border-radius:14px;padding:10px;">
+							<img crossorigin="anonymous" src="{WEBUI_BASE_URL}/static/splash.png" class="w-8 h-8 rounded-lg" alt="logo" />
 						</div>
+						<span class="text-xl font-extrabold text-gray-900 dark:text-white">{$WEBUI_NAME}</span>
+					</div>
 
-						<!-- Header -->
-						<div class="text-center mb-8">
-							<h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-								{#if mode === 'signin'}
-									Welcome Back
-								{:else if mode === 'signup'}
-									{($config?.onboarding ?? false) ? 'Get Started' : 'Create Account'}
-								{:else}
-									Sign in with LDAP
-								{/if}
-							</h2>
-							<p class="text-gray-600 dark:text-gray-400">
-								{#if $config?.onboarding ?? false}
-									Create your admin account
-								{:else}
-									{mode === 'signin' ? 'Sign in to continue' : 'Fill in your details to get started'}
-								{/if}
-							</p>
-						</div>
+					<!-- Title -->
+					<div class="mb-8">
+						<h2 class="auth-title">
+							{#if mode === 'signin'}
+								Sign In
+							{:else if mode === 'signup'}
+								{($config?.onboarding ?? false) ? 'Get Started' : 'Create Account'}
+							{:else}
+								Sign in with LDAP
+							{/if}
+						</h2>
+						<p class="auth-subtitle">
+							{#if $config?.onboarding ?? false}
+								Set up your admin account to begin
+							{:else if mode === 'signin'}
+								Enter your credentials to continue
+							{:else}
+								Fill in your details to get started
+							{/if}
+						</p>
+					</div>
 
-						<!-- Tabs for Email/Phone (if needed) -->
-						{#if ($config?.features.enable_login_form || $config?.features.enable_ldap) && mode !== 'ldap'}
-							<div class="flex gap-2 mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
-								<button
-									class="tab-button active flex-1 py-2.5 rounded-lg font-medium text-sm"
-									type="button"
-								>
-									Email
-								</button>
-							</div>
-						{/if}
+					<!-- Form -->
+					<form
+						class="space-y-4"
+						on:submit={(e) => {
+							e.preventDefault();
+							submitHandler();
+						}}
+					>
+						{#if $config?.features.enable_login_form || $config?.features.enable_ldap}
 
-						<form
-							class="space-y-5"
-							on:submit={(e) => {
-								e.preventDefault();
-								submitHandler();
-							}}
-						>
-							{#if $config?.features.enable_login_form || $config?.features.enable_ldap}
-								{#if mode === 'signup'}
-									<div>
-										<label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-											{$i18n.t('Full Name')}
-										</label>
+							{#if mode === 'signup'}
+								<div>
+									<label class="form-label">{$i18n.t('Full Name')}</label>
+									<div class="input-wrap">
+										<svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+											<path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+										</svg>
 										<input
 											bind:value={name}
 											type="text"
-											class="input-field w-full px-4 py-3 rounded-xl text-sm text-gray-900 dark:text-gray-100"
+											class="auth-input"
 											autocomplete="name"
 											placeholder={$i18n.t('Enter Your Full Name')}
 											required
 										/>
 									</div>
-								{/if}
+								</div>
+							{/if}
 
-								{#if mode === 'ldap'}
-									<div>
-										<label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-											{$i18n.t('Username')}
-										</label>
+							{#if mode === 'ldap'}
+								<div>
+									<label class="form-label">{$i18n.t('Username')}</label>
+									<div class="input-wrap">
+										<svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+											<path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+										</svg>
 										<input
 											bind:value={ldapUsername}
 											type="text"
-											class="input-field w-full px-4 py-3 rounded-xl text-sm text-gray-900 dark:text-gray-100"
+											class="auth-input"
 											autocomplete="username"
 											name="username"
 											placeholder={$i18n.t('Enter Your Username')}
 											required
 										/>
 									</div>
-								{:else}
-									<div>
-										<label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-											{$i18n.t('Email')}
-										</label>
+								</div>
+							{:else}
+								<div>
+									<label class="form-label">{$i18n.t('Email')}</label>
+									<div class="input-wrap">
+										<svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+											<path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+										</svg>
 										<input
 											bind:value={email}
 											type="email"
-											class="input-field w-full px-4 py-3 rounded-xl text-sm text-gray-900 dark:text-gray-100"
+											class="auth-input"
 											autocomplete="email"
 											name="email"
-											placeholder="name@example.com"
+											placeholder="Username or email"
 											required
 										/>
 									</div>
-								{/if}
+								</div>
+							{/if}
 
-								<div>
-									<label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-										{$i18n.t('Password')}
-									</label>
+							<div>
+								<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+									<label class="form-label" style="margin-bottom:0;">{$i18n.t('Password')}</label>
+									{#if mode === 'signin'}
+										<button type="button" class="link-orange" style="font-size:12px;">Forgot password?</button>
+									{/if}
+								</div>
+								<div class="input-wrap">
+									<svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+									</svg>
 									<input
 										bind:value={password}
 										type="password"
-										class="input-field w-full px-4 py-3 rounded-xl text-sm text-gray-900 dark:text-gray-100"
+										class="auth-input"
 										placeholder="••••••••"
 										autocomplete="current-password"
 										name="current-password"
 										required
 									/>
 								</div>
-							{/if}
+							</div>
 
-							<!-- Submit Button -->
-							<button
-								class="btn-orange w-full py-3.5 rounded-xl font-semibold text-white text-sm shadow-lg"
-								type="submit"
-							>
+							<!-- Remember me -->
+							{#if mode === 'signin'}
+								<div style="display:flex;align-items:center;gap:8px;">
+									<input type="checkbox" class="checkbox-custom" id="remember" />
+									<label for="remember" style="font-size:13px;color:#6b7280;font-weight:600;cursor:pointer;">Remember me</label>
+								</div>
+							{/if}
+						{/if}
+
+						<!-- Submit -->
+						<div style="padding-top:4px;">
+							<button class="btn-submit" type="submit">
 								{#if mode === 'ldap'}
 									{$i18n.t('Authenticate')}
 								{:else if mode === 'signin'}
@@ -556,125 +846,97 @@
 									{($config?.onboarding ?? false) ? $i18n.t('Create Admin Account') : $i18n.t('Create Account')}
 								{/if}
 							</button>
+						</div>
 
-							<!-- Toggle Sign In/Up -->
-							{#if $config?.features.enable_signup && !($config?.onboarding ?? false) && mode !== 'ldap'}
-								<div class="text-center text-sm text-gray-600 dark:text-gray-400">
-									{mode === 'signin'
-										? $i18n.t("Don't have an account?")
-										: $i18n.t('Already have an account?')}
-									<button
-										class="font-semibold text-orange-500 hover:text-orange-600 ml-1"
-										type="button"
-										on:click={() => {
-											if (mode === 'signin') {
-												mode = 'signup';
-											} else {
-												mode = 'signin';
-											}
-										}}
-									>
-										{mode === 'signin' ? $i18n.t('Sign Up') : $i18n.t('Sign In')}
-									</button>
-								</div>
-							{/if}
-						</form>
-
-						<!-- OAuth Providers -->
-						{#if Object.keys($config?.oauth?.providers ?? {}).length > 0}
-							<div class="relative my-6">
-								<div class="absolute inset-0 flex items-center">
-									<div class="w-full border-t border-gray-300 dark:border-gray-700"></div>
-								</div>
-								<div class="relative flex justify-center text-sm">
-									<span class="px-4 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-										{$i18n.t('Or continue with')}
-									</span>
-								</div>
-							</div>
-
-							<div class="space-y-3">
-								{#if $config?.oauth?.providers?.google}
-									<button
-										class="btn-outline flex justify-center items-center w-full py-3 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-200"
-										on:click={() => {
-											window.location.href = `${WEBUI_BASE_URL}/oauth/google/login`;
-										}}
-									>
-										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="w-5 h-5 mr-3">
-											<path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-											<path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-											<path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-											<path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-										</svg>
-										{$i18n.t('Continue with {{provider}}', { provider: 'Google' })}
-									</button>
-								{/if}
-
-								{#if $config?.oauth?.providers?.microsoft}
-									<button
-										class="btn-outline flex justify-center items-center w-full py-3 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-200"
-										on:click={() => {
-											window.location.href = `${WEBUI_BASE_URL}/oauth/microsoft/login`;
-										}}
-									>
-										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" class="w-5 h-5 mr-3">
-											<rect x="1" y="1" width="9" height="9" fill="#f25022"/>
-											<rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
-											<rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
-											<rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
-										</svg>
-										{$i18n.t('Continue with {{provider}}', { provider: 'Microsoft' })}
-									</button>
-								{/if}
-
-								{#if $config?.oauth?.providers?.github}
-									<button
-										class="btn-outline flex justify-center items-center w-full py-3 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-200"
-										on:click={() => {
-											window.location.href = `${WEBUI_BASE_URL}/oauth/github/login`;
-										}}
-									>
-										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-5 h-5 mr-3">
-											<path fill="currentColor" d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.92 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57C20.565 21.795 24 17.31 24 12c0-6.63-5.37-12-12-12z"/>
-										</svg>
-										{$i18n.t('Continue with {{provider}}', { provider: 'GitHub' })}
-									</button>
-								{/if}
-
-								{#if $config?.oauth?.providers?.oidc}
-									<button
-										class="btn-outline flex justify-center items-center w-full py-3 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-200"
-										on:click={() => {
-											window.location.href = `${WEBUI_BASE_URL}/oauth/oidc/login`;
-										}}
-									>
-										<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3">
-											<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z"/>
-										</svg>
-										{$i18n.t('Continue with {{provider}}', { provider: $config?.oauth?.providers?.oidc ?? 'SSO' })}
-									</button>
-								{/if}
-							</div>
-						{/if}
-
-						<!-- LDAP Toggle -->
-						{#if $config?.features.enable_ldap && $config?.features.enable_login_form}
-							<div class="mt-6 text-center">
+						<!-- Toggle -->
+						{#if $config?.features.enable_signup && !($config?.onboarding ?? false) && mode !== 'ldap'}
+							<div style="text-align:center;font-size:14px;color:#6b7280;padding-top:4px;">
+								{mode === 'signin' ? "New here?" : 'Already have an account?'}
 								<button
-									class="text-sm text-gray-600 dark:text-gray-400 hover:text-orange-500 dark:hover:text-orange-400 font-medium transition"
+									class="link-orange"
+									style="margin-left:4px;"
 									type="button"
 									on:click={() => {
-										if (mode === 'ldap')
-											mode = ($config?.onboarding ?? false) ? 'signup' : 'signin';
-										else mode = 'ldap';
+										mode = mode === 'signin' ? 'signup' : 'signin';
 									}}
 								>
-									{mode === 'ldap' ? $i18n.t('Continue with Email') : $i18n.t('Continue with LDAP')}
+									{mode === 'signin' ? $i18n.t('Create an Account') : $i18n.t('Sign In')}
 								</button>
 							</div>
 						{/if}
-					</div>
+					</form>
+
+					<!-- OAuth -->
+					{#if Object.keys($config?.oauth?.providers ?? {}).length > 0}
+						<div class="divider">
+							<div class="divider-line"></div>
+							<span class="divider-text">{$i18n.t('Or continue with')}</span>
+							<div class="divider-line"></div>
+						</div>
+
+						<div class="space-y-3">
+							{#if $config?.oauth?.providers?.google}
+								<button class="btn-oauth" on:click={() => { window.location.href = `${WEBUI_BASE_URL}/oauth/google/login`; }}>
+									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" style="width:18px;height:18px;">
+										<path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+										<path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+										<path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+										<path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+									</svg>
+									{$i18n.t('Continue with {{provider}}', { provider: 'Google' })}
+								</button>
+							{/if}
+
+							{#if $config?.oauth?.providers?.microsoft}
+								<button class="btn-oauth" on:click={() => { window.location.href = `${WEBUI_BASE_URL}/oauth/microsoft/login`; }}>
+									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" style="width:18px;height:18px;">
+										<rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+										<rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+										<rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+										<rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+									</svg>
+									{$i18n.t('Continue with {{provider}}', { provider: 'Microsoft' })}
+								</button>
+							{/if}
+
+							{#if $config?.oauth?.providers?.github}
+								<button class="btn-oauth" on:click={() => { window.location.href = `${WEBUI_BASE_URL}/oauth/github/login`; }}>
+									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width:18px;height:18px;">
+										<path fill="currentColor" d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.92 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57C20.565 21.795 24 17.31 24 12c0-6.63-5.37-12-12-12z"/>
+									</svg>
+									{$i18n.t('Continue with {{provider}}', { provider: 'GitHub' })}
+								</button>
+							{/if}
+
+							{#if $config?.oauth?.providers?.oidc}
+								<button class="btn-oauth" on:click={() => { window.location.href = `${WEBUI_BASE_URL}/oauth/oidc/login`; }}>
+									<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px;height:18px;">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z"/>
+									</svg>
+									{$i18n.t('Continue with {{provider}}', { provider: $config?.oauth?.providers?.oidc ?? 'SSO' })}
+								</button>
+							{/if}
+						</div>
+					{/if}
+
+					<!-- LDAP toggle -->
+					{#if $config?.features.enable_ldap && $config?.features.enable_login_form}
+						<div style="margin-top:20px;text-align:center;">
+							<button
+								class="link-orange"
+								style="font-size:13px;"
+								type="button"
+								on:click={() => {
+									if (mode === 'ldap')
+										mode = ($config?.onboarding ?? false) ? 'signup' : 'signin';
+									else mode = 'ldap';
+								}}
+							>
+								{mode === 'ldap' ? $i18n.t('Continue with Email') : $i18n.t('Continue with LDAP')}
+							</button>
+						</div>
+					{/if}
+
 				{/if}
 			</div>
 		</div>

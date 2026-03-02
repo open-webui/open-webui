@@ -1,10 +1,9 @@
   <script lang="ts">
 	import { getContext } from 'svelte';
-
+import { WEBUI_BASE_URL } from '$lib/constants'; 
 	const i18n = getContext('i18n');
 </script>
-
-<div class="w-full h-full overflow-y-auto px-4 sm:px-6 py-6">
+<div class="w-full h-screen overflow-y-auto px-4 sm:px-6 py-6">
 	<!-- Header -->
 	<div class="mb-6">
 		<h1 class="text-2xl font-bold text-gray-900 dark:text-white">
@@ -23,11 +22,11 @@
 		<!-- Guideline Image -->
 		<div class="flex justify-center">
 			<img
-				src="/guideline/guideline-user.png"
-				alt="Guideline illustration"
-				class="w-full max-w-md rounded-xl bg-gray-50
-				dark:bg-gray-800 p-4 object-contain"
-			/>
+							crossorigin="anonymous"
+							src="{WEBUI_BASE_URL}/static/Guideline.png"
+							class="w-full max-w-4xl h-auto rounded-xl shadow-md"
+							alt="logo"
+						/>
 		</div>
 
 		<!-- Section 1 -->
@@ -36,9 +35,9 @@
 				📌 General Rules
 			</h2>
 			<ul class="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
-				<li>Use the system responsibly</li>
-				<li>Do not share personal or sensitive information</li>
-				<li>Respect community and platform rules</li>
+				<li>Use the system in a responsible and ethical manner.</li>
+				<li>Avoid sharing personal, confidential, or sensitive information.</li>
+				<li>Follow community standards and platform policies at all times.</li>
 			</ul>
 		</div>
 
@@ -48,9 +47,9 @@
 				💬 Chat Usage
 			</h2>
 			<ul class="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
-				<li>Ask clear and meaningful questions</li>
-				<li>Avoid spam or repeated messages</li>
-				<li>Do not attempt to bypass system restrictions</li>
+				<li>Ask clear, specific, and meaningful questions.</li>
+				<li>Refrain from sending spam or repeated messages.</li>
+				<li>Do not attempt to bypass system limitations or restrictions.</li>
 			</ul>
 		</div>
 
@@ -60,8 +59,9 @@
 				🔐 Account & Security
 			</h2>
 			<p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-				Keep your account secure. Never share your password or access token.
-				If you notice suspicious behavior, please sign out and contact support.
+				Keep your account secure at all times.
+				Never share your password, access token, or login credentials with anyone.
+				If you detect any unusual or suspicious activity, please log out immediately and contact support.
 			</p>
 		</div>
 

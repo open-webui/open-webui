@@ -445,6 +445,14 @@
 			{:else if selectedTab === 'evaluations'}
 				<Evaluations />
 			{:else if selectedTab === 'tools'}
+	<Tools
+		saveSettings={async () => {
+			toast.success($i18n.t('Settings saved successfully!'));
+
+			await tick();
+			await config.set(await getBackendConfig());
+		}}
+	/>
 				<!-- <Tools /> -->
 			{:else if selectedTab === 'documents'}
 				<Documents

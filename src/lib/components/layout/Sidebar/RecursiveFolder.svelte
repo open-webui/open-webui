@@ -339,7 +339,7 @@
 		deleteHandler();
 	}}
 >
-	<div class=" text-sm text-gray-700 dark:text-gray-300 flex-1 line-clamp-3">
+	<div class="text-sm text-gray-700 dark:text-gray-300 flex-1 line-clamp-3">
 		{@html DOMPurify.sanitize(
 			$i18n.t('This will delete <strong>{{NAME}}</strong> and <strong>all its contents</strong>.', {
 				NAME: folders[folderId].name
@@ -350,10 +350,12 @@
 
 {#if dragged && x && y}
 	<DragGhost {x} {y}>
-		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
-			<div class="flex items-center gap-1">
-				<FolderOpen className="size-3.5" strokeWidth="2" />
-				<div class=" text-xs text-white line-clamp-1">
+		<div class="bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-900 backdrop-blur-xl px-3 py-2 rounded-xl shadow-2xl border border-gray-700/50 dark:border-gray-600/50 w-fit max-w-48">
+			<div class="flex items-center gap-2">
+				<div class="p-1 bg-white/10 rounded-md">
+					<FolderOpen className="size-3.5" strokeWidth="2" />
+				</div>
+				<div class="text-xs font-medium text-white line-clamp-1">
 					{folders[folderId].name}
 				</div>
 			</div>
@@ -364,7 +366,7 @@
 <div bind:this={folderElement} class="relative {className}" draggable="true">
 	{#if draggedOver}
 		<div
-			class="absolute top-0 left-0 w-full h-full rounded-xs bg-gray-100/50 dark:bg-gray-700/20 bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none"
+			class="absolute inset-0 rounded-lg bg-blue-50/60 dark:bg-blue-500/10 border-2 border-blue-400/50 dark:border-blue-500/40 z-50 pointer-events-none touch-none transition-all duration-200 animate-pulse"
 		></div>
 	{/if}
 
@@ -382,62 +384,61 @@
 		<div class="w-full group">
 			<button
 				id="folder-{folderId}-button"
-				class="relative w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class="relative w-full py-2 px-2.5 rounded-lg flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-800/60 active:bg-gray-100 dark:active:bg-gray-800 transition-all duration-150 ease-out"
 				on:dblclick={() => {
 					editHandler();
 				}}
 			>
-				<div class="text-gray-300 dark:text-gray-600">
-					{#if open}
-						<ChevronDown className=" size-3" strokeWidth="2.5" />
-					{:else}
-						<ChevronRight className=" size-3" strokeWidth="2.5" />
-					{/if}
+				<div class="text-gray-400 dark:text-gray-500 transition-transform duration-200 {open ? 'rotate-0' : '-rotate-90'}">
+					<ChevronDown className="size-3.5" strokeWidth="2.5" />
 				</div>
 
-				<div class="translate-y-[0.5px] flex-1 justify-start text-start line-clamp-1">
-					{#if edit}
-						<input
-							id="folder-{folderId}-input"
-							type="text"
-							bind:value={name}
-							on:focus={(e) => {
-								e.target.select();
-							}}
-							on:blur={() => {
-								nameUpdateHandler();
-								edit = false;
-							}}
-							on:click={(e) => {
-								// Prevent accidental collapse toggling when clicking inside input
-								e.stopPropagation();
-							}}
-							on:mousedown={(e) => {
-								// Prevent accidental collapse toggling when clicking inside input
-								e.stopPropagation();
-							}}
-							on:keydown={(e) => {
-								if (e.key === 'Enter') {
+				<div class="flex-1 flex items-center gap-2 min-w-0">
+					<div class="p-1 rounded-md bg-gray-100 dark:bg-gray-800 group-hover:bg-gray-200 dark:group-hover:bg-gray-700 transition-colors duration-150">
+						<FolderOpen className="size-3.5 text-gray-600 dark:text-gray-400" strokeWidth="2" />
+					</div>
+					
+					<div class="flex-1 text-start line-clamp-1 min-w-0">
+						{#if edit}
+							<input
+								id="folder-{folderId}-input"
+								type="text"
+								bind:value={name}
+								on:focus={(e) => {
+									e.target.select();
+								}}
+								on:blur={() => {
 									nameUpdateHandler();
 									edit = false;
-								}
-							}}
-							class="w-full h-full bg-transparent text-gray-500 dark:text-gray-500 outline-hidden"
-						/>
-					{:else}
-						{folders[folderId].name}
-					{/if}
+								}}
+								on:click={(e) => {
+									e.stopPropagation();
+								}}
+								on:mousedown={(e) => {
+									e.stopPropagation();
+								}}
+								on:keydown={(e) => {
+									if (e.key === 'Enter') {
+										nameUpdateHandler();
+										edit = false;
+									}
+								}}
+								class="w-full h-full px-2 py-0.5 -mx-2 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border border-blue-400 dark:border-blue-500 rounded-md outline-none ring-2 ring-blue-400/20 dark:ring-blue-500/20"
+							/>
+						{:else}
+							<span class="text-sm">{folders[folderId].name}</span>
+						{/if}
+					</div>
 				</div>
 
-				<button
-					class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
+				<div
+					class="opacity-0 group-hover:opacity-100 transition-opacity duration-150 self-center flex items-center"
 					on:pointerup={(e) => {
 						e.stopPropagation();
 					}}
 				>
 					<FolderMenu
 						on:rename={() => {
-							// Requires a timeout to prevent the click event from closing the dropdown
 							setTimeout(() => {
 								editHandler();
 							}, 200);
@@ -449,18 +450,18 @@
 							exportHandler();
 						}}
 					>
-						<button class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto" on:click={(e) => {}}>
-							<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
+						<button class="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors duration-150 touch-auto" on:click={(e) => {}}>
+							<EllipsisHorizontal className="size-4 text-gray-600 dark:text-gray-400" strokeWidth="2.5" />
 						</button>
 					</FolderMenu>
-				</button>
+				</div>
 			</button>
 		</div>
 
 		<div slot="content" class="w-full">
 			{#if (folders[folderId]?.childrenIds ?? []).length > 0 || (folders[folderId].items?.chats ?? []).length > 0}
 				<div
-					class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
+					class="ml-4 pl-2 mt-0.5 flex flex-col overflow-y-auto scrollbar-hidden border-l-2 border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 transition-colors duration-200"
 				>
 					{#if folders[folderId]?.childrenIds}
 						{@const children = folders[folderId]?.childrenIds

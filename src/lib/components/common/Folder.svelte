@@ -112,14 +112,14 @@
 <div bind:this={folderElement} class="relative {className}">
 	{#if draggedOver}
 		<div
-			class="absolute top-0 left-0 w-full h-full rounded-xs bg-gray-100/50 dark:bg-gray-700/20 bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none"
+			class="absolute inset-0 rounded-lg bg-blue-50/60 dark:bg-blue-500/10 border-2 border-blue-400/50 dark:border-blue-500/40 z-50 pointer-events-none touch-none transition-all duration-200 animate-pulse"
 		></div>
 	{/if}
 
 	{#if collapsible}
 		<Collapsible
 			bind:open
-			className="w-full "
+			className="w-full"
 			buttonClassName="w-full"
 			on:change={(e) => {
 				dispatch('change', e.detail);
@@ -127,25 +127,21 @@
 		>
 			<!-- svelte-ignore a11y-no-static-element-interactions -->
 			<div
-				class="w-full group rounded-md relative flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-900 text-gray-500 dark:text-gray-500 transition"
+				class="w-full group rounded-lg relative flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/60 active:bg-gray-100 dark:active:bg-gray-800 text-gray-600 dark:text-gray-300 transition-all duration-150 ease-out"
 			>
-				<button class="w-full py-1.5 pl-2 flex items-center gap-1.5 text-xs font-medium">
-					<div class="text-gray-300 dark:text-gray-600">
-						{#if open}
-							<ChevronDown className=" size-3" strokeWidth="2.5" />
-						{:else}
-							<ChevronRight className=" size-3" strokeWidth="2.5" />
-						{/if}
+				<button class="w-full py-2 pl-2.5 pr-2 flex items-center gap-2 text-sm font-medium">
+					<div class="text-gray-400 dark:text-gray-500 transition-transform duration-200 {open ? 'rotate-0' : '-rotate-90'}">
+						<ChevronDown className="size-3.5" strokeWidth="2.5" />
 					</div>
 
-					<div class="translate-y-[0.5px]">
+					<div class="flex-1 text-start line-clamp-1">
 						{name}
 					</div>
 				</button>
 
 				{#if onAdd}
 					<button
-						class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
+						class="absolute z-10 right-2 self-center flex items-center"
 						on:pointerup={(e) => {
 							e.stopPropagation();
 						}}
@@ -156,10 +152,10 @@
 					>
 						<Tooltip content={onAddLabel}>
 							<button
-								class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
+								class="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors duration-150 touch-auto"
 								on:click={(e) => {}}
 							>
-								<Plus className=" size-3" strokeWidth="2.5" />
+								<Plus className="size-3.5 text-gray-600 dark:text-gray-400" strokeWidth="2.5" />
 							</button>
 						</Tooltip>
 					</button>
