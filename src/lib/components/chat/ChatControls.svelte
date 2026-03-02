@@ -1,4 +1,4 @@
-<script context="module">
+<script context="module" lang="ts">
 	let savedTab: 'controls' | 'files' | 'overview' = 'controls';
 </script>
 
@@ -58,8 +58,10 @@
 	let paneReady = false;
 
 	// Tab state for Controls+Files panel
-	let activeTab: 'controls' | 'files' | 'overview' = savedTab;
-	$: savedTab = activeTab;
+	let activeTab = savedTab;
+	// svelte-ignore reactive_declaration_module_script_dependency
+	$: { savedTab = activeTab };
+
 	$: hasMessages = history?.messages && Object.keys(history.messages).length > 0;
 
 	$: showControlsTab = $user?.role === 'admin' || ($user?.permissions?.chat?.controls ?? true);
