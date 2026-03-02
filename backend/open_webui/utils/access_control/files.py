@@ -78,8 +78,11 @@ def has_access_to_file(
     for model in Models.get_models_by_user_id(user.id, permission=access_type, db=db):
         knowledge_items = getattr(model.meta, "knowledge", None) or []
         for item in knowledge_items:
-            if isinstance(item, dict) and item.get("type") == "file" and item.get("id") == file.id:
+            if (
+                isinstance(item, dict)
+                and item.get("type") == "file"
+                and item.get("id") == file.id
+            ):
                 return True
 
     return False
-
