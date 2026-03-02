@@ -7,6 +7,7 @@ from open_webui.models.knowledge import Knowledges
 from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
 from open_webui.models.groups import Groups
+from open_webui.models.models import Models
 from open_webui.models.access_grants import AccessGrants
 
 log = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ def has_access_to_file(
     """
     Check if a user has the specified access to a file through any of:
     - Knowledge bases (ownership or access grants)
+    - Shared workspace models that attach the file directly
     - Channels the user is a member of
     - Shared chats
 
@@ -71,5 +73,16 @@ def has_access_to_file(
     chats = Chats.get_shared_chats_by_file_id(file_id, db=db)
     if chats:
         return True
+
+    # Check if the file is directly attached to a shared workspace model
+    for model in Models.get_models_by_user_id(user.id, permission=access_type, db=db):
+        knowledge_items = getattr(model.meta, "knowledge", None) or []
+        for item in knowledge_items:
+            if (
+                isinstance(item, dict)
+                and item.get("type") == "file"
+                and item.get("id") == file.id
+            ):
+                return True
 
     return False
