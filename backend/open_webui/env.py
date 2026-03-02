@@ -547,6 +547,10 @@ WEBUI_AUTH_SIGNOUT_REDIRECT_URL = os.environ.get(
     "WEBUI_AUTH_SIGNOUT_REDIRECT_URL", None
 )
 
+OAUTH_LOGOUT_CUSTOM_REDIRECT_URI = os.environ.get(
+    "OAUTH_LOGOUT_CUSTOM_REDIRECT_URI", None
+)
+
 ####################################
 # WEBUI_SECRET_KEY
 ####################################
