@@ -239,6 +239,16 @@
 		connect();
 	};
 
+	// Reconnect when the selected terminal changes
+	$: if ($selectedTerminalId !== undefined && term) {
+		// Clear the terminal screen and reconnect to the new server
+		disconnect();
+		term.clear();
+		if ($selectedTerminalId) {
+			connect();
+		}
+	}
+
 	onMount(() => {
 		initTerminal();
 	});
