@@ -470,8 +470,30 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 			return true;
 		} catch (err) {
 			console.error('Error copying formatted content:', err);
-			// Fallback to plain text
-			return await copyToClipboard(text);
+			try {
+				const container = document.createElement('div');
+				container.innerHTML = styledHtml;
+				container.style.position = 'fixed';
+				container.style.opacity = '0';
+				container.style.pointerEvents = 'none';
+				container.setAttribute('contenteditable', 'true');
+				document.body.appendChild(container);
+				
+				const selection = window.getSelection();
+				const range = document.createRange();
+				range.selectNodeContents(container);
+				selection.removeAllRanges();
+				selection.addRange(range);
+				
+				document.execCommand('copy');
+				
+				selection.removeAllRanges();
+				document.body.removeChild(container);
+				return true;
+			} catch (fallbackErr) {
+				console.error('Fallback copy also failed:', fallbackErr);
+				return await copyToClipboard(text, null, false);
+			}
 		}
 	} else {
 		let result = false;
