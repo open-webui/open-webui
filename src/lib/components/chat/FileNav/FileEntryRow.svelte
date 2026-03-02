@@ -51,6 +51,8 @@
 				const data = JSON.parse(raw);
 				if (data.path) {
 					const destFolder = `${currentPath}${entry.name}/`;
+					// Don't allow dropping a folder onto itself
+					if (data.path + '/' === destFolder || data.path === destFolder) return;
 					onMove(data.path, destFolder);
 				}
 			} catch {}

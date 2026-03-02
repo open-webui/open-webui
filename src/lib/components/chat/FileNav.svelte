@@ -334,6 +334,10 @@
 
 		if (source === destination) return;
 
+		// Prevent moving a folder into itself or its own subtree
+		const sourceDir = source.endsWith('/') ? source : source + '/';
+		if (destFolder.startsWith(sourceDir)) return;
+
 		const result = await moveEntry(terminal.url, terminal.key, source, destination);
 		toast[result ? 'success' : 'error'](
 			$i18n.t(result ? 'Moved {{name}}' : 'Failed to move {{name}}', { name: fileName })
