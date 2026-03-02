@@ -242,6 +242,7 @@ async def ws_terminal(
     upstream_params["user_id"] = user.id
 
     import urllib.parse
+
     upstream_url = f"{ws_base}/api/terminals/{session_id}"
     if upstream_params:
         upstream_url += f"?{urllib.parse.urlencode(upstream_params)}"
@@ -280,7 +281,10 @@ async def ws_terminal(
                             await ws.send_bytes(msg.data)
                         elif msg.type == aiohttp.WSMsgType.TEXT:
                             await ws.send_text(msg.data)
-                        elif msg.type in (aiohttp.WSMsgType.CLOSE, aiohttp.WSMsgType.ERROR):
+                        elif msg.type in (
+                            aiohttp.WSMsgType.CLOSE,
+                            aiohttp.WSMsgType.ERROR,
+                        ):
                             break
                 except Exception:
                     pass
