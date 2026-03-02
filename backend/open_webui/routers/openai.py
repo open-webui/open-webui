@@ -1161,10 +1161,18 @@ async def embeddings(request: Request, form_data: dict, user):
         dict: OpenAI-compatible embeddings response.
     """
     idx = 0
-    # Prepare payload/body
-    body = json.dumps(form_data)
     # Find correct backend url/key based on model
     model_id = form_data.get("model")
+
+    # Resolve workspace alias models to their base model
+    if model_id:
+        model_info = Models.get_model_by_id(model_id)
+        if model_info and model_info.base_model_id:
+            model_id = model_info.base_model_id
+            form_data["model"] = model_id
+
+    # Prepare payload/body
+    body = json.dumps(form_data)
     # Check if model is already in app state cache to avoid expensive get_all_models() call
     models = request.app.state.OPENAI_MODELS
     if not models or model_id not in models:
@@ -1268,6 +1276,15 @@ async def responses(
 
     idx = 0
     model_id = form_data.model
+
+    # Resolve workspace alias models to their base model
+    if model_id:
+        model_info = Models.get_model_by_id(model_id)
+        if model_info and model_info.base_model_id:
+            model_id = model_info.base_model_id
+            payload["model"] = model_id
+            body = json.dumps(payload)
+
     if model_id:
         models = request.app.state.OPENAI_MODELS
         if not models or model_id not in models:
@@ -1374,6 +1391,15 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
     idx = 0
     model_id = payload.get("model") if isinstance(payload, dict) else None
+
+    # Resolve workspace alias models to their base model
+    if model_id:
+        model_info = Models.get_model_by_id(model_id)
+        if model_info and model_info.base_model_id:
+            model_id = model_info.base_model_id
+            payload["model"] = model_id
+            body = json.dumps(payload).encode()
+
     if model_id:
         models = request.app.state.OPENAI_MODELS
         if not models or model_id not in models:
