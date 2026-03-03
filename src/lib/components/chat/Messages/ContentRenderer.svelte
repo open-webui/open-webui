@@ -212,5 +212,6 @@
 			onAddMessages({ modelId, parentId, messages });
 			closeFloatingButtons();
 		}}
+		onClose={closeFloatingButtons}
 	/>
 {/if}

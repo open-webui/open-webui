@@ -34,7 +34,8 @@
 		showSettings,
 		selectedTerminalId,
 		TTSWorker,
-		temporaryChatEnabled
+		temporaryChatEnabled,
+		quotedText
 	} from '$lib/stores';
 
 	import {
@@ -75,6 +76,7 @@
 	import Spinner from '../common/Spinner.svelte';
 
 	import XMark from '../icons/XMark.svelte';
+	import ArrowForward from '../icons/ArrowForward.svelte';
 	import GlobeAlt from '../icons/GlobeAlt.svelte';
 	import Photo from '../icons/Photo.svelte';
 	import Wrench from '../icons/Wrench.svelte';
@@ -1203,6 +1205,25 @@
 								: ' border-gray-100/30 dark:border-gray-850/30 hover:border-gray-200 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800'}  transition px-1 bg-white/5 dark:bg-gray-500/5 backdrop-blur-sm dark:text-gray-100"
 							dir={$settings?.chatDirection ?? 'auto'}
 						>
+							{#if $quotedText}
+								<div
+									class="flex items-center gap-2 mx-2 mt-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-xl"
+								>
+									<ArrowForward className="size-3.5 shrink-0 text-gray-500" />
+									<div
+										class="flex-1 text-sm text-gray-600 dark:text-gray-300 line-clamp-1"
+									>
+										"{$quotedText}"
+									</div>
+									<button
+										class="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+										on:click={() => quotedText.set('')}
+									>
+										<XMark />
+									</button>
+								</div>
+							{/if}
+
 							{#if atSelectedModel !== undefined}
 								<div class="px-3 pt-3 text-left w-full flex flex-col z-10">
 									<div class="flex items-center justify-between w-full">

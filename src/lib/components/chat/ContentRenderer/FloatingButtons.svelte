@@ -1,9 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 
-	import DOMPurify from 'dompurify';
-	import { marked } from 'marked';
-
 	import { getContext, tick, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -13,7 +10,7 @@
 	import LightBulb from '$lib/components/icons/LightBulb.svelte';
 	import Markdown from '../Messages/Markdown.svelte';
 	import Skeleton from '../Messages/Skeleton.svelte';
-	import { chatId, models, socket } from '$lib/stores';
+	import { chatId, models, socket, quotedText } from '$lib/stores';
 
 	export let id = '';
 	export let messageId = '';
@@ -22,12 +19,9 @@
 	export let messages = [];
 	export let actions = [];
 	export let onAdd = (e) => {};
-
-	let floatingInput = false;
-	let selectedAction = null;
+	export let onClose = () => {};
 
 	let selectedText = '';
-	let floatingInputValue = '';
 
 	let content = '';
 	let responseContent = null;
@@ -105,11 +99,7 @@
 		// Remove all TOOL placeholders from the prompt
 		prompt = prompt.replace(toolIdPattern, '');
 
-		if (prompt.includes('{{INPUT_CONTENT}}') && floatingInput) {
-			prompt = prompt.replace('{{INPUT_CONTENT}}', floatingInputValue);
-			floatingInputValue = '';
-		}
-
+		prompt = prompt.replace('{{INPUT_CONTENT}}', '');
 		prompt = prompt.replace('{{CONTENT}}', selectedText);
 		prompt = prompt.replace('{{SELECTED_CONTENT}}', selectedContent);
 
@@ -227,12 +217,9 @@
 			controller.abort();
 		}
 
-		selectedAction = null;
 		selectedText = '';
 		responseContent = null;
 		responseDone = false;
-		floatingInput = false;
-		floatingInputValue = '';
 	};
 
 	onDestroy(() => {
@@ -248,85 +235,31 @@
 	style="display: none"
 >
 	{#if responseContent === null}
-		{#if !floatingInput}
-			<div
-				class="flex flex-row shrink-0 p-0.5 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-xl shadow-xl border border-gray-100 dark:border-gray-800"
-			>
-				{#each actions as action}
-					<button
-						aria-label={action.label}
-						class="px-1.5 py-[1px] hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl flex items-center gap-1 min-w-fit transition"
-						on:click={async () => {
-							selectedText = window.getSelection().toString();
-							selectedAction = action;
+		<div
+			class="flex flex-row shrink-0 p-0.5 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-xl shadow-xl border border-gray-100 dark:border-gray-800"
+		>
+			{#each actions as action}
+				<button
+					aria-label={action.label}
+					class="px-1.5 py-[1px] hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl flex items-center gap-1 min-w-fit transition"
+					on:click={() => {
+						selectedText = window.getSelection().toString();
 
-							if (action.prompt.includes('{{INPUT_CONTENT}}')) {
-								floatingInput = true;
-								floatingInputValue = '';
-
-								await tick();
-								setTimeout(() => {
-									const input = document.getElementById('floating-message-input');
-									if (input) {
-										input.focus();
-									}
-								}, 0);
-							} else {
-								actionHandler(action.id);
-							}
-						}}
-					>
-						{#if action.icon}
-							<svelte:component this={action.icon} className="size-3 shrink-0" />
-						{/if}
-						<div class="shrink-0">{action.label}</div>
-					</button>
-				{/each}
-			</div>
-		{:else}
-			<div
-				class="py-1 flex dark:text-gray-100 bg-white dark:bg-gray-850 border border-gray-100 dark:border-gray-800 w-72 rounded-full shadow-xl"
-			>
-				<input
-					type="text"
-					id="floating-message-input"
-					class="ml-5 bg-transparent outline-hidden w-full flex-1 text-sm"
-					placeholder={$i18n.t('Ask a question')}
-					aria-label={$i18n.t('Ask a question')}
-					bind:value={floatingInputValue}
-					on:keydown={(e) => {
-						if (e.key === 'Enter') {
-							actionHandler(selectedAction?.id);
+						if (action.input) {
+							quotedText.set(selectedText);
+							onClose();
+						} else {
+							actionHandler(action.id);
 						}
 					}}
-				/>
-
-				<div class="ml-1 mr-1">
-					<button
-						aria-label={$i18n.t('Submit question')}
-						class="{floatingInputValue !== ''
-							? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-							: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 m-0.5 self-center"
-						on:click={() => {
-							actionHandler(selectedAction?.id);
-						}}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="size-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</button>
-				</div>
-			</div>
-		{/if}
+				>
+					{#if action.icon}
+						<svelte:component this={action.icon} className="size-3 shrink-0" />
+					{/if}
+					<div class="shrink-0">{action.label}</div>
+				</button>
+			{/each}
+		</div>
 	{:else}
 		<div
 			class="bg-white dark:bg-gray-850 dark:text-gray-100 rounded-3xl shadow-xl w-80 max-w-full border border-gray-100 dark:border-gray-800"

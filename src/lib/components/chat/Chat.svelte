@@ -45,7 +45,8 @@
 		showEmbeds,
 		selectedTerminalId,
 		showFileNavPath,
-		showFileNavDir
+		showFileNavDir,
+		quotedText
 	} from '$lib/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -2850,10 +2851,20 @@
 									}}
 									on:submit={async (e) => {
 										clearDraft();
-										if (e.detail || files.length > 0) {
-											await tick();
+										let userPrompt = e.detail || '';
 
-											submitPrompt(e.detail.replaceAll('\n\n', '\n'));
+										if ($quotedText) {
+											const quoted = $quotedText
+												.split('\n')
+												.map((l) => `> ${l}`)
+												.join('\n');
+											userPrompt = `${quoted}\n\n\n${userPrompt}`;
+											quotedText.set('');
+										}
+
+										if (userPrompt || files.length > 0) {
+											await tick();
+											submitPrompt(userPrompt.replaceAll('\n\n', '\n'));
 										}
 									}}
 								/>
@@ -2893,9 +2904,20 @@
 									}}
 									on:submit={async (e) => {
 										clearDraft();
-										if (e.detail || files.length > 0) {
+										let userPrompt = e.detail || '';
+
+										if ($quotedText) {
+											const quoted = $quotedText
+												.split('\n')
+												.map((l) => `> ${l}`)
+												.join('\n');
+											userPrompt = `${quoted}\n\n\n${userPrompt}`;
+											quotedText.set('');
+										}
+
+										if (userPrompt || files.length > 0) {
 											await tick();
-											submitPrompt(e.detail.replaceAll('\n\n', '\n'));
+											submitPrompt(userPrompt.replaceAll('\n\n', '\n'));
 										}
 									}}
 								/>
