@@ -3701,7 +3701,7 @@ async def streaming_chat_response_handler(response, ctx):
                                                     ].setdefault("name", "")
                                                     delta_tool_call[
                                                         "function"
-                                                    ].setdefault("arguments", "")
+                                                    ].setdefault("arguments", "{}")
                                                     response_tool_calls.append(
                                                         delta_tool_call
                                                     )
