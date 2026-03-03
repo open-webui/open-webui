@@ -1,0 +1,34 @@
+services:
+  open-webui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      shm_size: '2gb'   # Mehr Shared Memory für den Node.js Build-Prozess
+    container_name: open-webui
+    restart: unless-stopped
+    ports:
+      - "3000:8080"  # Port 3000 nach außen
+    volumes:
+      - open-webui-data:/app/backend/data
+    environment:
+      - 'OLLAMA_BASE_URL=http://ollama:11434'
+      - WEBUI_SECRET_KEY
+      - OPENAI_API_BASE_URL
+      - OPENAI_API_KEY
+      - MICROSOFT_CLIENT_ID
+      - MICROSOFT_CLIENT_SECRET
+      - MICROSOFT_CLIENT_TENANT_ID
+      - OPENID_PROVIDER_URL
+      - ENABLE_OAUTH_SIGNUP
+      - MICROSOFT_REDIRECT_URI
+      - MICROSOFT_OAUTH_SCOPE
+      - WEBUI_AUTH_METHOD
+      - WEBUI_URL
+      - SCARF_NO_ANALYTICS
+      - DO_NOT_TRACK
+      - ANONYMIZED_TELEMETRY
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+volumes:
+  open-webui-data:

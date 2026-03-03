@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     branches:
-      - main # or whatever branch you want to use
+      - main
 
 jobs:
   release:
@@ -12,30 +12,67 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 2  # Brauchen den vorherigen Commit für den Vergleich
 
-      - name: Check for changes in package.json
+      - name: Check if version changed in package.json
+        id: version_check
         run: |
-          git diff --cached --diff-filter=d package.json || {
-            echo "No changes to package.json"
-            exit 1
-          }
+          # Vergleich der Version zwischen dem aktuellen und dem vorherigen Commit
+          CURRENT_VERSION=$(jq -r '.version' package.json)
+          PREVIOUS_VERSION=$(git show HEAD~1:package.json 2>/dev/null | jq -r '.version' 2>/dev/null || echo "none")
 
-      - name: Get version number from package.json
-        id: get_version
-        run: |
-          VERSION=$(jq -r '.version' package.json)
-          echo "::set-output name=version::$VERSION"
+          echo "Current version:  $CURRENT_VERSION"
+          echo "Previous version: $PREVIOUS_VERSION"
+
+          if [ "$CURRENT_VERSION" = "$PREVIOUS_VERSION" ]; then
+            echo "Version unchanged – skipping release."
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "Version changed from $PREVIOUS_VERSION → $CURRENT_VERSION"
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          fi
 
       - name: Extract latest CHANGELOG entry
         id: changelog
+        if: steps.version_check.outputs.changed == 'true'
         run: |
-          CHANGELOG_CONTENT=$(awk 'BEGIN {print_section=0;} /^## \[/ {if (print_section == 0) {print_section=1;} else {exit;}} print_section {print;}' CHANGELOG.md)
-          CHANGELOG_ESCAPED=$(echo "$CHANGELOG_CONTENT" | sed ':a;N;$!ba;s/\n/%0A/g')
-          echo "Extracted latest release notes from CHANGELOG.md:" 
-          echo -e "$CHANGELOG_CONTENT" 
-          echo "::set-output name=content::$CHANGELOG_ESCAPED"
+          CHANGELOG_CONTENT=$(awk 'BEGIN {s=0} /^## \[/ {if(s==0){s=1}else{exit}} s{print}' CHANGELOG.md)
+          # Newlines für GitHub Actions Output escapen
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG_CONTENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Check if GitHub release already exists
+        id: release_check
+        if: steps.version_check.outputs.changed == 'true'
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const tag = `v${{ steps.version_check.outputs.version }}`;
+            try {
+              const existing = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: tag,
+              });
+              console.log(`Release ${tag} already exists – skipping.`);
+              core.setOutput('exists', 'true');
+            } catch (e) {
+              if (e.status === 404) {
+                console.log(`Release ${tag} does not exist yet – will create.`);
+                core.setOutput('exists', 'false');
+              } else {
+                throw e;
+              }
+            }
 
       - name: Create GitHub release
+        if: |
+          steps.version_check.outputs.changed == 'true' &&
+          steps.release_check.outputs.exists == 'false'
         uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -44,29 +81,24 @@ jobs:
             const release = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: `v${{ steps.get_version.outputs.version }}`,
-              name: `v${{ steps.get_version.outputs.version }}`,
+              tag_name: `v${{ steps.version_check.outputs.version }}`,
+              name: `v${{ steps.version_check.outputs.version }}`,
               body: changelog,
-            })
-            console.log(`Created release ${release.data.html_url}`)
-
-      - name: Upload package to GitHub release
-        uses: actions/upload-artifact@v4
-        with:
-          name: package
-          path: |
-            .
-            !.git
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            });
+            console.log(`✅ Created release: ${release.data.html_url}`);
 
       - name: Trigger Docker build workflow
+        if: |
+          steps.version_check.outputs.changed == 'true' &&
+          steps.release_check.outputs.exists == 'false'
         uses: actions/github-script@v8
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            github.rest.actions.createWorkflowDispatch({
+            await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: 'docker-build.yaml',
-              ref: 'v${{ steps.get_version.outputs.version }}',
-            })
+              ref: `v${{ steps.version_check.outputs.version }}`,
+            });
+            console.log('✅ Docker build workflow triggered.');
