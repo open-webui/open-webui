@@ -1,17 +1,10 @@
 <script>
 	import { onDestroy } from 'svelte';
-	import { marked } from 'marked';
+	import { marked } from '$lib/utils/marked/config';
 	import { replaceTokens, processResponseContent } from '$lib/utils';
 	import { user } from '$lib/stores';
 
-	import markedExtension from '$lib/utils/marked/extension';
-	import markedKatexExtension from '$lib/utils/marked/katex-extension';
-	import { disableSingleTilde } from '$lib/utils/marked/strikethrough-extension';
-	import { mentionExtension } from '$lib/utils/marked/mention-extension';
-
 	import MarkdownTokens from './Markdown/MarkdownTokens.svelte';
-	import footnoteExtension from '$lib/utils/marked/footnote-extension';
-	import citationExtension from '$lib/utils/marked/citation-extension';
 
 	export let id = '';
 	export let content;
@@ -36,24 +29,6 @@
 
 	let tokens = [];
 	let pendingUpdate = null;
-
-	const options = {
-		throwOnError: false,
-		breaks: true
-	};
-
-	marked.use(markedKatexExtension(options));
-	marked.use(markedExtension(options));
-	marked.use(citationExtension(options));
-	marked.use(footnoteExtension(options));
-	marked.use(disableSingleTilde);
-	marked.use({
-		extensions: [
-			mentionExtension({ triggerChar: '@' }),
-			mentionExtension({ triggerChar: '#' }),
-			mentionExtension({ triggerChar: '$' })
-		]
-	});
 
 	const parseTokens = () => {
 		tokens = marked.lexer(replaceTokens(processResponseContent(content), model?.name, $user?.name));
