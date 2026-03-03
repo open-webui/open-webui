@@ -19,6 +19,7 @@ from open_webui.utils.plugin import (
     load_function_module_by_id,
     replace_imports,
     get_function_module_from_cache,
+    resolve_valves_schema_options,
 )
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
@@ -27,7 +28,6 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from pydantic import BaseModel, HttpUrl
 from open_webui.internal.db import get_session
 from sqlalchemy.orm import Session
-
 
 log = logging.getLogger(__name__)
 
@@ -446,7 +446,10 @@ async def get_function_valves_spec_by_id(
 
         if hasattr(function_module, "Valves"):
             Valves = function_module.Valves
-            return Valves.schema()
+            schema = Valves.schema()
+            # Resolve dynamic options for select dropdowns
+            schema = resolve_valves_schema_options(Valves, schema, user)
+            return schema
         return None
     else:
         raise HTTPException(
@@ -546,7 +549,10 @@ async def get_function_user_valves_spec_by_id(
 
         if hasattr(function_module, "UserValves"):
             UserValves = function_module.UserValves
-            return UserValves.schema()
+            schema = UserValves.schema()
+            # Resolve dynamic options for select dropdowns
+            schema = resolve_valves_schema_options(UserValves, schema, user)
+            return schema
         return None
     else:
         raise HTTPException(

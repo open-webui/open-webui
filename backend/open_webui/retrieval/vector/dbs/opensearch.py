@@ -113,7 +113,11 @@ class OpenSearchClient(VectorDBBase):
         self.client.indices.delete(index=self._get_index_name(collection_name))
 
     def search(
-        self, collection_name: str, vectors: list[list[float | int]], limit: int
+        self,
+        collection_name: str,
+        vectors: list[list[float | int]],
+        filter: Optional[dict] = None,
+        limit: int = 10,
     ) -> Optional[SearchResult]:
         try:
             if not self.has_collection(collection_name):
@@ -207,7 +211,7 @@ class OpenSearchClient(VectorDBBase):
                 for item in batch
             ]
             bulk(self.client, actions)
-        self.client.indices.refresh(self._get_index_name(collection_name))
+        self.client.indices.refresh(index=self._get_index_name(collection_name))
 
     def upsert(self, collection_name: str, items: list[VectorItem]):
         self._create_index_if_not_exists(
@@ -230,7 +234,7 @@ class OpenSearchClient(VectorDBBase):
                 for item in batch
             ]
             bulk(self.client, actions)
-        self.client.indices.refresh(self._get_index_name(collection_name))
+        self.client.indices.refresh(index=self._get_index_name(collection_name))
 
     def delete(
         self,
@@ -259,7 +263,7 @@ class OpenSearchClient(VectorDBBase):
             self.client.delete_by_query(
                 index=self._get_index_name(collection_name), body=query_body
             )
-        self.client.indices.refresh(self._get_index_name(collection_name))
+        self.client.indices.refresh(index=self._get_index_name(collection_name))
 
     def reset(self):
         indices = self.client.indices.get(index=f"{self.index_prefix}_*")

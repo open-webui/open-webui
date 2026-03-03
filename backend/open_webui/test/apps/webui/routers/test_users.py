@@ -12,7 +12,7 @@ def _assert_user(data, id, **kwargs):
     comparison_data = {
         "name": f"user {id}",
         "email": f"user{id}@openwebui.com",
-        "profile_image_url": f"/user{id}.png",
+        "profile_image_url": f"/api/v1/users/{id}/profile/image",
         "role": "user",
         **kwargs,
     }
@@ -150,7 +150,7 @@ class TestUsers(AbstractPostgresTest):
             role="admin",
             name="user 2 updated",
             email="user2-updated@openwebui.com",
-            profile_image_url="/user2-updated.png",
+            profile_image_url=f"/api/v1/users/2/profile/image",
         )
 
         # Delete user by id

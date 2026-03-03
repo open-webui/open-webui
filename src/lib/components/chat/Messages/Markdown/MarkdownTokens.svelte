@@ -17,6 +17,7 @@
 	import KatexRenderer from './KatexRenderer.svelte';
 	import AlertRenderer, { alertComponent } from './AlertRenderer.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
+	import ToolCallDisplay from '$lib/components/common/ToolCallDisplay.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
 
@@ -53,16 +54,18 @@
 	const exportTableToCSVHandler = (token, tokenIdx = 0) => {
 		console.log('Exporting table to CSV');
 
-		// Extract header row text and escape for CSV.
-		const header = token.header.map((headerCell) => `"${headerCell.text.replace(/"/g, '""')}"`);
+		// Extract header row text, decode HTML entities, and escape for CSV.
+		const header = token.header.map(
+			(headerCell) => `"${decode(headerCell.text).replace(/"/g, '""')}"`
+		);
 
 		// Create an array for rows that will hold the mapped cell text.
 		const rows = token.rows.map((row) =>
 			row.map((cell) => {
 				// Map tokens into a single text
 				const cellContent = cell.tokens.map((token) => token.text).join('');
-				// Escape double quotes and wrap the content in double quotes
-				return `"${cellContent.replace(/"/g, '""')}"`;
+				// Decode HTML entities and escape double quotes, wrap in double quotes
+				return `"${decode(cellContent).replace(/"/g, '""')}"`;
 			})
 		);
 
@@ -131,7 +134,8 @@
 		<div class="relative w-full group mb-2">
 			<div class="scrollbar-hidden relative overflow-x-auto max-w-full">
 				<table
-					class=" w-full text-sm text-left text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
+					class=" w-full text-sm text-start text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
+					dir="auto"
 				>
 					<thead
 						class="text-xs text-gray-700 uppercase bg-white dark:bg-gray-900 dark:text-gray-400 border-none"
@@ -141,9 +145,9 @@
 								<th
 									scope="col"
 									class="px-2.5! py-2! cursor-pointer border-b border-gray-100! dark:border-gray-800!"
-									style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}
+									style={token.align[headerIdx] ? `text-align: ${token.align[headerIdx]}` : ''}
 								>
-									<div class="gap-1.5 text-left">
+									<div class="gap-1.5 text-start">
 										<div class="shrink-0 break-normal">
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-header-${headerIdx}`}
@@ -316,26 +320,49 @@
 			</ul>
 		{/if}
 	{:else if token.type === 'details'}
-		<Collapsible
-			title={token.summary}
-			open={$settings?.expandDetails ?? false}
-			attributes={token?.attributes}
-			className="w-full space-y-1"
-			dir="auto"
-		>
-			<div class=" mb-1.5" slot="content">
-				<svelte:self
-					id={`${id}-${tokenIdx}-d`}
-					tokens={marked.lexer(decode(token.text))}
-					attributes={token?.attributes}
-					{done}
-					{editCodeBlock}
-					{onTaskClick}
-					{sourceIds}
-					{onSourceClick}
-				/>
-			</div>
-		</Collapsible>
+		{@const textContent = decode(token.text || '')
+			.replace(/<summary>.*?<\/summary>/gi, '')
+			.trim()}
+
+		{#if token?.attributes?.type === 'tool_calls'}
+			<!-- Tool calls have dedicated handling with ToolCallDisplay component -->
+			<ToolCallDisplay
+				id={`${id}-${tokenIdx}-tc`}
+				attributes={token.attributes}
+				open={false}
+				className="w-full space-y-1"
+			/>
+		{:else if textContent.length > 0}
+			<Collapsible
+				title={token.summary}
+				open={$settings?.expandDetails ?? false}
+				attributes={token?.attributes}
+				className="w-full space-y-1"
+				dir="auto"
+			>
+				<div class=" mb-1.5" slot="content">
+					<svelte:self
+						id={`${id}-${tokenIdx}-d`}
+						tokens={marked.lexer(decode(token.text))}
+						attributes={token?.attributes}
+						{done}
+						{editCodeBlock}
+						{onTaskClick}
+						{sourceIds}
+						{onSourceClick}
+					/>
+				</div>
+			</Collapsible>
+		{:else}
+			<Collapsible
+				title={token.summary}
+				open={false}
+				disabled={true}
+				attributes={token?.attributes}
+				className="w-full space-y-1"
+				dir="auto"
+			/>
+		{/if}
 	{:else if token.type === 'html'}
 		<HtmlToken {id} {token} {onSourceClick} />
 	{:else if token.type === 'iframe'}

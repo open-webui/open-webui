@@ -7,7 +7,7 @@
 </script>
 
 <div class="px-3">
-	<div class="text-center dark:text-white text-2xl font-medium z-50">
+	<div class="text-center dark:text-white text-2xl font-medium z-50" role="heading" aria-level="2">
 		{#if title}
 			{title}
 		{:else}

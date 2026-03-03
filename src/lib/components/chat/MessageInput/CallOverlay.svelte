@@ -363,6 +363,19 @@
 	let currentMessageId = null;
 	let currentUtterance = null;
 
+	// Get voice: model-specific > user settings > config default
+	const getVoiceId = () => {
+		// Check for model-specific TTS voice first
+		if (model?.info?.meta?.tts?.voice) {
+			return model.info.meta.tts.voice;
+		}
+		// Fall back to user settings or config default
+		if ($settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice) {
+			return $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice;
+		}
+		return $config?.audio?.tts?.voice;
+	};
+
 	const speakSpeechSynthesisHandler = (content) => {
 		if ($showCallOverlay) {
 			return new Promise((resolve) => {
@@ -372,12 +385,8 @@
 					if (voices.length > 0) {
 						clearInterval(getVoicesLoop);
 
-						const voice =
-							voices
-								?.filter(
-									(v) => v.voiceURI === ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-								)
-								?.at(0) ?? undefined;
+						const voiceId = getVoiceId();
+						const voice = voices?.filter((v) => v.voiceURI === voiceId)?.at(0) ?? undefined;
 
 						currentUtterance = new SpeechSynthesisUtterance(content);
 						currentUtterance.rate = $settings.audio?.tts?.playbackRate ?? 1;
@@ -471,7 +480,7 @@
 					const url = await $TTSWorker
 						.generate({
 							text: content,
-							voice: $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice
+							voice: getVoiceId()
 						})
 						.catch((error) => {
 							console.error(error);
@@ -482,16 +491,12 @@
 						audioCache.set(content, new Audio(url));
 					}
 				} else if ($config.audio.tts.engine !== '') {
-					const res = await synthesizeOpenAISpeech(
-						localStorage.token,
-						$settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
-							? ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-							: $config?.audio?.tts?.voice,
-						content
-					).catch((error) => {
-						console.error(error);
-						return null;
-					});
+					const res = await synthesizeOpenAISpeech(localStorage.token, getVoiceId(), content).catch(
+						(error) => {
+							console.error(error);
+							return null;
+						}
+					);
 
 					if (res) {
 						const blob = await res.blob();

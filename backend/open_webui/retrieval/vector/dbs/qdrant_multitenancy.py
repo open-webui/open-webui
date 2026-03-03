@@ -254,7 +254,11 @@ class QdrantClient(VectorDBBase):
         )
 
     def search(
-        self, collection_name: str, vectors: List[List[float | int]], limit: int
+        self,
+        collection_name: str,
+        vectors: List[List[float | int]],
+        filter: Optional[Dict] = None,
+        limit: int = 10,
     ) -> Optional[SearchResult]:
         """
         Search for the nearest neighbor items based on the vectors with tenant isolation.

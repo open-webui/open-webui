@@ -10,7 +10,6 @@ from typing import Dict, List, Optional
 
 from open_webui.env import REDIS_KEY_PREFIX
 
-
 log = logging.getLogger(__name__)
 
 # A dictionary to keep track of active tasks
@@ -74,7 +73,13 @@ async def redis_list_item_tasks(redis: Redis, item_id: str) -> List[str]:
 
 
 async def redis_send_command(redis: Redis, command: dict):
-    await redis.publish(REDIS_PUBSUB_CHANNEL, json.dumps(command))
+    command_json = json.dumps(command)
+    # RedisCluster doesn't expose publish() directly, but the
+    # PUBLISH command broadcasts across all cluster nodes server-side.
+    if hasattr(redis, "nodes_manager"):
+        await redis.execute_command("PUBLISH", REDIS_PUBSUB_CHANNEL, command_json)
+    else:
+        await redis.publish(REDIS_PUBSUB_CHANNEL, command_json)
 
 
 async def cleanup_task(redis, task_id: str, id=None):
@@ -183,3 +188,18 @@ async def stop_item_tasks(redis: Redis, item_id: str):
             return result  # Return the first failure
 
     return {"status": True, "message": f"All tasks for item {item_id} stopped."}
+
+
+async def has_active_tasks(redis, chat_id: str) -> bool:
+    """Check if a chat has any active tasks."""
+    task_ids = await list_task_ids_by_item_id(redis, chat_id)
+    return len(task_ids) > 0
+
+
+async def get_active_chat_ids(redis, chat_ids: List[str]) -> List[str]:
+    """Filter a list of chat_ids to only those with active tasks."""
+    active = []
+    for chat_id in chat_ids:
+        if await has_active_tasks(redis, chat_id):
+            active.append(chat_id)
+    return active

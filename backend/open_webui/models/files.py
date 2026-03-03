@@ -4,7 +4,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 from sqlalchemy import BigInteger, Column, String, Text, JSON
 
 log = logging.getLogger(__name__)
@@ -26,8 +26,6 @@ class File(Base):
     data = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
 
-    access_control = Column(JSON, nullable=True)
-
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
 
@@ -45,8 +43,6 @@ class FileModel(BaseModel):
     data: Optional[dict] = None
     meta: Optional[dict] = None
 
-    access_control: Optional[dict] = None
-
     created_at: Optional[int]  # timestamp in epoch
     updated_at: Optional[int]  # timestamp in epoch
 
@@ -63,6 +59,25 @@ class FileMeta(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
+    @model_validator(mode="before")
+    @classmethod
+    def sanitize_meta(cls, data):
+        """Sanitize metadata fields to handle malformed legacy data."""
+        if not isinstance(data, dict):
+            return data
+
+        # Handle content_type that may be a list like ['application/pdf', None]
+        content_type = data.get("content_type")
+        if isinstance(content_type, list):
+            # Extract first non-None string value
+            data["content_type"] = next(
+                (item for item in content_type if isinstance(item, str)), None
+            )
+        elif content_type is not None and not isinstance(content_type, str):
+            data["content_type"] = None
+
+        return data
+
 
 class FileModelResponse(BaseModel):
     id: str
@@ -74,7 +89,7 @@ class FileModelResponse(BaseModel):
     meta: FileMeta
 
     created_at: int  # timestamp in epoch
-    updated_at: int  # timestamp in epoch
+    updated_at: Optional[int] = None  # timestamp in epoch, optional for legacy files
 
     model_config = ConfigDict(extra="allow")
 
@@ -94,7 +109,6 @@ class FileForm(BaseModel):
     path: str
     data: dict = {}
     meta: dict = {}
-    access_control: Optional[dict] = None
 
 
 class FileUpdateForm(BaseModel):

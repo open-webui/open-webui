@@ -10,7 +10,6 @@ from open_webui.utils.misc import get_last_user_message, get_messages_content
 
 from open_webui.config import DEFAULT_RAG_TEMPLATE
 
-
 log = logging.getLogger(__name__)
 
 
@@ -69,6 +68,7 @@ def prompt_template(template: str, user: Optional[Any] = None) -> str:
 
             USER_VARIABLES = {
                 "name": str(user.get("name")),
+                "email": str(user.get("email")),
                 "location": str(user_info.get("location")),
                 "bio": str(user.get("bio")),
                 "gender": str(user.get("gender")),
@@ -92,6 +92,9 @@ def prompt_template(template: str, user: Optional[Any] = None) -> str:
     template = template.replace("{{CURRENT_WEEKDAY}}", formatted_weekday)
 
     template = template.replace("{{USER_NAME}}", USER_VARIABLES.get("name", "Unknown"))
+    template = template.replace(
+        "{{USER_EMAIL}}", USER_VARIABLES.get("email", "Unknown")
+    )
     template = template.replace("{{USER_BIO}}", USER_VARIABLES.get("bio", "Unknown"))
     template = template.replace(
         "{{USER_GENDER}}", USER_VARIABLES.get("gender", "Unknown")

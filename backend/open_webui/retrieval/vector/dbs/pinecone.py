@@ -33,7 +33,6 @@ from open_webui.config import (
 )
 from open_webui.retrieval.vector.utils import process_metadata
 
-
 NO_LIMIT = 10000  # Reasonable limit to avoid overwhelming the system
 BATCH_SIZE = 100  # Recommended batch size for Pinecone operations
 
@@ -391,7 +390,11 @@ class PineconeClient(VectorDBBase):
         )
 
     def search(
-        self, collection_name: str, vectors: List[List[Union[float, int]]], limit: int
+        self,
+        collection_name: str,
+        vectors: List[List[Union[float, int]]],
+        filter: Optional[dict] = None,
+        limit: int = 10,
     ) -> Optional[SearchResult]:
         """Search for similar vectors in a collection."""
         if not vectors or not vectors[0]:

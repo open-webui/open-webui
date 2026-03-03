@@ -233,7 +233,8 @@ class OpenGaussClient(VectorDBBase):
         self,
         collection_name: str,
         vectors: List[List[float]],
-        limit: Optional[int] = None,
+        filter: Optional[Dict[str, Any]] = None,
+        limit: int = 10,
     ) -> Optional[SearchResult]:
         try:
             if not vectors:

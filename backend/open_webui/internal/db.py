@@ -14,6 +14,7 @@ from open_webui.env import (
     DATABASE_POOL_SIZE,
     DATABASE_POOL_TIMEOUT,
     DATABASE_ENABLE_SQLITE_WAL,
+    DATABASE_ENABLE_SESSION_SHARING,
     ENABLE_DB_MIGRATIONS,
 )
 from peewee_migrate import Router
@@ -164,7 +165,7 @@ get_db = contextmanager(get_session)
 
 @contextmanager
 def get_db_context(db: Optional[Session] = None):
-    if isinstance(db, Session):
+    if isinstance(db, Session) and DATABASE_ENABLE_SESSION_SHARING:
         yield db
     else:
         with get_db() as session:

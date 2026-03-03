@@ -25,6 +25,25 @@
 	let showEditChannelModal = false;
 
 	let itemElement;
+
+	const hasPublicReadGrant = (grants: any) =>
+		Array.isArray(grants) &&
+		grants.some(
+			(grant) =>
+				grant?.principal_type === 'user' &&
+				grant?.principal_id === '*' &&
+				grant?.permission === 'read'
+		);
+
+	const isPublicChannel = (channel: any): boolean => {
+		if (channel?.type === 'group') {
+			if (typeof channel?.is_private === 'boolean') {
+				return !channel.is_private;
+			}
+			return hasPublicReadGrant(channel?.access_grants);
+		}
+		return hasPublicReadGrant(channel?.access_grants);
+	};
 </script>
 
 <ChannelModal
@@ -32,11 +51,12 @@
 	{channel}
 	edit={true}
 	{onUpdate}
-	onSubmit={async ({ name, is_private, access_control, group_ids, user_ids }) => {
+	onSubmit={async (payload: any) => {
+		const { name, is_private, access_grants, group_ids, user_ids } = payload ?? {};
 		const res = await updateChannelById(localStorage.token, channel.id, {
 			name,
 			is_private,
-			access_control,
+			access_grants,
 			group_ids,
 			user_ids
 		}).catch((error) => {
@@ -123,7 +143,7 @@
 					{/if}
 				{:else}
 					<div class=" size-4 justify-center flex items-center ml-1">
-						{#if channel?.type === 'group' ? !channel?.is_private : channel?.access_control === null}
+						{#if isPublicChannel(channel)}
 							<Hashtag className="size-3.5" strokeWidth="2.5" />
 						{:else}
 							<Lock className="size-[15px]" strokeWidth="2" />
@@ -171,7 +191,7 @@
 		<div class="flex items-center">
 			{#if channel?.unread_count > 0}
 				<div
-					class="text-xs py-[1px] px-2 rounded-xl bg-gray-100 text-black dark:bg-gray-800 dark:text-white font-medium"
+					class="text-xs py-[1px] px-2 rounded-xl bg-gray-100 text-black dark:bg-gray-800 dark:text-white font-medium whitespace-nowrap"
 				>
 					{new Intl.NumberFormat($i18n.locale, {
 						notation: 'compact',

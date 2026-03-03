@@ -15,6 +15,10 @@
 			label: $i18n.t('File Upload'),
 			description: $i18n.t('Model accepts file inputs')
 		},
+		file_context: {
+			label: $i18n.t('File Context'),
+			description: $i18n.t('Inject file content into conversation context')
+		},
 		web_search: {
 			label: $i18n.t('Web Search'),
 			description: $i18n.t('Model can search the web for information')
@@ -50,6 +54,7 @@
 	};
 
 	export let capabilities: {
+		file_context?: boolean;
 		vision?: boolean;
 		file_upload?: boolean;
 		web_search?: boolean;
@@ -60,6 +65,14 @@
 		status_updates?: boolean;
 		builtin_tools?: boolean;
 	} = {};
+
+	// Hide file_context when file_upload is disabled
+	$: visibleCapabilities = Object.keys(capabilityLabels).filter((cap) => {
+		if (cap === 'file_context' && !capabilities.file_upload) {
+			return false;
+		}
+		return true;
+	});
 </script>
 
 <div>
@@ -67,7 +80,7 @@
 		<div class=" self-center text-xs font-medium text-gray-500">{$i18n.t('Capabilities')}</div>
 	</div>
 	<div class="flex items-center mt-2 flex-wrap">
-		{#each Object.keys(capabilityLabels) as capability}
+		{#each visibleCapabilities as capability}
 			<div class=" flex items-center gap-2 mr-3">
 				<Checkbox
 					state={capabilities[capability] ? 'checked' : 'unchecked'}

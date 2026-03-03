@@ -8,7 +8,6 @@ import aiohttp
 import websockets
 from pydantic import BaseModel
 
-
 logger = logging.getLogger(__name__)
 
 

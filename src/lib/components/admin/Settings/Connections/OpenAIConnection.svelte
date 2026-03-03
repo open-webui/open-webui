@@ -3,6 +3,7 @@
 	const i18n = getContext('i18n');
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import AddConnectionModal from '$lib/components/AddConnectionModal.svelte';
@@ -98,10 +99,10 @@
 		</div>
 	</Tooltip>
 
-	<div class="flex gap-1">
+	<div class="flex gap-1 items-center">
 		<Tooltip content={$i18n.t('Configure')} className="self-start">
 			<button
-				class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
+				class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition"
 				on:click={() => {
 					showConfigModal = true;
 				}}
@@ -109,6 +110,16 @@
 			>
 				<Cog6 />
 			</button>
+		</Tooltip>
+
+		<Tooltip content={(config?.enable ?? true) ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
+			<Switch
+				bind:state={config.enable}
+				on:change={() => {
+					config.enable = config.enable ?? false;
+					onSubmit({ url, key, config });
+				}}
+			/>
 		</Tooltip>
 	</div>
 </div>

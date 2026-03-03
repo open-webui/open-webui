@@ -15,9 +15,10 @@ from open_webui.models.files import (
 )
 from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, Users, UserResponse
+from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import (
     BigInteger,
     Column,
@@ -28,10 +29,6 @@ from sqlalchemy import (
     UniqueConstraint,
     or_,
 )
-
-from open_webui.utils.access_control import has_access
-from open_webui.utils.db.access_control import has_permission
-
 
 log = logging.getLogger(__name__)
 
@@ -50,22 +47,6 @@ class Knowledge(Base):
     description = Column(Text)
 
     meta = Column(JSON, nullable=True)
-    access_control = Column(JSON, nullable=True)  # Controls data access levels.
-    # Defines access control rules for this entry.
-    # - `None`: Public access, available to all users with the "user" role.
-    # - `{}`: Private access, restricted exclusively to the owner.
-    # - Custom permissions: Specific access control for reading and writing;
-    #   Can specify group or user-level restrictions:
-    #   {
-    #      "read": {
-    #          "group_ids": ["group_id1", "group_id2"],
-    #          "user_ids":  ["user_id1", "user_id2"]
-    #      },
-    #      "write": {
-    #          "group_ids": ["group_id1", "group_id2"],
-    #          "user_ids":  ["user_id1", "user_id2"]
-    #      }
-    #   }
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -82,7 +63,7 @@ class KnowledgeModel(BaseModel):
 
     meta: Optional[dict] = None
 
-    access_control: Optional[dict] = None
+    access_grants: list[AccessGrantModel] = Field(default_factory=list)
 
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
@@ -139,7 +120,7 @@ class KnowledgeUserResponse(KnowledgeUserModel):
 class KnowledgeForm(BaseModel):
     name: str
     description: str
-    access_control: Optional[dict] = None
+    access_grants: Optional[list[dict]] = None
 
 
 class FileUserResponse(FileModelResponse):
@@ -157,27 +138,52 @@ class KnowledgeFileListResponse(BaseModel):
 
 
 class KnowledgeTable:
+    def _get_access_grants(
+        self, knowledge_id: str, db: Optional[Session] = None
+    ) -> list[AccessGrantModel]:
+        return AccessGrants.get_grants_by_resource("knowledge", knowledge_id, db=db)
+
+    def _to_knowledge_model(
+        self,
+        knowledge: Knowledge,
+        access_grants: Optional[list[AccessGrantModel]] = None,
+        db: Optional[Session] = None,
+    ) -> KnowledgeModel:
+        knowledge_data = KnowledgeModel.model_validate(knowledge).model_dump(
+            exclude={"access_grants"}
+        )
+        knowledge_data["access_grants"] = (
+            access_grants
+            if access_grants is not None
+            else self._get_access_grants(knowledge_data["id"], db=db)
+        )
+        return KnowledgeModel.model_validate(knowledge_data)
+
     def insert_new_knowledge(
         self, user_id: str, form_data: KnowledgeForm, db: Optional[Session] = None
     ) -> Optional[KnowledgeModel]:
         with get_db_context(db) as db:
             knowledge = KnowledgeModel(
                 **{
-                    **form_data.model_dump(),
+                    **form_data.model_dump(exclude={"access_grants"}),
                     "id": str(uuid.uuid4()),
                     "user_id": user_id,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
+                    "access_grants": [],
                 }
             )
 
             try:
-                result = Knowledge(**knowledge.model_dump())
+                result = Knowledge(**knowledge.model_dump(exclude={"access_grants"}))
                 db.add(result)
                 db.commit()
                 db.refresh(result)
+                AccessGrants.set_access_grants(
+                    "knowledge", result.id, form_data.access_grants, db=db
+                )
                 if result:
-                    return KnowledgeModel.model_validate(result)
+                    return self._to_knowledge_model(result, db=db)
                 else:
                     return None
             except Exception:
@@ -191,9 +197,13 @@ class KnowledgeTable:
                 db.query(Knowledge).order_by(Knowledge.updated_at.desc()).all()
             )
             user_ids = list(set(knowledge.user_id for knowledge in all_knowledge))
+            knowledge_ids = [knowledge.id for knowledge in all_knowledge]
 
             users = Users.get_users_by_user_ids(user_ids, db=db) if user_ids else []
             users_dict = {user.id: user for user in users}
+            grants_map = AccessGrants.get_grants_by_resources(
+                "knowledge", knowledge_ids, db=db
+            )
 
             knowledge_bases = []
             for knowledge in all_knowledge:
@@ -201,7 +211,11 @@ class KnowledgeTable:
                 knowledge_bases.append(
                     KnowledgeUserModel.model_validate(
                         {
-                            **KnowledgeModel.model_validate(knowledge).model_dump(),
+                            **self._to_knowledge_model(
+                                knowledge,
+                                access_grants=grants_map.get(knowledge.id, []),
+                                db=db,
+                            ).model_dump(),
                             "user": user.model_dump() if user else None,
                         }
                     )
@@ -229,6 +243,9 @@ class KnowledgeTable:
                             or_(
                                 Knowledge.name.ilike(f"%{query_key}%"),
                                 Knowledge.description.ilike(f"%{query_key}%"),
+                                User.name.ilike(f"%{query_key}%"),
+                                User.email.ilike(f"%{query_key}%"),
+                                User.username.ilike(f"%{query_key}%"),
                             )
                         )
 
@@ -238,9 +255,16 @@ class KnowledgeTable:
                     elif view_option == "shared":
                         query = query.filter(Knowledge.user_id != user_id)
 
-                    query = has_permission(db, Knowledge, query, filter)
+                    query = AccessGrants.has_permission_filter(
+                        db=db,
+                        query=query,
+                        DocumentModel=Knowledge,
+                        filter=filter,
+                        resource_type="knowledge",
+                        permission="read",
+                    )
 
-                query = query.order_by(Knowledge.updated_at.desc())
+                query = query.order_by(Knowledge.updated_at.desc(), Knowledge.id.asc())
 
                 total = query.count()
                 if skip:
@@ -250,13 +274,20 @@ class KnowledgeTable:
 
                 items = query.all()
 
+                knowledge_ids = [kb.id for kb, _ in items]
+                grants_map = AccessGrants.get_grants_by_resources(
+                    "knowledge", knowledge_ids, db=db
+                )
+
                 knowledge_bases = []
                 for knowledge_base, user in items:
                     knowledge_bases.append(
                         KnowledgeUserModel.model_validate(
                             {
-                                **KnowledgeModel.model_validate(
-                                    knowledge_base
+                                **self._to_knowledge_model(
+                                    knowledge_base,
+                                    access_grants=grants_map.get(knowledge_base.id, []),
+                                    db=db,
                                 ).model_dump(),
                                 "user": (
                                     UserModel.model_validate(user).model_dump()
@@ -291,7 +322,14 @@ class KnowledgeTable:
 
                 # Apply access-control directly to the joined query
                 # This makes the database handle filtering, even with 10k+ KBs
-                query = has_permission(db, Knowledge, query, filter)
+                query = AccessGrants.has_permission_filter(
+                    db=db,
+                    query=query,
+                    DocumentModel=Knowledge,
+                    filter=filter,
+                    resource_type="knowledge",
+                    permission="read",
+                )
 
                 # Apply filename search
                 if filter:
@@ -300,7 +338,7 @@ class KnowledgeTable:
                         query = query.filter(File.filename.ilike(f"%{q}%"))
 
                 # Order by file changes
-                query = query.order_by(File.updated_at.desc())
+                query = query.order_by(File.updated_at.desc(), File.id.asc())
 
                 # Count before pagination
                 total = query.count()
@@ -324,8 +362,8 @@ class KnowledgeTable:
                                 if user
                                 else None
                             ),
-                            collection=KnowledgeModel.model_validate(
-                                knowledge
+                            collection=self._to_knowledge_model(
+                                knowledge, db=db
                             ).model_dump(),
                         )
                     )
@@ -347,7 +385,14 @@ class KnowledgeTable:
         user_group_ids = {
             group.id for group in Groups.get_groups_by_member_id(user_id, db=db)
         }
-        return has_access(user_id, permission, knowledge.access_control, user_group_ids)
+        return AccessGrants.has_access(
+            user_id=user_id,
+            resource_type="knowledge",
+            resource_id=knowledge.id,
+            permission=permission,
+            user_group_ids=user_group_ids,
+            db=db,
+        )
 
     def get_knowledge_bases_by_user_id(
         self, user_id: str, permission: str = "write", db: Optional[Session] = None
@@ -360,8 +405,13 @@ class KnowledgeTable:
             knowledge_base
             for knowledge_base in knowledge_bases
             if knowledge_base.user_id == user_id
-            or has_access(
-                user_id, permission, knowledge_base.access_control, user_group_ids
+            or AccessGrants.has_access(
+                user_id=user_id,
+                resource_type="knowledge",
+                resource_id=knowledge_base.id,
+                permission=permission,
+                user_group_ids=user_group_ids,
+                db=db,
             )
         ]
 
@@ -371,7 +421,7 @@ class KnowledgeTable:
         try:
             with get_db_context(db) as db:
                 knowledge = db.query(Knowledge).filter_by(id=id).first()
-                return KnowledgeModel.model_validate(knowledge) if knowledge else None
+                return self._to_knowledge_model(knowledge, db=db) if knowledge else None
         except Exception:
             return None
 
@@ -388,7 +438,14 @@ class KnowledgeTable:
         user_group_ids = {
             group.id for group in Groups.get_groups_by_member_id(user_id, db=db)
         }
-        if has_access(user_id, "write", knowledge.access_control, user_group_ids):
+        if AccessGrants.has_access(
+            user_id=user_id,
+            resource_type="knowledge",
+            resource_id=knowledge.id,
+            permission="write",
+            user_group_ids=user_group_ids,
+            db=db,
+        ):
             return knowledge
         return None
 
@@ -403,8 +460,17 @@ class KnowledgeTable:
                     .filter(KnowledgeFile.file_id == file_id)
                     .all()
                 )
+                knowledge_ids = [k.id for k in knowledges]
+                grants_map = AccessGrants.get_grants_by_resources(
+                    "knowledge", knowledge_ids, db=db
+                )
                 return [
-                    KnowledgeModel.model_validate(knowledge) for knowledge in knowledges
+                    self._to_knowledge_model(
+                        knowledge,
+                        access_grants=grants_map.get(knowledge.id, []),
+                        db=db,
+                    )
+                    for knowledge in knowledges
                 ]
         except Exception:
             return []
@@ -427,6 +493,9 @@ class KnowledgeTable:
                     .filter(KnowledgeFile.knowledge_id == knowledge_id)
                 )
 
+                # Default sort: updated_at descending
+                primary_sort = File.updated_at.desc()
+
                 if filter:
                     query_key = filter.get("query")
                     if query_key:
@@ -440,27 +509,23 @@ class KnowledgeTable:
 
                     order_by = filter.get("order_by")
                     direction = filter.get("direction")
+                    is_asc = direction == "asc"
 
                     if order_by == "name":
-                        if direction == "asc":
-                            query = query.order_by(File.filename.asc())
-                        else:
-                            query = query.order_by(File.filename.desc())
+                        primary_sort = (
+                            File.filename.asc() if is_asc else File.filename.desc()
+                        )
                     elif order_by == "created_at":
-                        if direction == "asc":
-                            query = query.order_by(File.created_at.asc())
-                        else:
-                            query = query.order_by(File.created_at.desc())
+                        primary_sort = (
+                            File.created_at.asc() if is_asc else File.created_at.desc()
+                        )
                     elif order_by == "updated_at":
-                        if direction == "asc":
-                            query = query.order_by(File.updated_at.asc())
-                        else:
-                            query = query.order_by(File.updated_at.desc())
-                    else:
-                        query = query.order_by(File.updated_at.desc())
+                        primary_sort = (
+                            File.updated_at.asc() if is_asc else File.updated_at.desc()
+                        )
 
-                else:
-                    query = query.order_by(File.updated_at.desc())
+                # Apply sort with secondary key for deterministic pagination
+                query = query.order_by(primary_sort, File.id.asc())
 
                 # Count BEFORE pagination
                 total = query.count()
@@ -548,6 +613,21 @@ class KnowledgeTable:
             except Exception:
                 return None
 
+    def has_file(
+        self, knowledge_id: str, file_id: str, db: Optional[Session] = None
+    ) -> bool:
+        """Check whether a file belongs to a knowledge base."""
+        try:
+            with get_db_context(db) as db:
+                return (
+                    db.query(KnowledgeFile)
+                    .filter_by(knowledge_id=knowledge_id, file_id=file_id)
+                    .first()
+                    is not None
+                )
+        except Exception:
+            return False
+
     def remove_file_from_knowledge_by_id(
         self, knowledge_id: str, file_id: str, db: Optional[Session] = None
     ) -> bool:
@@ -595,11 +675,15 @@ class KnowledgeTable:
                 knowledge = self.get_knowledge_by_id(id=id, db=db)
                 db.query(Knowledge).filter_by(id=id).update(
                     {
-                        **form_data.model_dump(),
+                        **form_data.model_dump(exclude={"access_grants"}),
                         "updated_at": int(time.time()),
                     }
                 )
                 db.commit()
+                if form_data.access_grants is not None:
+                    AccessGrants.set_access_grants(
+                        "knowledge", id, form_data.access_grants, db=db
+                    )
                 return self.get_knowledge_by_id(id=id, db=db)
         except Exception as e:
             log.exception(e)
@@ -626,6 +710,7 @@ class KnowledgeTable:
     def delete_knowledge_by_id(self, id: str, db: Optional[Session] = None) -> bool:
         try:
             with get_db_context(db) as db:
+                AccessGrants.revoke_all_access("knowledge", id, db=db)
                 db.query(Knowledge).filter_by(id=id).delete()
                 db.commit()
                 return True
@@ -635,6 +720,9 @@ class KnowledgeTable:
     def delete_all_knowledge(self, db: Optional[Session] = None) -> bool:
         with get_db_context(db) as db:
             try:
+                knowledge_ids = [row[0] for row in db.query(Knowledge.id).all()]
+                for knowledge_id in knowledge_ids:
+                    AccessGrants.revoke_all_access("knowledge", knowledge_id, db=db)
                 db.query(Knowledge).delete()
                 db.commit()
 
