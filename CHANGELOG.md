@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.9] - 2026-03-03
+
+### Added
+
+### Fixed
+
+- 🔌 **Terminal keepalive.** Terminal connections now stay active without being closed by idle timeouts from proxies or load balancers, and spurious disconnection messages no longer appear. [Commit](https://github.com/open-webui/open-webui/commit/ca2aaf0321c219d041e92e2c0c842a4e424732ef)
+
+### Changed
+
 ## [0.8.8] - 2026-03-02
 
 ### Added
