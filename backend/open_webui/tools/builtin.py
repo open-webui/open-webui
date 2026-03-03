@@ -36,6 +36,8 @@ from open_webui.models.chats import Chats
 from open_webui.models.channels import Channels, ChannelMember, Channel
 from open_webui.models.messages import Messages, Message
 from open_webui.models.groups import Groups
+from open_webui.models.memories import Memories
+from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.utils.sanitize import sanitize_code
 
 log = logging.getLogger(__name__)
@@ -166,6 +168,9 @@ async def search_web(
     try:
         engine = __request__.app.state.config.WEB_SEARCH_ENGINE
         user = UserModel(**__user__) if __user__ else None
+
+        # Use admin-configured result count if configured, falling back to model-provided count of provided, else default to 5
+        count = __request__.app.state.config.WEB_SEARCH_RESULT_COUNT or count
 
         results = await asyncio.to_thread(_search_web, __request__, engine, query, user)
 
@@ -380,8 +385,8 @@ async def execute_code(
         # Add import blocking code if there are blocked modules
         if CODE_INTERPRETER_BLOCKED_MODULES:
             import textwrap
-            blocking_code = textwrap.dedent(
-                f"""
+
+            blocking_code = textwrap.dedent(f"""
                 import builtins
 
                 BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
@@ -397,15 +402,20 @@ async def execute_code(
                     return _real_import(name, globals, locals, fromlist, level)
 
                 builtins.__import__ = restricted_import
-                """
-            )
+                """)
             code = blocking_code + "\n" + code
 
-        engine = getattr(__request__.app.state.config, "CODE_INTERPRETER_ENGINE", "pyodide")
+        engine = getattr(
+            __request__.app.state.config, "CODE_INTERPRETER_ENGINE", "pyodide"
+        )
         if engine == "pyodide":
             # Execute via frontend pyodide using bidirectional event call
             if __event_call__ is None:
-                return json.dumps({"error": "Event call not available. WebSocket connection required for pyodide execution."})
+                return json.dumps(
+                    {
+                        "error": "Event call not available. WebSocket connection required for pyodide execution."
+                    }
+                )
 
             output = await __event_call__(
                 {
@@ -413,7 +423,9 @@ async def execute_code(
                     "data": {
                         "id": str(uuid4()),
                         "code": code,
-                        "session_id": __metadata__.get("session_id") if __metadata__ else None,
+                        "session_id": (
+                            __metadata__.get("session_id") if __metadata__ else None
+                        ),
                     },
                 }
             )
@@ -436,12 +448,14 @@ async def execute_code(
                 code,
                 (
                     __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN
-                    if __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH == "token"
+                    if __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH
+                    == "token"
                     else None
                 ),
                 (
                     __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD
-                    if __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH == "password"
+                    if __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH
+                    == "password"
                     else None
                 ),
                 __request__.app.state.config.CODE_INTERPRETER_JUPYTER_TIMEOUT,
@@ -619,6 +633,79 @@ async def replace_memory_content(
         )
     except Exception as e:
         log.exception(f"replace_memory_content error: {e}")
+        return json.dumps({"error": str(e)})
+
+
+async def delete_memory(
+    memory_id: str,
+    __request__: Request = None,
+    __user__: dict = None,
+) -> str:
+    """
+    Delete a memory by its ID.
+
+    :param memory_id: The ID of the memory to delete
+    :return: Confirmation that the memory was deleted
+    """
+    if __request__ is None:
+        return json.dumps({"error": "Request context not available"})
+
+    try:
+        user = UserModel(**__user__) if __user__ else None
+
+        result = Memories.delete_memory_by_id_and_user_id(memory_id, user.id)
+
+        if result:
+            VECTOR_DB_CLIENT.delete(
+                collection_name=f"user-memory-{user.id}", ids=[memory_id]
+            )
+            return json.dumps(
+                {"status": "success", "message": f"Memory {memory_id} deleted"},
+                ensure_ascii=False,
+            )
+        else:
+            return json.dumps({"error": "Memory not found or access denied"})
+    except Exception as e:
+        log.exception(f"delete_memory error: {e}")
+        return json.dumps({"error": str(e)})
+
+
+async def list_memories(
+    __request__: Request = None,
+    __user__: dict = None,
+) -> str:
+    """
+    List all stored memories for the user.
+
+    :return: JSON list of all memories with id, content, and dates
+    """
+    if __request__ is None:
+        return json.dumps({"error": "Request context not available"})
+
+    try:
+        user = UserModel(**__user__) if __user__ else None
+
+        memories = Memories.get_memories_by_user_id(user.id)
+
+        if memories:
+            result = [
+                {
+                    "id": m.id,
+                    "content": m.content,
+                    "created_at": time.strftime(
+                        "%Y-%m-%d %H:%M", time.localtime(m.created_at)
+                    ),
+                    "updated_at": time.strftime(
+                        "%Y-%m-%d %H:%M", time.localtime(m.updated_at)
+                    ),
+                }
+                for m in memories
+            ]
+            return json.dumps(result, ensure_ascii=False)
+        else:
+            return json.dumps([])
+    except Exception as e:
+        log.exception(f"list_memories error: {e}")
         return json.dumps({"error": str(e)})
 
 
@@ -1520,6 +1607,69 @@ async def search_knowledge_files(
         return json.dumps({"error": str(e)})
 
 
+async def view_file(
+    file_id: str,
+    __request__: Request = None,
+    __user__: dict = None,
+    __model_knowledge__: Optional[list[dict]] = None,
+) -> str:
+    """
+    Get the full content of a file by its ID.
+
+    :param file_id: The ID of the file to retrieve
+    :return: JSON with the file's id, filename, and full text content
+    """
+    if __request__ is None:
+        return json.dumps({"error": "Request context not available"})
+
+    if not __user__:
+        return json.dumps({"error": "User context not available"})
+
+    try:
+        from open_webui.models.files import Files
+        from open_webui.utils.access_control.files import has_access_to_file
+
+        user_id = __user__.get("id")
+        user_role = __user__.get("role", "user")
+
+        file = Files.get_file_by_id(file_id)
+        if not file:
+            return json.dumps({"error": "File not found"})
+
+        if (
+            file.user_id != user_id
+            and user_role != "admin"
+            and not any(
+                item.get("type") == "file" and item.get("id") == file_id
+                for item in (__model_knowledge__ or [])
+            )
+            and not has_access_to_file(
+                file_id=file_id,
+                access_type="read",
+                user=UserModel(**__user__),
+            )
+        ):
+            return json.dumps({"error": "File not found"})
+
+        content = ""
+        if file.data:
+            content = file.data.get("content", "")
+
+        return json.dumps(
+            {
+                "id": file.id,
+                "filename": file.filename,
+                "content": content,
+                "updated_at": file.updated_at,
+                "created_at": file.created_at,
+            },
+            ensure_ascii=False,
+        )
+    except Exception as e:
+        log.exception(f"view_file error: {e}")
+        return json.dumps({"error": str(e)})
+
+
 async def view_knowledge_file(
     file_id: str,
     __request__: Request = None,
@@ -1681,7 +1831,7 @@ async def query_knowledge_files(
                 elif item_type == "file":
                     # Individual file - use file-{id} as collection name
                     file = Files.get_file_by_id(item_id)
-                    if file and (user_role == "admin" or file.user_id == user_id):
+                    if file:
                         collection_names.append(f"file-{item_id}")
 
                 elif item_type == "note":
@@ -1880,4 +2030,66 @@ async def query_knowledge_bases(
 
     except Exception as e:
         log.exception(f"query_knowledge_bases error: {e}")
+        return json.dumps({"error": str(e)})
+
+
+# =============================================================================
+# SKILLS TOOLS
+# =============================================================================
+
+
+async def view_skill(
+    name: str,
+    __request__: Request = None,
+    __user__: dict = None,
+) -> str:
+    """
+    Load the full instructions of a skill by its name from the available skills manifest.
+    Use this when you need detailed instructions for a skill listed in <available_skills>.
+
+    :param name: The name of the skill to load (as shown in the manifest)
+    :return: The full skill instructions as markdown content
+    """
+    if __request__ is None:
+        return json.dumps({"error": "Request context not available"})
+
+    if not __user__:
+        return json.dumps({"error": "User context not available"})
+
+    try:
+        from open_webui.models.skills import Skills
+        from open_webui.models.access_grants import AccessGrants
+
+        user_id = __user__.get("id")
+
+        # Direct DB lookup by unique name
+        skill = Skills.get_skill_by_name(name)
+
+        if not skill or not skill.is_active:
+            return json.dumps({"error": f"Skill '{name}' not found"})
+
+        # Check user access
+        user_role = __user__.get("role", "user")
+        if user_role != "admin" and skill.user_id != user_id:
+            user_group_ids = [
+                group.id for group in Groups.get_groups_by_member_id(user_id)
+            ]
+            if not AccessGrants.has_access(
+                user_id=user_id,
+                resource_type="skill",
+                resource_id=skill.id,
+                permission="read",
+                user_group_ids=set(user_group_ids),
+            ):
+                return json.dumps({"error": "Access denied"})
+
+        return json.dumps(
+            {
+                "name": skill.name,
+                "content": skill.content,
+            },
+            ensure_ascii=False,
+        )
+    except Exception as e:
+        log.exception(f"view_skill error: {e}")
         return json.dumps({"error": str(e)})

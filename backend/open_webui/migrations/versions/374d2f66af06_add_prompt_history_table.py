@@ -12,7 +12,6 @@ import uuid
 from alembic import op
 import sqlalchemy as sa
 
-
 revision: str = "374d2f66af06"
 down_revision: Union[str, None] = "c440947495f3"
 branch_labels: Union[str, Sequence[str], None] = None

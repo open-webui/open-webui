@@ -37,7 +37,8 @@
 		'sougou',
 		'firecrawl',
 		'external',
-		'yandex'
+		'yandex',
+		'youcom'
 	];
 	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'external'];
 
@@ -155,7 +156,7 @@
 						</div>
 						<div class="flex items-center relative">
 							<select
-								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+								class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 								bind:value={webConfig.WEB_SEARCH_ENGINE}
 								placeholder={$i18n.t('Select a engine')}
 								required
@@ -738,7 +739,7 @@
 								</div>
 							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'yandex'}
-                            <div class="mb-2.5 flex w-full flex-col">
+							<div class="mb-2.5 flex w-full flex-col">
 								<div>
 									<div class=" self-center text-xs font-medium mb-1">
 										{$i18n.t('Yandex Web Search URL')}
@@ -769,20 +770,35 @@
 								</div>
 
 								<div class="mb-2.5">
-                                    <div class=" mb-1 text-xs font-medium">{$i18n.t('Yandex Web Search config')}</div>
+									<div class=" mb-1 text-xs font-medium">{$i18n.t('Yandex Web Search config')}</div>
 
-                                    <Tooltip
-                                        content={$i18n.t('Leave empty to use the default config, or enter a valid json (see https://yandex.cloud/en/docs/search-api/api-ref/WebSearch/search#yandex.cloud.searchapi.v2.WebSearchRequest)')}
-                                        placement="top-start"
-                                    >
-                                        <Textarea
-                                            bind:value={webConfig.YANDEX_WEB_SEARCH_CONFIG}
-                                            placeholder={$i18n.t(
-                                                'Leave empty to use the default config, or enter a valid json (see https://yandex.cloud/en/docs/search-api/api-ref/WebSearch/search#yandex.cloud.searchapi.v2.WebSearchRequest)'
-                                            )}
-                                        />
-                                    </Tooltip>
-                                </div>
+									<Tooltip
+										content={$i18n.t(
+											'Leave empty to use the default config, or enter a valid json (see https://yandex.cloud/en/docs/search-api/api-ref/WebSearch/search#yandex.cloud.searchapi.v2.WebSearchRequest)'
+										)}
+										placement="top-start"
+									>
+										<Textarea
+											bind:value={webConfig.YANDEX_WEB_SEARCH_CONFIG}
+											placeholder={$i18n.t(
+												'Leave empty to use the default config, or enter a valid json (see https://yandex.cloud/en/docs/search-api/api-ref/WebSearch/search#yandex.cloud.searchapi.v2.WebSearchRequest)'
+											)}
+										/>
+									</Tooltip>
+								</div>
+							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'youcom'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('You.com API Key')}
+									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter You.com API Key')}
+										bind:value={webConfig.YOUCOM_API_KEY}
+									/>
+								</div>
 							</div>
 						{/if}
 
@@ -934,7 +950,7 @@
 						</div>
 						<div class="flex items-center relative">
 							<select
-								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+								class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 								bind:value={webConfig.WEB_LOADER_ENGINE}
 								placeholder={$i18n.t('Select a engine')}
 							>

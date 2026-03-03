@@ -13,7 +13,6 @@ from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, or_, func, cast
 
-
 ####################
 # Prompts DB Schema
 ####################
@@ -98,12 +97,19 @@ class PromptsTable:
         return AccessGrants.get_grants_by_resource("prompt", prompt_id, db=db)
 
     def _to_prompt_model(
-        self, prompt: Prompt, db: Optional[Session] = None
+        self,
+        prompt: Prompt,
+        access_grants: Optional[list[AccessGrantModel]] = None,
+        db: Optional[Session] = None,
     ) -> PromptModel:
         prompt_data = PromptModel.model_validate(prompt).model_dump(
             exclude={"access_grants"}
         )
-        prompt_data["access_grants"] = self._get_access_grants(prompt_data["id"], db=db)
+        prompt_data["access_grants"] = (
+            access_grants
+            if access_grants is not None
+            else self._get_access_grants(prompt_data["id"], db=db)
+        )
         return PromptModel.model_validate(prompt_data)
 
     def insert_new_prompt(
@@ -146,7 +152,9 @@ class PromptsTable:
                         "data": form_data.data or {},
                         "meta": form_data.meta or {},
                         "tags": form_data.tags or [],
-                        "access_grants": [grant.model_dump() for grant in current_access_grants],
+                        "access_grants": [
+                            grant.model_dump() for grant in current_access_grants
+                        ],
                     }
 
                     history_entry = PromptHistories.create_history_entry(
@@ -205,9 +213,13 @@ class PromptsTable:
             )
 
             user_ids = list(set(prompt.user_id for prompt in all_prompts))
+            prompt_ids = [prompt.id for prompt in all_prompts]
 
             users = Users.get_users_by_user_ids(user_ids, db=db) if user_ids else []
             users_dict = {user.id: user for user in users}
+            grants_map = AccessGrants.get_grants_by_resources(
+                "prompt", prompt_ids, db=db
+            )
 
             prompts = []
             for prompt in all_prompts:
@@ -215,7 +227,11 @@ class PromptsTable:
                 prompts.append(
                     PromptUserResponse.model_validate(
                         {
-                            **self._to_prompt_model(prompt, db=db).model_dump(),
+                            **self._to_prompt_model(
+                                prompt,
+                                access_grants=grants_map.get(prompt.id, []),
+                                db=db,
+                            ).model_dump(),
                             "user": user.model_dump() if user else None,
                         }
                     )
@@ -258,7 +274,6 @@ class PromptsTable:
 
             # Join with User table for user filtering and sorting
             query = db.query(Prompt, User).outerjoin(User, User.id == Prompt.user_id)
-            query = query.filter(Prompt.is_active == True)
 
             if filter:
                 query_key = filter.get("query")
@@ -329,11 +344,20 @@ class PromptsTable:
 
             items = query.all()
 
+            prompt_ids = [prompt.id for prompt, _ in items]
+            grants_map = AccessGrants.get_grants_by_resources(
+                "prompt", prompt_ids, db=db
+            )
+
             prompts = []
             for prompt, user in items:
                 prompts.append(
                     PromptUserResponse(
-                        **self._to_prompt_model(prompt, db=db).model_dump(),
+                        **self._to_prompt_model(
+                            prompt,
+                            access_grants=grants_map.get(prompt.id, []),
+                            db=db,
+                        ).model_dump(),
                         user=(
                             UserResponse(**UserModel.model_validate(user).model_dump())
                             if user
@@ -345,7 +369,6 @@ class PromptsTable:
             return PromptListResponse(items=prompts, total=total)
 
     def update_prompt_by_command(
-
         self,
         command: str,
         form_data: PromptForm,
@@ -450,7 +473,7 @@ class PromptsTable:
                 prompt.content = form_data.content
                 prompt.data = form_data.data or prompt.data
                 prompt.meta = form_data.meta or prompt.meta
-                
+
                 if form_data.tags is not None:
                     prompt.tags = form_data.tags
 
@@ -459,7 +482,7 @@ class PromptsTable:
                         "prompt", prompt.id, form_data.access_grants, db=db
                     )
                     current_access_grants = self._get_access_grants(prompt.id, db=db)
-                    
+
                 prompt.updated_at = int(time.time())
 
                 db.commit()
@@ -510,16 +533,16 @@ class PromptsTable:
                 prompt = db.query(Prompt).filter_by(id=prompt_id).first()
                 if not prompt:
                     return None
-                
+
                 prompt.name = name
                 prompt.command = command
-                
+
                 if tags is not None:
                     prompt.tags = tags
-                    
+
                 prompt.updated_at = int(time.time())
                 db.commit()
-                
+
                 return self._to_prompt_model(prompt, db=db)
         except Exception:
             return None
@@ -562,43 +585,24 @@ class PromptsTable:
         except Exception:
             return None
 
-    def delete_prompt_by_command(
-        self, command: str, db: Optional[Session] = None
-    ) -> bool:
-        """Soft delete a prompt by setting is_active to False."""
-        try:
-            with get_db_context(db) as db:
-                prompt = db.query(Prompt).filter_by(command=command).first()
-                if prompt:
-                    PromptHistories.delete_history_by_prompt_id(prompt.id, db=db)
-                    AccessGrants.revoke_all_access("prompt", prompt.id, db=db)
-
-                    prompt.is_active = False
-                    prompt.updated_at = int(time.time())
-                    db.commit()
-                    return True
-                return False
-        except Exception:
-            return False
-
-    def delete_prompt_by_id(self, prompt_id: str, db: Optional[Session] = None) -> bool:
-        """Soft delete a prompt by setting is_active to False."""
+    def toggle_prompt_active(
+        self, prompt_id: str, db: Optional[Session] = None
+    ) -> Optional[PromptModel]:
+        """Toggle the is_active flag on a prompt."""
         try:
             with get_db_context(db) as db:
                 prompt = db.query(Prompt).filter_by(id=prompt_id).first()
                 if prompt:
-                    PromptHistories.delete_history_by_prompt_id(prompt.id, db=db)
-                    AccessGrants.revoke_all_access("prompt", prompt.id, db=db)
-
-                    prompt.is_active = False
+                    prompt.is_active = not prompt.is_active
                     prompt.updated_at = int(time.time())
                     db.commit()
-                    return True
-                return False
+                    db.refresh(prompt)
+                    return self._to_prompt_model(prompt, db=db)
+                return None
         except Exception:
-            return False
+            return None
 
-    def hard_delete_prompt_by_command(
+    def delete_prompt_by_command(
         self, command: str, db: Optional[Session] = None
     ) -> bool:
         """Permanently delete a prompt and its history."""
@@ -609,8 +613,23 @@ class PromptsTable:
                     PromptHistories.delete_history_by_prompt_id(prompt.id, db=db)
                     AccessGrants.revoke_all_access("prompt", prompt.id, db=db)
 
-                    # Delete prompt
-                    db.query(Prompt).filter_by(command=command).delete()
+                    db.delete(prompt)
+                    db.commit()
+                    return True
+                return False
+        except Exception:
+            return False
+
+    def delete_prompt_by_id(self, prompt_id: str, db: Optional[Session] = None) -> bool:
+        """Permanently delete a prompt and its history."""
+        try:
+            with get_db_context(db) as db:
+                prompt = db.query(Prompt).filter_by(id=prompt_id).first()
+                if prompt:
+                    PromptHistories.delete_history_by_prompt_id(prompt.id, db=db)
+                    AccessGrants.revoke_all_access("prompt", prompt.id, db=db)
+
+                    db.delete(prompt)
                     db.commit()
                     return True
                 return False

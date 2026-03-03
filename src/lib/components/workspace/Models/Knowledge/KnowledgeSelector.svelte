@@ -170,15 +170,27 @@
 							>
 								<div class="  text-black dark:text-gray-100 flex items-center gap-1 shrink-0">
 									{#if item.type === 'note'}
-										<Tooltip content={$i18n.t('Note')} placement="top">
+										<Tooltip
+											content={$i18n.t('Note')}
+											placement="top"
+											tippyOptions={{ zIndex: 100000 }}
+										>
 											<PageEdit className="size-4" />
 										</Tooltip>
 									{:else if item.type === 'collection'}
-										<Tooltip content={$i18n.t('Collection')} placement="top">
+										<Tooltip
+											content={$i18n.t('Collection')}
+											placement="top"
+											tippyOptions={{ zIndex: 100000 }}
+										>
 											<Database className="size-4" />
 										</Tooltip>
 									{:else if item.type === 'file'}
-										<Tooltip content={$i18n.t('File')} placement="top">
+										<Tooltip
+											content={$i18n.t('File')}
+											placement="top"
+											tippyOptions={{ zIndex: 100000 }}
+										>
 											<DocumentPage className="size-4" />
 										</Tooltip>
 									{/if}
@@ -186,6 +198,7 @@
 									<Tooltip
 										content={item.description || decodeString(item?.name)}
 										placement="top-start"
+										tippyOptions={{ zIndex: 100000 }}
 									>
 										<div class="line-clamp-1 flex-1 text-sm text-left">
 											{decodeString(item?.name)}

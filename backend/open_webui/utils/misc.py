@@ -91,14 +91,22 @@ def get_message_list(messages_map, message_id):
 
     # Reconstruct the chain by following the parentId links
     message_list = []
+    visited_message_ids = set()
 
     while current_message:
-        message_list.insert(
-            0, current_message
-        )  # Insert the message at the beginning of the list
+        message_id = current_message.get("id")
+        if message_id in visited_message_ids:
+            # Cycle detected, break to prevent infinite loop
+            break
+
+        if message_id is not None:
+            visited_message_ids.add(message_id)
+
+        message_list.append(current_message)
         parent_id = current_message.get("parentId")  # Use .get() for safety
         current_message = messages_map.get(parent_id) if parent_id else None
 
+    message_list.reverse()
     return message_list
 
 
@@ -151,11 +159,15 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
     def flush_pending():
         nonlocal pending_content, pending_tool_calls
         if pending_content or pending_tool_calls:
-            messages.append({
-                "role": "assistant",
-                "content": "\n".join(pending_content) if pending_content else "",
-                **({"tool_calls": pending_tool_calls} if pending_tool_calls else {}),
-            })
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": "\n".join(pending_content) if pending_content else "",
+                    **(
+                        {"tool_calls": pending_tool_calls} if pending_tool_calls else {}
+                    ),
+                }
+            )
             pending_content = []
             pending_tool_calls = []
 
@@ -178,14 +190,16 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
             # Ensure arguments is always a JSON string
             if not isinstance(arguments, str):
                 arguments = json.dumps(arguments)
-            pending_tool_calls.append({
-                "id": item.get("call_id", ""),
-                "type": "function",
-                "function": {
-                    "name": item.get("name", ""),
-                    "arguments": arguments,
+            pending_tool_calls.append(
+                {
+                    "id": item.get("call_id", ""),
+                    "type": "function",
+                    "function": {
+                        "name": item.get("name", ""),
+                        "arguments": arguments,
+                    },
                 }
-            })
+            )
 
         elif item_type == "function_call_output":
             # Flush any pending content/tool_calls before adding tool result
@@ -196,13 +210,20 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
             content = ""
             for part in output_parts:
                 if part.get("type") == "input_text":
-                    content += part.get("text", "")
+                    output_text = part.get("text", "")
+                    content += (
+                        str(output_text)
+                        if not isinstance(output_text, str)
+                        else output_text
+                    )
 
-            messages.append({
-                "role": "tool",
-                "tool_call_id": item.get("call_id", ""),
-                "content": content,
-            })
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": item.get("call_id", ""),
+                    "content": content,
+                }
+            )
 
         elif item_type == "reasoning":
             if raw:
@@ -218,31 +239,31 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
                 if reasoning_text:
                     start_tag = item.get("start_tag", "<think>")
                     end_tag = item.get("end_tag", "</think>")
-                    pending_content.append(
-                        f"{start_tag}{reasoning_text}{end_tag}"
-                    )
+                    pending_content.append(f"{start_tag}{reasoning_text}{end_tag}")
             # else: skip reasoning blocks for normal LLM messages
 
         elif item_type == "open_webui:code_interpreter":
-            if raw:
-                # Include code interpreter content for LLM re-processing
-                code = item.get("code", "")
-                code_output = item.get("output", "")
+            # Always include code interpreter content so the LLM knows
+            # the code was already executed and doesn't retry.
+            code = item.get("code", "")
+            code_output = item.get("output", "")
 
-                if code:
-                    lang = item.get("lang", "python")
-                    pending_content.append(f"```{lang}\n{code}\n```")
+            if code:
+                pending_content.append(
+                    f"<code_interpreter>\n{code}\n</code_interpreter>"
+                )
 
-                if code_output:
-                    if isinstance(code_output, dict):
-                        stdout = code_output.get("stdout", "")
-                        result = code_output.get("result", "")
-                        output_text = stdout or result
-                    else:
-                        output_text = str(code_output)
-                    if output_text:
-                        pending_content.append(f"Output:\n{output_text}")
-            # else: skip extension types
+            if code_output:
+                if isinstance(code_output, dict):
+                    stdout = code_output.get("stdout", "")
+                    result = code_output.get("result", "")
+                    output_text = stdout or result
+                else:
+                    output_text = str(code_output)
+                if output_text:
+                    pending_content.append(
+                        f"<code_interpreter_output>\n{output_text}\n</code_interpreter_output>"
+                    )
 
         elif item_type.startswith("open_webui:"):
             # Skip other extension types
@@ -259,6 +280,24 @@ def get_last_user_message(messages: list[dict]) -> Optional[str]:
     if message is None:
         return None
     return get_content_from_message(message)
+
+
+def set_last_user_message_content(content: str, messages: list[dict]) -> list[dict]:
+    """
+    Replace the text content of the last user message in-place.
+    Handles both plain-string and list-of-parts content formats.
+    """
+    for message in reversed(messages):
+        if message.get("role") == "user":
+            if isinstance(message.get("content"), list):
+                for item in message["content"]:
+                    if item.get("type") == "text":
+                        item["text"] = content
+                        break
+            else:
+                message["content"] = content
+            break
+    return messages
 
 
 def get_last_assistant_message_item(messages: list[dict]) -> Optional[dict]:
@@ -439,7 +478,7 @@ def openai_chat_completion_message_template(
             **({"tool_calls": tool_calls} if tool_calls else {}),
         }
 
-    template["choices"][0]["finish_reason"] = "stop"
+    template["choices"][0]["finish_reason"] = "tool_calls" if tool_calls else "stop"
 
     if usage:
         template["usage"] = usage
@@ -774,6 +813,31 @@ def extract_urls(text: str) -> list[str]:
         r"(https?://[^\s]+)", re.IGNORECASE
     )  # Matches http and https URLs
     return url_pattern.findall(text)
+
+
+async def cleanup_response(
+    response: Optional[aiohttp.ClientResponse],
+    session: Optional[aiohttp.ClientSession],
+):
+    if response:
+        response.close()
+    if session:
+        await session.close()
+
+
+async def stream_wrapper(response, session, content_handler=None):
+    """
+    Wrap a stream to ensure cleanup happens even if streaming is interrupted.
+    This is more reliable than BackgroundTask which may not run if client disconnects.
+    """
+    try:
+        stream = (
+            content_handler(response.content) if content_handler else response.content
+        )
+        async for chunk in stream:
+            yield chunk
+    finally:
+        await cleanup_response(response, session)
 
 
 def stream_chunks_handler(stream: aiohttp.StreamReader):

@@ -15,6 +15,7 @@ from sqlalchemy import (
     Text,
     JSON,
     Index,
+    func,
 )
 
 ####################
@@ -279,25 +280,26 @@ class ChatMessageTable:
         db: Optional[Session] = None,
     ) -> list[str]:
         """Get distinct chat_ids that used a specific model."""
-        from sqlalchemy import distinct
 
         with get_db_context(db) as db:
-            query = db.query(distinct(ChatMessage.chat_id)).filter(
-                ChatMessage.model_id == model_id
-            )
+            query = db.query(
+                ChatMessage.chat_id,
+                func.max(ChatMessage.created_at).label("last_message_at"),
+            ).filter(ChatMessage.model_id == model_id)
             if start_date:
                 query = query.filter(ChatMessage.created_at >= start_date)
             if end_date:
                 query = query.filter(ChatMessage.created_at <= end_date)
 
-            # Order by most recent message in each chat
+            # Group by chat_id and order by most recent message in each chat
             chat_ids = (
-                query.order_by(ChatMessage.created_at.desc())
+                query.group_by(ChatMessage.chat_id)
+                .order_by(func.max(ChatMessage.created_at).desc())
                 .offset(skip)
                 .limit(limit)
                 .all()
             )
-            return [chat_id for (chat_id,) in chat_ids]
+            return [chat_id for chat_id, _ in chat_ids]
 
     def delete_messages_by_chat_id(
         self, chat_id: str, db: Optional[Session] = None
@@ -332,7 +334,11 @@ class ChatMessageTable:
             if end_date:
                 query = query.filter(ChatMessage.created_at <= end_date)
             if group_id:
-                group_users = db.query(GroupMember.user_id).filter(GroupMember.group_id == group_id).subquery()
+                group_users = (
+                    db.query(GroupMember.user_id)
+                    .filter(GroupMember.group_id == group_id)
+                    .subquery()
+                )
                 query = query.filter(ChatMessage.user_id.in_(group_users))
 
             results = query.group_by(ChatMessage.model_id).all()
@@ -362,10 +368,12 @@ class ChatMessageTable:
             elif dialect == "postgresql":
                 # Use json_extract_path_text for PostgreSQL JSON columns
                 input_tokens = cast(
-                    func.json_extract_path_text(ChatMessage.usage, "input_tokens"), Integer
+                    func.json_extract_path_text(ChatMessage.usage, "input_tokens"),
+                    Integer,
                 )
                 output_tokens = cast(
-                    func.json_extract_path_text(ChatMessage.usage, "output_tokens"), Integer
+                    func.json_extract_path_text(ChatMessage.usage, "output_tokens"),
+                    Integer,
                 )
             else:
                 raise NotImplementedError(f"Unsupported dialect: {dialect}")
@@ -387,7 +395,11 @@ class ChatMessageTable:
             if end_date:
                 query = query.filter(ChatMessage.created_at <= end_date)
             if group_id:
-                group_users = db.query(GroupMember.user_id).filter(GroupMember.group_id == group_id).subquery()
+                group_users = (
+                    db.query(GroupMember.user_id)
+                    .filter(GroupMember.group_id == group_id)
+                    .subquery()
+                )
                 query = query.filter(ChatMessage.user_id.in_(group_users))
 
             results = query.group_by(ChatMessage.model_id).all()
@@ -424,10 +436,12 @@ class ChatMessageTable:
             elif dialect == "postgresql":
                 # Use json_extract_path_text for PostgreSQL JSON columns
                 input_tokens = cast(
-                    func.json_extract_path_text(ChatMessage.usage, "input_tokens"), Integer
+                    func.json_extract_path_text(ChatMessage.usage, "input_tokens"),
+                    Integer,
                 )
                 output_tokens = cast(
-                    func.json_extract_path_text(ChatMessage.usage, "output_tokens"), Integer
+                    func.json_extract_path_text(ChatMessage.usage, "output_tokens"),
+                    Integer,
                 )
             else:
                 raise NotImplementedError(f"Unsupported dialect: {dialect}")
@@ -481,7 +495,11 @@ class ChatMessageTable:
             if end_date:
                 query = query.filter(ChatMessage.created_at <= end_date)
             if group_id:
-                group_users = db.query(GroupMember.user_id).filter(GroupMember.group_id == group_id).subquery()
+                group_users = (
+                    db.query(GroupMember.user_id)
+                    .filter(GroupMember.group_id == group_id)
+                    .subquery()
+                )
                 query = query.filter(ChatMessage.user_id.in_(group_users))
 
             results = query.group_by(ChatMessage.user_id).all()
@@ -507,7 +525,11 @@ class ChatMessageTable:
             if end_date:
                 query = query.filter(ChatMessage.created_at <= end_date)
             if group_id:
-                group_users = db.query(GroupMember.user_id).filter(GroupMember.group_id == group_id).subquery()
+                group_users = (
+                    db.query(GroupMember.user_id)
+                    .filter(GroupMember.group_id == group_id)
+                    .subquery()
+                )
                 query = query.filter(ChatMessage.user_id.in_(group_users))
 
             results = query.group_by(ChatMessage.chat_id).all()
@@ -536,7 +558,11 @@ class ChatMessageTable:
             if end_date:
                 query = query.filter(ChatMessage.created_at <= end_date)
             if group_id:
-                group_users = db.query(GroupMember.user_id).filter(GroupMember.group_id == group_id).subquery()
+                group_users = (
+                    db.query(GroupMember.user_id)
+                    .filter(GroupMember.group_id == group_id)
+                    .subquery()
+                )
                 query = query.filter(ChatMessage.user_id.in_(group_users))
 
             results = query.all()
@@ -544,10 +570,14 @@ class ChatMessageTable:
             # Group by date -> model -> count
             daily_counts: dict[str, dict[str, int]] = {}
             for timestamp, model_id in results:
-                date_str = datetime.fromtimestamp(_normalize_timestamp(timestamp)).strftime("%Y-%m-%d")
+                date_str = datetime.fromtimestamp(
+                    _normalize_timestamp(timestamp)
+                ).strftime("%Y-%m-%d")
                 if date_str not in daily_counts:
                     daily_counts[date_str] = {}
-                daily_counts[date_str][model_id] = daily_counts[date_str].get(model_id, 0) + 1
+                daily_counts[date_str][model_id] = (
+                    daily_counts[date_str].get(model_id, 0) + 1
+                )
 
             # Fill in missing days
             if start_date and end_date:
@@ -587,14 +617,20 @@ class ChatMessageTable:
             # Group by hour -> model -> count
             hourly_counts: dict[str, dict[str, int]] = {}
             for timestamp, model_id in results:
-                hour_str = datetime.fromtimestamp(_normalize_timestamp(timestamp)).strftime("%Y-%m-%d %H:00")
+                hour_str = datetime.fromtimestamp(
+                    _normalize_timestamp(timestamp)
+                ).strftime("%Y-%m-%d %H:00")
                 if hour_str not in hourly_counts:
                     hourly_counts[hour_str] = {}
-                hourly_counts[hour_str][model_id] = hourly_counts[hour_str].get(model_id, 0) + 1
+                hourly_counts[hour_str][model_id] = (
+                    hourly_counts[hour_str].get(model_id, 0) + 1
+                )
 
             # Fill in missing hours
             if start_date and end_date:
-                current = datetime.fromtimestamp(_normalize_timestamp(start_date)).replace(minute=0, second=0, microsecond=0)
+                current = datetime.fromtimestamp(
+                    _normalize_timestamp(start_date)
+                ).replace(minute=0, second=0, microsecond=0)
                 end_dt = datetime.fromtimestamp(_normalize_timestamp(end_date))
                 while current <= end_dt:
                     hour_str = current.strftime("%Y-%m-%d %H:00")

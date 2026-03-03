@@ -1,27 +1,15 @@
 <script lang="ts">
-	import fileSaver from 'file-saver';
-	const { saveAs } = fileSaver;
-
-	import { v4 as uuidv4 } from 'uuid';
+	import { getModels, getTaskConfig, updateTaskConfig } from '$lib/apis';
+	import { config, settings } from '$lib/stores';
+	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
-	import { getBackendConfig, getModels, getTaskConfig, updateTaskConfig } from '$lib/apis';
-	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
-	import { config, settings, user } from '$lib/stores';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
-
-	import { banners as _banners } from '$lib/stores';
-	import type { Banner } from '$lib/types';
-
 	import { getBaseModels } from '$lib/apis/models';
-	import { getBanners, setBanners } from '$lib/apis/configs';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import Banners from './Interface/Banners.svelte';
-	import PromptSuggestions from '$lib/components/workspace/Models/PromptSuggestions.svelte';
 
 	import LangPicker from './LangPicker.svelte';
 
@@ -49,9 +37,6 @@
 		VOICE_MODE_PROMPT_TEMPLATE: ''
 	};
 
-	let promptSuggestions = [];
-	let banners: Banner[] = [];
-
 	const updateInterfaceHandler = async () => {
 		// Trim any spaces from translation languages before saving
 		if (taskConfig.TRANSLATION_LANGUAGES && Array.isArray(taskConfig.TRANSLATION_LANGUAGES)) {
@@ -60,16 +45,6 @@
 				.filter((lang: string) => lang !== '');
 		}
 		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
-
-		promptSuggestions = promptSuggestions.filter((p) => p.content !== '');
-		promptSuggestions = await setDefaultPromptSuggestions(localStorage.token, promptSuggestions);
-		await updateBanners();
-
-		await config.set(await getBackendConfig());
-	};
-
-	const updateBanners = async () => {
-		_banners.set(await setBanners(localStorage.token, banners));
 	};
 
 	let workspaceModels = null;
@@ -78,33 +53,37 @@
 	let models = null;
 
 	const init = async () => {
-		taskConfig = await getTaskConfig(localStorage.token);
-		promptSuggestions = $config?.default_prompt_suggestions ?? [];
-		banners = await getBanners(localStorage.token);
+		try {
+			taskConfig = await getTaskConfig(localStorage.token);
 
-		workspaceModels = await getBaseModels(localStorage.token);
-		baseModels = await getModels(localStorage.token, null, false);
+			workspaceModels = await getBaseModels(localStorage.token);
+			baseModels = await getModels(localStorage.token, null, false);
 
-		models = baseModels.map((m) => {
-			const workspaceModel = workspaceModels.find((wm) => wm.id === m.id);
+			models = baseModels.map((m) => {
+				const workspaceModel = workspaceModels.find((wm) => wm.id === m.id);
 
-			if (workspaceModel) {
-				return {
-					...m,
-					...workspaceModel
-				};
-			} else {
-				return {
-					...m,
-					id: m.id,
-					name: m.name,
+				if (workspaceModel) {
+					return {
+						...m,
+						...workspaceModel
+					};
+				} else {
+					return {
+						...m,
+						id: m.id,
+						name: m.name,
 
-					is_active: true
-				};
-			}
-		});
+						is_active: true
+					};
+				}
+			});
 
-		console.debug('models', models);
+			console.debug('models', models);
+		} catch (err) {
+			console.error('Failed to initialize Interface settings:', err);
+			toast.error(err?.detail ?? err?.message ?? $i18n.t('Failed to load Interface settings'));
+			models = [];
+		}
 	};
 
 	onMount(async () => {
@@ -161,7 +140,15 @@
 								if (taskConfig.TASK_MODEL) {
 									const model = models.find((m) => m.id === taskConfig.TASK_MODEL);
 									if (model) {
-										if (model?.access_control !== null) {
+										if (
+											model?.access_grants &&
+											!model.access_grants.some(
+												(g) =>
+													g.principal_type === 'user' &&
+													g.principal_id === '*' &&
+													g.permission === 'read'
+											)
+										) {
 											toast.error(
 												$i18n.t(
 													'This model is not publicly available. Please select another model.'
@@ -196,7 +183,15 @@
 								if (taskConfig.TASK_MODEL_EXTERNAL) {
 									const model = models.find((m) => m.id === taskConfig.TASK_MODEL_EXTERNAL);
 									if (model) {
-										if (model?.access_control !== null) {
+										if (
+											model?.access_grants &&
+											!model.access_grants.some(
+												(g) =>
+													g.principal_type === 'user' &&
+													g.principal_id === '*' &&
+													g.permission === 'read'
+											)
+										) {
 											toast.error(
 												$i18n.t(
 													'This model is not publicly available. Please select another model.'

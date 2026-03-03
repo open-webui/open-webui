@@ -5,7 +5,8 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 from open_webui.models.users import User, UserModel, UserProfileImageResponse, Users
-from pydantic import BaseModel
+from open_webui.utils.validate import validate_profile_image_url
+from pydantic import BaseModel, field_validator
 from sqlalchemy import Boolean, Column, String, Text
 
 log = logging.getLogger(__name__)
@@ -74,6 +75,13 @@ class SignupForm(BaseModel):
     password: str
     profile_image_url: Optional[str] = "/user.png"
 
+    @field_validator("profile_image_url")
+    @classmethod
+    def check_profile_image_url(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            return validate_profile_image_url(v)
+        return v
+
 
 class AddUserForm(SignupForm):
     role: Optional[str] = "pending"
@@ -138,7 +146,7 @@ class AuthsTable:
     def authenticate_user_by_api_key(
         self, api_key: str, db: Optional[Session] = None
     ) -> Optional[UserModel]:
-        log.info(f"authenticate_user_by_api_key: {api_key}")
+        log.info(f"authenticate_user_by_api_key")
         # if no api_key, return None
         if not api_key:
             return None
@@ -189,7 +197,10 @@ class AuthsTable:
             with get_db_context(db) as db:
                 result = db.query(Auth).filter_by(id=id).update({"email": email})
                 db.commit()
-                return True if result == 1 else False
+                if result == 1:
+                    Users.update_user_by_id(id, {"email": email}, db=db)
+                    return True
+                return False
         except Exception:
             return False
 

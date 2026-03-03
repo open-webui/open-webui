@@ -105,7 +105,9 @@
 							/>
 						{:else if valvesSpec.properties[property]?.input ?? null}
 							{#if valvesSpec.properties[property]?.input?.type === 'password'}
-								<div class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 border border-gray-100/30 dark:border-gray-850/30">
+								<div
+									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 border border-gray-100/30 dark:border-gray-850/30"
+								>
 									<SensitiveInput
 										id="valve-{property}"
 										placeholder={valvesSpec.properties[property]?.description ?? ''}
@@ -124,7 +126,10 @@
 										dispatch('change');
 									}}
 								>
-									<option value="" disabled>{valvesSpec.properties[property]?.description ?? $i18n.t('Select an option')}</option>
+									<option value="" disabled
+										>{valvesSpec.properties[property]?.description ??
+											$i18n.t('Select an option')}</option
+									>
 									{#each valvesSpec.properties[property].input.options as option}
 										{#if typeof option === 'object' && option !== null}
 											<option value={option.value} selected={option.value === valves[property]}>

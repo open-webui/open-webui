@@ -22,7 +22,6 @@ from sqlalchemy.orm import Session
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 
-
 log = logging.getLogger(__name__)
 
 router = APIRouter()

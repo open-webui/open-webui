@@ -309,14 +309,27 @@
 										bind:value={url}
 										placeholder={$i18n.t('API Base URL')}
 										autocomplete="off"
+										list={ollama ? undefined : 'suggestions'}
 										required
 									/>
+
+									{#if !ollama}
+										<datalist id="suggestions">
+											<option value="https://api.openai.com/v1" />
+											<option value="https://api.anthropic.com/v1" />
+											<option value="https://generativelanguage.googleapis.com/v1beta/openai" />
+											<option value="https://api.mistral.ai/v1" />
+											<option value="https://api.groq.com/openai/v1" />
+											<option value="https://openrouter.ai/api/v1" />
+											<option value="https://api.x.ai/v1" />
+										</datalist>
+									{/if}
 								</div>
 							</div>
 
 							<Tooltip content={$i18n.t('Verify Connection')} className="self-end -mb-1">
 								<button
-									class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
+									class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition"
 									on:click={() => {
 										verifyHandler();
 									}}

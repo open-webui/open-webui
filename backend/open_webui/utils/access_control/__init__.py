@@ -139,16 +139,48 @@ def has_access(
             continue
         principal_type = grant.get("principal_type")
         principal_id = grant.get("principal_id")
-        if principal_type == "user" and (principal_id == "*" or principal_id == user_id):
+        if principal_type == "user" and (
+            principal_id == "*" or principal_id == user_id
+        ):
             return True
-        if principal_type == "group" and user_group_ids and principal_id in user_group_ids:
+        if (
+            principal_type == "group"
+            and user_group_ids
+            and principal_id in user_group_ids
+        ):
             return True
-
 
     return False
 
 
-def migrate_access_control(data: dict, ac_key: str = "access_control", grants_key: str = "access_grants") -> None:
+def has_connection_access(
+    user: UserModel,
+    connection: dict,
+    user_group_ids: Optional[Set[str]] = None,
+) -> bool:
+    """
+    Check if a user can access a server connection (tool server, terminal, etc.)
+    based on ``config.access_grants`` within the connection dict.
+
+    - Admin with BYPASS_ADMIN_ACCESS_CONTROL → always allowed
+    - Missing, None, or empty access_grants → private, admin-only
+    - access_grants has entries → delegates to ``has_access``
+    """
+    from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
+
+    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
+        return True
+
+    if user_group_ids is None:
+        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
+
+    access_grants = (connection.get("config") or {}).get("access_grants", [])
+    return has_access(user.id, "read", access_grants, user_group_ids)
+
+
+def migrate_access_control(
+    data: dict, ac_key: str = "access_control", grants_key: str = "access_grants"
+) -> None:
     """
     Auto-migrate a config dict in-place from legacy access_control dict to access_grants list.
 
@@ -169,17 +201,81 @@ def migrate_access_control(data: dict, ac_key: str = "access_control", grants_ke
             if not perm_data:
                 continue
             for group_id in perm_data.get("group_ids", []):
-                grants.append({
-                    "principal_type": "group",
-                    "principal_id": group_id,
-                    "permission": perm,
-                })
+                grants.append(
+                    {
+                        "principal_type": "group",
+                        "principal_id": group_id,
+                        "permission": perm,
+                    }
+                )
             for uid in perm_data.get("user_ids", []):
-                grants.append({
-                    "principal_type": "user",
-                    "principal_id": uid,
-                    "permission": perm,
-                })
+                grants.append(
+                    {
+                        "principal_type": "user",
+                        "principal_id": uid,
+                        "permission": perm,
+                    }
+                )
 
     data[grants_key] = grants
     data.pop(ac_key, None)
+
+
+from open_webui.models.access_grants import (
+    has_public_read_access_grant,
+    has_user_access_grant,
+    strip_user_access_grants,
+)
+
+
+def filter_allowed_access_grants(
+    default_permissions: Dict[str, Any],
+    user_id: str,
+    user_role: str,
+    access_grants: list,
+    public_permission_key: str,
+    db: Optional[Any] = None,
+) -> list:
+    """
+    Checks if the user has the required permissions to grant access to a resource.
+    Returns the filtered list of access grants if permissions are missing.
+    """
+    if user_role == "admin" or not access_grants:
+        return access_grants
+
+    # Check if user can share publicly
+    if has_public_read_access_grant(access_grants) and not has_permission(
+        user_id,
+        public_permission_key,
+        default_permissions,
+        db=db,
+    ):
+        access_grants = [
+            grant
+            for grant in access_grants
+            if not (
+                (
+                    grant.get("principal_type")
+                    if isinstance(grant, dict)
+                    else getattr(grant, "principal_type", None)
+                )
+                == "user"
+                and (
+                    grant.get("principal_id")
+                    if isinstance(grant, dict)
+                    else getattr(grant, "principal_id", None)
+                )
+                == "*"
+            )
+        ]
+
+    # Strip individual user sharing if user lacks permission
+    if has_user_access_grant(access_grants) and not has_permission(
+        user_id,
+        "access_grants.allow_users",
+        default_permissions,
+        db=db,
+    ):
+        access_grants = strip_user_access_grants(access_grants)
+
+    return access_grants

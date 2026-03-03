@@ -86,4 +86,3 @@ async def generate_embeddings(
         form_data=form_data,
         user=user,
     )
-

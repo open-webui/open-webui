@@ -18,6 +18,7 @@ async-timeout
 aiocache
 aiofiles
 starlette-compress==1.7.0
+Brotli==1.1.0
 httpx[socks,http2,zstd,cli,brotli]==0.28.1
 starsessions[redis]==2.2.1
 python-mimeparse==2.0.0

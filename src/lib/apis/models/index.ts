@@ -284,6 +284,7 @@ export const updateModelById = async (token: string, id: string, model: object) 
 export const updateModelAccessGrants = async (
 	token: string,
 	id: string,
+	name: string,
 	accessGrants: any[]
 ) => {
 	let error = null;
@@ -295,7 +296,7 @@ export const updateModelAccessGrants = async (
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({ id, access_grants: accessGrants })
+		body: JSON.stringify({ id, name, access_grants: accessGrants })
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

@@ -322,7 +322,7 @@ JWT_EXPIRES_IN = PersistentConfig(
 if JWT_EXPIRES_IN.value == "-1":
     log.warning(
         "⚠️  SECURITY WARNING: JWT_EXPIRES_IN is set to '-1'\n"
-        "    See: https://docs.openwebui.com/getting-started/env-configuration\n"
+        "    See: https://docs.openwebui.com/reference/env-configuration\n"
     )
 
 ####################################
@@ -573,6 +573,20 @@ ENABLE_OAUTH_GROUP_CREATION = PersistentConfig(
 )
 
 
+oauth_group_default_share = (
+    os.environ.get("OAUTH_GROUP_DEFAULT_SHARE", "true").strip().lower()
+)
+OAUTH_GROUP_DEFAULT_SHARE = PersistentConfig(
+    "OAUTH_GROUP_DEFAULT_SHARE",
+    "oauth.group_default_share",
+    (
+        "members"
+        if oauth_group_default_share == "members"
+        else oauth_group_default_share == "true"
+    ),
+)
+
+
 OAUTH_BLOCKED_GROUPS = PersistentConfig(
     "OAUTH_BLOCKED_GROUPS",
     "oauth.blocked_groups",
@@ -626,6 +640,18 @@ OAUTH_UPDATE_PICTURE_ON_LOGIN = PersistentConfig(
     "OAUTH_UPDATE_PICTURE_ON_LOGIN",
     "oauth.update_picture_on_login",
     os.environ.get("OAUTH_UPDATE_PICTURE_ON_LOGIN", "False").lower() == "true",
+)
+
+OAUTH_UPDATE_NAME_ON_LOGIN = PersistentConfig(
+    "OAUTH_UPDATE_NAME_ON_LOGIN",
+    "oauth.update_name_on_login",
+    os.environ.get("OAUTH_UPDATE_NAME_ON_LOGIN", "False").lower() == "true",
+)
+
+OAUTH_UPDATE_EMAIL_ON_LOGIN = PersistentConfig(
+    "OAUTH_UPDATE_EMAIL_ON_LOGIN",
+    "oauth.update_email_on_login",
+    os.environ.get("OAUTH_UPDATE_EMAIL_ON_LOGIN", "False").lower() == "true",
 )
 
 OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID = (
@@ -1158,6 +1184,20 @@ TOOL_SERVER_CONNECTIONS = PersistentConfig(
 )
 
 ####################################
+# TERMINAL_SERVER
+####################################
+
+terminal_server_connections = json.loads(
+    os.environ.get("TERMINAL_SERVER_CONNECTIONS", "[]")
+)
+
+TERMINAL_SERVER_CONNECTIONS = PersistentConfig(
+    "TERMINAL_SERVER_CONNECTIONS",
+    "terminal_server.connections",
+    terminal_server_connections,
+)
+
+####################################
 # WEBUI
 ####################################
 
@@ -1249,6 +1289,18 @@ MODEL_ORDER_LIST = PersistentConfig(
     [],
 )
 
+DEFAULT_MODEL_METADATA = PersistentConfig(
+    "DEFAULT_MODEL_METADATA",
+    "models.default_metadata",
+    {},
+)
+
+DEFAULT_MODEL_PARAMS = PersistentConfig(
+    "DEFAULT_MODEL_PARAMS",
+    "models.default_params",
+    {},
+)
+
 DEFAULT_USER_ROLE = PersistentConfig(
     "DEFAULT_USER_ROLE",
     "ui.default_user_role",
@@ -1298,6 +1350,11 @@ USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS = (
 
 USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS = (
     os.environ.get("USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS", "False").lower() == "true"
+)
+
+USER_PERMISSIONS_WORKSPACE_SKILLS_ACCESS = (
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_SKILLS_ACCESS", "False").lower()
+    == "true"
 )
 
 USER_PERMISSIONS_WORKSPACE_MODELS_IMPORT = (
@@ -1380,6 +1437,18 @@ USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_PUBLIC_SHARING = (
     == "true"
 )
 
+USER_PERMISSIONS_WORKSPACE_SKILLS_ALLOW_SHARING = (
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_SKILLS_ALLOW_SHARING", "False").lower()
+    == "true"
+)
+
+USER_PERMISSIONS_WORKSPACE_SKILLS_ALLOW_PUBLIC_SHARING = (
+    os.environ.get(
+        "USER_PERMISSIONS_WORKSPACE_SKILLS_ALLOW_PUBLIC_SHARING", "False"
+    ).lower()
+    == "true"
+)
+
 
 USER_PERMISSIONS_NOTES_ALLOW_SHARING = (
     os.environ.get("USER_PERMISSIONS_NOTES_ALLOW_SHARING", "False").lower() == "true"
@@ -1387,6 +1456,11 @@ USER_PERMISSIONS_NOTES_ALLOW_SHARING = (
 
 USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING = (
     os.environ.get("USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING", "False").lower()
+    == "true"
+)
+
+USER_PERMISSIONS_ACCESS_GRANTS_ALLOW_USERS = (
+    os.environ.get("USER_PERMISSIONS_ACCESS_GRANTS_ALLOW_USERS", "True").lower()
     == "true"
 )
 
@@ -1409,6 +1483,10 @@ USER_PERMISSIONS_CHAT_PARAMS = (
 
 USER_PERMISSIONS_CHAT_FILE_UPLOAD = (
     os.environ.get("USER_PERMISSIONS_CHAT_FILE_UPLOAD", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_WEB_UPLOAD = (
+    os.environ.get("USER_PERMISSIONS_CHAT_WEB_UPLOAD", "True").lower() == "true"
 )
 
 USER_PERMISSIONS_CHAT_DELETE = (
@@ -1521,6 +1599,7 @@ DEFAULT_USER_PERMISSIONS = {
         "knowledge": USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS,
         "prompts": USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS,
         "tools": USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS,
+        "skills": USER_PERMISSIONS_WORKSPACE_SKILLS_ACCESS,
         "models_import": USER_PERMISSIONS_WORKSPACE_MODELS_IMPORT,
         "models_export": USER_PERMISSIONS_WORKSPACE_MODELS_EXPORT,
         "prompts_import": USER_PERMISSIONS_WORKSPACE_PROMPTS_IMPORT,
@@ -1537,8 +1616,13 @@ DEFAULT_USER_PERMISSIONS = {
         "public_prompts": USER_PERMISSIONS_WORKSPACE_PROMPTS_ALLOW_PUBLIC_SHARING,
         "tools": USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_SHARING,
         "public_tools": USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_PUBLIC_SHARING,
+        "skills": USER_PERMISSIONS_WORKSPACE_SKILLS_ALLOW_SHARING,
+        "public_skills": USER_PERMISSIONS_WORKSPACE_SKILLS_ALLOW_PUBLIC_SHARING,
         "notes": USER_PERMISSIONS_NOTES_ALLOW_SHARING,
         "public_notes": USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING,
+    },
+    "access_grants": {
+        "allow_users": USER_PERMISSIONS_ACCESS_GRANTS_ALLOW_USERS,
     },
     "chat": {
         "controls": USER_PERMISSIONS_CHAT_CONTROLS,
@@ -1546,6 +1630,7 @@ DEFAULT_USER_PERMISSIONS = {
         "system_prompt": USER_PERMISSIONS_CHAT_SYSTEM_PROMPT,
         "params": USER_PERMISSIONS_CHAT_PARAMS,
         "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
+        "web_upload": USER_PERMISSIONS_CHAT_WEB_UPLOAD,
         "delete": USER_PERMISSIONS_CHAT_DELETE,
         "delete_message": USER_PERMISSIONS_CHAT_DELETE_MESSAGE,
         "continue_response": USER_PERMISSIONS_CHAT_CONTINUE_RESPONSE,
@@ -1656,6 +1741,10 @@ BYPASS_ADMIN_ACCESS_CONTROL = (
 
 ENABLE_ADMIN_CHAT_ACCESS = (
     os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "true"
+)
+
+ENABLE_ADMIN_ANALYTICS = (
+    os.environ.get("ENABLE_ADMIN_ANALYTICS", "True").lower() == "true"
 )
 
 ENABLE_COMMUNITY_SHARING = PersistentConfig(
@@ -2293,7 +2382,9 @@ WEAVIATE_GRPC_PORT = int(os.environ.get("WEAVIATE_GRPC_PORT", "50051"))
 WEAVIATE_API_KEY = os.environ.get("WEAVIATE_API_KEY")
 WEAVIATE_HTTP_SECURE = os.environ.get("WEAVIATE_HTTP_SECURE", "false").lower() == "true"
 WEAVIATE_GRPC_SECURE = os.environ.get("WEAVIATE_GRPC_SECURE", "false").lower() == "true"
-WEAVIATE_SKIP_INIT_CHECKS = os.environ.get("WEAVIATE_SKIP_INIT_CHECKS", "false").lower() == "true"
+WEAVIATE_SKIP_INIT_CHECKS = (
+    os.environ.get("WEAVIATE_SKIP_INIT_CHECKS", "false").lower() == "true"
+)
 
 # OpenSearch
 OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")
@@ -2887,6 +2978,12 @@ ENABLE_ASYNC_EMBEDDING = PersistentConfig(
     os.environ.get("ENABLE_ASYNC_EMBEDDING", "True").lower() == "true",
 )
 
+RAG_EMBEDDING_CONCURRENT_REQUESTS = PersistentConfig(
+    "RAG_EMBEDDING_CONCURRENT_REQUESTS",
+    "rag.embedding_concurrent_requests",
+    int(os.getenv("RAG_EMBEDDING_CONCURRENT_REQUESTS", "0")),
+)
+
 RAG_EMBEDDING_QUERY_PREFIX = os.environ.get("RAG_EMBEDDING_QUERY_PREFIX", None)
 
 RAG_EMBEDDING_CONTENT_PREFIX = os.environ.get("RAG_EMBEDDING_CONTENT_PREFIX", None)
@@ -3120,17 +3217,24 @@ WEB_SEARCH_RESULT_COUNT = PersistentConfig(
 )
 
 
+try:
+    web_search_domain_filter_list = json.loads(
+        os.getenv("WEB_SEARCH_DOMAIN_FILTER_LIST", "[]")
+    )
+except Exception as e:
+    web_search_domain_filter_list = [
+        # "wikipedia.com",
+        # "wikimedia.org",
+        # "wikidata.org",
+        # "!stackoverflow.com",
+    ]
+
 # You can provide a list of your own websites to filter after performing a web search.
 # This ensures the highest level of safety and reliability of the information sources.
 WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
     "WEB_SEARCH_DOMAIN_FILTER_LIST",
     "rag.web.search.domain.filter_list",
-    [
-        # "wikipedia.com",
-        # "wikimedia.org",
-        # "wikidata.org",
-        # "!stackoverflow.com",
-    ],
+    web_search_domain_filter_list,
 )
 
 WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
@@ -3469,6 +3573,12 @@ YANDEX_WEB_SEARCH_CONFIG = PersistentConfig(
     os.environ.get("YANDEX_WEB_SEARCH_CONFIG", ""),
 )
 
+YOUCOM_API_KEY = PersistentConfig(
+    "YOUCOM_API_KEY",
+    "rag.web.search.youcom_api_key",
+    os.environ.get("YOUCOM_API_KEY", ""),
+)
+
 ####################################
 # Images
 ####################################
@@ -3492,10 +3602,14 @@ IMAGE_GENERATION_MODEL = PersistentConfig(
 )
 
 # Regex pattern for models that support IMAGE_SIZE = "auto".
-IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN = os.getenv("IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN", "^gpt-image")
+IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN = os.getenv(
+    "IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN", "^gpt-image"
+)
 
 # Regex pattern for models that return URLs instead of base64 data.
-IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN = os.getenv("IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN", "^gpt-image")
+IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN = os.getenv(
+    "IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN", "^gpt-image"
+)
 
 IMAGE_SIZE = PersistentConfig(
     "IMAGE_SIZE", "image_generation.size", os.getenv("IMAGE_SIZE", "512x512")

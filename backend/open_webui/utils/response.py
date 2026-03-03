@@ -68,7 +68,7 @@ def convert_ollama_usage_to_openai(data: dict) -> dict:
     input_tokens = int(data.get("prompt_eval_count", 0))
     output_tokens = int(data.get("eval_count", 0))
     total_tokens = input_tokens + output_tokens
-    
+
     return {
         # Standardized fields
         "input_tokens": input_tokens,
@@ -144,6 +144,7 @@ def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
 
 
 async def convert_streaming_response_ollama_to_openai(ollama_streaming_response):
+    has_tool_calls = False
     async for data in ollama_streaming_response.body_iterator:
         data = json.loads(data)
 
@@ -155,6 +156,7 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
 
         if tool_calls:
             openai_tool_calls = convert_ollama_tool_call_to_openai(tool_calls)
+            has_tool_calls = True
 
         done = data.get("done", False)
 
@@ -165,6 +167,9 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
         data = openai_chat_chunk_message_template(
             model, message_content, reasoning_content, openai_tool_calls, usage
         )
+
+        if done and has_tool_calls:
+            data["choices"][0]["finish_reason"] = "tool_calls"
 
         line = f"data: {json.dumps(data)}\n\n"
         yield line

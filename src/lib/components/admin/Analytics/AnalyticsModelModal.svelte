@@ -32,7 +32,13 @@
 	let loadingOverview = false;
 
 	// Chats tab state
-	let chatList: Array<{ id: string; title: string; updated_at: number; user_id?: string; user_name?: string }> = [];
+	let chatList: Array<{
+		id: string;
+		title: string;
+		updated_at: number;
+		user_id?: string;
+		user_name?: string;
+	}> = [];
 	let chatListLoading = false;
 	let allChatsLoaded = false;
 	const PAGE_SIZE = 50;
@@ -76,7 +82,14 @@
 		chatList = [];
 		allChatsLoaded = false;
 		try {
-			const res = await getModelChats(localStorage.token, model.id, startDate, endDate, 0, PAGE_SIZE);
+			const res = await getModelChats(
+				localStorage.token,
+				model.id,
+				startDate,
+				endDate,
+				0,
+				PAGE_SIZE
+			);
 			const chats = res?.chats ?? [];
 			chatList = chats.map((c: any) => ({
 				id: c.chat_id,
@@ -99,7 +112,14 @@
 		chatListLoading = true;
 		try {
 			const skip = chatList.length;
-			const res = await getModelChats(localStorage.token, model.id, startDate, endDate, skip, PAGE_SIZE);
+			const res = await getModelChats(
+				localStorage.token,
+				model.id,
+				startDate,
+				endDate,
+				skip,
+				PAGE_SIZE
+			);
 			const chats = res?.chats ?? [];
 			const newChats = chats.map((c: any) => ({
 				id: c.chat_id,
@@ -157,14 +177,14 @@
 					{$i18n.t('Overview')}
 				</button>
 				{#if $config?.features?.enable_admin_chat_access}
-				<button
-					class="py-2 text-sm font-medium border-b-2 transition-colors {selectedTab === 'chats'
-						? 'border-black dark:border-white text-gray-900 dark:text-white'
-						: 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}"
-					on:click={() => selectTab('chats')}
-				>
-					{$i18n.t('Chats')}
-				</button>
+					<button
+						class="py-2 text-sm font-medium border-b-2 transition-colors {selectedTab === 'chats'
+							? 'border-black dark:border-white text-gray-900 dark:text-white'
+							: 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}"
+						on:click={() => selectTab('chats')}
+					>
+						{$i18n.t('Chats')}
+					</button>
 				{/if}
 			</div>
 		</div>
@@ -175,10 +195,10 @@
 				<div class="mb-4 mt-3">
 					<div class="flex items-center justify-between mb-2">
 						<Tooltip content={$i18n.t('Thumbs up/down ratings from users on model responses')}>
-						<div class="text-xs text-gray-500 font-medium uppercase tracking-wide cursor-help">
-							{$i18n.t('Feedback Activity')}
-						</div>
-					</Tooltip>
+							<div class="text-xs text-gray-500 font-medium uppercase tracking-wide cursor-help">
+								{$i18n.t('Feedback Activity')}
+							</div>
+						</Tooltip>
 						<div
 							class="inline-flex rounded-full bg-gray-100/80 p-0.5 dark:bg-gray-800/80 backdrop-blur-sm"
 						>

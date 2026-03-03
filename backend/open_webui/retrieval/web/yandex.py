@@ -31,14 +31,14 @@ def xml_element_contents_to_string(element: Element) -> str:
 
 
 def search_yandex(
-        request: Request,
-        yandex_search_url: str,
-        yandex_search_api_key: str,
-        yandex_search_config: str,
-        query: str,
-        count: int,
-        filter_list: Optional[List[str]] = None,
-        user=None,
+    request: Request,
+    yandex_search_url: str,
+    yandex_search_api_key: str,
+    yandex_search_config: str,
+    query: str,
+    count: int,
+    filter_list: Optional[List[str]] = None,
+    user=None,
 ) -> List[SearchResult]:
     try:
         headers = {
@@ -73,7 +73,11 @@ def search_yandex(
         payload["groupSpec"]["docsInGroup"] = 1
 
         response = requests.post(
-            "https://searchapi.api.cloud.yandex.net/v2/web/search" if yandex_search_url == "" else yandex_search_url,
+            (
+                "https://searchapi.api.cloud.yandex.net/v2/web/search"
+                if yandex_search_url == ""
+                else yandex_search_url
+            ),
             headers=headers,
             json=payload,
         )
@@ -84,18 +88,28 @@ def search_yandex(
         if "rawData" not in response_body:
             raise Exception(f"No `rawData` in response body: {response_body}")
 
-        search_result_body_bytes = base64.decodebytes(bytes(response_body["rawData"], "utf-8"))
+        search_result_body_bytes = base64.decodebytes(
+            bytes(response_body["rawData"], "utf-8")
+        )
 
         doc_root = ET.parse(io.BytesIO(search_result_body_bytes))
 
         results = []
 
         for group in doc_root.findall("response/results/grouping/group"):
-            results.append({
-                "url": xml_element_contents_to_string(group.find("doc/url")).strip("\n"),
-                "title": xml_element_contents_to_string(group.find("doc/title")).strip("\n"),
-                "snippet": xml_element_contents_to_string(group.find("doc/passages/passage")),
-            })
+            results.append(
+                {
+                    "url": xml_element_contents_to_string(group.find("doc/url")).strip(
+                        "\n"
+                    ),
+                    "title": xml_element_contents_to_string(
+                        group.find("doc/title")
+                    ).strip("\n"),
+                    "snippet": xml_element_contents_to_string(
+                        group.find("doc/passages/passage")
+                    ),
+                }
+            )
 
         results = get_filtered_results(results, filter_list)
 
@@ -140,7 +154,9 @@ if __name__ == "__main__":
         ),
         os.environ.get("YANDEX_WEB_SEARCH_URL", ""),
         os.environ.get("YANDEX_WEB_SEARCH_API_KEY", ""),
-        os.environ.get("YANDEX_WEB_SEARCH_CONFIG", "{\"query\": {\"searchType\": \"SEARCH_TYPE_COM\"}}"),
+        os.environ.get(
+            "YANDEX_WEB_SEARCH_CONFIG", '{"query": {"searchType": "SEARCH_TYPE_COM"}}'
+        ),
         "TOP movies of the past year",
         3,
     )

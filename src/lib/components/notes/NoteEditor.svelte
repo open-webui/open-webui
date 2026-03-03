@@ -60,7 +60,12 @@
 	// Assuming $i18n.languages is an array of language codes
 	$: loadLocale($i18n.languages);
 
-	import { deleteNoteById, getNoteById, updateNoteById, updateNoteAccessGrants } from '$lib/apis/notes';
+	import {
+		deleteNoteById,
+		getNoteById,
+		updateNoteById,
+		updateNoteAccessGrants
+	} from '$lib/apis/notes';
 
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import Spinner from '../common/Spinner.svelte';
@@ -866,6 +871,9 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 		bind:show={showAccessControlModal}
 		bind:accessGrants={note.access_grants}
 		accessRoles={['read', 'write']}
+		share={$user?.permissions?.sharing?.notes || $user?.role === 'admin'}
+		sharePublic={$user?.permissions?.sharing?.public_notes || $user?.role === 'admin'}
+		shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) || $user?.role === 'admin'}
 		onChange={async () => {
 			if (id) {
 				try {

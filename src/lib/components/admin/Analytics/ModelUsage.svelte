@@ -41,9 +41,7 @@
 
 	$: sortedModels = [...modelStats].sort((a, b) => {
 		if (orderBy === 'name') {
-			return direction === 'asc'
-				? a.name.localeCompare(b.name)
-				: b.name.localeCompare(a.name);
+			return direction === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
 		}
 		return direction === 'asc' ? a.count - b.count : b.count - a.count;
 	});
@@ -53,16 +51,22 @@
 	onMount(loadAnalytics);
 </script>
 
-<div class="pt-0.5 pb-1 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-white dark:bg-gray-900">
+<div
+	class="pt-0.5 pb-1 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-white dark:bg-gray-900"
+>
 	<div class="flex items-center text-xl font-medium px-0.5 gap-2 shrink-0">
 		{$i18n.t('Model Usage')}
 		<span class="text-lg text-gray-500">{totalMessages} {$i18n.t('messages')}</span>
 	</div>
 </div>
 
-<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded-sm min-h-[100px]">
+<div
+	class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded-sm min-h-[100px]"
+>
 	{#if loading}
-		<div class="absolute inset-0 flex items-center justify-center z-10 bg-white/50 dark:bg-gray-900/50">
+		<div
+			class="absolute inset-0 flex items-center justify-center z-10 bg-white/50 dark:bg-gray-900/50"
+		>
 			<Spinner className="size-5" />
 		</div>
 	{/if}
@@ -70,7 +74,11 @@
 	{#if !modelStats.length && !loading}
 		<div class="text-center text-xs text-gray-500 py-1">{$i18n.t('No data found')}</div>
 	{:else if modelStats.length}
-		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 {loading ? 'opacity-20' : ''}">
+		<table
+			class="w-full text-sm text-left text-gray-500 dark:text-gray-400 {loading
+				? 'opacity-20'
+				: ''}"
+		>
 			<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
 				<tr class="border-b-[1.5px] border-gray-50 dark:border-gray-850/30">
 					<th scope="col" class="px-2.5 py-2 w-8">#</th>
@@ -82,7 +90,9 @@
 						<div class="flex gap-1.5 items-center">
 							{$i18n.t('Model')}
 							{#if orderBy === 'name'}
-								{#if direction === 'asc'}<ChevronUp className="size-2" />{:else}<ChevronDown className="size-2" />{/if}
+								{#if direction === 'asc'}<ChevronUp className="size-2" />{:else}<ChevronDown
+										className="size-2"
+									/>{/if}
 							{:else}
 								<span class="invisible"><ChevronUp className="size-2" /></span>
 							{/if}
@@ -96,18 +106,37 @@
 						<div class="flex gap-1.5 items-center justify-end">
 							{$i18n.t('Messages')}
 							{#if orderBy === 'count'}
-								{#if direction === 'asc'}<ChevronUp className="size-2" />{:else}<ChevronDown className="size-2" />{/if}
+								{#if direction === 'asc'}<ChevronUp className="size-2" />{:else}<ChevronDown
+										className="size-2"
+									/>{/if}
 							{:else}
 								<span class="invisible"><ChevronUp className="size-2" /></span>
 							{/if}
 						</div>
 					</th>
-					<th scope="col" class="px-2.5 py-2 text-right w-24">{$i18n.t('Share')}</th>
+					<th
+						scope="col"
+						class="px-2.5 py-2 cursor-pointer select-none text-right w-24"
+						on:click={() => toggleSort('percentage')}
+					>
+						<div class="flex gap-1.5 items-center justify-end">
+							{$i18n.t('Share')}
+							{#if orderBy === 'percentage'}
+								{#if direction === 'asc'}<ChevronUp className="size-2" />{:else}<ChevronDown
+										className="size-2"
+									/>{/if}
+							{:else}
+								<span class="invisible"><ChevronUp className="size-2" /></span>
+							{/if}
+						</div>
+					</th>
 				</tr>
 			</thead>
 			<tbody>
 				{#each sortedModels as model, idx (model.model_id)}
-					<tr class="bg-white dark:bg-gray-900 text-xs hover:bg-gray-50 dark:hover:bg-gray-850/50 transition">
+					<tr
+						class="bg-white dark:bg-gray-900 text-xs hover:bg-gray-50 dark:hover:bg-gray-850/50 transition"
+					>
 						<td class="px-3 py-1.5 font-medium text-gray-900 dark:text-white">
 							{idx + 1}
 						</td>
@@ -116,7 +145,10 @@
 								<img
 									src="{WEBUI_API_BASE_URL}/models/model/profile/image?id={model.model_id}"
 									alt={model.name}
-									class="size-5 rounded-full object-cover"
+									class="size-5 rounded-full object-cover shrink-0"
+									on:error={(e) => {
+										e.target.src = '/favicon.png';
+									}}
 								/>
 								<span class="font-medium text-gray-800 dark:text-gray-200">{model.name}</span>
 							</div>

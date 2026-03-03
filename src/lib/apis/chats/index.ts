@@ -255,11 +255,7 @@ export const getArchivedChatList = async (
 	}));
 };
 
-export const getSharedChatList = async (
-	token: string = '',
-	page: number = 1,
-	filter?: object
-) => {
+export const getSharedChatList = async (token: string = '', page: number = 1, filter?: object) => {
 	let error = null;
 
 	const searchParams = new URLSearchParams();

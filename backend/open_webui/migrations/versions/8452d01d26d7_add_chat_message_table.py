@@ -127,6 +127,11 @@ def upgrade() -> None:
 
             timestamp = message.get("timestamp", now)
 
+            try:
+                timestamp = int(float(timestamp))
+            except Exception as e:
+                timestamp = now
+
             # Normalize timestamp: convert ms to seconds, validate range
             if timestamp > 10_000_000_000:
                 timestamp = timestamp // 1000
@@ -165,7 +170,9 @@ def upgrade() -> None:
                 log.warning(f"Failed to insert message {message_id}: {e}")
                 continue
 
-    log.info(f"Backfilled {messages_inserted} messages into chat_message table ({messages_failed} failed)")
+    log.info(
+        f"Backfilled {messages_inserted} messages into chat_message table ({messages_failed} failed)"
+    )
 
 
 def downgrade() -> None:

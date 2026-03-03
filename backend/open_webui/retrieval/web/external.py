@@ -10,7 +10,6 @@ from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.env import FORWARD_SESSION_INFO_HEADER_CHAT_ID
 
-
 log = logging.getLogger(__name__)
 
 

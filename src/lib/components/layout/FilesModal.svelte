@@ -339,7 +339,9 @@
 										<div class="flex justify-end pl-2.5 text-gray-600 dark:text-gray-300">
 											<Tooltip content={shiftKey ? $i18n.t('Delete File') : $i18n.t('Delete File')}>
 												<button
-													class="self-center w-fit px-1 text-sm rounded-xl {shiftKey ? 'text-red-500' : ''}"
+													class="self-center w-fit px-1 text-sm rounded-xl {shiftKey
+														? 'text-red-500'
+														: ''}"
 													on:click|stopPropagation={() => {
 														if (shiftKey) {
 															deleteHandler(file.id);
@@ -365,7 +367,9 @@
 										}
 									}}
 								>
-									<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
+									<div
+										class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
+									>
 										<Spinner className="size-4" />
 										<div>{$i18n.t('Loading...')}</div>
 									</div>

@@ -88,25 +88,29 @@ async def get_user_analytics(
     token_usage = ChatMessages.get_token_usage_by_user(
         start_date=start_date, end_date=end_date, db=db
     )
-    
+
     # Get user info for top users
-    top_user_ids = [uid for uid, _ in sorted(counts.items(), key=lambda x: -x[1])[:limit]]
+    top_user_ids = [
+        uid for uid, _ in sorted(counts.items(), key=lambda x: -x[1])[:limit]
+    ]
     user_info = {u.id: u for u in Users.get_users_by_user_ids(top_user_ids, db=db)}
-    
+
     users = []
     for user_id in top_user_ids:
         u = user_info.get(user_id)
         tokens = token_usage.get(user_id, {})
-        users.append(UserAnalyticsEntry(
-            user_id=user_id,
-            name=u.name if u else None,
-            email=u.email if u else None,
-            count=counts[user_id],
-            input_tokens=tokens.get("input_tokens", 0),
-            output_tokens=tokens.get("output_tokens", 0),
-            total_tokens=tokens.get("total_tokens", 0),
-        ))
-    
+        users.append(
+            UserAnalyticsEntry(
+                user_id=user_id,
+                name=u.name if u else None,
+                email=u.email if u else None,
+                count=counts[user_id],
+                input_tokens=tokens.get("input_tokens", 0),
+                output_tokens=tokens.get("output_tokens", 0),
+                total_tokens=tokens.get("total_tokens", 0),
+            )
+        )
+
     return UserAnalyticsResponse(users=users)
 
 
@@ -168,7 +172,7 @@ async def get_summary(
     chat_counts = ChatMessages.get_message_count_by_chat(
         start_date=start_date, end_date=end_date, group_id=group_id, db=db
     )
-    
+
     return SummaryResponse(
         total_messages=sum(model_counts.values()),
         total_chats=len(chat_counts),
@@ -317,9 +321,7 @@ async def get_model_chats(
             if isinstance(content, str):
                 first_message = content[:200]
             elif isinstance(content, list):
-                text_parts = [
-                    b.get("text", "") for b in content if isinstance(b, dict)
-                ]
+                text_parts = [b.get("text", "") for b in content if isinstance(b, dict)]
                 first_message = " ".join(text_parts)[:200]
 
         # Get user info
@@ -330,7 +332,6 @@ async def get_model_chats(
 
         # Timestamps from messages
         updated_at = max(m.created_at for m in messages) if messages else 0
-
 
         chats_data.append(
             ModelChatEntry(
@@ -387,24 +388,24 @@ async def get_model_overview(
 
     # Get feedback history per day
     history_counts: dict[str, dict] = defaultdict(lambda: {"won": 0, "lost": 0})
-    
+
     # Calculate start date for history
     now = datetime.now()
     start_dt = None
     if days > 0:
         start_dt = now - timedelta(days=days)
-    
+
     for chat_id in chat_ids:
         feedbacks = Feedbacks.get_feedbacks_by_chat_id(chat_id, db=db)
         for fb in feedbacks:
             if fb.data and "rating" in fb.data:
                 rating = fb.data["rating"]
                 fb_date = datetime.fromtimestamp(fb.created_at)
-                
+
                 # Filter by date range
                 if start_dt and fb_date < start_dt:
                     continue
-                    
+
                 date_str = fb_date.strftime("%Y-%m-%d")
                 if rating == 1:
                     history_counts[date_str]["won"] += 1
@@ -423,15 +424,17 @@ async def get_model_overview(
             current = datetime.strptime(min_date, "%Y-%m-%d")
         else:
             current = now
-            
+
         while current <= end_dt:
             date_str = current.strftime("%Y-%m-%d")
             counts = history_counts.get(date_str, {"won": 0, "lost": 0})
-            history.append(HistoryEntry(
-                date=date_str,
-                won=counts["won"],
-                lost=counts["lost"],
-            ))
+            history.append(
+                HistoryEntry(
+                    date=date_str,
+                    won=counts["won"],
+                    lost=counts["lost"],
+                )
+            )
             current += timedelta(days=1)
 
     # Get chat tags

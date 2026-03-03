@@ -14,7 +14,11 @@ import requests
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 
-from open_webui.config import CACHE_DIR, IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN, IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN
+from open_webui.config import (
+    CACHE_DIR,
+    IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN,
+    IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN,
+)
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.retrieval.web.utils import validate_url
 from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS
@@ -199,9 +203,8 @@ async def update_config(
 
     request.app.state.config.IMAGE_GENERATION_ENGINE = form_data.IMAGE_GENERATION_ENGINE
     set_image_model(request, form_data.IMAGE_GENERATION_MODEL)
-    if (
-        form_data.IMAGE_SIZE == "auto"
-        and not re.match(IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN, form_data.IMAGE_GENERATION_MODEL)
+    if form_data.IMAGE_SIZE == "auto" and not re.match(
+        IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN, form_data.IMAGE_GENERATION_MODEL
     ):
         raise HTTPException(
             status_code=400,
@@ -610,7 +613,10 @@ async def image_generations(
                 ),
                 **(
                     {}
-                    if re.match(IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN, request.app.state.config.IMAGE_GENERATION_MODEL)
+                    if re.match(
+                        IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN,
+                        request.app.state.config.IMAGE_GENERATION_MODEL,
+                    )
                     else {"response_format": "b64_json"}
                 ),
                 **(
@@ -635,7 +641,10 @@ async def image_generations(
 
             for image in res["data"]:
                 if image_url := image.get("url", None):
-                    image_data, content_type = get_image_data(image_url, headers)
+                    image_data, content_type = get_image_data(
+                        image_url,
+                        {k: v for k, v in headers.items() if k != "Content-Type"},
+                    )
                 else:
                     image_data, content_type = get_image_data(image["b64_json"])
 
@@ -843,6 +852,7 @@ class EditImageForm(BaseModel):
     size: Optional[str] = None
     n: Optional[int] = None
     negative_prompt: Optional[str] = None
+    background: Optional[str] = None
 
 
 @router.post("/edit")
@@ -912,7 +922,9 @@ async def image_edits(
             form_data.image = await load_url_image(form_data.image)
         elif isinstance(form_data.image, list):
             # Load all images in parallel for better performance
-            form_data.image = list(await asyncio.gather(*[load_url_image(img) for img in form_data.image]))
+            form_data.image = list(
+                await asyncio.gather(*[load_url_image(img) for img in form_data.image])
+            )
     except Exception as e:
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
 
@@ -946,8 +958,14 @@ async def image_edits(
                 **({"n": form_data.n} if form_data.n else {}),
                 **({"size": size} if size else {}),
                 **(
+                    {"background": form_data.background} if form_data.background else {}
+                ),
+                **(
                     {}
-                    if re.match(IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN, request.app.state.config.IMAGE_EDIT_MODEL)
+                    if re.match(
+                        IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN,
+                        request.app.state.config.IMAGE_EDIT_MODEL,
+                    )
                     else {"response_format": "b64_json"}
                 ),
             }
@@ -978,7 +996,10 @@ async def image_edits(
             images = []
             for image in res["data"]:
                 if image_url := image.get("url", None):
-                    image_data, content_type = get_image_data(image_url, headers)
+                    image_data, content_type = get_image_data(
+                        image_url,
+                        {k: v for k, v in headers.items() if k != "Content-Type"},
+                    )
                 else:
                     image_data, content_type = get_image_data(image["b64_json"])
 

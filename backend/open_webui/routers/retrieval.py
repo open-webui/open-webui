@@ -37,6 +37,7 @@ from langchain_text_splitters import (
 from langchain_core.documents import Document
 
 from open_webui.models.files import FileModel, FileUpdateForm, Files
+from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
 from open_webui.internal.db import get_session, get_db
@@ -77,6 +78,7 @@ from open_webui.retrieval.web.sougou import search_sougou
 from open_webui.retrieval.web.firecrawl import search_firecrawl
 from open_webui.retrieval.web.external import search_external
 from open_webui.retrieval.web.yandex import search_yandex
+from open_webui.retrieval.web.ydc import search_youcom
 
 from open_webui.retrieval.utils import (
     get_content_from_url,
@@ -110,6 +112,7 @@ from open_webui.config import (
 from open_webui.env import (
     DEVICE_TYPE,
     DOCKER,
+    RAG_EMBEDDING_TIMEOUT,
     SENTENCE_TRANSFORMERS_BACKEND,
     SENTENCE_TRANSFORMERS_MODEL_KWARGS,
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
@@ -269,6 +272,7 @@ async def get_status(request: Request):
         "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
         "RAG_EMBEDDING_BATCH_SIZE": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         "ENABLE_ASYNC_EMBEDDING": request.app.state.config.ENABLE_ASYNC_EMBEDDING,
+        "RAG_EMBEDDING_CONCURRENT_REQUESTS": request.app.state.config.RAG_EMBEDDING_CONCURRENT_REQUESTS,
     }
 
 
@@ -280,6 +284,7 @@ async def get_embedding_config(request: Request, user=Depends(get_admin_user)):
         "RAG_EMBEDDING_MODEL": request.app.state.config.RAG_EMBEDDING_MODEL,
         "RAG_EMBEDDING_BATCH_SIZE": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         "ENABLE_ASYNC_EMBEDDING": request.app.state.config.ENABLE_ASYNC_EMBEDDING,
+        "RAG_EMBEDDING_CONCURRENT_REQUESTS": request.app.state.config.RAG_EMBEDDING_CONCURRENT_REQUESTS,
         "openai_config": {
             "url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
             "key": request.app.state.config.RAG_OPENAI_API_KEY,
@@ -320,6 +325,7 @@ class EmbeddingModelUpdateForm(BaseModel):
     RAG_EMBEDDING_MODEL: str
     RAG_EMBEDDING_BATCH_SIZE: Optional[int] = 1
     ENABLE_ASYNC_EMBEDDING: Optional[bool] = True
+    RAG_EMBEDDING_CONCURRENT_REQUESTS: Optional[int] = 0
 
 
 def unload_embedding_model(request: Request):
@@ -353,6 +359,9 @@ async def update_embedding_config(
         )
         request.app.state.config.ENABLE_ASYNC_EMBEDDING = (
             form_data.ENABLE_ASYNC_EMBEDDING
+        )
+        request.app.state.config.RAG_EMBEDDING_CONCURRENT_REQUESTS = (
+            form_data.RAG_EMBEDDING_CONCURRENT_REQUESTS
         )
 
         if request.app.state.config.RAG_EMBEDDING_ENGINE in [
@@ -421,6 +430,7 @@ async def update_embedding_config(
                 else None
             ),
             enable_async=request.app.state.config.ENABLE_ASYNC_EMBEDDING,
+            concurrent_requests=request.app.state.config.RAG_EMBEDDING_CONCURRENT_REQUESTS,
         )
 
         return {
@@ -429,6 +439,7 @@ async def update_embedding_config(
             "RAG_EMBEDDING_MODEL": request.app.state.config.RAG_EMBEDDING_MODEL,
             "RAG_EMBEDDING_BATCH_SIZE": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
             "ENABLE_ASYNC_EMBEDDING": request.app.state.config.ENABLE_ASYNC_EMBEDDING,
+            "RAG_EMBEDDING_CONCURRENT_REQUESTS": request.app.state.config.RAG_EMBEDDING_CONCURRENT_REQUESTS,
             "openai_config": {
                 "url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
                 "key": request.app.state.config.RAG_OPENAI_API_KEY,
@@ -582,6 +593,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "YANDEX_WEB_SEARCH_URL": request.app.state.config.YANDEX_WEB_SEARCH_URL,
             "YANDEX_WEB_SEARCH_API_KEY": request.app.state.config.YANDEX_WEB_SEARCH_API_KEY,
             "YANDEX_WEB_SEARCH_CONFIG": request.app.state.config.YANDEX_WEB_SEARCH_CONFIG,
+            "YOUCOM_API_KEY": request.app.state.config.YOUCOM_API_KEY,
         },
     }
 
@@ -648,6 +660,7 @@ class WebConfig(BaseModel):
     YANDEX_WEB_SEARCH_URL: Optional[str] = None
     YANDEX_WEB_SEARCH_API_KEY: Optional[str] = None
     YANDEX_WEB_SEARCH_CONFIG: Optional[str] = None
+    YOUCOM_API_KEY: Optional[str] = None
 
 
 class ConfigForm(BaseModel):
@@ -1204,6 +1217,7 @@ async def update_rag_config(
         request.app.state.config.YANDEX_WEB_SEARCH_CONFIG = (
             form_data.web.YANDEX_WEB_SEARCH_CONFIG
         )
+        request.app.state.config.YOUCOM_API_KEY = form_data.web.YOUCOM_API_KEY
 
     return {
         "status": True,
@@ -1331,6 +1345,7 @@ async def update_rag_config(
             "YANDEX_WEB_SEARCH_URL": request.app.state.config.YANDEX_WEB_SEARCH_URL,
             "YANDEX_WEB_SEARCH_API_KEY": request.app.state.config.YANDEX_WEB_SEARCH_API_KEY,
             "YANDEX_WEB_SEARCH_CONFIG": request.app.state.config.YANDEX_WEB_SEARCH_CONFIG,
+            "YOUCOM_API_KEY": request.app.state.config.YOUCOM_API_KEY,
         },
     }
 
@@ -1588,16 +1603,22 @@ def save_docs_to_vector_db(
                 else None
             ),
             enable_async=request.app.state.config.ENABLE_ASYNC_EMBEDDING,
+            concurrent_requests=request.app.state.config.RAG_EMBEDDING_CONCURRENT_REQUESTS,
         )
 
-        # Run async embedding in sync context
-        embeddings = asyncio.run(
+        # Run async embedding in sync context using the main event loop
+        # This allows the main loop to stay responsive to health checks during long operations
+        embedding_timeout = RAG_EMBEDDING_TIMEOUT
+
+        future = asyncio.run_coroutine_threadsafe(
             embedding_function(
                 list(map(lambda x: x.replace("\n", " "), texts)),
                 prefix=RAG_EMBEDDING_CONTENT_PREFIX,
                 user=user,
-            )
+            ),
+            request.app.state.main_loop,
         )
+        embeddings = future.result(timeout=embedding_timeout)
         log.info(f"embeddings generated {len(embeddings)} for {len(texts)} items")
 
         items = [
@@ -1740,6 +1761,7 @@ def process_file(
                         DOCLING_API_KEY=request.app.state.config.DOCLING_API_KEY,
                         DOCLING_PARAMS=request.app.state.config.DOCLING_PARAMS,
                         PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
+                        PDF_LOADER_MODE=request.app.state.config.PDF_LOADER_MODE,
                         DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                         DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
                         DOCUMENT_INTELLIGENCE_MODEL=request.app.state.config.DOCUMENT_INTELLIGENCE_MODEL,
@@ -1927,6 +1949,9 @@ async def process_web(
     request: Request,
     form_data: ProcessUrlForm,
     process: bool = Query(True, description="Whether to process and save the content"),
+    overwrite: bool = Query(
+        True, description="Whether to overwrite existing collection"
+    ),
     user=Depends(get_verified_user),
 ):
     try:
@@ -1946,7 +1971,8 @@ async def process_web(
                     request,
                     docs,
                     collection_name,
-                    overwrite=True,
+                    overwrite=overwrite,
+                    add=(not overwrite),
                     user=user,
                 )
             else:
@@ -2282,6 +2308,13 @@ def search_web(
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             user=user,
         )
+    elif engine == "youcom":
+        return search_youcom(
+            request.app.state.config.YOUCOM_API_KEY,
+            query,
+            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+        )
     else:
         raise Exception("No search engine API key found in environment variables")
 
@@ -2321,7 +2354,7 @@ async def process_web_search(
             # Limited concurrency with semaphore
             semaphore = asyncio.Semaphore(concurrent_limit)
 
-            async def search_with_limit(query):
+            async def search_query_with_semaphore(query):
                 async with semaphore:
                     return await run_in_threadpool(
                         search_web,
@@ -2331,7 +2364,9 @@ async def process_web_search(
                         user,
                     )
 
-            search_tasks = [search_with_limit(query) for query in form_data.queries]
+            search_tasks = [
+                search_query_with_semaphore(query) for query in form_data.queries
+            ]
         else:
             # Unlimited parallel execution (previous behavior)
             search_tasks = [
@@ -2456,6 +2491,34 @@ async def process_web_search(
         )
 
 
+def _validate_collection_access(collection_names: list[str], user) -> None:
+    """
+    Prevent users from querying collections they don't own.
+    Enforces ownership on user-memory-* and file-* collections.
+    Admins bypass this check.
+    """
+    if user.role == "admin":
+        return
+
+    for name in collection_names:
+        if name.startswith("user-memory-") and name != f"user-memory-{user.id}":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+        elif name.startswith("file-"):
+            file_id = name[len("file-") :]
+            if not has_access_to_file(
+                file_id=file_id,
+                access_type="read",
+                user=user,
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                )
+
+
 class QueryDocForm(BaseModel):
     collection_name: str
     query: str
@@ -2471,6 +2534,8 @@ async def query_doc_handler(
     form_data: QueryDocForm,
     user=Depends(get_verified_user),
 ):
+    _validate_collection_access([form_data.collection_name], user)
+
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (
             form_data.hybrid is None or form_data.hybrid
@@ -2545,6 +2610,8 @@ async def query_collection_handler(
     form_data: QueryCollectionsForm,
     user=Depends(get_verified_user),
 ):
+    _validate_collection_access(form_data.collection_names, user)
+
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (
             form_data.hybrid is None or form_data.hybrid
@@ -2723,6 +2790,27 @@ async def process_files_batch(
 
     for file in form_data.files:
         try:
+            # Ownership check: verify the requesting user owns the file or is an admin
+            db_file = Files.get_file_by_id(file.id)
+            if not db_file:
+                file_errors.append(
+                    BatchProcessFilesResult(
+                        file_id=file.id,
+                        status="failed",
+                        error="File not found",
+                    )
+                )
+                continue
+            if db_file.user_id != user.id and user.role != "admin":
+                file_errors.append(
+                    BatchProcessFilesResult(
+                        file_id=file.id,
+                        status="failed",
+                        error="Permission denied: not file owner",
+                    )
+                )
+                continue
+
             text_content = file.data.get("content", "")
             docs: List[Document] = [
                 Document(

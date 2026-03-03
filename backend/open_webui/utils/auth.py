@@ -46,7 +46,6 @@ from open_webui.env import (
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-
 log = logging.getLogger(__name__)
 
 SESSION_SECRET = WEBUI_SECRET_KEY
@@ -290,6 +289,10 @@ async def get_current_user(
 
     if token is None and "token" in request.cookies:
         token = request.cookies.get("token")
+
+    # Fallback to request.state.token (set by middleware, e.g. for x-api-key)
+    if token is None and hasattr(request.state, "token") and request.state.token:
+        token = request.state.token.credentials
 
     if token is None:
         raise HTTPException(status_code=401, detail="Not authenticated")

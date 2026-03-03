@@ -65,7 +65,7 @@ class FileMeta(BaseModel):
         """Sanitize metadata fields to handle malformed legacy data."""
         if not isinstance(data, dict):
             return data
-        
+
         # Handle content_type that may be a list like ['application/pdf', None]
         content_type = data.get("content_type")
         if isinstance(content_type, list):
@@ -75,7 +75,7 @@ class FileMeta(BaseModel):
             )
         elif content_type is not None and not isinstance(content_type, str):
             data["content_type"] = None
-        
+
         return data
 
 

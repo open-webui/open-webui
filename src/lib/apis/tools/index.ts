@@ -225,11 +225,7 @@ export const updateToolById = async (token: string, id: string, tool: object) =>
 	return res;
 };
 
-export const updateToolAccessGrants = async (
-	token: string,
-	id: string,
-	accessGrants: any[]
-) => {
+export const updateToolAccessGrants = async (token: string, id: string, accessGrants: any[]) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/access/update`, {

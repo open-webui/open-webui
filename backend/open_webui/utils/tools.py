@@ -40,7 +40,7 @@ from open_webui.models.users import UserModel
 from open_webui.models.groups import Groups
 from open_webui.models.access_grants import AccessGrants
 from open_webui.utils.plugin import load_tool_module_by_id
-from open_webui.utils.access_control import has_access
+from open_webui.utils.access_control import has_access, has_connection_access
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
@@ -48,6 +48,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
+    FORWARD_SESSION_INFO_HEADER_MESSAGE_ID,
 )
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.tools.builtin import (
@@ -59,6 +60,8 @@ from open_webui.tools.builtin import (
     search_memories,
     add_memory,
     replace_memory_content,
+    delete_memory,
+    list_memories,
     get_current_timestamp,
     calculate_timestamp,
     search_notes,
@@ -76,7 +79,9 @@ from open_webui.tools.builtin import (
     query_knowledge_bases,
     search_knowledge_files,
     query_knowledge_files,
+    view_file,
     view_knowledge_file,
+    view_skill,
 )
 
 import copy
@@ -139,25 +144,13 @@ def get_updated_tool_function(function: Callable, extra_params: dict):
     return function
 
 
-def has_tool_server_access(
-    user: UserModel, server_connection: dict, user_group_ids: set = None
-) -> bool:
-    """Check if user has access to a tool server (MCP or OpenAPI)."""
-    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
-        return True
-
-    if user_group_ids is None:
-        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
-
-    server_config = server_connection.get("config", {})
-    access_grants = server_config.get("access_grants", [])
-    return has_access(user.id, "read", access_grants, user_group_ids)
-
-
 async def get_tools(
     request: Request, tool_ids: list[str], user: UserModel, extra_params: dict
 ) -> dict[str, dict]:
     """Load tools for the given tool_ids, checking access control."""
+    if not tool_ids:
+        return {}
+
     tools_dict = {}
 
     # Get user's group memberships for access control checks
@@ -289,7 +282,7 @@ async def get_tools(
                     )
 
                     # Check access control for tool server
-                    if not has_tool_server_access(
+                    if not has_connection_access(
                         user, tool_server_connection, user_group_ids
                     ):
                         log.warning(
@@ -351,7 +344,13 @@ async def get_tools(
                             headers = include_user_info_headers(headers, user)
                             metadata = extra_params.get("__metadata__", {})
                             if metadata and metadata.get("chat_id"):
-                                headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get("chat_id")
+                                headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = (
+                                    metadata.get("chat_id")
+                                )
+                            if metadata and metadata.get("message_id"):
+                                headers[FORWARD_SESSION_INFO_HEADER_MESSAGE_ID] = (
+                                    metadata.get("message_id")
+                                )
 
                         def make_tool_function(
                             function_name, tool_server_data, headers
@@ -380,7 +379,7 @@ async def get_tools(
                         tool_dict = {
                             "tool_id": tool_id,
                             "callable": callable,
-                            "spec": spec,
+                            "spec": clean_openai_tool_schema(spec),
                             # Misc info
                             "type": "external",
                         }
@@ -415,9 +414,8 @@ def get_builtin_tools(
 
     # Helper to get model capabilities (defaults to True if not specified)
     def get_model_capability(name: str, default: bool = True) -> bool:
-        return (
-            (model.get("info", {}).get("meta", {}).get("capabilities") or {})
-            .get(name, default)
+        return (model.get("info", {}).get("meta", {}).get("capabilities") or {}).get(
+            name, default
         )
 
     # Helper to check if a builtin tool category is enabled via meta.builtinTools
@@ -438,6 +436,12 @@ def get_builtin_tools(
         if model_knowledge:
             # Model has attached knowledge - only allow semantic search within it
             builtin_functions.append(query_knowledge_files)
+
+            knowledge_types = {item.get("type") for item in model_knowledge}
+            if "file" in knowledge_types or "collection" in knowledge_types:
+                builtin_functions.append(view_file)
+            if "note" in knowledge_types:
+                builtin_functions.append(view_note)
         else:
             # No model knowledge - allow full KB browsing
             builtin_functions.extend(
@@ -457,13 +461,22 @@ def get_builtin_tools(
 
     # Add memory tools if builtin category enabled AND enabled for this chat
     if is_builtin_tool_enabled("memory") and features.get("memory"):
-        builtin_functions.extend([search_memories, add_memory, replace_memory_content])
+        builtin_functions.extend(
+            [
+                search_memories,
+                add_memory,
+                replace_memory_content,
+                delete_memory,
+                list_memories,
+            ]
+        )
 
     # Add web search tools if builtin category enabled AND enabled globally AND model has web_search capability
     if (
         is_builtin_tool_enabled("web_search")
         and getattr(request.app.state.config, "ENABLE_WEB_SEARCH", False)
         and get_model_capability("web_search")
+        and features.get("web_search")
     ):
         builtin_functions.extend([search_web, fetch_url])
 
@@ -472,12 +485,14 @@ def get_builtin_tools(
         is_builtin_tool_enabled("image_generation")
         and getattr(request.app.state.config, "ENABLE_IMAGE_GENERATION", False)
         and get_model_capability("image_generation")
+        and features.get("image_generation")
     ):
         builtin_functions.append(generate_image)
     if (
         is_builtin_tool_enabled("image_generation")
         and getattr(request.app.state.config, "ENABLE_IMAGE_EDIT", False)
         and get_model_capability("image_generation")
+        and features.get("image_generation")
     ):
         builtin_functions.append(edit_image)
 
@@ -486,17 +501,22 @@ def get_builtin_tools(
         is_builtin_tool_enabled("code_interpreter")
         and getattr(request.app.state.config, "ENABLE_CODE_INTERPRETER", True)
         and get_model_capability("code_interpreter")
+        and features.get("code_interpreter")
     ):
         builtin_functions.append(execute_code)
 
     # Notes tools - search, view, create, and update user's notes (if builtin category enabled AND notes enabled globally)
-    if is_builtin_tool_enabled("notes") and getattr(request.app.state.config, "ENABLE_NOTES", False):
+    if is_builtin_tool_enabled("notes") and getattr(
+        request.app.state.config, "ENABLE_NOTES", False
+    ):
         builtin_functions.extend(
             [search_notes, view_note, write_note, replace_note_content]
         )
 
     # Channels tools - search channels and messages (if builtin category enabled AND channels enabled globally)
-    if is_builtin_tool_enabled("channels") and getattr(request.app.state.config, "ENABLE_CHANNELS", False):
+    if is_builtin_tool_enabled("channels") and getattr(
+        request.app.state.config, "ENABLE_CHANNELS", False
+    ):
         builtin_functions.extend(
             [
                 search_channels,
@@ -505,6 +525,10 @@ def get_builtin_tools(
                 view_channel_message,
             ]
         )
+
+    # Skills tools - view_skill allows model to load full skill instructions on demand
+    if extra_params.get("__skill_ids__"):
+        builtin_functions.append(view_skill)
 
     for func in builtin_functions:
         callable = get_async_tool_function_and_apply_extra_params(
@@ -524,6 +548,7 @@ def get_builtin_tools(
         # Generate spec from function
         pydantic_model = convert_function_to_pydantic_model(func)
         spec = convert_pydantic_model_to_openai_function_spec(pydantic_model)
+        spec = clean_openai_tool_schema(spec)
 
         tools_dict[func.__name__] = {
             "tool_id": f"builtin:{func.__name__}",
@@ -632,6 +657,44 @@ def convert_function_to_pydantic_model(func: Callable) -> type[BaseModel]:
     return model
 
 
+def clean_properties(schema: dict):
+    if not isinstance(schema, dict):
+        return
+
+    if "anyOf" in schema:
+        non_null_types = [t for t in schema["anyOf"] if t.get("type") != "null"]
+        if len(non_null_types) == 1:
+            schema.update(non_null_types[0])
+            del schema["anyOf"]
+        else:
+            schema["anyOf"] = non_null_types
+
+    if "default" in schema and schema["default"] is None:
+        del schema["default"]
+
+    # fix missing type
+    if "type" not in schema and "anyOf" not in schema and "properties" not in schema:
+        schema["type"] = "string"
+
+    if "properties" in schema:
+        for prop_name, prop_schema in schema["properties"].items():
+            clean_properties(prop_schema)
+
+    if "items" in schema:
+        clean_properties(schema["items"])
+
+
+def clean_openai_tool_schema(spec: dict) -> dict:
+    import copy
+
+    cleaned_spec = copy.deepcopy(spec)
+
+    if "parameters" in cleaned_spec:
+        clean_properties(cleaned_spec["parameters"])
+
+    return cleaned_spec
+
+
 def get_functions_from_tool(tool: object) -> list[Callable]:
     return [
         getattr(tool, func)
@@ -654,7 +717,9 @@ def get_tool_specs(tool_module: object) -> list[dict]:
     )
 
     specs = [
-        convert_pydantic_model_to_openai_function_spec(function_model)
+        clean_openai_tool_schema(
+            convert_pydantic_model_to_openai_function_spec(function_model)
+        )
         for function_model in function_models
     ]
 
@@ -730,13 +795,18 @@ def convert_openapi_to_tool_payload(openapi_spec):
                             f". Possible values: {', '.join(param_schema.get('enum'))}"
                         )
                     param_property = {
-                        "type": param_schema.get("type"),
+                        "type": param_schema.get("type") or "string",
                         "description": description,
                     }
 
                     # Include items property for array types (required by OpenAI)
                     if param_schema.get("type") == "array" and "items" in param_schema:
                         param_property["items"] = param_schema["items"]
+
+                    # Filter out None values to prevent schema validation errors
+                    param_property = {
+                        k: v for k, v in param_property.items() if v is not None
+                    }
 
                     tool["parameters"]["properties"][param_name] = param_property
                     if param.get("required"):
@@ -799,6 +869,180 @@ async def get_tool_servers(request: Request):
         tool_servers = await set_tool_servers(request)
 
     return tool_servers
+
+
+async def get_terminal_cwd(
+    base_url: str,
+    headers: dict,
+    cookies: Optional[dict] = None,
+) -> Optional[str]:
+    """Fetch the current working directory from a terminal server."""
+    try:
+        cwd_url = f"{base_url.rstrip('/')}/files/cwd"
+        async with aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=5),
+            trust_env=True,
+        ) as session:
+            async with session.get(
+                cwd_url, headers=headers, cookies=cookies or {}
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    return data.get("cwd")
+    except Exception as e:
+        log.debug(f"Failed to fetch terminal CWD: {e}")
+    return None
+
+
+async def set_terminal_servers(request: Request):
+    """Load and cache OpenAPI specs from all TERMINAL_SERVER_CONNECTIONS."""
+    connections = request.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
+
+    # Build server configs compatible with get_tool_servers_data
+    # Terminal connections store id/name at top level; translate to info dict
+    server_configs = []
+    for connection in connections:
+        if not connection.get("url"):
+            continue
+
+        enabled = connection.get("enabled", True)
+
+        server_configs.append(
+            {
+                "url": connection.get("url", ""),
+                "key": connection.get("key", ""),
+                "auth_type": connection.get("auth_type", "bearer"),
+                "path": connection.get("path", "/openapi.json"),
+                "spec_type": "url",
+                # get_tool_servers_data reads config.enable to filter active servers
+                "config": {"enable": enabled},
+                "info": {
+                    "id": connection.get("id", ""),
+                    "name": connection.get("name", ""),
+                },
+            }
+        )
+
+    request.app.state.TERMINAL_SERVERS = await get_tool_servers_data(server_configs)
+
+    if request.app.state.redis is not None:
+        await request.app.state.redis.set(
+            "terminal_servers", json.dumps(request.app.state.TERMINAL_SERVERS)
+        )
+
+    return request.app.state.TERMINAL_SERVERS
+
+
+async def get_terminal_servers(request: Request):
+    """Return cached terminal server specs, loading if needed."""
+    terminal_servers = []
+    if request.app.state.redis is not None:
+        try:
+            terminal_servers = json.loads(
+                await request.app.state.redis.get("terminal_servers")
+            )
+            request.app.state.TERMINAL_SERVERS = terminal_servers
+        except Exception as e:
+            log.error(f"Error fetching terminal_servers from Redis: {e}")
+
+    if not terminal_servers:
+        terminal_servers = await set_terminal_servers(request)
+
+    return terminal_servers
+
+
+async def get_terminal_tools(
+    request: Request,
+    terminal_id: str,
+    user: UserModel,
+    extra_params: dict,
+) -> dict[str, dict]:
+    """Resolve tools for a terminal server identified by terminal_id.
+
+    - Finds the connection in TERMINAL_SERVER_CONNECTIONS
+    - Checks access_grants
+    - Loads specs from cache
+    - Builds callables that route through the terminal proxy
+    """
+    connections = request.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
+    connection = next((c for c in connections if c.get("id") == terminal_id), None)
+    if connection is None:
+        log.warning(f"Terminal server not found: {terminal_id}")
+        return {}
+
+    user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
+    if not has_connection_access(user, connection, user_group_ids):
+        log.warning(f"Access denied to terminal {terminal_id} for user {user.id}")
+        return {}
+
+    # Find the cached spec data for this terminal
+    terminal_servers = await get_terminal_servers(request)
+    server_data = next(
+        (s for s in terminal_servers if s.get("id") == terminal_id), None
+    )
+    if server_data is None:
+        log.warning(f"Terminal server spec not found for {terminal_id}")
+        return {}
+
+    specs = server_data.get("specs", [])
+    if not specs:
+        return {}
+
+    # Build auth headers
+    auth_type = connection.get("auth_type", "bearer")
+    cookies = {}
+    headers = {"Content-Type": "application/json", "X-User-Id": user.id}
+
+    if auth_type == "bearer":
+        headers["Authorization"] = f"Bearer {connection.get('key', '')}"
+    elif auth_type == "session":
+        cookies = request.cookies
+        headers["Authorization"] = f"Bearer {request.state.token.credentials}"
+    elif auth_type == "system_oauth":
+        cookies = request.cookies
+        oauth_token = extra_params.get("__oauth_token__", None)
+        if oauth_token:
+            headers["Authorization"] = f"Bearer {oauth_token.get('access_token', '')}"
+    # auth_type == "none": no Authorization header
+
+    terminal_cwd = await get_terminal_cwd(connection.get("url", ""), headers, cookies)
+
+    tools_dict = {}
+    for spec in specs:
+        function_name = spec["name"]
+
+        # Inject CWD into run_command description
+        tool_spec = clean_openai_tool_schema(spec)
+        if function_name == "run_command" and terminal_cwd:
+            tool_spec["description"] = (
+                tool_spec.get("description", "")
+                + f"\n\nThe current working directory is: {terminal_cwd}"
+            )
+
+        def make_tool_function(fn_name, srv_data, hdrs, cks):
+            async def tool_function(**kwargs):
+                return await execute_tool_server(
+                    url=srv_data["url"],
+                    headers=hdrs,
+                    cookies=cks,
+                    name=fn_name,
+                    params=kwargs,
+                    server_data=srv_data,
+                )
+
+            return tool_function
+
+        tool_function = make_tool_function(function_name, server_data, headers, cookies)
+        callable = get_async_tool_function_and_apply_extra_params(tool_function, {})
+
+        tools_dict[function_name] = {
+            "tool_id": f"terminal:{terminal_id}",
+            "callable": callable,
+            "spec": tool_spec,
+            "type": "terminal",
+        }
+
+    return tools_dict
 
 
 async def get_tool_server_data(url: str, headers: Optional[dict]) -> Dict[str, Any]:
@@ -917,6 +1161,11 @@ async def get_tool_servers_data(servers: List[Dict[str, Any]]) -> List[Dict[str,
             log.error(f"Failed to connect to {url} OpenAPI tool server")
             continue
 
+        # Guard against invalid or non-OpenAPI specs (e.g., MCP-style configs)
+        if not isinstance(response, dict) or "paths" not in response:
+            log.warning(f"Invalid OpenAPI spec from {url}: missing 'paths'")
+            continue
+
         response = {
             "openapi": response,
             "info": response.get("info", {}),
@@ -998,7 +1247,8 @@ async def execute_tool_server(
                 if param_in == "path":
                     path_params[param_name] = params[param_name]
                 elif param_in == "query":
-                    query_params[param_name] = params[param_name]
+                    if params[param_name] is not None:
+                        query_params[param_name] = params[param_name]
 
         final_url = f"{url}{route_path}"
         for key, value in path_params.items():
