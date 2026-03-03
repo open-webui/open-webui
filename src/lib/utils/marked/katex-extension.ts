@@ -13,6 +13,12 @@ const ALLOWED_SURROUNDING_CHARS =
 	'\\s。，、､;；„“‘’“”（）「」『』［］《》【】‹›«»…⋯:：？！～⇒?!-\\/:-@\\[-`{-~\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Hangul}';
 // Modified to fit more formats in different languages. Originally: '\\s?。，、；!-\\/:-@\\[-`{-~\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Hangul}';
 
+// Pre-compile the surrounding character regex once at module load time.
+// This regex uses Unicode property escapes (\p{Script=Han}, etc.) which are
+// extremely expensive to compile - doing so on every call caused ~87% of
+// markdown rendering time to be spent in KaTeX regex compilation.
+const SURROUNDING_CHARS_REGEX = new RegExp(`[${ALLOWED_SURROUNDING_CHARS}]`, 'u');
+
 // const DELIMITER_LIST = [
 //     { left: '$$', right: '$$', display: false },
 //     { left: '$', right: '$', display: false },
@@ -73,7 +79,6 @@ function katexStart(src, displayMode: boolean) {
 
 	while (indexSrc) {
 		let index = -1;
-		let startIndex = -1;
 		let startDelimiter = '';
 		let endDelimiter = '';
 		for (const delimiter of DELIMITER_LIST) {
@@ -81,14 +86,17 @@ function katexStart(src, displayMode: boolean) {
 				continue;
 			}
 
-			startIndex = indexSrc.indexOf(delimiter.left);
+			const startIndex = indexSrc.indexOf(delimiter.left);
 			if (startIndex === -1) {
 				continue;
 			}
 
-			index = startIndex;
-			startDelimiter = delimiter.left;
-			endDelimiter = delimiter.right;
+			// Take the earliest match, not the last
+			if (index === -1 || startIndex < index) {
+				index = startIndex;
+				startDelimiter = delimiter.left;
+				endDelimiter = delimiter.right;
+			}
 		}
 
 		if (index === -1) {
@@ -97,13 +105,11 @@ function katexStart(src, displayMode: boolean) {
 
 		// Check if the delimiter is preceded by a special character.
 		// If it does, then it's potentially a math formula.
-		const f =
-			index === 0 ||
-			indexSrc.charAt(index - 1).match(new RegExp(`[${ALLOWED_SURROUNDING_CHARS}]`, 'u'));
+		const f = index === 0 || SURROUNDING_CHARS_REGEX.test(indexSrc.charAt(index - 1));
 		if (f) {
 			const possibleKatex = indexSrc.substring(index);
 
-			if (possibleKatex.match(ruleReg)) {
+			if (ruleReg.test(possibleKatex)) {
 				return index;
 			}
 		}
