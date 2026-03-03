@@ -67,6 +67,7 @@
 
 		messagesLoading = true;
 		messagesCount += 20;
+		buildMessages();
 
 		await tick();
 
@@ -98,16 +99,21 @@
 
 	// Throttle message list rebuilds to once per animation frame during streaming.
 	// Structural changes (currentId change) always rebuild immediately.
-	$: if (history.currentId) {
-		const currentIdChanged = history.currentId !== lastCurrentId;
-		lastCurrentId = history.currentId;
+	const handleHistoryChange = (currentId, _messages) => {
+		if (!currentId) {
+			messages = [];
+			return;
+		}
+
+		const currentIdChanged = currentId !== lastCurrentId;
+		lastCurrentId = currentId;
 
 		if (currentIdChanged) {
 			// Structural change: new chat, navigation, new message — rebuild immediately
 			cancelAnimationFrame(pendingRebuild);
 			pendingRebuild = null;
 			buildMessages();
-		} else if (history.messages) {
+		} else if (_messages) {
 			// Content update (streaming) — throttle to once per frame
 			if (!pendingRebuild) {
 				pendingRebuild = requestAnimationFrame(() => {
@@ -116,9 +122,9 @@
 				});
 			}
 		}
-	} else {
-		messages = [];
-	}
+	};
+
+	$: handleHistoryChange(history.currentId, history.messages);
 
 	$: if (autoScroll && bottomPadding) {
 		(async () => {

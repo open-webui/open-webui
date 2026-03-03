@@ -15,12 +15,14 @@
 	} from '$lib/stores';
 	import {
 		getCwd,
+		getTerminalConfig,
 		listFiles,
 		readFile,
 		downloadFileBlob,
 		uploadToTerminal,
 		createDirectory,
 		deleteEntry,
+		moveEntry,
 		setCwd,
 		type FileEntry
 	} from '$lib/apis/terminal';
@@ -35,10 +37,47 @@
 	import FileNavToolbar from './FileNav/FileNavToolbar.svelte';
 	import FilePreview from './FileNav/FilePreview.svelte';
 	import FileEntryRow from './FileNav/FileEntryRow.svelte';
+	import XTerminal from './XTerminal.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let onAttach: ((blob: Blob, name: string, contentType: string) => void) | null = null;
+	export let overlay = false;
+
+	// ── Terminal panel state ────────────────────────────────────────────
+	let terminalExpanded = false;
+	let terminalHeight = 200; // px, default when expanded
+	let isDraggingHandle = false;
+	let containerEl: HTMLElement;
+	let terminalConnected = false;
+	let terminalConnecting = false;
+	let terminalEnabled = true;
+
+	const toggleTerminal = () => {
+		terminalExpanded = !terminalExpanded;
+	};
+
+	const onHandleMouseDown = (e: MouseEvent) => {
+		e.preventDefault();
+		isDraggingHandle = true;
+		const startY = e.clientY;
+		const startHeight = terminalHeight;
+
+		const onMouseMove = (ev: MouseEvent) => {
+			const delta = startY - ev.clientY;
+			const maxH = containerEl ? containerEl.clientHeight - 100 : 500;
+			terminalHeight = Math.max(80, Math.min(maxH, startHeight + delta));
+		};
+
+		const onMouseUp = () => {
+			isDraggingHandle = false;
+			window.removeEventListener('mousemove', onMouseMove);
+			window.removeEventListener('mouseup', onMouseUp);
+		};
+
+		window.addEventListener('mousemove', onMouseMove);
+		window.addEventListener('mouseup', onMouseUp);
+	};
 
 	// ── Directory state ──────────────────────────────────────────────────
 	let currentPath = savedPath;
@@ -61,10 +100,12 @@
 
 	const MD_EXTS = new Set(['md', 'markdown', 'mdx']);
 	const CSV_EXTS = new Set(['csv', 'tsv']);
+	const HTML_EXTS = new Set(['html', 'htm']);
 	const getFileExt = (path: string | null) => path?.split('.').pop()?.toLowerCase() ?? '';
 
 	$: isMarkdown = MD_EXTS.has(getFileExt(selectedFile));
 	$: isCsv = CSV_EXTS.has(getFileExt(selectedFile));
+	$: isHtml = HTML_EXTS.has(getFileExt(selectedFile));
 	$: isTextFile = fileContent !== null && fileImageUrl === null && filePdfData === null;
 
 	// ── Upload / folder creation ─────────────────────────────────────────
@@ -112,6 +153,10 @@
 		if (terminal && terminal.url !== prevTerminalUrl) {
 			prevTerminalUrl = terminal.url;
 			(async () => {
+				// Discover server features (terminal enabled/disabled)
+				const config = await getTerminalConfig(terminal.url, terminal.key);
+				terminalEnabled = config?.features?.terminal !== false;
+
 				const cwd = await getCwd(terminal.url, terminal.key);
 				const dir = cwd ? (cwd.endsWith('/') ? cwd : cwd + '/') : '/';
 				savedPath = dir;
@@ -323,6 +368,29 @@
 		showDeleteConfirm = true;
 	};
 
+	// ── Move (drag-and-drop) ────────────────────────────────────────────
+	const handleMove = async (source: string, destFolder: string) => {
+		const terminal = selectedTerminal;
+		if (!terminal) return;
+
+		const fileName = source.split('/').pop() ?? '';
+		const destination = `${destFolder}${fileName}`;
+
+		if (source === destination) return;
+
+		// Prevent moving a folder into itself or its own subtree
+		const sourceDir = source.endsWith('/') ? source : source + '/';
+		if (destFolder.startsWith(sourceDir)) return;
+
+		const result = await moveEntry(terminal.url, terminal.key, source, destination);
+		if ('error' in result) {
+			toast.error(result.error);
+		} else {
+			toast.success($i18n.t('Moved {{name}}', { name: fileName }));
+		}
+		await loadDir(currentPath);
+	};
+
 	// ── Lifecycle ────────────────────────────────────────────────────────
 	onMount(async () => {
 		const terminal = getTerminal();
@@ -427,6 +495,7 @@
 	</div>
 {:else}
 	<div
+		bind:this={containerEl}
 		class="flex flex-col h-full min-h-0 relative"
 		on:dragover={handleDragOver}
 		on:dragleave={() => (isDragOver = false)}
@@ -465,6 +534,7 @@
 			onNewFolder={startNewFolder}
 			onNewFile={startNewFile}
 			onUploadFiles={handleUploadFiles}
+			onMove={handleMove}
 		>
 			{#if fileImageUrl !== null}
 				<Tooltip content={$i18n.t('Reset view')}>
@@ -488,7 +558,7 @@
 					</button>
 				</Tooltip>
 			{/if}
-			{#if (isMarkdown || isCsv) && fileContent !== null && !editing}
+			{#if (isMarkdown || isCsv || isHtml) && fileContent !== null && !editing}
 				<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
 					<button
 						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
@@ -631,6 +701,7 @@
 					{fileImageUrl}
 					{filePdfData}
 					{fileContent}
+					{overlay}
 					onSave={async (content) => {
 						const terminal = selectedTerminal;
 						if (!terminal || !selectedFile) return;
@@ -717,6 +788,7 @@
 									onOpen={openEntry}
 									onDownload={downloadFile}
 									onDelete={requestDelete}
+									onMove={handleMove}
 								/>
 							{/each}
 						</ul>
@@ -724,5 +796,74 @@
 				{/if}
 			{/if}
 		</div>
+
+		<!-- Terminal bottom panel -->
+		{#if terminalEnabled}
+			<div class="shrink-0 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850">
+				{#if terminalExpanded}
+					<!-- Drag handle (at top of panel) -->
+					<!-- svelte-ignore a11y-no-static-element-interactions -->
+					<div
+						class="h-1 cursor-row-resize hover:bg-blue-400/30 transition group relative"
+						on:mousedown={onHandleMouseDown}
+					>
+						<div class="absolute inset-x-0 -top-1 -bottom-1" />
+					</div>
+				{/if}
+
+				<!-- Toggle header (full-width button) -->
+				<button
+					class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
+					on:click={toggleTerminal}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 20 20"
+						fill="currentColor"
+						class="size-3.5"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M3.25 3A2.25 2.25 0 0 0 1 5.25v9.5A2.25 2.25 0 0 0 3.25 17h13.5A2.25 2.25 0 0 0 19 14.75v-9.5A2.25 2.25 0 0 0 16.75 3H3.25Zm.943 8.752a.75.75 0 0 1 .055-1.06L6.128 9l-1.88-1.693a.75.75 0 1 1 1.004-1.114l2.5 2.25a.75.75 0 0 1 0 1.114l-2.5 2.25a.75.75 0 0 1-1.06-.055ZM9.75 10.25a.75.75 0 0 0 0 1.5h2.5a.75.75 0 0 0 0-1.5h-2.5Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+					<span class="font-medium">{$i18n.t('Terminal')}</span>
+
+					{#if terminalExpanded}
+						<div
+							class="w-1.5 h-1.5 rounded-full transition-colors {terminalConnected
+								? 'bg-emerald-500'
+								: terminalConnecting
+									? 'bg-yellow-500 animate-pulse'
+									: 'bg-gray-400'}"
+						/>
+					{/if}
+
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 20 20"
+						fill="currentColor"
+						class="size-3 ml-auto transition-transform {terminalExpanded ? 'rotate-180' : ''}"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M9.47 6.47a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 1 1-1.06 1.06L10 8.06l-3.72 3.72a.75.75 0 0 1-1.06-1.06l4.25-4.25Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</button>
+
+				{#if terminalExpanded}
+					<div style="height: {terminalHeight}px" class="min-h-0">
+						<XTerminal
+							{overlay}
+							bind:connected={terminalConnected}
+							bind:connecting={terminalConnecting}
+						/>
+					</div>
+				{/if}
+			</div>
+		{/if}
 	</div>
 {/if}
