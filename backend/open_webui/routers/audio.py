@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import json
 import logging
@@ -46,6 +47,7 @@ from open_webui.config import (
     WHISPER_LANGUAGE,
     WHISPER_MULTILINGUAL,
     ELEVENLABS_API_BASE_URL,
+    CAMB_AI_API_BASE_URL,
 )
 
 from open_webui.constants import ERROR_MESSAGES
@@ -168,6 +170,8 @@ class TTSConfigForm(BaseModel):
     AZURE_SPEECH_REGION: str
     AZURE_SPEECH_BASE_URL: str
     AZURE_SPEECH_OUTPUT_FORMAT: str
+    CAMB_API_KEY: str = ""
+    CAMB_TARGET_LANGUAGE: str = ""
 
 
 class STTConfigForm(BaseModel):
@@ -208,6 +212,8 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             "AZURE_SPEECH_REGION": request.app.state.config.TTS_AZURE_SPEECH_REGION,
             "AZURE_SPEECH_BASE_URL": request.app.state.config.TTS_AZURE_SPEECH_BASE_URL,
             "AZURE_SPEECH_OUTPUT_FORMAT": request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+            "CAMB_API_KEY": request.app.state.config.AUDIO_CAMB_API_KEY,
+            "CAMB_TARGET_LANGUAGE": request.app.state.config.AUDIO_TTS_CAMB_TARGET_LANGUAGE,
         },
         "stt": {
             "OPENAI_API_BASE_URL": request.app.state.config.STT_OPENAI_API_BASE_URL,
@@ -247,6 +253,10 @@ async def update_audio_config(
     )
     request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = (
         form_data.tts.AZURE_SPEECH_OUTPUT_FORMAT
+    )
+    request.app.state.config.AUDIO_CAMB_API_KEY = form_data.tts.CAMB_API_KEY
+    request.app.state.config.AUDIO_TTS_CAMB_TARGET_LANGUAGE = (
+        form_data.tts.CAMB_TARGET_LANGUAGE
     )
 
     request.app.state.config.STT_OPENAI_API_BASE_URL = form_data.stt.OPENAI_API_BASE_URL
@@ -294,6 +304,8 @@ async def update_audio_config(
             "AZURE_SPEECH_REGION": request.app.state.config.TTS_AZURE_SPEECH_REGION,
             "AZURE_SPEECH_BASE_URL": request.app.state.config.TTS_AZURE_SPEECH_BASE_URL,
             "AZURE_SPEECH_OUTPUT_FORMAT": request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+            "CAMB_API_KEY": request.app.state.config.AUDIO_CAMB_API_KEY,
+            "CAMB_TARGET_LANGUAGE": request.app.state.config.AUDIO_TTS_CAMB_TARGET_LANGUAGE,
         },
         "stt": {
             "OPENAI_API_BASE_URL": request.app.state.config.STT_OPENAI_API_BASE_URL,
@@ -351,6 +363,9 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         body
         + str(request.app.state.config.TTS_ENGINE).encode("utf-8")
         + str(request.app.state.config.TTS_MODEL).encode("utf-8")
+        + str(
+            getattr(request.app.state.config, "AUDIO_TTS_CAMB_TARGET_LANGUAGE", "")
+        ).encode("utf-8")
     ).hexdigest()
 
     file_path = SPEECH_CACHE_DIR.joinpath(f"{name}.mp3")
@@ -579,6 +594,132 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             await f.write(json.dumps(payload))
 
         return FileResponse(file_path)
+
+    elif request.app.state.config.TTS_ENGINE == "camb":
+        payload = None
+        try:
+            payload = json.loads(body.decode("utf-8"))
+        except Exception as e:
+            log.exception(e)
+            raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+        camb_api_key = request.app.state.config.AUDIO_CAMB_API_KEY
+        target_language = str(
+            request.app.state.config.AUDIO_TTS_CAMB_TARGET_LANGUAGE
+        ).strip()
+        voice_id = payload.get("voice", "")
+        speech_model = request.app.state.config.TTS_MODEL or "mars-flash"
+
+        headers = {
+            "x-api-key": camb_api_key,
+            "Content-Type": "application/json",
+        }
+
+        try:
+            timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            async with aiohttp.ClientSession(
+                timeout=timeout, trust_env=True
+            ) as session:
+                if target_language:
+                    # Translated TTS — async task pattern
+                    async with session.post(
+                        f"{CAMB_AI_API_BASE_URL}/translated-tts",
+                        json={
+                            "text": payload["input"],
+                            "source_language": 1,
+                            "target_language": int(target_language),
+                            "voice_id": int(voice_id) if voice_id else None,
+                        },
+                        headers=headers,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    ) as r:
+                        r.raise_for_status()
+                        task_data = await r.json()
+
+                    task_id = task_data["task_id"]
+                    run_id = task_data.get("run_id")
+
+                    # Poll for completion
+                    result = await _camb_poll_task(
+                        session,
+                        f"{CAMB_AI_API_BASE_URL}/translated-tts/{task_id}",
+                        headers,
+                    )
+
+                    if not run_id:
+                        run_id = result.get("run_id")
+
+                    # Retrieve audio file (returned directly as audio/flac)
+                    async with session.get(
+                        f"{CAMB_AI_API_BASE_URL}/tts-result/{run_id}",
+                        headers=headers,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    ) as r:
+                        r.raise_for_status()
+                        async with aiofiles.open(file_path, "wb") as f:
+                            await f.write(await r.read())
+
+                else:
+                    # Standard TTS — streaming endpoint
+                    tts_payload = {
+                        "text": payload["input"],
+                        "language": "en-us",
+                        "voice_id": int(voice_id) if voice_id else None,
+                        "speech_model": speech_model,
+                        "output_configuration": {"format": "mp3"},
+                    }
+                    async with session.post(
+                        f"{CAMB_AI_API_BASE_URL}/tts-stream",
+                        json=tts_payload,
+                        headers=headers,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    ) as r:
+                        r.raise_for_status()
+                        async with aiofiles.open(file_path, "wb") as f:
+                            async for chunk in r.content.iter_any():
+                                await f.write(chunk)
+
+                async with aiofiles.open(file_body_path, "w") as f:
+                    await f.write(json.dumps(payload))
+
+            return FileResponse(file_path)
+
+        except Exception as e:
+            log.exception(e)
+            detail = None
+            try:
+                detail = f"External: {e}"
+            except Exception:
+                pass
+            raise HTTPException(
+                status_code=500,
+                detail=detail if detail else "Open WebUI: CAMB AI TTS Error",
+            )
+
+
+async def _camb_poll_task(
+    session: aiohttp.ClientSession,
+    url: str,
+    headers: dict,
+    max_wait: int = 120,
+    interval: float = 2.0,
+) -> dict:
+    """Poll a CAMB AI async task until SUCCESS or ERROR."""
+    elapsed = 0.0
+    while elapsed < max_wait:
+        async with session.get(
+            url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL
+        ) as r:
+            r.raise_for_status()
+            data = await r.json()
+        task_status = data.get("status", "").upper()
+        if task_status == "SUCCESS":
+            return data
+        if task_status == "ERROR":
+            raise Exception(f"CAMB AI task failed: {data}")
+        await asyncio.sleep(interval)
+        elapsed += interval
+    raise Exception(f"CAMB AI task timed out after {max_wait}s")
 
 
 def transcription_handler(request, file_path, metadata, user=None):
@@ -1049,6 +1190,7 @@ def transcription_handler(request, file_path, metadata, user=None):
             )
 
 
+
 def transcribe(
     request: Request, file_path: str, metadata: Optional[dict] = None, user=None
 ):
@@ -1275,6 +1417,12 @@ def get_available_models(request: Request) -> list[dict]:
             ]
         except requests.RequestException as e:
             log.error(f"Error fetching voices: {str(e)}")
+    elif request.app.state.config.TTS_ENGINE == "camb":
+        available_models = [
+            {"name": "MARS Flash (Low Latency)", "id": "mars-flash"},
+            {"name": "MARS Pro (High Quality)", "id": "mars-pro"},
+            {"name": "MARS Instruct (Director Control)", "id": "mars-instruct"},
+        ]
     return available_models
 
 
@@ -1350,6 +1498,22 @@ def get_available_voices(request) -> dict:
                 )
         except requests.RequestException as e:
             log.error(f"Error fetching voices: {str(e)}")
+    elif request.app.state.config.TTS_ENGINE == "camb":
+        try:
+            camb_api_key = request.app.state.config.AUDIO_CAMB_API_KEY
+            response = requests.get(
+                f"{CAMB_AI_API_BASE_URL}/list-voices",
+                headers={"x-api-key": camb_api_key},
+                timeout=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
+            )
+            response.raise_for_status()
+            voices_data = response.json()
+            for voice in voices_data.get("voices", []):
+                available_voices[str(voice["id"])] = voice.get(
+                    "voice_name", voice.get("name", str(voice["id"]))
+                )
+        except requests.RequestException as e:
+            log.error(f"Error fetching CAMB voices: {str(e)}")
 
     return available_voices
 

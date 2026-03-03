@@ -4063,6 +4063,21 @@ AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
     ),
 )
 
+# CAMB AI configuration
+CAMB_AI_API_BASE_URL = os.getenv("CAMB_AI_API_BASE_URL", "https://client.camb.ai/apis")
+
+AUDIO_CAMB_API_KEY = PersistentConfig(
+    "AUDIO_CAMB_API_KEY",
+    "audio.camb.api_key",
+    os.getenv("AUDIO_CAMB_API_KEY", ""),
+)
+
+AUDIO_TTS_CAMB_TARGET_LANGUAGE = PersistentConfig(
+    "AUDIO_TTS_CAMB_TARGET_LANGUAGE",
+    "audio.tts.camb.target_language",
+    os.getenv("AUDIO_TTS_CAMB_TARGET_LANGUAGE", ""),
+)
+
 
 ####################################
 # LDAP

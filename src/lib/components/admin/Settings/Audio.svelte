@@ -53,6 +53,9 @@
 	let STT_MISTRAL_API_KEY = '';
 	let STT_MISTRAL_API_BASE_URL = '';
 	let STT_MISTRAL_USE_CHAT_COMPLETIONS = false;
+	let TTS_CAMB_API_KEY = '';
+	let TTS_CAMB_TARGET_LANGUAGE = '';
+
 
 	let STT_WHISPER_MODEL_LOADING = false;
 
@@ -124,6 +127,8 @@
 				AZURE_SPEECH_REGION: TTS_AZURE_SPEECH_REGION,
 				AZURE_SPEECH_BASE_URL: TTS_AZURE_SPEECH_BASE_URL,
 				AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+				CAMB_API_KEY: TTS_CAMB_API_KEY,
+				CAMB_TARGET_LANGUAGE: TTS_CAMB_TARGET_LANGUAGE,
 				SPLIT_ON: TTS_SPLIT_ON
 			},
 			stt: {
@@ -176,6 +181,9 @@
 			TTS_AZURE_SPEECH_REGION = res.tts.AZURE_SPEECH_REGION;
 			TTS_AZURE_SPEECH_BASE_URL = res.tts.AZURE_SPEECH_BASE_URL;
 			TTS_AZURE_SPEECH_OUTPUT_FORMAT = res.tts.AZURE_SPEECH_OUTPUT_FORMAT;
+
+			TTS_CAMB_API_KEY = res.tts.CAMB_API_KEY;
+			TTS_CAMB_TARGET_LANGUAGE = res.tts.CAMB_TARGET_LANGUAGE;
 
 			STT_OPENAI_API_BASE_URL = res.stt.OPENAI_API_BASE_URL;
 			STT_OPENAI_API_KEY = res.stt.OPENAI_API_KEY;
@@ -517,6 +525,9 @@
 								if (e.target?.value === 'openai') {
 									TTS_VOICE = 'alloy';
 									TTS_MODEL = 'tts-1';
+								} else if (e.target?.value === 'camb') {
+									TTS_VOICE = '';
+									TTS_MODEL = 'mars-flash';
 								} else {
 									TTS_VOICE = '';
 									TTS_MODEL = '';
@@ -528,6 +539,7 @@
 							<option value="openai">{$i18n.t('OpenAI')}</option>
 							<option value="elevenlabs">{$i18n.t('ElevenLabs')}</option>
 							<option value="azure">{$i18n.t('Azure AI Speech')}</option>
+							<option value="camb">{$i18n.t('CAMB AI')}</option>
 						</select>
 					</div>
 				</div>
@@ -582,6 +594,37 @@
 										placeholder={$i18n.t('(leave blank for to use commercial endpoint)')}
 									/>
 								</div>
+							</div>
+						</div>
+					</div>
+				{:else if TTS_ENGINE === 'camb'}
+					<div>
+						<div class="mt-1 flex gap-2 mb-1">
+							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_CAMB_API_KEY} required />
+						</div>
+
+						<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
+
+						<div>
+							<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Target Language (Translated TTS)')}</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={TTS_CAMB_TARGET_LANGUAGE}
+										placeholder={$i18n.t('e.g., 54 for Spanish (leave blank for standard TTS)')}
+									/>
+								</div>
+							</div>
+							<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+								{$i18n.t('Enter a CAMB AI language ID to enable Translated TTS. This translates text before speaking in the target language.')}
+								<a
+									class=" hover:underline dark:text-gray-200 text-gray-800"
+									href="https://docs.camb.ai"
+									target="_blank"
+								>
+									{$i18n.t('See available language IDs.')}
+								</a>
 							</div>
 						</div>
 					</div>
@@ -787,6 +830,47 @@
 											bind:value={TTS_AZURE_SPEECH_OUTPUT_FORMAT}
 											placeholder={$i18n.t('Select an output format')}
 										/>
+									</div>
+								</div>
+							</div>
+						</div>
+					{:else if TTS_ENGINE === 'camb'}
+						<div class=" flex gap-2">
+							<div class="w-full">
+								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('TTS Voice')}</div>
+								<div class="flex w-full">
+									<div class="flex-1">
+										<input
+											list="voice-list"
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											bind:value={TTS_VOICE}
+											placeholder={$i18n.t('Select a voice')}
+										/>
+
+										<datalist id="voice-list">
+											{#each voices as voice}
+												<option value={voice.id}>{voice.name}</option>
+											{/each}
+										</datalist>
+									</div>
+								</div>
+							</div>
+							<div class="w-full">
+								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('TTS Model')}</div>
+								<div class="flex w-full">
+									<div class="flex-1">
+										<input
+											list="tts-model-list"
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											bind:value={TTS_MODEL}
+											placeholder={$i18n.t('Select a model')}
+										/>
+
+										<datalist id="tts-model-list">
+											{#each models as model}
+												<option value={model.id} class="bg-gray-50 dark:bg-gray-700" />
+											{/each}
+										</datalist>
 									</div>
 								</div>
 							</div>
