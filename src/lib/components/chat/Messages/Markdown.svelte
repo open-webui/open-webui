@@ -36,6 +36,8 @@
 
 	let tokens = [];
 	let pendingUpdate = null;
+	let lastContent = '';
+	let lastParsedContent = '';
 
 	const options = {
 		throwOnError: false,
@@ -56,7 +58,14 @@
 	});
 
 	const parseTokens = () => {
-		tokens = marked.lexer(replaceTokens(processResponseContent(content), model?.name, $user?.name));
+		if (content === lastContent) return;
+		lastContent = content;
+
+		const processed = replaceTokens(processResponseContent(content), model?.name, $user?.name);
+		if (processed === lastParsedContent) return;
+		lastParsedContent = processed;
+
+		tokens = marked.lexer(processed);
 	};
 
 	// Throttle parsing to once per animation frame while streaming
