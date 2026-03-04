@@ -276,12 +276,19 @@ class FeedbackTable:
 
             return FeedbackListResponse(items=feedbacks, total=total)
 
-    def get_all_feedbacks(self, db: Optional[Session] = None) -> list[FeedbackModel]:
+    def get_all_feedbacks(
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        db: Optional[Session] = None,
+    ) -> list[FeedbackModel]:
         with get_db_context(db) as db:
             return [
                 FeedbackModel.model_validate(feedback)
                 for feedback in db.query(Feedback)
                 .order_by(Feedback.updated_at.desc())
+                .offset(skip)
+                .limit(limit)
                 .all()
             ]
 
@@ -309,7 +316,12 @@ class FeedbackTable:
     def get_feedbacks_for_leaderboard(
         self, db: Optional[Session] = None
     ) -> list[LeaderboardFeedbackData]:
-        """Fetch only id and data for leaderboard computation (excludes snapshot/meta)."""
+        """Fetch only id and data for leaderboard computation (excludes snapshot/meta).
+
+        NOTE: intentionally unbounded — this is an admin-only analytics path that
+        requires the full feedback history to produce accurate rankings.  Only the
+        two lightweight columns (id, data) are fetched, not the heavy snapshot blob.
+        """
         with get_db_context(db) as db:
             return [
                 LeaderboardFeedbackData(id=row.id, data=row.data)
@@ -386,7 +398,11 @@ class FeedbackTable:
         return result
 
     def get_feedbacks_by_type(
-        self, type: str, db: Optional[Session] = None
+        self,
+        type: str,
+        skip: int = 0,
+        limit: int = 100,
+        db: Optional[Session] = None,
     ) -> list[FeedbackModel]:
         with get_db_context(db) as db:
             return [
@@ -394,11 +410,17 @@ class FeedbackTable:
                 for feedback in db.query(Feedback)
                 .filter_by(type=type)
                 .order_by(Feedback.updated_at.desc())
+                .offset(skip)
+                .limit(limit)
                 .all()
             ]
 
     def get_feedbacks_by_user_id(
-        self, user_id: str, db: Optional[Session] = None
+        self,
+        user_id: str,
+        skip: int = 0,
+        limit: int = 100,
+        db: Optional[Session] = None,
     ) -> list[FeedbackModel]:
         with get_db_context(db) as db:
             return [
@@ -406,6 +428,8 @@ class FeedbackTable:
                 for feedback in db.query(Feedback)
                 .filter_by(user_id=user_id)
                 .order_by(Feedback.updated_at.desc())
+                .offset(skip)
+                .limit(limit)
                 .all()
             ]
 

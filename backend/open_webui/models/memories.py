@@ -87,20 +87,42 @@ class MemoriesTable:
             except Exception:
                 return None
 
-    def get_memories(self, db: Optional[Session] = None) -> list[MemoryModel]:
+    def get_memories(
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        db: Optional[Session] = None,
+    ) -> list[MemoryModel]:
         with get_db_context(db) as db:
             try:
-                memories = db.query(Memory).all()
+                memories = (
+                    db.query(Memory)
+                    .order_by(Memory.updated_at.desc())
+                    .offset(skip)
+                    .limit(limit)
+                    .all()
+                )
                 return [MemoryModel.model_validate(memory) for memory in memories]
             except Exception:
                 return None
 
     def get_memories_by_user_id(
-        self, user_id: str, db: Optional[Session] = None
+        self,
+        user_id: str,
+        skip: int = 0,
+        limit: int = 100,
+        db: Optional[Session] = None,
     ) -> list[MemoryModel]:
         with get_db_context(db) as db:
             try:
-                memories = db.query(Memory).filter_by(user_id=user_id).all()
+                memories = (
+                    db.query(Memory)
+                    .filter_by(user_id=user_id)
+                    .order_by(Memory.updated_at.desc())
+                    .offset(skip)
+                    .limit(limit)
+                    .all()
+                )
                 return [MemoryModel.model_validate(memory) for memory in memories]
             except Exception:
                 return None
