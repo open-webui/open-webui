@@ -17,7 +17,7 @@ const ALLOWED_SURROUNDING_CHARS =
 // This regex uses Unicode property escapes (\p{Script=Han}, etc.) which are
 // extremely expensive to compile - doing so on every call caused ~87% of
 // markdown rendering time to be spent in KaTeX regex compilation.
-const SURROUNDING_CHARS_REGEX = new RegExp(`[${ALLOWED_SURROUNDING_CHARS}]`, 'u');
+const ALLOWED_SURROUNDING_CHARS_REGEX = new RegExp(`[${ALLOWED_SURROUNDING_CHARS}]`, 'u');
 
 // const DELIMITER_LIST = [
 //     { left: '$$', right: '$$', display: false },
@@ -81,7 +81,7 @@ function katexStart(src, displayMode: boolean) {
 			if (displayMode && src.charAt(i + 1) !== '$') {
 				continue;
 			}
-			if (i === 0 || SURROUNDING_CHARS_REGEX.test(src.charAt(i - 1))) {
+			if (i === 0 || ALLOWED_SURROUNDING_CHARS_REGEX.test(src.charAt(i - 1))) {
 				return i;
 			}
 		} else if (ch === 92 /* \ */) {
@@ -94,7 +94,7 @@ function katexStart(src, displayMode: boolean) {
 				// Inline: \( or \ce{ or \pu{
 				if (next !== '(' && next !== 'c' && next !== 'p') continue;
 			}
-			if (i === 0 || SURROUNDING_CHARS_REGEX.test(src.charAt(i - 1))) {
+			if (i === 0 || ALLOWED_SURROUNDING_CHARS_REGEX.test(src.charAt(i - 1))) {
 				return i;
 			}
 		}
