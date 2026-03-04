@@ -926,7 +926,6 @@
 		cancelAnimationFrame(contentsRAF);
 		contentsRAF = requestAnimationFrame(() => {
 			getContents();
-			contentsRAF = null;
 		});
 	} else {
 		artifactContents.set([]);
