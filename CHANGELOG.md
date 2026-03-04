@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - 🔌 **Terminal keepalive.** Terminal connections now stay active without being closed by idle timeouts from proxies or load balancers, and spurious disconnection messages no longer appear. [Commit](https://github.com/open-webui/open-webui/commit/ca2aaf0321c219d041e92e2c0c842a4e424732ef)
+- 📁 **Chat archive handler.** The archive button in the chat navbar now actually archives the chat and refreshes the chat list, instead of doing nothing. [#22229](https://github.com/open-webui/open-webui/pull/22229)
 
 ### Changed
 
