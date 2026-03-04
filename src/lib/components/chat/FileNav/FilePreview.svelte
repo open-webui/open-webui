@@ -4,6 +4,7 @@
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
 	import { settings } from '$lib/stores';
+	import { isCodeFile, highlightCode } from '$lib/utils/codeHighlight';
 	import Spinner from '../../common/Spinner.svelte';
 	import PDFViewer from '../../common/PDFViewer.svelte';
 
@@ -74,6 +75,7 @@
 	$: isMarkdown = MD_EXTS.has(getExt(selectedFile));
 	$: isCsv = CSV_EXTS.has(getExt(selectedFile));
 	$: isHtml = HTML_EXTS.has(getExt(selectedFile));
+	$: isCode = isCodeFile(selectedFile);
 	$: csvDelimiter = getExt(selectedFile) === 'tsv' ? '\t' : ',';
 	$: renderedHtml =
 		isMarkdown && fileContent
@@ -122,6 +124,24 @@
 	$: csvRows = isCsv && fileContent ? parseCsv(fileContent, csvDelimiter) : [];
 	$: csvHeader = csvRows.length > 0 ? csvRows[0] : [];
 	$: csvBody = csvRows.length > 1 ? csvRows.slice(1) : [];
+
+	// ── Shiki code highlighting ─────────────────────────────────────────
+	let highlightedHtml: string | null = null;
+	let highlightingFile: string | null = null; // track which file we're highlighting
+
+	$: if (isCode && fileContent !== null && selectedFile) {
+		const currentFile = selectedFile;
+		highlightingFile = currentFile;
+		highlightCode(fileContent, selectedFile)
+			.then((html) => {
+				if (highlightingFile === currentFile) highlightedHtml = html;
+			})
+			.catch(() => {
+				if (highlightingFile === currentFile) highlightedHtml = null;
+			});
+	} else {
+		highlightedHtml = null;
+	}
 
 	export let showRaw = false;
 	$: selectedFile, (showRaw = false); // reset to preview mode when switching files
@@ -181,7 +201,7 @@
 		<PDFViewer bind:this={pdfViewerRef} data={filePdfData} className="w-full h-full" />
 	{:else if fileOfficeHtml !== null}
 		<div class="flex flex-col h-full">
-			<div class="office-preview overflow-auto flex-1 min-h-0 p-3">
+			<div class="office-preview overflow-auto flex-1 min-h-0">
 				{@html fileOfficeHtml}
 			</div>
 			{#if excelSheetNames.length > 1}
@@ -278,6 +298,10 @@
 					</tbody>
 				</table>
 			</div>
+		{:else if isCode && highlightedHtml && !showRaw}
+			<div class="shiki-preview overflow-auto h-full text-xs">
+				{@html highlightedHtml}
+			</div>
 		{:else if editing}
 			<textarea
 				bind:this={editTextarea}
@@ -362,39 +386,91 @@
 	}
 	:global(.office-preview table) {
 		border-collapse: collapse;
-		font-size: 0.8rem;
-		line-height: 1.25rem;
+		font-size: 0.75rem;
+		font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+		line-height: 1.3;
 	}
 	:global(.office-preview table td),
 	:global(.office-preview table th) {
-		border: 1px solid rgba(128, 128, 128, 0.25);
-		padding: 0.5rem 0.75rem;
+		border: 1px solid rgba(200, 200, 200, 0.5);
+		padding: 4px 10px;
 		text-align: left;
 		white-space: nowrap;
+		user-select: text;
+		cursor: cell;
+		max-width: 300px;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	:global(.dark .office-preview table td),
 	:global(.dark .office-preview table th) {
-		border-color: rgba(128, 128, 128, 0.35);
+		border-color: rgba(80, 80, 80, 0.5);
 	}
-	:global(.office-preview table th) {
-		background: rgba(243, 244, 246, 0.95);
-		font-weight: 600;
+	/* Column letter headers */
+	:global(.office-preview table th.excel-col-hdr) {
 		position: sticky;
 		top: 0;
+		z-index: 2;
+		background: #f0f0f0;
+		color: #666;
+		font-weight: 500;
+		font-size: 0.65rem;
+		text-align: center;
+		padding: 3px 10px;
+		border-bottom: 2px solid rgba(180, 180, 180, 0.6);
+	}
+	:global(.dark .office-preview table th.excel-col-hdr) {
+		background: #2a2a3e;
+		color: #888;
+		border-bottom-color: rgba(100, 100, 100, 0.6);
+	}
+	/* Row number cells */
+	:global(.office-preview .excel-row-num) {
+		position: sticky;
+		left: 0;
 		z-index: 1;
+		background: #f0f0f0;
+		color: #999;
+		font-size: 0.6rem;
+		text-align: right !important;
+		padding: 4px 8px 4px 4px !important;
+		user-select: none;
+		width: 1px;
+		white-space: nowrap;
+		border-right: 2px solid rgba(180, 180, 180, 0.6) !important;
 	}
-	:global(.dark .office-preview table th) {
-		background: rgba(31, 41, 55, 0.95);
+	:global(.dark .office-preview .excel-row-num) {
+		background: #2a2a3e;
+		color: #666;
+		border-right-color: rgba(100, 100, 100, 0.6) !important;
 	}
-	:global(.office-preview table tr:nth-child(even)) {
-		background: rgba(128, 128, 128, 0.04);
+	/* Corner cell (intersection of row nums and col headers) */
+	:global(.office-preview thead .excel-row-num) {
+		z-index: 3;
 	}
-	:global(.office-preview table tr:hover) {
+	/* Number cells right-aligned */
+	:global(.office-preview .excel-num) {
+		text-align: right;
+		font-variant-numeric: tabular-nums;
+	}
+	/* Row hover and selection */
+	:global(.office-preview table tbody tr:nth-child(even) td:not(.excel-row-num)) {
+		background: rgba(0, 0, 0, 0.015);
+	}
+	:global(.dark .office-preview table tbody tr:nth-child(even) td:not(.excel-row-num)) {
+		background: rgba(255, 255, 255, 0.02);
+	}
+	:global(.office-preview table tbody tr:hover td:not(.excel-row-num)) {
 		background: rgba(59, 130, 246, 0.06);
 	}
-	:global(.dark .office-preview table tr:hover) {
+	:global(.dark .office-preview table tbody tr:hover td:not(.excel-row-num)) {
 		background: rgba(59, 130, 246, 0.1);
 	}
+	:global(.office-preview table td:focus) {
+		outline: 2px solid rgba(59, 130, 246, 0.5);
+		outline-offset: -2px;
+	}
+	/* DOCX / generic office styles */
 	:global(.office-preview img) {
 		max-width: 100%;
 		height: auto;
@@ -405,5 +481,45 @@
 	:global(.office-preview p) { margin: 0.25em 0; }
 	:global(.office-preview ul),
 	:global(.office-preview ol) { padding-left: 1.5em; margin: 0.5em 0; }
+	/* ── Shiki code highlighting ─────────────────────────────────── */
+	.shiki-preview :global(pre.shiki) {
+		margin: 0;
+		padding: 0.75rem 1rem;
+		font-size: 0.75rem;
+		line-height: 1.6;
+		border-radius: 0;
+		overflow-x: auto;
+	}
+	.shiki-preview :global(pre.shiki code) {
+		counter-reset: line;
+	}
+	.shiki-preview :global(pre.shiki code > .line) {
+		counter-increment: line;
+		display: inline-block;
+		width: 100%;
+		white-space: pre;
+	}
+	.shiki-preview :global(pre.shiki code > .line::before) {
+		content: counter(line);
+		display: inline-block;
+		width: 2.5em;
+		text-align: right;
+		margin-right: 1em;
+		color: #9ca3af;
+		user-select: none;
+		font-size: 0.65rem;
+	}
+	:global(.dark) .shiki-preview :global(pre.shiki code > .line::before) {
+		color: #4b5563;
+	}
+	/* Shiki dual-theme: swap CSS variables in dark mode */
+	:global(.dark) .shiki-preview :global(.shiki),
+	:global(.dark) .shiki-preview :global(.shiki span) {
+		color: var(--shiki-dark) !important;
+		background-color: var(--shiki-dark-bg) !important;
+		font-style: var(--shiki-dark-font-style) !important;
+		font-weight: var(--shiki-dark-font-weight) !important;
+		text-decoration: var(--shiki-dark-text-decoration) !important;
+	}
 </style>
 

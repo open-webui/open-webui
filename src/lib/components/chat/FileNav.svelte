@@ -26,6 +26,7 @@
 		setCwd,
 		type FileEntry
 	} from '$lib/apis/terminal';
+	import { isCodeFile } from '$lib/utils/codeHighlight';
 	import Folder from '../icons/Folder.svelte';
 	import Document from '../icons/Document.svelte';
 	import PenAlt from '../icons/PenAlt.svelte';
@@ -116,6 +117,7 @@
 	$: isMarkdown = MD_EXTS.has(getFileExt(selectedFile));
 	$: isCsv = CSV_EXTS.has(getFileExt(selectedFile));
 	$: isHtml = HTML_EXTS.has(getFileExt(selectedFile));
+	$: isCode = isCodeFile(selectedFile);
 	$: isOfficeFile = OFFICE_EXTS.has(getFileExt(selectedFile));
 	$: isTextFile =
 		fileContent !== null && fileImageUrl === null && filePdfData === null && !isOfficeFile;
@@ -281,11 +283,9 @@
 						excelSheetNames = wb.SheetNames;
 						if (excelSheetNames.length > 0) {
 							selectedExcelSheet = excelSheetNames[0];
-							const ws = wb.Sheets[selectedExcelSheet];
-							const DOMPurify = (await import('dompurify')).default;
-							fileOfficeHtml = DOMPurify.sanitize(
-								XLSX.utils.sheet_to_html(ws, { id: 'excel-table', editable: false, header: '' })
-							);
+							const { excelToTable } = await import('$lib/utils/excelToTable');
+							const result = await excelToTable(wb.Sheets[selectedExcelSheet]);
+							fileOfficeHtml = result.html;
 						}
 					} else if (ext === 'pptx') {
 						const { pptxToImages } = await import('$lib/utils/pptxToHtml');
@@ -612,7 +612,7 @@
 					</button>
 				</Tooltip>
 			{/if}
-			{#if (isMarkdown || isCsv || isHtml) && fileContent !== null && !editing}
+			{#if (isMarkdown || isCsv || isHtml || isCode) && fileContent !== null && !editing}
 				<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
 					<button
 						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
@@ -764,12 +764,9 @@
 					onSheetChange={async (sheet) => {
 						if (!excelWorkbook) return;
 						selectedExcelSheet = sheet;
-						const XLSX = await import('xlsx');
-						const ws = excelWorkbook.Sheets[sheet];
-						const DOMPurify = (await import('dompurify')).default;
-						fileOfficeHtml = DOMPurify.sanitize(
-							XLSX.utils.sheet_to_html(ws, { id: 'excel-table', editable: false, header: '' })
-						);
+						const { excelToTable } = await import('$lib/utils/excelToTable');
+						const result = await excelToTable(excelWorkbook.Sheets[sheet]);
+						fileOfficeHtml = result.html;
 					}}
 					{overlay}
 					onSave={async (content) => {

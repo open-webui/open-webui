@@ -171,20 +171,11 @@
 
 	const renderExcelSheet = async () => {
 		if (!excelWorkbook || !selectedSheet) return;
-
+		const { excelToTable } = await import('$lib/utils/excelToTable');
 		const worksheet = excelWorkbook.Sheets[selectedSheet];
-		// Calculate row count
-		const XLSX = await import('xlsx');
-		const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:A1');
-		rowCount = range.e.r - range.s.r + 1;
-
-		excelHtml = DOMPurify.sanitize(
-			XLSX.utils.sheet_to_html(worksheet, {
-				id: 'excel-table',
-				editable: false,
-				header: ''
-			})
-		);
+		const result = await excelToTable(worksheet);
+		excelHtml = result.html;
+		rowCount = result.rowCount;
 	};
 
 	$: if (selectedSheet && excelWorkbook) {
@@ -568,7 +559,7 @@
 							{/if}
 
 							{#if excelHtml}
-								<div class="excel-table-container overflow-auto max-h-[60vh]">
+								<div class="office-preview overflow-auto max-h-[60vh]">
 									{@html excelHtml}
 								</div>
 							{:else}
