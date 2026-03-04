@@ -237,13 +237,14 @@ class MessageTable:
             )
 
     def get_thread_replies_by_message_id(
-        self, id: str, db: Optional[Session] = None
+        self, id: str, limit: int = 200, db: Optional[Session] = None
     ) -> list[MessageReplyToResponse]:
         with get_db_context(db) as db:
             all_messages = (
                 db.query(Message)
                 .filter_by(parent_id=id)
                 .order_by(Message.created_at.desc())
+                .limit(limit)
                 .all()
             )
 
@@ -293,9 +294,10 @@ class MessageTable:
         self, id: str, db: Optional[Session] = None
     ) -> list[str]:
         with get_db_context(db) as db:
+            # Query only the user_id column to avoid loading full Message rows.
             return [
-                message.user_id
-                for message in db.query(Message).filter_by(parent_id=id).all()
+                row[0]
+                for row in db.query(Message.user_id).filter_by(parent_id=id).all()
             ]
 
     def get_messages_by_channel_id(

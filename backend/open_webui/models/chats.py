@@ -1013,8 +1013,10 @@ class ChatTable:
         with get_db_context(db) as db:
             all_chats = (
                 db.query(Chat)
-                # .limit(limit).offset(skip)
                 .order_by(Chat.updated_at.desc())
+                .offset(skip)
+                .limit(limit)
+                .all()
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
@@ -1065,7 +1067,11 @@ class ChatTable:
             )
 
     def get_pinned_chats_by_user_id(
-        self, user_id: str, db: Optional[Session] = None
+        self,
+        user_id: str,
+        skip: int = 0,
+        limit: int = 200,
+        db: Optional[Session] = None,
     ) -> list[ChatTitleIdResponse]:
         with get_db_context(db) as db:
             all_chats = (
@@ -1073,6 +1079,9 @@ class ChatTable:
                 .filter_by(user_id=user_id, pinned=True, archived=False)
                 .order_by(Chat.updated_at.desc())
                 .with_entities(Chat.id, Chat.title, Chat.updated_at, Chat.created_at)
+                .offset(skip)
+                .limit(limit)
+                .all()
             )
             return [
                 ChatTitleIdResponse.model_validate(
@@ -1087,13 +1096,20 @@ class ChatTable:
             ]
 
     def get_archived_chats_by_user_id(
-        self, user_id: str, db: Optional[Session] = None
+        self,
+        user_id: str,
+        skip: int = 0,
+        limit: int = 50,
+        db: Optional[Session] = None,
     ) -> list[ChatModel]:
         with get_db_context(db) as db:
             all_chats = (
                 db.query(Chat)
                 .filter_by(user_id=user_id, archived=True)
                 .order_by(Chat.updated_at.desc())
+                .offset(skip)
+                .limit(limit)
+                .all()
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
@@ -1320,7 +1336,12 @@ class ChatTable:
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def get_chats_by_folder_ids_and_user_id(
-        self, folder_ids: list[str], user_id: str, db: Optional[Session] = None
+        self,
+        folder_ids: list[str],
+        user_id: str,
+        skip: int = 0,
+        limit: int = 100,
+        db: Optional[Session] = None,
     ) -> list[ChatModel]:
         with get_db_context(db) as db:
             query = db.query(Chat).filter(
@@ -1330,6 +1351,11 @@ class ChatTable:
             query = query.filter_by(archived=False)
 
             query = query.order_by(Chat.updated_at.desc())
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
 
             all_chats = query.all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
@@ -1388,6 +1414,13 @@ class ChatTable:
                 raise NotImplementedError(
                     f"Unsupported dialect: {db.bind.dialect.name}"
                 )
+
+            query = query.order_by(Chat.updated_at.desc())
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
 
             all_chats = query.all()
             log.debug(f"all_chats: {all_chats}")
@@ -1597,21 +1630,36 @@ class ChatTable:
     ) -> bool:
         try:
             with get_db_context(db) as db:
-                chats_by_user = db.query(Chat).filter_by(user_id=user_id).all()
-                shared_chat_ids = [f"shared-{chat.id}" for chat in chats_by_user]
+                # Build the set of shared user_id values server-side using a
+                # correlated subquery – avoids loading all chat rows into Python.
+                owned_chat_ids_subq = (
+                    db.query(Chat.id).filter_by(user_id=user_id).subquery()
+                )
 
-                # Use subquery to delete chat_messages for shared chats
-                shared_id_subq = (
+                # Shared rows are stored with user_id = 'shared-<original_chat_id>'
+                # We match by checking that the suffix after 'shared-' exists in
+                # the owner's chat ids.
+                shared_chats_subq = (
                     db.query(Chat.id)
-                    .filter(Chat.user_id.in_(shared_chat_ids))
+                    .filter(
+                        Chat.user_id.like("shared-%"),
+                        func.substr(Chat.user_id, 8).in_(owned_chat_ids_subq),
+                    )
                     .subquery()
                 )
-                db.query(ChatMessage).filter(
-                    ChatMessage.chat_id.in_(shared_id_subq)
-                ).delete(synchronize_session=False)
-                db.query(Chat).filter(Chat.user_id.in_(shared_chat_ids)).delete()
-                db.commit()
 
+                # Delete chat_messages that belong to shared chats
+                db.query(ChatMessage).filter(
+                    ChatMessage.chat_id.in_(shared_chats_subq)
+                ).delete(synchronize_session=False)
+
+                # Delete the shared chat rows themselves
+                db.query(Chat).filter(
+                    Chat.user_id.like("shared-%"),
+                    func.substr(Chat.user_id, 8).in_(owned_chat_ids_subq),
+                ).delete(synchronize_session=False)
+
+                db.commit()
                 return True
         except Exception:
             return False
