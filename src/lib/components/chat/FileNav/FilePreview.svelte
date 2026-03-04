@@ -15,6 +15,8 @@
 	export let selectedFile: string | null = null;
 	export let fileLoading = false;
 	export let fileImageUrl: string | null = null;
+	export let fileVideoUrl: string | null = null;
+	export let fileAudioUrl: string | null = null;
 	export let filePdfData: ArrayBuffer | null = null;
 	export let fileContent: string | null = null;
 
@@ -196,6 +198,27 @@
 				class="max-w-full max-h-full object-contain p-3"
 				draggable="false"
 			/>
+		</div>
+	{:else if fileVideoUrl !== null}
+		<div class="w-full h-full flex items-center justify-center bg-black">
+			<!-- svelte-ignore a11y-media-has-caption -->
+			<video
+				src={fileVideoUrl}
+				controls
+				class="max-w-full max-h-full"
+			>
+				{$i18n.t('Your browser does not support the video tag.')}
+			</video>
+		</div>
+	{:else if fileAudioUrl !== null}
+		<div class="w-full h-full flex items-center justify-center p-6">
+			<audio
+				src={fileAudioUrl}
+				controls
+				class="w-full max-w-md"
+			>
+				{$i18n.t('Your browser does not support the audio tag.')}
+			</audio>
 		</div>
 	{:else if filePdfData !== null}
 		<PDFViewer bind:this={pdfViewerRef} data={filePdfData} className="w-full h-full" />

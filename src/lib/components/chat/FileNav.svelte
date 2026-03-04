@@ -91,6 +91,8 @@
 	let selectedFile: string | null = null;
 	let fileContent: string | null = null;
 	let fileImageUrl: string | null = null;
+	let fileVideoUrl: string | null = null;
+	let fileAudioUrl: string | null = null;
 	let filePdfData: ArrayBuffer | null = null;
 	let fileLoading = false;
 	let filePreviewRef: FilePreview;
@@ -181,7 +183,11 @@
 
 	// ── Helpers ──────────────────────────────────────────────────────────
 	const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif']);
+	const VIDEO_EXTS = new Set(['mp4', 'webm', 'mov', 'ogv', 'avi', 'mkv']);
+	const AUDIO_EXTS = new Set(['mp3', 'wav', 'ogg', 'oga', 'flac', 'm4a', 'aac', 'wma', 'opus']);
 	const isImage = (path: string) => IMAGE_EXTS.has(path.split('.').pop()?.toLowerCase() ?? '');
+	const isVideo = (path: string) => VIDEO_EXTS.has(path.split('.').pop()?.toLowerCase() ?? '');
+	const isAudio = (path: string) => AUDIO_EXTS.has(path.split('.').pop()?.toLowerCase() ?? '');
 	const isPdf = (path: string) => path.split('.').pop()?.toLowerCase() === 'pdf';
 	const isOffice = (path: string) => OFFICE_EXTS.has(path.split('.').pop()?.toLowerCase() ?? '');
 
@@ -205,6 +211,14 @@
 		if (fileImageUrl) {
 			URL.revokeObjectURL(fileImageUrl);
 			fileImageUrl = null;
+		}
+		if (fileVideoUrl) {
+			URL.revokeObjectURL(fileVideoUrl);
+			fileVideoUrl = null;
+		}
+		if (fileAudioUrl) {
+			URL.revokeObjectURL(fileAudioUrl);
+			fileAudioUrl = null;
 		}
 		filePdfData = null;
 		fileOfficeHtml = null;
@@ -262,6 +276,12 @@
 		if (isImage(filePath)) {
 			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
 			if (result) fileImageUrl = URL.createObjectURL(result.blob);
+		} else if (isVideo(filePath)) {
+			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			if (result) fileVideoUrl = URL.createObjectURL(result.blob);
+		} else if (isAudio(filePath)) {
+			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			if (result) fileAudioUrl = URL.createObjectURL(result.blob);
 		} else if (isPdf(filePath)) {
 			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
 			if (result) filePdfData = await result.blob.arrayBuffer();
@@ -524,6 +544,8 @@
 
 	onDestroy(() => {
 		if (fileImageUrl) URL.revokeObjectURL(fileImageUrl);
+		if (fileVideoUrl) URL.revokeObjectURL(fileVideoUrl);
+		if (fileAudioUrl) URL.revokeObjectURL(fileAudioUrl);
 	});
 </script>
 
@@ -755,6 +777,8 @@
 					{selectedFile}
 					{fileLoading}
 					{fileImageUrl}
+					{fileVideoUrl}
+					{fileAudioUrl}
 					{filePdfData}
 					{fileContent}
 					{fileOfficeHtml}
