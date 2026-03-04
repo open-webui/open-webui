@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🎬 **Open Terminal video previews.** Users can now preview video and audio files directly in the Open Terminal file navigator, making it easier to view media without downloading them first. [Commit](https://github.com/open-webui/open-webui/commit/c40f26946f2eaeb1587a1f8b0c643b4a5121fc06)
 - 💻 **Code syntax highlighting and XLSX improvements in Open Terminal.** Code files now display with syntax highlighting in the Open Terminal file navigator, and XLSX spreadsheets now show column headers and row numbers for easier navigation. [Commit](https://github.com/open-webui/open-webui/commit/f962bae98306ea9264967b78b803397f4821f9b0)
 - 🌳 **Open Terminal JSON tree view.** JSON, JSONC, JSONL, and JSON5 files now display as interactive collapsible tree views in the Open Terminal file navigator, and SVG files render as preview images with syntax highlighting support. [Commit](https://github.com/open-webui/open-webui/commit/f4c38e6001dd9d4853ed923e0bc5e790c4fd9941)
+- 📓 **Open Terminal Jupyter Notebook previews.** Users can now preview Jupyter Notebook files directly in the Open Terminal file navigator, making it easier to view notebook content without downloading them first. [Commit](https://github.com/open-webui/open-webui/commit/b081e33c0a37585a1ee60b6e0e1ea03457f1e5f4)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for French were enhanced and expanded.
 
