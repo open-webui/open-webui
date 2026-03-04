@@ -1547,7 +1547,11 @@
 										}}
 										uploadOneDriveHandler={async (authorityType) => {
 											try {
-												const filesData = await pickAndDownloadFiles(authorityType);
+												const maxFileCount = $config?.file?.max_count;
+												const filesData = await pickAndDownloadFiles(
+													authorityType,
+													maxFileCount
+												);
 												if (filesData && filesData.length > 0) {
 													if (filesData.length > 1) {
 														toast.success(
@@ -1568,11 +1572,22 @@
 												}
 											} catch (error) {
 												console.error('OneDrive Error:', error);
-												toast.error(
-													$i18n.t('OneDrive Error: {{error}}', {
-														error: error.message
-													})
-												);
+												// Handle specific max file count error
+												if (error.message?.startsWith('MAX_FILE_COUNT_EXCEEDED:')) {
+													const [, count, max] = error.message.split(':');
+													toast.error(
+														$i18n.t('Selected items contain {{count}} files, but maximum is {{max}}.', {
+															count,
+															max
+														})
+													);
+												} else {
+													toast.error(
+														$i18n.t('OneDrive Error: {{error}}', {
+															error: error.message
+														})
+													);
+												}
 											}
 										}}
 										{onUpload}

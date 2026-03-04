@@ -501,7 +501,8 @@ export async function openOneDrivePicker(
 
 // Pick and download multiple files from OneDrive (with folder support)
 export async function pickAndDownloadFiles(
-	authorityType?: 'personal' | 'organizations'
+	authorityType?: 'personal' | 'organizations',
+	maxFileCount?: number
 ): Promise<{ blob: Blob; name: string }[] | null> {
 	const pickerResult = await openOneDrivePicker(authorityType);
 
@@ -526,6 +527,13 @@ export async function pickAndDownloadFiles(
 	// Check if any files were actually found
 	if (allFiles.length === 0) {
 		throw new Error('No files found in the selected items.');
+	}
+
+	// Check if the number of files exceeds the configured maximum
+	if (maxFileCount && allFiles.length > maxFileCount) {
+		throw new Error(
+			`MAX_FILE_COUNT_EXCEEDED:${allFiles.length}:${maxFileCount}`
+		);
 	}
 
 	// Download all files with error handling
