@@ -5,6 +5,12 @@ export type FileEntry = {
 	modified?: number;
 };
 
+export type ListeningPort = {
+	port: number;
+	pid: number | null;
+	process: string | null;
+};
+
 export type TerminalFeatures = {
 	terminal?: boolean;
 };
@@ -234,4 +240,21 @@ export const moveEntry = async (
 			return { error: err?.detail ?? 'Move failed' };
 		});
 	return res;
+};
+
+export const getListeningPorts = async (
+	baseUrl: string,
+	apiKey: string
+): Promise<ListeningPort[]> => {
+	const url = `${baseUrl.replace(/\/$/, '')}/ports`;
+	const res = await fetch(url, {
+		headers: { Authorization: `Bearer ${apiKey}` }
+	}).catch(() => null);
+	if (!res || !res.ok) return [];
+	const json = await res.json().catch(() => null);
+	return json?.ports ?? [];
+};
+
+export const getPortProxyUrl = (baseUrl: string, port: number, path: string = ''): string => {
+	return `${baseUrl.replace(/\/$/, '')}/proxy/${port}/${path}`;
 };
