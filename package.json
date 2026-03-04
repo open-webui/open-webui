@@ -66,6 +66,7 @@
 		"@sveltejs/svelte-virtual-list": "^3.0.1",
 		"@tiptap/core": "^3.0.7",
 		"@tiptap/extension-bubble-menu": "^2.26.1",
+		"@tiptap/extension-code": "^3.0.7",
 		"@tiptap/extension-code-block-lowlight": "^3.0.7",
 		"@tiptap/extension-drag-handle": "^3.4.5",
 		"@tiptap/extension-file-handler": "^3.0.7",
