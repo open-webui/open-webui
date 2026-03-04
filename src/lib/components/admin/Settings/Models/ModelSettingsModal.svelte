@@ -436,7 +436,7 @@
 										</Tooltip>
 									</div>
 									<button
-										class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
+										class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {loading
 											? ' cursor-not-allowed'
 											: ''}"
 										type="submit"
@@ -445,9 +445,9 @@
 										{$i18n.t('Save')}
 
 										{#if loading}
-											<div class="ml-2 self-center">
+											<span class="shrink-0">
 												<Spinner />
-											</div>
+											</span>
 										{/if}
 									</button>
 								</div>
