@@ -3716,10 +3716,12 @@ async def streaming_chat_response_handler(response, ctx):
                                                         ).get("arguments")
                                                     )
 
-                                                    if delta_name:
+                                                    if delta_name and not current_response_tool_call[
+                                                        "function"
+                                                    ].get("name"):
                                                         current_response_tool_call[
                                                             "function"
-                                                        ]["name"] += delta_name
+                                                        ]["name"] = delta_name
 
                                                     if delta_arguments:
                                                         current_response_tool_call[
