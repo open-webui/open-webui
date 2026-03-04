@@ -55,6 +55,7 @@
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
 	import { bestMatchingLanguage, displayFileHandler } from '$lib/utils';
 	import { setTextScale } from '$lib/utils/text-scale';
+	import { identifyUmamiUser, trackUmamiEvent } from '$lib/utils/umami';
 
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
@@ -92,6 +93,7 @@
 
 	let loaded = false;
 	let tokenTimer = null;
+	let lastUmamiIdentifiedUserId = null;
 
 	let showRefresh = false;
 
@@ -654,6 +656,66 @@
 		}
 	};
 
+	const setupUmami = async (umamiConfig) => {
+		if (typeof window === 'undefined') {
+			return false;
+		}
+
+		const websiteId = `${umamiConfig?.website_id ?? ''}`.trim();
+		if (!websiteId) {
+			return false;
+		}
+
+		const domain = `${umamiConfig?.domain ?? 'https://cloud.umami.is'}`.trim().replace(/\/+$/, '');
+		const scriptUrl = `${umamiConfig?.script_url ?? `${domain}/script.js`}`.trim();
+
+		const applyIdentify = () => {
+			if ($user?.id) {
+				identifyUmamiUser($user.id);
+				if (lastUmamiIdentifiedUserId !== $user.id) {
+					trackUmamiEvent('session_authenticated', {
+						flow: 'auth',
+						surface: 'app_layout',
+						trigger: 'session_ready'
+					});
+					lastUmamiIdentifiedUserId = $user.id;
+				}
+			}
+		};
+
+		const existingScript = document.querySelector('script[data-open-webui-umami="true"]');
+		if (existingScript) {
+			if (window.umami) {
+				applyIdentify();
+			}
+			return true;
+		}
+
+		await new Promise((resolve) => {
+			const script = document.createElement('script');
+			script.defer = true;
+			script.src = scriptUrl;
+			script.setAttribute('data-website-id', websiteId);
+			script.setAttribute('data-host-url', domain);
+			script.setAttribute('data-do-not-track', 'true');
+			script.setAttribute('data-open-webui-umami', 'true');
+
+			script.onload = () => {
+				applyIdentify();
+				resolve(true);
+			};
+
+			script.onerror = () => {
+				console.error(`Failed to load Umami analytics script from ${scriptUrl}`);
+				resolve(false);
+			};
+
+			document.head.appendChild(script);
+		});
+
+		return true;
+	};
+
 	onMount(async () => {
 		window.addEventListener('message', windowMessageEventHandler);
 
@@ -774,9 +836,20 @@
 					clearInterval(tokenTimer);
 				}
 				tokenTimer = setInterval(checkTokenExpiry, 15000);
+
+				if (window.umami && value?.id && lastUmamiIdentifiedUserId !== value.id) {
+					identifyUmamiUser(value.id);
+					trackUmamiEvent('session_authenticated', {
+						flow: 'auth',
+						surface: 'app_layout',
+						trigger: 'session_ready'
+					});
+					lastUmamiIdentifiedUserId = value.id;
+				}
 			} else {
 				$socket?.off('events', chatEventHandler);
 				$socket?.off('events:channel', channelEventHandler);
+				lastUmamiIdentifiedUserId = null;
 			}
 		});
 
@@ -804,6 +877,8 @@
 		}
 
 		if (backendConfig) {
+			await setupUmami(backendConfig?.analytics?.umami);
+
 			// Save Backend Status to Store
 			await config.set(backendConfig);
 			await WEBUI_NAME.set(backendConfig.name);

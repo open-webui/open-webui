@@ -63,6 +63,7 @@
 		displayFileHandler
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
+	import { trackUmamiEvent } from '$lib/utils/umami';
 
 	import {
 		archiveChatById,
@@ -1819,6 +1820,15 @@
 
 		saveSessionSelectedModels();
 
+		trackUmamiEvent('message_sent', {
+			flow: 'chat',
+			surface: 'chat_input',
+			trigger: 'submit',
+			model_count: selectedModels.length,
+			has_files: _files.length > 0,
+			temporary_chat: $temporaryChatEnabled
+		});
+
 		await sendMessage(history, userMessageId, { newChat: true });
 	};
 
@@ -2381,6 +2391,13 @@
 				scrollToBottom();
 			}
 
+			trackUmamiEvent('message_regenerated', {
+				flow: 'chat',
+				surface: 'messages',
+				trigger: 'click',
+				has_suggestion_prompt: Boolean(suggestionPrompt)
+			});
+
 			await sendMessage(history, userMessage.id, {
 				...(suggestionPrompt
 					? {
@@ -2503,6 +2520,15 @@
 				$selectedFolder?.id
 			);
 
+			trackUmamiEvent('chat_created', {
+				flow: 'chat',
+				surface: 'chat_input',
+				trigger: 'submit',
+				model_count: selectedModels.length,
+				has_files: (chatFiles?.length ?? 0) > 0,
+				temporary_chat: false
+			});
+
 			_chatId = chat.id;
 			await chatId.set(_chatId);
 
@@ -2517,6 +2543,13 @@
 		} else {
 			_chatId = `local:${$socket?.id}`; // Use socket id for temporary chat
 			await chatId.set(_chatId);
+			trackUmamiEvent('chat_created', {
+				flow: 'chat',
+				surface: 'chat_input',
+				trigger: 'submit',
+				model_count: selectedModels.length,
+				temporary_chat: true
+			});
 		}
 		await tick();
 
