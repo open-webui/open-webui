@@ -8,6 +8,7 @@
 	import Spinner from '../../common/Spinner.svelte';
 	import PDFViewer from '../../common/PDFViewer.svelte';
 	import JsonTreeView from './JsonTreeView.svelte';
+	import NotebookView from './NotebookView.svelte';
 
 	let pdfViewerRef: PDFViewer;
 
@@ -81,6 +82,7 @@
 	$: isHtml = HTML_EXTS.has(getExt(selectedFile));
 	$: isJson = JSON_EXTS.has(getExt(selectedFile));
 	$: isSvg = getExt(selectedFile) === 'svg';
+	$: isNotebook = getExt(selectedFile) === 'ipynb';
 	$: isCode = isCodeFile(selectedFile);
 	$: csvDelimiter = getExt(selectedFile) === 'tsv' ? '\t' : ',';
 	$: renderedHtml =
@@ -174,6 +176,19 @@
 	} else {
 		parsedJson = undefined;
 		jsonError = null;
+	}
+
+	// ── Notebook parsing ─────────────────────────────────────────────────
+	let parsedNotebook: Record<string, unknown> | null = null;
+
+	$: if (isNotebook && fileContent !== null) {
+		try {
+			parsedNotebook = JSON.parse(fileContent);
+		} catch {
+			parsedNotebook = null;
+		}
+	} else {
+		parsedNotebook = null;
 	}
 
 	export let showRaw = false;
@@ -351,6 +366,10 @@
 						{/each}
 					</tbody>
 				</table>
+			</div>
+		{:else if isNotebook && !showRaw && parsedNotebook}
+			<div class="overflow-auto h-full">
+				<NotebookView notebook={parsedNotebook} />
 			</div>
 		{:else if isJson && !showRaw && parsedJson !== undefined}
 			<div class="overflow-auto h-full">
