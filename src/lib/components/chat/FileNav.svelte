@@ -119,6 +119,8 @@
 	$: isMarkdown = MD_EXTS.has(getFileExt(selectedFile));
 	$: isCsv = CSV_EXTS.has(getFileExt(selectedFile));
 	$: isHtml = HTML_EXTS.has(getFileExt(selectedFile));
+	$: isJson = ['json', 'jsonc', 'jsonl', 'json5'].includes(getFileExt(selectedFile));
+	$: isSvg = getFileExt(selectedFile) === 'svg';
 	$: isCode = isCodeFile(selectedFile);
 	$: isOfficeFile = OFFICE_EXTS.has(getFileExt(selectedFile));
 	$: isTextFile =
@@ -182,7 +184,7 @@
 	}
 
 	// ── Helpers ──────────────────────────────────────────────────────────
-	const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif']);
+	const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'ico', 'avif']);
 	const VIDEO_EXTS = new Set(['mp4', 'webm', 'mov', 'ogv', 'avi', 'mkv']);
 	const AUDIO_EXTS = new Set(['mp3', 'wav', 'ogg', 'oga', 'flac', 'm4a', 'aac', 'wma', 'opus']);
 	const isImage = (path: string) => IMAGE_EXTS.has(path.split('.').pop()?.toLowerCase() ?? '');
@@ -634,7 +636,7 @@
 					</button>
 				</Tooltip>
 			{/if}
-			{#if (isMarkdown || isCsv || isHtml || isCode) && fileContent !== null && !editing}
+			{#if (isMarkdown || isCsv || isHtml || isCode || isJson || isSvg) && fileContent !== null && !editing}
 				<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
 					<button
 						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"

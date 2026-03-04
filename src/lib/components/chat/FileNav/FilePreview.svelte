@@ -7,6 +7,7 @@
 	import { isCodeFile, highlightCode } from '$lib/utils/codeHighlight';
 	import Spinner from '../../common/Spinner.svelte';
 	import PDFViewer from '../../common/PDFViewer.svelte';
+	import JsonTreeView from './JsonTreeView.svelte';
 
 	let pdfViewerRef: PDFViewer;
 
@@ -72,11 +73,14 @@
 	const MD_EXTS = new Set(['md', 'markdown', 'mdx']);
 	const CSV_EXTS = new Set(['csv', 'tsv']);
 	const HTML_EXTS = new Set(['html', 'htm']);
+	const JSON_EXTS = new Set(['json', 'jsonc', 'jsonl', 'json5']);
 	const getExt = (path: string | null) => path?.split('.').pop()?.toLowerCase() ?? '';
 
 	$: isMarkdown = MD_EXTS.has(getExt(selectedFile));
 	$: isCsv = CSV_EXTS.has(getExt(selectedFile));
 	$: isHtml = HTML_EXTS.has(getExt(selectedFile));
+	$: isJson = JSON_EXTS.has(getExt(selectedFile));
+	$: isSvg = getExt(selectedFile) === 'svg';
 	$: isCode = isCodeFile(selectedFile);
 	$: csvDelimiter = getExt(selectedFile) === 'tsv' ? '\t' : ',';
 	$: renderedHtml =
@@ -131,10 +135,20 @@
 	let highlightedHtml: string | null = null;
 	let highlightingFile: string | null = null; // track which file we're highlighting
 
-	$: if (isCode && fileContent !== null && selectedFile) {
+	$: if ((isCode || isSvg) && fileContent !== null && selectedFile) {
 		const currentFile = selectedFile;
 		highlightingFile = currentFile;
-		highlightCode(fileContent, selectedFile)
+		const lang = isSvg ? 'xml' : undefined;
+		(lang
+			? import('shiki').then(({ codeToHtml }) =>
+					codeToHtml(fileContent!, {
+						lang: 'xml',
+						themes: { light: 'github-light', dark: 'github-dark' },
+						defaultColor: 'light'
+					})
+				)
+			: highlightCode(fileContent!, selectedFile!)
+		)
 			.then((html) => {
 				if (highlightingFile === currentFile) highlightedHtml = html;
 			})
@@ -143,6 +157,23 @@
 			});
 	} else {
 		highlightedHtml = null;
+	}
+
+	// ── JSON parsing ────────────────────────────────────────────────────
+	let parsedJson: unknown = undefined;
+	let jsonError: string | null = null;
+
+	$: if (isJson && fileContent !== null) {
+		try {
+			parsedJson = JSON.parse(fileContent);
+			jsonError = null;
+		} catch (e) {
+			parsedJson = undefined;
+			jsonError = e instanceof Error ? e.message : 'Invalid JSON';
+		}
+	} else {
+		parsedJson = undefined;
+		jsonError = null;
 	}
 
 	export let showRaw = false;
@@ -321,7 +352,20 @@
 					</tbody>
 				</table>
 			</div>
-		{:else if isCode && highlightedHtml && !showRaw}
+		{:else if isJson && !showRaw && parsedJson !== undefined}
+			<div class="overflow-auto h-full">
+				<JsonTreeView data={parsedJson} />
+			</div>
+		{:else if isJson && !showRaw && jsonError}
+			<div class="p-3 text-xs">
+				<div class="text-red-500 mb-2">JSON parse error: {jsonError}</div>
+				<pre class="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all leading-relaxed">{fileContent}</pre>
+			</div>
+		{:else if isSvg && !showRaw && fileContent}
+			<div class="svg-preview w-full h-full flex items-center justify-center overflow-auto p-3">
+				{@html DOMPurify.sanitize(fileContent, { USE_PROFILES: { svg: true, svgFilters: true }, ADD_TAGS: ['use'] })}
+			</div>
+		{:else if (isCode || isSvg) && highlightedHtml && !showRaw}
 			<div class="shiki-preview overflow-auto h-full text-xs">
 				{@html highlightedHtml}
 			</div>
