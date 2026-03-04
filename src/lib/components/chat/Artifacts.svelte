@@ -98,6 +98,7 @@
 		});
 
 		artifactContents.subscribe((value) => {
+			const prevLength = contents.length;
 			contents = value;
 			console.log('Artifact contents updated:', contents);
 
@@ -106,7 +107,9 @@
 				showArtifacts.set(false);
 			}
 
-			selectedContentIdx = contents ? contents.length - 1 : 0;
+			if (contents.length > prevLength) {
+				selectedContentIdx = contents.length - 1;
+			}
 		});
 	});
 </script>
