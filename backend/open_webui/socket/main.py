@@ -37,7 +37,7 @@ from open_webui.env import (
     WEBSOCKET_SERVER_PING_INTERVAL,
     WEBSOCKET_SERVER_LOGGING,
     WEBSOCKET_SERVER_ENGINEIO_LOGGING,
-    WEBSOCKET_EVENT_CALL_TIMEOUT,
+    WEBSOCKET_EVENT_CALLER_TIMEOUT,
 )
 from open_webui.utils.auth import decode_token
 from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
@@ -919,7 +919,7 @@ def get_event_call(request_info):
                 "data": event_data,
             },
             to=request_info["session_id"],
-            timeout=WEBSOCKET_EVENT_CALL_TIMEOUT,
+            timeout=WEBSOCKET_EVENT_CALLER_TIMEOUT,
         )
         return response
 
