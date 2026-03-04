@@ -5,12 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.9] - 2026-03-03
+## [0.8.9] - 2026-03-04
 
 ### Added
 
 ### Fixed
 
+- 🎨 **Button spinner alignment.** Button spinners across multiple modals now align correctly and stay on the same line as the button text, fixing layout issues when loading states are displayed. [#22227](https://github.com/open-webui/open-webui/pull/22227)
 - 🔌 **Terminal keepalive.** Terminal connections now stay active without being closed by idle timeouts from proxies or load balancers, and spurious disconnection messages no longer appear. [Commit](https://github.com/open-webui/open-webui/commit/ca2aaf0321c219d041e92e2c0c842a4e424732ef)
 - 📁 **Chat archive handler.** The archive button in the chat navbar now actually archives the chat and refreshes the chat list, instead of doing nothing. [#22229](https://github.com/open-webui/open-webui/pull/22229)
 - 🐍 **BeautifulSoup4 dependency.** Added the missing BeautifulSoup4 package to backend requirements, fixing failures when using features that depend on HTML parsing. [#22231](https://github.com/open-webui/open-webui/pull/22231)
