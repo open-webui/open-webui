@@ -34,3 +34,24 @@ Open WebUI has a default timeout of 5 minutes for Ollama to finish generating th
    - Confirm that the Ollama Server URL is correctly set to `[OLLAMA URL]` (e.g., `http://localhost:11434`).
 
 By following these enhanced troubleshooting steps, connection issues should be effectively resolved. For further assistance or queries, feel free to reach out to us on our community Discord.
+
+## Reverse Proxy and Persistent Volume Checks
+
+### Reverse Proxy Subpath (`/openwebui`) Issues
+
+Symptoms can include missing static assets (`404`), login loops, or broken streaming responses.
+
+- Ensure your proxy forwards WebSocket upgrade headers.
+- Ensure subpath routing is consistent (strip or rewrite the prefix before forwarding to Open WebUI).
+- Set `WEBUI_URL` to your external URL when running behind a proxy, for example `https://example.com/openwebui`.
+- If subpath routing remains unstable, prefer a subdomain deployment such as `https://ai.example.com`.
+
+### Persistent Volume Issues
+
+Symptoms can include lost chats/settings after restart or update.
+
+- Ensure the container path `/app/backend/data` is mapped to a persistent host directory.
+- Recheck the mapping after container recreation; a typo can create a new empty folder.
+- Verify the host directory permissions allow the container to read/write.
+
+For a beginner-safe Unraid walkthrough that includes these checks, see [Open WebUI on Unraid (beginner-safe)](./docs/unraid-beginner-safe.md).

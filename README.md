@@ -174,9 +174,13 @@ We offer various installation alternatives, including non-Docker native installa
 
 Look at the [Local Development Guide](https://docs.openwebui.com/getting-started/development) for instructions on setting up a local development environment.
 
+For a Unraid-focused setup walkthrough, see [Open WebUI on Unraid (beginner-safe)](./docs/unraid-beginner-safe.md).
+
 ### Troubleshooting
 
 Encountering connection issues? Our [Open WebUI Documentation](https://docs.openwebui.com/troubleshooting/) has got you covered. For further assistance and to join our vibrant community, visit the [Open WebUI Discord](https://discord.gg/5rJgQTnV4s).
+
+For reverse proxy subpath and persistent volume troubleshooting on Unraid, see [Open WebUI on Unraid (beginner-safe)](./docs/unraid-beginner-safe.md#troubleshooting).
 
 #### Open WebUI: Server Connection Error
 
