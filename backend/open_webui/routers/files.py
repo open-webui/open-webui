@@ -132,9 +132,18 @@ def process_uploaded_file(
                         db=db_session,
                     )
                 else:
-                    raise Exception(
-                        f"File type {content_type} is not supported for processing"
-                    )
+                    # Allow image/video uploads for multimodal chat without forcing
+                    # retrieval/text extraction. They are still available via file URL.
+                    if content_type.startswith("video/"):
+                        Files.update_file_data_by_id(
+                            file_item.id,
+                            {"status": "completed"},
+                            db=db_session,
+                        )
+                    else:
+                        raise Exception(
+                            f"File type {content_type} is not supported for processing"
+                        )
             else:
                 log.info(
                     f"File type {file.content_type} is not provided, but trying to process anyway"
