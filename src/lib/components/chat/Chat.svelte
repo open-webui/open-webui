@@ -65,6 +65,7 @@
 	import { AudioQueue } from '$lib/utils/audio';
 
 	import {
+		archiveChatById,
 		createNewChat,
 		getAllTags,
 		getChatById,
@@ -2585,6 +2586,25 @@
 			toast.error($i18n.t('Failed to move chat'));
 		}
 	};
+
+	const archiveChatHandler = async (id: string) => {
+		try {
+			await archiveChatById(localStorage.token, id);
+			currentChatPage.set(1);
+			initNewChat();
+			await goto('/');
+			getChatList(localStorage.token, $currentChatPage).then((chats) => {
+				chats.set(chats);
+			});
+			getPinnedChatList(localStorage.token).then((pinnedChats) => {
+				pinnedChats.set(pinnedChats);
+			});
+			toast.success($i18n.t('Chat archived.'));
+		} catch (error) {
+			console.error('Error archiving chat:', error);
+			toast.error($i18n.t('Failed to archive chat.'));
+		}
+	};
 </script>
 
 <svelte:head>
@@ -2667,7 +2687,7 @@
 						bind:selectedModels
 						shareEnabled={!!history.currentId}
 						{initNewChat}
-						archiveChatHandler={() => {}}
+						{archiveChatHandler}
 						{moveChatHandler}
 						onSaveTempChat={async () => {
 							try {
