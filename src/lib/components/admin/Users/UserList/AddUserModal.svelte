@@ -108,6 +108,7 @@
 					}
 
 					stopLoading();
+					show = false;
 				};
 
 				reader.readAsText(file);
@@ -115,8 +116,6 @@
 				toast.error($i18n.t('File not found.'));
 			}
 		}
-
-		loading = false;
 	};
 </script>
 
