@@ -270,6 +270,11 @@
 					console.log('Shortcut triggered: DELETE_CHAT');
 					event.preventDefault();
 					document.getElementById('delete-chat-button')?.click();
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.CLOSE_CHAT])) {
+					console.log('Shortcut triggered: CLOSE_CHAT');
+					event.preventDefault();
+					// Close current chat by navigating to home
+					goto('/');
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.OPEN_SETTINGS])) {
 					console.log('Shortcut triggered: OPEN_SETTINGS');
 					event.preventDefault();

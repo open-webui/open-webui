@@ -16,6 +16,7 @@ export enum Shortcut {
 	NEW_CHAT = 'newChat',
 	NEW_TEMPORARY_CHAT = 'newTemporaryChat',
 	DELETE_CHAT = 'deleteChat',
+	CLOSE_CHAT = 'closeChat',
 	OPEN_MODEL_SELECTOR = 'openModelSelector',
 	TOGGLE_DICTATION = 'toggleDictation',
 
@@ -59,6 +60,12 @@ export const shortcuts: ShortcutRegistry = {
 		name: 'Delete Chat',
 		keys: ['mod', 'shift', 'Backspace', 'Delete'],
 		category: 'Chat'
+	},
+	[Shortcut.CLOSE_CHAT]: {
+		name: 'Close Chat',
+		keys: ['mod', 'W'],
+		category: 'Chat',
+		tooltip: 'Closes the current chat and returns to the home screen.'
 	},
 	[Shortcut.OPEN_MODEL_SELECTOR]: {
 		name: 'Open Model Selector',
