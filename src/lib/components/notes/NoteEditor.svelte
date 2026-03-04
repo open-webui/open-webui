@@ -6,7 +6,7 @@
 
 	const i18n = getContext('i18n');
 
-	import { marked } from 'marked';
+	import { renderMarkdownToHTML } from '$lib/utils/marked';
 	import { toast } from 'svelte-sonner';
 
 	import { goto } from '$app/navigation';
@@ -163,7 +163,7 @@
 	// Computed HTML for editor: fall back to markdown if HTML is missing
 	$: editorHtml =
 		note?.data?.content?.html ||
-		(note?.data?.content?.md ? marked.parse(note.data.content.md) : '');
+		(note?.data?.content?.md ? (renderMarkdownToHTML(note.data.content.md) as string) : '');
 
 	const init = async () => {
 		loading = true;
@@ -707,7 +707,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 									const choice = data.choices[0];
 									if (choice.delta && choice.delta.content) {
 										enhancedContent.md += choice.delta.content;
-										enhancedContent.html = marked.parse(enhancedContent.md);
+										enhancedContent.html = renderMarkdownToHTML(enhancedContent.md) as string;
 
 										note.data.content.md = enhancedContent.md;
 										note.data.content.html = enhancedContent.html;

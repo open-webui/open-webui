@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { marked } from 'marked';
+	import { renderMarkdownToHTML } from '$lib/utils/marked';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
@@ -583,13 +583,13 @@
 									class=" flex-1 self-center {(model?.is_active ?? true) ? '' : 'text-gray-500'}"
 								>
 									<Tooltip
-										content={marked.parse(
+										content={(renderMarkdownToHTML(
 											!!model?.meta?.description
 												? model?.meta?.description
 												: model?.ollama?.digest
 													? `${model?.ollama?.digest} **(${model?.ollama?.modified_at})**`
 													: model.id
-										)}
+										) as string)}
 										className=" w-fit"
 										placement="top-start"
 									>

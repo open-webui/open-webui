@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Token } from 'marked';
+	import type { Token } from '$lib/utils/marked';
 	import { LinkPreview } from 'bits-ui';
 
 	import { getContext } from 'svelte';

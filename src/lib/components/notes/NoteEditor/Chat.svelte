@@ -2,33 +2,7 @@
 	export let show = false;
 	export let selectedModelId = '';
 
-	import { marked } from 'marked';
-	// Configure marked with extensions
-	marked.use({
-		breaks: true,
-		gfm: true,
-		renderer: {
-			list(body, ordered, start) {
-				const isTaskList = body.includes('data-checked=');
-
-				if (isTaskList) {
-					return `<ul data-type="taskList">${body}</ul>`;
-				}
-
-				const type = ordered ? 'ol' : 'ul';
-				const startatt = ordered && start !== 1 ? ` start="${start}"` : '';
-				return `<${type}${startatt}>${body}</${type}>`;
-			},
-
-			listitem(text, task, checked) {
-				if (task) {
-					const checkedAttr = checked ? 'true' : 'false';
-					return `<li data-type="taskItem" data-checked="${checkedAttr}">${text}</li>`;
-				}
-				return `<li>${text}</li>`;
-			}
-		}
-	});
+	import { renderMarkdownToHTML } from '$lib/utils/marked';
 
 	import { toast } from 'svelte-sonner';
 
@@ -258,7 +232,7 @@ Based on the user's instruction, update and enhance the existing notes or select
 										streaming = true;
 
 										enhancedContent.md += deltaContent;
-										enhancedContent.html = marked.parse(enhancedContent.md);
+										enhancedContent.html = renderMarkdownToHTML(enhancedContent.md) as string;
 
 										if (!selectedContent || !selectedContent?.text) {
 											note.data.content.md = enhancedContent.md;
