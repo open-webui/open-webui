@@ -466,74 +466,71 @@
 					</Tooltip>
 				</div>
 
-			{#if !exportMode}
-				<div
-					class="sticky {stickyButtonsClassName} left-0 right-0 py-1.5 pr-3 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white"
-				>
+				{#if !exportMode}
 					<div class="flex items-center gap-0.5 shrink-0">
-					<button
-						class="flex gap-1 items-center bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
-						on:click={collapseCodeBlock}
-					>
-						<div class=" -translate-y-[0.5px]">
-							<ChevronUpDown className="size-3" />
-						</div>
-
-						<div>
-							{collapsed ? $i18n.t('Expand') : $i18n.t('Collapse')}
-						</div>
-					</button>
-
-					{#if ($config?.features?.enable_code_execution ?? true) && (lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code)))}
-						{#if executing}
-							<div
-								class="run-code-button bg-none border-none p-0.5 cursor-not-allowed bg-white dark:bg-black"
-							>
-								{$i18n.t('Running')}
+						<button
+							class="flex gap-1 items-center bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
+							on:click={collapseCodeBlock}
+						>
+							<div class=" -translate-y-[0.5px]">
+								<ChevronUpDown className="size-3" />
 							</div>
-						{:else if run}
+
+							<div>
+								{collapsed ? $i18n.t('Expand') : $i18n.t('Collapse')}
+							</div>
+						</button>
+
+						{#if ($config?.features?.enable_code_execution ?? true) && (lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code)))}
+							{#if executing}
+								<div
+									class="run-code-button bg-none border-none p-0.5 cursor-not-allowed bg-white dark:bg-black"
+								>
+									{$i18n.t('Running')}
+								</div>
+							{:else if run}
+								<button
+									class="flex gap-1 items-center run-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
+									on:click={async () => {
+										code = _code;
+										await tick();
+										executePython(code);
+									}}
+								>
+									<div>
+										{$i18n.t('Run')}
+									</div>
+								</button>
+							{/if}
+						{/if}
+
+						{#if save}
+							<button
+								class="save-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
+								on:click={saveCode}
+							>
+								{saved ? $i18n.t('Saved') : $i18n.t('Save')}
+							</button>
+						{/if}
+
+						<button
+							class="copy-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
+							on:click={copyCode}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
+						>
+
+						{#if preview && ['html', 'svg'].includes(lang)}
 							<button
 								class="flex gap-1 items-center run-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
-								on:click={async () => {
-									code = _code;
-									await tick();
-									executePython(code);
-								}}
+								on:click={previewCode}
 							>
 								<div>
-									{$i18n.t('Run')}
+									{$i18n.t('Preview')}
 								</div>
 							</button>
 						{/if}
-					{/if}
-
-					{#if save}
-						<button
-							class="save-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
-							on:click={saveCode}
-						>
-							{saved ? $i18n.t('Saved') : $i18n.t('Save')}
-						</button>
-					{/if}
-
-					<button
-						class="copy-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
-						on:click={copyCode}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
-					>
-
-					{#if preview && ['html', 'svg'].includes(lang)}
-						<button
-							class="flex gap-1 items-center run-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
-							on:click={previewCode}
-						>
-							<div>
-								{$i18n.t('Preview')}
-							</div>
-						</button>
-					{/if}
 					</div>
-				</div>
-			{/if}
+				{/if}
+			</div>
 
 			<div
 				class="language-{lang} rounded-t-2xl {exportMode ? '' : '-mt-8'} {editorClassName
