@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { getModels, getTaskConfig, updateTaskConfig } from '$lib/apis';
-	import { config, settings } from '$lib/stores';
+	import { getBanners, setBanners } from '$lib/apis/configs';
+	import { config, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { v4 as uuidv4 } from 'uuid';
 
 	import { getBaseModels } from '$lib/apis/models';
 
@@ -12,6 +14,8 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	import LangPicker from './LangPicker.svelte';
+	import Banners from './Interface/Banners.svelte';
+	import PromptSuggestions from '$lib/components/workspace/Models/PromptSuggestions.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -45,12 +49,18 @@
 				.filter((lang: string) => lang !== '');
 		}
 		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
+
+		// Save banners separately
+		await setBanners(localStorage.token, banners);
 	};
 
 	let workspaceModels = null;
 	let baseModels = null;
 
 	let models = null;
+
+	let banners = [];
+	let promptSuggestions = [];
 
 	const init = async () => {
 		try {
@@ -79,10 +89,14 @@
 			});
 
 			console.debug('models', models);
+
+			// Load banners
+			banners = await getBanners(localStorage.token);
 		} catch (err) {
 			console.error('Failed to initialize Interface settings:', err);
 			toast.error(err?.detail ?? err?.message ?? $i18n.t('Failed to load Interface settings'));
 			models = [];
+			banners = [];
 		}
 	};
 
