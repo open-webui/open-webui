@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- ⏱️ **Event call timeout configuration.** Administrators can now configure the WebSocket event call timeout via the WEBSOCKET_EVENT_CALLER_TIMEOUT environment variable, giving users more time to respond to event_call forms instead of timing out after 60 seconds. [#22222](https://github.com/open-webui/open-webui/pull/22222), [#22220](https://github.com/open-webui/open-webui/issues/22220)
+
 ### Fixed
 
 - 🎨 **Button spinner alignment.** Button spinners across multiple modals now align correctly and stay on the same line as the button text, fixing layout issues when loading states are displayed. [#22227](https://github.com/open-webui/open-webui/pull/22227)
