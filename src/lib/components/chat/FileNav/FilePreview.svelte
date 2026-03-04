@@ -17,6 +17,14 @@
 	export let filePdfData: ArrayBuffer | null = null;
 	export let fileContent: string | null = null;
 
+	// Office preview props
+	export let fileOfficeHtml: string | null = null;
+	export let fileOfficeSlides: string[] | null = null;
+	export let currentSlide = 0;
+	export let excelSheetNames: string[] = [];
+	export let selectedExcelSheet = '';
+	export let onSheetChange: ((sheet: string) => void) | null = null;
+
 	export let overlay = false;
 
 	export let onSave: ((content: string) => Promise<void>) | null = null;
@@ -124,7 +132,8 @@
 		pzInstance = panzoom(node, {
 			bounds: true,
 			boundsPadding: 0.1,
-			zoomSpeed: 0.065
+			zoomSpeed: 0.065,
+			zoomDoubleClickSpeed: 1
 		});
 	};
 
@@ -152,7 +161,7 @@
 </script>
 
 <div
-	class="flex-1 {fileImageUrl !== null
+	class="flex-1 {fileImageUrl !== null || (fileOfficeSlides !== null && fileOfficeSlides.length > 0)
 		? 'overflow-hidden'
 		: 'overflow-y-auto'} min-h-0 relative h-full"
 >
@@ -170,6 +179,61 @@
 		</div>
 	{:else if filePdfData !== null}
 		<PDFViewer bind:this={pdfViewerRef} data={filePdfData} className="w-full h-full" />
+	{:else if fileOfficeHtml !== null}
+		<div class="flex flex-col h-full">
+			<div class="office-preview overflow-auto flex-1 min-h-0 p-3">
+				{@html fileOfficeHtml}
+			</div>
+			{#if excelSheetNames.length > 1}
+				<div class="flex items-center gap-1 py-1.5 px-3 border-t border-gray-100 dark:border-gray-800 overflow-x-auto">
+					{#each excelSheetNames as sheet}
+						<button
+							class="shrink-0 px-3 py-1 text-xs rounded-md transition-colors
+								{selectedExcelSheet === sheet
+									? 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium'
+									: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+							on:click={() => onSheetChange?.(sheet)}
+						>
+							{sheet}
+						</button>
+					{/each}
+				</div>
+			{/if}
+		</div>
+	{:else if fileOfficeSlides !== null && fileOfficeSlides.length > 0}
+		<div class="flex flex-col h-full">
+			<div class="w-full flex-1 min-h-0 flex items-center justify-center overflow-hidden" use:initImagePanzoom>
+				<img
+					src={fileOfficeSlides[currentSlide]}
+					alt="Slide {currentSlide + 1}"
+					class="max-w-full max-h-full object-contain p-3"
+					draggable="false"
+				/>
+			</div>
+			{#if fileOfficeSlides.length > 1}
+				<div class="flex items-center justify-center gap-3 py-2 px-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500">
+					<button
+						class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
+						disabled={currentSlide === 0}
+						on:click={() => { resetImageView(); currentSlide = Math.max(0, currentSlide - 1); }}
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4">
+							<path fill-rule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" />
+						</svg>
+					</button>
+					<span>{currentSlide + 1} / {fileOfficeSlides.length}</span>
+					<button
+						class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
+						disabled={currentSlide === fileOfficeSlides.length - 1}
+						on:click={() => { resetImageView(); currentSlide = Math.min(fileOfficeSlides.length - 1, currentSlide + 1); }}
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4">
+							<path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+						</svg>
+					</button>
+				</div>
+			{/if}
+		</div>
 	{:else if fileContent !== null}
 		{#if isHtml && !showRaw}
 			{#if overlay}
@@ -226,7 +290,7 @@
 				class="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all leading-relaxed p-3">{fileContent}</pre>
 		{/if}
 	{:else}
-		<div class="text-sm text-gray-400 text-center pt-8">
+		<div class="text-xs text-gray-400 text-center pt-8">
 			{$i18n.t('Could not read file.')}
 		</div>
 	{/if}
@@ -284,4 +348,62 @@
 	:global(.dark) .csv-row-num {
 		color: #6b7280;
 	}
+	/* ── Office preview styles ──────────────────────────────────────── */
+	:global(.office-preview) {
+		font-size: 0.875rem;
+		line-height: 1.6;
+		color: #1f2937;
+		background: #fff;
+		border-radius: 4px;
+	}
+	:global(.dark .office-preview) {
+		color: #e5e7eb;
+		background: #1a1a2e;
+	}
+	:global(.office-preview table) {
+		border-collapse: collapse;
+		font-size: 0.8rem;
+		line-height: 1.25rem;
+	}
+	:global(.office-preview table td),
+	:global(.office-preview table th) {
+		border: 1px solid rgba(128, 128, 128, 0.25);
+		padding: 0.5rem 0.75rem;
+		text-align: left;
+		white-space: nowrap;
+	}
+	:global(.dark .office-preview table td),
+	:global(.dark .office-preview table th) {
+		border-color: rgba(128, 128, 128, 0.35);
+	}
+	:global(.office-preview table th) {
+		background: rgba(243, 244, 246, 0.95);
+		font-weight: 600;
+		position: sticky;
+		top: 0;
+		z-index: 1;
+	}
+	:global(.dark .office-preview table th) {
+		background: rgba(31, 41, 55, 0.95);
+	}
+	:global(.office-preview table tr:nth-child(even)) {
+		background: rgba(128, 128, 128, 0.04);
+	}
+	:global(.office-preview table tr:hover) {
+		background: rgba(59, 130, 246, 0.06);
+	}
+	:global(.dark .office-preview table tr:hover) {
+		background: rgba(59, 130, 246, 0.1);
+	}
+	:global(.office-preview img) {
+		max-width: 100%;
+		height: auto;
+	}
+	:global(.office-preview h1) { font-size: 1.5rem; font-weight: 700; margin: 0.75em 0 0.5em; }
+	:global(.office-preview h2) { font-size: 1.25rem; font-weight: 600; margin: 0.75em 0 0.5em; }
+	:global(.office-preview h3) { font-size: 1.1rem; font-weight: 600; margin: 0.5em 0 0.25em; }
+	:global(.office-preview p) { margin: 0.25em 0; }
+	:global(.office-preview ul),
+	:global(.office-preview ol) { padding-left: 1.5em; margin: 0.5em 0; }
 </style>
+
