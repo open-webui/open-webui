@@ -362,9 +362,9 @@ export const generateInitialsImage = (name) => {
 	const initials =
 		sanitizedName.length > 0
 			? sanitizedName[0] +
-				(sanitizedName.split(' ').length > 1
-					? sanitizedName[sanitizedName.lastIndexOf(' ') + 1]
-					: '')
+			(sanitizedName.split(' ').length > 1
+				? sanitizedName[sanitizedName.lastIndexOf(' ') + 1]
+				: '')
 			: '';
 
 	ctx.fillText(initials.toUpperCase(), canvas.width / 2, canvas.height / 2);
@@ -520,10 +520,10 @@ export const compareVersion = (latest, current) => {
 	return current === '0.0.0'
 		? false
 		: current.localeCompare(latest, undefined, {
-				numeric: true,
-				sensitivity: 'case',
-				caseFirst: 'upper'
-			}) < 0;
+			numeric: true,
+			sensitivity: 'case',
+			caseFirst: 'upper'
+		}) < 0;
 };
 
 export const extractCurlyBraceWords = (text) => {
@@ -956,6 +956,16 @@ export const extractSentencesForAudio = (text: string) => {
 };
 
 export const getMessageContentParts = (content: string, splitOn: string = 'punctuation') => {
+	// Strip <details> blocks directly on the full string before any
+	// code-block-aware processing. removeAllDetails (which callers use)
+	// applies the regex via replaceOutsideCode, which splits on triple-
+	// backtick code fences first. If a <details> block contains code
+	// fences (e.g. reasoning with code examples), the opening and
+	// closing tags land in separate segments and the regex fails,
+	// leaking thinking content into TTS. Applying the strip here on
+	// the full string catches those cases. (Fixes #22197)
+	content = content.replace(/<details[^>]*>[\s\S]*?<\/details>/gi, '');
+
 	const messageContentParts: string[] = [];
 
 	switch (splitOn) {
