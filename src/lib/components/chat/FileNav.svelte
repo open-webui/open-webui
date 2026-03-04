@@ -609,7 +609,14 @@
 			{selectedFile}
 			{loading}
 			onNavigate={loadDir}
-			onRefresh={() => loadDir(currentPath)}
+			onRefresh={() => {
+				if (selectedFile) {
+					const fileName = selectedFile.split('/').pop() ?? '';
+					openEntry({ name: fileName, type: 'file', size: 0 });
+				} else {
+					loadDir(currentPath);
+				}
+			}}
 			onNewFolder={startNewFolder}
 			onNewFile={startNewFile}
 			onUploadFiles={handleUploadFiles}
