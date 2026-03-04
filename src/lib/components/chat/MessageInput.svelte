@@ -1636,12 +1636,10 @@
 									{/if}
 
 									<div class="ml-1 flex gap-1.5">
-										{#if (selectedToolIds ?? []).filter((id) => !id.startsWith('direct_server:terminal_')).length > 0}
+										{#if (selectedToolIds ?? []).length > 0}
 											<Tooltip
 												content={$i18n.t('{{COUNT}} Available Tools', {
-													COUNT: (selectedToolIds ?? []).filter(
-														(id) => !id.startsWith('direct_server:terminal_')
-													).length
+													COUNT: (selectedToolIds ?? []).length
 												})}
 											>
 												<button
@@ -1655,9 +1653,7 @@
 													<Wrench className="size-4" strokeWidth="1.75" />
 
 													<span class="text-sm">
-														{(selectedToolIds ?? []).filter(
-															(id) => !id.startsWith('direct_server:terminal_')
-														).length}
+														{(selectedToolIds ?? []).length}
 													</span>
 												</button>
 											</Tooltip>
