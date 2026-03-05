@@ -29,7 +29,7 @@ from fastapi import (
     APIRouter,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel
 
 
@@ -581,6 +581,35 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         return FileResponse(file_path)
 
 
+def _format_timestamp(seconds, separator=","):
+    h = int(seconds // 3600)
+    m = int((seconds % 3600) // 60)
+    s = int(seconds % 60)
+    ms = int(round((seconds % 1) * 1000))
+
+    return f"{h:02d}:{m:02d}:{s:02d}{separator}{ms:03d}"
+
+
+def format_srt(segments):
+    lines = []
+    for i, seg in enumerate(segments, 1):
+        start = _format_timestamp(seg["start"], ",")
+        end = _format_timestamp(seg["end"], ",")
+        lines.append(f"{i}\n{start} --> {end}\n{seg['text'].strip()}\n")
+
+    return "\n".join(lines)
+
+
+def format_vtt(segments):
+    lines = ["WEBVTT\n"]
+    for seg in segments:
+        start = _format_timestamp(seg["start"], ".")
+        end = _format_timestamp(seg["end"], ".")
+        lines.append(f"{start} --> {end}\n{seg['text'].strip()}\n")
+
+    return "\n".join(lines)
+
+
 def transcription_handler(request, file_path, metadata, user=None):
     filename = os.path.basename(file_path)
     file_dir = os.path.dirname(file_path)
@@ -600,20 +629,71 @@ def transcription_handler(request, file_path, metadata, user=None):
             )
 
         model = request.app.state.faster_whisper_model
+
+        response_fmt = metadata.get("response_format", "json")
+        granularities = metadata.get("timestamp_granularities") or []
+        want_words = "word" in granularities
+        need_segments = response_fmt in ("verbose_json", "srt", "vtt")
+
         segments, info = model.transcribe(
             file_path,
             beam_size=5,
             vad_filter=WHISPER_VAD_FILTER,
             language=languages[0],
             multilingual=WHISPER_MULTILINGUAL,
+            word_timestamps=want_words and response_fmt == "verbose_json",
         )
         log.info(
             "Detected language '%s' with probability %f"
             % (info.language, info.language_probability)
         )
 
-        transcript = "".join([segment.text for segment in list(segments)])
-        data = {"text": transcript.strip()}
+        segment_list = list(segments)
+        transcript = "".join([seg.text for seg in segment_list])
+
+        if need_segments:
+            data = {
+                "task": "transcribe",
+                "language": info.language,
+                "duration": info.duration,
+                "text": transcript.strip(),
+            }
+
+            if want_words:
+                data["words"] = [
+                    {"word": w.word, "start": w.start, "end": w.end}
+                    for seg in segment_list
+                    for w in (seg.words or [])
+                ]
+
+            want_segment_detail = (
+                "segment" in granularities
+                or not want_words
+                or response_fmt in ("srt", "vtt")
+            )
+            if want_segment_detail:
+                data["segments"] = []
+                for i, seg in enumerate(segment_list):
+                    seg_data = {
+                        "id": i,
+                        "seek": seg.seek,
+                        "start": seg.start,
+                        "end": seg.end,
+                        "text": seg.text,
+                        "tokens": seg.tokens,
+                        "temperature": seg.temperature,
+                        "avg_logprob": seg.avg_logprob,
+                        "compression_ratio": seg.compression_ratio,
+                        "no_speech_prob": seg.no_speech_prob,
+                    }
+                    if want_words and seg.words:
+                        seg_data["words"] = [
+                            {"word": w.word, "start": w.start, "end": w.end}
+                            for w in seg.words
+                        ]
+                    data["segments"].append(seg_data)
+        else:
+            data = {"text": transcript.strip()}
 
         # save the transcript to a json file
         transcript_file = f"{file_dir}/{id}.json"
@@ -1101,9 +1181,50 @@ def transcribe(
                 except Exception:
                     pass
 
-    return {
-        "text": " ".join([result["text"] for result in results]),
-    }
+    combined_text = " ".join([result["text"] for result in results])
+
+    if results and "duration" in results[0]:
+        combined = {
+            "task": "transcribe",
+            "language": results[0].get("language"),
+            "duration": sum(r.get("duration", 0) for r in results),
+            "text": combined_text,
+        }
+        if any("words" in r for r in results):
+            combined["words"] = []
+            time_offset = 0.0
+            for r in results:
+                for w in r.get("words", []):
+                    combined["words"].append({
+                        "word": w["word"],
+                        "start": w["start"] + time_offset,
+                        "end": w["end"] + time_offset,
+                    })
+                time_offset += r.get("duration", 0)
+        if any("segments" in r for r in results):
+            combined["segments"] = []
+            time_offset = 0.0
+            seg_id = 0
+            for r in results:
+                for s in r.get("segments", []):
+                    seg = {
+                        **s,
+                        "id": seg_id,
+                        "start": s["start"] + time_offset,
+                        "end": s["end"] + time_offset,
+                    }
+                    if "words" in s:
+                        seg["words"] = [
+                            {**w, "start": w["start"] + time_offset, "end": w["end"] + time_offset}
+                            for w in s["words"]
+                        ]
+                    combined["segments"].append(seg)
+                    seg_id += 1
+                time_offset += r.get("duration", 0)
+
+        return combined
+
+    return {"text": combined_text}
 
 
 def compress_audio(file_path):
@@ -1173,6 +1294,8 @@ def transcription(
     request: Request,
     file: UploadFile = File(...),
     language: Optional[str] = Form(None),
+    response_format: Optional[str] = Form(None),
+    timestamp_granularities: Optional[list[str]] = Form(None),
     user=Depends(get_verified_user),
 ):
     if user.role != "admin" and not has_permission(
@@ -1214,12 +1337,29 @@ def transcription(
             f.write(contents)
 
         try:
-            metadata = None
-
+            metadata = {}
             if language:
-                metadata = {"language": language}
+                metadata["language"] = language
+            if response_format:
+                metadata["response_format"] = response_format
+            if timestamp_granularities:
+                metadata["timestamp_granularities"] = timestamp_granularities
 
             result = transcribe(request, file_path, metadata, user)
+
+            response_fmt = response_format or "json"
+            if response_fmt == "text":
+                return PlainTextResponse(result["text"])
+            elif response_fmt == "srt":
+                return PlainTextResponse(
+                    format_srt(result.get("segments", [])),
+                    media_type="application/x-subrip",
+                )
+            elif response_fmt == "vtt":
+                return PlainTextResponse(
+                    format_vtt(result.get("segments", [])),
+                    media_type="text/vtt",
+                )
 
             return {
                 **result,
