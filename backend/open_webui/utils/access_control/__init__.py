@@ -163,8 +163,8 @@ def has_connection_access(
     based on ``config.access_grants`` within the connection dict.
 
     - Admin with BYPASS_ADMIN_ACCESS_CONTROL → always allowed
-    - Empty / missing access_grants → allowed for all users
-    - Otherwise → delegates to ``has_access``
+    - Missing, None, or empty access_grants → private, admin-only
+    - access_grants has entries → delegates to ``has_access``
     """
     from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 
@@ -175,9 +175,6 @@ def has_connection_access(
         user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
 
     access_grants = (connection.get("config") or {}).get("access_grants", [])
-    if not access_grants:
-        return True
-
     return has_access(user.id, "read", access_grants, user_group_ids)
 
 

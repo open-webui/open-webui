@@ -364,7 +364,9 @@
 	};
 
 	$: if (token) {
-		if (JSON.stringify(token) !== JSON.stringify(_token)) {
+		if (token.text !== _token?.text || token.raw !== _token?.raw) {
+			_token = token;
+		} else if (JSON.stringify(token) !== JSON.stringify(_token)) {
 			_token = token;
 		}
 	}

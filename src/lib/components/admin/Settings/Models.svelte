@@ -249,6 +249,8 @@
 
 		console.debug(model);
 
+		upsertModelHandler(model, false);
+
 		toast.success(
 			model.meta.hidden
 				? $i18n.t(`Model {{name}} is now hidden`, {
@@ -258,8 +260,6 @@
 						name: model.id
 					})
 		);
-
-		upsertModelHandler(model);
 	};
 
 	const copyLinkHandler = async (model) => {
