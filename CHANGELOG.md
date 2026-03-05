@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🗃️ **Open Terminal SQLite browser.** Users can now browse SQLite database files directly in the Open Terminal file navigator, viewing tables and running queries without downloading them first. [Commit](https://github.com/open-webui/open-webui/commit/a181b4a731a9ec7856be08d0b045a454d1341cf4)
 - 📋 **Open Terminal file copy button.** Users can now copy file contents directly to clipboard in the Open Terminal file navigator with a single click, making it easier to quickly grab file content without downloading. [Commit](https://github.com/open-webui/open-webui/commit/f5ea1ce250cb02fbc583c6cb3f52a923912d0178)
 - 🔃 **Open Terminal auto-refresh.** The Open Terminal file navigator now automatically refreshes when the model writes or modifies files, keeping the view in sync without manual refresh. [Commit](https://github.com/open-webui/open-webui/commit/828656b35f04bf486609183799cf8aa2e9850a76)
+- 📊 **Open Terminal Mermaid diagram rendering.** Markdown files with Mermaid code blocks are now rendered as diagrams directly in the Open Terminal file navigator, making it easier to visualize flowcharts and other diagrams. [Commit](https://github.com/open-webui/open-webui/commit/aaa49bdd6d6e5c10e8be554039d3cac673008fc2)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for French were enhanced and expanded.
 
