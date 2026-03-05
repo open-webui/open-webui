@@ -55,8 +55,11 @@
 		]
 	});
 
+	let lastParsedContent = '';
+
 	const parseTokens = () => {
 		tokens = marked.lexer(replaceTokens(processResponseContent(content), model?.name, $user?.name));
+		lastParsedContent = content;
 	};
 
 	// Throttle parsing to once per animation frame while streaming
@@ -64,7 +67,9 @@
 		if (done) {
 			cancelAnimationFrame(pendingUpdate);
 			pendingUpdate = null;
-			parseTokens();
+			if (content !== lastParsedContent) {
+				parseTokens();
+			}
 		} else if (!pendingUpdate) {
 			pendingUpdate = requestAnimationFrame(() => {
 				pendingUpdate = null;
