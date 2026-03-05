@@ -1247,7 +1247,8 @@ async def execute_tool_server(
                 if param_in == "path":
                     path_params[param_name] = params[param_name]
                 elif param_in == "query":
-                    query_params[param_name] = params[param_name]
+                    if params[param_name] is not None:
+                        query_params[param_name] = params[param_name]
 
         final_url = f"{url}{route_path}"
         for key, value in path_params.items():

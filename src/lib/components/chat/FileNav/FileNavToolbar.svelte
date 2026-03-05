@@ -45,7 +45,9 @@
 					{!selectedFile && i === breadcrumbs.length - 1
 					? 'text-gray-700 dark:text-gray-300'
 					: 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400'}
-					{dragOverCrumb === i ? 'bg-blue-50 dark:bg-blue-900/30 ring-1 ring-blue-400 dark:ring-blue-500' : ''}"
+					{dragOverCrumb === i
+					? 'bg-blue-50 dark:bg-blue-900/30 ring-1 ring-blue-400 dark:ring-blue-500'
+					: ''}"
 				on:click={() => onNavigate(crumb.path)}
 				on:dragover={(e) => {
 					if (!e.dataTransfer?.types.includes('application/x-terminal-file-move')) return;
