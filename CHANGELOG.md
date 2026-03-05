@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🌳 **Open Terminal JSON tree view.** JSON, JSONC, JSONL, and JSON5 files now display as interactive collapsible tree views in the Open Terminal file navigator, and SVG files render as preview images with syntax highlighting support. [Commit](https://github.com/open-webui/open-webui/commit/f4c38e6001dd9d4853ed923e0bc5e790c4fd9941)
 - 📓 **Open Terminal Jupyter Notebook previews.** Users can now preview Jupyter Notebook files directly in the Open Terminal file navigator, making it easier to view notebook content without downloading them first. [Commit](https://github.com/open-webui/open-webui/commit/b081e33c0a37585a1ee60b6e0e1ea03457f1e5f4)
 - 🗃️ **Open Terminal SQLite browser.** Users can now browse SQLite database files directly in the Open Terminal file navigator, viewing tables and running queries without downloading them first. [Commit](https://github.com/open-webui/open-webui/commit/a181b4a731a9ec7856be08d0b045a454d1341cf4)
+- 📋 **Open Terminal file copy button.** Users can now copy file contents directly to clipboard in the Open Terminal file navigator with a single click, making it easier to quickly grab file content without downloading. [Commit](https://github.com/open-webui/open-webui/commit/f5ea1ce250cb02fbc583c6cb3f52a923912d0178)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for French were enhanced and expanded.
 
