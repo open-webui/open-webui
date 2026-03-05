@@ -155,8 +155,7 @@ async def search_web(
 ) -> str:
     """
     Search the public web for information. Best for current events, external references,
-    or topics not covered in internal documents. If knowledge base tools are available,
-    consider checking those first for internal information.
+    or topics not covered in internal documents.
 
     :param query: The search query to look up
     :param count: Number of results to return (default: 5)
