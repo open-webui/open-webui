@@ -54,8 +54,8 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
 
-def get_function_module_by_id(request: Request, pipe_id: str):
-    function_module, _, _ = get_function_module_from_cache(request, pipe_id)
+def get_function_module_by_id(request: Request, pipe_id: str, load_from_db: bool = True):
+    function_module, _, _ = get_function_module_from_cache(request, pipe_id, load_from_db=load_from_db)
 
     if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
         Valves = function_module.Valves
@@ -287,7 +287,7 @@ async def generate_function_chat_completion(
             form_data = apply_system_prompt_to_body(system, form_data, metadata, user)
 
     pipe_id = get_pipe_id(form_data)
-    function_module = get_function_module_by_id(request, pipe_id)
+    function_module = get_function_module_by_id(request, pipe_id, load_from_db=False)
 
     pipe = function_module.pipe
     params = get_function_params(function_module, form_data, user, extra_params)
