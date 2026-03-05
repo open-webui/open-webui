@@ -5,7 +5,11 @@
 
 2) IN backend/open_webui/env.py
 line 93 
+change 
+WEBUI_NAME = os.environ.get("WEBUI_NAME", "Geomas")
+
 remove or comment:
+
 if WEBUI_NAME != "Open WebUI":
     WEBUI_NAME += " (Open WebUI)"
 
@@ -27,5 +31,8 @@ except ImportError:
     1) static/
     2) static/static
     3) backend/open_webui/static
-7) yarn run build 
+
+
+    + replace Open WebUI with Geomas in index.html
+7) yarn install + yarn run build 
 

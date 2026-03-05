@@ -25,12 +25,12 @@ https://drive.google.com/drive/folders/1AaqxuBb3apJe7sqTJdjgD8kkP_e3RLyP?usp=sha
 
 1) Создать контейнер
 ```
-docker run -it --name balabanov_open_web --net=host -v /home/balabanov/:/home/ python:3.10 bash -f
+docker run -it --name balabanov_open_web --net=host -v /home/balabanov/:/home/ python:3.11 bash -f
 ```
 В целом примаунтить надо лишь папку с data чтобы туда скопировать ее. Но если не хотите маунтить:
 
 ```
-docker run -it --name balabanov_open_web --net=host python:3.10 bash -f
+docker run -it --name balabanov_open_web --net=host python:3.11 bash -f
 
 docker cp <path to data> container_name:<path to data>
 
@@ -53,12 +53,13 @@ cd open-webui-geo
 
 ```
 cd backend
-python3.10 -m venv venv
-./venv/bin/python3.10 -m pip install -r requirements.txt
+-- optional python3.10 -m venv venv
+python3.11 -m pip install -r requirements.txt
 
 echo $(head -c 12 /dev/random | base64) > .webui_secret_key
-export PORT=8000
-export HOST=212.41.21.72
+export PORT=8503
+export HOST=87.228.65.110
+
 
 ```
 6) Запуск
@@ -68,14 +69,14 @@ export HOST=212.41.21.72
 
 Тестовый запуск
 ```
-PYTHONPATH=. WEBUI_SECRET_KEY=$(cat .webui_secret_key)  ./venv/bin/python3.10 -m uvicorn open_webui.main:app --host=212.41.21.72 --port 8503 --reload
+PYTHONPATH=. WEBUI_SECRET_KEY=$(cat .webui_secret_key) python3.11 -m uvicorn open_webui.main:app --host=87.228.65.110 --port 8503 --reload
 ```
 
 
 
 Запуск с логгингом
 ```
-export PYTHONPATH=. && export WEBUI_SECRET_KEY=$(cat .webui_secret_key) && export PYTHONUNBUFFERED=1 && exec ./venv/bin/python3.10 -u -m uvicorn open_webui.main:app --host 212.41.21.72 --port 8503 --reload > webui.log 2>&1
+export PYTHONPATH=. && export WEBUI_SECRET_KEY=$(cat .webui_secret_key) && export PYTHONUNBUFFERED=1 && exec python3.11 -u -m uvicorn open_webui.main:app --host 87.228.65.110 --port 8503 --reload > webui.log 2>&1
 
 ```
 
