@@ -579,6 +579,7 @@
 		line-height: 1.6;
 		border-radius: 0;
 		overflow-x: auto;
+		min-height: 100%;
 	}
 	.shiki-preview :global(pre.shiki code) {
 		counter-reset: line;
