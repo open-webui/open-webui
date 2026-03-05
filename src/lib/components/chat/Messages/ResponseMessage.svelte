@@ -120,16 +120,22 @@
 	export let selectedModels = [];
 
 	let message: MessageType = structuredClone(history.messages[messageId]);
+	let lastFingerprint = '';
 	$: if (history.messages) {
 		const source = history.messages[messageId];
 		if (source) {
 			// Fast path: O(1) check on the fields that change most often (content during streaming, done at end)
-			// Avoids 2x O(n) JSON.stringify calls that are always true during streaming anyway
 			if (message.content !== source.content || message.done !== source.done) {
 				message = structuredClone(source);
-			} else if (JSON.stringify(message) !== JSON.stringify(source)) {
-				// Slow path: full comparison for infrequent changes (sources, annotations, status, etc.)
-				message = structuredClone(source);
+				lastFingerprint = '';
+			} else {
+				// O(1) fingerprint covering all fields the event handler can mutate,
+				// instead of O(content_length) JSON.stringify comparison
+				const fp = `${(source.sources ?? []).length}:${(source.code_executions ?? []).length}:${source.annotation?.rating}:${source.error}:${(source.files ?? []).length}:${(source.statusHistory ?? []).length}:${source.timestamp}:${(source.embeds ?? []).length}:${(source.followUps ?? []).length}:${source.favorite}`;
+				if (fp !== lastFingerprint) {
+					lastFingerprint = fp;
+					message = structuredClone(source);
+				}
 			}
 		}
 	}

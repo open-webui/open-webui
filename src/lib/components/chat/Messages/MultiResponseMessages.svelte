@@ -61,13 +61,20 @@
 	let selectedModelIdx = null;
 
 	let message = structuredClone(history.messages[messageId]);
+	let lastFingerprint = '';
 	$: if (history.messages) {
 		const source = history.messages[messageId];
 		if (source) {
 			if (message.content !== source.content || message.done !== source.done) {
 				message = structuredClone(source);
-			} else if (JSON.stringify(message) !== JSON.stringify(source)) {
-				message = structuredClone(source);
+				lastFingerprint = '';
+			} else {
+				// O(1) fingerprint instead of O(content_length) JSON.stringify
+				const fp = `${(source.sources ?? []).length}:${(source.code_executions ?? []).length}:${source.annotation?.rating}:${source.error}:${(source.files ?? []).length}:${(source.statusHistory ?? []).length}:${source.timestamp}:${(source.embeds ?? []).length}:${(source.followUps ?? []).length}:${source.favorite}`;
+				if (fp !== lastFingerprint) {
+					lastFingerprint = fp;
+					message = structuredClone(source);
+				}
 			}
 		}
 	}

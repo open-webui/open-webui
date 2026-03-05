@@ -53,13 +53,20 @@
 	let editScrollContainer: HTMLDivElement;
 
 	let message = structuredClone(history.messages[messageId]);
+	let lastFingerprint = '';
 	$: if (history.messages) {
 		const source = history.messages[messageId];
 		if (source) {
 			if (message.content !== source.content) {
 				message = structuredClone(source);
-			} else if (JSON.stringify(message) !== JSON.stringify(source)) {
-				message = structuredClone(source);
+				lastFingerprint = '';
+			} else {
+				// O(1) fingerprint instead of O(content_length) JSON.stringify
+				const fp = `${(source.files ?? []).length}:${source.timestamp}`;
+				if (fp !== lastFingerprint) {
+					lastFingerprint = fp;
+					message = structuredClone(source);
+				}
 			}
 		}
 	}
