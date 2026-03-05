@@ -5,6 +5,7 @@
 	import DOMPurify from 'dompurify';
 	import { settings } from '$lib/stores';
 	import { isCodeFile, highlightCode } from '$lib/utils/codeHighlight';
+	import { initMermaid, renderMermaidDiagram } from '$lib/utils';
 	import Spinner from '../../common/Spinner.svelte';
 	import PDFViewer from '../../common/PDFViewer.svelte';
 	import JsonTreeView from './JsonTreeView.svelte';
@@ -91,6 +92,41 @@
 		isMarkdown && fileContent
 			? DOMPurify.sanitize(marked.parse(fileContent, { async: false }) as string)
 			: '';
+
+	let markdownEl: HTMLDivElement;
+	let mermaidInstance: any = null;
+
+	const renderMermaidBlocks = async (el: HTMLDivElement) => {
+		if (!el) return;
+		const codeEls = el.querySelectorAll('code.language-mermaid');
+		if (codeEls.length === 0) return;
+
+		if (!mermaidInstance) {
+			mermaidInstance = await initMermaid();
+		}
+
+		for (const codeEl of codeEls) {
+			const pre = codeEl.parentElement;
+			if (!pre || pre.tagName !== 'PRE' || pre.dataset.mermaidRendered) continue;
+			pre.dataset.mermaidRendered = 'true';
+
+			try {
+				const svg = await renderMermaidDiagram(mermaidInstance, codeEl.textContent ?? '');
+				if (svg) {
+					const wrapper = document.createElement('div');
+					wrapper.className = 'mermaid-diagram flex justify-center py-2';
+					wrapper.innerHTML = svg;
+					pre.replaceWith(wrapper);
+				}
+			} catch (e) {
+				console.error('Mermaid render error:', e);
+			}
+		}
+	};
+
+	$: if (renderedHtml && markdownEl) {
+		tick().then(() => renderMermaidBlocks(markdownEl));
+	}
 
 	// Simple CSV parser that handles quoted fields
 	const parseCsv = (text: string, delimiter: string): string[][] => {
@@ -341,7 +377,7 @@
 				title="HTML Preview"
 			/>
 		{:else if isMarkdown && !showRaw}
-			<div class="prose dark:prose-invert max-w-full text-sm p-3">
+			<div bind:this={markdownEl} class="prose dark:prose-invert max-w-full text-sm p-3">
 				{@html renderedHtml}
 			</div>
 		{:else if isCsv && !showRaw && csvRows.length > 0}
