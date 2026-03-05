@@ -94,6 +94,7 @@
 	let fileVideoUrl: string | null = null;
 	let fileAudioUrl: string | null = null;
 	let filePdfData: ArrayBuffer | null = null;
+	let fileSqliteData: ArrayBuffer | null = null;
 	let fileLoading = false;
 	let filePreviewRef: FilePreview;
 
@@ -188,9 +189,11 @@
 	const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'ico', 'avif']);
 	const VIDEO_EXTS = new Set(['mp4', 'webm', 'mov', 'ogv', 'avi', 'mkv']);
 	const AUDIO_EXTS = new Set(['mp3', 'wav', 'ogg', 'oga', 'flac', 'm4a', 'aac', 'wma', 'opus']);
+	const SQLITE_EXTS = new Set(['db', 'sqlite', 'sqlite3', 'db3']);
 	const isImage = (path: string) => IMAGE_EXTS.has(path.split('.').pop()?.toLowerCase() ?? '');
 	const isVideo = (path: string) => VIDEO_EXTS.has(path.split('.').pop()?.toLowerCase() ?? '');
 	const isAudio = (path: string) => AUDIO_EXTS.has(path.split('.').pop()?.toLowerCase() ?? '');
+	const isSqlite = (path: string) => SQLITE_EXTS.has(path.split('.').pop()?.toLowerCase() ?? '');
 	const isPdf = (path: string) => path.split('.').pop()?.toLowerCase() === 'pdf';
 	const isOffice = (path: string) => OFFICE_EXTS.has(path.split('.').pop()?.toLowerCase() ?? '');
 
@@ -224,6 +227,7 @@
 			fileAudioUrl = null;
 		}
 		filePdfData = null;
+		fileSqliteData = null;
 		fileOfficeHtml = null;
 		fileOfficeSlides = null;
 		currentSlide = 0;
@@ -288,6 +292,9 @@
 		} else if (isPdf(filePath)) {
 			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
 			if (result) filePdfData = await result.blob.arrayBuffer();
+		} else if (isSqlite(filePath)) {
+			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			if (result) fileSqliteData = await result.blob.arrayBuffer();
 		} else if (isOffice(filePath)) {
 			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
 			if (result) {
@@ -794,6 +801,7 @@
 					{fileVideoUrl}
 					{fileAudioUrl}
 					{filePdfData}
+					{fileSqliteData}
 					{fileContent}
 					{fileOfficeHtml}
 					{fileOfficeSlides}

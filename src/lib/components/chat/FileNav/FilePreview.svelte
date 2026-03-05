@@ -9,6 +9,7 @@
 	import PDFViewer from '../../common/PDFViewer.svelte';
 	import JsonTreeView from './JsonTreeView.svelte';
 	import NotebookView from './NotebookView.svelte';
+	import SqliteView from './SqliteView.svelte';
 
 	let pdfViewerRef: PDFViewer;
 
@@ -20,6 +21,7 @@
 	export let fileVideoUrl: string | null = null;
 	export let fileAudioUrl: string | null = null;
 	export let filePdfData: ArrayBuffer | null = null;
+	export let fileSqliteData: ArrayBuffer | null = null;
 	export let fileContent: string | null = null;
 
 	// Office preview props
@@ -268,6 +270,8 @@
 		</div>
 	{:else if filePdfData !== null}
 		<PDFViewer bind:this={pdfViewerRef} data={filePdfData} className="w-full h-full" />
+	{:else if fileSqliteData !== null}
+		<SqliteView data={fileSqliteData} />
 	{:else if fileOfficeHtml !== null}
 		<div class="flex flex-col h-full">
 			<div class="office-preview overflow-auto flex-1 min-h-0">
