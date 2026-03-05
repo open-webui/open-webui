@@ -56,6 +56,8 @@
 	let description = '';
 
 	let oauthClientInfo = null;
+	let oauthStaticClientId = '';
+	let oauthStaticClientSecret = '';
 
 	let enable = true;
 	let loading = false;
@@ -73,11 +75,32 @@
 			return;
 		}
 
+		if (auth_type === 'oauth_2.1_static') {
+			if (oauthStaticClientId.trim() === '') {
+				toast.error($i18n.t('Please enter a valid Client ID'));
+				return;
+			}
+
+			if (oauthStaticClientSecret.trim() === '') {
+				toast.error($i18n.t('Please enter a valid Client Secret'));
+				return;
+			}
+		}
+
+		const registration_type = auth_type === 'oauth_2.1_static' ? 'static' : 'dynamic';
+
 		const res = await registerOAuthClient(
 			localStorage.token,
 			{
 				url: url,
-				client_id: id
+				client_id: id,
+				registration_type,
+				...(registration_type === 'static'
+					? {
+							oauth_client_id: oauthStaticClientId,
+							oauth_client_secret: oauthStaticClientSecret
+						}
+					: {})
 			},
 			'mcp'
 		).catch((err) => {
@@ -265,7 +288,11 @@
 			return;
 		}
 
-		if (type === 'mcp' && auth_type === 'oauth_2.1' && !oauthClientInfo) {
+		if (
+			type === 'mcp' &&
+			['oauth_2.1', 'oauth_2.1_static'].includes(auth_type) &&
+			!oauthClientInfo
+		) {
 			toast.error($i18n.t('Please register the OAuth client'));
 			loading = false;
 			return;
@@ -343,6 +370,8 @@
 		description = '';
 
 		oauthClientInfo = null;
+		oauthStaticClientId = '';
+		oauthStaticClientSecret = '';
 
 		enable = true;
 		functionNameFilterList = '';
@@ -599,7 +628,7 @@
 										</div>
 									</div>
 
-									{#if auth_type === 'oauth_2.1'}
+									{#if ['oauth_2.1', 'oauth_2.1_static'].includes(auth_type)}
 										<div class="flex items-center gap-2">
 											<div class="flex flex-col justify-end items-center shrink-0">
 												<Tooltip
@@ -652,6 +681,9 @@
 												<option value="system_oauth">{$i18n.t('OAuth')}</option>
 												{#if type === 'mcp'}
 													<option value="oauth_2.1">{$i18n.t('OAuth 2.1')}</option>
+													<option value="oauth_2.1_static"
+														>{$i18n.t('OAuth 2.1 - Static')}</option
+													>
 												{/if}
 											{/if}
 										</select>
@@ -687,6 +719,19 @@
 												class={`flex items-center text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
 											>
 												{$i18n.t('Uses OAuth 2.1 Dynamic Client Registration')}
+											</div>
+										{:else if auth_type === 'oauth_2.1_static'}
+											<div class="flex flex-1 gap-2">
+												<SensitiveInput
+													bind:value={oauthStaticClientId}
+													placeholder={$i18n.t('OAuth Client ID')}
+													required={false}
+												/>
+												<SensitiveInput
+													bind:value={oauthStaticClientSecret}
+													placeholder={$i18n.t('OAuth Client Secret')}
+													required={false}
+												/>
 											</div>
 										{/if}
 									</div>

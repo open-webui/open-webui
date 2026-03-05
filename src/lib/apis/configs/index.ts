@@ -263,6 +263,9 @@ type RegisterOAuthClientForm = {
 	url: string;
 	client_id: string;
 	client_name?: string;
+	registration_type?: 'dynamic' | 'static';
+	oauth_client_id?: string;
+	oauth_client_secret?: string;
 };
 
 export const registerOAuthClient = async (

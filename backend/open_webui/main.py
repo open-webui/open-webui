@@ -2354,7 +2354,7 @@ if len(app.state.config.TOOL_SERVER_CONNECTIONS) > 0:
             server_id = tool_server_connection.get("info", {}).get("id")
             auth_type = tool_server_connection.get("auth_type", "none")
 
-            if server_id and auth_type == "oauth_2.1":
+            if server_id and auth_type in ["oauth_2.1", "oauth_2.1_static"]:
                 oauth_client_info = tool_server_connection.get("info", {}).get(
                     "oauth_client_info", ""
                 )
@@ -2421,34 +2421,39 @@ async def register_client(request, client_id: str) -> bool:
 
     server_url = connection.get("url")
     oauth_server_key = (connection.get("config") or {}).get("oauth_server_key")
+    auth_type = connection.get("auth_type", "none")
 
     try:
-        oauth_client_info = (
-            await get_oauth_client_info_with_dynamic_client_registration(
-                request,
-                client_id,
-                server_url,
-                oauth_server_key,
+        if auth_type == "oauth_2.1_static":
+            oauth_client_info = connection.get("info", {}).get("oauth_client_info", "")
+            oauth_client_info = decrypt_data(oauth_client_info)
+            oauth_client_info = OAuthClientInformationFull(**oauth_client_info)
+        elif auth_type == "oauth_2.1":
+            oauth_client_info = (
+                await get_oauth_client_info_with_dynamic_client_registration(
+                    request,
+                    client_id,
+                    server_url,
+                    oauth_server_key,
+                )
             )
-        )
-    except Exception as e:
-        log.error(f"Dynamic client re-registration failed for {client_id}: {e}")
-        return False
 
-    try:
-        request.app.state.config.TOOL_SERVER_CONNECTIONS[connection_idx] = {
-            **connection,
-            "info": {
-                **connection.get("info", {}),
-                "oauth_client_info": encrypt_data(
-                    oauth_client_info.model_dump(mode="json")
-                ),
-            },
-        }
+            request.app.state.config.TOOL_SERVER_CONNECTIONS[connection_idx] = {
+                **connection,
+                "info": {
+                    **connection.get("info", {}),
+                    "oauth_client_info": encrypt_data(
+                        oauth_client_info.model_dump(mode="json")
+                    ),
+                },
+            }
+        else:
+            log.warning(
+                f"Unsupported auth_type {auth_type} for OAuth client re-registration ({client_id})"
+            )
+            return False
     except Exception as e:
-        log.error(
-            f"Failed to persist updated OAuth client info for tool server {client_id}: {e}"
-        )
+        log.error(f"OAuth client re-registration failed for {client_id}: {e}")
         return False
 
     oauth_client_manager.remove_client(client_id)

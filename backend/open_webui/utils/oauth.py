@@ -463,6 +463,100 @@ async def get_oauth_client_info_with_dynamic_client_registration(
         raise e
 
 
+async def get_oauth_client_info_with_static_client_registration(
+    request,
+    client_id: str,
+    oauth_server_url: str,
+    static_client_id: str,
+    static_client_secret: str,
+) -> OAuthClientInformationFull:
+    try:
+        oauth_server_metadata = None
+        oauth_server_metadata_url = None
+
+        redirect_base_url = (
+            str(request.app.state.config.WEBUI_URL or request.base_url)
+        ).rstrip("/")
+
+        oauth_client_metadata = OAuthClientMetadata(
+            client_name="Open WebUI",
+            redirect_uris=[f"{redirect_base_url}/oauth/clients/{client_id}/callback"],
+            grant_types=["authorization_code", "refresh_token"],
+            response_types=["code"],
+        )
+
+        discovery_urls = await get_discovery_urls(oauth_server_url)
+        for url in discovery_urls:
+            async with aiohttp.ClientSession(trust_env=True) as session:
+                async with session.get(
+                    url, ssl=AIOHTTP_CLIENT_SESSION_SSL
+                ) as oauth_server_metadata_response:
+                    if oauth_server_metadata_response.status == 200:
+                        try:
+                            oauth_server_metadata = OAuthMetadata.model_validate(
+                                await oauth_server_metadata_response.json()
+                            )
+                            oauth_server_metadata_url = url
+
+                            if (
+                                oauth_client_metadata.scope is None
+                                and oauth_server_metadata.scopes_supported is not None
+                            ):
+                                oauth_client_metadata.scope = " ".join(
+                                    oauth_server_metadata.scopes_supported
+                                )
+
+                            supported_auth_methods = (
+                                oauth_server_metadata.token_endpoint_auth_methods_supported
+                                or []
+                            )
+                            if (
+                                supported_auth_methods
+                                and oauth_client_metadata.token_endpoint_auth_method
+                                not in supported_auth_methods
+                            ):
+                                if "client_secret_post" in supported_auth_methods:
+                                    oauth_client_metadata.token_endpoint_auth_method = (
+                                        "client_secret_post"
+                                    )
+                                elif "client_secret_basic" in supported_auth_methods:
+                                    oauth_client_metadata.token_endpoint_auth_method = (
+                                        "client_secret_basic"
+                                    )
+                                else:
+                                    oauth_client_metadata.token_endpoint_auth_method = (
+                                        supported_auth_methods[0]
+                                    )
+
+                            break
+                        except Exception as e:
+                            log.error(f"Error parsing OAuth metadata from {url}: {e}")
+                            continue
+
+        oauth_client_info = OAuthClientInformationFull.model_validate(
+            {
+                "client_id": static_client_id,
+                "client_secret": static_client_secret,
+                "issuer": oauth_server_metadata_url,
+                "server_metadata": oauth_server_metadata,
+                "redirect_uris": oauth_client_metadata.redirect_uris,
+                "grant_types": oauth_client_metadata.grant_types,
+                "response_types": oauth_client_metadata.response_types,
+                "client_name": oauth_client_metadata.client_name,
+                "scope": oauth_client_metadata.scope,
+                "token_endpoint_auth_method": oauth_client_metadata.token_endpoint_auth_method,
+            }
+        )
+
+        log.info(
+            f"Static OAuth client registration successful for client_id: {oauth_client_info.client_id}"
+        )
+        return oauth_client_info
+    except Exception as e:
+        log.error(f"Exception during static client registration: {e}")
+        raise e
+
+
 class OAuthClientManager:
     def __init__(self, app):
         self.oauth = OAuth()
@@ -529,7 +623,10 @@ class OAuthClientManager:
         for connection in connections or []:
             if connection.get("type", "openapi") != "mcp":
                 continue
-            if connection.get("auth_type", "none") != "oauth_2.1":
+            if connection.get("auth_type", "none") not in [
+                "oauth_2.1",
+                "oauth_2.1_static",
+            ]:
                 continue
 
             server_id = connection.get("info", {}).get("id")

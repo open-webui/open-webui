@@ -2442,7 +2442,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 headers["Authorization"] = (
                                     f"Bearer {oauth_token.get('access_token', '')}"
                                 )
-                        elif auth_type == "oauth_2.1":
+                        elif auth_type in ["oauth_2.1", "oauth_2.1_static"]:
                             try:
                                 splits = server_id.split(":")
                                 server_id = splits[-1] if len(splits) > 1 else server_id
