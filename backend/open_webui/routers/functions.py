@@ -355,6 +355,9 @@ async def update_function_by_id(
         FUNCTIONS = request.app.state.FUNCTIONS
         FUNCTIONS[id] = function_module
 
+        FUNCTION_VALVES = request.app.state.FUNCTION_VALVES
+        FUNCTION_VALVES.pop(id, None)
+
         updated = {**form_data.model_dump(exclude={"id"}), "type": function_type}
         log.debug(updated)
 
@@ -396,6 +399,9 @@ async def delete_function_by_id(
         FUNCTIONS = request.app.state.FUNCTIONS
         if id in FUNCTIONS:
             del FUNCTIONS[id]
+
+        FUNCTION_VALVES = request.app.state.FUNCTION_VALVES
+        FUNCTION_VALVES.pop(id, None)
 
     return result
 
@@ -486,6 +492,10 @@ async def update_function_valves_by_id(
 
                 valves_dict = valves.model_dump(exclude_unset=True)
                 Functions.update_function_valves_by_id(id, valves_dict, db=db)
+
+                FUNCTION_VALVES = request.app.state.FUNCTION_VALVES
+                FUNCTION_VALVES.pop(id, None)
+
                 return valves_dict
             except Exception as e:
                 log.exception(f"Error updating function values by id {id}: {e}")

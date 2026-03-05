@@ -930,6 +930,7 @@ app.state.TOOL_CONTENTS = {}
 
 app.state.FUNCTIONS = {}
 app.state.FUNCTION_CONTENTS = {}
+app.state.FUNCTION_VALVES = {}
 
 ########################################
 #

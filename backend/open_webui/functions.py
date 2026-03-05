@@ -59,7 +59,12 @@ def get_function_module_by_id(request: Request, pipe_id: str):
 
     if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
         Valves = function_module.Valves
-        valves = Functions.get_function_valves_by_id(pipe_id)
+
+        FUNCTION_VALVES = request.app.state.FUNCTION_VALVES
+        valves = FUNCTION_VALVES.get(pipe_id)
+        if valves is None:
+            valves = Functions.get_function_valves_by_id(pipe_id) or {}
+            FUNCTION_VALVES[pipe_id] = valves
 
         if valves:
             try:
