@@ -19,7 +19,7 @@
 	export let messageId = '';
 
 	export let model = null;
-	export let messages = [];
+	export let getMessages: () => { role: string; content: string }[] = () => [];
 	export let actions = [];
 	export let onAdd = (e) => {};
 
@@ -123,7 +123,7 @@
 			session_id: $socket?.id,
 			chat_id: $chatId,
 			messages: [
-				...messages,
+				...getMessages(),
 				{
 					role: 'user',
 					content: content
