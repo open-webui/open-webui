@@ -10,7 +10,7 @@
 	export let apiKey: string;
 
 	let ports: ListeningPort[] = [];
-	let expanded = true;
+	let expanded = false;
 	let loading = false;
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
 
