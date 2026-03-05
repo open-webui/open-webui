@@ -25,6 +25,10 @@
 	export let fileSqliteData: ArrayBuffer | null = null;
 	export let fileContent: string | null = null;
 
+	// Terminal connection for notebook execution
+	export let baseUrl: string = '';
+	export let apiKey: string = '';
+
 	// Office preview props
 	export let fileOfficeHtml: string | null = null;
 	export let fileOfficeSlides: string[] | null = null;
@@ -409,7 +413,7 @@
 			</div>
 		{:else if isNotebook && !showRaw && parsedNotebook}
 			<div class="overflow-auto h-full">
-				<NotebookView notebook={parsedNotebook} />
+				<NotebookView notebook={parsedNotebook} filePath={selectedFile ?? ''} {baseUrl} {apiKey} />
 			</div>
 		{:else if isJson && !showRaw && parsedJson !== undefined}
 			<div class="overflow-auto h-full">

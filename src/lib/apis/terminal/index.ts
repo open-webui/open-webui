@@ -258,3 +258,81 @@ export const getListeningPorts = async (
 export const getPortProxyUrl = (baseUrl: string, port: number, path: string = ''): string => {
 	return `${baseUrl.replace(/\/$/, '')}/proxy/${port}/${path}`;
 };
+
+// ---------------------------------------------------------------------------
+// Notebook execution
+// ---------------------------------------------------------------------------
+
+export const createNotebookSession = async (
+	baseUrl: string,
+	apiKey: string,
+	path: string
+): Promise<{ id: string; kernel: string; status: string } | { error: string }> => {
+	const url = `${baseUrl.replace(/\/$/, '')}/notebooks`;
+	const res = await fetch(url, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${apiKey}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({ path })
+	})
+		.then(async (res) => {
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				return { error: body?.detail ?? `HTTP ${res.status}` };
+			}
+			return res.json();
+		})
+		.catch((err) => {
+			console.error('open-terminal createNotebookSession error:', err);
+			return { error: 'Connection failed' };
+		});
+	return res;
+};
+
+export const executeNotebookCell = async (
+	baseUrl: string,
+	apiKey: string,
+	sessionId: string,
+	cellIndex: number,
+	source?: string
+): Promise<{ status: string; execution_count?: number; outputs: any[] } | { error: string }> => {
+	const url = `${baseUrl.replace(/\/$/, '')}/notebooks/${sessionId}/execute`;
+	const body: Record<string, any> = { cell_index: cellIndex };
+	if (source !== undefined) body.source = source;
+
+	const res = await fetch(url, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${apiKey}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify(body)
+	})
+		.then(async (res) => {
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				return { error: body?.detail ?? `HTTP ${res.status}` };
+			}
+			return res.json();
+		})
+		.catch((err) => {
+			console.error('open-terminal executeNotebookCell error:', err);
+			return { error: 'Connection failed' };
+		});
+	return res;
+};
+
+export const stopNotebookSession = async (
+	baseUrl: string,
+	apiKey: string,
+	sessionId: string
+): Promise<boolean> => {
+	const url = `${baseUrl.replace(/\/$/, '')}/notebooks/${sessionId}`;
+	const res = await fetch(url, {
+		method: 'DELETE',
+		headers: { Authorization: `Bearer ${apiKey}` }
+	}).catch(() => null);
+	return res?.ok ?? false;
+};

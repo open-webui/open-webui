@@ -845,6 +845,8 @@
 						const result = await excelToTable(excelWorkbook.Sheets[sheet]);
 						fileOfficeHtml = result.html;
 					}}
+					baseUrl={selectedTerminal?.url ?? ''}
+					apiKey={selectedTerminal?.key ?? ''}
 					{overlay}
 					onSave={async (content) => {
 						const terminal = selectedTerminal;
