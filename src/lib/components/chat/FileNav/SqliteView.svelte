@@ -135,9 +135,9 @@
 		<div class="flex items-center gap-1 px-2 py-1.5 border-b border-gray-100 dark:border-gray-800 overflow-x-auto scrollbar-none shrink-0">
 			{#each tables as table}
 				<button
-					class="shrink-0 px-2 py-1 text-xs rounded transition
+					class="shrink-0 px-2 py-1 text-xs rounded-lg transition
 						{table === selectedTable && !queryMode
-						? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium'
+						? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-medium'
 						: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}"
 					on:click={() => selectTable(table)}
 				>
@@ -146,9 +146,9 @@
 			{/each}
 			<div class="flex-1"></div>
 			<button
-				class="shrink-0 px-2 py-1 text-xs rounded transition
+				class="shrink-0 px-2 py-1 text-xs rounded-lg transition font-mono
 					{queryMode
-					? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium'
+					? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-medium'
 					: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}"
 				on:click={() => { queryMode = !queryMode; }}
 			>
@@ -158,30 +158,33 @@
 
 		{#if queryMode}
 			<!-- Query editor -->
-			<div class="p-2 border-b border-gray-100 dark:border-gray-800 shrink-0">
-				<div class="flex gap-1.5">
-					<textarea
-						bind:value={queryText}
-						placeholder="SELECT * FROM ..."
-						class="flex-1 text-xs font-mono bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded px-2 py-1.5 outline-none resize-none min-h-[2.5rem]"
-						rows="2"
-						on:keydown={(e) => {
-							if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-								e.preventDefault();
-								runQuery();
-							}
-						}}
-					></textarea>
+			<div class="shrink-0">
+				<textarea
+					bind:value={queryText}
+					placeholder="SELECT * FROM ..."
+					class="query-editor w-full text-xs font-mono bg-transparent text-gray-800 dark:text-gray-200 px-3 py-2 outline-none resize-none"
+					rows="3"
+					spellcheck="false"
+					on:keydown={(e) => {
+						if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+							e.preventDefault();
+							runQuery();
+						}
+					}}
+				></textarea>
+				<div class="flex items-center justify-between px-2 py-1 bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
+					{#if queryError}
+						<span class="text-[0.65rem] text-red-500 dark:text-red-400 truncate mr-2">{queryError}</span>
+					{:else}
+						<span class="text-[0.6rem] text-gray-400 dark:text-gray-600 select-none">⌘+Enter</span>
+					{/if}
 					<button
-						class="shrink-0 px-3 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded transition"
+						class="shrink-0 px-2.5 py-0.5 text-[0.65rem] font-medium rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
 						on:click={runQuery}
 					>
 						{$i18n.t('Run')}
 					</button>
 				</div>
-				{#if queryError}
-					<div class="mt-1 text-xs text-red-500">{queryError}</div>
-				{/if}
 			</div>
 
 			{#if queryColumns.length > 0}
@@ -326,5 +329,11 @@
 	}
 	:global(.dark) .sqlite-null {
 		color: #6b7280 !important;
+	}
+	.query-editor::placeholder {
+		color: #9ca3af;
+	}
+	:global(.dark) .query-editor::placeholder {
+		color: #6b7280;
 	}
 </style>
