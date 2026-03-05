@@ -511,13 +511,15 @@
 			const lastSlash = filePath.lastIndexOf('/');
 			const dir = lastSlash > 0 ? filePath.substring(0, lastSlash + 1) : '/';
 
-			if (dir === currentPath) {
-				await loadDir(currentPath);
-			}
-			if (filePath === selectedFile) {
-				const fileName = filePath.substring(lastSlash + 1);
-				const entry = entries.find((e) => e.name === fileName);
-				if (entry) await openEntry(entry);
+			if (selectedFile) {
+				if (selectedFile === filePath || currentPath.startsWith(dir)) {
+					const fileName = selectedFile.split('/').pop() ?? '';
+					await openEntry({ name: fileName, type: 'file', size: 0 });
+				}
+			} else {
+				if (currentPath.startsWith(dir) || dir.startsWith(currentPath)) {
+					await loadDir(currentPath);
+				}
 			}
 		});
 
@@ -549,6 +551,8 @@
 		document.addEventListener('visibilitychange', onVisibilityChange);
 
 		return () => {
+			unsubFileNav();
+			unsubFileNavDir();
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp);
 			window.removeEventListener('blur', onBlur);

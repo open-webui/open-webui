@@ -406,11 +406,14 @@
 	};
 
 	const terminalEventHandler = (type: string, data: any) => {
-		if (!data?.path) return;
 		if (type === 'terminal:display_file') {
+			if (!data?.path) return;
 			displayFileHandler(data.path, { showControls, showFileNavPath });
-		} else if (type === 'terminal:write_file') {
+		} else if (type === 'terminal:write_file' || type === 'terminal:replace_file_content') {
+			if (!data?.path) return;
 			showFileNavDir.set(data.path);
+		} else if (type === 'terminal:run_command') {
+			showFileNavDir.set('/');
 		}
 	};
 

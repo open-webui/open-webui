@@ -1053,16 +1053,16 @@ async def terminal_event_handler(
     """Emit terminal:* events for Open Terminal tools.
 
     - display_file  → emits 'terminal:display_file' to open the file preview.
-    - write_file → emits 'terminal:write_file' to silently refresh the file browser.
+    - write_file / replace_file_content → emits 'terminal:write_file' to refresh.
+    - run_command → emits 'terminal:run_command' with cwd to refresh if relevant.
     """
     if not event_emitter:
         return
 
-    path = tool_function_params.get("path", "")
-    if not path:
-        return
-
     if tool_function_name == "display_file":
+        path = tool_function_params.get("path", "")
+        if not path:
+            return
         # Only emit if the file actually exists
         parsed = tool_result
         if isinstance(parsed, str):
@@ -1079,11 +1079,21 @@ async def terminal_event_handler(
                 "data": {"path": path},
             }
         )
-    elif tool_function_name == "write_file":
+    elif tool_function_name in ("write_file", "replace_file_content"):
+        path = tool_function_params.get("path", "")
+        if not path:
+            return
         await event_emitter(
             {
                 "type": f"terminal:{tool_function_name}",
                 "data": {"path": path},
+            }
+        )
+    elif tool_function_name == "run_command":
+        await event_emitter(
+            {
+                "type": "terminal:run_command",
+                "data": {},
             }
         )
 
