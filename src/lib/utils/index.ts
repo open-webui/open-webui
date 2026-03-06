@@ -318,7 +318,7 @@ async function resizeImageToDataURL(
 export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
 	return new Promise((resolve, reject) => {
 		const img = new Image();
-		img.onload = () => {
+		img.onload = async () => {
 			let width = img.width;
 			let height = img.height;
 
