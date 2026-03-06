@@ -4118,6 +4118,62 @@ async def streaming_chat_response_handler(response, ctx):
 
                     response_tool_calls = tool_calls.pop(0)
 
+                    # Some models (GPT-5/5.1) concatenate multiple
+                    # complete JSON argument objects under a single
+                    # tool call index.  Expand them into separate
+                    # tool call entries so each is executed.
+                    expanded_tool_calls = []
+                    for tc in response_tool_calls:
+                        raw_args = (
+                            tc.get("function", {}).get("arguments", "") or ""
+                        ).strip()
+                        if not raw_args:
+                            expanded_tool_calls.append(tc)
+                            continue
+
+                        decoder = json.JSONDecoder()
+                        objects = []
+                        idx = 0
+                        try:
+                            while idx < len(raw_args):
+                                obj, end = decoder.raw_decode(raw_args, idx)
+                                objects.append(obj)
+                                # skip whitespace between objects
+                                idx = end
+                                while idx < len(raw_args) and raw_args[idx] in " \t\n\r":
+                                    idx += 1
+                        except (json.JSONDecodeError, ValueError):
+                            # Not valid JSON (possibly ast-style) or
+                            # genuinely malformed — let downstream
+                            # parsing handle it as before.
+                            objects = []
+
+                        if len(objects) > 1:
+                            # Multiple JSON objects found — split into
+                            # separate tool calls.
+                            for i, obj in enumerate(objects):
+                                new_tc = {
+                                    "id": tc.get("id", ""),
+                                    "type": tc.get("type", "function"),
+                                    "function": {
+                                        "name": tc.get("function", {}).get(
+                                            "name", ""
+                                        ),
+                                        "arguments": json.dumps(obj),
+                                    },
+                                }
+                                if "index" in tc:
+                                    new_tc["index"] = tc["index"]
+                                expanded_tool_calls.append(new_tc)
+                            log.debug(
+                                f"Expanded 1 tool call into {len(objects)} "
+                                f"(concatenated JSON arguments detected)"
+                            )
+                        else:
+                            expanded_tool_calls.append(tc)
+                    response_tool_calls = expanded_tool_calls
+
+
                     # Append function_call items for each tool call
                     for tc in response_tool_calls:
                         call_id = tc.get("id", "")
