@@ -144,6 +144,11 @@
 	let selectedToolIds = [];
 	let selectedFilterIds = [];
 
+	// Tools that require OAuth authentication but user hasn't authorized yet
+	$: unauthTools = selectedToolIds
+		.map((id) => ($tools ?? []).find((t) => t.id === id))
+		.filter((t) => t && !(t.authenticated ?? true));
+
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
@@ -2703,6 +2708,7 @@
 						title={$chatTitle}
 						bind:selectedModels
 						shareEnabled={!!history.currentId}
+						{unauthTools}
 						{initNewChat}
 						{archiveChatHandler}
 						{moveChatHandler}

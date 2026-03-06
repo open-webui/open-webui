@@ -231,6 +231,35 @@ class OAuthSessionTable:
             log.error(f"Error getting OAuth sessions by user ID: {e}")
             return []
 
+    def get_sessions_expiring_before(
+        self, expires_before: int, db: Optional[Session] = None
+    ) -> List[OAuthSessionModel]:
+        """Get all OAuth sessions expiring before a given unix timestamp."""
+        try:
+            with get_db_context(db) as db:
+                sessions = (
+                    db.query(OAuthSession)
+                    .filter(OAuthSession.expires_at <= expires_before)
+                    .all()
+                )
+
+                results = []
+                for session in sessions:
+                    try:
+                        db.expunge(session)
+                        session.token = self._decrypt_token(session.token)
+                        results.append(OAuthSessionModel.model_validate(session))
+                    except Exception as e:
+                        log.warning(
+                            f"Skipping OAuth session {session.id} due to decryption failure: {type(e).__name__}: {e}"
+                        )
+
+                return results
+
+        except Exception as e:
+            log.error(f"Error getting expiring OAuth sessions: {e}")
+            return []
+
     def update_session_by_id(
         self, session_id: str, token: dict, db: Optional[Session] = None
     ) -> Optional[OAuthSessionModel]:
