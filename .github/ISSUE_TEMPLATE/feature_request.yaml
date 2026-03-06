@@ -9,15 +9,15 @@ body:
         ## Important Notes
         ### Before submitting
         
-        Please check the **open AND closed** [Issues](https://github.com/open-webui/open-webui/issues) AND [Discussions](https://github.com/open-webui/open-webui/discussions) to see if a similar request has been posted.
+        Please check the **open AND closed** [Issues](https://github.com/BEKO2210/privatedesk-ai/issues) AND [Discussions](https://github.com/BEKO2210/privatedesk-ai/discussions) to see if a similar request has been posted.
         It's likely we're already tracking it! If you’re unsure, start a discussion post first.
 
         #### Scope
 
-        If your feature request is likely to take more than a quick coding session to implement, test and verify, then open it in the **Ideas** section of the [Discussions](https://github.com/open-webui/open-webui/discussions) instead.
+        If your feature request is likely to take more than a quick coding session to implement, test and verify, then open it in the **Ideas** section of the [Discussions](https://github.com/BEKO2210/privatedesk-ai/discussions) instead.
         **We will close and force move your feature request to the Ideas section, if we believe your feature request is not trivial/quick to implement.**
         This is to ensure the issues tab is used only for issues, quickly addressable feature requests and tracking tickets by the maintainers.
-        Other feature requests belong in the **Ideas** section of the [Discussions](https://github.com/open-webui/open-webui/discussions).
+        Other feature requests belong in the **Ideas** section of the [Discussions](https://github.com/BEKO2210/privatedesk-ai/discussions).
         
         If your feature request might impact others in the community, definitely open a discussion instead and evaluate whether and how to implement it.
         
@@ -27,17 +27,17 @@ body:
         We value a **constructive attitude**, so please be mindful of your communication. If negativity is part of your approach, our capacity to engage may be limited. We're here to help if you're **open to learning** and **communicating positively**.
 
         Remember:
-        - Open WebUI is a **volunteer-driven project**
+        - PrivateDesk AI is a **volunteer-driven project**
         - It's managed by a **single maintainer**
         - It's supported by contributors who also have **full-time jobs**
 
         We appreciate your time and ask that you **respect ours**.
 
         ### Contributing
-        If you encounter an issue, we highly encourage you to submit a pull request or fork the project. We actively work to prevent contributor burnout to maintain the quality and continuity of Open WebUI.
+        If you encounter an issue, we highly encourage you to submit a pull request or fork the project. We actively work to prevent contributor burnout to maintain the quality and continuity of PrivateDesk AI.
 
         ### Bug reproducibility
-        If a bug cannot be reproduced with a `:main` or `:dev` Docker setup, or a `pip install` with Python 3.11, it may require additional help from the community. In such cases, we will move it to the "[issues](https://github.com/open-webui/open-webui/discussions/categories/issues)" Discussions section due to our limited resources. We encourage the community to assist with these issues. Remember, it’s not that the issue doesn’t exist; we need your help!
+        If a bug cannot be reproduced with a `:main` or `:dev` Docker setup, or a `pip install` with Python 3.11, it may require additional help from the community. In such cases, we will move it to the "[issues](https://github.com/BEKO2210/privatedesk-ai/discussions/categories/issues)" Discussions section due to our limited resources. We encourage the community to assist with these issues. Remember, it’s not that the issue doesn’t exist; we need your help!
 
   - type: checkboxes
     id: existing-issue

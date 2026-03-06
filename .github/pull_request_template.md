@@ -6,16 +6,16 @@
 
 # Pull Request Checklist
 
-### Note to first-time contributors: Please open a discussion post in [Discussions](https://github.com/open-webui/open-webui/discussions) to discuss your idea/fix with the community before creating a pull request, and describe your changes before submitting a pull request.
+### Note to first-time contributors: Please open a discussion post in [Discussions](https://github.com/BEKO2210/privatedesk-ai/discussions) to discuss your idea/fix with the community before creating a pull request, and describe your changes before submitting a pull request.
 
-This is to ensure large feature PRs are discussed with the community first, before starting work on it. If the community does not want this feature or it is not relevant for Open WebUI as a project, it can be identified in the discussion before working on the feature and submitting the PR.
+This is to ensure large feature PRs are discussed with the community first, before starting work on it. If the community does not want this feature or it is not relevant for PrivateDesk AI as a project, it can be identified in the discussion before working on the feature and submitting the PR.
 
 **Before submitting, make sure you've checked the following:**
 
 - [ ] **Target branch:** Verify that the pull request targets the `dev` branch. **PRs targeting `main` will be immediately closed.**
 - [ ] **Description:** Provide a concise description of the changes made in this pull request down below.
 - [ ] **Changelog:** Ensure a changelog entry following the format of [Keep a Changelog](https://keepachangelog.com/) is added at the bottom of the PR description.
-- [ ] **Documentation:** Add docs in [Open WebUI Docs Repository](https://github.com/open-webui/docs). Document user-facing behavior, environment variables, public APIs/interfaces, or deployment steps.
+- [ ] **Documentation:** Add docs in [PrivateDesk AI Docs Repository](https://github.com/privatedesk-ai/docs). Document user-facing behavior, environment variables, public APIs/interfaces, or deployment steps.
 - [ ] **Dependencies:** Are there any new or upgraded dependencies? If so, explain why, update the changelog/docs, and include any compatibility notes. Actually run the code/function that uses updated library to ensure it doesn't crash.
 - [ ] **Testing:** Perform manual tests to **verify the implemented fix/feature works as intended AND does not break any other functionality**. Include reproducible steps to demonstrate the issue before the fix. Test edge cases (URL encoding, HTML entities, types). Take this as an opportunity to **make screenshots of the feature/fix and include them in the PR description**.
 - [ ] **Agentic AI Code:** Confirm this Pull Request is **not written by any AI Agent** or has at least **gone through additional human review AND manual testing**. If any AI Agent is the co-author of this PR, it may lead to immediate closure of the PR.
@@ -90,7 +90,7 @@ Keep the "Contributor License Agreement" confirmation text intact.
 Deleting it will trigger the CLA-Bot to INVALIDATE your PR.
 -->
 
-By submitting this pull request, I confirm that I have read and fully agree to the [Contributor License Agreement (CLA)](https://github.com/open-webui/open-webui/blob/main/CONTRIBUTOR_LICENSE_AGREEMENT), and I am providing my contributions under its terms.
+By submitting this pull request, I confirm that I have read and fully agree to the [Contributor License Agreement (CLA)](https://github.com/BEKO2210/privatedesk-ai/blob/main/CONTRIBUTOR_LICENSE_AGREEMENT), and I am providing my contributions under its terms.
 
 > [!NOTE]
 > Deleting the CLA section will lead to immediate closure of your PR and it will not be merged in.

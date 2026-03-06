@@ -1,23 +1,23 @@
-# Contributing to Open WebUI
+# Contributing to PrivateDesk AI
 
 🚀 **Welcome, Contributors!** 🚀
 
-Your interest in contributing to Open WebUI is greatly appreciated. This document is here to guide you through the process, ensuring your contributions enhance the project effectively. Let's make Open WebUI even better, together!
+Your interest in contributing to PrivateDesk AI is greatly appreciated. This document is here to guide you through the process, ensuring your contributions enhance the project effectively. Let's make PrivateDesk AI even better, together!
 
 ## 📌 Key Points
 
-### 🦙 Ollama vs. Open WebUI
+### 🦙 Ollama vs. PrivateDesk AI
 
-It's crucial to distinguish between Ollama and Open WebUI:
+It's crucial to distinguish between Ollama and PrivateDesk AI:
 
-- **Open WebUI** focuses on providing an intuitive and responsive web interface for chat interactions.
+- **PrivateDesk AI** focuses on providing an intuitive and responsive web interface for chat interactions.
 - **Ollama** is the underlying technology that powers these interactions.
 
-If your issue or contribution pertains directly to the core Ollama technology, please direct it to the appropriate [Ollama project repository](https://ollama.com/). Open WebUI's repository is dedicated to the web interface aspect only.
+If your issue or contribution pertains directly to the core Ollama technology, please direct it to the appropriate [Ollama project repository](https://ollama.com/). PrivateDesk AI's repository is dedicated to the web interface aspect only.
 
 ### 🚨 Reporting Issues
 
-Noticed something off? Have an idea? Check our [Issues tab](https://github.com/open-webui/open-webui/issues) to see if it's already been reported or suggested. If not, feel free to open a new issue. When reporting an issue, please follow our issue templates. These templates are designed to ensure that all necessary details are provided from the start, enabling us to address your concerns more efficiently.
+Noticed something off? Have an idea? Check our [Issues tab](https://github.com/BEKO2210/privatedesk-ai/issues) to see if it's already been reported or suggested. If not, feel free to open a new issue. When reporting an issue, please follow our issue templates. These templates are designed to ensure that all necessary details are provided from the start, enabling us to address your concerns more efficiently.
 
 > [!IMPORTANT]
 >
@@ -26,17 +26,17 @@ Noticed something off? Have an idea? Check our [Issues tab](https://github.com/o
 
 > [!WARNING]
 > Reporting vulnerabilities is not wanted through Issues!
-> Instead, [use the security reporting functionality](https://github.com/open-webui/open-webui/security) and ensure you comply with the outlined requirements.
+> Instead, [use the security reporting functionality](https://github.com/BEKO2210/privatedesk-ai/security) and ensure you comply with the outlined requirements.
 
 ### 🧭 Scope of Support
 
-We've noticed an uptick in issues not directly related to Open WebUI but rather to the environment it's run in, especially Docker setups. While we strive to support Docker deployment, understanding Docker fundamentals is crucial for a smooth experience.
+We've noticed an uptick in issues not directly related to PrivateDesk AI but rather to the environment it's run in, especially Docker setups. While we strive to support Docker deployment, understanding Docker fundamentals is crucial for a smooth experience.
 
-- **Docker Deployment Support**: Open WebUI supports Docker deployment. Familiarity with Docker is assumed. For Docker basics, please refer to the [official Docker documentation](https://docs.docker.com/get-started/overview/).
+- **Docker Deployment Support**: PrivateDesk AI supports Docker deployment. Familiarity with Docker is assumed. For Docker basics, please refer to the [official Docker documentation](https://docs.docker.com/get-started/overview/).
 
-- **Advanced Configurations**: Setting up reverse proxies for HTTPS and managing Docker deployments requires foundational knowledge. There are numerous online resources available to learn these skills. Ensuring you have this knowledge will greatly enhance your experience with Open WebUI and similar projects.
+- **Advanced Configurations**: Setting up reverse proxies for HTTPS and managing Docker deployments requires foundational knowledge. There are numerous online resources available to learn these skills. Ensuring you have this knowledge will greatly enhance your experience with PrivateDesk AI and similar projects.
 
-- **Check the documentation and help improve it**: [Our documentation](https://docs.openwebui.com) has ever growing troubleshooting guides and detailed installation tutorials. Please verify if it is of help to your issue and help expand it by submitting issues and PRs on our [Docs Repository](https://github.com/open-webui/docs).
+- **Check the documentation and help improve it**: [Our documentation](mailto:belkis.aslani@gmail.com) has ever growing troubleshooting guides and detailed installation tutorials. Please verify if it is of help to your issue and help expand it by submitting issues and PRs on our [Docs Repository](https://github.com/privatedesk-ai/docs).
 
 ## 💡 Contributing
 
@@ -46,7 +46,7 @@ Looking to contribute? Great! Here's how you can help:
 
 We welcome pull requests. Before submitting one, please:
 
-1. Open a discussion regarding your ideas [here](https://github.com/open-webui/open-webui/discussions/new/choose).
+1. Open a discussion regarding your ideas [here](https://github.com/BEKO2210/privatedesk-ai/discussions/new/choose).
 2. Follow the project's coding standards and include tests for new features.
 3. Update documentation as necessary.
 4. Write clear, descriptive commit messages.
@@ -57,14 +57,14 @@ We welcome pull requests. Before submitting one, please:
 
 ### 📚 Documentation & Tutorials
 
-Help us make Open WebUI more accessible by improving the documentation, writing tutorials, or creating guides on setting up and optimizing the Web UI.
+Help us make PrivateDesk AI more accessible by improving the documentation, writing tutorials, or creating guides on setting up and optimizing the Web UI.
 
-Help expand our documentation by submitting issues and PRs on our [Docs Repository](https://github.com/open-webui/docs).
+Help expand our documentation by submitting issues and PRs on our [Docs Repository](https://github.com/privatedesk-ai/docs).
 We welcome tutorials, guides and other documentation improvements!
 
 ### 🌐 Translations and Internationalization
 
-Help us make Open WebUI available to a wider audience. In this section, we'll guide you through the process of adding new translations to the project.
+Help us make PrivateDesk AI available to a wider audience. In this section, we'll guide you through the process of adding new translations to the project.
 
 We use JSON files to store translations. You can find the existing translation files in the `src/lib/i18n/locales` directory. Each directory corresponds to a specific language, for example, `en-US` for English (US), `fr-FR` for French (France) and so on. You can refer to [ISO 639 Language Codes](http://www.lingoes.net/en/translator/langcode.htm) to find the appropriate code for a specific language.
 
@@ -79,10 +79,10 @@ To add a new language:
 
 ### 🤔 Questions & Feedback
 
-Got questions or feedback? Join our [Discord community](https://discord.gg/5rJgQTnV4s) or open an issue or discussion. We're here to help!
+Got questions or feedback? Join our [Discord community](mailto:belkis.aslani@gmail.com) or open an issue or discussion. We're here to help!
 
 ## 🙏 Thank You!
 
-Your contributions, big or small, make a significant impact on Open WebUI. We're excited to see what you bring to the project!
+Your contributions, big or small, make a significant impact on PrivateDesk AI. We're excited to see what you bring to the project!
 
 Together, let's create an even more powerful tool for the community. 🌟

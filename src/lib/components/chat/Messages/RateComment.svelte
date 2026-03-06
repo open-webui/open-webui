@@ -256,7 +256,7 @@
 	{#if $config?.features.enable_community_sharing && message?.model}
 		<div class="mt-3 pt-3 border-t border-gray-100/30 dark:border-gray-850/30">
 			<a
-				href={`https://openwebui.com/models?q=${encodeURIComponent(message.model)}`}
+				href={`https://github.com/BEKO2210/privatedesk-ai/models?q=${encodeURIComponent(message.model)}`}
 				target="_blank"
 				class="flex cursor-pointer items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-850 w-full px-3 py-2 rounded-xl transition"
 			>

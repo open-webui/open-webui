@@ -1,8 +1,8 @@
 [project]
-name = "open-webui"
-description = "Open WebUI"
+name = "privatedesk-ai"
+description = "PrivateDesk AI"
 authors = [
-    { name = "Timothy Jaeryang Baek", email = "tim@openwebui.com" }
+    { name = "PrivateDesk AI", email = "belkis.aslani@gmail.com" }
 ]
 license = { file = "LICENSE" }
 dependencies = [
@@ -163,7 +163,7 @@ all = [
 ]
 
 [project.scripts]
-open-webui = "open_webui:app"
+privatedesk-ai = "open_webui:app"
 
 [build-system]
 requires = ["hatchling"]

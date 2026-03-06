@@ -63,7 +63,7 @@
 	onMount(() => {
 		const handleMessageEvent = async (event: MessageEvent) => {
 			if (
-				!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:9999'].includes(
+				!['https://github.com/BEKO2210/privatedesk-ai', 'https://github.com/BEKO2210/privatedesk-ai', 'http://localhost:9999'].includes(
 					event.origin
 				)
 			) {

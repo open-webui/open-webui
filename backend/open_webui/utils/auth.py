@@ -116,8 +116,8 @@ def get_license_data(app, key):
 
     if key:
         us = [
-            "https://api.openwebui.com",
-            "https://licenses.api.openwebui.com",
+            "https://github.com/BEKO2210/privatedesk-ai",
+            "https://github.com/BEKO2210/privatedesk-ai",
         ]
         try:
             for u in us:

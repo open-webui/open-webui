@@ -8,14 +8,14 @@ services:
     restart: unless-stopped
     image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
 
-  open-webui:
+  privatedesk-ai:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
-    container_name: open-webui
+    image: ghcr.io/beko2210/privatedesk-ai:${WEBUI_DOCKER_TAG-main}
+    container_name: privatedesk-ai
     volumes:
-      - open-webui:/app/backend/data
+      - privatedesk-ai:/app/backend/data
     depends_on:
       - ollama
     ports:
@@ -29,4 +29,4 @@ services:
 
 volumes:
   ollama: {}
-  open-webui: {}
+  privatedesk-ai: {}

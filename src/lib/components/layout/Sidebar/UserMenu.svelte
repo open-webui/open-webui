@@ -287,7 +287,7 @@
 				{#if $user?.role === 'admin'}
 					<DropdownMenu.Item
 						as="a"
-						href="https://docs.openwebui.com"
+						href="mailto:belkis.aslani@gmail.com"
 						target="_blank"
 						draggable="false"
 						class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
@@ -305,7 +305,7 @@
 					<!-- Releases -->
 					<DropdownMenu.Item
 						as="a"
-						href="https://github.com/open-webui/open-webui/releases"
+						href="https://github.com/BEKO2210/privatedesk-ai/releases"
 						target="_blank"
 						draggable="false"
 						class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"

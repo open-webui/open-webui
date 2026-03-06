@@ -27,7 +27,7 @@
 		const systemTerminals = ($terminalServers ?? []).filter((t: any) => t.id);
 		const systemMatch = systemTerminals.find((t: any) => t.id === $selectedTerminalId);
 		if (systemMatch) {
-			// For system terminals, WS goes through the Open WebUI backend proxy
+			// For system terminals, WS goes through the PrivateDesk AI backend proxy
 			return { serverId: systemMatch.id, baseUrl: WEBUI_API_BASE_URL };
 		}
 
@@ -77,7 +77,7 @@
 				const wsBase = base.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:');
 				wsUrl = `${wsBase}/api/terminals/${sessionId}`;
 			} else {
-				// System terminal — proxy through Open WebUI backend
+				// System terminal — proxy through PrivateDesk AI backend
 				const base = info.baseUrl.replace(/\/$/, '');
 				authToken = token;
 

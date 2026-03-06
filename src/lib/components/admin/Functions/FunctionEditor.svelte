@@ -42,9 +42,9 @@
 	let codeEditor;
 	let boilerplate = `"""
 title: Example Filter
-author: open-webui
-author_url: https://github.com/open-webui
-funding_url: https://github.com/open-webui
+author: privatedesk-ai
+author_url: https://github.com/BEKO2210
+funding_url: https://github.com/BEKO2210
 version: 0.1
 """
 
