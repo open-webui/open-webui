@@ -153,6 +153,11 @@ class TestUsers(AbstractPostgresTest):
             profile_image_url=f"/api/v1/users/2/profile/image",
         )
 
+        # Prevent primary admin deletion
+        with mock_webui_user(id="1"):
+            response = self.fast_api_client.delete(self.create_url("/1"))
+        assert response.status_code == 403
+
         # Delete user by id
         with mock_webui_user(id="1"):
             response = self.fast_api_client.delete(self.create_url("/2"))
