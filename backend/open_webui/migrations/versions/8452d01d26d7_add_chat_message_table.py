@@ -163,6 +163,11 @@ def upgrade() -> None:
 
             timestamp = message.get("timestamp", now)
 
+            try:
+                timestamp = int(float(timestamp))
+            except Exception:
+                timestamp = now
+
             # Normalize timestamp: convert ms to seconds, validate range
             if timestamp > 10_000_000_000:
                 timestamp = timestamp // 1000
