@@ -53,3 +53,4 @@ chromadb==1.4.1
 black==26.1.0
 pydub
 chardet==5.2.0
+beautifulsoup4

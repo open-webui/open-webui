@@ -47,6 +47,7 @@ from open_webui.routers.audio import transcribe
 from open_webui.storage.provider import Storage
 
 
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.misc import strict_match_mime_type
 from pydantic import BaseModel
@@ -56,68 +57,32 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
-############################
-# Check if the current user has access to a file through any knowledge bases the user may be in.
-############################
-
-
-# TODO: Optimize this function to use the knowledge_file table for faster lookups.
-def has_access_to_file(
-    file_id: Optional[str],
-    access_type: str,
-    user=Depends(get_verified_user),
-    db: Optional[Session] = None,
-) -> bool:
-    file = Files.get_file_by_id(file_id, db=db)
-    log.debug(f"Checking if user has {access_type} access to file")
-    if not file:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    # Check if the file is associated with any knowledge bases the user has access to
-    knowledge_bases = Knowledges.get_knowledges_by_file_id(file_id, db=db)
-    user_group_ids = {
-        group.id for group in Groups.get_groups_by_member_id(user.id, db=db)
-    }
-    for knowledge_base in knowledge_bases:
-        if knowledge_base.user_id == user.id or AccessGrants.has_access(
-            user_id=user.id,
-            resource_type="knowledge",
-            resource_id=knowledge_base.id,
-            permission=access_type,
-            user_group_ids=user_group_ids,
-            db=db,
-        ):
-            return True
-
-    knowledge_base_id = file.meta.get("collection_name") if file.meta else None
-    if knowledge_base_id:
-        knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(
-            user.id, access_type, db=db
-        )
-        for knowledge_base in knowledge_bases:
-            if knowledge_base.id == knowledge_base_id:
-                return True
-
-    # Check if the file is associated with any channels the user has access to
-    channels = Channels.get_channels_by_file_id_and_user_id(file_id, user.id, db=db)
-    if access_type == "read" and channels:
-        return True
-
-    # Check if the file is associated with any chats the user has access to
-    # TODO: Granular access control for chats
-    chats = Chats.get_shared_chats_by_file_id(file_id, db=db)
-    if chats:
-        return True
-
-    return False
-
+from open_webui.utils.access_control.files import has_access_to_file
 
 ############################
 # Upload File
 ############################
+
+
+def _is_text_file(file_path: str, chunk_size: int = 8192) -> bool:
+    """Check if a file is likely a text file by reading a chunk and validating UTF-8.
+
+    This catches files whose extensions are mis-mapped by mimetypes/browsers
+    (e.g. TypeScript .ts → video/mp2t) without maintaining an extension whitelist.
+    """
+    try:
+        resolved = Storage.get_file(file_path)
+        with open(resolved, "rb") as f:
+            chunk = f.read(chunk_size)
+        if not chunk:
+            return False
+        # Null bytes are a strong indicator of binary content
+        if b"\x00" in chunk:
+            return False
+        chunk.decode("utf-8")
+        return True
+    except (UnicodeDecodeError, Exception):
+        return False
 
 
 def process_uploaded_file(
@@ -131,14 +96,19 @@ def process_uploaded_file(
 ):
     def _process_handler(db_session):
         try:
-            if file.content_type:
+            content_type = file.content_type
+
+            # Detect mis-labeled text files (e.g. .ts → video/mp2t)
+            if content_type and content_type.startswith(("image/", "video/")):
+                if _is_text_file(file_path):
+                    content_type = "text/plain"
+
+            if content_type:
                 stt_supported_content_types = getattr(
                     request.app.state.config, "STT_SUPPORTED_CONTENT_TYPES", []
                 )
 
-                if strict_match_mime_type(
-                    stt_supported_content_types, file.content_type
-                ):
+                if strict_match_mime_type(stt_supported_content_types, content_type):
                     file_path_processed = Storage.get_file(file_path)
                     result = transcribe(
                         request, file_path_processed, file_metadata, user
@@ -152,7 +122,7 @@ def process_uploaded_file(
                         user=user,
                         db=db_session,
                     )
-                elif (not file.content_type.startswith(("image/", "video/"))) or (
+                elif (not content_type.startswith(("image/", "video/"))) or (
                     request.app.state.config.CONTENT_EXTRACTION_ENGINE == "external"
                 ):
                     process_file(
@@ -163,7 +133,7 @@ def process_uploaded_file(
                     )
                 else:
                     raise Exception(
-                        f"File type {file.content_type} is not supported for processing"
+                        f"File type {content_type} is not supported for processing"
                     )
             else:
                 log.info(
@@ -362,7 +332,7 @@ async def list_files(
     content: bool = Query(True),
     db: Session = Depends(get_session),
 ):
-    if user.role == "admin":
+    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         files = Files.get_files(db=db)
     else:
         files = Files.get_files_by_user_id(user.id, db=db)
@@ -398,8 +368,10 @@ async def search_files(
     Search for files by filename with support for wildcard patterns.
     Uses SQL-based filtering with pagination for better performance.
     """
-    # Determine user_id: null for admin (search all), user.id for regular users
-    user_id = None if user.role == "admin" else user.id
+    # Determine user_id: null for admin with bypass (search all), user.id otherwise
+    user_id = (
+        None if (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL) else user.id
+    )
 
     # Use optimized database query with pagination
     files = Files.search_files(
@@ -689,6 +661,8 @@ async def get_file_content_by_id(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=ERROR_MESSAGES.NOT_FOUND,
                 )
+        except HTTPException as e:
+            raise e
         except Exception as e:
             log.exception(e)
             log.error("Error getting file content")
@@ -740,6 +714,8 @@ async def get_html_file_content_by_id(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=ERROR_MESSAGES.NOT_FOUND,
                 )
+        except HTTPException as e:
+            raise e
         except Exception as e:
             log.exception(e)
             log.error("Error getting file content")

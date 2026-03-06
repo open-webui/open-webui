@@ -27,14 +27,22 @@ from open_webui.constants import ERROR_MESSAGES
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission
-from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant
+from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
+from open_webui.models.access_grants import AccessGrants
 from open_webui.internal.db import get_session
 from sqlalchemy.orm import Session
 
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _truncate_note_data(data: Optional[dict], max_length: int = 1000) -> Optional[dict]:
+    if not data:
+        return data
+    md = (data.get("content") or {}).get("md") or ""
+    return {"content": {"md": md[:max_length]}}
+
 
 ############################
 # GetNotes
@@ -82,6 +90,7 @@ async def get_notes(
         NoteUserResponse(
             **{
                 **note.model_dump(),
+                "data": _truncate_note_data(note.data),
                 "user": UserResponse(**users[note.user_id].model_dump()),
             }
         )
@@ -135,7 +144,10 @@ async def search_notes(
 
         filter["user_id"] = user.id
 
-    return Notes.search_notes(user.id, filter, skip=skip, limit=limit, db=db)
+    result = Notes.search_notes(user.id, filter, skip=skip, limit=limit, db=db)
+    for note in result.items:
+        note.data = _truncate_note_data(note.data)
+    return result
 
 
 ############################
@@ -271,18 +283,14 @@ async def update_note_by_id(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
-    # Check if user can share publicly
-    if (
-        user.role != "admin"
-        and has_public_read_access_grant(form_data.access_grants)
-        and not has_permission(
-            user.id,
-            "sharing.public_notes",
-            request.app.state.config.USER_PERMISSIONS,
-            db=db,
-        )
-    ):
-        form_data.access_grants = []
+    form_data.access_grants = filter_allowed_access_grants(
+        request.app.state.config.USER_PERMISSIONS,
+        user.id,
+        user.role,
+        form_data.access_grants,
+        "sharing.public_notes",
+        db=db,
+    )
 
     try:
         note = Notes.update_note_by_id(id, form_data, db=db)
@@ -345,24 +353,13 @@ async def update_note_access_by_id(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
-    # Strip public sharing if user lacks permission
-    if (
-        user.role != "admin"
-        and has_public_read_access_grant(form_data.access_grants)
-        and not has_permission(
-            user.id,
-            "sharing.public_notes",
-            request.app.state.config.USER_PERMISSIONS,
-        )
-    ):
-        form_data.access_grants = [
-            grant
-            for grant in form_data.access_grants
-            if not (
-                grant.get("principal_type") == "user"
-                and grant.get("principal_id") == "*"
-            )
-        ]
+    form_data.access_grants = filter_allowed_access_grants(
+        request.app.state.config.USER_PERMISSIONS,
+        user.id,
+        user.role,
+        form_data.access_grants,
+        "sharing.public_notes",
+    )
 
     AccessGrants.set_access_grants("note", id, form_data.access_grants, db=db)
 

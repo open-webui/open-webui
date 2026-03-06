@@ -135,6 +135,7 @@ class OAuthSessionTable:
                 db.refresh(result)
 
                 if result:
+                    db.expunge(result)  # Detach so dict swap is never flushed
                     result.token = token  # Return decrypted token
                     return OAuthSessionModel.model_validate(result)
                 else:
@@ -151,6 +152,7 @@ class OAuthSessionTable:
             with get_db_context(db) as db:
                 session = db.query(OAuthSession).filter_by(id=session_id).first()
                 if session:
+                    db.expunge(session)
                     session.token = self._decrypt_token(session.token)
                     return OAuthSessionModel.model_validate(session)
 
@@ -171,6 +173,7 @@ class OAuthSessionTable:
                     .first()
                 )
                 if session:
+                    db.expunge(session)
                     session.token = self._decrypt_token(session.token)
                     return OAuthSessionModel.model_validate(session)
 
@@ -188,9 +191,11 @@ class OAuthSessionTable:
                 session = (
                     db.query(OAuthSession)
                     .filter_by(provider=provider, user_id=user_id)
+                    .order_by(OAuthSession.created_at.desc())
                     .first()
                 )
                 if session:
+                    db.expunge(session)
                     session.token = self._decrypt_token(session.token)
                     return OAuthSessionModel.model_validate(session)
 
@@ -210,6 +215,7 @@ class OAuthSessionTable:
                 results = []
                 for session in sessions:
                     try:
+                        db.expunge(session)
                         session.token = self._decrypt_token(session.token)
                         results.append(OAuthSessionModel.model_validate(session))
                     except Exception as e:
@@ -244,6 +250,7 @@ class OAuthSessionTable:
                 session = db.query(OAuthSession).filter_by(id=session_id).first()
 
                 if session:
+                    db.expunge(session)
                     session.token = self._decrypt_token(session.token)
                     return OAuthSessionModel.model_validate(session)
 

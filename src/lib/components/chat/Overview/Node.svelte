@@ -14,7 +14,7 @@
 </script>
 
 <div
-	class="px-4 py-3 shadow-md rounded-xl dark:bg-black bg-white border dark:border-gray-900 w-60 h-20 group"
+	class="px-4 py-3 shadow-md rounded-xl dark:bg-black bg-white border border-gray-100 dark:border-gray-900 w-60 h-20 group"
 >
 	<Tooltip
 		content={data?.message?.error ? data.message.error.content : data.message.content}
@@ -56,6 +56,9 @@
 
 						<button
 							class={data?.message?.favorite ? '' : 'invisible group-hover:visible'}
+							aria-label={data?.message?.favorite
+								? $i18n.t('Remove from favorites')
+								: $i18n.t('Add to favorites')}
 							on:click={() => {
 								data.message.favorite = !(data?.message?.favorite ?? false);
 							}}

@@ -16,7 +16,9 @@
 		{ value: 'enabled', label: $i18n.t('Enabled') },
 		{ value: 'disabled', label: $i18n.t('Disabled') },
 		{ value: 'visible', label: $i18n.t('Visible') },
-		{ value: 'hidden', label: $i18n.t('Hidden') }
+		{ value: 'hidden', label: $i18n.t('Hidden') },
+		{ value: 'public', label: $i18n.t('Public') },
+		{ value: 'private', label: $i18n.t('Private') }
 	];
 </script>
 

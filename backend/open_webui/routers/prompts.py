@@ -9,7 +9,7 @@ from open_webui.models.prompts import (
     PromptModel,
     Prompts,
 )
-from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant
+from open_webui.models.access_grants import AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.prompt_history import (
     PromptHistories,
@@ -18,7 +18,7 @@ from open_webui.models.prompt_history import (
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.internal.db import get_session
 from sqlalchemy.orm import Session
@@ -473,28 +473,59 @@ async def update_prompt_access_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    # Strip public sharing if user lacks permission
-    if (
-        user.role != "admin"
-        and has_public_read_access_grant(form_data.access_grants)
-        and not has_permission(
-            user.id,
-            "sharing.public_prompts",
-            request.app.state.config.USER_PERMISSIONS,
-        )
-    ):
-        form_data.access_grants = [
-            grant
-            for grant in form_data.access_grants
-            if not (
-                grant.get("principal_type") == "user"
-                and grant.get("principal_id") == "*"
-            )
-        ]
+    form_data.access_grants = filter_allowed_access_grants(
+        request.app.state.config.USER_PERMISSIONS,
+        user.id,
+        user.role,
+        form_data.access_grants,
+        "sharing.public_prompts",
+    )
 
     AccessGrants.set_access_grants("prompt", prompt_id, form_data.access_grants, db=db)
 
     return Prompts.get_prompt_by_id(prompt_id, db=db)
+
+
+############################
+# TogglePromptActiveById
+############################
+
+
+@router.post("/id/{prompt_id}/toggle", response_model=Optional[PromptModel])
+async def toggle_prompt_active(
+    prompt_id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
+    prompt = Prompts.get_prompt_by_id(prompt_id, db=db)
+
+    if not prompt:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        prompt.user_id != user.id
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="prompt",
+            resource_id=prompt.id,
+            permission="write",
+            db=db,
+        )
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    result = Prompts.toggle_prompt_active(prompt.id, db=db)
+    if result:
+        return result
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=ERROR_MESSAGES.DEFAULT(),
+    )
 
 
 ############################

@@ -39,11 +39,6 @@ from open_webui.routers.pipelines import (
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 
-
-from open_webui.utils.plugin import (
-    load_function_module_by_id,
-    get_function_module_from_cache,
-)
 from open_webui.utils.models import get_all_models, check_model_access
 from open_webui.utils.payload import convert_payload_openai_to_ollama
 from open_webui.utils.response import (

@@ -395,6 +395,7 @@
 				<input
 					class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={query}
+					aria-label={$i18n.t('Search Models')}
 					placeholder={$i18n.t('Search Models')}
 					maxlength="500"
 					on:input={() => {
@@ -409,6 +410,7 @@
 					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 						<button
 							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							aria-label={$i18n.t('Clear search')}
 							on:click={() => {
 								query = '';
 								getModelList();
@@ -516,6 +518,9 @@
 																	<button
 																		class="self-center w-fit text-sm p-1.5 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 																		type="button"
+																		aria-label={model?.meta?.hidden
+																			? $i18n.t('Show')
+																			: $i18n.t('Hide')}
 																		on:click={(e) => {
 																			e.stopPropagation();
 																			hideModelHandler(model);
@@ -533,6 +538,7 @@
 																	<button
 																		class="self-center w-fit text-sm p-1.5 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 																		type="button"
+																		aria-label={$i18n.t('Delete')}
 																		on:click={(e) => {
 																			e.stopPropagation();
 																			deleteModelHandler(model);

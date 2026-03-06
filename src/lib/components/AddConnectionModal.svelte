@@ -309,14 +309,27 @@
 										bind:value={url}
 										placeholder={$i18n.t('API Base URL')}
 										autocomplete="off"
+										list={ollama ? undefined : 'suggestions'}
 										required
 									/>
+
+									{#if !ollama}
+										<datalist id="suggestions">
+											<option value="https://api.openai.com/v1" />
+											<option value="https://api.anthropic.com/v1" />
+											<option value="https://generativelanguage.googleapis.com/v1beta/openai" />
+											<option value="https://api.mistral.ai/v1" />
+											<option value="https://api.groq.com/openai/v1" />
+											<option value="https://openrouter.ai/api/v1" />
+											<option value="https://api.x.ai/v1" />
+										</datalist>
+									{/if}
 								</div>
 							</div>
 
 							<Tooltip content={$i18n.t('Verify Connection')} className="self-end -mb-1">
 								<button
-									class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
+									class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition"
 									on:click={() => {
 										verifyHandler();
 									}}
@@ -686,7 +699,7 @@
 						{/if}
 
 						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
+							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {loading
 								? ' cursor-not-allowed'
 								: ''}"
 							type="submit"
@@ -695,9 +708,9 @@
 							{$i18n.t('Save')}
 
 							{#if loading}
-								<div class="ml-2 self-center">
+								<span class="shrink-0">
 									<Spinner />
-								</div>
+								</span>
 							{/if}
 						</button>
 					</div>

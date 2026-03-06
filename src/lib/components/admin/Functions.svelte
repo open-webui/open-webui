@@ -83,7 +83,7 @@
 	}
 
 	const setFilteredItems = () => {
-		filteredItems = functions
+		filteredItems = (functions ?? [])
 			.filter(
 				(f) =>
 					(selectedType !== '' ? f.type === selectedType : true) &&
@@ -681,7 +681,8 @@
 				}
 
 				toast.success($i18n.t('Functions imported successfully'));
-				functions.set(await getFunctions(localStorage.token));
+				functions = await getFunctionList(localStorage.token);
+				_functions.set(await getFunctions(localStorage.token));
 				models.set(
 					await getModels(
 						localStorage.token,
@@ -690,6 +691,8 @@
 						true
 					)
 				);
+				importFiles = null;
+				functionsImportInputElement.value = '';
 			};
 
 			reader.readAsText(importFiles[0]);

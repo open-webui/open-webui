@@ -1,3 +1,4 @@
+import copy
 import time
 import logging
 import asyncio
@@ -302,7 +303,44 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     # This ensures each function's DB freshness check runs exactly once,
     # not once per (model × function) pair.
     for function_id in all_function_ids:
-        get_function_module_from_cache(request, function_id)
+        try:
+            get_function_module_from_cache(request, function_id)
+        except Exception as e:
+            log.info(f"Failed to load function module for {function_id}: {e}")
+
+    # Apply global model defaults to all models
+    # Per-model overrides take precedence over global defaults
+    default_metadata = (
+        getattr(request.app.state.config, "DEFAULT_MODEL_METADATA", None) or {}
+    )
+
+    if default_metadata:
+        for model in models:
+            info = model.get("info")
+
+            if info is None:
+                model["info"] = {"meta": copy.deepcopy(default_metadata)}
+                continue
+
+            meta = info.setdefault("meta", {})
+            for key, value in default_metadata.items():
+                if key == "capabilities":
+                    # Merge capabilities: defaults as base, per-model overrides win
+                    existing = meta.get("capabilities") or {}
+                    meta["capabilities"] = {**value, **existing}
+                elif meta.get(key) is None:
+                    meta[key] = copy.deepcopy(value)
+
+    def get_action_priority(action_id):
+        try:
+            function_module = request.app.state.FUNCTIONS.get(action_id)
+            if function_module and hasattr(function_module, "Valves"):
+                valves_db = Functions.get_function_valves_by_id(action_id)
+                valves = function_module.Valves(**(valves_db if valves_db else {}))
+                return getattr(valves, "priority", 0)
+        except Exception:
+            pass
+        return 0
 
     for model in models:
         action_ids = [
@@ -310,6 +348,8 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
             for action_id in list(set(model.pop("action_ids", []) + global_action_ids))
             if action_id in enabled_action_ids
         ]
+        action_ids.sort(key=lambda aid: (get_action_priority(aid), aid))
+
         filter_ids = [
             filter_id
             for filter_id in list(set(model.pop("filter_ids", []) + global_filter_ids))
@@ -337,7 +377,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
             if filter_function is None:
                 log.info(f"Filter not found: {filter_id}")
                 continue
-                
+
             function_module = request.app.state.FUNCTIONS.get(filter_id)
             if function_module is None:
                 log.info(f"Failed to load filter module: {filter_id}")
@@ -392,11 +432,13 @@ def get_filtered_models(models, user, db=None):
         user.role == "user"
         or (user.role == "admin" and not BYPASS_ADMIN_ACCESS_CONTROL)
     ) and not BYPASS_MODEL_ACCESS_CONTROL:
-        model_ids = [model["id"] for model in models if not model.get("arena")]
-        model_infos = {
-            model_info.id: model_info
-            for model_info in Models.get_models_by_ids(model_ids)
-        }
+        model_infos = {}
+        for model in models:
+            if model.get("arena"):
+                continue
+            info = model.get("info")
+            if info:
+                model_infos[model["id"]] = info
 
         user_group_ids = {
             group.id for group in Groups.get_groups_by_member_id(user.id, db=db)
@@ -426,12 +468,12 @@ def get_filtered_models(models, user, db=None):
                     filtered_models.append(model)
                 continue
 
-            model_info = model_infos.get(model["id"], None)
+            model_info = model_infos.get(model["id"])
             if model_info:
                 if (
                     (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
-                    or user.id == model_info.user_id
-                    or model_info.id in accessible_model_ids
+                    or user.id == model_info.get("user_id")
+                    or model["id"] in accessible_model_ids
                 ):
                     filtered_models.append(model)
 
