@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 💨 **Chat message tree operations.** Chat message tree operations are now significantly faster, improving overall chat responsiveness. [#22194](https://github.com/open-webui/open-webui/pull/22194)
 - 🚀 **Initial page load speed.** Page load is now significantly faster thanks to deferred loading of the syntax highlighting library, reducing the initial JavaScript bundle by several megabytes. [#22304](https://github.com/open-webui/open-webui/pull/22304)
 - ⚡ **Action priority query optimization.** Improved performance of action priority resolution by fixing an N+1 query pattern, reducing database round-trips when loading model actions. [#22301](https://github.com/open-webui/open-webui/pull/22301)
+- ⚡ **API key middleware optimization.** The API key restriction middleware was converted to a pure ASGI middleware for improved streaming performance, removing per-chunk call overhead. [#22188](https://github.com/open-webui/open-webui/pull/22188)
 - ⏱️ **Event call timeout configuration.** Administrators can now configure the WebSocket event call timeout via the WEBSOCKET_EVENT_CALLER_TIMEOUT environment variable, giving users more time to respond to event_call forms instead of timing out after 60 seconds. [#22222](https://github.com/open-webui/open-webui/pull/22222), [#22220](https://github.com/open-webui/open-webui/issues/22220)
 - 📑 **Office file previews.** Users can now preview DOCX, XLSX, and PPTX files directly in the chat file navigator, making it easier to view documents without downloading them first. [Commit](https://github.com/open-webui/open-webui/commit/890949abe6b01d201355a86c50317e20da07dd34)
 - 📁 **File refresh button visibility.** The refresh button in the chat file navigator now appears when viewing files as well as directories, allowing users to refresh the file view at any time. [Commit](https://github.com/open-webui/open-webui/commit/49a2e5bf573415dae6d4c7e5bd635e499c8de77a)
@@ -53,10 +54,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📌 **Stale pinned models cleanup.** Pinned models that are deleted or hidden are now automatically unpinned, keeping your pinned models list up to date. [Commit](https://github.com/open-webui/open-webui/commit/af4500e5040c8343d339cd88dd1d2fb6138c7a72)
 - 🔧 **OpenTelemetry metric descriptions.** Fixed conflicting metric instrument descriptions that caused warnings in the OpenTelemetry collector, resulting in cleaner telemetry logs for administrators. [#22293](https://github.com/open-webui/open-webui/pull/22293)
 - 📷 **Android photo capture.** Fixed an issue where the first photo taken in chat appeared completely black on some Android devices by using an alternative canvas export method. [#22317](https://github.com/open-webui/open-webui/pull/22317)
-
-### Changed
-
-- 🔌 **API key middleware optimization.** The API key restriction middleware was converted to a pure ASGI middleware for improved streaming performance, removing per-chunk call overhead. [#22188](https://github.com/open-webui/open-webui/pull/22188)
 
 ## [0.8.8] - 2026-03-02
 
