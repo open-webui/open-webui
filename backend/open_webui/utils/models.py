@@ -149,63 +149,79 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     ]
 
     custom_models = Models.get_all_models()
+
+    # Build O(1) lookup indices for base models to avoid O(n×m) nested loops.
+    # Two indices: exact ID match and Ollama base-name match (before ':').
+    models_by_id = {}
+    # For Ollama models, also index by the base name (e.g. 'llama3' for 'llama3:7b')
+    ollama_models_by_base = {}
+    for model in models:
+        models_by_id[model["id"]] = model
+        if model.get("owned_by") == "ollama":
+            base_name = model["id"].split(":")[0]
+            # Only store first occurrence to match the original inner-loop
+            # break-on-first-match semantics
+            if base_name not in ollama_models_by_base:
+                ollama_models_by_base[base_name] = model
+
+    # Precompute the set of existing model IDs to avoid rebuilding a list
+    # per custom model in the elif branch (was O(m) per iteration).
+    existing_model_ids = set(models_by_id.keys())
+
     for custom_model in custom_models:
         if custom_model.base_model_id is None:
-            # Applied directly to a base model
-            for model in models:
-                if custom_model.id == model["id"] or (
-                    model.get("owned_by") == "ollama"
-                    and custom_model.id
-                    == model["id"].split(":")[
-                        0
-                    ]  # Ollama may return model ids in different formats (e.g., 'llama3' vs. 'llama3:7b')
-                ):
-                    if custom_model.is_active:
-                        model["name"] = custom_model.name
-                        model["info"] = custom_model.model_dump()
+            # Applied directly to a base model — O(1) lookup
+            model = models_by_id.get(custom_model.id) or ollama_models_by_base.get(
+                custom_model.id
+            )
 
-                        # Set action_ids and filter_ids
-                        action_ids = []
-                        filter_ids = []
+            if model:
+                if custom_model.is_active:
+                    model["name"] = custom_model.name
+                    model["info"] = custom_model.model_dump()
 
-                        if "info" in model:
-                            if "meta" in model["info"]:
-                                action_ids.extend(
-                                    model["info"]["meta"].get("actionIds", [])
-                                )
-                                filter_ids.extend(
-                                    model["info"]["meta"].get("filterIds", [])
-                                )
+                    # Set action_ids and filter_ids
+                    action_ids = []
+                    filter_ids = []
 
-                            if "params" in model["info"]:
-                                # Remove params to avoid exposing sensitive info
-                                del model["info"]["params"]
+                    if "info" in model:
+                        if "meta" in model["info"]:
+                            action_ids.extend(
+                                model["info"]["meta"].get("actionIds", [])
+                            )
+                            filter_ids.extend(
+                                model["info"]["meta"].get("filterIds", [])
+                            )
 
-                        model["action_ids"] = action_ids
-                        model["filter_ids"] = filter_ids
-                    else:
-                        models.remove(model)
+                        if "params" in model["info"]:
+                            # Remove params to avoid exposing sensitive info
+                            del model["info"]["params"]
+
+                    model["action_ids"] = action_ids
+                    model["filter_ids"] = filter_ids
+                else:
+                    models.remove(model)
 
         elif custom_model.is_active and (
-            custom_model.id not in [model["id"] for model in models]
+            custom_model.id not in existing_model_ids
         ):
-            # Custom model based on a base model
+            # Custom model based on a base model — O(1) lookup
             owned_by = "openai"
             connection_type = None
-
             pipe = None
 
-            for m in models:
-                if (
-                    custom_model.base_model_id == m["id"]
-                    or custom_model.base_model_id == m["id"].split(":")[0]
-                ):
-                    owned_by = m.get("owned_by", "unknown")
-                    if "pipe" in m:
-                        pipe = m["pipe"]
-
-                    connection_type = m.get("connection_type", None)
-                    break
+            m = models_by_id.get(custom_model.base_model_id)
+            if m is None:
+                # Try Ollama base-name match (e.g. 'llama3' matches 'llama3:7b')
+                base_key = custom_model.base_model_id.split(":")[0]
+                m = ollama_models_by_base.get(base_key) or models_by_id.get(
+                    base_key
+                )
+            if m:
+                owned_by = m.get("owned_by", "unknown")
+                if "pipe" in m:
+                    pipe = m["pipe"]
+                connection_type = m.get("connection_type", None)
 
             model = {
                 "id": f"{custom_model.id}",
