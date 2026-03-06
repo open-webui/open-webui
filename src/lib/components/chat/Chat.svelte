@@ -1567,27 +1567,29 @@
 						navigator.vibrate(5);
 					}
 
-					// Emit chat event for TTS
-					const messageContentParts = getMessageContentParts(
-						removeAllDetails(message.content),
-						$config?.audio?.tts?.split_on ?? 'punctuation'
-					);
-					messageContentParts.pop();
-
-					// dispatch only last sentence and make sure it hasn't been dispatched before
-					if (
-						messageContentParts.length > 0 &&
-						messageContentParts[messageContentParts.length - 1] !== message.lastSentence
-					) {
-						message.lastSentence = messageContentParts[messageContentParts.length - 1];
-						eventTarget.dispatchEvent(
-							new CustomEvent('chat', {
-								detail: {
-									id: message.id,
-									content: messageContentParts[messageContentParts.length - 1]
-								}
-							})
+					// Emit chat event for TTS (only when call overlay is active)
+					if ($showCallOverlay) {
+						const messageContentParts = getMessageContentParts(
+							removeAllDetails(message.content),
+							$config?.audio?.tts?.split_on ?? 'punctuation'
 						);
+						messageContentParts.pop();
+
+						// dispatch only last sentence and make sure it hasn't been dispatched before
+						if (
+							messageContentParts.length > 0 &&
+							messageContentParts[messageContentParts.length - 1] !== message.lastSentence
+						) {
+							message.lastSentence = messageContentParts[messageContentParts.length - 1];
+							eventTarget.dispatchEvent(
+								new CustomEvent('chat', {
+									detail: {
+										id: message.id,
+										content: messageContentParts[messageContentParts.length - 1]
+									}
+								})
+							);
+						}
 					}
 				}
 			}
@@ -1601,27 +1603,29 @@
 				navigator.vibrate(5);
 			}
 
-			// Emit chat event for TTS
-			const messageContentParts = getMessageContentParts(
-				removeAllDetails(message.content),
-				$config?.audio?.tts?.split_on ?? 'punctuation'
-			);
-			messageContentParts.pop();
-
-			// dispatch only last sentence and make sure it hasn't been dispatched before
-			if (
-				messageContentParts.length > 0 &&
-				messageContentParts[messageContentParts.length - 1] !== message.lastSentence
-			) {
-				message.lastSentence = messageContentParts[messageContentParts.length - 1];
-				eventTarget.dispatchEvent(
-					new CustomEvent('chat', {
-						detail: {
-							id: message.id,
-							content: messageContentParts[messageContentParts.length - 1]
-						}
-					})
+			// Emit chat event for TTS (only when call overlay is active)
+			if ($showCallOverlay) {
+				const messageContentParts = getMessageContentParts(
+					removeAllDetails(message.content),
+					$config?.audio?.tts?.split_on ?? 'punctuation'
 				);
+				messageContentParts.pop();
+
+				// dispatch only last sentence and make sure it hasn't been dispatched before
+				if (
+					messageContentParts.length > 0 &&
+					messageContentParts[messageContentParts.length - 1] !== message.lastSentence
+				) {
+					message.lastSentence = messageContentParts[messageContentParts.length - 1];
+					eventTarget.dispatchEvent(
+						new CustomEvent('chat', {
+							detail: {
+								id: message.id,
+								content: messageContentParts[messageContentParts.length - 1]
+							}
+						})
+						);
+				}
 			}
 		}
 
@@ -1648,18 +1652,20 @@
 				document.getElementById(`speak-button-${message.id}`)?.click();
 			}
 
-			// Emit chat event for TTS
-			let lastMessageContentPart =
-				getMessageContentParts(
-					removeAllDetails(message.content),
-					$config?.audio?.tts?.split_on ?? 'punctuation'
-				)?.at(-1) ?? '';
-			if (lastMessageContentPart) {
-				eventTarget.dispatchEvent(
-					new CustomEvent('chat', {
-						detail: { id: message.id, content: lastMessageContentPart }
-					})
-				);
+			// Emit chat event for TTS (only when call overlay is active)
+			if ($showCallOverlay) {
+				let lastMessageContentPart =
+					getMessageContentParts(
+						removeAllDetails(message.content),
+						$config?.audio?.tts?.split_on ?? 'punctuation'
+					)?.at(-1) ?? '';
+				if (lastMessageContentPart) {
+					eventTarget.dispatchEvent(
+						new CustomEvent('chat', {
+							detail: { id: message.id, content: lastMessageContentPart }
+						})
+					);
+				}
 			}
 			eventTarget.dispatchEvent(
 				new CustomEvent('chat:finish', {
