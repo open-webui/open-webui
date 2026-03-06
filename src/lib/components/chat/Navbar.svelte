@@ -39,6 +39,7 @@
 	import ChatCheck from '../icons/ChatCheck.svelte';
 	import Knobs from '../icons/Knobs.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
 
 	const i18n = getContext('i18n');
 
@@ -50,6 +51,7 @@
 	export let history;
 	export let selectedModels;
 	export let showModelSelector = true;
+	export let unauthTools = [];
 
 	export let onSaveTempChat: () => {};
 	export let archiveChatHandler: (id: string) => void;
@@ -312,6 +314,27 @@
 								} else {
 									closedBannerIds = [...closedBannerIds, bannerId];
 								}
+							}}
+						/>
+					{/each}
+				</div>
+			</div>
+		{/if}
+
+		{#if unauthTools.length > 0}
+			<div class="w-full z-30">
+				<div class="flex flex-col gap-1 w-full">
+					{#each unauthTools as tool (tool.id)}
+						{@const serverId = tool.id.split(':').at(-1) ?? tool.id}
+						{@const authUrl = getOAuthClientAuthorizationUrl(serverId, 'mcp')}
+						<Banner
+							banner={{
+								id: `oauth-auth-${tool.id}`,
+								type: 'warning',
+								title: $i18n.t('Authorization Required'),
+								content: $i18n.t('**{{name}}** requires authorization.', { name: tool.name }) +
+									` <a href="${authUrl}" style="text-decoration: underline; font-weight: 600;">${$i18n.t('Authorize')}</a>`,
+								dismissible: false
 							}}
 						/>
 					{/each}

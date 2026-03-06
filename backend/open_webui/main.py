@@ -647,6 +647,7 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     asyncio.create_task(periodic_session_pool_cleanup())
+    asyncio.create_task(app.state.oauth_client_manager.periodic_token_refresh())
 
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         try:

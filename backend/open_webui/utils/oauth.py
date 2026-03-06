@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import copy
 import hashlib
@@ -709,6 +710,33 @@ class OAuthClientManager:
         except Exception as e:
             log.error(f"Error getting OAuth token for user {user_id}: {e}")
             return None
+
+    async def periodic_token_refresh(self):
+        """Proactively refresh OAuth tokens nearing expiration."""
+        REFRESH_INTERVAL = 900  # Check every 15 minutes
+        REFRESH_BUFFER = 1200  # Refresh tokens expiring within 20 minutes (buffer > interval, derived from ~1h minimum TTL of main OAuth providers)
+
+        while True:
+            try:
+                cutoff = int(time.time()) + REFRESH_BUFFER
+                sessions = OAuthSessions.get_sessions_expiring_before(cutoff)
+                if sessions:
+                    log.debug(
+                        f"Proactive token refresh: found {len(sessions)} session(s) to refresh"
+                    )
+                for session in sessions:
+                    try:
+                        await self.get_oauth_token(
+                            session.user_id, session.provider, force_refresh=True
+                        )
+                    except Exception as e:
+                        log.warning(
+                            f"Proactive refresh failed for session {session.id} "
+                            f"(user={session.user_id}, provider={session.provider}): {e}"
+                        )
+            except Exception as e:
+                log.error(f"Error in periodic token refresh: {e}")
+            await asyncio.sleep(REFRESH_INTERVAL)
 
     async def _refresh_token(self, session) -> dict:
         """
