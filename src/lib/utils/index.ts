@@ -275,11 +275,50 @@ export const canvasPixelTest = () => {
 	return true;
 };
 
+
+let resizeImageWarmupDone = false;
+/**
+ * Draws an image to a canvas at the given dimensions and returns a data URL.
+ * On mobile, the first export uses toBlob (avoids black image on Android); later exports use toDataURL.
+ */
+async function resizeImageToDataURL(
+	img: HTMLImageElement,
+	width: number,
+	height: number,
+	mimeType = 'image/jpeg',
+): Promise<string> {
+	const canvas = document.createElement('canvas');
+	canvas.width = width;
+	canvas.height = height;
+	canvas.getContext('2d')?.drawImage(img, 0, 0, width, height);
+
+	const toDataURL = () => canvas.toDataURL(mimeType);
+
+	if (!resizeImageWarmupDone && canvas.toBlob && /android|iphone|ipad|ipod/i.test(navigator?.userAgent)) {
+		resizeImageWarmupDone = true;
+		return new Promise((resolve) => {
+			canvas.toBlob(
+				(blob) => {
+					if (!blob) {
+						resolve(toDataURL());
+						return;
+					}
+					const reader = new FileReader();
+					reader.onload = () => resolve(String(reader.result));
+					reader.onerror = () => resolve(toDataURL());
+					reader.readAsDataURL(blob);
+				},
+				mimeType,
+			);
+		});
+	}
+	return Promise.resolve(toDataURL());
+}
+
 export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
 	return new Promise((resolve, reject) => {
 		const img = new Image();
 		img.onload = () => {
-			const canvas = document.createElement('canvas');
 			let width = img.width;
 			let height = img.height;
 
@@ -322,16 +361,8 @@ export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
 				height = maxHeight;
 			}
 
-			canvas.width = width;
-			canvas.height = height;
-
-			const context = canvas.getContext('2d');
-			context.drawImage(img, 0, 0, width, height);
-
-			// Get compressed image URL
-			const mimeType = imageUrl.match(/^data:([^;]+);/)?.[1];
-			const compressedUrl = canvas.toDataURL(mimeType);
-			resolve(compressedUrl);
+			const mimeType = imageUrl.match(/^data:([^;]+);/)?.[1] ?? 'image/jpeg';
+			resolve(await resizeImageToDataURL(img, width, height, mimeType));
 		};
 		img.onerror = (error) => reject(error);
 		img.src = imageUrl;
