@@ -1,3 +1,4 @@
+import base64
 import os
 import re
 
@@ -23,7 +24,7 @@ from open_webui.utils.plugin import (
 )
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from pydantic import BaseModel, HttpUrl
 from open_webui.internal.db import get_session
@@ -398,6 +399,61 @@ async def delete_function_by_id(
             del FUNCTIONS[id]
 
     return result
+
+
+############################
+# GetFunctionIcon
+############################
+
+
+@router.get("/id/{id}/icon")
+async def get_function_icon(request: Request, id: str, user=Depends(get_verified_user)):
+    """Serve a function's icon as a binary image response.
+
+    The /api/models endpoint replaces heavy inline base64 icon data with
+    lightweight URL references pointing here.  The response is served with
+    aggressive cache headers so the browser only fetches each icon once.
+    """
+    function_module = request.app.state.FUNCTIONS.get(id)
+    if function_module is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    function = Functions.get_function_by_id(id)
+    raw_icon = (
+        (
+            function.meta.manifest.get("icon_url", None)
+            if function and function.meta
+            else None
+        )
+        or getattr(function_module, "icon_url", None)
+        or getattr(function_module, "icon", None)
+    )
+
+    if not raw_icon or not raw_icon.startswith("data:"):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    # Parse data URI: data:[<mediatype>][;base64],<data>
+    try:
+        header, encoded = raw_icon.split(",", 1)
+        media_type = header.split(":")[1].split(";")[0]
+        content = base64.b64decode(encoded)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid icon data URI",
+        )
+
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
 
 
 ############################

@@ -242,47 +242,81 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
             models.append(model)
 
+    def _resolve_icon(function_id, raw_icon):
+        """Replace inline base64 data URIs with a lightweight URL reference.
+
+        When the raw icon is a data URI the value is replaced with an
+        endpoint URL so the heavy base64 payload is only fetched on
+        demand rather than duplicated across every model in the
+        /api/models response.
+
+        For SVG icons the URL includes a ``?format=svg`` hint so the
+        frontend can apply dark-mode colour inversion by simply
+        checking whether the icon string contains ``svg``.
+        """
+        if not raw_icon:
+            return None
+
+        if raw_icon.startswith("data:"):
+            url = f"/api/v1/functions/id/{function_id}/icon"
+            if "image/svg" in raw_icon:
+                url += "?format=svg"
+            return url
+
+        return raw_icon
+
+    def _get_raw_icon(function, module, action=None):
+        """Resolve the raw icon value from action / function / module sources."""
+        if action is not None:
+            icon = action.get("icon_url")
+            if icon:
+                return icon
+        return (
+            function.meta.manifest.get("icon_url", None)
+            or getattr(module, "icon_url", None)
+            or getattr(module, "icon", None)
+        )
+
     # Process action_ids to get the actions
     def get_action_items_from_module(function, module):
-        actions = []
         if hasattr(module, "actions"):
-            actions = module.actions
-            return [
-                {
-                    "id": f"{function.id}.{action['id']}",
-                    "name": action.get("name", f"{function.name} ({action['id']})"),
-                    "description": function.meta.description,
-                    "icon": action.get(
-                        "icon_url",
-                        function.meta.manifest.get("icon_url", None)
-                        or getattr(module, "icon_url", None)
-                        or getattr(module, "icon", None),
-                    ),
-                }
-                for action in actions
-            ]
+            items = []
+            for action in module.actions:
+                raw_icon = _get_raw_icon(function, module, action)
+                icon = _resolve_icon(function.id, raw_icon)
+                items.append(
+                    {
+                        "id": f"{function.id}.{action['id']}",
+                        "name": action.get(
+                            "name", f"{function.name} ({action['id']})"
+                        ),
+                        "description": function.meta.description,
+                        "icon": icon,
+                    }
+                )
+            return items
         else:
+            raw_icon = _get_raw_icon(function, module)
+            icon = _resolve_icon(function.id, raw_icon)
             return [
                 {
                     "id": function.id,
                     "name": function.name,
                     "description": function.meta.description,
-                    "icon": function.meta.manifest.get("icon_url", None)
-                    or getattr(module, "icon_url", None)
-                    or getattr(module, "icon", None),
+                    "icon": icon,
                 }
             ]
 
     # Process filter_ids to get the filters
     def get_filter_items_from_module(function, module):
+        raw_icon = _get_raw_icon(function, module)
+        icon = _resolve_icon(function.id, raw_icon)
         return [
             {
                 "id": function.id,
                 "name": function.name,
                 "description": function.meta.description,
-                "icon": function.meta.manifest.get("icon_url", None)
-                or getattr(module, "icon_url", None)
-                or getattr(module, "icon", None),
+                "icon": icon,
                 "has_user_valves": hasattr(module, "UserValves"),
             }
         ]
