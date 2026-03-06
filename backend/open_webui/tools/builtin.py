@@ -1831,7 +1831,7 @@ async def query_knowledge_files(
                 elif item_type == "file":
                     # Individual file - use file-{id} as collection name
                     file = Files.get_file_by_id(item_id)
-                    if file and (user_role == "admin" or file.user_id == user_id):
+                    if file:
                         collection_names.append(f"file-{item_id}")
 
                 elif item_type == "note":

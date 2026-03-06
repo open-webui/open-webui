@@ -65,6 +65,7 @@
 	import { AudioQueue } from '$lib/utils/audio';
 
 	import {
+		archiveChatById,
 		createNewChat,
 		getAllTags,
 		getChatById,
@@ -145,34 +146,6 @@
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
-
-	// Auto-inject direct terminal servers into selected tool IDs so they act like toggled-on tools
-	// System terminals (with id field) are handled server-side via terminal_id, not as direct tool servers
-	$: if ($terminalServers && $terminalServers.length > 0) {
-		const directTerminalServers = $terminalServers.filter((t) => !t.id);
-		const terminalIds = directTerminalServers.map(
-			(_, i) => `direct_server:terminal_${$terminalServers.indexOf(directTerminalServers[i])}`
-		);
-		const missingIds = terminalIds.filter((id) => !selectedToolIds.includes(id));
-		if (missingIds.length > 0) {
-			selectedToolIds = [...selectedToolIds, ...missingIds];
-		}
-	}
-
-	// Remove disabled terminal servers from selectedToolIds automatically
-	$: if (selectedToolIds.length > 0) {
-		const directTerminalServers = ($terminalServers ?? []).filter((t) => !t.id);
-		const terminalIds = directTerminalServers.map(
-			(_, i) =>
-				`direct_server:terminal_${($terminalServers ?? []).indexOf(directTerminalServers[i])}`
-		);
-		const invalidTerminalIds = selectedToolIds.filter(
-			(id) => id.startsWith('direct_server:terminal_') && !terminalIds.includes(id)
-		);
-		if (invalidTerminalIds.length > 0) {
-			selectedToolIds = selectedToolIds.filter((id) => !invalidTerminalIds.includes(id));
-		}
-	}
 
 	let showCommands = false;
 
@@ -354,23 +327,10 @@
 						[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
 					)
 				];
-			} else if (
-				$settings?.tools &&
-				$settings.tools.some((id) => !id.startsWith('direct_server:terminal_'))
-			) {
+			} else if ($settings?.tools) {
 				selectedToolIds = $settings.tools;
 			} else {
-				// Don't wipe existing terminal servers if no default tool IDs
 				selectedToolIds = selectedToolIds.filter((id) => !id.startsWith('direct_server:'));
-			}
-
-			// Auto-inject direct terminal servers (system ones are handled via terminal_id)
-			if ($terminalServers && $terminalServers.length > 0) {
-				const directTerminalServers = $terminalServers.filter((t) => !t.id);
-				const terminalIds = directTerminalServers.map(
-					(_, i) => `direct_server:terminal_${$terminalServers.indexOf(directTerminalServers[i])}`
-				);
-				selectedToolIds = [...new Set([...selectedToolIds, ...terminalIds])];
 			}
 
 			// Set Default Filters (Toggleable only)
@@ -446,11 +406,14 @@
 	};
 
 	const terminalEventHandler = (type: string, data: any) => {
-		if (!data?.path) return;
 		if (type === 'terminal:display_file') {
+			if (!data?.path) return;
 			displayFileHandler(data.path, { showControls, showFileNavPath });
-		} else if (type === 'terminal:write_file') {
+		} else if (type === 'terminal:write_file' || type === 'terminal:replace_file_content') {
+			if (!data?.path) return;
 			showFileNavDir.set(data.path);
+		} else if (type === 'terminal:run_command') {
+			showFileNavDir.set('/');
 		}
 	};
 
@@ -2210,7 +2173,9 @@
 				tool_servers: [
 					...($toolServers ?? []).filter(
 						(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
-					)
+					),
+					// Direct terminal servers — always included when enabled (not routed through selectedToolIds)
+					...($terminalServers ?? []).filter((t) => !t.id)
 				],
 				features: getFeatures(),
 				variables: {
@@ -2624,6 +2589,25 @@
 			toast.error($i18n.t('Failed to move chat'));
 		}
 	};
+
+	const archiveChatHandler = async (id: string) => {
+		try {
+			await archiveChatById(localStorage.token, id);
+			currentChatPage.set(1);
+			initNewChat();
+			await goto('/');
+			getChatList(localStorage.token, $currentChatPage).then((chats) => {
+				chats.set(chats);
+			});
+			getPinnedChatList(localStorage.token).then((pinnedChats) => {
+				pinnedChats.set(pinnedChats);
+			});
+			toast.success($i18n.t('Chat archived.'));
+		} catch (error) {
+			console.error('Error archiving chat:', error);
+			toast.error($i18n.t('Failed to archive chat.'));
+		}
+	};
 </script>
 
 <svelte:head>
@@ -2706,7 +2690,7 @@
 						bind:selectedModels
 						shareEnabled={!!history.currentId}
 						{initNewChat}
-						archiveChatHandler={() => {}}
+						{archiveChatHandler}
 						{moveChatHandler}
 						onSaveTempChat={async () => {
 							try {

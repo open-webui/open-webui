@@ -18,24 +18,70 @@
 	export let onOpen: (entry: FileEntry) => void = () => {};
 	export let onDownload: (path: string) => void = () => {};
 	export let onDelete: (path: string, name: string) => void = () => {};
+	export let onMove: (source: string, destFolder: string) => void = () => {};
+
+	let dragOverFolder = false;
 </script>
 
 <li class="group">
-	<div class="w-full flex items-center hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+	<div
+		class="w-full flex items-center hover:bg-gray-50 dark:hover:bg-gray-800 transition
+			{dragOverFolder
+			? 'bg-blue-50 dark:bg-blue-900/30 ring-1 ring-blue-400 dark:ring-blue-500 ring-inset'
+			: ''}"
+		role={entry.type === 'directory' ? 'button' : undefined}
+		on:dragover={(e) => {
+			if (entry.type !== 'directory') return;
+			if (!e.dataTransfer?.types.includes('application/x-terminal-file-move')) return;
+			e.preventDefault();
+			e.stopPropagation();
+			dragOverFolder = true;
+		}}
+		on:dragleave={(e) => {
+			if (entry.type !== 'directory') return;
+			e.stopPropagation();
+			dragOverFolder = false;
+		}}
+		on:drop={(e) => {
+			if (entry.type !== 'directory') return;
+			const raw = e.dataTransfer?.getData('application/x-terminal-file-move');
+			if (!raw) return;
+			e.preventDefault();
+			e.stopPropagation();
+			dragOverFolder = false;
+			try {
+				const data = JSON.parse(raw);
+				if (data.path) {
+					const destFolder = `${currentPath}${entry.name}/`;
+					// Don't allow dropping a folder onto itself
+					if (data.path + '/' === destFolder || data.path === destFolder) return;
+					onMove(data.path, destFolder);
+				}
+			} catch {}
+		}}
+	>
 		<button
 			class="flex-1 flex items-center gap-2 px-3 py-1.5 text-left min-w-0"
-			draggable={entry.type === 'file'}
+			draggable={true}
 			on:dragstart={(e) => {
-				if (entry.type !== 'file') return;
+				const filePath = `${currentPath}${entry.name}`;
+				// Internal move data
 				e.dataTransfer?.setData(
-					'application/x-terminal-file',
-					JSON.stringify({
-						path: `${currentPath}${entry.name}`,
-						name: entry.name,
-						url: terminalUrl,
-						key: terminalKey
-					})
+					'application/x-terminal-file-move',
+					JSON.stringify({ path: filePath, name: entry.name })
 				);
+				// Keep existing chat-attachment drag for files
+				if (entry.type === 'file') {
+					e.dataTransfer?.setData(
+						'application/x-terminal-file',
+						JSON.stringify({
+							path: filePath,
+							name: entry.name,
+							url: terminalUrl,
+							key: terminalKey
+						})
+					);
+				}
 			}}
 			on:click={() => onOpen(entry)}
 		>
