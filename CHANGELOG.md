@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - 🔒 **SQLCipher connection stability.** Fixed a crash that occurred when using database encryption with SQLCipher by changing the default connection pool behavior, ensuring stable operation during multi-threaded operations like user signup. [#22273](https://github.com/open-webui/open-webui/pull/22273), [#22258](https://github.com/open-webui/open-webui/issues/22258)
+- 🔧 **Parameterless tool calls.** Fixed parameterless tool calls failing during streaming by correcting the default arguments initialization, eliminating unnecessary model retries. [#22189](https://github.com/open-webui/open-webui/pull/22189)
 - 🧠 **Artifacts memory leak.** Fixed a memory leak where Svelte store subscriptions in the Artifacts component were not properly cleaned up when the component unmounted, causing memory to accumulate over time. [#22303](https://github.com/open-webui/open-webui/pull/22303)
 - 💬 **Floating Quick Actions availability.** Fixed an issue where the "Ask" and "Explain" Floating Quick Actions were missing when selecting text in chats that used a model that is no longer available. [#22149](https://github.com/open-webui/open-webui/pull/22149), [#22139](https://github.com/open-webui/open-webui/issues/22139)
 - 💬 **Follow-up suggestions.** Fixed follow-up suggestions not appearing by correcting contradictory format instructions in the prompt template, ensuring the LLM returns the correct JSON object format. [#22212](https://github.com/open-webui/open-webui/pull/22212)
