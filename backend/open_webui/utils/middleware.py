@@ -3777,14 +3777,17 @@ async def streaming_chat_response_handler(response, ctx):
                                         delta.get("images", []), request, metadata, user
                                     )
                                     if image_urls:
+                                        image_file_list = [
+                                            {"type": "image", "url": url}
+                                            for url in image_urls
+                                        ]
                                         message_files = Chats.add_message_files_by_id_and_message_id(
                                             metadata["chat_id"],
                                             metadata["message_id"],
-                                            [
-                                                {"type": "image", "url": url}
-                                                for url in image_urls
-                                            ],
+                                            image_file_list,
                                         )
+                                        if message_files is None:
+                                            message_files = image_file_list
 
                                         await event_emitter(
                                             {
