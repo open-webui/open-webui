@@ -333,7 +333,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
     # Batch-fetch all function valves in one query to avoid N+1 DB hits
     # inside get_action_priority (previously called per action × per model).
-    all_valves_by_id = Functions.get_function_valves_by_ids(
+    all_function_valves = Functions.get_function_valves_by_ids(
         list(all_function_ids)
     )
 
@@ -341,7 +341,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         try:
             function_module = request.app.state.FUNCTIONS.get(action_id)
             if function_module and hasattr(function_module, "Valves"):
-                valves_db = all_valves_by_id.get(action_id)
+                valves_db = all_function_valves.get(action_id)
                 valves = function_module.Valves(**(valves_db if valves_db else {}))
                 return getattr(valves, "priority", 0)
         except Exception:
