@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- 🔒 **SQLCipher connection stability.** Fixed a crash that occurred when using database encryption with SQLCipher by changing the default connection pool behavior, ensuring stable operation during multi-threaded operations like user signup. [#22273](https://github.com/open-webui/open-webui/pull/22273), [#22258](https://github.com/open-webui/open-webui/issues/22258)
 - 🧠 **Artifacts memory leak.** Fixed a memory leak where Svelte store subscriptions in the Artifacts component were not properly cleaned up when the component unmounted, causing memory to accumulate over time. [#22303](https://github.com/open-webui/open-webui/pull/22303)
 - 🎨 **Button spinner alignment.** Button spinners across multiple modals now align correctly and stay on the same line as the button text, fixing layout issues when loading states are displayed. [#22227](https://github.com/open-webui/open-webui/pull/22227)
 - 🔌 **Terminal keepalive.** Terminal connections now stay active without being closed by idle timeouts from proxies or load balancers, and spurious disconnection messages no longer appear. [Commit](https://github.com/open-webui/open-webui/commit/ca2aaf0321c219d041e92e2c0c842a4e424732ef)
