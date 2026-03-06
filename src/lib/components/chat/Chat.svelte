@@ -156,6 +156,7 @@
 
 	let chat = null;
 	let tags = [];
+	let closedBannerIds = [];
 
 	let history = {
 		messages: {},
@@ -2757,6 +2758,36 @@
 										messagesContainerElement.clientHeight + 5;
 								}}
 							>
+								<div>
+									<br>
+								</div>
+								<div class=" w-full z-30 mt-5">
+									<div class=" flex flex-col gap-1 w-full">
+										{#each $banners.filter((b) => ![...JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]'), ...closedBannerIds].includes(b.id)) as banner}
+											<Banner
+												{banner}
+												on:dismiss={(e) => {
+													const bannerId = e.detail;
+
+													if (banner.dismissible) {
+														localStorage.setItem(
+															'dismissedBannerIds',
+															JSON.stringify(
+																[
+																	bannerId,
+																	...JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]')
+																].filter((id) => $banners.find((b) => b.id === id))
+															)
+														);
+													} else {
+														closedBannerIds = [...closedBannerIds, bannerId];
+													}
+												}}
+											/>
+										{/each}
+									</div>
+								</div>
+
 								<div class=" h-full w-full flex flex-col">
 									<Messages
 										chatId={$chatId}
