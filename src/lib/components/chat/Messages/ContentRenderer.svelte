@@ -42,6 +42,31 @@
 	let contentContainerElement;
 	let floatingButtonsElement;
 
+	let sourceIds = [];
+	$: getSourceIds(sources);
+
+	const getSourceIds = (sources) => {
+		const result = [];
+		for (const source of sources ?? []) {
+			for (let index = 0; index < (source.document ?? []).length; index++) {
+				if (model?.info?.meta?.capabilities?.citations == false) {
+					result.push('N/A');
+					continue;
+				}
+				const metadata = source.metadata?.[index];
+				const id = metadata?.source ?? 'N/A';
+				if (metadata?.name) {
+					result.push(metadata.name);
+				} else if (id.startsWith('http://') || id.startsWith('https://')) {
+					result.push(id);
+				} else {
+					result.push(source?.source?.name ?? id);
+				}
+			}
+		}
+		sourceIds = [...new Set(result)];
+	};
+
 	const updateButtonPosition = (event) => {
 		const buttonsContainerElement = document.getElementById(`floating-buttons-${id}`);
 		if (
@@ -142,12 +167,54 @@
 		{done}
 		{editCodeBlock}
 		{topPadding}
-		sourceIds={(sources ?? []).reduce((acc, source) => {
-			let ids = [];
-			source.document.forEach((document, index) => {
-				if (model?.info?.meta?.capabilities?.citations == false) {
-					ids.push('N/A');
-					return ids;
+		{sourceIds}
+		{onSourceClick}
+		{onTaskClick}
+		{onSave}
+		onUpdate={async (token) => {
+			const { lang, text: code } = token;
+
+			if (
+				($settings?.detectArtifacts ?? true) &&
+				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
+				!$mobile &&
+				$chatId
+			) {
+				await tick();
+				showArtifacts.set(true);
+				showControls.set(true);
+			}
+		}}
+		onPreview={async (value) => {
+			console.log('Preview', value);
+			await artifactCode.set(value);
+			await showControls.set(true);
+			await showArtifacts.set(true);
+			await showEmbeds.set(false);
+		}}
+	/>
+</div>
+
+{#if floatingButtons && model}
+	<FloatingButtons
+		bind:this={floatingButtonsElement}
+		{id}
+		{messageId}
+		actions={$settings?.floatingActionButtons ?? []}
+		model={(selectedModels ?? []).includes(model?.id)
+			? model?.id
+			: (selectedModels ?? []).length > 0
+				? selectedModels.at(0)
+				: model?.id}
+		messages={createMessagesList(history, messageId)}
+		onAdd={({ modelId, parentId, messages }) => {
+			console.log(modelId, parentId, messages);
+			onAddMessages({ modelId, parentId, messages });
+			closeFloatingButtons();
+		}}
+	/>
+{/if}
+
 				}
 
 				const metadata = source.metadata?.[index];
