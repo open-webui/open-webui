@@ -342,7 +342,7 @@
 								? 'h-full'
 								: activeTab === 'controls'
 									? 'overflow-y-auto px-3 pt-1'
-									: 'overflow-y-auto'}"
+									: ''}"
 						>
 							{#if activeTab === 'overview'}
 								<Overview
@@ -401,7 +401,7 @@
 				<div
 					class="w-full {specialPanel && !$showCallOverlay
 						? ' '
-						: 'bg-white dark:shadow-lg dark:bg-gray-850'} z-40 pointer-events-auto overflow-y-auto scrollbar-hidden"
+						: 'bg-white dark:shadow-lg dark:bg-gray-850'} z-40 pointer-events-auto {activeTab === 'files' ? '' : 'overflow-y-auto'} scrollbar-hidden"
 					id="controls-container"
 				>
 					{#if $showCallOverlay}
@@ -483,7 +483,7 @@
 									? 'h-full'
 									: activeTab === 'controls'
 										? 'overflow-y-auto px-3 pt-1'
-										: 'overflow-y-auto'}"
+										: ''}"
 							>
 								{#if activeTab === 'overview'}
 									<Overview
