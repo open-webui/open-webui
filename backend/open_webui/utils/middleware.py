@@ -2081,17 +2081,53 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
 
-    # Load messages from DB when available — DB preserves structured 'output' items
-    # which the frontend strips, causing tool calls to be merged into content.
+    # Enrich frontend messages with DB-preserved 'output' items.
+    # The frontend has the authoritative message content (which may have been
+    # edited by the user), but strips structured 'output' items that the DB
+    # preserves for tool call reconstruction.  Instead of fully replacing
+    # frontend messages (which would lose edits), we merge DB-specific fields
+    # (output, files) into the frontend messages.
     chat_id = metadata.get("chat_id")
     parent_message_id = metadata.get("parent_message_id")
 
     if chat_id and parent_message_id and not chat_id.startswith("local:"):
         db_messages = load_messages_from_db(chat_id, parent_message_id)
         if db_messages:
-            system_message = get_system_message(form_data.get("messages", []))
+            # Build the final message list from frontend messages, enriched
+            # with DB fields.  The frontend list is authoritative for content
+            # (it reflects user edits); the DB list is authoritative for
+            # output items and file metadata.
+            frontend_messages = form_data.get("messages", [])
+            system_message = get_system_message(frontend_messages)
+
+            # Non-system frontend messages (the actual conversation)
+            frontend_conv = [
+                m for m in frontend_messages if m.get("role") != "system"
+            ]
+
+            enriched = []
+            for idx, db_msg in enumerate(db_messages):
+                if idx < len(frontend_conv):
+                    # Start from the frontend message (has correct/edited content)
+                    merged = {**frontend_conv[idx]}
+                    # Merge output from DB if frontend doesn't have it
+                    if "output" in db_msg and "output" not in merged:
+                        merged["output"] = db_msg["output"]
+                    # Merge files from DB if frontend doesn't have them
+                    if "files" in db_msg and "files" not in merged:
+                        merged["files"] = db_msg["files"]
+                    enriched.append(merged)
+                else:
+                    # More DB messages than frontend messages — use DB message
+                    enriched.append(db_msg)
+
+            # If frontend has more messages than DB (e.g. system injected
+            # extra), append the remaining frontend messages
+            if len(frontend_conv) > len(db_messages):
+                enriched.extend(frontend_conv[len(db_messages):])
+
             form_data["messages"] = (
-                [system_message, *db_messages] if system_message else db_messages
+                [system_message, *enriched] if system_message else enriched
             )
 
             # Inject image files into content as image_url parts (mirrors frontend logic)
