@@ -96,9 +96,7 @@
 			}
 		}
 
-		selectedToolIds = selectedToolIds.filter(
-			(id) => Object.keys(tools).includes(id) || id.startsWith('direct_server:terminal_')
-		);
+		selectedToolIds = selectedToolIds.filter((id) => Object.keys(tools).includes(id));
 	};
 </script>
 

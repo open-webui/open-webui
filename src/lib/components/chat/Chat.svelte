@@ -146,34 +146,6 @@
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
 
-	// Auto-inject direct terminal servers into selected tool IDs so they act like toggled-on tools
-	// System terminals (with id field) are handled server-side via terminal_id, not as direct tool servers
-	$: if ($terminalServers && $terminalServers.length > 0) {
-		const directTerminalServers = $terminalServers.filter((t) => !t.id);
-		const terminalIds = directTerminalServers.map(
-			(_, i) => `direct_server:terminal_${$terminalServers.indexOf(directTerminalServers[i])}`
-		);
-		const missingIds = terminalIds.filter((id) => !selectedToolIds.includes(id));
-		if (missingIds.length > 0) {
-			selectedToolIds = [...selectedToolIds, ...missingIds];
-		}
-	}
-
-	// Remove disabled terminal servers from selectedToolIds automatically
-	$: if (selectedToolIds.length > 0) {
-		const directTerminalServers = ($terminalServers ?? []).filter((t) => !t.id);
-		const terminalIds = directTerminalServers.map(
-			(_, i) =>
-				`direct_server:terminal_${($terminalServers ?? []).indexOf(directTerminalServers[i])}`
-		);
-		const invalidTerminalIds = selectedToolIds.filter(
-			(id) => id.startsWith('direct_server:terminal_') && !terminalIds.includes(id)
-		);
-		if (invalidTerminalIds.length > 0) {
-			selectedToolIds = selectedToolIds.filter((id) => !invalidTerminalIds.includes(id));
-		}
-	}
-
 	let showCommands = false;
 
 	let generating = false;
@@ -354,23 +326,10 @@
 						[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
 					)
 				];
-			} else if (
-				$settings?.tools &&
-				$settings.tools.some((id) => !id.startsWith('direct_server:terminal_'))
-			) {
+			} else if ($settings?.tools) {
 				selectedToolIds = $settings.tools;
 			} else {
-				// Don't wipe existing terminal servers if no default tool IDs
 				selectedToolIds = selectedToolIds.filter((id) => !id.startsWith('direct_server:'));
-			}
-
-			// Auto-inject direct terminal servers (system ones are handled via terminal_id)
-			if ($terminalServers && $terminalServers.length > 0) {
-				const directTerminalServers = $terminalServers.filter((t) => !t.id);
-				const terminalIds = directTerminalServers.map(
-					(_, i) => `direct_server:terminal_${$terminalServers.indexOf(directTerminalServers[i])}`
-				);
-				selectedToolIds = [...new Set([...selectedToolIds, ...terminalIds])];
 			}
 
 			// Set Default Filters (Toggleable only)
@@ -2210,7 +2169,9 @@
 				tool_servers: [
 					...($toolServers ?? []).filter(
 						(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
-					)
+					),
+					// Direct terminal servers — always included when enabled (not routed through selectedToolIds)
+					...($terminalServers ?? []).filter((t) => !t.id)
 				],
 				features: getFeatures(),
 				variables: {

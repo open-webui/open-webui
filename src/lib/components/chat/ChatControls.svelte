@@ -1,4 +1,4 @@
-<script context="module">
+<script context="module" lang="ts">
 	let savedTab: 'controls' | 'files' | 'overview' = 'controls';
 </script>
 
@@ -58,8 +58,12 @@
 	let paneReady = false;
 
 	// Tab state for Controls+Files panel
-	let activeTab: 'controls' | 'files' | 'overview' = savedTab;
-	$: savedTab = activeTab;
+	let activeTab = savedTab;
+	// svelte-ignore reactive_declaration_module_script_dependency
+	$: {
+		savedTab = activeTab;
+	}
+
 	$: hasMessages = history?.messages && Object.keys(history.messages).length > 0;
 
 	$: showControlsTab = $user?.role === 'admin' || ($user?.permissions?.chat?.controls ?? true);
@@ -280,10 +284,11 @@
 					<div class="flex flex-col h-full min-h-0">
 						<!-- Tab bar -->
 						<div class="flex items-center justify-between px-2 pt-2.5 pb-2 shrink-0">
-							<div class="flex gap-1">
+							<div class="flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
 								{#if showControlsTab}
 									<button
-										class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'controls'
+										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+										'controls'
 											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 											: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
 										on:click={() => (activeTab = 'controls')}
@@ -293,7 +298,8 @@
 								{/if}
 								{#if showFilesTab}
 									<button
-										class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'files'
+										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+										'files'
 											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 											: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
 										on:click={() => (activeTab = 'files')}
@@ -303,7 +309,8 @@
 								{/if}
 								{#if showOverviewTab}
 									<button
-										class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'overview'
+										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+										'overview'
 											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 											: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
 										on:click={() => (activeTab = 'overview')}
@@ -418,10 +425,11 @@
 						<div class="flex flex-col h-full min-h-0">
 							<!-- Tab bar -->
 							<div class="flex items-center justify-between px-2 pt-2.5 pb-2 shrink-0">
-								<div class="flex gap-1">
+								<div class="flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
 									{#if showControlsTab}
 										<button
-											class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'controls'
+											class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+											'controls'
 												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 												: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
 											on:click={() => (activeTab = 'controls')}
@@ -431,7 +439,8 @@
 									{/if}
 									{#if showFilesTab}
 										<button
-											class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'files'
+											class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+											'files'
 												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 												: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
 											on:click={() => (activeTab = 'files')}
@@ -441,7 +450,8 @@
 									{/if}
 									{#if showOverviewTab}
 										<button
-											class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'overview'
+											class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+											'overview'
 												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 												: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
 											on:click={() => (activeTab = 'overview')}
@@ -490,7 +500,7 @@
 										onClose={() => showControls.set(false)}
 									/>
 								{:else if activeTab === 'files' && $selectedTerminalId}
-									<FileNav onAttach={handleTerminalAttach} />
+									<FileNav onAttach={handleTerminalAttach} overlay={dragged} />
 								{:else}
 									<Controls embed={true} {models} bind:chatFiles bind:params />
 								{/if}
