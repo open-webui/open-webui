@@ -56,7 +56,15 @@ def search_perplexity_search(
         # Make the API request
         response = requests.request("POST", url, json=payload, headers=headers)
         # Parse the JSON response
-        json_response = response.json()
+        try:
+            json_response = response.json()
+        except Exception as parse_err:
+            log.error(
+                f"Failed to parse Perplexity response "
+                f"(status={response.status_code}): {parse_err} "
+                f"— raw body: {response.text[:500]}"
+            )
+            return []
 
         # Extract citations from the response
         results = json_response.get("results", [])
