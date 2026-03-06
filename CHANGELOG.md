@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📁 **Chat archive handler.** The archive button in the chat navbar now actually archives the chat and refreshes the chat list, instead of doing nothing. [#22229](https://github.com/open-webui/open-webui/pull/22229)
 - 🐍 **BeautifulSoup4 dependency.** Added the missing BeautifulSoup4 package to backend requirements, fixing failures when using features that depend on HTML parsing. [#22231](https://github.com/open-webui/open-webui/pull/22231)
 - 👥 **Group users default sort.** Group members in the admin panel now sort by last active time by default instead of creation date, making it easier to find active users. [#22211](https://github.com/open-webui/open-webui/pull/22211)
+- 🔧 **OpenTelemetry metric descriptions.** Fixed conflicting metric instrument descriptions that caused warnings in the OpenTelemetry collector, resulting in cleaner telemetry logs for administrators. [#22293](https://github.com/open-webui/open-webui/pull/22293)
 
 ### Changed
 
