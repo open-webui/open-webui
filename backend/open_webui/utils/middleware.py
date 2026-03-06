@@ -184,6 +184,11 @@ def get_citation_source_from_tool_result(
         if tool_name == "search_web":
             # Parse JSON array: [{"title": "...", "link": "...", "snippet": "..."}]
             results = tool_result
+            
+            # Handle error cases - return empty if not a valid list
+            if not isinstance(results, list):
+                return []
+            
             documents = []
             metadata = []
 
