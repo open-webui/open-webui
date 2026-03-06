@@ -3050,6 +3050,12 @@ TIKTOKEN_ENCODING_NAME = PersistentConfig(
 )
 
 
+TABLE_ROWS_PER_CHUNK = PersistentConfig(
+    "TABLE_ROWS_PER_CHUNK",
+    "rag.table_rows_per_chunk",
+    int(os.environ.get("TABLE_ROWS_PER_CHUNK", "5")),
+)
+
 CHUNK_SIZE = PersistentConfig(
     "CHUNK_SIZE", "rag.chunk_size", int(os.environ.get("CHUNK_SIZE", "1000"))
 )
