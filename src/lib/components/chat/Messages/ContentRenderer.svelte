@@ -195,7 +195,7 @@
 	/>
 </div>
 
-{#if floatingButtons && model}
+{#if floatingButtons}
 	<FloatingButtons
 		bind:this={floatingButtonsElement}
 		{id}
@@ -205,7 +205,7 @@
 			? model?.id
 			: (selectedModels ?? []).length > 0
 				? selectedModels.at(0)
-				: model?.id}
+				: model?.id ?? null}
 		messages={createMessagesList(history, messageId)}
 		onAdd={({ modelId, parentId, messages }) => {
 			console.log(modelId, parentId, messages);
