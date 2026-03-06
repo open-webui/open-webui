@@ -38,6 +38,7 @@ from open_webui.env import (
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
+    OAUTH_LOGOUT_CUSTOM_REDIRECT_URI,
     ENABLE_INITIAL_ADMIN_SIGNUP,
     ENABLE_OAUTH_TOKEN_EXCHANGE,
     AIOHTTP_CLIENT_SESSION_SSL,
@@ -840,16 +841,17 @@ async def signout(
                             logout_url = openid_data.get("end_session_endpoint")
 
                             if logout_url:
+                                redirect_url = f"{logout_url}?id_token_hint={oauth_id_token}"
+                                if OAUTH_LOGOUT_CUSTOM_REDIRECT_URI:
+                                    redirect_url = OAUTH_LOGOUT_CUSTOM_REDIRECT_URI
+                                elif WEBUI_AUTH_SIGNOUT_REDIRECT_URL:
+                                    redirect_url += f"&post_logout_redirect_uri={WEBUI_AUTH_SIGNOUT_REDIRECT_URL}"
+
                                 return JSONResponse(
                                     status_code=200,
                                     content={
                                         "status": True,
-                                        "redirect_url": f"{logout_url}?id_token_hint={oauth_id_token}"
-                                        + (
-                                            f"&post_logout_redirect_uri={WEBUI_AUTH_SIGNOUT_REDIRECT_URL}"
-                                            if WEBUI_AUTH_SIGNOUT_REDIRECT_URL
-                                            else ""
-                                        ),
+                                        "redirect_url": redirect_url,
                                     },
                                     headers=response.headers,
                                 )
