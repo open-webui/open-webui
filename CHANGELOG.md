@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.9] - 2026-03-04
+## [0.8.9] - 2026-03-07
 
 ### Added
 
@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📢 **Banner loading on navigation.** Admin-configured banners now load when navigating to the homepage, not just on page refresh, ensuring users see new banners immediately. [#22340](https://github.com/open-webui/open-webui/pull/22340), [#22180](https://github.com/open-webui/open-webui/issues/22180)
 - 📊 **System metrics via OpenTelemetry.** Administrators can now monitor Python runtime and system metrics including CPU, memory, garbage collection, and thread counts through the existing OpenTelemetry pipeline. [#22265](https://github.com/open-webui/open-webui/pull/22265)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 Translations for French were enhanced and expanded.
+- 🌐 Translations for French and Finnish were enhanced and expanded.
 
 ### Fixed
 
