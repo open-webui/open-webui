@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🐍 **BeautifulSoup4 dependency.** Added the missing BeautifulSoup4 package to backend requirements, fixing failures when using features that depend on HTML parsing. [#22231](https://github.com/open-webui/open-webui/pull/22231)
 - 👥 **Group users default sort.** Group members in the admin panel now sort by last active time by default instead of creation date, making it easier to find active users. [#22211](https://github.com/open-webui/open-webui/pull/22211)
 - 🔧 **OpenTelemetry metric descriptions.** Fixed conflicting metric instrument descriptions that caused warnings in the OpenTelemetry collector, resulting in cleaner telemetry logs for administrators. [#22293](https://github.com/open-webui/open-webui/pull/22293)
+- ⚡ **Message list performance.** Improved message list rendering performance by optimizing array operations, reducing complexity from O(n²) to O(n). [#22280](https://github.com/open-webui/open-webui/pull/22280)
 
 ### Changed
 
