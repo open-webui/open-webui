@@ -1,6 +1,13 @@
-const DELIMITER_LIST = [
+// "Loose" delimiters: $ and $$ are ambiguous (could be currency), so they
+// require surrounding-character checks to avoid false positives.
+const LOOSE_DELIMITERS = [
 	{ left: '$$', right: '$$', display: true },
-	{ left: '$', right: '$', display: false },
+	{ left: '$', right: '$', display: false }
+];
+
+// "Strict" delimiters: these are unambiguous LaTeX syntax and can be matched
+// without surrounding-character constraints.
+const STRICT_DELIMITERS = [
 	{ left: '\\pu{', right: '}', display: false },
 	{ left: '\\ce{', right: '}', display: false },
 	{ left: '\\(', right: '\\)', display: false },
@@ -8,7 +15,10 @@ const DELIMITER_LIST = [
 	{ left: '\\begin{equation}', right: '\\end{equation}', display: true }
 ];
 
-// Defines characters that are allowed to immediately precede or follow a math delimiter.
+const ALL_DELIMITERS = [...LOOSE_DELIMITERS, ...STRICT_DELIMITERS];
+
+// Defines characters that are allowed to immediately precede or follow a
+// loose math delimiter ($ and $$). Strict delimiters skip this check.
 const ALLOWED_SURROUNDING_CHARS =
 	'\\s。，、､;；„“‘’“”（）「」『』［］《》【】‹›«»…⋯:：？！～⇒?!-\\/:-@\\[-`{-~\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Hangul}';
 // Modified to fit more formats in different languages. Originally: '\\s?。，、；!-\\/:-@\\[-`{-~\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Hangul}';
@@ -27,44 +37,64 @@ const ALLOWED_SURROUNDING_CHARS_REGEX = new RegExp(`[${ALLOWED_SURROUNDING_CHARS
 // const inlineRule = /^(\${1,2})(?!\$)((?:\\.|[^\\\n])*?(?:\\.|[^\\\n\$]))\1(?=[\s?!\.,:？！。，：]|$)/;
 // const blockRule = /^(\${1,2})\n((?:\\[^]|[^\\])+?)\n\1(?:\n|$)/;
 
-const inlinePatterns = [];
-const blockPatterns = [];
 
 function escapeRegex(string) {
 	return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 }
 
-function generateRegexRules(delimiters) {
+function buildPatterns(delimiters) {
+	const inlinePatterns: string[] = [];
+	const blockPatterns: string[] = [];
+
 	delimiters.forEach((delimiter) => {
 		const { left, right, display } = delimiter;
-		// Ensure regex-safe delimiters
 		const escapedLeft = escapeRegex(left);
 		const escapedRight = escapeRegex(right);
 
 		if (!display) {
-			// For inline delimiters, we match everything
-			inlinePatterns.push(`${escapedLeft}((?:\\\\[^]|[^\\\\])+?)${escapedRight}`);
+			// Inline-only delimiters must not span newlines to prevent greedy cross-line matching
+			inlinePatterns.push(`${escapedLeft}((?:\\\\[^\\n]|[^\\\\\\n])+?)${escapedRight}`);
 		} else {
-			// Block delimiters doubles as inline delimiters when not followed by a newline
+			// Block delimiters double as inline delimiters when not followed by a newline
 			inlinePatterns.push(`${escapedLeft}(?!\\n)((?:\\\\[^]|[^\\\\])+?)(?!\\n)${escapedRight}`);
 			blockPatterns.push(`${escapedLeft}\\n((?:\\\\[^]|[^\\\\])+?)\\n${escapedRight}`);
 		}
 	});
 
-	// Math formulas can end in special characters
-	const inlineRule = new RegExp(
-		`^(${inlinePatterns.join('|')})(?=[${ALLOWED_SURROUNDING_CHARS}]|$)`,
-		'u'
-	);
-	const blockRule = new RegExp(
-		`^(${blockPatterns.join('|')})(?=[${ALLOWED_SURROUNDING_CHARS}]|$)`,
-		'u'
-	);
+	return { inlinePatterns, blockPatterns };
+}
+
+function generateRegexRules() {
+	const loose = buildPatterns(LOOSE_DELIMITERS);
+	const strict = buildPatterns(STRICT_DELIMITERS);
+
+	// Loose patterns require the surrounding-char lookahead
+	const looseInline = loose.inlinePatterns.length
+		? `(?:${loose.inlinePatterns.join('|')})(?=[${ALLOWED_SURROUNDING_CHARS}]|$)`
+		: null;
+	const looseBlock = loose.blockPatterns.length
+		? `(?:${loose.blockPatterns.join('|')})(?=[${ALLOWED_SURROUNDING_CHARS}]|$)`
+		: null;
+
+	// Strict patterns match without surrounding-char constraints
+	const strictInline = strict.inlinePatterns.length
+		? `(?:${strict.inlinePatterns.join('|')})`
+		: null;
+	const strictBlock = strict.blockPatterns.length
+		? `(?:${strict.blockPatterns.join('|')})`
+		: null;
+
+	// Combine: try strict first (more specific), then loose
+	const inlineParts = [strictInline, looseInline].filter(Boolean);
+	const blockParts = [strictBlock, looseBlock].filter(Boolean);
+
+	const inlineRule = new RegExp(`^(${inlineParts.join('|')})`, 'u');
+	const blockRule = new RegExp(`^(${blockParts.join('|')})`, 'u');
 
 	return { inlineRule, blockRule };
 }
 
-const { inlineRule, blockRule } = generateRegexRules(DELIMITER_LIST);
+const { inlineRule, blockRule } = generateRegexRules();
 
 export default function (options = {}) {
 	return {
@@ -81,6 +111,7 @@ function katexStart(src, displayMode: boolean) {
 			if (displayMode && src.charAt(i + 1) !== '$') {
 				continue;
 			}
+			// $ is a loose delimiter — require surrounding-char check
 			if (i === 0 || ALLOWED_SURROUNDING_CHARS_REGEX.test(src.charAt(i - 1))) {
 				return i;
 			}
@@ -94,9 +125,8 @@ function katexStart(src, displayMode: boolean) {
 				// Inline: \( or \ce{ or \pu{
 				if (next !== '(' && next !== 'c' && next !== 'p') continue;
 			}
-			if (i === 0 || ALLOWED_SURROUNDING_CHARS_REGEX.test(src.charAt(i - 1))) {
-				return i;
-			}
+			// \ delimiters are strict — no surrounding-char check needed
+			return i;
 		}
 	}
 }
