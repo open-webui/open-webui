@@ -321,15 +321,13 @@
 		if (model) {
 			// Set Default Tools
 			if (model?.info?.meta?.toolIds) {
-				selectedToolIds = [
-					...new Set(
-						[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
-					)
-				];
+				selectedToolIds = (model.info.meta.toolIds ?? []).filter((id) =>
+					$tools.find((t) => t.id === id)
+				);
 			} else if ($settings?.tools) {
 				selectedToolIds = $settings.tools;
 			} else {
-				selectedToolIds = selectedToolIds.filter((id) => !id.startsWith('direct_server:'));
+				selectedToolIds = [];
 			}
 
 			// Set Default Filters (Toggleable only)
