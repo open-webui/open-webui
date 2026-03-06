@@ -86,6 +86,7 @@
 		stopTask,
 		getTaskIdsByChatId
 	} from '$lib/apis';
+	import { getBanners } from '$lib/apis/configs';
 	import { getTools } from '$lib/apis/tools';
 	import { uploadFile } from '$lib/apis/files';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
@@ -649,7 +650,13 @@
 			if (p.url.pathname === '/') {
 				await tick();
 				initNewChat();
-				banners.set(await getBanners(localStorage.token).catch(() => []));
+
+				// Re-fetch banners on navigation to homepage so newly configured banners appear
+				try {
+					banners.set(await getBanners(localStorage.token).catch(() => []));
+				} catch (e) {
+					console.error('Failed to refresh banners:', e);
+				}
 			}
 
 			stopAudio();
