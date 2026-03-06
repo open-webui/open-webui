@@ -60,7 +60,7 @@ class TableAwareCSVLoader:
         self,
         file_path: str,
         autodetect_encoding: bool = False,
-        rows_per_chunk: int = 5,
+        rows_per_chunk: int = 1,
     ):
         self.file_path = file_path
         self.autodetect_encoding = autodetect_encoding
@@ -155,7 +155,7 @@ class TableAwareExcelLoader:
     def __init__(
         self,
         file_path: str,
-        rows_per_chunk: int = 5,
+        rows_per_chunk: int = 1,
     ):
         self.file_path = file_path
         self.rows_per_chunk = rows_per_chunk

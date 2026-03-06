@@ -229,12 +229,12 @@ class Loader:
                 loader = TableAwareCSVLoader(
                     file_path,
                     autodetect_encoding=True,
-                    rows_per_chunk=self.kwargs.get("TABLE_ROWS_PER_CHUNK", 5),
+                    rows_per_chunk=self.kwargs.get("TABLE_ROWS_PER_CHUNK", 1),
                 )
             elif file_ext in ["xls", "xlsx"]:
                 loader = TableAwareExcelLoader(
                     file_path,
-                    rows_per_chunk=self.kwargs.get("TABLE_ROWS_PER_CHUNK", 5),
+                    rows_per_chunk=self.kwargs.get("TABLE_ROWS_PER_CHUNK", 1),
                 )
             elif self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, autodetect_encoding=True)
@@ -298,12 +298,12 @@ class Loader:
                 loader = TableAwareCSVLoader(
                     file_path,
                     autodetect_encoding=True,
-                    rows_per_chunk=self.kwargs.get("TABLE_ROWS_PER_CHUNK", 5),
+                    rows_per_chunk=self.kwargs.get("TABLE_ROWS_PER_CHUNK", 1),
                 )
             elif file_ext in ["xls", "xlsx"]:
                 loader = TableAwareExcelLoader(
                     file_path,
-                    rows_per_chunk=self.kwargs.get("TABLE_ROWS_PER_CHUNK", 5),
+                    rows_per_chunk=self.kwargs.get("TABLE_ROWS_PER_CHUNK", 1),
                 )
             elif self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, autodetect_encoding=True)
@@ -392,7 +392,7 @@ class Loader:
                 loader = TableAwareCSVLoader(
                     file_path,
                     autodetect_encoding=True,
-                    rows_per_chunk=self.kwargs.get("TABLE_ROWS_PER_CHUNK", 5),
+                    rows_per_chunk=self.kwargs.get("TABLE_ROWS_PER_CHUNK", 1),
                 )
             elif file_ext == "rst":
                 loader = UnstructuredRSTLoader(file_path, mode="elements")
@@ -416,7 +416,7 @@ class Loader:
             ] or file_ext in ["xls", "xlsx"]:
                 loader = TableAwareExcelLoader(
                     file_path,
-                    rows_per_chunk=self.kwargs.get("TABLE_ROWS_PER_CHUNK", 5),
+                    rows_per_chunk=self.kwargs.get("TABLE_ROWS_PER_CHUNK", 1),
                 )
             elif file_content_type in [
                 "application/vnd.ms-powerpoint",

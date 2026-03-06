@@ -187,7 +187,7 @@ class TestTableAwareCSVLoader:
         path = _write_bytes(content.encode("latin-1"))
         try:
             docs = TableAwareCSVLoader(path, autodetect_encoding=True).load()
-            assert len(docs) == 1
+            assert len(docs) == 2  # default rows_per_chunk=1, 2 rows -> 2 chunks
             assert "Réné" in docs[0].page_content
         finally:
             os.unlink(path)
@@ -196,10 +196,9 @@ class TestTableAwareCSVLoader:
         rows = "h1,h2\n" + "\n".join(f"{i},v{i}" for i in range(12)) + "\n"
         path = _write_csv(rows)
         try:
-            docs = TableAwareCSVLoader(path).load()  # default rows_per_chunk=5
-            assert len(docs) == 3  # 12 rows / 5 = 3 chunks (5+5+2)
-            assert docs[0].metadata["rows_in_chunk"] == 5
-            assert docs[2].metadata["rows_in_chunk"] == 2
+            docs = TableAwareCSVLoader(path).load()  # default rows_per_chunk=1
+            assert len(docs) == 12  # 12 rows / 1 = 12 chunks
+            assert docs[0].metadata["rows_in_chunk"] == 1
         finally:
             os.unlink(path)
 
