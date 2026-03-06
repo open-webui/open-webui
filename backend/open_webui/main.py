@@ -1633,7 +1633,36 @@ async def get_models(
     log.debug(
         f"/api/models returned filtered models accessible to the user: {json.dumps([model.get('id') for model in models])}"
     )
-    return {"data": models}
+
+    # Deduplicate actions and filters into top-level dicts keyed by ID.
+    # Each model carries the same global actions/filters, so N models with
+    # M actions would otherwise duplicate M action objects (including heavy
+    # base64 icon data) N times in the JSON payload.
+    # Instead, each model now has action_ids/filter_ids (string arrays),
+    # and the frontend resolves full objects from the top-level dicts.
+    actions_dict = {}
+    filters_dict = {}
+    for model in models:
+        if "actions" in model:
+            for action in model["actions"]:
+                aid = action.get("id")
+                if aid and aid not in actions_dict:
+                    actions_dict[aid] = action
+            model["action_ids"] = [a.get("id") for a in model["actions"]]
+            del model["actions"]
+        if "filters" in model:
+            for filt in model["filters"]:
+                fid = filt.get("id")
+                if fid and fid not in filters_dict:
+                    filters_dict[fid] = filt
+            model["filter_ids"] = [f.get("id") for f in model["filters"]]
+            del model["filters"]
+
+    return {
+        "data": models,
+        "actions": actions_dict,
+        "filters": filters_dict,
+    }
 
 
 @app.get("/api/models/base")

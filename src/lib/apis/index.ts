@@ -41,6 +41,25 @@ export const getModels = async (
 
 	let models = res?.data ?? [];
 
+	// The backend deduplicates actions/filters into top-level dicts to avoid
+	// sending identical base64 icon data N times (once per model). Rehydrate
+	// them back onto each model so downstream components can still use
+	// model.actions / model.filters without changes.
+	const actionsDict = res?.actions ?? {};
+	const filtersDict = res?.filters ?? {};
+	for (const model of models) {
+		if (model.action_ids && !model.actions) {
+			model.actions = model.action_ids
+				.map((id: string) => actionsDict[id])
+				.filter(Boolean);
+		}
+		if (model.filter_ids && !model.filters) {
+			model.filters = model.filter_ids
+				.map((id: string) => filtersDict[id])
+				.filter(Boolean);
+		}
+	}
+
 	if (connections && !base) {
 		let localModels = [];
 
@@ -1679,7 +1698,7 @@ export interface ModelMeta {
 	profile_image_url?: string;
 }
 
-export interface ModelParams {}
+export interface ModelParams { }
 
 export type GlobalModelConfig = ModelConfig[];
 
