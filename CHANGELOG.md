@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 💻 **Code syntax highlighting and XLSX improvements in Open Terminal.** Code files now display with syntax highlighting in the Open Terminal file navigator, and XLSX spreadsheets now show column headers and row numbers for easier navigation. [Commit](https://github.com/open-webui/open-webui/commit/f962bae98306ea9264967b78b803397f4821f9b0)
 - 🌳 **Open Terminal JSON tree view.** JSON, JSONC, JSONL, and JSON5 files now display as interactive collapsible tree views in the Open Terminal file navigator, and SVG files render as preview images with syntax highlighting support. [Commit](https://github.com/open-webui/open-webui/commit/f4c38e6001dd9d4853ed923e0bc5e790c4fd9941)
 - 📢 **Banner loading on navigation.** Admin-configured banners now load when navigating to the homepage, not just on page refresh, ensuring users see new banners immediately. [#22340](https://github.com/open-webui/open-webui/pull/22340), [#22180](https://github.com/open-webui/open-webui/issues/22180)
+- 📊 **System metrics via OpenTelemetry.** Administrators can now monitor Python runtime and system metrics including CPU, memory, garbage collection, and thread counts through the existing OpenTelemetry pipeline. [#22265](https://github.com/open-webui/open-webui/pull/22265)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for French were enhanced and expanded.
 
