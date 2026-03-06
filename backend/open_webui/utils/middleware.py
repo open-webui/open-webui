@@ -2082,21 +2082,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     log.debug(f"form_data: {form_data}")
 
     # Enrich frontend messages with DB-preserved 'output' items.
-    # The frontend has the authoritative message content (which may have been
-    # edited by the user), but strips structured 'output' items that the DB
-    # preserves for tool call reconstruction.  Instead of fully replacing
-    # frontend messages (which would lose edits), we merge DB-specific fields
-    # (output, files) into the frontend messages.
+    # The frontend messages are authoritative for content (they reflect user
+    # edits).  The DB preserves structured 'output' items that the frontend
+    # strips — these are needed for tool call reconstruction.  We merge only
+    # 'output' and 'files' from DB into frontend messages, never replacing
+    # content.
     chat_id = metadata.get("chat_id")
     parent_message_id = metadata.get("parent_message_id")
 
     if chat_id and parent_message_id and not chat_id.startswith("local:"):
         db_messages = load_messages_from_db(chat_id, parent_message_id)
         if db_messages:
-            # Build the final message list from frontend messages, enriched
-            # with DB fields.  The frontend list is authoritative for content
-            # (it reflects user edits); the DB list is authoritative for
-            # output items and file metadata.
             frontend_messages = form_data.get("messages", [])
             system_message = get_system_message(frontend_messages)
 
@@ -2118,11 +2114,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         merged["files"] = db_msg["files"]
                     enriched.append(merged)
                 else:
-                    # More DB messages than frontend messages — use DB message
+                    # More DB messages than frontend — use DB message as-is
                     enriched.append(db_msg)
 
-            # If frontend has more messages than DB (e.g. system injected
-            # extra), append the remaining frontend messages
+            # Append any extra frontend messages beyond the DB chain
             if len(frontend_conv) > len(db_messages):
                 enriched.extend(frontend_conv[len(db_messages):])
 
@@ -2130,7 +2125,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 [system_message, *enriched] if system_message else enriched
             )
 
-            # Inject image files into content as image_url parts (mirrors frontend logic)
+            # Inject image files into content as image_url parts
             for message in form_data["messages"]:
                 image_files = [
                     f
