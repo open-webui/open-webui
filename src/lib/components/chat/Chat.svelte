@@ -86,7 +86,6 @@
 		stopTask,
 		getTaskIdsByChatId
 	} from '$lib/apis';
-	import { getBanners } from '$lib/apis/configs';
 	import { getTools } from '$lib/apis/tools';
 	import { uploadFile } from '$lib/apis/files';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
@@ -1631,7 +1630,7 @@
 								content: messageContentParts[messageContentParts.length - 1]
 							}
 						})
-						);
+					);
 				}
 			}
 		}
