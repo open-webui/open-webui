@@ -58,6 +58,8 @@
 
 	let selectedModel = null;
 
+import { onMount } from 'svelte';
+
 	let groupIds = [];
 
 	let tags = [];
@@ -230,6 +232,13 @@
 
 		let groups = await getGroups(localStorage.token);
 		groupIds = groups.map((group) => group.id);
+
+		// Refresh model list when page becomes visible (fixes cloned model issue)
+		document.addEventListener('visibilitychange', () => {
+			if (!document.hidden) {
+				getModelList();
+			}
+		});
 
 		await tick();
 		loaded = true;
