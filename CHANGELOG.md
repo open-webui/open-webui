@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ⚡ **Message list performance.** Improved message list rendering performance by optimizing array operations, reducing complexity from O(n²) to O(n). [#22280](https://github.com/open-webui/open-webui/pull/22280)
 - ⚡ **Streaming markdown performance.** Improved chat responsiveness during streaming by skipping unnecessary markdown re-parsing when the content hasn't changed, eliminating wasted processing during model pauses. [#22183](https://github.com/open-webui/open-webui/pull/22183)
 - ⚡ **Chat streaming performance.** Chat streaming is now faster for users not using the voice call feature by skipping unnecessary text parsing that was running on every token. [#22195](https://github.com/open-webui/open-webui/pull/22195)
+- ⚡ **Source list performance.** Source lists in chat now render faster thanks to optimized computation that avoids unnecessary recalculations. [#22279](https://github.com/open-webui/open-webui/pull/22279), [Commit](https://github.com/open-webui/open-webui/commit/88af78c)
 
 ### Changed
 
