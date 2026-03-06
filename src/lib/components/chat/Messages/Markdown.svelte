@@ -59,21 +59,25 @@
 		tokens = marked.lexer(replaceTokens(processResponseContent(content), model?.name, $user?.name));
 	};
 
-	// Throttle parsing to once per animation frame while streaming
-	$: if (content) {
-		if (done) {
-			cancelAnimationFrame(pendingUpdate);
-			pendingUpdate = null;
-			parseTokens();
-		} else if (!pendingUpdate) {
-			pendingUpdate = requestAnimationFrame(() => {
+	const updateHandler = (content) => {
+		if (content) {
+			if (done) {
+				cancelAnimationFrame(pendingUpdate);
 				pendingUpdate = null;
 				parseTokens();
-			});
+			} else if (!pendingUpdate) {
+				pendingUpdate = requestAnimationFrame(() => {
+					pendingUpdate = null;
+					parseTokens();
+				});
+			}
 		}
-	}
+	};
 
-	onDestroy(() => {
+	$: updateHandler(content);
+
+	// Throttle parsing to once per animation frame while streaming
+	$: onDestroy(() => {
 		cancelAnimationFrame(pendingUpdate);
 	});
 </script>
