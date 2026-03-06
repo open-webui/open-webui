@@ -326,10 +326,9 @@
 						[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
 					)
 				];
-			} else if ($settings?.tools) {
-				selectedToolIds = $settings.tools;
 			} else {
-				selectedToolIds = selectedToolIds.filter((id) => !id.startsWith('direct_server:'));
+				// Clear selected tools when switching to a model without default tools
+				selectedToolIds = [];
 			}
 
 			// Set Default Filters (Toggleable only)
