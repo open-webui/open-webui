@@ -48,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ⚡ **Chat streaming performance.** Chat streaming is now faster for users not using the voice call feature by skipping unnecessary text parsing that was running on every token. [#22195](https://github.com/open-webui/open-webui/pull/22195)
 - ⚡ **Source list performance.** Source lists in chat now render faster thanks to optimized computation that avoids unnecessary recalculations. [#22279](https://github.com/open-webui/open-webui/pull/22279), [Commit](https://github.com/open-webui/open-webui/commit/88af78c)
 - ⚡ **Source list performance.** Optimized source list rendering by moving sourceIds computation to a reactive variable, reducing unnecessary recomputations. [Commit](https://github.com/open-webui/open-webui/commit/339ed1d72e100c89d8eb26de761dfefe842ef90c)
+- 💨 **Chat message tree operations.** Chat message tree operations are now significantly faster, improving overall chat responsiveness. [#22194](https://github.com/open-webui/open-webui/pull/22194)
 
 ### Changed
 
