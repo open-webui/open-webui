@@ -46,6 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- 🔌 **API key middleware optimization.** The API key restriction middleware was converted to a pure ASGI middleware for improved streaming performance, removing per-chunk call overhead. [#22188](https://github.com/open-webui/open-webui/pull/22188)
+
 ## [0.8.8] - 2026-03-02
 
 ### Added
