@@ -166,7 +166,12 @@ get_db = contextmanager(get_session)
 @contextmanager
 def get_db_context(db: Optional[Session] = None):
     if isinstance(db, Session) and DATABASE_ENABLE_SESSION_SHARING:
-        yield db
+        try:
+            yield db
+        except Exception as ex:
+            log.warning(f"Rolling back the session due to an error during database operations: {ex}")
+            db.rollback()
+            raise
     else:
         with get_db() as session:
             yield session
