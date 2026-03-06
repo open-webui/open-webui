@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📌 **Stale pinned models cleanup.** Pinned models that are deleted or hidden are now automatically unpinned, keeping your pinned models list up to date. [Commit](https://github.com/open-webui/open-webui/commit/af4500e5040c8343d339cd88dd1d2fb6138c7a72)
 - 🔧 **OpenTelemetry metric descriptions.** Fixed conflicting metric instrument descriptions that caused warnings in the OpenTelemetry collector, resulting in cleaner telemetry logs for administrators. [#22293](https://github.com/open-webui/open-webui/pull/22293)
 - 📷 **Android photo capture.** Fixed an issue where the first photo taken in chat appeared completely black on some Android devices by using an alternative canvas export method. [#22317](https://github.com/open-webui/open-webui/pull/22317)
+- ⚡ **Action priority query optimization.** Improved performance of action priority resolution by fixing an N+1 query pattern, reducing database round-trips when loading model actions. [#22301](https://github.com/open-webui/open-webui/pull/22301)
 
 ### Changed
 
