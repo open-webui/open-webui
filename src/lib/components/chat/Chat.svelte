@@ -105,6 +105,7 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
 	import Image from '../common/Image.svelte';
+	import { getBanners } from '$lib/apis/configs';
 
 	export let chatIdProp = '';
 
@@ -648,6 +649,7 @@
 			if (p.url.pathname === '/') {
 				await tick();
 				initNewChat();
+				banners.set(await getBanners(localStorage.token).catch(() => []));
 			}
 
 			stopAudio();
