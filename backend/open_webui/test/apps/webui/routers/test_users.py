@@ -137,6 +137,19 @@ class TestUsers(AbstractPostgresTest):
             )
         assert response.status_code == 200
 
+        # Prevent primary admin role downgrade
+        with mock_webui_user(id="1"):
+            response = self.fast_api_client.post(
+                self.create_url("/1/update"),
+                json={
+                    "name": "user 1",
+                    "email": "user1@openwebui.com",
+                    "profile_image_url": "/user1.png",
+                    "role": "user",
+                },
+            )
+        assert response.status_code == 403
+
         # Get all users
         with mock_webui_user(id="3"):
             response = self.fast_api_client.get(self.create_url(""))
