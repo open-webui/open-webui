@@ -151,6 +151,7 @@
 	let showCommands = false;
 
 	let generating = false;
+	let submittingPrompt = false;
 	let dragged = false;
 	let generationController = null;
 
@@ -178,6 +179,7 @@
 	}
 
 	const navigateHandler = async () => {
+		const targetChatId = chatIdProp;
 		loading = true;
 
 		// Save current queue to sessionStorage before navigating away
@@ -195,31 +197,36 @@
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
 
+		if (chatIdProp !== targetChatId) return;
+
 		const storageChatInput = sessionStorage.getItem(
-			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
+			`chat-input${targetChatId ? `-${targetChatId}` : ''}`
 		);
 
-		if (chatIdProp && (await loadChat())) {
+		if (targetChatId && (await loadChat(targetChatId))) {
+			if (chatIdProp !== targetChatId) return;
 			await tick();
 			loading = false;
 			window.setTimeout(() => scrollToBottom(), 0);
 
 			await tick();
+			if (chatIdProp !== targetChatId) return;
 
 			// Restore queue from sessionStorage
-			const storedQueueData = sessionStorage.getItem(`chat-queue-${chatIdProp}`);
+			const storedQueueData = sessionStorage.getItem(`chat-queue-${targetChatId}`);
 			if (storedQueueData) {
 				try {
 					const restoredQueue = JSON.parse(storedQueueData);
 
 					if (restoredQueue.length > 0) {
-						sessionStorage.removeItem(`chat-queue-${chatIdProp}`);
+						sessionStorage.removeItem(`chat-queue-${targetChatId}`);
 						// Check if there are pending tasks (still generating)
 						const hasPendingTask = taskIds !== null && taskIds.length > 0;
 						if (!hasPendingTask) {
 							// No pending tasks - process the queue
 							files = restoredQueue.flatMap((m) => m.files);
 							await tick();
+							if (chatIdProp !== targetChatId) return;
 							const combinedPrompt = restoredQueue.map((m) => m.prompt).join('\n\n');
 							await submitPrompt(combinedPrompt);
 						} else {
@@ -247,10 +254,12 @@
 			} else {
 				await setDefaults();
 			}
+			if (chatIdProp !== targetChatId) return;
 
 			const chatInput = document.getElementById('chat-input');
 			chatInput?.focus();
 		} else {
+			if (chatIdProp !== targetChatId) return;
 			await goto('/');
 		}
 	};
@@ -1187,22 +1196,27 @@
 		setTimeout(() => chatInput?.focus(), 0);
 	};
 
-	const loadChat = async () => {
-		chatId.set(chatIdProp);
+	const loadChat = async (expectedChatId: string = chatIdProp) => {
+		chatId.set(expectedChatId);
 
 		if ($temporaryChatEnabled) {
 			temporaryChatEnabled.set(false);
 		}
 
-		chat = await getChatById(localStorage.token, $chatId).catch(async (error) => {
+		const chatResult = await getChatById(localStorage.token, expectedChatId).catch(async (error) => {
 			await goto('/');
 			return null;
 		});
 
+		if (get(chatId) !== expectedChatId) return null;
+
+		chat = chatResult;
 		if (chat) {
-			tags = await getTagsById(localStorage.token, $chatId).catch(async (error) => {
+			tags = await getTagsById(localStorage.token, expectedChatId).catch(async (error) => {
 				return [];
 			});
+
+			if (get(chatId) !== expectedChatId) return null;
 
 			const chatContent = chat.chat;
 
@@ -1233,6 +1247,8 @@
 				autoScroll = true;
 				await tick();
 
+				if (get(chatId) !== expectedChatId) return null;
+
 				if (history.currentId) {
 					for (const message of Object.values(history.messages)) {
 						if (message && message.role === 'assistant') {
@@ -1241,9 +1257,11 @@
 					}
 				}
 
-				const taskRes = await getTaskIdsByChatId(localStorage.token, $chatId).catch((error) => {
+				const taskRes = await getTaskIdsByChatId(localStorage.token, expectedChatId).catch((error) => {
 					return null;
 				});
+
+				if (get(chatId) !== expectedChatId) return null;
 
 				if (taskRes) {
 					taskIds = taskRes.task_ids;
@@ -1251,11 +1269,12 @@
 
 				await tick();
 
-				return true;
+				return get(chatId) === expectedChatId ? true : null;
 			} else {
 				return null;
 			}
 		}
+		return null;
 	};
 
 	const scrollToBottom = async (behavior = 'auto') => {
@@ -1302,6 +1321,9 @@
 			return null;
 		});
 
+		// Stale: user switched chat while API was in flight — don't apply completion to current view
+		if (get(chatId) !== _chatId) return;
+
 		if (res !== null && res.messages) {
 			// Update chat history with the new messages
 			for (const message of res.messages) {
@@ -1320,6 +1342,8 @@
 
 		await tick();
 
+		if (get(chatId) !== _chatId) return;
+
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
 				chat = await updateChatById(localStorage.token, _chatId, {
@@ -1334,6 +1358,8 @@
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			}
 		}
+
+		if (get(chatId) !== _chatId) return;
 
 		taskIds = null;
 
@@ -1712,6 +1738,9 @@
 	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
 		console.log('submitPrompt', userPrompt, $chatId);
 
+		if (submittingPrompt) return;
+		submittingPrompt = true;
+		try {
 		const _selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
@@ -1837,6 +1866,9 @@
 		saveSessionSelectedModels();
 
 		await sendMessage(history, userMessageId, { newChat: true });
+		} finally {
+			submittingPrompt = false;
+		}
 	};
 
 	const sendMessage = async (
