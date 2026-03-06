@@ -26,6 +26,7 @@
 		setCwd,
 		type FileEntry
 	} from '$lib/apis/terminal';
+	import { isCodeFile } from '$lib/utils/codeHighlight';
 	import Folder from '../icons/Folder.svelte';
 	import Document from '../icons/Document.svelte';
 	import PenAlt from '../icons/PenAlt.svelte';
@@ -37,6 +38,7 @@
 	import FileNavToolbar from './FileNav/FileNavToolbar.svelte';
 	import FilePreview from './FileNav/FilePreview.svelte';
 	import FileEntryRow from './FileNav/FileEntryRow.svelte';
+	import PortList from './FileNav/PortList.svelte';
 	import XTerminal from './XTerminal.svelte';
 
 	const i18n = getContext('i18n');
@@ -89,9 +91,20 @@
 	let selectedFile: string | null = null;
 	let fileContent: string | null = null;
 	let fileImageUrl: string | null = null;
+	let fileVideoUrl: string | null = null;
+	let fileAudioUrl: string | null = null;
 	let filePdfData: ArrayBuffer | null = null;
+	let fileSqliteData: ArrayBuffer | null = null;
 	let fileLoading = false;
 	let filePreviewRef: FilePreview;
+
+	// ── Office preview state ────────────────────────────────────────────
+	let fileOfficeHtml: string | null = null;
+	let fileOfficeSlides: string[] | null = null;
+	let currentSlide = 0;
+	let excelSheetNames: string[] = [];
+	let selectedExcelSheet = '';
+	let excelWorkbook: import('xlsx').WorkBook | null = null;
 
 	// ── File preview toolbar state (bound from FilePreview) ─────────────
 	let editing = false;
@@ -101,12 +114,19 @@
 	const MD_EXTS = new Set(['md', 'markdown', 'mdx']);
 	const CSV_EXTS = new Set(['csv', 'tsv']);
 	const HTML_EXTS = new Set(['html', 'htm']);
+	const OFFICE_EXTS = new Set(['docx', 'xlsx', 'pptx']);
 	const getFileExt = (path: string | null) => path?.split('.').pop()?.toLowerCase() ?? '';
 
 	$: isMarkdown = MD_EXTS.has(getFileExt(selectedFile));
 	$: isCsv = CSV_EXTS.has(getFileExt(selectedFile));
 	$: isHtml = HTML_EXTS.has(getFileExt(selectedFile));
-	$: isTextFile = fileContent !== null && fileImageUrl === null && filePdfData === null;
+	$: isJson = ['json', 'jsonc', 'jsonl', 'json5'].includes(getFileExt(selectedFile));
+	$: isSvg = getFileExt(selectedFile) === 'svg';
+	$: isNotebook = getFileExt(selectedFile) === 'ipynb';
+	$: isCode = isCodeFile(selectedFile);
+	$: isOfficeFile = OFFICE_EXTS.has(getFileExt(selectedFile));
+	$: isTextFile =
+		fileContent !== null && fileImageUrl === null && filePdfData === null && !isOfficeFile;
 
 	// ── Upload / folder creation ─────────────────────────────────────────
 	let isDragOver = false;
@@ -166,9 +186,16 @@
 	}
 
 	// ── Helpers ──────────────────────────────────────────────────────────
-	const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif']);
+	const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'ico', 'avif']);
+	const VIDEO_EXTS = new Set(['mp4', 'webm', 'mov', 'ogv', 'avi', 'mkv']);
+	const AUDIO_EXTS = new Set(['mp3', 'wav', 'ogg', 'oga', 'flac', 'm4a', 'aac', 'wma', 'opus']);
+	const SQLITE_EXTS = new Set(['db', 'sqlite', 'sqlite3', 'db3']);
 	const isImage = (path: string) => IMAGE_EXTS.has(path.split('.').pop()?.toLowerCase() ?? '');
+	const isVideo = (path: string) => VIDEO_EXTS.has(path.split('.').pop()?.toLowerCase() ?? '');
+	const isAudio = (path: string) => AUDIO_EXTS.has(path.split('.').pop()?.toLowerCase() ?? '');
+	const isSqlite = (path: string) => SQLITE_EXTS.has(path.split('.').pop()?.toLowerCase() ?? '');
 	const isPdf = (path: string) => path.split('.').pop()?.toLowerCase() === 'pdf';
+	const isOffice = (path: string) => OFFICE_EXTS.has(path.split('.').pop()?.toLowerCase() ?? '');
 
 	const buildBreadcrumbs = (path: string) =>
 		path
@@ -191,7 +218,22 @@
 			URL.revokeObjectURL(fileImageUrl);
 			fileImageUrl = null;
 		}
+		if (fileVideoUrl) {
+			URL.revokeObjectURL(fileVideoUrl);
+			fileVideoUrl = null;
+		}
+		if (fileAudioUrl) {
+			URL.revokeObjectURL(fileAudioUrl);
+			fileAudioUrl = null;
+		}
 		filePdfData = null;
+		fileSqliteData = null;
+		fileOfficeHtml = null;
+		fileOfficeSlides = null;
+		currentSlide = 0;
+		excelSheetNames = [];
+		selectedExcelSheet = '';
+		excelWorkbook = null;
 	};
 
 	// ── Directory operations ─────────────────────────────────────────────
@@ -241,9 +283,51 @@
 		if (isImage(filePath)) {
 			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
 			if (result) fileImageUrl = URL.createObjectURL(result.blob);
+		} else if (isVideo(filePath)) {
+			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			if (result) fileVideoUrl = URL.createObjectURL(result.blob);
+		} else if (isAudio(filePath)) {
+			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			if (result) fileAudioUrl = URL.createObjectURL(result.blob);
 		} else if (isPdf(filePath)) {
 			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
 			if (result) filePdfData = await result.blob.arrayBuffer();
+		} else if (isSqlite(filePath)) {
+			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			if (result) fileSqliteData = await result.blob.arrayBuffer();
+		} else if (isOffice(filePath)) {
+			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			if (result) {
+				const ext = getFileExt(filePath);
+				const arrayBuffer = await result.blob.arrayBuffer();
+				try {
+					if (ext === 'docx') {
+						const mammoth = await import('mammoth');
+						const res = await mammoth.convertToHtml({ arrayBuffer });
+						const DOMPurify = (await import('dompurify')).default;
+						fileOfficeHtml = DOMPurify.sanitize(res.value);
+					} else if (ext === 'xlsx') {
+						const XLSX = await import('xlsx');
+						const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+						excelWorkbook = wb;
+						excelSheetNames = wb.SheetNames;
+						if (excelSheetNames.length > 0) {
+							selectedExcelSheet = excelSheetNames[0];
+							const { excelToTable } = await import('$lib/utils/excelToTable');
+							const result = await excelToTable(wb.Sheets[selectedExcelSheet]);
+							fileOfficeHtml = result.html;
+						}
+					} else if (ext === 'pptx') {
+						const { pptxToImages } = await import('$lib/utils/pptxToHtml');
+						const result = await pptxToImages(arrayBuffer);
+						fileOfficeSlides = result.images;
+						currentSlide = 0;
+					}
+				} catch (e) {
+					console.error('Failed to render Office file:', e);
+					fileContent = `Error previewing file: ${e instanceof Error ? e.message : 'Unknown error'}`;
+				}
+			}
 		} else {
 			fileContent = await readFile(terminal.url, terminal.key, filePath);
 		}
@@ -407,13 +491,17 @@
 			const dir = lastSlash > 0 ? filePath.substring(0, lastSlash + 1) : '/';
 			const fileName = filePath.substring(lastSlash + 1);
 
-			if (dir !== currentPath) {
-				await loadDir(dir);
-			}
-
+			// Always reload directory to ensure entries are fresh
+			await loadDir(dir);
 			await tick();
+
 			const entry = entries.find((e) => e.name === fileName);
-			if (entry) await openEntry(entry);
+			if (entry) {
+				await openEntry(entry);
+			} else {
+				// File may not be in listing; open it directly
+				await openEntry({ name: fileName, type: 'file', size: 0 });
+			}
 		});
 
 		const unsubFileNavDir = showFileNavDir.subscribe(async (filePath) => {
@@ -423,13 +511,15 @@
 			const lastSlash = filePath.lastIndexOf('/');
 			const dir = lastSlash > 0 ? filePath.substring(0, lastSlash + 1) : '/';
 
-			if (dir === currentPath) {
-				await loadDir(currentPath);
-			}
-			if (filePath === selectedFile) {
-				const fileName = filePath.substring(lastSlash + 1);
-				const entry = entries.find((e) => e.name === fileName);
-				if (entry) await openEntry(entry);
+			if (selectedFile) {
+				if (selectedFile === filePath || currentPath.startsWith(dir)) {
+					const fileName = selectedFile.split('/').pop() ?? '';
+					await openEntry({ name: fileName, type: 'file', size: 0 });
+				}
+			} else {
+				if (currentPath.startsWith(dir) || dir.startsWith(currentPath)) {
+					await loadDir(currentPath);
+				}
 			}
 		});
 
@@ -461,6 +551,8 @@
 		document.addEventListener('visibilitychange', onVisibilityChange);
 
 		return () => {
+			unsubFileNav();
+			unsubFileNavDir();
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp);
 			window.removeEventListener('blur', onBlur);
@@ -470,6 +562,8 @@
 
 	onDestroy(() => {
 		if (fileImageUrl) URL.revokeObjectURL(fileImageUrl);
+		if (fileVideoUrl) URL.revokeObjectURL(fileVideoUrl);
+		if (fileAudioUrl) URL.revokeObjectURL(fileAudioUrl);
 	});
 </script>
 
@@ -530,13 +624,20 @@
 			{selectedFile}
 			{loading}
 			onNavigate={loadDir}
-			onRefresh={() => loadDir(currentPath)}
+			onRefresh={() => {
+				if (selectedFile) {
+					const fileName = selectedFile.split('/').pop() ?? '';
+					openEntry({ name: fileName, type: 'file', size: 0 });
+				} else {
+					loadDir(currentPath);
+				}
+			}}
 			onNewFolder={startNewFolder}
 			onNewFile={startNewFile}
 			onUploadFiles={handleUploadFiles}
 			onMove={handleMove}
 		>
-			{#if fileImageUrl !== null}
+			{#if fileImageUrl !== null || (fileOfficeSlides !== null && fileOfficeSlides.length > 0)}
 				<Tooltip content={$i18n.t('Reset view')}>
 					<button
 						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
@@ -558,7 +659,7 @@
 					</button>
 				</Tooltip>
 			{/if}
-			{#if (isMarkdown || isCsv || isHtml) && fileContent !== null && !editing}
+			{#if (isMarkdown || isCsv || isHtml || isCode || isJson || isSvg || isNotebook) && fileContent !== null && !editing}
 				<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
 					<button
 						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
@@ -664,6 +765,34 @@
 					</Tooltip>
 				{/if}
 			{/if}
+
+			{#if fileContent !== null}
+				<Tooltip content={$i18n.t('Copy')}>
+					<button
+						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+						on:click={async () => {
+							await navigator.clipboard.writeText(fileContent ?? '');
+							toast.success($i18n.t('Copied to clipboard'));
+						}}
+						aria-label={$i18n.t('Copy')}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.5"
+							class="size-3.5"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"
+							/>
+						</svg>
+					</button>
+				</Tooltip>
+			{/if}
 			<Tooltip content={$i18n.t('Download')}>
 				<button
 					class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
@@ -696,11 +825,28 @@
 					bind:editing
 					bind:showRaw
 					bind:saving
+					bind:currentSlide
 					{selectedFile}
 					{fileLoading}
 					{fileImageUrl}
+					{fileVideoUrl}
+					{fileAudioUrl}
 					{filePdfData}
+					{fileSqliteData}
 					{fileContent}
+					{fileOfficeHtml}
+					{fileOfficeSlides}
+					{excelSheetNames}
+					{selectedExcelSheet}
+					onSheetChange={async (sheet) => {
+						if (!excelWorkbook) return;
+						selectedExcelSheet = sheet;
+						const { excelToTable } = await import('$lib/utils/excelToTable');
+						const result = await excelToTable(excelWorkbook.Sheets[sheet]);
+						fileOfficeHtml = result.html;
+					}}
+					baseUrl={selectedTerminal?.url ?? ''}
+					apiKey={selectedTerminal?.key ?? ''}
 					{overlay}
 					onSave={async (content) => {
 						const terminal = selectedTerminal;
@@ -797,56 +943,80 @@
 			{/if}
 		</div>
 
+		<!-- Port detection -->
+		{#if selectedTerminal && !selectedFile}
+			<div class="shrink-0 border-t border-gray-100 dark:border-gray-800">
+				<PortList baseUrl={selectedTerminal.url} apiKey={selectedTerminal.key} />
+			</div>
+		{/if}
+
 		<!-- Terminal bottom panel -->
 		{#if terminalEnabled}
-		<div class="shrink-0 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850">
-			{#if terminalExpanded}
-				<!-- Drag handle (at top of panel) -->
-				<!-- svelte-ignore a11y-no-static-element-interactions -->
-				<div
-					class="h-1 cursor-row-resize hover:bg-blue-400/30 transition group relative"
-					on:mousedown={onHandleMouseDown}
-				>
-					<div class="absolute inset-x-0 -top-1 -bottom-1" />
-				</div>
-			{/if}
-
-			<!-- Toggle header (full-width button) -->
-			<button
-				class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
-				on:click={toggleTerminal}
-			>
-				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-3.5">
-					<path fill-rule="evenodd" d="M3.25 3A2.25 2.25 0 0 0 1 5.25v9.5A2.25 2.25 0 0 0 3.25 17h13.5A2.25 2.25 0 0 0 19 14.75v-9.5A2.25 2.25 0 0 0 16.75 3H3.25Zm.943 8.752a.75.75 0 0 1 .055-1.06L6.128 9l-1.88-1.693a.75.75 0 1 1 1.004-1.114l2.5 2.25a.75.75 0 0 1 0 1.114l-2.5 2.25a.75.75 0 0 1-1.06-.055ZM9.75 10.25a.75.75 0 0 0 0 1.5h2.5a.75.75 0 0 0 0-1.5h-2.5Z" clip-rule="evenodd" />
-				</svg>
-				<span class="font-medium">{$i18n.t('Terminal')}</span>
-
+			<div class="shrink-0 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850">
 				{#if terminalExpanded}
+					<!-- Drag handle (at top of panel) -->
+					<!-- svelte-ignore a11y-no-static-element-interactions -->
 					<div
-						class="w-1.5 h-1.5 rounded-full transition-colors {terminalConnected
-							? 'bg-emerald-500'
-							: terminalConnecting
-								? 'bg-yellow-500 animate-pulse'
-								: 'bg-gray-400'}"
-					/>
+						class="h-1 cursor-row-resize hover:bg-blue-400/30 transition group relative"
+						on:mousedown={onHandleMouseDown}
+					>
+						<div class="absolute inset-x-0 -top-1 -bottom-1" />
+					</div>
 				{/if}
 
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="size-3 ml-auto transition-transform {terminalExpanded ? 'rotate-180' : ''}"
+				<!-- Toggle header (full-width button) -->
+				<button
+					class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
+					on:click={toggleTerminal}
 				>
-					<path fill-rule="evenodd" d="M9.47 6.47a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 1 1-1.06 1.06L10 8.06l-3.72 3.72a.75.75 0 0 1-1.06-1.06l4.25-4.25Z" clip-rule="evenodd" />
-				</svg>
-			</button>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 20 20"
+						fill="currentColor"
+						class="size-3.5"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M3.25 3A2.25 2.25 0 0 0 1 5.25v9.5A2.25 2.25 0 0 0 3.25 17h13.5A2.25 2.25 0 0 0 19 14.75v-9.5A2.25 2.25 0 0 0 16.75 3H3.25Zm.943 8.752a.75.75 0 0 1 .055-1.06L6.128 9l-1.88-1.693a.75.75 0 1 1 1.004-1.114l2.5 2.25a.75.75 0 0 1 0 1.114l-2.5 2.25a.75.75 0 0 1-1.06-.055ZM9.75 10.25a.75.75 0 0 0 0 1.5h2.5a.75.75 0 0 0 0-1.5h-2.5Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+					<span class="font-medium">{$i18n.t('Terminal')}</span>
 
-			{#if terminalExpanded}
-				<div style="height: {terminalHeight}px" class="min-h-0">
-					<XTerminal {overlay} bind:connected={terminalConnected} bind:connecting={terminalConnecting} />
-				</div>
-			{/if}
-		</div>
+					{#if terminalExpanded}
+						<div
+							class="w-1.5 h-1.5 rounded-full transition-colors {terminalConnected
+								? 'bg-emerald-500'
+								: terminalConnecting
+									? 'bg-yellow-500 animate-pulse'
+									: 'bg-gray-400'}"
+						/>
+					{/if}
+
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 20 20"
+						fill="currentColor"
+						class="size-3 ml-auto transition-transform {terminalExpanded ? 'rotate-180' : ''}"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M9.47 6.47a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 1 1-1.06 1.06L10 8.06l-3.72 3.72a.75.75 0 0 1-1.06-1.06l4.25-4.25Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</button>
+
+				{#if terminalExpanded}
+					<div style="height: {terminalHeight}px" class="min-h-0">
+						<XTerminal
+							{overlay}
+							bind:connected={terminalConnected}
+							bind:connecting={terminalConnecting}
+						/>
+					</div>
+				{/if}
+			</div>
 		{/if}
 	</div>
 {/if}

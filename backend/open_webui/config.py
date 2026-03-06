@@ -1960,7 +1960,7 @@ Suggest 3-5 relevant follow-up questions or prompts that the user might naturall
 - Only suggest follow-ups that make sense given the chat content and do not repeat what was already covered.
 - If the conversation is very short or not specific, suggest more general (but relevant) follow-ups the user might ask.
 - Use the conversation's primary language; default to English if multilingual.
-- Response must be a JSON array of strings, no extra text or formatting.
+- Response must be a JSON object with a "follow_ups" key containing an array of strings, no extra text or formatting.
 ### Output:
 JSON format: { "follow_ups": ["Question 1?", "Question 2?", "Question 3?"] }
 ### Chat History:

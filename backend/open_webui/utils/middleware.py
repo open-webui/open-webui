@@ -91,6 +91,7 @@ from open_webui.utils.misc import (
     get_last_user_message_item,
     get_last_assistant_message,
     get_system_message,
+    replace_system_message_content,
     prepend_to_first_user_message_content,
     convert_logit_bias_input_to_json,
     get_content_from_message,
@@ -1052,16 +1053,16 @@ async def terminal_event_handler(
     """Emit terminal:* events for Open Terminal tools.
 
     - display_file  → emits 'terminal:display_file' to open the file preview.
-    - write_file → emits 'terminal:write_file' to silently refresh the file browser.
+    - write_file / replace_file_content → emits 'terminal:write_file' to refresh.
+    - run_command → emits 'terminal:run_command' with cwd to refresh if relevant.
     """
     if not event_emitter:
         return
 
-    path = tool_function_params.get("path", "")
-    if not path:
-        return
-
     if tool_function_name == "display_file":
+        path = tool_function_params.get("path", "")
+        if not path:
+            return
         # Only emit if the file actually exists
         parsed = tool_result
         if isinstance(parsed, str):
@@ -1078,11 +1079,21 @@ async def terminal_event_handler(
                 "data": {"path": path},
             }
         )
-    elif tool_function_name == "write_file":
+    elif tool_function_name in ("write_file", "replace_file_content"):
+        path = tool_function_params.get("path", "")
+        if not path:
+            return
         await event_emitter(
             {
                 "type": f"terminal:{tool_function_name}",
                 "data": {"path": path},
+            }
+        )
+    elif tool_function_name == "run_command":
+        await event_emitter(
+            {
+                "type": "terminal:run_command",
+                "data": {},
             }
         )
 
@@ -4090,6 +4101,22 @@ async def streaming_chat_response_handler(response, ctx):
                 all_tool_call_sources = []  # Accumulated sources across all iterations
                 user_message = get_last_user_message(form_data["messages"])
 
+                # Check if citations are enabled for this model
+                citations_enabled = (
+                    model.get("info", {}).get("meta", {}).get("capabilities") or {}
+                ).get("citations", True)
+
+                # Save original system message so we can restore it before
+                # re-applying source context (prevents duplication when
+                # RAG_SYSTEM_CONTEXT is enabled and the template is appended
+                # to the system message on each iteration).
+                original_system_message = get_system_message(form_data["messages"])
+                original_system_content = (
+                    get_content_from_message(original_system_message)
+                    if original_system_message
+                    else None
+                )
+
                 while (
                     len(tool_calls) > 0
                     and tool_call_retries < CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES
@@ -4244,7 +4271,8 @@ async def streaming_chat_response_handler(response, ctx):
 
                         # Extract citation sources from tool results
                         if (
-                            tool_function_name
+                            citations_enabled
+                            and tool_function_name
                             in [
                                 "search_web",
                                 "fetch_url",
@@ -4334,27 +4362,35 @@ async def streaming_chat_response_handler(response, ctx):
                         }
                     )
 
-                    # Emit citation sources for UI display
-                    for source in tool_call_sources:
-                        await event_emitter({"type": "source", "data": source})
+                    # Emit citation sources and apply source context to messages
+                    if citations_enabled:
+                        for source in tool_call_sources:
+                            await event_emitter({"type": "source", "data": source})
 
-                    # Apply source context to messages for model
-                    # Use metadata_only=True to avoid duplicating content
-                    # that is already in the tool result message.
-                    all_tool_call_sources.extend(tool_call_sources)
-                    if all_tool_call_sources and user_message:
-                        # Restore original user message before re-applying to avoid recursive nesting
-                        set_last_user_message_content(
-                            user_message, form_data["messages"]
-                        )
-                        form_data["messages"] = apply_source_context_to_messages(
-                            request,
-                            form_data["messages"],
-                            all_tool_call_sources,
-                            user_message,
-                            include_content=False,
-                        )
-                    tool_call_sources.clear()
+                        # Apply source context to messages for model.
+                        # Use include_content=False to avoid duplicating content
+                        # that is already in the tool result message.
+                        all_tool_call_sources.extend(tool_call_sources)
+                        if all_tool_call_sources and user_message:
+                            # Restore original messages before re-applying to
+                            # avoid recursive nesting (user message) and
+                            # duplication (system message with RAG_SYSTEM_CONTEXT).
+                            set_last_user_message_content(
+                                user_message, form_data["messages"]
+                            )
+                            if original_system_content is not None:
+                                replace_system_message_content(
+                                    original_system_content,
+                                    form_data["messages"],
+                                )
+                            form_data["messages"] = apply_source_context_to_messages(
+                                request,
+                                form_data["messages"],
+                                all_tool_call_sources,
+                                user_message,
+                                include_content=False,
+                            )
+                        tool_call_sources.clear()
 
                     await event_emitter(
                         {
@@ -4424,8 +4460,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 code = sanitize_code(code)
 
                                 if CODE_INTERPRETER_BLOCKED_MODULES:
-                                    blocking_code = textwrap.dedent(
-                                        f"""
+                                    blocking_code = textwrap.dedent(f"""
                                         import builtins
     
                                         BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
@@ -4441,8 +4476,7 @@ async def streaming_chat_response_handler(response, ctx):
                                             return _real_import(name, globals, locals, fromlist, level)
     
                                         builtins.__import__ = restricted_import
-                                    """
-                                    )
+                                    """)
                                     code = blocking_code + "\n" + code
 
                                 if (

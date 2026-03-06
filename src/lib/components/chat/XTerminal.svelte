@@ -5,12 +5,7 @@
 	import { WebLinksAddon } from '@xterm/addon-web-links';
 	import '@xterm/xterm/css/xterm.css';
 
-	import {
-		terminalServers,
-		settings,
-		selectedTerminalId,
-		user
-	} from '$lib/stores';
+	import { terminalServers, settings, selectedTerminalId, user } from '$lib/stores';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
@@ -25,6 +20,7 @@
 	export let connected = false;
 	export let connecting = false;
 	let resizeObserver: ResizeObserver | null = null;
+	let pingInterval: ReturnType<typeof setInterval> | null = null;
 
 	// Resolve the active terminal server's info for the WebSocket URL
 	const getTerminalInfo = (): { serverId: string; baseUrl: string } | null => {
@@ -66,9 +62,7 @@
 				// Direct connection to open-terminal
 				const base = info.baseUrl.replace(/\/$/, '');
 				const directTerminals = ($settings?.terminalServers ?? []).filter((s: any) => s.url);
-				const directMatch = directTerminals.find(
-					(s: any) => s.url === $selectedTerminalId
-				);
+				const directMatch = directTerminals.find((s: any) => s.url === $selectedTerminalId);
 				const apiKey = directMatch?.key ?? '';
 				authToken = apiKey;
 
@@ -115,6 +109,13 @@
 				if (term && ws) {
 					ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
 				}
+				// Keepalive ping to prevent idle timeout from proxies/LBs
+				if (pingInterval) clearInterval(pingInterval);
+				pingInterval = setInterval(() => {
+					if (ws && ws.readyState === WebSocket.OPEN) {
+						ws.send(JSON.stringify({ type: 'ping' }));
+					}
+				}, 25000);
 			};
 
 			ws.onmessage = (event) => {
@@ -148,6 +149,10 @@
 	};
 
 	const disconnect = () => {
+		if (pingInterval) {
+			clearInterval(pingInterval);
+			pingInterval = null;
+		}
 		if (ws) {
 			ws.close();
 			ws = null;
@@ -162,7 +167,8 @@
 		term = new Terminal({
 			cursorBlink: true,
 			fontSize: 13,
-			fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Monaco, 'Courier New', monospace",
+			fontFamily:
+				"'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Monaco, 'Courier New', monospace",
 			theme: {
 				background: '#1a1b26',
 				foreground: '#c0caf5',
@@ -235,8 +241,10 @@
 		});
 		resizeObserver.observe(terminalEl);
 
-		// Auto-connect
-		connect();
+		// Connection is handled by the reactive block below (which fires
+		// when `term` is set here), so we intentionally do NOT call
+		// connect() to avoid creating a duplicate WebSocket whose onclose
+		// handler would write a spurious "[Connection closed]" message.
 	};
 
 	// Reconnect when the selected terminal changes
@@ -263,9 +271,5 @@
 </script>
 
 <div class="h-full min-h-0 relative">
-	<div
-		bind:this={terminalEl}
-		class="absolute inset-0 p-1"
-		class:pointer-events-none={overlay}
-	/>
+	<div bind:this={terminalEl} class="absolute inset-0 p-1" class:pointer-events-none={overlay} />
 </div>
