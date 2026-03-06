@@ -25,7 +25,7 @@
 	let id = '';
 	let auth_type = 'bearer';
 	let path = '/openapi.json';
-	let enabled = true;
+	let enabled = false;
 	let showAdvanced = false;
 	let showAccessControlModal = false;
 	let accessGrants: any[] = [];
@@ -47,7 +47,7 @@
 			name = '';
 			auth_type = 'bearer';
 			path = '/openapi.json';
-			enabled = true;
+			enabled = false;
 			accessGrants = [];
 		}
 	};
@@ -136,7 +136,9 @@
 										<label
 											for="terminal-id"
 											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>{$i18n.t('ID')} <span class="opacity-50">({$i18n.t('optional')})</span></label>
+											>{$i18n.t('ID')}
+											<span class="opacity-50">({$i18n.t('optional')})</span></label
+										>
 									</div>
 									<div class="flex flex-1 items-center">
 										<input

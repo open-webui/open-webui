@@ -646,11 +646,15 @@ LICENSE_PUBLIC_KEY = os.environ.get("LICENSE_PUBLIC_KEY", "")
 
 pk = None
 if LICENSE_PUBLIC_KEY:
-    pk = serialization.load_pem_public_key(f"""
+    pk = serialization.load_pem_public_key(
+        f"""
 -----BEGIN PUBLIC KEY-----
 {LICENSE_PUBLIC_KEY}
 -----END PUBLIC KEY-----
-""".encode("utf-8"))
+""".encode(
+            "utf-8"
+        )
+    )
 
 
 ####################################
@@ -787,6 +791,16 @@ try:
     WEBSOCKET_SERVER_PING_INTERVAL = int(WEBSOCKET_SERVER_PING_INTERVAL)
 except ValueError:
     WEBSOCKET_SERVER_PING_INTERVAL = 25
+
+WEBSOCKET_EVENT_CALLER_TIMEOUT = os.environ.get("WEBSOCKET_EVENT_CALLER_TIMEOUT", "")
+
+if WEBSOCKET_EVENT_CALLER_TIMEOUT == "":
+    WEBSOCKET_EVENT_CALLER_TIMEOUT = None
+else:
+    try:
+        WEBSOCKET_EVENT_CALLER_TIMEOUT = int(WEBSOCKET_EVENT_CALLER_TIMEOUT)
+    except ValueError:
+        WEBSOCKET_EVENT_CALLER_TIMEOUT = 300
 
 
 REQUESTS_VERIFY = os.environ.get("REQUESTS_VERIFY", "True").lower() == "true"

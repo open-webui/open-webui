@@ -57,64 +57,7 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
-############################
-# Check if the current user has access to a file through any knowledge bases the user may be in.
-############################
-
-
-# TODO: Optimize this function to use the knowledge_file table for faster lookups.
-def has_access_to_file(
-    file_id: Optional[str],
-    access_type: str,
-    user=Depends(get_verified_user),
-    db: Optional[Session] = None,
-) -> bool:
-    file = Files.get_file_by_id(file_id, db=db)
-    log.debug(f"Checking if user has {access_type} access to file")
-    if not file:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    # Check if the file is associated with any knowledge bases the user has access to
-    knowledge_bases = Knowledges.get_knowledges_by_file_id(file_id, db=db)
-    user_group_ids = {
-        group.id for group in Groups.get_groups_by_member_id(user.id, db=db)
-    }
-    for knowledge_base in knowledge_bases:
-        if knowledge_base.user_id == user.id or AccessGrants.has_access(
-            user_id=user.id,
-            resource_type="knowledge",
-            resource_id=knowledge_base.id,
-            permission=access_type,
-            user_group_ids=user_group_ids,
-            db=db,
-        ):
-            return True
-
-    knowledge_base_id = file.meta.get("collection_name") if file.meta else None
-    if knowledge_base_id:
-        knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(
-            user.id, access_type, db=db
-        )
-        for knowledge_base in knowledge_bases:
-            if knowledge_base.id == knowledge_base_id:
-                return True
-
-    # Check if the file is associated with any channels the user has access to
-    channels = Channels.get_channels_by_file_id_and_user_id(file_id, user.id, db=db)
-    if access_type == "read" and channels:
-        return True
-
-    # Check if the file is associated with any chats the user has access to
-    # TODO: Granular access control for chats
-    chats = Chats.get_shared_chats_by_file_id(file_id, db=db)
-    if chats:
-        return True
-
-    return False
-
+from open_webui.utils.access_control.files import has_access_to_file
 
 ############################
 # Upload File

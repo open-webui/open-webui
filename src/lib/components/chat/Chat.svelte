@@ -44,7 +44,8 @@
 		pinnedChats,
 		showEmbeds,
 		selectedTerminalId,
-		showFileNavPath
+		showFileNavPath,
+		showFileNavDir
 	} from '$lib/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -64,6 +65,7 @@
 	import { AudioQueue } from '$lib/utils/audio';
 
 	import {
+		archiveChatById,
 		createNewChat,
 		getAllTags,
 		getChatById,
@@ -109,10 +111,10 @@
 	let loading = true;
 
 	const eventTarget = new EventTarget();
-	let controlPane;
-	let controlPaneComponent;
+	let controlPane: Pane | undefined;
+	let controlPaneComponent: ChatControls | undefined;
 
-	let messageInput;
+	let messageInput: MessageInput | undefined;
 
 	let autoScroll = true;
 	let processing = '';
@@ -129,8 +131,6 @@
 	let eventConfirmationInputType = '';
 	let eventCallback = null;
 
-	let chatIdUnsubscriber: Unsubscriber | undefined;
-
 	let selectedModels = [''];
 	let atSelectedModel: Model | undefined;
 	let selectedModelIds = [];
@@ -146,33 +146,6 @@
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
-
-	// Auto-inject direct terminal servers into selected tool IDs so they act like toggled-on tools
-	// System terminals (with id field) are handled server-side via terminal_id, not as direct tool servers
-	$: if ($terminalServers && $terminalServers.length > 0) {
-		const directTerminalServers = $terminalServers.filter((t) => !t.id);
-		const terminalIds = directTerminalServers.map(
-			(_, i) => `direct_server:terminal_${$terminalServers.indexOf(directTerminalServers[i])}`
-		);
-		const missingIds = terminalIds.filter((id) => !selectedToolIds.includes(id));
-		if (missingIds.length > 0) {
-			selectedToolIds = [...selectedToolIds, ...missingIds];
-		}
-	}
-
-	// Remove disabled terminal servers from selectedToolIds automatically
-	$: if (selectedToolIds.length > 0) {
-		const directTerminalServers = ($terminalServers ?? []).filter((t) => !t.id);
-		const terminalIds = directTerminalServers.map(
-			(_, i) => `direct_server:terminal_${($terminalServers ?? []).indexOf(directTerminalServers[i])}`
-		);
-		const invalidTerminalIds = selectedToolIds.filter(
-			(id) => id.startsWith('direct_server:terminal_') && !terminalIds.includes(id)
-		);
-		if (invalidTerminalIds.length > 0) {
-			selectedToolIds = selectedToolIds.filter((id) => !invalidTerminalIds.includes(id));
-		}
-	}
 
 	let showCommands = false;
 
@@ -321,7 +294,7 @@
 
 	const onSelectedModelIdsChange = () => {
 		resetInput();
-		oldSelectedModelIds = JSON.parse(JSON.stringify(selectedModelIds));
+		oldSelectedModelIds = structuredClone(selectedModelIds);
 	};
 
 	const resetInput = () => {
@@ -357,23 +330,10 @@
 						[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
 					)
 				];
-			} else if (
-				$settings?.tools &&
-				$settings.tools.some((id) => !id.startsWith('direct_server:terminal_'))
-			) {
+			} else if ($settings?.tools) {
 				selectedToolIds = $settings.tools;
 			} else {
-				// Don't wipe existing terminal servers if no default tool IDs
 				selectedToolIds = selectedToolIds.filter((id) => !id.startsWith('direct_server:'));
-			}
-
-			// Auto-inject direct terminal servers (system ones are handled via terminal_id)
-			if ($terminalServers && $terminalServers.length > 0) {
-				const directTerminalServers = $terminalServers.filter((t) => !t.id);
-				const terminalIds = directTerminalServers.map(
-					(_, i) => `direct_server:terminal_${$terminalServers.indexOf(directTerminalServers[i])}`
-				);
-				selectedToolIds = [...new Set([...selectedToolIds, ...terminalIds])];
 			}
 
 			// Set Default Filters (Toggleable only)
@@ -446,6 +406,18 @@
 		await tick();
 
 		saveChatHandler(_chatId, history);
+	};
+
+	const terminalEventHandler = (type: string, data: any) => {
+		if (type === 'terminal:display_file') {
+			if (!data?.path) return;
+			displayFileHandler(data.path, { showControls, showFileNavPath });
+		} else if (type === 'terminal:write_file' || type === 'terminal:replace_file_content') {
+			if (!data?.path) return;
+			showFileNavDir.set(data.path);
+		} else if (type === 'terminal:run_command') {
+			showFileNavDir.set('/');
+		}
 	};
 
 	const chatEventHandler = async (event, cb) => {
@@ -581,10 +553,8 @@
 					eventConfirmationInputPlaceholder = data.placeholder;
 					eventConfirmationInputValue = data?.value ?? '';
 					eventConfirmationInputType = data?.type ?? '';
-				} else if (type === 'display_file') {
-					if (data?.path) {
-						displayFileHandler(data.path, { showControls, showFileNavPath });
-					}
+				} else if (type.startsWith('terminal:')) {
+					terminalEventHandler(type, data);
 				} else {
 					console.log('Unknown message type', data);
 				}
@@ -651,24 +621,23 @@
 		savedModelIds();
 	}
 
-	let pageSubscribe = null;
-	let showControlsSubscribe = null;
-	let selectedFolderSubscribe = null;
-
 	const stopAudio = () => {
 		try {
 			speechSynthesis.cancel();
-			$audioQueue.stop();
+			$audioQueue?.stop();
 		} catch {}
 	};
 
-	onMount(async () => {
+	onMount(() => {
 		loading = true;
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('events', chatEventHandler);
 
-		audioQueue.set(new AudioQueue(document.getElementById('audioElement')));
+		$audioQueue?.destroy();
+
+		const audioQueueInstance = new AudioQueue(document.getElementById('audioElement'));
+		audioQueue.set(audioQueueInstance);
 
 		// Reset direct terminal enabled states — selectedTerminalId starts null on every page load
 		if ($settings?.terminalServers?.some((s) => s.enabled)) {
@@ -678,7 +647,7 @@
 			});
 		}
 
-		pageSubscribe = page.subscribe(async (p) => {
+		const pageSubscribe = page.subscribe(async (p) => {
 			if (p.url.pathname === '/') {
 				await tick();
 				initNewChat();
@@ -687,12 +656,7 @@
 			stopAudio();
 		});
 
-		const storageChatInput = sessionStorage.getItem(
-			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
-		);
-
-		if (!chatIdProp) {
-			loading = false;
+		const showControlsSubscribe = showControls.subscribe(async (value) => {
 			await tick();
 		}
 
@@ -728,7 +692,7 @@
 			if (controlPane && !$mobile) {
 				try {
 					if (value) {
-						controlPaneComponent.openPane();
+						controlPaneComponent?.openPane();
 					} else {
 						controlPane.collapse();
 					}
@@ -744,7 +708,8 @@
 			}
 		});
 
-		selectedFolderSubscribe = selectedFolder.subscribe(async (folder) => {
+		const selectedFolderSubscribe = selectedFolder.subscribe(async (folder) => {
+			await tick();
 			if (
 				folder?.data?.model_ids &&
 				JSON.stringify(selectedModels) !== JSON.stringify(folder.data.model_ids)
@@ -755,22 +720,60 @@
 			}
 		});
 
-		const chatInput = document.getElementById('chat-input');
-		chatInput?.focus();
-	});
+		const storageChatInput = sessionStorage.getItem(
+			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
+		);
 
-	onDestroy(() => {
-		try {
-			pageSubscribe();
-			showControlsSubscribe();
-			selectedFolderSubscribe();
-			chatIdUnsubscriber?.();
-			window.removeEventListener('message', onMessageHandler);
-			$socket?.off('events', chatEventHandler);
-			$audioQueue?.destroy();
-		} catch (e) {
-			console.error(e);
-		}
+		const init = async () => {
+			if (!chatIdProp) {
+				loading = false;
+				await tick();
+			}
+
+			if (storageChatInput) {
+				prompt = '';
+				messageInput?.setText('');
+
+				files = [];
+				selectedToolIds = [];
+				selectedFilterIds = [];
+				webSearchEnabled = false;
+				imageGenerationEnabled = false;
+				codeInterpreterEnabled = false;
+
+				try {
+					const input = JSON.parse(storageChatInput);
+
+					if (!$temporaryChatEnabled) {
+						messageInput?.setText(input.prompt);
+						files = input.files;
+						selectedToolIds = input.selectedToolIds;
+						selectedFilterIds = input.selectedFilterIds;
+						webSearchEnabled = input.webSearchEnabled;
+						imageGenerationEnabled = input.imageGenerationEnabled;
+						codeInterpreterEnabled = input.codeInterpreterEnabled;
+					}
+				} catch (e) {}
+			}
+
+			const chatInput = document.getElementById('chat-input');
+			chatInput?.focus();
+		};
+		init();
+
+		return () => {
+			try {
+				pageSubscribe();
+				showControlsSubscribe();
+				selectedFolderSubscribe();
+				window.removeEventListener('message', onMessageHandler);
+				$socket?.off('events', chatEventHandler);
+				audioQueueInstance?.destroy();
+				audioQueue.set(null);
+			} catch (e) {
+				console.error(e);
+			}
+		};
 	});
 
 	// File upload functions
@@ -958,7 +961,11 @@
 	};
 
 	$: if (history) {
-		getContents();
+		cancelAnimationFrame(contentsRAF);
+		contentsRAF = requestAnimationFrame(() => {
+			getContents();
+			contentsRAF = null;
+		});
 	} else {
 		artifactContents.set([]);
 	}
@@ -1237,7 +1244,7 @@
 					selectedModels = selectedModels.length > 0 ? [selectedModels[0]] : [''];
 				}
 
-				oldSelectedModelIds = JSON.parse(JSON.stringify(selectedModels));
+				oldSelectedModelIds = structuredClone(selectedModels);
 
 				history =
 					(chatContent?.history ?? undefined) !== undefined
@@ -1288,6 +1295,7 @@
 	};
 
 	let scrollRAF = null;
+	let contentsRAF = null;
 	const scheduleScrollToBottom = () => {
 		if (!scrollRAF) {
 			scrollRAF = requestAnimationFrame(async () => {
@@ -1768,7 +1776,7 @@
 		if (taskIds !== null && taskIds.length > 0) {
 			if ($settings?.enableMessageQueue ?? true) {
 				// Queue the message
-				const _files = JSON.parse(JSON.stringify(files));
+				const _files = structuredClone(files);
 				messageQueue = [
 					...messageQueue,
 					{
@@ -1803,7 +1811,7 @@
 		prompt = '';
 
 		const messages = createMessagesList(history, history.currentId);
-		const _files = JSON.parse(JSON.stringify(files));
+		const _files = structuredClone(files);
 
 		chatFiles.push(
 			..._files.filter(
@@ -1872,7 +1880,7 @@
 		}
 
 		let _chatId = JSON.parse(JSON.stringify($chatId));
-		_history = JSON.parse(JSON.stringify(_history));
+		_history = structuredClone(_history);
 
 		const responseMessageIds: Record<PropertyKey, string> = {};
 		// If modelId is provided, use it, else use selected model
@@ -1925,7 +1933,7 @@
 
 		await tick();
 
-		_history = JSON.parse(JSON.stringify(history));
+		_history = structuredClone(history);
 		// Save chat after all messages have been created
 		await saveChatHandler(_chatId, _history);
 
@@ -2036,7 +2044,7 @@
 			return fileExists;
 		});
 
-		let files = JSON.parse(JSON.stringify(chatFiles));
+		let files = structuredClone(chatFiles);
 		files.push(
 			...(userMessage?.files ?? []).filter(
 				(item) =>
@@ -2201,7 +2209,9 @@
 				tool_servers: [
 					...($toolServers ?? []).filter(
 						(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
-					)
+					),
+					// Direct terminal servers — always included when enabled (not routed through selectedToolIds)
+					...($terminalServers ?? []).filter((t) => !t.id)
 				],
 				features: getFeatures(),
 				variables: {
@@ -2615,6 +2625,25 @@
 			toast.error($i18n.t('Failed to move chat'));
 		}
 	};
+
+	const archiveChatHandler = async (id: string) => {
+		try {
+			await archiveChatById(localStorage.token, id);
+			currentChatPage.set(1);
+			initNewChat();
+			await goto('/');
+			getChatList(localStorage.token, $currentChatPage).then((chats) => {
+				chats.set(chats);
+			});
+			getPinnedChatList(localStorage.token).then((pinnedChats) => {
+				pinnedChats.set(pinnedChats);
+			});
+			toast.success($i18n.t('Chat archived.'));
+		} catch (error) {
+			console.error('Error archiving chat:', error);
+			toast.error($i18n.t('Failed to archive chat.'));
+		}
+	};
 </script>
 
 <svelte:head>
@@ -2697,7 +2726,7 @@
 						bind:selectedModels
 						shareEnabled={!!history.currentId}
 						{initNewChat}
-						archiveChatHandler={() => {}}
+						{archiveChatHandler}
 						{moveChatHandler}
 						onSaveTempChat={async () => {
 							try {
@@ -2715,6 +2744,7 @@
 										id: uuidv4(),
 										title: title.length > 50 ? `${title.slice(0, 50)}...` : title,
 										models: selectedModels,
+										params: params,
 										history: history,
 										messages: messages,
 										timestamp: Date.now()

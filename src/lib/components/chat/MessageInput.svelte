@@ -1016,7 +1016,7 @@
 			}
 
 			tools.set(await getTools(localStorage.token));
-		}
+		};
 		initialize();
 
 		return () => {
@@ -1033,7 +1033,7 @@
 				dropzoneElement.removeEventListener('drop', onDrop);
 				dropzoneElement.removeEventListener('dragleave', onDragLeave);
 			}
-		}
+		};
 	});
 </script>
 
@@ -1640,12 +1640,10 @@
 									{/if}
 
 									<div class="ml-1 flex gap-1.5">
-										{#if (selectedToolIds ?? []).filter((id) => !id.startsWith('direct_server:terminal_')).length > 0}
+										{#if (selectedToolIds ?? []).length > 0}
 											<Tooltip
 												content={$i18n.t('{{COUNT}} Available Tools', {
-													COUNT: (selectedToolIds ?? []).filter(
-														(id) => !id.startsWith('direct_server:terminal_')
-													).length
+													COUNT: (selectedToolIds ?? []).length
 												})}
 											>
 												<button
@@ -1659,9 +1657,7 @@
 													<Wrench className="size-4" strokeWidth="1.75" />
 
 													<span class="text-sm">
-														{(selectedToolIds ?? []).filter(
-															(id) => !id.startsWith('direct_server:terminal_')
-														).length}
+														{(selectedToolIds ?? []).length}
 													</span>
 												</button>
 											</Tooltip>
@@ -1813,7 +1809,9 @@
 
 										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
 											<!-- Terminal Server Selector -->
-											<TerminalMenu bind:show={showTerminalMenu} />
+											{#if ($terminalServers ?? []).length > 0 || ($settings?.terminalServers ?? []).some((s) => s.url)}
+												<TerminalMenu bind:show={showTerminalMenu} />
+											{/if}
 
 											<!-- {$i18n.t('Record voice')} -->
 											<Tooltip content={$i18n.t('Dictate')}>

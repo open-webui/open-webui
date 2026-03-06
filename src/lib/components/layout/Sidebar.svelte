@@ -414,9 +414,7 @@
 		document.documentElement.style.setProperty('--sidebar-width', `${newSidebarWidth}px`);
 	};
 
-	let unsubscribers = [];
-
-	onMount(async () => {
+	onMount(() => {
 		try {
 			const width = Number(localStorage.getItem('sidebarWidth'));
 			if (!Number.isNaN(width) && width >= MIN_WIDTH && width <= MAX_WIDTH) {
@@ -429,9 +427,9 @@
 			document.documentElement.style.setProperty('--sidebar-width', `${w}px`);
 		});
 
-		await showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
+		showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
 
-		unsubscribers = [
+		const unsubscribers = [
 			mobile.subscribe((value) => {
 				if ($showSidebar && value) {
 					showSidebar.set(false);
@@ -502,14 +500,35 @@
 		window.addEventListener('blur', onBlur);
 
 		const dropZone = document.getElementById('sidebar');
+		if (dropZone) {
+			dropZone.addEventListener('dragover', onDragOver);
+			dropZone.addEventListener('drop', onDrop);
+			dropZone.addEventListener('dragleave', onDragLeave);
+		}
 
-		dropZone?.addEventListener('dragover', onDragOver);
-		dropZone?.addEventListener('drop', onDrop);
-		dropZone?.addEventListener('dragleave', onDragLeave);
+		const socketInstance = $socket;
+		socketInstance?.on('events', chatActiveEventHandler);
 
-		// Listen for real-time chat:active events via the events channel
-		$socket?.off('events', chatActiveEventHandler);
-		$socket?.on('events', chatActiveEventHandler);
+		return () => {
+			unsubscribers.forEach((unsubscriber) => unsubscriber());
+
+			window.removeEventListener('keydown', onKeyDown);
+			window.removeEventListener('keyup', onKeyUp);
+
+			window.removeEventListener('touchstart', onTouchStart);
+			window.removeEventListener('touchend', onTouchEnd);
+
+			window.removeEventListener('focus', onFocus);
+			window.removeEventListener('blur', onBlur);
+
+			if (dropZone) {
+				dropZone.removeEventListener('dragover', onDragOver);
+				dropZone.removeEventListener('drop', onDrop);
+				dropZone.removeEventListener('dragleave', onDragLeave);
+			}
+
+			socketInstance?.off('events', chatActiveEventHandler);
+		};
 	});
 
 	// Handler for chat:active events (defined outside onMount for proper cleanup)
@@ -531,34 +550,6 @@
 			});
 		}
 	};
-
-	onDestroy(() => {
-		if (unsubscribers && unsubscribers.length > 0) {
-			unsubscribers.forEach((unsubscriber) => {
-				if (unsubscriber) {
-					unsubscriber();
-				}
-			});
-		}
-
-		window.removeEventListener('keydown', onKeyDown);
-		window.removeEventListener('keyup', onKeyUp);
-
-		window.removeEventListener('touchstart', onTouchStart);
-		window.removeEventListener('touchend', onTouchEnd);
-
-		window.removeEventListener('focus', onFocus);
-		window.removeEventListener('blur', onBlur);
-
-		const dropZone = document.getElementById('sidebar');
-
-		dropZone?.removeEventListener('dragover', onDragOver);
-		dropZone?.removeEventListener('drop', onDrop);
-		dropZone?.removeEventListener('dragleave', onDragLeave);
-
-		// Clean up socket listener
-		$socket?.off('events', chatActiveEventHandler);
-	});
 
 	const newChatHandler = async () => {
 		selectedChatId = null;

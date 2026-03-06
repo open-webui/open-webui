@@ -1,4 +1,4 @@
-<script context="module">
+<script context="module" lang="ts">
 	let savedTab: 'controls' | 'files' | 'overview' = 'controls';
 </script>
 
@@ -50,17 +50,20 @@
 	export let files;
 	export let modelId;
 
-	export let pane;
+	export let pane: Pane | null = null;
 
-	let mediaQuery;
 	let largeScreen = false;
 	let dragged = false;
 	let minSize = 0;
 	let paneReady = false;
 
 	// Tab state for Controls+Files panel
-	let activeTab: 'controls' | 'files' | 'overview' = savedTab;
-	$: savedTab = activeTab;
+	let activeTab = savedTab;
+	// svelte-ignore reactive_declaration_module_script_dependency
+	$: {
+		savedTab = activeTab;
+	}
+
 	$: hasMessages = history?.messages && Object.keys(history.messages).length > 0;
 
 	$: showControlsTab = $user?.role === 'admin' || ($user?.permissions?.chat?.controls ?? true);
@@ -172,56 +175,67 @@
 		dragged = false;
 	};
 
-	onMount(async () => {
-		mediaQuery = window.matchMedia('(min-width: 1024px)');
+	onMount(() => {
+		const mediaQuery = window.matchMedia('(min-width: 1024px)');
 		mediaQuery.addEventListener('change', handleMediaQuery);
 		handleMediaQuery(mediaQuery);
 
+		let resizeObserver: ResizeObserver | null = null;
+		let isDestroyed = false;
+
 		// Wait for Svelte to render the Pane after largeScreen changed
-		await tick();
+		const init = async () => {
+			await tick();
 
-		const container = document.getElementById('chat-container');
-		minSize = Math.floor((350 / container.clientWidth) * 100);
+			if (isDestroyed) return;
 
-		const resizeObserver = new ResizeObserver((entries) => {
-			for (let entry of entries) {
-				const width = entry.contentRect.width;
-				minSize = Math.floor((350 / width) * 100);
-				if ($showControls) {
-					if (pane && pane.isExpanded() && pane.getSize() < minSize) {
-						pane.resize(minSize);
-					} else {
-						let size = Math.floor(
-							(parseInt(localStorage?.chatControlsSize) / container.clientWidth) * 100
-						);
-						if (size < minSize) pane.resize(minSize);
+			// If controls were persisted as open, set the pane to the saved size
+			if ($showControls && pane) {
+				openPane();
+			}
+
+			setTimeout(() => {
+				paneReady = true;
+			}, 0);
+
+			const container = document.getElementById('chat-container') as HTMLElement;
+			if (!container) return;
+
+			minSize = Math.floor((350 / container.clientWidth) * 100);
+			resizeObserver = new ResizeObserver((entries) => {
+				for (let entry of entries) {
+					const width = entry.contentRect.width;
+					minSize = Math.floor((350 / width) * 100);
+					if ($showControls) {
+						if (pane && pane.isExpanded() && pane.getSize() < minSize) {
+							pane.resize(minSize);
+						} else {
+							let size = Math.floor(
+								(parseInt(localStorage?.chatControlsSize) / container.clientWidth) * 100
+							);
+							if (size < minSize && pane) pane.resize(minSize);
+						}
 					}
 				}
-			}
-		});
-		resizeObserver.observe(container);
+			});
+			resizeObserver.observe(container);
+		};
+		init();
 
 		document.addEventListener('mousedown', onMouseDown);
 		document.addEventListener('mouseup', onMouseUp);
 
-		setTimeout(() => {
-			paneReady = true;
-		}, 0);
-
-		// If controls were persisted as open, set the pane to the saved size
-		if ($showControls && pane) {
-			openPane();
-		}
-	});
-
-	onDestroy(() => {
-		paneReady = false;
-		if (!largeScreen) {
-			showControls.set(false);
-		}
-		mediaQuery.removeEventListener('change', handleMediaQuery);
-		document.removeEventListener('mousedown', onMouseDown);
-		document.removeEventListener('mouseup', onMouseUp);
+		return () => {
+			isDestroyed = true;
+			paneReady = false;
+			resizeObserver?.disconnect();
+			if (!largeScreen) {
+				showControls.set(false);
+			}
+			mediaQuery.removeEventListener('change', handleMediaQuery);
+			document.removeEventListener('mousedown', onMouseDown);
+			document.removeEventListener('mouseup', onMouseUp);
+		};
 	});
 
 	const closeHandler = () => {
@@ -270,10 +284,11 @@
 					<div class="flex flex-col h-full min-h-0">
 						<!-- Tab bar -->
 						<div class="flex items-center justify-between px-2 pt-2.5 pb-2 shrink-0">
-							<div class="flex gap-1">
+							<div class="flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
 								{#if showControlsTab}
 									<button
-										class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'controls'
+										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+										'controls'
 											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 											: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
 										on:click={() => (activeTab = 'controls')}
@@ -283,7 +298,8 @@
 								{/if}
 								{#if showFilesTab}
 									<button
-										class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'files'
+										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+										'files'
 											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 											: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
 										on:click={() => (activeTab = 'files')}
@@ -293,7 +309,8 @@
 								{/if}
 								{#if showOverviewTab}
 									<button
-										class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'overview'
+										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+										'overview'
 											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 											: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
 										on:click={() => (activeTab = 'overview')}
@@ -408,10 +425,11 @@
 						<div class="flex flex-col h-full min-h-0">
 							<!-- Tab bar -->
 							<div class="flex items-center justify-between px-2 pt-2.5 pb-2 shrink-0">
-								<div class="flex gap-1">
+								<div class="flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
 									{#if showControlsTab}
 										<button
-											class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'controls'
+											class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+											'controls'
 												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 												: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
 											on:click={() => (activeTab = 'controls')}
@@ -421,7 +439,8 @@
 									{/if}
 									{#if showFilesTab}
 										<button
-											class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'files'
+											class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+											'files'
 												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 												: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
 											on:click={() => (activeTab = 'files')}
@@ -431,7 +450,8 @@
 									{/if}
 									{#if showOverviewTab}
 										<button
-											class="px-2.5 py-1 text-sm rounded-lg transition {activeTab === 'overview'
+											class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+											'overview'
 												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 												: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
 											on:click={() => (activeTab = 'overview')}
@@ -480,7 +500,7 @@
 										onClose={() => showControls.set(false)}
 									/>
 								{:else if activeTab === 'files' && $selectedTerminalId}
-									<FileNav onAttach={handleTerminalAttach} />
+									<FileNav onAttach={handleTerminalAttach} overlay={dragged} />
 								{:else}
 									<Controls embed={true} {models} bind:chatFiles bind:params />
 								{/if}
