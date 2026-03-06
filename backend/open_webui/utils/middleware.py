@@ -4163,25 +4163,26 @@ async def streaming_chat_response_handler(response, ctx):
                         tool_args = tool_call.get("function", {}).get("arguments", "{}")
 
                         tool_function_params = {}
-                        try:
-                            # json.loads cannot be used because some models do not produce valid JSON
-                            tool_function_params = ast.literal_eval(tool_args)
-                        except Exception as e:
-                            log.debug(e)
-                            # Fallback to JSON parsing
+                        if tool_args and tool_args.strip():
                             try:
-                                tool_function_params = json.loads(tool_args)
+                                # json.loads cannot be used because some models do not produce valid JSON
+                                tool_function_params = ast.literal_eval(tool_args)
                             except Exception as e:
-                                log.error(
-                                    f"Error parsing tool call arguments: {tool_args}"
-                                )
-                                results.append(
-                                    {
-                                        "tool_call_id": tool_call_id,
-                                        "content": f"Error: Tool call arguments could not be parsed. The model generated malformed or incomplete JSON for `{tool_function_name}`. Please try again.",
-                                    }
-                                )
-                                continue
+                                log.debug(e)
+                                # Fallback to JSON parsing
+                                try:
+                                    tool_function_params = json.loads(tool_args)
+                                except Exception as e:
+                                    log.error(
+                                        f"Error parsing tool call arguments: {tool_args}"
+                                    )
+                                    results.append(
+                                        {
+                                            "tool_call_id": tool_call_id,
+                                            "content": f"Error: Tool call arguments could not be parsed. The model generated malformed or incomplete JSON for `{tool_function_name}`. Please try again.",
+                                        }
+                                    )
+                                    continue
 
                         # Ensure arguments are valid JSON for downstream LLM integrations
                         log.debug(

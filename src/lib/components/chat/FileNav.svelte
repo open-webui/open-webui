@@ -659,7 +659,7 @@
 					</button>
 				</Tooltip>
 			{/if}
-			{#if (isMarkdown || isCsv || isHtml || isCode || isJson || isSvg || isNotebook) && fileContent !== null && !editing}
+			{#if (isMarkdown || isCsv || isHtml || isJson || isSvg || isNotebook) && fileContent !== null && !editing}
 				<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
 					<button
 						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
@@ -709,7 +709,24 @@
 				</Tooltip>
 			{/if}
 			{#if isTextFile}
-				{#if editing}
+				{#if isCode}
+					<Tooltip content={$i18n.t('Save')}>
+						<button
+							class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+							on:click={() => filePreviewRef?.saveCodeFile()}
+							disabled={saving}
+							aria-label={$i18n.t('Save')}
+						>
+							{#if saving}
+								<Spinner className="size-3.5" />
+							{:else}
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-3.5">
+									<path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" />
+								</svg>
+							{/if}
+						</button>
+					</Tooltip>
+				{:else if editing}
 					<Tooltip content={$i18n.t('Cancel')}>
 						<button
 							class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"

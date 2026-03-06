@@ -4,15 +4,17 @@
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
 	import { settings } from '$lib/stores';
-	import { isCodeFile, highlightCode } from '$lib/utils/codeHighlight';
+	import { isCodeFile } from '$lib/utils/codeHighlight';
 	import { initMermaid, renderMermaidDiagram } from '$lib/utils';
 	import Spinner from '../../common/Spinner.svelte';
 	import PDFViewer from '../../common/PDFViewer.svelte';
 	import JsonTreeView from './JsonTreeView.svelte';
 	import NotebookView from './NotebookView.svelte';
 	import SqliteView from './SqliteView.svelte';
+	import FileCodeEditor from './FileCodeEditor.svelte';
 
 	let pdfViewerRef: PDFViewer;
+	let fileCodeEditorRef: FileCodeEditor;
 
 	const i18n = getContext('i18n');
 
@@ -74,6 +76,15 @@
 	export const cancelEdit = () => {
 		editing = false;
 		editContent = '';
+	};
+
+	/** Save code file directly from CodeMirror */
+	export const saveCodeFile = async () => {
+		if (!onSave) return;
+		saving = true;
+		const content = fileCodeEditorRef?.getValue() ?? '';
+		await onSave(content);
+		saving = false;
 	};
 
 	$: isTextFile = fileContent !== null && fileImageUrl === null && filePdfData === null;
@@ -175,24 +186,21 @@
 	$: csvHeader = csvRows.length > 0 ? csvRows[0] : [];
 	$: csvBody = csvRows.length > 1 ? csvRows.slice(1) : [];
 
-	// ── Shiki code highlighting ─────────────────────────────────────────
+	// ── Shiki code highlighting (SVG only) ──────────────────────────────
 	let highlightedHtml: string | null = null;
-	let highlightingFile: string | null = null; // track which file we're highlighting
+	let highlightingFile: string | null = null;
 
-	$: if ((isCode || isSvg) && fileContent !== null && selectedFile) {
+	$: if (isSvg && fileContent !== null && selectedFile) {
 		const currentFile = selectedFile;
 		highlightingFile = currentFile;
-		const lang = isSvg ? 'xml' : undefined;
-		(lang
-			? import('shiki').then(({ codeToHtml }) =>
-					codeToHtml(fileContent!, {
-						lang: 'xml',
-						themes: { light: 'github-light', dark: 'github-dark' },
-						defaultColor: 'light'
-					})
-				)
-			: highlightCode(fileContent!, selectedFile!)
-		)
+		import('shiki')
+			.then(({ codeToHtml }) =>
+				codeToHtml(fileContent!, {
+					lang: 'xml',
+					themes: { light: 'github-light', dark: 'github-dark' },
+					defaultColor: 'light'
+				})
+			)
 			.then((html) => {
 				if (highlightingFile === currentFile) highlightedHtml = html;
 			})
@@ -428,7 +436,16 @@
 			<div class="svg-preview w-full h-full flex items-center justify-center overflow-auto p-3">
 				{@html DOMPurify.sanitize(fileContent, { USE_PROFILES: { svg: true, svgFilters: true }, ADD_TAGS: ['use'] })}
 			</div>
-		{:else if (isCode || isSvg) && highlightedHtml && !showRaw}
+		{:else if isCode && !showRaw}
+			<div class="h-full">
+				<FileCodeEditor
+					bind:this={fileCodeEditorRef}
+					value={fileContent ?? ''}
+					filePath={selectedFile}
+					{onSave}
+				/>
+			</div>
+		{:else if isSvg && highlightedHtml && !showRaw}
 			<div class="shiki-preview overflow-auto h-full text-xs">
 				{@html highlightedHtml}
 			</div>
