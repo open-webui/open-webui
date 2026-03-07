@@ -151,17 +151,17 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     custom_models = Models.get_all_models()
 
     # Single O(1) lookup: Ollama base names first, then exact IDs (exact wins).
-    model_lookup = {}
+    base_model_lookup = {}
     for model in models:
         if model.get("owned_by") == "ollama":
-            model_lookup.setdefault(model["id"].split(":")[0], model)
-        model_lookup[model["id"]] = model
+            base_model_lookup.setdefault(model["id"].split(":")[0], model)
+        base_model_lookup[model["id"]] = model
 
     existing_ids = {m["id"] for m in models}
 
     for custom_model in custom_models:
         if custom_model.base_model_id is None:
-            model = model_lookup.get(custom_model.id)
+            model = base_model_lookup.get(custom_model.id)
 
             if model:
                 if custom_model.is_active:
@@ -188,14 +188,17 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 else:
                     models.remove(model)
 
-        elif custom_model.is_active and custom_model.id not in existing_ids:
+        elif custom_model.is_active:
+            if custom_model.id in existing_ids:
+                continue
+
             owned_by = "openai"
             connection_type = None
             pipe = None
 
-            base_model = model_lookup.get(custom_model.base_model_id)
+            base_model = base_model_lookup.get(custom_model.base_model_id)
             if base_model is None:
-                base_model = model_lookup.get(custom_model.base_model_id.split(":")[0])
+                base_model = base_model_lookup.get(custom_model.base_model_id.split(":")[0])
             if base_model:
                 owned_by = base_model.get("owned_by", "unknown")
                 if "pipe" in base_model:
