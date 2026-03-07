@@ -75,9 +75,7 @@
 
 			// Get page data
 			const offset = page * pageSize;
-			const result = db.exec(
-				`SELECT * FROM "${selectedTable}" LIMIT ${pageSize} OFFSET ${offset}`
-			);
+			const result = db.exec(`SELECT * FROM "${selectedTable}" LIMIT ${pageSize} OFFSET ${offset}`);
 			if (result.length > 0) {
 				rows = result[0].values.map((r: any[]) => r.map((v: any) => formatValue(v)));
 			} else {
@@ -119,7 +117,9 @@
 
 	onDestroy(() => {
 		if (db) {
-			try { db.close(); } catch {}
+			try {
+				db.close();
+			} catch {}
 			db = null;
 		}
 	});
@@ -132,7 +132,9 @@
 		<div class="p-3 text-xs text-red-500">{error}</div>
 	{:else}
 		<!-- Table tabs + query toggle -->
-		<div class="flex items-center gap-1 px-2 py-1.5 border-b border-gray-100 dark:border-gray-800 overflow-x-auto scrollbar-none shrink-0">
+		<div
+			class="flex items-center gap-1 px-2 py-1.5 border-b border-gray-100 dark:border-gray-800 overflow-x-auto scrollbar-none shrink-0"
+		>
 			{#each tables as table}
 				<button
 					class="shrink-0 px-2 py-1 text-xs rounded-lg transition
@@ -150,7 +152,9 @@
 					{queryMode
 					? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-medium'
 					: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}"
-				on:click={() => { queryMode = !queryMode; }}
+				on:click={() => {
+					queryMode = !queryMode;
+				}}
 			>
 				SQL
 			</button>
@@ -172,9 +176,13 @@
 						}
 					}}
 				></textarea>
-				<div class="flex items-center justify-between px-2 py-1 bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
+				<div
+					class="flex items-center justify-between px-2 py-1 bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800"
+				>
 					{#if queryError}
-						<span class="text-[0.65rem] text-red-500 dark:text-red-400 truncate mr-2">{queryError}</span>
+						<span class="text-[0.65rem] text-red-500 dark:text-red-400 truncate mr-2"
+							>{queryError}</span
+						>
 					{:else}
 						<span class="text-[0.6rem] text-gray-400 dark:text-gray-600 select-none">⌘+Enter</span>
 					{/if}
@@ -242,24 +250,50 @@
 
 			<!-- Pagination -->
 			{#if totalPages > 1}
-				<div class="flex items-center justify-center gap-3 py-1.5 px-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500 shrink-0">
+				<div
+					class="flex items-center justify-center gap-3 py-1.5 px-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500 shrink-0"
+				>
 					<button
 						class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
 						disabled={page === 0}
-						on:click={() => { page--; loadPage(); }}
+						on:click={() => {
+							page--;
+							loadPage();
+						}}
 					>
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4">
-							<path fill-rule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" />
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							class="size-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z"
+								clip-rule="evenodd"
+							/>
 						</svg>
 					</button>
 					<span>{page + 1} / {totalPages} ({totalRows.toLocaleString()} rows)</span>
 					<button
 						class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
 						disabled={page >= totalPages - 1}
-						on:click={() => { page++; loadPage(); }}
+						on:click={() => {
+							page++;
+							loadPage();
+						}}
 					>
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4">
-							<path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							class="size-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
+								clip-rule="evenodd"
+							/>
 						</svg>
 					</button>
 				</div>

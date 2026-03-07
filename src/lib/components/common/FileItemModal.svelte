@@ -587,7 +587,9 @@
 						{#if docxError}
 							<div class="text-red-500 text-sm p-4">{docxError}</div>
 						{:else if docxHtml}
-							<div class="office-preview max-h-[60vh] overflow-auto p-4 prose dark:prose-invert max-w-full text-sm">
+							<div
+								class="office-preview max-h-[60vh] overflow-auto p-4 prose dark:prose-invert max-w-full text-sm"
+							>
 								{@html docxHtml}
 							</div>
 						{:else}
@@ -611,20 +613,39 @@
 										<button
 											class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
 											disabled={pptxCurrentSlide === 0}
-											on:click={() => pptxCurrentSlide = Math.max(0, pptxCurrentSlide - 1)}
+											on:click={() => (pptxCurrentSlide = Math.max(0, pptxCurrentSlide - 1))}
 										>
-											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5">
-												<path fill-rule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" />
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+												class="size-5"
+											>
+												<path
+													fill-rule="evenodd"
+													d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z"
+													clip-rule="evenodd"
+												/>
 											</svg>
 										</button>
 										<span>{pptxCurrentSlide + 1} / {pptxSlides.length}</span>
 										<button
 											class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
 											disabled={pptxCurrentSlide === pptxSlides.length - 1}
-											on:click={() => pptxCurrentSlide = Math.min(pptxSlides.length - 1, pptxCurrentSlide + 1)}
+											on:click={() =>
+												(pptxCurrentSlide = Math.min(pptxSlides.length - 1, pptxCurrentSlide + 1))}
 										>
-											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5">
-												<path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+												class="size-5"
+											>
+												<path
+													fill-rule="evenodd"
+													d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
+													clip-rule="evenodd"
+												/>
 											</svg>
 										</button>
 									</div>

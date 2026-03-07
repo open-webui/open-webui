@@ -38,11 +38,12 @@
 
 	$: cells = (notebook?.cells as NotebookCell[]) ?? [];
 	$: lang = (notebook?.metadata as Record<string, unknown>)?.kernelspec
-		? ((notebook.metadata as Record<string, Record<string, string>>).kernelspec?.language ?? 'python')
+		? ((notebook.metadata as Record<string, Record<string, string>>).kernelspec?.language ??
+			'python')
 		: 'python';
 
 	const toStr = (s: string[] | string | undefined): string =>
-		Array.isArray(s) ? s.join('') : s ?? '';
+		Array.isArray(s) ? s.join('') : (s ?? '');
 
 	// ── Syntax highlighting ──────────────────────────────────────────────
 	let highlightedCells: Record<number, string> = {};
@@ -75,8 +76,7 @@
 	const renderMarkdown = (src: string): string =>
 		DOMPurify.sanitize(marked.parse(src, { async: false }) as string);
 
-	const stripAnsi = (s: string): string =>
-		s.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '');
+	const stripAnsi = (s: string): string => s.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '');
 
 	const getOutputImages = (output: NotebookOutput): string[] => {
 		if (!output.data) return [];
@@ -173,12 +173,14 @@
 		const result = await executeNotebookCell(baseUrl, apiKey, sessionId!, index, source);
 
 		if ('error' in result) {
-			cells[index].outputs = [{
-				output_type: 'error',
-				ename: 'ExecutionError',
-				evalue: result.error,
-				traceback: [result.error]
-			}];
+			cells[index].outputs = [
+				{
+					output_type: 'error',
+					ename: 'ExecutionError',
+					evalue: result.error,
+					traceback: [result.error]
+				}
+			];
 		} else {
 			cells[index].outputs = result.outputs;
 			if (result.execution_count !== undefined) {
@@ -225,7 +227,13 @@
 				{$i18n.t('Run All')}
 			</button>
 			{#if kernelReady}
-				<button class="nb-btn text-[0.6rem]" on:click={async () => { await stopSession(); await startSession(); }}>
+				<button
+					class="nb-btn text-[0.6rem]"
+					on:click={async () => {
+						await stopSession();
+						await startSession();
+					}}
+				>
 					{$i18n.t('Restart')}
 				</button>
 				<button class="nb-btn text-[0.6rem]" on:click={stopSession}>
@@ -237,19 +245,30 @@
 
 			<div class="flex items-center select-none">
 				{#if kernelStarting}
-					<Tooltip content={$i18n.t('Starting kernel...')} placement="bottom"><Spinner className="size-2" /></Tooltip>
+					<Tooltip content={$i18n.t('Starting kernel...')} placement="bottom"
+						><Spinner className="size-2" /></Tooltip
+					>
 				{:else if runningCell !== null}
-					<Tooltip content={$i18n.t('Running')} placement="bottom"><Spinner className="size-2" /></Tooltip>
+					<Tooltip content={$i18n.t('Running')} placement="bottom"
+						><Spinner className="size-2" /></Tooltip
+					>
 				{:else if kernelReady}
-					<Tooltip content="Jupyter" placement="bottom"><span class="size-1.5 rounded-full bg-green-500 inline-block"></span></Tooltip>
+					<Tooltip content="Jupyter" placement="bottom"
+						><span class="size-1.5 rounded-full bg-green-500 inline-block"></span></Tooltip
+					>
 				{:else}
-					<Tooltip content={$i18n.t('No kernel')} placement="bottom"><span class="size-1.5 rounded-full bg-gray-400 dark:bg-gray-600 inline-block"></span></Tooltip>
+					<Tooltip content={$i18n.t('No kernel')} placement="bottom"
+						><span class="size-1.5 rounded-full bg-gray-400 dark:bg-gray-600 inline-block"
+						></span></Tooltip
+					>
 				{/if}
 			</div>
 		</div>
 
 		{#if kernelError}
-			<div class="px-2 py-1 text-[0.65rem] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 whitespace-pre-wrap font-mono">
+			<div
+				class="px-2 py-1 text-[0.65rem] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 whitespace-pre-wrap font-mono"
+			>
 				{kernelError}
 			</div>
 		{/if}
@@ -265,7 +284,9 @@
 						bind:value={editedSources[i]}
 						on:input={autoResize}
 						on:blur={() => cancelEditing(i)}
-						on:keydown={(e) => { if (e.key === 'Escape') cancelEditing(i); }}
+						on:keydown={(e) => {
+							if (e.key === 'Escape') cancelEditing(i);
+						}}
 					></textarea>
 				{:else}
 					<!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -290,8 +311,19 @@
 								disabled={runningCell !== null}
 								title="Run cell (⌘+Enter)"
 							>
-								<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-3">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke-width="2"
+									stroke="currentColor"
+									class="size-3"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
+									/>
 								</svg>
 							</button>
 						{/if}
@@ -308,7 +340,9 @@
 							<CellEditor
 								value={editedSources[i]}
 								{lang}
-								on:change={(e) => { editedSources[i] = e.detail; }}
+								on:change={(e) => {
+									editedSources[i] = e.detail;
+								}}
 								on:run={() => runCell(i)}
 								on:cancel={() => cancelEditing(i)}
 							/>
@@ -334,7 +368,9 @@
 							<div class="nb-outputs">
 								{#each cell.outputs as output}
 									{#if output.output_type === 'error'}
-										<pre class="nb-error">{stripAnsi((output.traceback ?? []).join('\n') || `${output.ename}: ${output.evalue}`)}</pre>
+										<pre class="nb-error">{stripAnsi(
+												(output.traceback ?? []).join('\n') || `${output.ename}: ${output.evalue}`
+											)}</pre>
 									{:else}
 										{@const html = getOutputHtml(output)}
 										{@const images = getOutputImages(output)}
@@ -401,10 +437,18 @@
 		padding-top: 0.5rem;
 		padding-bottom: 0.5rem;
 	}
-	.nb-markdown :global(h1) { font-size: 1.4rem; }
-	.nb-markdown :global(h2) { font-size: 1.2rem; }
-	.nb-markdown :global(h3) { font-size: 1.05rem; }
-	.nb-markdown :global(p) { margin: 0.4em 0; }
+	.nb-markdown :global(h1) {
+		font-size: 1.4rem;
+	}
+	.nb-markdown :global(h2) {
+		font-size: 1.2rem;
+	}
+	.nb-markdown :global(h3) {
+		font-size: 1.05rem;
+	}
+	.nb-markdown :global(p) {
+		margin: 0.4em 0;
+	}
 	.nb-markdown :global(pre) {
 		background: rgba(128, 128, 128, 0.06);
 		padding: 0.5rem 0.75rem;
@@ -495,7 +539,8 @@
 		background: #161b22;
 		color: #e6edf3;
 	}
-	.nb-code-textarea, .nb-edit-textarea {
+	.nb-code-textarea,
+	.nb-edit-textarea {
 		width: 100%;
 		padding: 0.5rem 0.75rem;
 		font-size: 0.75rem;

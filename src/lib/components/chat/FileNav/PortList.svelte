@@ -67,33 +67,33 @@
 		</svg>
 		{$i18n.t('Ports')}
 		<span class="ml-auto flex items-center gap-1">
-		{#if ports.length > 0}
-			<span
-				class="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
-			>
-				{ports.length}
-			</span>
-		{/if}
-		<Tooltip content={$i18n.t('Refresh')}>
-			<button
-				class="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
-				on:click|stopPropagation={loadPorts}
-				aria-label={$i18n.t('Refresh')}
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="size-3 {loading ? 'animate-spin' : ''}"
+			{#if ports.length > 0}
+				<span
+					class="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
 				>
-					<path
-						fill-rule="evenodd"
-						d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.451a.75.75 0 0 0 0-1.5H4.5a.75.75 0 0 0-.75.75v3.75a.75.75 0 0 0 1.5 0v-2.127l.13.13a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm-10.624-2.85a5.5 5.5 0 0 1 9.201-2.465l.312.31H11.75a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 .75-.75V3.42a.75.75 0 0 0-1.5 0v2.126l-.13-.129A7 7 0 0 0 3.239 8.555a.75.75 0 0 0 1.449.39Z"
-						clip-rule="evenodd"
-					/>
-				</svg>
-			</button>
-		</Tooltip>
+					{ports.length}
+				</span>
+			{/if}
+			<Tooltip content={$i18n.t('Refresh')}>
+				<button
+					class="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+					on:click|stopPropagation={loadPorts}
+					aria-label={$i18n.t('Refresh')}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 20 20"
+						fill="currentColor"
+						class="size-3 {loading ? 'animate-spin' : ''}"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.451a.75.75 0 0 0 0-1.5H4.5a.75.75 0 0 0-.75.75v3.75a.75.75 0 0 0 1.5 0v-2.127l.13.13a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm-10.624-2.85a5.5 5.5 0 0 1 9.201-2.465l.312.31H11.75a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 .75-.75V3.42a.75.75 0 0 0-1.5 0v2.126l-.13-.129A7 7 0 0 0 3.239 8.555a.75.75 0 0 0 1.449.39Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</button>
+			</Tooltip>
 		</span>
 	</button>
 
@@ -112,9 +112,7 @@
 						<span class="font-mono text-blue-500 dark:text-blue-400 shrink-0">
 							:{port.port}
 						</span>
-						<span
-							class="text-gray-500 dark:text-gray-400 truncate flex-1 text-left"
-						>
+						<span class="text-gray-500 dark:text-gray-400 truncate flex-1 text-left">
 							{port.process ?? ''}
 						</span>
 						<span

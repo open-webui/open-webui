@@ -1059,19 +1059,23 @@ async def update_rag_config(
     # None means "don't change", int means "set to this value"
     if form_data.FILE_MAX_SIZE is not None:
         request.app.state.config.FILE_MAX_SIZE = (
-            None if form_data.FILE_MAX_SIZE == '' else form_data.FILE_MAX_SIZE
+            None if form_data.FILE_MAX_SIZE == "" else form_data.FILE_MAX_SIZE
         )
     if form_data.FILE_MAX_COUNT is not None:
         request.app.state.config.FILE_MAX_COUNT = (
-            None if form_data.FILE_MAX_COUNT == '' else form_data.FILE_MAX_COUNT
+            None if form_data.FILE_MAX_COUNT == "" else form_data.FILE_MAX_COUNT
         )
     if form_data.FILE_IMAGE_COMPRESSION_WIDTH is not None:
         request.app.state.config.FILE_IMAGE_COMPRESSION_WIDTH = (
-            None if form_data.FILE_IMAGE_COMPRESSION_WIDTH == '' else form_data.FILE_IMAGE_COMPRESSION_WIDTH
+            None
+            if form_data.FILE_IMAGE_COMPRESSION_WIDTH == ""
+            else form_data.FILE_IMAGE_COMPRESSION_WIDTH
         )
     if form_data.FILE_IMAGE_COMPRESSION_HEIGHT is not None:
         request.app.state.config.FILE_IMAGE_COMPRESSION_HEIGHT = (
-            None if form_data.FILE_IMAGE_COMPRESSION_HEIGHT == '' else form_data.FILE_IMAGE_COMPRESSION_HEIGHT
+            None
+            if form_data.FILE_IMAGE_COMPRESSION_HEIGHT == ""
+            else form_data.FILE_IMAGE_COMPRESSION_HEIGHT
         )
 
     request.app.state.config.ALLOWED_FILE_EXTENSIONS = (

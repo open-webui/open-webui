@@ -333,9 +333,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
     # Batch-fetch all function valves in one query to avoid N+1 DB hits
     # inside get_action_priority (previously called per action × per model).
-    all_function_valves = Functions.get_function_valves_by_ids(
-        list(all_function_ids)
-    )
+    all_function_valves = Functions.get_function_valves_by_ids(list(all_function_ids))
 
     def get_action_priority(action_id):
         try:

@@ -186,4 +186,3 @@ export async function highlightCode(code: string, filePath: string): Promise<str
 		defaultColor: 'light'
 	});
 }
-

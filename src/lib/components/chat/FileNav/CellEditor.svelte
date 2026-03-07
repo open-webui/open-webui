@@ -28,22 +28,24 @@
 		const isDark = document.documentElement.classList.contains('dark');
 
 		const extensions = [
-			Prec.highest(keymap.of([
-				{
-					key: 'Mod-Enter',
-					run: () => {
-						dispatch('run');
-						return true;
+			Prec.highest(
+				keymap.of([
+					{
+						key: 'Mod-Enter',
+						run: () => {
+							dispatch('run');
+							return true;
+						}
+					},
+					{
+						key: 'Escape',
+						run: () => {
+							dispatch('cancel');
+							return true;
+						}
 					}
-				},
-				{
-					key: 'Escape',
-					run: () => {
-						dispatch('cancel');
-						return true;
-					}
-				}
-			])),
+				])
+			),
 			basicSetup,
 			keymap.of([indentWithTab]),
 			indentUnit.of('    '),
@@ -57,7 +59,10 @@
 			editorLanguage.of([]),
 			EditorView.theme({
 				'&': { fontSize: '0.75rem' },
-				'.cm-content': { padding: '0.35rem 0', fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace' },
+				'.cm-content': {
+					padding: '0.35rem 0',
+					fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace'
+				},
 				'.cm-gutters': { display: 'none' },
 				'.cm-focused': { outline: 'none' },
 				'.cm-scroller': { overflow: 'auto' }

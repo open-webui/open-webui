@@ -281,7 +281,7 @@
 <div
 	class="flex-1 {fileImageUrl !== null || (fileOfficeSlides !== null && fileOfficeSlides.length > 0)
 		? 'overflow-hidden'
-		: 'overflow-y-auto'} min-h-0 relative h-full"
+		: 'overflow-y-auto'} min-h-0 min-w-0 relative h-full"
 >
 	<!-- File preview -->
 	{#if fileLoading}
@@ -298,21 +298,13 @@
 	{:else if fileVideoUrl !== null}
 		<div class="w-full h-full flex items-center justify-center bg-black">
 			<!-- svelte-ignore a11y-media-has-caption -->
-			<video
-				src={fileVideoUrl}
-				controls
-				class="max-w-full max-h-full"
-			>
+			<video src={fileVideoUrl} controls class="max-w-full max-h-full">
 				{$i18n.t('Your browser does not support the video tag.')}
 			</video>
 		</div>
 	{:else if fileAudioUrl !== null}
 		<div class="w-full h-full flex items-center justify-center p-6">
-			<audio
-				src={fileAudioUrl}
-				controls
-				class="w-full max-w-md"
-			>
+			<audio src={fileAudioUrl} controls class="w-full max-w-md">
 				{$i18n.t('Your browser does not support the audio tag.')}
 			</audio>
 		</div>
@@ -326,13 +318,15 @@
 				{@html fileOfficeHtml}
 			</div>
 			{#if excelSheetNames.length > 1}
-				<div class="flex items-center gap-1 py-1.5 px-3 border-t border-gray-100 dark:border-gray-800 overflow-x-auto">
+				<div
+					class="flex items-center gap-1 py-1.5 px-3 border-t border-gray-100 dark:border-gray-800 overflow-x-auto"
+				>
 					{#each excelSheetNames as sheet}
 						<button
 							class="shrink-0 px-3 py-1 text-xs rounded-md transition-colors
 								{selectedExcelSheet === sheet
-									? 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium'
-									: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+								? 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium'
+								: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}"
 							on:click={() => onSheetChange?.(sheet)}
 						>
 							{sheet}
@@ -343,7 +337,10 @@
 		</div>
 	{:else if fileOfficeSlides !== null && fileOfficeSlides.length > 0}
 		<div class="flex flex-col h-full">
-			<div class="w-full flex-1 min-h-0 flex items-center justify-center overflow-hidden" use:initImagePanzoom>
+			<div
+				class="w-full flex-1 min-h-0 flex items-center justify-center overflow-hidden"
+				use:initImagePanzoom
+			>
 				<img
 					src={fileOfficeSlides[currentSlide]}
 					alt="Slide {currentSlide + 1}"
@@ -352,24 +349,50 @@
 				/>
 			</div>
 			{#if fileOfficeSlides.length > 1}
-				<div class="flex items-center justify-center gap-3 py-2 px-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500">
+				<div
+					class="flex items-center justify-center gap-3 py-2 px-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500"
+				>
 					<button
 						class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
 						disabled={currentSlide === 0}
-						on:click={() => { resetImageView(); currentSlide = Math.max(0, currentSlide - 1); }}
+						on:click={() => {
+							resetImageView();
+							currentSlide = Math.max(0, currentSlide - 1);
+						}}
 					>
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4">
-							<path fill-rule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" />
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							class="size-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z"
+								clip-rule="evenodd"
+							/>
 						</svg>
 					</button>
 					<span>{currentSlide + 1} / {fileOfficeSlides.length}</span>
 					<button
 						class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
 						disabled={currentSlide === fileOfficeSlides.length - 1}
-						on:click={() => { resetImageView(); currentSlide = Math.min(fileOfficeSlides.length - 1, currentSlide + 1); }}
+						on:click={() => {
+							resetImageView();
+							currentSlide = Math.min(fileOfficeSlides.length - 1, currentSlide + 1);
+						}}
 					>
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4">
-							<path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							class="size-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
+								clip-rule="evenodd"
+							/>
 						</svg>
 					</button>
 				</div>
@@ -402,8 +425,8 @@
 				{@html renderedHtml}
 			</div>
 		{:else if isCsv && !showRaw && csvRows.length > 0}
-			<div class="overflow-auto h-full px-3 pb-3">
-				<table class="csv-table w-full text-xs font-mono border-collapse">
+			<div class="absolute inset-0 overflow-auto px-3 pb-3">
+				<table class="csv-table text-xs font-mono border-collapse">
 					<thead>
 						<tr>
 							<th class="csv-row-num">#</th>
@@ -439,11 +462,15 @@
 		{:else if isJson && !showRaw && jsonError}
 			<div class="p-3 text-xs">
 				<div class="text-red-500 mb-2">JSON parse error: {jsonError}</div>
-				<pre class="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all leading-relaxed">{fileContent}</pre>
+				<pre
+					class="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all leading-relaxed">{fileContent}</pre>
 			</div>
 		{:else if isSvg && !showRaw && fileContent}
 			<div class="svg-preview w-full h-full flex items-center justify-center overflow-auto p-3">
-				{@html DOMPurify.sanitize(fileContent, { USE_PROFILES: { svg: true, svgFilters: true }, ADD_TAGS: ['use'] })}
+				{@html DOMPurify.sanitize(fileContent, {
+					USE_PROFILES: { svg: true, svgFilters: true },
+					ADD_TAGS: ['use']
+				})}
 			</div>
 		{:else if isCode && !showRaw}
 			<div class="h-full">
@@ -631,12 +658,29 @@
 		max-width: 100%;
 		height: auto;
 	}
-	:global(.office-preview h1) { font-size: 1.5rem; font-weight: 700; margin: 0.75em 0 0.5em; }
-	:global(.office-preview h2) { font-size: 1.25rem; font-weight: 600; margin: 0.75em 0 0.5em; }
-	:global(.office-preview h3) { font-size: 1.1rem; font-weight: 600; margin: 0.5em 0 0.25em; }
-	:global(.office-preview p) { margin: 0.25em 0; }
+	:global(.office-preview h1) {
+		font-size: 1.5rem;
+		font-weight: 700;
+		margin: 0.75em 0 0.5em;
+	}
+	:global(.office-preview h2) {
+		font-size: 1.25rem;
+		font-weight: 600;
+		margin: 0.75em 0 0.5em;
+	}
+	:global(.office-preview h3) {
+		font-size: 1.1rem;
+		font-weight: 600;
+		margin: 0.5em 0 0.25em;
+	}
+	:global(.office-preview p) {
+		margin: 0.25em 0;
+	}
 	:global(.office-preview ul),
-	:global(.office-preview ol) { padding-left: 1.5em; margin: 0.5em 0; }
+	:global(.office-preview ol) {
+		padding-left: 1.5em;
+		margin: 0.5em 0;
+	}
 	/* ── Shiki code highlighting ─────────────────────────────────── */
 	.shiki-preview :global(pre.shiki) {
 		margin: 0;
@@ -679,4 +723,3 @@
 		text-decoration: var(--shiki-dark-text-decoration) !important;
 	}
 </style>
-

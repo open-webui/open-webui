@@ -325,13 +325,10 @@ class FunctionsTable:
                     .filter(Function.id.in_(ids))
                     .all()
                 )
-                return {
-                    f.id: (f.valves if f.valves else {}) for f in functions
-                }
+                return {f.id: (f.valves if f.valves else {}) for f in functions}
         except Exception as e:
             log.exception(f"Error batch-fetching function valves: {e}")
             return {}
-
 
     def update_function_valves_by_id(
         self, id: str, valves: dict, db: Optional[Session] = None

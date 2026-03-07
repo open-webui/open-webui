@@ -275,7 +275,6 @@ export const canvasPixelTest = () => {
 	return true;
 };
 
-
 let resizeImageWarmupDone = false;
 /**
  * Draws an image to a canvas at the given dimensions and returns a data URL.
@@ -285,7 +284,7 @@ async function resizeImageToDataURL(
 	img: HTMLImageElement,
 	width: number,
 	height: number,
-	mimeType = 'image/jpeg',
+	mimeType = 'image/jpeg'
 ): Promise<string> {
 	const canvas = document.createElement('canvas');
 	canvas.width = width;
@@ -294,22 +293,23 @@ async function resizeImageToDataURL(
 
 	const toDataURL = () => canvas.toDataURL(mimeType);
 
-	if (!resizeImageWarmupDone && canvas.toBlob && /android|iphone|ipad|ipod/i.test(navigator?.userAgent)) {
+	if (
+		!resizeImageWarmupDone &&
+		canvas.toBlob &&
+		/android|iphone|ipad|ipod/i.test(navigator?.userAgent)
+	) {
 		resizeImageWarmupDone = true;
 		return new Promise((resolve) => {
-			canvas.toBlob(
-				(blob) => {
-					if (!blob) {
-						resolve(toDataURL());
-						return;
-					}
-					const reader = new FileReader();
-					reader.onload = () => resolve(String(reader.result));
-					reader.onerror = () => resolve(toDataURL());
-					reader.readAsDataURL(blob);
-				},
-				mimeType,
-			);
+			canvas.toBlob((blob) => {
+				if (!blob) {
+					resolve(toDataURL());
+					return;
+				}
+				const reader = new FileReader();
+				reader.onload = () => resolve(String(reader.result));
+				reader.onerror = () => resolve(toDataURL());
+				reader.readAsDataURL(blob);
+			}, mimeType);
 		});
 	}
 	return Promise.resolve(toDataURL());
@@ -393,9 +393,9 @@ export const generateInitialsImage = (name) => {
 	const initials =
 		sanitizedName.length > 0
 			? sanitizedName[0] +
-			(sanitizedName.split(' ').length > 1
-				? sanitizedName[sanitizedName.lastIndexOf(' ') + 1]
-				: '')
+				(sanitizedName.split(' ').length > 1
+					? sanitizedName[sanitizedName.lastIndexOf(' ') + 1]
+					: '')
 			: '';
 
 	ctx.fillText(initials.toUpperCase(), canvas.width / 2, canvas.height / 2);
@@ -551,10 +551,10 @@ export const compareVersion = (latest, current) => {
 	return current === '0.0.0'
 		? false
 		: current.localeCompare(latest, undefined, {
-			numeric: true,
-			sensitivity: 'case',
-			caseFirst: 'upper'
-		}) < 0;
+				numeric: true,
+				sensitivity: 'case',
+				caseFirst: 'upper'
+			}) < 0;
 };
 
 export const extractCurlyBraceWords = (text) => {

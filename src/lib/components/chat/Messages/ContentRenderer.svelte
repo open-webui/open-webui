@@ -205,7 +205,7 @@
 			? model?.id
 			: (selectedModels ?? []).length > 0
 				? selectedModels.at(0)
-				: model?.id ?? null}
+				: (model?.id ?? null)}
 		messages={createMessagesList(history, messageId)}
 		onAdd={({ modelId, parentId, messages }) => {
 			console.log(modelId, parentId, messages);

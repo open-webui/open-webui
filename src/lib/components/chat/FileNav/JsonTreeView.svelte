@@ -39,7 +39,13 @@
 			<div class="json-children">
 				{#each entries as [k, v], i}
 					<div class="json-entry">
-						<svelte:self data={v} key={type === 'array' ? null : k} root={false} depth={depth + 1} {expandDepth} />
+						<svelte:self
+							data={v}
+							key={type === 'array' ? null : k}
+							root={false}
+							depth={depth + 1}
+							{expandDepth}
+						/>
 						{#if i < entries.length - 1}<span class="json-comma">,</span>{/if}
 					</div>
 				{/each}
