@@ -59,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📷 **Android photo capture.** Fixed an issue where the first photo taken in chat appeared completely black on some Android devices by using an alternative canvas export method. [#22317](https://github.com/open-webui/open-webui/pull/22317)
 - 🖥️ **Open Terminal Windows path fix.** Fixed a bug where navigating back to parent directories on Windows added an incorrect leading slash, causing directory loads to fail. Paths are now properly normalized for Windows drive letters. [#22352](https://github.com/open-webui/open-webui/issues/22352), [Commit](https://github.com/open-webui/open-webui/commit/044fd1bd15cae06a5c56a321ca79d8362942f66a)
 - 🖼️ **Chat overview profile image sizing.** Fixed a bug where profile images in the chat overview could shrink incorrectly in tight spaces. The images now maintain their proper size with the flex-shrink-0 property. [#22261](https://github.com/open-webui/open-webui/pull/22261)
+- 💬 **Queued messages display.** Fixed an issue where queued messages could be cut off or hidden. The queued messages area now scrolls properly when content exceeds the visible area, showing up to 25% of the viewport height. [#22176](https://github.com/open-webui/open-webui/pull/22176)
 
 ### Changed
 
