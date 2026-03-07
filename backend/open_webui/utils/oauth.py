@@ -36,6 +36,7 @@ from open_webui.models.groups import Groups, GroupModel, GroupUpdateForm, GroupF
 from open_webui.config import (
     DEFAULT_USER_ROLE,
     ENABLE_OAUTH_SIGNUP,
+    OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE,
     OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
     OAUTH_PROVIDERS,
     ENABLE_OAUTH_ROLE_MANAGEMENT,
@@ -791,7 +792,7 @@ class OAuthClientManager:
             if (
                 hasattr(client, "client_kwargs")
                 and client.client_kwargs.get("scope")
-                and auth_manager_config.OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE
+                and OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE
             ):
                 refresh_data["scope"] = client.client_kwargs["scope"]
 
@@ -1093,7 +1094,7 @@ class OAuthManager:
             if (
                 hasattr(client, "client_kwargs")
                 and client.client_kwargs.get("scope")
-                and auth_manager_config.OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE
+                and OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE
             ):
                 refresh_data["scope"] = client.client_kwargs["scope"]
 
