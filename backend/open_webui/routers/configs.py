@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Request, HTTPException
 from pydantic import BaseModel, ConfigDict
 import aiohttp
 
-from typing import Optional
+from typing import Optional, Literal
 
 from open_webui.env import AIOHTTP_CLIENT_TIMEOUT
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -24,6 +24,7 @@ from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.utils.oauth import (
     get_discovery_urls,
     get_oauth_client_info_with_dynamic_client_registration,
+    get_oauth_client_info_with_static_client_registration,
     encrypt_data,
     decrypt_data,
     OAuthClientInformationFull,
@@ -101,6 +102,9 @@ class OAuthClientRegistrationForm(BaseModel):
     url: str
     client_id: str
     client_name: Optional[str] = None
+    registration_type: Optional[Literal["dynamic", "static"]] = "dynamic"
+    oauth_client_id: Optional[str] = None
+    oauth_client_secret: Optional[str] = None
 
 
 @router.post("/oauth/clients/register")
@@ -115,11 +119,28 @@ async def register_oauth_client(
         if type:
             oauth_client_id = f"{type}:{form_data.client_id}"
 
-        oauth_client_info = (
-            await get_oauth_client_info_with_dynamic_client_registration(
-                request, oauth_client_id, form_data.url
+        oauth_client_info = None
+        if form_data.registration_type == "static":
+            if not form_data.oauth_client_id or not form_data.oauth_client_secret:
+                raise HTTPException(
+                    status_code=400,
+                    detail="oauth_client_id and oauth_client_secret are required for static registration",
+                )
+
+            oauth_client_info = await get_oauth_client_info_with_static_client_registration(
+                request,
+                oauth_client_id,
+                form_data.url,
+                form_data.oauth_client_id,
+                form_data.oauth_client_secret,
             )
-        )
+        else:
+            oauth_client_info = (
+                await get_oauth_client_info_with_dynamic_client_registration(
+                    request, oauth_client_id, form_data.url
+                )
+            )
+
         return {
             "status": True,
             "oauth_client_info": encrypt_data(
@@ -172,7 +193,7 @@ async def set_tool_servers_config(
         server_type = connection.get("type", "openapi")
         auth_type = connection.get("auth_type", "none")
 
-        if auth_type == "oauth_2.1":
+        if auth_type in ["oauth_2.1", "oauth_2.1_static"]:
             # Remove existing OAuth clients for tool servers
             server_id = connection.get("info", {}).get("id")
             client_key = f"{server_type}:{server_id}"
@@ -195,7 +216,7 @@ async def set_tool_servers_config(
             server_id = connection.get("info", {}).get("id")
             auth_type = connection.get("auth_type", "none")
 
-            if auth_type == "oauth_2.1" and server_id:
+            if auth_type in ["oauth_2.1", "oauth_2.1_static"] and server_id:
                 try:
                     oauth_client_info = connection.get("info", {}).get(
                         "oauth_client_info", ""
@@ -269,7 +290,7 @@ async def verify_tool_servers_config(
     """
     try:
         if form_data.type == "mcp":
-            if form_data.auth_type == "oauth_2.1":
+            if form_data.auth_type in ["oauth_2.1", "oauth_2.1_static"]:
                 discovery_urls = await get_discovery_urls(form_data.url)
                 for discovery_url in discovery_urls:
                     log.debug(
