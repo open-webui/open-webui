@@ -272,7 +272,7 @@ JSON format: { "title": "your concise title here" }
 ${content}
 </content>`;
 
-		const oldTitle = JSON.parse(JSON.stringify(note.title));
+		const oldTitle = note.title;
 		note.title = '';
 		titleGenerating = true;
 
