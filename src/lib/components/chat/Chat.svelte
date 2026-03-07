@@ -2009,6 +2009,17 @@
 		return features;
 	};
 
+	const getStopTokens = () => {
+		const stop = params?.stop ?? $settings?.params?.stop;
+		if (!stop) return undefined;
+
+		const tokens = Array.isArray(stop) ? stop : stop.split(',').map((s) => s.trim());
+
+		return tokens
+			.filter(Boolean)
+			.map((token) => decodeURIComponent(JSON.parse(`"${token.replace(/"/g, '\\"')}"`)));
+	};
+
 	const sendMessageSocket = async (model, _messages, _history, responseMessageId, _chatId) => {
 		const responseMessage = _history.messages[responseMessageId];
 		const userMessage = _history.messages[responseMessage.parentId];
@@ -2170,12 +2181,7 @@
 				params: {
 					...$settings?.params,
 					...params,
-					stop:
-						(params?.stop ?? $settings?.params?.stop ?? undefined)
-							? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(
-									(str) => decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
-								)
-							: undefined
+					stop: getStopTokens()
 				},
 
 				files: (files?.length ?? 0) > 0 ? files : undefined,
