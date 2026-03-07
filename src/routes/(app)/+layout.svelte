@@ -310,6 +310,10 @@
 					console.log('Shortcut triggered: REGENERATE_RESPONSE');
 					event.preventDefault();
 					[...document.getElementsByClassName('regenerate-response-button')]?.at(-1)?.click();
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.EDIT_LAST_MESSAGE])) {
+					console.log('Shortcut triggered: EDIT_LAST_MESSAGE');
+					event.preventDefault();
+					[...document.getElementsByClassName('edit-user-message-button')]?.at(-1)?.click();
 				}
 			});
 		};

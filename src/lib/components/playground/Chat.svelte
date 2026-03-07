@@ -6,7 +6,7 @@
 	import { DropdownMenu } from 'bits-ui';
 
 	import { goto } from '$app/navigation';
-	import { onMount, tick, getContext } from 'svelte';
+	import { onMount, tick, getContext, onDestroy } from 'svelte';
 
 	import {
 		OLLAMA_API_BASE_URL,
@@ -16,6 +16,7 @@
 	} from '$lib/constants';
 	import { WEBUI_NAME, config, user, models, settings } from '$lib/stores';
 	import { flyAndScale } from '$lib/utils/transitions';
+	import { Shortcut, shortcuts } from '$lib/shortcuts';
 
 	import { chatCompletion } from '$lib/apis/openai';
 
@@ -302,6 +303,58 @@
 			selectedModelId = '';
 		}
 		loaded = true;
+	});
+
+	// Helper function to check if the pressed keys match the shortcut definition
+	const isShortcutMatch = (event: KeyboardEvent, shortcut): boolean => {
+		const keys = shortcut?.keys || [];
+
+		const normalized = keys.map((k) => k.toLowerCase());
+		const needCtrl = normalized.includes('ctrl') || normalized.includes('mod');
+		const needShift = normalized.includes('shift');
+		const needAlt = normalized.includes('alt');
+
+		const mainKeys = normalized.filter((k) => !['ctrl', 'shift', 'alt', 'mod'].includes(k));
+
+		// Get the main key pressed
+		const keyPressed = event.key.toLowerCase();
+
+		// Check modifiers
+		if (needShift && !event.shiftKey) return false;
+
+		if (needCtrl && !(event.ctrlKey || event.metaKey)) return false;
+		if (!needCtrl && (event.ctrlKey || event.metaKey)) return false;
+		if (needAlt && !event.altKey) return false;
+		if (!needAlt && event.altKey) return false;
+
+		if (mainKeys.length && !mainKeys.includes(keyPressed)) return false;
+
+		return true;
+	};
+
+	const handleKeyboardShortcuts = async (event: KeyboardEvent) => {
+		// Only handle shortcuts when not loading
+		if (loading) return;
+
+		if (isShortcutMatch(event, shortcuts[Shortcut.PLAYGROUND_SUBMIT])) {
+			event.preventDefault();
+			await submitHandler();
+		} else if (isShortcutMatch(event, shortcuts[Shortcut.PLAYGROUND_ADD_MESSAGE])) {
+			event.preventDefault();
+			await addHandler();
+			role = role === 'user' ? 'assistant' : 'user';
+		} else if (isShortcutMatch(event, shortcuts[Shortcut.PLAYGROUND_TOGGLE_ROLE])) {
+			event.preventDefault();
+			role = role === 'user' ? 'assistant' : 'user';
+		}
+	};
+
+	onMount(() => {
+		document.addEventListener('keydown', handleKeyboardShortcuts);
+	});
+
+	onDestroy(() => {
+		document.removeEventListener('keydown', handleKeyboardShortcuts);
 	});
 </script>
 
