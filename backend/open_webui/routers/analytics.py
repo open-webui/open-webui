@@ -86,7 +86,7 @@ async def get_user_analytics(
         start_date=start_date, end_date=end_date, group_id=group_id, db=db
     )
     token_usage = ChatMessages.get_token_usage_by_user(
-        start_date=start_date, end_date=end_date, db=db
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
     )
 
     # Get user info for top users
