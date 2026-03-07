@@ -114,9 +114,25 @@
 	import { Fragment, DOMParser } from 'prosemirror-model';
 	import { EditorState, Plugin, PluginKey, TextSelection, Selection } from 'prosemirror-state';
 	import { Decoration, DecorationSet } from 'prosemirror-view';
-	import { Editor, Extension, mergeAttributes } from '@tiptap/core';
+	import { Editor, Extension, markInputRule, mergeAttributes } from '@tiptap/core';
+	import { Code } from '@tiptap/extension-code';
 
 	import { AIAutocompletion } from './RichTextInput/AutoCompletion.js';
+
+	// Fix: TipTap's default Code input rule regex captures the character before the
+	// opening backtick, causing markInputRule to delete it. Using a lookbehind avoids
+	// including that character in the match range. See: #20417
+	const codeInputRegex = /(?<=[^`]|^)`([^`]+)`(?!`)$/;
+	const FixedCode = Code.extend({
+		addInputRules() {
+			return [
+				markInputRule({
+					find: codeInputRegex,
+					type: this.type
+				})
+			];
+		}
+	});
 
 	import StarterKit from '@tiptap/starter-kit';
 
@@ -692,12 +708,16 @@
 			extensions: [
 				StarterKit.configure({
 					link: link,
+					// Disable default Code mark; we add FixedCode below with a corrected
+					// input rule that doesn't eat the preceding character (#20417).
+					code: false,
 					// When rich text is off, disable Strike from StarterKit so we can
 					// re-add it below without its Mod-Shift-s shortcut (which conflicts
 					// with the Toggle Sidebar shortcut). When rich text is on, the user
 					// can undo strikethrough via the toolbar, so the shortcut is fine.
 					...(richText ? {} : { strike: false })
 				}),
+				FixedCode,
 				...(dragHandle ? [ListItemDragHandle] : []),
 				Placeholder.configure({ placeholder: () => _placeholder, showOnlyWhenEditable: false }),
 				SelectionDecoration,
