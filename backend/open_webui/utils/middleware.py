@@ -173,12 +173,21 @@ def get_citation_source_from_tool_result(
 
     Returns a list of sources (usually one, but query_knowledge_files may return multiple).
     """
+    _EXPECTS_LIST = {"search_web", "query_knowledge_files"}
+    _EXPECTS_DICT = {"view_knowledge_file"}
+
     try:
         try:
             tool_result = json.loads(tool_result)
         except (json.JSONDecodeError, TypeError):
             pass  # keep tool_result as-is (e.g. fetch_url returns plain text)
         if isinstance(tool_result, dict) and "error" in tool_result:
+            return []
+
+        # Validate tool_result type based on what the branch expects
+        if tool_name in _EXPECTS_LIST and not isinstance(tool_result, list):
+            return []
+        elif tool_name in _EXPECTS_DICT and not isinstance(tool_result, dict):
             return []
 
         if tool_name == "search_web":
