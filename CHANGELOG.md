@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.9] - 2026-03-07
+## [0.8.9] - 2026-03-09
 
 ### Added
 
@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔧 **Parameterless tool calls.** Fixed parameterless tool calls failing during streaming by correcting the default arguments initialization, eliminating unnecessary model retries. [#22189](https://github.com/open-webui/open-webui/pull/22189)
 - 🧠 **Artifacts memory leak.** Fixed a memory leak where Svelte store subscriptions in the Artifacts component were not properly cleaned up when the component unmounted, causing memory to accumulate over time. [#22303](https://github.com/open-webui/open-webui/pull/22303)
 - ♾️ **Artifacts reactive loop fix.** Fixed an infinite reactive loop in chat when artifacts are present by moving the animation frame logic outside the reactive block, preventing continuous re-rendering and CPU usage. [#22238](https://github.com/open-webui/open-webui/pull/22238), [Commit](https://github.com/open-webui/open-webui/commit/626fcff417afba642f4f71e0498267a21435c524)
+- 🔀 **Artifact navigation.** Artifact navigation via arrow buttons now works correctly; the selected artifact is no longer reset when content updates. [#22239](https://github.com/open-webui/open-webui/pull/22239)
 - 💬 **Floating Quick Actions availability.** Fixed an issue where the "Ask" and "Explain" Floating Quick Actions were missing when selecting text in chats that used a model that is no longer available. [#22149](https://github.com/open-webui/open-webui/pull/22149), [#22139](https://github.com/open-webui/open-webui/issues/22139)
 - 💬 **Follow-up suggestions.** Fixed follow-up suggestions not appearing by correcting contradictory format instructions in the prompt template, ensuring the LLM returns the correct JSON object format. [#22212](https://github.com/open-webui/open-webui/pull/22212)
 - 🔊 **TTS thinking content.** Fixed TTS playback reading think tags instead of skipping them by handling edge cases where code blocks inside thinking content prevented proper tag removal. [#22237](https://github.com/open-webui/open-webui/pull/22237), [#22197](https://github.com/open-webui/open-webui/issues/22197)
