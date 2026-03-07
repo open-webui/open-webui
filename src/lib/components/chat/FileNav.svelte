@@ -177,7 +177,8 @@
 				const config = await getTerminalConfig(terminal.url, terminal.key);
 				terminalEnabled = config?.features?.terminal !== false;
 
-				const cwd = await getCwd(terminal.url, terminal.key);
+				const rawCwd = await getCwd(terminal.url, terminal.key);
+				const cwd = rawCwd ? normalizePath(rawCwd) : null;
 				const dir = cwd ? (cwd.endsWith('/') ? cwd : cwd + '/') : '/';
 				savedPath = dir;
 				loadDir(dir);
@@ -197,18 +198,22 @@
 	const isPdf = (path: string) => path.split('.').pop()?.toLowerCase() === 'pdf';
 	const isOffice = (path: string) => OFFICE_EXTS.has(path.split('.').pop()?.toLowerCase() ?? '');
 
-	const buildBreadcrumbs = (path: string) =>
-		path
-			.split('/')
-			.filter(Boolean)
-			.reduce(
-				(acc, part) => {
-					const prev = acc[acc.length - 1];
-					acc.push({ label: part, path: `${prev.path}${part}/` });
-					return acc;
-				},
-				[{ label: '/', path: '/' }]
-			);
+	/** Normalize Windows backslashes to forward slashes. */
+	const normalizePath = (p: string) => p.replace(/\\/g, '/');
+
+	const buildBreadcrumbs = (path: string) => {
+		const parts = path.split('/').filter(Boolean);
+		const isDrive = /^[A-Za-z]:$/.test(parts[0] ?? '');
+		const root = isDrive ? { label: parts[0], path: `${parts[0]}/` } : { label: '/', path: '/' };
+		return (isDrive ? parts.slice(1) : parts).reduce(
+			(acc, part) => {
+				const prev = acc[acc.length - 1];
+				acc.push({ label: part, path: `${prev.path}${part}/` });
+				return acc;
+			},
+			[root]
+		);
+	};
 
 	// ── File preview management ──────────────────────────────────────────
 	const clearFilePreview = () => {
@@ -486,6 +491,7 @@
 			if (!filePath || !selectedTerminal) return;
 			handledDisplayFile = true;
 			showFileNavPath.set(null);
+			filePath = normalizePath(filePath);
 
 			const lastSlash = filePath.lastIndexOf('/');
 			const dir = lastSlash > 0 ? filePath.substring(0, lastSlash + 1) : '/';
@@ -507,6 +513,7 @@
 		const unsubFileNavDir = showFileNavDir.subscribe(async (filePath) => {
 			if (!filePath || !selectedTerminal) return;
 			showFileNavDir.set(null);
+			filePath = normalizePath(filePath);
 
 			const lastSlash = filePath.lastIndexOf('/');
 			const dir = lastSlash > 0 ? filePath.substring(0, lastSlash + 1) : '/';
@@ -525,7 +532,8 @@
 
 		if (!handledDisplayFile) {
 			if (savedPath === '/') {
-				const cwd = await getCwd(terminal.url, terminal.key);
+				const rawCwd = await getCwd(terminal.url, terminal.key);
+				const cwd = rawCwd ? normalizePath(rawCwd) : null;
 				if (cwd) savedPath = cwd.endsWith('/') ? cwd : cwd + '/';
 			}
 			loadDir(savedPath);
