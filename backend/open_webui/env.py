@@ -839,6 +839,15 @@ AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL = (
     os.environ.get("AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL", "True").lower() == "true"
 )
 
+MCP_TOOL_SPECS_CACHE_TTL = os.environ.get("MCP_TOOL_SPECS_CACHE_TTL", "259200")
+if MCP_TOOL_SPECS_CACHE_TTL == "":
+    MCP_TOOL_SPECS_CACHE_TTL = None
+else:
+    try:
+        MCP_TOOL_SPECS_CACHE_TTL = int(MCP_TOOL_SPECS_CACHE_TTL)
+    except Exception:
+        MCP_TOOL_SPECS_CACHE_TTL = 259200  # 72 hours
+
 
 RAG_EMBEDDING_TIMEOUT = os.environ.get("RAG_EMBEDDING_TIMEOUT", "")
 

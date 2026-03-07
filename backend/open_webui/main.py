@@ -1911,10 +1911,12 @@ async def chat_completion(
             try:
                 if mcp_clients := metadata.get("mcp_clients"):
                     for client in reversed(mcp_clients.values()):
-                        await client.disconnect()
+                        try:
+                            await client.disconnect()
+                        except Exception as e:
+                            log.debug(f"Error disconnecting MCP client: {e}")
             except Exception as e:
                 log.debug(f"Error cleaning up: {e}")
-                pass
             # Emit chat:active=false when task completes
             try:
                 if metadata.get("chat_id"):

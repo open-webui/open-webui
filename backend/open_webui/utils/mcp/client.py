@@ -133,7 +133,9 @@ class MCPClient:
 
     async def disconnect(self):
         # Clean up and close the session
-        await self.exit_stack.aclose()
+        if self.exit_stack is not None:
+            await self.exit_stack.aclose()
+            self.exit_stack = None
 
     async def __aenter__(self):
         await self.exit_stack.__aenter__()
