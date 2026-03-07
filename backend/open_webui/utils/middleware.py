@@ -3093,8 +3093,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                     )
 
                     # Save message in the database
-                    raw_usage = response_data.get("usage", {}) or {}
-                    usage = normalize_usage(raw_usage) if raw_usage else None
+                    usage = normalize_usage(response_data.get("usage", {}) or {})
 
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
@@ -4468,7 +4467,8 @@ async def streaming_chat_response_handler(response, ctx):
                                 code = sanitize_code(code)
 
                                 if CODE_INTERPRETER_BLOCKED_MODULES:
-                                    blocking_code = textwrap.dedent(f"""
+                                    blocking_code = textwrap.dedent(
+                                        f"""
                                         import builtins
     
                                         BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
@@ -4484,7 +4484,8 @@ async def streaming_chat_response_handler(response, ctx):
                                             return _real_import(name, globals, locals, fromlist, level)
     
                                         builtins.__import__ = restricted_import
-                                    """)
+                                    """
+                                    )
                                     code = blocking_code + "\n" + code
 
                                 if (
