@@ -787,6 +787,12 @@ class OAuthClientManager:
             if hasattr(client, "client_secret") and client.client_secret:
                 refresh_data["client_secret"] = client.client_secret
 
+            # Add scope if available in client kwargs (some providers require it on refresh)
+            if hasattr(client, "client_kwargs") and client.client_kwargs.get(
+                "scope", ""
+            ):
+                refresh_data["scope"] = client.client_kwargs["scope"]
+
             # Make refresh request
             async with aiohttp.ClientSession(trust_env=True) as session_http:
                 async with session_http.post(
@@ -1080,6 +1086,12 @@ class OAuthManager:
             # Add client_secret if available (some providers require it)
             if hasattr(client, "client_secret") and client.client_secret:
                 refresh_data["client_secret"] = client.client_secret
+
+            # Add scope if available in client kwargs (some providers require it on refresh)
+            if hasattr(client, "client_kwargs") and client.client_kwargs.get(
+                "scope", ""
+            ):
+                refresh_data["scope"] = client.client_kwargs["scope"]
 
             # Make refresh request
             async with aiohttp.ClientSession(trust_env=True) as session_http:
