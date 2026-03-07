@@ -830,27 +830,24 @@ def handle_responses_streaming_event(
         return current_output, None
 
 
-def apply_source_context_to_messages(
-    request: Request,
-    messages: list,
+def build_source_context_string(
     sources: list,
-    user_message: str,
     include_content: bool = True,
-) -> list:
+    citation_idx: dict | None = None,
+) -> str:
     """
-    Build source context from citation sources and apply to messages.
-    Uses RAG template to format context for model consumption.
+    Build <source> tag context string from citation sources.
 
-    When include_content is False, emit <source> tags with id/name but no
-    document body — useful when the content is already present elsewhere
-    (e.g. in a tool result message) and only citation markers are needed.
+    Args:
+        sources: List of source dicts with 'document', 'metadata', and 'source' keys.
+        include_content: Whether to include document body inside <source> tags.
+        citation_idx: Shared citation index dict for consistent numbering across
+                      multiple calls. Mutated in-place. Created if None.
     """
-    if not sources or not user_message:
-        return messages
+    if citation_idx is None:
+        citation_idx = {}
 
     context_string = ""
-    citation_idx = {}
-
     for source in sources:
         for doc, meta in zip(source.get("document", []), source.get("metadata", [])):
             src_id = meta.get("source") or source.get("source", {}).get("id") or "N/A"
@@ -863,6 +860,37 @@ def apply_source_context_to_messages(
                 + (f' name="{src_name}"' if src_name else "")
                 + f">{body}</source>\n"
             )
+    return context_string
+
+
+def apply_source_context_to_messages(
+    request: Request,
+    messages: list,
+    sources: list,
+    user_message: str,
+    include_content: bool = True,
+    context_string: str | None = None,
+) -> list:
+    """
+    Build source context from citation sources and apply to messages.
+    Uses RAG template to format context for model consumption.
+
+    When include_content is False, emit <source> tags with id/name but no
+    document body — useful when the content is already present elsewhere
+    (e.g. in a tool result message) and only citation markers are needed.
+
+    If context_string is provided, it is used directly instead of building
+    from sources. This allows callers to merge multiple source groups
+    (e.g. file sources with content + tool sources without) into a single
+    RAG template application.
+    """
+    if not user_message:
+        return messages
+
+    if context_string is None:
+        if not sources:
+            return messages
+        context_string = build_source_context_string(sources, include_content)
 
     context_string = context_string.strip()
     if not context_string:
@@ -2657,6 +2685,19 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # If context is not empty, insert it into the messages
     if sources and prompt:
+        # Save pre-RAG-injection state so the native FC streaming handler
+        # can restore the original messages before merging file + tool
+        # sources into a single RAG template application (prevents
+        # duplicate RAG prompt injection).
+        metadata["_pre_rag_user_message"] = get_last_user_message(
+            form_data["messages"]
+        )
+        _sys_msg = get_system_message(form_data["messages"])
+        metadata["_pre_rag_system_content"] = (
+            get_content_from_message(_sys_msg) if _sys_msg else None
+        )
+        metadata["_file_sources"] = sources[:]
+
         form_data["messages"] = apply_source_context_to_messages(
             request, form_data["messages"], sources, prompt
         )
@@ -4099,23 +4140,33 @@ async def streaming_chat_response_handler(response, ctx):
                 tool_call_retries = 0
                 tool_call_sources = []  # Track citation sources from tool results
                 all_tool_call_sources = []  # Accumulated sources across all iterations
-                user_message = get_last_user_message(form_data["messages"])
+                # Use pre-RAG-injection user message if available.
+                # process_chat_payload saves it before the first
+                # apply_source_context_to_messages call so we can
+                # restore to the true original (not one that already
+                # has the file-upload RAG template baked in).
+                user_message = metadata.get(
+                    "_pre_rag_user_message"
+                ) or get_last_user_message(form_data["messages"])
 
                 # Check if citations are enabled for this model
                 citations_enabled = (
                     model.get("info", {}).get("meta", {}).get("capabilities") or {}
                 ).get("citations", True)
 
-                # Save original system message so we can restore it before
-                # re-applying source context (prevents duplication when
-                # RAG_SYSTEM_CONTEXT is enabled and the template is appended
-                # to the system message on each iteration).
-                original_system_message = get_system_message(form_data["messages"])
-                original_system_content = (
-                    get_content_from_message(original_system_message)
-                    if original_system_message
-                    else None
-                )
+                # Use pre-RAG-injection system content if available
+                # (same reasoning as user_message above).
+                if "_pre_rag_system_content" in metadata:
+                    original_system_content = metadata["_pre_rag_system_content"]
+                else:
+                    original_system_message = get_system_message(
+                        form_data["messages"]
+                    )
+                    original_system_content = (
+                        get_content_from_message(original_system_message)
+                        if original_system_message
+                        else None
+                    )
 
                 while (
                     len(tool_calls) > 0
@@ -4369,8 +4420,9 @@ async def streaming_chat_response_handler(response, ctx):
                             await event_emitter({"type": "source", "data": source})
 
                         # Apply source context to messages for model.
-                        # Use include_content=False to avoid duplicating content
-                        # that is already in the tool result message.
+                        # Merge file sources (with content) and tool sources
+                        # (without content) into a single RAG template to
+                        # avoid duplicate prompt injection.
                         all_tool_call_sources.extend(tool_call_sources)
                         if all_tool_call_sources and user_message:
                             # Restore original messages before re-applying to
@@ -4384,12 +4436,29 @@ async def streaming_chat_response_handler(response, ctx):
                                     original_system_content,
                                     form_data["messages"],
                                 )
+
+                            # Build a single merged context string:
+                            # - file sources keep their document body
+                            # - tool sources omit it (already in tool result)
+                            citation_idx = {}
+                            file_sources = metadata.get("_file_sources", [])
+                            merged_ctx = build_source_context_string(
+                                file_sources,
+                                include_content=True,
+                                citation_idx=citation_idx,
+                            )
+                            merged_ctx += build_source_context_string(
+                                all_tool_call_sources,
+                                include_content=False,
+                                citation_idx=citation_idx,
+                            )
+
                             form_data["messages"] = apply_source_context_to_messages(
                                 request,
                                 form_data["messages"],
-                                all_tool_call_sources,
+                                [],
                                 user_message,
-                                include_content=False,
+                                context_string=merged_ctx,
                             )
                         tool_call_sources.clear()
 
