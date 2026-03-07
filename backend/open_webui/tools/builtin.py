@@ -2093,3 +2093,164 @@ async def view_skill(
     except Exception as e:
         log.exception(f"view_skill error: {e}")
         return json.dumps({"error": str(e)})
+
+
+# =============================================================================
+# TERMINAL TOOLS
+# =============================================================================
+
+
+async def upload_file_to_terminal(
+    file_name: str,
+    __request__: Request = None,
+    __user__: dict = None,
+    __metadata__: dict = None,
+) -> str:
+    """
+    Upload a file from the current chat to the connected Open Terminal server's
+    working directory. The file must have been uploaded by the user in this chat.
+
+    :param file_name: The name of the file to upload (as shown in the chat)
+    :return: JSON with the upload result including the path on the terminal server
+    """
+    if __request__ is None:
+        return json.dumps({"error": "Request context not available"})
+
+    if not __user__:
+        return json.dumps({"error": "User context not available"})
+
+    metadata = __metadata__ or {}
+    terminal_id = metadata.get("terminal_id")
+    if not terminal_id:
+        return json.dumps({"error": "No terminal server connected to this chat"})
+
+    # Coerce file_name from LLM (may arrive oddly formatted)
+    if isinstance(file_name, str):
+        file_name = file_name.strip()
+
+    try:
+        from open_webui.models.files import Files
+        from open_webui.storage.provider import Storage
+
+        # --- 1. Find the file in chat-attached files ---
+        files = metadata.get("files", [])
+        matched_file = None
+        for f in files:
+            name = f.get("name") or f.get("filename") or ""
+            if name == file_name:
+                matched_file = f
+                break
+
+        # Fallback: case-insensitive match
+        if not matched_file:
+            for f in files:
+                name = f.get("name") or f.get("filename") or ""
+                if name.lower() == file_name.lower():
+                    matched_file = f
+                    break
+
+        if not matched_file:
+            available = [
+                f.get("name") or f.get("filename") or "unknown" for f in files
+            ]
+            return json.dumps(
+                {
+                    "error": f"File '{file_name}' not found in chat attachments",
+                    "available_files": available,
+                },
+                ensure_ascii=False,
+            )
+
+        file_id = matched_file.get("id")
+        if not file_id:
+            return json.dumps({"error": "File entry has no ID"})
+
+        # --- 2. Retrieve file from OWUI storage ---
+        file_record = Files.get_file_by_id(file_id)
+        if not file_record:
+            return json.dumps({"error": f"File record not found for id {file_id}"})
+
+        local_path = Storage.get_file(file_record.path)
+
+        # --- 3. Resolve terminal connection ---
+        terminal_url = None
+        headers = {}
+
+        # Try system terminal first (terminal_id matches a connection ID)
+        connections = __request__.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
+        connection = next(
+            (c for c in connections if c.get("id") == terminal_id), None
+        )
+        if connection:
+            terminal_url = connection.get("url", "").rstrip("/")
+            auth_type = connection.get("auth_type", "bearer")
+            if auth_type == "bearer":
+                key = connection.get("key", "")
+                if key:
+                    headers["Authorization"] = f"Bearer {key}"
+        else:
+            # Try direct terminal (terminal_id is the URL itself)
+            tool_servers = metadata.get("tool_servers") or []
+            for ts in tool_servers:
+                ts_url = (ts.get("url") or "").rstrip("/")
+                if ts_url and ts_url == terminal_id.rstrip("/"):
+                    terminal_url = ts_url
+                    key = ts.get("key", "")
+                    if key:
+                        headers["Authorization"] = f"Bearer {key}"
+                    break
+
+        if not terminal_url:
+            return json.dumps(
+                {"error": f"Terminal connection '{terminal_id}' could not be resolved"}
+            )
+
+        # --- 4. Upload to terminal server ---
+        import httpx
+
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            # Query the terminal's current working directory
+            upload_dir = "."
+            try:
+                cwd_resp = await client.get(
+                    f"{terminal_url}/files/cwd",
+                    headers=headers,
+                )
+                if cwd_resp.status_code == 200:
+                    upload_dir = cwd_resp.json().get("cwd", ".")
+            except Exception:
+                pass  # Fall back to "."
+
+            log.info(
+                f"upload_file_to_terminal: uploading '{file_record.filename}' "
+                f"to {terminal_url}/files/upload?directory={upload_dir}"
+            )
+
+            with open(local_path, "rb") as fh:
+                response = await client.post(
+                    f"{terminal_url}/files/upload",
+                    params={"directory": upload_dir},
+                    files={"file": (file_record.filename, fh)},
+                    headers=headers,
+                )
+
+        if response.status_code != 200:
+            detail = response.text[:500]
+            return json.dumps(
+                {"error": f"Upload failed (HTTP {response.status_code}): {detail}"}
+            )
+
+        result = response.json()
+        return json.dumps(
+            {
+                "status": "success",
+                "message": f"File '{file_record.filename}' uploaded to terminal server",
+                "path": result.get("path"),
+                "size": result.get("size"),
+            },
+            ensure_ascii=False,
+        )
+    except Exception as e:
+        log.exception(f"upload_file_to_terminal error: {e}")
+        return json.dumps({"error": str(e)})
+
