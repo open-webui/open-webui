@@ -388,6 +388,15 @@
 				class="w-full h-full border-none bg-white"
 				title="HTML Preview"
 			/>
+		{:else if isHtml && showRaw}
+			<div class="h-full">
+				<FileCodeEditor
+					bind:this={fileCodeEditorRef}
+					value={fileContent ?? ''}
+					filePath={selectedFile}
+					{onSave}
+				/>
+			</div>
 		{:else if isMarkdown && !showRaw}
 			<div bind:this={markdownEl} class="prose dark:prose-invert max-w-full text-sm p-3">
 				{@html renderedHtml}
