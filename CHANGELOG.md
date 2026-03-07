@@ -56,6 +56,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔧 **OpenTelemetry metric descriptions.** Fixed conflicting metric instrument descriptions that caused warnings in the OpenTelemetry collector, resulting in cleaner telemetry logs for administrators. [#22293](https://github.com/open-webui/open-webui/pull/22293)
 - 📷 **Android photo capture.** Fixed an issue where the first photo taken in chat appeared completely black on some Android devices by using an alternative canvas export method. [#22317](https://github.com/open-webui/open-webui/pull/22317)
 
+### Changed
+
+- 🔍 **Web search tool guidance.** The web search tool description was updated to encourage direct usage without first checking knowledge bases, making it clearer for users who want to search the web immediately. [#22264](https://github.com/open-webui/open-webui/pull/22264)
+
 ## [0.8.8] - 2026-03-02
 
 ### Added
