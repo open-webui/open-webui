@@ -213,7 +213,12 @@ class PersistentConfig(Generic[T]):
             log.info(f"Updated {self.env_name} to new value {self.value}")
 
     def save(self):
+        global CONFIG_DATA
         log.info(f"Saving '{self.env_name}' to the database")
+        # Re-read the latest config from DB before saving to avoid
+        # overwriting changes made by other workers in multi-worker
+        # environments (e.g. multiple uvicorn workers or k8s replicas).
+        CONFIG_DATA = get_config()
         path_parts = self.config_path.split(".")
         sub_config = CONFIG_DATA
         for key in path_parts[:-1]:
