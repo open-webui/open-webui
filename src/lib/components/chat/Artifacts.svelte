@@ -98,15 +98,18 @@
 		});
 
 		const unsubscribeArtifactContents = artifactContents.subscribe((value) => {
-			contents = value;
-			console.log('Artifact contents updated:', contents);
+			const newContents = value ?? [];
+			console.log('Artifact contents updated:', newContents);
 
-			if (contents.length === 0) {
+			if (newContents.length === 0) {
 				showControls.set(false);
 				showArtifacts.set(false);
+				selectedContentIdx = 0;
+			} else if (newContents.length > contents.length) {
+				selectedContentIdx = newContents.length - 1;
 			}
 
-			selectedContentIdx = contents ? contents.length - 1 : 0;
+			contents = newContents;
 		});
 
 		return () => {
