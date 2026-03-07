@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📊 **System metrics via OpenTelemetry.** Administrators can now monitor Python runtime and system metrics including CPU, memory, garbage collection, and thread counts through the existing OpenTelemetry pipeline. [#22265](https://github.com/open-webui/open-webui/pull/22265)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for French, Finnish, Turkish, German, Simplified Chinese, and Traditional Chinese were enhanced and expanded.
+- 🔍 **Web search tool guidance.** The web search tool description was updated to encourage direct usage without first checking knowledge bases, making it clearer for users who want to search the web immediately. [#22264](https://github.com/open-webui/open-webui/pull/22264)
 
 ### Fixed
 
@@ -59,15 +60,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🖥️ **Open Terminal permission fix.** Open Terminal is now visible without requiring "Allow Speech to Text" permission, fixing an issue where users without microphone access couldn't access the terminal feature. [#22374](https://github.com/open-webui/open-webui/issues/22374), [Commit](https://github.com/open-webui/open-webui/commit/70a31a9a57bdd0690ac270f31ebd1b46e8fdfa98)
 - 📌 **Stale pinned models cleanup.** Pinned models that are deleted or hidden are now automatically unpinned, keeping your pinned models list up to date. [Commit](https://github.com/open-webui/open-webui/commit/af4500e5040c8343d339cd88dd1d2fb6138c7a72)
 - 🔧 **OpenTelemetry metric descriptions.** Fixed conflicting metric instrument descriptions that caused warnings in the OpenTelemetry collector, resulting in cleaner telemetry logs for administrators. [#22293](https://github.com/open-webui/open-webui/pull/22293)
+- 📊 **Non-streaming token tracking.** Token usage from non-streaming chat responses is now correctly saved to the database, fixing missing token counts in the Admin Panel analytics. Previously, non-streaming responses saved NULL usage data, causing messages to be excluded from token aggregation queries. [#22166](https://github.com/open-webui/open-webui/pull/22166)
 - 📷 **Android photo capture.** Fixed an issue where the first photo taken in chat appeared completely black on some Android devices by using an alternative canvas export method. [#22317](https://github.com/open-webui/open-webui/pull/22317)
 - 🖥️ **Open Terminal Windows path fix.** Fixed a bug where navigating back to parent directories on Windows added an incorrect leading slash, causing directory loads to fail. Paths are now properly normalized for Windows drive letters. [#22352](https://github.com/open-webui/open-webui/issues/22352), [Commit](https://github.com/open-webui/open-webui/commit/044fd1bd15cae06a5c56a321ca79d8362942f66a)
 - 🖼️ **Chat overview profile image sizing.** Fixed a bug where profile images in the chat overview could shrink incorrectly in tight spaces. The images now maintain their proper size with the flex-shrink-0 property. [#22261](https://github.com/open-webui/open-webui/pull/22261)
 - 💬 **Queued messages display.** Fixed an issue where queued messages could be cut off or hidden. The queued messages area now scrolls properly when content exceeds the visible area, showing up to 25% of the viewport height. [#22176](https://github.com/open-webui/open-webui/pull/22176)
 - 🎨 **Image generation in temporary chats.** Generated images now display correctly in temporary chat mode when using builtin image generation tools. Previously, images were not shown because the code was overwriting the image list with a null database response. [#22330](https://github.com/open-webui/open-webui/pull/22330), [#22309](https://github.com/open-webui/open-webui/issues/22309)
-
-### Changed
-
-- 🔍 **Web search tool guidance.** The web search tool description was updated to encourage direct usage without first checking knowledge bases, making it clearer for users who want to search the web immediately. [#22264](https://github.com/open-webui/open-webui/pull/22264)
 
 ## [0.8.8] - 2026-03-02
 
