@@ -18,6 +18,7 @@ from open_webui.utils.tools import (
     set_terminal_servers,
 )
 from open_webui.utils.mcp.client import MCPClient
+from open_webui.utils.mcp.cache import invalidate_all as invalidate_mcp_cache
 from open_webui.models.oauth_sessions import OAuthSessions
 
 
@@ -47,6 +48,7 @@ class ImportConfigForm(BaseModel):
 @router.post("/import", response_model=dict)
 async def import_config(form_data: ImportConfigForm, user=Depends(get_admin_user)):
     save_config(form_data.config)
+    invalidate_mcp_cache()
     return get_config()
 
 
@@ -188,6 +190,7 @@ async def set_tool_servers_config(
     ]
 
     await set_tool_servers(request)
+    invalidate_mcp_cache()
 
     for connection in request.app.state.config.TOOL_SERVER_CONNECTIONS:
         server_type = connection.get("type", "openapi")

@@ -112,6 +112,7 @@ from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.utils.payload import apply_system_prompt_to_body
 from open_webui.utils.response import normalize_usage
 from open_webui.utils.mcp.client import MCPClient
+from open_webui.utils.mcp.cache import get_cached_specs, set_cached_specs
 
 
 from open_webui.config import (
@@ -2486,11 +2487,22 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                     metadata.get("message_id")
                                 )
 
-                        mcp_clients[server_id] = MCPClient()
-                        await mcp_clients[server_id].connect(
-                            url=mcp_server_connection.get("url", ""),
-                            headers=headers if headers else None,
-                        )
+                        # Check cache before connecting to MCP server
+                        per_user = auth_type not in ("bearer", "none", "")
+                        cached = get_cached_specs(user.id, server_id, per_user)
+
+                        if cached is not None:
+                            tool_specs = cached
+                            log.debug(f"MCP tool specs cache hit for server '{server_id}' (user: {user.id}, per_user: {per_user})")
+                        else:
+                            log.debug(f"MCP tool specs cache miss for server '{server_id}' (user: {user.id}, per_user: {per_user}), fetching from server")
+                            mcp_clients[server_id] = MCPClient()
+                            await mcp_clients[server_id].connect(
+                                url=mcp_server_connection.get("url", ""),
+                                headers=headers if headers else None,
+                            )
+                            tool_specs = await mcp_clients[server_id].list_tool_specs()
+                            set_cached_specs(user.id, server_id, tool_specs, per_user)
 
                         function_name_filter_list = mcp_server_connection.get(
                             "config", {}
@@ -2501,12 +2513,21 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 ","
                             )
 
-                        tool_specs = await mcp_clients[server_id].list_tool_specs()
+                        mcp_url = mcp_server_connection.get("url", "")
+                        mcp_headers = headers if headers else None
+
                         for tool_spec in tool_specs:
 
-                            def make_tool_function(client, function_name):
+                            def make_tool_function(
+                                clients_dict, sid, url, hdrs, function_name
+                            ):
                                 async def tool_function(**kwargs):
-                                    return await client.call_tool(
+                                    if sid not in clients_dict:
+                                        clients_dict[sid] = MCPClient()
+                                        await clients_dict[sid].connect(
+                                            url=url, headers=hdrs
+                                        )
+                                    return await clients_dict[sid].call_tool(
                                         function_name,
                                         function_args=kwargs,
                                     )
@@ -2521,7 +2542,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                     continue
 
                             tool_function = make_tool_function(
-                                mcp_clients[server_id], tool_spec["name"]
+                                mcp_clients,
+                                server_id,
+                                mcp_url,
+                                mcp_headers,
+                                tool_spec["name"],
                             )
 
                             mcp_tools_dict[f"{server_id}_{tool_spec['name']}"] = {
@@ -2531,7 +2556,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 },
                                 "callable": tool_function,
                                 "type": "mcp",
-                                "client": mcp_clients[server_id],
+                                "client": mcp_clients.get(server_id),
                                 "direct": False,
                             }
                     except Exception as e:
