@@ -228,6 +228,7 @@ async def generate_title(
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
         "stream": False,
+        "task": str(TASKS.TITLE_GENERATION), # Add "task" since "metadata" not sent to pipeline.
         **(
             {"max_tokens": max_tokens}
             if models[task_model_id].get("owned_by") == "ollama"
@@ -308,6 +309,7 @@ async def generate_follow_ups(
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
         "stream": False,
+        "task": str(TASKS.FOLLOW_UP_GENERATION), # Add "task" since "metadata" not sent to pipeline.
         "metadata": {
             **(request.state.metadata if hasattr(request.state, "metadata") else {}),
             "task": str(TASKS.FOLLOW_UP_GENERATION),
@@ -381,6 +383,7 @@ async def generate_chat_tags(
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
         "stream": False,
+        "task": str(TASKS.TAGS_GENERATION), # Add "task" since "metadata" not sent to pipeline.
         "metadata": {
             **(request.state.metadata if hasattr(request.state, "metadata") else {}),
             "task": str(TASKS.TAGS_GENERATION),
@@ -447,6 +450,7 @@ async def generate_image_prompt(
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
         "stream": False,
+        "task": str(TASKS.IMAGE_PROMPT_GENERATION), # Add "task" since "metadata" not sent to pipeline.
         "metadata": {
             **(request.state.metadata if hasattr(request.state, "metadata") else {}),
             "task": str(TASKS.IMAGE_PROMPT_GENERATION),
@@ -532,6 +536,7 @@ async def generate_queries(
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
         "stream": False,
+        "task": str(TASKS.QUERY_GENERATION), # Add "task" since "metadata" not sent to pipeline.
         "metadata": {
             **(request.state.metadata if hasattr(request.state, "metadata") else {}),
             "task": str(TASKS.QUERY_GENERATION),
@@ -617,6 +622,7 @@ async def generate_autocompletion(
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
         "stream": False,
+        "task": str(TASKS.AUTOCOMPLETE_GENERATION), # Add "task" since "metadata" not sent to pipeline.
         "metadata": {
             **(request.state.metadata if hasattr(request.state, "metadata") else {}),
             "task": str(TASKS.AUTOCOMPLETE_GENERATION),
@@ -679,6 +685,7 @@ async def generate_emoji(
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
         "stream": False,
+        "task": str(TASKS.EMOJI_GENERATION), # Add "task" since "metadata" not sent to pipeline.
         **(
             {"max_tokens": 4}
             if models[task_model_id].get("owned_by") == "ollama"
@@ -741,6 +748,7 @@ async def generate_moa_response(
         "model": model_id,
         "messages": [{"role": "user", "content": content}],
         "stream": form_data.get("stream", False),
+        "task": str(TASKS.MOA_RESPONSE_GENERATION), # Add "task" since "metadata" not sent to pipeline.
         "metadata": {
             **(request.state.metadata if hasattr(request.state, "metadata") else {}),
             "chat_id": form_data.get("chat_id", None),
