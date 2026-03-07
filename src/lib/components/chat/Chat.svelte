@@ -934,15 +934,19 @@
 		}
 	};
 
-	$: if (history) {
-		cancelAnimationFrame(contentsRAF);
-		contentsRAF = requestAnimationFrame(() => {
-			getContents();
-			contentsRAF = null;
-		});
-	} else {
-		artifactContents.set([]);
-	}
+	const onHistoryChange = (history) => {
+		if (history) {
+			cancelAnimationFrame(contentsRAF);
+			contentsRAF = requestAnimationFrame(() => {
+				getContents();
+				contentsRAF = null;
+			});
+		} else {
+			artifactContents.set([]);
+		}
+	};
+
+	$: onHistoryChange(history);
 
 	const getContents = () => {
 		const messages = history ? createMessagesList(history, history.currentId) : [];
