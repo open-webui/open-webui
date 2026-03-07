@@ -196,7 +196,7 @@
 			</div>
 		{/if}
 
-		<div class="chat-{message.role} w-full min-w-full markdown-prose">
+		<div class="chat-{message.role} w-full min-w-0 markdown-prose">
 			{#if edit !== true}
 				{#if message.files}
 					<div
@@ -363,8 +363,8 @@
 					</div>
 				</div>
 			{:else if message.content !== ''}
-				<div class="w-full">
-					<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
+				<div class="w-full min-w-0">
+					<div class="flex min-w-0 {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
 						<div
 							class="rounded-3xl {($settings?.chatBubble ?? true)
 								? `max-w-[90%] px-4 py-1.5  bg-gray-50 dark:bg-gray-850 ${
