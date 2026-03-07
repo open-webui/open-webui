@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  openwebui:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "3000:8080"
+
+  model:
+    image: vllm/vllm-openai:latest
+    command: >
+      --model google/medgemma-4b-it
+      --host 0.0.0.0
+      --port 8000
+      --dtype auto
+      --max-model-len 4096
+    ports:
+      - "8000:8000"
+    environment:
+      HUGGING_FACE_HUB_TOKEN: ${HUGGING_FACE_HUB_TOKEN}
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+
+volumes:
+  hf-cache:

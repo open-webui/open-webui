@@ -558,6 +558,8 @@ from open_webui.utils.redis import get_sentinels_from_env
 
 
 from open_webui.constants import ERROR_MESSAGES
+#CADE ADDED FOR RUNPOD
+from open_webui.utils.runpod_idle_shutdown import activity_middleware, start_idle_shutdown_task
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
@@ -706,6 +708,9 @@ app = FastAPI(
     redoc_url=None,
     lifespan=lifespan,
 )
+#CADE ADDED FOR RUNPOD
+app.middleware("http")(activity_middleware)
+start_idle_shutdown_task(app)
 
 # For Open WebUI OIDC/OAuth2
 oauth_manager = OAuthManager(app)

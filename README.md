@@ -237,3 +237,10 @@ If you have any questions, suggestions, or need assistance, please open an issue
 ---
 
 Created by [Timothy Jaeryang Baek](https://github.com/tjbck) - Let's make Open WebUI even more amazing together! 💪
+Cade's changes: 3/7/2026
+planned model backend
+
+this project is intended to connect to a separate medgemma model server.
+initial target model: google/medgemma-4b-it
+initial deployment target: runpod l4 spot
+the openwebui app and the model server are separate containers.
