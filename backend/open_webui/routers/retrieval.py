@@ -1491,61 +1491,81 @@ def save_docs_to_vector_db(
                     raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
-        if request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER:
-            log.info("Using markdown header text splitter")
-            # Define headers to split on - covering most common markdown header levels
-            markdown_splitter = MarkdownHeaderTextSplitter(
-                headers_to_split_on=[
-                    ("#", "Header 1"),
-                    ("##", "Header 2"),
-                    ("###", "Header 3"),
-                    ("####", "Header 4"),
-                    ("#####", "Header 5"),
-                    ("######", "Header 6"),
-                ],
-                strip_headers=False,  # Keep headers in content for context
+        # Separate table-aware docs (pre-chunked by TableAwareCSVLoader/ExcelLoader)
+        # from regular docs that need text splitting
+        table_docs = [
+            doc for doc in docs if doc.metadata.get("file_type") == "table"
+        ]
+        non_table_docs = [
+            doc for doc in docs if doc.metadata.get("file_type") != "table"
+        ]
+
+        if table_docs:
+            log.info(
+                f"Skipping text splitting for {len(table_docs)} pre-chunked table documents"
             )
 
-            split_docs = []
-            for doc in docs:
-                split_docs.extend(
-                    [
-                        Document(
-                            page_content=split_chunk.page_content,
-                            metadata={**doc.metadata},
-                        )
-                        for split_chunk in markdown_splitter.split_text(
-                            doc.page_content
-                        )
-                    ]
+        docs = non_table_docs
+
+        if docs:
+            if request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER:
+                log.info("Using markdown header text splitter")
+                # Define headers to split on - covering most common markdown header levels
+                markdown_splitter = MarkdownHeaderTextSplitter(
+                    headers_to_split_on=[
+                        ("#", "Header 1"),
+                        ("##", "Header 2"),
+                        ("###", "Header 3"),
+                        ("####", "Header 4"),
+                        ("#####", "Header 5"),
+                        ("######", "Header 6"),
+                    ],
+                    strip_headers=False,  # Keep headers in content for context
                 )
 
-            docs = split_docs
-            if request.app.state.config.CHUNK_MIN_SIZE_TARGET > 0:
-                docs = merge_docs_to_target_size(request, docs)
+                split_docs = []
+                for doc in docs:
+                    split_docs.extend(
+                        [
+                            Document(
+                                page_content=split_chunk.page_content,
+                                metadata={**doc.metadata},
+                            )
+                            for split_chunk in markdown_splitter.split_text(
+                                doc.page_content
+                            )
+                        ]
+                    )
 
-        if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=request.app.state.config.CHUNK_SIZE,
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
-                add_start_index=True,
-            )
-            docs = text_splitter.split_documents(docs)
-        elif request.app.state.config.TEXT_SPLITTER == "token":
-            log.info(
-                f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}"
-            )
+                docs = split_docs
+                if request.app.state.config.CHUNK_MIN_SIZE_TARGET > 0:
+                    docs = merge_docs_to_target_size(request, docs)
 
-            tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
-            text_splitter = TokenTextSplitter(
-                encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
-                chunk_size=request.app.state.config.CHUNK_SIZE,
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
-                add_start_index=True,
-            )
-            docs = text_splitter.split_documents(docs)
-        else:
-            raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
+            if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
+                text_splitter = RecursiveCharacterTextSplitter(
+                    chunk_size=request.app.state.config.CHUNK_SIZE,
+                    chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
+                    add_start_index=True,
+                )
+                docs = text_splitter.split_documents(docs)
+            elif request.app.state.config.TEXT_SPLITTER == "token":
+                log.info(
+                    f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}"
+                )
+
+                tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
+                text_splitter = TokenTextSplitter(
+                    encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
+                    chunk_size=request.app.state.config.CHUNK_SIZE,
+                    chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
+                    add_start_index=True,
+                )
+                docs = text_splitter.split_documents(docs)
+            else:
+                raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
+
+        # Recombine table docs with split non-table docs
+        docs = docs + table_docs
 
     if len(docs) == 0:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
@@ -1775,6 +1795,7 @@ def process_file(
                         MINERU_API_KEY=request.app.state.config.MINERU_API_KEY,
                         MINERU_API_TIMEOUT=request.app.state.config.MINERU_API_TIMEOUT,
                         MINERU_PARAMS=request.app.state.config.MINERU_PARAMS,
+                        TABLE_ROWS_PER_CHUNK=request.app.state.config.TABLE_ROWS_PER_CHUNK,
                     )
                     docs = loader.load(
                         file.filename, file.meta.get("content_type"), file_path

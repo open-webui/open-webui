@@ -24,6 +24,7 @@ from langchain_community.document_loaders import (
 from langchain_core.documents import Document
 
 from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
+from open_webui.retrieval.loaders.table import TableAwareCSVLoader, TableAwareExcelLoader
 
 from open_webui.retrieval.loaders.mistral import MistralLoader
 from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
@@ -224,7 +225,18 @@ class Loader:
                 user=self.user,
             )
         elif self.engine == "tika" and self.kwargs.get("TIKA_SERVER_URL"):
-            if self._is_text_file(file_ext, file_content_type):
+            if file_ext in ["csv", "tsv"]:
+                loader = TableAwareCSVLoader(
+                    file_path,
+                    autodetect_encoding=True,
+                    rows_per_chunk=self.kwargs.get("TABLE_ROWS_PER_CHUNK", 1),
+                )
+            elif file_ext in ["xls", "xlsx"]:
+                loader = TableAwareExcelLoader(
+                    file_path,
+                    rows_per_chunk=self.kwargs.get("TABLE_ROWS_PER_CHUNK", 1),
+                )
+            elif self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, autodetect_encoding=True)
             else:
                 loader = TikaLoader(
@@ -282,7 +294,18 @@ class Loader:
                 ),
             )
         elif self.engine == "docling" and self.kwargs.get("DOCLING_SERVER_URL"):
-            if self._is_text_file(file_ext, file_content_type):
+            if file_ext in ["csv", "tsv"]:
+                loader = TableAwareCSVLoader(
+                    file_path,
+                    autodetect_encoding=True,
+                    rows_per_chunk=self.kwargs.get("TABLE_ROWS_PER_CHUNK", 1),
+                )
+            elif file_ext in ["xls", "xlsx"]:
+                loader = TableAwareExcelLoader(
+                    file_path,
+                    rows_per_chunk=self.kwargs.get("TABLE_ROWS_PER_CHUNK", 1),
+                )
+            elif self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, autodetect_encoding=True)
             else:
                 # Build params for DoclingLoader
@@ -365,8 +388,12 @@ class Loader:
                     extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES"),
                     mode=self.kwargs.get("PDF_LOADER_MODE", "page"),
                 )
-            elif file_ext == "csv":
-                loader = CSVLoader(file_path, autodetect_encoding=True)
+            elif file_ext in ["csv", "tsv"]:
+                loader = TableAwareCSVLoader(
+                    file_path,
+                    autodetect_encoding=True,
+                    rows_per_chunk=self.kwargs.get("TABLE_ROWS_PER_CHUNK", 1),
+                )
             elif file_ext == "rst":
                 loader = UnstructuredRSTLoader(file_path, mode="elements")
             elif file_ext == "xml":
@@ -387,7 +414,10 @@ class Loader:
                 "application/vnd.ms-excel",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             ] or file_ext in ["xls", "xlsx"]:
-                loader = UnstructuredExcelLoader(file_path)
+                loader = TableAwareExcelLoader(
+                    file_path,
+                    rows_per_chunk=self.kwargs.get("TABLE_ROWS_PER_CHUNK", 1),
+                )
             elif file_content_type in [
                 "application/vnd.ms-powerpoint",
                 "application/vnd.openxmlformats-officedocument.presentationml.presentation",
