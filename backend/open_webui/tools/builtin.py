@@ -249,11 +249,13 @@ async def generate_image(
 
         # Persist files to DB if chat context is available
         if __chat_id__ and __message_id__ and images:
-            image_files = Chats.add_message_files_by_id_and_message_id(
+            db_files = Chats.add_message_files_by_id_and_message_id(
                 __chat_id__,
                 __message_id__,
                 image_files,
             )
+            if db_files is not None:
+                image_files = db_files
 
         # Emit the images to the UI if event emitter is available
         if __event_emitter__ and image_files:
@@ -314,11 +316,13 @@ async def edit_image(
 
         # Persist files to DB if chat context is available
         if __chat_id__ and __message_id__ and images:
-            image_files = Chats.add_message_files_by_id_and_message_id(
+            db_files = Chats.add_message_files_by_id_and_message_id(
                 __chat_id__,
                 __message_id__,
                 image_files,
             )
+            if db_files is not None:
+                image_files = db_files
 
         # Emit the images to the UI if event emitter is available
         if __event_emitter__ and image_files:
