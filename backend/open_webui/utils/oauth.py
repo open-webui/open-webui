@@ -799,6 +799,7 @@ class OAuthClientManager:
                     self.app.state.config, "OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE", False
                 )
             ):
+                log.debug(f"""DEBUG SCOPE: {client.client_kwargs["scope"]}""")
                 refresh_data["scope"] = client.client_kwargs["scope"]
 
             # Make refresh request
@@ -1101,6 +1102,7 @@ class OAuthManager:
                 and client.client_kwargs.get("scope")
                 and auth_manager_config.OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE
             ):
+                log.debug(f"""2 DEBUG SCOPE: {client.client_kwargs["scope"]}""")
                 refresh_data["scope"] = client.client_kwargs["scope"]
 
             # Make refresh request
