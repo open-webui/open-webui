@@ -485,6 +485,17 @@
 		focus();
 	};
 
+	// Convert text to ProseMirror nodes, using hardBreak for newlines
+	const textToNodes = (state, text) => {
+		if (!text.includes('\n')) return state.schema.text(text);
+		const nodes = [];
+		text.split('\n').forEach((line, i) => {
+			if (i > 0) nodes.push(state.schema.nodes.hardBreak.create());
+			if (line) nodes.push(state.schema.text(line));
+		});
+		return nodes;
+	};
+
 	export const replaceVariables = (variables) => {
 		if (!editor || !editor.view) return;
 		const { state, view } = editor;
@@ -519,7 +530,7 @@
 
 		// Apply replacements in reverse order to maintain correct positions
 		replacements.reverse().forEach(({ from, to, text }) => {
-			tr = tr.replaceWith(from, to, text !== '' ? state.schema.text(text) : []);
+			tr = tr.replaceWith(from, to, text !== '' ? textToNodes(state, text) : []);
 		});
 
 		// Only dispatch if there are changes
