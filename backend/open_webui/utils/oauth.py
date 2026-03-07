@@ -114,6 +114,9 @@ log = logging.getLogger(__name__)
 auth_manager_config = AppConfig()
 auth_manager_config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
 auth_manager_config.ENABLE_OAUTH_SIGNUP = ENABLE_OAUTH_SIGNUP
+auth_manager_config.OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE = (
+    OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE
+)
 auth_manager_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL = OAUTH_MERGE_ACCOUNTS_BY_EMAIL
 auth_manager_config.ENABLE_OAUTH_ROLE_MANAGEMENT = ENABLE_OAUTH_ROLE_MANAGEMENT
 auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT = ENABLE_OAUTH_GROUP_MANAGEMENT
@@ -792,7 +795,9 @@ class OAuthClientManager:
             if (
                 hasattr(client, "client_kwargs")
                 and client.client_kwargs.get("scope")
-                and OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE
+                and getattr(
+                    self.app.state.config, "OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE", False
+                )
             ):
                 refresh_data["scope"] = client.client_kwargs["scope"]
 
@@ -1094,7 +1099,7 @@ class OAuthManager:
             if (
                 hasattr(client, "client_kwargs")
                 and client.client_kwargs.get("scope")
-                and OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE
+                and auth_manager_config.OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE
             ):
                 refresh_data["scope"] = client.client_kwargs["scope"]
 
