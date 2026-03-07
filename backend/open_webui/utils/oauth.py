@@ -788,8 +788,10 @@ class OAuthClientManager:
                 refresh_data["client_secret"] = client.client_secret
 
             # Add scope if available in client kwargs (some providers require it on refresh)
-            if hasattr(client, "client_kwargs") and client.client_kwargs.get(
-                "scope", ""
+            if (
+                hasattr(client, "client_kwargs")
+                and client.client_kwargs.get("scope")
+                and auth_manager_config.OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE
             ):
                 refresh_data["scope"] = client.client_kwargs["scope"]
 
@@ -1088,8 +1090,10 @@ class OAuthManager:
                 refresh_data["client_secret"] = client.client_secret
 
             # Add scope if available in client kwargs (some providers require it on refresh)
-            if hasattr(client, "client_kwargs") and client.client_kwargs.get(
-                "scope", ""
+            if (
+                hasattr(client, "client_kwargs")
+                and client.client_kwargs.get("scope")
+                and auth_manager_config.OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE
             ):
                 refresh_data["scope"] = client.client_kwargs["scope"]
 

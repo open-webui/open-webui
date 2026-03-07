@@ -339,6 +339,12 @@ ENABLE_OAUTH_SIGNUP = PersistentConfig(
     os.environ.get("ENABLE_OAUTH_SIGNUP", "False").lower() == "true",
 )
 
+OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE = PersistentConfig(
+    "OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE",
+    "oauth.refresh_token_include_scope",
+    os.environ.get("OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE", "False").lower() == "true",
+)
+
 
 OAUTH_MERGE_ACCOUNTS_BY_EMAIL = PersistentConfig(
     "OAUTH_MERGE_ACCOUNTS_BY_EMAIL",
