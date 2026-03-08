@@ -31,7 +31,7 @@
 
 	let query = '';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
-	let orderBy = 'created_at'; // default sort key
+	let orderBy = groupId ? `group_id:${groupId}` : 'last_active_at'; // default sort key
 	let direction = 'desc'; // default sort order
 
 	let page = 1;

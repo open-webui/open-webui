@@ -1,3 +1,4 @@
+import copy
 import time
 import logging
 import sys
@@ -119,6 +120,7 @@ from open_webui.config import (
     DEFAULT_VOICE_MODE_PROMPT_TEMPLATE,
     DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
     DEFAULT_CODE_INTERPRETER_PROMPT,
+    CODE_INTERPRETER_PYODIDE_PROMPT,
     CODE_INTERPRETER_BLOCKED_MODULES,
 )
 from open_webui.env import (
@@ -160,6 +162,55 @@ def output_id(prefix: str) -> str:
     return f"{prefix}_{uuid4().hex[:24]}"
 
 
+def _split_tool_calls(
+    tool_calls: list[dict],
+) -> list[dict]:
+    """Expand tool calls whose arguments contain multiple back-to-back JSON objects.
+
+    Some models (e.g. GPT-5.4) send multiple complete JSON argument objects
+    under the same tool call index, producing concatenated invalid JSON like:
+        '{"query":"A","count":5}{"query":"B","count":5}'
+
+    Each such tool call is split into separate entries so each gets executed
+    independently. Single-object arguments pass through unchanged.
+    """
+
+    def split_json_objects(raw: str) -> list[str]:
+        decoder = json.JSONDecoder()
+        results = []
+        position = 0
+
+        while position < len(raw):
+            while position < len(raw) and raw[position].isspace():
+                position += 1
+            if position >= len(raw):
+                break
+            try:
+                _, end = decoder.raw_decode(raw, position)
+                results.append(raw[position:end].strip())
+                position = end
+            except json.JSONDecodeError:
+                return [raw]
+
+        return results or [raw]
+
+    expanded = []
+    for tool_call in tool_calls:
+        arguments = tool_call.get("function", {}).get("arguments", "")
+        split_arguments = split_json_objects(arguments)
+
+        if len(split_arguments) <= 1:
+            expanded.append(tool_call)
+        else:
+            for argument in split_arguments:
+                cloned = copy.deepcopy(tool_call)
+                cloned["id"] = f"call_{uuid4().hex[:24]}"
+                cloned["function"]["arguments"] = argument
+                expanded.append(cloned)
+
+    return expanded
+
+
 def get_citation_source_from_tool_result(
     tool_name: str, tool_params: dict, tool_result: str, tool_id: str = ""
 ) -> list[dict]:
@@ -173,12 +224,21 @@ def get_citation_source_from_tool_result(
 
     Returns a list of sources (usually one, but query_knowledge_files may return multiple).
     """
+    _EXPECTS_LIST = {"search_web", "query_knowledge_files"}
+    _EXPECTS_DICT = {"view_knowledge_file"}
+
     try:
         try:
             tool_result = json.loads(tool_result)
         except (json.JSONDecodeError, TypeError):
             pass  # keep tool_result as-is (e.g. fetch_url returns plain text)
         if isinstance(tool_result, dict) and "error" in tool_result:
+            return []
+
+        # Validate tool_result type based on what the branch expects
+        if tool_name in _EXPECTS_LIST and not isinstance(tool_result, list):
+            return []
+        elif tool_name in _EXPECTS_DICT and not isinstance(tool_result, dict):
             return []
 
         if tool_name == "search_web":
@@ -830,6 +890,32 @@ def handle_responses_streaming_event(
         return current_output, None
 
 
+def get_source_context(
+    sources: list, source_ids: dict = None, include_content: bool = True
+) -> str:
+    """
+    Build <source> tag context string from citation sources.
+    """
+    context_string = ""
+    if source_ids is None:
+        source_ids = {}
+    for source in sources:
+        for doc, meta in zip(source.get("document", []), source.get("metadata", [])):
+            source_id = (
+                meta.get("source") or source.get("source", {}).get("id") or "N/A"
+            )
+            if source_id not in source_ids:
+                source_ids[source_id] = len(source_ids) + 1
+            src_name = source.get("source", {}).get("name")
+            body = doc if include_content else ""
+            context_string += (
+                f'<source id="{source_ids[source_id]}"'
+                + (f' name="{src_name}"' if src_name else "")
+                + f">{body}</source>\n"
+            )
+    return context_string
+
+
 def apply_source_context_to_messages(
     request: Request,
     messages: list,
@@ -848,39 +934,21 @@ def apply_source_context_to_messages(
     if not sources or not user_message:
         return messages
 
-    context_string = ""
-    citation_idx = {}
+    context = get_source_context(sources, include_content=include_content)
 
-    for source in sources:
-        for doc, meta in zip(source.get("document", []), source.get("metadata", [])):
-            src_id = meta.get("source") or source.get("source", {}).get("id") or "N/A"
-            if src_id not in citation_idx:
-                citation_idx[src_id] = len(citation_idx) + 1
-            src_name = source.get("source", {}).get("name")
-            body = doc if include_content else ""
-            context_string += (
-                f'<source id="{citation_idx[src_id]}"'
-                + (f' name="{src_name}"' if src_name else "")
-                + f">{body}</source>\n"
-            )
-
-    context_string = context_string.strip()
-    if not context_string:
+    context = context.strip()
+    if not context:
         return messages
 
     if RAG_SYSTEM_CONTEXT:
         return add_or_update_system_message(
-            rag_template(
-                request.app.state.config.RAG_TEMPLATE, context_string, user_message
-            ),
+            rag_template(request.app.state.config.RAG_TEMPLATE, context, user_message),
             messages,
             append=True,
         )
     else:
         return add_or_update_user_message(
-            rag_template(
-                request.app.state.config.RAG_TEMPLATE, context_string, user_message
-            ),
+            rag_template(request.app.state.config.RAG_TEMPLATE, context, user_message),
             messages,
             append=False,
         )
@@ -1053,16 +1121,16 @@ async def terminal_event_handler(
     """Emit terminal:* events for Open Terminal tools.
 
     - display_file  → emits 'terminal:display_file' to open the file preview.
-    - write_file → emits 'terminal:write_file' to silently refresh the file browser.
+    - write_file / replace_file_content → emits 'terminal:write_file' to refresh.
+    - run_command → emits 'terminal:run_command' with cwd to refresh if relevant.
     """
     if not event_emitter:
         return
 
-    path = tool_function_params.get("path", "")
-    if not path:
-        return
-
     if tool_function_name == "display_file":
+        path = tool_function_params.get("path", "")
+        if not path:
+            return
         # Only emit if the file actually exists
         parsed = tool_result
         if isinstance(parsed, str):
@@ -1079,11 +1147,21 @@ async def terminal_event_handler(
                 "data": {"path": path},
             }
         )
-    elif tool_function_name == "write_file":
+    elif tool_function_name in ("write_file", "replace_file_content"):
+        path = tool_function_params.get("path", "")
+        if not path:
+            return
         await event_emitter(
             {
                 "type": f"terminal:{tool_function_name}",
                 "data": {"path": path},
+            }
+        )
+    elif tool_function_name == "run_command":
+        await event_emitter(
+            {
+                "type": "terminal:run_command",
+                "data": {},
             }
         )
 
@@ -2171,10 +2249,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         folder.data["system_prompt"], form_data, metadata, user
                     )
                 if "files" in folder.data:
-                    form_data["files"] = [
-                        *folder.data["files"],
-                        *form_data.get("files", []),
-                    ]
+                    if metadata.get("params", {}).get("function_calling") != "native":
+                        form_data["files"] = [
+                            *folder.data["files"],
+                            *form_data.get("files", []),
+                        ]
+                    else:
+                        # Native FC: skip RAG injection, builtin tools
+                        # will read folder knowledge from metadata.
+                        metadata["folder_knowledge"] = folder.data["files"]
 
     # Model "Knowledge" handling
     user_message = get_last_user_message(form_data["messages"])
@@ -2284,18 +2367,35 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
 
         if "code_interpreter" in features and features["code_interpreter"]:
+            engine = getattr(
+                request.app.state.config, "CODE_INTERPRETER_ENGINE", "pyodide"
+            )
+
             # Skip XML-tag prompt injection when native FC is enabled —
             # execute_code will be injected as a builtin tool instead
             if metadata.get("params", {}).get("function_calling") != "native":
+                prompt = (
+                    request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE
+                    if request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE != ""
+                    else DEFAULT_CODE_INTERPRETER_PROMPT
+                )
+
+                # Append filesystem awareness only for pyodide engine
+                if engine != "jupyter":
+                    prompt += CODE_INTERPRETER_PYODIDE_PROMPT
+
                 form_data["messages"] = add_or_update_user_message(
-                    (
-                        request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE
-                        if request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE
-                        != ""
-                        else DEFAULT_CODE_INTERPRETER_PROMPT
-                    ),
+                    prompt,
                     form_data["messages"],
                 )
+            else:
+                # Native FC: tool docstring can't be dynamic, so inject
+                # filesystem context into messages for pyodide engine
+                if engine != "jupyter":
+                    form_data["messages"] = add_or_update_user_message(
+                        CODE_INTERPRETER_PYODIDE_PROMPT,
+                        form_data["messages"],
+                    )
 
     tool_ids = form_data.pop("tool_ids", None)
     terminal_id = form_data.pop("terminal_id", None)
@@ -2644,6 +2744,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             sources.extend(flags.get("sources", []))
         except Exception as e:
             log.exception(e)
+
+    # Save the pre-RAG message state so the native tool call loop can
+    # restore to the true original (before file-source injection) rather
+    # than a snapshot that already has the RAG template baked in.
+    system_message = get_system_message(form_data["messages"])
+    metadata["system_prompt"] = (
+        get_content_from_message(system_message) if system_message else None
+    )
+    metadata["user_prompt"] = get_last_user_message(form_data["messages"])
+    metadata["sources"] = sources[:] if sources else []
 
     # If context is not empty, insert it into the messages
     if sources and prompt:
@@ -3083,6 +3193,8 @@ async def non_streaming_chat_response_handler(response, ctx):
                     )
 
                     # Save message in the database
+                    usage = normalize_usage(response_data.get("usage", {}) or {})
+
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
@@ -3090,6 +3202,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                             "role": "assistant",
                             "content": content,
                             "output": response_output,
+                            **({"usage": usage} if usage else {}),
                         },
                     )
 
@@ -3719,7 +3832,7 @@ async def streaming_chat_response_handler(response, ctx):
                                                     if delta_name:
                                                         current_response_tool_call[
                                                             "function"
-                                                        ]["name"] += delta_name
+                                                        ]["name"] = delta_name
 
                                                     if delta_arguments:
                                                         current_response_tool_call[
@@ -3767,14 +3880,17 @@ async def streaming_chat_response_handler(response, ctx):
                                         delta.get("images", []), request, metadata, user
                                     )
                                     if image_urls:
+                                        image_file_list = [
+                                            {"type": "image", "url": url}
+                                            for url in image_urls
+                                        ]
                                         message_files = Chats.add_message_files_by_id_and_message_id(
                                             metadata["chat_id"],
                                             metadata["message_id"],
-                                            [
-                                                {"type": "image", "url": url}
-                                                for url in image_urls
-                                            ],
+                                            image_file_list,
                                         )
+                                        if message_files is None:
+                                            message_files = image_file_list
 
                                         await event_emitter(
                                             {
@@ -4079,7 +4195,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 reasoning_item["status"] = "completed"
 
                     if response_tool_calls:
-                        tool_calls.append(response_tool_calls)
+                        tool_calls.append(_split_tool_calls(response_tool_calls))
 
                     if response.background:
                         await response.background()
@@ -4096,16 +4212,17 @@ async def streaming_chat_response_handler(response, ctx):
                     model.get("info", {}).get("meta", {}).get("capabilities") or {}
                 ).get("citations", True)
 
-                # Save original system message so we can restore it before
-                # re-applying source context (prevents duplication when
-                # RAG_SYSTEM_CONTEXT is enabled and the template is appended
-                # to the system message on each iteration).
-                original_system_message = get_system_message(form_data["messages"])
-                original_system_content = (
-                    get_content_from_message(original_system_message)
-                    if original_system_message
-                    else None
-                )
+                # Use the pre-RAG system content captured before the
+                # initial file-source injection in process_chat_payload.
+                # This ensures restore truly undoes the RAG template.
+                original_system_content = metadata.get("system_prompt")
+                if original_system_content is None:
+                    original_system_message = get_system_message(form_data["messages"])
+                    original_system_content = (
+                        get_content_from_message(original_system_message)
+                        if original_system_message
+                        else None
+                    )
 
                 while (
                     len(tool_calls) > 0
@@ -4153,25 +4270,26 @@ async def streaming_chat_response_handler(response, ctx):
                         tool_args = tool_call.get("function", {}).get("arguments", "{}")
 
                         tool_function_params = {}
-                        try:
-                            # json.loads cannot be used because some models do not produce valid JSON
-                            tool_function_params = ast.literal_eval(tool_args)
-                        except Exception as e:
-                            log.debug(e)
-                            # Fallback to JSON parsing
+                        if tool_args and tool_args.strip():
                             try:
-                                tool_function_params = json.loads(tool_args)
+                                # json.loads cannot be used because some models do not produce valid JSON
+                                tool_function_params = ast.literal_eval(tool_args)
                             except Exception as e:
-                                log.error(
-                                    f"Error parsing tool call arguments: {tool_args}"
-                                )
-                                results.append(
-                                    {
-                                        "tool_call_id": tool_call_id,
-                                        "content": f"Error: Tool call arguments could not be parsed. The model generated malformed or incomplete JSON for `{tool_function_name}`. Please try again.",
-                                    }
-                                )
-                                continue
+                                log.debug(e)
+                                # Fallback to JSON parsing
+                                try:
+                                    tool_function_params = json.loads(tool_args)
+                                except Exception as e:
+                                    log.error(
+                                        f"Error parsing tool call arguments: {tool_args}"
+                                    )
+                                    results.append(
+                                        {
+                                            "tool_call_id": tool_call_id,
+                                            "content": f"Error: Tool call arguments could not be parsed. The model generated malformed or incomplete JSON for `{tool_function_name}`. Please try again.",
+                                        }
+                                    )
+                                    continue
 
                         # Ensure arguments are valid JSON for downstream LLM integrations
                         log.debug(
@@ -4352,34 +4470,61 @@ async def streaming_chat_response_handler(response, ctx):
                         }
                     )
 
-                    # Emit citation sources and apply source context to messages
+                    # Emit citation sources to the frontend for display
                     if citations_enabled:
                         for source in tool_call_sources:
                             await event_emitter({"type": "source", "data": source})
 
-                        # Apply source context to messages for model.
-                        # Use include_content=False to avoid duplicating content
-                        # that is already in the tool result message.
+                        # Apply tool source context to messages for the model.
+                        # Restoring to pre-RAG original prevents duplicating
+                        # the RAG template across file and tool sources.
                         all_tool_call_sources.extend(tool_call_sources)
                         if all_tool_call_sources and user_message:
-                            # Restore original messages before re-applying to
-                            # avoid recursive nesting (user message) and
-                            # duplication (system message with RAG_SYSTEM_CONTEXT).
-                            set_last_user_message_content(
-                                user_message, form_data["messages"]
+                            # Restore pre-RAG message state before re-applying
+                            # to prevent RAG template duplication.
+                            original_user_message = (
+                                metadata.get("user_prompt") or user_message
                             )
-                            if original_system_content is not None:
-                                replace_system_message_content(
-                                    original_system_content,
-                                    form_data["messages"],
-                                )
-                            form_data["messages"] = apply_source_context_to_messages(
-                                request,
+                            set_last_user_message_content(
+                                original_user_message,
                                 form_data["messages"],
+                            )
+                            replace_system_message_content(
+                                original_system_content or "",
+                                form_data["messages"],
+                            )
+
+                            # Build context: file sources with content,
+                            # tool sources as citation markers only.
+                            source_ids = {}
+                            source_context = get_source_context(
+                                metadata.get("sources", []), source_ids
+                            ) + get_source_context(
                                 all_tool_call_sources,
-                                user_message,
+                                source_ids,
                                 include_content=False,
                             )
+                            source_context = source_context.strip()
+                            if source_context:
+                                rag_content = rag_template(
+                                    request.app.state.config.RAG_TEMPLATE,
+                                    source_context,
+                                    user_message,
+                                )
+                                if RAG_SYSTEM_CONTEXT:
+                                    form_data["messages"] = (
+                                        add_or_update_system_message(
+                                            rag_content,
+                                            form_data["messages"],
+                                            append=True,
+                                        )
+                                    )
+                                else:
+                                    form_data["messages"] = add_or_update_user_message(
+                                        rag_content,
+                                        form_data["messages"],
+                                        append=False,
+                                    )
                         tool_call_sources.clear()
 
                     await event_emitter(
@@ -4482,6 +4627,7 @@ async def streaming_chat_response_handler(response, ctx):
                                                 "session_id": metadata.get(
                                                     "session_id", None
                                                 ),
+                                                "files": metadata.get("files", []),
                                             },
                                         }
                                     )

@@ -21,6 +21,12 @@
 	let variableValues = {};
 
 	const submitHandler = async () => {
+		// Normalize Windows CRLF (\r\n) to LF (\n) for all string values
+		for (const key of Object.keys(variableValues)) {
+			if (typeof variableValues[key] === 'string') {
+				variableValues[key] = variableValues[key].replace(/\r\n/g, '\n');
+			}
+		}
 		onSave(variableValues);
 		show = false;
 	};
