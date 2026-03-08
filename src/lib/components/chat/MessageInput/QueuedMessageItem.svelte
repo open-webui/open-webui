@@ -33,13 +33,11 @@
 							file.url?.startsWith('data') || file.url?.startsWith('http')
 								? file.url
 								: `${WEBUI_API_BASE_URL}/files/${file.url}${file?.content_type ? '/content' : ''}`}
-						<Image
-							src={fileUrl}
-							alt=""
-							imageClassName="size-6 rounded-md object-cover"
-						/>
+						<Image src={fileUrl} alt="" imageClassName="size-6 rounded-md object-cover" />
 					{:else}
-						<div class="flex items-center px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400">
+						<div
+							class="flex items-center px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400"
+						>
 							<span class="max-w-[80px] truncate">{file.name ?? 'file'}</span>
 						</div>
 					{/if}
@@ -50,7 +48,9 @@
 		{#if content}
 			<p class="text-sm text-gray-600 dark:text-gray-300 truncate">{content}</p>
 		{:else if files.length === 0}
-			<p class="text-sm text-gray-400 dark:text-gray-500 truncate italic">{$i18n.t('Empty message')}</p>
+			<p class="text-sm text-gray-400 dark:text-gray-500 truncate italic">
+				{$i18n.t('Empty message')}
+			</p>
 		{/if}
 	</div>
 

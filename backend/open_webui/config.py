@@ -850,7 +850,11 @@ def load_oauth_providers():
     if FEISHU_CLIENT_ID.value:
         configured_providers.append("Feishu")
 
-    if configured_providers and not OPENID_PROVIDER_URL.value and not OPENID_END_SESSION_ENDPOINT.value:
+    if (
+        configured_providers
+        and not OPENID_PROVIDER_URL.value
+        and not OPENID_END_SESSION_ENDPOINT.value
+    ):
         provider_list = ", ".join(configured_providers)
         log.warning(
             f"⚠️  OAuth providers configured ({provider_list}) but OPENID_PROVIDER_URL not set - logout will not work!"
@@ -2371,7 +2375,8 @@ if VECTOR_DB == "chroma":
 MARIADB_VECTOR_DB_URL = os.environ.get("MARIADB_VECTOR_DB_URL", "").strip()
 
 MARIADB_VECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
-    os.environ.get("MARIADB_VECTOR_INITIALIZE_MAX_VECTOR_LENGTH", "1536").strip() or "1536"
+    os.environ.get("MARIADB_VECTOR_INITIALIZE_MAX_VECTOR_LENGTH", "1536").strip()
+    or "1536"
 )
 
 # Distance strategy:
@@ -2382,7 +2387,9 @@ MARIADB_VECTOR_DISTANCE_STRATEGY = (
 )
 
 # HNSW M parameter (MariaDB VECTOR INDEX ... M=<int>)
-MARIADB_VECTOR_INDEX_M = int(os.environ.get("MARIADB_VECTOR_INDEX_M", "8").strip() or "8")
+MARIADB_VECTOR_INDEX_M = int(
+    os.environ.get("MARIADB_VECTOR_INDEX_M", "8").strip() or "8"
+)
 
 # Pooling (MariaDB-Vector)
 MARIADB_VECTOR_POOL_SIZE = os.environ.get("MARIADB_VECTOR_POOL_SIZE", None)

@@ -633,6 +633,7 @@
 	"Embedding Concurrent Requests": "Número de Peticiones Concurrentes en Incrustración",
 	"Embedding Model": "Modelo de Incrustación",
 	"Embedding Model Engine": "Motor del Modelo de Incrustación",
+	"Empty message": "",
 	"Enable All": "Habilitar Todo",
 	"Enable API Keys": "Habilitar Claves API",
 	"Enable autocomplete generation for chat messages": "Habilitar generación de autocompletado para mensajes de chat",

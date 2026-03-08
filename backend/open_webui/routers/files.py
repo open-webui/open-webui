@@ -583,6 +583,7 @@ def update_file_data_content_by_id(
                 request,
                 ProcessFileForm(file_id=id, content=form_data.content),
                 user=user,
+                db=db,
             )
             file = Files.get_file_by_id(id=id, db=db)
         except Exception as e:

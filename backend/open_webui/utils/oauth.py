@@ -1706,7 +1706,9 @@ class OAuthManager:
         redirect_url = f"{redirect_base_url}/auth"
 
         if error_message:
-            redirect_url = f"{redirect_url}?error={urllib.parse.quote_plus(error_message)}"
+            redirect_url = (
+                f"{redirect_url}?error={urllib.parse.quote_plus(error_message)}"
+            )
             return RedirectResponse(url=redirect_url, headers=response.headers)
 
         response = RedirectResponse(url=redirect_url, headers=response.headers)

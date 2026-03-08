@@ -633,6 +633,7 @@
 	"Embedding Concurrent Requests": "嵌入并发请求数",
 	"Embedding Model": "嵌入模型",
 	"Embedding Model Engine": "嵌入模型引擎",
+	"Empty message": "",
 	"Enable All": "全部启用",
 	"Enable API Keys": "启用接口密钥",
 	"Enable autocomplete generation for chat messages": "启用对话输入框内容自动补全",

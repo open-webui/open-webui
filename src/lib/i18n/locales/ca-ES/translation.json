@@ -633,6 +633,7 @@
 	"Embedding Concurrent Requests": "Peticions concurrents d'incrustació",
 	"Embedding Model": "Model d'incrustació",
 	"Embedding Model Engine": "Motor de model d'incrustació",
+	"Empty message": "",
 	"Enable All": "Habilitar tot",
 	"Enable API Keys": "Permetre claus API",
 	"Enable autocomplete generation for chat messages": "Activar la generació automàtica per als missatges del xat",

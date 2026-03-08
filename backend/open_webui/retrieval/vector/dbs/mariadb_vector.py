@@ -22,7 +22,12 @@ from open_webui.config import (
     MARIADB_VECTOR_POOL_TIMEOUT,
     MARIADB_VECTOR_POOL_RECYCLE,
 )
-from open_webui.retrieval.vector.main import GetResult, SearchResult, VectorDBBase, VectorItem
+from open_webui.retrieval.vector.main import (
+    GetResult,
+    SearchResult,
+    VectorDBBase,
+    VectorItem,
+)
 from open_webui.retrieval.vector.utils import process_metadata
 
 log = logging.getLogger(__name__)
@@ -157,8 +162,7 @@ class MariaDBVectorClient(VectorDBBase):
             with conn.cursor() as cur:
                 try:
                     dist = self.distance_strategy
-                    cur.execute(
-                        f"""
+                    cur.execute(f"""
                         CREATE TABLE IF NOT EXISTS document_chunk (
                             -- MariaDB Vector requires the table PRIMARY KEY used with a VECTOR INDEX to be <= 256 bytes.
                             -- VARCHAR has internal length/metadata overhead, so VARCHAR(255) can exceed the 256-byte limit.
@@ -173,8 +177,7 @@ class MariaDBVectorClient(VectorDBBase):
                             VECTOR INDEX (embedding) M={self.index_m} DISTANCE={dist},
                             INDEX idx_document_chunk_collection_name (collection_name)
                         ) ENGINE=InnoDB;
-                        """
-                    )
+                        """)
                     conn.commit()
                 except Exception as e:
                     conn.rollback()
@@ -220,7 +223,11 @@ class MariaDBVectorClient(VectorDBBase):
         """
         Return the MariaDB Vector distance function name for the configured strategy.
         """
-        return "vec_distance_cosine" if self.distance_strategy == "cosine" else "vec_distance_euclidean"
+        return (
+            "vec_distance_cosine"
+            if self.distance_strategy == "cosine"
+            else "vec_distance_euclidean"
+        )
 
     def _score_from_dist(self, dist: float) -> float:
         """
@@ -442,12 +449,19 @@ class MariaDBVectorClient(VectorDBBase):
                             documents[q_idx].append(rtext)
                             metadatas[q_idx].append(_safe_json(rmeta))
 
-                    return SearchResult(ids=ids, distances=distances, documents=documents, metadatas=metadatas)
+                    return SearchResult(
+                        ids=ids,
+                        distances=distances,
+                        documents=documents,
+                        metadatas=metadatas,
+                    )
         except Exception as e:
             log.exception(f"[MARIADB_VECTOR] search() failed: {e}")
             return None
 
-    def query(self, collection_name: str, filter: Dict[str, Any], limit: Optional[int] = None) -> Optional[GetResult]:
+    def query(
+        self, collection_name: str, filter: Dict[str, Any], limit: Optional[int] = None
+    ) -> Optional[GetResult]:
         """
         Retrieve documents by metadata filter (non-vector query).
         """
@@ -472,7 +486,9 @@ class MariaDBVectorClient(VectorDBBase):
                 metadatas = [[_safe_json(r[2]) for r in rows]]
                 return GetResult(ids=ids, documents=documents, metadatas=metadatas)
 
-    def get(self, collection_name: str, limit: Optional[int] = None) -> Optional[GetResult]:
+    def get(
+        self, collection_name: str, limit: Optional[int] = None
+    ) -> Optional[GetResult]:
         """
         Retrieve documents in a collection without filtering (optionally limited).
         """
@@ -549,7 +565,10 @@ class MariaDBVectorClient(VectorDBBase):
         try:
             with self._connect() as conn:
                 with conn.cursor() as cur:
-                    cur.execute("SELECT 1 FROM document_chunk WHERE collection_name = ? LIMIT 1", (collection_name,))
+                    cur.execute(
+                        "SELECT 1 FROM document_chunk WHERE collection_name = ? LIMIT 1",
+                        (collection_name,),
+                    )
                     return cur.fetchone() is not None
         except Exception:
             return False

@@ -58,7 +58,9 @@ class Vector:
 
                 return OpenGaussClient()
             case VectorType.MARIADB_VECTOR:
-                from open_webui.retrieval.vector.dbs.mariadb_vector import MariaDBVectorClient
+                from open_webui.retrieval.vector.dbs.mariadb_vector import (
+                    MariaDBVectorClient,
+                )
 
                 return MariaDBVectorClient()
             case VectorType.ELASTICSEARCH:

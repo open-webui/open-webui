@@ -32,8 +32,7 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict) -> b
             else:
                 user_dict = json.loads(user_data)
             facts = [
-                {"name": name, "value": value}
-                for name, value in user_dict.items()
+                {"name": name, "value": value} for name, value in user_dict.items()
             ]
             payload = {
                 "@type": "MessageCard",

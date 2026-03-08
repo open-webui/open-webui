@@ -633,6 +633,7 @@
 	"Embedding Concurrent Requests": "",
 	"Embedding Model": "Innbyggingsmodell",
 	"Embedding Model Engine": "Motor for innbygging av modeller",
+	"Empty message": "",
 	"Enable All": "",
 	"Enable API Keys": "",
 	"Enable autocomplete generation for chat messages": "Aktiver automatisk utfylling av chatmeldinger",

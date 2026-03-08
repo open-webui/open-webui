@@ -162,9 +162,7 @@ def truncate_content(content: str, max_chars: int, mode: str = "middletruncate")
         return f"{content[:half]}...{content[-(max_chars - half):]}"
 
 
-def apply_content_filter(
-    messages: list[dict], filter_str: str
-) -> list[dict]:
+def apply_content_filter(messages: list[dict], filter_str: str) -> list[dict]:
     """Apply a content filter to each message's content.
 
     filter_str is like 'middletruncate:500', 'start:200', or 'end:200'.
@@ -238,9 +236,7 @@ def replace_messages_variable(
             else:
                 half = mid // 2
                 start_msgs = messages[:half]
-                end_msgs = (
-                    messages[-half:] if mid % 2 == 0 else messages[-(half + 1) :]
-                )
+                end_msgs = messages[-half:] if mid % 2 == 0 else messages[-(half + 1) :]
                 selected = start_msgs + end_msgs
             content_filter = middle_filter
         else:
