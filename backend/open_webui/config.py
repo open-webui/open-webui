@@ -2313,7 +2313,12 @@ You have access to a Python code interpreter via: `<code_interpreter type="code"
 Ensure the code interpreter is effectively utilized to achieve the highest-quality analysis for the user."""
 
 # Appended to the code interpreter prompt only when engine is pyodide (not jupyter)
-CODE_INTERPRETER_PYODIDE_FS_PROMPT = """
+CODE_INTERPRETER_PYODIDE_PROMPT = """
+
+##### Pyodide Environment
+
+- This Python environment runs via Pyodide in the browser. **Do not install packages** — `pip install`, `subprocess`, and `micropip.install()` are not available.
+- If a required library is unavailable, use an alternative approach with available modules. Do not attempt to install anything.
 
 ##### Persistent File System
 
