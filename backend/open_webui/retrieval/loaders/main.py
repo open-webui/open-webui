@@ -219,13 +219,16 @@ class Loader:
             and self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_URL")
             and self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_API_KEY")
         ):
-            loader = ExternalDocumentLoader(
-                file_path=file_path,
-                url=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_URL"),
-                api_key=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_API_KEY"),
-                mime_type=file_content_type,
-                user=self.user,
-            )
+            if self._is_text_file(file_ext, file_content_type):
+                loader = TextLoader(file_path, autodetect_encoding=True)
+            else:
+                loader = ExternalDocumentLoader(
+                    file_path=file_path,
+                    url=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_URL"),
+                    api_key=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_API_KEY"),
+                    mime_type=file_content_type,
+                    user=self.user,
+                )
         elif self.engine == "tika" and self.kwargs.get("TIKA_SERVER_URL"):
             if self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, autodetect_encoding=True)

@@ -51,6 +51,8 @@ from open_webui.utils.payload import (
 from open_webui.utils.misc import (
     cleanup_response,
     convert_logit_bias_input_to_json,
+    get_function_call_output_text,
+    trim_trailing_empty_output_messages,
     stream_chunks_handler,
     stream_wrapper,
 )
@@ -843,7 +845,47 @@ def convert_to_responses_payload(payload: dict) -> dict:
         # Check for stored output items (from previous Responses API turn)
         stored_output = msg.get("output")
         if stored_output and isinstance(stored_output, list):
-            input_items.extend(stored_output)
+            for item in trim_trailing_empty_output_messages(stored_output):
+                item_type = item.get("type")
+
+                if item_type == "function_call":
+                    call_id = item.get("call_id", "")
+                    item_id = item.get("id", "")
+                    if not isinstance(item_id, str) or not item_id.startswith("fc_"):
+                        seed = call_id or item.get("name", "") or json.dumps(
+                            item, default=str
+                        )
+                        item_id = f"fc_{hashlib.sha256(seed.encode()).hexdigest()[:24]}"
+
+                    input_items.append(
+                        {
+                            "type": "function_call",
+                            "id": item_id,
+                            "call_id": call_id,
+                            "name": item.get("name", ""),
+                            "arguments": item.get("arguments", "{}"),
+                            **(
+                                {"status": item.get("status")}
+                                if item.get("status")
+                                else {}
+                            ),
+                        }
+                    )
+                    continue
+
+                if item_type == "function_call_output":
+                    input_items.append(
+                        {
+                            "type": "function_call_output",
+                            "call_id": item.get("call_id", ""),
+                            "output": get_function_call_output_text(
+                                item.get("output", "")
+                            ),
+                        }
+                    )
+                    continue
+
+                input_items.append(item)
             continue
 
         if role == "system":

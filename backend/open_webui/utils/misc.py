@@ -1,3 +1,4 @@
+import copy
 import hashlib
 import re
 import threading
@@ -136,6 +137,78 @@ def get_content_from_message(message: dict) -> Optional[str]:
     return None
 
 
+def trim_trailing_empty_output_messages(output: list) -> list[dict]:
+    """
+    Remove placeholder assistant message items appended locally before a
+    continuation starts streaming.
+    """
+    if not output or not isinstance(output, list):
+        return []
+
+    trimmed_output = copy.deepcopy(output)
+
+    while trimmed_output:
+        item = trimmed_output[-1]
+        if item.get("type") != "message" or item.get("role") != "assistant":
+            break
+
+        content_parts = item.get("content", [])
+        text = "".join(
+            str(part.get("text", ""))
+            for part in content_parts
+            if isinstance(part, dict) and "text" in part
+        )
+
+        if text:
+            break
+
+        trimmed_output.pop()
+
+    return trimmed_output
+
+
+def get_function_call_output_text(output_value) -> str:
+    if isinstance(output_value, str):
+        return output_value
+
+    if isinstance(output_value, list):
+        content = ""
+        for part in output_value:
+            if not isinstance(part, dict) or "text" not in part:
+                continue
+
+            output_text = part.get("text", "")
+            content += (
+                str(output_text) if not isinstance(output_text, str) else output_text
+            )
+        return content
+
+    if output_value is None:
+        return ""
+
+    return str(output_value)
+
+
+def convert_output_to_input_messages(
+    output: list, raw: bool = False, responses_api: bool = False
+) -> list[dict]:
+    """
+    Convert OR-aligned output items into follow-up input messages.
+
+    For Chat Completions models, this produces assistant/tool messages.
+    For Responses API models, it preserves the native output items under a
+    single assistant message so the downstream payload converter can reuse
+    the raw structured history.
+    """
+    if responses_api:
+        trimmed_output = trim_trailing_empty_output_messages(output)
+        if not trimmed_output:
+            return []
+        return [{"role": "assistant", "output": trimmed_output}]
+
+    return convert_output_to_messages(output, raw=raw)
+
+
 def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
     """
     Convert OR-aligned output items to OpenAI Chat Completion-format messages.
@@ -205,17 +278,7 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
             # Flush any pending content/tool_calls before adding tool result
             flush_pending()
 
-            # Extract text from output content parts
-            output_parts = item.get("output", [])
-            content = ""
-            for part in output_parts:
-                if part.get("type") == "input_text":
-                    output_text = part.get("text", "")
-                    content += (
-                        str(output_text)
-                        if not isinstance(output_text, str)
-                        else output_text
-                    )
+            content = get_function_call_output_text(item.get("output", ""))
 
             messages.append(
                 {
