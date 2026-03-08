@@ -2301,7 +2301,6 @@ DEFAULT_CODE_INTERPRETER_PROMPT = """
 You have access to a Python code interpreter via: `<code_interpreter type="code" lang="python"></code_interpreter>`
 
 - The Python shell runs directly in the user's browser for fast execution of analysis, calculations, or problem-solving. Use it in this response.
-- You can use a wide array of libraries for data manipulation, visualization, API calls, or any computational task. Think outside the box and harness Python's full potential.
 - **You must enclose your code within `<code_interpreter type="code" lang="python">` XML tags** and stop right away. If you don't, the code won't execute.
 - Do NOT use triple backticks (```py ... ```) inside the XML tags — that is markdown formatting, not executable Python code.
 - **Always print meaningful outputs** (results, tables, summaries, visuals). Avoid implicit outputs; use explicit print statements.
@@ -2320,7 +2319,11 @@ CODE_INTERPRETER_PYODIDE_FS_PROMPT = """
 - User-uploaded files are available at `/mnt/uploads/`. When the user asks you to work with their files, read from this directory.
 - You can also write output files to `/mnt/uploads/` so the user can access and download them from the file browser.
 - The file system persists across code executions within the same session.
-- Use `import os; os.listdir('/mnt/uploads')` to discover available files."""
+- Use `import os; os.listdir('/mnt/uploads')` to discover available files.
+
+##### Package Constraints
+
+Only the following libraries are available: requests, beautifulsoup4 (bs4), numpy, pandas, matplotlib, seaborn, scikit-learn (sklearn), scipy, regex, sympy, tiktoken, pytz, and the Python standard library. **Do NOT attempt to install packages** — `pip install`, `micropip.install()`, `subprocess.run(["pip", ...])`, and any other installation methods will always fail in this environment."""
 
 
 ####################################
