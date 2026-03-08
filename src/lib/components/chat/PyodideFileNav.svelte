@@ -3,7 +3,7 @@
 </script>
 
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onMount, tick } from 'svelte';
 	import { pyodideWorker } from '$lib/stores';
 	import PyodideWorkerConstructor from '$lib/workers/pyodide.worker?worker';
 	import type { FileEntry } from '$lib/apis/terminal';
@@ -14,6 +14,7 @@
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Folder from '../icons/Folder.svelte';
+	import Document from '../icons/Document.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -34,6 +35,14 @@
 	let showDeleteConfirm = false;
 	let deletePath = '';
 	let deleteName = '';
+
+	let creatingFolder = false;
+	let newFolderName = '';
+	let newFolderInput: HTMLInputElement;
+
+	let creatingFile = false;
+	let newFileName = '';
+	let newFileInput: HTMLInputElement;
 
 	let _reqId = 0;
 
@@ -187,8 +196,17 @@
 		}
 	};
 
-	const createFolder = async () => {
-		const name = prompt($i18n.t('Folder name'));
+	const startNewFolder = async () => {
+		creatingFolder = true;
+		newFolderName = '';
+		await tick();
+		newFolderInput?.focus();
+	};
+
+	const submitNewFolder = async () => {
+		const name = newFolderName.trim();
+		creatingFolder = false;
+		newFolderName = '';
 		if (!name) return;
 		const folderPath = `${currentPath}${name}`.replace(/\/$/, '');
 		try {
@@ -196,6 +214,30 @@
 			await loadDir(currentPath);
 		} catch (e) {
 			console.error('Failed to create folder:', e);
+		}
+	};
+
+	const startNewFile = async () => {
+		creatingFile = true;
+		newFileName = '';
+		await tick();
+		newFileInput?.focus();
+	};
+
+	const submitNewFile = async () => {
+		const name = newFileName.trim();
+		creatingFile = false;
+		newFileName = '';
+		if (!name) return;
+		try {
+			await sendWorkerMessage({
+				type: 'fs:upload',
+				files: [{ name, data: new ArrayBuffer(0) }],
+				dir: currentPath.replace(/\/$/, '') || '/'
+			});
+			await loadDir(currentPath);
+		} catch (e) {
+			console.error('Failed to create file:', e);
 		}
 	};
 
@@ -294,8 +336,8 @@
 				loadDir(currentPath);
 			}
 		}}
-		onNewFolder={createFolder}
-		onNewFile={() => {}}
+		onNewFolder={startNewFolder}
+		onNewFile={startNewFile}
 		onUploadFiles={uploadFiles}
 		onMove={() => {}}
 	>
@@ -343,14 +385,56 @@
 			<div class="flex items-center justify-center flex-1 p-6">
 				<div class="text-xs text-red-500">{error}</div>
 			</div>
-		{:else if entries.length === 0}
+		{:else if entries.length === 0 && !creatingFolder && !creatingFile}
 			<div class="flex flex-col items-center justify-center flex-1 p-6 text-center gap-2">
 				<Folder className="size-5 text-gray-300 dark:text-gray-600" />
 				<div class="text-xs text-gray-400 dark:text-gray-500">
 					{$i18n.t('No files yet. Upload files or run Python code to create them.')}
 				</div>
 			</div>
-		{:else}
+		{/if}
+
+		{#if !loading && !error && !selectedFile}
+			{#if creatingFolder}
+				<div class="flex items-center gap-2 px-3 py-1.5">
+					<Folder className="size-4 shrink-0 text-blue-400 dark:text-blue-300" />
+					<input
+						bind:this={newFolderInput}
+						bind:value={newFolderName}
+						class="flex-1 text-xs bg-transparent border border-gray-200 dark:border-gray-700 rounded px-1.5 py-0.5 outline-none focus:border-blue-400 dark:focus:border-blue-500"
+						placeholder={$i18n.t('Folder name')}
+						on:keydown={(e) => {
+							if (e.key === 'Enter') submitNewFolder();
+							if (e.key === 'Escape') {
+								creatingFolder = false;
+								newFolderName = '';
+							}
+						}}
+						on:blur={submitNewFolder}
+					/>
+				</div>
+			{/if}
+			{#if creatingFile}
+				<div class="flex items-center gap-2 px-3 py-1.5">
+					<Document className="size-4 shrink-0 text-gray-400 dark:text-gray-500" />
+					<input
+						bind:this={newFileInput}
+						bind:value={newFileName}
+						class="flex-1 text-xs bg-transparent border border-gray-200 dark:border-gray-700 rounded px-1.5 py-0.5 outline-none focus:border-blue-400 dark:focus:border-blue-500"
+						placeholder={$i18n.t('File name')}
+						on:keydown={(e) => {
+							if (e.key === 'Enter') submitNewFile();
+							if (e.key === 'Escape') {
+								creatingFile = false;
+								newFileName = '';
+							}
+						}}
+						on:blur={submitNewFile}
+					/>
+				</div>
+			{/if}
+
+			{#if entries.length > 0 || creatingFolder || creatingFile}
 			<ul class="overflow-y-auto flex-1 min-h-0">
 				{#each entries as entry (entry.name)}
 					<FileEntryRow
@@ -362,6 +446,7 @@
 					/>
 				{/each}
 			</ul>
+			{/if}
 		{/if}
 	</div>
 </div>
