@@ -1039,9 +1039,13 @@ class ChatTable:
                 if order_by and direction:
                     if hasattr(Chat, order_by):
                         if direction.lower() == "asc":
-                            query = query.order_by(getattr(Chat, order_by).asc(), Chat.id)
+                            query = query.order_by(
+                                getattr(Chat, order_by).asc(), Chat.id
+                            )
                         elif direction.lower() == "desc":
-                            query = query.order_by(getattr(Chat, order_by).desc(), Chat.id)
+                            query = query.order_by(
+                                getattr(Chat, order_by).desc(), Chat.id
+                            )
                 else:
                     query = query.order_by(Chat.updated_at.desc(), Chat.id)
 
