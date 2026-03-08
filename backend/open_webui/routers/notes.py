@@ -236,7 +236,6 @@ async def get_note_by_id(
             permission="write",
             db=db,
         )
-        or has_public_read_access_grant(note.access_grants)
     )
 
     return NoteResponse(**note.model_dump(), write_access=write_access)
