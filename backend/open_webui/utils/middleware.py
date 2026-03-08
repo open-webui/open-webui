@@ -207,10 +207,22 @@ def _split_tool_calls(
             for argument in split_arguments:
                 cloned = copy.deepcopy(tool_call)
                 cloned["id"] = f"call_{uuid4().hex[:24]}"
+                cloned["output_id"] = output_id("fc")
                 cloned["function"]["arguments"] = argument
                 expanded.append(cloned)
 
     return expanded
+
+
+def prepare_responses_output_for_append(
+    output: list[dict],
+) -> tuple[list[dict], list[dict]]:
+    """
+    Trim the local continuation placeholder before appending a follow-up
+    Responses stream and snapshot the historical prefix for later re-merge.
+    """
+    trimmed_output = trim_trailing_empty_output_messages(output)
+    return trimmed_output, list(trimmed_output)
 
 
 def extract_responses_api_tool_calls(
@@ -3731,11 +3743,11 @@ async def streaming_chat_response_handler(response, ctx):
                     nonlocal responses_output_start_index
 
                     response_tool_calls = []
-                    responses_output_prefix = (
-                        trim_trailing_empty_output_messages(output)
-                        if append_responses_output
-                        else []
-                    )
+                    responses_output_prefix = []
+                    if append_responses_output:
+                        output, responses_output_prefix = (
+                            prepare_responses_output_for_append(output)
+                        )
                     responses_output_index_offset = len(responses_output_prefix)
                     responses_output_start_index = responses_output_index_offset
 
