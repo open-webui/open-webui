@@ -38,8 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
--
-
 ## [0.8.9] - 2026-03-07
 
 ### Added
