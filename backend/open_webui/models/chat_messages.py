@@ -292,9 +292,11 @@ class ChatMessageTable:
                 query = query.filter(ChatMessage.created_at <= end_date)
 
             # Group by chat_id and order by most recent message in each chat
+            # Secondary sort on chat_id ensures deterministic pagination
+            # (prevents duplicates across pages when timestamps tie)
             chat_ids = (
                 query.group_by(ChatMessage.chat_id)
-                .order_by(func.max(ChatMessage.created_at).desc())
+                .order_by(func.max(ChatMessage.created_at).desc(), ChatMessage.chat_id)
                 .offset(skip)
                 .limit(limit)
                 .all()

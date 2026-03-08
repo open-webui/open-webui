@@ -39,6 +39,8 @@
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import Eye from '$lib/components/icons/Eye.svelte';
+	import CheckCircle from '$lib/components/icons/CheckCircle.svelte';
+	import Minus from '$lib/components/icons/Minus.svelte';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { goto } from '$app/navigation';
 	import { DropdownMenu } from 'bits-ui';
@@ -71,10 +73,7 @@
 
 	const isPublicModel = (model) => {
 		return (model?.access_grants ?? []).some(
-			(g) =>
-				g.principal_type === 'user' &&
-				g.principal_id === '*' &&
-				g.permission === 'read'
+			(g) => g.principal_type === 'user' && g.principal_id === '*' && g.permission === 'read'
 		);
 	};
 
@@ -121,6 +120,30 @@
 		);
 	};
 
+	const showAllHandler = async () => {
+		const modelsToShow = filteredModels.filter((m) => m?.meta?.hidden === true);
+		// Optimistic UI update
+		modelsToShow.forEach((m) => {
+			m.meta = { ...m.meta, hidden: false };
+		});
+		models = models;
+		// Sync with server
+		await Promise.all(modelsToShow.map((model) => upsertModelHandler(model, false)));
+		toast.success($i18n.t('All models are now visible'));
+	};
+
+	const hideAllHandler = async () => {
+		const modelsToHide = filteredModels.filter((m) => !(m?.meta?.hidden ?? false));
+		// Optimistic UI update
+		modelsToHide.forEach((m) => {
+			m.meta = { ...m.meta, hidden: true };
+		});
+		models = models;
+		// Sync with server
+		await Promise.all(modelsToHide.map((model) => upsertModelHandler(model, false)));
+		toast.success($i18n.t('All models are now hidden'));
+	};
+
 	const downloadModels = async (models) => {
 		let blob = new Blob([JSON.stringify(models)], {
 			type: 'application/json'
@@ -154,7 +177,7 @@
 		});
 	};
 
-	const upsertModelHandler = async (model) => {
+	const upsertModelHandler = async (model, showToast = true) => {
 		model.base_model_id = null;
 
 		if (workspaceModels.find((m) => m.id === model.id)) {
@@ -162,7 +185,7 @@
 				return null;
 			});
 
-			if (res) {
+			if (res && showToast) {
 				toast.success($i18n.t('Model updated successfully'));
 			}
 		} else {
@@ -178,7 +201,7 @@
 				return null;
 			});
 
-			if (res) {
+			if (res && !silent) {
 				toast.success($i18n.t('Model updated successfully'));
 			}
 		}
@@ -226,6 +249,8 @@
 
 		console.debug(model);
 
+		upsertModelHandler(model, false);
+
 		toast.success(
 			model.meta.hidden
 				? $i18n.t(`Model {{name}} is now hidden`, {
@@ -235,8 +260,6 @@
 						name: model.id
 					})
 		);
-
-		upsertModelHandler(model);
 	};
 
 	const copyLinkHandler = async (model) => {
@@ -485,7 +508,7 @@
 									enableAllHandler();
 								}}
 							>
-								<Eye className="size-4" />
+								<CheckCircle className="size-4" />
 								<div class="flex items-center">{$i18n.t('Enable All')}</div>
 							</DropdownMenu.Item>
 
@@ -495,8 +518,30 @@
 									disableAllHandler();
 								}}
 							>
-								<EyeSlash className="size-4" />
+								<Minus className="size-4" />
 								<div class="flex items-center">{$i18n.t('Disable All')}</div>
+							</DropdownMenu.Item>
+
+							<hr class="border-gray-100 dark:border-gray-800 my-1" />
+
+							<DropdownMenu.Item
+								class="select-none flex gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								on:click={() => {
+									showAllHandler();
+								}}
+							>
+								<Eye className="size-4" />
+								<div class="flex items-center">{$i18n.t('Show All')}</div>
+							</DropdownMenu.Item>
+
+							<DropdownMenu.Item
+								class="select-none flex gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								on:click={() => {
+									hideAllHandler();
+								}}
+							>
+								<EyeSlash className="size-4" />
+								<div class="flex items-center">{$i18n.t('Hide All')}</div>
 							</DropdownMenu.Item>
 						</DropdownMenu.Content>
 					</div>

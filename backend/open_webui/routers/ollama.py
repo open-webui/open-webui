@@ -1176,7 +1176,7 @@ async def embeddings(
 
 class GenerateCompletionForm(BaseModel):
     model: str
-    prompt: str
+    prompt: Optional[str] = None
     suffix: Optional[str] = None
     images: Optional[list[str]] = None
     format: Optional[Union[dict, str]] = None

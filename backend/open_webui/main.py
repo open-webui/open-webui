@@ -96,6 +96,7 @@ from open_webui.routers import (
     users,
     utils,
     scim,
+    terminals,
 )
 
 from open_webui.routers.retrieval import (
@@ -132,6 +133,8 @@ from open_webui.config import (
     THREAD_POOL_SIZE,
     # Tool Server Configs
     TOOL_SERVER_CONNECTIONS,
+    # Terminal Server
+    TERMINAL_SERVER_CONNECTIONS,
     # Code Execution
     ENABLE_CODE_EXECUTION,
     CODE_EXECUTION_ENGINE,
@@ -524,7 +527,7 @@ from open_webui.utils.middleware import (
     process_chat_payload,
     process_chat_response,
 )
-from open_webui.utils.tools import set_tool_servers
+from open_webui.utils.tools import set_tool_servers, set_terminal_servers
 
 from open_webui.utils.auth import (
     get_license_data,
@@ -690,8 +693,13 @@ async def lifespan(app: FastAPI):
             )
             await set_tool_servers(mock_request)
             log.info(f"Initialized {len(app.state.TOOL_SERVERS)} tool server(s)")
+
+            await set_terminal_servers(mock_request)
+            log.info(
+                f"Initialized {len(app.state.TERMINAL_SERVERS)} terminal server(s)"
+            )
         except Exception as e:
-            log.warning(f"Failed to initialize tool servers at startup: {e}")
+            log.warning(f"Failed to initialize tool/terminal servers at startup: {e}")
 
     yield
 
@@ -774,6 +782,15 @@ app.state.OPENAI_MODELS = {}
 
 app.state.config.TOOL_SERVER_CONNECTIONS = TOOL_SERVER_CONNECTIONS
 app.state.TOOL_SERVERS = []
+
+########################################
+#
+# TERMINAL SERVER
+#
+########################################
+
+app.state.config.TERMINAL_SERVER_CONNECTIONS = TERMINAL_SERVER_CONNECTIONS
+app.state.TERMINAL_SERVERS = []
 
 ########################################
 #
@@ -1381,46 +1398,52 @@ app.add_middleware(RedirectMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
 
-class APIKeyRestrictionMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        auth_header = request.headers.get("Authorization")
-        token = None
+class APIKeyRestrictionMiddleware:
+    def __init__(self, app):
+        self.app = app
 
-        if auth_header:
-            parts = auth_header.split(" ", 1)
-            if len(parts) == 2:
-                token = parts[1]
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            request = Request(scope)
+            auth_header = request.headers.get("Authorization")
+            token = None
 
-        # Only apply restrictions if an sk- API key is used
-        if token and token.startswith("sk-"):
-            # Check if restrictions are enabled
-            if request.app.state.config.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS:
-                allowed_paths = [
-                    path.strip()
-                    for path in str(
-                        request.app.state.config.API_KEYS_ALLOWED_ENDPOINTS
-                    ).split(",")
-                    if path.strip()
-                ]
+            if auth_header:
+                parts = auth_header.split(" ", 1)
+                if len(parts) == 2:
+                    token = parts[1]
 
-                request_path = request.url.path
+            # Only apply restrictions if an sk- API key is used
+            if token and token.startswith("sk-"):
+                # Check if restrictions are enabled
+                if app.state.config.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS:
+                    allowed_paths = [
+                        path.strip()
+                        for path in str(
+                            app.state.config.API_KEYS_ALLOWED_ENDPOINTS
+                        ).split(",")
+                        if path.strip()
+                    ]
 
-                # Match exact path or prefix path
-                is_allowed = any(
-                    request_path == allowed or request_path.startswith(allowed + "/")
-                    for allowed in allowed_paths
-                )
+                    request_path = request.url.path
 
-                if not is_allowed:
-                    return JSONResponse(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        content={
-                            "detail": "API key not allowed to access this endpoint."
-                        },
+                    # Match exact path or prefix path
+                    is_allowed = any(
+                        request_path == allowed
+                        or request_path.startswith(allowed + "/")
+                        for allowed in allowed_paths
                     )
 
-        response = await call_next(request)
-        return response
+                    if not is_allowed:
+                        await JSONResponse(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            content={
+                                "detail": "API key not allowed to access this endpoint."
+                            },
+                        )(scope, receive, send)
+                        return
+
+        await self.app(scope, receive, send)
 
 
 app.add_middleware(APIKeyRestrictionMiddleware)
@@ -1540,6 +1563,7 @@ app.include_router(
 if ENABLE_ADMIN_ANALYTICS:
     app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
+app.include_router(terminals.router, prefix="/api/v1/terminals", tags=["terminals"])
 
 # SCIM 2.0 API for identity management
 if ENABLE_SCIM:
@@ -2169,6 +2193,7 @@ async def get_app_config(request: Request):
                 "user_count": user_count,
                 "code": {
                     "engine": app.state.config.CODE_EXECUTION_ENGINE,
+                    "interpreter_engine": app.state.config.CODE_INTERPRETER_ENGINE,
                 },
                 "audio": {
                     "tts": {
