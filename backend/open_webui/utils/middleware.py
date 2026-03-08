@@ -1926,7 +1926,7 @@ async def chat_completion_files_handler(
                     queries_response = {"queries": [queries_response]}
 
                 queries = queries_response.get("queries", [])
-            except:
+            except Exception:
                 pass
 
             await __event_emitter__(
@@ -2196,7 +2196,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             form_data = apply_system_prompt_to_body(
                 system_message.get("content"), form_data, metadata, user, replace=True
             )  # Required to handle system prompt variables
-        except:
+        except Exception:
             pass
 
     form_data = await convert_url_images_to_base64(form_data)
@@ -3338,7 +3338,7 @@ async def streaming_chat_response_handler(response, ctx):
                         if match:
                             try:
                                 attr_content = match.group(1) if match.group(1) else ""
-                            except:
+                            except Exception:
                                 attr_content = ""
 
                             attributes = extract_attributes(attr_content)
