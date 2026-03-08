@@ -79,6 +79,9 @@
 
 	let mouseOver = false;
 	let draggable = false;
+	$: if (mouseOver) {
+		loadChat();
+	}
 
 	const loadChat = async () => {
 		if (!chat) {
