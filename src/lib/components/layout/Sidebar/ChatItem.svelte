@@ -78,10 +78,6 @@
 	let chat = null;
 
 	let mouseOver = false;
-	let draggable = false;
-	$: if (mouseOver) {
-		loadChat();
-	}
 
 	const loadChat = async () => {
 		if (!chat) {
@@ -375,7 +371,7 @@
 	id="sidebar-chat-group"
 	bind:this={itemElement}
 	class=" w-full {className} relative group"
-	draggable={draggable && !confirmEdit}
+	draggable={!confirmEdit}
 >
 	{#if confirmEdit}
 		<div
