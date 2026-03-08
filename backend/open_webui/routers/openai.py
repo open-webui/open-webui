@@ -885,6 +885,17 @@ def convert_to_responses_payload(payload: dict) -> dict:
                     )
                     continue
 
+                if item_type == "message":
+                    message_item = dict(item)
+                    item_id = message_item.get("id", "")
+                    if not isinstance(item_id, str) or not item_id.startswith("msg_"):
+                        seed = item_id or json.dumps(message_item, default=str)
+                        message_item["id"] = (
+                            f"msg_{hashlib.sha256(seed.encode()).hexdigest()[:24]}"
+                        )
+                    input_items.append(message_item)
+                    continue
+
                 input_items.append(item)
             continue
 
