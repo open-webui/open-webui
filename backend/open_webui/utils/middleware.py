@@ -891,23 +891,25 @@ def handle_responses_streaming_event(
 
 
 def get_source_context(
-    sources: list, source_id_map: dict = None, include_content: bool = True
+    sources: list, source_ids: dict = None, include_content: bool = True
 ) -> str:
     """
     Build <source> tag context string from citation sources.
     """
     context_string = ""
-    if source_id_map is None:
-        source_id_map = {}
+    if source_ids is None:
+        source_ids = {}
     for source in sources:
         for doc, meta in zip(source.get("document", []), source.get("metadata", [])):
-            src_id = meta.get("source") or source.get("source", {}).get("id") or "N/A"
-            if src_id not in source_id_map:
-                source_id_map[src_id] = len(source_id_map) + 1
+            source_id = (
+                meta.get("source") or source.get("source", {}).get("id") or "N/A"
+            )
+            if source_id not in source_ids:
+                source_ids[source_id] = len(source_ids) + 1
             src_name = source.get("source", {}).get("name")
             body = doc if include_content else ""
             context_string += (
-                f'<source id="{source_id_map[src_id]}"'
+                f'<source id="{source_ids[source_id]}"'
                 + (f' name="{src_name}"' if src_name else "")
                 + f">{body}</source>\n"
             )
@@ -4494,12 +4496,12 @@ async def streaming_chat_response_handler(response, ctx):
 
                             # Build context: file sources with content,
                             # tool sources as citation markers only.
-                            source_id_map = {}
+                            source_ids = {}
                             source_context = get_source_context(
-                                metadata.get("sources", []), source_id_map
+                                metadata.get("sources", []), source_ids
                             ) + get_source_context(
                                 all_tool_call_sources,
-                                source_id_map,
+                                source_ids,
                                 include_content=False,
                             )
                             source_context = source_context.strip()
