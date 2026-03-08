@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- 🔗 **Pipeline filter HTTP errors.** Fixed a bug where HTTP errors in pipeline inlet/outlet filters would silently corrupt the user's chat payload; errors are now properly raised before parsing the response. [#22445](https://github.com/open-webui/open-webui/pull/22445)
+- 📨 **Teams webhook crash.** Fixed a TypeError crash in the Teams webhook handler when user data is missing from the event payload. [#22444](https://github.com/open-webui/open-webui/pull/22444)
+- 🛠️ **Process shutdown handling.** Fixed bare except clauses in the main process that prevented clean shutdown; replaced with proper exception handling. [#22423](https://github.com/open-webui/open-webui/pull/22423)
 - 🐳 **Docker deployment startup.** Docker deployments now start correctly; the missing OpenTelemetry system metrics dependency was added. [#22447](https://github.com/open-webui/open-webui/pull/22447), [#22401](https://github.com/open-webui/open-webui/issues/22401)
 - 🛠️ **Tool access for non-admin users.** Fixed a NameError that prevented non-admin users from viewing tools; the missing has_access function is now properly imported. [#22393](https://github.com/open-webui/open-webui/issues/22393)
 - 🔐 **OAuth error handling.** Fixed a bug where bare except clauses silently caught SystemExit and KeyboardInterrupt, preventing clean process shutdown during OAuth authentication. [#22420](https://github.com/open-webui/open-webui/pull/22420)
