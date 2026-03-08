@@ -1,0 +1,35 @@
+name: SonarQube Scan
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  sonarqube:
+    runs-on: stax-general
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@9598b8a83feef37de07f549027fab50ecffe6a6e # v2.3.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONARQUBE_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONARQUBE_HOST_URL }}
+        with:
+          args: >
+            -Dsonar.projectKey=open-webui
+            -Dsonar.projectName=open-webui
+            -Dsonar.sources=.
+            -Dsonar.exclusions=tests/,venv/,.venv/,node_modules/,**/*.js,**/*.ts,**/*.css,**/*.html
+            -Dsonar.python.version=3.11,3.12
+
+      - name: SonarQube Quality Gate
+        continue-on-error: true
+        uses: sonarsource/sonarqube-quality-gate-action@cb3ed20f9fec62b4c3b8ad9e77656c6adaade913 # v1.1.0
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONARQUBE_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONARQUBE_HOST_URL }}
