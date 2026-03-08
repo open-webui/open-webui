@@ -38,7 +38,7 @@ def search_kagi(
         if result["t"] == 0
     ]
 
-    print(results)
+    log.debug(f"Kagi search results: {results}")
 
     if filter_list:
         results = get_filtered_results(results, filter_list)

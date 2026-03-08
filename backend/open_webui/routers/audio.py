@@ -1065,7 +1065,7 @@ def transcribe(
     # Always produce a list of chunk paths (could be one entry if small)
     try:
         chunk_paths = split_audio(file_path, MAX_FILE_SIZE)
-        print(f"Chunk paths: {chunk_paths}")
+        log.debug(f"Chunk paths: {chunk_paths}")
     except Exception as e:
         log.exception(e)
         raise HTTPException(
