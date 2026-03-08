@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
--
+- 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
+- 🌐 Translations for Portuguese (Brazil), Spanish, and Malay were enhanced and expanded.
 
 ### Fixed
 
