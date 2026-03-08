@@ -199,11 +199,11 @@ async def get_tools(
                     if val.get("type") == "str":
                         val["type"] = "string"
 
-                # Remove internal reserved parameters (e.g. _id, _user)
+                # Remove internal reserved parameters (e.g. __id__, __user__)
                 spec["parameters"]["properties"] = {
                     key: val
                     for key, val in spec["parameters"]["properties"].items()
-                    if not key.startswith("_")
+                    if not key.startswith("__")
                 }
 
                 # convert to function that takes only model params and inserts custom params
@@ -612,7 +612,7 @@ def parse_docstring(docstring):
         if not match:
             continue
         param_name, param_description = match.groups()
-        if param_name.startswith("_"):
+        if param_name.startswith("__"):
             continue
         param_descriptions[param_name] = param_description
 
