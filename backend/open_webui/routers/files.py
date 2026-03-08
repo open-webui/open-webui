@@ -329,17 +329,23 @@ def upload_file_handler(
 @router.get("/", response_model=list[FileModelResponse])
 async def list_files(
     user=Depends(get_verified_user),
+    page: Optional[int] = None,
+    limit: int = 50,
     content: bool = Query(True),
     db: Session = Depends(get_session),
 ):
+    skip = 0
+    if page is not None:
+        skip = (page - 1) * limit
+
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
-        files = Files.get_files(db=db)
+        files = Files.get_files(skip=skip, limit=limit, db=db)
     else:
-        files = Files.get_files_by_user_id(user.id, db=db)
+        files = Files.get_files_by_user_id(user.id, skip=skip, limit=limit, db=db)
 
     if not content:
         for file in files:
-            if "content" in file.data:
+            if file.data and "content" in file.data:
                 del file.data["content"]
 
     return files

@@ -302,33 +302,44 @@ export const getSharedChatList = async (token: string = '', page: number = 1, fi
 
 export const getAllChats = async (token: string) => {
 	let error = null;
+	let allChats: object[] = [];
+	let page = 1;
+	const limit = 100;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/all`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+	while (true) {
+		const searchParams = new URLSearchParams();
+		searchParams.append('page', `${page}`);
+		searchParams.append('limit', `${limit}`);
+
+		const res = await fetch(`${WEBUI_API_BASE_URL}/chats/all?${searchParams.toString()}`, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			}
+		})
+			.then(async (res) => {
+				if (!res.ok) throw await res.json();
+				return res.json();
+			})
+			.catch((err) => {
+				error = err;
+				console.error(err);
+				return null;
+			});
+
+		if (error) {
+			throw error;
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err;
-			console.error(err);
-			return null;
-		});
 
-	if (error) {
-		throw error;
+		if (!res || res.length === 0) break;
+		allChats = allChats.concat(res);
+		if (res.length < limit) break;
+		page++;
 	}
 
-	return res;
+	return allChats;
 };
 
 export const getChatListBySearchText = async (token: string, text: string, page: number = 1) => {
@@ -441,33 +452,44 @@ export const getChatListByFolderId = async (token: string, folderId: string, pag
 
 export const getAllArchivedChats = async (token: string) => {
 	let error = null;
+	let allChats: object[] = [];
+	let page = 1;
+	const limit = 100;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/all/archived`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+	while (true) {
+		const searchParams = new URLSearchParams();
+		searchParams.append('page', `${page}`);
+		searchParams.append('limit', `${limit}`);
+
+		const res = await fetch(`${WEBUI_API_BASE_URL}/chats/all/archived?${searchParams.toString()}`, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			}
+		})
+			.then(async (res) => {
+				if (!res.ok) throw await res.json();
+				return res.json();
+			})
+			.catch((err) => {
+				error = err;
+				console.error(err);
+				return null;
+			});
+
+		if (error) {
+			throw error;
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err;
-			console.error(err);
-			return null;
-		});
 
-	if (error) {
-		throw error;
+		if (!res || res.length === 0) break;
+		allChats = allChats.concat(res);
+		if (res.length < limit) break;
+		page++;
 	}
 
-	return res;
+	return allChats;
 };
 
 export const getAllUserChats = async (token: string) => {
@@ -476,29 +498,37 @@ export const getAllUserChats = async (token: string) => {
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/all/db`, {
 		method: 'GET',
 		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			Accept: 'application/x-ndjson',
+			authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err;
-			console.error(err);
-			return null;
-		});
+	}).catch((err) => {
+		error = err;
+		console.error(err);
+		return null;
+	});
 
 	if (error) {
 		throw error;
 	}
 
-	return res;
+	if (!res || !res.ok) {
+		if (res) {
+			try {
+				const errData = await res.json();
+				throw errData;
+			} catch (e) {
+				throw e;
+			}
+		}
+		return [];
+	}
+
+	const text = await res.text();
+	return text
+		.trim()
+		.split('\n')
+		.filter(Boolean)
+		.map((line) => JSON.parse(line));
 };
 
 export const getAllTags = async (token: string) => {

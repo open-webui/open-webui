@@ -733,9 +733,16 @@ async def get_user_pinned_chats(
 
 @router.get("/all", response_model=list[ChatResponse])
 async def get_user_chats(
-    user=Depends(get_verified_user), db: Session = Depends(get_session)
+    page: Optional[int] = None,
+    limit: int = 50,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
-    result = Chats.get_chats_by_user_id(user.id, db=db)
+    skip = 0
+    if page is not None:
+        skip = (page - 1) * limit
+
+    result = Chats.get_chats_by_user_id(user.id, skip=skip, limit=limit, db=db)
     return [ChatResponse(**chat.model_dump()) for chat in result.items]
 
 
@@ -746,11 +753,20 @@ async def get_user_chats(
 
 @router.get("/all/archived", response_model=list[ChatResponse])
 async def get_user_archived_chats(
-    user=Depends(get_verified_user), db: Session = Depends(get_session)
+    page: Optional[int] = None,
+    limit: int = 50,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
+    skip = 0
+    if page is not None:
+        skip = (page - 1) * limit
+
     return [
         ChatResponse(**chat.model_dump())
-        for chat in Chats.get_archived_chats_by_user_id(user.id, db=db)
+        for chat in Chats.get_archived_chats_by_user_id(
+            user.id, skip=skip, limit=limit, db=db
+        )
     ]
 
 
@@ -778,7 +794,7 @@ async def get_all_user_tags(
 ############################
 
 
-@router.get("/all/db", response_model=list[ChatResponse])
+@router.get("/all/db")
 async def get_all_user_chats_in_db(
     user=Depends(get_admin_user), db: Session = Depends(get_session)
 ):
@@ -787,7 +803,27 @@ async def get_all_user_chats_in_db(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
-    return [ChatResponse(**chat.model_dump()) for chat in Chats.get_chats(db=db)]
+
+    def generate_chats_jsonl():
+        batch_skip = 0
+        batch_limit = 50
+        while True:
+            batch = Chats.get_chats(skip=batch_skip, limit=batch_limit)
+            if not batch:
+                break
+            for chat in batch:
+                yield ChatResponse(**chat.model_dump()).model_dump_json() + "\n"
+            if len(batch) < batch_limit:
+                break
+            batch_skip += batch_limit
+
+    return StreamingResponse(
+        generate_chats_jsonl(),
+        media_type="application/x-ndjson",
+        headers={
+            "Content-Disposition": "attachment; filename=all-chats-export.jsonl"
+        },
+    )
 
 
 ############################

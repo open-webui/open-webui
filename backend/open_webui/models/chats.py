@@ -1011,12 +1011,14 @@ class ChatTable:
         self, skip: int = 0, limit: int = 50, db: Optional[Session] = None
     ) -> list[ChatModel]:
         with get_db_context(db) as db:
-            all_chats = (
-                db.query(Chat)
-                # .limit(limit).offset(skip)
-                .order_by(Chat.updated_at.desc())
-            )
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+            query = db.query(Chat).order_by(Chat.updated_at.desc())
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
+
+            return [ChatModel.model_validate(chat) for chat in query.all()]
 
     def get_chats_by_user_id(
         self,
@@ -1091,15 +1093,25 @@ class ChatTable:
             ]
 
     def get_archived_chats_by_user_id(
-        self, user_id: str, db: Optional[Session] = None
+        self,
+        user_id: str,
+        skip: int = 0,
+        limit: int = 50,
+        db: Optional[Session] = None,
     ) -> list[ChatModel]:
         with get_db_context(db) as db:
-            all_chats = (
+            query = (
                 db.query(Chat)
                 .filter_by(user_id=user_id, archived=True)
                 .order_by(Chat.updated_at.desc())
             )
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
+
+            return [ChatModel.model_validate(chat) for chat in query.all()]
 
     def get_chats_by_user_id_and_search_text(
         self,

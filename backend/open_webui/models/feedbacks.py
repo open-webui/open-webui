@@ -276,13 +276,20 @@ class FeedbackTable:
 
             return FeedbackListResponse(items=feedbacks, total=total)
 
-    def get_all_feedbacks(self, db: Optional[Session] = None) -> list[FeedbackModel]:
+    def get_all_feedbacks(
+        self, skip: int = 0, limit: int = 50, db: Optional[Session] = None
+    ) -> list[FeedbackModel]:
         with get_db_context(db) as db:
+            query = db.query(Feedback).order_by(Feedback.updated_at.desc())
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
+
             return [
                 FeedbackModel.model_validate(feedback)
-                for feedback in db.query(Feedback)
-                .order_by(Feedback.updated_at.desc())
-                .all()
+                for feedback in query.all()
             ]
 
     def get_all_feedback_ids(
@@ -398,15 +405,23 @@ class FeedbackTable:
             ]
 
     def get_feedbacks_by_user_id(
-        self, user_id: str, db: Optional[Session] = None
+        self, user_id: str, skip: int = 0, limit: int = 50, db: Optional[Session] = None
     ) -> list[FeedbackModel]:
         with get_db_context(db) as db:
-            return [
-                FeedbackModel.model_validate(feedback)
-                for feedback in db.query(Feedback)
+            query = (
+                db.query(Feedback)
                 .filter_by(user_id=user_id)
                 .order_by(Feedback.updated_at.desc())
-                .all()
+            )
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
+
+            return [
+                FeedbackModel.model_validate(feedback)
+                for feedback in query.all()
             ]
 
     def update_feedback_by_id(

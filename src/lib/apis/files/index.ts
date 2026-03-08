@@ -146,33 +146,44 @@ export const uploadDir = async (token: string) => {
 
 export const getFiles = async (token: string = '') => {
 	let error = null;
+	let allFiles: object[] = [];
+	let page = 1;
+	const limit = 100;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
+	while (true) {
+		const searchParams = new URLSearchParams();
+		searchParams.append('page', `${page}`);
+		searchParams.append('limit', `${limit}`);
+
+		const res = await fetch(`${WEBUI_API_BASE_URL}/files/?${searchParams.toString()}`, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		})
+			.then(async (res) => {
+				if (!res.ok) throw await res.json();
+				return res.json();
+			})
+			.catch((err) => {
+				error = err.detail;
+				console.error(err);
+				return null;
+			});
+
+		if (error) {
+			throw error;
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
 
-	if (error) {
-		throw error;
+		if (!res || res.length === 0) break;
+		allFiles = allFiles.concat(res);
+		if (res.length < limit) break;
+		page++;
 	}
 
-	return res;
+	return allFiles;
 };
 
 export const searchFiles = async (

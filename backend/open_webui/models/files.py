@@ -191,9 +191,18 @@ class FilesTable:
             except Exception:
                 return None
 
-    def get_files(self, db: Optional[Session] = None) -> list[FileModel]:
+    def get_files(
+        self, skip: int = 0, limit: int = 50, db: Optional[Session] = None
+    ) -> list[FileModel]:
         with get_db_context(db) as db:
-            return [FileModel.model_validate(file) for file in db.query(File).all()]
+            query = db.query(File).order_by(File.updated_at.desc())
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
+
+            return [FileModel.model_validate(file) for file in query.all()]
 
     def check_access_by_user_id(
         self, id, user_id, permission="write", db: Optional[Session] = None
@@ -239,13 +248,21 @@ class FilesTable:
             ]
 
     def get_files_by_user_id(
-        self, user_id: str, db: Optional[Session] = None
+        self, user_id: str, skip: int = 0, limit: int = 50, db: Optional[Session] = None
     ) -> list[FileModel]:
         with get_db_context(db) as db:
-            return [
-                FileModel.model_validate(file)
-                for file in db.query(File).filter_by(user_id=user_id).all()
-            ]
+            query = (
+                db.query(File)
+                .filter_by(user_id=user_id)
+                .order_by(File.updated_at.desc())
+            )
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
+
+            return [FileModel.model_validate(file) for file in query.all()]
 
     @staticmethod
     def _glob_to_like_pattern(glob: str) -> str:

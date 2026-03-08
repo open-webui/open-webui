@@ -1,6 +1,8 @@
 from typing import Optional
 import logging
+import json
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi.responses import StreamingResponse
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 
@@ -316,9 +318,16 @@ async def update_config(
 
 @router.get("/feedbacks/all", response_model=list[FeedbackResponse])
 async def get_all_feedbacks(
-    user=Depends(get_admin_user), db: Session = Depends(get_session)
+    page: Optional[int] = None,
+    limit: int = 50,
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
 ):
-    feedbacks = Feedbacks.get_all_feedbacks(db=db)
+    skip = 0
+    if page is not None:
+        skip = (page - 1) * limit
+
+    feedbacks = Feedbacks.get_all_feedbacks(skip=skip, limit=limit, db=db)
     return feedbacks
 
 
@@ -337,19 +346,48 @@ async def delete_all_feedbacks(
     return success
 
 
-@router.get("/feedbacks/all/export", response_model=list[FeedbackModel])
+@router.get("/feedbacks/all/export")
 async def export_all_feedbacks(
     user=Depends(get_admin_user), db: Session = Depends(get_session)
 ):
-    feedbacks = Feedbacks.get_all_feedbacks(db=db)
-    return feedbacks
+    def generate_feedbacks_jsonl():
+        batch_skip = 0
+        batch_limit = 50
+        while True:
+            batch = Feedbacks.get_all_feedbacks(
+                skip=batch_skip, limit=batch_limit
+            )
+            if not batch:
+                break
+            for feedback in batch:
+                yield feedback.model_dump_json() + "\n"
+            if len(batch) < batch_limit:
+                break
+            batch_skip += batch_limit
+
+    return StreamingResponse(
+        generate_feedbacks_jsonl(),
+        media_type="application/x-ndjson",
+        headers={
+            "Content-Disposition": "attachment; filename=feedbacks-export.jsonl"
+        },
+    )
 
 
 @router.get("/feedbacks/user", response_model=list[FeedbackUserResponse])
 async def get_feedbacks(
-    user=Depends(get_verified_user), db: Session = Depends(get_session)
+    page: Optional[int] = None,
+    limit: int = 50,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
-    feedbacks = Feedbacks.get_feedbacks_by_user_id(user.id, db=db)
+    skip = 0
+    if page is not None:
+        skip = (page - 1) * limit
+
+    feedbacks = Feedbacks.get_feedbacks_by_user_id(
+        user.id, skip=skip, limit=limit, db=db
+    )
     return feedbacks
 
 

@@ -206,29 +206,37 @@ export const exportAllFeedbacks = async (token: string = '') => {
 	const res = await fetch(`${WEBUI_API_BASE_URL}/evaluations/feedbacks/all/export`, {
 		method: 'GET',
 		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
+			Accept: 'application/x-ndjson',
 			authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
+	}).catch((err) => {
+		error = err.detail;
+		console.error(err);
+		return null;
+	});
 
 	if (error) {
 		throw error;
 	}
 
-	return res;
+	if (!res || !res.ok) {
+		if (res) {
+			try {
+				const errData = await res.json();
+				throw errData;
+			} catch (e) {
+				throw e;
+			}
+		}
+		return [];
+	}
+
+	const text = await res.text();
+	return text
+		.trim()
+		.split('\n')
+		.filter(Boolean)
+		.map((line) => JSON.parse(line));
 };
 
 export const createNewFeedback = async (token: string, feedback: object) => {
