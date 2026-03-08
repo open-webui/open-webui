@@ -76,6 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🖼️ **Chat overview profile image sizing.** Fixed a bug where profile images in the chat overview could shrink incorrectly in tight spaces. The images now maintain their proper size with the flex-shrink-0 property. [#22261](https://github.com/open-webui/open-webui/pull/22261)
 - 💬 **Queued messages display.** Fixed an issue where queued messages could be cut off or hidden. The queued messages area now scrolls properly when content exceeds the visible area, showing up to 25% of the viewport height. [#22176](https://github.com/open-webui/open-webui/pull/22176)
 - 🎨 **Image generation in temporary chats.** Generated images now display correctly in temporary chat mode when using builtin image generation tools. Previously, images were not shown because the code was overwriting the image list with a null database response. [#22330](https://github.com/open-webui/open-webui/pull/22330), [#22309](https://github.com/open-webui/open-webui/issues/22309)
+- 🤖 **Ollama model unload fix.** Fixed a bug where unloading a model from Ollama via the Open WebUI proxy failed with a "Field required" error for the prompt field. The proxy now correctly allows omitting the prompt when using keep_alive: 0 to unload models. [#22260](https://github.com/open-webui/open-webui/issues/22260), [Commit](https://github.com/open-webui/open-webui/commit/95b65ff751f91131b633cb128ff2decdd87c4a85)
 
 ## [0.8.8] - 2026-03-02
 
