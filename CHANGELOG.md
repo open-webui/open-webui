@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - 🔗 **Pipeline filter HTTP errors.** Fixed a bug where HTTP errors in pipeline inlet/outlet filters would silently corrupt the user's chat payload; errors are now properly raised before parsing the response. [#22445](https://github.com/open-webui/open-webui/pull/22445)
+- 📚 **Knowledge file embedding updates.** Fixed a bug where updating knowledge files left old embeddings in the database, causing search results to include duplicate and stale data. [#20558](https://github.com/open-webui/open-webui/issues/20558)
 - 📁 **Files list stability.** Fixed the files list ordering to use created_at with id as secondary sort, ensuring consistent ordering and preventing page crashes when managing many files. [#21879](https://github.com/open-webui/open-webui/issues/21879)
 - 📨 **Teams webhook crash.** Fixed a TypeError crash in the Teams webhook handler when user data is missing from the event payload. [#22444](https://github.com/open-webui/open-webui/pull/22444)
 - 🛠️ **Process shutdown handling.** Fixed bare except clauses in the main process that prevented clean shutdown; replaced with proper exception handling. [#22423](https://github.com/open-webui/open-webui/pull/22423)
