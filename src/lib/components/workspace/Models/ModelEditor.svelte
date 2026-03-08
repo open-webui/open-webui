@@ -219,8 +219,8 @@
 
 		info.params.system = system.trim() === '' ? null : system;
 		info.params.stop = params.stop
-			? (typeof params.stop === 'string' ? params.stop.split(',') : params.stop).filter(
-					(s) => s.trim()
+			? (typeof params.stop === 'string' ? params.stop.split(',') : params.stop).filter((s) =>
+					s.trim()
 				)
 			: null;
 		Object.keys(info.params).forEach((key) => {

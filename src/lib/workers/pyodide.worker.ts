@@ -123,9 +123,7 @@ function fsUploadFiles(files: { name: string; data: ArrayBuffer }[], dir = '/mnt
 function fsList(path: string) {
 	const entries: { name: string; type: 'file' | 'directory'; size: number }[] = [];
 	try {
-		const items = self.pyodide.FS.readdir(path).filter(
-			(n: string) => n !== '.' && n !== '..'
-		);
+		const items = self.pyodide.FS.readdir(path).filter((n: string) => n !== '.' && n !== '..');
 		for (const name of items) {
 			try {
 				const stat = self.pyodide.FS.stat(`${path}/${name}`);
@@ -155,9 +153,7 @@ function fsDelete(path: string) {
 		const stat = self.pyodide.FS.stat(path);
 		if (self.pyodide.FS.isDir(stat.mode)) {
 			// Recursively delete directory contents
-			const items = self.pyodide.FS.readdir(path).filter(
-				(n: string) => n !== '.' && n !== '..'
-			);
+			const items = self.pyodide.FS.readdir(path).filter((n: string) => n !== '.' && n !== '..');
 			for (const item of items) {
 				fsDelete(`${path}/${item}`);
 			}
@@ -178,7 +174,11 @@ function fsMkdir(path: string) {
 // Code execution
 // ---------------------------------------------------------------------------
 
-async function executeCode(id: string, code: string, files?: { name: string; data: ArrayBuffer }[]) {
+async function executeCode(
+	id: string,
+	code: string,
+	files?: { name: string; data: ArrayBuffer }[]
+) {
 	self.stdout = null;
 	self.stderr = null;
 	self.result = null;
@@ -282,7 +282,11 @@ self.onmessage = async (event) => {
 				const buffer = fsRead(data.path);
 				self.postMessage({ id, type: 'fs:read', data: buffer }, { transfer: [buffer] });
 			} catch (err: unknown) {
-				self.postMessage({ id, type: 'fs:read', error: err instanceof Error ? err.message : String(err) });
+				self.postMessage({
+					id,
+					type: 'fs:read',
+					error: err instanceof Error ? err.message : String(err)
+				});
 			}
 			break;
 		}

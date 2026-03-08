@@ -125,9 +125,9 @@ def upgrade() -> None:
     # - yield_per: fetches rows in chunks via cursor.fetchmany() (all backends)
     # - stream_results: enables server-side cursors on PostgreSQL (no-op on SQLite)
     result = conn.execute(
-        sa.select(chat_table.c.id, chat_table.c.user_id, chat_table.c.chat).where(
-            ~chat_table.c.user_id.like("shared-%")
-        ).execution_options(yield_per=1000, stream_results=True)
+        sa.select(chat_table.c.id, chat_table.c.user_id, chat_table.c.chat)
+        .where(~chat_table.c.user_id.like("shared-%"))
+        .execution_options(yield_per=1000, stream_results=True)
     )
 
     now = int(time.time())
@@ -175,33 +175,39 @@ def upgrade() -> None:
             if timestamp < 1577836800 or timestamp > now + 86400:
                 timestamp = now
 
-            messages_batch.append({
-                "id": f"{chat_id}-{message_id}",
-                "chat_id": chat_id,
-                "user_id": user_id,
-                "role": role,
-                "parent_id": message.get("parentId"),
-                "content": message.get("content"),
-                "output": message.get("output"),
-                "model_id": message.get("model"),
-                "files": message.get("files"),
-                "sources": message.get("sources"),
-                "embeds": message.get("embeds"),
-                "done": message.get("done", True),
-                "status_history": message.get("statusHistory"),
-                "error": message.get("error"),
-                "usage": message.get("usage"),
-                "created_at": timestamp,
-                "updated_at": timestamp,
-            })
+            messages_batch.append(
+                {
+                    "id": f"{chat_id}-{message_id}",
+                    "chat_id": chat_id,
+                    "user_id": user_id,
+                    "role": role,
+                    "parent_id": message.get("parentId"),
+                    "content": message.get("content"),
+                    "output": message.get("output"),
+                    "model_id": message.get("model"),
+                    "files": message.get("files"),
+                    "sources": message.get("sources"),
+                    "embeds": message.get("embeds"),
+                    "done": message.get("done", True),
+                    "status_history": message.get("statusHistory"),
+                    "error": message.get("error"),
+                    "usage": message.get("usage"),
+                    "created_at": timestamp,
+                    "updated_at": timestamp,
+                }
+            )
 
             # Flush batch when full
             if len(messages_batch) >= BATCH_SIZE:
-                inserted, failed = _flush_batch(conn, chat_message_table, messages_batch)
+                inserted, failed = _flush_batch(
+                    conn, chat_message_table, messages_batch
+                )
                 total_inserted += inserted
                 total_failed += failed
                 if total_inserted % 50000 < BATCH_SIZE:
-                    log.info(f"Migration progress: {total_inserted} messages inserted...")
+                    log.info(
+                        f"Migration progress: {total_inserted} messages inserted..."
+                    )
                 messages_batch.clear()
 
     # Flush remaining messages

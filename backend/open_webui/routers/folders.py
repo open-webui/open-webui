@@ -129,7 +129,9 @@ def create_folder(
         )
 
     try:
-        folder = Folders.insert_new_folder(user.id, form_data, form_data.parent_id, db=db)
+        folder = Folders.insert_new_folder(
+            user.id, form_data, form_data.parent_id, db=db
+        )
         return folder
     except Exception as e:
         log.exception(e)
@@ -317,7 +319,9 @@ async def delete_folder_by_id(
         folder = folders.pop()
         if folder:
             try:
-                folder_ids = Folders.delete_folder_by_id_and_user_id(folder.id, user.id, db=db)
+                folder_ids = Folders.delete_folder_by_id_and_user_id(
+                    folder.id, user.id, db=db
+                )
 
                 for folder_id in folder_ids:
                     if delete_contents:

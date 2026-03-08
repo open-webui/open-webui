@@ -150,16 +150,12 @@
 		}
 
 		// Check for duplicate names in the same parent
-		const siblings = Object.values(folders).filter(
-			(folder) => folder.parent_id === parent_id
-		);
+		const siblings = Object.values(folders).filter((folder) => folder.parent_id === parent_id);
 		if (siblings.find((folder) => folder.name.toLowerCase() === name.toLowerCase())) {
 			// If a folder with the same name already exists, append a number to the name
 			let i = 1;
 			while (
-				siblings.find(
-					(folder) => folder.name.toLowerCase() === `${name} ${i}`.toLowerCase()
-				)
+				siblings.find((folder) => folder.name.toLowerCase() === `${name} ${i}`.toLowerCase())
 			) {
 				i++;
 			}

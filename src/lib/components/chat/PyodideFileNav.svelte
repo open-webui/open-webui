@@ -108,7 +108,10 @@
 		savedPyodidePath = currentPath;
 
 		try {
-			const res = await sendWorkerMessage({ type: 'fs:list', path: currentPath.replace(/\/$/, '') || '/' });
+			const res = await sendWorkerMessage({
+				type: 'fs:list',
+				path: currentPath.replace(/\/$/, '') || '/'
+			});
 			entries = (res.entries || []).sort((a: FileEntry, b: FileEntry) => {
 				if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
 				return a.name.localeCompare(b.name);
@@ -247,7 +250,11 @@
 			payloads.push({ name: file.name, data: await file.arrayBuffer() });
 		}
 		try {
-			await sendWorkerMessage({ type: 'fs:upload', files: payloads, dir: currentPath.replace(/\/$/, '') || '/' });
+			await sendWorkerMessage({
+				type: 'fs:upload',
+				files: payloads,
+				dir: currentPath.replace(/\/$/, '') || '/'
+			});
 		} catch (e) {
 			console.error('Upload failed:', e);
 		}
@@ -347,9 +354,18 @@
 			on:click={() => selectedFile && downloadFile(selectedFile)}
 			aria-label={$i18n.t('Download')}
 		>
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-3.5">
-				<path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" />
-				<path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 20 20"
+				fill="currentColor"
+				class="size-3.5"
+			>
+				<path
+					d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z"
+				/>
+				<path
+					d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"
+				/>
 			</svg>
 		</button>
 		<button
@@ -361,8 +377,17 @@
 			}}
 			aria-label={$i18n.t('Delete')}
 		>
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-3.5">
-				<path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022 1.005 11.36A2.75 2.75 0 0 0 7.764 20h4.472a2.75 2.75 0 0 0 2.745-2.689l1.005-11.36.149.022a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 1 .7.8l-.3 6a.75.75 0 0 1-1.5-.075l.3-6a.75.75 0 0 1 .8-.725ZM12.2 8.52a.75.75 0 0 0-1.5.075l-.3 6a.75.75 0 0 0 1.5-.075l.3-6Z" clip-rule="evenodd" />
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 20 20"
+				fill="currentColor"
+				class="size-3.5"
+			>
+				<path
+					fill-rule="evenodd"
+					d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022 1.005 11.36A2.75 2.75 0 0 0 7.764 20h4.472a2.75 2.75 0 0 0 2.745-2.689l1.005-11.36.149.022a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 1 .7.8l-.3 6a.75.75 0 0 1-1.5-.075l.3-6a.75.75 0 0 1 .8-.725ZM12.2 8.52a.75.75 0 0 0-1.5.075l-.3 6a.75.75 0 0 0 1.5-.075l.3-6Z"
+					clip-rule="evenodd"
+				/>
 			</svg>
 		</button>
 	</FileNavToolbar>
@@ -370,13 +395,7 @@
 	<!-- Content area -->
 	<div class="flex-1 min-h-0 flex flex-col">
 		{#if selectedFile}
-			<FilePreview
-				{selectedFile}
-				{fileLoading}
-				{fileImageUrl}
-				{fileContent}
-				{overlay}
-			/>
+			<FilePreview {selectedFile} {fileLoading} {fileImageUrl} {fileContent} {overlay} />
 		{:else if loading}
 			<div class="flex items-center justify-center flex-1 p-6">
 				<Spinner className="size-4" />
@@ -435,17 +454,17 @@
 			{/if}
 
 			{#if entries.length > 0 || creatingFolder || creatingFile}
-			<ul class="overflow-y-auto flex-1 min-h-0">
-				{#each entries as entry (entry.name)}
-					<FileEntryRow
-						{entry}
-						{currentPath}
-						onOpen={openEntry}
-						onDownload={downloadFile}
-						onDelete={confirmDelete}
-					/>
-				{/each}
-			</ul>
+				<ul class="overflow-y-auto flex-1 min-h-0">
+					{#each entries as entry (entry.name)}
+						<FileEntryRow
+							{entry}
+							{currentPath}
+							onOpen={openEntry}
+							onDownload={downloadFile}
+							onDelete={confirmDelete}
+						/>
+					{/each}
+				</ul>
 			{/if}
 		{/if}
 	</div>

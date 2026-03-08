@@ -296,9 +296,7 @@ class ChatMessageTable:
             # (prevents duplicates across pages when timestamps tie)
             chat_ids = (
                 query.group_by(ChatMessage.chat_id)
-                .order_by(
-                    func.max(ChatMessage.created_at).desc(), ChatMessage.chat_id
-                )
+                .order_by(func.max(ChatMessage.created_at).desc(), ChatMessage.chat_id)
                 .offset(skip)
                 .limit(limit)
                 .all()

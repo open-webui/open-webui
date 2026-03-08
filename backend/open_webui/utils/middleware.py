@@ -2248,10 +2248,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         folder.data["system_prompt"], form_data, metadata, user
                     )
                 if "files" in folder.data:
-                    if (
-                        metadata.get("params", {}).get("function_calling")
-                        != "native"
-                    ):
+                    if metadata.get("params", {}).get("function_calling") != "native":
                         form_data["files"] = [
                             *folder.data["files"],
                             *form_data.get("files", []),
@@ -2378,8 +2375,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             if metadata.get("params", {}).get("function_calling") != "native":
                 prompt = (
                     request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE
-                    if request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE
-                    != ""
+                    if request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE != ""
                     else DEFAULT_CODE_INTERPRETER_PROMPT
                 )
 
@@ -2755,9 +2751,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     metadata["system_prompt"] = (
         get_content_from_message(system_message) if system_message else None
     )
-    metadata["user_prompt"] = get_last_user_message(
-        form_data["messages"]
-    )
+    metadata["user_prompt"] = get_last_user_message(form_data["messages"])
     metadata["sources"] = sources[:] if sources else []
 
     # If context is not empty, insert it into the messages
@@ -4200,11 +4194,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 reasoning_item["status"] = "completed"
 
                     if response_tool_calls:
-                        tool_calls.append(
-                            _split_tool_calls(
-                                response_tool_calls
-                            )
-                        )
+                        tool_calls.append(_split_tool_calls(response_tool_calls))
 
                     if response.background:
                         await response.background()
@@ -4224,13 +4214,9 @@ async def streaming_chat_response_handler(response, ctx):
                 # Use the pre-RAG system content captured before the
                 # initial file-source injection in process_chat_payload.
                 # This ensures restore truly undoes the RAG template.
-                original_system_content = metadata.get(
-                    "system_prompt"
-                )
+                original_system_content = metadata.get("system_prompt")
                 if original_system_content is None:
-                    original_system_message = get_system_message(
-                        form_data["messages"]
-                    )
+                    original_system_message = get_system_message(form_data["messages"])
                     original_system_content = (
                         get_content_from_message(original_system_message)
                         if original_system_message
@@ -4495,9 +4481,9 @@ async def streaming_chat_response_handler(response, ctx):
                         if all_tool_call_sources and user_message:
                             # Restore pre-RAG message state before re-applying
                             # to prevent RAG template duplication.
-                            original_user_message = metadata.get(
-                                "user_prompt"
-                            ) or user_message
+                            original_user_message = (
+                                metadata.get("user_prompt") or user_message
+                            )
                             set_last_user_message_content(
                                 original_user_message,
                                 form_data["messages"],
@@ -4509,14 +4495,11 @@ async def streaming_chat_response_handler(response, ctx):
 
                             # Combine file and tool sources into one RAG
                             # template application.
-                            form_data["messages"] = (
-                                apply_source_context_to_messages(
-                                    request,
-                                    form_data["messages"],
-                                    metadata.get("sources", [])
-                                    + all_tool_call_sources,
-                                    user_message,
-                                )
+                            form_data["messages"] = apply_source_context_to_messages(
+                                request,
+                                form_data["messages"],
+                                metadata.get("sources", []) + all_tool_call_sources,
+                                user_message,
                             )
                         tool_call_sources.clear()
 
@@ -4588,8 +4571,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 code = sanitize_code(code)
 
                                 if CODE_INTERPRETER_BLOCKED_MODULES:
-                                    blocking_code = textwrap.dedent(
-                                        f"""
+                                    blocking_code = textwrap.dedent(f"""
                                         import builtins
     
                                         BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
@@ -4605,8 +4587,7 @@ async def streaming_chat_response_handler(response, ctx):
                                             return _real_import(name, globals, locals, fromlist, level)
     
                                         builtins.__import__ = restricted_import
-                                    """
-                                    )
+                                    """)
                                     code = blocking_code + "\n" + code
 
                                 if (
