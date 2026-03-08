@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - 🐳 **Docker deployment startup.** Docker deployments now start correctly; the missing OpenTelemetry system metrics dependency was added. [#22447](https://github.com/open-webui/open-webui/pull/22447), [#22401](https://github.com/open-webui/open-webui/issues/22401)
+- 🛠️ **Tool access for non-admin users.** Fixed a NameError that prevented non-admin users from viewing tools; the missing has_access function is now properly imported. [#22393](https://github.com/open-webui/open-webui/issues/22393)
 - 🔐 **OAuth error handling.** Fixed a bug where bare except clauses silently caught SystemExit and KeyboardInterrupt, preventing clean process shutdown during OAuth authentication. [#22420](https://github.com/open-webui/open-webui/pull/22420)
 - 🛠️ **Exception error messages.** Fixed three locations where incorrect exception raising caused confusing TypeError messages instead of proper error descriptions, making debugging much easier. [#22446](https://github.com/open-webui/open-webui/pull/22446)
 - 📄 **YAML file processing.** Fixed an error when uploading YAML files with Docling enabled; YAML and YML files are now properly recognized as text files and processed correctly. [#22399](https://github.com/open-webui/open-webui/pull/22399), [#22263](https://github.com/open-webui/open-webui/issues/22263)
