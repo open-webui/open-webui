@@ -17,6 +17,7 @@
 
 	import { WEBUI_VERSION, WEBUI_API_BASE_URL } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
+	import { customHeadersFetch } from '../../hooks.client';
 
 	import {
 		config,
@@ -206,6 +207,7 @@
 			setBanners().catch((e) => console.error('Failed to load banners:', e)),
 			setTools().catch((e) => console.error('Failed to load tools:', e)),
 			setUserSettings(async () => {
+				customHeadersFetch();
 				await Promise.all([
 					setModels().catch((e) => console.error('Failed to load models:', e)),
 					setToolServers().catch((e) => console.error('Failed to load tool servers:', e))
