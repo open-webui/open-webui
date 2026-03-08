@@ -95,8 +95,10 @@ from open_webui.utils.misc import (
     replace_system_message_content,
     prepend_to_first_user_message_content,
     convert_logit_bias_input_to_json,
+    convert_output_to_input_messages,
     get_content_from_message,
-    convert_output_to_messages,
+    get_function_call_output_text,
+    trim_trailing_empty_output_messages,
 )
 from open_webui.utils.tools import (
     get_tools,
@@ -209,6 +211,58 @@ def _split_tool_calls(
                 expanded.append(cloned)
 
     return expanded
+
+
+def extract_responses_api_tool_calls(
+    output: list[dict], start_index: int = 0
+) -> tuple[list[dict], list[dict]]:
+    """
+    Extract function_call items from the newly streamed portion of a Responses
+    API output list.
+
+    Historical items before start_index are preserved as-is so continuation
+    turns do not re-execute earlier completed tools or reorder their UI blocks.
+    """
+    if not output or not isinstance(output, list):
+        return output, []
+
+    start_index = max(0, start_index)
+    if start_index >= len(output):
+        return output, []
+
+    retained_output = list(output[:start_index])
+    responses_api_tool_calls = []
+
+    for item in output[start_index:]:
+        if item.get("type") != "function_call":
+            retained_output.append(item)
+            continue
+
+        call_id = item.get("call_id") or item.get("id", "")
+        name = item.get("name", "")
+        arguments = item.get("arguments", "{}")
+
+        if not name:
+            log.warning(
+                "Responses API: skipping function_call item with empty name: %s",
+                item,
+            )
+            retained_output.append(item)
+            continue
+
+        responses_api_tool_calls.append(
+            {
+                "id": call_id,
+                "output_id": item.get("id", ""),
+                "index": len(responses_api_tool_calls),
+                "function": {
+                    "name": name,
+                    "arguments": arguments,
+                },
+            }
+        )
+
+    return retained_output, _split_tool_calls(responses_api_tool_calls)
 
 
 def get_citation_source_from_tool_result(
@@ -435,15 +489,9 @@ def serialize_output(output: list) -> str:
 
             result_item = tool_outputs.get(call_id)
             if result_item:
-                result_text = ""
-                for result_output in result_item.get("output", []):
-                    if "text" in result_output:
-                        output_text = result_output.get("text", "")
-                        result_text += (
-                            str(output_text)
-                            if not isinstance(output_text, str)
-                            else output_text
-                        )
+                result_text = get_function_call_output_text(
+                    result_item.get("output", "")
+                )
                 files = result_item.get("files")
                 embeds = result_item.get("embeds", "")
 
@@ -2117,19 +2165,23 @@ def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[dict]]
     ]
 
 
-def process_messages_with_output(messages: list[dict]) -> list[dict]:
+def process_messages_with_output(
+    messages: list[dict], responses_api: bool = False
+) -> list[dict]:
     """
     Process messages with OR-aligned output items for LLM consumption.
 
     For assistant messages with 'output' field, produces properly formatted
-    OpenAI-style messages (tool_calls + tool results). Strips 'output' before LLM.
+    follow-up input messages. Responses API models keep the native structured
+    output; Chat Completions models receive assistant/tool messages.
     """
     processed = []
 
     for message in messages:
         if message.get("role") == "assistant" and message.get("output"):
-            # Use output items for clean OpenAI-format messages
-            output_messages = convert_output_to_messages(message["output"], raw=True)
+            output_messages = convert_output_to_input_messages(
+                message["output"], raw=True, responses_api=responses_api
+            )
             if output_messages:
                 processed.extend(output_messages)
                 continue
@@ -2187,8 +2239,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 # Strip files field — it's been incorporated into content
                 message.pop("files", None)
 
-    # Process messages with OR-aligned output items for clean LLM messages
-    form_data["messages"] = process_messages_with_output(form_data.get("messages", []))
+    # Responses-backed models must preserve native output items; Chat
+    # Completions models still need assistant/tool message reconstruction.
+    form_data["messages"] = process_messages_with_output(
+        form_data.get("messages", []),
+        responses_api=is_responses_api_model(
+            request,
+            model=model,
+            model_id=form_data.get("model"),
+        ),
+    )
 
     system_message = get_system_message(form_data.get("messages", []))
     if system_message:  # Chat Controls/User Settings
@@ -2870,6 +2930,60 @@ def build_response_object(response, response_data):
     return response
 
 
+def is_responses_api_model(
+    request: Request,
+    model: Optional[dict] = None,
+    model_id: Optional[str] = None,
+) -> bool:
+    models = getattr(request.app.state, "MODELS", {}) or {}
+    openai_models = getattr(request.app.state, "OPENAI_MODELS", {}) or {}
+    candidate_model = {}
+    candidate_ids = []
+
+    if model_id:
+        candidate_ids.append(model_id)
+        model_info = Models.get_model_by_id(model_id)
+        if model_info and model_info.base_model_id:
+            candidate_ids.append(model_info.base_model_id)
+
+    if isinstance(model, dict):
+        base_model_id = (
+            model.get("info", {}).get("base_model_id")
+            or model.get("info", {}).get("params", {}).get("base_model_id")
+        )
+        if base_model_id:
+            candidate_ids.append(base_model_id)
+        if model.get("id"):
+            candidate_ids.append(model["id"])
+
+    for candidate_id in candidate_ids:
+        if not candidate_id:
+            continue
+
+        candidate_model = openai_models.get(candidate_id, {})
+        if candidate_model:
+            break
+
+        candidate_model = models.get(candidate_id, {})
+        if candidate_model and candidate_model.get("urlIdx") is not None:
+            break
+    else:
+        candidate_model = model if isinstance(model, dict) else {}
+
+    url_idx = candidate_model.get("urlIdx")
+    if url_idx is None:
+        return False
+
+    try:
+        base_url = request.app.state.config.OPENAI_API_BASE_URLS[url_idx]
+    except (IndexError, TypeError):
+        return False
+
+    api_configs = getattr(request.app.state.config, "OPENAI_API_CONFIGS", {}) or {}
+    api_config = api_configs.get(str(url_idx), api_configs.get(base_url, {}))
+    return api_config.get("api_type") == "responses"
+
+
 async def get_system_oauth_token(request, user):
     oauth_token = None
     try:
@@ -3534,6 +3648,7 @@ async def streaming_chat_response_handler(response, ctx):
             )
 
             tool_calls = []
+            responses_output_start_index = 0
 
             last_assistant_message = None
             try:
@@ -3607,12 +3722,22 @@ async def streaming_chat_response_handler(response, ctx):
                         },
                     )
 
-                async def stream_body_handler(response, form_data):
+                async def stream_body_handler(
+                    response, form_data, append_responses_output: bool = False
+                ):
                     nonlocal content
                     nonlocal usage
                     nonlocal output
+                    nonlocal responses_output_start_index
 
                     response_tool_calls = []
+                    responses_output_prefix = (
+                        trim_trailing_empty_output_messages(output)
+                        if append_responses_output
+                        else []
+                    )
+                    responses_output_index_offset = len(responses_output_prefix)
+                    responses_output_start_index = responses_output_index_offset
 
                     delta_count = 0
                     delta_chunk_size = max(
@@ -3660,6 +3785,17 @@ async def streaming_chat_response_handler(response, ctx):
                         try:
                             data = json.loads(data)
 
+                            if (
+                                append_responses_output
+                                and data.get("type", "").startswith("response.")
+                                and isinstance(data.get("output_index"), int)
+                            ):
+                                data = {
+                                    **data,
+                                    "output_index": data["output_index"]
+                                    + responses_output_index_offset,
+                                }
+
                             data, _ = await process_filter_functions(
                                 request=request,
                                 filter_functions=filter_functions,
@@ -3694,6 +3830,21 @@ async def streaming_chat_response_handler(response, ctx):
                                     output, response_metadata = (
                                         handle_responses_streaming_event(data, output)
                                     )
+
+                                    if (
+                                        append_responses_output
+                                        and data.get("type") == "response.completed"
+                                    ):
+                                        final_output = (
+                                            data.get("response", {}).get("output")
+                                        )
+                                        if final_output is not None:
+                                            output = [
+                                                *responses_output_prefix,
+                                                *trim_trailing_empty_output_messages(
+                                                    final_output
+                                                ),
+                                            ]
 
                                     processed_data = {
                                         "output": output,
@@ -4197,6 +4348,38 @@ async def streaming_chat_response_handler(response, ctx):
                     if response_tool_calls:
                         tool_calls.append(_split_tool_calls(response_tool_calls))
 
+                    # Responses API: function_call items are added to
+                    # `output` by handle_responses_streaming_event but
+                    # never copied into `response_tool_calls`.  Extract
+                    # them here so the tool-execution loop below can
+                    # pick them up.
+                    if not response_tool_calls and output:
+                        try:
+                            output, responses_api_tool_calls = (
+                                extract_responses_api_tool_calls(
+                                    output,
+                                    start_index=responses_output_start_index,
+                                )
+                            )
+
+                            if responses_api_tool_calls:
+                                log.info(
+                                    "Responses API: extracted %d tool call(s) "
+                                    "from output: %s",
+                                    len(responses_api_tool_calls),
+                                    [
+                                        tc["function"]["name"]
+                                        for tc in responses_api_tool_calls
+                                    ],
+                                )
+                                tool_calls.append(responses_api_tool_calls)
+                        except Exception as e:
+                            log.exception(
+                                "Responses API: failed to extract tool calls "
+                                "from output: %s",
+                                e,
+                            )
+
                     if response.background:
                         await response.background()
 
@@ -4240,7 +4423,9 @@ async def streaming_chat_response_handler(response, ctx):
                         output.append(
                             {
                                 "type": "function_call",
-                                "id": call_id or output_id("fc"),
+                                "id": tc.get("output_id")
+                                or call_id
+                                or output_id("fc"),
                                 "call_id": call_id,
                                 "name": func.get("name", ""),
                                 "arguments": func.get("arguments", "{}"),
@@ -4439,12 +4624,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 "type": "function_call_output",
                                 "id": output_id("fco"),
                                 "call_id": result.get("tool_call_id", ""),
-                                "output": [
-                                    {
-                                        "type": "input_text",
-                                        "text": result.get("content", ""),
-                                    }
-                                ],
+                                "output": result.get("content", ""),
                                 "status": "completed",
                                 **(
                                     {"files": result.get("files")}
@@ -4538,13 +4718,23 @@ async def streaming_chat_response_handler(response, ctx):
                     )
 
                     try:
+                        follow_up_messages = convert_output_to_input_messages(
+                            output,
+                            raw=True,
+                            responses_api=is_responses_api_model(
+                                request,
+                                model=model,
+                                model_id=model_id,
+                            ),
+                        )
+
                         new_form_data = {
                             **form_data,
                             "model": model_id,
                             "stream": True,
                             "messages": [
                                 *form_data["messages"],
-                                *convert_output_to_messages(output, raw=True),
+                                *follow_up_messages,
                             ],
                         }
 
@@ -4556,11 +4746,39 @@ async def streaming_chat_response_handler(response, ctx):
                         )
 
                         if isinstance(res, StreamingResponse):
-                            await stream_body_handler(res, new_form_data)
+                            await stream_body_handler(
+                                res,
+                                new_form_data,
+                                append_responses_output=is_responses_api_model(
+                                    request,
+                                    model=model,
+                                    model_id=model_id,
+                                ),
+                            )
                         else:
+                            res_body = None
+                            try:
+                                if hasattr(res, "body"):
+                                    res_body = res.body
+                                    if isinstance(res_body, bytes):
+                                        res_body = res_body.decode(
+                                            "utf-8", "replace"
+                                        )
+                            except Exception:
+                                pass
+                            log.warning(
+                                "Tool call follow-up: non-streaming response "
+                                "received (type=%s), body=%s, breaking",
+                                type(res).__name__,
+                                res_body[:500] if res_body else "N/A",
+                            )
                             break
                     except Exception as e:
-                        log.debug(e)
+                        log.exception(
+                            "Tool call follow-up: failed to generate "
+                            "continuation: %s",
+                            e,
+                        )
                         break
 
                 if DETECT_CODE_INTERPRETER:
@@ -4729,7 +4947,15 @@ async def streaming_chat_response_handler(response, ctx):
                                 "stream": True,
                                 "messages": [
                                     *form_data["messages"],
-                                    *convert_output_to_messages(output, raw=True),
+                                    *convert_output_to_input_messages(
+                                        output,
+                                        raw=True,
+                                        responses_api=is_responses_api_model(
+                                            request,
+                                            model=model,
+                                            model_id=model_id,
+                                        ),
+                                    ),
                                 ],
                             }
 
@@ -4741,7 +4967,15 @@ async def streaming_chat_response_handler(response, ctx):
                             )
 
                             if isinstance(res, StreamingResponse):
-                                await stream_body_handler(res, new_form_data)
+                                await stream_body_handler(
+                                    res,
+                                    new_form_data,
+                                    append_responses_output=is_responses_api_model(
+                                        request,
+                                        model=model,
+                                        model_id=model_id,
+                                    ),
+                                )
                             else:
                                 break
                         except Exception as e:
