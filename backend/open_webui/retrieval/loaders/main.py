@@ -86,6 +86,9 @@ known_source_ext = [
     "hs",
     "lhs",
     "json",
+    "yaml",
+    "yml",
+    "toml",
 ]
 
 
