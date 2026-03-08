@@ -80,6 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🤖 **Ollama model unload fix.** Fixed a bug where unloading a model from Ollama via the Open WebUI proxy failed with a "Field required" error for the prompt field. The proxy now correctly allows omitting the prompt when using keep_alive: 0 to unload models. [#22260](https://github.com/open-webui/open-webui/issues/22260), [Commit](https://github.com/open-webui/open-webui/commit/95b65ff751f91131b633cb128ff2decdd87c4a85)
 - 📢 **Banner type dropdown fix.** Fixed a bug where selecting a banner type required two clicks to register, as the first selection was being swallowed due to DOM structure changes. The dropdown now works correctly on the first click. [#22378](https://github.com/open-webui/open-webui/pull/22378)
 - 📊 **Analytics URL encoding fix.** Fixed a bug where the Analytics page failed to load data for models with slashes in their ID, such as "anthropic/claude-opus-4.6". The frontend now properly URL-encodes forward slashes, allowing model analytics to load correctly. [#22380](https://github.com/open-webui/open-webui/issues/22380), [#22382](https://github.com/open-webui/open-webui/pull/22382)
+- 📊 **Analytics chat list duplicate fix.** Fixed a bug where the Analytics page chat list threw an "each_key_duplicate" Svelte error when chat IDs were duplicated during pagination. The fix adds deterministic ordering to prevent duplicate entries. [#22383](https://github.com/open-webui/open-webui/pull/22383)
 
 ## [0.8.8] - 2026-03-02
 
