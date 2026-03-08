@@ -211,6 +211,26 @@ def _split_tool_calls(
     return expanded
 
 
+def strip_thinking_blocks(text: str) -> str:
+    """Remove thinking/reasoning blocks from text before JSON parsing.
+    
+    Models like GLM-5, DeepSeek-R1, and other reasoning models output thinking
+    blocks (e.g., <thinking>...</thinking>, <reasoning>...</reasoning>) that
+    need to be stripped before parsing JSON responses.
+    """
+    if not isinstance(text, str):
+        return text
+    for start_tag, end_tag in DEFAULT_REASONING_TAGS:
+        while start_tag in text and end_tag in text:
+            start_idx = text.find(start_tag)
+            end_idx = text.find(end_tag, start_idx)
+            if start_idx != -1 and end_idx != -1:
+                text = text[:start_idx] + text[end_idx + len(end_tag):]
+            else:
+                break
+    return text.strip()
+
+
 def get_citation_source_from_tool_result(
     tool_name: str, tool_params: dict, tool_result: str, tool_id: str = ""
 ) -> list[dict]:
@@ -228,8 +248,10 @@ def get_citation_source_from_tool_result(
     _EXPECTS_DICT = {"view_knowledge_file"}
 
     try:
+        # Strip thinking blocks before parsing JSON (for models like GLM-5, DeepSeek-R1)
+        cleaned_result = strip_thinking_blocks(tool_result)
         try:
-            tool_result = json.loads(tool_result)
+            tool_result = json.loads(cleaned_result)
         except (json.JSONDecodeError, TypeError):
             pass  # keep tool_result as-is (e.g. fetch_url returns plain text)
         if isinstance(tool_result, dict) and "error" in tool_result:
