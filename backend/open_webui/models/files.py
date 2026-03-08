@@ -289,7 +289,7 @@ class FilesTable:
             db: Optional database session.
 
         Returns:
-            List of matching FileModel objects, ordered by updated_at descending.
+            List of matching FileModel objects, ordered by created_at descending.
         """
         with get_db_context(db) as db:
             query = db.query(File)
@@ -303,7 +303,7 @@ class FilesTable:
 
             return [
                 FileModel.model_validate(file)
-                for file in query.order_by(File.updated_at.desc())
+                for file in query.order_by(File.created_at.desc(), File.id.desc())
                 .offset(skip)
                 .limit(limit)
                 .all()
