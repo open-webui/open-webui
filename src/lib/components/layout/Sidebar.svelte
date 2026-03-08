@@ -142,19 +142,24 @@
 		}
 	};
 
-	const createFolder = async ({ name, data }) => {
+	const createFolder = async ({ name, data, parent_id }) => {
 		name = name?.trim();
 		if (!name) {
 			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
 		}
 
-		const rootFolders = Object.values(folders).filter((folder) => folder.parent_id === null);
-		if (rootFolders.find((folder) => folder.name.toLowerCase() === name.toLowerCase())) {
+		// Check for duplicate names in the same parent
+		const siblings = Object.values(folders).filter(
+			(folder) => folder.parent_id === parent_id
+		);
+		if (siblings.find((folder) => folder.name.toLowerCase() === name.toLowerCase())) {
 			// If a folder with the same name already exists, append a number to the name
 			let i = 1;
 			while (
-				rootFolders.find((folder) => folder.name.toLowerCase() === `${name} ${i}`.toLowerCase())
+				siblings.find(
+					(folder) => folder.name.toLowerCase() === `${name} ${i}`.toLowerCase()
+				)
 			) {
 				i++;
 			}
@@ -166,9 +171,10 @@
 		const tempId = uuidv4();
 		folders = {
 			...folders,
-			tempId: {
+			[tempId]: {
 				id: tempId,
 				name: name,
+				parent_id: parent_id,
 				created_at: Date.now(),
 				updated_at: Date.now()
 			}
@@ -176,7 +182,8 @@
 
 		const res = await createNewFolder(localStorage.token, {
 			name,
-			data
+			data,
+			parent_id
 		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;

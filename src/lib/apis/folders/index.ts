@@ -4,6 +4,7 @@ type FolderForm = {
 	name?: string;
 	data?: Record<string, any>;
 	meta?: Record<string, any>;
+	parent_id?: string | null;
 };
 
 export const createNewFolder = async (token: string, folderForm: FolderForm) => {
