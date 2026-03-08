@@ -420,11 +420,13 @@ class ChatMessageTable:
         self,
         start_date: Optional[int] = None,
         end_date: Optional[int] = None,
+        group_id: Optional[str] = None,
         db: Optional[Session] = None,
     ) -> dict[str, dict]:
         """Aggregate token usage by user using database-level aggregation."""
         with get_db_context(db) as db:
             from sqlalchemy import func, cast, Integer
+            from open_webui.models.groups import GroupMember
 
             dialect = db.bind.dialect.name
 
@@ -464,6 +466,13 @@ class ChatMessageTable:
                 query = query.filter(ChatMessage.created_at >= start_date)
             if end_date:
                 query = query.filter(ChatMessage.created_at <= end_date)
+            if group_id:
+                group_users = (
+                    db.query(GroupMember.user_id)
+                    .filter(GroupMember.group_id == group_id)
+                    .subquery()
+                )
+                query = query.filter(ChatMessage.user_id.in_(group_users))
 
             results = query.group_by(ChatMessage.user_id).all()
 
