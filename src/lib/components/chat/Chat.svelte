@@ -148,6 +148,8 @@
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
 
+
+
 	let showCommands = false;
 
 	let generating = false;
@@ -2924,6 +2926,7 @@
 					{stopResponse}
 					{showMessage}
 					{eventTarget}
+					{codeInterpreterEnabled}
 				/>
 			</PaneGroup>
 		</div>

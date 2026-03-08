@@ -1,3 +1,4 @@
+import copy
 import time
 import logging
 import sys
@@ -119,6 +120,7 @@ from open_webui.config import (
     DEFAULT_VOICE_MODE_PROMPT_TEMPLATE,
     DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
     DEFAULT_CODE_INTERPRETER_PROMPT,
+    CODE_INTERPRETER_PYODIDE_FS_PROMPT,
     CODE_INTERPRETER_BLOCKED_MODULES,
 )
 from open_webui.env import (
@@ -2352,18 +2354,36 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
 
         if "code_interpreter" in features and features["code_interpreter"]:
+            engine = getattr(
+                request.app.state.config, "CODE_INTERPRETER_ENGINE", "pyodide"
+            )
+
             # Skip XML-tag prompt injection when native FC is enabled —
             # execute_code will be injected as a builtin tool instead
             if metadata.get("params", {}).get("function_calling") != "native":
+                prompt = (
+                    request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE
+                    if request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE
+                    != ""
+                    else DEFAULT_CODE_INTERPRETER_PROMPT
+                )
+
+                # Append filesystem awareness only for pyodide engine
+                if engine != "jupyter":
+                    prompt += CODE_INTERPRETER_PYODIDE_FS_PROMPT
+
                 form_data["messages"] = add_or_update_user_message(
-                    (
-                        request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE
-                        if request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE
-                        != ""
-                        else DEFAULT_CODE_INTERPRETER_PROMPT
-                    ),
+                    prompt,
                     form_data["messages"],
                 )
+            else:
+                # Native FC: tool docstring can't be dynamic, so inject
+                # filesystem context into messages for pyodide engine
+                if engine != "jupyter":
+                    form_data["messages"] = add_or_update_user_message(
+                        CODE_INTERPRETER_PYODIDE_FS_PROMPT,
+                        form_data["messages"],
+                    )
 
     tool_ids = form_data.pop("tool_ids", None)
     terminal_id = form_data.pop("terminal_id", None)

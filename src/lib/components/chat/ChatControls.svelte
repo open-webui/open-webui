@@ -10,6 +10,7 @@
 
 	import { onDestroy, onMount, tick, getContext } from 'svelte';
 	import {
+		config,
 		terminalServers,
 		mobile,
 		showControls,
@@ -31,6 +32,7 @@
 	import Artifacts from './Artifacts.svelte';
 	import Embeds from './ChatControls/Embeds.svelte';
 	import FileNav from './FileNav.svelte';
+	import PyodideFileNav from './PyodideFileNav.svelte';
 	import Overview from './Overview.svelte';
 
 	const i18n = getContext('i18n');
@@ -50,6 +52,8 @@
 	export let files;
 	export let modelId;
 
+	export let codeInterpreterEnabled = false;
+
 	export let pane: Pane | null = null;
 
 	let largeScreen = false;
@@ -67,7 +71,7 @@
 	$: hasMessages = history?.messages && Object.keys(history.messages).length > 0;
 
 	$: showControlsTab = $user?.role === 'admin' || ($user?.permissions?.chat?.controls ?? true);
-	$: showFilesTab = !!$selectedTerminalId;
+	$: showFilesTab = !!$selectedTerminalId || (codeInterpreterEnabled && $config?.code?.interpreter_engine !== 'jupyter');
 	$: showOverviewTab = hasMessages;
 
 	// Tab fallback: if active tab becomes hidden, switch to next available
@@ -355,6 +359,8 @@
 								/>
 							{:else if activeTab === 'files' && $selectedTerminalId}
 								<FileNav onAttach={handleTerminalAttach} />
+							{:else if activeTab === 'files' && codeInterpreterEnabled}
+								<PyodideFileNav />
 							{:else}
 								<Controls embed={true} {models} bind:chatFiles bind:params />
 							{/if}
@@ -504,6 +510,8 @@
 									/>
 								{:else if activeTab === 'files' && $selectedTerminalId}
 									<FileNav onAttach={handleTerminalAttach} overlay={dragged} />
+								{:else if activeTab === 'files' && codeInterpreterEnabled}
+									<PyodideFileNav overlay={dragged} />
 								{:else}
 									<Controls embed={true} {models} bind:chatFiles bind:params />
 								{/if}
