@@ -429,6 +429,9 @@ async def execute_code(
                         "session_id": (
                             __metadata__.get("session_id") if __metadata__ else None
                         ),
+                        "files": (
+                            __metadata__.get("files", []) if __metadata__ else []
+                        ),
                     },
                 }
             )

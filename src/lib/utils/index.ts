@@ -1679,6 +1679,10 @@ export const renderVegaVisualization = async (spec: string, i18n?: any) => {
 };
 
 export const getCodeBlockContents = (content: string): object => {
+	// Strip thinking/reasoning and other detail blocks before extracting code
+	// to prevent code inside <details type="reasoning"> from being treated as artifacts
+	content = removeAllDetails(content);
+
 	const codeBlockContents = content.match(/```[\s\S]*?```/g);
 
 	let codeBlocks = [];

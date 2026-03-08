@@ -4510,6 +4510,7 @@ async def streaming_chat_response_handler(response, ctx):
                                                 "session_id": metadata.get(
                                                     "session_id", None
                                                 ),
+                                                "files": metadata.get("files", []),
                                             },
                                         }
                                     )
