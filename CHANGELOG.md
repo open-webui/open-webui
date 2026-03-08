@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - ⚡ **API call optimization.** Reduced excessive API calls when hovering over the model selector or scrolling through chat history by adding a 30-second cooldown to model list fetches and a 200ms debounce to chat loading. [#22457](https://github.com/open-webui/open-webui/pull/22457)
 - 🗄️ **MariaDB Vector support.** Added MariaDB Vector as a new vector database backend, enabling deployments with VECTOR_DB=mariadb-vector; supports cosine and euclidean distance strategies with configurable HNSW indexing. [#21931](https://github.com/open-webui/open-webui/pull/21931)
+- 📝 **Task message truncation.** Chat messages sent to task models for title and tag generation can now be truncated using a filter in the prompt template, reducing token usage and processing time for long conversations. [#21499](https://github.com/open-webui/open-webui/issues/21499)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for Portuguese (Brazil), Spanish, and Malay were enhanced and expanded.
 
