@@ -278,7 +278,7 @@ class ModelChatsResponse(BaseModel):
     total: int
 
 
-@router.get("/models/{model_id}/chats", response_model=ModelChatsResponse)
+@router.get("/models/{model_id:path}/chats", response_model=ModelChatsResponse)
 async def get_model_chats(
     model_id: str,
     start_date: Optional[int] = Query(None),
@@ -367,7 +367,7 @@ class ModelOverviewResponse(BaseModel):
     tags: list[TagEntry]
 
 
-@router.get("/models/{model_id}/overview", response_model=ModelOverviewResponse)
+@router.get("/models/{model_id:path}/overview", response_model=ModelOverviewResponse)
 async def get_model_overview(
     model_id: str,
     days: int = Query(30, description="Number of days of history (0 for all)"),
