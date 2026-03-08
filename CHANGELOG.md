@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🛠️ **Exception error messages.** Fixed three locations where incorrect exception raising caused confusing TypeError messages instead of proper error descriptions, making debugging much easier. [#22446](https://github.com/open-webui/open-webui/pull/22446)
 - 📄 **YAML file processing.** Fixed an error when uploading YAML files with Docling enabled; YAML and YML files are now properly recognized as text files and processed correctly. [#22399](https://github.com/open-webui/open-webui/pull/22399), [#22263](https://github.com/open-webui/open-webui/issues/22263)
 - 📅 **Time range month names.** Fixed month names in time range labels appearing in the wrong language when OS regional settings differ from browser language; month names now consistently display in English. [#22454](https://github.com/open-webui/open-webui/pull/22454)
+- 🔐 **OAuth error URL encoding.** Fixed OAuth error messages with special characters causing malformed redirect URLs; error messages are now properly URL-encoded. [#22415](https://github.com/open-webui/open-webui/pull/22415)
+- 🛠️ **Internal tool method filtering.** Tools no longer expose internal methods starting with underscore to the LLM, reducing clutter and improving accuracy. [#22408](https://github.com/open-webui/open-webui/pull/22408)
+- 🔊 **Azure TTS locale extraction.** Fixed Azure text-to-speech using incomplete locale codes in SSML; now correctly uses full locale like "en-US" instead of just "en". [#22443](https://github.com/open-webui/open-webui/pull/22443)
 
 ### Changed
 
