@@ -432,6 +432,10 @@ def get_builtin_tools(
     # If model has attached knowledge (any type), only provide query_knowledge_files
     # Otherwise, provide all KB browsing tools
     model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", [])
+    # Merge folder-attached knowledge so builtin tools can search it
+    folder_knowledge = extra_params.get("__metadata__", {}).get("folder_knowledge")
+    if folder_knowledge:
+        model_knowledge = list(model_knowledge or []) + list(folder_knowledge)
     if is_builtin_tool_enabled("knowledge"):
         if model_knowledge:
             # Model has attached knowledge - only allow semantic search within it

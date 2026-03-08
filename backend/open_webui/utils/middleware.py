@@ -2241,10 +2241,34 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         folder.data["system_prompt"], form_data, metadata, user
                     )
                 if "files" in folder.data:
-                    form_data["files"] = [
-                        *folder.data["files"],
-                        *form_data.get("files", []),
-                    ]
+                    folder_files = folder.data["files"]
+                    if (
+                        metadata.get("params", {}).get("function_calling")
+                        == "native"
+                    ):
+                        # Native FC: knowledge files will be handled by the
+                        # builtin query_knowledge_files tool, not RAG.
+                        knowledge_files = [
+                            f
+                            for f in folder_files
+                            if f.get("type") == "collection"
+                            or f.get("collection_names")
+                        ]
+                        attachment_files = [
+                            f
+                            for f in folder_files
+                            if f not in knowledge_files
+                        ]
+                        form_data["files"] = [
+                            *attachment_files,
+                            *form_data.get("files", []),
+                        ]
+                        metadata["folder_knowledge"] = knowledge_files
+                    else:
+                        form_data["files"] = [
+                            *folder_files,
+                            *form_data.get("files", []),
+                        ]
 
     # Model "Knowledge" handling
     user_message = get_last_user_message(form_data["messages"])
