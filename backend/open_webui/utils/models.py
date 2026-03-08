@@ -332,6 +332,32 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 elif meta.get(key) is None:
                     meta[key] = copy.deepcopy(value)
 
+    # Apply upstream model metadata hints from OpenAI-compatible backends.
+    # Upstream meta is model-specific from the provider, so it overrides
+    # global DEFAULT_MODEL_METADATA but is still overridden by DB model overrides.
+    for model in models:
+        # Skip models that have a DB override (custom_models loop already set info)
+        if model.get("info", {}).get("id"):
+            continue
+
+        upstream_meta = model.get("openai", {}).get("meta") or model.get(
+            "ollama", {}
+        ).get("meta")
+        if not upstream_meta:
+            continue
+
+        info = model.setdefault("info", {})
+        meta = info.setdefault("meta", {})
+
+        for key in ("profile_image_url", "description", "capabilities"):
+            value = upstream_meta.get(key)
+            if value is not None:
+                if key == "capabilities" and meta.get("capabilities"):
+                    # Merge: upstream overrides DEFAULT_MODEL_METADATA capabilities
+                    meta["capabilities"] = {**meta["capabilities"], **value}
+                else:
+                    meta[key] = value
+
     # Batch-fetch all function valves in one query to avoid N+1 DB hits
     # inside get_action_priority (previously called per action × per model).
     all_function_valves = Functions.get_function_valves_by_ids(list(all_function_ids))
