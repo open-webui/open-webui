@@ -852,17 +852,36 @@ def transcription_handler(request, file_path, metadata, user=None):
         except requests.exceptions.RequestException as e:
             log.exception(e)
             detail = None
+            status_code = getattr(r, "status_code", 500) if r else 500
 
             try:
                 if r is not None and r.status_code != 200:
                     res = r.json()
-                    if "error" in res:
+                    # Azure returns {"code": "...", "message": "...", "innerError": {...}}
+                    if "code" in res and "message" in res:
+                        azure_code = res.get("innerError", {}).get(
+                            "code", res["code"]
+                        )
+                        user_facing_codes = {
+                            "EmptyAudioFile",
+                            "AudioLengthLimitExceeded",
+                            "NoLanguageIdentified",
+                            "MultipleLanguagesIdentified",
+                        }
+                        if azure_code in user_facing_codes:
+                            detail = res["message"]
+                        else:
+                            log.error(
+                                f"Azure STT error [{azure_code}]: {res['message']}"
+                            )
+                            detail = "An error occurred during transcription."
+                    elif "error" in res:
                         detail = f"External: {res['error'].get('message', '')}"
             except Exception:
                 detail = f"External: {e}"
 
             raise HTTPException(
-                status_code=getattr(r, "status_code", 500) if r else 500,
+                status_code=status_code,
                 detail=detail if detail else "Open WebUI: Server Connection Error",
             )
 
@@ -1087,6 +1106,8 @@ def transcribe(
             for future in futures:
                 try:
                     results.append(future.result())
+                except HTTPException:
+                    raise
                 except Exception as transcribe_exc:
                     raise HTTPException(
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1226,6 +1247,8 @@ def transcription(
                 "filename": os.path.basename(file_path),
             }
 
+        except HTTPException:
+            raise
         except Exception as e:
             log.exception(e)
 
@@ -1234,6 +1257,8 @@ def transcription(
                 detail="Transcription failed.",
             )
 
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(e)
 
