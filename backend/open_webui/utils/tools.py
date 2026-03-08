@@ -707,8 +707,8 @@ def get_functions_from_tool(tool: object) -> list[Callable]:
             getattr(tool, func)
         )  # checks if the attribute is callable (a method or function).
         and not func.startswith(
-            "__"
-        )  # filters out special (dunder) methods like init, str, etc. — these are usually built-in functions of an object that you might not need to use directly.
+            "_"
+        )  # filters out internal methods (starting with _) and special (dunder) methods.
         and not inspect.isclass(
             getattr(tool, func)
         )  # ensures that the callable is not a class itself, just a method or function.
