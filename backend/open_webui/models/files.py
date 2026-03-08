@@ -4,6 +4,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
+from open_webui.utils.misc import sanitize_metadata
 from pydantic import BaseModel, ConfigDict, model_validator
 from sqlalchemy import BigInteger, Column, String, Text, JSON
 
@@ -127,9 +128,16 @@ class FilesTable:
         self, user_id: str, form_data: FileForm, db: Optional[Session] = None
     ) -> Optional[FileModel]:
         with get_db_context(db) as db:
+            file_data = form_data.model_dump()
+
+            # Sanitize meta to remove non-JSON-serializable objects
+            # (e.g. callable tool functions, MCP client instances from middleware)
+            if file_data.get("meta"):
+                file_data["meta"] = sanitize_metadata(file_data["meta"])
+
             file = FileModel(
                 **{
-                    **form_data.model_dump(),
+                    **file_data,
                     "user_id": user_id,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
