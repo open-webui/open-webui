@@ -4493,14 +4493,29 @@ async def streaming_chat_response_handler(response, ctx):
                                 form_data["messages"],
                             )
 
-                            # Combine file and tool sources into one RAG
-                            # template application.
-                            form_data["messages"] = apply_source_context_to_messages(
-                                request,
-                                form_data["messages"],
-                                metadata.get("sources", []) + all_tool_call_sources,
-                                user_message,
+                            # Build context: file sources with content,
+                            # tool sources as citation markers only.
+                            ctx = get_source_context(metadata.get("sources", []))
+                            ctx += get_source_context(
+                                all_tool_call_sources, include_content=False
                             )
+                            ctx = ctx.strip()
+                            if ctx:
+                                rag = rag_template(
+                                    request.app.state.config.RAG_TEMPLATE,
+                                    ctx,
+                                    user_message,
+                                )
+                                if RAG_SYSTEM_CONTEXT:
+                                    form_data["messages"] = (
+                                        add_or_update_system_message(
+                                            rag, form_data["messages"], append=True
+                                        )
+                                    )
+                                else:
+                                    form_data["messages"] = add_or_update_user_message(
+                                        rag, form_data["messages"], append=False
+                                    )
                         tool_call_sources.clear()
 
                     await event_emitter(
