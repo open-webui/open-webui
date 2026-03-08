@@ -79,8 +79,15 @@
 
 	let mouseOver = false;
 	let draggable = false;
+	let loadChatDebounceTimer: ReturnType<typeof setTimeout>;
+
 	$: if (mouseOver) {
-		loadChat();
+		clearTimeout(loadChatDebounceTimer);
+		loadChatDebounceTimer = setTimeout(() => {
+			loadChat();
+		}, 200);
+	} else {
+		clearTimeout(loadChatDebounceTimer);
 	}
 
 	const loadChat = async () => {
@@ -266,6 +273,8 @@
 	});
 
 	onDestroy(() => {
+		clearTimeout(loadChatDebounceTimer);
+
 		if (itemElement) {
 			document.removeEventListener('click', onClickOutside, true);
 

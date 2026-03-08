@@ -45,6 +45,9 @@
 	export let searchEnabled = true;
 	export let searchPlaceholder = $i18n.t('Search a model');
 
+	const MODELS_FETCH_COOLDOWN_MS = 30000;
+	let lastModelsFetchTime = 0;
+
 	export let items: {
 		label: string;
 		value: string;
@@ -413,6 +416,10 @@
 				? 'dark:placeholder-gray-100 placeholder-gray-800'
 				: 'placeholder-gray-400'}"
 			on:mouseenter={async () => {
+				const now = Date.now();
+				if (now - lastModelsFetchTime < MODELS_FETCH_COOLDOWN_MS) return;
+				lastModelsFetchTime = now;
+
 				models.set(
 					await getModels(
 						localStorage.token,
