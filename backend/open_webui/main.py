@@ -1864,7 +1864,7 @@ async def chat_completion(
                                 "model": model_id,
                             },
                         )
-                except:
+                except Exception:
                     pass
 
             ctx = build_chat_response_context(
@@ -1911,7 +1911,7 @@ async def chat_completion(
                         {"type": "chat:tasks:cancel"},
                     )
 
-                except:
+                except Exception:
                     pass
         finally:
             try:
