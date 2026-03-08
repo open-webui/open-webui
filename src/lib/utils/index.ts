@@ -1094,6 +1094,22 @@ export const approximateToHumanReadable = (nanoseconds: number) => {
 	return results.reverse().join(' ');
 };
 
+// Month names used as i18n translation keys — must be English regardless of locale
+const MONTH_NAMES = [
+	'January',
+	'February',
+	'March',
+	'April',
+	'May',
+	'June',
+	'July',
+	'August',
+	'September',
+	'October',
+	'November',
+	'December'
+];
+
 export const getTimeRange = (timestamp) => {
 	const now = new Date();
 	const date = new Date(timestamp * 1000); // Convert Unix timestamp to milliseconds
@@ -1119,7 +1135,7 @@ export const getTimeRange = (timestamp) => {
 	} else if (diffDays <= 30) {
 		return 'Previous 30 days';
 	} else if (nowYear === dateYear) {
-		return date.toLocaleString('default', { month: 'long' });
+		return MONTH_NAMES[dateMonth];
 	} else {
 		return date.getFullYear().toString();
 	}
