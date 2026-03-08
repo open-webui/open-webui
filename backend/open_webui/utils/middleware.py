@@ -929,25 +929,21 @@ def apply_source_context_to_messages(
     if not sources or not user_message:
         return messages
 
-    context_string = get_source_context(sources, include_content)
+    context = get_source_context(sources, include_content)
 
-    context_string = context_string.strip()
-    if not context_string:
+    context = context.strip()
+    if not context:
         return messages
 
     if RAG_SYSTEM_CONTEXT:
         return add_or_update_system_message(
-            rag_template(
-                request.app.state.config.RAG_TEMPLATE, context_string, user_message
-            ),
+            rag_template(request.app.state.config.RAG_TEMPLATE, context, user_message),
             messages,
             append=True,
         )
     else:
         return add_or_update_user_message(
-            rag_template(
-                request.app.state.config.RAG_TEMPLATE, context_string, user_message
-            ),
+            rag_template(request.app.state.config.RAG_TEMPLATE, context, user_message),
             messages,
             append=False,
         )
@@ -4495,26 +4491,31 @@ async def streaming_chat_response_handler(response, ctx):
 
                             # Build context: file sources with content,
                             # tool sources as citation markers only.
-                            ctx = get_source_context(metadata.get("sources", []))
-                            ctx += get_source_context(
+                            source_context = get_source_context(
+                                metadata.get("sources", [])
+                            ) + get_source_context(
                                 all_tool_call_sources, include_content=False
                             )
-                            ctx = ctx.strip()
-                            if ctx:
-                                rag = rag_template(
+                            source_context = source_context.strip()
+                            if source_context:
+                                rag_content = rag_template(
                                     request.app.state.config.RAG_TEMPLATE,
-                                    ctx,
+                                    source_context,
                                     user_message,
                                 )
                                 if RAG_SYSTEM_CONTEXT:
                                     form_data["messages"] = (
                                         add_or_update_system_message(
-                                            rag, form_data["messages"], append=True
+                                            rag_content,
+                                            form_data["messages"],
+                                            append=True,
                                         )
                                     )
                                 else:
                                     form_data["messages"] = add_or_update_user_message(
-                                        rag, form_data["messages"], append=False
+                                        rag_content,
+                                        form_data["messages"],
+                                        append=False,
                                     )
                         tool_call_sources.clear()
 
