@@ -160,6 +160,55 @@ def output_id(prefix: str) -> str:
     return f"{prefix}_{uuid4().hex[:24]}"
 
 
+def _split_tool_calls(
+    tool_calls: list[dict],
+) -> list[dict]:
+    """Expand tool calls whose arguments contain multiple back-to-back JSON objects.
+
+    Some models (e.g. GPT-5.4) send multiple complete JSON argument objects
+    under the same tool call index, producing concatenated invalid JSON like:
+        '{"query":"A","count":5}{"query":"B","count":5}'
+
+    Each such tool call is split into separate entries so each gets executed
+    independently. Single-object arguments pass through unchanged.
+    """
+
+    def split_json_objects(raw: str) -> list[str]:
+        decoder = json.JSONDecoder()
+        results = []
+        position = 0
+
+        while position < len(raw):
+            while position < len(raw) and raw[position].isspace():
+                position += 1
+            if position >= len(raw):
+                break
+            try:
+                _, end = decoder.raw_decode(raw, position)
+                results.append(raw[position:end].strip())
+                position = end
+            except json.JSONDecodeError:
+                return [raw]
+
+        return results or [raw]
+
+    expanded = []
+    for tool_call in tool_calls:
+        arguments = tool_call.get("function", {}).get("arguments", "")
+        split_arguments = split_json_objects(arguments)
+
+        if len(split_arguments) <= 1:
+            expanded.append(tool_call)
+        else:
+            for argument in split_arguments:
+                cloned = copy.deepcopy(tool_call)
+                cloned["id"] = f"call_{uuid4().hex[:24]}"
+                cloned["function"]["arguments"] = argument
+                expanded.append(cloned)
+
+    return expanded
+
+
 def get_citation_source_from_tool_result(
     tool_name: str, tool_params: dict, tool_result: str, tool_id: str = ""
 ) -> list[dict]:
@@ -4104,7 +4153,11 @@ async def streaming_chat_response_handler(response, ctx):
                                 reasoning_item["status"] = "completed"
 
                     if response_tool_calls:
-                        tool_calls.append(response_tool_calls)
+                        tool_calls.append(
+                            _split_tool_calls(
+                                response_tool_calls
+                            )
+                        )
 
                     if response.background:
                         await response.background()
