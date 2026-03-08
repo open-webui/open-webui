@@ -61,6 +61,11 @@ class S3VectorClient(VectorDBBase):
                 dataType=data_type,
                 dimension=dimension,
                 distanceMetric=distance_metric,
+                metadataConfiguration={
+                    "nonFilterableMetadataKeys": [
+                        "text",
+                    ]
+                },
             )
             log.info(
                 f"Created S3 index: {index_name} (dim={dimension}, type={data_type}, metric={distance_metric})"
