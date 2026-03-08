@@ -16,6 +16,14 @@ log = logging.getLogger(__name__)
 def get_task_model_id(
     default_model_id: str, task_model: str, task_model_external: str, models
 ) -> str:
+    if default_model_id not in models:
+        if task_model and task_model in models:
+            default_model_id = task_model
+        elif task_model_external and task_model_external in models:
+            default_model_id = task_model_external
+        else:
+            return default_model_id
+
     # Set the task model
     task_model_id = default_model_id
     # Check if the user has a custom task model and use that model
