@@ -1,3 +1,7 @@
+"""
+NOTE: This vector database integration is community-supported and maintained on a best-effort basis.
+"""
+
 from typing import Optional, List, Dict, Any, Union
 import logging
 import time  # for measuring elapsed time

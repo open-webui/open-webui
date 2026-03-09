@@ -1,3 +1,7 @@
+"""
+NOTE: This vector database integration is community-supported and maintained on a best-effort basis.
+"""
+
 from open_webui.retrieval.vector.utils import process_metadata
 from open_webui.retrieval.vector.main import (
     VectorDBBase,
