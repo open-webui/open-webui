@@ -330,7 +330,7 @@
 			.replace(/<summary>.*?<\/summary>/gi, '')
 			.trim()}
 
-		{#if exportMode || token?.attributes?.type === 'reasoning'}
+		{#if exportMode}
 			<!-- Hide reasoning/thinking blocks in export mode -->
 		{:else if token?.attributes?.type === 'tool_calls'}
 			<!-- Tool calls have dedicated handling with ToolCallDisplay component -->
