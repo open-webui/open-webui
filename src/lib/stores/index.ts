@@ -282,6 +282,7 @@ type Config = {
 		enable_direct_connections: boolean;
 		enable_version_update_check: boolean;
 		folder_max_file_count?: number;
+		content_extraction_server_side: boolean;
 	};
 	oauth: {
 		providers: {

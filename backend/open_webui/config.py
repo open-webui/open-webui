@@ -2941,6 +2941,11 @@ BYPASS_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
     os.environ.get("BYPASS_EMBEDDING_AND_RETRIEVAL", "False").lower() == "true",
 )
 
+CONTENT_EXTRACTION_SERVER_SIDE = PersistentConfig(
+    "CONTENT_EXTRACTION_SERVER_SIDE",
+    "rag.CONTENT_EXTRACTION_SERVER_SIDE",
+    os.environ.get("CONTENT_EXTRACTION_SERVER_SIDE", "False").lower() == "true",
+)
 
 RAG_TOP_K = PersistentConfig(
     "RAG_TOP_K", "rag.top_k", int(os.environ.get("RAG_TOP_K", "3"))

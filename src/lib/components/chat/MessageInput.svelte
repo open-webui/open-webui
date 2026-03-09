@@ -598,7 +598,7 @@
 
 		files = [...files, fileItem];
 
-		if (!$temporaryChatEnabled) {
+		if (!$temporaryChatEnabled || $config?.features?.content_extraction_server_side) {
 			try {
 				// If the file is an audio file, provide the language for STT.
 				let metadata = null;
