@@ -633,6 +633,7 @@
 	"Embedding Concurrent Requests": "Samanaikaiset upotuspyynnöt",
 	"Embedding Model": "Upotusmalli",
 	"Embedding Model Engine": "Upotusmallin moottori",
+	"Empty message": "",
 	"Enable All": "Ota kaikki käyttöön",
 	"Enable API Keys": "Ota API-avaimet käyttöön",
 	"Enable autocomplete generation for chat messages": "Ota automaattinen täydennys käyttöön keskusteluviesteissä",

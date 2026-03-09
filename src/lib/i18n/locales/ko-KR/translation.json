@@ -633,6 +633,7 @@
 	"Embedding Concurrent Requests": "",
 	"Embedding Model": "임베딩 모델",
 	"Embedding Model Engine": "임베딩 모델 엔진",
+	"Empty message": "",
 	"Enable All": "",
 	"Enable API Keys": "",
 	"Enable autocomplete generation for chat messages": "채팅 메시지에 대한 자동 완성 생성 활성화",

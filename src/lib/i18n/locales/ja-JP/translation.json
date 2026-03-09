@@ -633,6 +633,7 @@
 	"Embedding Concurrent Requests": "",
 	"Embedding Model": "埋め込みモデル",
 	"Embedding Model Engine": "埋め込みモデルエンジン",
+	"Empty message": "",
 	"Enable All": "",
 	"Enable API Keys": "API キーを有効にする",
 	"Enable autocomplete generation for chat messages": "チャットメッセージの自動補完を有効にする",

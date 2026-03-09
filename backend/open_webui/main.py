@@ -1732,8 +1732,8 @@ async def chat_completion(
         }
 
         # Check base model existence for custom models
-        if model_info_params.get("base_model_id"):
-            base_model_id = model_info_params.get("base_model_id")
+        if model_info and model_info.base_model_id:
+            base_model_id = model_info.base_model_id
             if base_model_id not in request.app.state.MODELS:
                 if ENABLE_CUSTOM_MODEL_FALLBACK:
                     default_models = (
@@ -1864,7 +1864,7 @@ async def chat_completion(
                                 "model": model_id,
                             },
                         )
-                except:
+                except Exception:
                     pass
 
             ctx = build_chat_response_context(
@@ -1911,7 +1911,7 @@ async def chat_completion(
                         {"type": "chat:tasks:cancel"},
                     )
 
-                except:
+                except Exception:
                     pass
         finally:
             try:

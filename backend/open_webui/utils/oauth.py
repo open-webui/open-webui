@@ -620,7 +620,7 @@ class OAuthClientManager:
                             payload = json.loads(response_text)
                             error = payload.get("error")
                             error_description = payload.get("error_description", "")
-                        except:
+                        except Exception:
                             pass
                     else:
                         error_description = response_text
@@ -1706,7 +1706,9 @@ class OAuthManager:
         redirect_url = f"{redirect_base_url}/auth"
 
         if error_message:
-            redirect_url = f"{redirect_url}?error={error_message}"
+            redirect_url = (
+                f"{redirect_url}?error={urllib.parse.quote_plus(error_message)}"
+            )
             return RedirectResponse(url=redirect_url, headers=response.headers)
 
         response = RedirectResponse(url=redirect_url, headers=response.headers)

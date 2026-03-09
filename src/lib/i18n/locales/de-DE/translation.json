@@ -633,6 +633,7 @@
 	"Embedding Concurrent Requests": "Gleichzeitige Embedding Anfragen",
 	"Embedding Model": "Embedding-Modell",
 	"Embedding Model Engine": "Embedding-Modell-Engine",
+	"Empty message": "",
 	"Enable All": "Alle aktivieren",
 	"Enable API Keys": "API-Schlüssel aktivieren",
 	"Enable autocomplete generation for chat messages": "Autovervollständigung für Chat-Nachrichten aktivieren",
