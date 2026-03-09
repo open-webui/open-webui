@@ -620,7 +620,7 @@ class OAuthClientManager:
                             payload = json.loads(response_text)
                             error = payload.get("error")
                             error_description = payload.get("error_description", "")
-                        except:
+                        except Exception:
                             pass
                     else:
                         error_description = response_text
