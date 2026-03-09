@@ -108,6 +108,35 @@ def test_convert_to_responses_payload_omits_function_call_status_on_replay():
     ]
 
 
+def test_convert_to_responses_payload_omits_status_from_other_replayed_items():
+    payload = {
+        "model": "openai/gpt-5.4",
+        "messages": [
+            {
+                "role": "assistant",
+                "output": [
+                    {
+                        "type": "reasoning",
+                        "id": "rs_123",
+                        "summary": [],
+                        "status": "completed",
+                    }
+                ],
+            }
+        ],
+    }
+
+    converted = convert_to_responses_payload(payload)
+
+    assert converted["input"] == [
+        {
+            "type": "reasoning",
+            "id": "rs_123",
+            "summary": [],
+        }
+    ]
+
+
 def test_convert_to_responses_payload_anchors_on_stored_response_id():
     payload = {
         "model": "openai/gpt-5.4",

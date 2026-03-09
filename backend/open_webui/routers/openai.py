@@ -941,7 +941,10 @@ def convert_to_responses_payload(payload: dict) -> dict:
         # Check for stored output items (from previous Responses API turn)
         stored_output = msg.get("output")
         if stored_output and isinstance(stored_output, list):
-            for item in trim_trailing_empty_output_messages(stored_output):
+            for raw_item in trim_trailing_empty_output_messages(stored_output):
+                item = dict(raw_item) if isinstance(raw_item, dict) else raw_item
+                if isinstance(item, dict):
+                    item.pop("status", None)
                 item_type = item.get("type")
 
                 if item_type == "function_call":
@@ -978,7 +981,6 @@ def convert_to_responses_payload(payload: dict) -> dict:
 
                 if item_type == "message":
                     message_item = dict(item)
-                    message_item.pop("status", None)
                     item_id = message_item.get("id", "")
                     if not isinstance(item_id, str) or not item_id.startswith("msg_"):
                         seed = item_id or json.dumps(message_item, default=str)
