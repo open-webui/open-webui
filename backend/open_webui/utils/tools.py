@@ -432,6 +432,10 @@ def get_builtin_tools(
     # If model has attached knowledge (any type), only provide query_knowledge_files
     # Otherwise, provide all KB browsing tools
     model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", [])
+    # Merge folder-attached knowledge so builtin tools can search it
+    folder_knowledge = extra_params.get("__metadata__", {}).get("folder_knowledge")
+    if folder_knowledge:
+        model_knowledge = list(model_knowledge or []) + list(folder_knowledge)
     if is_builtin_tool_enabled("knowledge"):
         if model_knowledge:
             # Model has attached knowledge - only allow semantic search within it
@@ -703,8 +707,8 @@ def get_functions_from_tool(tool: object) -> list[Callable]:
             getattr(tool, func)
         )  # checks if the attribute is callable (a method or function).
         and not func.startswith(
-            "__"
-        )  # filters out special (dunder) methods like init, str, etc. — these are usually built-in functions of an object that you might not need to use directly.
+            "_"
+        )  # filters out internal methods (starting with _) and special (dunder) methods.
         and not inspect.isclass(
             getattr(tool, func)
         )  # ensures that the callable is not a class itself, just a method or function.
@@ -1186,7 +1190,7 @@ async def get_tool_servers_data(servers: List[Dict[str, Any]]) -> List[Dict[str,
             {
                 "id": str(id),
                 "idx": idx,
-                "url": server.get("url"),
+                "url": (server.get("url") or "").rstrip("/"),
                 "openapi": openapi_data,
                 "info": response.get("info"),
                 "specs": response.get("specs"),
@@ -1250,7 +1254,7 @@ async def execute_tool_server(
                     if params[param_name] is not None:
                         query_params[param_name] = params[param_name]
 
-        final_url = f"{url}{route_path}"
+        final_url = f"{url.rstrip('/')}{route_path}"
         for key, value in path_params.items():
             final_url = final_url.replace(f"{{{key}}}", str(value))
 
@@ -1320,6 +1324,8 @@ def get_tool_server_url(url: Optional[str], path: str) -> str:
     if "://" in path:
         # If it contains "://", it's a full URL
         return path
+    if url:
+        url = url.rstrip("/")
     if not path.startswith("/"):
         # Ensure the path starts with a slash
         path = f"/{path}"

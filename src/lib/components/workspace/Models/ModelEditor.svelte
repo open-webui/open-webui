@@ -218,7 +218,11 @@
 		}
 
 		info.params.system = system.trim() === '' ? null : system;
-		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
+		info.params.stop = params.stop
+			? (typeof params.stop === 'string' ? params.stop.split(',') : params.stop).filter((s) =>
+					s.trim()
+				)
+			: null;
 		Object.keys(info.params).forEach((key) => {
 			if (info.params[key] === '' || info.params[key] === null) {
 				delete info.params[key];

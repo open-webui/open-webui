@@ -221,6 +221,12 @@
 
 		const res = await updateRAGConfig(localStorage.token, {
 			...RAGConfig,
+			// Convert null (from cleared number inputs) to empty string so the backend
+			// can distinguish "clear this field" from "don't change this field"
+			FILE_MAX_SIZE: RAGConfig.FILE_MAX_SIZE ?? '',
+			FILE_MAX_COUNT: RAGConfig.FILE_MAX_COUNT ?? '',
+			FILE_IMAGE_COMPRESSION_WIDTH: RAGConfig.FILE_IMAGE_COMPRESSION_WIDTH ?? '',
+			FILE_IMAGE_COMPRESSION_HEIGHT: RAGConfig.FILE_IMAGE_COMPRESSION_HEIGHT ?? '',
 			ALLOWED_FILE_EXTENSIONS: RAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
 				.map((ext) => ext.trim())
 				.filter((ext) => ext !== ''),
