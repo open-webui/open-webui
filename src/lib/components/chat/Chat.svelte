@@ -2099,6 +2099,10 @@
 
 				return {
 					role: message.role,
+					// Preserve tool_calls for assistant messages (needed for proper tool calling)
+					...(message.tool_calls ? { tool_calls: message.tool_calls } : {}),
+					// Preserve output field for temp chats (backend uses it to reconstruct tool messages)
+					...(message.output ? { output: message.output } : {}),
 					...(message.role === 'user' && imageFiles.length > 0
 						? {
 								content: [
@@ -2119,7 +2123,7 @@
 							})
 				};
 			})
-			.filter((message) => message?.role === 'user' || message?.content?.trim());
+			.filter((message) => message?.role === 'user' || message?.content?.trim() || message?.tool_calls);
 
 		const toolIds = [];
 		const toolServerIds = [];
