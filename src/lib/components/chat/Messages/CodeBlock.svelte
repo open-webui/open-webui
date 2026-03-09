@@ -456,7 +456,7 @@
 			{/if}
 		{:else}
 			<div
-				class="sticky {stickyButtonsClassName} left-0 right-0 py-1.5 px-3 gap-2 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white bg-white dark:bg-black rounded-t-2xl"
+				class="sticky {stickyButtonsClassName} left-0 right-0 {exportMode && !lang ? '' : 'py-1.5'} px-3 gap-2 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white bg-white dark:bg-black rounded-t-2xl"
 			>
 				<div class="flex-1 truncate">
 					<Tooltip content={lang} placement="top-start">
@@ -539,7 +539,9 @@
 						? ''
 						: 'rounded-b-2xl'} overflow-hidden"
 			>
-				<div class=" pt-6.5 bg-white dark:bg-black"></div>
+				{#if !exportMode}
+					<div class=" pt-6.5 bg-white dark:bg-black"></div>
+				{/if}
 
 				{#if !collapsed}
 					{#if edit}
