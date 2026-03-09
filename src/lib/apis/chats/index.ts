@@ -667,6 +667,37 @@ export const getChatByShareId = async (token: string, share_id: string) => {
 	return res;
 };
 
+export const getPublicChatByShareId = async (share_id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/share/${share_id}/public`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json'
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const getChatPinnedStatusById = async (token: string, id: string) => {
 	let error = null;
 
@@ -822,7 +853,7 @@ export const cloneSharedChatById = async (token: string, id: string) => {
 	return res;
 };
 
-export const shareChatById = async (token: string, id: string) => {
+export const shareChatById = async (token: string, id: string, body?: { public: boolean }) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/share`, {
@@ -831,7 +862,8 @@ export const shareChatById = async (token: string, id: string) => {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
-		}
+		},
+		...(body && { body: JSON.stringify(body) })
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

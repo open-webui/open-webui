@@ -889,7 +889,11 @@
 				} else {
 					// Don't redirect if we're already on the auth page
 					// Needed because we pass in tokens from OAuth logins via URL fragments
-					if ($page.url.pathname !== '/auth') {
+					// Allow public shared chat pages without authentication
+					const isPublicShareRoute =
+						$page.url.pathname.startsWith('/s/') && $config?.features?.enable_public_sharing;
+
+					if ($page.url.pathname !== '/auth' && !isPublicShareRoute) {
 						await goto(`/auth?redirect=${encodedUrl}`);
 					}
 				}

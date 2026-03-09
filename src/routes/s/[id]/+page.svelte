@@ -5,10 +5,10 @@
 
 	import dayjs from 'dayjs';
 
-	import { settings, chatId, WEBUI_NAME, models, config } from '$lib/stores';
+	import { settings, chatId, WEBUI_NAME, models, config, user as sessionUser } from '$lib/stores';
 	import { convertMessagesToHistory, createMessagesList } from '$lib/utils';
 
-	import { getChatByShareId, cloneSharedChatById } from '$lib/apis/chats';
+	import { getChatByShareId, getPublicChatByShareId, cloneSharedChatById } from '$lib/apis/chats';
 
 	import Messages from '$lib/components/chat/Messages.svelte';
 
@@ -32,6 +32,7 @@
 
 	let chat = null;
 	let user = null;
+	let isAuthenticated = false;
 
 	let title = '';
 	let files = [];
@@ -60,14 +61,50 @@
 	//////////////////////////
 
 	const loadSharedChat = async () => {
-		const userSettings = await getUserSettings(localStorage.token).catch((error) => {
-			console.error(error);
-			return null;
-		});
+		const token = localStorage.token;
+		isAuthenticated = !!token;
 
-		if (userSettings) {
-			settings.set(userSettings.ui);
+		if (isAuthenticated) {
+			// Authenticated flow
+			const userSettings = await getUserSettings(token).catch((error) => {
+				console.error(error);
+				return null;
+			});
+
+			if (userSettings) {
+				settings.set(userSettings.ui);
+			} else {
+				let localStorageSettings = {} as Parameters<(typeof settings)['set']>[0];
+
+				try {
+					localStorageSettings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+				} catch (e: unknown) {
+					console.error('Failed to parse settings from localStorage', e);
+				}
+
+				settings.set(localStorageSettings);
+			}
+
+			await models.set(
+				await getModels(
+					token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
+			await chatId.set($page.params.id);
+			chat = await getChatByShareId(token, $chatId).catch(async (error) => {
+				await goto('/');
+				return null;
+			});
+
+			if (chat) {
+				user = await getUserInfoById(token, chat.user_id).catch((error) => {
+					console.error(error);
+					return null;
+				});
+			}
 		} else {
+			// Unauthenticated (public) flow
 			let localStorageSettings = {} as Parameters<(typeof settings)['set']>[0];
 
 			try {
@@ -77,26 +114,15 @@
 			}
 
 			settings.set(localStorageSettings);
-		}
 
-		await models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-			)
-		);
-		await chatId.set($page.params.id);
-		chat = await getChatByShareId(localStorage.token, $chatId).catch(async (error) => {
-			await goto('/');
-			return null;
-		});
-
-		if (chat) {
-			user = await getUserInfoById(localStorage.token, chat.user_id).catch((error) => {
-				console.error(error);
+			await chatId.set($page.params.id);
+			chat = await getPublicChatByShareId($chatId).catch(async (error) => {
+				await goto('/auth');
 				return null;
 			});
+		}
 
+		if (chat) {
 			const chatContent = chat.chat;
 
 			if (chatContent) {
@@ -201,12 +227,21 @@
 				class="absolute bottom-0 right-0 left-0 flex justify-center w-full bg-linear-to-b from-transparent to-white dark:to-gray-900"
 			>
 				<div class="pb-5">
-					<button
-						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-						on:click={cloneSharedChat}
-					>
-						{$i18n.t('Clone Chat')}
-					</button>
+					{#if isAuthenticated}
+						<button
+							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+							on:click={cloneSharedChat}
+						>
+							{$i18n.t('Clone Chat')}
+						</button>
+					{:else}
+						<a
+							href="/auth"
+							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+						>
+							{$i18n.t('Sign in to clone this chat')}
+						</a>
+					{/if}
 				</div>
 			</div>
 		</div>

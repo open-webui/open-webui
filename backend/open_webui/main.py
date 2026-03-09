@@ -383,6 +383,7 @@ from open_webui.config import (
     ENABLE_NOTES,
     ENABLE_USER_STATUS,
     ENABLE_COMMUNITY_SHARING,
+    ENABLE_PUBLIC_SHARING,
     ENABLE_MESSAGE_RATING,
     ENABLE_USER_WEBHOOKS,
     ENABLE_EVALUATION_ARENA_MODELS,
@@ -866,6 +867,7 @@ app.state.config.FOLDER_MAX_FILE_COUNT = FOLDER_MAX_FILE_COUNT
 app.state.config.ENABLE_CHANNELS = ENABLE_CHANNELS
 app.state.config.ENABLE_NOTES = ENABLE_NOTES
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
+app.state.config.ENABLE_PUBLIC_SHARING = ENABLE_PUBLIC_SHARING
 app.state.config.ENABLE_MESSAGE_RATING = ENABLE_MESSAGE_RATING
 app.state.config.ENABLE_USER_WEBHOOKS = ENABLE_USER_WEBHOOKS
 app.state.config.ENABLE_USER_STATUS = ENABLE_USER_STATUS
@@ -2150,6 +2152,7 @@ async def get_app_config(request: Request):
             "enable_version_update_check": ENABLE_VERSION_UPDATE_CHECK,
             "enable_public_active_users_count": ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
             "enable_easter_eggs": ENABLE_EASTER_EGGS,
+            "enable_public_sharing": app.state.config.ENABLE_PUBLIC_SHARING,
             **(
                 {
                     "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,

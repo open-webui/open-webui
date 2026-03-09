@@ -1770,6 +1770,12 @@ ENABLE_COMMUNITY_SHARING = PersistentConfig(
     os.environ.get("ENABLE_COMMUNITY_SHARING", "True").lower() == "true",
 )
 
+ENABLE_PUBLIC_SHARING = PersistentConfig(
+    "ENABLE_PUBLIC_SHARING",
+    "ui.enable_public_sharing",
+    os.environ.get("ENABLE_PUBLIC_SHARING", "False").lower() == "true",
+)
+
 ENABLE_MESSAGE_RATING = PersistentConfig(
     "ENABLE_MESSAGE_RATING",
     "ui.enable_message_rating",

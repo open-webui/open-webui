@@ -51,6 +51,7 @@ class Chat(Base):
 
     meta = Column(JSON, server_default="{}")
     folder_id = Column(Text, nullable=True)
+    public = Column(Boolean, default=False, nullable=False, server_default="false")
 
     __table_args__ = (
         # Performance indexes for common queries
@@ -84,6 +85,7 @@ class ChatModel(BaseModel):
 
     meta: dict = {}
     folder_id: Optional[str] = None
+    public: bool = False
 
 
 class ChatFile(Base):
@@ -160,6 +162,17 @@ class ChatResponse(BaseModel):
     pinned: Optional[bool] = False
     meta: dict = {}
     folder_id: Optional[str] = None
+
+
+class PublicChatResponse(BaseModel):
+    id: str
+    title: str
+    chat: dict
+    updated_at: int  # timestamp in epoch
+    created_at: int  # timestamp in epoch
+    archived: bool
+    pinned: Optional[bool] = False
+    meta: dict = {}
 
 
 class ChatTitleIdResponse(BaseModel):
@@ -559,7 +572,7 @@ class ChatTable:
             return message_files
 
     def insert_shared_chat_by_chat_id(
-        self, chat_id: str, db: Optional[Session] = None
+        self, chat_id: str, public: bool = False, db: Optional[Session] = None
     ) -> Optional[ChatModel]:
         with get_db_context(db) as db:
             # Get the existing chat to share
@@ -580,6 +593,7 @@ class ChatTable:
                     "meta": chat.meta,
                     "pinned": chat.pinned,
                     "folder_id": chat.folder_id,
+                    "public": public,
                     "created_at": chat.created_at,
                     "updated_at": int(time.time()),
                 }
@@ -599,7 +613,7 @@ class ChatTable:
             return shared_chat if (shared_result and result) else None
 
     def update_shared_chat_by_chat_id(
-        self, chat_id: str, db: Optional[Session] = None
+        self, chat_id: str, public: bool = False, db: Optional[Session] = None
     ) -> Optional[ChatModel]:
         try:
             with get_db_context(db) as db:
@@ -609,13 +623,16 @@ class ChatTable:
                 )
 
                 if shared_chat is None:
-                    return self.insert_shared_chat_by_chat_id(chat_id, db=db)
+                    return self.insert_shared_chat_by_chat_id(
+                        chat_id, public=public, db=db
+                    )
 
                 shared_chat.title = chat.title
                 shared_chat.chat = chat.chat
                 shared_chat.meta = chat.meta
                 shared_chat.pinned = chat.pinned
                 shared_chat.folder_id = chat.folder_id
+                shared_chat.public = public
                 shared_chat.updated_at = int(time.time())
                 db.commit()
                 db.refresh(shared_chat)

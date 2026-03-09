@@ -1009,6 +1009,7 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "DEFAULT_GROUP_ID": request.app.state.config.DEFAULT_GROUP_ID,
         "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
+        "ENABLE_PUBLIC_SHARING": request.app.state.config.ENABLE_PUBLIC_SHARING,
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
         "ENABLE_FOLDERS": request.app.state.config.ENABLE_FOLDERS,
         "FOLDER_MAX_FILE_COUNT": request.app.state.config.FOLDER_MAX_FILE_COUNT,
@@ -1035,6 +1036,7 @@ class AdminConfig(BaseModel):
     DEFAULT_GROUP_ID: str
     JWT_EXPIRES_IN: str
     ENABLE_COMMUNITY_SHARING: bool
+    ENABLE_PUBLIC_SHARING: bool
     ENABLE_MESSAGE_RATING: bool
     ENABLE_FOLDERS: bool
     FOLDER_MAX_FILE_COUNT: Optional[int | str] = None
@@ -1087,6 +1089,7 @@ async def update_admin_config(
     request.app.state.config.ENABLE_COMMUNITY_SHARING = (
         form_data.ENABLE_COMMUNITY_SHARING
     )
+    request.app.state.config.ENABLE_PUBLIC_SHARING = form_data.ENABLE_PUBLIC_SHARING
     request.app.state.config.ENABLE_MESSAGE_RATING = form_data.ENABLE_MESSAGE_RATING
 
     request.app.state.config.ENABLE_USER_WEBHOOKS = form_data.ENABLE_USER_WEBHOOKS
@@ -1113,6 +1116,7 @@ async def update_admin_config(
         "DEFAULT_GROUP_ID": request.app.state.config.DEFAULT_GROUP_ID,
         "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
+        "ENABLE_PUBLIC_SHARING": request.app.state.config.ENABLE_PUBLIC_SHARING,
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
         "ENABLE_FOLDERS": request.app.state.config.ENABLE_FOLDERS,
         "FOLDER_MAX_FILE_COUNT": request.app.state.config.FOLDER_MAX_FILE_COUNT,
