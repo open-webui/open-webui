@@ -96,6 +96,8 @@ from open_webui.utils.misc import (
     prepend_to_first_user_message_content,
     convert_logit_bias_input_to_json,
     convert_output_to_input_messages,
+    collapse_responses_api_messages,
+    build_responses_api_continuation_messages,
     get_content_from_message,
     get_function_call_output_text,
     trim_trailing_empty_output_messages,
@@ -223,6 +225,25 @@ def prepare_responses_output_for_append(
     """
     trimmed_output = trim_trailing_empty_output_messages(output)
     return trimmed_output, list(trimmed_output)
+
+
+def build_responses_tool_follow_up_input(results: list[dict]) -> list[dict]:
+    input_items = []
+
+    for result in results:
+        call_id = result.get("tool_call_id", "")
+        if not call_id:
+            continue
+
+        input_items.append(
+            {
+                "type": "function_call_output",
+                "call_id": call_id,
+                "output": get_function_call_output_text(result.get("content", "")),
+            }
+        )
+
+    return input_items
 
 
 def extract_responses_api_tool_calls(
@@ -934,7 +955,15 @@ def handle_responses_streaming_event(
                 ):
                     item["status"] = "completed"
 
-        return new_output, {"usage": response_data.get("usage"), "done": True}
+        return new_output, {
+            "usage": response_data.get("usage"),
+            "done": True,
+            **(
+                {"response_id": response_data.get("id")}
+                if response_data.get("id")
+                else {}
+            ),
+        }
 
     elif event_type == "response.in_progress":
         # State Machine Event: In Progress
@@ -2161,7 +2190,7 @@ async def convert_url_images_to_base64(form_data):
 def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[dict]]:
     """
     Load the message chain from DB up to message_id,
-    keeping only LLM-relevant fields (role, content, output).
+    keeping only LLM-relevant fields (role, content, output, response_id).
     """
     messages_map = Chats.get_messages_map_by_chat_id(chat_id)
     if not messages_map:
@@ -2172,7 +2201,11 @@ def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[dict]]
         return None
 
     return [
-        {k: v for k, v in msg.items() if k in ("role", "content", "output", "files")}
+        {
+            k: v
+            for k, v in msg.items()
+            if k in ("role", "content", "output", "files", "response_id")
+        }
         for msg in db_messages
     ]
 
@@ -2195,6 +2228,8 @@ def process_messages_with_output(
                 message["output"], raw=True, responses_api=responses_api
             )
             if output_messages:
+                if responses_api and message.get("response_id"):
+                    output_messages[0]["response_id"] = message["response_id"]
                 processed.extend(output_messages)
                 continue
 
@@ -2251,15 +2286,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 # Strip files field — it's been incorporated into content
                 message.pop("files", None)
 
+    responses_api_model = is_responses_api_model(
+        request,
+        model=model,
+        model_id=form_data.get("model"),
+    )
+
     # Responses-backed models must preserve native output items; Chat
     # Completions models still need assistant/tool message reconstruction.
     form_data["messages"] = process_messages_with_output(
         form_data.get("messages", []),
-        responses_api=is_responses_api_model(
-            request,
-            model=model,
-            model_id=form_data.get("model"),
-        ),
+        responses_api=responses_api_model,
     )
 
     system_message = get_system_message(form_data.get("messages", []))
@@ -2857,6 +2894,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             }
         )
 
+    if responses_api_model and not form_data.get("previous_response_id"):
+        collapsed_messages, previous_response_id = collapse_responses_api_messages(
+            form_data.get("messages", [])
+        )
+        if previous_response_id:
+            form_data["messages"] = collapsed_messages
+            form_data["previous_response_id"] = previous_response_id
+
     return form_data, metadata, events
 
 
@@ -3314,6 +3359,11 @@ async def non_streaming_chat_response_handler(response, ctx):
                                 "content": content,
                                 "output": response_output,
                                 "title": title,
+                                **(
+                                    {"response_id": response_data.get("id")}
+                                    if response_data.get("id")
+                                    else {}
+                                ),
                             },
                         }
                     )
@@ -3328,6 +3378,11 @@ async def non_streaming_chat_response_handler(response, ctx):
                             "role": "assistant",
                             "content": content,
                             "output": response_output,
+                            **(
+                                {"response_id": response_data.get("id")}
+                                if response_data.get("id")
+                                else {}
+                            ),
                             **({"usage": usage} if usage else {}),
                         },
                     )
@@ -3403,6 +3458,8 @@ async def streaming_chat_response_handler(response, ctx):
 
         # Handle as a background task
         async def response_handler(response, events):
+            nonlocal form_data
+
             def tag_output_handler(content_type, tags, output):
                 """
                 Detect special tags (reasoning, solution, code_interpreter) in streaming
@@ -3697,6 +3754,11 @@ async def streaming_chat_response_handler(response, ctx):
                     output = []
 
             usage = None
+            latest_responses_response_id = (
+                message.get("response_id")
+                if isinstance(message, dict) and message.get("response_id")
+                else None
+            )
 
             reasoning_tags_param = metadata.get("params", {}).get("reasoning_tags")
             DETECT_REASONING_TAGS = reasoning_tags_param is not False
@@ -3741,6 +3803,7 @@ async def streaming_chat_response_handler(response, ctx):
                     nonlocal usage
                     nonlocal output
                     nonlocal responses_output_start_index
+                    nonlocal latest_responses_response_id
 
                     response_tool_calls = []
                     responses_output_prefix = []
@@ -3868,6 +3931,10 @@ async def streaming_chat_response_handler(response, ctx):
 
                                     # Merge any metadata (usage, done, etc.)
                                     if response_metadata:
+                                        if response_metadata.get("response_id"):
+                                            latest_responses_response_id = (
+                                                response_metadata["response_id"]
+                                            )
                                         processed_data.update(response_metadata)
 
                                     await event_emitter(
@@ -4730,25 +4797,42 @@ async def streaming_chat_response_handler(response, ctx):
                     )
 
                     try:
-                        follow_up_messages = convert_output_to_input_messages(
-                            output,
-                            raw=True,
-                            responses_api=is_responses_api_model(
-                                request,
-                                model=model,
-                                model_id=model_id,
-                            ),
+                        responses_api_model = is_responses_api_model(
+                            request,
+                            model=model,
+                            model_id=model_id,
                         )
+                        if responses_api_model and latest_responses_response_id:
+                            new_form_data = {
+                                **form_data,
+                                "model": model_id,
+                                "stream": True,
+                                "messages": build_responses_api_continuation_messages(
+                                    form_data.get("messages", []),
+                                    build_responses_tool_follow_up_input(results),
+                                ),
+                                "previous_response_id": latest_responses_response_id,
+                            }
+                        else:
+                            follow_up_messages = convert_output_to_input_messages(
+                                output,
+                                raw=True,
+                                responses_api=responses_api_model,
+                            )
 
-                        new_form_data = {
-                            **form_data,
-                            "model": model_id,
-                            "stream": True,
-                            "messages": [
-                                *form_data["messages"],
-                                *follow_up_messages,
-                            ],
-                        }
+                            new_form_data = {
+                                **form_data,
+                                "model": model_id,
+                                "stream": True,
+                                "messages": [
+                                    *form_data["messages"],
+                                    *follow_up_messages,
+                                ],
+                            }
+                            new_form_data.pop("previous_response_id", None)
+
+                        new_form_data.pop("input", None)
+                        form_data = new_form_data
 
                         res = await generate_chat_completion(
                             request,
@@ -4761,11 +4845,7 @@ async def streaming_chat_response_handler(response, ctx):
                             await stream_body_handler(
                                 res,
                                 new_form_data,
-                                append_responses_output=is_responses_api_model(
-                                    request,
-                                    model=model,
-                                    model_id=model_id,
-                                ),
+                                append_responses_output=responses_api_model,
                             )
                         else:
                             res_body = None
@@ -4953,23 +5033,54 @@ async def streaming_chat_response_handler(response, ctx):
                         )
 
                         try:
-                            new_form_data = {
-                                **form_data,
-                                "model": model_id,
-                                "stream": True,
-                                "messages": [
-                                    *form_data["messages"],
-                                    *convert_output_to_input_messages(
-                                        output,
+                            responses_api_model = is_responses_api_model(
+                                request,
+                                model=model,
+                                model_id=model_id,
+                            )
+                            if responses_api_model and latest_responses_response_id:
+                                continuation_messages = []
+                                system_message = get_system_message(
+                                    form_data.get("messages", [])
+                                )
+                                if system_message:
+                                    continuation_messages.append(
+                                        copy.deepcopy(system_message)
+                                    )
+
+                                continuation_messages.extend(
+                                    convert_output_to_input_messages(
+                                        [copy.deepcopy(ci_item)],
                                         raw=True,
-                                        responses_api=is_responses_api_model(
-                                            request,
-                                            model=model,
-                                            model_id=model_id,
+                                        responses_api=False,
+                                    )
+                                )
+
+                                new_form_data = {
+                                    **form_data,
+                                    "model": model_id,
+                                    "stream": True,
+                                    "messages": continuation_messages,
+                                    "previous_response_id": latest_responses_response_id,
+                                }
+                            else:
+                                new_form_data = {
+                                    **form_data,
+                                    "model": model_id,
+                                    "stream": True,
+                                    "messages": [
+                                        *form_data["messages"],
+                                        *convert_output_to_input_messages(
+                                            output,
+                                            raw=True,
+                                            responses_api=responses_api_model,
                                         ),
-                                    ),
-                                ],
-                            }
+                                    ],
+                                }
+                                new_form_data.pop("previous_response_id", None)
+                                form_data = new_form_data
+
+                            new_form_data.pop("input", None)
 
                             res = await generate_chat_completion(
                                 request,
@@ -4982,11 +5093,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 await stream_body_handler(
                                     res,
                                     new_form_data,
-                                    append_responses_output=is_responses_api_model(
-                                        request,
-                                        model=model,
-                                        model_id=model_id,
-                                    ),
+                                    append_responses_output=responses_api_model,
                                 )
                             else:
                                 break
@@ -5005,6 +5112,11 @@ async def streaming_chat_response_handler(response, ctx):
                     "content": serialize_output(output),
                     "output": output,
                     "title": title,
+                    **(
+                        {"response_id": latest_responses_response_id}
+                        if latest_responses_response_id
+                        else {}
+                    ),
                 }
 
                 if not ENABLE_REALTIME_CHAT_SAVE:
@@ -5015,14 +5127,26 @@ async def streaming_chat_response_handler(response, ctx):
                         {
                             "content": serialize_output(output),
                             "output": output,
+                            **(
+                                {"response_id": latest_responses_response_id}
+                                if latest_responses_response_id
+                                else {}
+                            ),
                             **({"usage": usage} if usage else {}),
                         },
                     )
-                elif usage:
+                elif usage or latest_responses_response_id:
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
-                        {"usage": usage},
+                        {
+                            **({"usage": usage} if usage else {}),
+                            **(
+                                {"response_id": latest_responses_response_id}
+                                if latest_responses_response_id
+                                else {}
+                            ),
+                        },
                     )
 
                 # Send a webhook notification if the user is not active
@@ -5061,6 +5185,11 @@ async def streaming_chat_response_handler(response, ctx):
                         {
                             "content": serialize_output(output),
                             "output": output,
+                            **(
+                                {"response_id": latest_responses_response_id}
+                                if latest_responses_response_id
+                                else {}
+                            ),
                         },
                     )
 

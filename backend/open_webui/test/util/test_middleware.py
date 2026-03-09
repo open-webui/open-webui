@@ -2,6 +2,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from open_webui.utils.middleware import (
+    build_responses_tool_follow_up_input,
     _split_tool_calls,
     extract_responses_api_tool_calls,
     handle_responses_streaming_event,
@@ -209,3 +210,59 @@ def test_prepare_responses_output_for_append_keeps_follow_up_deltas_on_new_item(
 
     assert live_output[-1]["id"] == "msg_new"
     assert live_output[-1]["content"][0]["text"] == "follow-up text"
+
+
+def test_build_responses_tool_follow_up_input_uses_incremental_outputs():
+    results = [
+        {
+            "tool_call_id": "call_1",
+            "content": "tool result",
+            "files": [{"id": "ignored"}],
+        },
+        {
+            "tool_call_id": "call_2",
+            "content": [{"type": "output_text", "text": "structured result"}],
+        },
+    ]
+
+    assert build_responses_tool_follow_up_input(results) == [
+        {
+            "type": "function_call_output",
+            "call_id": "call_1",
+            "output": "tool result",
+        },
+        {
+            "type": "function_call_output",
+            "call_id": "call_2",
+            "output": "structured result",
+        },
+    ]
+
+
+def test_handle_responses_streaming_event_completed_returns_response_id():
+    output, metadata = handle_responses_streaming_event(
+        {
+            "type": "response.completed",
+            "response": {
+                "id": "resp_123",
+                "output": [
+                    {
+                        "type": "message",
+                        "id": "msg_123",
+                        "role": "assistant",
+                        "status": "completed",
+                        "content": [{"type": "output_text", "text": "done"}],
+                    }
+                ],
+                "usage": {"input_tokens": 1, "output_tokens": 2, "total_tokens": 3},
+            },
+        },
+        [],
+    )
+
+    assert output[0]["id"] == "msg_123"
+    assert metadata == {
+        "usage": {"input_tokens": 1, "output_tokens": 2, "total_tokens": 3},
+        "done": True,
+        "response_id": "resp_123",
+    }

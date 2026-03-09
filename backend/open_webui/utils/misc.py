@@ -209,6 +209,83 @@ def convert_output_to_input_messages(
     return convert_output_to_messages(output, raw=raw)
 
 
+def collapse_responses_api_messages(
+    messages: list[dict],
+) -> tuple[list[dict], Optional[str]]:
+    """
+    Collapse a Responses API conversation to the suffix after the latest
+    persisted assistant response.
+
+    When `previous_response_id` is available, OpenAI can reuse the stored
+    conversation state and only needs the new delta input. The current system
+    message is preserved so instructions remain explicit on the next request.
+    """
+    if not messages or not isinstance(messages, list):
+        return [], None
+
+    previous_response_id = None
+    previous_response_index = None
+
+    for index in range(len(messages) - 1, -1, -1):
+        message = messages[index]
+        if message.get("role") != "assistant":
+            continue
+
+        response_id = message.get("response_id")
+        if isinstance(response_id, str) and response_id:
+            previous_response_id = response_id
+            previous_response_index = index
+            break
+
+    if previous_response_id is None or previous_response_index is None:
+        return messages, None
+
+    delta_messages = [
+        copy.deepcopy(message)
+        for message in messages[previous_response_index + 1 :]
+        if message.get("role") != "system"
+    ]
+
+    if not delta_messages:
+        return messages, None
+
+    collapsed_messages = []
+    system_message = get_system_message(messages)
+    if system_message:
+        collapsed_messages.append(copy.deepcopy(system_message))
+
+    collapsed_messages.extend(delta_messages)
+    return collapsed_messages, previous_response_id
+
+
+def build_responses_api_continuation_messages(
+    messages: list[dict], output_items: list[dict]
+) -> list[dict]:
+    """
+    Build a minimal follow-up message list for a Responses API continuation.
+
+    The current system message is preserved for instructions, while the new
+    `output_items` become the only incremental input after
+    `previous_response_id`.
+    """
+    continuation_messages = []
+
+    system_message = get_system_message(messages)
+    if system_message:
+        continuation_messages.append(copy.deepcopy(system_message))
+
+    trimmed_output = trim_trailing_empty_output_messages(output_items)
+    if trimmed_output:
+        continuation_messages.append(
+            {
+                "role": "assistant",
+                "output": trimmed_output,
+            }
+        )
+
+    return continuation_messages
+
+
 def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
     """
     Convert OR-aligned output items to OpenAI Chat Completion-format messages.
