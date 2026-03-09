@@ -588,7 +588,9 @@ def sanitize_metadata(metadata: dict) -> dict:
                 if not callable(v) and _is_serializable(v)
             }
         if isinstance(obj, list):
-            return [_sanitize(v) for v in obj if not callable(v) and _is_serializable(v)]
+            return [
+                _sanitize(v) for v in obj if not callable(v) and _is_serializable(v)
+            ]
         if callable(obj):
             return None
         # Last resort: try to see if it's serializable

@@ -859,9 +859,7 @@ def transcription_handler(request, file_path, metadata, user=None):
                     res = r.json()
                     # Azure returns {"code": "...", "message": "...", "innerError": {...}}
                     if "code" in res and "message" in res:
-                        azure_code = res.get("innerError", {}).get(
-                            "code", res["code"]
-                        )
+                        azure_code = res.get("innerError", {}).get("code", res["code"])
                         user_facing_codes = {
                             "EmptyAudioFile",
                             "AudioLengthLimitExceeded",
