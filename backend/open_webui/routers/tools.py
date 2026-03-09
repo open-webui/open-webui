@@ -30,7 +30,11 @@ from open_webui.utils.plugin import (
 )
 from open_webui.utils.tools import get_tool_specs
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_access, has_permission
+from open_webui.utils.access_control import (
+    has_permission,
+    has_access,
+    filter_allowed_access_grants,
+)
 from open_webui.utils.tools import get_tool_servers
 
 from open_webui.config import CACHE_DIR, BYPASS_ADMIN_ACCESS_CONTROL

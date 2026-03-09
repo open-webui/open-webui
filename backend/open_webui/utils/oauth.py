@@ -36,6 +36,7 @@ from open_webui.models.groups import Groups, GroupModel, GroupUpdateForm, GroupF
 from open_webui.config import (
     DEFAULT_USER_ROLE,
     ENABLE_OAUTH_SIGNUP,
+    OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE,
     OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
     OAUTH_PROVIDERS,
     ENABLE_OAUTH_ROLE_MANAGEMENT,
@@ -113,6 +114,9 @@ log = logging.getLogger(__name__)
 auth_manager_config = AppConfig()
 auth_manager_config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
 auth_manager_config.ENABLE_OAUTH_SIGNUP = ENABLE_OAUTH_SIGNUP
+auth_manager_config.OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE = (
+    OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE
+)
 auth_manager_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL = OAUTH_MERGE_ACCOUNTS_BY_EMAIL
 auth_manager_config.ENABLE_OAUTH_ROLE_MANAGEMENT = ENABLE_OAUTH_ROLE_MANAGEMENT
 auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT = ENABLE_OAUTH_GROUP_MANAGEMENT
@@ -616,7 +620,7 @@ class OAuthClientManager:
                             payload = json.loads(response_text)
                             error = payload.get("error")
                             error_description = payload.get("error_description", "")
-                        except:
+                        except Exception:
                             pass
                     else:
                         error_description = response_text
@@ -786,6 +790,16 @@ class OAuthClientManager:
             }
             if hasattr(client, "client_secret") and client.client_secret:
                 refresh_data["client_secret"] = client.client_secret
+
+            # Add scope if available in client kwargs (some providers require it on refresh)
+            if (
+                hasattr(client, "client_kwargs")
+                and client.client_kwargs.get("scope")
+                and getattr(
+                    self.app.state.config, "OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE", False
+                )
+            ):
+                refresh_data["scope"] = client.client_kwargs["scope"]
 
             # Make refresh request
             async with aiohttp.ClientSession(trust_env=True) as session_http:
@@ -1080,6 +1094,14 @@ class OAuthManager:
             # Add client_secret if available (some providers require it)
             if hasattr(client, "client_secret") and client.client_secret:
                 refresh_data["client_secret"] = client.client_secret
+
+            # Add scope if available in client kwargs (some providers require it on refresh)
+            if (
+                hasattr(client, "client_kwargs")
+                and client.client_kwargs.get("scope")
+                and auth_manager_config.OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE
+            ):
+                refresh_data["scope"] = client.client_kwargs["scope"]
 
             # Make refresh request
             async with aiohttp.ClientSession(trust_env=True) as session_http:
@@ -1684,7 +1706,9 @@ class OAuthManager:
         redirect_url = f"{redirect_base_url}/auth"
 
         if error_message:
-            redirect_url = f"{redirect_url}?error={error_message}"
+            redirect_url = (
+                f"{redirect_url}?error={urllib.parse.quote_plus(error_message)}"
+            )
             return RedirectResponse(url=redirect_url, headers=response.headers)
 
         response = RedirectResponse(url=redirect_url, headers=response.headers)

@@ -114,7 +114,7 @@
 	import { Fragment, DOMParser } from 'prosemirror-model';
 	import { EditorState, Plugin, PluginKey, TextSelection, Selection } from 'prosemirror-state';
 	import { Decoration, DecorationSet } from 'prosemirror-view';
-	import { Editor, Extension, mergeAttributes } from '@tiptap/core';
+	import { Editor, Extension, markInputRule, mergeAttributes } from '@tiptap/core';
 
 	import { AIAutocompletion } from './RichTextInput/AutoCompletion.js';
 
@@ -135,7 +135,25 @@
 	import FileHandler from '@tiptap/extension-file-handler';
 	import Typography from '@tiptap/extension-typography';
 	import Highlight from '@tiptap/extension-highlight';
+	import Code from '@tiptap/extension-code';
 	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
+
+	// WORKAROUND: TipTap's default Code mark input rule regex captures the
+	// character before the opening backtick, causing it to be deleted.
+	// This uses a lookbehind assertion instead so the preceding character is
+	// matched for position but not captured/deleted.
+	// Upstream fix: https://github.com/ueberdosis/tiptap/pull/7124
+	const backtickInputRegex = /(?<=\s|^)`([^`]+)`(?!`)$/;
+	const FixedCode = Code.extend({
+		addInputRules() {
+			return [
+				markInputRule({
+					find: backtickInputRegex,
+					type: this.type
+				})
+			];
+		}
+	});
 
 	import Mention from '@tiptap/extension-mention';
 	import FormattingButtons from './RichTextInput/FormattingButtons.svelte';
@@ -467,6 +485,17 @@
 		focus();
 	};
 
+	// Convert text to ProseMirror nodes, using hardBreak for newlines
+	const textToNodes = (state, text) => {
+		if (!text.includes('\n')) return state.schema.text(text);
+		const nodes = [];
+		text.split('\n').forEach((line, i) => {
+			if (i > 0) nodes.push(state.schema.nodes.hardBreak.create());
+			if (line) nodes.push(state.schema.text(line));
+		});
+		return nodes;
+	};
+
 	export const replaceVariables = (variables) => {
 		if (!editor || !editor.view) return;
 		const { state, view } = editor;
@@ -501,7 +530,7 @@
 
 		// Apply replacements in reverse order to maintain correct positions
 		replacements.reverse().forEach(({ from, to, text }) => {
-			tr = tr.replaceWith(from, to, text !== '' ? state.schema.text(text) : []);
+			tr = tr.replaceWith(from, to, text !== '' ? textToNodes(state, text) : []);
 		});
 
 		// Only dispatch if there are changes
@@ -692,12 +721,14 @@
 			extensions: [
 				StarterKit.configure({
 					link: link,
+					code: false, // Disabled in favor of FixedCode (see workaround above)
 					// When rich text is off, disable Strike from StarterKit so we can
 					// re-add it below without its Mod-Shift-s shortcut (which conflicts
 					// with the Toggle Sidebar shortcut). When rich text is on, the user
 					// can undo strikethrough via the toolbar, so the shortcut is fine.
 					...(richText ? {} : { strike: false })
 				}),
+				FixedCode,
 				...(dragHandle ? [ListItemDragHandle] : []),
 				Placeholder.configure({ placeholder: () => _placeholder, showOnlyWhenEditable: false }),
 				SelectionDecoration,
