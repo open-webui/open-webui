@@ -111,7 +111,7 @@ def openai_reasoning_model_handler(payload):
 
     # Handle system role conversion based on model type
     if payload["messages"][0]["role"] == "system":
-        model_lower = payload["model"].lower()
+        model_lower = payload["model"].lower().split("/")[-1]
         # Legacy models use "user" role instead of "system"
         if model_lower.startswith("o1-mini") or model_lower.startswith("o1-preview"):
             payload["messages"][0]["role"] = "user"
@@ -796,7 +796,8 @@ def get_azure_allowed_params(api_version: str) -> set[str]:
 
 
 def is_openai_reasoning_model(model: str) -> bool:
-    return model.lower().startswith(("o1", "o3", "o4", "gpt-5"))
+    normalized_model = model.lower().split("/")[-1]
+    return normalized_model.startswith(("o1", "o3", "o4", "gpt-5"))
 
 
 def convert_to_azure_payload(url, payload: dict, api_version: str):
@@ -826,6 +827,81 @@ def convert_to_azure_payload(url, payload: dict, api_version: str):
     return url, payload
 
 
+def normalize_responses_payload(payload: dict) -> dict:
+    responses_payload = {**payload}
+    model = responses_payload.get("model", "")
+
+    reasoning_effort = responses_payload.pop("reasoning_effort", None)
+    reasoning = responses_payload.get("reasoning")
+    if reasoning is None:
+        reasoning = {}
+    elif not isinstance(reasoning, dict):
+        reasoning = {}
+
+    if reasoning_effort is not None:
+        if reasoning.get("effort") is None:
+            reasoning["effort"] = reasoning_effort
+
+    if is_openai_reasoning_model(model) and reasoning.get("summary") is None:
+        reasoning["summary"] = "auto"
+
+    if reasoning:
+        responses_payload["reasoning"] = reasoning
+
+    if "max_tokens" in responses_payload:
+        responses_payload["max_output_tokens"] = responses_payload.pop("max_tokens")
+
+    # Remove Chat Completions-only parameters not supported by the Responses API
+    for unsupported_key in (
+        "messages",
+        "stream_options",
+        "logit_bias",
+        "frequency_penalty",
+        "presence_penalty",
+        "stop",
+    ):
+        responses_payload.pop(unsupported_key, None)
+
+    # Convert Chat Completions tools format to Responses API format
+    # Chat Completions: {"type": "function", "function": {"name": ..., "description": ..., "parameters": ...}}
+    # Responses API:    {"type": "function", "name": ..., "description": ..., "parameters": ...}
+    if "tools" in responses_payload and isinstance(responses_payload["tools"], list):
+        converted_tools = []
+        for tool in responses_payload["tools"]:
+            if isinstance(tool, dict) and "function" in tool:
+                func = tool["function"]
+                converted_tool = {"type": tool.get("type", "function")}
+                if isinstance(func, dict):
+                    converted_tool["name"] = func.get("name", "")
+                    if "description" in func:
+                        converted_tool["description"] = func["description"]
+                    if "parameters" in func:
+                        converted_tool["parameters"] = func["parameters"]
+                    if "strict" in func:
+                        converted_tool["strict"] = func["strict"]
+                converted_tools.append(converted_tool)
+            else:
+                # Already in correct format or unknown format, pass through
+                converted_tools.append(tool)
+        responses_payload["tools"] = converted_tools
+
+    return responses_payload
+
+
+def extract_responses_history_anchor(messages: list[dict]) -> tuple[Optional[str], list]:
+    for index in range(len(messages) - 1, -1, -1):
+        message = messages[index]
+        response_id = message.get("response_id")
+        if (
+            message.get("role") == "assistant"
+            and isinstance(response_id, str)
+            and response_id.strip()
+        ):
+            return response_id, messages[index + 1 :]
+
+    return None, messages
+
+
 def convert_to_responses_payload(payload: dict) -> dict:
     """
     Convert Chat Completions payload to Responses API format.
@@ -834,9 +910,29 @@ def convert_to_responses_payload(payload: dict) -> dict:
     Responses API: { input: [{type: "message", role, content: [...]}], instructions: "system" }
     """
     messages = payload.pop("messages", [])
+    all_messages = messages
+
+    if not payload.get("previous_response_id"):
+        response_id, messages = extract_responses_history_anchor(messages)
+        if response_id:
+            payload["previous_response_id"] = response_id
 
     system_content = ""
     input_items = []
+
+    for msg in all_messages:
+        role = msg.get("role", "user")
+        content = msg.get("content", "")
+
+        if role != "system":
+            continue
+
+        if isinstance(content, str):
+            system_content = content
+        elif isinstance(content, list):
+            system_content = "\n".join(
+                p.get("text", "") for p in content if p.get("type") == "text"
+            )
 
     for msg in messages:
         role = msg.get("role", "user")
@@ -900,12 +996,6 @@ def convert_to_responses_payload(payload: dict) -> dict:
             continue
 
         if role == "system":
-            if isinstance(content, str):
-                system_content = content
-            elif isinstance(content, list):
-                system_content = "\n".join(
-                    p.get("text", "") for p in content if p.get("type") == "text"
-                )
             continue
 
         # Convert content format
@@ -938,43 +1028,7 @@ def convert_to_responses_payload(payload: dict) -> dict:
     if system_content:
         responses_payload["instructions"] = system_content
 
-    if "max_tokens" in responses_payload:
-        responses_payload["max_output_tokens"] = responses_payload.pop("max_tokens")
-
-    # Remove Chat Completions-only parameters not supported by the Responses API
-    for unsupported_key in (
-        "stream_options",
-        "logit_bias",
-        "frequency_penalty",
-        "presence_penalty",
-        "stop",
-    ):
-        responses_payload.pop(unsupported_key, None)
-
-    # Convert Chat Completions tools format to Responses API format
-    # Chat Completions: {"type": "function", "function": {"name": ..., "description": ..., "parameters": ...}}
-    # Responses API:    {"type": "function", "name": ..., "description": ..., "parameters": ...}
-    if "tools" in responses_payload and isinstance(responses_payload["tools"], list):
-        converted_tools = []
-        for tool in responses_payload["tools"]:
-            if isinstance(tool, dict) and "function" in tool:
-                func = tool["function"]
-                converted_tool = {"type": tool.get("type", "function")}
-                if isinstance(func, dict):
-                    converted_tool["name"] = func.get("name", "")
-                    if "description" in func:
-                        converted_tool["description"] = func["description"]
-                    if "parameters" in func:
-                        converted_tool["parameters"] = func["parameters"]
-                    if "strict" in func:
-                        converted_tool["strict"] = func["strict"]
-                converted_tools.append(converted_tool)
-            else:
-                # Already in correct format or unknown format, pass through
-                converted_tools.append(tool)
-        responses_payload["tools"] = converted_tools
-
-    return responses_payload
+    return normalize_responses_payload(responses_payload)
 
 
 def convert_responses_result(response: dict) -> dict:
@@ -1137,7 +1191,10 @@ async def generate_chat_completion(
             request_url = f"{request_url}/chat/completions?api-version={api_version}"
     else:
         if is_responses:
-            payload = convert_to_responses_payload(payload)
+            if "input" in payload:
+                payload = normalize_responses_payload(payload)
+            else:
+                payload = convert_to_responses_payload(payload)
             request_url = f"{url}/responses"
         else:
             request_url = f"{url}/chat/completions"
