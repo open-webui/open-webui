@@ -38,6 +38,7 @@ def test_convert_to_responses_payload_normalizes_stored_message_item_ids():
     assert converted["input"][1]["type"] == "message"
     assert converted["input"][1]["id"].startswith("msg_")
     assert converted["input"][1]["id"] != "88atacOkNLK6kdUP44TSoQY"
+    assert "status" not in converted["input"][1]
     assert converted["input"][1]["content"][0]["text"] == "first reply"
 
 
@@ -69,8 +70,40 @@ def test_convert_to_responses_payload_preserves_valid_stored_message_item_ids():
             "type": "message",
             "id": "msg_existing123",
             "role": "assistant",
-            "status": "completed",
             "content": [{"type": "output_text", "text": "cached reply"}],
+        }
+    ]
+
+
+def test_convert_to_responses_payload_omits_function_call_status_on_replay():
+    payload = {
+        "model": "openai/gpt-5.4",
+        "messages": [
+            {
+                "role": "assistant",
+                "output": [
+                    {
+                        "type": "function_call",
+                        "id": "fc_existing123",
+                        "call_id": "call_123",
+                        "name": "lookup_weather",
+                        "arguments": '{"city":"Zurich"}',
+                        "status": "completed",
+                    }
+                ],
+            }
+        ],
+    }
+
+    converted = convert_to_responses_payload(payload)
+
+    assert converted["input"] == [
+        {
+            "type": "function_call",
+            "id": "fc_existing123",
+            "call_id": "call_123",
+            "name": "lookup_weather",
+            "arguments": '{"city":"Zurich"}',
         }
     ]
 

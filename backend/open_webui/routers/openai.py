@@ -960,11 +960,6 @@ def convert_to_responses_payload(payload: dict) -> dict:
                             "call_id": call_id,
                             "name": item.get("name", ""),
                             "arguments": item.get("arguments", "{}"),
-                            **(
-                                {"status": item.get("status")}
-                                if item.get("status")
-                                else {}
-                            ),
                         }
                     )
                     continue
@@ -983,6 +978,7 @@ def convert_to_responses_payload(payload: dict) -> dict:
 
                 if item_type == "message":
                     message_item = dict(item)
+                    message_item.pop("status", None)
                     item_id = message_item.get("id", "")
                     if not isinstance(item_id, str) or not item_id.startswith("msg_"):
                         seed = item_id or json.dumps(message_item, default=str)
