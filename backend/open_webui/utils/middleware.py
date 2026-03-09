@@ -1913,6 +1913,11 @@ async def chat_completion_files_handler(
                 )
                 queries_response = queries_response["choices"][0]["message"]["content"]
 
+                # Strip <think>...</think> tags from thinking models (Qwen3, DeepSeek R1, etc.)
+                # These models wrap their reasoning in think tags before the actual JSON response
+                import re
+                queries_response = re.sub(r'<think>.*?</think>', '', queries_response, flags=re.DOTALL).strip()
+
                 try:
                     bracket_start = queries_response.find("{")
                     bracket_end = queries_response.rfind("}") + 1
