@@ -14,6 +14,7 @@ from open_webui.models.chats import (
     ChatUsageStatsListResponse,
     ChatsImportForm,
     ChatResponse,
+    PublicChatResponse,
     Chats,
     ChatTitleIdResponse,
     SharedChatResponse,
@@ -917,6 +918,34 @@ async def get_shared_chat_by_id(
 
 
 ############################
+# GetPublicSharedChatById
+############################
+
+
+@router.get("/share/{share_id}/public", response_model=Optional[PublicChatResponse])
+async def get_public_shared_chat_by_id(
+    request: Request,
+    share_id: str,
+    db: Session = Depends(get_session),
+):
+    if not request.app.state.config.ENABLE_PUBLIC_SHARING:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    chat = Chats.get_chat_by_share_id(share_id, db=db)
+
+    if chat and chat.public:
+        return PublicChatResponse(**chat.model_dump())
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=ERROR_MESSAGES.NOT_FOUND,
+    )
+
+
+############################
 # GetChatsByTags
 ############################
 
@@ -1324,10 +1353,15 @@ async def archive_chat_by_id(
 ############################
 
 
+class ShareChatForm(BaseModel):
+    public: bool = False
+
+
 @router.post("/{id}/share", response_model=Optional[ChatResponse])
 async def share_chat_by_id(
     request: Request,
     id: str,
+    form_data: Optional[ShareChatForm] = None,
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
@@ -1341,14 +1375,25 @@ async def share_chat_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    public = False
+    if form_data and form_data.public:
+        if not request.app.state.config.ENABLE_PUBLIC_SHARING:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+        public = True
+
     chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
 
     if chat:
         if chat.share_id:
-            shared_chat = Chats.update_shared_chat_by_chat_id(chat.id, db=db)
+            shared_chat = Chats.update_shared_chat_by_chat_id(
+                chat.id, public=public, db=db
+            )
             return ChatResponse(**shared_chat.model_dump())
 
-        shared_chat = Chats.insert_shared_chat_by_chat_id(chat.id, db=db)
+        shared_chat = Chats.insert_shared_chat_by_chat_id(chat.id, public=public, db=db)
         if not shared_chat:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -16,15 +16,47 @@
 	let shareUrl = null;
 	const i18n = getContext('i18n');
 
-	const shareLocalChat = async () => {
-		const _chat = chat;
-
-		const sharedChat = await shareChatById(localStorage.token, chatId);
+	const shareLocalChat = async (isPublic: boolean = false) => {
+		const sharedChat = await shareChatById(localStorage.token, chatId, { public: isPublic });
 		shareUrl = `${window.location.origin}/s/${sharedChat.id}`;
 		console.log(shareUrl);
 		chat = await getChatById(localStorage.token, chatId);
 
 		return shareUrl;
+	};
+
+	const copyLink = async (isPublic: boolean = false) => {
+		const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+		if (isSafari) {
+			// Oh, Safari, you're so special, let's give you some extra love and attention
+			console.log('isSafari');
+
+			const getUrlPromise = async () => {
+				const url = await shareLocalChat(isPublic);
+				return new Blob([url], { type: 'text/plain' });
+			};
+
+			navigator.clipboard
+				.write([
+					new ClipboardItem({
+						'text/plain': getUrlPromise()
+					})
+				])
+				.then(() => {
+					console.log('Async: Copying to clipboard was successful!');
+					return true;
+				})
+				.catch((error) => {
+					console.error('Async: Could not copy text: ', error);
+					return false;
+				});
+		} else {
+			copyToClipboard(await shareLocalChat(isPublic));
+		}
+
+		toast.success($i18n.t('Copied shared chat URL to clipboard!'));
+		show = false;
 	};
 
 	const shareChat = async () => {
@@ -140,43 +172,27 @@
 								</button>
 							{/if}
 
+							{#if $config?.features?.enable_public_sharing}
+								<button
+									class="self-center flex items-center gap-1 px-3.5 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full"
+									type="button"
+									on:click={() => copyLink(true)}
+								>
+									<Link />
+
+									{#if chat.share_id}
+										{$i18n.t('Update and Copy Public Link')}
+									{:else}
+										{$i18n.t('Copy Public Link')}
+									{/if}
+								</button>
+							{/if}
+
 							<button
 								class="self-center flex items-center gap-1 px-3.5 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 								type="button"
 								id="copy-and-share-chat-button"
-								on:click={async () => {
-									const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
-									if (isSafari) {
-										// Oh, Safari, you're so special, let's give you some extra love and attention
-										console.log('isSafari');
-
-										const getUrlPromise = async () => {
-											const url = await shareLocalChat();
-											return new Blob([url], { type: 'text/plain' });
-										};
-
-										navigator.clipboard
-											.write([
-												new ClipboardItem({
-													'text/plain': getUrlPromise()
-												})
-											])
-											.then(() => {
-												console.log('Async: Copying to clipboard was successful!');
-												return true;
-											})
-											.catch((error) => {
-												console.error('Async: Could not copy text: ', error);
-												return false;
-											});
-									} else {
-										copyToClipboard(await shareLocalChat());
-									}
-
-									toast.success($i18n.t('Copied shared chat URL to clipboard!'));
-									show = false;
-								}}
+								on:click={() => copyLink(false)}
 							>
 								<Link />
 
