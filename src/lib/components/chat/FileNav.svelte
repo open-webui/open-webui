@@ -172,6 +172,9 @@
 
 		if (terminal && terminal.url !== prevTerminalUrl) {
 			prevTerminalUrl = terminal.url;
+			loading = true;
+			error = null;
+			entries = [];
 			(async () => {
 				// Discover server features (terminal enabled/disabled)
 				const config = await getTerminalConfig(terminal.url, terminal.key);
@@ -531,6 +534,7 @@
 		});
 
 		if (!handledDisplayFile) {
+			loading = true;
 			if (savedPath === '/') {
 				const rawCwd = await getCwd(terminal.url, terminal.key);
 				const cwd = rawCwd ? normalizePath(rawCwd) : null;
