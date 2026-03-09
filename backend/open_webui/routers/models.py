@@ -386,40 +386,52 @@ async def get_model_by_id(
 
 
 @router.get("/model/profile/image")
-def get_model_profile_image(id: str, user=Depends(get_verified_user)):
+def get_model_profile_image(request: Request, id: str, user=Depends(get_verified_user)):
     model = Models.get_model_by_id(id)
+
+    # Resolve profile image URL: DB model takes priority, then in-memory upstream meta
+    profile_image_url: str | None = None
+    etag: str | None = None
 
     if model:
         etag = f'"{model.updated_at}"' if model.updated_at else None
+        profile_image_url = model.meta.profile_image_url
 
-        if model.meta.profile_image_url:
-            if model.meta.profile_image_url.startswith("http"):
-                return Response(
-                    status_code=status.HTTP_302_FOUND,
-                    headers={"Location": model.meta.profile_image_url},
+    if not profile_image_url:
+        # Fall back to upstream model metadata from /v1/models response
+        in_memory = (request.app.state.MODELS or {}).get(id)
+        if in_memory:
+            profile_image_url = (
+                in_memory.get("info", {}).get("meta", {}).get("profile_image_url")
+                or in_memory.get("meta", {}).get("profile_image_url")
+            )
+
+    if profile_image_url:
+        if profile_image_url.startswith("http"):
+            return Response(
+                status_code=status.HTTP_302_FOUND,
+                headers={"Location": profile_image_url},
+            )
+        elif profile_image_url.startswith("data:image"):
+            try:
+                header, base64_data = profile_image_url.split(",", 1)
+                image_data = base64.b64decode(base64_data)
+                image_buffer = io.BytesIO(image_data)
+                media_type = header.split(";")[0].lstrip("data:")
+
+                headers = {"Content-Disposition": "inline"}
+                if etag:
+                    headers["ETag"] = etag
+
+                return StreamingResponse(
+                    image_buffer,
+                    media_type=media_type,
+                    headers=headers,
                 )
-            elif model.meta.profile_image_url.startswith("data:image"):
-                try:
-                    header, base64_data = model.meta.profile_image_url.split(",", 1)
-                    image_data = base64.b64decode(base64_data)
-                    image_buffer = io.BytesIO(image_data)
-                    media_type = header.split(";")[0].lstrip("data:")
+            except Exception as e:
+                pass
 
-                    headers = {"Content-Disposition": "inline"}
-                    if etag:
-                        headers["ETag"] = etag
-
-                    return StreamingResponse(
-                        image_buffer,
-                        media_type=media_type,
-                        headers=headers,
-                    )
-                except Exception as e:
-                    pass
-
-        return FileResponse(f"{STATIC_DIR}/favicon.png")
-    else:
-        return FileResponse(f"{STATIC_DIR}/favicon.png")
+    return FileResponse(f"{STATIC_DIR}/favicon.png")
 
 
 ############################
