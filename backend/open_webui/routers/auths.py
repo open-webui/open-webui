@@ -35,6 +35,7 @@ from open_webui.env import (
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
     WEBUI_AUTH_TRUSTED_GROUPS_HEADER,
+    WEBUI_AUTH_TRUSTED_ROLE_HEADER,
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
@@ -615,6 +616,16 @@ async def signin(
             )
 
         user = Auths.authenticate_user_by_email(email, db=db)
+
+        if WEBUI_AUTH_TRUSTED_ROLE_HEADER and user:
+            role = request.headers.get(
+                WEBUI_AUTH_TRUSTED_ROLE_HEADER, ""
+            ).strip()
+
+            if role in ["pending", "user", "admin"]:
+                user.role = role
+                Users.update_user_role_by_id(user.id, role, db=db)
+
         if WEBUI_AUTH_TRUSTED_GROUPS_HEADER and user and user.role != "admin":
             group_names = request.headers.get(
                 WEBUI_AUTH_TRUSTED_GROUPS_HEADER, ""
