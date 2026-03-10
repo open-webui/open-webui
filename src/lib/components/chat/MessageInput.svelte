@@ -520,11 +520,10 @@
 	}
 
 	const scrollToBottom = () => {
-		const element = document.getElementById('messages-container');
-		element.scrollTo({
-			top: element.scrollHeight,
-			behavior: 'smooth'
-		});
+		const marker = document.getElementById('messages-bottom');
+		if (marker) {
+			marker.scrollIntoView({ behavior: 'smooth', block: 'end' });
+		}
 	};
 
 	const screenCaptureHandler = async () => {

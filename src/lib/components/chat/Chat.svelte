@@ -1262,13 +1262,19 @@
 		}
 	};
 
+	const isAtContentBottom = (): boolean => {
+		const marker = document.getElementById('messages-bottom');
+		if (!marker || !messagesContainerElement) return true;
+		const markerRect = marker.getBoundingClientRect();
+		const containerRect = messagesContainerElement.getBoundingClientRect();
+		return markerRect.top <= containerRect.bottom + 5;
+	};
+
 	const scrollToBottom = async (behavior = 'auto') => {
 		await tick();
-		if (messagesContainerElement) {
-			messagesContainerElement.scrollTo({
-				top: messagesContainerElement.scrollHeight,
-				behavior
-			});
+		const marker = document.getElementById('messages-bottom');
+		if (marker && messagesContainerElement) {
+			marker.scrollIntoView({ behavior, block: 'end' });
 		}
 	};
 
@@ -1840,6 +1846,14 @@
 
 		saveSessionSelectedModels();
 
+		// Scroll user message to top of viewport
+		autoScroll = false;
+		await tick();
+		const userMsgEl = document.getElementById(`message-${userMessageId}`);
+		if (userMsgEl) {
+			userMsgEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		}
+
 		await sendMessage(history, userMessageId, { newChat: true });
 	};
 
@@ -1950,7 +1964,9 @@
 						responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`];
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
-					scrollToBottom();
+					if (autoScroll) {
+						scrollToBottom();
+					}
 					await sendMessageSocket(
 						model,
 						messages && messages.length > 0
@@ -2052,7 +2068,9 @@
 				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
 		);
 
-		scrollToBottom();
+		if (autoScroll) {
+			scrollToBottom();
+		}
 		eventTarget.dispatchEvent(
 			new CustomEvent('chat:start', {
 				detail: {
@@ -2282,7 +2300,9 @@
 		}
 
 		await tick();
-		scrollToBottom();
+		if (autoScroll) {
+			scrollToBottom();
+		}
 	};
 
 	const handleOpenAIError = async (error, responseMessage) => {
@@ -2384,10 +2404,12 @@
 		history.messages[userMessageId] = userMessage;
 		history.currentId = userMessageId;
 
+		// Scroll user message to top of viewport
+		autoScroll = false;
 		await tick();
-
-		if (autoScroll) {
-			scrollToBottom();
+		const askUserMsgEl = document.getElementById(`message-${userMessageId}`);
+		if (askUserMsgEl) {
+			askUserMsgEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 		}
 
 		await sendMessage(history, userMessageId);
@@ -2404,8 +2426,12 @@
 				return;
 			}
 
-			if (autoScroll) {
-				scrollToBottom();
+			// Scroll user message to top of viewport
+			autoScroll = false;
+			await tick();
+			const userMsgEl = document.getElementById(`message-${userMessage.id}`);
+			if (userMsgEl) {
+				userMsgEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 			}
 
 			await sendMessage(history, userMessage.id, {
@@ -2762,9 +2788,7 @@
 								id="messages-container"
 								bind:this={messagesContainerElement}
 								on:scroll={(e) => {
-									autoScroll =
-										messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
-										messagesContainerElement.clientHeight + 5;
+									autoScroll = isAtContentBottom();
 								}}
 							>
 								<div class=" h-full w-full flex flex-col">

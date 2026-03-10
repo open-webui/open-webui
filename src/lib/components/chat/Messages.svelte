@@ -134,8 +134,10 @@
 	}
 
 	const scrollToBottom = () => {
-		const element = document.getElementById('messages-container');
-		element.scrollTop = element.scrollHeight;
+		const marker = document.getElementById('messages-bottom');
+		if (marker) {
+			marker.scrollIntoView({ behavior: 'auto', block: 'end' });
+		}
 	};
 
 	const updateChat = async () => {
@@ -184,8 +186,13 @@
 
 		// Optional auto-scroll
 		if ($settings?.scrollOnBranchChange ?? true) {
+			const marker = document.getElementById('messages-bottom');
 			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+			if (marker && element) {
+				const markerRect = marker.getBoundingClientRect();
+				const containerRect = element.getBoundingClientRect();
+				autoScroll = markerRect.top <= containerRect.bottom + 50;
+			}
 
 			setTimeout(() => {
 				scrollToBottom();
@@ -231,8 +238,13 @@
 		await tick();
 
 		if ($settings?.scrollOnBranchChange ?? true) {
+			const marker = document.getElementById('messages-bottom');
 			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+			if (marker && element) {
+				const markerRect = marker.getBoundingClientRect();
+				const containerRect = element.getBoundingClientRect();
+				autoScroll = markerRect.top <= containerRect.bottom + 50;
+			}
 
 			setTimeout(() => {
 				scrollToBottom();
@@ -282,8 +294,13 @@
 		await tick();
 
 		if ($settings?.scrollOnBranchChange ?? true) {
+			const marker = document.getElementById('messages-bottom');
 			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+			if (marker && element) {
+				const markerRect = marker.getBoundingClientRect();
+				const containerRect = element.getBoundingClientRect();
+				autoScroll = markerRect.top <= containerRect.bottom + 50;
+			}
 
 			setTimeout(() => {
 				scrollToBottom();
@@ -432,8 +449,13 @@
 
 	const triggerScroll = () => {
 		if (autoScroll) {
+			const marker = document.getElementById('messages-bottom');
 			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+			if (marker && element) {
+				const markerRect = marker.getBoundingClientRect();
+				const containerRect = element.getBoundingClientRect();
+				autoScroll = markerRect.top <= containerRect.bottom + 50;
+			}
 			setTimeout(() => {
 				scrollToBottom();
 			}, 100);
@@ -496,9 +518,10 @@
 						{/each}
 					</ul>
 				</section>
-				<div class="pb-18" />
+				<div id="messages-bottom" />
+				<div style="min-height: calc(100vh - 12rem);" />
 				{#if bottomPadding}
-					<div class="  pb-6" />
+					<div class="pb-6" />
 				{/if}
 			{/key}
 		</div>
