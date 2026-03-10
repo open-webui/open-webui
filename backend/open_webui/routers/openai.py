@@ -1240,6 +1240,25 @@ async def generate_chat_completion(
         elif isinstance(payload["stream_options"], dict):
             payload["stream_options"]["include_usage"] = True
 
+    # Cache Control: set "cache_control": {"type": "ephemeral"} on the very last message
+    if "messages" in payload and isinstance(payload["messages"], list) and len(payload["messages"]) > 0:
+        last_message = payload["messages"][-1]
+        
+        # If content is a list of parts, add cache_control to the last part
+        if isinstance(last_message.get("content"), list) and len(last_message["content"]) > 0:
+            last_part = last_message["content"][-1]
+            if isinstance(last_part, dict):
+                last_part["cache_control"] = {"type": "ephemeral"}
+        # If content is a string, convert it to a list and add cache_control to the text part
+        elif isinstance(last_message.get("content"), str):
+            last_message["content"] = [
+                {
+                    "type": "text", 
+                    "text": last_message["content"],
+                    "cache_control": {"type": "ephemeral"}
+                }
+            ]
+
     # Background Tasks: Title Generation
     task_type = None
     chat_id = None
