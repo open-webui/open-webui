@@ -26,19 +26,59 @@
 	let isEditing = false;
 	let editBody = '';
 	let editSubject = '';
-	let editTo = '';
 	let textareaEl: HTMLTextAreaElement;
+
+	// Chip-based To field
+	let toChips: string[] = [];
+	let toInput = '';
+	let toInputEl: HTMLInputElement;
 
 	let saveStatus = '';
 	let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
-	// Email block is complete when the closing tag is present or the full message is done
 	$: emailDone = done || (token?.raw ?? '').includes('</email>');
 
-	// Start editing automatically when email block finishes
 	$: if (emailDone && edit && !isEditing) {
 		startEditing();
 	}
+
+	// Serialize chips + pending input back to a flat string
+	const toFieldValue = () => {
+		const all = [...toChips];
+		const pending = toInput.trim();
+		if (pending) all.push(pending);
+		return all.join('; ');
+	};
+
+	// Parse a flat "to" string into chips
+	const parseToChips = (value: string) => {
+		return value
+			.split(/[;,]\s*/)
+			.map((s) => s.trim())
+			.filter(Boolean);
+	};
+
+	const commitChip = () => {
+		// Split on commas, semicolons, or whitespace to handle pasted/typed multi-address input
+		const addresses = toInput
+			.split(/[;,\s]+/)
+			.map((s) => s.trim())
+			.filter(Boolean);
+		if (addresses.length) {
+			toChips = [...toChips, ...addresses];
+			toInput = '';
+			syncToAndSave();
+		}
+	};
+
+	const removeChip = (index: number) => {
+		toChips = toChips.filter((_, i) => i !== index);
+		syncToAndSave();
+	};
+
+	const syncToAndSave = () => {
+		debouncedSave();
+	};
 
 	const resizeTextarea = () => {
 		if (!textareaEl) return;
@@ -49,12 +89,11 @@
 	const saveEmail = () => {
 		saveStatus = 'saving';
 		const oldBody = token.body;
-		const oldSubject = token.subject;
+		const toValue = toFieldValue();
 
-		// Rebuild the raw token with updated values
 		let newRaw = '<email>\n';
 		if (editSubject) newRaw += `<subject>${editSubject}</subject>\n`;
-		if (editTo) newRaw += `<to>${editTo}</to>\n`;
+		if (toValue) newRaw += `<to>${toValue}</to>\n`;
 		newRaw += `\n${editBody}\n</email>`;
 
 		onSave({
@@ -64,10 +103,9 @@
 			newRaw
 		});
 
-		// Update token in place so the card reflects changes
 		token.body = editBody;
 		token.subject = editSubject;
-		token.to = editTo;
+		token.to = toValue;
 		token.raw = newRaw;
 
 		setTimeout(() => {
@@ -89,7 +127,8 @@
 	const startEditing = async () => {
 		editBody = token.body;
 		editSubject = token.subject;
-		editTo = token.to;
+		toChips = parseToChips(token.to);
+		toInput = '';
 		isEditing = true;
 		await tick();
 		resizeTextarea();
@@ -98,11 +137,17 @@
 	const mailtoHref = () => {
 		const subject = isEditing ? editSubject : token.subject;
 		const body = isEditing ? editBody : token.body;
-		const to = isEditing ? editTo : token.to || '';
+		const rawTo = isEditing ? toFieldValue() : token.to || '';
+		// mailto: expects comma-separated addresses in the path, not percent-encoded
+		const to = rawTo
+			.split(/[;,\s]+/)
+			.map((s) => s.trim())
+			.filter(Boolean)
+			.join(',');
 		const params: string[] = [];
 		if (subject) params.push('subject=' + encodeURIComponent(subject));
 		if (body) params.push('body=' + encodeURIComponent(body));
-		return `mailto:${encodeURIComponent(to)}${params.length ? '?' + params.join('&') : ''}`;
+		return `mailto:${to}${params.length ? '?' + params.join('&') : ''}`;
 	};
 
 	const handleCopy = () => {
@@ -189,15 +234,51 @@
 
 		<div class="px-5 pb-4">
 			{#if isEditing}
-				<div class="flex gap-2 text-sm py-2 text-gray-500 dark:text-gray-400">
-					<span class="font-medium shrink-0">{$i18n.t('To')}:</span>
-					<input
-						type="text"
-						class="flex-1 bg-transparent text-gray-700 dark:text-gray-200 outline-none border-none p-0"
-						bind:value={editTo}
-						on:input={debouncedSave}
-						placeholder={$i18n.t('recipient@example.com')}
-					/>
+				<!-- svelte-ignore a11y-click-events-have-key-events -->
+				<!-- svelte-ignore a11y-no-static-element-interactions -->
+				<div
+					class="flex items-center gap-2 text-sm py-2 text-gray-500 dark:text-gray-400 cursor-text"
+					on:click={() => toInputEl?.focus()}
+				>
+					<span class="font-medium shrink-0 self-start mt-0.5">{$i18n.t('To')}:</span>
+					<div class="flex flex-wrap items-center gap-1 flex-1 min-w-0">
+						{#each toChips as chip, i}
+							<span
+								class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+							>
+								{chip}
+								<button
+									class="opacity-50 hover:opacity-100 transition"
+									on:click|stopPropagation={() => removeChip(i)}
+								>
+									<svg class="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+									</svg>
+								</button>
+							</span>
+						{/each}
+						<input
+							bind:this={toInputEl}
+							type="text"
+							class="flex-1 min-w-[120px] bg-transparent text-gray-700 dark:text-gray-200 outline-none border-none p-0 text-sm"
+							bind:value={toInput}
+							on:keydown={(e) => {
+								if (e.key === 'Enter' || e.key === ',' || e.key === ';' || e.key === 'Tab') {
+									if (toInput.trim()) {
+										e.preventDefault();
+										commitChip();
+									}
+								} else if (e.key === 'Backspace' && !toInput && toChips.length) {
+									toChips = toChips.slice(0, -1);
+									syncToAndSave();
+								}
+							}}
+							on:blur={() => {
+								if (toInput.trim()) commitChip();
+							}}
+							placeholder={toChips.length ? '' : $i18n.t('recipient@example.com')}
+						/>
+					</div>
 				</div>
 
 				<div class="flex gap-2 text-sm py-2 border-b border-gray-200 dark:border-gray-700">
