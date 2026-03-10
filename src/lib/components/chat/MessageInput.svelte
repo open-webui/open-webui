@@ -11,7 +11,7 @@
 	dayjs.extend(duration);
 	dayjs.extend(relativeTime);
 
-	import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
+	import { onMount, onDestroy, tick, getContext, createEventDispatcher } from 'svelte';
 
 	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
 	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
@@ -520,12 +520,36 @@
 	}
 
 	const scrollToBottom = () => {
-		const element = document.getElementById('messages-container');
-		element.scrollTo({
-			top: element.scrollHeight,
-			behavior: 'smooth'
-		});
+		const marker = document.getElementById('messages-bottom');
+		if (marker) {
+			marker.scrollIntoView({ behavior: 'smooth', block: 'end' });
+		}
 	};
+
+	// Show scroll button only when content-end marker is actually below viewport
+	let showScrollButton = false;
+	let scrollButtonRAF: number | null = null;
+
+	const updateScrollButton = () => {
+		const marker = document.getElementById('messages-bottom');
+		const container = document.getElementById('messages-container');
+		if (marker && container) {
+			const markerRect = marker.getBoundingClientRect();
+			const containerRect = container.getBoundingClientRect();
+			showScrollButton = markerRect.top > containerRect.bottom + 5;
+		} else {
+			showScrollButton = false;
+		}
+		scrollButtonRAF = requestAnimationFrame(updateScrollButton);
+	};
+
+	onMount(() => {
+		scrollButtonRAF = requestAnimationFrame(updateScrollButton);
+	});
+
+	onDestroy(() => {
+		if (scrollButtonRAF) cancelAnimationFrame(scrollButtonRAF);
+	});
 
 	const screenCaptureHandler = async () => {
 		try {
@@ -1085,7 +1109,7 @@
 					: 'max-w-6xl'} w-full"
 			>
 				<div class="relative">
-					{#if autoScroll === false && history?.currentId}
+					{#if showScrollButton && history?.currentId}
 						<div
 							class=" absolute -top-12 left-0 right-0 flex justify-center z-30 pointer-events-none"
 						>
