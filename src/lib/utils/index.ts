@@ -890,7 +890,12 @@ export const removeDetails = (content, types) => {
 
 export const removeAllDetails = (content) => {
 	return replaceOutsideCode(content, (segment) => {
-		return segment.replace(/<details[^>]*>.*?<\/details>/gis, '');
+		segment = segment.replace(/<details[^>]*>.*?<\/details>/gis, '');
+		segment = segment.replace(
+			/<email[^>]*>\s*(?:<subject>.*?<\/subject>\s*)?(?:<to>.*?<\/to>\s*)?([\s\S]*?)<\/email>/gis,
+			'$1'
+		);
+		return segment;
 	});
 };
 

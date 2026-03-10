@@ -5,6 +5,7 @@
 	import { user } from '$lib/stores';
 
 	import markedExtension from '$lib/utils/marked/extension';
+	import emailExtension from '$lib/utils/marked/email-extension';
 	import markedKatexExtension from '$lib/utils/marked/katex-extension';
 	import { disableSingleTilde } from '$lib/utils/marked/strikethrough-extension';
 	import { mentionExtension } from '$lib/utils/marked/mention-extension';
@@ -46,6 +47,7 @@
 
 	marked.use(markedKatexExtension(options));
 	marked.use(markedExtension(options));
+	marked.use(emailExtension(options));
 	marked.use(citationExtension(options));
 	marked.use(footnoteExtension(options));
 	marked.use(disableSingleTilde);

@@ -13,6 +13,7 @@
 	import { settings } from '$lib/stores';
 
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
+	import EmailCard from '$lib/components/chat/Messages/EmailCard.svelte';
 	import MarkdownInlineTokens from '$lib/components/chat/Messages/Markdown/MarkdownInlineTokens.svelte';
 	import KatexRenderer from './KatexRenderer.svelte';
 	import AlertRenderer, { alertComponent } from './AlertRenderer.svelte';
@@ -363,6 +364,21 @@
 				dir="auto"
 			/>
 		{/if}
+	{:else if token.type === 'email'}
+		<EmailCard
+			{token}
+			{done}
+			edit={editCodeBlock}
+			stickyButtonsClassName={topPadding ? 'top-10' : 'top-0'}
+			onSave={(value) => {
+				onSave({
+					raw: token.raw,
+					oldContent: token.body,
+					newContent: value.newContent,
+					newRaw: value.newRaw
+				});
+			}}
+		/>
 	{:else if token.type === 'html'}
 		<HtmlToken {id} {token} {onSourceClick} />
 	{:else if token.type === 'iframe'}
