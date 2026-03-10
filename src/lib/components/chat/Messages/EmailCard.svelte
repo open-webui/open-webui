@@ -93,14 +93,13 @@
 	};
 
 	const mailtoHref = () => {
-		const params = new URLSearchParams();
 		const subject = isEditing ? editSubject : token.subject;
 		const body = isEditing ? editBody : token.body;
-		if (subject) params.set('subject', subject);
-		if (body) params.set('body', body);
-		const paramStr = params.toString();
 		const to = token.to || '';
-		return `mailto:${to}${paramStr ? '?' + paramStr : ''}`;
+		const params: string[] = [];
+		if (subject) params.push('subject=' + encodeURIComponent(subject));
+		if (body) params.push('body=' + encodeURIComponent(body));
+		return `mailto:${encodeURIComponent(to)}${params.length ? '?' + params.join('&') : ''}`;
 	};
 
 	const handleCopy = () => {
