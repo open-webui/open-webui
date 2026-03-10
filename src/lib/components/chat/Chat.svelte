@@ -2,6 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
+	import { decode } from 'html-entities';
 
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	const i18n: Writable<i18nType> = getContext('i18n');
@@ -50,6 +51,7 @@
 		createMessagesList,
 		getPromptVariables,
 		processDetails,
+		removeDetails,
 		removeAllDetails,
 		renderPdfToImageDataUrls
 	} from '$lib/utils';
@@ -1718,7 +1720,11 @@
 		}
 
 		// Some backends may only attach final `reasoning_details` on the done event (no `choices` deltas).
-		if (Array.isArray(reasoning_details) && reasoning_details.length > 0) {
+		if (Array.isArray(reasoning_details)) {
+			if (reasoning_details.length > 0) {
+				message.reasoning_details = reasoning_details;
+			}
+		} else if (reasoning_details) {
 			message.reasoning_details = reasoning_details;
 		}
 
@@ -2413,19 +2419,49 @@
 						content: `${params?.system ?? $settings?.system ?? ''}`
 					}
 				: undefined,
-			..._messages.map((message) => ({
+			...expandMessagesForToolResumption(_messages).map((message) => ({
 				...message,
 				content: processDetails(message.content)
 			}))
 		].filter((message) => message);
 
 		messages = messages
-			.map((message, idx, arr) => {
+			.map((message) => {
+				if (message.role === 'tool') {
+					return {
+						role: 'tool',
+						content: message.content ?? '',
+						...(message.tool_call_id ? { tool_call_id: message.tool_call_id } : {})
+					};
+				}
+
+				if (message.tool_calls) {
+					if (Array.isArray(message.reasoning_details)) {
+						const signatureDetail = message.reasoning_details.find(
+							(d) => d.type === 'reasoning.encrypted' && d.data
+						);
+
+						if (signatureDetail) {
+							message.tool_calls = message.tool_calls.map((tc) => ({
+								...tc,
+								extra_content: { google: { thought_signature: signatureDetail.data } }
+							}));
+						}
+					}
+
+					return {
+						role: 'assistant',
+						content: message?.merged?.content ?? message.content ?? '',
+						tool_calls: message.tool_calls,
+						...(message.reasoning_details ? { reasoning_details: message.reasoning_details } : {})
+					};
+				}
+
 				const hasImages = message.files?.some((file) => file.type === 'image');
 				const isUser = message.role === 'user';
 				const modelSupportsVision = model?.info?.meta?.capabilities?.vision ?? true;
 
-				if (message.tool_calls && message.reasoning_details) {
+				if (message.tool_calls && Array.isArray(message.reasoning_details)) {
 					const signatureDetail = message.reasoning_details.find(
 						(d) => d.type === 'reasoning.encrypted' && d.data
 					);
@@ -2486,7 +2522,11 @@
 			})
 			.filter(
 				(message) =>
-					message?.role === 'user' || message?.content?.trim() || message?.reasoning_details
+					message?.role === 'user' ||
+					message?.role === 'tool' ||
+					message?.content?.trim() ||
+					message?.reasoning_details ||
+					message?.tool_calls?.length
 			);
 
 		const toolIds = [];
@@ -2755,16 +2795,145 @@
 			[...toolCallMatches].reverse().find((match) => /\bdone="true"/i.test(match[0])) ?? null;
 
 		if (completedToolCallMatch) {
-			return content
-				.substring(
-					0,
-					(completedToolCallMatch.index ?? 0) + completedToolCallMatch[0].length
-				)
-				.trim();
+			const endIndex = (completedToolCallMatch.index ?? 0) + completedToolCallMatch[0].length;
+
+			return {
+				content: content.substring(0, endIndex).trim(),
+				endIndex,
+				hasCompletedToolCall: true
+			};
 		}
 
 		const firstToolCallMatch = toolCallMatches[0];
-		return content.substring(0, firstToolCallMatch.index ?? 0).trim() || null;
+		const endIndex = firstToolCallMatch.index ?? 0;
+		const preservedContent = content.substring(0, endIndex).trim();
+
+		if (!preservedContent) {
+			return null;
+		}
+
+		return {
+			content: preservedContent,
+			endIndex,
+			hasCompletedToolCall: false
+		};
+	};
+
+	const shouldContinueFromLastToolRequest = (message) => {
+		const toolContext = getRetryableToolContext(message?.content ?? '');
+		if (!toolContext?.hasCompletedToolCall) {
+			return false;
+		}
+
+		const trailingContent = removeAllDetails(
+			(message?.content ?? '').slice(toolContext.endIndex)
+		).trim();
+
+		return trailingContent.length === 0;
+	};
+
+	const normalizeToolCallArguments = (value = '') => {
+		const decodedValue = decode(value);
+
+		try {
+			const parsedValue = JSON.parse(decodedValue);
+			return typeof parsedValue === 'string' ? parsedValue : JSON.stringify(parsedValue);
+		} catch (error) {
+			return decodedValue;
+		}
+	};
+
+	const normalizeToolResultContent = (value = '') => {
+		const decodedValue = decode(value);
+
+		try {
+			const parsedValue = JSON.parse(decodedValue);
+			return typeof parsedValue === 'string' ? parsedValue : JSON.stringify(parsedValue);
+		} catch (error) {
+			return decodedValue;
+		}
+	};
+
+	const normalizePreservedAssistantContent = (value = '') => {
+		return removeDetails(value, ['reasoning', 'code_interpreter']).trim();
+	};
+
+	const expandPreservedToolContextMessage = (message) => {
+		if (!message?.preservedToolContext) {
+			return [message];
+		}
+
+		const content = message.content ?? '';
+		const toolCallsRegex = /<details\s+type="tool_calls"([^>]*)>[\s\S]*?<\/details>/gi;
+		const matches = [...content.matchAll(toolCallsRegex)];
+
+		if (matches.length === 0) {
+			return [message];
+		}
+
+		const expandedMessages = [];
+		let lastIndex = 0;
+
+		for (const match of matches) {
+			const matchStart = match.index ?? 0;
+			const matchEnd = matchStart + match[0].length;
+			const textBefore = normalizePreservedAssistantContent(content.slice(lastIndex, matchStart));
+
+			const attributes = {};
+			const attributeRegex = /(\w+)="([^"]*)"/g;
+			let attributeMatch;
+
+			while ((attributeMatch = attributeRegex.exec(match[1] ?? '')) !== null) {
+				attributes[attributeMatch[1]] = attributeMatch[2];
+			}
+
+			if (attributes.done === 'true' && attributes.id && attributes.name) {
+				expandedMessages.push({
+					...message,
+					role: 'assistant',
+					content: textBefore,
+					tool_calls: [
+						{
+							id: attributes.id,
+							type: 'function',
+							function: {
+								name: attributes.name,
+								arguments: normalizeToolCallArguments(attributes.arguments ?? '')
+							}
+						}
+					],
+					preservedToolContext: undefined,
+					...(message.reasoning_details
+						? { reasoning_details: message.reasoning_details }
+						: {})
+				});
+
+				expandedMessages.push({
+					role: 'tool',
+					tool_call_id: attributes.id,
+					content: normalizeToolResultContent(attributes.result ?? '')
+				});
+			}
+
+			lastIndex = matchEnd;
+		}
+
+		const trailingText = normalizePreservedAssistantContent(content.slice(lastIndex));
+
+		if (trailingText) {
+			expandedMessages.push({
+				...message,
+				content: trailingText,
+				preservedToolContext: undefined,
+				tool_calls: undefined
+			});
+		}
+
+		return expandedMessages;
+	};
+
+	const expandMessagesForToolResumption = (messages = []) => {
+		return messages.flatMap((message) => expandPreservedToolContextMessage(message));
 	};
 
 	const retryFromLastRequest = async (message, modelId = null) => {
@@ -2779,8 +2948,8 @@
 			return false;
 		}
 
-		const preservedContent = getRetryableToolContext(message?.content ?? '');
-		if (!preservedContent) {
+		const toolContext = getRetryableToolContext(message?.content ?? '');
+		if (!toolContext?.content) {
 			return false;
 		}
 
@@ -2790,12 +2959,13 @@
 			id: responseMessageId,
 			childrenIds: [],
 			role: 'assistant',
-			content: `${preservedContent}\n\n`,
+			content: `${toolContext.content}\n\n`,
 			model: targetModelId,
 			modelName: model.name ?? targetModelId,
 			modelIdx: message.modelIdx ?? 0,
 			timestamp: Math.floor(Date.now() / 1000),
-			preservedToolContext: true
+			preservedToolContext: true,
+			...(message.reasoning_details ? { reasoning_details: message.reasoning_details } : {})
 		};
 
 		history.messages[responseMessageId] = responseMessage;
@@ -2860,6 +3030,12 @@
 
 		if (history.currentId && history.messages[history.currentId].done == true) {
 			const responseMessage = history.messages[history.currentId];
+
+			if (shouldContinueFromLastToolRequest(responseMessage)) {
+				await retryFromLastRequest(responseMessage);
+				return;
+			}
+
 			responseMessage.done = false;
 			await tick();
 
