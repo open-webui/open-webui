@@ -1662,7 +1662,7 @@
 			} else {
 				// Stream response
 				if (choices[0]?.delta?.reasoning_details) {
-					if (!message.reasoning_details) {
+					if (!Array.isArray(message.reasoning_details)) {
 						message.reasoning_details = [];
 					}
 
@@ -2417,11 +2417,14 @@
 				? {
 						role: 'system',
 						content: `${params?.system ?? $settings?.system ?? ''}`
-					}
+				  }
 				: undefined,
 			...expandMessagesForToolResumption(_messages).map((message) => ({
 				...message,
-				content: processDetails(message.content)
+				content:
+					typeof message.content === 'string'
+						? processDetails(message.content)
+						: message.content
 			}))
 		].filter((message) => message);
 
@@ -2524,7 +2527,7 @@
 				(message) =>
 					message?.role === 'user' ||
 					message?.role === 'tool' ||
-					message?.content?.trim() ||
+					hasMessageContent(message?.content) ||
 					message?.reasoning_details ||
 					message?.tool_calls?.length
 			);
@@ -2784,6 +2787,8 @@
 	};
 
 	const getRetryableToolContext = (content = '') => {
+		content = getStringMessageContent(content);
+
 		const toolCallsRegex = /<details\s+type="tool_calls"[^>]*>[\s\S]*?<\/details>/gi;
 		const toolCallMatches = [...content.matchAll(toolCallsRegex)];
 
@@ -2820,14 +2825,13 @@
 	};
 
 	const shouldContinueFromLastToolRequest = (message) => {
-		const toolContext = getRetryableToolContext(message?.content ?? '');
+		const content = getStringMessageContent(message?.content);
+		const toolContext = getRetryableToolContext(content);
 		if (!toolContext?.hasCompletedToolCall) {
 			return false;
 		}
 
-		const trailingContent = removeAllDetails(
-			(message?.content ?? '').slice(toolContext.endIndex)
-		).trim();
+		const trailingContent = removeAllDetails(content.slice(toolContext.endIndex)).trim();
 
 		return trailingContent.length === 0;
 	};
@@ -2854,8 +2858,45 @@
 		}
 	};
 
+	const getStringMessageContent = (value) => {
+		if (typeof value === 'string') {
+			return value;
+		}
+
+		if (Array.isArray(value)) {
+			return value
+				.map((part) => {
+					if (typeof part === 'string') {
+						return part;
+					}
+
+					if (part?.type === 'text' && typeof part.text === 'string') {
+						return part.text;
+					}
+
+					return '';
+				})
+				.join('\n');
+		}
+
+		return '';
+	};
+
+	const hasMessageContent = (value) => {
+		if (typeof value === 'string') {
+			return value.trim().length > 0;
+		}
+
+		if (Array.isArray(value)) {
+			return value.length > 0;
+		}
+
+		return value != null;
+	};
+
 	const normalizePreservedAssistantContent = (value = '') => {
-		return removeDetails(value, ['reasoning', 'code_interpreter']).trim();
+		const normalizedValue = getStringMessageContent(value);
+		return removeDetails(normalizedValue, ['reasoning', 'code_interpreter']).trim();
 	};
 
 	const expandPreservedToolContextMessage = (message) => {
@@ -2863,7 +2904,7 @@
 			return [message];
 		}
 
-		const content = message.content ?? '';
+		const content = getStringMessageContent(message.content);
 		const toolCallsRegex = /<details\s+type="tool_calls"([^>]*)>[\s\S]*?<\/details>/gi;
 		const matches = [...content.matchAll(toolCallsRegex)];
 

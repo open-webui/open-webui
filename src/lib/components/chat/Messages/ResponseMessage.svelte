@@ -181,6 +181,9 @@
 		}
 	};
 
+	const hasRenderableToolCalls = (content) =>
+		typeof content === 'string' && content.includes('<details type="tool_calls"');
+
 	const playAudio = (idx: number) => {
 		return new Promise<void>((res) => {
 			speakingIdx = idx;
@@ -1341,7 +1344,7 @@
 													regenerateWithModel(message, modelId, preserveToolContext);
 												}}
 												currentModelId={message.model}
-												hasToolCalls={message.content?.includes('<details type="tool_calls"') ?? false}
+												hasToolCalls={hasRenderableToolCalls(message.content)}
 											>
 												<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
 													<div
