@@ -26,6 +26,7 @@
 	let isEditing = false;
 	let editBody = '';
 	let editSubject = '';
+	let editTo = '';
 	let textareaEl: HTMLTextAreaElement;
 
 	let saveStatus = '';
@@ -53,7 +54,7 @@
 		// Rebuild the raw token with updated values
 		let newRaw = '<email>\n';
 		if (editSubject) newRaw += `<subject>${editSubject}</subject>\n`;
-		if (token.to) newRaw += `<to>${token.to}</to>\n`;
+		if (editTo) newRaw += `<to>${editTo}</to>\n`;
 		newRaw += `\n${editBody}\n</email>`;
 
 		onSave({
@@ -66,6 +67,7 @@
 		// Update token in place so the card reflects changes
 		token.body = editBody;
 		token.subject = editSubject;
+		token.to = editTo;
 		token.raw = newRaw;
 
 		setTimeout(() => {
@@ -87,6 +89,7 @@
 	const startEditing = async () => {
 		editBody = token.body;
 		editSubject = token.subject;
+		editTo = token.to;
 		isEditing = true;
 		await tick();
 		resizeTextarea();
@@ -95,7 +98,7 @@
 	const mailtoHref = () => {
 		const subject = isEditing ? editSubject : token.subject;
 		const body = isEditing ? editBody : token.body;
-		const to = token.to || '';
+		const to = isEditing ? editTo : token.to || '';
 		const params: string[] = [];
 		if (subject) params.push('subject=' + encodeURIComponent(subject));
 		if (body) params.push('body=' + encodeURIComponent(body));
@@ -185,14 +188,18 @@
 		</div>
 
 		<div class="px-5 pb-4">
-			{#if token.to}
+			{#if isEditing}
 				<div class="flex gap-2 text-sm py-2 text-gray-500 dark:text-gray-400">
 					<span class="font-medium shrink-0">{$i18n.t('To')}:</span>
-					<span class="text-gray-700 dark:text-gray-200">{token.to}</span>
+					<input
+						type="text"
+						class="flex-1 bg-transparent text-gray-700 dark:text-gray-200 outline-none border-none p-0"
+						bind:value={editTo}
+						on:input={debouncedSave}
+						placeholder={$i18n.t('recipient@example.com')}
+					/>
 				</div>
-			{/if}
 
-			{#if isEditing}
 				<div class="flex gap-2 text-sm py-2 border-b border-gray-200 dark:border-gray-700">
 					<span class="font-medium text-gray-500 dark:text-gray-400 shrink-0"
 						>{$i18n.t('Subject')}:</span
@@ -215,6 +222,13 @@
 					}}
 				></textarea>
 			{:else}
+				{#if token.to}
+					<div class="flex gap-2 text-sm py-2 text-gray-500 dark:text-gray-400">
+						<span class="font-medium shrink-0">{$i18n.t('To')}:</span>
+						<span class="text-gray-700 dark:text-gray-200">{token.to}</span>
+					</div>
+				{/if}
+
 				{#if token.subject}
 					<div class="flex gap-2 text-sm py-2 border-b border-gray-200 dark:border-gray-700">
 						<span class="font-medium text-gray-500 dark:text-gray-400 shrink-0"
