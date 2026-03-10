@@ -330,12 +330,22 @@ def upload_file_handler(
 async def list_files(
     user=Depends(get_verified_user),
     content: bool = Query(True),
+    skip: int = Query(0, ge=0, description="Number of files to skip"),
+    limit: int = Query(
+        100, ge=1, le=1000, description="Maximum number of files to return"
+    ),
     db: Session = Depends(get_session),
 ):
-    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
-        files = Files.get_files(db=db)
-    else:
-        files = Files.get_files_by_user_id(user.id, db=db)
+    user_id = (
+        None if (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL) else user.id
+    )
+    files = Files.search_files(
+        user_id=user_id,
+        filename="*",
+        skip=skip,
+        limit=limit,
+        db=db,
+    )
 
     if not content:
         for file in files:
