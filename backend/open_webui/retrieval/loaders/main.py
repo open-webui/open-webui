@@ -28,7 +28,8 @@ from open_webui.retrieval.loaders.external_document import ExternalDocumentLoade
 from open_webui.retrieval.loaders.mistral import MistralLoader
 from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
 from open_webui.retrieval.loaders.mineru import MinerULoader
-
+from open_webui.utils.ocr_engine import OCREngine
+from backend.open_webui.retrieval.loaders.google_ocr_loader import GoogleOCRLoader
 
 from open_webui.env import GLOBAL_LOG_LEVEL, REQUESTS_VERIFY
 
@@ -186,6 +187,7 @@ class Loader:
         self.engine = engine
         self.user = kwargs.get("user", None)
         self.kwargs = kwargs
+        #self.google_ocr = OCREngine()
 
     def load(
         self, filename: str, file_content_type: str, file_path: str
@@ -232,6 +234,8 @@ class Loader:
                     file_path=file_path,
                     extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES"),
                 )
+        elif self.engine == "google_ocr":
+           loader = GoogleOCRLoader(filename, file_content_type, file_path)
         elif (
             self.engine == "datalab_marker"
             and self.kwargs.get("DATALAB_MARKER_API_KEY")

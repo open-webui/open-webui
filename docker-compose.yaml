@@ -14,7 +14,8 @@ services:
       - 'OLLAMA_BASE_URL=http://ollama:11434'
       - 'WEBUI_SECRET_KEY='
       - GOOGLE_APPLICATION_CREDENTIALS=/app/backend/google_ocr_key.json
-      
+      - GOOGLE_CLOUD_PROJECT=clinicia-hipaa-dev
+      - CONTENT_EXTRACTION_ENGINE=google_ocr
     env_file:
       - .env
     extra_hosts:
