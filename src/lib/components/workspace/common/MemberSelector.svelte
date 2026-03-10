@@ -7,6 +7,7 @@
 	import { user as _user } from '$lib/stores';
 	import { getUserInfoById, searchUsers } from '$lib/apis/users';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { shouldShowSelectableUser } from './member-selector';
 
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
@@ -20,6 +21,7 @@
 
 	export let includeGroups = true;
 	export let includeUsers = true;
+	export let includeCurrentUser = false;
 	export let pagination = false;
 
 	export let groupIds = [];
@@ -245,7 +247,7 @@
 
 							<div>
 								{#each users as user, userIdx (user.id)}
-									{#if user?.id !== $_user?.id}
+									{#if shouldShowSelectableUser(user?.id, $_user?.id, includeCurrentUser)}
 										<button
 											class=" dark:border-gray-850 text-xs flex items-center justify-between w-full"
 											type="button"
