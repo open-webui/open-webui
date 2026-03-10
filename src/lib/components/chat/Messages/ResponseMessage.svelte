@@ -114,11 +114,9 @@
 	export let messageId;
 	export let selectedModels = [];
 
-	let message: MessageType = JSON.parse(JSON.stringify(history.messages[messageId]));
-	$: if (history.messages) {
-		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
-			message = JSON.parse(JSON.stringify(history.messages[messageId]));
-		}
+	let message: MessageType = history.messages[messageId];
+	$: if (history.messages?.[messageId] && message !== history.messages[messageId]) {
+		message = history.messages[messageId];
 	}
 
 	export let siblings;
@@ -184,6 +182,32 @@
 	const hasRenderableToolCalls = (content) =>
 		typeof content === 'string' && content.includes('<details type="tool_calls"');
 
+	const getMessageTextContent = (content) => {
+		if (typeof content === 'string') {
+			return content;
+		}
+
+		if (Array.isArray(content)) {
+			return content
+				.map((part) => {
+					if (typeof part === 'string') {
+						return part;
+					}
+
+					if (part?.type === 'text' && typeof part.text === 'string') {
+						return part.text;
+					}
+
+					return '';
+				})
+				.join('\n');
+		}
+
+		return '';
+	};
+
+	$: messageTextContent = getMessageTextContent(message?.content);
+
 	const playAudio = (idx: number) => {
 		return new Promise<void>((res) => {
 			speakingIdx = idx;
@@ -222,14 +246,14 @@
 			return;
 		}
 
-		if (!(message?.content ?? '').trim().length) {
+		if (!messageTextContent.trim().length) {
 			toast.info($i18n.t('No content to speak'));
 			return;
 		}
 
 		speaking = true;
 
-		const content = removeAllDetails(message.content);
+		const content = removeAllDetails(messageTextContent);
 
 		if ($config.audio.tts.engine === '') {
 			let voices = [];
@@ -390,7 +414,7 @@
 	const editMessageHandler = async () => {
 		edit = true;
 
-		editedContent = preprocessForEditing(message.content);
+		editedContent = preprocessForEditing(messageTextContent);
 
 		await tick();
 
@@ -427,7 +451,7 @@
 
 	const generateImage = async (message: MessageType) => {
 		generatingImage = true;
-		const res = await imageGenerations(localStorage.token, message.content).catch((error) => {
+		const res = await imageGenerations(localStorage.token, messageTextContent).catch((error) => {
 			toast.error(`${error}`);
 		});
 		console.log(res);
@@ -665,7 +689,7 @@
 								{#each message.files as file}
 									<div>
 										{#if file.type === 'image'}
-											<Image src={file.url} alt={message.content} />
+									<Image src={file.url} alt={messageTextContent} />
 										{:else}
 											<FileItem
 												item={file}
@@ -760,9 +784,9 @@
 							</div>
 						{:else}
 							<div class="w-full flex flex-col relative" id="response-content-container">
-								{#if message.content === '' && !message.error && ((model?.info?.meta?.capabilities?.status_updates ?? true) ? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false) : true)}
+								{#if messageTextContent === '' && !message.error && ((model?.info?.meta?.capabilities?.status_updates ?? true) ? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false) : true)}
 									<Skeleton />
-								{:else if message.content && message.error !== true}
+								{:else if messageTextContent && message.error !== true}
 									<!-- always show message contents even if there's an error -->
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 									<ContentRenderer
@@ -770,7 +794,7 @@
 										messageId={message.id}
 										{history}
 										{selectedModels}
-										content={message.content}
+										content={messageTextContent}
 										sources={message.sources}
 										floatingButtons={message?.done &&
 											!readOnly &&
@@ -800,7 +824,7 @@
 								{/if}
 
 									{#if message?.error}
-										<Error content={message?.error?.content ?? message.content} />
+										<Error content={message?.error?.content ?? messageTextContent} />
 									{/if}
 
 									{#if message.code_executions}
@@ -967,7 +991,7 @@
 											? 'visible'
 											: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-response-button"
 										on:click={() => {
-											copyToClipboard(message.content);
+										copyToClipboard(messageTextContent);
 										}}
 									>
 										<svg
@@ -1344,7 +1368,7 @@
 													regenerateWithModel(message, modelId, preserveToolContext);
 												}}
 												currentModelId={message.model}
-												hasToolCalls={hasRenderableToolCalls(message.content)}
+												hasToolCalls={hasRenderableToolCalls(messageTextContent)}
 											>
 												<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
 													<div

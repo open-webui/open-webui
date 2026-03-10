@@ -52,12 +52,36 @@ import StatusHistory from './ResponseMessage/StatusHistory.svelte';
 
 	let messageEditTextAreaElement: HTMLTextAreaElement;
 
-	let message = JSON.parse(JSON.stringify(history.messages[messageId]));
-	$: if (history.messages) {
-		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
-			message = JSON.parse(JSON.stringify(history.messages[messageId]));
-		}
+	let message = history.messages[messageId];
+	$: if (history.messages?.[messageId] && message !== history.messages[messageId]) {
+		message = history.messages[messageId];
 	}
+
+	const getMessageTextContent = (content) => {
+		if (typeof content === 'string') {
+			return content;
+		}
+
+		if (Array.isArray(content)) {
+			return content
+				.map((part) => {
+					if (typeof part === 'string') {
+						return part;
+					}
+
+					if (part?.type === 'text' && typeof part.text === 'string') {
+						return part.text;
+					}
+
+					return '';
+				})
+				.join('\n');
+		}
+
+		return '';
+	};
+
+	$: messageTextContent = getMessageTextContent(message?.content);
 
 	const copyToClipboard = async (text) => {
 		const res = await _copyToClipboard(text);
@@ -68,7 +92,7 @@ import StatusHistory from './ResponseMessage/StatusHistory.svelte';
 
 	const editMessageHandler = async () => {
 		edit = true;
-		editedContent = message?.content ?? '';
+		editedContent = messageTextContent;
 		editedFiles = message.files;
 
 		await tick();
@@ -343,7 +367,7 @@ import StatusHistory from './ResponseMessage/StatusHistory.svelte';
 				</div>
 			{/if}
 
-			{#if !edit && message.content !== ''}
+			{#if !edit && messageTextContent !== ''}
 				<div class="w-full">
 					<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
 						<div
@@ -353,10 +377,10 @@ import StatusHistory from './ResponseMessage/StatusHistory.svelte';
 									}`
 								: ' w-full'}"
 						>
-							{#if message.content}
+							{#if messageTextContent}
 								<Markdown
 									id={`${chatId}-${message.id}`}
-									content={message.content}
+									content={messageTextContent}
 									{editCodeBlock}
 									{topPadding}
 								/>
@@ -494,14 +518,14 @@ import StatusHistory from './ResponseMessage/StatusHistory.svelte';
 						</Tooltip>
 					{/if}
 
-					{#if message?.content}
+					{#if messageTextContent}
 						<Tooltip content={$i18n.t('Copy')} placement="bottom">
 							<button
 								class="{($settings?.highContrastMode ?? false)
 									? ''
 									: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 								on:click={() => {
-									copyToClipboard(message.content);
+									copyToClipboard(messageTextContent);
 								}}
 							>
 								<svg

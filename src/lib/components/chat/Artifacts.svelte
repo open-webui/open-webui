@@ -35,8 +35,10 @@
 	const getContents = () => {
 		contents = [];
 		messages.forEach((message) => {
-			if (message?.role !== 'user' && message?.content) {
-				const codeBlockContents = message.content.match(/```[\s\S]*?```/g);
+			const content = typeof message?.content === 'string' ? message.content : '';
+
+			if (message?.role !== 'user' && content) {
+				const codeBlockContents = content.match(/```[\s\S]*?```/g);
 				let codeBlocks = [];
 
 				let htmlContent = '';
@@ -62,9 +64,9 @@
 						}
 					});
 				} else {
-					const inlineHtml = message.content.match(/<html>[\s\S]*?<\/html>/gi);
-					const inlineCss = message.content.match(/<style>[\s\S]*?<\/style>/gi);
-					const inlineJs = message.content.match(/<script>[\s\S]*?<\/script>/gi);
+					const inlineHtml = content.match(/<html>[\s\S]*?<\/html>/gi);
+					const inlineCss = content.match(/<style>[\s\S]*?<\/style>/gi);
+					const inlineJs = content.match(/<script>[\s\S]*?<\/script>/gi);
 
 					if (inlineHtml) {
 						inlineHtml.forEach((block) => {
