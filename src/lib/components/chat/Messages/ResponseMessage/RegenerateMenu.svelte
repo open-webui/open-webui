@@ -219,6 +219,35 @@
 
 				<hr class="border-gray-50 dark:border-gray-800 my-1 mx-2" />
 
+				{#if hasToolCalls}
+					<DropdownMenu.Item
+						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+						on:click={() => {
+							onRegenerateWithModel(currentModelId, true);
+							show = false;
+						}}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="2"
+							aria-hidden="true"
+							stroke="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7"
+							/>
+						</svg>
+						<div class="flex items-center">{$i18n.t('Retry Last Request')}</div>
+					</DropdownMenu.Item>
+
+					<hr class="border-gray-50 dark:border-gray-800 my-1 mx-2" />
+				{/if}
+
 				<!-- Re-run with Different Model option -->
 				<DropdownMenu.Item
 					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"

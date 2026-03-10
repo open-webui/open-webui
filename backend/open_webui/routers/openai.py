@@ -212,6 +212,74 @@ async def cleanup_response(
         await session.close()
 
 
+def _get_user_ui_settings(user: Optional[UserModel]) -> dict:
+    if user is None:
+        return {}
+
+    settings = getattr(user, "settings", None)
+    if not settings:
+        return {}
+
+    if isinstance(settings, dict):
+        ui_settings = settings.get("ui", {})
+    else:
+        ui_settings = getattr(settings, "ui", {})
+
+    return ui_settings if isinstance(ui_settings, dict) else {}
+
+
+def _get_connection_api_config(connection_configs: Optional[dict], idx: int, url: str) -> dict:
+    if not isinstance(connection_configs, dict):
+        return {}
+
+    return connection_configs.get(str(idx), connection_configs.get(url, {})) or {}
+
+
+def resolve_user_direct_connection(
+    user: Optional[UserModel], direct_model: Optional[dict]
+) -> tuple[int, str, str, dict]:
+    if not direct_model:
+        raise HTTPException(status_code=404, detail="Direct model not found")
+
+    try:
+        idx = int(direct_model.get("urlIdx"))
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=400,
+            detail="Direct connection is misconfigured for this model",
+        )
+
+    ui_settings = _get_user_ui_settings(user)
+    direct_connections = ui_settings.get("directConnections", {})
+    if not isinstance(direct_connections, dict):
+        raise HTTPException(
+            status_code=404,
+            detail="Direct connection not found for this model",
+        )
+
+    base_urls = direct_connections.get("OPENAI_API_BASE_URLS", []) or []
+    api_keys = direct_connections.get("OPENAI_API_KEYS", []) or []
+    api_configs = direct_connections.get("OPENAI_API_CONFIGS", {}) or {}
+
+    if idx < 0 or idx >= len(base_urls):
+        raise HTTPException(
+            status_code=404,
+            detail="Direct connection not found for this model",
+        )
+
+    url = base_urls[idx].rstrip("/")
+    key = api_keys[idx] if idx < len(api_keys) else ""
+    api_config = _get_connection_api_config(api_configs, idx, url)
+
+    if api_config.get("enable", True) is False:
+        raise HTTPException(
+            status_code=403,
+            detail="Direct connection is disabled",
+        )
+
+    return idx, url, key, api_config
+
+
 async def get_headers_and_cookies(
     request: Request,
     url,
@@ -1162,23 +1230,34 @@ async def generate_chat_completion(
                 detail="Model not found",
             )
 
-    await get_all_models(request, user=user)
-    model = request.app.state.OPENAI_MODELS.get(model_id)
-    if model:
-        idx = model["urlIdx"]
-    else:
-        raise HTTPException(
-            status_code=404,
-            detail="Model not found",
-        )
+    direct_model = None
+    if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
+        direct_model = request.state.model
 
-    # Get the API config for the model
-    api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
-        str(idx),
-        request.app.state.config.OPENAI_API_CONFIGS.get(
-            request.app.state.config.OPENAI_API_BASE_URLS[idx], {}
-        ),  # Legacy support
-    )
+    if direct_model and direct_model.get("id") == model_id:
+        idx, url, key, api_config = resolve_user_direct_connection(user, direct_model)
+        model = direct_model
+    else:
+        await get_all_models(request, user=user)
+        model = request.app.state.OPENAI_MODELS.get(model_id)
+        if model:
+            idx = model["urlIdx"]
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail="Model not found",
+            )
+
+        url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+        key = request.app.state.config.OPENAI_API_KEYS[idx]
+
+        # Get the API config for the model
+        api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
+            str(idx),
+            request.app.state.config.OPENAI_API_CONFIGS.get(
+                request.app.state.config.OPENAI_API_BASE_URLS[idx], {}
+            ),  # Legacy support
+        )
 
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
@@ -1192,9 +1271,6 @@ async def generate_chat_completion(
             "email": user.email,
             "role": user.role,
         }
-
-    url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
-    key = request.app.state.config.OPENAI_API_KEYS[idx]
 
     # OpenRouter PDF inputs: prefer native file processing for vision-capable models.
     if has_pdf_files and "openrouter.ai" in url:

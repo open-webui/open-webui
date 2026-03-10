@@ -133,6 +133,7 @@
 	let selectedFilterIds = [];
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
+	let lastPersistedWebSearchEnabled: boolean | null = null;
 	let studyModeEnabled = false;
 	let codeInterpreterEnabled = false;
 
@@ -156,9 +157,26 @@
 		}, 1000); // Wait 1 second after last change before saving
 	}
 
-	// Sync webSearchEnabled to params for persistence
-	$: if ($chatId && webSearchEnabled !== params.webSearchEnabled) {
+	// Keep the in-memory chat params in sync with the current per-chat web search state.
+	$: if (webSearchEnabled !== params.webSearchEnabled) {
 		params = { ...params, webSearchEnabled };
+	}
+
+	// Persist per-chat web search changes immediately so they survive reloads and other devices.
+	$: if (
+		$chatId &&
+		!loading &&
+		!$temporaryChatEnabled &&
+		lastPersistedWebSearchEnabled !== null &&
+		webSearchEnabled !== lastPersistedWebSearchEnabled
+	) {
+		const nextParams = { ...params, webSearchEnabled };
+		const chatIdToPersist = $chatId;
+
+		params = nextParams;
+		lastPersistedWebSearchEnabled = webSearchEnabled;
+
+		void saveChatHandler(chatIdToPersist, history, nextParams);
 	}
 
 	let showCommands = false;
@@ -371,6 +389,7 @@
 
 	const navigateHandler = async () => {
 		loading = true;
+		lastPersistedWebSearchEnabled = null;
 
 		prompt = '';
 		messageInput?.setText('');
@@ -406,7 +425,6 @@
 							selectedToolIds = input.selectedToolIds;
 						}
 						selectedFilterIds = input.selectedFilterIds;
-						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
 					}
@@ -820,7 +838,9 @@
 						selectedToolIds = input.selectedToolIds;
 					}
 					selectedFilterIds = input.selectedFilterIds;
-					webSearchEnabled = input.webSearchEnabled;
+					if (!chatIdProp) {
+						webSearchEnabled = input.webSearchEnabled;
+					}
 					imageGenerationEnabled = input.imageGenerationEnabled;
 					codeInterpreterEnabled = input.codeInterpreterEnabled;
 				}
@@ -1308,6 +1328,8 @@
 						webSearchEnabled = params.webSearchEnabled;
 					}
 				}
+
+				lastPersistedWebSearchEnabled = webSearchEnabled;
 
 				autoScroll = true;
 				await tick();
@@ -2721,6 +2743,91 @@
 		}
 	};
 
+	const getRetryableToolContext = (content = '') => {
+		const toolCallsRegex = /<details\s+type="tool_calls"[^>]*>[\s\S]*?<\/details>/gi;
+		const toolCallMatches = [...content.matchAll(toolCallsRegex)];
+
+		if (toolCallMatches.length === 0) {
+			return null;
+		}
+
+		const completedToolCallMatch =
+			[...toolCallMatches].reverse().find((match) => /\bdone="true"/i.test(match[0])) ?? null;
+
+		if (completedToolCallMatch) {
+			return content
+				.substring(
+					0,
+					(completedToolCallMatch.index ?? 0) + completedToolCallMatch[0].length
+				)
+				.trim();
+		}
+
+		const firstToolCallMatch = toolCallMatches[0];
+		return content.substring(0, firstToolCallMatch.index ?? 0).trim() || null;
+	};
+
+	const retryFromLastRequest = async (message, modelId = null) => {
+		if (!history.currentId) {
+			return false;
+		}
+
+		const targetModelId = modelId ?? message?.selectedModelId ?? message?.model;
+		const model = $models.find((m) => m.id === targetModelId);
+		if (!model) {
+			toast.error($i18n.t(`Model {{modelId}} not found`, { modelId: targetModelId }));
+			return false;
+		}
+
+		const preservedContent = getRetryableToolContext(message?.content ?? '');
+		if (!preservedContent) {
+			return false;
+		}
+
+		const responseMessageId = uuidv4();
+		const responseMessage = {
+			parentId: message.parentId,
+			id: responseMessageId,
+			childrenIds: [],
+			role: 'assistant',
+			content: `${preservedContent}\n\n`,
+			model: targetModelId,
+			modelName: model.name ?? targetModelId,
+			modelIdx: message.modelIdx ?? 0,
+			timestamp: Math.floor(Date.now() / 1000),
+			preservedToolContext: true
+		};
+
+		history.messages[responseMessageId] = responseMessage;
+		history.currentId = responseMessageId;
+
+		if (message.parentId !== null && history.messages[message.parentId]) {
+			history.messages[message.parentId].childrenIds = [
+				...history.messages[message.parentId].childrenIds,
+				responseMessageId
+			];
+		}
+
+		history = history;
+		await tick();
+
+		if (autoScroll) {
+			scrollToBottom();
+		}
+
+		const messages = createMessagesList(history, responseMessageId);
+		const _chatId = JSON.parse(JSON.stringify($chatId));
+		const chatEventEmitter = await getChatEventEmitter(targetModelId, _chatId);
+
+		await sendMessageSocket(model, messages, history, responseMessageId, _chatId);
+
+		if (chatEventEmitter) {
+			clearInterval(chatEventEmitter);
+		}
+
+		return true;
+	};
+
 	const regenerateWithModel = async (message, newModelId, preserveToolContext = false) => {
 		console.log('regenerateWithModel', message, newModelId, preserveToolContext);
 
@@ -2728,103 +2835,23 @@
 			return;
 		}
 
-		const model = $models.find((m) => m.id === newModelId);
-		if (!model) {
-			toast.error($i18n.t(`Model {{modelId}} not found`, { modelId: newModelId }));
-			return;
-		}
-
 		let userMessage = history.messages[message.parentId];
 
 		if (preserveToolContext) {
-			// Feature 2: Keep tool calls and reasoning, only remove the final answer
-			// Parse the message content to find tool call sections
-			const content = message.content || '';
-			
-			// Find the last tool_calls details block
-			const toolCallsRegex = /<details\s+type="tool_calls"[^>]*>[\s\S]*?<\/details>/gi;
-			const toolCallMatches = [...content.matchAll(toolCallsRegex)];
-			
-			if (toolCallMatches.length > 0) {
-				// Get the position after the last tool call block
-				const lastMatch = toolCallMatches[toolCallMatches.length - 1];
-				const lastToolCallEndPos = lastMatch.index + lastMatch[0].length;
-				
-				// The preserved content is everything up to and including the last tool call block
-				const preservedContent = content.substring(0, lastToolCallEndPos).trim();
-				
-				// Create a new response message that includes the preserved context
-				const responseMessageId = uuidv4();
-				const responseMessage = {
-					parentId: message.parentId,
-					id: responseMessageId,
-					childrenIds: [],
-					role: 'assistant',
-					content: preservedContent + '\n\n', // Start with preserved context
-					model: newModelId,
-					modelName: model.name ?? newModelId,
-					modelIdx: message.modelIdx ?? 0,
-					timestamp: Math.floor(Date.now() / 1000),
-					preservedToolContext: true // Mark that this has preserved context
-				};
-
-				// Add message to history
-				history.messages[responseMessageId] = responseMessage;
-				history.currentId = responseMessageId;
-
-				// Append messageId to childrenIds of parent message
-				if (message.parentId !== null && history.messages[message.parentId]) {
-					history.messages[message.parentId].childrenIds = [
-						...history.messages[message.parentId].childrenIds,
-						responseMessageId
-					];
-				}
-
-				history = history;
-				await tick();
-
-				if (autoScroll) {
-					scrollToBottom();
-				}
-
-				// Prepare messages list including the preserved tool context
-				const messages = createMessagesList(history, responseMessageId);
-				
-				// Send to the new model to continue from where the tool context ends
-				const _chatId = JSON.parse(JSON.stringify($chatId));
-				const chatEventEmitter = await getChatEventEmitter(newModelId, _chatId);
-				
-				await sendMessageSocket(
-					model,
-					messages,
-					history,
-					responseMessageId,
-					_chatId
-				);
-
-				if (chatEventEmitter) clearInterval(chatEventEmitter);
-			} else {
-				// No tool calls found, fall back to regular regeneration with new model
-				if (autoScroll) {
-					scrollToBottom();
-				}
-
-				await sendMessage(history, userMessage.id, {
-					modelId: newModelId,
-					modelIdx: message.modelIdx
-				});
+			const retried = await retryFromLastRequest(message, newModelId);
+			if (retried) {
+				return;
 			}
-		} else {
-			// Simple model switch - just regenerate with the new model (no tool context preservation)
-			if (autoScroll) {
-				scrollToBottom();
-			}
-
-			await sendMessage(history, userMessage.id, {
-				modelId: newModelId,
-				modelIdx: message.modelIdx
-			});
 		}
+
+		if (autoScroll) {
+			scrollToBottom();
+		}
+
+		await sendMessage(history, userMessage.id, {
+			modelId: newModelId,
+			modelIdx: message.modelIdx
+		});
 	};
 
 	const continueResponse = async () => {
@@ -2939,18 +2966,19 @@
 			await chatId.set(_chatId);
 		}
 		await tick();
+		lastPersistedWebSearchEnabled = webSearchEnabled;
 
 		return _chatId;
 	};
 
-	const saveChatHandler = async (_chatId, history) => {
+	const saveChatHandler = async (_chatId, history, nextParams = params) => {
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
 				chat = await updateChatById(localStorage.token, _chatId, {
 					models: selectedModels,
 					history: history,
 					messages: createMessagesList(history, history.currentId),
-					params: params,
+					params: nextParams,
 					files: chatFiles
 				});
 				currentChatPage.set(1);
@@ -3102,16 +3130,17 @@
 								const title =
 									messages.find((m) => m.role === 'user')?.content ?? $i18n.t('New Chat');
 
-								const savedChat = await createNewChat(
-									localStorage.token,
-									{
-										id: uuidv4(),
-										title: title.length > 50 ? `${title.slice(0, 50)}...` : title,
-										models: selectedModels,
-										history: history,
-										messages: messages,
-										timestamp: Date.now()
-									},
+							const savedChat = await createNewChat(
+								localStorage.token,
+								{
+									id: uuidv4(),
+									title: title.length > 50 ? `${title.slice(0, 50)}...` : title,
+									models: selectedModels,
+									params: params,
+									history: history,
+									messages: messages,
+									timestamp: Date.now()
+								},
 									null
 								);
 
