@@ -2123,7 +2123,9 @@
 							})
 				};
 			})
-			.filter((message) => message?.role === 'user' || message?.content?.trim() || message?.tool_calls);
+			.filter(
+				(message) => message?.role === 'user' || message?.content?.trim() || message?.tool_calls
+			);
 
 		const toolIds = [];
 		const toolServerIds = [];
