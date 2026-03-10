@@ -134,7 +134,8 @@
 		resizeTextarea();
 	};
 
-	const mailtoHref = () => {
+	// Reactive so Svelte tracks toChips, editSubject, editBody etc.
+	$: computedMailtoHref = (() => {
 		const subject = isEditing ? editSubject : token.subject;
 		const body = isEditing ? editBody : token.body;
 		const rawTo = isEditing ? toFieldValue() : token.to || '';
@@ -148,7 +149,7 @@
 		if (subject) params.push('subject=' + encodeURIComponent(subject));
 		if (body) params.push('body=' + encodeURIComponent(body));
 		return `mailto:${to}${params.length ? '?' + params.join('&') : ''}`;
-	};
+	})();
 
 	const handleCopy = () => {
 		const body = isEditing ? editBody : token.body;
@@ -222,7 +223,7 @@
 
 					<Tooltip content={$i18n.t('Open in mail app')}>
 						<a
-							href={mailtoHref()}
+							href={computedMailtoHref}
 							class="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition"
 						>
 							<PaperPlane className="size-4" strokeWidth="1.5" />
