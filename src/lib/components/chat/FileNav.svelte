@@ -30,7 +30,8 @@
 	import Folder from '../icons/Folder.svelte';
 	import Document from '../icons/Document.svelte';
 	import PenAlt from '../icons/PenAlt.svelte';
-	import Reset from '../icons/Reset.svelte';
+	import ZoomReset from '../icons/ZoomReset.svelte';
+
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
@@ -656,7 +657,7 @@
 						on:click={() => filePreviewRef?.resetImageView()}
 						aria-label={$i18n.t('Reset view')}
 					>
-						<Reset className="size-3.5" />
+						<ZoomReset className="size-3.5" />
 					</button>
 				</Tooltip>
 			{/if}
@@ -667,7 +668,7 @@
 						on:click={() => filePreviewRef?.resetPdfView()}
 						aria-label={$i18n.t('Reset view')}
 					>
-						<Reset className="size-3.5" />
+						<ZoomReset className="size-3.5" />
 					</button>
 				</Tooltip>
 			{/if}
