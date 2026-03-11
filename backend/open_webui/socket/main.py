@@ -196,7 +196,19 @@ async def periodic_session_pool_cleanup():
                         f"Reaping orphaned session {sid} (user {entry.get('id')})"
                     )
                     del SESSION_POOL[sid]
-            await asyncio.sleep(SESSION_POOL_TIMEOUT)
+            sleep_remaining = SESSION_POOL_TIMEOUT
+            while sleep_remaining > 0:
+                sleep_interval = min(
+                    WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, sleep_remaining
+                )
+                await asyncio.sleep(sleep_interval)
+                sleep_remaining -= sleep_interval
+
+                if sleep_remaining > 0 and not session_renew_func():
+                    log.error(
+                        "Unable to renew session cleanup lock while waiting for the next sweep. Exiting."
+                    )
+                    return
     finally:
         session_release_func()
 
