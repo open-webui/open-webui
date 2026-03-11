@@ -19,6 +19,7 @@
 	export let side = 'top';
 	export let align = 'start';
 	export let user = null;
+	export let selected = null;
 
 	let show = false;
 	let emojis = emojiShortCodes;
@@ -97,7 +98,11 @@
 	// Handle emoji selection
 	function selectEmoji(emoji) {
 		const selectedCode = emoji.shortCodes[0];
-		onSubmit(selectedCode);
+		if (selected === selectedCode) {
+			onSubmit(null);
+		} else {
+			onSubmit(selectedCode);
+		}
 		show = false;
 	}
 </script>
@@ -131,6 +136,8 @@
 				bind:value={search}
 			/>
 		</div>
+
+
 		<!-- Virtualized Emoji List -->
 		<div class="w-full flex justify-start h-96 overflow-y-auto px-3 pb-3 text-sm">
 			{#if emojiRows.length === 0}
@@ -155,7 +162,7 @@
 											placement="top"
 										>
 											<button
-												class="p-1.5 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+												class="p-1.5 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition {selected === emojiItem.shortCodes[0] ? 'bg-gray-200 dark:bg-gray-700' : ''}"
 												on:click={() => selectEmoji(emojiItem)}
 											>
 												<img
