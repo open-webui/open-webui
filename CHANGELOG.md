@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✨ **Smoother loading animation.** The loading shimmer animation now looks smoother and more natural, with softer highlight colors. [#22516](https://github.com/open-webui/open-webui/pull/22516)
 - 🧪 **Terminal connection verification.** Users can now verify their terminal server connection is working before saving the configuration, making setup more reliable. [#22567](https://github.com/open-webui/open-webui/pull/22567)
 - 📁 **Chat folder emoji reset.** Users can now reset chat folder emojis back to the default icon using a "Reset to Default" button in the emoji picker, making it easier to revert custom icons. [#22554](https://github.com/open-webui/open-webui/pull/22554)
+- 📊 **Metrics export interval configuration.** Administrators can now control OpenTelemetry metrics export frequency via the OTEL_METRICS_EXPORT_INTERVAL_MILLIS environment variable, enabling cost optimization for metrics services like Grafana Cloud. [#22529](https://github.com/open-webui/open-webui/pull/22529)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for Finnish, Portuguese (Portugal), Catalan, and Turkish were enhanced and expanded.
 
