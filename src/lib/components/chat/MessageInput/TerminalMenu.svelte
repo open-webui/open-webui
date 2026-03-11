@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { toast } from 'svelte-sonner';
 	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { DropdownMenu } from 'bits-ui';
@@ -33,7 +34,15 @@
 					config: { enable: true }
 				}))
 			);
-			data = data.filter((d) => d && !d.error);
+			data = data.filter((d) => {
+			if (d.error) {
+				toast.error(
+					$i18n.t(`Failed to connect to {{URL}} terminal server`, { URL: d?.url })
+				);
+				return false;
+			}
+			return true;
+		});
 			terminalServers.set([...data, ...existingSystemTerminals]);
 		} else {
 			terminalServers.set(existingSystemTerminals);
