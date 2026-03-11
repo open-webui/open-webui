@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔧 **Tool server index bounds checking.** Tool servers with invalid indices no longer crash the application with IndexError after upgrades, preventing tool server configuration loss. [#22490](https://github.com/open-webui/open-webui/issues/22490), [Commit](https://github.com/open-webui/open-webui/commit/8da29566a1f81c38e80009bdea3ce4d9be860605)
 - 💬 **Channel @mentions.** Direct connection models no longer appear in channel @mention suggestions, preventing confusion since they don't work in channels. [#22553](https://github.com/open-webui/open-webui/issues/22553), [Commit](https://github.com/open-webui/open-webui/commit/0a87c1ecd078320a08c4cc62d41fe8727fb3b5f7)
 - 🔧 **Logit bias parameter handling.** Using logit_bias parameters no longer causes errors when the input is already in dictionary format. [#22597](https://github.com/open-webui/open-webui/issues/22597), [Commit](https://github.com/open-webui/open-webui/commit/e34ed72e1e958505e940b74bf1c6a4808640bd17)
+- 👤 **Terminal access user visibility.** The terminal connection access dialog now shows the currently logged-in user when searching for users to grant access, fixing an issue where users with identical display names were filtered incorrectly. [#22491](https://github.com/open-webui/open-webui/issues/22491), [Commit](https://github.com/open-webui/open-webui/commit/4a8f995c3fd4602ec2aaccc07efc4e8504dda84d)
 
 ### Changed
 
