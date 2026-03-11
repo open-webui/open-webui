@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- 🗄️ **Migration reliability.** Database migrations no longer fail when chat data has unexpected format, making upgrades more reliable. [#22588](https://github.com/open-webui/open-webui/pull/22588), [#22568](https://github.com/open-webui/open-webui/issues/22568)
+
 ## [0.8.10] - 2026-03-08
 
 ### Added
