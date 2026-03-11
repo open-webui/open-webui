@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- 🐳 **Docker build failure detection.** Docker builds now fail immediately when dependency installation fails, preventing broken images that crash on startup. [#22598](https://github.com/open-webui/open-webui/pull/22598)
 - 🔍 **Web search result limit.** The configured web search result count now acts as a maximum limit, preventing models from requesting more results than administrators allow. [#22577](https://github.com/open-webui/open-webui/pull/22577)
 
 ## [0.8.10] - 2026-03-08
