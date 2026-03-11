@@ -809,7 +809,15 @@ async def agenerate_ollama_batch_embeddings(
                 json=form_data,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
-                r.raise_for_status()
+                if not r.ok:
+                    body = ""
+                    try:
+                        body = await r.text()
+                    except Exception:
+                        pass
+                    raise Exception(
+                        f"Ollama embedding API returned HTTP {r.status}: {body[:200]}"
+                    )
                 data = await r.json()
                 if "embeddings" in data:
                     return data["embeddings"]
@@ -817,7 +825,7 @@ async def agenerate_ollama_batch_embeddings(
                     raise Exception("Something went wrong :/")
     except Exception as e:
         log.exception(f"Error generating ollama batch embeddings: {e}")
-        return None
+        raise
 
 
 def get_embedding_function(
