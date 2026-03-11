@@ -189,7 +189,7 @@ async def run_with_lock(acquire_fn, renew_fn, release_fn, work_fn, interval, loc
         try:
             while True:
                 if not renew_fn():
-                    log.warning("Lock renewal failed. Will re-acquire.")
+                    log.info("Lock renewal failed. Will re-acquire.")
                     break
                 await work_fn()
                 await asyncio.sleep(interval)
