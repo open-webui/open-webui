@@ -57,7 +57,7 @@
 
 			// Build authentication headers
 			const headers: Record<string, string> = {
-				'Accept': 'application/json',
+				Accept: 'application/json',
 				'Content-Type': 'application/json'
 			};
 
@@ -71,7 +71,9 @@
 			}
 
 			// Test 1: Try to get OpenAPI spec first (basic connectivity check)
-			const requestUrl = path.includes('://') ? path : `${terminalUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+			const requestUrl = path.includes('://')
+				? path
+				: `${terminalUrl}${path.startsWith('/') ? '' : '/'}${path}`;
 			const specResponse = await fetch(requestUrl, {
 				method: 'GET',
 				headers
@@ -176,8 +178,14 @@
 			// but the OpenAPI spec is accessible, we can't guarantee API key validity
 			// We should warn the user about this limitation
 			if (!authValid) {
-				console.warn('Could not fully validate API key - no authentication-required endpoints found');
-				toast.warning($i18n.t('OpenAPI spec is accessible, but API key validity could not be verified. Test by using the terminal.'));
+				console.warn(
+					'Could not fully validate API key - no authentication-required endpoints found'
+				);
+				toast.warning(
+					$i18n.t(
+						'OpenAPI spec is accessible, but API key validity could not be verified. Test by using the terminal.'
+					)
+				);
 			} else {
 				toast.success($i18n.t('Connection successful'));
 			}
@@ -188,12 +196,19 @@
 			const errorMessage = error.message || $i18n.t('Connection failed');
 
 			// Provide more specific error messages
-			if (errorMessage.includes('401') || errorMessage.includes('403') ||
-			    errorMessage.toLowerCase().includes('invalid') ||
-			    errorMessage.toLowerCase().includes('authentication')) {
+			if (
+				errorMessage.includes('401') ||
+				errorMessage.includes('403') ||
+				errorMessage.toLowerCase().includes('invalid') ||
+				errorMessage.toLowerCase().includes('authentication')
+			) {
 				toast.error($i18n.t('Invalid API Key or authentication failed'));
-			} else if (errorMessage.includes('Network') || errorMessage.includes('fetch') ||
-			           errorMessage.includes('ECONNREFUSED') || errorMessage.includes('Failed to fetch')) {
+			} else if (
+				errorMessage.includes('Network') ||
+				errorMessage.includes('fetch') ||
+				errorMessage.includes('ECONNREFUSED') ||
+				errorMessage.includes('Failed to fetch')
+			) {
 				toast.error($i18n.t('Failed to connect to terminal server'));
 			} else {
 				toast.error(errorMessage);

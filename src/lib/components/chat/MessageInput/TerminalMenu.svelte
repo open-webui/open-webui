@@ -35,14 +35,12 @@
 				}))
 			);
 			data = data.filter((d) => {
-			if (d.error) {
-				toast.error(
-					$i18n.t(`Failed to connect to {{URL}} terminal server`, { URL: d?.url })
-				);
-				return false;
-			}
-			return true;
-		});
+				if (d.error) {
+					toast.error($i18n.t(`Failed to connect to {{URL}} terminal server`, { URL: d?.url }));
+					return false;
+				}
+				return true;
+			});
 			terminalServers.set([...data, ...existingSystemTerminals]);
 		} else {
 			terminalServers.set(existingSystemTerminals);
