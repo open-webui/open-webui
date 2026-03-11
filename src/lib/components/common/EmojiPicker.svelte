@@ -19,6 +19,7 @@
 	export let side = 'top';
 	export let align = 'start';
 	export let user = null;
+	export let showReset = false;
 
 	let show = false;
 	let emojis = emojiShortCodes;
@@ -131,6 +132,20 @@
 				bind:value={search}
 			/>
 		</div>
+
+		{#if showReset}
+			<div class="px-4 pb-1">
+				<button
+					class="w-full text-xs font-medium py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition"
+					on:click={() => {
+						onSubmit(null);
+						show = false;
+					}}
+				>
+					{$i18n.t('Reset to Default')}
+				</button>
+			</div>
+		{/if}
 		<!-- Virtualized Emoji List -->
 		<div class="w-full flex justify-start h-96 overflow-y-auto px-3 pb-3 text-sm">
 			{#if emojiRows.length === 0}
