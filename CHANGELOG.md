@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🗄️ **Migration reliability.** Database migrations no longer fail when chat data has unexpected format, making upgrades more reliable. [#22588](https://github.com/open-webui/open-webui/pull/22588), [#22568](https://github.com/open-webui/open-webui/issues/22568)
 - 💬 **Channel @mentions.** Direct connection models no longer appear in channel @mention suggestions, preventing confusion since they don't work in channels. [#22553](https://github.com/open-webui/open-webui/issues/22553), [Commit](https://github.com/open-webui/open-webui/commit/0a87c1ecd078320a08c4cc62d41fe8727fb3b5f7)
 
+### Changed
+
+- 🔍 **Web search result limit.** The configured web search result count now acts as a maximum limit, preventing models from requesting more results than administrators allow. [#22577](https://github.com/open-webui/open-webui/pull/22577)
+
 ## [0.8.10] - 2026-03-08
 
 ### Added
