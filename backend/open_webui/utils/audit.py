@@ -24,7 +24,7 @@ from asgiref.typing import (
 from loguru import logger
 from starlette.requests import Request
 
-from open_webui.env import AUDIT_LOG_LEVEL, MAX_BODY_LOG_SIZE
+from open_webui.env import AUDIT_LOG_LEVEL, AUDIT_INCLUDED_PATHS, MAX_BODY_LOG_SIZE
 from open_webui.utils.auth import get_current_user, get_http_authorization_cred
 from open_webui.models.users import UserModel
 
@@ -129,14 +129,22 @@ class AuditLoggingMiddleware:
         app: ASGI3Application,
         *,
         excluded_paths: Optional[list[str]] = None,
+        included_paths: Optional[list[str]] = None,
         max_body_size: int = MAX_BODY_LOG_SIZE,
         audit_level: AuditLevel = AuditLevel.NONE,
     ) -> None:
         self.app = app
         self.audit_logger = AuditLogger(logger)
         self.excluded_paths = excluded_paths or []
+        self.included_paths = included_paths or []
         self.max_body_size = max_body_size
         self.audit_level = audit_level
+
+        if self.included_paths and self.excluded_paths:
+            logger.warning(
+                "Both AUDIT_INCLUDED_PATHS and AUDIT_EXCLUDED_PATHS are set. "
+                "AUDIT_INCLUDED_PATHS (whitelist) takes precedence."
+            )
 
     async def __call__(
         self,
@@ -226,7 +234,16 @@ class AuditLoggingMiddleware:
         ):
             return True
 
-        # match either /api/<resource>/...(for the endpoint /api/chat case) or /api/v1/<resource>/...
+        # Whitelist mode: only log paths that match included_paths
+        if self.included_paths:
+            pattern = re.compile(
+                r"^/api(?:/v1)?/(" + "|".join(self.included_paths) + r")\b"
+            )
+            if not pattern.match(request.url.path):
+                return True  # Skip: path not in whitelist
+            return False  # Do NOT skip: path is in whitelist
+
+        # Blacklist mode: skip paths that match excluded_paths
         pattern = re.compile(
             r"^/api(?:/v1)?/(" + "|".join(self.excluded_paths) + r")\b"
         )
