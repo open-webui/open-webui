@@ -75,7 +75,11 @@
 				const session = await res.json();
 				sessionId = session.id;
 
-				const wsBase = base.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:');
+				// Use the page's actual protocol so wss:// is used when the page is served over HTTPS,
+				// regardless of how WEBUI_API_BASE_URL was configured.
+				const wsProtocol =
+					typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+				const wsBase = base.replace(/^https?:/, wsProtocol);
 				wsUrl = `${wsBase}/api/terminals/${sessionId}`;
 			} else {
 				// System terminal — proxy through Open WebUI backend
@@ -91,7 +95,11 @@
 				const session = await res.json();
 				sessionId = session.id;
 
-				const wsBase = base.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:');
+				// Use the page's actual protocol so wss:// is used when the page is served over HTTPS,
+				// regardless of how WEBUI_API_BASE_URL was configured.
+				const wsProtocol =
+					typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+				const wsBase = base.replace(/^https?:/, wsProtocol);
 				wsUrl = `${wsBase}/terminals/${info.serverId}/api/terminals/${sessionId}`;
 			}
 
