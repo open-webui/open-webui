@@ -2038,13 +2038,33 @@ def apply_params_to_form_data(form_data, model):
         # If custom_params are provided, merge them into params
         params = deep_update(params, custom_params)
 
+    # Parameters that are Ollama-specific and must not be forwarded to
+    # OpenAI-compatible endpoints (they cause 400 errors on Bedrock, LiteLLM, etc.)
+    OLLAMA_ONLY_PARAMS = {
+        "mirostat",
+        "mirostat_eta",
+        "mirostat_tau",
+        "num_ctx",
+        "num_batch",
+        "num_keep",
+        "num_predict",
+        "repeat_last_n",
+        "top_k",
+        "min_p",
+        "num_gpu",
+        "use_mmap",
+        "use_mlock",
+        "num_thread",
+        "tfs_z",
+    }
+
     if model.get("owned_by") == "ollama":
         # Ollama specific parameters
         form_data["options"] = params
     else:
         if isinstance(params, dict):
             for key, value in params.items():
-                if value is not None:
+                if value is not None and key not in OLLAMA_ONLY_PARAMS:
                     form_data[key] = value
 
         if "logit_bias" in params and params["logit_bias"] is not None:
