@@ -15,12 +15,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- 🛠️ **General bug fixes.** Various bugs were fixed to improve the overall user experience.
-
-### Changed
-
-- 🔄 **General updates.** Various updates were made to improve the application.
-
 ## [0.8.10] - 2026-03-08
 
 ### Added
