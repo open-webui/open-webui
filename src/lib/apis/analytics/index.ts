@@ -4,7 +4,8 @@ export const getModelAnalytics = async (
 	token: string = '',
 	startDate: number | null = null,
 	endDate: number | null = null,
-	groupId: string | null = null
+	groupId: string | null = null,
+	userId: string | null = null
 ) => {
 	let error = null;
 
@@ -12,6 +13,7 @@ export const getModelAnalytics = async (
 	if (startDate) searchParams.append('start_date', startDate.toString());
 	if (endDate) searchParams.append('end_date', endDate.toString());
 	if (groupId) searchParams.append('group_id', groupId);
+	if (userId) searchParams.append('user_id', userId);
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/analytics/models?${searchParams.toString()}`, {
 		method: 'GET',
@@ -43,7 +45,8 @@ export const getUserAnalytics = async (
 	startDate: number | null = null,
 	endDate: number | null = null,
 	limit: number = 50,
-	groupId: string | null = null
+	groupId: string | null = null,
+	modelId: string | null = null
 ) => {
 	let error = null;
 
@@ -52,6 +55,7 @@ export const getUserAnalytics = async (
 	if (endDate) searchParams.append('end_date', endDate.toString());
 	if (limit) searchParams.append('limit', limit.toString());
 	if (groupId) searchParams.append('group_id', groupId);
+	if (modelId) searchParams.append('model_id', modelId);
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/analytics/users?${searchParams.toString()}`, {
 		method: 'GET',
@@ -206,7 +210,8 @@ export const getTokenUsage = async (
 	token: string = '',
 	startDate: number | null = null,
 	endDate: number | null = null,
-	groupId: string | null = null
+	groupId: string | null = null,
+	userId: string | null = null
 ) => {
 	let error = null;
 
@@ -214,6 +219,7 @@ export const getTokenUsage = async (
 	if (startDate) searchParams.append('start_date', startDate.toString());
 	if (endDate) searchParams.append('end_date', endDate.toString());
 	if (groupId) searchParams.append('group_id', groupId);
+	if (userId) searchParams.append('user_id', userId);
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/analytics/tokens?${searchParams.toString()}`, {
 		method: 'GET',

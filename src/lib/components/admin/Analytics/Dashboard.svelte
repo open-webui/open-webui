@@ -70,6 +70,14 @@
 	let selectedModel: { id: string; name: string } | null = null;
 	let showModelModal = false;
 
+	// Cross-filter state: filter users by model, or filter models by user
+	let filterByModelId: string | null = null;
+	let filterByModelName: string | null = null;
+	let filterByUserId: string | null = null;
+	let filterByUserName: string | null = null;
+	let loadingModels = false;
+	let loadingUsers = false;
+
 	// Sorting
 	let modelOrderBy = 'count';
 	let modelDirection: 'asc' | 'desc' = 'desc';
@@ -101,10 +109,10 @@
 			const granularity = selectedPeriod === '24h' ? 'hourly' : 'daily';
 			const [summaryRes, modelsRes, usersRes, dailyRes, tokensRes] = await Promise.all([
 				getSummary(localStorage.token, start, end, selectedGroupId),
-				getModelAnalytics(localStorage.token, start, end, selectedGroupId),
-				getUserAnalytics(localStorage.token, start, end, 50, selectedGroupId),
+				getModelAnalytics(localStorage.token, start, end, selectedGroupId, filterByUserId),
+				getUserAnalytics(localStorage.token, start, end, 50, selectedGroupId, filterByModelId),
 				getDailyStats(localStorage.token, start, end, granularity, selectedGroupId),
-				getTokenUsage(localStorage.token, start, end, selectedGroupId)
+				getTokenUsage(localStorage.token, start, end, selectedGroupId, filterByUserId)
 			]);
 
 			summary = summaryRes ?? summary;
@@ -138,6 +146,59 @@
 			console.error('Dashboard load failed:', err);
 		}
 		loading = false;
+	};
+
+	const reloadModelTable = async () => {
+		loadingModels = true;
+		try {
+			const { start, end } = getDateRange(selectedPeriod);
+			const [modelsRes, tokensRes] = await Promise.all([
+				getModelAnalytics(localStorage.token, start, end, selectedGroupId, filterByUserId),
+				getTokenUsage(localStorage.token, start, end, selectedGroupId, filterByUserId)
+			]);
+			const modelsMap = new Map($models.map((m) => [m.id, m.name || m.id]));
+			modelStats = (modelsRes?.models ?? []).map((entry) => ({
+				...entry,
+				name: modelsMap.get(entry.model_id) || entry.model_id
+			}));
+			if (tokensRes) {
+				tokenStats = {};
+				for (const m of tokensRes.models) {
+					tokenStats[m.model_id] = {
+						input_tokens: m.input_tokens,
+						output_tokens: m.output_tokens,
+						total_tokens: m.total_tokens
+					};
+				}
+				totalTokens = {
+					input: tokensRes.total_input_tokens,
+					output: tokensRes.total_output_tokens,
+					total: tokensRes.total_tokens
+				};
+			}
+		} catch (err) {
+			console.error('Model table reload failed:', err);
+		}
+		loadingModels = false;
+	};
+
+	const reloadUserTable = async () => {
+		loadingUsers = true;
+		try {
+			const { start, end } = getDateRange(selectedPeriod);
+			const usersRes = await getUserAnalytics(
+				localStorage.token,
+				start,
+				end,
+				50,
+				selectedGroupId,
+				filterByModelId
+			);
+			userStats = usersRes?.users ?? [];
+		} catch (err) {
+			console.error('User table reload failed:', err);
+		}
+		loadingUsers = false;
 	};
 
 	$: if (selectedPeriod || selectedGroupId !== undefined) {
@@ -295,8 +356,23 @@
 	<div class="grid md:grid-cols-2 gap-4">
 		<!-- Model Usage Table -->
 		<div>
-			<div class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 px-0.5">
-				{$i18n.t('Model Usage')}
+			<div class="flex items-center justify-between text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 px-0.5">
+				<span>{$i18n.t('Model Usage')}</span>
+				{#if filterByUserId}
+					<span class="flex items-center gap-1 text-blue-500 font-normal">
+						{$i18n.t('Filtered by')}:
+						<span class="font-medium">{filterByUserName}</span>
+						<button
+							class="ml-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition"
+							on:click={() => {
+								filterByUserId = null;
+								filterByUserName = null;
+								reloadModelTable();
+							}}
+							title={$i18n.t('Clear filter')}
+						>✕</button>
+					</span>
+				{/if}
 			</div>
 			<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
 				<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto">
@@ -381,9 +457,17 @@
 						{#each sortedModels as model, idx (model.model_id)}
 							<tr
 								class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+								class:bg-blue-50={filterByModelId === model.model_id}
+								class:dark:bg-blue-950={filterByModelId === model.model_id}
 								on:click={() => {
-									selectedModel = { id: model.model_id, name: model.name };
-									showModelModal = true;
+									if (filterByModelId === model.model_id) {
+										filterByModelId = null;
+										filterByModelName = null;
+									} else {
+										filterByModelId = model.model_id;
+									filterByModelName = model.name ?? model.model_id;
+									}
+									reloadUserTable();
 								}}
 							>
 								<td class="px-3 py-1 text-gray-400">{idx + 1}</td>
@@ -398,6 +482,14 @@
 											}}
 										/>
 										<span class="truncate max-w-[150px]">{model.name}</span>
+										<button
+											class="ml-auto text-gray-300 hover:text-blue-500 transition shrink-0"
+											title={$i18n.t('View details')}
+											on:click|stopPropagation={() => {
+											selectedModel = { id: model.model_id, name: model.name ?? model.model_id };
+												showModelModal = true;
+											}}
+										>→</button>
 									</div>
 								</td>
 								<td class="px-3 py-1 text-right">{model.count.toLocaleString()}</td>
@@ -425,8 +517,23 @@
 
 		<!-- User Activity Table -->
 		<div>
-			<div class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 px-0.5">
-				{$i18n.t('User Activity')}
+			<div class="flex items-center justify-between text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 px-0.5">
+				<span>{$i18n.t('User Activity')}</span>
+				{#if filterByModelId}
+					<span class="flex items-center gap-1 text-blue-500 font-normal">
+						{$i18n.t('Filtered by')}:
+						<span class="font-medium">{filterByModelName}</span>
+						<button
+							class="ml-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition"
+							on:click={() => {
+								filterByModelId = null;
+								filterByModelName = null;
+								reloadUserTable();
+							}}
+							title={$i18n.t('Clear filter')}
+						>✕</button>
+					</span>
+				{/if}
 			</div>
 			<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
 				<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto">
@@ -491,7 +598,21 @@
 					</thead>
 					<tbody>
 						{#each sortedUsers as user, idx (user.user_id)}
-							<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
+							<tr
+								class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+								class:bg-blue-50={filterByUserId === user.user_id}
+								class:dark:bg-blue-950={filterByUserId === user.user_id}
+								on:click={() => {
+									if (filterByUserId === user.user_id) {
+										filterByUserId = null;
+										filterByUserName = null;
+									} else {
+										filterByUserId = user.user_id;
+										filterByUserName = user.name || user.email || user.user_id.substring(0, 8);
+									}
+									reloadModelTable();
+								}}
+							>
 								<td class="px-3 py-1 text-gray-400">{idx + 1}</td>
 								<td class="px-3 py-1 font-medium text-gray-900 dark:text-white">
 									<div class="flex items-center gap-2">

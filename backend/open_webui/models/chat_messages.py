@@ -296,6 +296,7 @@ class ChatMessageTable:
         start_date: Optional[int] = None,
         end_date: Optional[int] = None,
         group_id: Optional[str] = None,
+        user_id: Optional[str] = None,
         db: Optional[Session] = None,
     ) -> dict[str, int]:
         with get_db_context(db) as db:
@@ -315,6 +316,8 @@ class ChatMessageTable:
             if group_id:
                 group_users = db.query(GroupMember.user_id).filter(GroupMember.group_id == group_id).subquery()
                 query = query.filter(ChatMessage.user_id.in_(group_users))
+            if user_id:
+                query = query.filter(ChatMessage.user_id == user_id)
 
             results = query.group_by(ChatMessage.model_id).all()
             return {row.model_id: row.count for row in results}
@@ -324,6 +327,7 @@ class ChatMessageTable:
         start_date: Optional[int] = None,
         end_date: Optional[int] = None,
         group_id: Optional[str] = None,
+        user_id: Optional[str] = None,
         db: Optional[Session] = None,
     ) -> dict[str, dict]:
         """Aggregate token usage by model using database-level aggregation."""
@@ -368,6 +372,8 @@ class ChatMessageTable:
             if group_id:
                 group_users = db.query(GroupMember.user_id).filter(GroupMember.group_id == group_id).subquery()
                 query = query.filter(ChatMessage.user_id.in_(group_users))
+            if user_id:
+                query = query.filter(ChatMessage.user_id == user_id)
 
             results = query.group_by(ChatMessage.model_id).all()
 
@@ -386,6 +392,7 @@ class ChatMessageTable:
         start_date: Optional[int] = None,
         end_date: Optional[int] = None,
         group_id: Optional[str] = None,
+        model_id: Optional[str] = None,
         db: Optional[Session] = None,
     ) -> dict[str, dict]:
         """Aggregate token usage by user using database-level aggregation."""
@@ -430,6 +437,8 @@ class ChatMessageTable:
             if group_id:
                 group_users = db.query(GroupMember.user_id).filter(GroupMember.group_id == group_id).subquery()
                 query = query.filter(ChatMessage.user_id.in_(group_users))
+            if model_id:
+                query = query.filter(ChatMessage.model_id == model_id)
 
             results = query.group_by(ChatMessage.user_id).all()
 
@@ -448,14 +457,23 @@ class ChatMessageTable:
         start_date: Optional[int] = None,
         end_date: Optional[int] = None,
         group_id: Optional[str] = None,
+        model_id: Optional[str] = None,
         db: Optional[Session] = None,
     ) -> dict[str, int]:
         with get_db_context(db) as db:
             from sqlalchemy import func
             from open_webui.models.groups import GroupMember
 
+<<<<<<< HEAD
             query = db.query(ChatMessage.user_id, func.count(ChatMessage.id).label('count')).filter(
                 ~ChatMessage.user_id.like('shared-%')
+=======
+            query = db.query(
+                ChatMessage.user_id, func.count(ChatMessage.id).label("count")
+            ).filter(
+                ChatMessage.role == "assistant",
+                ~ChatMessage.user_id.like("shared-%"),
+>>>>>>> cb4222bda (feat(analytics): add cross-filter by model and user in admin dashboard)
             )
 
             if start_date:
@@ -465,6 +483,8 @@ class ChatMessageTable:
             if group_id:
                 group_users = db.query(GroupMember.user_id).filter(GroupMember.group_id == group_id).subquery()
                 query = query.filter(ChatMessage.user_id.in_(group_users))
+            if model_id:
+                query = query.filter(ChatMessage.model_id == model_id)
 
             results = query.group_by(ChatMessage.user_id).all()
             return {row.user_id: row.count for row in results}
