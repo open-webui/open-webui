@@ -22,13 +22,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed Python files
+        id: changed
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE=${{ github.event.pull_request.base.sha }}
+          else
+            BASE=${{ github.event.before }}
+          fi
+          FILES=$(git diff --name-only --diff-filter=ACMR "$BASE" HEAD -- 'backend/**.py' | xargs)
+          echo "files=$FILES" >> "$GITHUB_OUTPUT"
 
       - name: Ruff check
+        if: steps.changed.outputs.files != ''
         uses: astral-sh/ruff-action@v3
         with:
-          args: check backend
+          args: check ${{ steps.changed.outputs.files }}
 
       - name: Ruff format
+        if: steps.changed.outputs.files != ''
         uses: astral-sh/ruff-action@v3
         with:
-          args: format --check backend
+          args: format --check ${{ steps.changed.outputs.files }}
