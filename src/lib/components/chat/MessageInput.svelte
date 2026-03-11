@@ -1,5 +1,7 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
+	import { slide } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import { toast } from 'svelte-sonner';
 
 	import { marked } from 'marked';
@@ -1207,6 +1209,7 @@
 						>
 							{#if $quotedText}
 								<div
+									transition:slide={{ duration: 200, easing: cubicOut }}
 									class="flex items-center gap-2 mx-2 mt-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-xl"
 								>
 									<ArrowForward className="size-3.5 shrink-0 text-gray-500" />
