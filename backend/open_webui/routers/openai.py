@@ -98,23 +98,26 @@ async def get_models_request(url, key=None, user: UserModel = None):
     return await send_get_request(f"{url}/models", key, user=user)
 
 
-def openai_reasoning_model_handler(payload):
+def openai_new_api_model_handler(payload):
     """
-    Handle reasoning model specific parameters
+    Handle newer OpenAI model parameters (max_completion_tokens).
+    Applies to all models that use the newer API conventions (o-series, gpt-4.1+, gpt-5+).
     """
     if "max_tokens" in payload:
-        # Convert "max_tokens" to "max_completion_tokens" for all reasoning models
         payload["max_completion_tokens"] = payload["max_tokens"]
         del payload["max_tokens"]
 
-    # Handle system role conversion based on model type
-    if payload["messages"][0]["role"] == "system":
-        model_lower = payload["model"].lower()
-        # Legacy models use "user" role instead of "system"
-        if model_lower.startswith("o1-mini") or model_lower.startswith("o1-preview"):
-            payload["messages"][0]["role"] = "user"
-        else:
-            payload["messages"][0]["role"] = "developer"
+    # Handle system role conversion only for reasoning models
+    if is_openai_reasoning_model(payload["model"]):
+        if payload["messages"][0]["role"] == "system":
+            model_lower = _extract_model_name(payload["model"])
+            # Legacy models use "user" role instead of "system"
+            if model_lower.startswith("o1-mini") or model_lower.startswith(
+                "o1-preview"
+            ):
+                payload["messages"][0]["role"] = "user"
+            else:
+                payload["messages"][0]["role"] = "developer"
 
     return payload
 
@@ -793,8 +796,23 @@ def get_azure_allowed_params(api_version: str) -> set[str]:
     return allowed_params
 
 
+def _extract_model_name(model: str) -> str:
+    """Extract the base model name, stripping any provider prefix (e.g. 'openai/gpt-5' -> 'gpt-5')."""
+    return model.split("/")[-1].lower()
+
+
+def is_openai_new_api_model(model: str) -> bool:
+    """Check if a model uses the newer OpenAI API conventions (max_completion_tokens instead of max_tokens).
+
+    This includes reasoning models (o-series) and newer GPT models (gpt-4.1+, gpt-5+).
+    """
+    name = _extract_model_name(model)
+    return name.startswith(("o1", "o3", "o4", "gpt-4.1", "gpt-5"))
+
+
 def is_openai_reasoning_model(model: str) -> bool:
-    return model.lower().startswith(("o1", "o3", "o4", "gpt-5"))
+    name = _extract_model_name(model)
+    return name.startswith(("o1", "o3", "o4", "gpt-5"))
 
 
 def convert_to_azure_payload(url, payload: dict, api_version: str):
@@ -803,15 +821,15 @@ def convert_to_azure_payload(url, payload: dict, api_version: str):
     # Filter allowed parameters based on Azure OpenAI API
     allowed_params = get_azure_allowed_params(api_version)
 
-    # Special handling for o-series models
-    if is_openai_reasoning_model(model):
-        # Convert max_tokens to max_completion_tokens for o-series models
+    # Special handling for newer OpenAI models
+    if is_openai_new_api_model(model):
+        # Convert max_tokens to max_completion_tokens for newer models
         if "max_tokens" in payload:
             payload["max_completion_tokens"] = payload["max_tokens"]
             del payload["max_tokens"]
 
-        # Remove temperature if not 1 for o-series models
-        if "temperature" in payload and payload["temperature"] != 1:
+        # Remove temperature if not 1 for reasoning models
+        if is_openai_reasoning_model(model) and "temperature" in payload and payload["temperature"] != 1:
             log.debug(
                 f"Removing temperature parameter for o-series model {model} as only default value (1) is supported"
             )
@@ -1041,9 +1059,9 @@ async def generate_chat_completion(
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
 
-    # Check if model is a reasoning model that needs special handling
-    if is_openai_reasoning_model(payload["model"]):
-        payload = openai_reasoning_model_handler(payload)
+    # Check if model uses newer OpenAI API conventions (max_completion_tokens)
+    if is_openai_new_api_model(payload["model"]):
+        payload = openai_new_api_model_handler(payload)
     elif "api.openai.com" not in url:
         # Remove "max_completion_tokens" from the payload for backward compatibility
         if "max_completion_tokens" in payload:
