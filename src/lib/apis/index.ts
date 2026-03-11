@@ -298,11 +298,15 @@ export const getTaskIdsByChatId = async (token: string, chat_id: string) => {
 	return res;
 };
 
-export const getToolServerData = async (token: string, url: string) => {
+export const getToolServerData = async (token: string, url: string, timeoutMs = 10000) => {
 	let error = null;
+
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
 	const res = await fetch(`${url}`, {
 		method: 'GET',
+		signal: controller.signal,
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
@@ -310,6 +314,7 @@ export const getToolServerData = async (token: string, url: string) => {
 		}
 	})
 		.then(async (res) => {
+			clearTimeout(timeoutId);
 			// Check if URL ends with .yaml or .yml to determine format
 			if (url.toLowerCase().endsWith('.yaml') || url.toLowerCase().endsWith('.yml')) {
 				if (!res.ok) throw await res.text();
@@ -321,8 +326,11 @@ export const getToolServerData = async (token: string, url: string) => {
 			}
 		})
 		.catch((err) => {
+			clearTimeout(timeoutId);
 			console.error(err);
-			if ('detail' in err) {
+			if (err?.name === 'AbortError') {
+				error = `Request timed out after ${timeoutMs / 1000}s — server unreachable: ${url}`;
+			} else if ('detail' in err) {
 				error = err.detail;
 			} else {
 				error = err;
