@@ -34,19 +34,16 @@
 
 	const DEFAULT_ACTIONS = [
 		{
-			id: 'ask',
-			label: $i18n.t('Ask'),
-			icon: ChatBubble,
-			input: true,
-			prompt: `{{SELECTED_CONTENT}}\n\n\n{{INPUT_CONTENT}}`
-		},
-		{
 			id: 'explain',
 			label: $i18n.t('Explain'),
 			icon: LightBulb,
 			prompt: `{{SELECTED_CONTENT}}\n\n\n${$i18n.t('Explain')}`
 		}
 	];
+
+	$: quickActions = actions.filter(
+		(a) => !(a.id === 'ask' && (a.prompt ?? '').trim() === '{{SELECTED_CONTENT}}\n\n\n{{INPUT_CONTENT}}')
+	);
 
 	const autoScroll = async () => {
 		const responseContainer = document.getElementById('response-container');
@@ -238,19 +235,26 @@
 		<div
 			class="flex flex-row shrink-0 p-0.5 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-xl shadow-xl border border-gray-100 dark:border-gray-800"
 		>
-			{#each actions as action}
+			<button
+				aria-label={$i18n.t('Ask')}
+				class="px-1.5 py-[1px] hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl flex items-center gap-1 min-w-fit transition"
+				on:click={() => {
+					selectedText = window.getSelection().toString();
+					quotedText.set(selectedText);
+					onClose();
+				}}
+			>
+				<ChatBubble className="size-3 shrink-0" />
+				<div class="shrink-0">{$i18n.t('Ask')}</div>
+			</button>
+
+			{#each quickActions as action}
 				<button
 					aria-label={action.label}
 					class="px-1.5 py-[1px] hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl flex items-center gap-1 min-w-fit transition"
 					on:click={() => {
 						selectedText = window.getSelection().toString();
-
-						if (action.input) {
-							quotedText.set(selectedText);
-							onClose();
-						} else {
-							actionHandler(action.id);
-						}
+						actionHandler(action.id);
 					}}
 				>
 					{#if action.icon}
