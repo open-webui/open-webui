@@ -105,6 +105,8 @@
 				}
 				connected = true;
 				connecting = false;
+				// Focus the terminal so it receives keyboard input immediately
+				term?.focus();
 				// Send initial resize
 				if (term && ws) {
 					ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
@@ -225,6 +227,10 @@
 				ws.send(buffer);
 			}
 		});
+
+		// Ensure all key events are processed by xterm.js and not intercepted
+		// by the browser or surrounding UI (fixes vi/vim keystroke handling).
+		term.attachCustomKeyEventHandler(() => true);
 
 		// Handle resize
 		term.onResize(({ cols, rows }) => {
