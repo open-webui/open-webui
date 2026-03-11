@@ -151,7 +151,12 @@ def upgrade() -> None:
                 continue
 
         history = chat_data.get("history", {})
+        if not isinstance(history, dict):
+            continue
+
         messages = history.get("messages", {})
+        if not isinstance(messages, dict):
+            continue
 
         for message_id, message in messages.items():
             if not isinstance(message, dict):
