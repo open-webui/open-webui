@@ -10,6 +10,9 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import AccessControlModal from '$lib/components/workspace/common/AccessControlModal.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
+	import { getToolServerData } from '$lib/apis';
 
 	export let show = false;
 	export let edit = false;
@@ -29,6 +32,176 @@
 	let showAdvanced = false;
 	let showAccessControlModal = false;
 	let accessGrants: any[] = [];
+	let verifying = false;
+
+	const verifyHandler = async () => {
+		if (url === '') {
+			toast.error($i18n.t('Please enter a valid URL'));
+			return;
+		}
+
+		if (path === '') {
+			toast.error($i18n.t('Please enter a valid path'));
+			return;
+		}
+
+		// Validate API key is provided when auth_type is bearer
+		if (auth_type === 'bearer' && !key.trim()) {
+			toast.error($i18n.t('API Key is required for Bearer authentication'));
+			return;
+		}
+
+		verifying = true;
+		try {
+			const terminalUrl = url.replace(/\/$/, '');
+
+			// Build authentication headers
+			const headers: Record<string, string> = {
+				'Accept': 'application/json',
+				'Content-Type': 'application/json'
+			};
+
+			if (auth_type === 'bearer') {
+				if (!key.trim()) {
+					throw new Error($i18n.t('API Key is required for Bearer authentication'));
+				}
+				headers['Authorization'] = `Bearer ${key}`;
+			} else if (auth_type === 'session') {
+				headers['Authorization'] = `Bearer ${localStorage.token}`;
+			}
+
+			// Test 1: Try to get OpenAPI spec first (basic connectivity check)
+			const requestUrl = path.includes('://') ? path : `${terminalUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+			const specResponse = await fetch(requestUrl, {
+				method: 'GET',
+				headers
+			});
+
+			if (!specResponse.ok) {
+				// Try to get error details
+				let errorMessage = 'Failed to connect to terminal server';
+				try {
+					const errorData = await specResponse.json();
+					if (errorData.detail) {
+						errorMessage = errorData.detail;
+					} else if (errorData.error) {
+						errorMessage = errorData.error;
+					} else if (errorData.message) {
+						errorMessage = errorData.message;
+					}
+				} catch (e) {
+					// If response is not JSON, use status text
+					errorMessage = specResponse.statusText || errorMessage;
+				}
+				throw new Error(errorMessage);
+			}
+
+			// Verify we got valid OpenAPI spec
+			const specData = await specResponse.json();
+			if (!specData || !specData.paths) {
+				throw new Error($i18n.t('Invalid OpenAPI spec received'));
+			}
+
+			// Test 2: Call a real terminal endpoint that requires authentication
+			// Try /browse/ endpoint first (most common)
+			const browseUrl = `${terminalUrl}/browse/`;
+			let authValid = false;
+
+			try {
+				const browseResponse = await fetch(browseUrl, {
+					method: 'GET',
+					headers
+				});
+
+				// Check for authentication errors
+				if (browseResponse.status === 401 || browseResponse.status === 403) {
+					throw new Error($i18n.t('Invalid API Key or authentication failed'));
+				}
+
+				// If we got a successful response (2xx), authentication is valid
+				if (browseResponse.ok) {
+					authValid = true;
+				}
+			} catch (e) {
+				// If /browse/ doesn't exist or fails, try other endpoints
+				console.warn('Browse endpoint not available, trying alternatives');
+			}
+
+			// Test 3: Try /info endpoint if browse failed
+			if (!authValid) {
+				try {
+					const infoResponse = await fetch(`${terminalUrl}/info`, {
+						method: 'GET',
+						headers
+					});
+
+					if (infoResponse.status === 401 || infoResponse.status === 403) {
+						throw new Error($i18n.t('Invalid API Key or authentication failed'));
+					}
+
+					if (infoResponse.ok) {
+						authValid = true;
+					}
+				} catch (e) {
+					console.warn('Info endpoint not available');
+				}
+			}
+
+			// Test 4: Try a simple command execution test
+			if (!authValid) {
+				try {
+					// Try to execute a simple command to test authentication
+					const commandResponse = await fetch(`${terminalUrl}/execute`, {
+						method: 'POST',
+						headers,
+						body: JSON.stringify({
+							command: 'pwd',
+							cwd: '/'
+						})
+					});
+
+					if (commandResponse.status === 401 || commandResponse.status === 403) {
+						throw new Error($i18n.t('Invalid API Key or authentication failed'));
+					}
+
+					if (commandResponse.ok) {
+						authValid = true;
+					}
+				} catch (e) {
+					console.warn('Command endpoint not available');
+				}
+			}
+
+			// If we couldn't verify authentication through any real endpoint,
+			// but the OpenAPI spec is accessible, we can't guarantee API key validity
+			// We should warn the user about this limitation
+			if (!authValid) {
+				console.warn('Could not fully validate API key - no authentication-required endpoints found');
+				toast.warning($i18n.t('OpenAPI spec is accessible, but API key validity could not be verified. Test by using the terminal.'));
+			} else {
+				toast.success($i18n.t('Connection successful'));
+			}
+
+			console.debug('Connection verified', { specData, authValid });
+		} catch (error) {
+			console.error('Verification error:', error);
+			const errorMessage = error.message || $i18n.t('Connection failed');
+
+			// Provide more specific error messages
+			if (errorMessage.includes('401') || errorMessage.includes('403') ||
+			    errorMessage.toLowerCase().includes('invalid') ||
+			    errorMessage.toLowerCase().includes('authentication')) {
+				toast.error($i18n.t('Invalid API Key or authentication failed'));
+			} else if (errorMessage.includes('Network') || errorMessage.includes('fetch') ||
+			           errorMessage.includes('ECONNREFUSED') || errorMessage.includes('Failed to fetch')) {
+				toast.error($i18n.t('Failed to connect to terminal server'));
+			} else {
+				toast.error(errorMessage);
+			}
+		} finally {
+			verifying = false;
+		}
+	};
 
 	const init = () => {
 		if (connection) {
@@ -174,6 +347,39 @@
 										required
 										autocomplete="off"
 									/>
+
+									<Tooltip
+										content={$i18n.t('Verify Connection')}
+										className="shrink-0 flex items-center mr-1"
+									>
+										<button
+											class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition"
+											on:click={() => {
+												verifyHandler();
+											}}
+											aria-label={$i18n.t('Verify Connection')}
+											type="button"
+											disabled={verifying}
+										>
+											{#if verifying}
+												<Spinner className="w-4 h-4" />
+											{:else}
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													class="w-4 h-4"
+													aria-hidden="true"
+												>
+													<path
+														fill-rule="evenodd"
+														d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+														clip-rule="evenodd"
+													/>
+												</svg>
+											{/if}
+										</button>
+									</Tooltip>
 								</div>
 							</div>
 						</div>
