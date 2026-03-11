@@ -757,12 +757,12 @@ WEBSOCKET_REDIS_CLUSTER = (
     os.environ.get("WEBSOCKET_REDIS_CLUSTER", str(REDIS_CLUSTER)).lower() == "true"
 )
 
-websocket_redis_lock_timeout = os.environ.get("WEBSOCKET_REDIS_LOCK_TIMEOUT", "60")
+websocket_redis_lock_timeout = os.environ.get("WEBSOCKET_REDIS_LOCK_TIMEOUT", "15")
 
 try:
     WEBSOCKET_REDIS_LOCK_TIMEOUT = int(websocket_redis_lock_timeout)
 except ValueError:
-    WEBSOCKET_REDIS_LOCK_TIMEOUT = 60
+    WEBSOCKET_REDIS_LOCK_TIMEOUT = 15
 
 WEBSOCKET_SENTINEL_HOSTS = os.environ.get("WEBSOCKET_SENTINEL_HOSTS", "")
 WEBSOCKET_SENTINEL_PORT = os.environ.get("WEBSOCKET_SENTINEL_PORT", "26379")
