@@ -275,11 +275,14 @@ async def get_tools(
                         continue
 
                     tool_server_idx = tool_server_data.get("idx", 0)
-                    tool_server_connection = (
-                        request.app.state.config.TOOL_SERVER_CONNECTIONS[
-                            tool_server_idx
-                        ]
-                    )
+                    connections = request.app.state.config.TOOL_SERVER_CONNECTIONS
+                    if tool_server_idx >= len(connections):
+                        log.warning(
+                            f"Tool server index {tool_server_idx} out of range "
+                            f"(have {len(connections)} connections), skipping server {server_id}"
+                        )
+                        continue
+                    tool_server_connection = connections[tool_server_idx]
 
                     # Check access control for tool server
                     if not has_connection_access(

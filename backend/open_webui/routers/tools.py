@@ -88,9 +88,15 @@ async def get_tools(
     # OpenAPI Tool Servers
     server_access_grants = {}
     for server in await get_tool_servers(request):
-        connection = request.app.state.config.TOOL_SERVER_CONNECTIONS[
-            server.get("idx", 0)
-        ]
+        server_idx = server.get("idx", 0)
+        connections = request.app.state.config.TOOL_SERVER_CONNECTIONS
+        if server_idx >= len(connections):
+            log.warning(
+                f"Tool server index {server_idx} out of range "
+                f"(have {len(connections)} connections), skipping server {server.get('id')}"
+            )
+            continue
+        connection = connections[server_idx]
         server_config = connection.get("config", {})
 
         server_id = f"server:{server.get('id')}"
