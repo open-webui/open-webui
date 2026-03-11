@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - ✨ **Smoother loading animation.** The loading shimmer animation now looks smoother and more natural, with softer highlight colors. [#22516](https://github.com/open-webui/open-webui/pull/22516)
+- 🧪 **Terminal connection verification.** Users can now verify their terminal server connection is working before saving the configuration, making setup more reliable. [#22567](https://github.com/open-webui/open-webui/pull/22567)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for Finnish, Portuguese (Portugal), Catalan, and Turkish were enhanced and expanded.
 
