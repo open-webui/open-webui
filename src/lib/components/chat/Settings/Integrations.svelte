@@ -58,7 +58,15 @@
 					config: { enable: true }
 				}))
 			);
-			terminalServersData = terminalServersData.filter((data) => data && !data.error);
+			terminalServersData = terminalServersData.filter((data) => {
+			if (data.error) {
+				toast.error(
+					$i18n.t(`Failed to connect to {{URL}} terminal server`, { URL: data?.url })
+				);
+				return false;
+			}
+			return true;
+		});
 			terminalServers.set([...terminalServersData, ...existingSystemTerminals]);
 		} else {
 			terminalServers.set(existingSystemTerminals);
