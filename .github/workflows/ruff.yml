@@ -1,0 +1,34 @@
+name: Ruff
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'backend/**'
+      - 'pyproject.toml'
+  pull_request:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'backend/**'
+      - 'pyproject.toml'
+
+jobs:
+  ruff:
+    name: 'Lint & Format Backend'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ruff check
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: check backend
+
+      - name: Ruff format
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: format --check backend
