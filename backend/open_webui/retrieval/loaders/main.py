@@ -1,8 +1,11 @@
+import os
 import requests
 import logging
 import ftfy
 import sys
 import json
+import tempfile
+import zipfile
 
 from azure.identity import DefaultAzureCredential
 from langchain_community.document_loaders import (
@@ -34,6 +37,67 @@ from open_webui.env import GLOBAL_LOG_LEVEL, REQUESTS_VERIFY
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
+
+def _normalize_xlsx_zip_entries(file_path: str) -> str:
+    """
+    Return a path to an xlsx file whose internal ZIP entries use the exact
+    case that openpyxl expects (e.g. ``xl/sharedStrings.xml``).
+
+    Some generators (e.g. certain Windows tools) produce ``xl/SharedStrings.xml``
+    with an uppercase 'S'.  The Python ``zipfile`` module on case-sensitive
+    file-systems (Linux / macOS) raises a ``KeyError`` when openpyxl tries to
+    open ``xl/sharedStrings.xml`` and only the capitalised variant exists.
+
+    If no case mismatch is detected the original *file_path* is returned as-is
+    to avoid unnecessary I/O.
+    """
+    # Mapping of known entries whose case may vary -> canonical lowercase name
+    CASE_SENSITIVE_ENTRIES = {
+        "xl/sharedstrings.xml": "xl/sharedStrings.xml",
+    }
+
+    try:
+        with zipfile.ZipFile(file_path, "r") as zin:
+            names = zin.namelist()
+
+        # Build a lookup: lowercase -> actual name present in the archive
+        lower_to_actual = {n.lower(): n for n in names}
+
+        needs_rename = False
+        for canonical_lower, canonical_name in CASE_SENSITIVE_ENTRIES.items():
+            actual = lower_to_actual.get(canonical_lower)
+            if actual is not None and actual != canonical_name:
+                needs_rename = True
+                break
+
+        if not needs_rename:
+            return file_path
+
+        # Re-package the ZIP with corrected entry names into a temp file
+        suffix = os.path.splitext(file_path)[1] or ".xlsx"
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+        tmp.close()
+
+        with zipfile.ZipFile(file_path, "r") as zin:
+            with zipfile.ZipFile(tmp.name, "w", compression=zipfile.ZIP_DEFLATED) as zout:
+                for item in zin.infolist():
+                    corrected_name = CASE_SENSITIVE_ENTRIES.get(
+                        item.filename.lower(), item.filename
+                    )
+                    data = zin.read(item.filename)
+                    new_info = zipfile.ZipInfo(corrected_name, date_time=item.date_time)
+                    new_info.compress_type = item.compress_type
+                    zout.writestr(new_info, data)
+
+        log.debug(
+            "xlsx: rewrote ZIP with normalised entry names -> %s", tmp.name
+        )
+        return tmp.name
+
+    except zipfile.BadZipFile:
+        # Not a valid ZIP / xlsx — let the downstream loader surface the error
+        return file_path
+
 
 known_source_ext = [
     "go",
@@ -387,7 +451,12 @@ class Loader:
                 "application/vnd.ms-excel",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             ] or file_ext in ["xls", "xlsx"]:
-                loader = UnstructuredExcelLoader(file_path)
+                # Normalise ZIP entry case before passing to openpyxl so that
+                # files with e.g. `xl/SharedStrings.xml` (capital S) don't
+                # raise a KeyError on case-sensitive file-systems.
+                # See https://github.com/open-webui/open-webui/issues/22613
+                normalised_path = _normalize_xlsx_zip_entries(file_path)
+                loader = UnstructuredExcelLoader(normalised_path)
             elif file_content_type in [
                 "application/vnd.ms-powerpoint",
                 "application/vnd.openxmlformats-officedocument.presentationml.presentation",
