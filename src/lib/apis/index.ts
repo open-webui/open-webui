@@ -298,11 +298,15 @@ export const getTaskIdsByChatId = async (token: string, chat_id: string) => {
 	return res;
 };
 
-export const getToolServerData = async (token: string, url: string) => {
+export const getToolServerData = async (token: string, url: string, timeout: number = 10000) => {
 	let error = null;
+
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), timeout);
 
 	const res = await fetch(`${url}`, {
 		method: 'GET',
+		signal: controller.signal,
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
@@ -321,13 +325,21 @@ export const getToolServerData = async (token: string, url: string) => {
 			}
 		})
 		.catch((err) => {
-			console.error(err);
-			if ('detail' in err) {
-				error = err.detail;
+			if (err?.name === 'AbortError') {
+				console.warn(`Tool server request timed out after ${timeout}ms: ${url}`);
+				error = `Connection timed out after ${timeout / 1000}s`;
 			} else {
-				error = err;
+				console.error(err);
+				if ('detail' in err) {
+					error = err.detail;
+				} else {
+					error = err;
+				}
 			}
 			return null;
+		})
+		.finally(() => {
+			clearTimeout(timeoutId);
 		});
 
 	if (error) {
