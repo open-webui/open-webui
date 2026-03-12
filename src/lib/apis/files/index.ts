@@ -5,7 +5,8 @@ export const uploadFile = async (
 	token: string,
 	file: File,
 	metadata?: object | null,
-	process?: boolean | null
+	process?: boolean | null,
+	onProgress?: (data: { status: string; error?: string }) => void
 ) => {
 	const data = new FormData();
 	data.append('file', file);
@@ -76,6 +77,10 @@ export const uploadFile = async (
 
 								if (res?.data) {
 									res.data = data;
+								}
+
+								if (onProgress) {
+									onProgress(data);
 								}
 							}
 						}

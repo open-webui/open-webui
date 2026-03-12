@@ -8,6 +8,7 @@ import asyncio
 import re
 import uuid
 from datetime import datetime
+import time
 from pathlib import Path
 from typing import Iterator, List, Optional, Sequence, Union
 
@@ -498,6 +499,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "DOCLING_SERVER_URL": request.app.state.config.DOCLING_SERVER_URL,
         "DOCLING_API_KEY": request.app.state.config.DOCLING_API_KEY,
         "DOCLING_PARAMS": request.app.state.config.DOCLING_PARAMS,
+        "DOCLING_SERVE_TIMEOUT": request.app.state.config.DOCLING_SERVE_TIMEOUT,
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "DOCUMENT_INTELLIGENCE_MODEL": request.app.state.config.DOCUMENT_INTELLIGENCE_MODEL,
@@ -701,6 +703,7 @@ class ConfigForm(BaseModel):
     DOCLING_SERVER_URL: Optional[str] = None
     DOCLING_API_KEY: Optional[str] = None
     DOCLING_PARAMS: Optional[dict] = None
+    DOCLING_SERVE_TIMEOUT: Optional[str] = None
     DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = None
     DOCUMENT_INTELLIGENCE_KEY: Optional[str] = None
     DOCUMENT_INTELLIGENCE_MODEL: Optional[str] = None
@@ -897,6 +900,11 @@ async def update_rag_config(
         form_data.DOCLING_PARAMS
         if form_data.DOCLING_PARAMS is not None
         else request.app.state.config.DOCLING_PARAMS
+    )
+    request.app.state.config.DOCLING_SERVE_TIMEOUT = (
+        form_data.DOCLING_SERVE_TIMEOUT
+        if form_data.DOCLING_SERVE_TIMEOUT is not None
+        else request.app.state.config.DOCLING_SERVE_TIMEOUT
     )
     request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = (
         form_data.DOCUMENT_INTELLIGENCE_ENDPOINT
@@ -1254,6 +1262,7 @@ async def update_rag_config(
         "DOCLING_SERVER_URL": request.app.state.config.DOCLING_SERVER_URL,
         "DOCLING_API_KEY": request.app.state.config.DOCLING_API_KEY,
         "DOCLING_PARAMS": request.app.state.config.DOCLING_PARAMS,
+        "DOCLING_SERVE_TIMEOUT": request.app.state.config.DOCLING_SERVE_TIMEOUT,
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "DOCUMENT_INTELLIGENCE_MODEL": request.app.state.config.DOCUMENT_INTELLIGENCE_MODEL,
@@ -1743,6 +1752,25 @@ def process_file(
                 file_path = file.path
                 if file_path:
                     file_path = Storage.get_file(file_path)
+
+                    # Mark as actively processing and record start time so the
+                    # UI polling loop can show meaningful status information.
+                    Files.update_file_data_by_id(
+                        file.id,
+                        {"status": "processing", "started_at": int(time.time())},
+                        db=db,
+                    )
+
+                    # Callback used by DoclingLoader to persist queue position
+                    # and task_id so they appear in the UI tooltip.
+                    _file_id_for_callback = file.id
+
+                    def _docling_status_callback(data: dict) -> None:
+                        with get_db() as _session:
+                            Files.update_file_data_by_id(
+                                _file_id_for_callback, data, db=_session
+                            )
+
                     loader = Loader(
                         engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
                         user=user,
@@ -1763,6 +1791,8 @@ def process_file(
                         DOCLING_SERVER_URL=request.app.state.config.DOCLING_SERVER_URL,
                         DOCLING_API_KEY=request.app.state.config.DOCLING_API_KEY,
                         DOCLING_PARAMS=request.app.state.config.DOCLING_PARAMS,
+                        DOCLING_SERVE_TIMEOUT=request.app.state.config.DOCLING_SERVE_TIMEOUT,
+                        DOCLING_STATUS_CALLBACK=_docling_status_callback,
                         PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
                         PDF_LOADER_MODE=request.app.state.config.PDF_LOADER_MODE,
                         DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
@@ -1848,6 +1878,37 @@ def process_file(
                     log.info(f"added {len(docs)} items to collection {collection_name}")
 
                     if result:
+                        # Guard: check that the file record still exists before
+                        # committing the final status.  The user may have pressed
+                        # the delete button while docling/embedding was running.
+                        with get_db() as _guard_session:
+                            if Files.get_file_by_id(file.id, db=_guard_session) is None:
+                                log.warning(
+                                    "File %s was deleted during processing; "
+                                    "discarding embeddings to prevent orphaned vectors.",
+                                    file.id,
+                                )
+                                try:
+                                    if form_data.collection_name:
+                                        # Shared knowledge collection – remove only this file's chunks
+                                        VECTOR_DB_CLIENT.delete(
+                                            collection_name=collection_name,
+                                            filter={"file_id": file.id},
+                                        )
+                                    else:
+                                        # Private file collection – drop entirely
+                                        VECTOR_DB_CLIENT.delete_collection(
+                                            collection_name=collection_name
+                                        )
+                                except Exception as _cleanup_err:
+                                    log.debug(
+                                        "Vector DB cleanup after user-delete: %s",
+                                        _cleanup_err,
+                                    )
+                                return {
+                                    "status": False,
+                                    "reason": "file_deleted_during_processing",
+                                }
                         # Fresh session for the final update.
                         with get_db() as session:
                             Files.update_file_metadata_by_id(

@@ -2905,6 +2905,12 @@ DOCLING_PARAMS = PersistentConfig(
     docling_params,
 )
 
+DOCLING_SERVE_TIMEOUT = PersistentConfig(
+    "DOCLING_SERVE_TIMEOUT",
+    "rag.docling_serve_timeout",
+    int(os.environ.get("DOCLING_SERVE_TIMEOUT")) if os.environ.get("DOCLING_SERVE_TIMEOUT") else None,
+)
+
 DOCUMENT_INTELLIGENCE_ENDPOINT = PersistentConfig(
     "DOCUMENT_INTELLIGENCE_ENDPOINT",
     "rag.document_intelligence_endpoint",

@@ -101,6 +101,30 @@
 	let fileItems = null;
 	let fileItemsTotal = null;
 
+	// Poll every 15 s while any file is still being processed, so the UI
+	// reflects status changes (pending → processing → completed / failed)
+	// without requiring a manual page refresh.
+	let pollingInterval: ReturnType<typeof setInterval> | null = null;
+
+	$: {
+		const hasPendingFiles = fileItems?.some(
+			(f) =>
+				f?.data?.status === 'pending' ||
+				f?.data?.status === 'processing' ||
+				f?.status === 'uploading'
+		);
+		if (hasPendingFiles && pollingInterval === null) {
+			pollingInterval = setInterval(() => {
+				getItemsPage(true);
+			}, 15_000);
+		} else if (fileItems !== null && !hasPendingFiles && pollingInterval !== null) {
+			// Only stop polling once we have a real result — not while fileItems is
+			// momentarily null during a refresh, which would kill the interval early.
+			clearInterval(pollingInterval);
+			pollingInterval = null;
+		}
+	}
+
 	const reset = () => {
 		currentPage = 1;
 	};
@@ -110,8 +134,11 @@
 		await getItemsPage();
 	};
 
-	// Debounce only query changes
-	$: if (query !== undefined) {
+	// Debounce only query changes.
+	// Guard on knowledgeId so the initial reactive evaluation (before onMount
+	// finishes) doesn't schedule a non-silent refresh that would blank the list
+	// 300 ms after the filter block already loaded the first page.
+	$: if (query !== undefined && knowledgeId !== null) {
 		clearTimeout(searchDebounceTimer);
 
 		searchDebounceTimer = setTimeout(() => {
@@ -139,11 +166,15 @@
 		reset();
 	}
 
-	const getItemsPage = async () => {
+	// silent=true preserves the current list while refreshing (used by the
+	// polling interval) so files don't flash away every 15 seconds.
+	const getItemsPage = async (silent = false) => {
 		if (knowledgeId === null) return;
 
-		fileItems = null;
-		fileItemsTotal = null;
+		if (!silent) {
+			fileItems = null;
+			fileItemsTotal = null;
+		}
 
 		if (sortKey === null) {
 			direction = null;
@@ -224,7 +255,13 @@
 						res.content
 					);
 
-					const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
+					const uploadedFile = await uploadFile(localStorage.token, file, null, null, (statusData) => {
+						fileItems = fileItems.map((item) =>
+							item.itemId === fileItem.itemId
+								? { ...item, data: { ...(item.data ?? {}), ...statusData } }
+								: item
+						);
+					}).catch((e) => {
 						toast.error(`${e}`);
 						return null;
 					});
@@ -310,7 +347,21 @@
 					: {})
 			};
 
-			const uploadedFile = await uploadFile(localStorage.token, file, metadata).catch((e) => {
+			const uploadedFile = await uploadFile(
+				localStorage.token,
+				file,
+				metadata,
+				null,
+				(statusData) => {
+					// Update the local placeholder item with the server-side status so
+					// the tooltip (and spinner) reflect real progress while we wait.
+					fileItems = fileItems.map((item) =>
+						item.itemId === fileItem.itemId
+							? { ...item, data: { ...(item.data ?? {}), ...statusData } }
+							: item
+					);
+				}
+			).catch((e) => {
 				toast.error(`${e}`);
 				return null;
 			});
@@ -764,6 +815,7 @@
 
 	onDestroy(() => {
 		clearTimeout(searchDebounceTimer);
+		if (pollingInterval !== null) clearInterval(pollingInterval);
 		mediaQuery?.removeEventListener('change', handleMediaQuery);
 		const dropZone = document.querySelector('body');
 		dropZone?.removeEventListener('dragover', onDragOver);
@@ -1109,7 +1161,7 @@
 										{/if}
 									</div>
 
-									{#key selectedFile.id}
+									{#key selectedFile?.id}
 										<textarea
 											class="w-full h-full text-sm outline-none resize-none px-3 py-2"
 											bind:value={selectedFileContent}

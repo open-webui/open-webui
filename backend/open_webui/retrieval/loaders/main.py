@@ -3,6 +3,7 @@ import logging
 import ftfy
 import sys
 import json
+import time
 
 from azure.identity import DefaultAzureCredential
 from langchain_community.document_loaders import (
@@ -134,22 +135,24 @@ class TikaLoader:
 
 
 class DoclingLoader:
-    def __init__(self, url, api_key=None, file_path=None, mime_type=None, params=None):
+    def __init__(self, url, api_key=None, file_path=None, mime_type=None, params=None, timeout=None, status_callback=None):
         self.url = url.rstrip("/")
         self.api_key = api_key
         self.file_path = file_path
         self.mime_type = mime_type
-
         self.params = params or {}
+        self.timeout = timeout  # total seconds to wait; None = infinite
+        self.status_callback = status_callback  # optional callable(dict) to persist queue state
 
     def load(self) -> list[Document]:
-        with open(self.file_path, "rb") as f:
-            headers = {}
-            if self.api_key:
-                headers["X-Api-Key"] = f"{self.api_key}"
+        headers = {}
+        if self.api_key:
+            headers["X-Api-Key"] = f"{self.api_key}"
 
+        # Submit via async endpoint – returns immediately with task_id
+        with open(self.file_path, "rb") as f:
             r = requests.post(
-                f"{self.url}/v1/convert/file",
+                f"{self.url}/v1/convert/file/async",
                 files={
                     "files": (
                         self.file_path,
@@ -162,17 +165,9 @@ class DoclingLoader:
                     **self.params,
                 },
                 headers=headers,
+                timeout=30,
             )
-        if r.ok:
-            result = r.json()
-            document_data = result.get("document", {})
-            text = document_data.get("md_content", "<No text content found>")
-
-            metadata = {"Content-Type": self.mime_type} if self.mime_type else {}
-
-            log.debug("Docling extracted text: %s", text)
-            return [Document(page_content=text, metadata=metadata)]
-        else:
+        if not r.ok:
             error_msg = f"Error calling Docling API: {r.reason}"
             if r.text:
                 try:
@@ -182,6 +177,96 @@ class DoclingLoader:
                 except Exception:
                     error_msg += f" - {r.text}"
             raise Exception(f"Error calling Docling: {error_msg}")
+
+        submit_data = r.json()
+        task_id = submit_data.get("task_id")
+        task_position = submit_data.get("task_position")
+        if not task_id:
+            raise Exception("Docling async submit did not return a task_id")
+        log.info(
+            "Docling task submitted: %s, queue position: %s",
+            task_id,
+            task_position,
+        )
+        if self.status_callback:
+            self.status_callback({"task_id": task_id, "task_position": task_position})
+
+        # Poll until completion, respecting optional total timeout
+        deadline = time.monotonic() + self.timeout if self.timeout is not None else None
+        poll_wait = 30  # long-poll window per request (seconds)
+
+        while True:
+            if deadline is not None:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise Exception(
+                        f"Docling conversion timed out after {self.timeout}s (task_id={task_id})"
+                    )
+                poll_wait = min(poll_wait, int(remaining) + 1)
+
+            poll_start = time.monotonic()
+            try:
+                status_r = requests.get(
+                    f"{self.url}/v1/status/poll/{task_id}",
+                    params={"wait": poll_wait},
+                    headers=headers,
+                    timeout=poll_wait + 10,
+                )
+            except requests.Timeout:
+                log.warning("Docling status poll timed out for task %s, retrying", task_id)
+                # Apply the same minimum-gap guard as the normal path so that a
+                # series of back-to-back timeouts cannot loop faster than once per
+                # poll_wait seconds (timeout = poll_wait + 10, so this is normally
+                # a no-op, but guards against misconfigured or reduced poll_wait).
+                elapsed = time.monotonic() - poll_start
+                if elapsed < poll_wait:
+                    time.sleep(poll_wait - elapsed)
+                continue
+
+            if not status_r.ok:
+                raise Exception(f"Error polling Docling task status: {status_r.reason}")
+
+            status_data = status_r.json()
+            task_status = status_data.get("task_status", "")
+            log.debug(
+                "Docling task %s: status=%s, queue_position=%s",
+                task_id,
+                task_status,
+                status_data.get("task_position"),
+            )
+            if self.status_callback and status_data.get("task_position") is not None:
+                self.status_callback({"task_position": status_data["task_position"]})
+
+            if task_status == "success":
+                break
+            elif task_status == "failure":
+                error_msg = status_data.get("error_message") or "Unknown error"
+                raise Exception(f"Docling conversion failed: {error_msg}")
+            # else "pending" or "started" – keep polling
+
+            # Guard against servers that ignore ?wait= and return immediately.
+            # Sleep out the remainder of the intended poll window so we never
+            # poll faster than once per poll_wait seconds, regardless of how
+            # quickly the server responds.
+            elapsed = time.monotonic() - poll_start
+            if elapsed < poll_wait:
+                time.sleep(poll_wait - elapsed)
+
+        # Retrieve result
+        result_r = requests.get(
+            f"{self.url}/v1/result/{task_id}",
+            headers=headers,
+            timeout=30,
+        )
+        if not result_r.ok:
+            raise Exception(f"Error retrieving Docling result: {result_r.reason}")
+
+        result = result_r.json()
+        document_data = result.get("document", {})
+        text = document_data.get("md_content", "<No text content found>")
+        metadata = {"Content-Type": self.mime_type} if self.mime_type else {}
+        log.debug("Docling extracted text: %s", text)
+        return [Document(page_content=text, metadata=metadata)]
 
 
 class Loader:
@@ -297,12 +382,21 @@ class Loader:
                         log.error("Invalid DOCLING_PARAMS format, expected JSON object")
                         params = {}
 
+                docling_timeout = self.kwargs.get("DOCLING_SERVE_TIMEOUT")
+                if docling_timeout is not None:
+                    try:
+                        docling_timeout = int(docling_timeout)
+                    except (ValueError, TypeError):
+                        docling_timeout = None
+
                 loader = DoclingLoader(
                     url=self.kwargs.get("DOCLING_SERVER_URL"),
                     api_key=self.kwargs.get("DOCLING_API_KEY", None),
                     file_path=file_path,
                     mime_type=file_content_type,
                     params=params,
+                    timeout=docling_timeout,
+                    status_callback=self.kwargs.get("DOCLING_STATUS_CALLBACK"),
                 )
         elif (
             self.engine == "document_intelligence"
