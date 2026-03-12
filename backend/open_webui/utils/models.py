@@ -149,63 +149,64 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     ]
 
     custom_models = Models.get_all_models()
+
+    # Single O(1) lookup: Ollama base names first, then exact IDs (exact wins).
+    base_model_lookup = {}
+    for model in models:
+        if model.get("owned_by") == "ollama":
+            base_model_lookup.setdefault(model["id"].split(":")[0], model)
+        base_model_lookup[model["id"]] = model
+
+    existing_ids = {m["id"] for m in models}
+
     for custom_model in custom_models:
         if custom_model.base_model_id is None:
-            # Applied directly to a base model
-            for model in models:
-                if custom_model.id == model["id"] or (
-                    model.get("owned_by") == "ollama"
-                    and custom_model.id
-                    == model["id"].split(":")[
-                        0
-                    ]  # Ollama may return model ids in different formats (e.g., 'llama3' vs. 'llama3:7b')
-                ):
-                    if custom_model.is_active:
-                        model["name"] = custom_model.name
-                        model["info"] = custom_model.model_dump()
+            # Override applied directly to a base model (shares the same ID)
+            model = base_model_lookup.get(custom_model.id)
 
-                        # Set action_ids and filter_ids
-                        action_ids = []
-                        filter_ids = []
+            if model:
+                if custom_model.is_active:
+                    model["name"] = custom_model.name
+                    model["info"] = custom_model.model_dump()
 
-                        if "info" in model:
-                            if "meta" in model["info"]:
-                                action_ids.extend(
-                                    model["info"]["meta"].get("actionIds", [])
-                                )
-                                filter_ids.extend(
-                                    model["info"]["meta"].get("filterIds", [])
-                                )
+                    action_ids = []
+                    filter_ids = []
 
-                            if "params" in model["info"]:
-                                # Remove params to avoid exposing sensitive info
-                                del model["info"]["params"]
+                    if "info" in model:
+                        if "meta" in model["info"]:
+                            action_ids.extend(
+                                model["info"]["meta"].get("actionIds", [])
+                            )
+                            filter_ids.extend(
+                                model["info"]["meta"].get("filterIds", [])
+                            )
 
-                        model["action_ids"] = action_ids
-                        model["filter_ids"] = filter_ids
-                    else:
-                        models.remove(model)
+                        if "params" in model["info"]:
+                            del model["info"]["params"]
 
-        elif custom_model.is_active and (
-            custom_model.id not in [model["id"] for model in models]
-        ):
-            # Custom model based on a base model
+                    model["action_ids"] = action_ids
+                    model["filter_ids"] = filter_ids
+                else:
+                    models.remove(model)
+
+        elif custom_model.is_active:
+            if custom_model.id in existing_ids:
+                continue
+
             owned_by = "openai"
             connection_type = None
-
             pipe = None
 
-            for m in models:
-                if (
-                    custom_model.base_model_id == m["id"]
-                    or custom_model.base_model_id == m["id"].split(":")[0]
-                ):
-                    owned_by = m.get("owned_by", "unknown")
-                    if "pipe" in m:
-                        pipe = m["pipe"]
-
-                    connection_type = m.get("connection_type", None)
-                    break
+            base_model = base_model_lookup.get(custom_model.base_model_id)
+            if base_model is None:
+                base_model = base_model_lookup.get(
+                    custom_model.base_model_id.split(":")[0]
+                )
+            if base_model:
+                owned_by = base_model.get("owned_by", "unknown")
+                if "pipe" in base_model:
+                    pipe = base_model["pipe"]
+                connection_type = base_model.get("connection_type", None)
 
             model = {
                 "id": f"{custom_model.id}",
@@ -331,12 +332,29 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 elif meta.get(key) is None:
                     meta[key] = copy.deepcopy(value)
 
+    # Batch-fetch all function valves in one query to avoid N+1 DB hits
+    # inside get_action_priority (previously called per action × per model).
+    all_function_valves = Functions.get_function_valves_by_ids(list(all_function_ids))
+
+    def get_action_priority(action_id):
+        try:
+            function_module = request.app.state.FUNCTIONS.get(action_id)
+            if function_module and hasattr(function_module, "Valves"):
+                valves_db = all_function_valves.get(action_id)
+                valves = function_module.Valves(**(valves_db if valves_db else {}))
+                return getattr(valves, "priority", 0)
+        except Exception:
+            pass
+        return 0
+
     for model in models:
         action_ids = [
             action_id
             for action_id in list(set(model.pop("action_ids", []) + global_action_ids))
             if action_id in enabled_action_ids
         ]
+        action_ids.sort(key=lambda aid: (get_action_priority(aid), aid))
+
         filter_ids = [
             filter_id
             for filter_id in list(set(model.pop("filter_ids", []) + global_filter_ids))

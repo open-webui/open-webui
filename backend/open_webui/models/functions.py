@@ -308,6 +308,28 @@ class FunctionsTable:
                 log.exception(f"Error getting function valves by id {id}: {e}")
                 return None
 
+    def get_function_valves_by_ids(
+        self, ids: list[str], db: Optional[Session] = None
+    ) -> dict[str, dict]:
+        """
+        Batch fetch valves for multiple functions in a single query.
+        Returns a dict mapping function_id -> valves dict.
+        Functions without valves are mapped to {}.
+        """
+        if not ids:
+            return {}
+        try:
+            with get_db_context(db) as db:
+                functions = (
+                    db.query(Function.id, Function.valves)
+                    .filter(Function.id.in_(ids))
+                    .all()
+                )
+                return {f.id: (f.valves if f.valves else {}) for f in functions}
+        except Exception as e:
+            log.exception(f"Error batch-fetching function valves: {e}")
+            return {}
+
     def update_function_valves_by_id(
         self, id: str, valves: dict, db: Optional[Session] = None
     ) -> Optional[FunctionValves]:

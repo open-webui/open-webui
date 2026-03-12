@@ -72,7 +72,7 @@
 			}}
 		>
 			<div
-				class=" w-full font-medium flex items-center justify-between gap-2 {attributes?.done &&
+				class=" w-full flex items-center justify-between gap-2 {attributes?.done &&
 				attributes?.done !== 'true'
 					? 'shimmer'
 					: ''}

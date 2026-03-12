@@ -322,7 +322,7 @@ JWT_EXPIRES_IN = PersistentConfig(
 if JWT_EXPIRES_IN.value == "-1":
     log.warning(
         "⚠️  SECURITY WARNING: JWT_EXPIRES_IN is set to '-1'\n"
-        "    See: https://docs.openwebui.com/getting-started/env-configuration\n"
+        "    See: https://docs.openwebui.com/reference/env-configuration\n"
     )
 
 ####################################
@@ -337,6 +337,12 @@ ENABLE_OAUTH_SIGNUP = PersistentConfig(
     "ENABLE_OAUTH_SIGNUP",
     "oauth.enable_signup",
     os.environ.get("ENABLE_OAUTH_SIGNUP", "False").lower() == "true",
+)
+
+OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE = PersistentConfig(
+    "OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE",
+    "oauth.refresh_token_include_scope",
+    os.environ.get("OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE", "False").lower() == "true",
 )
 
 
@@ -461,6 +467,12 @@ OPENID_PROVIDER_URL = PersistentConfig(
     "OPENID_PROVIDER_URL",
     "oauth.oidc.provider_url",
     os.environ.get("OPENID_PROVIDER_URL", ""),
+)
+
+OPENID_END_SESSION_ENDPOINT = PersistentConfig(
+    "OPENID_END_SESSION_ENDPOINT",
+    "oauth.oidc.end_session_endpoint",
+    os.environ.get("OPENID_END_SESSION_ENDPOINT", ""),
 )
 
 OPENID_REDIRECT_URI = PersistentConfig(
@@ -640,6 +652,18 @@ OAUTH_UPDATE_PICTURE_ON_LOGIN = PersistentConfig(
     "OAUTH_UPDATE_PICTURE_ON_LOGIN",
     "oauth.update_picture_on_login",
     os.environ.get("OAUTH_UPDATE_PICTURE_ON_LOGIN", "False").lower() == "true",
+)
+
+OAUTH_UPDATE_NAME_ON_LOGIN = PersistentConfig(
+    "OAUTH_UPDATE_NAME_ON_LOGIN",
+    "oauth.update_name_on_login",
+    os.environ.get("OAUTH_UPDATE_NAME_ON_LOGIN", "False").lower() == "true",
+)
+
+OAUTH_UPDATE_EMAIL_ON_LOGIN = PersistentConfig(
+    "OAUTH_UPDATE_EMAIL_ON_LOGIN",
+    "oauth.update_email_on_login",
+    os.environ.get("OAUTH_UPDATE_EMAIL_ON_LOGIN", "False").lower() == "true",
 )
 
 OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID = (
@@ -826,13 +850,18 @@ def load_oauth_providers():
     if FEISHU_CLIENT_ID.value:
         configured_providers.append("Feishu")
 
-    if configured_providers and not OPENID_PROVIDER_URL.value:
+    if (
+        configured_providers
+        and not OPENID_PROVIDER_URL.value
+        and not OPENID_END_SESSION_ENDPOINT.value
+    ):
         provider_list = ", ".join(configured_providers)
         log.warning(
             f"⚠️  OAuth providers configured ({provider_list}) but OPENID_PROVIDER_URL not set - logout will not work!"
         )
         log.warning(
-            f"Set OPENID_PROVIDER_URL to your OAuth provider's OpenID Connect discovery endpoint to fix logout functionality."
+            f"Set OPENID_PROVIDER_URL to your OAuth provider's OpenID Connect discovery endpoint,"
+            f" or set OPENID_END_SESSION_ENDPOINT to a custom logout URL to fix logout functionality."
         )
 
 
@@ -1172,6 +1201,20 @@ TOOL_SERVER_CONNECTIONS = PersistentConfig(
 )
 
 ####################################
+# TERMINAL_SERVER
+####################################
+
+terminal_server_connections = json.loads(
+    os.environ.get("TERMINAL_SERVER_CONNECTIONS", "[]")
+)
+
+TERMINAL_SERVER_CONNECTIONS = PersistentConfig(
+    "TERMINAL_SERVER_CONNECTIONS",
+    "terminal_server.connections",
+    terminal_server_connections,
+)
+
+####################################
 # WEBUI
 ####################################
 
@@ -1433,6 +1476,11 @@ USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING = (
     == "true"
 )
 
+USER_PERMISSIONS_ACCESS_GRANTS_ALLOW_USERS = (
+    os.environ.get("USER_PERMISSIONS_ACCESS_GRANTS_ALLOW_USERS", "True").lower()
+    == "true"
+)
+
 
 USER_PERMISSIONS_CHAT_CONTROLS = (
     os.environ.get("USER_PERMISSIONS_CHAT_CONTROLS", "True").lower() == "true"
@@ -1589,6 +1637,9 @@ DEFAULT_USER_PERMISSIONS = {
         "public_skills": USER_PERMISSIONS_WORKSPACE_SKILLS_ALLOW_PUBLIC_SHARING,
         "notes": USER_PERMISSIONS_NOTES_ALLOW_SHARING,
         "public_notes": USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING,
+    },
+    "access_grants": {
+        "allow_users": USER_PERMISSIONS_ACCESS_GRANTS_ALLOW_USERS,
     },
     "chat": {
         "controls": USER_PERMISSIONS_CHAT_CONTROLS,
@@ -1926,7 +1977,7 @@ Suggest 3-5 relevant follow-up questions or prompts that the user might naturall
 - Only suggest follow-ups that make sense given the chat content and do not repeat what was already covered.
 - If the conversation is very short or not specific, suggest more general (but relevant) follow-ups the user might ask.
 - Use the conversation's primary language; default to English if multilingual.
-- Response must be a JSON array of strings, no extra text or formatting.
+- Response must be a JSON object with a "follow_ups" key containing an array of strings, no extra text or formatting.
 ### Output:
 JSON format: { "follow_ups": ["Question 1?", "Question 2?", "Question 3?"] }
 ### Chat History:
@@ -2256,20 +2307,36 @@ CODE_INTERPRETER_BLOCKED_MODULES = [
 ]
 
 DEFAULT_CODE_INTERPRETER_PROMPT = """
-#### Tools Available
+#### Code Interpreter
 
-1. **Code Interpreter**: `<code_interpreter type="code" lang="python"></code_interpreter>`
-   - You have access to a Python shell that runs directly in the user's browser, enabling fast execution of code for analysis, calculations, or problem-solving.  Use it in this response.
-   - The Python code you write can incorporate a wide array of libraries, handle data manipulation or visualization, perform API calls for web-related tasks, or tackle virtually any computational challenge. Use this flexibility to **think outside the box, craft elegant solutions, and harness Python's full potential**.
-   - To use it, **you must enclose your code within `<code_interpreter type="code" lang="python">` XML tags** and stop right away. If you don't, the code won't execute. 
-   - When writing code in the code_interpreter XML tag, Do NOT use the triple backticks code block for markdown formatting, example: ```py # python code ``` will cause an error because it is markdown formatting, it is not python code.
-   - When coding, **always aim to print meaningful outputs** (e.g., results, tables, summaries, or visuals) to better interpret and verify the findings. Avoid relying on implicit outputs; prioritize explicit and clear print statements so the results are effectively communicated to the user.  
-   - After obtaining the printed output, **always provide a concise analysis, interpretation, or next steps to help the user understand the findings or refine the outcome further.**  
-   - If the results are unclear, unexpected, or require validation, refine the code and execute it again as needed. Always aim to deliver meaningful insights from the results, iterating if necessary.  
-   - **If a link to an image, audio, or any file is provided in markdown format in the output, ALWAYS regurgitate word for word, explicitly display it as part of the response to ensure the user can access it easily, do NOT change the link.**
-   - All responses should be communicated in the chat's primary language, ensuring seamless understanding. If the chat is multilingual, default to English for clarity.
+You have access to a Python code interpreter via: `<code_interpreter type="code" lang="python"></code_interpreter>`
 
-Ensure that the tools are effectively utilized to achieve the highest-quality analysis for the user."""
+- The Python shell runs directly in the user's browser for fast execution of analysis, calculations, or problem-solving. Use it in this response.
+- You can use a wide array of libraries for data manipulation, visualization, API calls, or any computational task. Think outside the box and harness Python's full potential.
+- **You must enclose your code within `<code_interpreter type="code" lang="python">` XML tags** and stop right away. If you don't, the code won't execute.
+- Do NOT use triple backticks (```py ... ```) inside the XML tags — that is markdown formatting, not executable Python code.
+- **Always print meaningful outputs** (results, tables, summaries, visuals). Avoid implicit outputs; use explicit print statements.
+- After obtaining output, **provide a concise analysis, interpretation, or next steps** to help the user understand the findings.
+- If results are unclear or unexpected, refine the code and re-execute. Iterate until you deliver meaningful insights.
+- **If a link to an image, audio, or any file appears in the output, display it exactly as-is** in your response so the user can access it. Do not modify the link.
+- Respond in the chat's primary language. Default to English if multilingual.
+
+Ensure the code interpreter is effectively utilized to achieve the highest-quality analysis for the user."""
+
+# Appended to the code interpreter prompt only when engine is pyodide (not jupyter)
+CODE_INTERPRETER_PYODIDE_PROMPT = """
+
+##### Pyodide Environment
+
+- This Python environment runs via Pyodide in the browser. **Do not install packages** — `pip install`, `subprocess`, and `micropip.install()` are not available.
+- If a required library is unavailable, use an alternative approach with available modules. Do not attempt to install anything.
+
+##### Persistent File System
+
+- User-uploaded files are available at `/mnt/uploads/`. When the user asks you to work with their files, read from this directory.
+- You can also write output files to `/mnt/uploads/` so the user can access and download them from the file browser.
+- The file system persists across code executions within the same session.
+- Use `import os; os.listdir('/mnt/uploads')` to discover available files."""
 
 
 ####################################
@@ -2302,6 +2369,81 @@ if VECTOR_DB == "chroma":
         CHROMA_HTTP_HEADERS = None
     CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 # this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (sentence-transformers/all-MiniLM-L6-v2)
+
+
+# MariaDB Vector (mariadb-vector)
+MARIADB_VECTOR_DB_URL = os.environ.get("MARIADB_VECTOR_DB_URL", "").strip()
+
+MARIADB_VECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
+    os.environ.get("MARIADB_VECTOR_INITIALIZE_MAX_VECTOR_LENGTH", "1536").strip()
+    or "1536"
+)
+
+# Distance strategy:
+#   - cosine     => vec_distance_cosine(...)
+#   - euclidean  => vec_distance_euclidean(...)
+MARIADB_VECTOR_DISTANCE_STRATEGY = (
+    os.environ.get("MARIADB_VECTOR_DISTANCE_STRATEGY", "cosine").strip().lower()
+)
+
+# HNSW M parameter (MariaDB VECTOR INDEX ... M=<int>)
+MARIADB_VECTOR_INDEX_M = int(
+    os.environ.get("MARIADB_VECTOR_INDEX_M", "8").strip() or "8"
+)
+
+# Pooling (MariaDB-Vector)
+MARIADB_VECTOR_POOL_SIZE = os.environ.get("MARIADB_VECTOR_POOL_SIZE", None)
+
+if MARIADB_VECTOR_POOL_SIZE != None:
+    try:
+        MARIADB_VECTOR_POOL_SIZE = int(MARIADB_VECTOR_POOL_SIZE)
+    except Exception:
+        MARIADB_VECTOR_POOL_SIZE = None
+
+MARIADB_VECTOR_POOL_MAX_OVERFLOW = os.environ.get("MARIADB_VECTOR_POOL_MAX_OVERFLOW", 0)
+
+if MARIADB_VECTOR_POOL_MAX_OVERFLOW == "":
+    MARIADB_VECTOR_POOL_MAX_OVERFLOW = 0
+else:
+    try:
+        MARIADB_VECTOR_POOL_MAX_OVERFLOW = int(MARIADB_VECTOR_POOL_MAX_OVERFLOW)
+    except Exception:
+        MARIADB_VECTOR_POOL_MAX_OVERFLOW = 0
+
+MARIADB_VECTOR_POOL_TIMEOUT = os.environ.get("MARIADB_VECTOR_POOL_TIMEOUT", 30)
+
+if MARIADB_VECTOR_POOL_TIMEOUT == "":
+    MARIADB_VECTOR_POOL_TIMEOUT = 30
+else:
+    try:
+        MARIADB_VECTOR_POOL_TIMEOUT = int(MARIADB_VECTOR_POOL_TIMEOUT)
+    except Exception:
+        MARIADB_VECTOR_POOL_TIMEOUT = 30
+
+MARIADB_VECTOR_POOL_RECYCLE = os.environ.get("MARIADB_VECTOR_POOL_RECYCLE", 3600)
+
+if MARIADB_VECTOR_POOL_RECYCLE == "":
+    MARIADB_VECTOR_POOL_RECYCLE = 3600
+else:
+    try:
+        MARIADB_VECTOR_POOL_RECYCLE = int(MARIADB_VECTOR_POOL_RECYCLE)
+    except Exception:
+        MARIADB_VECTOR_POOL_RECYCLE = 3600
+
+ENABLE_MARIADB_VECTOR = True
+if VECTOR_DB == "mariadb-vector":
+    if not MARIADB_VECTOR_DB_URL:
+        ENABLE_MARIADB_VECTOR = False
+    else:
+        try:
+            parsed = urlparse(MARIADB_VECTOR_DB_URL)
+            scheme = (parsed.scheme or "").lower()
+            # Require official driver so VECTOR binds as float32 bytes correctly
+            if scheme != "mariadb+mariadbconnector":
+                ENABLE_MARIADB_VECTOR = False
+        except Exception:
+            ENABLE_MARIADB_VECTOR = False
+
 
 # Milvus
 MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
@@ -3177,17 +3319,24 @@ WEB_SEARCH_RESULT_COUNT = PersistentConfig(
 )
 
 
+try:
+    web_search_domain_filter_list = json.loads(
+        os.getenv("WEB_SEARCH_DOMAIN_FILTER_LIST", "[]")
+    )
+except Exception as e:
+    web_search_domain_filter_list = [
+        # "wikipedia.com",
+        # "wikimedia.org",
+        # "wikidata.org",
+        # "!stackoverflow.com",
+    ]
+
 # You can provide a list of your own websites to filter after performing a web search.
 # This ensures the highest level of safety and reliability of the information sources.
 WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
     "WEB_SEARCH_DOMAIN_FILTER_LIST",
     "rag.web.search.domain.filter_list",
-    [
-        # "wikipedia.com",
-        # "wikimedia.org",
-        # "wikidata.org",
-        # "!stackoverflow.com",
-    ],
+    web_search_domain_filter_list,
 )
 
 WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(

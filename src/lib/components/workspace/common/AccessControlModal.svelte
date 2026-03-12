@@ -20,6 +20,7 @@
 
 	export let share = true;
 	export let sharePublic = true;
+	export let shareUsers = true;
 
 	export let onChange = () => {};
 </script>
@@ -48,6 +49,7 @@
 				{accessRoles}
 				{share}
 				{sharePublic}
+				{shareUsers}
 			/>
 		</div>
 	</div>

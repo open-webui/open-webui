@@ -2,8 +2,8 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { settings, playingNotificationSound, isLastActiveTab } from '$lib/stores';
 	import DOMPurify from 'dompurify';
-
 	import { marked } from 'marked';
+
 	import { createEventDispatcher, onMount } from 'svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
@@ -118,7 +118,7 @@
 		{/if}
 
 		<div class=" line-clamp-2 text-xs self-center dark:text-gray-300 font-normal">
-			{@html DOMPurify.sanitize(marked(content))}
+			{@html DOMPurify.sanitize(marked(DOMPurify.sanitize(content, { ALLOWED_TAGS: [] })))}
 		</div>
 	</div>
 </div>

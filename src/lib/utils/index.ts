@@ -1,3 +1,4 @@
+import type { Writable } from 'svelte/store';
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
 import { WEBUI_BASE_URL } from '$lib/constants';
@@ -274,11 +275,50 @@ export const canvasPixelTest = () => {
 	return true;
 };
 
+let resizeImageWarmupDone = false;
+/**
+ * Draws an image to a canvas at the given dimensions and returns a data URL.
+ * On mobile, the first export uses toBlob (avoids black image on Android); later exports use toDataURL.
+ */
+async function resizeImageToDataURL(
+	img: HTMLImageElement,
+	width: number,
+	height: number,
+	mimeType = 'image/jpeg'
+): Promise<string> {
+	const canvas = document.createElement('canvas');
+	canvas.width = width;
+	canvas.height = height;
+	canvas.getContext('2d')?.drawImage(img, 0, 0, width, height);
+
+	const toDataURL = () => canvas.toDataURL(mimeType);
+
+	if (
+		!resizeImageWarmupDone &&
+		canvas.toBlob &&
+		/android|iphone|ipad|ipod/i.test(navigator?.userAgent)
+	) {
+		resizeImageWarmupDone = true;
+		return new Promise((resolve) => {
+			canvas.toBlob((blob) => {
+				if (!blob) {
+					resolve(toDataURL());
+					return;
+				}
+				const reader = new FileReader();
+				reader.onload = () => resolve(String(reader.result));
+				reader.onerror = () => resolve(toDataURL());
+				reader.readAsDataURL(blob);
+			}, mimeType);
+		});
+	}
+	return Promise.resolve(toDataURL());
+}
+
 export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
 	return new Promise((resolve, reject) => {
 		const img = new Image();
-		img.onload = () => {
-			const canvas = document.createElement('canvas');
+		img.onload = async () => {
 			let width = img.width;
 			let height = img.height;
 
@@ -321,16 +361,8 @@ export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
 				height = maxHeight;
 			}
 
-			canvas.width = width;
-			canvas.height = height;
-
-			const context = canvas.getContext('2d');
-			context.drawImage(img, 0, 0, width, height);
-
-			// Get compressed image URL
-			const mimeType = imageUrl.match(/^data:([^;]+);/)?.[1];
-			const compressedUrl = canvas.toDataURL(mimeType);
-			resolve(compressedUrl);
+			const mimeType = imageUrl.match(/^data:([^;]+);/)?.[1] ?? 'image/jpeg';
+			resolve(await resizeImageToDataURL(img, width, height, mimeType));
 		};
 		img.onerror = (error) => reject(error);
 		img.src = imageUrl;
@@ -955,6 +987,16 @@ export const extractSentencesForAudio = (text: string) => {
 };
 
 export const getMessageContentParts = (content: string, splitOn: string = 'punctuation') => {
+	// Strip <details> blocks directly on the full string before any
+	// code-block-aware processing. removeAllDetails (which callers use)
+	// applies the regex via replaceOutsideCode, which splits on triple-
+	// backtick code fences first. If a <details> block contains code
+	// fences (e.g. reasoning with code examples), the opening and
+	// closing tags land in separate segments and the regex fails,
+	// leaking thinking content into TTS. Applying the strip here on
+	// the full string catches those cases. (Fixes #22197)
+	content = content.replace(/<details[^>]*>[\s\S]*?<\/details>/gi, '');
+
 	const messageContentParts: string[] = [];
 
 	switch (splitOn) {
@@ -1052,6 +1094,22 @@ export const approximateToHumanReadable = (nanoseconds: number) => {
 	return results.reverse().join(' ');
 };
 
+// Month names used as i18n translation keys — must be English regardless of locale
+const MONTH_NAMES = [
+	'January',
+	'February',
+	'March',
+	'April',
+	'May',
+	'June',
+	'July',
+	'August',
+	'September',
+	'October',
+	'November',
+	'December'
+];
+
 export const getTimeRange = (timestamp) => {
 	const now = new Date();
 	const date = new Date(timestamp * 1000); // Convert Unix timestamp to milliseconds
@@ -1077,7 +1135,7 @@ export const getTimeRange = (timestamp) => {
 	} else if (diffDays <= 30) {
 		return 'Previous 30 days';
 	} else if (nowYear === dateYear) {
-		return date.toLocaleString('default', { month: 'long' });
+		return MONTH_NAMES[dateMonth];
 	} else {
 		return date.getFullYear().toString();
 	}
@@ -1170,19 +1228,19 @@ export const getWeekday = () => {
 };
 
 export const createMessagesList = (history, messageId) => {
-	if (messageId === null) {
-		return [];
+	const list = [];
+	let currentId = messageId;
+
+	while (currentId !== null && currentId !== undefined) {
+		const message = history.messages[currentId];
+		if (message === undefined) {
+			break;
+		}
+		list.push(message);
+		currentId = message.parentId;
 	}
 
-	const message = history.messages[messageId];
-	if (message === undefined) {
-		return [];
-	}
-	if (message?.parentId) {
-		return [...createMessagesList(history, message.parentId), message];
-	} else {
-		return [message];
-	}
+	return list.reverse();
 };
 
 export const formatFileSize = (size) => {
@@ -1637,6 +1695,10 @@ export const renderVegaVisualization = async (spec: string, i18n?: any) => {
 };
 
 export const getCodeBlockContents = (content: string): object => {
+	// Strip thinking/reasoning and other detail blocks before extracting code
+	// to prevent code inside <details type="reasoning"> from being treated as artifacts
+	content = removeAllDetails(content);
+
 	const codeBlockContents = content.match(/```[\s\S]*?```/g);
 
 	let codeBlocks = [];
@@ -1719,4 +1781,21 @@ export const parseFrontmatter = (content) => {
 
 export const formatSkillName = (name) => {
 	return name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+/**
+ * Open the file browser panel to display a specific file.
+ * Used by both the direct tool execution path (client-side) and the
+ * backend event path (server-side) so behaviour is consistent.
+ *
+ * Stores are passed in by the caller to keep this utility pure.
+ */
+export const displayFileHandler = (
+	path: string,
+	stores: { showControls: Writable<boolean>; showFileNavPath: Writable<string | null> }
+) => {
+	if (path) {
+		stores.showControls.set(true);
+		stores.showFileNavPath.set(path);
+	}
 };

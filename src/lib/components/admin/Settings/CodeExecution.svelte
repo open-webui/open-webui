@@ -67,7 +67,8 @@
 								>
 									<option disabled selected value="">{$i18n.t('Select a engine')}</option>
 									{#each engines as engine}
-										<option value={engine}>{engine}</option>
+										<option value={engine}>{engine}{engine === 'jupyter' ? ' (Legacy)' : ''}</option
+										>
 									{/each}
 								</select>
 							</div>
@@ -193,7 +194,9 @@
 									>
 										<option disabled selected value="">{$i18n.t('Select a engine')}</option>
 										{#each engines as engine}
-											<option value={engine}>{engine}</option>
+											<option value={engine}
+												>{engine}{engine === 'jupyter' ? ' (Legacy)' : ''}</option
+											>
 										{/each}
 									</select>
 								</div>

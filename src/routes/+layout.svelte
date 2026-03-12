@@ -30,8 +30,14 @@
 		toolServers,
 		playingNotificationSound,
 		channels,
-		channelId
+		channelId,
+		terminalServers,
+		showControls,
+		showFileNavPath,
+		showFileNavDir,
+		pyodideWorker
 	} from '$lib/stores';
+	import { getFileContentById } from '$lib/apis/files';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { beforeNavigate } from '$app/navigation';
@@ -49,7 +55,7 @@
 	import { chatCompletion } from '$lib/apis/openai';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
-	import { bestMatchingLanguage } from '$lib/utils';
+	import { bestMatchingLanguage, displayFileHandler } from '$lib/utils';
 	import { setTextScale } from '$lib/utils/text-scale';
 
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
@@ -180,7 +186,20 @@
 		});
 	};
 
-	const executePythonAsWorker = async (id, code, cb) => {
+	/**
+	 * Get or create the persistent Pyodide worker.
+	 * The worker persists across executions so the virtual FS (IDBFS) is preserved.
+	 */
+	const getOrCreateWorker = () => {
+		let worker = $pyodideWorker;
+		if (!worker) {
+			worker = new PyodideWorker();
+			pyodideWorker.set(worker);
+		}
+		return worker;
+	};
+
+	const executePythonAsWorker = async (id, code, cb, files = []) => {
 		let result = null;
 		let stdout = null;
 		let stderr = null;
@@ -202,19 +221,44 @@
 			/\bimport\s+pytz\b|\bfrom\s+pytz\b/.test(code) ? 'pytz' : null
 		].filter(Boolean);
 
-		const pyodideWorker = new PyodideWorker();
+		const worker = getOrCreateWorker();
 
-		pyodideWorker.postMessage({
+		// Fetch file content from the server and prepare for the worker
+		let filePayloads = [];
+		if (files && files.length > 0) {
+			for (const file of files) {
+				try {
+					const fileId = file?.id;
+					const fileName = file?.filename || file?.name || 'file';
+					if (fileId) {
+						const content = await getFileContentById(fileId);
+						if (content) {
+							filePayloads.push({ name: fileName, data: content });
+						}
+					}
+				} catch (e) {
+					console.error('Failed to fetch file for Pyodide:', e);
+				}
+			}
+		}
+
+		worker.postMessage({
+			type: 'execute',
 			id: id,
 			code: code,
-			packages: packages
+			packages: packages,
+			files: filePayloads.length > 0 ? filePayloads : undefined
 		});
 
-		setTimeout(() => {
+		// Timeout for this specific execution (not the worker itself)
+		let timeoutId = setTimeout(() => {
 			if (executing) {
 				executing = false;
 				stderr = 'Execution Time Limit Exceeded';
-				pyodideWorker.terminate();
+
+				// Terminate and recreate the worker on timeout
+				worker.terminate();
+				pyodideWorker.set(null);
 
 				if (cb) {
 					cb(
@@ -233,11 +277,18 @@
 			}
 		}, 60000);
 
-		pyodideWorker.onmessage = (event) => {
-			console.log('pyodideWorker.onmessage', event);
-			const { id, ...data } = event.data;
+		// Use addEventListener so multiple concurrent executions don't clobber each other
+		const onMessage = (event) => {
+			const { id: eventId, ...data } = event.data;
+			// Only handle responses for this execution ID
+			if (eventId !== id) return;
+			// Ignore FS responses (they use a type field)
+			if (data.type && data.type.startsWith('fs:')) return;
 
-			console.log(id, data);
+			console.log('pyodideWorker.onmessage', event);
+			clearTimeout(timeoutId);
+			worker.removeEventListener('message', onMessage);
+			worker.removeEventListener('error', onError);
 
 			data['stdout'] && (stdout = data['stdout']);
 			data['stderr'] && (stderr = data['stderr']);
@@ -261,8 +312,11 @@
 			executing = false;
 		};
 
-		pyodideWorker.onerror = (event) => {
+		const onError = (event) => {
 			console.log('pyodideWorker.onerror', event);
+			clearTimeout(timeoutId);
+			worker.removeEventListener('message', onMessage);
+			worker.removeEventListener('error', onError);
 
 			if (cb) {
 				cb(
@@ -280,29 +334,49 @@
 			}
 			executing = false;
 		};
+
+		worker.addEventListener('message', onMessage);
+		worker.addEventListener('error', onError);
+	};
+
+	const resolveToolServer = (serverUrl) => {
+		let toolServer = $settings?.toolServers?.find((server) => server.url === serverUrl);
+		if (!toolServer) {
+			const terminalServer = ($settings?.terminalServers ?? []).find(
+				(server) => server.url === serverUrl
+			);
+			if (terminalServer) {
+				toolServer = {
+					url: terminalServer.url,
+					auth_type: terminalServer.auth_type ?? 'bearer',
+					key: terminalServer.key ?? '',
+					path: terminalServer.path ?? '/openapi.json'
+				};
+			}
+		}
+
+		let toolServerData =
+			$toolServers?.find((server) => server.url === serverUrl) ??
+			$terminalServers?.find((server) => server.url === serverUrl);
+
+		let token = null;
+		if (toolServer) {
+			const auth_type = toolServer?.auth_type ?? 'bearer';
+			if (auth_type === 'bearer') token = toolServer?.key;
+			else if (auth_type === 'session') token = localStorage.token;
+		}
+
+		return { toolServer, toolServerData, token };
 	};
 
 	const executeTool = async (data, cb) => {
-		const toolServer = $settings?.toolServers?.find((server) => server.url === data.server?.url);
-		const toolServerData = $toolServers?.find((server) => server.url === data.server?.url);
+		const { toolServer, toolServerData, token } = resolveToolServer(data.server?.url);
 
 		console.log('executeTool', data, toolServer);
 
 		if (toolServer) {
-			console.log(toolServer);
-
-			let toolServerToken = null;
-			const auth_type = toolServer?.auth_type ?? 'bearer';
-			if (auth_type === 'bearer') {
-				toolServerToken = toolServer?.key;
-			} else if (auth_type === 'none') {
-				// No authentication
-			} else if (auth_type === 'session') {
-				toolServerToken = localStorage.token;
-			}
-
 			const res = await executeToolServer(
-				toolServerToken,
+				token,
 				toolServer.url,
 				data?.name,
 				data?.params,
@@ -310,18 +384,23 @@
 			);
 
 			console.log('executeToolServer', res);
+
+			if (data?.name === 'display_file' && data?.params?.path) {
+				if (res?.exists !== false) {
+					displayFileHandler(data.params.path, { showControls, showFileNavPath });
+				}
+			}
+
+			if (['write_file'].includes(data?.name) && data?.params?.path) {
+				showFileNavDir.set(res?.path ?? data.params.path);
+			}
+
 			if (cb) {
-				cb(JSON.parse(JSON.stringify(res)));
+				cb(structuredClone(res));
 			}
 		} else {
 			if (cb) {
-				cb(
-					JSON.parse(
-						JSON.stringify({
-							error: 'Tool Server Not Found'
-						})
-					)
-				);
+				cb({ error: 'Tool Server Not Found' });
 			}
 		}
 	};
@@ -397,7 +476,7 @@
 		} else if (data?.session_id === $socket.id) {
 			if (type === 'execute:python') {
 				console.log('execute:python', data);
-				executePythonAsWorker(data.id, data.code, cb);
+				executePythonAsWorker(data.id, data.code, cb, data.files || []);
 			} else if (type === 'execute:tool') {
 				console.log('execute:tool', data);
 				executeTool(data, cb);

@@ -146,7 +146,7 @@ class AuthsTable:
     def authenticate_user_by_api_key(
         self, api_key: str, db: Optional[Session] = None
     ) -> Optional[UserModel]:
-        log.info(f"authenticate_user_by_api_key: {api_key}")
+        log.info(f"authenticate_user_by_api_key")
         # if no api_key, return None
         if not api_key:
             return None
@@ -197,7 +197,10 @@ class AuthsTable:
             with get_db_context(db) as db:
                 result = db.query(Auth).filter_by(id=id).update({"email": email})
                 db.commit()
-                return True if result == 1 else False
+                if result == 1:
+                    Users.update_user_by_id(id, {"email": email}, db=db)
+                    return True
+                return False
         except Exception:
             return False
 

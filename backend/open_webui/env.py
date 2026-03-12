@@ -786,6 +786,16 @@ try:
 except ValueError:
     WEBSOCKET_SERVER_PING_INTERVAL = 25
 
+WEBSOCKET_EVENT_CALLER_TIMEOUT = os.environ.get("WEBSOCKET_EVENT_CALLER_TIMEOUT", "")
+
+if WEBSOCKET_EVENT_CALLER_TIMEOUT == "":
+    WEBSOCKET_EVENT_CALLER_TIMEOUT = None
+else:
+    try:
+        WEBSOCKET_EVENT_CALLER_TIMEOUT = int(WEBSOCKET_EVENT_CALLER_TIMEOUT)
+    except ValueError:
+        WEBSOCKET_EVENT_CALLER_TIMEOUT = 300
+
 
 REQUESTS_VERIFY = os.environ.get("REQUESTS_VERIFY", "True").lower() == "true"
 
@@ -1039,3 +1049,16 @@ PIP_PACKAGE_INDEX_OPTIONS = os.getenv("PIP_PACKAGE_INDEX_OPTIONS", "").split()
 ####################################
 
 EXTERNAL_PWA_MANIFEST_URL = os.environ.get("EXTERNAL_PWA_MANIFEST_URL")
+
+####################################
+# GROUP DEFAULTS
+####################################
+
+# Controls the default "Who can share to this group" setting for new groups.
+# Env var values: "true" (anyone), "false" (no one), "members" (only group members).
+_default_group_share = (
+    os.environ.get("DEFAULT_GROUP_SHARE_PERMISSION", "members").strip().lower()
+)
+DEFAULT_GROUP_SHARE_PERMISSION = (
+    "members" if _default_group_share == "members" else _default_group_share == "true"
+)

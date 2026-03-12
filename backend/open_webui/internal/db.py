@@ -102,11 +102,30 @@ if SQLALCHEMY_DATABASE_URL.startswith("sqlite+sqlcipher://"):
         conn.execute(f"PRAGMA key = '{database_password}'")
         return conn
 
-    engine = create_engine(
-        "sqlite://",  # Dummy URL since we're using creator
-        creator=create_sqlcipher_connection,
-        echo=False,
-    )
+    # The dummy "sqlite://" URL would cause SQLAlchemy to auto-select
+    # SingletonThreadPool, which non-deterministically closes in-use
+    # connections when thread count exceeds pool_size, leading to segfaults
+    # in the native sqlcipher3 C library. Use NullPool by default for safety,
+    # or QueuePool if DATABASE_POOL_SIZE is explicitly configured.
+    if isinstance(DATABASE_POOL_SIZE, int) and DATABASE_POOL_SIZE > 0:
+        engine = create_engine(
+            "sqlite://",
+            creator=create_sqlcipher_connection,
+            pool_size=DATABASE_POOL_SIZE,
+            max_overflow=DATABASE_POOL_MAX_OVERFLOW,
+            pool_timeout=DATABASE_POOL_TIMEOUT,
+            pool_recycle=DATABASE_POOL_RECYCLE,
+            pool_pre_ping=True,
+            poolclass=QueuePool,
+            echo=False,
+        )
+    else:
+        engine = create_engine(
+            "sqlite://",
+            creator=create_sqlcipher_connection,
+            poolclass=NullPool,
+            echo=False,
+        )
 
     log.info("Connected to encrypted SQLite database using SQLCipher")
 

@@ -420,9 +420,8 @@
 								/>
 
 								<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-									<!-- https://docs.openwebui.com/getting-started/advanced-topics/api-endpoints -->
 									<a
-										href="https://docs.openwebui.com/getting-started/api-endpoints"
+										href="https://docs.openwebui.com/reference/api-endpoints"
 										target="_blank"
 										class=" text-gray-300 font-medium underline"
 									>
@@ -463,7 +462,7 @@
 										<span class=" font-medium">{$i18n.t('Warning')}:</span>
 										<span
 											><a
-												href="https://docs.openwebui.com/getting-started/env-configuration#jwt_expires_in"
+												href="https://docs.openwebui.com/reference/env-configuration#jwt_expires_in"
 												target="_blank"
 												class=" underline"
 												>{$i18n.t('No expiration can pose security risks.')}
