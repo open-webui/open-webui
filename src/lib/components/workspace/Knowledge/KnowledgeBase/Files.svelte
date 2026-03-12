@@ -11,6 +11,8 @@
 
 	import { capitalizeFirstLetter, formatFileSize } from '$lib/utils';
 
+	import { WEBUI_BASE_URL } from '$lib/constants';
+
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import DocumentPage from '$lib/components/icons/DocumentPage.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -31,6 +33,25 @@
 				? ''
 				: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
 		>
+			<div class="flex items-center">
+				{#if file?.status !== 'uploading'}
+					<Tooltip content={$i18n.t('Open file')}>
+						<button
+							class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							type="button"
+							on:click={() => {
+								let fileId = file?.id ?? file?.tempId;
+								window.open(`${WEBUI_BASE_URL}/api/v1/files/${fileId}/content`, '_blank');
+							}}
+						>
+							<DocumentPage className="size-3.5" />
+						</button>
+					</Tooltip>
+				{:else}
+					<Spinner className="size-3.5" />
+				{/if}
+			</div>
+
 			<button
 				class="relative group flex items-center gap-1 rounded-xl p-2 text-left flex-1 justify-between"
 				type="button"
@@ -41,14 +62,6 @@
 			>
 				<div class="">
 					<div class="flex gap-2 items-center line-clamp-1">
-						<div class="shrink-0">
-							{#if file?.status !== 'uploading'}
-								<DocumentPage className="size-3.5" />
-							{:else}
-								<Spinner className="size-3.5" />
-							{/if}
-						</div>
-
 						<div class="line-clamp-1 text-sm">
 							{file?.name ?? file?.meta?.name}
 							{#if file?.meta?.size}
