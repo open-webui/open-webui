@@ -1,15 +1,21 @@
-from typing import Optional, Set, Union, List, Dict, Any
-from open_webui.models.users import Users, UserModel
-from open_webui.models.groups import Groups
-
-
-from open_webui.config import DEFAULT_USER_PERMISSIONS
 import json
+from typing import Any
+
+from open_webui.models.users import UserModel
+from open_webui.models.groups import Groups
+from open_webui.models.access_grants import (
+    has_public_read_access_grant,
+    has_user_access_grant,
+    strip_user_access_grants,
+)
+from open_webui.config import DEFAULT_USER_PERMISSIONS
+
+from sqlalchemy.orm import Session
 
 
 def fill_missing_permissions(
-    permissions: Dict[str, Any], default_permissions: Dict[str, Any]
-) -> Dict[str, Any]:
+    permissions: dict[str, Any], default_permissions: dict[str, Any]
+) -> dict[str, Any]:
     """
     Recursively fills in missing properties in the permissions dictionary
     using the default permissions as a template.
@@ -27,9 +33,9 @@ def fill_missing_permissions(
 
 def get_permissions(
     user_id: str,
-    default_permissions: Dict[str, Any],
-    db: Optional[Any] = None,
-) -> Dict[str, Any]:
+    default_permissions: dict[str, Any],
+    db: Session | None = None,
+) -> dict[str, Any]:
     """
     Get all permissions for a user by combining the permissions of all groups the user is a member of.
     If a permission is defined in multiple groups, the most permissive value is used (True > False).
@@ -37,8 +43,8 @@ def get_permissions(
     """
 
     def combine_permissions(
-        permissions: Dict[str, Any], group_permissions: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        permissions: dict[str, Any], group_permissions: dict[str, Any]
+    ) -> dict[str, Any]:
         """Combine permissions from multiple groups by taking the most permissive value."""
         for key, value in group_permissions.items():
             if isinstance(value, dict):
@@ -72,8 +78,8 @@ def get_permissions(
 def has_permission(
     user_id: str,
     permission_key: str,
-    default_permissions: Dict[str, Any] = {},
-    db: Optional[Any] = None,
+    default_permissions: dict[str, Any] = {},
+    db: Session | None = None,
 ) -> bool:
     """
     Check if a user has a specific permission by checking the group permissions
@@ -82,7 +88,7 @@ def has_permission(
     Permission keys can be hierarchical and separated by dots ('.').
     """
 
-    def get_permission(permissions: Dict[str, Any], keys: List[str]) -> bool:
+    def get_permission(permissions: dict[str, Any], keys: list[str]) -> bool:
         """Traverse permissions dict using a list of keys (from dot-split permission_key)."""
         for key in keys:
             if key not in permissions:
@@ -110,9 +116,9 @@ def has_permission(
 def has_access(
     user_id: str,
     permission: str = "read",
-    access_grants: Optional[list] = None,
-    user_group_ids: Optional[Set[str]] = None,
-    db: Optional[Any] = None,
+    access_grants: list | None = None,
+    user_group_ids: set[str] | None = None,
+    db: Session | None = None,
 ) -> bool:
     """
     Check if a user has the specified permission using an in-memory access_grants list.
@@ -156,7 +162,7 @@ def has_access(
 def has_connection_access(
     user: UserModel,
     connection: dict,
-    user_group_ids: Optional[Set[str]] = None,
+    user_group_ids: set[str] | None = None,
 ) -> bool:
     """
     Check if a user can access a server connection (tool server, terminal, etc.)
@@ -194,7 +200,7 @@ def migrate_access_control(
     if access_control is None and ac_key not in data:
         return
 
-    grants: List[Dict[str, str]] = []
+    grants: list[dict[str, str]] = []
     if access_control and isinstance(access_control, dict):
         for perm in ["read", "write"]:
             perm_data = access_control.get(perm, {})
@@ -221,20 +227,13 @@ def migrate_access_control(
     data.pop(ac_key, None)
 
 
-from open_webui.models.access_grants import (
-    has_public_read_access_grant,
-    has_user_access_grant,
-    strip_user_access_grants,
-)
-
-
 def filter_allowed_access_grants(
-    default_permissions: Dict[str, Any],
+    default_permissions: dict[str, Any],
     user_id: str,
     user_role: str,
     access_grants: list,
     public_permission_key: str,
-    db: Optional[Any] = None,
+    db: Session | None = None,
 ) -> list:
     """
     Checks if the user has the required permissions to grant access to a resource.

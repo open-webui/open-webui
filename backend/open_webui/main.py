@@ -469,6 +469,7 @@ from open_webui.env import (
     ENABLE_CUSTOM_MODEL_FALLBACK,
     LICENSE_KEY,
     AUDIT_EXCLUDED_PATHS,
+    AUDIT_INCLUDED_PATHS,
     AUDIT_LOG_LEVEL,
     CHANGELOG,
     REDIS_URL,
@@ -1585,6 +1586,7 @@ if audit_level != AuditLevel.NONE:
         AuditLoggingMiddleware,
         audit_level=audit_level,
         excluded_paths=AUDIT_EXCLUDED_PATHS,
+        included_paths=AUDIT_INCLUDED_PATHS,
         max_body_size=MAX_BODY_LOG_SIZE,
     )
 ##################################
