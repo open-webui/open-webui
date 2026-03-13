@@ -583,11 +583,35 @@ def update_file_data_content_by_id(
                 request,
                 ProcessFileForm(file_id=id, content=form_data.content),
                 user=user,
+                db=db,
             )
             file = Files.get_file_by_id(id=id, db=db)
         except Exception as e:
             log.exception(e)
             log.error(f"Error processing file: {file.id}")
+
+        # Propagate content change to all knowledge collections referencing
+        # this file.  Without this the old embeddings remain in the knowledge
+        # collection and RAG returns both stale and current data (#20558).
+        knowledges = Knowledges.get_knowledges_by_file_id(id, db=db)
+        for knowledge in knowledges:
+            try:
+                # Remove old embeddings for this file from the KB collection
+                VECTOR_DB_CLIENT.delete(
+                    collection_name=knowledge.id, filter={"file_id": id}
+                )
+                # Re-add from the now-updated file-{file_id} collection
+                process_file(
+                    request,
+                    ProcessFileForm(file_id=id, collection_name=knowledge.id),
+                    user=user,
+                    db=db,
+                )
+            except Exception as e:
+                log.warning(
+                    f"Failed to update knowledge {knowledge.id} after "
+                    f"content change for file {id}: {e}"
+                )
 
         return {"content": file.data.get("content", "")}
     else:

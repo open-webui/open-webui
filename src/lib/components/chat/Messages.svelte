@@ -90,11 +90,11 @@
 			}
 			visitedMessageIds.add(message.id);
 
-			_messages.unshift(message);
+			_messages.push(message);
 			message = message.parentId !== null ? history.messages[message.parentId] : null;
 		}
 
-		messages = _messages;
+		messages = _messages.reverse();
 	};
 
 	// Throttle message list rebuilds to once per animation frame during streaming.

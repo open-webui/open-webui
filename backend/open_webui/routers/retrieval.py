@@ -729,10 +729,10 @@ class ConfigForm(BaseModel):
     CHUNK_OVERLAP: Optional[int] = None
 
     # File upload settings
-    FILE_MAX_SIZE: Optional[int] = None
-    FILE_MAX_COUNT: Optional[int] = None
-    FILE_IMAGE_COMPRESSION_WIDTH: Optional[int] = None
-    FILE_IMAGE_COMPRESSION_HEIGHT: Optional[int] = None
+    FILE_MAX_SIZE: Optional[Union[int, str]] = None
+    FILE_MAX_COUNT: Optional[Union[int, str]] = None
+    FILE_IMAGE_COMPRESSION_WIDTH: Optional[Union[int, str]] = None
+    FILE_IMAGE_COMPRESSION_HEIGHT: Optional[Union[int, str]] = None
     ALLOWED_FILE_EXTENSIONS: Optional[List[str]] = None
 
     # Integration settings
@@ -1055,26 +1055,29 @@ async def update_rag_config(
     )
 
     # File upload settings
-    request.app.state.config.FILE_MAX_SIZE = (
-        form_data.FILE_MAX_SIZE
-        if form_data.FILE_MAX_SIZE is not None
-        else request.app.state.config.FILE_MAX_SIZE
-    )
-    request.app.state.config.FILE_MAX_COUNT = (
-        form_data.FILE_MAX_COUNT
-        if form_data.FILE_MAX_COUNT is not None
-        else request.app.state.config.FILE_MAX_COUNT
-    )
-    request.app.state.config.FILE_IMAGE_COMPRESSION_WIDTH = (
-        form_data.FILE_IMAGE_COMPRESSION_WIDTH
-        if form_data.FILE_IMAGE_COMPRESSION_WIDTH is not None
-        else request.app.state.config.FILE_IMAGE_COMPRESSION_WIDTH
-    )
-    request.app.state.config.FILE_IMAGE_COMPRESSION_HEIGHT = (
-        form_data.FILE_IMAGE_COMPRESSION_HEIGHT
-        if form_data.FILE_IMAGE_COMPRESSION_HEIGHT is not None
-        else request.app.state.config.FILE_IMAGE_COMPRESSION_HEIGHT
-    )
+    # Empty string means "clear to None" (unlimited/no compression),
+    # None means "don't change", int means "set to this value"
+    if form_data.FILE_MAX_SIZE is not None:
+        request.app.state.config.FILE_MAX_SIZE = (
+            None if form_data.FILE_MAX_SIZE == "" else form_data.FILE_MAX_SIZE
+        )
+    if form_data.FILE_MAX_COUNT is not None:
+        request.app.state.config.FILE_MAX_COUNT = (
+            None if form_data.FILE_MAX_COUNT == "" else form_data.FILE_MAX_COUNT
+        )
+    if form_data.FILE_IMAGE_COMPRESSION_WIDTH is not None:
+        request.app.state.config.FILE_IMAGE_COMPRESSION_WIDTH = (
+            None
+            if form_data.FILE_IMAGE_COMPRESSION_WIDTH == ""
+            else form_data.FILE_IMAGE_COMPRESSION_WIDTH
+        )
+    if form_data.FILE_IMAGE_COMPRESSION_HEIGHT is not None:
+        request.app.state.config.FILE_IMAGE_COMPRESSION_HEIGHT = (
+            None
+            if form_data.FILE_IMAGE_COMPRESSION_HEIGHT == ""
+            else form_data.FILE_IMAGE_COMPRESSION_HEIGHT
+        )
+
     request.app.state.config.ALLOWED_FILE_EXTENSIONS = (
         form_data.ALLOWED_FILE_EXTENSIONS
         if form_data.ALLOWED_FILE_EXTENSIONS is not None
