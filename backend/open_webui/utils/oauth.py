@@ -273,7 +273,7 @@ async def get_authorization_server_discovery_urls(server_url: str) -> list[str]:
             ) as response:
                 if response.status == 401:
                     match = re.search(
-                        r'resource_metadata="([^"]+)"',
+                        r'resource_metadata="?([^",\s]+)"?',
                         response.headers.get("WWW-Authenticate", ""),
                     )
                     if match:
