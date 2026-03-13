@@ -708,14 +708,9 @@
 	};
 
 	onMount(async () => {
-		// Popup detection: if opened with oauth_success or error param, signal parent and close
-		const params = new URLSearchParams(window.location.search);
-		if (params.has('oauth_success') || params.has('error')) {
-			const isSuccess = params.has('oauth_success');
-			const eventData = isSuccess
-				? { type: 'oauth:success' }
-				: { type: 'oauth:error', error: params.get('error') };
-			localStorage.setItem('oauth_result', JSON.stringify(eventData));
+		// OAuth popup detection: signal parent and close
+		if (new URLSearchParams(window.location.search).has('oauth_success')) {
+			localStorage.setItem('oauth_result', JSON.stringify({ type: 'oauth:success' }));
 			localStorage.removeItem('oauth_result');
 			if (window.opener) {
 				setTimeout(() => window.close(), 300);

@@ -195,12 +195,6 @@
 		prevUnauthToolIds = currentIds;
 	}
 
-	onDestroy(() => {
-		for (const id of prevUnauthToolIds) {
-			toast.dismiss(id);
-		}
-	});
-
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
@@ -713,8 +707,6 @@
 			if (data.type === 'oauth:success') {
 				toast.success($i18n.t('Authentication successful'));
 				tools.set(await getTools(localStorage.token));
-			} else if (data.type === 'oauth:error') {
-				toast.error($i18n.t('Authentication failed: {{error}}', { error: data.error }));
 			}
 		} catch {}
 	};
