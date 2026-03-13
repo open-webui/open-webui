@@ -1272,7 +1272,6 @@ async def chat_completion_tools_handler(
                 tool = None
                 tool_type = ""
                 direct_tool = False
-                #
 
                 try:
                     tool = tools[tool_function_name]
@@ -2661,7 +2660,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 await _notify_mcp_oauth_required(event_emitter, server_id, server_name)
 
                         log.debug(e)
-
                         if event_emitter:
                             await event_emitter(
                                 {

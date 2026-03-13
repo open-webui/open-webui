@@ -928,18 +928,21 @@ class OAuthClientManager:
                 exc_info=True,
             )
 
-        base_url = (str(request.app.state.config.WEBUI_URL or request.base_url)).rstrip("/")
-        redirect_url = f"{base_url}{return_url}" if return_url else base_url
+        # Popup flow: redirect back to the opener page, frontend detects success/error via tool store
+        if return_url:
+            base_url = (str(request.app.state.config.WEBUI_URL or request.base_url)).rstrip("/")
+            return RedirectResponse(url=f"{base_url}{return_url}", headers=response.headers)
+
+        redirect_url = (
+            str(request.app.state.config.WEBUI_URL or request.base_url)
+        ).rstrip("/")
 
         if error_message:
             log.debug(error_message)
-            separator = "&" if "?" in redirect_url else "/?"
-            redirect_url = f"{redirect_url}{separator}error={urllib.parse.quote_plus(error_message)}"
+            redirect_url = (
+                f"{redirect_url}/?error={urllib.parse.quote_plus(error_message)}"
+            )
             return RedirectResponse(url=redirect_url, headers=response.headers)
-
-        if not return_url:
-            separator = "&" if "?" in redirect_url else "/?"
-            redirect_url = f"{redirect_url}{separator}oauth_success=true"
 
         response = RedirectResponse(url=redirect_url, headers=response.headers)
         return response
