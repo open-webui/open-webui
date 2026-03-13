@@ -379,6 +379,18 @@ GOOGLE_REDIRECT_URI = PersistentConfig(
     os.environ.get("GOOGLE_REDIRECT_URI", ""),
 )
 
+GOOGLE_OAUTH_ACCESS_TYPE = PersistentConfig(
+    "GOOGLE_OAUTH_ACCESS_TYPE",
+    "oauth.google.access_type",
+    os.environ.get("GOOGLE_OAUTH_ACCESS_TYPE", ""),
+)
+
+GOOGLE_OAUTH_PROMPT = PersistentConfig(
+    "GOOGLE_OAUTH_PROMPT",
+    "oauth.google.prompt",
+    os.environ.get("GOOGLE_OAUTH_PROMPT", ""),
+)
+
 MICROSOFT_CLIENT_ID = PersistentConfig(
     "MICROSOFT_CLIENT_ID",
     "oauth.microsoft.client_id",
@@ -683,11 +695,19 @@ def load_oauth_providers():
     if GOOGLE_CLIENT_ID.value and GOOGLE_CLIENT_SECRET.value:
 
         def google_oauth_register(oauth: OAuth):
+            google_authorize_params = {
+                k: v for k, v in {
+                    "access_type": GOOGLE_OAUTH_ACCESS_TYPE.value,
+                    "prompt": GOOGLE_OAUTH_PROMPT.value,
+                }.items() if v
+            }
+
             client = oauth.register(
                 name="google",
                 client_id=GOOGLE_CLIENT_ID.value,
                 client_secret=GOOGLE_CLIENT_SECRET.value,
                 server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+                **({"authorize_params": google_authorize_params} if google_authorize_params else {}),
                 client_kwargs={
                     "scope": GOOGLE_OAUTH_SCOPE.value,
                     **(
