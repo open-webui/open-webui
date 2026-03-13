@@ -11,6 +11,7 @@
 	import AccessControlModal from '$lib/components/workspace/common/AccessControlModal.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import { detectTerminalServerType, putOrchestratorPolicy } from '$lib/apis/configs';
 	import { getTerminalConfig } from '$lib/apis/terminal';
 
@@ -31,6 +32,7 @@
 	let enabled = false;
 	let showAdvanced = false;
 	let showAccessControlModal = false;
+	let showDeleteConfirmDialog = false;
 	let accessGrants: any[] = [];
 
 	// Policy / auto-detect state
@@ -698,29 +700,27 @@
 							</div>
 						</div>
 
-						<div class="flex justify-between pt-3 text-sm font-medium gap-1.5">
-							<div></div>
-							<div class="flex gap-1.5">
+						<div class="flex justify-between items-center pt-3 text-sm font-medium">
+							<div>
 								{#if edit}
 									<button
-										class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-900 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+										class="px-1 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:underline transition"
 										type="button"
 										on:click={() => {
-											onDelete();
-											show = false;
+											showDeleteConfirmDialog = true;
 										}}
 									>
 										{$i18n.t('Delete')}
 									</button>
 								{/if}
-
-								<button
-									class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
-									type="submit"
-								>
-									{$i18n.t('Save')}
-								</button>
 							</div>
+
+							<button
+								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+								type="submit"
+							>
+								{$i18n.t('Save')}
+							</button>
 						</div>
 					</div>
 				</form>
@@ -730,3 +730,13 @@
 </Modal>
 
 <AccessControlModal bind:show={showAccessControlModal} bind:accessGrants />
+
+<ConfirmDialog
+	bind:show={showDeleteConfirmDialog}
+	message={$i18n.t('Are you sure you want to delete this connection? This action cannot be undone.')}
+	confirmLabel={$i18n.t('Delete')}
+	on:confirm={() => {
+		onDelete();
+		show = false;
+	}}
+/>
