@@ -92,8 +92,8 @@ async def process_pipeline_inlet_filter(request, payload, user, models):
                     json=request_data,
                     ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as response:
-                    payload = await response.json()
                     response.raise_for_status()
+                    payload = await response.json()
             except aiohttp.ClientResponseError as e:
                 res = (
                     await response.json()
@@ -145,8 +145,8 @@ async def process_pipeline_outlet_filter(request, payload, user, models):
                     json=request_data,
                     ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as response:
-                    payload = await response.json()
                     response.raise_for_status()
+                    payload = await response.json()
             except aiohttp.ClientResponseError as e:
                 try:
                     res = (

@@ -1,0 +1,12 @@
+services:
+  open-webui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: open-webui
+    image: "ghcr.io/open-webui/open-webui:main"
+    volumes:
+      - "./data:/app/backend/data"
+      - "/etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro"
+    ports:
+      - 8080:8080

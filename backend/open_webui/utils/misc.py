@@ -566,6 +566,53 @@ def sanitize_data_for_db(obj):
     return obj
 
 
+def sanitize_metadata(metadata: dict) -> dict:
+    """
+    Return a JSON-safe copy of a metadata dict for database storage.
+
+    The middleware metadata accumulates non-serializable Python objects
+    (e.g. callable tool functions, MCP client instances) that cause
+    PostgreSQL JSON inserts to fail.  This helper strips those out while
+    preserving the primitive data needed for file-to-chat linking.
+    """
+    if not isinstance(metadata, dict):
+        return metadata
+
+    def _sanitize(obj):
+        if isinstance(obj, (str, int, float, bool, type(None))):
+            return obj
+        if isinstance(obj, dict):
+            return {
+                k: _sanitize(v)
+                for k, v in obj.items()
+                if not callable(v) and _is_serializable(v)
+            }
+        if isinstance(obj, list):
+            return [
+                _sanitize(v) for v in obj if not callable(v) and _is_serializable(v)
+            ]
+        if callable(obj):
+            return None
+        # Last resort: try to see if it's serializable
+        try:
+            json.dumps(obj)
+            return obj
+        except (TypeError, ValueError):
+            return None
+
+    def _is_serializable(obj):
+        """Quick check whether a value can survive JSON serialization."""
+        if isinstance(obj, (str, int, float, bool, type(None), dict, list)):
+            return True
+        try:
+            json.dumps(obj)
+            return True
+        except (TypeError, ValueError):
+            return False
+
+    return _sanitize(metadata)
+
+
 def extract_folders_after_data_docs(path):
     # Convert the path to a Path object if it's not already
     path = Path(path)

@@ -72,6 +72,9 @@ export const functions = writable(null);
 export const toolServers = writable([]);
 export const terminalServers = writable([]);
 
+// Persistent Pyodide worker for code interpreter FS
+export const pyodideWorker: Writable<Worker | null> = writable(null);
+
 export const banners: Writable<Banner[]> = writable([]);
 
 export const settings: Writable<Settings> = writable({});

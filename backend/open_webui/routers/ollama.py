@@ -1176,7 +1176,7 @@ async def embeddings(
 
 class GenerateCompletionForm(BaseModel):
     model: str
-    prompt: str
+    prompt: Optional[str] = None
     suffix: Optional[str] = None
     images: Optional[list[str]] = None
     format: Optional[Union[dict, str]] = None
@@ -1747,7 +1747,9 @@ async def download_file_stream(
 
                                 yield f"data: {json.dumps(res)}\n\n"
                             else:
-                                raise "Ollama: Could not create blob, Please try again."
+                                raise RuntimeError(
+                                    "Ollama: Could not create blob, Please try again."
+                                )
 
 
 # url = "https://huggingface.co/TheBloke/stablelm-zephyr-3b-GGUF/resolve/main/stablelm-zephyr-3b.Q2_K.gguf"
