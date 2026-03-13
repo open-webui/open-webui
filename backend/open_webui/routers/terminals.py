@@ -75,6 +75,12 @@ async def proxy_terminal(
         )
 
     target_url = f"{base_url}/{path}"
+
+    # Route through orchestrator policy endpoint if policy_id is set
+    policy_id = connection.get("policy_id")
+    if policy_id:
+        target_url = f"{base_url}/p/{policy_id}/{path}"
+
     if request.query_params:
         target_url += f"?{request.query_params}"
 
@@ -236,14 +242,18 @@ async def ws_terminal(
     # Build upstream WebSocket URL (no token in URL)
     ws_base = base_url.replace("https://", "wss://").replace("http://", "ws://")
 
-    auth_type = connection.get("auth_type", "bearer")
+    # Route through orchestrator policy endpoint if policy_id is set
+    policy_id = connection.get("policy_id")
     upstream_params = {}
     # For orchestrator-backed servers, pass user_id
     upstream_params["user_id"] = user.id
 
     import urllib.parse
 
-    upstream_url = f"{ws_base}/api/terminals/{session_id}"
+    if policy_id:
+        upstream_url = f"{ws_base}/p/{policy_id}/api/terminals/{session_id}"
+    else:
+        upstream_url = f"{ws_base}/api/terminals/{session_id}"
     if upstream_params:
         upstream_url += f"?{urllib.parse.urlencode(upstream_params)}"
 

@@ -914,9 +914,17 @@ async def set_terminal_servers(request: Request):
 
         enabled = connection.get("enabled", True)
 
+        base_url = connection.get("url", "").rstrip("/")
+        policy_id = connection.get("policy_id", "")
+
+        # Orchestrator connections route through /p/{policy_id}/ — the
+        # OpenAPI spec lives on the proxied terminal, not the orchestrator.
+        if connection.get("server_type") == "orchestrator" and policy_id:
+            base_url = f"{base_url}/p/{policy_id}"
+
         server_configs.append(
             {
-                "url": connection.get("url", ""),
+                "url": base_url,
                 "key": connection.get("key", ""),
                 "auth_type": connection.get("auth_type", "bearer"),
                 "path": connection.get("path", "/openapi.json"),

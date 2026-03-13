@@ -229,6 +229,11 @@ class TerminalServerConnection(BaseModel):
 
     config: Optional[dict] = None
 
+    # Orchestrator policy fields
+    server_type: Optional[str] = None  # "orchestrator", "terminal"
+    policy_id: Optional[str] = None
+    policy: Optional[dict] = None  # cached policy data
+
     model_config = ConfigDict(extra="allow")
 
 

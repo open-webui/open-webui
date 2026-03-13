@@ -11,6 +11,7 @@
 	import AccessControlModal from '$lib/components/workspace/common/AccessControlModal.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { detectTerminalServerType, putOrchestratorPolicy } from '$lib/apis/configs';
 	import { getTerminalConfig } from '$lib/apis/terminal';
 
 	export let show = false;
@@ -32,6 +33,18 @@
 	let showAccessControlModal = false;
 	let accessGrants: any[] = [];
 
+	// Policy / auto-detect state
+	let serverType: 'orchestrator' | 'terminal' | null = null;
+	let verifying = false;
+	let policyId = '';
+	let policyImage = '';
+	let policyEnvPairs: { key: string; value: string }[] = [];
+	let policyCpu = '1';
+	let policyMemory = '1Gi';
+	let policyStorage = 'ephemeral';
+	let policyStorageSize = '5Gi';
+	let policyIdleTimeout = 30;
+
 	const init = () => {
 		if (connection) {
 			id = connection?.id ?? '';
@@ -42,6 +55,24 @@
 			path = connection?.path ?? '/openapi.json';
 			enabled = connection?.enabled ?? true;
 			accessGrants = connection?.config?.access_grants ?? [];
+
+			// Restore policy state
+			serverType = connection?.server_type ?? null;
+			policyId = connection?.policy_id ?? '';
+
+			const p = connection?.policy ?? {};
+			policyImage = p.image ?? '';
+			policyIdleTimeout = p.idle_timeout_minutes ?? 30;
+			policyStorage = p.storage ? 'persistent' : 'ephemeral';
+			policyStorageSize = p.storage ?? '5Gi';
+
+			// Restore env pairs
+			const env = p.env ?? {};
+			policyEnvPairs = Object.entries(env).map(([k, v]) => ({ key: k, value: v as string }));
+
+			// Restore resources
+			policyCpu = p.cpu_limit ?? '1';
+			policyMemory = p.memory_limit ?? '1Gi';
 		} else {
 			id = '';
 			url = '';
@@ -51,6 +82,16 @@
 			path = '/openapi.json';
 			enabled = false;
 			accessGrants = [];
+
+			serverType = null;
+			policyId = '';
+			policyImage = '';
+			policyEnvPairs = [];
+			policyCpu = '1';
+			policyMemory = '1Gi';
+			policyStorage = 'ephemeral';
+			policyStorageSize = '5Gi';
+			policyIdleTimeout = 30;
 		}
 	};
 
@@ -65,16 +106,81 @@
 			return;
 		}
 
-		const res = await getTerminalConfig(_url, key);
+		verifying = true;
+		try {
+			if (admin) {
+				// Admin: detect orchestrator vs terminal
+				const type = await detectTerminalServerType(_url, key);
 
-		if (res) {
-			toast.success($i18n.t('Server connection verified'));
-		} else {
+				if (type) {
+					serverType = type;
+					toast.success(
+						$i18n.t('Connected ({{type}})', {
+							type: type === 'orchestrator' ? 'Orchestrator' : 'Terminal'
+						})
+					);
+					// Default policy_id to connection id when orchestrator detected
+					if (type === 'orchestrator' && !policyId) {
+						policyId =
+							id ||
+							name
+								.toLowerCase()
+								.replace(/[^a-z0-9-]/g, '-')
+								.replace(/-+/g, '-')
+								.replace(/^-|-$/g, '') ||
+							'default';
+					}
+				} else {
+					serverType = null;
+					toast.error($i18n.t('Server connection failed'));
+				}
+			} else {
+				// Non-admin: simple terminal verification
+				const res = await getTerminalConfig(_url, key);
+				if (res) {
+					toast.success($i18n.t('Server connection verified'));
+				} else {
+					toast.error($i18n.t('Server connection failed'));
+				}
+			}
+		} catch {
+			serverType = null;
 			toast.error($i18n.t('Server connection failed'));
+		} finally {
+			verifying = false;
 		}
 	};
 
-	const submitHandler = () => {
+	const buildPolicyData = (): object => {
+		const data: Record<string, any> = {};
+
+		if (policyImage) data.image = policyImage;
+		if (policyCpu) data.cpu_limit = policyCpu;
+		if (policyMemory) data.memory_limit = policyMemory;
+
+		if (policyStorage === 'persistent') {
+			data.storage = policyStorageSize;
+		}
+
+		if (policyIdleTimeout > 0) {
+			data.idle_timeout_minutes = policyIdleTimeout;
+		}
+
+		// Env vars
+		const env: Record<string, string> = {};
+		for (const pair of policyEnvPairs) {
+			if (pair.key.trim()) {
+				env[pair.key.trim()] = pair.value;
+			}
+		}
+		if (Object.keys(env).length > 0) {
+			data.env = env;
+		}
+
+		return data;
+	};
+
+	const submitHandler = async () => {
 		if (url === '') {
 			toast.error($i18n.t('Please enter a valid URL'));
 			return;
@@ -82,6 +188,16 @@
 
 		// Remove trailing slash
 		url = url.replace(/\/$/, '');
+
+		// Save policy to orchestrator if applicable
+		if (serverType === 'orchestrator' && admin && policyId) {
+			try {
+				await putOrchestratorPolicy(url, key, policyId, buildPolicyData());
+			} catch (err) {
+				toast.error($i18n.t('Failed to save policy: {{error}}', { error: err }));
+				return;
+			}
+		}
 
 		const result = {
 			...(admin && id.trim() ? { id: id.trim() } : {}),
@@ -93,7 +209,11 @@
 			enabled: enabled,
 			config: {
 				...(admin ? { access_grants: accessGrants } : {})
-			}
+			},
+			// Policy fields
+			...(serverType ? { server_type: serverType } : {}),
+			...(serverType === 'orchestrator' && policyId ? { policy_id: policyId } : {}),
+			...(serverType === 'orchestrator' ? { policy: buildPolicyData() } : {})
 		};
 
 		onSubmit(result);
@@ -202,24 +322,240 @@
 										verifyHandler();
 									}}
 									type="button"
+									disabled={verifying}
 									aria-label={$i18n.t('Verify Connection')}
 								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										aria-hidden="true"
-										class="w-4 h-4"
-									>
-										<path
-											fill-rule="evenodd"
-											d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
-											clip-rule="evenodd"
-										/>
-									</svg>
+									{#if verifying}
+										<svg
+											class="w-4 h-4 animate-spin"
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+										>
+											<circle
+												class="opacity-25"
+												cx="12"
+												cy="12"
+												r="10"
+												stroke="currentColor"
+												stroke-width="4"
+											></circle>
+											<path
+												class="opacity-75"
+												fill="currentColor"
+												d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+											></path>
+										</svg>
+									{:else}
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											aria-hidden="true"
+											class="w-4 h-4"
+										>
+											<path
+												fill-rule="evenodd"
+												d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+												clip-rule="evenodd"
+											/>
+										</svg>
+									{/if}
 								</button>
 							</Tooltip>
 						</div>
+
+						<!-- Policy section (orchestrator only, admin only) -->
+						{#if serverType === 'orchestrator' && admin}
+							<div class="flex gap-2 mt-2">
+								<div class="flex flex-col w-full">
+									<div class="flex justify-between mb-0.5">
+										<div
+											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										>
+											{$i18n.t('Policy ID')}
+										</div>
+									</div>
+									<div class="flex flex-1 items-center">
+										<input
+											id="policy-id"
+											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											type="text"
+											bind:value={policyId}
+											placeholder="python-ds"
+											autocomplete="off"
+											disabled={edit && !!connection?.policy_id}
+										/>
+									</div>
+								</div>
+							</div>
+
+							<div class="flex gap-2 mt-2">
+								<div class="flex flex-col w-full">
+									<div class="flex justify-between mb-0.5">
+										<div
+											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										>
+											{$i18n.t('Image')}
+											<span class="opacity-50">({$i18n.t('optional')})</span>
+										</div>
+									</div>
+									<div class="flex flex-1 items-center">
+										<input
+											id="policy-image"
+											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											type="text"
+											bind:value={policyImage}
+											placeholder="ghcr.io/open-webui/open-terminal:latest"
+											autocomplete="off"
+										/>
+									</div>
+								</div>
+							</div>
+
+							<div class="flex gap-2 mt-2">
+								<div class="flex flex-col flex-1">
+									<div class="flex justify-between mb-0.5">
+										<div
+											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										>
+											{$i18n.t('CPU')}
+										</div>
+									</div>
+									<div class="flex flex-1 items-center">
+										<input
+											id="policy-cpu"
+											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											type="text"
+											bind:value={policyCpu}
+											placeholder="1"
+											autocomplete="off"
+										/>
+									</div>
+								</div>
+								<div class="flex flex-col flex-1">
+									<div class="flex justify-between mb-0.5">
+										<div
+											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										>
+											{$i18n.t('Memory')}
+										</div>
+									</div>
+									<div class="flex flex-1 items-center">
+										<input
+											id="policy-memory"
+											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											type="text"
+											bind:value={policyMemory}
+											placeholder="1Gi"
+											autocomplete="off"
+										/>
+									</div>
+								</div>
+							</div>
+
+							<div class="flex gap-2 mt-2">
+								<div class="flex flex-col flex-1">
+									<div class="flex justify-between mb-0.5">
+										<div
+											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										>
+											{$i18n.t('Storage')}
+										</div>
+									</div>
+									<div class="flex gap-2">
+										<div class="flex-shrink-0 self-start">
+											<select
+												class={`dark:bg-gray-900 w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+												bind:value={policyStorage}
+											>
+												<option value="ephemeral">{$i18n.t('Ephemeral')}</option>
+												<option value="persistent">{$i18n.t('Persistent')}</option>
+											</select>
+										</div>
+										{#if policyStorage === 'persistent'}
+											<div class="flex flex-1 items-center">
+												<input
+													id="policy-storage-size"
+													class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+													type="text"
+													bind:value={policyStorageSize}
+													placeholder="5Gi"
+													autocomplete="off"
+												/>
+											</div>
+										{/if}
+									</div>
+								</div>
+
+								<div class="flex flex-col flex-1">
+									<div class="flex justify-between mb-0.5">
+										<div
+											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										>
+											{$i18n.t('Idle Timeout')}
+											<span class="opacity-50">({$i18n.t('min')})</span>
+										</div>
+									</div>
+									<div class="flex flex-1 items-center">
+										<input
+											id="idle-timeout"
+											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											type="number"
+											min="0"
+											bind:value={policyIdleTimeout}
+											placeholder="30"
+											autocomplete="off"
+										/>
+									</div>
+								</div>
+							</div>
+
+							<!-- Env Vars -->
+							<div class="flex gap-2 mt-2">
+								<div class="flex flex-col w-full">
+									<div class="flex justify-between items-center mb-0.5">
+										<div
+											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										>
+											{$i18n.t('Environment Variables')}
+										</div>
+										<button
+											type="button"
+											class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition"
+											on:click={() =>
+												(policyEnvPairs = [...policyEnvPairs, { key: '', value: '' }])}
+										>
+											+ {$i18n.t('Add')}
+										</button>
+									</div>
+									{#each policyEnvPairs as pair, idx}
+										<div class="flex gap-1.5 mb-1">
+											<input
+												class={`flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+												type="text"
+												bind:value={pair.key}
+												placeholder="KEY"
+											/>
+											<input
+												class={`flex-[2] text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+												type="text"
+												bind:value={pair.value}
+												placeholder="value"
+											/>
+											<button
+												type="button"
+												class="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition px-1"
+												on:click={() =>
+													(policyEnvPairs = policyEnvPairs.filter((_, i) => i !== idx))}
+											>
+												<XMark className={'size-3'} />
+											</button>
+										</div>
+									{/each}
+								</div>
+							</div>
+						{/if}
 
 						<div class="flex items-center justify-between">
 							<button
