@@ -2797,7 +2797,6 @@
 								<MessageInput
 									bind:this={messageInput}
 									{history}
-									{taskIds}
 									{selectedModels}
 									bind:files
 									bind:prompt

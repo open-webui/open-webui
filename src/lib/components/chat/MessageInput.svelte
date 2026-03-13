@@ -120,7 +120,6 @@
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
 
 	export let history;
-	export let taskIds = null;
 
 	export let prompt = '';
 	export let files = [];
@@ -138,6 +137,10 @@
 	export let onQueueSendNow: (id: string) => void = () => {};
 	export let onQueueEdit: (id: string) => void = () => {};
 	export let onQueueDelete: (id: string) => void = () => {};
+
+	$: currentMessage = history?.currentId ? history?.messages?.[history.currentId] : null;
+	$: isAssistantGenerating = currentMessage?.role === 'assistant' && currentMessage?.done !== true;
+	$: showStopButton = generating || isAssistantGenerating;
 
 	let inputContent = null;
 
@@ -1768,7 +1771,7 @@
 								</div>
 
 								<div class="self-end flex space-x-1 mr-1 shrink-0 gap-[0.5px]">
-									{#if (taskIds && taskIds.length > 0) || (history.currentId && history.messages[history.currentId]?.done != true) || generating}
+									{#if showStopButton}
 										<div class=" flex items-center">
 											<Tooltip content={$i18n.t('Stop')}>
 												<button
