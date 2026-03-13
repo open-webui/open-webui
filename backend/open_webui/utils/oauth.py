@@ -861,7 +861,7 @@ class OAuthClientManager:
         redirect_uri_str = str(redirect_uri) if redirect_uri else None
         return await client.authorize_redirect(request, redirect_uri_str)
 
-    async def handle_callback(self, request, client_id: str, user_id: str, response):
+    async def handle_callback(self, request, client_id: str, user_id: str, response, return_url: str = None):
         client = self.get_client(client_id) or self.ensure_client_from_config(client_id)
         if client is None:
             raise HTTPException(404)
@@ -928,16 +928,18 @@ class OAuthClientManager:
                 exc_info=True,
             )
 
-        redirect_url = (
-            str(request.app.state.config.WEBUI_URL or request.base_url)
-        ).rstrip("/")
+        base_url = (str(request.app.state.config.WEBUI_URL or request.base_url)).rstrip("/")
+        redirect_url = f"{base_url}{return_url}" if return_url else base_url
 
         if error_message:
             log.debug(error_message)
-            redirect_url = (
-                f"{redirect_url}/?error={urllib.parse.quote_plus(error_message)}"
-            )
+            separator = "&" if "?" in redirect_url else "/?"
+            redirect_url = f"{redirect_url}{separator}error={urllib.parse.quote_plus(error_message)}"
             return RedirectResponse(url=redirect_url, headers=response.headers)
+
+        if not return_url:
+            separator = "&" if "?" in redirect_url else "/?"
+            redirect_url = f"{redirect_url}{separator}oauth_success=true"
 
         response = RedirectResponse(url=redirect_url, headers=response.headers)
         return response

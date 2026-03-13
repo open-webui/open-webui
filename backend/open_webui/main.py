@@ -2471,6 +2471,7 @@ async def oauth_client_authorize(
     client_id: str,
     request: Request,
     response: Response,
+    return_url: str = None,
     user=Depends(get_verified_user),
 ):
     # ensure_valid_client_registration
@@ -2508,6 +2509,9 @@ async def oauth_client_authorize(
                 detail="OAuth client registration is still invalid after re-registration",
             )
 
+    if return_url:
+        request.session[f"oauth_return_url_{client_id}"] = return_url
+
     return await oauth_client_manager.handle_authorize(request, client_id=client_id)
 
 
@@ -2518,11 +2522,13 @@ async def oauth_client_callback(
     response: Response,
     user=Depends(get_verified_user),
 ):
+    return_url = request.session.pop(f"oauth_return_url_{client_id}", None)
     return await oauth_client_manager.handle_callback(
         request,
         client_id=client_id,
         user_id=user.id if user else None,
         response=response,
+        return_url=return_url,
     )
 
 
