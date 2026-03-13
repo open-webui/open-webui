@@ -1814,12 +1814,16 @@ async def query_knowledge_files(
 
         # If model has attached knowledge, use those
         if __model_knowledge__:
+            knowledge_ids_set = set(knowledge_ids) if knowledge_ids else None
+
             for item in __model_knowledge__:
                 item_type = item.get("type")
                 item_id = item.get("id")
 
                 if item_type == "collection":
-                    # Knowledge base - use KB ID as collection name
+                    if knowledge_ids_set and item_id not in knowledge_ids_set:
+                        continue
+
                     knowledge = Knowledges.get_knowledge_by_id(item_id)
                     if knowledge and (
                         user_role == "admin"
@@ -1835,13 +1839,17 @@ async def query_knowledge_files(
                         collection_names.append(item_id)
 
                 elif item_type == "file":
-                    # Individual file - use file-{id} as collection name
+                    if knowledge_ids_set:
+                        continue
+
                     file = Files.get_file_by_id(item_id)
                     if file:
                         collection_names.append(f"file-{item_id}")
 
                 elif item_type == "note":
-                    # Note - always return full content as context
+                    if knowledge_ids_set:
+                        continue
+
                     note = Notes.get_note_by_id(item_id)
                     if note and (
                         user_role == "admin"
