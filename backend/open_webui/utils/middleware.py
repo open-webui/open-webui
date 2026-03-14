@@ -1913,39 +1913,59 @@ async def chat_completion_files_handler(
         if all_full_context or bypass_embedding:
             log.info(f"[RAG Bypass] Skipping retrieval: all_full_context={all_full_context}, bypass_embedding={bypass_embedding}")
             
-            # Build sources directly from file content, similar to Cherry Studio's approach
-            # Bypass all retrieval/vector search logic and directly inject file content
+            # Build file content context and inject directly into messages
+            # This avoids frontend JSON serialization delay for large files
+            file_contents = []
             for file_item in files:
                 file_id = file_item.get("id")
                 file_name = file_item.get("name", "Unknown")
                 
-                # Try to get content from file metadata (already loaded in frontend)
-                content = file_item.get("file", {}).get("data", {}).get("content", "")
-                
-                # If not in metadata, load from database (file should already be processed)
-                if not content and file_id:
+                # Load content from database (frontend doesn't pass content to avoid serialization)
+                if file_id:
                     try:
                         from open_webui.models.files import Files
                         file_obj = Files.get_file_by_id(file_id)
                         if file_obj and file_obj.data:
                             content = file_obj.data.get("content", "")
                             file_name = file_obj.filename
+                            if content:
+                                file_contents.append(f"=== File: {file_name} ===\n{content}\n")
+                                log.debug(f"Loaded file {file_name} from DB ({len(content)} chars)")
                     except Exception as e:
                         log.warning(f"Failed to load file {file_id}: {e}")
                         continue
+            
+            if file_contents:
+                # Build context from file contents
+                context = "\n".join(file_contents)
                 
-                if content:
-                    sources.append({
-                        "source": {
-                            "id": file_id,
-                            "name": file_name,
-                        },
-                        "document": [content],
-                        "metadata": [{"file_id": file_id, "name": file_name}],
-                    })
-                    log.debug(f"Added file {file_name} directly to sources ({len(content)} chars)")
-                else:
-                    log.warning(f"No content found for file {file_name}, skipping")
+                # Find last user message and inject context
+                messages = body.get("messages", [])
+                for i in range(len(messages) - 1, -1, -1):
+                    if messages[i].get("role") == "user":
+                        original_content = messages[i].get("content", "")
+                        
+                        # Inject file context before user message
+                        if isinstance(original_content, str):
+                            messages[i]["content"] = f"[Attached Files Context]\n{context}\n\n[User Message]\n{original_content}"
+                        elif isinstance(original_content, list):
+                            # Handle array content format
+                            text_parts = [p for p in original_content if p.get("type") == "text"]
+                            if text_parts:
+                                text_parts[0]["text"] = f"[Attached Files Context]\n{context}\n\n[User Message]\n{text_parts[0].get('text', '')}"
+                            else:
+                                original_content.insert(0, {
+                                    "type": "text",
+                                    "text": f"[Attached Files Context]\n{context}\n\n[User Message]"
+                                })
+                                messages[i]["content"] = original_content
+                        
+                        log.info(f"[RAG Bypass] Injected {len(file_contents)} file(s) content into message")
+                        break
+            
+            # Skip the rest of the function (no status emission, no retrieval)
+            log.info(f"[RAG Bypass] Directly injected file content, returning")
+            return body, {"sources": []}
         else:
             queries = []
             try:
