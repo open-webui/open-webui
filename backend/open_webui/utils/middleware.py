@@ -1895,11 +1895,59 @@ async def chat_completion_files_handler(
     sources = []
 
     if files := body.get("metadata", {}).get("files", None):
+        # Debug: log files structure
+        log.info(f"[RAG Debug] Processing {len(files)} files")
+        for idx, item in enumerate(files):
+            log.info(f"[RAG Debug] File {idx}: id={item.get('id')}, name={item.get('name')}, context={item.get('context')}, type={item.get('type')}")
+        
         # Check if all files are in full context mode
         all_full_context = all(item.get("context") == "full" for item in files)
+        
+        # Check if global bypass is enabled
+        bypass_embedding = request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
 
-        queries = []
-        if not all_full_context:
+        log.info(f"[RAG Debug] all_full_context={all_full_context}, bypass_embedding={bypass_embedding}")
+
+        # If ALL files are in full context mode OR global bypass is enabled, skip retrieval entirely
+        # This avoids the "retrieving" status and query generation when not needed
+        if all_full_context or bypass_embedding:
+            log.info(f"[RAG Bypass] Skipping retrieval: all_full_context={all_full_context}, bypass_embedding={bypass_embedding}")
+            
+            # Build sources directly from file content, similar to Cherry Studio's approach
+            # Bypass all retrieval/vector search logic and directly inject file content
+            for file_item in files:
+                file_id = file_item.get("id")
+                file_name = file_item.get("name", "Unknown")
+                
+                # Try to get content from file metadata (already loaded in frontend)
+                content = file_item.get("file", {}).get("data", {}).get("content", "")
+                
+                # If not in metadata, load from database (file should already be processed)
+                if not content and file_id:
+                    try:
+                        from open_webui.models.files import Files
+                        file_obj = Files.get_file_by_id(file_id)
+                        if file_obj and file_obj.data:
+                            content = file_obj.data.get("content", "")
+                            file_name = file_obj.filename
+                    except Exception as e:
+                        log.warning(f"Failed to load file {file_id}: {e}")
+                        continue
+                
+                if content:
+                    sources.append({
+                        "source": {
+                            "id": file_id,
+                            "name": file_name,
+                        },
+                        "document": [content],
+                        "metadata": [{"file_id": file_id, "name": file_name}],
+                    })
+                    log.debug(f"Added file {file_name} directly to sources ({len(content)} chars)")
+                else:
+                    log.warning(f"No content found for file {file_name}, skipping")
+        else:
+            queries = []
             try:
                 queries_response = await generate_queries(
                     request,
@@ -1940,38 +1988,37 @@ async def chat_completion_files_handler(
                 }
             )
 
-        if len(queries) == 0:
-            queries = [get_last_user_message(body["messages"])]
+            if len(queries) == 0:
+                queries = [get_last_user_message(body["messages"])]
 
-        try:
-            # Directly await async get_sources_from_items (no thread needed - fully async now)
-            sources = await get_sources_from_items(
-                request=request,
-                items=files,
-                queries=queries,
-                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
-                    query, prefix=prefix, user=user
-                ),
-                k=request.app.state.config.TOP_K,
-                reranking_function=(
-                    (
-                        lambda query, documents: request.app.state.RERANKING_FUNCTION(
-                            query, documents, user=user
+            try:
+                # Directly await async get_sources_from_items (no thread needed - fully async now)
+                sources = await get_sources_from_items(
+                    request=request,
+                    items=files,
+                    queries=queries,
+                    embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                        query, prefix=prefix, user=user
+                    ),
+                    k=request.app.state.config.TOP_K,
+                    reranking_function=(
+                        (
+                            lambda query, documents: request.app.state.RERANKING_FUNCTION(
+                                query, documents, user=user
+                            )
                         )
-                    )
-                    if request.app.state.RERANKING_FUNCTION
-                    else None
-                ),
-                k_reranker=request.app.state.config.TOP_K_RERANKER,
-                r=request.app.state.config.RELEVANCE_THRESHOLD,
-                hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
-                hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
-                full_context=all_full_context
-                or request.app.state.config.RAG_FULL_CONTEXT,
-                user=user,
-            )
-        except Exception as e:
-            log.exception(e)
+                        if request.app.state.RERANKING_FUNCTION
+                        else None
+                    ),
+                    k_reranker=request.app.state.config.TOP_K_RERANKER,
+                    r=request.app.state.config.RELEVANCE_THRESHOLD,
+                    hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
+                    hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+                    full_context=request.app.state.config.RAG_FULL_CONTEXT,
+                    user=user,
+                )
+            except Exception as e:
+                log.exception(e)
 
         log.debug(f"rag_contexts:sources: {sources}")
 
