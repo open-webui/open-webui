@@ -12,6 +12,7 @@
 		renderMermaidDiagram,
 		renderVegaVisualization
 	} from '$lib/utils';
+	import { getContextAsyncTaskTracker } from '$lib/utils/AsyncTaskTracker';
 
 	import 'highlight.js/styles/github-dark.min.css';
 
@@ -37,6 +38,7 @@
 	export let run = true;
 	export let preview = false;
 	export let collapsed = false;
+	export let exportMode = false;
 
 	export let token;
 	export let lang = '';
@@ -48,6 +50,7 @@
 	export let stickyButtonsClassName = 'top-0';
 
 	let pyodideWorker = null;
+	const asyncTaskTracker = getContextAsyncTaskTracker();
 
 	let _code = '';
 	$: if (code) {
@@ -77,6 +80,10 @@
 	const collapseCodeBlock = () => {
 		collapsed = !collapsed;
 	};
+
+	$: if (exportMode && collapsed) {
+		collapsed = false;
+	}
 
 	const saveCode = () => {
 		saved = true;
@@ -341,7 +348,9 @@
 		onUpdate(token);
 		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
 			try {
-				renderHTML = await renderMermaid(code);
+				renderHTML = asyncTaskTracker
+					? await asyncTaskTracker.track(() => renderMermaid(code), 'mermaid-render')
+					: await renderMermaid(code);
 			} catch (error) {
 				console.error('Failed to render mermaid diagram:', error);
 				const errorMsg = error instanceof Error ? error.message : String(error);
@@ -353,7 +362,9 @@
 			(token?.raw ?? '').slice(-4).includes('```')
 		) {
 			try {
-				renderHTML = await renderVegaVisualization(code);
+				renderHTML = asyncTaskTracker
+					? await asyncTaskTracker.track(() => renderVegaVisualization(code), 'vega-render')
+					: await renderVegaVisualization(code);
 			} catch (error) {
 				console.error('Failed to render Vega visualization:', error);
 				const errorMsg = error instanceof Error ? error.message : String(error);
@@ -429,10 +440,11 @@
 					className=" rounded-2xl max-h-fit overflow-hidden"
 					svg={renderHTML}
 					content={_token.text}
+					hideButtons={exportMode}
 				/>
 			{:else}
 				<div class="p-3">
-					{#if renderError}
+					{#if renderError && !exportMode}
 						<div
 							class="flex gap-2.5 border px-4 py-3 border-red-600/10 bg-red-600/10 rounded-2xl mb-2"
 						>
@@ -444,7 +456,7 @@
 			{/if}
 		{:else}
 			<div
-				class="sticky {stickyButtonsClassName} left-0 right-0 py-1.5 px-3 gap-2 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white bg-white dark:bg-black rounded-t-2xl"
+				class="sticky {stickyButtonsClassName} left-0 right-0 {exportMode && !lang ? '' : 'py-1.5'} px-3 gap-2 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white bg-white dark:bg-black rounded-t-2xl"
 			>
 				<div class="flex-1 truncate">
 					<Tooltip content={lang} placement="top-start">
@@ -454,78 +466,82 @@
 					</Tooltip>
 				</div>
 
-				<div class="flex items-center gap-0.5 shrink-0">
-					<button
-						class="flex gap-1 items-center bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
-						on:click={collapseCodeBlock}
-					>
-						<div class=" -translate-y-[0.5px]">
-							<ChevronUpDown className="size-3" />
-						</div>
-
-						<div>
-							{collapsed ? $i18n.t('Expand') : $i18n.t('Collapse')}
-						</div>
-					</button>
-
-					{#if ($config?.features?.enable_code_execution ?? true) && (lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code)))}
-						{#if executing}
-							<div
-								class="run-code-button bg-none border-none p-0.5 cursor-not-allowed bg-white dark:bg-black"
-							>
-								{$i18n.t('Running')}
+				{#if !exportMode}
+					<div class="flex items-center gap-0.5 shrink-0">
+						<button
+							class="flex gap-1 items-center bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
+							on:click={collapseCodeBlock}
+						>
+							<div class=" -translate-y-[0.5px]">
+								<ChevronUpDown className="size-3" />
 							</div>
-						{:else if run}
+
+							<div>
+								{collapsed ? $i18n.t('Expand') : $i18n.t('Collapse')}
+							</div>
+						</button>
+
+						{#if ($config?.features?.enable_code_execution ?? true) && (lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code)))}
+							{#if executing}
+								<div
+									class="run-code-button bg-none border-none p-0.5 cursor-not-allowed bg-white dark:bg-black"
+								>
+									{$i18n.t('Running')}
+								</div>
+							{:else if run}
+								<button
+									class="flex gap-1 items-center run-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
+									on:click={async () => {
+										code = _code;
+										await tick();
+										executePython(code);
+									}}
+								>
+									<div>
+										{$i18n.t('Run')}
+									</div>
+								</button>
+							{/if}
+						{/if}
+
+						{#if save}
+							<button
+								class="save-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
+								on:click={saveCode}
+							>
+								{saved ? $i18n.t('Saved') : $i18n.t('Save')}
+							</button>
+						{/if}
+
+						<button
+							class="copy-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
+							on:click={copyCode}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
+						>
+
+						{#if preview && ['html', 'svg'].includes(lang)}
 							<button
 								class="flex gap-1 items-center run-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
-								on:click={async () => {
-									code = _code;
-									await tick();
-									executePython(code);
-								}}
+								on:click={previewCode}
 							>
 								<div>
-									{$i18n.t('Run')}
+									{$i18n.t('Preview')}
 								</div>
 							</button>
 						{/if}
-					{/if}
-
-					{#if save}
-						<button
-							class="save-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
-							on:click={saveCode}
-						>
-							{saved ? $i18n.t('Saved') : $i18n.t('Save')}
-						</button>
-					{/if}
-
-					<button
-						class="copy-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
-						on:click={copyCode}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
-					>
-
-					{#if preview && ['html', 'svg'].includes(lang)}
-						<button
-							class="flex gap-1 items-center run-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
-							on:click={previewCode}
-						>
-							<div>
-								{$i18n.t('Preview')}
-							</div>
-						</button>
-					{/if}
-				</div>
+					</div>
+				{/if}
 			</div>
 
 			<div
-				class="language-{lang} rounded-t-2xl -mt-8 {editorClassName
+				class="language-{lang} rounded-t-2xl {exportMode ? '' : '-mt-8'} {editorClassName
 					? editorClassName
 					: executing || stdout || stderr || result
 						? ''
 						: 'rounded-b-2xl'} overflow-hidden"
 			>
-				<div class=" pt-6.5 bg-white dark:bg-black"></div>
+				{#if !exportMode}
+					<div class=" pt-6.5 bg-white dark:bg-black"></div>
+				{/if}
 
 				{#if !collapsed}
 					{#if edit}
@@ -548,7 +564,9 @@
 								stderr ||
 								result) &&
 								'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
-								class="language-{lang} rounded-t-none whitespace-pre text-sm"
+								class="language-{lang} rounded-t-none {exportMode
+									? 'whitespace-pre-wrap break-words'
+									: 'whitespace-pre'} {exportMode ? 'text-xs leading-normal' : 'text-sm'}"
 								>{@html hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value ||
 									code}</code
 							></pre>

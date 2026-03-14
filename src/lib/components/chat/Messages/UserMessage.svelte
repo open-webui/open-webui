@@ -39,6 +39,7 @@
 	export let isFirstMessage: boolean;
 	export let readOnly: boolean;
 	export let editCodeBlock = true;
+export let exportMode = false;
 	export let topPadding = false;
 
 	let showDeleteConfirm = false;
@@ -377,6 +378,7 @@
 									id={`${chatId}-${message.id}`}
 									content={message.content}
 									{editCodeBlock}
+									{exportMode}
 									{topPadding}
 								/>
 							{/if}
