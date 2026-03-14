@@ -13,12 +13,6 @@ from langchain_community.document_loaders import (
     OutlookMessageLoader,
     PyPDFLoader,
     TextLoader,
-    UnstructuredEPubLoader,
-    UnstructuredExcelLoader,
-    UnstructuredODTLoader,
-    UnstructuredPowerPointLoader,
-    UnstructuredRSTLoader,
-    UnstructuredXMLLoader,
     YoutubeLoader,
 )
 from langchain_core.documents import Document
@@ -90,6 +84,54 @@ known_source_ext = [
     "yml",
     "toml",
 ]
+
+
+class ExcelLoader:
+    """Fallback Excel loader using pandas when unstructured is not installed."""
+
+    def __init__(self, file_path):
+        self.file_path = file_path
+
+    def load(self) -> list[Document]:
+        import pandas as pd
+
+        text_parts = []
+        xls = pd.ExcelFile(self.file_path)
+        for sheet_name in xls.sheet_names:
+            df = pd.read_excel(xls, sheet_name=sheet_name)
+            text_parts.append(f"Sheet: {sheet_name}\n{df.to_string(index=False)}")
+        return [
+            Document(
+                page_content="\n\n".join(text_parts),
+                metadata={"source": self.file_path},
+            )
+        ]
+
+
+class PptxLoader:
+    """Fallback PowerPoint loader using python-pptx when unstructured is not installed."""
+
+    def __init__(self, file_path):
+        self.file_path = file_path
+
+    def load(self) -> list[Document]:
+        from pptx import Presentation
+
+        prs = Presentation(self.file_path)
+        text_parts = []
+        for i, slide in enumerate(prs.slides, 1):
+            slide_texts = []
+            for shape in slide.shapes:
+                if shape.has_text_frame:
+                    slide_texts.append(shape.text_frame.text)
+            if slide_texts:
+                text_parts.append(f"Slide {i}:\n" + "\n".join(slide_texts))
+        return [
+            Document(
+                page_content="\n\n".join(text_parts),
+                metadata={"source": self.file_path},
+            )
+        ]
 
 
 class TikaLoader:
@@ -371,15 +413,40 @@ class Loader:
             elif file_ext == "csv":
                 loader = CSVLoader(file_path, autodetect_encoding=True)
             elif file_ext == "rst":
-                loader = UnstructuredRSTLoader(file_path, mode="elements")
+                try:
+                    from langchain_community.document_loaders import UnstructuredRSTLoader
+                    loader = UnstructuredRSTLoader(file_path, mode="elements")
+                except ImportError:
+                    log.warning(
+                        "The 'unstructured' package is not installed. "
+                        "Falling back to plain text loading for .rst file. "
+                        "Install it with: pip install unstructured"
+                    )
+                    loader = TextLoader(file_path, autodetect_encoding=True)
             elif file_ext == "xml":
-                loader = UnstructuredXMLLoader(file_path)
+                try:
+                    from langchain_community.document_loaders import UnstructuredXMLLoader
+                    loader = UnstructuredXMLLoader(file_path)
+                except ImportError:
+                    log.warning(
+                        "The 'unstructured' package is not installed. "
+                        "Falling back to plain text loading for .xml file. "
+                        "Install it with: pip install unstructured"
+                    )
+                    loader = TextLoader(file_path, autodetect_encoding=True)
             elif file_ext in ["htm", "html"]:
                 loader = BSHTMLLoader(file_path, open_encoding="unicode_escape")
             elif file_ext == "md":
                 loader = TextLoader(file_path, autodetect_encoding=True)
             elif file_content_type == "application/epub+zip":
-                loader = UnstructuredEPubLoader(file_path)
+                try:
+                    from langchain_community.document_loaders import UnstructuredEPubLoader
+                    loader = UnstructuredEPubLoader(file_path)
+                except ImportError:
+                    raise ValueError(
+                        "Processing .epub files requires the 'unstructured' package. "
+                        "Install it with: pip install unstructured"
+                    )
             elif (
                 file_content_type
                 == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -390,19 +457,45 @@ class Loader:
                 "application/vnd.ms-excel",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             ] or file_ext in ["xls", "xlsx"]:
-                loader = UnstructuredExcelLoader(file_path)
+                try:
+                    from langchain_community.document_loaders import UnstructuredExcelLoader
+                    loader = UnstructuredExcelLoader(file_path)
+                except ImportError:
+                    log.warning(
+                        "The 'unstructured' package is not installed. "
+                        "Falling back to pandas for Excel file loading. "
+                        "Install unstructured for better results: pip install unstructured"
+                    )
+                    loader = ExcelLoader(file_path)
             elif file_content_type in [
                 "application/vnd.ms-powerpoint",
                 "application/vnd.openxmlformats-officedocument.presentationml.presentation",
             ] or file_ext in ["ppt", "pptx"]:
-                loader = UnstructuredPowerPointLoader(file_path)
+                try:
+                    from langchain_community.document_loaders import UnstructuredPowerPointLoader
+                    loader = UnstructuredPowerPointLoader(file_path)
+                except ImportError:
+                    log.warning(
+                        "The 'unstructured' package is not installed. "
+                        "Falling back to python-pptx for PowerPoint file loading. "
+                        "Install unstructured for better results: pip install unstructured"
+                    )
+                    loader = PptxLoader(file_path)
             elif file_ext == "msg":
                 loader = OutlookMessageLoader(file_path)
             elif file_ext == "odt":
-                loader = UnstructuredODTLoader(file_path)
+                try:
+                    from langchain_community.document_loaders import UnstructuredODTLoader
+                    loader = UnstructuredODTLoader(file_path)
+                except ImportError:
+                    raise ValueError(
+                        "Processing .odt files requires the 'unstructured' package. "
+                        "Install it with: pip install unstructured"
+                    )
             elif self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, autodetect_encoding=True)
             else:
                 loader = TextLoader(file_path, autodetect_encoding=True)
 
         return loader
+
