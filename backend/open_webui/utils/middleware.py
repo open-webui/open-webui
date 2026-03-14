@@ -1898,8 +1898,28 @@ async def chat_completion_files_handler(
         # Check if all files are in full context mode
         all_full_context = all(item.get("context") == "full" for item in files)
 
-        queries = []
-        if not all_full_context:
+        # If all files are in full context mode, skip retrieval and use file content directly
+        if all_full_context:
+            log.debug("All files are in full context mode, skipping retrieval")
+            try:
+                sources = await get_sources_from_items(
+                    request=request,
+                    items=files,
+                    queries=[],  # Empty queries for full context mode
+                    embedding_function=None,  # No embedding needed
+                    k=0,  # No retrieval
+                    reranking_function=None,
+                    k_reranker=0,
+                    r=0,
+                    hybrid_bm25_weight=0,
+                    hybrid_search=False,
+                    full_context=True,
+                    user=user,
+                )
+            except Exception as e:
+                log.exception(e)
+        else:
+            queries = []
             try:
                 queries_response = await generate_queries(
                     request,
@@ -1940,36 +1960,37 @@ async def chat_completion_files_handler(
                 }
             )
 
-        if len(queries) == 0:
-            queries = [get_last_user_message(body["messages"])]
+            if len(queries) == 0:
+                queries = [get_last_user_message(body["messages"])]
 
-        try:
-            # Directly await async get_sources_from_items (no thread needed - fully async now)
-            sources = await get_sources_from_items(
-                request=request,
-                items=files,
-                queries=queries,
-                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
-                    query, prefix=prefix, user=user
-                ),
-                k=request.app.state.config.TOP_K,
-                reranking_function=(
-                    (
-                        lambda query, documents: request.app.state.RERANKING_FUNCTION(
-                            query, documents, user=user
+            try:
+                # Directly await async get_sources_from_items (no thread needed - fully async now)
+                sources = await get_sources_from_items(
+                    request=request,
+                    items=files,
+                    queries=queries,
+                    embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                        query, prefix=prefix, user=user
+                    ),
+                    k=request.app.state.config.TOP_K,
+                    reranking_function=(
+                        (
+                            lambda query, documents: request.app.state.RERANKING_FUNCTION(
+                                query, documents, user=user
+                            )
                         )
-                    )
-                    if request.app.state.RERANKING_FUNCTION
-                    else None
-                ),
-                k_reranker=request.app.state.config.TOP_K_RERANKER,
-                r=request.app.state.config.RELEVANCE_THRESHOLD,
-                hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
-                hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
-                full_context=all_full_context
-                or request.app.state.config.RAG_FULL_CONTEXT,
-                user=user,
-            )
+                        if request.app.state.RERANKING_FUNCTION
+                        else None
+                    ),
+                    k_reranker=request.app.state.config.TOP_K_RERANKER,
+                    r=request.app.state.config.RELEVANCE_THRESHOLD,
+                    hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
+                    hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+                    full_context=request.app.state.config.RAG_FULL_CONTEXT,
+                    user=user,
+                )
+            except Exception as e:
+                log.exception(e)
         except Exception as e:
             log.exception(e)
 
