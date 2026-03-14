@@ -695,27 +695,26 @@ class Oracle23aiClient(VectorDBBase):
         """
         Get all items in a collection.
 
-        Retrieves items from a specified collection up to the limit.
+        Retrieves items from a specified collection up to an internal limit.
 
         Args:
             collection_name (str): Name of the collection to retrieve
-            limit (Optional[int]): Maximum number of items to retrieve
 
         Returns:
             Optional[GetResult]: Result containing ids, documents, and metadata
 
         Example:
             >>> client = Oracle23aiClient()
-            >>> results = client.get("my_collection", limit=50)
+            >>> results = client.get("my_collection")
             >>> if results:
             ...     print(f"Retrieved {len(results.ids[0])} documents from collection")
         """
-        log.info(
-            f"Getting items from collection '{collection_name}' with limit {limit}."
-        )
-
         try:
             limit = 1000  # Hardcoded limit for get operation
+
+            log.info(
+                f"Getting items from collection '{collection_name}' with limit {limit}."
+            )
 
             with self.get_connection() as connection:
                 with connection.cursor() as cursor:
