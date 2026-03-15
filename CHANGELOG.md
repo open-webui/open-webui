@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📝 **Public note access.** Opening public notes via direct share link no longer returns a 500 error caused by a missing function import. [#22680](https://github.com/open-webui/open-webui/issues/22680), [Commit](https://github.com/open-webui/open-webui/commit/566e25569e5e7d9c1e42db840ba4ba578887d208)
 - 👤 **Terminal access user visibility.** The terminal connection access dialog now shows the currently logged-in user when searching for users to grant access, fixing an issue where users with identical display names were filtered incorrectly. [#22491](https://github.com/open-webui/open-webui/issues/22491), [Commit](https://github.com/open-webui/open-webui/commit/4a8f995c3fd4602ec2aaccc07efc4e8504dda84d)
 - 👥 **User groups display.** User groups in the admin panel profile preview now wrap properly instead of overflowing horizontally, with a scrollbar when the list is long. [#22547](https://github.com/open-webui/open-webui/pull/22547)
+- 🖼️ **Model profile image fallbacks.** Model profile images now display a fallback icon when they fail to load, and model icons no longer disappear on paginated Models pages in admin and workspace settings. [#22485](https://github.com/open-webui/open-webui/pull/22485)
 
 ### Changed
 
