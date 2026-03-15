@@ -2099,6 +2099,8 @@
 
 				return {
 					role: message.role,
+					// Preserve output items so backend can reconstruct tool_calls/tool-role messages (temp chats)
+					...(message.output ? { output: message.output } : {}),
 					...(message.role === 'user' && imageFiles.length > 0
 						? {
 								content: [
