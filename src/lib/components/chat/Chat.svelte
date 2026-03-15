@@ -358,14 +358,12 @@
 			});
 	})();
 
-	const startUsagePolling = () => {
+	const FAST_POLL_MS = 3000;
+	const SLOW_POLL_MS = 30000;
+
+	const startUsagePolling = (intervalMs = FAST_POLL_MS) => {
 		if (usagePollingInterval) clearInterval(usagePollingInterval);
-
-		// Initial fetch
-		fetchTokenUsage();
-
-		// Poll every 3 seconds
-		usagePollingInterval = setInterval(fetchTokenUsage, 3000);
+		usagePollingInterval = setInterval(fetchTokenUsage, intervalMs);
 	};
 
 	const stopUsagePolling = () => {
@@ -382,7 +380,9 @@
 	}
 
 	onMount(() => {
-		startUsagePolling();
+		// Fetch immediately, then poll slowly to keep rate limits fresh
+		fetchTokenUsage();
+		startUsagePolling(SLOW_POLL_MS);
 	});
 
 	onDestroy(() => {
@@ -471,8 +471,11 @@
 		console.log('saveSessionSelectedModels', selectedModels, sessionStorage.selectedModels);
 	};
 
+	const arraysEqual = (a: string[], b: string[]) =>
+		a.length === b.length && a.every((v, i) => v === b[i]);
+
 	let oldSelectedModelIds = [''];
-	$: if (JSON.stringify(selectedModelIds) !== JSON.stringify(oldSelectedModelIds)) {
+	$: if (!arraysEqual(selectedModelIds, oldSelectedModelIds)) {
 		onSelectedModelIdsChange();
 	}
 
@@ -551,8 +554,8 @@
 	const showMessage = async (message, ignoreSettings = false) => {
 		await tick();
 
-		const _chatId = JSON.parse(JSON.stringify($chatId));
-		let _messageId = JSON.parse(JSON.stringify(message.id));
+		const _chatId = $chatId;
+		let _messageId = message.id;
 
 		let messageChildrenIds = [];
 		if (_messageId === null) {
@@ -767,7 +770,7 @@
 		if (
 			$selectedFolder &&
 			selectedModels.filter((modelId) => modelId !== '').length > 0 &&
-			JSON.stringify($selectedFolder?.data?.model_ids) !== JSON.stringify(selectedModels)
+			!arraysEqual($selectedFolder?.data?.model_ids ?? [], selectedModels)
 		) {
 			const res = await updateFolderById(localStorage.token, $selectedFolder.id, {
 				data: {
@@ -873,7 +876,7 @@
 		selectedFolderSubscribe = selectedFolder.subscribe(async (folder) => {
 			if (
 				folder?.data?.model_ids &&
-				JSON.stringify(selectedModels) !== JSON.stringify(folder.data.model_ids)
+				!arraysEqual(selectedModels, folder.data.model_ids)
 			) {
 				selectedModels = folder.data.model_ids;
 
@@ -1684,9 +1687,7 @@
 				}
 
 				let value = choices[0]?.delta?.content ?? '';
-				if (message.content == '' && value == '\n') {
-					console.log('Empty response');
-				} else {
+				if (!(message.content == '' && value == '\n')) {
 					message.content += value;
 
 					if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
@@ -1843,7 +1844,7 @@
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
 
-		if (JSON.stringify(selectedModels) !== JSON.stringify(_selectedModels)) {
+		if (!arraysEqual(selectedModels, _selectedModels)) {
 			selectedModels = _selectedModels;
 		}
 
@@ -1907,7 +1908,7 @@
 		prompt = '';
 
 		const messages = createMessagesList(history, history.currentId);
-		const _files = JSON.parse(JSON.stringify(files));
+		const _files = structuredClone(files);
 
 		chatFiles.push(
 			..._files.filter((item) =>
@@ -1973,11 +1974,11 @@
 			scrollToBottom();
 		}
 
-		let _chatId = JSON.parse(JSON.stringify($chatId));
-		_history = JSON.parse(JSON.stringify(_history));
+		let _chatId = $chatId;
+		_history = structuredClone(_history);
 
 		const syncHistorySnapshot = () => {
-			history = JSON.parse(JSON.stringify(_history));
+			history = structuredClone(_history);
 		};
 		syncHistorySnapshot();
 
@@ -1986,7 +1987,7 @@
 			if (!nextMessage) {
 				return;
 			}
-			history.messages[messageId] = JSON.parse(JSON.stringify(nextMessage));
+			history.messages[messageId] = structuredClone(nextMessage);
 			history = { ...history };
 		};
 
@@ -2041,7 +2042,7 @@
 
 		await tick();
 
-		_history = JSON.parse(JSON.stringify(history));
+		_history = structuredClone(history);
 		// Save chat after all messages have been created
 		await saveChatHandler(_chatId, _history);
 
@@ -2299,6 +2300,7 @@
 					}
 
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
+					startUsagePolling(FAST_POLL_MS);
 					scrollToBottom();
 					await sendMessageSocket(
 						model,
@@ -2311,6 +2313,7 @@
 					);
 
 					if (chatEventEmitter) clearInterval(chatEventEmitter);
+					startUsagePolling(SLOW_POLL_MS);
 				} else {
 					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 				}
@@ -2376,7 +2379,7 @@
 			return fileExists;
 		});
 
-		let files = JSON.parse(JSON.stringify(chatFiles));
+		let files = structuredClone(chatFiles);
 		files.push(
 			...(userMessage?.files ?? []).filter((item) =>
 				['doc', 'text', 'file', 'note', 'chat', 'collection'].includes(item.type)
@@ -3027,14 +3030,16 @@
 		}
 
 		const messages = createMessagesList(history, responseMessageId);
-		const _chatId = JSON.parse(JSON.stringify($chatId));
+		const _chatId = $chatId;
 		const chatEventEmitter = await getChatEventEmitter(targetModelId, _chatId);
+		startUsagePolling(FAST_POLL_MS);
 
 		await sendMessageSocket(model, messages, history, responseMessageId, _chatId);
 
 		if (chatEventEmitter) {
 			clearInterval(chatEventEmitter);
 		}
+		startUsagePolling(SLOW_POLL_MS);
 
 		return true;
 	};
@@ -3067,7 +3072,7 @@
 
 	const continueResponse = async () => {
 		console.log('continueResponse');
-		const _chatId = JSON.parse(JSON.stringify($chatId));
+		const _chatId = $chatId;
 
 		if (history.currentId && history.messages[history.currentId].done == true) {
 			const responseMessage = history.messages[history.currentId];
@@ -3085,6 +3090,7 @@
 				.at(0);
 
 			if (model) {
+				startUsagePolling(FAST_POLL_MS);
 				await sendMessageSocket(
 					model,
 					createMessagesList(history, responseMessage.id),
@@ -3092,6 +3098,7 @@
 					responseMessage.id,
 					_chatId
 				);
+				startUsagePolling(SLOW_POLL_MS);
 			}
 		}
 	};

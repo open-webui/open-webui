@@ -280,7 +280,7 @@ class AnalyticsTable:
                 if record:
                     # Update existing record
                     log.info(f"📊 [Analytics.update_conversation] Updating existing record")
-                    record.total_input_tokens += token_in
+                    record.total_input_tokens = token_in
                     record.total_output_tokens += token_out
                     record.total_tokens += token_total
                     record.last_input_tokens = token_in

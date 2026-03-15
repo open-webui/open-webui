@@ -79,7 +79,7 @@
 
 		let message = history.messages[history.currentId];
 		while (message && (messagesCount !== null ? _messages.length <= messagesCount : true)) {
-			_messages.unshift({ ...message });
+			_messages.unshift(message);
 			message = message.parentId !== null ? history.messages[message.parentId] : null;
 		}
 
