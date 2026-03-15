@@ -14,6 +14,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
+	import { toPluginId } from '$lib/utils';
 
 	let formElement = null;
 	let loading = false;
@@ -45,8 +46,11 @@
 	};
 
 	$: if (name && !edit && !clone) {
-		id = name.replace(/\s+/g, '_').toLowerCase();
+		id = toPluginId(name);
 	}
+
+	const INVALID_PLUGIN_TITLE_MESSAGE =
+		'Please enter a title with at least one letter, number, or underscore so Open WebUI can generate an id.';
 
 	let codeEditor;
 	let boilerplate = `import os
@@ -157,9 +161,16 @@ class Tools:
 `;
 
 	const saveHandler = async () => {
+		const normalizedId = toPluginId(id || name);
+		if (!normalizedId) {
+			toast.error($i18n.t(INVALID_PLUGIN_TITLE_MESSAGE));
+			return;
+		}
+
+		id = normalizedId;
 		loading = true;
 		onSave({
-			id,
+			id: normalizedId,
 			name,
 			meta,
 			content,
