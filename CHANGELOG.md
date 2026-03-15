@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🛠️ **Ruff linter and formatter.** Added Ruff as the Python linter and formatter, replacing the black-based workflow for better code quality with near-instant execution. [#22576](https://github.com/open-webui/open-webui/pull/22576), [#22462](https://github.com/open-webui/open-webui/discussions/22462)
 - ✏️ **Markdown file editing.** Users can now edit and save Markdown files directly in the file navigator, with empty files automatically switching to editor mode for immediate editing. [Commit](https://github.com/open-webui/open-webui/commit/47e47e42af682e7f75c8359999f7cdf969bf903e)
 - 🍔 **Model bulk actions menu.** Users can now quickly enable, disable, show, or hide multiple models at once using a new hamburger menu on the workspace Models page filter bar, with actions respecting the current search and filter settings. [#22484](https://github.com/open-webui/open-webui/pull/22484)
+- 📂 **Files list pagination.** The files list API now supports pagination, returning paginated results with a total count for easier navigation through large file collections. [Commit](https://github.com/open-webui/open-webui/commit/f9756de693a93e918c037d757afddb7defc847e4)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for Finnish, Portuguese (Portugal), Catalan, Turkish, Japanese, Simplified Chinese, and Traditional Chinese were enhanced and expanded.
 
