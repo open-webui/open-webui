@@ -41,7 +41,7 @@
 		"prettier": "^3.3.3",
 		"prettier-plugin-svelte": "^3.2.6",
 		"sass-embedded": "^1.81.0",
-		"svelte": "^5.0.0",
+		"svelte": "^5.53.10",
 		"svelte-check": "^4.0.0",
 		"svelte-confetti": "^1.3.2",
 		"tailwindcss": "^4.0.0",
