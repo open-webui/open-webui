@@ -476,13 +476,13 @@ async def ldap_auth(
                 if sid_bytes:
                     user_id = convert_ad_sid_to_string(sid_bytes)
                     if user_id:
-                        log.info(f"Successfully extracted AD SID for user {username_list}: {user_id}")
+                        log.debug(f"Successfully extracted AD SID for user {username_list}: {user_id}")
                     else:
                         log.warning(f"Failed to convert AD SID for user {username_list}, will use UUID fallback")
             except Exception as e:
                 log.warning(f"Error extracting AD SID for user {username_list}: {str(e)}, will use UUID fallback")
         elif LDAP_USE_AD_SID:
-            log.warning(f"LDAP_USE_AD_SID enabled but objectSid not found for user {username_list}, will use UUID fallback")
+            log.debug(f"LDAP_USE_AD_SID enabled but objectSid not found for user {username_list}")
 
         user_groups = []
         if ENABLE_LDAP_GROUP_MANAGEMENT and LDAP_ATTRIBUTE_FOR_GROUPS in entry:
@@ -553,10 +553,8 @@ async def ldap_auth(
                 try:
                     role = 'admin' if not Users.has_users(db=db) else request.app.state.config.DEFAULT_USER_ROLE
 
-                    kwargs = {}
                     if user_id:
-                        log.info(f"Creating LDAP user with AD SID as ID: {user_id}")
-                        kwargs["id"] = user_id
+                        log.debug(f"Creating LDAP user with AD SID as ID: {user_id}")
 
                     user = Auths.insert_new_auth(
                         email=email,
@@ -564,7 +562,7 @@ async def ldap_auth(
                         name=cn,
                         role=role,
                         db=db,
-                        **kwargs,
+                        id=user_id,
                     )
 
                     if not user:
