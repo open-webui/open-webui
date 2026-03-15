@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📋 **SBOM generation script.** A new script for generating CycloneDX Software Bill of Materials is now available in the scripts directory. [Commit](https://github.com/open-webui/open-webui/commit/39100eca4915e4fe86a6912aa97dde86ed72e015)
 - 🛠️ **Ruff linter and formatter.** Added Ruff as the Python linter and formatter, replacing the black-based workflow for better code quality with near-instant execution. [#22576](https://github.com/open-webui/open-webui/pull/22576), [#22462](https://github.com/open-webui/open-webui/discussions/22462)
 - ✏️ **Markdown file editing.** Users can now edit and save Markdown files directly in the file navigator, with empty files automatically switching to editor mode for immediate editing. [Commit](https://github.com/open-webui/open-webui/commit/47e47e42af682e7f75c8359999f7cdf969bf903e)
+- 🍔 **Model bulk actions menu.** Users can now quickly enable, disable, show, or hide multiple models at once using a new hamburger menu on the workspace Models page filter bar, with actions respecting the current search and filter settings. [#22484](https://github.com/open-webui/open-webui/pull/22484)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for Finnish, Portuguese (Portugal), Catalan, Turkish, Japanese, Simplified Chinese, and Traditional Chinese were enhanced and expanded.
 
