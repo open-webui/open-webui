@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧠 **Memory management search and sort.** Users can now search and sort their personal memories in the Memory management modal, making it easier to find specific memories. [Commit](https://github.com/open-webui/open-webui/commit/47ab4c71d50fd631b04c95f2febb085dd0a13083)
 - 📋 **SBOM generation script.** A new script for generating CycloneDX Software Bill of Materials is now available in the scripts directory. [Commit](https://github.com/open-webui/open-webui/commit/39100eca4915e4fe86a6912aa97dde86ed72e015)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 Translations for Finnish, Portuguese (Portugal), Catalan, and Turkish were enhanced and expanded.
+- 🌐 Translations for Finnish, Portuguese (Portugal), Catalan, Turkish, and Japanese were enhanced and expanded.
 
 ### Fixed
 
