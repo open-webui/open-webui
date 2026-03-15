@@ -1,0 +1,49 @@
+name: Ruff
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'backend/**'
+      - 'pyproject.toml'
+  pull_request:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'backend/**'
+      - 'pyproject.toml'
+
+jobs:
+  ruff:
+    name: 'Lint & Format Backend'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed Python files
+        id: changed
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE=${{ github.event.pull_request.base.sha }}
+          else
+            BASE=${{ github.event.before }}
+          fi
+          FILES=$(git diff --name-only --diff-filter=ACMR "$BASE" HEAD -- 'backend/**.py' | xargs)
+          echo "files=$FILES" >> "$GITHUB_OUTPUT"
+
+      - name: Ruff check
+        if: steps.changed.outputs.files != ''
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: check ${{ steps.changed.outputs.files }}
+
+      - name: Ruff format
+        if: steps.changed.outputs.files != ''
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: format --check ${{ steps.changed.outputs.files }}
