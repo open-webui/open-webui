@@ -59,9 +59,12 @@ async def redis_cleanup_task(redis: Redis, task_id: str, item_id: Optional[str])
     pipe.hdel(REDIS_TASKS_KEY, task_id)
     if item_id:
         pipe.srem(f"{REDIS_ITEM_TASKS_KEY}:{item_id}", task_id)
-        if (await pipe.scard(f"{REDIS_ITEM_TASKS_KEY}:{item_id}").execute())[-1] == 0:
-            pipe.delete(f"{REDIS_ITEM_TASKS_KEY}:{item_id}")  # Remove if empty set
-    await pipe.execute()
+        await pipe.execute()
+        # Remove the set key entirely if no tasks remain for this item
+        if await redis.scard(f"{REDIS_ITEM_TASKS_KEY}:{item_id}") == 0:
+            await redis.delete(f"{REDIS_ITEM_TASKS_KEY}:{item_id}")
+    else:
+        await pipe.execute()
 
 
 async def redis_list_tasks(redis: Redis) -> List[str]:
@@ -146,6 +149,8 @@ async def stop_task(redis, task_id: str):
     Cancel a running task and remove it from the global task list.
     """
     if redis:
+        # Look up the item_id before cleanup so we can remove the set entry too
+        item_id = await redis.hget(REDIS_TASKS_KEY, task_id)
         # PUBSUB: All instances check if they have this task, and stop if so.
         await redis_send_command(
             redis,
@@ -154,8 +159,10 @@ async def stop_task(redis, task_id: str):
                 "task_id": task_id,
             },
         )
-        # Optionally check if task_id still in Redis a few moments later for feedback?
-        return {"status": True, "message": f"Stop signal sent for {task_id}"}
+        # Always clean Redis directly — hdel/srem are idempotent, safe even
+        # if the done_callback on the owning process also fires cleanup.
+        await redis_cleanup_task(redis, task_id, item_id or None)
+        return {"status": True, "message": f"Task {task_id} stopped."}
 
     task = tasks.pop(task_id, None)
     if not task:
