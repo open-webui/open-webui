@@ -804,7 +804,6 @@ def handle_responses_streaming_event(
             elif type_name not in ["completed", "failed"]:
                 output_index = data.get("output_index", len(current_output) - 1)
                 if current_output and 0 <= output_index < len(current_output):
-
                     key = (
                         "text"
                         if type_name
@@ -973,10 +972,12 @@ def process_tool_result(
             tool_result_embeds.append(content)
 
             if 200 <= tool_result.status_code < 300:
+                custom_message = tool_result.headers.get("Tool-Result-Message", "")
                 tool_result = {
                     "status": "success",
                     "code": "ui_component",
-                    "message": f"{tool_function_name}: Embedded UI result is active and visible to the user.",
+                    "message": custom_message
+                    or f"{tool_function_name}: Embedded UI result is active and visible to the user.",
                 }
             elif 400 <= tool_result.status_code < 500:
                 tool_result = {
@@ -1026,6 +1027,10 @@ def process_tool_result(
                     "Location",
                     tool_response_headers.get("location", ""),
                 )
+                custom_message = tool_response_headers.get(
+                    "Tool-Result-Message",
+                    tool_response_headers.get("tool-result-message", ""),
+                )
 
                 if "text/html" in content_type:
                     # Display as iframe embed
@@ -1033,14 +1038,16 @@ def process_tool_result(
                     tool_result = {
                         "status": "success",
                         "code": "ui_component",
-                        "message": f"{tool_function_name}: Embedded UI result is active and visible to the user.",
+                        "message": custom_message
+                        or f"{tool_function_name}: Embedded UI result is active and visible to the user.",
                     }
                 elif location:
                     tool_result_embeds.append(location)
                     tool_result = {
                         "status": "success",
                         "code": "ui_component",
-                        "message": f"{tool_function_name}: Embedded UI result is active and visible to the user.",
+                        "message": custom_message
+                        or f"{tool_function_name}: Embedded UI result is active and visible to the user.",
                     }
 
     tool_result_files = []
@@ -1192,7 +1199,7 @@ async def chat_completion_tools_handler(
 
         recent_messages = messages[-4:] if len(messages) > 4 else messages
         chat_history = "\n".join(
-            f"{message['role'].upper()}: \"\"\"{get_content_from_message(message)}\"\"\""
+            f'{message["role"].upper()}: """{get_content_from_message(message)}"""'
             for message in recent_messages
         )
 
@@ -1610,7 +1617,6 @@ def get_images_from_messages(message_list):
     images = []
 
     for message in reversed(message_list):
-
         message_images = []
         for file in message.get("files", []):
             if file.get("type") == "image":
@@ -1949,8 +1955,10 @@ async def chat_completion_files_handler(
                 request=request,
                 items=files,
                 queries=queries,
-                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
-                    query, prefix=prefix, user=user
+                embedding_function=lambda query, prefix: (
+                    request.app.state.EMBEDDING_FUNCTION(
+                        query, prefix=prefix, user=user
+                    )
                 ),
                 k=request.app.state.config.TOP_K,
                 reranking_function=(
@@ -3327,7 +3335,6 @@ async def streaming_chat_response_handler(response, ctx):
                     # Use the output item's own text for tag detection
                     item_text = get_last_text(output)
                     for start_tag, end_tag in tags:
-
                         start_tag_pattern = rf"{re.escape(start_tag)}"
                         if start_tag.startswith("<") and start_tag.endswith(">"):
                             start_tag_pattern = (
@@ -3547,7 +3554,9 @@ async def streaming_chat_response_handler(response, ctx):
             content = (
                 message.get("content", "")
                 if message
-                else last_assistant_message if last_assistant_message else ""
+                else last_assistant_message
+                if last_assistant_message
+                else ""
             )
 
             # Initialize output: use existing from message if continuing, else create new
@@ -4228,7 +4237,6 @@ async def streaming_chat_response_handler(response, ctx):
                     len(tool_calls) > 0
                     and tool_call_retries < CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES
                 ):
-
                     tool_call_retries += 1
 
                     response_tool_calls = tool_calls.pop(0)
@@ -4572,7 +4580,6 @@ async def streaming_chat_response_handler(response, ctx):
                         and output[-1].get("type") == "open_webui:code_interpreter"
                         and retries < MAX_RETRIES
                     ):
-
                         await event_emitter(
                             {
                                 "type": "chat:completion",
@@ -4665,7 +4672,6 @@ async def streaming_chat_response_handler(response, ctx):
                                     if isinstance(stdout, str):
                                         stdoutLines = stdout.split("\n")
                                         for idx, line in enumerate(stdoutLines):
-
                                             if "data:image/png;base64" in line:
                                                 image_url = get_image_url_from_base64(
                                                     request,
