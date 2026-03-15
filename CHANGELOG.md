@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - 🔍 **Web search result limit.** The configured web search result count now acts as a maximum limit, preventing models from requesting more results than administrators allow. [#22577](https://github.com/open-webui/open-webui/pull/22577)
+- 🔌 **MCP integration visibility.** MCP (Streamable HTTP) integrations are now hidden from user-level settings, matching the intended behavior where only administrators can configure MCP connections through the admin panel. User-level connections now show the connection type as read-only. [#22615](https://github.com/open-webui/open-webui/issues/22615), [Commit](https://github.com/open-webui/open-webui/commit/1eef5b4f6a718c0fcf3605f1ed62669aca07b454)
 
 ## [0.8.10] - 2026-03-08
 
