@@ -9,6 +9,7 @@
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
+	import { toPluginId } from '$lib/utils';
 
 	let formElement = null;
 	let loading = false;
@@ -36,7 +37,7 @@
 	};
 
 	$: if (name && !edit && !clone) {
-		id = name.replace(/\s+/g, '_').toLowerCase();
+		id = toPluginId(name);
 	}
 
 	let codeEditor;
@@ -256,9 +257,11 @@ class Pipe:
 `;
 
 	const saveHandler = async () => {
+		const normalizedId = toPluginId(id || name);
+		id = normalizedId;
 		loading = true;
 		onSave({
-			id,
+			id: normalizedId,
 			name,
 			meta,
 			content

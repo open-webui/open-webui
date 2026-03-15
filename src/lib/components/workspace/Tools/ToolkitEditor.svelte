@@ -14,6 +14,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
+	import { toPluginId } from '$lib/utils';
 
 	let formElement = null;
 	let loading = false;
@@ -45,7 +46,7 @@
 	};
 
 	$: if (name && !edit && !clone) {
-		id = name.replace(/\s+/g, '_').toLowerCase();
+		id = toPluginId(name);
 	}
 
 	let codeEditor;
@@ -157,9 +158,11 @@ class Tools:
 `;
 
 	const saveHandler = async () => {
+		const normalizedId = toPluginId(id || name);
+		id = normalizedId;
 		loading = true;
 		onSave({
-			id,
+			id: normalizedId,
 			name,
 			meta,
 			content,

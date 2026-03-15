@@ -1401,6 +1401,24 @@ export const slugify = (str: string): string => {
 	);
 };
 
+export const toPluginId = (value: string): string => {
+	let pluginId = value
+		.normalize('NFKC')
+		.trim()
+		.replace(/\s+/gu, '_')
+		.replace(/[^\p{L}\p{N}\p{M}_]/gu, '')
+		.replace(/_+/g, '_')
+		.replace(/^_+|_+$/g, '')
+		.toLowerCase();
+
+	// Python identifiers cannot start with a number, so prefix one when needed.
+	if (pluginId !== '' && /^\p{N}/u.test(pluginId)) {
+		pluginId = `_${pluginId}`;
+	}
+
+	return pluginId;
+};
+
 export const extractInputVariables = (text: string): Record<string, any> => {
 	const regex = /{{\s*([^|}\s]+)\s*\|\s*([^}]+)\s*}}/g;
 	const regularRegex = /{{\s*([^|}\s]+)\s*}}/g;
