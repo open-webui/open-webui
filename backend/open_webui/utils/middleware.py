@@ -966,6 +966,12 @@ def process_tool_result(
     tool_result_embeds = []
     EXTERNAL_TOOL_TYPES = ("external", "action", "terminal")
 
+    custom_message = None
+    if isinstance(tool_result, tuple) and len(tool_result) == 2 and isinstance(tool_result[0], HTMLResponse):
+        tool_result, custom_message = tool_result
+        if custom_message is not None:
+            custom_message = custom_message if isinstance(custom_message, str) else json.dumps(custom_message, indent=2)
+
     if isinstance(tool_result, HTMLResponse):
         content_disposition = tool_result.headers.get("Content-Disposition", "")
         if "inline" in content_disposition:
@@ -976,7 +982,8 @@ def process_tool_result(
                 tool_result = {
                     "status": "success",
                     "code": "ui_component",
-                    "message": f"{tool_function_name}: Embedded UI result is active and visible to the user.",
+                    "message": custom_message
+                    or f"{tool_function_name}: Embedded UI result is active and visible to the user.",
                 }
             elif 400 <= tool_result.status_code < 500:
                 tool_result = {
