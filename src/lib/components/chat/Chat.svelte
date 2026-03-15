@@ -2024,7 +2024,7 @@
 			.map((token) => decodeURIComponent(JSON.parse(`"${token.replace(/"/g, '\\"')}"`)));
 	};
 
-	const sendMessageSocket = async (model, _messages, _history, responseMessageId, _chatId) => {
+	const sendMessageSocket = async (model, _messages, _history, responseMessageId, _chatId, { continuePrompt = null } = {}) => {
 		const responseMessage = _history.messages[responseMessageId];
 		const userMessage = _history.messages[responseMessage.parentId];
 
@@ -2120,6 +2120,14 @@
 				};
 			})
 			.filter((message) => message?.role === 'user' || message?.content?.trim());
+
+		// Add continue prompt if this is a continuation request
+		if (continuePrompt) {
+			messages.push({
+				role: 'user',
+				content: continuePrompt
+			});
+		}
 
 		const toolIds = [];
 		const toolServerIds = [];
@@ -2450,7 +2458,8 @@
 					createMessagesList(history, responseMessage.id),
 					history,
 					responseMessage.id,
-					_chatId
+					_chatId,
+					{ continuePrompt: 'Continue' }
 				);
 			}
 		}
