@@ -41,7 +41,7 @@ class ExternalDocumentLoader(BaseLoader):
 
         try:
             headers["X-Filename"] = quote(os.path.basename(self.file_path))
-        except:
+        except Exception:
             pass
 
         if self.user is not None:

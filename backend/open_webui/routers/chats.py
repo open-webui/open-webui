@@ -1095,7 +1095,7 @@ async def send_chat_message_event_by_id(
         else:
             return False
         return True
-    except:
+    except Exception:
         return False
 
 
