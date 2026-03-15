@@ -1,5 +1,4 @@
 <script>
-	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 
@@ -40,9 +39,6 @@
 	$: if (name && !edit && !clone) {
 		id = toPluginId(name);
 	}
-
-	const INVALID_PLUGIN_TITLE_MESSAGE =
-		'Please enter a title with at least one letter, number, or underscore so Open WebUI can generate an id.';
 
 	let codeEditor;
 	let boilerplate = `"""
@@ -262,11 +258,6 @@ class Pipe:
 
 	const saveHandler = async () => {
 		const normalizedId = toPluginId(id || name);
-		if (!normalizedId) {
-			toast.error($i18n.t(INVALID_PLUGIN_TITLE_MESSAGE));
-			return;
-		}
-
 		id = normalizedId;
 		loading = true;
 		onSave({

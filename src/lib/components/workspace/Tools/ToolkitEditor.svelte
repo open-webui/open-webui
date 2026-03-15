@@ -49,9 +49,6 @@
 		id = toPluginId(name);
 	}
 
-	const INVALID_PLUGIN_TITLE_MESSAGE =
-		'Please enter a title with at least one letter, number, or underscore so Open WebUI can generate an id.';
-
 	let codeEditor;
 	let boilerplate = `import os
 import requests
@@ -162,11 +159,6 @@ class Tools:
 
 	const saveHandler = async () => {
 		const normalizedId = toPluginId(id || name);
-		if (!normalizedId) {
-			toast.error($i18n.t(INVALID_PLUGIN_TITLE_MESSAGE));
-			return;
-		}
-
 		id = normalizedId;
 		loading = true;
 		onSave({
