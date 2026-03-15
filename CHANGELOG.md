@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📦 **Document loader fallbacks.** Excel and PowerPoint files can now be processed even when the unstructured package is not installed, using pandas and python-pptx as fallback loaders. [Commit](https://github.com/open-webui/open-webui/commit/6862d618ee17f95d3cae78819ed993e7fbc7e632)
 - 🧠 **Memory management search and sort.** Users can now search and sort their personal memories in the Memory management modal, making it easier to find specific memories. [Commit](https://github.com/open-webui/open-webui/commit/47ab4c71d50fd631b04c95f2febb085dd0a13083)
 - 📋 **SBOM generation script.** A new script for generating CycloneDX Software Bill of Materials is now available in the scripts directory. [Commit](https://github.com/open-webui/open-webui/commit/39100eca4915e4fe86a6912aa97dde86ed72e015)
+- 🛠️ **Ruff linter and formatter.** Added Ruff as the Python linter and formatter, replacing the black-based workflow for better code quality with near-instant execution. [#22576](https://github.com/open-webui/open-webui/pull/22576), [#22462](https://github.com/open-webui/open-webui/discussions/22462)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for Finnish, Portuguese (Portugal), Catalan, Turkish, and Japanese were enhanced and expanded.
 
