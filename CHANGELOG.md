@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🛠️ **Ruff linter and formatter.** Added Ruff as the Python linter and formatter, replacing the black-based workflow for better code quality with near-instant execution. [#22576](https://github.com/open-webui/open-webui/pull/22576), [#22462](https://github.com/open-webui/open-webui/discussions/22462)
 - ✏️ **Markdown file editing.** Users can now edit and save Markdown files directly in the file navigator, with empty files automatically switching to editor mode for immediate editing. [Commit](https://github.com/open-webui/open-webui/commit/47e47e42af682e7f75c8359999f7cdf969bf903e)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 Translations for Finnish, Portuguese (Portugal), Catalan, Turkish, and Japanese were enhanced and expanded.
+- 🌐 Translations for Finnish, Portuguese (Portugal), Catalan, Turkish, Japanese, Simplified Chinese, and Traditional Chinese were enhanced and expanded.
 
 ### Fixed
 
