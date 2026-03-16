@@ -1893,10 +1893,14 @@ async def chat_completion(
                 pass
             finally:
                 raise  # re-raise to ensure proper task cancellation handling
-        except HTTPException:
-            raise
         except Exception as e:
             log.debug(f"Error processing chat payload: {e}")
+
+            error_content = (
+                str(e.detail)
+                if isinstance(e, HTTPException) and e.detail is not None
+                else str(e)
+            )
             if metadata.get("chat_id") and metadata.get("message_id"):
                 # Update the chat message with the error
                 try:
@@ -1906,7 +1910,7 @@ async def chat_completion(
                             metadata["message_id"],
                             {
                                 "parentId": metadata.get("parent_message_id", None),
-                                "error": {"content": str(e)},
+                                "error": {"content": error_content},
                             },
                         )
 
@@ -1914,7 +1918,7 @@ async def chat_completion(
                     await event_emitter(
                         {
                             "type": "chat:message:error",
-                            "data": {"error": {"content": str(e)}},
+                            "data": {"error": {"content": error_content}},
                         }
                     )
                     await event_emitter(
@@ -1923,6 +1927,9 @@ async def chat_completion(
 
                 except Exception:
                     pass
+
+            if isinstance(e, HTTPException):
+                raise
         finally:
             try:
                 if mcp_clients := metadata.get("mcp_clients"):
