@@ -1,8 +1,16 @@
+"""
+NOTE: This vector database integration is community-supported and maintained on a best-effort basis.
+"""
+
 from pymilvus import MilvusClient as Client
 from pymilvus import FieldSchema, DataType
+from pymilvus import connections, Collection
+
 import json
 import logging
 from typing import Optional
+
+from open_webui.retrieval.vector.utils import process_metadata
 from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
@@ -18,11 +26,11 @@ from open_webui.config import (
     MILVUS_HNSW_M,
     MILVUS_HNSW_EFCONSTRUCTION,
     MILVUS_IVF_FLAT_NLIST,
+    MILVUS_DISKANN_MAX_DEGREE,
+    MILVUS_DISKANN_SEARCH_LIST_SIZE,
 )
-from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 class MilvusClient(VectorDBBase):
@@ -127,12 +135,18 @@ class MilvusClient(VectorDBBase):
         elif index_type == "IVF_FLAT":
             index_creation_params = {"nlist": MILVUS_IVF_FLAT_NLIST}
             log.info(f"IVF_FLAT params: {index_creation_params}")
+        elif index_type == "DISKANN":
+            index_creation_params = {
+                "max_degree": MILVUS_DISKANN_MAX_DEGREE,
+                "search_list_size": MILVUS_DISKANN_SEARCH_LIST_SIZE,
+            }
+            log.info(f"DISKANN params: {index_creation_params}")
         elif index_type in ["FLAT", "AUTOINDEX"]:
             log.info(f"Using {index_type} index with no specific build-time params.")
         else:
             log.warning(
                 f"Unsupported MILVUS_INDEX_TYPE: '{index_type}'. "
-                f"Supported types: HNSW, IVF_FLAT, FLAT, AUTOINDEX. "
+                f"Supported types: HNSW, IVF_FLAT, DISKANN, FLAT, AUTOINDEX. "
                 f"Milvus will use its default for the collection if this type is not directly supported for index creation."
             )
             # For unsupported types, pass the type directly to Milvus; it might handle it or use a default.
@@ -169,7 +183,11 @@ class MilvusClient(VectorDBBase):
         )
 
     def search(
-        self, collection_name: str, vectors: list[list[float | int]], limit: int
+        self,
+        collection_name: str,
+        vectors: list[list[float | int]],
+        filter: Optional[dict] = None,
+        limit: int = 10,
     ) -> Optional[SearchResult]:
         # Search for the nearest neighbor items based on the vectors and return 'limit' number of results.
         collection_name = collection_name.replace("-", "_")
@@ -185,86 +203,54 @@ class MilvusClient(VectorDBBase):
         )
         return self._result_to_search_result(result)
 
-    def query(self, collection_name: str, filter: dict, limit: Optional[int] = None):
-        # Construct the filter string for querying
+    def query(self, collection_name: str, filter: dict, limit: int = -1):
+        connections.connect(uri=MILVUS_URI, token=MILVUS_TOKEN, db_name=MILVUS_DB)
+
         collection_name = collection_name.replace("-", "_")
         if not self.has_collection(collection_name):
             log.warning(
                 f"Query attempted on non-existent collection: {self.collection_prefix}_{collection_name}"
             )
             return None
-        filter_string = " && ".join(
-            [
-                f'metadata["{key}"] == {json.dumps(value)}'
-                for key, value in filter.items()
-            ]
-        )
-        max_limit = 16383  # The maximum number of records per request
-        all_results = []
-        if limit is None:
-            # Milvus default limit for query if not specified is 16384, but docs mention iteration.
-            # Let's set a practical high number if "all" is intended, or handle true pagination.
-            # For now, if limit is None, we'll fetch in batches up to a very large number.
-            # This part could be refined based on expected use cases for "get all".
-            # For this function signature, None implies "as many as possible" up to Milvus limits.
-            limit = (
-                16384 * 10
-            )  # A large number to signify fetching many, will be capped by actual data or max_limit per call.
-            log.info(
-                f"Limit not specified for query, fetching up to {limit} results in batches."
-            )
 
-        # Initialize offset and remaining to handle pagination
-        offset = 0
-        remaining = limit
+        filter_expressions = []
+        for key, value in filter.items():
+            if isinstance(value, str):
+                filter_expressions.append(f'metadata["{key}"] == "{value}"')
+            else:
+                filter_expressions.append(f'metadata["{key}"] == {value}')
+
+        filter_string = " && ".join(filter_expressions)
+
+        collection = Collection(f"{self.collection_prefix}_{collection_name}")
+        collection.load()
 
         try:
             log.info(
                 f"Querying collection {self.collection_prefix}_{collection_name} with filter: '{filter_string}', limit: {limit}"
             )
-            # Loop until there are no more items to fetch or the desired limit is reached
-            while remaining > 0:
-                current_fetch = min(
-                    max_limit, remaining if isinstance(remaining, int) else max_limit
-                )
-                log.debug(
-                    f"Querying with offset: {offset}, current_fetch: {current_fetch}"
-                )
 
-                results = self.client.query(
-                    collection_name=f"{self.collection_prefix}_{collection_name}",
-                    filter=filter_string,
-                    output_fields=[
-                        "id",
-                        "data",
-                        "metadata",
-                    ],  # Explicitly list needed fields. Vector not usually needed in query.
-                    limit=current_fetch,
-                    offset=offset,
-                )
+            iterator = collection.query_iterator(
+                expr=filter_string,
+                output_fields=[
+                    "id",
+                    "data",
+                    "metadata",
+                ],
+                limit=limit if limit > 0 else -1,
+            )
 
-                if not results:
-                    log.debug("No more results from query.")
+            all_results = []
+            while True:
+                batch = iterator.next()
+                if not batch:
+                    iterator.close()
                     break
+                all_results.extend(batch)
 
-                all_results.extend(results)
-                results_count = len(results)
-                log.debug(f"Fetched {results_count} results in this batch.")
+            log.debug(f"Total results from query: {len(all_results)}")
+            return self._result_to_get_result([all_results] if all_results else [[]])
 
-                if isinstance(remaining, int):
-                    remaining -= results_count
-
-                offset += results_count
-
-                # Break the loop if the results returned are less than the requested fetch count (means end of data)
-                if results_count < current_fetch:
-                    log.debug(
-                        "Fetched less than requested, assuming end of results for this query."
-                    )
-                    break
-
-            log.info(f"Total results from query: {len(all_results)}")
-            return self._result_to_get_result([all_results])
         except Exception as e:
             log.exception(
                 f"Error querying collection {self.collection_prefix}_{collection_name} with filter '{filter_string}' and limit {limit}: {e}"
@@ -279,7 +265,7 @@ class MilvusClient(VectorDBBase):
         )
         # Using query with a trivial filter to get all items.
         # This will use the paginated query logic.
-        return self.query(collection_name=collection_name, filter={}, limit=None)
+        return self.query(collection_name=collection_name, filter={}, limit=-1)
 
     def insert(self, collection_name: str, items: list[VectorItem]):
         # Insert the items into the collection, if the collection does not exist, it will be created.
@@ -311,7 +297,7 @@ class MilvusClient(VectorDBBase):
                     "id": item["id"],
                     "vector": item["vector"],
                     "data": {"text": item["text"]},
-                    "metadata": item["metadata"],
+                    "metadata": process_metadata(item["metadata"]),
                 }
                 for item in items
             ],
@@ -347,7 +333,7 @@ class MilvusClient(VectorDBBase):
                     "id": item["id"],
                     "vector": item["vector"],
                     "data": {"text": item["text"]},
-                    "metadata": item["metadata"],
+                    "metadata": process_metadata(item["metadata"]),
                 }
                 for item in items
             ],

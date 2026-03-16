@@ -38,13 +38,14 @@ class ERROR_MESSAGES(str, Enum):
     ID_TAKEN = "Uh-oh! This id is already registered. Please choose another id string."
     MODEL_ID_TAKEN = "Uh-oh! This model id is already registered. Please choose another model id string."
     NAME_TAG_TAKEN = "Uh-oh! This name tag is already registered. Please choose another name tag string."
+    MODEL_ID_TOO_LONG = "The model id is too long. Please make sure your model id is less than 256 characters long."
 
     INVALID_TOKEN = (
         "Your session has expired or the token is invalid. Please sign in again."
     )
     INVALID_CRED = "The email or password provided is incorrect. Please check for typos and try logging in again."
     INVALID_EMAIL_FORMAT = "The email format you entered is invalid. Please double-check and make sure you're using a valid email address (e.g., yourname@example.com)."
-    INVALID_PASSWORD = (
+    INCORRECT_PASSWORD = (
         "The password provided is incorrect. Please check for typos and try again."
     )
     INVALID_TRUSTED_HEADER = "Your provider has not provided a trusted header. Please contact your administrator for assistance."
@@ -104,6 +105,10 @@ class ERROR_MESSAGES(str, Enum):
     )
     FILE_NOT_PROCESSED = "Extracted content is not available for this file. Please ensure that the file is processed before proceeding."
 
+    INVALID_PASSWORD = lambda err="": (
+        err if err else "The password does not meet the required validation criteria."
+    )
+
 
 class TASKS(str, Enum):
     def __str__(self) -> str:
@@ -111,6 +116,7 @@ class TASKS(str, Enum):
 
     DEFAULT = lambda task="": f"{task if task else 'generation'}"
     TITLE_GENERATION = "title_generation"
+    FOLLOW_UP_GENERATION = "follow_up_generation"
     TAGS_GENERATION = "tags_generation"
     EMOJI_GENERATION = "emoji_generation"
     QUERY_GENERATION = "query_generation"

@@ -1,13 +1,17 @@
 <script lang="ts">
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount, getContext } from 'svelte';
 	import panzoom, { type PanZoom } from 'panzoom';
 
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
+	import XMark from '$lib/components/icons/XMark.svelte';
+
 	export let show = false;
 	export let src = '';
 	export let alt = '';
+
+	const i18n = getContext('i18n');
 
 	let mounted = false;
 
@@ -82,16 +86,7 @@
 						show = false;
 					}}
 				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="2"
-						stroke="currentColor"
-						class="w-6 h-6"
-					>
-						<path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-					</svg>
+					<XMark className={'size-6'} />
 				</button>
 			</div>
 
@@ -107,9 +102,10 @@
 
 							const mimeType = blob.type || 'image/png';
 							// create file name based on the MIME type, alt should be a valid file name with extension
-							const fileName = alt
-								? `${alt.replaceAll('.', '')}.${mimeType.split('/')[1]}`
-								: 'download.png';
+							const fileName = `${$i18n
+								.t('Generated Image')
+								.toLowerCase()
+								.replace(/ /g, '_')}.${mimeType.split('/')[1]}`;
 
 							// Use FileSaver to save the blob
 							saveAs(blob, fileName);
@@ -126,9 +122,10 @@
 									const blobWithType = new Blob([blob], { type: mimeType });
 
 									// create file name based on the MIME type, alt should be a valid file name with extension
-									const fileName = alt
-										? `${alt.replaceAll('.', '')}.${mimeType.split('/')[1]}`
-										: 'download.png';
+									const fileName = `${$i18n
+										.t('Generated Image')
+										.toLowerCase()
+										.replace(/ /g, '_')}.${mimeType.split('/')[1]}`;
 
 									// Use FileSaver to save the blob
 									saveAs(blobWithType, fileName);
@@ -153,9 +150,10 @@
 									const blobWithType = new Blob([blob], { type: mimeType });
 
 									// create file name based on the MIME type, alt should be a valid file name with extension
-									const fileName = alt
-										? `${alt.replaceAll('.', '')}.${mimeType.split('/')[1]}`
-										: 'download.png';
+									const fileName = `${$i18n
+										.t('Generated Image')
+										.toLowerCase()
+										.replace(/ /g, '_')}.${mimeType.split('/')[1]}`;
 
 									// Use FileSaver to save the blob
 									saveAs(blobWithType, fileName);

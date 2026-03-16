@@ -26,7 +26,7 @@
 		});
 
 		if (evaluationConfig) {
-			toast.success('Settings saved successfully');
+			toast.success($i18n.t('Settings saved successfully!'));
 			models.set(
 				await getModels(
 					localStorage.token,
@@ -104,9 +104,9 @@
 		{#if evaluationConfig !== null}
 			<div class="">
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="mb-2.5 flex w-full justify-between">
 						<div class=" text-xs font-medium">{$i18n.t('Arena Models')}</div>
@@ -119,7 +119,7 @@
 
 				{#if evaluationConfig.ENABLE_EVALUATION_ARENA_MODELS}
 					<div class="mb-3">
-						<div class=" mb-2.5 text-base font-medium flex justify-between items-center">
+						<div class=" mt-0.5 mb-2.5 text-base font-medium flex justify-between items-center">
 							<div>
 								{$i18n.t('Manage')}
 							</div>
@@ -139,7 +139,7 @@
 							</div>
 						</div>
 
-						<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+						<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 						<div class="flex flex-col gap-2">
 							{#if (evaluationConfig?.EVALUATION_ARENA_MODELS ?? []).length > 0}

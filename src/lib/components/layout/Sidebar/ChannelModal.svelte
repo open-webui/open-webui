@@ -1,25 +1,40 @@
 <script lang="ts">
 	import { getContext, createEventDispatcher, onMount } from 'svelte';
-	import { createNewChannel, deleteChannelById } from '$lib/apis/channels';
-
-	import Modal from '$lib/components/common/Modal.svelte';
-	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
-	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	const i18n = getContext('i18n');
 
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	const i18n = getContext('i18n');
+
+	import { createNewChannel, deleteChannelById } from '$lib/apis/channels';
+	import { user } from '$lib/stores';
+
+	import Spinner from '$lib/components/common/Spinner.svelte';
+	import Modal from '$lib/components/common/Modal.svelte';
+	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
+	import MemberSelector from '$lib/components/workspace/common/MemberSelector.svelte';
+	import Visibility from '$lib/components/workspace/common/Visibility.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import WebhooksModal from '$lib/components/channel/WebhooksModal.svelte';
 
 	export let show = false;
 	export let onSubmit: Function = () => {};
 	export let onUpdate: Function = () => {};
 
-	export let channel = null;
+	export let channel: any = null;
 	export let edit = false;
 
+	let channelTypes = ['group', 'dm'];
+	let type = '';
 	let name = '';
-	let accessControl = {};
+
+	let isPrivate = null;
+	let accessGrants = [];
+
+	let groupIds = [];
+	let userIds = [];
 
 	let loading = false;
 
@@ -27,48 +42,103 @@
 		name = name.replace(/\s/g, '-').toLocaleLowerCase();
 	}
 
+	$: onTypeChange(type);
+
+	const onTypeChange = (type) => {
+		if (type === 'group') {
+			if (isPrivate === null) {
+				isPrivate = true;
+			}
+		} else {
+			isPrivate = null;
+		}
+	};
+
 	const submitHandler = async () => {
 		loading = true;
+		if (name.length > 128) {
+			toast.error($i18n.t('Channel name must be less than 128 characters'));
+			loading = false;
+			return;
+		}
+
 		await onSubmit({
+			type: type,
 			name: name.replace(/\s/g, '-'),
-			access_control: accessControl
+			is_private: type === 'group' ? (isPrivate ?? true) : null,
+			access_grants: type === '' ? accessGrants : [],
+			group_ids: groupIds,
+			user_ids: userIds
 		});
 		show = false;
 		loading = false;
 	};
 
 	const init = () => {
-		name = channel.name;
-		accessControl = channel.access_control;
+		if ($user?.role === 'admin') {
+			channelTypes = ['', 'group', 'dm'];
+		} else {
+			channelTypes = ['group', 'dm'];
+		}
+
+		type = channel?.type ?? channelTypes[0];
+
+		if (channel) {
+			name = channel?.name ?? '';
+			if (type === 'group') {
+				isPrivate = typeof channel?.is_private === 'boolean' ? channel.is_private : true;
+			} else {
+				isPrivate = null;
+			}
+			accessGrants = channel?.access_grants ?? [];
+			userIds = channel?.user_ids ?? [];
+		}
 	};
 
-	$: if (channel) {
+	$: if (show) {
 		init();
+	} else {
+		resetHandler();
 	}
 
 	let showDeleteConfirmDialog = false;
+	let showWebhooksModal = false;
 
 	const deleteHandler = async () => {
 		showDeleteConfirmDialog = false;
+		if (!channel?.id) {
+			show = false;
+			return;
+		}
 
-		const res = await deleteChannelById(localStorage.token, channel.id).catch((error) => {
+		const channelId = channel.id;
+
+		const res = await deleteChannelById(localStorage.token, channelId).catch((error) => {
 			toast.error(error.message);
 		});
 
 		if (res) {
-			toast.success('Channel deleted successfully');
+			toast.success($i18n.t('Channel deleted successfully'));
 			onUpdate();
 
-			if ($page.url.pathname === `/channels/${channel.id}`) {
+			if ($page.url.pathname === `/channels/${channelId}`) {
 				goto('/');
 			}
 		}
 
 		show = false;
 	};
+
+	const resetHandler = () => {
+		type = '';
+		name = '';
+		accessGrants = [];
+		userIds = [];
+		loading = false;
+	};
 </script>
 
-<Modal size="sm" bind:show>
+<Modal size="md" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
 			<div class=" text-lg font-medium self-center">
@@ -84,18 +154,7 @@
 					show = false;
 				}}
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="w-5 h-5"
-				>
-					<path
-						fill-rule="evenodd"
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-						clip-rule="evenodd"
-					/>
-				</svg>
+				<XMark className={'size-5'} />
 			</button>
 		</div>
 
@@ -107,27 +166,114 @@
 						submitHandler();
 					}}
 				>
+					{#if !edit}
+						<div class="flex flex-col w-full mt-2 mb-1">
+							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Channel Type')}</div>
+
+							<div class="flex-1">
+								<Tooltip
+									content={type === 'dm'
+										? $i18n.t('A private conversation between you and selected users')
+										: type === 'group'
+											? $i18n.t('A collaboration channel where people join as members')
+											: $i18n.t(
+													'A discussion channel where access is controlled by groups and permissions'
+												)}
+									placement="top-start"
+								>
+									<select
+										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+										bind:value={type}
+									>
+										{#each channelTypes as channelType, channelTypeIdx (channelType)}
+											<option value={channelType} selected={channelTypeIdx === 0}>
+												{#if channelType === 'group'}
+													{$i18n.t('Group Channel')}
+												{:else if channelType === 'dm'}
+													{$i18n.t('Direct Message')}
+												{:else if channelType === ''}
+													{$i18n.t('Channel')}
+												{/if}
+											</option>
+										{/each}
+									</select>
+								</Tooltip>
+							</div>
+						</div>
+					{/if}
+
+					<div class=" text-gray-300 dark:text-gray-700 text-xs">
+						{#if type === ''}
+							{$i18n.t('Discussion channel where access is based on groups and permissions')}
+						{:else if type === 'group'}
+							{$i18n.t('Collaboration channel where people join as members')}
+						{:else if type === 'dm'}
+							{$i18n.t('Private conversation between selected users')}
+						{/if}
+					</div>
+
 					<div class="flex flex-col w-full mt-2">
-						<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Channel Name')}</div>
+						<div class=" mb-1 text-xs text-gray-500">
+							{$i18n.t('Channel Name')}
+							<span class="text-xs text-gray-200 dark:text-gray-800 ml-0.5"
+								>{type === 'dm' ? `${$i18n.t('Optional')}` : ''}</span
+							>
+						</div>
 
 						<div class="flex-1">
 							<input
 								class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 								type="text"
 								bind:value={name}
-								placeholder={$i18n.t('new-channel')}
+								placeholder={`${$i18n.t('new-channel')}`}
 								autocomplete="off"
+								required={type !== 'dm'}
+								max="100"
 							/>
 						</div>
 					</div>
 
-					<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
-
-					<div class="my-2 -mx-2">
-						<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
-							<AccessControl bind:accessControl />
+					{#if type !== 'dm'}
+						<div class="-mx-2 mb-1 mt-2.5 px-2">
+							{#if type === ''}
+								<AccessControl bind:accessGrants accessRoles={['read', 'write']} />
+							{:else if type === 'group'}
+								<Visibility
+									state={isPrivate ? 'private' : 'public'}
+									onChange={(value: string) => {
+										if (value === 'private') {
+											isPrivate = true;
+										} else {
+											isPrivate = false;
+										}
+										console.log(value, isPrivate);
+									}}
+								/>
+							{/if}
 						</div>
-					</div>
+					{/if}
+
+					{#if ['dm'].includes(type)}
+						<div class="">
+							<MemberSelector bind:userIds includeGroups={false} />
+						</div>
+					{/if}
+
+					{#if edit}
+						<div class="flex w-full mt-2 items-center justify-between">
+							<div class="text-xs text-gray-500">{$i18n.t('Webhooks')}</div>
+
+							<button
+								class="text-xs bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden text-left"
+								type="button"
+								on:click={() => {
+									showWebhooksModal = true;
+								}}
+							>
+								{$i18n.t('Manage')}
+							</button>
+						</div>
+					{/if}
 
 					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
 						{#if edit}
@@ -157,29 +303,7 @@
 
 							{#if loading}
 								<div class="ml-2 self-center">
-									<svg
-										class=" w-4 h-4"
-										viewBox="0 0 24 24"
-										fill="currentColor"
-										xmlns="http://www.w3.org/2000/svg"
-										><style>
-											.spinner_ajPY {
-												transform-origin: center;
-												animation: spinner_AtaB 0.75s infinite linear;
-											}
-											@keyframes spinner_AtaB {
-												100% {
-													transform: rotate(360deg);
-												}
-											}
-										</style><path
-											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-											opacity=".25"
-										/><path
-											d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-											class="spinner_ajPY"
-										/></svg
-									>
+									<Spinner />
 								</div>
 							{/if}
 						</button>
@@ -198,3 +322,5 @@
 		deleteHandler();
 	}}
 />
+
+<WebhooksModal bind:show={showWebhooksModal} {channel} />

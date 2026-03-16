@@ -1,5 +1,9 @@
 <script lang="ts">
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
+
 	import { toast } from 'svelte-sonner';
+	import { DropdownMenu } from 'bits-ui';
 
 	import { goto } from '$app/navigation';
 	import { onMount, tick, getContext } from 'svelte';
@@ -11,11 +15,13 @@
 		WEBUI_BASE_URL
 	} from '$lib/constants';
 	import { WEBUI_NAME, config, user, models, settings } from '$lib/stores';
+	import { flyAndScale } from '$lib/utils/transitions';
 
-	import { chatCompletion, generateOpenAIChatCompletion } from '$lib/apis/openai';
+	import { chatCompletion } from '$lib/apis/openai';
 
 	import { splitStream } from '$lib/utils';
 	import Collapsible from '../common/Collapsible.svelte';
+	import Dropdown from '../common/Dropdown.svelte';
 
 	import Messages from '$lib/components/playground/Chat/Messages.svelte';
 	import ChevronUp from '../icons/ChevronUp.svelte';
@@ -24,6 +30,8 @@
 	import Cog6 from '../icons/Cog6.svelte';
 	import Sidebar from '../common/Sidebar.svelte';
 	import ArrowRight from '../icons/ArrowRight.svelte';
+	import Download from '../icons/Download.svelte';
+	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -193,6 +201,94 @@
 		}
 	};
 
+	const exportToJson = () => {
+		const now = Math.floor(Date.now() / 1000);
+
+		// Convert flat messages array to history map format
+		const messagesMap: Record<string, any> = {};
+		let currentId: string | null = null;
+		let parentId: string | null = null;
+
+		// Add system message if present
+		if (system) {
+			const systemId = crypto.randomUUID();
+			messagesMap[systemId] = {
+				id: systemId,
+				parentId: null,
+				childrenIds: [],
+				role: 'system',
+				content: system,
+				timestamp: now
+			};
+			parentId = systemId;
+		}
+
+		// Add conversation messages
+		for (const msg of messages) {
+			const msgId = crypto.randomUUID();
+
+			// Link parent to child
+			if (parentId && messagesMap[parentId]) {
+				messagesMap[parentId].childrenIds.push(msgId);
+			}
+
+			messagesMap[msgId] = {
+				id: msgId,
+				parentId: parentId,
+				childrenIds: [],
+				role: msg.role,
+				content: msg.content,
+				timestamp: now,
+				...(msg.role === 'assistant' && selectedModelId ? { model: selectedModelId } : {})
+			};
+
+			currentId = msgId;
+			parentId = msgId;
+		}
+
+		const exportData = {
+			chat: {
+				title: 'Playground Chat',
+				models: [selectedModelId],
+				params: system ? { system } : {},
+				history: {
+					messages: messagesMap,
+					currentId
+				}
+			},
+			meta: {},
+			pinned: false,
+			created_at: now,
+			updated_at: now
+		};
+
+		const blob = new Blob([JSON.stringify([exportData], null, 2)], {
+			type: 'application/json'
+		});
+		saveAs(blob, `playground-chat-${Date.now()}.json`);
+		toast.success($i18n.t('Chat exported successfully'));
+	};
+
+	const downloadTxt = () => {
+		let chatText = '';
+
+		// Add system message if present
+		if (system) {
+			chatText += `### SYSTEM\n${system}\n\n`;
+		}
+
+		// Add conversation messages
+		for (const msg of messages) {
+			chatText += `### ${msg.role.toUpperCase()}\n${msg.content}\n\n`;
+		}
+
+		const blob = new Blob([chatText.trim()], {
+			type: 'text/plain'
+		});
+		saveAs(blob, `playground-chat-${Date.now()}.txt`);
+		toast.success($i18n.t('Chat exported successfully'));
+	};
+
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
 			await goto('/');
@@ -211,48 +307,12 @@
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full relative">
-		<Sidebar bind:show={showSettings} className=" bg-white dark:bg-gray-900" width="300px">
-			<div class="flex flex-col px-5 py-3 text-sm">
-				<div class="flex justify-between items-center mb-2">
-					<div class=" font-medium text-base">Settings</div>
-
-					<div class=" translate-x-1.5">
-						<button
-							class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
-							on:click={() => {
-								showSettings = !showSettings;
-							}}
-						>
-							<ArrowRight className="size-3" strokeWidth="2.5" />
-						</button>
-					</div>
-				</div>
-
-				<div class="mt-1">
-					<div>
-						<div class=" text-xs font-medium mb-1">Model</div>
-
-						<div class="w-full">
-							<select
-								class="w-full bg-transparent border border-gray-100 dark:border-gray-850 rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden"
-								bind:value={selectedModelId}
-							>
-								{#each $models as model}
-									<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
-								{/each}
-							</select>
-						</div>
-					</div>
-				</div>
-			</div>
-		</Sidebar>
-
 		<div class=" flex flex-col h-full px-3.5">
-			<div class="flex w-full items-start gap-1.5">
+			<div class="flex w-full items-center gap-1.5">
 				<Collapsible
 					className="w-full flex-1"
 					bind:open={showSystem}
-					buttonClassName="w-full rounded-lg text-sm border border-gray-100 dark:border-gray-850 w-full py-1 px-1.5"
+					buttonClassName="w-full rounded-lg text-sm border border-gray-100/30 dark:border-gray-850/30 w-full py-1 px-1.5"
 					grow={true}
 				>
 					<div class="flex gap-2 justify-between items-center">
@@ -260,7 +320,7 @@
 							{$i18n.t('System Instructions')}
 						</div>
 
-						{#if !showSystem}
+						{#if !showSystem && system.trim()}
 							<div class=" flex-1 text-gray-500 line-clamp-1">
 								{system}
 							</div>
@@ -293,16 +353,59 @@
 					</div>
 				</Collapsible>
 
-				<div class="translate-y-1">
+				<Dropdown>
 					<button
-						class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
-						on:click={() => {
-							showSettings = !showSettings;
-						}}
+						class="p-1.5 text-sm font-medium bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition rounded-lg"
+						aria-label={$i18n.t('More options')}
 					>
-						<Cog6 />
+						<EllipsisHorizontal className="size-4" />
 					</button>
-				</div>
+
+					<div slot="content">
+						<DropdownMenu.Content
+							class="w-full max-w-[200px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+							sideOffset={8}
+							side="bottom"
+							align="end"
+							transition={flyAndScale}
+						>
+							<DropdownMenu.Sub>
+								<DropdownMenu.SubTrigger
+									class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
+								>
+									<Download strokeWidth="1.5" />
+									<div class="flex items-center">{$i18n.t('Download')}</div>
+								</DropdownMenu.SubTrigger>
+								<DropdownMenu.SubContent
+									class="w-full rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white border border-gray-100 dark:border-gray-800 shadow-lg max-h-52 overflow-y-auto scrollbar-hidden"
+									transition={flyAndScale}
+									sideOffset={8}
+								>
+									<DropdownMenu.Item
+										class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
+										disabled={messages.length === 0}
+										on:click={() => {
+											exportToJson();
+										}}
+									>
+										<div class="flex items-center line-clamp-1">
+											{$i18n.t('Export chat (.json)')}
+										</div>
+									</DropdownMenu.Item>
+									<DropdownMenu.Item
+										class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
+										disabled={messages.length === 0}
+										on:click={() => {
+											downloadTxt();
+										}}
+									>
+										<div class="flex items-center line-clamp-1">{$i18n.t('Plain text (.txt)')}</div>
+									</DropdownMenu.Item>
+								</DropdownMenu.SubContent>
+							</DropdownMenu.Sub>
+						</DropdownMenu.Content>
+					</div>
+				</Dropdown>
 			</div>
 
 			<div
@@ -318,10 +421,9 @@
 			</div>
 
 			<div class="pb-3">
-				<div class="text-xs font-medium text-gray-500 px-2 py-1">
-					{selectedModelId}
-				</div>
-				<div class="border border-gray-100 dark:border-gray-850 w-full px-3 py-2.5 rounded-xl">
+				<div
+					class="border border-gray-100/30 dark:border-gray-850/30 w-full px-3 py-2.5 rounded-xl"
+				>
 					<div class="py-0.5">
 						<!-- $i18n.t('a user') -->
 						<!-- $i18n.t('an assistant') -->
@@ -343,10 +445,20 @@
 						/>
 					</div>
 
-					<div class="flex justify-between">
-						<div>
+					<div
+						class="flex justify-between flex-col sm:flex-row items-start sm:items-center gap-2 mt-2"
+					>
+						<div class="shrink-0">
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
+								type="button"
+								class="px-3.5 py-1.5 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg shrink-0 {($settings?.highContrastMode ??
+								false)
+									? ''
+									: 'outline-hidden'}"
+								aria-pressed={role === 'assistant'}
+								aria-label={$i18n.t(
+									role === 'user' ? 'Switch to Assistant role' : 'Switch to User role'
+								)}
 								on:click={() => {
 									role = role === 'user' ? 'assistant' : 'user';
 								}}
@@ -359,37 +471,52 @@
 							</button>
 						</div>
 
-						<div>
-							{#if !loading}
-								<button
-									disabled={message === ''}
-									class="px-3.5 py-1.5 text-sm font-medium disabled:bg-gray-50 dark:disabled:hover:bg-gray-850 disabled:cursor-not-allowed bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
-									on:click={() => {
-										addHandler();
-										role = role === 'user' ? 'assistant' : 'user';
-									}}
+						<div class="flex items-center justify-between gap-2 w-full sm:w-auto">
+							<div class="flex-1">
+								<select
+									class=" bg-transparent border border-gray-100/30 dark:border-gray-850/30 rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden w-full"
+									bind:value={selectedModelId}
 								>
-									{$i18n.t('Add')}
-								</button>
+									{#each $models as model}
+										<option value={model.id} class="bg-gray-50 dark:bg-gray-700"
+											>{model.name}</option
+										>
+									{/each}
+								</select>
+							</div>
 
-								<button
-									class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
-									on:click={() => {
-										submitHandler();
-									}}
-								>
-									{$i18n.t('Run')}
-								</button>
-							{:else}
-								<button
-									class="px-3 py-1.5 text-sm font-medium bg-gray-300 text-black transition rounded-lg"
-									on:click={() => {
-										stopResponse();
-									}}
-								>
-									{$i18n.t('Cancel')}
-								</button>
-							{/if}
+							<div class="flex gap-2 shrink-0">
+								{#if !loading}
+									<button
+										disabled={message === ''}
+										class="px-3.5 py-1.5 text-sm font-medium disabled:bg-gray-50 dark:disabled:hover:bg-gray-850 disabled:cursor-not-allowed bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
+										on:click={() => {
+											addHandler();
+											role = role === 'user' ? 'assistant' : 'user';
+										}}
+									>
+										{$i18n.t('Add')}
+									</button>
+
+									<button
+										class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
+										on:click={() => {
+											submitHandler();
+										}}
+									>
+										{$i18n.t('Run')}
+									</button>
+								{:else}
+									<button
+										class="px-3 py-1.5 text-sm font-medium bg-gray-300 text-black transition rounded-lg"
+										on:click={() => {
+											stopResponse();
+										}}
+									>
+										{$i18n.t('Cancel')}
+									</button>
+								{/if}
+							</div>
 						</div>
 					</div>
 				</div>

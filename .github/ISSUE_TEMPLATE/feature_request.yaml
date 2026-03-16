@@ -8,10 +8,21 @@ body:
       value: |
         ## Important Notes
         ### Before submitting
-        Please check the [Issues](https://github.com/open-webui/open-webui/issues) or [Discussions](https://github.com/open-webui/open-webui/discussions) to see if a similar request has been posted.
+        
+        Please check the **open AND closed** [Issues](https://github.com/open-webui/open-webui/issues) AND [Discussions](https://github.com/open-webui/open-webui/discussions) to see if a similar request has been posted.
         It's likely we're already tracking it! If you’re unsure, start a discussion post first.
-        This will help us efficiently focus on improving the project.
 
+        #### Scope
+
+        If your feature request is likely to take more than a quick coding session to implement, test and verify, then open it in the **Ideas** section of the [Discussions](https://github.com/open-webui/open-webui/discussions) instead.
+        **We will close and force move your feature request to the Ideas section, if we believe your feature request is not trivial/quick to implement.**
+        This is to ensure the issues tab is used only for issues, quickly addressable feature requests and tracking tickets by the maintainers.
+        Other feature requests belong in the **Ideas** section of the [Discussions](https://github.com/open-webui/open-webui/discussions).
+        
+        If your feature request might impact others in the community, definitely open a discussion instead and evaluate whether and how to implement it.
+        
+        This will help us efficiently focus on improving the project.
+        
         ### Collaborate respectfully
         We value a **constructive attitude**, so please be mindful of your communication. If negativity is part of your approach, our capacity to engage may be limited. We're here to help if you're **open to learning** and **communicating positively**.
 
@@ -21,7 +32,6 @@ body:
         - It's supported by contributors who also have **full-time jobs**
 
         We appreciate your time and ask that you **respect ours**.
-
 
         ### Contributing
         If you encounter an issue, we highly encourage you to submit a pull request or fork the project. We actively work to prevent contributor burnout to maintain the quality and continuity of Open WebUI.
@@ -35,14 +45,22 @@ body:
       label: Check Existing Issues
       description: Please confirm that you've checked for existing similar requests
       options:
-        - label: I have searched the existing issues and discussions.
+        - label: I have searched for all existing **open AND closed** issues and discussions for similar requests. I have found none that is comparable to my request.
+          required: true
+  - type: checkboxes
+    id: feature-scope
+    attributes:
+      label: Verify Feature Scope
+      description: Please confirm the feature's scope is within the described scope
+      options:
+        - label: I have read through and understood the scope definition for feature requests in the Issues section. I believe my feature request meets the definition and belongs in the Issues section instead of the Discussions.
           required: true
   - type: textarea
     id: problem-description
     attributes:
       label: Problem Description
       description: Is your feature request related to a problem? Please provide a clear and concise description of what the problem is.
-      placeholder: "Ex. I'm always frustrated when..."
+      placeholder: "Ex. I'm always frustrated when... / Not related to a problem"
     validations:
       required: true
   - type: textarea

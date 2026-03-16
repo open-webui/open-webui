@@ -13,9 +13,11 @@
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
-	import { settings, user, shortCodesToEmojis } from '$lib/stores';
+	import { formatDate } from '$lib/utils';
 
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { settings, user, shortCodesToEmojis } from '$lib/stores';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { getMessageData } from '$lib/apis/channels';
 
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
@@ -28,18 +30,32 @@
 	import Image from '$lib/components/common/Image.svelte';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import ProfilePreview from './Message/ProfilePreview.svelte';
-	import ChatBubbleOvalEllipsis from '$lib/components/icons/ChatBubbleOvalEllipsis.svelte';
+	import ChatBubbleOvalEllipsis from '$lib/components/icons/ChatBubble.svelte';
 	import FaceSmile from '$lib/components/icons/FaceSmile.svelte';
-	import ReactionPicker from './Message/ReactionPicker.svelte';
+	import EmojiPicker from '$lib/components/common/EmojiPicker.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
-	import { formatDate } from '$lib/utils';
+	import Emoji from '$lib/components/common/Emoji.svelte';
+	import Skeleton from '$lib/components/chat/Messages/Skeleton.svelte';
+	import ArrowUpLeftAlt from '$lib/components/icons/ArrowUpLeftAlt.svelte';
+	import PinSlash from '$lib/components/icons/PinSlash.svelte';
+	import Pin from '$lib/components/icons/Pin.svelte';
+
+	export let className = '';
 
 	export let message;
+	export let channel;
+
 	export let showUserProfile = true;
 	export let thread = false;
 
+	export let replyToMessage = false;
+	export let disabled = false;
+	export let pending = false;
+
 	export let onDelete: Function = () => {};
 	export let onEdit: Function = () => {};
+	export let onReply: Function = () => {};
+	export let onPin: Function = () => {};
 	export let onThread: Function = () => {};
 	export let onReaction: Function = () => {};
 
@@ -48,6 +64,21 @@
 	let edit = false;
 	let editedContent = null;
 	let showDeleteConfirmDialog = false;
+
+	const loadMessageData = async () => {
+		if (message && message?.data) {
+			const res = await getMessageData(localStorage.token, channel?.id, message.id);
+			if (res) {
+				message.data = res;
+			}
+		}
+	};
+
+	onMount(async () => {
+		if (message && message?.data) {
+			await loadMessageData();
+		}
+	});
 </script>
 
 <ConfirmDialog
@@ -61,39 +92,77 @@
 
 {#if message}
 	<div
-		class="flex flex-col justify-between px-5 {showUserProfile
+		id="message-{message.id}"
+		class="flex flex-col justify-between w-full max-w-full mx-auto group hover:bg-gray-300/5 dark:hover:bg-gray-700/5 transition relative {className
+			? className
+			: `px-5 ${
+					replyToMessage ? 'border-l-4 border-blue-500 bg-blue-100/10 dark:bg-blue-100/5 pl-4' : ''
+				} ${
+					(message?.reply_to_message?.meta?.model_id ?? message?.reply_to_message?.user_id) ===
+					$user?.id
+						? 'border-l-4 border-orange-500 bg-orange-100/10 dark:bg-orange-100/5 pl-4'
+						: ''
+				} ${message?.is_pinned ? 'bg-yellow-100/20 dark:bg-yellow-100/5' : ''}`} {showUserProfile
 			? 'pt-1.5 pb-0.5'
-			: ''} w-full {($settings?.widescreenMode ?? null)
-			? 'max-w-full'
-			: 'max-w-5xl'} mx-auto group hover:bg-gray-300/5 dark:hover:bg-gray-700/5 transition relative"
+			: ''}"
 	>
-		{#if !edit}
+		{#if !edit && !disabled}
 			<div
 				class=" absolute {showButtons ? '' : 'invisible group-hover:visible'} right-1 -top-2 z-10"
 			>
 				<div
-					class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100 dark:border-gray-850"
+					class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100/30 dark:border-gray-850/30"
 				>
-					<ReactionPicker
-						onClose={() => (showButtons = false)}
-						onSubmit={(name) => {
-							showButtons = false;
-							onReaction(name);
-						}}
-					>
-						<Tooltip content={$i18n.t('Add Reaction')}>
+					{#if onReaction}
+						<EmojiPicker
+							onClose={() => (showButtons = false)}
+							onSubmit={(name) => {
+								showButtons = false;
+								onReaction(name);
+							}}
+						>
+							<Tooltip content={$i18n.t('Add Reaction')}>
+								<button
+									class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+									on:click={() => {
+										showButtons = true;
+									}}
+								>
+									<FaceSmile />
+								</button>
+							</Tooltip>
+						</EmojiPicker>
+					{/if}
+
+					{#if onReply}
+						<Tooltip content={$i18n.t('Reply')}>
 							<button
-								class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+								class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-0.5"
 								on:click={() => {
-									showButtons = true;
+									onReply(message);
 								}}
 							>
-								<FaceSmile />
+								<ArrowUpLeftAlt className="size-5" />
 							</button>
 						</Tooltip>
-					</ReactionPicker>
+					{/if}
 
-					{#if !thread}
+					<Tooltip content={message?.is_pinned ? $i18n.t('Unpin') : $i18n.t('Pin')}>
+						<button
+							class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+							on:click={() => {
+								onPin(message);
+							}}
+						>
+							{#if message?.is_pinned}
+								<PinSlash className="size-4" />
+							{:else}
+								<Pin className="size-4" />
+							{/if}
+						</button>
+					</Tooltip>
+
+					{#if !thread && onThread}
 						<Tooltip content={$i18n.t('Reply in Thread')}>
 							<button
 								class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
@@ -107,47 +176,119 @@
 					{/if}
 
 					{#if message.user_id === $user?.id || $user?.role === 'admin'}
-						<Tooltip content={$i18n.t('Edit')}>
-							<button
-								class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
-								on:click={() => {
-									edit = true;
-									editedContent = message.content;
-								}}
-							>
-								<Pencil />
-							</button>
-						</Tooltip>
+						{#if onEdit}
+							<Tooltip content={$i18n.t('Edit')}>
+								<button
+									class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+									on:click={() => {
+										edit = true;
+										editedContent = message.content;
+									}}
+								>
+									<Pencil />
+								</button>
+							</Tooltip>
+						{/if}
 
-						<Tooltip content={$i18n.t('Delete')}>
-							<button
-								class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
-								on:click={() => (showDeleteConfirmDialog = true)}
-							>
-								<GarbageBin />
-							</button>
-						</Tooltip>
+						{#if onDelete}
+							<Tooltip content={$i18n.t('Delete')}>
+								<button
+									class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+									on:click={() => (showDeleteConfirmDialog = true)}
+								>
+									<GarbageBin />
+								</button>
+							</Tooltip>
+						{/if}
 					{/if}
 				</div>
 			</div>
 		{/if}
 
+		{#if message?.is_pinned}
+			<div class="flex {showUserProfile ? 'mb-0.5' : 'mt-0.5'}">
+				<div class="ml-8.5 flex items-center gap-1 px-1 rounded-full text-xs">
+					<Pin className="size-3 text-yellow-500 dark:text-yellow-300" />
+					<span class="text-gray-500">{$i18n.t('Pinned')}</span>
+				</div>
+			</div>
+		{/if}
+
+		{#if message?.reply_to_message?.user}
+			<div class="relative text-xs mb-1">
+				<div
+					class="absolute h-3 w-7 left-[18px] top-2 rounded-tl-lg border-t-[1.5px] border-l-[1.5px] border-gray-200 dark:border-gray-700 z-0"
+				></div>
+
+				<button
+					class="ml-12 flex items-center space-x-2 relative z-0"
+					on:click={() => {
+						const messageElement = document.getElementById(
+							`message-${message.reply_to_message.id}`
+						);
+						if (messageElement) {
+							messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+							messageElement.classList.add('highlight');
+							setTimeout(() => {
+								messageElement.classList.remove('highlight');
+							}, 2000);
+							return;
+						}
+					}}
+				>
+					{#if message?.reply_to_message?.meta?.model_id}
+						<img
+							src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${message.reply_to_message.meta.model_id}`}
+							alt={message.reply_to_message.meta.model_name ??
+								message.reply_to_message.meta.model_id}
+							class="size-4 ml-0.5 rounded-full object-cover"
+						/>
+					{:else}
+						<img
+							src={message.reply_to_message.user?.role === 'webhook'
+								? `${WEBUI_API_BASE_URL}/channels/webhooks/${message.reply_to_message.user?.id}/profile/image`
+								: `${WEBUI_API_BASE_URL}/users/${message.reply_to_message.user?.id}/profile/image`}
+							alt={message.reply_to_message.user?.name ?? $i18n.t('Unknown User')}
+							class="size-4 ml-0.5 rounded-full object-cover"
+						/>
+					{/if}
+
+					<div class="shrink-0">
+						{message?.reply_to_message.meta?.model_name ??
+							message?.reply_to_message.user?.name ??
+							$i18n.t('Unknown User')}
+					</div>
+
+					<div class="italic text-sm text-gray-500 dark:text-gray-400 line-clamp-1 w-full flex-1">
+						<Markdown id={`${message.id}-reply-to`} content={message?.reply_to_message?.content} />
+					</div>
+				</button>
+			</div>
+		{/if}
+
 		<div
-			class=" flex w-full message-{message.id}"
+			class=" flex w-full message-{message.id} "
 			id="message-{message.id}"
 			dir={$settings.chatDirection}
 		>
-			<div
-				class={`shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'} w-9`}
-			>
+			<div class={`shrink-0 mr-1 w-9`}>
 				{#if showUserProfile}
-					<ProfilePreview user={message.user}>
-						<ProfileImage
-							src={message.user?.profile_image_url ??
-								($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
-							className={'size-8 translate-y-1 ml-0.5'}
+					{#if message?.meta?.model_id}
+						<img
+							src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${message.meta.model_id}`}
+							alt={message.meta.model_name ?? message.meta.model_id}
+							class="size-8 translate-y-1 ml-0.5 object-cover rounded-full"
 						/>
-					</ProfilePreview>
+					{:else}
+						<ProfilePreview user={message.user}>
+							<ProfileImage
+								src={message.user?.role === 'webhook'
+									? `${WEBUI_API_BASE_URL}/channels/webhooks/${message.user?.id}/profile/image`
+									: `${WEBUI_API_BASE_URL}/users/${message.user?.id}/profile/image`}
+								className={'size-8 ml-0.5'}
+							/>
+						</ProfilePreview>
+					{/if}
 				{:else}
 					<!-- <div class="w-7 h-7 rounded-full bg-transparent" /> -->
 
@@ -163,31 +304,58 @@
 				{/if}
 			</div>
 
-			<div class="flex-auto w-0 pl-1">
+			<div class="flex-auto w-0 pl-2">
 				{#if showUserProfile}
 					<Name>
 						<div class=" self-end text-base shrink-0 font-medium truncate">
-							{message?.user?.name}
+							{#if message?.meta?.model_id}
+								{message?.meta?.model_name ?? message?.meta?.model_id}
+							{:else}
+								{message?.user?.name}
+							{/if}
 						</div>
 
 						{#if message.created_at}
 							<div
-								class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
+								class=" self-center text-xs text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 							>
 								<Tooltip content={dayjs(message.created_at / 1000000).format('LLLL')}>
-									<span class="line-clamp-1">{formatDate(message.created_at / 1000000)}</span>
+									<span class="line-clamp-1">
+										{#if dayjs(message.created_at / 1000000).isToday()}
+											{dayjs(message.created_at / 1000000).format('LT')}
+										{:else}
+											{$i18n.t(formatDate(message.created_at / 1000000), {
+												LOCALIZED_TIME: dayjs(message.created_at / 1000000).format('LT'),
+												LOCALIZED_DATE: dayjs(message.created_at / 1000000).format('L')
+											})}
+										{/if}
+									</span>
 								</Tooltip>
 							</div>
 						{/if}
 					</Name>
 				{/if}
 
-				{#if (message?.data?.files ?? []).length > 0}
-					<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
+				{#if message?.data === true}
+					<!-- loading indicator -->
+					<div class=" my-2">
+						<Skeleton />
+					</div>
+				{:else if (message?.data?.files ?? []).length > 0}
+					<div
+						class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap"
+						dir={$settings?.chatDirection ?? 'auto'}
+					>
 						{#each message?.data?.files as file}
+							{@const fileUrl =
+								file.url.startsWith('data') || file.url.startsWith('http')
+									? file.url
+									: `${WEBUI_API_BASE_URL}/files/${file.url}${file?.content_type ? '/content' : ''}`}
 							<div>
-								{#if file.type === 'image'}
-									<Image src={file.url} alt={file.name} imageClassName=" max-h-96 rounded-lg" />
+								{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
+									<Image src={fileUrl} alt={file.name} imageClassName=" max-h-96 rounded-lg" />
+								{:else if file.type === 'video' || (file?.content_type ?? '').startsWith('video/')}
+									<video src={fileUrl} controls class=" max-h-96 rounded-lg"></video>
 								{:else}
 									<FileItem
 										item={file}
@@ -195,7 +363,7 @@
 										name={file.name}
 										type={file.type}
 										size={file?.size}
-										colorClassName="bg-white dark:bg-gray-850 "
+										small={true}
 									/>
 								{/if}
 							</div>
@@ -225,7 +393,7 @@
 							<div class="flex space-x-1.5">
 								<button
 									id="close-edit-message-button"
-									class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
+									class="px-3.5 py-1.5 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
 									on:click={() => {
 										edit = false;
 										editedContent = null;
@@ -236,7 +404,7 @@
 
 								<button
 									id="confirm-edit-message-button"
-									class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
+									class="px-3.5 py-1.5 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
 									on:click={async () => {
 										onEdit(editedContent);
 										edit = false;
@@ -249,67 +417,96 @@
 						</div>
 					</div>
 				{:else}
-					<div class=" min-w-full markdown-prose">
-						<Markdown
-							id={message.id}
-							content={message.content}
-						/>{#if message.created_at !== message.updated_at}<span class="text-gray-500 text-[10px]"
-								>(edited)</span
-							>{/if}
+					<div class=" min-w-full markdown-prose {pending ? 'opacity-50' : ''}">
+						{#if (message?.content ?? '').trim() === '' && message?.meta?.model_id}
+							<Skeleton />
+						{:else}
+							<Markdown
+								id={message.id}
+								content={message.content}
+								paragraphTag="span"
+							/>{#if message.created_at !== message.updated_at && (message?.meta?.model_id ?? null) === null}<span
+									class="text-gray-500 text-[10px] pl-1 self-center">({$i18n.t('edited')})</span
+								>{/if}
+						{/if}
 					</div>
 
 					{#if (message?.reactions ?? []).length > 0}
 						<div>
 							<div class="flex items-center flex-wrap gap-y-1.5 gap-1 mt-1 mb-2">
 								{#each message.reactions as reaction}
-									<Tooltip content={`:${reaction.name}:`}>
+									<Tooltip
+										content={$i18n.t('{{NAMES}} reacted with {{REACTION}}', {
+											NAMES: reaction.users
+												.reduce((acc, u, idx) => {
+													const name = u.id === $user?.id ? $i18n.t('You') : u.name;
+													const total = reaction.users.length;
+
+													// First three names always added normally
+													if (idx < 3) {
+														const separator =
+															idx === 0
+																? ''
+																: idx === Math.min(2, total - 1)
+																	? ` ${$i18n.t('and')} `
+																	: ', ';
+														return `${acc}${separator}${name}`;
+													}
+
+													// More than 4 → "and X others"
+													if (idx === 3 && total > 4) {
+														return (
+															acc +
+															` ${$i18n.t('and {{COUNT}} others', {
+																COUNT: total - 3
+															})}`
+														);
+													}
+
+													return acc;
+												}, '')
+												.trim(),
+											REACTION: `:${reaction.name}:`
+										})}
+									>
 										<button
-											class="flex items-center gap-1.5 transition rounded-xl px-2 py-1 cursor-pointer {reaction.user_ids.includes(
-												$user?.id
-											)
+											class="flex items-center gap-1.5 transition rounded-xl px-2 py-1 cursor-pointer {reaction.users
+												.map((u) => u.id)
+												.includes($user?.id)
 												? ' bg-blue-300/10 outline outline-blue-500/50 outline-1'
 												: 'bg-gray-300/10 dark:bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1'}"
 											on:click={() => {
-												onReaction(reaction.name);
+												if (onReaction) {
+													onReaction(reaction.name);
+												}
 											}}
 										>
-											{#if $shortCodesToEmojis[reaction.name]}
-												<img
-													src="/assets/emojis/{$shortCodesToEmojis[
-														reaction.name
-													].toLowerCase()}.svg"
-													alt={reaction.name}
-													class=" size-4"
-													loading="lazy"
-												/>
-											{:else}
-												<div>
-													{reaction.name}
-												</div>
-											{/if}
+											<Emoji shortCode={reaction.name} />
 
-											{#if reaction.user_ids.length > 0}
+											{#if reaction.users.length > 0}
 												<div class="text-xs font-medium text-gray-500 dark:text-gray-400">
-													{reaction.user_ids?.length}
+													{reaction.users?.length}
 												</div>
 											{/if}
 										</button>
 									</Tooltip>
 								{/each}
 
-								<ReactionPicker
-									onSubmit={(name) => {
-										onReaction(name);
-									}}
-								>
-									<Tooltip content={$i18n.t('Add Reaction')}>
-										<div
-											class="flex items-center gap-1.5 bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1 transition rounded-xl px-1 py-1 cursor-pointer text-gray-500 dark:text-gray-400"
-										>
-											<FaceSmile />
-										</div>
-									</Tooltip>
-								</ReactionPicker>
+								{#if onReaction}
+									<EmojiPicker
+										onSubmit={(name) => {
+											onReaction(name);
+										}}
+									>
+										<Tooltip content={$i18n.t('Add Reaction')}>
+											<div
+												class="flex items-center gap-1.5 bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1 transition rounded-xl px-1 py-1 cursor-pointer text-gray-500 dark:text-gray-400"
+											>
+												<FaceSmile />
+											</div>
+										</Tooltip>
+									</EmojiPicker>
+								{/if}
 							</div>
 						</div>
 					{/if}
@@ -341,3 +538,18 @@
 		</div>
 	</div>
 {/if}
+
+<style>
+	.highlight {
+		animation: highlightAnimation 2s ease-in-out;
+	}
+
+	@keyframes highlightAnimation {
+		0% {
+			background-color: rgba(0, 60, 255, 0.1);
+		}
+		100% {
+			background-color: transparent;
+		}
+	}
+</style>

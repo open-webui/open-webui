@@ -1,8 +1,8 @@
-<script>
-	import { v4 as uuidv4 } from 'uuid';
+<script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import { config, models, settings } from '$lib/stores';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import { onMount, tick, getContext } from 'svelte';
 	import { createNewModel, getModelById } from '$lib/apis/models';
@@ -15,13 +15,16 @@
 	const onSubmit = async (modelInfo) => {
 		if ($models.find((m) => m.id === modelInfo.id)) {
 			toast.error(
-				`Error: A model with the ID '${modelInfo.id}' already exists. Please select a different ID to proceed.`
+				$i18n.t(
+					"Error: A model with the ID '{{modelId}}' already exists. Please select a different ID to proceed.",
+					{ modelId: modelInfo.id }
+				)
 			);
 			return;
 		}
 
 		if (modelInfo.id === '') {
-			toast.error('Error: Model ID cannot be empty. Please enter a valid ID to proceed.');
+			toast.error($i18n.t('Error: Model ID cannot be empty. Please enter a valid ID to proceed.'));
 			return;
 		}
 
@@ -30,7 +33,8 @@
 				...modelInfo,
 				meta: {
 					...modelInfo.meta,
-					profile_image_url: modelInfo.meta.profile_image_url ?? '/static/favicon.png',
+					profile_image_url:
+						modelInfo.meta.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`,
 					suggestion_prompts: modelInfo.meta.suggestion_prompts
 						? modelInfo.meta.suggestion_prompts.filter((prompt) => prompt.content !== '')
 						: null
@@ -56,24 +60,29 @@
 
 	let model = null;
 
-	onMount(async () => {
-		window.addEventListener('message', async (event) => {
+	onMount(() => {
+		const handleMessageEvent = async (event: MessageEvent) => {
 			if (
-				!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:5173'].includes(
+				!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:9999'].includes(
 					event.origin
 				)
 			) {
 				return;
 			}
 
-			let data = JSON.parse(event.data);
+			try {
+				let data = JSON.parse(event.data);
 
-			if (data?.info) {
-				data = data.info;
+				if (data?.info) {
+					data = data.info;
+				}
+
+				model = data;
+			} catch (e) {
+				console.error('Failed to parse message data:', e);
 			}
-
-			model = data;
-		});
+		};
+		window.addEventListener('message', handleMessageEvent);
 
 		if (window.opener ?? false) {
 			window.opener.postMessage('loaded', '*');
@@ -83,6 +92,10 @@
 			model = JSON.parse(sessionStorage.model);
 			sessionStorage.removeItem('model');
 		}
+
+		return () => {
+			window.removeEventListener('message', handleMessageEvent);
+		};
 	});
 </script>
 

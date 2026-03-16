@@ -1,5 +1,8 @@
 <script>
-	import Users from '$lib/components/admin/Users.svelte';
-</script>
+	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 
-<Users />
+	onMount(async () => {
+		await goto('/admin/users/overview');
+	});
+</script>

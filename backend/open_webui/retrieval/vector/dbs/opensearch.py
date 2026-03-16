@@ -1,7 +1,12 @@
+"""
+NOTE: This vector database integration is community-supported and maintained on a best-effort basis.
+"""
+
 from opensearchpy import OpenSearch
 from opensearchpy.helpers import bulk
 from typing import Optional
 
+from open_webui.retrieval.vector.utils import process_metadata
 from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
@@ -112,7 +117,11 @@ class OpenSearchClient(VectorDBBase):
         self.client.indices.delete(index=self._get_index_name(collection_name))
 
     def search(
-        self, collection_name: str, vectors: list[list[float | int]], limit: int
+        self,
+        collection_name: str,
+        vectors: list[list[float | int]],
+        filter: Optional[dict] = None,
+        limit: int = 10,
     ) -> Optional[SearchResult]:
         try:
             if not self.has_collection(collection_name):
@@ -157,10 +166,10 @@ class OpenSearchClient(VectorDBBase):
 
         for field, value in filter.items():
             query_body["query"]["bool"]["filter"].append(
-                {"match": {"metadata." + str(field): value}}
+                {"term": {"metadata." + str(field) + ".keyword": value}}
             )
 
-        size = limit if limit else 10
+        size = limit if limit else 10000
 
         try:
             result = self.client.search(
@@ -200,12 +209,13 @@ class OpenSearchClient(VectorDBBase):
                     "_source": {
                         "vector": item["vector"],
                         "text": item["text"],
-                        "metadata": item["metadata"],
+                        "metadata": process_metadata(item["metadata"]),
                     },
                 }
                 for item in batch
             ]
             bulk(self.client, actions)
+        self.client.indices.refresh(index=self._get_index_name(collection_name))
 
     def upsert(self, collection_name: str, items: list[VectorItem]):
         self._create_index_if_not_exists(
@@ -221,13 +231,14 @@ class OpenSearchClient(VectorDBBase):
                     "doc": {
                         "vector": item["vector"],
                         "text": item["text"],
-                        "metadata": item["metadata"],
+                        "metadata": process_metadata(item["metadata"]),
                     },
                     "doc_as_upsert": True,
                 }
                 for item in batch
             ]
             bulk(self.client, actions)
+        self.client.indices.refresh(index=self._get_index_name(collection_name))
 
     def delete(
         self,
@@ -251,11 +262,12 @@ class OpenSearchClient(VectorDBBase):
             }
             for field, value in filter.items():
                 query_body["query"]["bool"]["filter"].append(
-                    {"match": {"metadata." + str(field): value}}
+                    {"term": {"metadata." + str(field) + ".keyword": value}}
                 )
             self.client.delete_by_query(
                 index=self._get_index_name(collection_name), body=query_body
             )
+        self.client.indices.refresh(index=self._get_index_name(collection_name))
 
     def reset(self):
         indices = self.client.indices.get(index=f"{self.index_prefix}_*")

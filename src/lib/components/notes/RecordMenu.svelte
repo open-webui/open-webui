@@ -2,7 +2,7 @@
 	import { DropdownMenu } from 'bits-ui';
 	import { createEventDispatcher, getContext, onMount } from 'svelte';
 
-	import { showSettings, activeUserIds, USAGE_POOL, mobile, showSidebar, user } from '$lib/stores';
+	import { showSettings, mobile, showSidebar, user } from '$lib/stores';
 	import { fade, slide } from 'svelte/transition';
 
 	import Mic from '../icons/Mic.svelte';
@@ -13,7 +13,7 @@
 	const i18n = getContext('i18n');
 
 	export let show = false;
-	export let className = 'max-w-[160px]';
+	export let className = 'max-w-[170px]';
 
 	export let onRecord = () => {};
 	export let onCaptureAudio = () => {};
@@ -34,7 +34,7 @@
 
 	<slot name="content">
 		<DropdownMenu.Content
-			class="w-full {className} text-sm rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg font-primary"
+			class="w-full {className} text-sm rounded-xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg font-primary"
 			sideOffset={8}
 			side="bottom"
 			align="start"
@@ -48,7 +48,7 @@
 				}}
 			>
 				<div class=" self-center mr-2">
-					<Mic className="size-5" strokeWidth="1.5" />
+					<Mic className="size-4" strokeWidth="2" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Record')}</div>
 			</button>
@@ -61,7 +61,7 @@
 				}}
 			>
 				<div class=" self-center mr-2">
-					<CursorArrowRays className="size-5" strokeWidth="1.5" />
+					<CursorArrowRays className="size-4" strokeWidth="2" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Capture Audio')}</div>
 			</button>
@@ -74,7 +74,7 @@
 				}}
 			>
 				<div class=" self-center mr-2">
-					<CloudArrowUp className="size-5" strokeWidth="1.5" />
+					<CloudArrowUp className="size-4" strokeWidth="2" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Upload Audio')}</div>
 			</button>

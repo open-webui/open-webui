@@ -11,7 +11,6 @@ import sqlalchemy as sa
 from sqlalchemy.sql import table, column, select
 import json
 
-
 revision = "6a39f3d8e55c"
 down_revision = "c0fbf31ca0db"
 branch_labels = None

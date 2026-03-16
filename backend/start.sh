@@ -14,7 +14,11 @@ if [[ "${WEB_LOADER_ENGINE,,}" == "playwright" ]]; then
     python -c "import nltk; nltk.download('punkt_tab')"
 fi
 
-KEY_FILE=.webui_secret_key
+if [ -n "${WEBUI_SECRET_KEY_FILE}" ]; then
+    KEY_FILE="${WEBUI_SECRET_KEY_FILE}"
+else
+    KEY_FILE=".webui_secret_key"
+fi
 
 PORT="${PORT:-8080}"
 HOST="${HOST:-0.0.0.0}"
@@ -49,12 +53,12 @@ if [ -n "$SPACE_ID" ]; then
     WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' &
     webui_pid=$!
     echo "Waiting for webui to start..."
-    while ! curl -s http://localhost:8080/health > /dev/null; do
+    while ! curl -s "http://localhost:${PORT}/health" > /dev/null; do
       sleep 1
     done
     echo "Creating admin user..."
     curl \
-      -X POST "http://localhost:8080/api/v1/auths/signup" \
+      -X POST "http://localhost:${PORT}/api/v1/auths/signup" \
       -H "accept: application/json" \
       -H "Content-Type: application/json" \
       -d "{ \"email\": \"${ADMIN_USER_EMAIL}\", \"password\": \"${ADMIN_USER_PASSWORD}\", \"name\": \"Admin\" }"
@@ -66,5 +70,18 @@ if [ -n "$SPACE_ID" ]; then
 fi
 
 PYTHON_CMD=$(command -v python3 || command -v python)
+UVICORN_WORKERS="${UVICORN_WORKERS:-1}"
 
-WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec "$PYTHON_CMD" -m uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' --workers "${UVICORN_WORKERS:-1}"
+# If script is called with arguments, use them; otherwise use default workers
+if [ "$#" -gt 0 ]; then
+    ARGS=("$@")
+else
+    ARGS=(--workers "$UVICORN_WORKERS")
+fi
+
+# Run uvicorn
+WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec "$PYTHON_CMD" -m uvicorn open_webui.main:app \
+    --host "$HOST" \
+    --port "$PORT" \
+    --forwarded-allow-ips '*' \
+    "${ARGS[@]}"

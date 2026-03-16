@@ -6,13 +6,154 @@ from importlib import util
 import types
 import tempfile
 import logging
+from typing import Any
 
-from open_webui.env import SRC_LOG_LEVELS, PIP_OPTIONS, PIP_PACKAGE_INDEX_OPTIONS
+from open_webui.env import (
+    PIP_OPTIONS,
+    PIP_PACKAGE_INDEX_OPTIONS,
+    OFFLINE_MODE,
+    ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS,
+)
 from open_webui.models.functions import Functions
 from open_webui.models.tools import Tools
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+
+def resolve_valves_schema_options(
+    valves_class: type, schema: dict, user: Any = None
+) -> dict:
+    """
+    Resolve dynamic options in a Valves schema.
+
+    For properties with `input.options`, this function handles two cases:
+    - List: Used directly as dropdown options
+    - String: Treated as method name, called to get options dynamically
+
+    Usage in Valves:
+        class UserValves(BaseModel):
+            # Static options
+            priority: str = Field(
+                default="medium",
+                json_schema_extra={
+                    "input": {
+                        "type": "select",
+                        "options": ["low", "medium", "high"]
+                    }
+                }
+            )
+
+            # Dynamic options (method name)
+            model: str = Field(
+                default="",
+                json_schema_extra={
+                    "input": {
+                        "type": "select",
+                        "options": "get_model_options"
+                    }
+                }
+            )
+
+            @classmethod
+            def get_model_options(cls, __user__=None) -> list[dict]:
+                return [{"value": "gpt-4", "label": "GPT-4"}]
+
+    Args:
+        valves_class: The Valves or UserValves Pydantic model class
+        schema: The JSON schema dict from valves_class.schema()
+        user: Optional user object passed to methods that accept __user__
+
+    Returns:
+        Modified schema dict with resolved options
+    """
+    if not schema or "properties" not in schema:
+        return schema
+
+    # Make a copy to avoid mutating the original
+    schema = dict(schema)
+    schema["properties"] = dict(schema.get("properties", {}))
+
+    for prop_name, prop_schema in list(schema["properties"].items()):
+        # Get the original field info from the Pydantic model
+        if not hasattr(valves_class, "model_fields"):
+            continue
+
+        field_info = valves_class.model_fields.get(prop_name)
+        if not field_info:
+            continue
+
+        # Check json_schema_extra for options
+        json_schema_extra = field_info.json_schema_extra
+        if not json_schema_extra or not isinstance(json_schema_extra, dict):
+            continue
+
+        input_config = json_schema_extra.get("input")
+        if not input_config or not isinstance(input_config, dict):
+            continue
+
+        options = input_config.get("options")
+        if options is None:
+            continue
+
+        resolved_options = None
+
+        # Case 1: options is already a list - use directly
+        if isinstance(options, list):
+            resolved_options = options
+
+        # Case 2: options is a string - treat as method name
+        elif isinstance(options, str) and options:
+            method = getattr(valves_class, options, None)
+            if method is None or not callable(method):
+                log.warning(
+                    f"options '{options}' not found or not callable on {valves_class.__name__}"
+                )
+                continue
+
+            try:
+                import inspect
+
+                sig = inspect.signature(method)
+                params = sig.parameters
+
+                # Prepare kwargs based on what the method accepts
+                kwargs = {}
+                if "__user__" in params and user is not None:
+                    kwargs["__user__"] = (
+                        user.model_dump() if hasattr(user, "model_dump") else user
+                    )
+                if "user" in params and user is not None:
+                    kwargs["user"] = (
+                        user.model_dump() if hasattr(user, "model_dump") else user
+                    )
+
+                resolved_options = method(**kwargs) if kwargs else method()
+
+                # Validate return type
+                if not isinstance(resolved_options, list):
+                    log.warning(
+                        f"Method '{options}' did not return a list for {prop_name}"
+                    )
+                    continue
+
+            except Exception as e:
+                log.warning(f"Failed to resolve options for {prop_name}: {e}")
+                continue
+        else:
+            # Invalid options type - skip
+            continue
+
+        # Update the schema with resolved options
+        schema["properties"][prop_name] = dict(prop_schema)
+        if "input" not in schema["properties"][prop_name]:
+            schema["properties"][prop_name]["input"] = {"type": "select"}
+        else:
+            schema["properties"][prop_name]["input"] = dict(
+                schema["properties"][prop_name].get("input", {})
+            )
+        schema["properties"][prop_name]["input"]["options"] = resolved_options
+
+    return schema
 
 
 def extract_frontmatter(content):
@@ -166,6 +307,48 @@ def load_function_module_by_id(function_id: str, content: str | None = None):
         os.unlink(temp_file.name)
 
 
+def get_tool_module_from_cache(request, tool_id, load_from_db=True):
+    if load_from_db:
+        # Always load from the database by default
+        tool = Tools.get_tool_by_id(tool_id)
+        if not tool:
+            raise Exception(f"Tool not found: {tool_id}")
+        content = tool.content
+
+        new_content = replace_imports(content)
+        if new_content != content:
+            content = new_content
+            # Update the tool content in the database
+            Tools.update_tool_by_id(tool_id, {"content": content})
+
+        if (
+            hasattr(request.app.state, "TOOL_CONTENTS")
+            and tool_id in request.app.state.TOOL_CONTENTS
+        ) and (
+            hasattr(request.app.state, "TOOLS") and tool_id in request.app.state.TOOLS
+        ):
+            if request.app.state.TOOL_CONTENTS[tool_id] == content:
+                return request.app.state.TOOLS[tool_id], None
+
+        tool_module, frontmatter = load_tool_module_by_id(tool_id, content)
+    else:
+        if hasattr(request.app.state, "TOOLS") and tool_id in request.app.state.TOOLS:
+            return request.app.state.TOOLS[tool_id], None
+
+        tool_module, frontmatter = load_tool_module_by_id(tool_id)
+
+    if not hasattr(request.app.state, "TOOLS"):
+        request.app.state.TOOLS = {}
+
+    if not hasattr(request.app.state, "TOOL_CONTENTS"):
+        request.app.state.TOOL_CONTENTS = {}
+
+    request.app.state.TOOLS[tool_id] = tool_module
+    request.app.state.TOOL_CONTENTS[tool_id] = content
+
+    return tool_module, frontmatter
+
+
 def get_function_module_from_cache(request, function_id, load_from_db=True):
     if load_from_db:
         # Always load from the database by default
@@ -223,6 +406,16 @@ def get_function_module_from_cache(request, function_id, load_from_db=True):
 
 
 def install_frontmatter_requirements(requirements: str):
+    if not ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS:
+        log.info(
+            "ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS is disabled, skipping installation of requirements."
+        )
+        return
+
+    if OFFLINE_MODE:
+        log.info("Offline mode enabled, skipping installation of requirements.")
+        return
+
     if requirements:
         try:
             req_list = [req.strip() for req in requirements.split(",")]
@@ -260,7 +453,7 @@ def install_tool_and_function_dependencies():
                 all_dependencies += f"{dependencies}, "
         for tool in tool_list:
             # Only install requirements for admin tools
-            if tool.user.role == "admin":
+            if tool.user and tool.user.role == "admin":
                 frontmatter = extract_frontmatter(replace_imports(tool.content))
                 if dependencies := frontmatter.get("requirements"):
                     all_dependencies += f"{dependencies}, "

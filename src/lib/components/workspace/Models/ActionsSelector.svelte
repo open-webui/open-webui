@@ -22,26 +22,29 @@
 	});
 </script>
 
-<div>
-	<div class="flex w-full justify-between mb-1">
-		<div class=" self-center text-sm font-semibold">{$i18n.t('Actions')}</div>
-	</div>
+{#if actions.length > 0}
+	<div>
+		<div class="flex w-full justify-between mb-1">
+			<div class=" self-center text-xs font-medium text-gray-500">{$i18n.t('Actions')}</div>
+		</div>
 
-	<div class=" text-xs dark:text-gray-500">
-		{$i18n.t('To select actions here, add them to the "Functions" workspace first.')}
-	</div>
-
-	<div class="flex flex-col">
-		{#if actions.length > 0}
-			<div class=" flex items-center mt-2 flex-wrap">
+		<div class="flex flex-col">
+			<div class=" flex items-center flex-wrap">
 				{#each Object.keys(_actions) as action, actionIdx}
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
 							<Checkbox
-								state={_actions[action].selected ? 'checked' : 'unchecked'}
+								state={_actions[action].is_global
+									? 'checked'
+									: _actions[action].selected
+										? 'checked'
+										: 'unchecked'}
+								disabled={_actions[action].is_global}
 								on:change={(e) => {
-									_actions[action].selected = e.detail === 'checked';
-									selectedActionIds = Object.keys(_actions).filter((t) => _actions[t].selected);
+									if (!_actions[action].is_global) {
+										_actions[action].selected = e.detail === 'checked';
+										selectedActionIds = Object.keys(_actions).filter((t) => _actions[t].selected);
+									}
 								}}
 							/>
 						</div>
@@ -54,6 +57,6 @@
 					</div>
 				{/each}
 			</div>
-		{/if}
+		</div>
 	</div>
-</div>
+{/if}
