@@ -41,10 +41,15 @@
 	/** Svelte action: captures the first child element as the trigger reference */
 	function trigger(node) {
 		triggerEl = node.firstElementChild || node;
-		node.addEventListener('click', toggleOpen);
+		function handleClick(e) {
+			e.stopPropagation();
+			e.preventDefault();
+			toggleOpen();
+		}
+		node.addEventListener('click', handleClick);
 		return {
 			destroy() {
-				node.removeEventListener('click', toggleOpen);
+				node.removeEventListener('click', handleClick);
 			}
 		};
 	}
@@ -77,10 +82,22 @@
 		}
 
 		if (align === 'end') {
-			contentEl.style.right = `${window.innerWidth - rect.right}px`;
+			let right = window.innerWidth - rect.right;
+			// Shift if overflowing left edge
+			const contentWidth = contentEl.offsetWidth || 0;
+			if (right + contentWidth > window.innerWidth) {
+				right = window.innerWidth - contentWidth - 16;
+			}
+			contentEl.style.right = `${Math.max(16, right)}px`;
 			contentEl.style.left = 'auto';
 		} else {
-			contentEl.style.left = `${rect.left}px`;
+			let left = rect.left;
+			// Shift if overflowing right edge
+			const contentWidth = contentEl.offsetWidth || 0;
+			if (left + contentWidth + 16 > window.innerWidth) {
+				left = window.innerWidth - contentWidth - 16;
+			}
+			contentEl.style.left = `${Math.max(16, left)}px`;
 			contentEl.style.right = 'auto';
 		}
 	}
@@ -94,6 +111,14 @@
 			// Re-check after transition renders real dimensions
 			setTimeout(positionContent, 50);
 		}
+	}
+
+	// React to external show changes (e.g. bind:show toggled by parent component)
+	$: if (show) {
+		tick().then(() => {
+			positionContent();
+			setTimeout(positionContent, 50);
+		});
 	}
 
 	function handleWindowClick(event) {

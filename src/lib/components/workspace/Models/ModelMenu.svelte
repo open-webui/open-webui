@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { DropdownMenu } from 'bits-ui';
-	import { flyAndScale } from '$lib/utils/transitions';
 	import { getContext } from 'svelte';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -42,8 +40,8 @@
 
 <Dropdown
 	bind:show
-	on:change={(e) => {
-		if (e.detail === false) {
+	onOpenChange={(state) => {
+		if (state === false) {
 			onClose();
 		}
 	}}
@@ -60,27 +58,23 @@
 	</Tooltip>
 
 	<div slot="content">
-		<DropdownMenu.Content
-			class="w-full max-w-[170px] rounded-2xl p-1 border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
-			sideOffset={-2}
-			side="bottom"
-			align="start"
-			transition={flyAndScale}
+		<div
+			class="min-w-[170px] rounded-2xl p-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 		>
 			{#if writeAccess}
-				<DropdownMenu.Item
-					class="select-none flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+				<button
+					class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
 					on:click={() => {
 						editHandler();
 					}}
 				>
 					<Pencil />
 					<div class="flex items-center">{$i18n.t('Edit')}</div>
-				</DropdownMenu.Item>
+				</button>
 			{/if}
 
 			{#if writeAccess}
-				<DropdownMenu.Item
+				<button
 					class="select-none flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 					on:click={() => {
 						hideHandler();
@@ -130,10 +124,10 @@
 							{$i18n.t('Hide Model')}
 						{/if}
 					</div>
-				</DropdownMenu.Item>
+				</button>
 			{/if}
 
-			<DropdownMenu.Item
+			<button
 				class="select-none flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 				on:click={() => {
 					pinModelHandler(model?.id);
@@ -152,10 +146,10 @@
 						{$i18n.t('Keep in Sidebar')}
 					{/if}
 				</div>
-			</DropdownMenu.Item>
+			</button>
 
 			{#if writeAccess}
-				<DropdownMenu.Item
+				<button
 					class="select-none flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 					on:click={() => {
 						cloneHandler();
@@ -164,14 +158,14 @@
 					<DocumentDuplicate />
 
 					<div class="flex items-center">{$i18n.t('Clone')}</div>
-				</DropdownMenu.Item>
+				</button>
 			{/if}
 
 			{#if writeAccess}
 				<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
 			{/if}
 
-			<DropdownMenu.Item
+			<button
 				class="select-none flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 				on:click={() => {
 					copyLinkHandler();
@@ -180,10 +174,10 @@
 				<Link />
 
 				<div class="flex items-center">{$i18n.t('Copy Link')}</div>
-			</DropdownMenu.Item>
+			</button>
 
 			{#if writeAccess && ($currentUser?.role === 'admin' || $currentUser?.permissions?.workspace?.models_export)}
-				<DropdownMenu.Item
+				<button
 					class="select-none flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 					on:click={() => {
 						exportHandler();
@@ -192,11 +186,11 @@
 					<Download />
 
 					<div class="flex items-center">{$i18n.t('Export')}</div>
-				</DropdownMenu.Item>
+				</button>
 			{/if}
 
 			{#if writeAccess && $config?.features.enable_community_sharing}
-				<DropdownMenu.Item
+				<button
 					class="select-none flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl"
 					on:click={() => {
 						shareHandler();
@@ -204,13 +198,13 @@
 				>
 					<Share />
 					<div class="flex items-center">{$i18n.t('Share')}</div>
-				</DropdownMenu.Item>
+				</button>
 			{/if}
 
 			{#if writeAccess}
 				<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
 
-				<DropdownMenu.Item
+				<button
 					class="select-none flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 					on:click={() => {
 						deleteHandler();
@@ -218,8 +212,8 @@
 				>
 					<GarbageBin />
 					<div class="flex items-center">{$i18n.t('Delete')}</div>
-				</DropdownMenu.Item>
+				</button>
 			{/if}
-		</DropdownMenu.Content>
+		</div>
 	</div>
 </Dropdown>
