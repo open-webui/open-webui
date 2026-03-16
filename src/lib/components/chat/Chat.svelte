@@ -1545,8 +1545,12 @@
 			await handleOpenAIError(error, message);
 		}
 
-		if (sources && !message?.sources) {
-			message.sources = sources;
+		if (sources) {
+			if (message?.sources) {
+				message.sources = [...message.sources, ...sources];
+			} else {
+				message.sources = sources;
+			}
 		}
 
 		if (choices) {

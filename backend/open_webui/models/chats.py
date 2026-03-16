@@ -494,10 +494,17 @@ class ChatTable:
         history = chat.get("history", {})
 
         if message_id in history.get("messages", {}):
-            history["messages"][message_id] = {
-                **history["messages"][message_id],
-                **message,
-            }
+            existing = history["messages"][message_id]
+
+            # Merge list-type fields (e.g. "sources") instead of overwriting,
+            # so that tool-emitted citations and RAG sources coexist.
+            for key in ("sources",):
+                if key in message and key in existing:
+                    existing_items = existing[key]
+                    new_items = [s for s in message[key] if s not in existing_items]
+                    message = {**message, key: existing_items + new_items}
+
+            history["messages"][message_id] = {**existing, **message}
         else:
             history["messages"][message_id] = message
 
