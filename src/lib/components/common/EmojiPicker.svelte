@@ -109,8 +109,8 @@
 <Dropdown
 	bind:show
 	{align}
-	on:change={(e) => {
-		if (e.detail === false) {
+	onOpenChange={(state) => {
+		if (state === false) {
 			search = '';
 			onClose();
 		}

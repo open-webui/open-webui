@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { flyAndScale } from '$lib/utils/transitions';
-	import { createEventDispatcher, tick } from 'svelte';
-
-	const dispatch = createEventDispatcher();
+	import { tick } from 'svelte';
 
 	/** Whether the dropdown is open */
 	export let show = false;
@@ -106,7 +104,6 @@
 	async function toggleOpen() {
 		show = !show;
 		onOpenChange(show);
-		dispatch('change', show);
 		if (show) {
 			await tick();
 			positionContent();
@@ -129,22 +126,19 @@
 		if (contentEl?.contains(event.target)) return;
 		show = false;
 		onOpenChange(false);
-		dispatch('change', false);
 	}
 
 	function handleKeydown(event) {
 		if (event.key === 'Escape' && show) {
 			show = false;
 			onOpenChange(false);
-			dispatch('change', false);
-		}
+			}
 	}
 
 	/** Close the dropdown programmatically */
 	export function close() {
 		show = false;
 		onOpenChange(false);
-		dispatch('change', false);
 	}
 </script>
 

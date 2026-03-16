@@ -59,8 +59,7 @@
 		}
 	};
 
-	const handleDropdownChange = (e) => {
-		const state = e.detail;
+	const handleDropdownChange = (state) => {
 		dispatch('change', state);
 
 		// Fetch usage info when dropdown opens, if user has permission
@@ -79,7 +78,7 @@
 />
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<Dropdown bind:show on:change={handleDropdownChange} {align}>
+<Dropdown bind:show onOpenChange={handleDropdownChange} {align}>
 	<slot />
 
 	<div slot="content">
