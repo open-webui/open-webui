@@ -89,7 +89,7 @@
 		"@xyflow/svelte": "^0.1.19",
 		"alpinejs": "^3.15.0",
 		"async": "^3.2.5",
-		"bits-ui": "^0.21.15",
+		"bits-ui": "^2.0.0",
 		"chart.js": "^4.5.0",
 		"codemirror": "^6.0.1",
 		"codemirror-lang-elixir": "^4.0.0",

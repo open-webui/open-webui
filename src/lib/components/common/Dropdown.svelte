@@ -120,7 +120,7 @@
 		});
 	}
 
-	function handleWindowClick(event) {
+	function handleWindowPointerDown(event) {
 		if (!show || !closeOnOutsideClick) return;
 		if (triggerEl?.contains(event.target)) return;
 		if (contentEl?.contains(event.target)) return;
@@ -140,9 +140,22 @@
 		show = false;
 		onOpenChange(false);
 	}
+
+	import { onMount, onDestroy } from 'svelte';
+
+	let onPointerDown;
+	onMount(() => {
+		onPointerDown = (e) => handleWindowPointerDown(e);
+		document.addEventListener('pointerdown', onPointerDown, true);
+	});
+	onDestroy(() => {
+		if (onPointerDown) {
+			document.removeEventListener('pointerdown', onPointerDown, true);
+		}
+	});
 </script>
 
-<svelte:window on:click={handleWindowClick} on:keydown={handleKeydown} on:scroll|capture={positionContent} on:resize={positionContent} />
+<svelte:window on:keydown={handleKeydown} on:scroll|capture={positionContent} on:resize={positionContent} />
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
