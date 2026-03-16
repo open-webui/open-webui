@@ -22,6 +22,15 @@
 		contentEl.style.position = 'fixed';
 		contentEl.style.zIndex = '99999';
 
+		// Inherit min-width from parent dropdown container
+		const parentContainer = triggerEl.closest('[class*="rounded"]')?.parentElement;
+		if (parentContainer) {
+			const parentWidth = parentContainer.offsetWidth;
+			if (parentWidth > 0) {
+				contentEl.style.minWidth = `${parentWidth}px`;
+			}
+		}
+
 		// Position to the right of the trigger
 		const rightSpace = window.innerWidth - rect.right;
 		const contentWidth = contentEl.offsetWidth || 200;

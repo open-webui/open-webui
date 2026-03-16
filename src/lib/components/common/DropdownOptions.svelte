@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import { DropdownMenu } from 'bits-ui';
 
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	const i18n = getContext('i18n');
 
@@ -20,19 +20,17 @@
 	let open = false;
 </script>
 
-<DropdownMenu.Root bind:open>
-	<DropdownMenu.Trigger>
-		<div
-			class={className
-				? className
-				: 'flex w-full items-center gap-2 truncate bg-transparent px-0.5 text-sm placeholder-gray-400 outline-hidden focus:outline-hidden'}
-		>
-			{items.find((item) => item.value === value)?.label ?? placeholder}
-			<ChevronDown className=" size-3" strokeWidth="2.5" />
-		</div>
-	</DropdownMenu.Trigger>
+<Dropdown bind:show={open} {align}>
+	<div
+		class={className
+			? className
+			: 'flex w-full items-center gap-2 truncate bg-transparent px-0.5 text-sm placeholder-gray-400 outline-hidden focus:outline-hidden'}
+	>
+		{items.find((item) => item.value === value)?.label ?? placeholder}
+		<ChevronDown className=" size-3" strokeWidth="2.5" />
+	</div>
 
-	<DropdownMenu.Content {align}>
+	<div slot="content">
 		<div
 			class="dark:bg-gray-850 z-50 w-full rounded-2xl border border-gray-100 bg-white p-1 shadow-lg dark:border-gray-800 dark:text-white"
 		>
@@ -58,5 +56,5 @@
 				</button>
 			{/each}
 		</div>
-	</DropdownMenu.Content>
-</DropdownMenu.Root>
+	</div>
+</Dropdown>

@@ -42,7 +42,6 @@
 	function trigger(node) {
 		triggerEl = node.firstElementChild || node;
 		function handleClick(e) {
-			e.stopPropagation();
 			e.preventDefault();
 			toggleOpen();
 		}
@@ -147,16 +146,19 @@
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<span use:trigger style="display: contents;">
+<span use:trigger style="display: contents; cursor: pointer;">
 	<slot />
 </span>
 
 {#if show}
+	<!-- svelte-ignore a11y-click-events-have-key-events -->
+	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
 		use:portal
 		bind:this={contentEl}
 		class={contentClass}
 		transition:flyAndScale
+		on:click|stopPropagation
 	>
 		<slot name="content" />
 	</div>
