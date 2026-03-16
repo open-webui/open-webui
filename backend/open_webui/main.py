@@ -1893,6 +1893,8 @@ async def chat_completion(
                 pass
             finally:
                 raise  # re-raise to ensure proper task cancellation handling
+        except HTTPException:
+            raise
         except Exception as e:
             log.debug(f"Error processing chat payload: {e}")
             if metadata.get("chat_id") and metadata.get("message_id"):
