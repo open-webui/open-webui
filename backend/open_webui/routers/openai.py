@@ -829,7 +829,11 @@ def convert_to_azure_payload(url, payload: dict, api_version: str):
             del payload["max_tokens"]
 
         # Remove temperature if not 1 for reasoning models
-        if is_openai_reasoning_model(model) and "temperature" in payload and payload["temperature"] != 1:
+        if (
+            is_openai_reasoning_model(model)
+            and "temperature" in payload
+            and payload["temperature"] != 1
+        ):
             log.debug(
                 f"Removing temperature parameter for o-series model {model} as only default value (1) is supported"
             )
