@@ -35,7 +35,7 @@ async def get_memories(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if not has_permission(
+    if user.role != "admin" and not has_permission(
         user.id, "features.memories", request.app.state.config.USER_PERMISSIONS
     ):
         raise HTTPException(
@@ -75,7 +75,7 @@ async def add_memory(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if not has_permission(
+    if user.role != "admin" and not has_permission(
         user.id, "features.memories", request.app.state.config.USER_PERMISSIONS
     ):
         raise HTTPException(
@@ -128,7 +128,7 @@ async def query_memory(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if not has_permission(
+    if user.role != "admin" and not has_permission(
         user.id, "features.memories", request.app.state.config.USER_PERMISSIONS
     ):
         raise HTTPException(
@@ -173,7 +173,7 @@ async def reset_memory_from_vector_db(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if not has_permission(
+    if user.role != "admin" and not has_permission(
         user.id, "features.memories", request.app.state.config.USER_PERMISSIONS
     ):
         raise HTTPException(
@@ -229,7 +229,7 @@ async def delete_memory_by_user_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if not has_permission(
+    if user.role != "admin" and not has_permission(
         user.id, "features.memories", request.app.state.config.USER_PERMISSIONS
     ):
         raise HTTPException(
@@ -271,7 +271,7 @@ async def update_memory_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if not has_permission(
+    if user.role != "admin" and not has_permission(
         user.id, "features.memories", request.app.state.config.USER_PERMISSIONS
     ):
         raise HTTPException(
@@ -324,7 +324,7 @@ async def delete_memory_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if not has_permission(
+    if user.role != "admin" and not has_permission(
         user.id, "features.memories", request.app.state.config.USER_PERMISSIONS
     ):
         raise HTTPException(
