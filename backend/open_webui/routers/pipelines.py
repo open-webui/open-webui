@@ -101,7 +101,7 @@ async def process_pipeline_inlet_filter(request, payload, user, models):
                     else {}
                 )
                 if "detail" in res:
-                    raise Exception(response.status, res["detail"])
+                    raise HTTPException(status_code=e.status, detail=res["detail"])
             except Exception as e:
                 log.exception(f"Connection error: {e}")
 
