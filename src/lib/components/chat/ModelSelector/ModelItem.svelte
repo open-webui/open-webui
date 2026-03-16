@@ -82,6 +82,9 @@
 						alt={$i18n.t('{{modelName}} profile image', { modelName: item.label })}
 						class="rounded-full size-5 flex items-center"
 						loading="lazy"
+						on:error={(e) => {
+							e.currentTarget.src = '/favicon.png';
+						}}
 					/>
 				</Tooltip>
 			</div>
