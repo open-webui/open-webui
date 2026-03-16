@@ -35,11 +35,9 @@
 
 	<svelte:fragment slot="item" let:item let:selected>
 		{item.label}
-		{#if selected}
-			<div class="ml-auto">
-				<Check />
-			</div>
-		{/if}
+		<div class="ml-auto {selected ? '' : 'invisible'}">
+			<Check />
+		</div>
 	</svelte:fragment>
 </Select>
 
