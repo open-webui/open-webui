@@ -3174,6 +3174,56 @@ CHUNK_OVERLAP = PersistentConfig(
     int(os.environ.get("CHUNK_OVERLAP", "100")),
 )
 
+
+####################################
+# File Metadata Fields Configuration
+####################################
+
+# Config-driven metadata field definitions for knowledge base files.
+# Each field definition is a dict with:
+#   - key (str): The field name stored in File.meta and vector DB metadata
+#   - type (str): Value type for validation - "string", "integer", "list", "boolean"
+#   - embed (bool): Include in BM25 enrichment text (improves hybrid search ranking)
+#   - context (bool): Include as attribute on <source> tags sent to the LLM
+#                      (makes the field visible for citation in responses)
+#   - filter (bool): Whether this field is queryable via the file metadata filter API
+#
+# Set via environment variable (JSON array) or admin API at runtime.
+# Example: FILE_METADATA_FIELDS='[{"key":"title","type":"string","embed":true,"context":true,"filter":true}]'
+
+_DEFAULT_FILE_METADATA_FIELDS = [
+    {"key": "title", "type": "string", "embed": True, "context": True, "filter": True},
+    {"key": "author", "type": "string", "embed": False, "context": True, "filter": True},
+    {"key": "source_url", "type": "string", "embed": False, "context": True, "filter": True},
+    {"key": "tags", "type": "list", "embed": True, "context": True, "filter": True},
+    {"key": "description", "type": "string", "embed": True, "context": False, "filter": True},
+    {"key": "published_at", "type": "integer", "embed": False, "context": False, "filter": True},
+    {"key": "language", "type": "string", "embed": False, "context": True, "filter": True},
+]
+
+
+def _parse_file_metadata_fields(env_value: str) -> list:
+    """Parse FILE_METADATA_FIELDS from environment variable (JSON string)."""
+    if not env_value:
+        return _DEFAULT_FILE_METADATA_FIELDS
+    try:
+        import json
+
+        parsed = json.loads(env_value)
+        if isinstance(parsed, list):
+            return parsed
+        return _DEFAULT_FILE_METADATA_FIELDS
+    except (json.JSONDecodeError, TypeError):
+        return _DEFAULT_FILE_METADATA_FIELDS
+
+
+FILE_METADATA_FIELDS = PersistentConfig(
+    "FILE_METADATA_FIELDS",
+    "rag.file_metadata_fields",
+    _parse_file_metadata_fields(os.environ.get("FILE_METADATA_FIELDS", "")),
+)
+
+
 DEFAULT_RAG_TEMPLATE = """### Task:
 Respond to the user query using the provided context, incorporating inline citations in the format [id] **only when the <source> tag includes an explicit id attribute** (e.g., <source id="1">).
 

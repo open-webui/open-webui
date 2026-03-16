@@ -891,11 +891,36 @@ def handle_responses_streaming_event(
 
 
 def get_source_context(
-    sources: list, source_ids: dict = None, include_content: bool = True
+    sources: list,
+    source_ids: dict = None,
+    include_content: bool = True,
+    metadata_fields: list = None,
 ) -> str:
     """
     Build <source> tag context string from citation sources.
+
+    Args:
+        sources: List of source dicts with document/metadata arrays.
+        source_ids: Shared dict mapping source identifiers to numeric IDs.
+        include_content: Whether to include document body in tags.
+        metadata_fields: Optional list of FILE_METADATA_FIELDS config dicts.
+            Fields with context=True will be added as attributes on <source>
+            tags, making them visible to the LLM for citation
+            (e.g. source_url, author).
     """
+    # Pre-compute which metadata keys to include as source tag attributes.
+    # Uses the "context" flag (not "embed" which controls BM25 enrichment).
+    # Built-in keys (name, source) are already handled explicitly.
+    _BUILTIN_KEYS = {"name", "source", "file_id", "created_by", "hash",
+                     "embedding_config", "headings", "snippet", "start_index"}
+    extra_attr_keys = []
+    if metadata_fields:
+        extra_attr_keys = [
+            f["key"]
+            for f in metadata_fields
+            if f.get("context") and f.get("key") not in _BUILTIN_KEYS
+        ]
+
     context_string = ""
     if source_ids is None:
         source_ids = {}
@@ -908,11 +933,22 @@ def get_source_context(
                 source_ids[source_id] = len(source_ids) + 1
             src_name = source.get("source", {}).get("name")
             body = doc if include_content else ""
-            context_string += (
-                f'<source id="{source_ids[source_id]}"'
-                + (f' name="{src_name}"' if src_name else "")
-                + f">{body}</source>\n"
-            )
+
+            # Build tag with standard attributes
+            tag = f'<source id="{source_ids[source_id]}"'
+            if src_name:
+                tag += f' name="{src_name}"'
+
+            # Add config-driven metadata attributes
+            for key in extra_attr_keys:
+                value = meta.get(key)
+                if value is not None and value != "":
+                    # Sanitize: escape quotes in attribute values
+                    safe_value = str(value).replace('"', "&quot;")
+                    tag += f' {key}="{safe_value}"'
+
+            tag += f">{body}</source>\n"
+            context_string += tag
     return context_string
 
 
@@ -934,7 +970,13 @@ def apply_source_context_to_messages(
     if not sources or not user_message:
         return messages
 
-    context = get_source_context(sources, include_content=include_content)
+    context = get_source_context(
+        sources,
+        include_content=include_content,
+        metadata_fields=getattr(
+            request.app.state.config, "FILE_METADATA_FIELDS", None
+        ),
+    )
 
     context = context.strip()
     if not context:
@@ -4497,12 +4539,18 @@ async def streaming_chat_response_handler(response, ctx):
                             # Build context: file sources with content,
                             # tool sources as citation markers only.
                             source_ids = {}
+                            _meta_fields = getattr(
+                                request.app.state.config, "FILE_METADATA_FIELDS", None
+                            )
                             source_context = get_source_context(
-                                metadata.get("sources", []), source_ids
+                                metadata.get("sources", []),
+                                source_ids,
+                                metadata_fields=_meta_fields,
                             ) + get_source_context(
                                 all_tool_call_sources,
                                 source_ids,
                                 include_content=False,
+                                metadata_fields=_meta_fields,
                             )
                             source_context = source_context.strip()
                             if source_context:

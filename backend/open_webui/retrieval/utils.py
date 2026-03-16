@@ -179,7 +179,32 @@ def get_doc(collection_name: str, user: UserModel = None):
         raise e
 
 
-def get_enriched_texts(collection_result: GetResult) -> list[str]:
+def get_enriched_texts(
+    collection_result: GetResult,
+    embed_metadata_fields: Optional[list[dict]] = None,
+) -> list[str]:
+    """
+    Build enriched text representations for BM25 scoring by appending
+    metadata fields to the original chunk text.
+
+    Args:
+        collection_result: Vector DB query result containing documents and metadata.
+        embed_metadata_fields: Optional list of config-driven metadata field
+            definitions (from FILE_METADATA_FIELDS). Fields with embed=True
+            will be appended to the enriched text. If None, only the built-in
+            fields (name, title, headings, source, snippet) are used.
+    """
+    # Pre-compute the set of custom embed field keys (excluding built-in ones
+    # that are already handled explicitly below)
+    _BUILTIN_KEYS = {"name", "title", "headings", "source", "snippet"}
+    custom_embed_keys = []
+    if embed_metadata_fields:
+        custom_embed_keys = [
+            f["key"]
+            for f in embed_metadata_fields
+            if f.get("embed") and f.get("key") not in _BUILTIN_KEYS
+        ]
+
     enriched_texts = []
     for idx, text in enumerate(collection_result.documents[0]):
         metadata = collection_result.metadatas[0][idx]
@@ -212,6 +237,16 @@ def get_enriched_texts(collection_result: GetResult) -> list[str]:
         if metadata.get("snippet"):
             metadata_parts.append(f"Snippet: {metadata['snippet']}")
 
+        # Add config-driven custom embed fields (e.g. author, description, tags)
+        for key in custom_embed_keys:
+            value = metadata.get(key)
+            if value is not None:
+                label = key.replace("_", " ").title()
+                if isinstance(value, list):
+                    metadata_parts.append(f"{label}: {', '.join(str(v) for v in value)}")
+                else:
+                    metadata_parts.append(f"{label}: {value}")
+
         enriched_texts.append(" ".join(metadata_parts))
 
     return enriched_texts
@@ -228,6 +263,7 @@ async def query_doc_with_hybrid_search(
     r: float,
     hybrid_bm25_weight: float,
     enable_enriched_texts: bool = False,
+    embed_metadata_fields: Optional[list[dict]] = None,
 ) -> dict:
     try:
         # First check if collection_result has the required attributes
@@ -257,7 +293,7 @@ async def query_doc_with_hybrid_search(
         ]
 
         bm25_texts = (
-            get_enriched_texts(collection_result)
+            get_enriched_texts(collection_result, embed_metadata_fields)
             if enable_enriched_texts
             else original_texts
         )
@@ -488,6 +524,7 @@ async def query_collection_with_hybrid_search(
     r: float,
     hybrid_bm25_weight: float,
     enable_enriched_texts: bool = False,
+    embed_metadata_fields: Optional[list[dict]] = None,
 ) -> dict:
     results = []
     error = False
@@ -523,6 +560,7 @@ async def query_collection_with_hybrid_search(
                 r=r,
                 hybrid_bm25_weight=hybrid_bm25_weight,
                 enable_enriched_texts=enable_enriched_texts,
+                embed_metadata_fields=embed_metadata_fields,
             )
             return result, None
         except Exception as e:
@@ -1229,6 +1267,9 @@ async def get_sources_from_items(
                                 r=r,
                                 hybrid_bm25_weight=hybrid_bm25_weight,
                                 enable_enriched_texts=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
+                                embed_metadata_fields=getattr(
+                                    request.app.state.config, "FILE_METADATA_FIELDS", None
+                                ),
                             )
                         except Exception as e:
                             log.debug(
