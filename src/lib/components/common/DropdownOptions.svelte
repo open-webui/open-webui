@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 
-	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import Select from '$lib/components/common/Select.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	const i18n = getContext('i18n');
 
@@ -17,44 +17,31 @@
 
 	export let onChange: (value: string) => void = () => {};
 
+	let selectComponent;
 	let open = false;
 </script>
 
-<Dropdown bind:show={open} {align}>
-	<div
-		class={className
-			? className
-			: 'flex w-full items-center gap-2 truncate bg-transparent px-0.5 text-sm placeholder-gray-400 outline-hidden focus:outline-hidden'}
-	>
-		{items.find((item) => item.value === value)?.label ?? placeholder}
+<Select
+	bind:this={selectComponent}
+	bind:value
+	bind:open
+	{items}
+	{placeholder}
+	{align}
+	triggerClass={className
+		? className
+		: 'flex shrink-0 items-center gap-2 bg-transparent px-0.5 text-sm placeholder-gray-400 outline-hidden focus:outline-hidden'}
+	itemClass="flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+	onChange={(v) => {
+		onChange(v);
+	}}
+>
+	<svelte:fragment slot="trigger" let:selectedLabel>
+		{selectedLabel}
 		<ChevronDown className=" size-3" strokeWidth="2.5" />
-	</div>
+	</svelte:fragment>
 
-	<div slot="content">
-		<div
-			class="dark:bg-gray-850 z-50 w-full rounded-2xl border border-gray-100 bg-white p-1 shadow-lg dark:border-gray-800 dark:text-white"
-		>
-			{#each items as item}
-				<button
-					class="flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 {value ===
-					item.value
-						? ' '
-						: '  text-gray-500 dark:text-gray-400'}"
-					type="button"
-					on:click={() => {
-						if (value === item.value) {
-							value = null;
-						} else {
-							value = item.value;
-						}
-
-						open = false;
-						onChange(value);
-					}}
-				>
-					{item.label}
-				</button>
-			{/each}
-		</div>
-	</div>
-</Dropdown>
+	<svelte:fragment slot="item" let:item let:selected>
+		<span class={selected ? '' : 'text-gray-500 dark:text-gray-400'}>{item.label}</span>
+	</svelte:fragment>
+</Select>
