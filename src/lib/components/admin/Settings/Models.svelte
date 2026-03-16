@@ -43,8 +43,7 @@
 	import Minus from '$lib/components/icons/Minus.svelte';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { goto } from '$app/navigation';
-	import { DropdownMenu } from 'bits-ui';
-	import { flyAndScale } from '$lib/utils/transitions';
+
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import AdminViewSelector from './Models/AdminViewSelector.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
@@ -495,55 +494,55 @@
 					</Tooltip>
 
 					<div slot="content">
-						<DropdownMenu.Content
-							class="w-full max-w-[170px] rounded-xl p-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
-							sideOffset={-2}
-							side="bottom"
-							align="end"
-							transition={flyAndScale}
+						<div
+							class="w-[170px] rounded-xl p-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
 						>
-							<DropdownMenu.Item
-								class="select-none flex gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+							<button
+								class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								type="button"
 								on:click={() => {
 									enableAllHandler();
 								}}
 							>
 								<CheckCircle className="size-4" />
 								<div class="flex items-center">{$i18n.t('Enable All')}</div>
-							</DropdownMenu.Item>
+							</button>
 
-							<DropdownMenu.Item
-								class="select-none flex gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+							<button
+								class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								type="button"
 								on:click={() => {
 									disableAllHandler();
 								}}
 							>
 								<Minus className="size-4" />
 								<div class="flex items-center">{$i18n.t('Disable All')}</div>
-							</DropdownMenu.Item>
+							</button>
 
 							<hr class="border-gray-100 dark:border-gray-800 my-1" />
 
-							<DropdownMenu.Item
-								class="select-none flex gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+							<button
+								class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								type="button"
 								on:click={() => {
 									showAllHandler();
 								}}
 							>
 								<Eye className="size-4" />
 								<div class="flex items-center">{$i18n.t('Show All')}</div>
-							</DropdownMenu.Item>
+							</button>
 
-							<DropdownMenu.Item
-								class="select-none flex gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+							<button
+								class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								type="button"
 								on:click={() => {
 									hideAllHandler();
 								}}
 							>
 								<EyeSlash className="size-4" />
 								<div class="flex items-center">{$i18n.t('Hide All')}</div>
-							</DropdownMenu.Item>
-						</DropdownMenu.Content>
+							</button>
+						</div>
 					</div>
 				</Dropdown>
 			</div>
