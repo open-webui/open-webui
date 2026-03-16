@@ -76,9 +76,9 @@
 
 - ⚖️ **水平扩展性**：支持基于 Redis 的会话管理和 WebSocket，适用于负载均衡器后的多工作节点部署。
 
-- 🌐🌍 **多语言支持**：通过我们的国际化 (i18n) 支持，以您偏好的语言使用 Open WebUI。
+- 🌐🌍 **多语言支持**：通过我们的国际化 (i18n) 支持，以您偏好的语言使用 Open WebUI。欢迎加入我们扩展支持的语言！我们正积极寻求贡献者！
 
-- 🧩 **Pipelines，Open WebUI 插件支持**：使用 [Pipelines 插件框架](https://github.com/openwebui/pipelines) 无缝集成自定义逻辑和 Python 库。
+- 🧩 **Pipelines，Open WebUI 插件支持**：使用 [Pipelines 插件框架](https://github.com/openwebui/pipelines) 无缝集成自定义逻辑和 Python 库。启动您的 Pipelines 实例，将 OpenAI URL 设置为 Pipelines URL，即可探索无限可能。[示例](https://github.com/openwebui/pipelines/tree/main/examples) 包括**函数调用**、用于控制访问的**用户速率限制**、使用 Langfuse 等工具的**使用情况监控**、用于多语言支持的 **LibreTranslate 实时翻译**、**毒性消息过滤**等等。
 
 - 🌟 **持续更新**：我们致力于通过定期的更新、修复和新功能不断改进 Open WebUI。
 
@@ -86,7 +86,7 @@
 
 ---
 
-我们衷心感谢赞助商的慷慨支持。你们的贡献帮助我们维护和改进项目。谢谢！
+我们衷心感谢赞助商的慷慨支持。你们的贡献帮助我们维护和改进项目，确保我们能够继续为社区提供优质成果。谢谢！
 
 ## 如何安装 🚀
 
@@ -108,45 +108,136 @@
    open-webui serve
    ```
 
-启动后，您可以在浏览器中访问 `http://localhost:8080` 开启您的体验！
+这将启动 Open WebUI 服务器，您可以通过 [http://localhost:8080](http://localhost:8080) 进行访问。
 
-### 使用 Docker 运行 🐳
+### 使用 Docker 快速开始 🐳
 
-#### 若 Ollama 在您的计算机上
-使用以下命令：
+> [!NOTE]  
+> 请注意，对于某些 Docker 环境，可能需要额外的配置。如果您遇到任何连接问题，我们的 [Open WebUI 文档](https://docs.openwebui.com/) 中的详细指南随时准备为您提供帮助。
+
+> [!WARNING]
+> 使用 Docker 安装 Open WebUI 时，请务必在 Docker 命令中包含 `-v open-webui:/app/backend/data`。这一步至关重要，因为它确保了您的数据库已正确挂载，防止任何数据丢失。
+
+> [!TIP]  
+> 如果您希望在包含 Ollama 或 CUDA 加速的情况下使用 Open WebUI，我们建议使用带有 `:cuda` 或 `:ollama` 标签的官方镜像。要启用 CUDA，您必须在 Linux/WSL 系统上安装 [Nvidia CUDA 容器工具包](https://docs.nvidia.com/dgx/nvidia-container-runtime-upgrade/)。
+
+### 使用默认配置安装
+
+- **如果 Ollama 在您的计算机上**，请使用此命令：
+
+  ```bash
+  docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
+  ```
+
+- **如果 Ollama 在不同的服务器上**，请使用此命令：
+
+  要连接到另一台服务器上的 Ollama，请将 `OLLAMA_BASE_URL` 更改为服务器的 URL：
+
+  ```bash
+  docker run -d -p 3000:8080 -e OLLAMA_BASE_URL=https://example.com -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
+  ```
+
+- **要运行支持 Nvidia GPU 的 Open WebUI**，请使用此命令：
+
+  ```bash
+  docker run -d -p 3000:8080 --gpus all --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:cuda
+  ```
+
+### 仅针对 OpenAI API 使用的安装
+
+- **如果您仅使用 OpenAI API**，请使用此命令：
+
+  ```bash
+  docker run -d -p 3000:8080 -e OPENAI_API_KEY=your_secret_key -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
+  ```
+
+### 安装带有内置 Ollama 支持的 Open WebUI
+
+这种安装方法使用一个将 Open WebUI 与 Ollama 捆绑在一起的单一容器镜像，从而可以通过单个命令进行简化设置。根据您的硬件设置选择适当的命令：
+
+- **支持 GPU**：
+  通过运行以下命令利用 GPU 资源：
+
+  ```bash
+  docker run -d -p 3000:8080 --gpus=all -v ollama:/root/.ollama -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama
+  ```
+
+- **仅限 CPU**：
+  如果您不使用 GPU，请改用此命令：
+
+  ```bash
+  docker run -d -p 3000:8080 -v ollama:/root/.ollama -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama
+  ```
+
+这两个命令都可以实现 Open WebUI 和 Ollama 的内置、无忧安装，确保您可以迅速启动并运行一切。
+
+安装完成后，您可以通过 [http://localhost:3000](http://localhost:3000) 访问 Open WebUI。尽情享受吧！ 😄
+
+### 其他安装方法
+
+我们提供各种安装替代方案，包括非 Docker 原生安装方法、Docker Compose、Kustomize 和 Helm。访问我们的 [Open WebUI 文档](https://docs.openwebui.com/getting-started/) 或加入我们的 [Discord 社区](https://discord.gg/5rJgQTnV4s) 获取全面指导。
+
+有关设置本地开发环境的说明，请查看 [本地开发指南](https://docs.openwebui.com/getting-started/development)。
+
+### 故障排除
+
+遇到连接问题？我们的 [Open WebUI 故障排除文档](https://docs.openwebui.com/troubleshooting/) 可以为您提供帮助。如需进一步协助并加入我们的活力社区，请访问 [Open WebUI Discord](https://discord.gg/5rJgQTnV4s)。
+
+#### Open WebUI：服务器连接错误
+
+如果您遇到连接问题，通常是因为 WebUI Docker 容器无法访问容器内部的 Ollama 服务器（地址为 127.0.0.1:11434 或 host.docker.internal:11434）。在 Docker 命令中使用 `--network=host` 标志来解决此问题。请注意，端口会从 3000 变为 8080，访问链接为：`http://localhost:8080`。
+
+**示例 Docker 命令**：
 
 ```bash
-docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui ghcr.io/open-webui/open-webui:main
+docker run -d --network=host -v open-webui:/app/backend/data -e OLLAMA_BASE_URL=http://127.0.0.1:11434 --name open-webui --restart always ghcr.io/open-webui/open-webui:main
 ```
 
-#### 若 Ollama 在远程服务器上
-要连接到远程服务器上的 Ollama，请将 `OLLAMA_BASE_URL` 更改为服务器的 URL：
+### 保持您的 Docker 安装为最新版本
+
+查看我们的 [Open WebUI 文档](https://docs.openwebui.com/getting-started/updating) 中的更新指南。
+
+### 使用开发 (Dev) 分支 🌙
+
+> [!WARNING]
+> `:dev` 分支包含最新的不稳定功能和更改。使用该分支需自担风险，因为它可能包含错误或不完整的功能。
+
+如果您想尝试最新的前沿功能并可以接受偶尔的不稳定性，可以像这样使用 `:dev` 标签：
 
 ```bash
-docker run -d -p 3000:8080 -e OLLAMA_BASE_URL=https://example.com -v open-webui:/app/backend/data --name open-webui ghcr.io/open-webui/open-webui:main
+docker run -d -p 3000:8080 -v open-webui:/app/backend/data --name open-webui --add-host=host.docker.internal:host-gateway --restart always ghcr.io/open-webui/open-webui:dev
 ```
 
-#### 运行支持 Nvidia GPU 的 Open WebUI
-使用以下命令：
+### 离线模式
+
+如果您在离线环境中运行 Open WebUI，可以将 `HF_HUB_OFFLINE` 环境变量设置为 `1`，以防止尝试从互联网下载模型。
 
 ```bash
-docker run -d -p 3000:8080 --gpus all --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui ghcr.io/open-webui/open-webui:cuda
+export HF_HUB_OFFLINE=1
 ```
 
-### 仅适用于 Open WebUI 的 Docker 镜像
-如果您不打算使用 Ollama，请使用以下命令：
+## 接下来要做什么？ 🌟
 
-```bash
-docker run -d -p 3000:8080 -v open-webui:/app/backend/data --name open-webui ghcr.io/open-webui/open-webui:main
-```
+在 [Open WebUI 文档](https://docs.openwebui.com/roadmap/) 中发现我们路线图上的即将推出的功能。
 
-有关其他安装方法（如 Kubernetes、Caddy、Conda 等），请参考我们的 [官方文档](https://docs.openwebui.com/getting-started/)。
+## 许可证 📜
 
-## 故障排除
-遇到问题？请前往我们的 [GitHub Issues](https://github.com/open-webui/open-webui/issues) 或加入我们的 [Discord 社区](https://discord.gg/5rJgQTnV4s) 寻求帮助。
+本项目包含多个许可证下的代码。当前代码库包括根据 Open WebUI 许可证许可的组件，并额外要求保留 "Open WebUI" 品牌，以及根据其各自原始许可证许可的先前贡献。有关许可证更改和代码各部分适用条款的详细记录，请参阅 [LICENSE_HISTORY](./LICENSE_HISTORY)。有关完整且更新的许可详情，请参阅 [LICENSE](./LICENSE) 和 [LICENSE_HISTORY](./LICENSE_HISTORY) 文件。
 
-## 贡献 (Contributing)
-欢迎参与贡献！请参阅我们的 [贡献指南](CONTRIBUTING.md) 以获取更多信息。
+## 支持 💬
 
-## 许可证 (License)
-本项目采用 [MIT 许可证](LICENSE)。
+如果您有任何疑问、建议或需要帮助，请提交 issue 或加入我们的 [Open WebUI Discord 社区](https://discord.gg/5rJgQTnV4s) 与我们联系！ 🤝
+
+## 星标历史 (Star History)
+
+<a href="https://star-history.com/#open-webui/open-webui&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date" />
+  </picture>
+</a>
+
+---
+
+由 [Timothy Jaeryang Baek](https://github.com/tjbck) 创建 - 让我们一起让 Open WebUI 变得更加精彩！ 💪
