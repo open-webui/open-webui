@@ -790,12 +790,11 @@
 					? [
 							BubbleMenu.configure({
 								element: bubbleMenuElement,
-								tippyOptions: {
-									duration: 100,
-									arrow: false,
+								appendTo: () => document.body,
+								options: {
+									strategy: 'fixed',
 									placement: 'top',
-									theme: 'transparent',
-									offset: [0, 2]
+									offset: 2
 								},
 								shouldShow: ({ editor, view, state, oldState, from, to }) => {
 									// safety check
@@ -808,20 +807,34 @@
 							}),
 							FloatingMenu.configure({
 								element: floatingMenuElement,
-								tippyOptions: {
-									duration: 100,
-									arrow: false,
+								appendTo: () => document.body,
+								options: {
+									strategy: 'fixed',
 									placement: floatingMenuPlacement,
-									theme: 'transparent',
-									offset: [-12, 4]
+									offset: 4
 								},
 								shouldShow: ({ editor, view, state, oldState }) => {
 									// safety check
 									if (!editor || !editor.view || editor.isDestroyed) {
 										return false;
 									}
-									// default logic
-									return editor.isActive('paragraph');
+									const { selection } = state;
+									const { $anchor, empty } = selection;
+									const isRootDepth = $anchor.depth === 1;
+									const isEmptyTextBlock =
+										$anchor.parent.isTextblock &&
+										!$anchor.parent.type.spec.code &&
+										!$anchor.parent.textContent &&
+										$anchor.parent.childCount === 0;
+
+									// Only show on empty paragraphs at root depth
+									return (
+										view.hasFocus() &&
+										empty &&
+										isRootDepth &&
+										isEmptyTextBlock &&
+										editor.isEditable
+									);
 								}
 							})
 						]
@@ -1232,11 +1245,11 @@
 </script>
 
 {#if richText && showFormattingToolbar}
-	<div bind:this={bubbleMenuElement} id="bubble-menu" class="p-0 {editor ? '' : 'hidden'}">
+	<div bind:this={bubbleMenuElement} id="bubble-menu" class="p-0" style="visibility: hidden; opacity: 0; position: absolute; z-index: 9999;">
 		<FormattingButtons {editor} />
 	</div>
 
-	<div bind:this={floatingMenuElement} id="floating-menu" class="p-0 {editor ? '' : 'hidden'}">
+	<div bind:this={floatingMenuElement} id="floating-menu" class="p-0" style="visibility: hidden; opacity: 0; position: absolute; z-index: 9999;">
 		<FormattingButtons {editor} />
 	</div>
 {/if}
