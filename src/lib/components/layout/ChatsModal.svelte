@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { getContext } from 'svelte';
+	import { getContext, tick } from 'svelte';
+	import { goto } from '$app/navigation';
 
 	import dayjs from 'dayjs';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
@@ -10,6 +11,7 @@
 	dayjs.extend(calendar);
 
 	import { deleteChatById } from '$lib/apis/chats';
+	import { chatId } from '$lib/stores';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -64,12 +66,22 @@
 		}
 	};
 
-	const deleteHandler = async (chatId) => {
-		const res = await deleteChatById(localStorage.token, chatId).catch((error) => {
+	const deleteHandler = async (id) => {
+		const res = await deleteChatById(localStorage.token, id).catch((error) => {
 			toast.error(`${error}`);
+			return null;
 		});
 
-		onUpdate();
+		if (res) {
+			if ($chatId === id) {
+				await goto('/');
+
+				await chatId.set('');
+				await tick();
+			}
+
+			onUpdate();
+		}
 	};
 </script>
 

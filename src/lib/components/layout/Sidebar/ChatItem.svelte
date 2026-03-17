@@ -155,6 +155,14 @@
 	const archiveChatHandler = async (id) => {
 		try {
 			await archiveChatById(localStorage.token, id);
+
+			if ($chatId === id) {
+				await goto('/');
+
+				await chatId.set('');
+				await tick();
+			}
+
 			dispatch('change');
 			toast.success($i18n.t('Chat archived.'));
 		} catch (error) {
