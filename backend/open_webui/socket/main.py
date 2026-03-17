@@ -508,6 +508,19 @@ async def channel_events(sid, data):
         Channels.update_member_last_read_at(data["channel_id"], user["id"])
 
 
+def normalize_document_id(document_id: str) -> str:
+    """Canonicalize document IDs to prevent auth bypass via prefix variants.
+
+    YdocManager normalizes storage keys by replacing ":" with "_", so
+    "note_abc" and "note:abc" resolve to the same underlying document.
+    We must rewrite underscore-prefixed IDs back to the colon form so
+    that authorization checks (which key on "note:") always fire.
+    """
+    if document_id.startswith("note_"):
+        document_id = "note:" + document_id[5:]
+    return document_id
+
+
 @sio.on("ydoc:document:join")
 async def ydoc_document_join(sid, data):
     """Handle user joining a document"""
@@ -516,7 +529,7 @@ async def ydoc_document_join(sid, data):
         return
 
     try:
-        document_id = data["document_id"]
+        document_id = normalize_document_id(data["document_id"])
 
         if document_id.startswith("note:"):
             note_id = document_id.split(":")[1]
@@ -591,6 +604,8 @@ async def ydoc_document_join(sid, data):
 
 
 async def document_save_handler(document_id, data, user):
+    document_id = normalize_document_id(document_id)
+
     if document_id.startswith("note:"):
         note_id = document_id.split(":")[1]
         note = Notes.get_note_by_id(note_id)
@@ -619,6 +634,8 @@ async def yjs_document_state(sid, data):
     """Send the current state of the Yjs document to the user"""
     try:
         document_id = data["document_id"]
+
+        document_id = normalize_document_id(document_id)
         room = f"doc_{document_id}"
 
         active_session_ids = get_session_ids_from_room(room)
@@ -658,6 +675,15 @@ async def yjs_document_update(sid, data):
     """Handle Yjs document updates"""
     try:
         document_id = data["document_id"]
+
+        document_id = normalize_document_id(document_id)
+
+        # Verify the sender actually joined this document room
+        room = f"doc_{document_id}"
+        active_session_ids = get_session_ids_from_room(room)
+        if sid not in active_session_ids:
+            log.warning(f"Session {sid} not in room {room}. Rejecting update.")
+            return
 
         try:
             await stop_item_tasks(REDIS, document_id)
