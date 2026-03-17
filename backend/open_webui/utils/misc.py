@@ -6,7 +6,7 @@ import uuid
 import logging
 from datetime import timedelta
 from pathlib import Path
-from typing import Callable, Optional, Sequence, Union
+from typing import Any, Callable, Optional, Sequence, Union
 import json
 import aiohttp
 import mimeparse
@@ -273,6 +273,51 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
     flush_pending()
 
     return messages
+
+
+def merge_assistant_content_into_output_messages(
+    messages: list[dict], content: Any
+) -> list[dict]:
+    """
+    Preserve tool/reasoning reconstruction from stored `output`, but let an
+    edited assistant `content` replace the final assistant-visible text.
+
+    This keeps the backend-authoritative message chain editable without
+    discarding tool calls or other structured output items.
+    """
+    if not messages:
+        return messages
+
+    content_text = get_content_from_message({"content": content})
+    if not content_text or not content_text.strip():
+        return messages
+
+    merged_messages = list(messages)
+    assistant_indexes = [
+        idx
+        for idx, message in enumerate(merged_messages)
+        if message.get("role") == "assistant"
+    ]
+
+    if not assistant_indexes:
+        return [*merged_messages, {"role": "assistant", "content": content}]
+
+    non_tool_assistant_indexes = [
+        idx
+        for idx in assistant_indexes
+        if not merged_messages[idx].get("tool_calls")
+    ]
+    target_idx = (
+        non_tool_assistant_indexes[-1]
+        if non_tool_assistant_indexes
+        else assistant_indexes[-1]
+    )
+
+    merged_messages[target_idx] = {
+        **merged_messages[target_idx],
+        "content": content,
+    }
+    return merged_messages
 
 
 def get_last_user_message(messages: list[dict]) -> Optional[str]:

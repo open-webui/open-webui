@@ -2030,7 +2030,14 @@
 			.map((token) => decodeURIComponent(JSON.parse(`"${token.replace(/"/g, '\\"')}"`)));
 	};
 
-	const sendMessageSocket = async (model, _messages, _history, responseMessageId, _chatId) => {
+	const sendMessageSocket = async (
+		model,
+		_messages,
+		_history,
+		responseMessageId,
+		_chatId,
+		{ contextMessageId = null }: { contextMessageId?: string | null } = {}
+	) => {
 		const responseMessage = _history.messages[responseMessageId];
 		const userMessage = _history.messages[responseMessage.parentId];
 
@@ -2223,6 +2230,7 @@
 				chat_id: $chatId,
 
 				id: responseMessageId,
+				context_message_id: contextMessageId ?? undefined,
 				parent_id: userMessage?.id ?? null,
 				parent_message: userMessage,
 
@@ -2458,7 +2466,8 @@
 					createMessagesList(history, responseMessage.id),
 					history,
 					responseMessage.id,
-					_chatId
+					_chatId,
+					{ contextMessageId: responseMessage.id }
 				);
 			}
 		}

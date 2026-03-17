@@ -97,6 +97,7 @@ from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
     get_content_from_message,
     convert_output_to_messages,
+    merge_assistant_content_into_output_messages,
 )
 from open_webui.utils.tools import (
     get_tools,
@@ -2131,7 +2132,11 @@ def process_messages_with_output(messages: list[dict]) -> list[dict]:
             # Use output items for clean OpenAI-format messages
             output_messages = convert_output_to_messages(message["output"], raw=True)
             if output_messages:
-                processed.extend(output_messages)
+                processed.extend(
+                    merge_assistant_content_into_output_messages(
+                        output_messages, message.get("content")
+                    )
+                )
                 continue
 
         # Strip 'output' field before adding (LLM shouldn't see it)
@@ -2152,10 +2157,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Load messages from DB when available — DB preserves structured 'output' items
     # which the frontend strips, causing tool calls to be merged into content.
     chat_id = metadata.get("chat_id")
-    parent_message_id = metadata.get("parent_message_id")
+    context_message_id = metadata.get("context_message_id") or metadata.get(
+        "parent_message_id"
+    )
 
-    if chat_id and parent_message_id and not chat_id.startswith("local:"):
-        db_messages = load_messages_from_db(chat_id, parent_message_id)
+    if chat_id and context_message_id and not chat_id.startswith("local:"):
+        db_messages = load_messages_from_db(chat_id, context_message_id)
         if db_messages:
             system_message = get_system_message(form_data.get("messages", []))
             form_data["messages"] = (
