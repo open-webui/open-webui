@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- 🔒 **Model access control bypass.** Fixed a security vulnerability where external clients could bypass model access controls by setting a URL parameter, preventing unauthorized access to restricted models. [Commit](https://github.com/open-webui/open-webui/commit/c0385f60ba049da48d2d5452068586d375303c37)
 - 🛡️ **Terminal proxy path sanitization.** The terminal server proxy now properly sanitizes paths to prevent directory traversal and SSRF attacks, protecting against security vulnerabilities. [Commit](https://github.com/open-webui/open-webui/commit/f9d38a073fae32032ed44073cf2817cba20210bb)
 - 🛡️ **Tool configuration access control.** Tool configuration endpoints now properly verify user permissions, preventing unauthorized access to tool settings. [Commit](https://github.com/open-webui/open-webui/commit/bc5b3ec6b8ec0fef894eb8046c636ee33688b8c4)
 - 💬 **Message queue responsiveness.** The message queue no longer waits for background tasks like title generation and follow-up suggestions to complete, allowing users to send new messages immediately after a response finishes without unnecessary delays. [Commit](https://github.com/open-webui/open-webui/commit/486c004cbb43f15d5c3e31561f51f22effff1f6c), [#22565](https://github.com/open-webui/open-webui/issues/22565)
