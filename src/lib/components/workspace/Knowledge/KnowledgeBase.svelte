@@ -171,14 +171,18 @@
 
 	const fileSelectHandler = async (file) => {
 		try {
-			selectedFile = file;
-			const rawContent = selectedFile?.data?.content || '';
+			const rawContent = file?.data?.content || '';
 
-			// Normalize single newlines to paragraph breaks (double newlines) so the
-			// rich text editor's markdown parser preserves them. Without this, single
-			// newlines get collapsed into spaces during markdown parsing (breaks: false).
-			// Existing double+ newlines (paragraph breaks) are left unchanged.
-			selectedFileContent = rawContent.replace(/(?<!\n)\n(?!\n)/g, '\n\n');
+			// Strip carriage returns and normalize single newlines to paragraph
+			// breaks (double newlines) so the rich text editor's markdown parser
+			// preserves them. This is idempotent — already-doubled newlines are
+			// left unchanged, so re-opening saved content doesn't compound.
+			const normalized = rawContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+			selectedFileContent = normalized.replace(/(?<!\n)\n(?!\n)/g, '\n\n');
+
+			// Set selectedFile AFTER content so the {#key selectedFile.id} block
+			// recreates RichTextInput with the already-normalized value.
+			selectedFile = file;
 		} catch (e) {
 			toast.error($i18n.t('Failed to load file content.'));
 		}

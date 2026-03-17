@@ -1217,11 +1217,9 @@
 			} else {
 				if (value !== mdValue) {
 					editor.commands.setContent(
-						preserveBreaks
-							? value
-							: marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
-									breaks: false
-								})
+						marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
+							breaks: false
+						})
 					);
 
 					selectTemplate();
