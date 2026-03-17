@@ -202,9 +202,9 @@ async def fetch_url(
     try:
         content, _ = await asyncio.to_thread(get_content_from_url, __request__, url)
 
-        # Truncate if too long (avoid overwhelming context)
-        max_length = 50000
-        if len(content) > max_length:
+        # Truncate if configured (WEB_FETCH_MAX_CONTENT_LENGTH)
+        max_length = getattr(__request__.app.state.config, "WEB_FETCH_MAX_CONTENT_LENGTH", None)
+        if max_length and max_length > 0 and len(content) > max_length:
             content = content[:max_length] + "\n\n[Content truncated...]"
 
         return content

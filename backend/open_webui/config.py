@@ -3345,6 +3345,15 @@ WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
     int(os.getenv("WEB_SEARCH_CONCURRENT_REQUESTS", "0")),
 )
 
+WEB_FETCH_MAX_CONTENT_LENGTH = PersistentConfig(
+    "WEB_FETCH_MAX_CONTENT_LENGTH",
+    "rag.web.search.fetch_url_max_content_length",
+    (
+        int(os.environ.get("WEB_FETCH_MAX_CONTENT_LENGTH"))
+        if os.environ.get("WEB_FETCH_MAX_CONTENT_LENGTH")
+        else None
+    ),
+)
 
 WEB_LOADER_ENGINE = PersistentConfig(
     "WEB_LOADER_ENGINE",
