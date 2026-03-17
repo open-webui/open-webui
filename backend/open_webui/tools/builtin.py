@@ -10,6 +10,7 @@ import json
 import logging
 import time
 import asyncio
+import os
 from typing import Optional
 
 from fastapi import Request
@@ -203,7 +204,8 @@ async def fetch_url(
         content, _ = await asyncio.to_thread(get_content_from_url, __request__, url)
 
         # Truncate if too long (avoid overwhelming context)
-        max_length = 50000
+        # Make max_length configurable via environment variable
+        max_length = int(os.environ.get("WEBUI_MAX_FETCH_URL_LENGTH", "50000"))
         if len(content) > max_length:
             content = content[:max_length] + "\n\n[Content truncated...]"
 
