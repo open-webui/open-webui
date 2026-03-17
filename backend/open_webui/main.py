@@ -2332,13 +2332,17 @@ async def register_client(request, client_id: str) -> bool:
         return False
 
     try:
-        request.app.state.config.TOOL_SERVER_CONNECTIONS[connection_idx] = {
+        connections = request.app.state.config.TOOL_SERVER_CONNECTIONS
+        connections[connection_idx] = {
             **connection,
             'info': {
                 **connection.get('info', {}),
                 'oauth_client_info': encrypt_data(oauth_client_info.model_dump(mode='json')),
             },
         }
+        # Re-assign the full list to trigger AppConfig.__setattr__ → PersistentConfig.save()
+        # (in-place list mutation via list[idx] = ... does not trigger __setattr__)
+        request.app.state.config.TOOL_SERVER_CONNECTIONS = connections
     except Exception as e:
         log.error(f'Failed to persist updated OAuth client info for tool server {client_id}: {e}')
         return False
