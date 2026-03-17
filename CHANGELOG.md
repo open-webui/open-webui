@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.11] - 2026-03-15
+## [0.8.11] - 2026-03-18
 
 ### Added
 
@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✏️ **Markdown file editing.** Users can now edit and save Markdown files directly in the file navigator, with empty files automatically switching to editor mode for immediate editing. [Commit](https://github.com/open-webui/open-webui/commit/47e47e42af682e7f75c8359999f7cdf969bf903e)
 - 🍔 **Model bulk actions menu.** Users can now quickly enable, disable, show, or hide multiple models at once using a new hamburger menu on the workspace Models page filter bar, with actions respecting the current search and filter settings. [#22484](https://github.com/open-webui/open-webui/pull/22484)
 - 📂 **Files list pagination.** The files list API now supports pagination, returning paginated results with a total count for easier navigation through large file collections. [Commit](https://github.com/open-webui/open-webui/commit/f9756de693a93e918c037d757afddb7defc847e4)
+- 🔗 **Web fetch content length config.** Administrators can now configure the maximum characters to return from fetched URLs via WEB_FETCH_MAX_CONTENT_LENGTH environment variable or the admin settings page, instead of the previous hardcoded 50K limit. [Commit](https://github.com/open-webui/open-webui/commit/b171b0216b916745420c7caf513093a315ed9560), [#22774](https://github.com/open-webui/open-webui/issues/22774)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for Finnish, Portuguese (Portugal), Catalan, Turkish, Japanese, Simplified Chinese, Traditional Chinese, and Estonian were enhanced and expanded.
 
