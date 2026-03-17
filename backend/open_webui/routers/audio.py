@@ -492,7 +492,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         region = request.app.state.config.TTS_AZURE_SPEECH_REGION or "eastus"
         base_url = request.app.state.config.TTS_AZURE_SPEECH_BASE_URL
         language = request.app.state.config.TTS_VOICE
-        locale = "-".join(request.app.state.config.TTS_VOICE.split("-")[:1])
+        locale = "-".join(request.app.state.config.TTS_VOICE.split("-")[:2])
         output_format = request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT
 
         try:
@@ -852,17 +852,34 @@ def transcription_handler(request, file_path, metadata, user=None):
         except requests.exceptions.RequestException as e:
             log.exception(e)
             detail = None
+            status_code = getattr(r, "status_code", 500) if r else 500
 
             try:
                 if r is not None and r.status_code != 200:
                     res = r.json()
-                    if "error" in res:
+                    # Azure returns {"code": "...", "message": "...", "innerError": {...}}
+                    if "code" in res and "message" in res:
+                        azure_code = res.get("innerError", {}).get("code", res["code"])
+                        user_facing_codes = {
+                            "EmptyAudioFile",
+                            "AudioLengthLimitExceeded",
+                            "NoLanguageIdentified",
+                            "MultipleLanguagesIdentified",
+                        }
+                        if azure_code in user_facing_codes:
+                            detail = res["message"]
+                        else:
+                            log.error(
+                                f"Azure STT error [{azure_code}]: {res['message']}"
+                            )
+                            detail = "An error occurred during transcription."
+                    elif "error" in res:
                         detail = f"External: {res['error'].get('message', '')}"
             except Exception:
                 detail = f"External: {e}"
 
             raise HTTPException(
-                status_code=getattr(r, "status_code", 500) if r else 500,
+                status_code=status_code,
                 detail=detail if detail else "Open WebUI: Server Connection Error",
             )
 
@@ -1087,6 +1104,8 @@ def transcribe(
             for future in futures:
                 try:
                     results.append(future.result())
+                except HTTPException:
+                    raise
                 except Exception as transcribe_exc:
                     raise HTTPException(
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1194,7 +1213,9 @@ def transcription(
         )
 
     try:
-        ext = file.filename.split(".")[-1]
+        safe_name = os.path.basename(file.filename) if file.filename else ""
+        ext = safe_name.rsplit(".", 1)[-1] if "." in safe_name else ""
+
         id = uuid.uuid4()
 
         filename = f"{id}.{ext}"
@@ -1203,6 +1224,10 @@ def transcription(
         file_dir = f"{CACHE_DIR}/audio/transcriptions"
         os.makedirs(file_dir, exist_ok=True)
         file_path = f"{file_dir}/{filename}"
+
+        # Defense-in-depth: ensure resolved path stays within intended directory
+        if not os.path.realpath(file_path).startswith(os.path.realpath(file_dir)):
+            raise ValueError("Invalid file path detected")
 
         with open(file_path, "wb") as f:
             f.write(contents)
@@ -1220,20 +1245,24 @@ def transcription(
                 "filename": os.path.basename(file_path),
             }
 
+        except HTTPException:
+            raise
         except Exception as e:
             log.exception(e)
 
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(e),
+                detail="Transcription failed.",
             )
 
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(e)
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail="Transcription failed.",
         )
 
 

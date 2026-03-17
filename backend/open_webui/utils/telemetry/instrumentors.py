@@ -20,6 +20,7 @@ from opentelemetry.instrumentation.redis import RedisInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
+from opentelemetry.instrumentation.system_metrics import SystemMetricsInstrumentor
 from opentelemetry.trace import Span, StatusCode
 from redis import Redis
 from redis.cluster import RedisCluster
@@ -204,6 +205,7 @@ class Instrumentor(BaseInstrumentor):
             request_hook=aiohttp_request_hook,
             response_hook=aiohttp_response_hook,
         )
+        SystemMetricsInstrumentor().instrument()
 
     def _uninstrument(self, **kwargs):
         if getattr(self, "instrumentors", None) is None:

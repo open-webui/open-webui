@@ -33,6 +33,7 @@
 
 	export let share = true;
 	export let sharePublic = true;
+	export let shareUsers = true;
 
 	let groups: any[] = [];
 	const resolvingGroupIds = new Set<string>();
@@ -419,7 +420,7 @@
 	});
 </script>
 
-<AddAccessModal bind:show={showAddAccessModal} onAdd={handleAddAccess} />
+<AddAccessModal bind:show={showAddAccessModal} {shareUsers} onAdd={handleAddAccess} />
 
 <div class=" rounded-lg flex flex-col gap-1">
 	<div class="py-2">
@@ -562,51 +563,53 @@
 			{/each}
 
 			<!-- Users -->
-			{#each selectedUsers as user}
-				<div
-					class="flex items-center gap-3 justify-between text-sm w-full transition border-b border-gray-50 dark:border-gray-850 pb-2 last:border-0"
-				>
-					<div class="flex items-center gap-2 w-full flex-1">
-						<img
-							class="rounded-full size-5 object-cover"
-							src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
-							alt={user.name ?? user.id}
-						/>
-						<div class="w-full">
-							<Tooltip content={user.email} placement="top-start">
-								<div class="truncate text-sm">{user.name ?? user.id}</div>
-							</Tooltip>
+			{#if shareUsers}
+				{#each selectedUsers as user}
+					<div
+						class="flex items-center gap-3 justify-between text-sm w-full transition border-b border-gray-50 dark:border-gray-850 pb-2 last:border-0"
+					>
+						<div class="flex items-center gap-2 w-full flex-1">
+							<img
+								class="rounded-full size-5 object-cover"
+								src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
+								alt={user.name ?? user.id}
+							/>
+							<div class="w-full">
+								<Tooltip content={user.email} placement="top-start">
+									<div class="truncate text-sm">{user.name ?? user.id}</div>
+								</Tooltip>
+							</div>
+						</div>
+
+						<div class="w-full flex justify-end items-center gap-2">
+							<button
+								type="button"
+								on:click={() => {
+									if (accessRoles.includes('write')) {
+										togglePrincipalWrite('user', user.id);
+									}
+								}}
+							>
+								{#if writeUserIds.includes(user.id)}
+									<Badge type={'success'} content={$i18n.t('Write')} />
+								{:else}
+									<Badge type={'info'} content={$i18n.t('Read')} />
+								{/if}
+							</button>
+
+							<button
+								class=" rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+								type="button"
+								on:click={() => {
+									removePrincipal('user', user.id);
+								}}
+							>
+								<XMark className="size-4" />
+							</button>
 						</div>
 					</div>
-
-					<div class="w-full flex justify-end items-center gap-2">
-						<button
-							type="button"
-							on:click={() => {
-								if (accessRoles.includes('write')) {
-									togglePrincipalWrite('user', user.id);
-								}
-							}}
-						>
-							{#if writeUserIds.includes(user.id)}
-								<Badge type={'success'} content={$i18n.t('Write')} />
-							{:else}
-								<Badge type={'info'} content={$i18n.t('Read')} />
-							{/if}
-						</button>
-
-						<button
-							class=" rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-							type="button"
-							on:click={() => {
-								removePrincipal('user', user.id);
-							}}
-						>
-							<XMark className="size-4" />
-						</button>
-					</div>
-				</div>
-			{/each}
+				{/each}
+			{/if}
 
 			{#if !hasPublicReadGrant(accessGrants ?? []) && accessGroups.length === 0 && selectedUsers.length === 0}
 				<div class="text-xs text-gray-500 text-center py-4">

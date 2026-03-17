@@ -22,6 +22,7 @@
 	import ChevronUpDown from '$lib/components/icons/ChevronUpDown.svelte';
 	import CommandLine from '$lib/components/icons/CommandLine.svelte';
 	import Cube from '$lib/components/icons/Cube.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -363,7 +364,9 @@
 	};
 
 	$: if (token) {
-		if (JSON.stringify(token) !== JSON.stringify(_token)) {
+		if (token.text !== _token?.text || token.raw !== _token?.raw) {
+			_token = token;
+		} else if (JSON.stringify(token) !== JSON.stringify(_token)) {
 			_token = token;
 		}
 	}
@@ -441,15 +444,17 @@
 			{/if}
 		{:else}
 			<div
-				class="absolute left-0 right-0 py-1.5 pr-3 text-text-300 pl-4.5 text-xs font-medium dark:text-white"
+				class="sticky {stickyButtonsClassName} left-0 right-0 py-1.5 px-3 gap-2 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white bg-white dark:bg-black rounded-t-2xl"
 			>
-				{lang}
-			</div>
+				<div class="flex-1 truncate">
+					<Tooltip content={lang} placement="top-start">
+						<span class=" truncate text-ellipsis">
+							{lang}
+						</span>
+					</Tooltip>
+				</div>
 
-			<div
-				class="sticky {stickyButtonsClassName} left-0 right-0 py-1.5 pr-3 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white"
-			>
-				<div class="flex items-center gap-0.5">
+				<div class="flex items-center gap-0.5 shrink-0">
 					<button
 						class="flex gap-1 items-center bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
 						on:click={collapseCodeBlock}

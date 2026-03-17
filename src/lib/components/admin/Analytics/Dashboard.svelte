@@ -24,12 +24,12 @@
 	// Time period - persist in localStorage
 	let selectedPeriod =
 		(typeof localStorage !== 'undefined' && localStorage.getItem('analyticsPeriod')) || '7d';
-	const periods = [
-		{ value: '24h', label: 'Last 24 hours' },
-		{ value: '7d', label: 'Last 7 days' },
-		{ value: '30d', label: 'Last 30 days' },
-		{ value: '90d', label: 'Last 90 days' },
-		{ value: 'all', label: 'All time' }
+	$: periods = [
+		{ value: '24h', label: $i18n.t('Last 24 hours') },
+		{ value: '7d', label: $i18n.t('Last 7 days') },
+		{ value: '30d', label: $i18n.t('Last 30 days') },
+		{ value: '90d', label: $i18n.t('Last 90 days') },
+		{ value: 'all', label: $i18n.t('All time') }
 	];
 
 	// User group filter
@@ -214,7 +214,7 @@
 			class="w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-none text-right"
 		>
 			{#each periods as period}
-				<option value={period.value}>{$i18n.t(period.label)}</option>
+				<option value={period.value}>{period.label}</option>
 			{/each}
 		</select>
 	</div>
@@ -274,7 +274,7 @@
 		{@const periodMap = { '24h': 'hour', '7d': 'week', '30d': 'month', '90d': 'year', all: 'all' }}
 		<div class="mb-4">
 			<div class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2 px-0.5">
-				{$i18n.t(selectedPeriod === '24h' ? 'Hourly Messages' : 'Daily Messages')}
+				{selectedPeriod === '24h' ? $i18n.t('Hourly Messages') : $i18n.t('Daily Messages')}
 			</div>
 			<ChartLine
 				data={dailyStats}

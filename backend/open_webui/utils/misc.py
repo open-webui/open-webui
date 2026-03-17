@@ -210,7 +210,12 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
             content = ""
             for part in output_parts:
                 if part.get("type") == "input_text":
-                    content += part.get("text", "")
+                    output_text = part.get("text", "")
+                    content += (
+                        str(output_text)
+                        if not isinstance(output_text, str)
+                        else output_text
+                    )
 
             messages.append(
                 {
@@ -275,6 +280,24 @@ def get_last_user_message(messages: list[dict]) -> Optional[str]:
     if message is None:
         return None
     return get_content_from_message(message)
+
+
+def set_last_user_message_content(content: str, messages: list[dict]) -> list[dict]:
+    """
+    Replace the text content of the last user message in-place.
+    Handles both plain-string and list-of-parts content formats.
+    """
+    for message in reversed(messages):
+        if message.get("role") == "user":
+            if isinstance(message.get("content"), list):
+                for item in message["content"]:
+                    if item.get("type") == "text":
+                        item["text"] = content
+                        break
+            else:
+                message["content"] = content
+            break
+    return messages
 
 
 def get_last_assistant_message_item(messages: list[dict]) -> Optional[dict]:
@@ -541,6 +564,53 @@ def sanitize_data_for_db(obj):
     elif isinstance(obj, list):
         return [sanitize_data_for_db(v) for v in obj]
     return obj
+
+
+def sanitize_metadata(metadata: dict) -> dict:
+    """
+    Return a JSON-safe copy of a metadata dict for database storage.
+
+    The middleware metadata accumulates non-serializable Python objects
+    (e.g. callable tool functions, MCP client instances) that cause
+    PostgreSQL JSON inserts to fail.  This helper strips those out while
+    preserving the primitive data needed for file-to-chat linking.
+    """
+    if not isinstance(metadata, dict):
+        return metadata
+
+    def _sanitize(obj):
+        if isinstance(obj, (str, int, float, bool, type(None))):
+            return obj
+        if isinstance(obj, dict):
+            return {
+                k: _sanitize(v)
+                for k, v in obj.items()
+                if not callable(v) and _is_serializable(v)
+            }
+        if isinstance(obj, list):
+            return [
+                _sanitize(v) for v in obj if not callable(v) and _is_serializable(v)
+            ]
+        if callable(obj):
+            return None
+        # Last resort: try to see if it's serializable
+        try:
+            json.dumps(obj)
+            return obj
+        except (TypeError, ValueError):
+            return None
+
+    def _is_serializable(obj):
+        """Quick check whether a value can survive JSON serialization."""
+        if isinstance(obj, (str, int, float, bool, type(None), dict, list)):
+            return True
+        try:
+            json.dumps(obj)
+            return True
+        except (TypeError, ValueError):
+            return False
+
+    return _sanitize(metadata)
 
 
 def extract_folders_after_data_docs(path):
