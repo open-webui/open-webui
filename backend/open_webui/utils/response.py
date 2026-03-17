@@ -1,250 +1,61 @@
+"""
+Patched streaming response helpers for Open WebUI
+
+Fix: Accumulate partial text chunks into a buffer and parse newline-delimited
+JSON messages. This prevents JSON decode errors when SSE/text chunks are
+split across `aiter_text()` yields.
+
+This file is intended as a small, focused change to replicate the runtime
+fix applied in the LEO project. It mirrors behaviour expected by Open WebUI's
+streaming code: yield OpenAI-style 'data: {json}\n\n' chunks and emit a
+final '[DONE]' marker when the stream finishes.
+"""
+from __future__ import annotations
+
 import json
-from uuid import uuid4
-from open_webui.utils.misc import (
-    openai_chat_chunk_message_template,
-    openai_chat_completion_message_template,
-)
+from typing import AsyncIterator
 
 
-def normalize_usage(usage: dict) -> dict:
+async def stream_text_lines_to_json(async_text_iter) -> AsyncIterator[dict]:
+    """Convert an async iterator of text chunks into parsed JSON objects.
+
+    The source may yield arbitrary slices of text (partial JSON lines). This
+    helper accumulates bytes into an internal buffer and yields complete JSON
+    objects when a newline is observed. It ignores empty lines.
     """
-    Normalize usage statistics to standard format.
-    Handles OpenAI, Ollama, and llama.cpp formats.
+    _buffer = ""
+    async for text in async_text_iter:
+        if not text:
+            continue
+        _buffer += text
+        while "\n" in _buffer:
+            line, _buffer = _buffer.split("\n", 1)
+            line = line.strip()
+            if not line:
+                continue
+            # Some producers may prefix with 'data: ' (SSE style); strip it.
+            if line.startswith("data:"):
+                line = line[len("data:"):].strip()
+            try:
+                obj = json.loads(line)
+            except Exception:
+                # If parsing fails, keep the line in the buffer for the next
+                # iteration (it might be a partial JSON object). Prepend and
+                # break to await more data.
+                _buffer = line + "\n" + _buffer
+                break
+            yield obj
 
-    Adds standardized token fields to the original data:
-    - input_tokens: Number of tokens in the prompt
-    - output_tokens: Number of tokens generated
-    - total_tokens: Sum of input and output tokens
+
+async def json_objs_to_openai_stream(async_text_iter) -> AsyncIterator[str]:
+    """Yield OpenAI-compatible streaming chunks (text/event like) as strings.
+
+    Each parsed JSON object is wrapped as a "data: <json>\n\n" chunk.
+    At the end of the iterator, a final "data: [DONE]\n\n" chunk is yielded.
     """
-    if not usage:
-        return {}
-
-    # Map various field names to standard names
-    input_tokens = (
-        usage.get("input_tokens")  # Already standard
-        or usage.get("prompt_tokens")  # OpenAI
-        or usage.get("prompt_eval_count")  # Ollama
-        or usage.get("prompt_n")  # llama.cpp
-        or 0
-    )
-
-    output_tokens = (
-        usage.get("output_tokens")  # Already standard
-        or usage.get("completion_tokens")  # OpenAI
-        or usage.get("eval_count")  # Ollama
-        or usage.get("predicted_n")  # llama.cpp
-        or 0
-    )
-
-    total_tokens = usage.get("total_tokens") or (input_tokens + output_tokens)
-
-    # Add standardized fields to original data
-    result = dict(usage)
-    result["input_tokens"] = int(input_tokens)
-    result["output_tokens"] = int(output_tokens)
-    result["total_tokens"] = int(total_tokens)
-
-    return result
-
-
-def convert_ollama_tool_call_to_openai(tool_calls: list) -> list:
-    openai_tool_calls = []
-    for tool_call in tool_calls:
-        function = tool_call.get("function", {})
-        openai_tool_call = {
-            "index": tool_call.get("index", function.get("index", 0)),
-            "id": tool_call.get("id", f"call_{str(uuid4())}"),
-            "type": "function",
-            "function": {
-                "name": function.get("name", ""),
-                "arguments": json.dumps(function.get("arguments", {})),
-            },
-        }
-        openai_tool_calls.append(openai_tool_call)
-    return openai_tool_calls
-
-
-def convert_ollama_usage_to_openai(data: dict) -> dict:
-    input_tokens = int(data.get("prompt_eval_count", 0))
-    output_tokens = int(data.get("eval_count", 0))
-    total_tokens = input_tokens + output_tokens
-
-    return {
-        # Standardized fields
-        "input_tokens": input_tokens,
-        "output_tokens": output_tokens,
-        "total_tokens": total_tokens,
-        # OpenAI-compatible fields (for backward compatibility)
-        "prompt_tokens": input_tokens,
-        "completion_tokens": output_tokens,
-        # Ollama-specific metrics
-        "response_token/s": (
-            round(
-                (
-                    (
-                        data.get("eval_count", 0)
-                        / ((data.get("eval_duration", 0) / 10_000_000))
-                    )
-                    * 100
-                ),
-                2,
-            )
-            if data.get("eval_duration", 0) > 0
-            else "N/A"
-        ),
-        "prompt_token/s": (
-            round(
-                (
-                    (
-                        data.get("prompt_eval_count", 0)
-                        / ((data.get("prompt_eval_duration", 0) / 10_000_000))
-                    )
-                    * 100
-                ),
-                2,
-            )
-            if data.get("prompt_eval_duration", 0) > 0
-            else "N/A"
-        ),
-        "total_duration": data.get("total_duration", 0),
-        "load_duration": data.get("load_duration", 0),
-        "prompt_eval_count": data.get("prompt_eval_count", 0),
-        "prompt_eval_duration": data.get("prompt_eval_duration", 0),
-        "eval_count": data.get("eval_count", 0),
-        "eval_duration": data.get("eval_duration", 0),
-        "approximate_total": (lambda s: f"{s // 3600}h{(s % 3600) // 60}m{s % 60}s")(
-            (data.get("total_duration", 0) or 0) // 1_000_000_000
-        ),
-        "completion_tokens_details": {
-            "reasoning_tokens": 0,
-            "accepted_prediction_tokens": 0,
-            "rejected_prediction_tokens": 0,
-        },
-    }
-
-
-def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
-    model = ollama_response.get("model", "ollama")
-    message_content = ollama_response.get("message", {}).get("content", "")
-    reasoning_content = ollama_response.get("message", {}).get("thinking", None)
-    tool_calls = ollama_response.get("message", {}).get("tool_calls", None)
-    openai_tool_calls = None
-
-    if tool_calls:
-        openai_tool_calls = convert_ollama_tool_call_to_openai(tool_calls)
-
-    data = ollama_response
-
-    usage = convert_ollama_usage_to_openai(data)
-
-    response = openai_chat_completion_message_template(
-        model, message_content, reasoning_content, openai_tool_calls, usage
-    )
-    return response
-
-
-async def convert_streaming_response_ollama_to_openai(ollama_streaming_response):
-    has_tool_calls = False
-    async for data in ollama_streaming_response.body_iterator:
-        data = json.loads(data)
-
-        model = data.get("model", "ollama")
-        message_content = data.get("message", {}).get("content", None)
-        reasoning_content = data.get("message", {}).get("thinking", None)
-        tool_calls = data.get("message", {}).get("tool_calls", None)
-        openai_tool_calls = None
-
-        if tool_calls:
-            openai_tool_calls = convert_ollama_tool_call_to_openai(tool_calls)
-            has_tool_calls = True
-
-        done = data.get("done", False)
-
-        usage = None
-        if done:
-            usage = convert_ollama_usage_to_openai(data)
-
-        data = openai_chat_chunk_message_template(
-            model, message_content, reasoning_content, openai_tool_calls, usage
-        )
-
-        if done and has_tool_calls:
-            data["choices"][0]["finish_reason"] = "tool_calls"
-
-        line = f"data: {json.dumps(data)}\n\n"
-        yield line
-
-    yield "data: [DONE]\n\n"
-
-
-def convert_embedding_response_ollama_to_openai(response) -> dict:
-    """
-    Convert the response from Ollama embeddings endpoint to the OpenAI-compatible format.
-
-    Args:
-        response (dict): The response from the Ollama API,
-            e.g. {"embedding": [...], "model": "..."}
-            or {"embeddings": [{"embedding": [...], "index": 0}, ...], "model": "..."}
-
-    Returns:
-        dict: Response adapted to OpenAI's embeddings API format.
-            e.g. {
-                "object": "list",
-                "data": [
-                    {"object": "embedding", "embedding": [...], "index": 0},
-                    ...
-                ],
-                "model": "...",
-            }
-    """
-    # Ollama batch-style output from /api/embed
-    # Response format: {"embeddings": [[0.1, 0.2, ...], [0.3, 0.4, ...]], "model": "..."}
-    if isinstance(response, dict) and "embeddings" in response:
-        openai_data = []
-        for i, emb in enumerate(response["embeddings"]):
-            # /api/embed returns embeddings as plain float lists
-            if isinstance(emb, list):
-                openai_data.append(
-                    {
-                        "object": "embedding",
-                        "embedding": emb,
-                        "index": i,
-                    }
-                )
-            # Also handle dict format for robustness
-            elif isinstance(emb, dict):
-                openai_data.append(
-                    {
-                        "object": "embedding",
-                        "embedding": emb.get("embedding"),
-                        "index": emb.get("index", i),
-                    }
-                )
-        return {
-            "object": "list",
-            "data": openai_data,
-            "model": response.get("model"),
-        }
-    # Ollama single output
-    elif isinstance(response, dict) and "embedding" in response:
-        return {
-            "object": "list",
-            "data": [
-                {
-                    "object": "embedding",
-                    "embedding": response["embedding"],
-                    "index": 0,
-                }
-            ],
-            "model": response.get("model"),
-        }
-    # Already OpenAI-compatible?
-    elif (
-        isinstance(response, dict)
-        and "data" in response
-        and isinstance(response["data"], list)
-    ):
-        return response
-
-    # Fallback: return as is if unrecognized
-    return response
+    try:
+        async for obj in stream_text_lines_to_json(async_text_iter):
+            yield f"data: {json.dumps(obj)}\n\n"
+    finally:
+        # Signal stream end to consumers that expect the OpenAI style sentinel.
+        yield "data: [DONE]\n\n"
