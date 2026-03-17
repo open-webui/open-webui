@@ -179,7 +179,7 @@ async def set_tool_servers_config(
 
             try:
                 request.app.state.oauth_client_manager.remove_client(client_key)
-            except:
+            except Exception:
                 pass
 
     # Set new tool server connections
@@ -228,6 +228,11 @@ class TerminalServerConnection(BaseModel):
     auth_type: Optional[str] = "bearer"
 
     config: Optional[dict] = None
+
+    # Orchestrator policy fields
+    server_type: Optional[str] = None  # "orchestrator", "terminal"
+    policy_id: Optional[str] = None
+    policy: Optional[dict] = None  # cached policy data
 
     model_config = ConfigDict(extra="allow")
 

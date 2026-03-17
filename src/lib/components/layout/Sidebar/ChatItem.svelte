@@ -553,11 +553,8 @@
 					onClose={() => {
 						dispatch('unselect');
 					}}
-					on:change={async () => {
+					onPinChange={async () => {
 						dispatch('change');
-					}}
-					on:tag={(e) => {
-						dispatch('tag', e.detail);
 					}}
 				>
 					<button

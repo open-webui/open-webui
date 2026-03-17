@@ -82,15 +82,14 @@
 
 	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
 	import Voice from '../icons/Voice.svelte';
-	import Cloud from '../icons/Cloud.svelte';
+	import Terminal from '../icons/Terminal.svelte';
 	import IntegrationsMenu from './MessageInput/IntegrationsMenu.svelte';
 	import TerminalMenu from './MessageInput/TerminalMenu.svelte';
 	import Component from '../icons/Component.svelte';
 	import PlusAlt from '../icons/PlusAlt.svelte';
 	import Dropdown from '../common/Dropdown.svelte';
 
-	import { DropdownMenu } from 'bits-ui';
-	import { flyAndScale } from '$lib/utils/transitions';
+
 
 	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
 	import Knobs from '../icons/Knobs.svelte';
@@ -1756,7 +1755,7 @@
 														? 'm-1'
 														: 'focus:outline-hidden rounded-full'}"
 												>
-													<Cloud className="size-3.5" strokeWidth="2" />
+													<Terminal className="size-3.5" strokeWidth="2" />
 
 													<div class="hidden group-hover:block">
 														<XMark className="size-4" strokeWidth="1.75" />

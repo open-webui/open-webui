@@ -467,6 +467,7 @@ from open_webui.env import (
     ENABLE_CUSTOM_MODEL_FALLBACK,
     LICENSE_KEY,
     AUDIT_EXCLUDED_PATHS,
+    AUDIT_INCLUDED_PATHS,
     AUDIT_LOG_LEVEL,
     CHANGELOG,
     REDIS_URL,
@@ -701,6 +702,9 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             log.warning(f"Failed to initialize tool/terminal servers at startup: {e}")
 
+    # Mark application as ready to accept traffic from a startup perspective.
+    app.state.startup_complete = True
+
     yield
 
     if hasattr(app.state, "redis_task_command_listener"):
@@ -714,6 +718,9 @@ app = FastAPI(
     redoc_url=None,
     lifespan=lifespan,
 )
+
+# Used by readiness checks to gate traffic until startup work is done.
+app.state.startup_complete = False
 
 # For Open WebUI OIDC/OAuth2
 oauth_manager = OAuthManager(app)
@@ -1581,6 +1588,7 @@ if audit_level != AuditLevel.NONE:
         AuditLoggingMiddleware,
         audit_level=audit_level,
         excluded_paths=AUDIT_EXCLUDED_PATHS,
+        included_paths=AUDIT_INCLUDED_PATHS,
         max_body_size=MAX_BODY_LOG_SIZE,
     )
 ##################################
@@ -2605,6 +2613,47 @@ async def get_opensearch_xml():
 
 @app.get("/health")
 async def healthcheck():
+    return {"status": True}
+
+
+@app.get("/ready")
+async def readiness_check():
+    """
+    Returns 200 only when the application is ready to accept traffic.
+    """
+
+    # Ensure application startup work has completed
+    if not getattr(app.state, "startup_complete", False):
+        log.info("Readiness check failed: startup not complete")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Startup not complete",
+        )
+
+    # Check database connectivity
+    try:
+        ScopedSession.execute(text("SELECT 1;")).all()
+    except Exception as e:
+        log.warning(f"Readiness check DB ping failed: {e!r}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database not ready",
+        )
+
+    # Check Redis connectivity if configured
+    redis = app.state.redis
+    if redis is not None:
+        try:
+            pong = await redis.ping()
+            if pong is False:
+                raise Exception("Redis PING returned False")
+        except Exception as e:
+            log.warning(f"Readiness check Redis ping failed: {e!r}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Redis not ready",
+            )
+
     return {"status": True}
 
 

@@ -88,9 +88,15 @@ async def get_tools(
     # OpenAPI Tool Servers
     server_access_grants = {}
     for server in await get_tool_servers(request):
-        connection = request.app.state.config.TOOL_SERVER_CONNECTIONS[
-            server.get("idx", 0)
-        ]
+        server_idx = server.get("idx", 0)
+        connections = request.app.state.config.TOOL_SERVER_CONNECTIONS
+        if server_idx >= len(connections):
+            log.warning(
+                f"Tool server index {server_idx} out of range "
+                f"(have {len(connections)} connections), skipping server {server.get('id')}"
+            )
+            continue
+        connection = connections[server_idx]
         server_config = connection.get("config", {})
 
         server_id = f"server:{server.get('id')}"
@@ -647,19 +653,35 @@ async def get_tools_valves_by_id(
     id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
 ):
     tools = Tools.get_tool_by_id(id, db=db)
-    if tools:
-        try:
-            valves = Tools.get_tool_valves_by_id(id, db=db)
-            return valves
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(str(e)),
-            )
-    else:
+    if not tools:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        tools.user_id != user.id
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="tool",
+            resource_id=tools.id,
+            permission="write",
+            db=db,
+        )
+        and user.role != "admin"
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    try:
+        valves = Tools.get_tool_valves_by_id(id, db=db)
+        return valves
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(str(e)),
         )
 
 
@@ -676,25 +698,41 @@ async def get_tools_valves_spec_by_id(
     db: Session = Depends(get_session),
 ):
     tools = Tools.get_tool_by_id(id, db=db)
-    if tools:
-        if id in request.app.state.TOOLS:
-            tools_module = request.app.state.TOOLS[id]
-        else:
-            tools_module, _ = load_tool_module_by_id(id)
-            request.app.state.TOOLS[id] = tools_module
-
-        if hasattr(tools_module, "Valves"):
-            Valves = tools_module.Valves
-            schema = Valves.schema()
-            # Resolve dynamic options for select dropdowns
-            schema = resolve_valves_schema_options(Valves, schema, user)
-            return schema
-        return None
-    else:
+    if not tools:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+
+    if (
+        tools.user_id != user.id
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="tool",
+            resource_id=tools.id,
+            permission="write",
+            db=db,
+        )
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    if id in request.app.state.TOOLS:
+        tools_module = request.app.state.TOOLS[id]
+    else:
+        tools_module, _ = load_tool_module_by_id(id)
+        request.app.state.TOOLS[id] = tools_module
+
+    if hasattr(tools_module, "Valves"):
+        Valves = tools_module.Valves
+        schema = Valves.schema()
+        # Resolve dynamic options for select dropdowns
+        schema = resolve_valves_schema_options(Valves, schema, user)
+        return schema
+    return None
 
 
 ############################

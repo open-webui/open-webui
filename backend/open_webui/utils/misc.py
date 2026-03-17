@@ -762,18 +762,22 @@ def parse_ollama_modelfile(model_text):
     return data
 
 
-def convert_logit_bias_input_to_json(user_input) -> Optional[str]:
-    if user_input:
-        logit_bias_pairs = user_input.split(",")
-        logit_bias_json = {}
-        for pair in logit_bias_pairs:
-            token, bias = pair.split(":")
-            token = str(token.strip())
-            bias = int(bias.strip())
-            bias = 100 if bias > 100 else -100 if bias < -100 else bias
-            logit_bias_json[token] = bias
-        return json.dumps(logit_bias_json)
-    return None
+def convert_logit_bias_input_to_json(logit_bias_input) -> Optional[str]:
+    if not logit_bias_input:
+        return None
+
+    if isinstance(logit_bias_input, dict):
+        return json.dumps(logit_bias_input)
+
+    logit_bias_pairs = logit_bias_input.split(",")
+    logit_bias_json = {}
+    for pair in logit_bias_pairs:
+        token, bias = pair.split(":")
+        token = str(token.strip())
+        bias = int(bias.strip())
+        bias = 100 if bias > 100 else -100 if bias < -100 else bias
+        logit_bias_json[token] = bias
+    return json.dumps(logit_bias_json)
 
 
 def freeze(value):

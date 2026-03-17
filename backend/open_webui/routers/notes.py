@@ -27,7 +27,11 @@ from open_webui.constants import ERROR_MESSAGES
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
+from open_webui.utils.access_control import (
+    has_permission,
+    has_public_read_access_grant,
+    filter_allowed_access_grants,
+)
 from open_webui.models.access_grants import AccessGrants
 from open_webui.internal.db import get_session
 from sqlalchemy.orm import Session

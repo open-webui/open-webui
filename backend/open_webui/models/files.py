@@ -103,6 +103,11 @@ class FileMetadataResponse(BaseModel):
     updated_at: int  # timestamp in epoch
 
 
+class FileListResponse(BaseModel):
+    items: list[FileModelResponse]
+    total: int
+
+
 class FileForm(BaseModel):
     id: str
     hash: Optional[str] = None
@@ -117,10 +122,6 @@ class FileUpdateForm(BaseModel):
     data: Optional[dict] = None
     meta: Optional[dict] = None
 
-
-class FileListResponse(BaseModel):
-    items: list[FileModel]
-    total: int
 
 
 class FilesTable:
@@ -254,6 +255,30 @@ class FilesTable:
                 FileModel.model_validate(file)
                 for file in db.query(File).filter_by(user_id=user_id).all()
             ]
+
+    def get_file_list(
+        self,
+        user_id: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 50,
+        db: Optional[Session] = None,
+    ) -> "FileListResponse":
+        with get_db_context(db) as db:
+            query = db.query(File)
+            if user_id:
+                query = query.filter_by(user_id=user_id)
+
+            total = query.count()
+
+            items = [
+                FileModel.model_validate(file)
+                for file in query.order_by(File.updated_at.desc(), File.id.desc())
+                .offset(skip)
+                .limit(limit)
+                .all()
+            ]
+
+            return FileListResponse(items=items, total=total)
 
     @staticmethod
     def _glob_to_like_pattern(glob: str) -> str:

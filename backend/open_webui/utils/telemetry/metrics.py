@@ -44,10 +44,9 @@ from open_webui.env import (
     OTEL_METRICS_BASIC_AUTH_PASSWORD,
     OTEL_METRICS_OTLP_SPAN_EXPORTER,
     OTEL_METRICS_EXPORTER_OTLP_INSECURE,
+    OTEL_METRICS_EXPORT_INTERVAL_MILLIS,
 )
 from open_webui.models.users import Users
-
-_EXPORT_INTERVAL_MILLIS = 10_000  # 10 seconds
 
 
 def _build_meter_provider(resource: Resource) -> MeterProvider:
@@ -67,7 +66,7 @@ def _build_meter_provider(resource: Resource) -> MeterProvider:
                 OTLPHttpMetricExporter(
                     endpoint=OTEL_METRICS_EXPORTER_OTLP_ENDPOINT, headers=headers
                 ),
-                export_interval_millis=_EXPORT_INTERVAL_MILLIS,
+                export_interval_millis=OTEL_METRICS_EXPORT_INTERVAL_MILLIS,
             )
         ]
     else:
@@ -78,7 +77,7 @@ def _build_meter_provider(resource: Resource) -> MeterProvider:
                     insecure=OTEL_METRICS_EXPORTER_OTLP_INSECURE,
                     headers=headers,
                 ),
-                export_interval_millis=_EXPORT_INTERVAL_MILLIS,
+                export_interval_millis=OTEL_METRICS_EXPORT_INTERVAL_MILLIS,
             )
         ]
 

@@ -1,5 +1,4 @@
 import logging
-from typing import Optional, Any
 
 from open_webui.models.users import UserModel
 from open_webui.models.files import Files
@@ -10,14 +9,16 @@ from open_webui.models.groups import Groups
 from open_webui.models.models import Models
 from open_webui.models.access_grants import AccessGrants
 
+from sqlalchemy.orm import Session
+
 log = logging.getLogger(__name__)
 
 
 def has_access_to_file(
-    file_id: Optional[str],
+    file_id: str | None,
     access_type: str,
     user: UserModel,
-    db: Optional[Any] = None,
+    db: Session | None = None,
 ) -> bool:
     """
     Check if a user has the specified access to a file through any of:

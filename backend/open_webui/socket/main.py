@@ -661,7 +661,7 @@ async def yjs_document_update(sid, data):
 
         try:
             await stop_item_tasks(REDIS, document_id)
-        except:
+        except Exception:
             pass
 
         user_id = data.get("user_id", sid)

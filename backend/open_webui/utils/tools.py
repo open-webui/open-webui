@@ -275,11 +275,14 @@ async def get_tools(
                         continue
 
                     tool_server_idx = tool_server_data.get("idx", 0)
-                    tool_server_connection = (
-                        request.app.state.config.TOOL_SERVER_CONNECTIONS[
-                            tool_server_idx
-                        ]
-                    )
+                    connections = request.app.state.config.TOOL_SERVER_CONNECTIONS
+                    if tool_server_idx >= len(connections):
+                        log.warning(
+                            f"Tool server index {tool_server_idx} out of range "
+                            f"(have {len(connections)} connections), skipping server {server_id}"
+                        )
+                        continue
+                    tool_server_connection = connections[tool_server_idx]
 
                     # Check access control for tool server
                     if not has_connection_access(
@@ -911,9 +914,17 @@ async def set_terminal_servers(request: Request):
 
         enabled = connection.get("enabled", True)
 
+        base_url = connection.get("url", "").rstrip("/")
+        policy_id = connection.get("policy_id", "")
+
+        # Orchestrator connections route through /p/{policy_id}/ — the
+        # OpenAPI spec lives on the proxied terminal, not the orchestrator.
+        if connection.get("server_type") == "orchestrator" and policy_id:
+            base_url = f"{base_url}/p/{policy_id}"
+
         server_configs.append(
             {
-                "url": connection.get("url", ""),
+                "url": base_url,
                 "key": connection.get("key", ""),
                 "auth_type": connection.get("auth_type", "bearer"),
                 "path": connection.get("path", "/openapi.json"),

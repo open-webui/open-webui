@@ -1,19 +1,11 @@
 <script lang="ts">
-	import { DropdownMenu } from 'bits-ui';
-	import { flyAndScale } from '$lib/utils/transitions';
 	import { getContext, createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
-	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Tags from '$lib/components/chat/Tags.svelte';
-	import Share from '$lib/components/icons/Share.svelte';
-	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
-	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
-	import ArrowUpCircle from '$lib/components/icons/ArrowUpCircle.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 
 	const i18n = getContext('i18n');
@@ -26,12 +18,12 @@
 
 <Dropdown
 	bind:show
-	on:change={(e) => {
-		if (e.detail === false) {
+	align="end"
+	onOpenChange={(state) => {
+		if (state === false) {
 			onClose();
 		}
 	}}
-	align="end"
 >
 	<Tooltip content={$i18n.t('More')}>
 		<slot
@@ -50,33 +42,30 @@
 	</Tooltip>
 
 	<div slot="content">
-		<DropdownMenu.Content
-			class="w-full max-w-[170px] rounded-2xl px-1 py-1 border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
-			side="bottom"
-			align="end"
-			transition={flyAndScale}
+		<div
+			class="min-w-[170px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 		>
 			{#if onExport}
-				<DropdownMenu.Item
-					class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+				<button
+					class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
 					on:click={() => {
 						onExport();
 					}}
 				>
 					<Download />
 					<div class="flex items-center">{$i18n.t('Export')}</div>
-				</DropdownMenu.Item>
+				</button>
 			{/if}
 
-			<DropdownMenu.Item
-				class="select-none flex  gap-2  items-center px-3 py-1.5 text-sm   cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+			<button
+				class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
 				on:click={() => {
 					dispatch('delete');
 				}}
 			>
 				<GarbageBin />
 				<div class="flex items-center">{$i18n.t('Delete')}</div>
-			</DropdownMenu.Item>
-		</DropdownMenu.Content>
+			</button>
+		</div>
 	</div>
 </Dropdown>
