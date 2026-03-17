@@ -70,6 +70,7 @@ from open_webui.utils.files import (
 from open_webui.models.users import UserModel
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
+from open_webui.models.files import Files
 
 from open_webui.retrieval.utils import get_sources_from_items
 
@@ -1898,47 +1899,109 @@ async def chat_completion_files_handler(
         # Check if all files are in full context mode
         all_full_context = all(item.get("context") == "full" for item in files)
 
+        # Global bypass flag: use existing app config
+        bypass_embedding = request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
+
+        # If ALL files are in full context mode OR global bypass is enabled, skip retrieval entirely
+        # This avoids the "retrieving" status and query generation when not needed
+        if all_full_context or bypass_embedding:
+            # Build file content context and inject directly into messages
+            # This avoids frontend JSON serialization delay for large files
+            file_contents = []
+            injection_successful = False
+
+            for file_item in files:
+                file_id = file_item.get("id")
+                file_name = file_item.get("name", "Unknown")
+
+                # Load content from database (frontend doesn't pass content to avoid serialization)
+                if file_id:
+                    try:
+                        file_obj = Files.get_file_by_id(file_id)
+                        if file_obj and file_obj.data:
+                            content = file_obj.data.get("content", "")
+                            file_name = file_obj.filename
+                            if content:
+                                file_contents.append(f"=== File: {file_name} ===\n{content}\n")
+                    except Exception as e:
+                        log.warning(f"Failed to load file {file_id}: {e}")
+                        continue
+
+            # Only bypass retrieval if we successfully loaded and injected file content
+            if file_contents:
+                # Build context from file contents
+                context = "\n".join(file_contents)
+
+                # Find last user message and inject context
+                messages = body.get("messages", [])
+                for i in range(len(messages) - 1, -1, -1):
+                    if messages[i].get("role") == "user":
+                        original_content = messages[i].get("content", "")
+
+                        # Inject file context before user message
+                        if isinstance(original_content, str):
+                            messages[i]["content"] = f"[Attached Files Context]\n{context}\n\n[User Message]\n{original_content}"
+                        elif isinstance(original_content, list):
+                            # Handle array content format
+                            text_parts = [p for p in original_content if p.get("type") == "text"]
+                            if text_parts:
+                                text_parts[0]["text"] = f"[Attached Files Context]\n{context}\n\n[User Message]\n{text_parts[0].get('text', '')}"
+                            else:
+                                original_content.insert(0, {
+                                    "type": "text",
+                                    "text": f"[Attached Files Context]\n{context}\n\n[User Message]"
+                                })
+                                messages[i]["content"] = original_content
+
+                        injection_successful = True
+                        break
+
+            # Only skip retrieval if injection was successful
+            if injection_successful:
+                return body, {"sources": []}
+            # else: fall through to normal retrieval as fallback
+
+        # Normal retrieval path (or fallback when injection failed)
         queries = []
-        if not all_full_context:
-            try:
-                queries_response = await generate_queries(
-                    request,
-                    {
-                        "model": body["model"],
-                        "messages": body["messages"],
-                        "type": "retrieval",
-                        "chat_id": body.get("metadata", {}).get("chat_id"),
-                    },
-                    user,
-                )
-                queries_response = queries_response["choices"][0]["message"]["content"]
-
-                try:
-                    bracket_start = queries_response.find("{")
-                    bracket_end = queries_response.rfind("}") + 1
-
-                    if bracket_start == -1 or bracket_end == -1:
-                        raise Exception("No JSON object found in the response")
-
-                    queries_response = queries_response[bracket_start:bracket_end]
-                    queries_response = json.loads(queries_response)
-                except Exception as e:
-                    queries_response = {"queries": [queries_response]}
-
-                queries = queries_response.get("queries", [])
-            except Exception:
-                pass
-
-            await __event_emitter__(
+        try:
+            queries_response = await generate_queries(
+                request,
                 {
-                    "type": "status",
-                    "data": {
-                        "action": "queries_generated",
-                        "queries": queries,
-                        "done": False,
-                    },
-                }
+                    "model": body["model"],
+                    "messages": body["messages"],
+                    "type": "retrieval",
+                    "chat_id": body.get("metadata", {}).get("chat_id"),
+                },
+                user,
             )
+            queries_response = queries_response["choices"][0]["message"]["content"]
+
+            try:
+                bracket_start = queries_response.find("{")
+                bracket_end = queries_response.rfind("}") + 1
+
+                if bracket_start == -1 or bracket_end == -1:
+                    raise Exception("No JSON object found in the response")
+
+                queries_response = queries_response[bracket_start:bracket_end]
+                queries_response = json.loads(queries_response)
+            except Exception as e:
+                queries_response = {"queries": [queries_response]}
+
+            queries = queries_response.get("queries", [])
+        except:
+            pass
+
+        await __event_emitter__(
+            {
+                "type": "status",
+                "data": {
+                    "action": "queries_generated",
+                    "queries": queries,
+                    "done": False,
+                },
+            }
+        )
 
         if len(queries) == 0:
             queries = [get_last_user_message(body["messages"])]
