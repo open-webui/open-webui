@@ -172,7 +172,13 @@
 	const fileSelectHandler = async (file) => {
 		try {
 			selectedFile = file;
-			selectedFileContent = selectedFile?.data?.content || '';
+			const rawContent = selectedFile?.data?.content || '';
+
+			// Normalize single newlines to paragraph breaks (double newlines) so the
+			// rich text editor's markdown parser preserves them. Without this, single
+			// newlines get collapsed into spaces during markdown parsing (breaks: false).
+			// Existing double+ newlines (paragraph breaks) are left unchanged.
+			selectedFileContent = rawContent.replace(/(?<!\n)\n(?!\n)/g, '\n\n');
 		} catch (e) {
 			toast.error($i18n.t('Failed to load file content.'));
 		}
@@ -1111,7 +1117,7 @@
 									</div>
 
 									{#key selectedFile.id}
-										<div class="flex-1 overflow-y-auto px-3 py-2">
+										<div class="flex-1 overflow-y-auto px-3 py-2" role="textbox" aria-label={$i18n.t('File content')}>
 											<RichTextInput
 												bind:value={selectedFileContent}
 												placeholder={$i18n.t('Add content here')}
