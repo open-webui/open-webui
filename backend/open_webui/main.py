@@ -2451,7 +2451,8 @@ async def register_client(request, client_id: str) -> bool:
         return False
 
     try:
-        request.app.state.config.TOOL_SERVER_CONNECTIONS[connection_idx] = {
+        connections = list(request.app.state.config.TOOL_SERVER_CONNECTIONS)
+        connections[connection_idx] = {
             **connection,
             "info": {
                 **connection.get("info", {}),
@@ -2460,6 +2461,7 @@ async def register_client(request, client_id: str) -> bool:
                 ),
             },
         }
+        request.app.state.config.TOOL_SERVER_CONNECTIONS = connections
     except Exception as e:
         log.error(
             f"Failed to persist updated OAuth client info for tool server {client_id}: {e}"
@@ -2482,8 +2484,14 @@ async def oauth_client_authorize(
     # ensure_valid_client_registration
     client = oauth_client_manager.get_client(client_id)
     client_info = oauth_client_manager.get_client_info(client_id)
+
     if client is None or client_info is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND)
+        # Client not in memory or config — attempt dynamic re-registration
+        if await register_client(request, client_id):
+            client = oauth_client_manager.get_client(client_id)
+            client_info = oauth_client_manager.get_client_info(client_id)
+        if client is None or client_info is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND)
 
     if not await oauth_client_manager._preflight_authorization_url(client, client_info):
         log.info(
