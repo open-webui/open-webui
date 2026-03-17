@@ -82,8 +82,8 @@
 					<div class="px-1">
 						{#if !loading}
 							<div class="flex flex-col gap-1">
-								{#each Object.keys(variables) as variable, idx}
-									{@const { type, ...variableAttributes } = variables[variable] ?? {}}
+								{#each Object.keys(variables) as variable, variableIdx}
+									{@const variableAttributes = Object.fromEntries(Object.entries(variables[variable] ?? {}).filter(([key]) => key !== 'type'))}
 
 									<div class=" py-0.5 w-full justify-between">
 										<div class="flex w-full justify-between mb-1.5">
@@ -105,7 +105,7 @@
 													<select
 														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 														bind:value={variableValues[variable]}
-														id="input-variable-{idx}"
+														id="input-variable-{variableIdx}"
 													>
 														{#if placeholder}
 															<option value="" disabled selected>
@@ -125,11 +125,11 @@
 																type="checkbox"
 																bind:checked={variableValues[variable]}
 																class="size-3.5 rounded cursor-pointer border border-gray-200 dark:border-gray-700"
-																id="input-variable-{idx}"
+																id="input-variable-{variableIdx}"
 																{...variableAttributes}
 															/>
 
-															<label for="input-variable-{idx}" class="text-sm"
+															<label for="input-variable-{variableIdx}" class="text-sm"
 																>{variables[variable]?.label ?? variable}</label
 															>
 														</div>
@@ -150,7 +150,7 @@
 																type="color"
 																class="size-6 rounded cursor-pointer border border-gray-200 dark:border-gray-700"
 																value={variableValues[variable]}
-																id="input-variable-{idx}"
+																id="input-variable-{variableIdx}"
 																on:input={(e) => {
 																	// Convert the color value to uppercase immediately
 																	variableValues[variable] = e.target.value.toUpperCase();
@@ -175,7 +175,7 @@
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
-														id="input-variable-{idx}"
+														id="input-variable-{variableIdx}"
 														required={variables[variable]?.required ?? false}
 														{...variableAttributes}
 													/>
@@ -186,7 +186,7 @@
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
-														id="input-variable-{idx}"
+														id="input-variable-{variableIdx}"
 														required={variables[variable]?.required ?? false}
 														{...variableAttributes}
 													/>
@@ -197,7 +197,7 @@
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
-														id="input-variable-{idx}"
+														id="input-variable-{variableIdx}"
 														required={variables[variable]?.required ?? false}
 														{...variableAttributes}
 													/>
@@ -208,7 +208,7 @@
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
-														id="input-variable-{idx}"
+														id="input-variable-{variableIdx}"
 														required={variables[variable]?.required ?? false}
 														{...variableAttributes}
 													/>
@@ -219,7 +219,7 @@
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
-														id="input-variable-{idx}"
+														id="input-variable-{variableIdx}"
 														required={variables[variable]?.required ?? false}
 														{...variableAttributes}
 													/>
@@ -230,7 +230,7 @@
 																type="range"
 																bind:value={variableValues[variable]}
 																class="w-full rounded-lg py-1 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
-																id="input-variable-{idx}"
+																id="input-variable-{variableIdx}"
 																{...variableAttributes}
 															/>
 														</div>
@@ -251,7 +251,7 @@
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
-														id="input-variable-{idx}"
+														id="input-variable-{variableIdx}"
 														required
 													/> -->
 												{:else if variables[variable]?.type === 'tel'}
@@ -261,7 +261,7 @@
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
-														id="input-variable-{idx}"
+														id="input-variable-{variableIdx}"
 														required={variables[variable]?.required ?? false}
 														{...variableAttributes}
 													/>
@@ -272,7 +272,7 @@
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
-														id="input-variable-{idx}"
+														id="input-variable-{variableIdx}"
 														required={variables[variable]?.required ?? false}
 														{...variableAttributes}
 													/>
@@ -283,7 +283,7 @@
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
-														id="input-variable-{idx}"
+														id="input-variable-{variableIdx}"
 														required={variables[variable]?.required ?? false}
 														{...variableAttributes}
 													/>
@@ -294,7 +294,7 @@
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
-														id="input-variable-{idx}"
+														id="input-variable-{variableIdx}"
 														required={variables[variable]?.required ?? false}
 														{...variableAttributes}
 													/>
@@ -326,7 +326,7 @@
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
-														id="input-variable-{idx}"
+														id="input-variable-{variableIdx}"
 														required={variables[variable]?.required ?? false}
 													/>
 												{/if}
