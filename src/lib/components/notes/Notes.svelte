@@ -221,7 +221,9 @@
 			}
 
 			if (items) {
-				items = [...items, ...pageItems];
+				const existingIds = new Set(items.map((item) => item.id));
+				const newItems = pageItems.filter((item) => !existingIds.has(item.id));
+				items = [...items, ...newItems];
 			} else {
 				items = pageItems;
 			}
