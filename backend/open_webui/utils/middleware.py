@@ -2059,7 +2059,7 @@ def apply_params_to_form_data(form_data, model):
     return form_data
 
 
-async def convert_url_images_to_base64(form_data):
+async def convert_url_media_to_base64(form_data):
     messages = form_data.get("messages", [])
 
     for message in messages:
@@ -2070,27 +2070,44 @@ async def convert_url_images_to_base64(form_data):
         new_content = []
 
         for item in content:
-            if not isinstance(item, dict) or item.get("type") != "image_url":
+            if not isinstance(item, dict):
                 new_content.append(item)
                 continue
 
-            image_url = item.get("image_url", {}).get("url", "")
-            if image_url.startswith("data:image/"):
+            item_type = item.get("type")
+            url_key = None
+            data_prefix = None
+
+            if item_type == "image_url":
+                url_key = "image_url"
+                data_prefix = "data:image/"
+            elif item_type == "video_url":
+                url_key = "video_url"
+                data_prefix = "data:video/"
+            else:
+                new_content.append(item)
+                continue
+
+            media_url = item.get(url_key, {}).get("url", "")
+            if media_url.startswith(data_prefix):
                 new_content.append(item)
                 continue
 
             try:
                 base64_data = await asyncio.to_thread(
-                    get_image_base64_from_url, image_url
+                    get_image_base64_from_url, media_url
                 )
+                if not base64_data:
+                    new_content.append(item)
+                    continue
                 new_content.append(
                     {
-                        "type": "image_url",
-                        "image_url": {"url": base64_data},
+                        "type": item_type,
+                        url_key: {"url": base64_data},
                     }
                 )
             except Exception as e:
-                log.debug(f"Error converting image URL to base64: {e}")
+                log.debug(f"Error converting media URL to base64: {e}")
                 new_content.append(item)
 
         message["content"] = new_content
@@ -2162,7 +2179,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 [system_message, *db_messages] if system_message else db_messages
             )
 
-            # Inject image files into content as image_url parts (mirrors frontend logic)
+            # Inject image/video files into content as OpenAI-compatible multimodal parts.
             for message in form_data["messages"]:
                 image_files = [
                     f
@@ -2170,7 +2187,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     if f.get("type") == "image"
                     or (f.get("content_type") or "").startswith("image/")
                 ]
-                if message.get("role") == "user" and image_files:
+                video_files = [
+                    f
+                    for f in message.get("files", [])
+                    if f.get("type") == "video"
+                    or (f.get("content_type") or "").startswith("video/")
+                ]
+                if message.get("role") == "user" and (image_files or video_files):
                     text_content = message.get("content", "")
                     if isinstance(text_content, str):
                         message["content"] = [
@@ -2181,6 +2204,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                     "image_url": {"url": f["url"]},
                                 }
                                 for f in image_files
+                                if f.get("url")
+                            ],
+                            *[
+                                {
+                                    "type": "video_url",
+                                    "video_url": {"url": f["url"]},
+                                }
+                                for f in video_files
                                 if f.get("url")
                             ],
                         ]
@@ -2199,7 +2230,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         except Exception:
             pass
 
-    form_data = await convert_url_images_to_base64(form_data)
+    form_data = await convert_url_media_to_base64(form_data)
 
     event_emitter = get_event_emitter(metadata)
     event_caller = get_event_call(metadata)
