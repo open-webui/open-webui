@@ -166,6 +166,10 @@ async def generate_chat_completion(
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
+    # Propagate bypass_filter via request.state so that downstream route
+    # handlers (openai/ollama) can read it without exposing it as a query param.
+    request.state.bypass_filter = bypass_filter
+
     if hasattr(request.state, "metadata"):
         if "metadata" not in form_data:
             form_data["metadata"] = request.state.metadata
@@ -269,7 +273,6 @@ async def generate_chat_completion(
                 request=request,
                 form_data=form_data,
                 user=user,
-                bypass_filter=bypass_filter,
                 bypass_system_prompt=bypass_system_prompt,
             )
             if form_data.get("stream"):
@@ -286,7 +289,6 @@ async def generate_chat_completion(
                 request=request,
                 form_data=form_data,
                 user=user,
-                bypass_filter=bypass_filter,
                 bypass_system_prompt=bypass_system_prompt,
             )
 

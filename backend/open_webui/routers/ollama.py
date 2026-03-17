@@ -1285,7 +1285,6 @@ async def generate_chat_completion(
     form_data: dict,
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
-    bypass_filter: Optional[bool] = False,
     bypass_system_prompt: bool = False,
 ):
     if not request.app.state.config.ENABLE_OLLAMA_API:
@@ -1295,6 +1294,11 @@ async def generate_chat_completion(
     # Database operations (get_model_by_id, AccessGrants.has_access) manage their own short-lived sessions.
     # This prevents holding a connection during the entire LLM call (30-60+ seconds),
     # which would exhaust the connection pool under concurrent load.
+
+    # bypass_filter is read from request.state to prevent external clients from
+    # setting it via query parameter (CVE fix). Only internal server-side callers
+    # (e.g. utils/chat.py) should set request.state.bypass_filter = True.
+    bypass_filter = getattr(request.state, "bypass_filter", False)
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
