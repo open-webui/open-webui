@@ -55,6 +55,7 @@
 	import DropdownOptions from '$lib/components/common/DropdownOptions.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
 	import AttachWebpageModal from '$lib/components/chat/MessageInput/AttachWebpageModal.svelte';
+	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
 
 	let largeScreen = true;
 
@@ -1110,13 +1111,14 @@
 									</div>
 
 									{#key selectedFile.id}
-										<textarea
-											class="w-full h-full text-sm outline-none resize-none px-3 py-2"
-											bind:value={selectedFileContent}
-											disabled={!knowledge?.write_access}
-											aria-label={$i18n.t('File content')}
-											placeholder={$i18n.t('Add content here')}
-										/>
+										<div class="flex-1 overflow-y-auto px-3 py-2">
+											<RichTextInput
+												bind:value={selectedFileContent}
+												placeholder={$i18n.t('Add content here')}
+												preserveBreaks={true}
+												editable={knowledge?.write_access ?? false}
+											/>
+										</div>
 									{/key}
 								</div>
 							</div>
