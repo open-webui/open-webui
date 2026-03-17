@@ -372,6 +372,17 @@
 									</div>
 								</div>
 							</div>
+							
+							<div class="flex w-full mt-1">
+								<div class="flex-1 flex justify-between">
+									<div class="self-center text-xs font-medium">
+										{$i18n.t('Enable OpenAI PDF Parser')}
+									</div>
+									<div class="flex items-center relative">
+										<Switch bind:state={RAGConfig.ENABLE_OPENAI_PDF_PARSER} />
+									</div>
+								</div>
+							</div>
 
 							<div class="flex w-full mt-2">
 								<div class="flex-1 flex justify-between">

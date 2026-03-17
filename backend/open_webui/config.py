@@ -3043,6 +3043,12 @@ PDF_EXTRACT_IMAGES = PersistentConfig(
     os.environ.get("PDF_EXTRACT_IMAGES", "False").lower() == "true",
 )
 
+ENABLE_OPENAI_PDF_PARSER = PersistentConfig(
+    "ENABLE_OPENAI_PDF_PARSER",
+    "rag.enable_openai_pdf_parser",
+    os.environ.get("ENABLE_OPENAI_PDF_PARSER", "False").lower() == "true",
+)
+
 PDF_LOADER_MODE = PersistentConfig(
     "PDF_LOADER_MODE",
     "rag.pdf_loader_mode",

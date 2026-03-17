@@ -4,6 +4,8 @@ import mimetypes
 import os
 import shutil
 import asyncio
+import base64
+
 
 import re
 import uuid
@@ -480,6 +482,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         # Content extraction settings
         "CONTENT_EXTRACTION_ENGINE": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
         "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
+        "ENABLE_OPENAI_PDF_PARSER": request.app.state.config.ENABLE_OPENAI_PDF_PARSER,
         "PDF_LOADER_MODE": request.app.state.config.PDF_LOADER_MODE,
         "DATALAB_MARKER_API_KEY": request.app.state.config.DATALAB_MARKER_API_KEY,
         "DATALAB_MARKER_API_BASE_URL": request.app.state.config.DATALAB_MARKER_API_BASE_URL,
@@ -680,6 +683,7 @@ class ConfigForm(BaseModel):
     # Content extraction settings
     CONTENT_EXTRACTION_ENGINE: Optional[str] = None
     PDF_EXTRACT_IMAGES: Optional[bool] = None
+    ENABLE_OPENAI_PDF_PARSER: Optional[bool] = None
     PDF_LOADER_MODE: Optional[str] = None
 
     DATALAB_MARKER_API_KEY: Optional[str] = None
@@ -807,6 +811,11 @@ async def update_rag_config(
         form_data.PDF_EXTRACT_IMAGES
         if form_data.PDF_EXTRACT_IMAGES is not None
         else request.app.state.config.PDF_EXTRACT_IMAGES
+    )
+    request.app.state.config.ENABLE_OPENAI_PDF_PARSER = (
+        form_data.ENABLE_OPENAI_PDF_PARSER
+        if form_data.ENABLE_OPENAI_PDF_PARSER is not None
+        else request.app.state.config.ENABLE_OPENAI_PDF_PARSER
     )
     request.app.state.config.PDF_LOADER_MODE = (
         form_data.PDF_LOADER_MODE
@@ -1237,6 +1246,7 @@ async def update_rag_config(
         # Content extraction settings
         "CONTENT_EXTRACTION_ENGINE": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
         "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
+        "ENABLE_OPENAI_PDF_PARSER": request.app.state.config.ENABLE_OPENAI_PDF_PARSER,
         "PDF_LOADER_MODE": request.app.state.config.PDF_LOADER_MODE,
         "DATALAB_MARKER_API_KEY": request.app.state.config.DATALAB_MARKER_API_KEY,
         "DATALAB_MARKER_API_BASE_URL": request.app.state.config.DATALAB_MARKER_API_BASE_URL,
@@ -1809,9 +1819,16 @@ def process_file(
                 text_content = " ".join([doc.page_content for doc in docs])
 
             log.debug(f"text_content: {text_content}")
+            
+            # Store PDF base64 for OpenAI built-in file parser        
+            with open(file_path, "rb") as f:
+                upload_file_bytes = f.read()
+            uploaded_file_base64_string = base64.b64encode(upload_file_bytes).decode("utf-8")
+            
             Files.update_file_data_by_id(
                 file.id,
                 {"content": text_content},
+                {"uploaded_file_base64_string": uploaded_file_base64_string},
                 db=db,
             )
             hash = calculate_sha256_string(text_content)
@@ -1870,6 +1887,7 @@ def process_file(
                                 "collection_name": collection_name,
                                 "filename": file.filename,
                                 "content": text_content,
+                                "uploaded_file_base64_string": uploaded_file_base64_string,  # need by OpenAI API built-in file parser
                             }
                     else:
                         raise Exception("Error saving document to vector database")
@@ -1903,7 +1921,6 @@ def process_file(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
-
 
 class ProcessTextForm(BaseModel):
     name: str
