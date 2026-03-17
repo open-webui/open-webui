@@ -133,12 +133,14 @@
 	style="scroll-margin-top: 3rem;"
 >
 	{#if !($settings?.chatBubble ?? true)}
-		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 mt-1`}>
-			<ProfileImage
-				src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
-				className={'size-8 user-message-profile-image'}
-			/>
-		</div>
+		{#if user}
+			<div class={`shrink-0 ltr:mr-3 rtl:ml-3 mt-1`}>
+				<ProfileImage
+					src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
+					className={'size-8 user-message-profile-image'}
+				/>
+			</div>
+		{/if}
 	{/if}
 	<div class="flex-auto w-0 max-w-full pl-1">
 		{#if !($settings?.chatBubble ?? true)}
@@ -147,8 +149,10 @@
 					{#if message.user}
 						{$i18n.t('You')}
 						<span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
-					{:else if $settings.showUsername || $_user.name !== user.name}
+					{:else if user && ($settings.showUsername || $_user.name !== user.name)}
 						{user.name}
+					{:else if !user && message?.user}
+						{message.user}
 					{:else}
 						{$i18n.t('You')}
 					{/if}
