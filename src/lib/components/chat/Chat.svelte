@@ -1733,6 +1733,7 @@
 				let value = choices[0]?.delta?.content ?? '';
 				if (!(message.content == '' && value == '\n')) {
 					message.content += value;
+					message = { ...message };
 					history.messages[message.id] = message;
 					history = { ...history };
 
@@ -1778,6 +1779,7 @@
 		if (content) {
 			// REALTIME_CHAT_SAVE is disabled
 			message.content = content;
+			message = { ...message };
 			history.messages[message.id] = message;
 			history = { ...history };
 
@@ -1818,6 +1820,7 @@
 			message.usage = usage;
 		}
 
+		message = { ...message };
 		history.messages[message.id] = message;
 		history = { ...history };
 
