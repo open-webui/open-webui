@@ -10,8 +10,7 @@
 		settings,
 		showArtifacts,
 		showControls,
-		showEmbeds,
-		showOverview
+		showEmbeds
 	} from '$lib/stores';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
 	import { createMessagesList } from '$lib/utils';
@@ -42,6 +41,31 @@
 
 	let contentContainerElement;
 	let floatingButtonsElement;
+
+	let sourceIds = [];
+	$: getSourceIds(sources);
+
+	const getSourceIds = (sources) => {
+		const result = [];
+		for (const source of sources ?? []) {
+			for (let index = 0; index < (source.document ?? []).length; index++) {
+				if (model?.info?.meta?.capabilities?.citations == false) {
+					result.push('N/A');
+					continue;
+				}
+				const metadata = source.metadata?.[index];
+				const id = metadata?.source ?? 'N/A';
+				if (metadata?.name) {
+					result.push(metadata.name);
+				} else if (id.startsWith('http://') || id.startsWith('https://')) {
+					result.push(id);
+				} else {
+					result.push(source?.source?.name ?? id);
+				}
+			}
+		}
+		sourceIds = [...new Set(result)];
+	};
 
 	const updateButtonPosition = (event) => {
 		const buttonsContainerElement = document.getElementById(`floating-buttons-${id}`);
@@ -143,36 +167,7 @@
 		{done}
 		{editCodeBlock}
 		{topPadding}
-		sourceIds={(sources ?? []).reduce((acc, source) => {
-			let ids = [];
-			source.document.forEach((document, index) => {
-				if (model?.info?.meta?.capabilities?.citations == false) {
-					ids.push('N/A');
-					return ids;
-				}
-
-				const metadata = source.metadata?.[index];
-				const id = metadata?.source ?? 'N/A';
-
-				if (metadata?.name) {
-					ids.push(metadata.name);
-					return ids;
-				}
-
-				if (id.startsWith('http://') || id.startsWith('https://')) {
-					ids.push(id);
-				} else {
-					ids.push(source?.source?.name ?? id);
-				}
-
-				return ids;
-			});
-
-			acc = [...acc, ...ids];
-
-			// remove duplicates
-			return acc.filter((item, index) => acc.indexOf(item) === index);
-		}, [])}
+		{sourceIds}
 		{onSourceClick}
 		{onTaskClick}
 		{onSave}
@@ -195,13 +190,12 @@
 			await artifactCode.set(value);
 			await showControls.set(true);
 			await showArtifacts.set(true);
-			await showOverview.set(false);
 			await showEmbeds.set(false);
 		}}
 	/>
 </div>
 
-{#if floatingButtons && model}
+{#if floatingButtons}
 	<FloatingButtons
 		bind:this={floatingButtonsElement}
 		{id}
@@ -211,7 +205,7 @@
 			? model?.id
 			: (selectedModels ?? []).length > 0
 				? selectedModels.at(0)
-				: model?.id}
+				: (model?.id ?? null)}
 		messages={createMessagesList(history, messageId)}
 		onAdd={({ modelId, parentId, messages }) => {
 			console.log(modelId, parentId, messages);

@@ -36,6 +36,7 @@ from open_webui.models.groups import Groups, GroupModel, GroupUpdateForm, GroupF
 from open_webui.config import (
     DEFAULT_USER_ROLE,
     ENABLE_OAUTH_SIGNUP,
+    OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE,
     OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
     OAUTH_PROVIDERS,
     ENABLE_OAUTH_ROLE_MANAGEMENT,
@@ -55,6 +56,8 @@ from open_webui.config import (
     OAUTH_ADMIN_ROLES,
     OAUTH_ALLOWED_DOMAINS,
     OAUTH_UPDATE_PICTURE_ON_LOGIN,
+    OAUTH_UPDATE_NAME_ON_LOGIN,
+    OAUTH_UPDATE_EMAIL_ON_LOGIN,
     OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID,
     OAUTH_AUDIENCE,
     WEBHOOK_URL,
@@ -111,6 +114,9 @@ log = logging.getLogger(__name__)
 auth_manager_config = AppConfig()
 auth_manager_config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
 auth_manager_config.ENABLE_OAUTH_SIGNUP = ENABLE_OAUTH_SIGNUP
+auth_manager_config.OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE = (
+    OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE
+)
 auth_manager_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL = OAUTH_MERGE_ACCOUNTS_BY_EMAIL
 auth_manager_config.ENABLE_OAUTH_ROLE_MANAGEMENT = ENABLE_OAUTH_ROLE_MANAGEMENT
 auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT = ENABLE_OAUTH_GROUP_MANAGEMENT
@@ -129,6 +135,8 @@ auth_manager_config.OAUTH_ALLOWED_DOMAINS = OAUTH_ALLOWED_DOMAINS
 auth_manager_config.WEBHOOK_URL = WEBHOOK_URL
 auth_manager_config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN = OAUTH_UPDATE_PICTURE_ON_LOGIN
+auth_manager_config.OAUTH_UPDATE_NAME_ON_LOGIN = OAUTH_UPDATE_NAME_ON_LOGIN
+auth_manager_config.OAUTH_UPDATE_EMAIL_ON_LOGIN = OAUTH_UPDATE_EMAIL_ON_LOGIN
 auth_manager_config.OAUTH_AUDIENCE = OAUTH_AUDIENCE
 
 
@@ -612,7 +620,7 @@ class OAuthClientManager:
                             payload = json.loads(response_text)
                             error = payload.get("error")
                             error_description = payload.get("error_description", "")
-                        except:
+                        except Exception:
                             pass
                     else:
                         error_description = response_text
@@ -782,6 +790,16 @@ class OAuthClientManager:
             }
             if hasattr(client, "client_secret") and client.client_secret:
                 refresh_data["client_secret"] = client.client_secret
+
+            # Add scope if available in client kwargs (some providers require it on refresh)
+            if (
+                hasattr(client, "client_kwargs")
+                and client.client_kwargs.get("scope")
+                and getattr(
+                    self.app.state.config, "OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE", False
+                )
+            ):
+                refresh_data["scope"] = client.client_kwargs["scope"]
 
             # Make refresh request
             async with aiohttp.ClientSession(trust_env=True) as session_http:
@@ -1076,6 +1094,14 @@ class OAuthManager:
             # Add client_secret if available (some providers require it)
             if hasattr(client, "client_secret") and client.client_secret:
                 refresh_data["client_secret"] = client.client_secret
+
+            # Add scope if available in client kwargs (some providers require it on refresh)
+            if (
+                hasattr(client, "client_kwargs")
+                and client.client_kwargs.get("scope")
+                and auth_manager_config.OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE
+            ):
+                refresh_data["scope"] = client.client_kwargs["scope"]
 
             # Make refresh request
             async with aiohttp.ClientSession(trust_env=True) as session_http:
@@ -1548,6 +1574,33 @@ class OAuthManager:
                     # Update the user object in memory as well,
                     # to avoid problems with the ENABLE_OAUTH_GROUP_MANAGEMENT check below
                     user.role = determined_role
+
+                if auth_manager_config.OAUTH_UPDATE_NAME_ON_LOGIN:
+                    username_claim = auth_manager_config.OAUTH_USERNAME_CLAIM
+                    if username_claim:
+                        new_name = user_data.get(username_claim)
+                        if new_name and new_name != user.name:
+                            Users.update_user_by_id(user.id, {"name": new_name}, db=db)
+                            user.name = new_name
+                            log.debug(f"Updated name for user {user.email}")
+
+                if auth_manager_config.OAUTH_UPDATE_EMAIL_ON_LOGIN:
+                    email_claim = auth_manager_config.OAUTH_EMAIL_CLAIM
+                    if email_claim:
+                        new_email = user_data.get(email_claim)
+                        if new_email and new_email.lower() != user.email.lower():
+                            existing_user = Users.get_user_by_email(new_email, db=db)
+                            if existing_user:
+                                log.error(
+                                    f"Cannot update email to {new_email} for user {user.id} because it is already taken."
+                                )
+                            else:
+                                Auths.update_email_by_id(
+                                    user.id, new_email.lower(), db=db
+                                )
+                                user.email = new_email.lower()
+                                log.debug(f"Updated email for user {user.id}")
+
                 # Update profile picture if enabled and different from current
                 if auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN:
                     picture_claim = auth_manager_config.OAUTH_PICTURE_CLAIM
@@ -1653,7 +1706,9 @@ class OAuthManager:
         redirect_url = f"{redirect_base_url}/auth"
 
         if error_message:
-            redirect_url = f"{redirect_url}?error={error_message}"
+            redirect_url = (
+                f"{redirect_url}?error={urllib.parse.quote_plus(error_message)}"
+            )
             return RedirectResponse(url=redirect_url, headers=response.headers)
 
         response = RedirectResponse(url=redirect_url, headers=response.headers)
@@ -1706,17 +1761,22 @@ class OAuthManager:
                 db=db,
             )
 
-            response.set_cookie(
-                key="oauth_session_id",
-                value=session.id,
-                httponly=True,
-                samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-                secure=WEBUI_AUTH_COOKIE_SECURE,
-            )
+            if session:
+                response.set_cookie(
+                    key="oauth_session_id",
+                    value=session.id,
+                    httponly=True,
+                    samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                    secure=WEBUI_AUTH_COOKIE_SECURE,
+                )
 
-            log.info(
-                f"Stored OAuth session server-side for user {user.id}, provider {provider}"
-            )
+                log.info(
+                    f"Stored OAuth session server-side for user {user.id}, provider {provider}"
+                )
+            else:
+                log.warning(
+                    f"Failed to create OAuth session for user {user.id}, provider {provider}"
+                )
         except Exception as e:
             log.error(f"Failed to store OAuth session server-side: {e}")
 

@@ -90,24 +90,32 @@
 	};
 
 	onMount(() => {
-		artifactCode.subscribe((value) => {
+		const unsubscribeArtifactCode = artifactCode.subscribe((value) => {
 			if (contents) {
 				const codeIdx = contents.findIndex((content) => content.content.includes(value));
 				selectedContentIdx = codeIdx !== -1 ? codeIdx : 0;
 			}
 		});
 
-		artifactContents.subscribe((value) => {
-			contents = value;
-			console.log('Artifact contents updated:', contents);
+		const unsubscribeArtifactContents = artifactContents.subscribe((value) => {
+			const newContents = value ?? [];
+			console.log('Artifact contents updated:', newContents);
 
-			if (contents.length === 0) {
+			if (newContents.length === 0) {
 				showControls.set(false);
 				showArtifacts.set(false);
+				selectedContentIdx = 0;
+			} else if (newContents.length > contents.length) {
+				selectedContentIdx = newContents.length - 1;
 			}
 
-			selectedContentIdx = contents ? contents.length - 1 : 0;
+			contents = newContents;
 		});
+
+		return () => {
+			unsubscribeArtifactCode();
+			unsubscribeArtifactContents();
+		};
 	});
 </script>
 

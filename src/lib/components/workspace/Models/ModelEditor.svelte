@@ -218,7 +218,11 @@
 		}
 
 		info.params.system = system.trim() === '' ? null : system;
-		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
+		info.params.stop = params.stop
+			? (typeof params.stop === 'string' ? params.stop.split(',') : params.stop).filter((s) =>
+					s.trim()
+				)
+			: null;
 		Object.keys(info.params).forEach((key) => {
 			if (info.params[key] === '' || info.params[key] === null) {
 				delete info.params[key];
@@ -332,6 +336,7 @@
 		accessRoles={preset ? ['read', 'write'] : ['read']}
 		share={$user?.permissions?.sharing?.models || $user?.role === 'admin'}
 		sharePublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
+		shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) || $user?.role === 'admin'}
 		onChange={async () => {
 			if (edit && model?.id) {
 				try {

@@ -24,6 +24,10 @@
 	import Tooltip from './Tooltip.svelte';
 	import dayjs from 'dayjs';
 	import Spinner from './Spinner.svelte';
+	import PDFViewer from './PDFViewer.svelte';
+	import Reset from '../icons/Reset.svelte';
+
+	import panzoom, { type PanZoom } from 'panzoom';
 
 	export let item;
 	export let show = false;
@@ -36,6 +40,8 @@
 	let isAudio = false;
 	let isImage = false;
 	let isExcel = false;
+	let isDocx = false;
+	let isPptx = false;
 
 	let selectedTab = '';
 	let excelWorkbook: WorkBook | null = null;
@@ -44,6 +50,32 @@
 	let excelHtml = '';
 	let excelError = '';
 	let rowCount = 0;
+
+	// DOCX state
+	let docxHtml = '';
+	let docxError = '';
+
+	// PPTX state
+	let pptxSlides: string[] = [];
+	let pptxCurrentSlide = 0;
+	let pptxError = '';
+
+	let pzInstance: PanZoom | null = null;
+
+	const initImagePanzoom = (node: HTMLElement) => {
+		pzInstance = panzoom(node, {
+			bounds: true,
+			boundsPadding: 0.1,
+			zoomSpeed: 0.065
+		});
+	};
+
+	const resetImageView = () => {
+		if (pzInstance) {
+			pzInstance.moveTo(0, 0);
+			pzInstance.zoomAbs(0, 0, 1);
+		}
+	};
 
 	$: isPDF =
 		item?.meta?.content_type === 'application/pdf' ||
@@ -107,6 +139,16 @@
 				item.name.toLowerCase().endsWith('.xlsx') ||
 				item.name.toLowerCase().endsWith('.csv')));
 
+	$: isDocx =
+		item?.meta?.content_type ===
+			'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+		(item?.name && item.name.toLowerCase().endsWith('.docx'));
+
+	$: isPptx =
+		item?.meta?.content_type ===
+			'application/vnd.openxmlformats-officedocument.presentationml.presentation' ||
+		(item?.name && item.name.toLowerCase().endsWith('.pptx'));
+
 	const loadExcelContent = async () => {
 		try {
 			excelError = '';
@@ -129,25 +171,47 @@
 
 	const renderExcelSheet = async () => {
 		if (!excelWorkbook || !selectedSheet) return;
-
+		const { excelToTable } = await import('$lib/utils/excelToTable');
 		const worksheet = excelWorkbook.Sheets[selectedSheet];
-		// Calculate row count
-		const XLSX = await import('xlsx');
-		const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:A1');
-		rowCount = range.e.r - range.s.r + 1;
-
-		excelHtml = DOMPurify.sanitize(
-			XLSX.utils.sheet_to_html(worksheet, {
-				id: 'excel-table',
-				editable: false,
-				header: ''
-			})
-		);
+		const result = await excelToTable(worksheet);
+		excelHtml = result.html;
+		rowCount = result.rowCount;
 	};
 
 	$: if (selectedSheet && excelWorkbook) {
 		renderExcelSheet();
 	}
+
+	const loadDocxContent = async () => {
+		try {
+			docxError = '';
+			const [arrayBuffer, mammoth] = await Promise.all([
+				getFileContentById(item.id),
+				import('mammoth')
+			]);
+			const result = await mammoth.convertToHtml({ arrayBuffer });
+			docxHtml = DOMPurify.sanitize(result.value);
+		} catch (error) {
+			console.error('Error loading DOCX file:', error);
+			docxError = $i18n.t('Failed to load DOCX file. Please try downloading it instead.');
+		}
+	};
+
+	const loadPptxContent = async () => {
+		try {
+			pptxError = '';
+			const [arrayBuffer, { pptxToImages }] = await Promise.all([
+				getFileContentById(item.id),
+				import('$lib/utils/pptxToHtml')
+			]);
+			const result = await pptxToImages(arrayBuffer);
+			pptxSlides = result.images;
+			pptxCurrentSlide = 0;
+		} catch (error) {
+			console.error('Error loading PPTX file:', error);
+			pptxError = $i18n.t('Failed to load PPTX file. Please try downloading it instead.');
+		}
+	};
 
 	const loadContent = async () => {
 		selectedTab = '';
@@ -180,6 +244,12 @@
 			if (isExcel) {
 				await loadExcelContent();
 			}
+			if (isDocx) {
+				await loadDocxContent();
+			}
+			if (isPptx) {
+				await loadPptxContent();
+			}
 
 			loading = false;
 		}
@@ -196,6 +266,10 @@
 		if (item?.context === 'full') {
 			enableFullContent = true;
 		}
+
+		return () => {
+			pzInstance?.dispose();
+		};
 	});
 </script>
 
@@ -333,7 +407,7 @@
 					</div>
 				{/if}
 
-				{#if isAudio || isPDF || isExcel || isCode || isMarkdown}
+				{#if isAudio || isPDF || isExcel || isCode || isMarkdown || isDocx || isPptx}
 					<div
 						class="flex mb-2.5 scrollbar-none overflow-x-auto w-full border-b border-gray-50 dark:border-gray-850/30 text-center text-sm font-medium bg-transparent dark:text-gray-200"
 					>
@@ -360,13 +434,26 @@
 				{/if}
 
 				{#if isImage}
-					<div class="w-full max-h-[70vh] overflow-auto">
-						<img
-							src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
-							alt={item?.name ?? 'Image'}
-							class="w-full object-contain rounded-lg"
-							loading="lazy"
-						/>
+					<div class="relative w-full max-h-[70vh] overflow-hidden">
+						<div class="absolute top-2 right-2 z-10">
+							<Tooltip content={$i18n.t('Reset view')}>
+								<button
+									class="p-1.5 rounded-lg bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+									on:click={resetImageView}
+								>
+									<Reset className="size-4" />
+								</button>
+							</Tooltip>
+						</div>
+						<div use:initImagePanzoom>
+							<img
+								src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
+								alt={item?.name ?? 'Image'}
+								class="w-full object-contain rounded-lg"
+								loading="lazy"
+								draggable="false"
+							/>
+						</div>
 					</div>
 				{:else if selectedTab === ''}
 					{#if item?.file?.data}
@@ -443,10 +530,9 @@
 							playsinline
 						/>
 					{:else if isPDF}
-						<iframe
-							title={item?.name}
-							src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
-							class="w-full h-[70vh] border-0 rounded-lg"
+						<PDFViewer
+							url={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
+							className="w-full h-[70vh] border-0 rounded-lg"
 						/>
 					{:else if isExcel}
 						{#if excelError}
@@ -473,7 +559,7 @@
 							{/if}
 
 							{#if excelHtml}
-								<div class="excel-table-container overflow-auto max-h-[60vh]">
+								<div class="office-preview overflow-auto max-h-[60vh]">
 									{@html excelHtml}
 								</div>
 							{:else}
@@ -497,6 +583,77 @@
 						>
 							<Markdown content={item.file.data.content} id="markdown-viewer" />
 						</div>
+					{:else if isDocx}
+						{#if docxError}
+							<div class="text-red-500 text-sm p-4">{docxError}</div>
+						{:else if docxHtml}
+							<div
+								class="office-preview max-h-[60vh] overflow-auto p-4 prose dark:prose-invert max-w-full text-sm"
+							>
+								{@html docxHtml}
+							</div>
+						{:else}
+							<div class="text-gray-500 text-sm p-4">No content available</div>
+						{/if}
+					{:else if isPptx}
+						{#if pptxError}
+							<div class="text-red-500 text-sm p-4">{pptxError}</div>
+						{:else if pptxSlides.length > 0}
+							<div class="max-h-[60vh] overflow-auto">
+								<div class="flex justify-center p-4">
+									<img
+										src={pptxSlides[pptxCurrentSlide]}
+										alt="Slide {pptxCurrentSlide + 1}"
+										class="max-w-full max-h-[50vh] object-contain rounded-md shadow-lg"
+										draggable="false"
+									/>
+								</div>
+								{#if pptxSlides.length > 1}
+									<div class="flex items-center justify-center gap-3 pb-3 text-sm text-gray-500">
+										<button
+											class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
+											disabled={pptxCurrentSlide === 0}
+											on:click={() => (pptxCurrentSlide = Math.max(0, pptxCurrentSlide - 1))}
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+												class="size-5"
+											>
+												<path
+													fill-rule="evenodd"
+													d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z"
+													clip-rule="evenodd"
+												/>
+											</svg>
+										</button>
+										<span>{pptxCurrentSlide + 1} / {pptxSlides.length}</span>
+										<button
+											class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
+											disabled={pptxCurrentSlide === pptxSlides.length - 1}
+											on:click={() =>
+												(pptxCurrentSlide = Math.min(pptxSlides.length - 1, pptxCurrentSlide + 1))}
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+												class="size-5"
+											>
+												<path
+													fill-rule="evenodd"
+													d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
+													clip-rule="evenodd"
+												/>
+											</svg>
+										</button>
+									</div>
+								{/if}
+							</div>
+						{:else}
+							<div class="text-gray-500 text-sm p-4">No content available</div>
+						{/if}
 					{:else}
 						<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
 							{(item?.file?.data?.content ?? '').trim() || 'No content'}

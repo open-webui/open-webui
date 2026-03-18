@@ -37,6 +37,7 @@ from langchain_text_splitters import (
 from langchain_core.documents import Document
 
 from open_webui.models.files import FileModel, FileUpdateForm, Files
+from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
 from open_webui.internal.db import get_session, get_db
@@ -728,10 +729,10 @@ class ConfigForm(BaseModel):
     CHUNK_OVERLAP: Optional[int] = None
 
     # File upload settings
-    FILE_MAX_SIZE: Optional[int] = None
-    FILE_MAX_COUNT: Optional[int] = None
-    FILE_IMAGE_COMPRESSION_WIDTH: Optional[int] = None
-    FILE_IMAGE_COMPRESSION_HEIGHT: Optional[int] = None
+    FILE_MAX_SIZE: Optional[Union[int, str]] = None
+    FILE_MAX_COUNT: Optional[Union[int, str]] = None
+    FILE_IMAGE_COMPRESSION_WIDTH: Optional[Union[int, str]] = None
+    FILE_IMAGE_COMPRESSION_HEIGHT: Optional[Union[int, str]] = None
     ALLOWED_FILE_EXTENSIONS: Optional[List[str]] = None
 
     # Integration settings
@@ -1054,26 +1055,29 @@ async def update_rag_config(
     )
 
     # File upload settings
-    request.app.state.config.FILE_MAX_SIZE = (
-        form_data.FILE_MAX_SIZE
-        if form_data.FILE_MAX_SIZE is not None
-        else request.app.state.config.FILE_MAX_SIZE
-    )
-    request.app.state.config.FILE_MAX_COUNT = (
-        form_data.FILE_MAX_COUNT
-        if form_data.FILE_MAX_COUNT is not None
-        else request.app.state.config.FILE_MAX_COUNT
-    )
-    request.app.state.config.FILE_IMAGE_COMPRESSION_WIDTH = (
-        form_data.FILE_IMAGE_COMPRESSION_WIDTH
-        if form_data.FILE_IMAGE_COMPRESSION_WIDTH is not None
-        else request.app.state.config.FILE_IMAGE_COMPRESSION_WIDTH
-    )
-    request.app.state.config.FILE_IMAGE_COMPRESSION_HEIGHT = (
-        form_data.FILE_IMAGE_COMPRESSION_HEIGHT
-        if form_data.FILE_IMAGE_COMPRESSION_HEIGHT is not None
-        else request.app.state.config.FILE_IMAGE_COMPRESSION_HEIGHT
-    )
+    # Empty string means "clear to None" (unlimited/no compression),
+    # None means "don't change", int means "set to this value"
+    if form_data.FILE_MAX_SIZE is not None:
+        request.app.state.config.FILE_MAX_SIZE = (
+            None if form_data.FILE_MAX_SIZE == "" else form_data.FILE_MAX_SIZE
+        )
+    if form_data.FILE_MAX_COUNT is not None:
+        request.app.state.config.FILE_MAX_COUNT = (
+            None if form_data.FILE_MAX_COUNT == "" else form_data.FILE_MAX_COUNT
+        )
+    if form_data.FILE_IMAGE_COMPRESSION_WIDTH is not None:
+        request.app.state.config.FILE_IMAGE_COMPRESSION_WIDTH = (
+            None
+            if form_data.FILE_IMAGE_COMPRESSION_WIDTH == ""
+            else form_data.FILE_IMAGE_COMPRESSION_WIDTH
+        )
+    if form_data.FILE_IMAGE_COMPRESSION_HEIGHT is not None:
+        request.app.state.config.FILE_IMAGE_COMPRESSION_HEIGHT = (
+            None
+            if form_data.FILE_IMAGE_COMPRESSION_HEIGHT == ""
+            else form_data.FILE_IMAGE_COMPRESSION_HEIGHT
+        )
+
     request.app.state.config.ALLOWED_FILE_EXTENSIONS = (
         form_data.ALLOWED_FILE_EXTENSIONS
         if form_data.ALLOWED_FILE_EXTENSIONS is not None
@@ -1971,6 +1975,7 @@ async def process_web(
                     docs,
                     collection_name,
                     overwrite=overwrite,
+                    add=(not overwrite),
                     user=user,
                 )
             else:
@@ -2489,6 +2494,34 @@ async def process_web_search(
         )
 
 
+def _validate_collection_access(collection_names: list[str], user) -> None:
+    """
+    Prevent users from querying collections they don't own.
+    Enforces ownership on user-memory-* and file-* collections.
+    Admins bypass this check.
+    """
+    if user.role == "admin":
+        return
+
+    for name in collection_names:
+        if name.startswith("user-memory-") and name != f"user-memory-{user.id}":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+        elif name.startswith("file-"):
+            file_id = name[len("file-") :]
+            if not has_access_to_file(
+                file_id=file_id,
+                access_type="read",
+                user=user,
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                )
+
+
 class QueryDocForm(BaseModel):
     collection_name: str
     query: str
@@ -2504,6 +2537,8 @@ async def query_doc_handler(
     form_data: QueryDocForm,
     user=Depends(get_verified_user),
 ):
+    _validate_collection_access([form_data.collection_name], user)
+
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (
             form_data.hybrid is None or form_data.hybrid
@@ -2578,6 +2613,8 @@ async def query_collection_handler(
     form_data: QueryCollectionsForm,
     user=Depends(get_verified_user),
 ):
+    _validate_collection_access(form_data.collection_names, user)
+
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (
             form_data.hybrid is None or form_data.hybrid
@@ -2756,6 +2793,27 @@ async def process_files_batch(
 
     for file in form_data.files:
         try:
+            # Ownership check: verify the requesting user owns the file or is an admin
+            db_file = Files.get_file_by_id(file.id)
+            if not db_file:
+                file_errors.append(
+                    BatchProcessFilesResult(
+                        file_id=file.id,
+                        status="failed",
+                        error="File not found",
+                    )
+                )
+                continue
+            if db_file.user_id != user.id and user.role != "admin":
+                file_errors.append(
+                    BatchProcessFilesResult(
+                        file_id=file.id,
+                        status="failed",
+                        error="Permission denied: not file owner",
+                    )
+                )
+                continue
+
             text_content = file.data.get("content", "")
             docs: List[Document] = [
                 Document(

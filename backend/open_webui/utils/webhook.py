@@ -26,9 +26,13 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict) -> b
         # Microsoft Teams Webhooks
         elif "webhook.office.com" in url:
             action = event_data.get("action", "undefined")
+            user_data = event_data.get("user", "{}")
+            if isinstance(user_data, dict):
+                user_dict = user_data
+            else:
+                user_dict = json.loads(user_data)
             facts = [
-                {"name": name, "value": value}
-                for name, value in json.loads(event_data.get("user", {})).items()
+                {"name": name, "value": value} for name, value in user_dict.items()
             ]
             payload = {
                 "@type": "MessageCard",

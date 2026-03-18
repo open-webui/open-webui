@@ -591,7 +591,9 @@ def generate_openai_batch_embeddings(
         if "data" in data:
             return [elem["embedding"] for elem in data["data"]]
         else:
-            raise "Something went wrong :/"
+            raise ValueError(
+                "Unexpected OpenAI embeddings response: missing 'data' key"
+            )
     except Exception as e:
         log.exception(f"Error generating openai batch embeddings: {e}")
         return None
@@ -774,7 +776,9 @@ def generate_ollama_batch_embeddings(
         if "embeddings" in data:
             return data["embeddings"]
         else:
-            raise "Something went wrong :/"
+            raise ValueError(
+                "Unexpected Ollama embeddings response: missing 'embeddings' key"
+            )
     except Exception as e:
         log.exception(f"Error generating ollama batch embeddings: {e}")
         return None
@@ -1319,6 +1323,8 @@ def get_model_path(model: str, update_model: bool = False):
         return model_repo_path
     except Exception as e:
         log.exception(f"Cannot determine model snapshot path: {e}")
+        if OFFLINE_MODE:
+            raise
         return model
 
 

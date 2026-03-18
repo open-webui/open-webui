@@ -98,16 +98,17 @@
 		return onKeyDown(event);
 	}
 
-	const keydownListener = (e) => {
-		// required to prevent the default enter behavior
-		if (e.key === 'Enter') {
-			e.preventDefault();
-			select(selectedIndex);
-		}
-	};
+	onMount(() => {
+		const keydownListener = (e: KeyboardEvent) => {
+			// required to prevent the default enter behavior
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				select(selectedIndex);
+			}
+		};
 
-	onMount(async () => {
 		window.addEventListener('keydown', keydownListener);
+
 		if (channelSuggestions) {
 			// Add a dummy channel item
 			_channels = [
@@ -117,17 +118,17 @@
 			];
 		} else {
 			if (userSuggestions) {
-				await getUserList();
+				getUserList();
 			}
 
 			if (modelSuggestions) {
 				_models = [...$models.map((m) => ({ type: 'model', id: m.id, label: m.name, data: m }))];
 			}
 		}
-	});
 
-	onDestroy(() => {
-		window.removeEventListener('keydown', keydownListener);
+		return () => {
+			window.removeEventListener('keydown', keydownListener);
+		};
 	});
 
 	const hasPublicReadGrant = (grants: any) =>
