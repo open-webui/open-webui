@@ -1535,9 +1535,11 @@ class OAuthManager:
 
         # Set the cookie token
         # Redirect back to the frontend with the JWT token
+        expires_delta = parse_duration(auth_manager_config.JWT_EXPIRES_IN)
         response.set_cookie(
             key='token',
             value=jwt_token,
+            max_age=int(expires_delta.total_seconds()) if expires_delta else None,
             httponly=False,  # Required for frontend access
             samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
             secure=WEBUI_AUTH_COOKIE_SECURE,
