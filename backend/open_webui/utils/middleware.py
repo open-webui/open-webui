@@ -200,6 +200,9 @@ def _split_tool_calls(
         split_arguments = split_json_objects(arguments)
 
         if len(split_arguments) <= 1:
+            # Ensure tool call has an ID (important for Kimi and OpenAI compatibility)
+            if "id" not in tool_call:
+                tool_call["id"] = f"call_{uuid4().hex[:24]}"
             expanded.append(tool_call)
         else:
             for argument in split_arguments:
@@ -3613,6 +3616,7 @@ async def streaming_chat_response_handler(response, ctx):
                     nonlocal output
 
                     response_tool_calls = []
+                    last_finish_reason = None
 
                     delta_count = 0
                     delta_chunk_size = max(
@@ -3747,6 +3751,11 @@ async def streaming_chat_response_handler(response, ctx):
                                         continue
 
                                     delta = choices[0].get("delta", {})
+                                    finish_reason = choices[0].get("finish_reason")
+                                    
+                                    # Track the last finish_reason seen (important for Kimi)
+                                    if finish_reason:
+                                        last_finish_reason = finish_reason
 
                                     # Handle delta annotations
                                     annotations = delta.get("annotations")
@@ -3786,60 +3795,67 @@ async def streaming_chat_response_handler(response, ctx):
                                     if delta_tool_calls:
                                         for delta_tool_call in delta_tool_calls:
                                             tool_call_index = delta_tool_call.get(
-                                                "index"
+                                                "index", 0
+                                            )  # Default to 0 if not provided (Kimi compatibility)
+
+                                            # Ensure tool call has required fields
+                                            delta_tool_call.setdefault(
+                                                "function", {}
                                             )
+                                            delta_tool_call[
+                                                "function"
+                                            ].setdefault("name", "")
+                                            delta_tool_call[
+                                                "function"
+                                            ].setdefault("arguments", "")
+                                            
+                                            # For Kimi compatibility: if no index is provided,
+                                            # treat tool calls as a single sequence
+                                            if tool_call_index is None:
+                                                tool_call_index = 0
+                                                delta_tool_call["index"] = 0
 
-                                            if tool_call_index is not None:
-                                                # Check if the tool call already exists
-                                                current_response_tool_call = None
-                                                for (
-                                                    response_tool_call
-                                                ) in response_tool_calls:
-                                                    if (
-                                                        response_tool_call.get("index")
-                                                        == tool_call_index
-                                                    ):
-                                                        current_response_tool_call = (
-                                                            response_tool_call
-                                                        )
-                                                        break
+                                            # Check if the tool call already exists
+                                            current_response_tool_call = None
+                                            for (
+                                                response_tool_call
+                                            ) in response_tool_calls:
+                                                if (
+                                                    response_tool_call.get("index")
+                                                    == tool_call_index
+                                                ):
+                                                    current_response_tool_call = (
+                                                        response_tool_call
+                                                    )
+                                                    break
 
-                                                if current_response_tool_call is None:
-                                                    # Add the new tool call
-                                                    delta_tool_call.setdefault(
+                                            if current_response_tool_call is None:
+                                                # Add the new tool call
+                                                response_tool_calls.append(
+                                                    delta_tool_call
+                                                )
+                                            else:
+                                                # Update the existing tool call
+                                                delta_name = delta_tool_call.get(
+                                                    "function", {}
+                                                ).get("name")
+                                                delta_arguments = (
+                                                    delta_tool_call.get(
                                                         "function", {}
-                                                    )
-                                                    delta_tool_call[
-                                                        "function"
-                                                    ].setdefault("name", "")
-                                                    delta_tool_call[
-                                                        "function"
-                                                    ].setdefault("arguments", "")
-                                                    response_tool_calls.append(
-                                                        delta_tool_call
-                                                    )
-                                                else:
-                                                    # Update the existing tool call
-                                                    delta_name = delta_tool_call.get(
-                                                        "function", {}
-                                                    ).get("name")
-                                                    delta_arguments = (
-                                                        delta_tool_call.get(
-                                                            "function", {}
-                                                        ).get("arguments")
-                                                    )
+                                                    ).get("arguments")
+                                                )
 
-                                                    if delta_name:
-                                                        current_response_tool_call[
-                                                            "function"
-                                                        ]["name"] = delta_name
+                                                if delta_name:
+                                                    current_response_tool_call[
+                                                        "function"
+                                                    ]["name"] = delta_name
 
-                                                    if delta_arguments:
-                                                        current_response_tool_call[
-                                                            "function"
-                                                        ][
-                                                            "arguments"
-                                                        ] += delta_arguments
+                                                if delta_arguments:
+                                                    current_response_tool_call[
+                                                        "function"
+                                                    ][
+                                                        "arguments"
+                                                    ] += delta_arguments
 
                                         # Emit pending tool calls in real-time
                                         if response_tool_calls:
@@ -4194,6 +4210,10 @@ async def streaming_chat_response_handler(response, ctx):
                                 )
                                 reasoning_item["status"] = "completed"
 
+                    # Check if response_tool_calls has accumulated any tool calls
+                    # This handles cases where finish_reason=tool_calls is set but
+                    # the last delta doesn't contain tool_calls (they were in earlier deltas)
+                    # Important for Kimi K2.5 compatibility
                     if response_tool_calls:
                         tool_calls.append(_split_tool_calls(response_tool_calls))
 
@@ -4538,16 +4558,40 @@ async def streaming_chat_response_handler(response, ctx):
                     )
 
                     try:
+                        # Convert output to messages for Kimi/OpenAI compatibility
+                        converted_messages = convert_output_to_messages(output, raw=True)
+                        
+                        # Debug log for Kimi K2.5 tool call handling
+                        log.info(f"🔄 [Kimi Tool Call] Tool call retry #{tool_call_retries + 1}")
+                        log.info(f"   Original messages: {len(form_data['messages'])}")
+                        log.info(f"   Converted messages: {len(converted_messages)}")
+                        log.info(f"   Final message count: {len(form_data['messages']) + len(converted_messages)}")
+                        
+                        # Log message sequence for debugging
+                        for idx, msg in enumerate(converted_messages):
+                            if msg.get("role") == "assistant" and "tool_calls" in msg:
+                                log.info(f"   [{idx}] Message: assistant with {len(msg['tool_calls'])} tool_calls")
+                            elif msg.get("role") == "tool":
+                                log.info(f"   [{idx}] Message: tool (tool_call_id={msg.get('tool_call_id')})")
+                            else:
+                                log.info(f"   [{idx}] Message: {msg.get('role')}")
+                        
+                        # Prepare final messages for Kimi - add reasoning_content to assistant messages with tool_calls
+                        # This is required by Kimi when thinking is enabled
+                        final_messages = [*form_data["messages"]]
+                        for msg in converted_messages:
+                            if msg.get("role") == "assistant" and "tool_calls" in msg and "reasoning_content" not in msg:
+                                msg["reasoning_content"] = "tool_call"
+                            final_messages.append(msg)
+                        
                         new_form_data = {
                             **form_data,
                             "model": model_id,
                             "stream": True,
-                            "messages": [
-                                *form_data["messages"],
-                                *convert_output_to_messages(output, raw=True),
-                            ],
+                            "messages": final_messages,
                         }
-
+                        
+                        log.info(f"   Calling generate_chat_completion with {len(new_form_data['messages'])} messages")
                         res = await generate_chat_completion(
                             request,
                             new_form_data,
@@ -4556,11 +4600,36 @@ async def streaming_chat_response_handler(response, ctx):
                         )
 
                         if isinstance(res, StreamingResponse):
+                            log.info(f"   ✅ Got StreamingResponse, processing stream...")
                             await stream_body_handler(res, new_form_data)
                         else:
+                            log.warning(f"   ❌ Response is not StreamingResponse, type: {type(res)}")
+                            if isinstance(res, dict):
+                                log.error(f"   Error response content: {json.dumps(res, indent=2, ensure_ascii=False)}")
+                            elif hasattr(res, "body"):
+                                try:
+                                    body_content = await res.body() if hasattr(res.body, '__call__') else res.body
+                                    log.error(f"   Response body: {body_content}")
+                                except:
+                                    log.error(f"   Could not read response body")
+                            else:
+                                log.error(f"   Response object: {res}")
+                            
+                            # Log the final messages that were sent
+                            log.error(f"   Messages sent to Kimi:")
+                            for idx, msg in enumerate(new_form_data.get("messages", [])):
+                                role = msg.get("role")
+                                tool_calls = msg.get("tool_calls", [])
+                                if tool_calls:
+                                    log.error(f"     [{idx}] {role}: {len(tool_calls)} tool_calls")
+                                    for tc in tool_calls:
+                                        log.error(f"          id={tc.get('id')}, name={tc.get('function', {}).get('name')}")
+                                else:
+                                    content_preview = str(msg.get("content", ""))[:100]
+                                    log.error(f"     [{idx}] {role}: {content_preview}...")
                             break
                     except Exception as e:
-                        log.debug(e)
+                        log.error(f"   ❌ Exception during tool call retry: {str(e)}", exc_info=True)
                         break
 
                 if DETECT_CODE_INTERPRETER:

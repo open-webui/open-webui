@@ -155,21 +155,32 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
     messages = []
     pending_tool_calls = []
     pending_content = []
+    pending_reasoning_content = []
 
     def flush_pending():
-        nonlocal pending_content, pending_tool_calls
-        if pending_content or pending_tool_calls:
-            messages.append(
-                {
-                    "role": "assistant",
-                    "content": "\n".join(pending_content) if pending_content else "",
-                    **(
-                        {"tool_calls": pending_tool_calls} if pending_tool_calls else {}
-                    ),
-                }
-            )
+        nonlocal pending_content, pending_tool_calls, pending_reasoning_content
+        if pending_content or pending_tool_calls or pending_reasoning_content:
+            # Create assistant message with tool_calls
+            # Note: Kimi and other models require tool_calls to be present in the message
+            # even if content is empty, to properly reconstruct the conversation flow
+            msg = {
+                "role": "assistant",
+                "content": "\n".join(pending_content) if pending_content else "",
+            }
+
+            # Preserve reasoning_content for models that validate thinking mode
+            # (e.g. Kimi requires this when assistant message contains tool_calls).
+            if pending_reasoning_content:
+                msg["reasoning_content"] = "\n".join(pending_reasoning_content)
+            
+            # Always include tool_calls if present (Kimi spec requires this)
+            if pending_tool_calls:
+                msg["tool_calls"] = pending_tool_calls
+            
+            messages.append(msg)
             pending_content = []
             pending_tool_calls = []
+            pending_reasoning_content = []
 
     for item in output:
         item_type = item.get("type", "")
@@ -237,6 +248,7 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
                         reasoning_text += part.get("text", "")
 
                 if reasoning_text:
+                    pending_reasoning_content.append(reasoning_text)
                     start_tag = item.get("start_tag", "<think>")
                     end_tag = item.get("end_tag", "</think>")
                     pending_content.append(f"{start_tag}{reasoning_text}{end_tag}")
