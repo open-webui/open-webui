@@ -2470,6 +2470,19 @@ async def process_chat_response(
 
                                         reasoning_block["content"] += reasoning_content
 
+                                        # Stream reasoning incrementally to the UI so the
+                                        # frontend can render immediately instead of waiting
+                                        # for the accumulated completion snapshot.
+                                        if event_emitter is not None:
+                                            await event_emitter(
+                                                {
+                                                    "type": "chat:message:delta",
+                                                    "data": {
+                                                        "content": reasoning_content,
+                                                    },
+                                                }
+                                            )
+
                                         data = {
                                             "content": serialize_content_blocks(
                                                 content_blocks
@@ -2514,6 +2527,17 @@ async def process_chat_response(
                                         content_blocks[-1]["content"] = (
                                             content_blocks[-1]["content"] + value
                                         )
+
+                                        # Stream each text delta immediately.
+                                        if event_emitter is not None:
+                                            await event_emitter(
+                                                {
+                                                    "type": "chat:message:delta",
+                                                    "data": {
+                                                        "content": value,
+                                                    },
+                                                }
+                                            )
 
                                         if DETECT_REASONING_TAGS:
                                             content, content_blocks, _ = (
