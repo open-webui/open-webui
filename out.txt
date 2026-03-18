@@ -1,0 +1,19 @@
+backend/open_webui/socket/main.py:        await sio.emit(
+backend/open_webui/socket/main.py:            await sio.emit(
+backend/open_webui/socket/main.py:        await sio.emit(
+backend/open_webui/socket/main.py:        await sio.emit(
+backend/open_webui/socket/main.py:        await sio.emit(
+backend/open_webui/socket/main.py:        await sio.emit("error", {"message": "Failed to join document"}, room=sid)
+backend/open_webui/socket/main.py:        await sio.emit(
+backend/open_webui/socket/main.py:        await sio.emit(
+backend/open_webui/socket/main.py:        await sio.emit(
+backend/open_webui/socket/main.py:        await sio.emit(
+backend/open_webui/socket/main.py:            sio.emit(
+backend/open_webui/routers/channels.py:            await sio.emit(
+backend/open_webui/routers/channels.py:                    await sio.emit(
+backend/open_webui/routers/channels.py:            await sio.emit(
+backend/open_webui/routers/channels.py:        await sio.emit(
+backend/open_webui/routers/channels.py:        await sio.emit(
+backend/open_webui/routers/channels.py:        await sio.emit(
+backend/open_webui/routers/channels.py:                await sio.emit(
+backend/open_webui/routers/notes.py:        await sio.emit(

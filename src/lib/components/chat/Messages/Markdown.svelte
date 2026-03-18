@@ -59,12 +59,11 @@
 	};
 
 	const scheduleParse = () => {
-		if (parseTimeout) {
-			clearTimeout(parseTimeout);
-		}
-
-		// If done, parse immediately with minimal delay for final content
+		// If done, clear any pending timeouts and parse immediately with minimal delay
 		if (done) {
+			if (parseTimeout) {
+				clearTimeout(parseTimeout);
+			}
 			parseTimeout = setTimeout(() => {
 				if (pendingContent !== null) {
 					parseContent(pendingContent);
@@ -72,16 +71,22 @@
 				}
 				parseTimeout = null;
 			}, DONE_DELAY);
-		} else {
-			// During streaming, throttle updates
-			parseTimeout = setTimeout(() => {
-				if (pendingContent !== null) {
-					parseContent(pendingContent);
-					pendingContent = null;
-				}
-				parseTimeout = null;
-			}, STREAMING_THROTTLE);
+			return;
 		}
+
+		// During streaming, act as a true throttle (not a debounce)
+		// If a timeout is already scheduled, do nothing and let it fire
+		if (parseTimeout) {
+			return;
+		}
+
+		parseTimeout = setTimeout(() => {
+			if (pendingContent !== null) {
+				parseContent(pendingContent);
+				pendingContent = null;
+			}
+			parseTimeout = null;
+		}, STREAMING_THROTTLE);
 	};
 
 	// Use a reactive statement that just schedules parsing instead of doing it immediately
