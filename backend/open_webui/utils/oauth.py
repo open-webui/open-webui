@@ -1210,6 +1210,13 @@ class OAuthManager:
                         log.debug("Assigned user the admin role")
                         role = "admin"
                         break
+            else:
+                # No roles for neither user nor admin found, raise a 403 to deny user access
+                raise HTTPException(
+                    status.HTTP_403_FORBIDDEN,
+                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                )
+
         else:
             if not user:
                 # If role management is disabled, use the default role for new users
