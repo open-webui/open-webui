@@ -2695,20 +2695,54 @@
 					history.messages[responseMessageId] = responseMessage;
 					history = { ...history };
 
-					const shouldUseDirectStream = !($socket?.connected && $socket?.id);
+					const contentType = res.headers.get('content-type') ?? '';
+					const isEventStream = contentType.includes('text/event-stream');
+					const shouldUseDirectStream = isEventStream || !($socket?.connected && $socket?.id);
 
 					if (shouldUseDirectStream) {
 						const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
-						for await (const chunk of textStream) {
-							if (!chunk) {
-								continue;
+						for await (const update of textStream) {
+							const { value, done, sources, error, usage, selectedModelId } = update;
+
+							if (error) {
+								await handleOpenAIError(error, responseMessage);
+								break;
 							}
 
-							try {
-								const data = JSON.parse(chunk);
-								await chatCompletionEventHandler(data, responseMessage, $chatId);
-							} catch (error) {
-								console.error('Error parsing streamed chat chunk', error, chunk);
+							if (sources && !responseMessage?.sources) {
+								responseMessage.sources = sources;
+							}
+
+							if (selectedModelId) {
+								responseMessage.selectedModelId = selectedModelId;
+								responseMessage.arena = true;
+							}
+
+							if (usage) {
+								responseMessage.usage = usage;
+							}
+
+							if (done) {
+								responseMessage.done = true;
+								history.messages[responseMessageId] = responseMessage;
+								history = { ...history };
+								break;
+							}
+
+							if (!(responseMessage.content == '' && value == '\n')) {
+								responseMessage.content += value;
+								history.messages[responseMessageId] = responseMessage;
+								history = { ...history };
+
+								if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+									navigator.vibrate(5);
+								}
+							}
+
+							await tick();
+
+							if (autoScroll) {
+								scrollToBottom();
 							}
 						}
 					} else {
