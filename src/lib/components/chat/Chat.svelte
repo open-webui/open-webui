@@ -2620,7 +2620,7 @@
 				},
 				model_item: $models.find((m) => m.id === model.id),
 
-				session_id: $socket?.id,
+				...(stream ? {} : { session_id: $socket?.id }),
 				chat_id: $chatId,
 				id: responseMessageId,
 
