@@ -39,12 +39,108 @@ function escapeRegExp(string: string): string {
 	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// Segment message content into (1) detail block (2) code blocks (either triple/single backticks) (3) text
+export function splitContentIntoSegments(content: string): string[] {
+	let segment = '';
+	let segments = [];
+	let isDetails = false;
+	let isTripleBackticks = false;
+	let isSingleBackticks = false;
+	for (const s of content.split(/([`]+|<details|<\/details>[\n]?)/s)) {
+		// Parsing rules (three root contexts):
+		// 1. <details...</detail>
+		// 2. ```TEXT```
+		// 3. `TEXT`
+		let n = 0;
+		let processTrailingBackticks = false;
+		if (isDetails) {
+			segment += s;
+			if (s.startsWith('</')) {
+				isDetails = false;
+				segments.push(segment);
+				segment = '';
+			}
+		}
+		else if (isTripleBackticks) {
+			if (s.startsWith('`')) {
+				n = s.length;
+				if (n >= 3) {
+					isTripleBackticks = false;
+					segments.push(segment + '```');
+					n -= 3;
+					processTrailingBackticks = true;
+				}
+				else
+					segment += s;
+			}
+			else
+				segment += s;
+		}
+		else if (isSingleBackticks) {
+			if (s.startsWith('`')) {
+				n = s.length - 1;
+				isSingleBackticks = false;
+				segments.push(segment + '`');
+				processTrailingBackticks = true;
+			}
+			else
+				segment += s;
+		}
+		else if (s === '<details') {
+			if (segment)
+				segments.push(segment);
+			segment = s;
+			isDetails = true;
+		}
+		else if (s.startsWith('`')) {
+			if (segment)
+				segments.push(segment);
+			n = s.length;
+			processTrailingBackticks = true;
+		}
+		else {
+			segment += s;
+		}
+
+		// Process remaining backticks
+		if (processTrailingBackticks) {
+			// 6: pair (triple) then continue
+			// 5: start triple + 2 backticks
+			// 4: start triple + 1 backtick
+			// 3: start triple
+			// 2: pair (single)
+			// 1: start single
+			// 0: none
+			const triplePairs = Math.floor(n / 6);
+			n %= 6;
+			for (let i = 0; i < triplePairs; i++)
+				segments.push('``````');
+			segment = '`'.repeat(n);
+			if (n >= 3)
+				isTripleBackticks = true;
+			else if (n === 2) {
+				segments.push('``');
+				segment = '';
+			}
+			else if (n === 1)
+				isSingleBackticks = true;
+		}
+	}
+	if (segment)
+		segments.push(segment);
+	return segments;
+}
+
+// Filter certain segments from the content
+export function filterSegmentsFromContent(content: string, filter: (str: string) => boolean): string {
+	return splitContentIntoSegments(content).filter(filter).join('');
+}
+
 // Replace tokens outside code blocks only
 export const replaceOutsideCode = (content: string, replacer: (str: string) => string) => {
-	return content
-		.split(/(```[\s\S]*?```|`[\s\S]*?`)/)
+	return splitContentIntoSegments(content)
 		.map((segment) => {
-			return segment.startsWith('```') || segment.startsWith('`') ? segment : replacer(segment);
+			return segment.startsWith('`') ? segment : replacer(segment);
 		})
 		.join('');
 };
@@ -877,20 +973,21 @@ export const cleanText = (content: string) => {
 };
 
 export const removeDetails = (content, types) => {
-	return replaceOutsideCode(content, (segment) => {
-		for (const type of types) {
-			segment = segment.replace(
-				new RegExp(`<details\\s+type="${type}"[^>]*>.*?<\\/details>`, 'gis'),
-				''
-			);
+	let regexs: RegExp[] = types.map(
+		(type: string) => new RegExp(`^<details\\s+type="${type}"`, 'is')
+	);
+	return filterSegmentsFromContent(content, (segment) => {
+		for (const reg of regexs) {
+			if (reg.test(segment))
+				return false;
 		}
-		return segment;
+		return true;
 	});
 };
 
 export const removeAllDetails = (content) => {
-	return replaceOutsideCode(content, (segment) => {
-		return segment.replace(/<details[^>]*>.*?<\/details>/gis, '');
+	return filterSegmentsFromContent(content, (segment) => {
+		return !segment.startsWith('<details');
 	});
 };
 
@@ -987,15 +1084,7 @@ export const extractSentencesForAudio = (text: string) => {
 };
 
 export const getMessageContentParts = (content: string, splitOn: string = 'punctuation') => {
-	// Strip <details> blocks directly on the full string before any
-	// code-block-aware processing. removeAllDetails (which callers use)
-	// applies the regex via replaceOutsideCode, which splits on triple-
-	// backtick code fences first. If a <details> block contains code
-	// fences (e.g. reasoning with code examples), the opening and
-	// closing tags land in separate segments and the regex fails,
-	// leaking thinking content into TTS. Applying the strip here on
-	// the full string catches those cases. (Fixes #22197)
-	content = content.replace(/<details[^>]*>[\s\S]*?<\/details>/gi, '');
+	content = removeAllDetails(content);
 
 	const messageContentParts: string[] = [];
 
