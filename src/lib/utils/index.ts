@@ -110,7 +110,7 @@ export const sanitizeResponseContent = (content: string) => {
 
 export const processResponseContent = (content: string) => {
 	content = processChineseContent(content);
-	return content.trim();
+	return content;
 };
 
 function isChineseChar(char: string): boolean {
@@ -1637,7 +1637,8 @@ export type ConvertHeicToJpegOptions = {
 	maxHeight?: number | null;
 };
 
-const clampNumber = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+const clampNumber = (value: number, min: number, max: number) =>
+	Math.min(max, Math.max(min, value));
 
 const dataUrlToBlob = (dataUrl: string) => {
 	const [header, base64] = dataUrl.split(',', 2);
@@ -1730,7 +1731,12 @@ const rasterizeBlobToJpeg = async (
 			}
 
 			if (bitmap) {
-				const { width, height } = getContainedDimensions(bitmap.width, bitmap.height, maxWidth, maxHeight);
+				const { width, height } = getContainedDimensions(
+					bitmap.width,
+					bitmap.height,
+					maxWidth,
+					maxHeight
+				);
 				const canvas = document.createElement('canvas');
 				canvas.width = width;
 				canvas.height = height;
@@ -1747,7 +1753,12 @@ const rasterizeBlobToJpeg = async (
 		}
 
 		const img = await loadImageElementFromBlob(blob);
-		const { width, height } = getContainedDimensions(img.naturalWidth, img.naturalHeight, maxWidth, maxHeight);
+		const { width, height } = getContainedDimensions(
+			img.naturalWidth,
+			img.naturalHeight,
+			maxWidth,
+			maxHeight
+		);
 		const canvas = document.createElement('canvas');
 		canvas.width = width;
 		canvas.height = height;
@@ -1770,11 +1781,7 @@ const rasterizeBlobToJpeg = async (
 };
 
 export const convertHeicToJpeg = async (file: File, options: ConvertHeicToJpegOptions = {}) => {
-	const quality = clampNumber(
-		typeof options.quality === 'number' ? options.quality : 0.92,
-		0.1,
-		1
-	);
+	const quality = clampNumber(typeof options.quality === 'number' ? options.quality : 0.92, 0.1, 1);
 	const maxWidth = options.maxWidth ?? null;
 	const maxHeight = options.maxHeight ?? null;
 

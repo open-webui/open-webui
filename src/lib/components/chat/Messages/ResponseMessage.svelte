@@ -115,7 +115,7 @@
 	export let selectedModels = [];
 
 	let message: MessageType = history.messages[messageId];
-	$: if (history.messages?.[messageId] && message !== history.messages[messageId]) {
+	$: if (history.messages?.[messageId]) {
 		message = history.messages[messageId];
 	}
 
@@ -145,8 +145,8 @@
 	export let editCodeBlock = true;
 	export let topPadding = false;
 
-		let buttonsContainerElement: HTMLDivElement;
-		let showDeleteConfirm = false;
+	let buttonsContainerElement: HTMLDivElement;
+	let showDeleteConfirm = false;
 
 	let model = null;
 	$: model = $models.find((m) => m.id === message.model);
@@ -689,7 +689,7 @@
 								{#each message.files as file}
 									<div>
 										{#if file.type === 'image'}
-									<Image src={file.url} alt={messageTextContent} />
+											<Image src={file.url} alt={messageTextContent} />
 										{:else}
 											<FileItem
 												item={file}
@@ -806,13 +806,13 @@
 										done={($settings?.chatFadeStreamingText ?? true)
 											? (message?.done ?? false)
 											: true}
-											{model}
-											onTaskClick={async (e) => {
-												console.log(e);
-											}}
-											onAddMessages={({ modelId, parentId, messages }) => {
-												addMessages({ modelId, parentId, messages });
-											}}
+										{model}
+										onTaskClick={async (e) => {
+											console.log(e);
+										}}
+										onAddMessages={({ modelId, parentId, messages }) => {
+											addMessages({ modelId, parentId, messages });
+										}}
 										onSave={({ raw, oldContent, newContent }) => {
 											history.messages[message.id].content = history.messages[
 												message.id
@@ -823,13 +823,13 @@
 									/>
 								{/if}
 
-									{#if message?.error}
-										<Error content={message?.error?.content ?? messageTextContent} />
-									{/if}
+								{#if message?.error}
+									<Error content={message?.error?.content ?? messageTextContent} />
+								{/if}
 
-									{#if message.code_executions}
-										<CodeExecutions codeExecutions={message.code_executions} />
-									{/if}
+								{#if message.code_executions}
+									<CodeExecutions codeExecutions={message.code_executions} />
+								{/if}
 							</div>
 						{/if}
 					</div>
@@ -991,7 +991,7 @@
 											? 'visible'
 											: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-response-button"
 										on:click={() => {
-										copyToClipboard(messageTextContent);
+											copyToClipboard(messageTextContent);
 										}}
 									>
 										<svg

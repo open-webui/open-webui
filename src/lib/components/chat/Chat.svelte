@@ -597,16 +597,6 @@
 	};
 
 	const chatEventHandler = async (event, cb) => {
-		console.log(
-			'[SOCKET EVENT]',
-			event?.data?.type,
-			'chat_id match:',
-			event.chat_id === $chatId,
-			'message_id:',
-			event.message_id,
-			'has message:',
-			!!history.messages[event.message_id]
-		);
 		if (event.chat_id === $chatId) {
 			await tick();
 			let message = history.messages[event.message_id];
@@ -622,20 +612,7 @@
 						message.statusHistory = [data];
 					}
 				} else if (type === 'chat:completion') {
-					console.log(
-						'[COMPLETION DATA]',
-						JSON.stringify(data).substring(0, 300),
-						'msg content before:',
-						JSON.stringify(message.content).substring(0, 100)
-					);
 					chatCompletionEventHandler(data, message, event.chat_id);
-					console.log(
-						'[COMPLETION AFTER]',
-						'msg content:',
-						JSON.stringify(message.content).substring(0, 300),
-						'done:',
-						message.done
-					);
 				} else if (type === 'chat:tasks:cancel') {
 					taskIds = null;
 					const responseMessage = history.messages[history.currentId];
