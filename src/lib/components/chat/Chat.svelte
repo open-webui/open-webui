@@ -66,7 +66,7 @@
 		updateChatById,
 		updateChatFolderIdById
 	} from '$lib/apis/chats';
-	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
+	import { chatCompletion, generateOpenAIChatCompletion } from '$lib/apis/openai';
 	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
 	import { getAndUpdateUserLocation, getUserSettings, updateUserSettings } from '$lib/apis/users';
 	import {
@@ -2590,7 +2590,7 @@
 			}
 		}
 
-		const res = await generateOpenAIChatCompletion(
+		const [res, controller] = await chatCompletion(
 			localStorage.token,
 			{
 				stream: stream,
@@ -2678,14 +2678,73 @@
 			return null;
 		});
 
+		generationController = controller ?? null;
+
 		if (res) {
-			if (res.error) {
-				await handleOpenAIError(res.error, responseMessage);
-			} else {
-				if (taskIds) {
-					taskIds.push(res.task_id);
+			if (stream) {
+				if (!res.ok) {
+					let errorPayload = null;
+					try {
+						errorPayload = await res.json();
+					} catch {
+						errorPayload = { message: `HTTP ${res.status}` };
+					}
+					await handleOpenAIError(errorPayload, responseMessage);
+				} else if (res.body) {
+					responseMessage.done = false;
+					history.messages[responseMessageId] = responseMessage;
+					history = { ...history };
+
+					const shouldUseDirectStream = !($socket?.connected && $socket?.id);
+
+					if (shouldUseDirectStream) {
+						const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
+						for await (const chunk of textStream) {
+							if (!chunk) {
+								continue;
+							}
+
+							try {
+								const data = JSON.parse(chunk);
+								await chatCompletionEventHandler(data, responseMessage, $chatId);
+							} catch (error) {
+								console.error('Error parsing streamed chat chunk', error, chunk);
+							}
+						}
+					} else {
+						let payload = null;
+						try {
+							payload = await res.json();
+						} catch (error) {
+							console.error('Error parsing async chat task response', error);
+						}
+
+						if (payload?.error) {
+							await handleOpenAIError(payload.error, responseMessage);
+						} else if (payload?.task_id) {
+							if (taskIds) {
+								taskIds.push(payload.task_id);
+							} else {
+								taskIds = [payload.task_id];
+							}
+						}
+					}
 				} else {
-					taskIds = [res.task_id];
+					await handleOpenAIError(
+						{ message: 'Streaming response body is missing.' },
+						responseMessage
+					);
+				}
+			} else {
+				const data = await res.json();
+				if (data.error) {
+					await handleOpenAIError(data.error, responseMessage);
+				} else {
+					if (taskIds) {
+						taskIds.push(data.task_id);
+					} else {
+						taskIds = [data.task_id];
+					}
 				}
 			}
 		}
