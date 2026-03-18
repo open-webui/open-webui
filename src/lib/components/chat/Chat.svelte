@@ -597,6 +597,16 @@
 	};
 
 	const chatEventHandler = async (event, cb) => {
+		console.log(
+			'[SOCKET EVENT]',
+			event?.data?.type,
+			'chat_id match:',
+			event.chat_id === $chatId,
+			'message_id:',
+			event.message_id,
+			'has message:',
+			!!history.messages[event.message_id]
+		);
 		if (event.chat_id === $chatId) {
 			await tick();
 			let message = history.messages[event.message_id];
@@ -2620,7 +2630,7 @@
 				},
 				model_item: $models.find((m) => m.id === model.id),
 
-				...(stream ? {} : { session_id: $socket?.id }),
+				session_id: $socket?.id,
 				chat_id: $chatId,
 				id: responseMessageId,
 
