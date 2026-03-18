@@ -24,6 +24,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Textarea from './common/Textarea.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -61,6 +62,7 @@
 	let loading = false;
 	let showAdvanced = false;
 	let showAccessControlModal = false;
+	let showDeleteConfirmDialog = false;
 
 	const registerOAuthClientHandler = async () => {
 		if (url === '') {
@@ -447,20 +449,26 @@
 								<div class=" text-xs text-gray-500">{$i18n.t('Type')}</div>
 
 								<div class="">
-									<button
-										on:click={() => {
-											type = ['', 'openapi'].includes(type) ? 'mcp' : 'openapi';
-										}}
-										type="button"
-										class=" text-xs text-gray-700 dark:text-gray-300"
-									>
-										{#if ['', 'openapi'].includes(type)}
+									{#if !direct}
+										<button
+											on:click={() => {
+												type = ['', 'openapi'].includes(type) ? 'mcp' : 'openapi';
+											}}
+											type="button"
+											class=" text-xs text-gray-700 dark:text-gray-300"
+										>
+											{#if ['', 'openapi'].includes(type)}
+												{$i18n.t('OpenAPI')}
+											{:else if type === 'mcp'}
+												{$i18n.t('MCP')}
+												<span class="text-gray-500">{$i18n.t('Streamable HTTP')}</span>
+											{/if}
+										</button>
+									{:else}
+										<div class="text-xs text-gray-700 dark:text-gray-300">
 											{$i18n.t('OpenAPI')}
-										{:else if type === 'mcp'}
-											{$i18n.t('MCP')}
-											<span class="text-gray-500">{$i18n.t('Streamable HTTP')}</span>
-										{/if}
-									</button>
+										</div>
+									{/if}
 								</div>
 							</div>
 						</div>
@@ -881,38 +889,36 @@
 						</div>
 					{/if}
 
-					<div class="flex justify-between pt-3 text-sm font-medium gap-1.5">
-						<div></div>
-						<div class="flex gap-1.5">
+					<div class="flex justify-between items-center pt-3 text-sm font-medium">
+						<div>
 							{#if edit}
 								<button
-									class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-900 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+									class="px-1 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:underline transition"
 									type="button"
 									on:click={() => {
-										onDelete();
-										show = false;
+										showDeleteConfirmDialog = true;
 									}}
 								>
 									{$i18n.t('Delete')}
 								</button>
 							{/if}
-
-							<button
-								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
-									? ' cursor-not-allowed'
-									: ''}"
-								type="submit"
-								disabled={loading}
-							>
-								{$i18n.t('Save')}
-
-								{#if loading}
-									<div class="ml-2 self-center">
-										<Spinner />
-									</div>
-								{/if}
-							</button>
 						</div>
+
+						<button
+							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {loading
+								? ' cursor-not-allowed'
+								: ''}"
+							type="submit"
+							disabled={loading}
+						>
+							{$i18n.t('Save')}
+
+							{#if loading}
+								<span class="shrink-0">
+									<Spinner />
+								</span>
+							{/if}
+						</button>
 					</div>
 				</form>
 			</div>
@@ -921,3 +927,13 @@
 </Modal>
 
 <AccessControlModal bind:show={showAccessControlModal} bind:accessGrants />
+
+<ConfirmDialog
+	bind:show={showDeleteConfirmDialog}
+	message={$i18n.t('Are you sure you want to delete this connection? This action cannot be undone.')}
+	confirmLabel={$i18n.t('Delete')}
+	on:confirm={() => {
+		onDelete();
+		show = false;
+	}}
+/>

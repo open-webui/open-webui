@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import { DropdownMenu } from 'bits-ui';
-	import { flyAndScale } from '$lib/utils/transitions';
 	import { formatFileSize } from '$lib/utils';
 	import type { FileEntry } from '$lib/apis/terminal';
+
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Folder from '../../icons/Folder.svelte';
 	import EllipsisHorizontal from '../../icons/EllipsisHorizontal.svelte';
 	import GarbageBin from '../../icons/GarbageBin.svelte';
@@ -12,8 +12,8 @@
 
 	export let entry: FileEntry;
 	export let currentPath: string;
-	export let terminalUrl: string;
-	export let terminalKey: string;
+	export let terminalUrl: string = '';
+	export let terminalKey: string = '';
 
 	export let onOpen: (entry: FileEntry) => void = () => {};
 	export let onDownload: (path: string) => void = () => {};
@@ -111,63 +111,59 @@
 			{/if}
 		</button>
 
-		<DropdownMenu.Root>
-			<DropdownMenu.Trigger
+		<Dropdown align="end" sideOffset={4}>
+			<button
 				class="shrink-0 p-0.5 mr-1 rounded-lg transition
 					text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400
 					hover:bg-gray-100 dark:hover:bg-gray-800"
-				on:click={(e) => e.stopPropagation()}
 				aria-label={$i18n.t('More')}
 			>
 				<EllipsisHorizontal className="size-3.5" />
-			</DropdownMenu.Trigger>
+			</button>
 
-			<DropdownMenu.Content
-				strategy="fixed"
-				class="w-full max-w-[150px] rounded-2xl p-1 z-[9999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800"
-				sideOffset={4}
-				side="bottom"
-				align="end"
-				transition={flyAndScale}
-			>
-				{#if entry.type !== 'directory'}
-					<DropdownMenu.Item
+			<div slot="content">
+				<div
+					class="min-w-[150px] rounded-2xl p-1 z-[9999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800"
+				>
+					{#if entry.type !== 'directory'}
+						<button
+							type="button"
+							class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+							on:click={(e) => {
+								e.stopPropagation();
+								onDownload(`${currentPath}${entry.name}`);
+							}}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								class="size-4"
+							>
+								<path
+									d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z"
+								/>
+								<path
+									d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"
+								/>
+							</svg>
+							<div class="flex items-center">{$i18n.t('Download')}</div>
+						</button>
+					{/if}
+
+					<button
 						type="button"
 						class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
 						on:click={(e) => {
 							e.stopPropagation();
-							onDownload(`${currentPath}${entry.name}`);
+							onDelete(`${currentPath}${entry.name}`, entry.name);
 						}}
 					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="size-4"
-						>
-							<path
-								d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z"
-							/>
-							<path
-								d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"
-							/>
-						</svg>
-						<div class="flex items-center">{$i18n.t('Download')}</div>
-					</DropdownMenu.Item>
-				{/if}
-
-				<DropdownMenu.Item
-					type="button"
-					class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
-					on:click={(e) => {
-						e.stopPropagation();
-						onDelete(`${currentPath}${entry.name}`, entry.name);
-					}}
-				>
-					<GarbageBin className="size-4" />
-					<div class="flex items-center">{$i18n.t('Delete')}</div>
-				</DropdownMenu.Item>
-			</DropdownMenu.Content>
-		</DropdownMenu.Root>
+						<GarbageBin className="size-4" />
+						<div class="flex items-center">{$i18n.t('Delete')}</div>
+					</button>
+				</div>
+			</div>
+		</Dropdown>
 	</div>
 </li>
