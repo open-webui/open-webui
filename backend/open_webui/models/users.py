@@ -229,6 +229,8 @@ class UserNameResponse(BaseModel):
     name: str
     role: str
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class UserResponse(UserNameResponse):
     email: str

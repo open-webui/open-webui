@@ -4,7 +4,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
-from open_webui.models.users import Users, UserModel
+from open_webui.models.users import Users, UserModel, UserResponse, User
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, Index
 
@@ -75,10 +75,6 @@ class FunctionWithValvesModel(BaseModel):
 ####################
 
 
-class FunctionUserResponse(FunctionModel):
-    user: Optional[UserModel] = None
-
-
 class FunctionResponse(BaseModel):
     id: str
     user_id: str
@@ -89,6 +85,12 @@ class FunctionResponse(BaseModel):
     is_global: bool
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class FunctionUserResponse(FunctionResponse):
+    user: Optional[UserResponse] = None
 
 
 class FunctionForm(BaseModel):
@@ -227,18 +229,36 @@ class FunctionsTable:
             functions = db.query(Function).order_by(Function.updated_at.desc()).all()
             user_ids = list(set(func.user_id for func in functions))
 
-            users = Users.get_users_by_user_ids(user_ids, db=db) if user_ids else []
+            users = db.query(User).filter(User.id.in_(user_ids)).all()
             users_dict = {user.id: user for user in users}
 
-            return [
-                FunctionUserResponse.model_validate(
+            results = []
+            for func in functions:
+                user = users_dict.get(func.user_id)
+                results.append(
                     {
-                        **FunctionModel.model_validate(func).model_dump(),
-                        'user': (users_dict.get(func.user_id).model_dump() if func.user_id in users_dict else None),
+                        "id": func.id,
+                        "user_id": func.user_id,
+                        "type": func.type,
+                        "name": func.name,
+                        "meta": func.meta,
+                        "is_active": func.is_active,
+                        "is_global": func.is_global,
+                        "updated_at": func.updated_at,
+                        "created_at": func.created_at,
+                        "user": (
+                            {
+                                "id": user.id,
+                                "name": user.name,
+                                "role": user.role,
+                                "email": user.email,
+                            }
+                            if user
+                            else None
+                        ),
                     }
                 )
-                for func in functions
-            ]
+            return results
 
     def get_functions_by_type(self, type: str, active_only=False, db: Optional[Session] = None) -> list[FunctionModel]:
         with get_db_context(db) as db:

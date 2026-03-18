@@ -68,7 +68,7 @@
 	let showDeleteConfirm = false;
 
 	let loaded = false;
-	let functions = null;
+	let functions = [];
 	let filteredItems = [];
 
 	$: if (query !== undefined) {
