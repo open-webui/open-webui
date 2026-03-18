@@ -58,29 +58,33 @@
 
 	import {
 		createNewChat,
-		 	getAllTags,
-		 	getChatById,
-		 	getChatList,
-		 	getPinnedChatList,
-		 	getTagsById,
-		 	updateChatById,
-		 	updateChatFolderIdById
-		 } from '$lib/apis/chats';
-		 import { generateOpenAIChatCompletion } from '$lib/apis/openai';
-		 import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
-		 import { getAndUpdateUserLocation, getUserSettings, updateUserSettings } from '$lib/apis/users';
-		 import {
-		 	chatCompleted,
-		 	generateQueries,
-		 	chatAction,
-		 	generateMoACompletion,
-		 	stopTask,
-		 	getTaskIdsByChatId
-		 } from '$lib/apis';
-		 import type { ReasoningEffort } from '$lib/apis';
-		 import { BASE_REASONING_EFFORTS, EXTRA_REASONING_EFFORTS, orderReasoningEfforts } from '$lib/constants/reasoning';
-		 import { getTools } from '$lib/apis/tools';
-		 import { uploadFile } from '$lib/apis/files';
+		getAllTags,
+		getChatById,
+		getChatList,
+		getPinnedChatList,
+		getTagsById,
+		updateChatById,
+		updateChatFolderIdById
+	} from '$lib/apis/chats';
+	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
+	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
+	import { getAndUpdateUserLocation, getUserSettings, updateUserSettings } from '$lib/apis/users';
+	import {
+		chatCompleted,
+		generateQueries,
+		chatAction,
+		generateMoACompletion,
+		stopTask,
+		getTaskIdsByChatId
+	} from '$lib/apis';
+	import type { ReasoningEffort } from '$lib/apis';
+	import {
+		BASE_REASONING_EFFORTS,
+		EXTRA_REASONING_EFFORTS,
+		orderReasoningEfforts
+	} from '$lib/constants/reasoning';
+	import { getTools } from '$lib/apis/tools';
+	import { uploadFile } from '$lib/apis/files';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 
 	import { fade } from 'svelte/transition';
@@ -283,10 +287,14 @@
 
 				// Don't schedule if more than 24 hours away (will be recalculated on next poll)
 				if (msUntilReset > 0 && msUntilReset < 24 * 60 * 60 * 1000) {
-					console.log(`Token usage: scheduling reset for "${groupName}" in ${Math.round(msUntilReset / 1000)}s`);
+					console.log(
+						`Token usage: scheduling reset for "${groupName}" in ${Math.round(msUntilReset / 1000)}s`
+					);
 
 					const timeout = setTimeout(async () => {
-						console.log(`Token usage: reset time reached for "${groupName}", triggering UI update...`);
+						console.log(
+							`Token usage: reset time reached for "${groupName}", triggering UI update...`
+						);
 
 						// Increment trigger to force Svelte reactivity - UI will immediately show 0
 						// because getEffectiveUsage() checks if now >= next_reset_at
@@ -614,8 +622,12 @@
 					}
 				} else if (type === 'chat:message:delta' || type === 'message') {
 					message.content += data.content;
+					history.messages[event.message_id] = message;
+					history = { ...history };
 				} else if (type === 'chat:message' || type === 'replace') {
 					message.content = data.content;
+					history.messages[event.message_id] = message;
+					history = { ...history };
 				} else if (type === 'chat:message:files' || type === 'files') {
 					message.files = data.files;
 				} else if (type === 'chat:message:embeds' || type === 'embeds') {
@@ -631,11 +643,14 @@
 				} else if (type === 'model-switch:pending') {
 					// Model switch has been queued
 					message.pendingSwitchModel = data.model_id;
-					toast.info($i18n.t('Model switch to {{model}} queued for next iteration', { model: data.model_id }));
+					toast.info(
+						$i18n.t('Model switch to {{model}} queued for next iteration', { model: data.model_id })
+					);
 				} else if (type === 'model-switch:applied') {
 					// Model switch was applied
 					message.model = data.new_model_id;
-					message.modelName = $models.find((m) => m.id === data.new_model_id)?.name ?? data.new_model_id;
+					message.modelName =
+						$models.find((m) => m.id === data.new_model_id)?.name ?? data.new_model_id;
 					message.pendingSwitchModel = null;
 					toast.success($i18n.t('Switched to model: {{model}}', { model: message.modelName }));
 				} else if (type === 'chat:title') {
@@ -874,10 +889,7 @@
 		});
 
 		selectedFolderSubscribe = selectedFolder.subscribe(async (folder) => {
-			if (
-				folder?.data?.model_ids &&
-				!arraysEqual(selectedModels, folder.data.model_ids)
-			) {
+			if (folder?.data?.model_ids && !arraysEqual(selectedModels, folder.data.model_ids)) {
 				selectedModels = folder.data.model_ids;
 
 				console.log('Set selectedModels from folder data:', selectedModels);
@@ -1634,8 +1646,17 @@
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
-		const { id, done, choices, content, sources, selected_model_id, error, usage, reasoning_details } =
-			data;
+		const {
+			id,
+			done,
+			choices,
+			content,
+			sources,
+			selected_model_id,
+			error,
+			usage,
+			reasoning_details
+		} = data;
 
 		if (error) {
 			await handleOpenAIError(error, message);
@@ -1689,6 +1710,8 @@
 				let value = choices[0]?.delta?.content ?? '';
 				if (!(message.content == '' && value == '\n')) {
 					message.content += value;
+					history.messages[message.id] = message;
+					history = { ...history };
 
 					if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 						navigator.vibrate(5);
@@ -1732,6 +1755,8 @@
 		if (content) {
 			// REALTIME_CHAT_SAVE is disabled
 			message.content = content;
+			history.messages[message.id] = message;
+			history = { ...history };
 
 			if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 				navigator.vibrate(5);
@@ -1771,6 +1796,7 @@
 		}
 
 		history.messages[message.id] = message;
+		history = { ...history };
 
 		if (done) {
 			message.done = true;
@@ -1857,10 +1883,7 @@
 			return;
 		}
 
-		if (
-			files.length > 0 &&
-			files.filter((file) => file.status === 'uploading').length > 0
-		) {
+		if (files.length > 0 && files.filter((file) => file.status === 'uploading').length > 0) {
 			const uploadingFiles = files.filter((file) => file.status === 'uploading');
 			const uploadCount = uploadingFiles.length;
 			const allSentWaitingForServer = uploadingFiles.every(
@@ -1873,7 +1896,9 @@
 							`Uploads have finished sending ({{count}} file(s)); waiting for the server to finish processing.`,
 							{ count: uploadCount }
 						)
-					: $i18n.t(`Oops! There are files still uploading. Please wait for the upload to complete.`)
+					: $i18n.t(
+							`Oops! There are files still uploading. Please wait for the upload to complete.`
+						)
 			);
 			return;
 		}
@@ -2170,9 +2195,11 @@
 
 					// PDF Preprocessing for non-vision models
 					const hasPdfs = createMessagesList(_history, parentId).some((message) =>
-						message.files?.some((file) =>
-							file.type === 'file' &&
-							(file.name?.toLowerCase().endsWith('.pdf') || file.file?.filename?.toLowerCase().endsWith('.pdf'))
+						message.files?.some(
+							(file) =>
+								file.type === 'file' &&
+								(file.name?.toLowerCase().endsWith('.pdf') ||
+									file.file?.filename?.toLowerCase().endsWith('.pdf'))
 						)
 					);
 
@@ -2183,10 +2210,13 @@
 							toast.error(`Vision preprocessor model not found: ${preprocessorId}`);
 						} else {
 							const userMessage = _history.messages[parentId];
-							const userPdfs = userMessage.files?.filter((f) =>
-								f.type === 'file' &&
-								(f.name?.toLowerCase().endsWith('.pdf') || f.file?.filename?.toLowerCase().endsWith('.pdf'))
-							) || [];
+							const userPdfs =
+								userMessage.files?.filter(
+									(f) =>
+										f.type === 'file' &&
+										(f.name?.toLowerCase().endsWith('.pdf') ||
+											f.file?.filename?.toLowerCase().endsWith('.pdf'))
+								) || [];
 
 							if (userPdfs.length > 0) {
 								let responseMessage = _history.messages[responseMessageId];
@@ -2204,13 +2234,16 @@
 									// Convert all PDFs to images
 									let allPdfImages = [];
 									for (const pdfFile of userPdfs) {
-										const pdfUrl = pdfFile.url || `${WEBUI_API_BASE_URL}/files/${pdfFile.id}/content`;
+										const pdfUrl =
+											pdfFile.url || `${WEBUI_API_BASE_URL}/files/${pdfFile.id}/content`;
 										try {
 											const pdfImages = await renderPdfToImageDataUrls(pdfUrl);
-											allPdfImages.push(...pdfImages.map((url, idx) => ({
-												url,
-												filename: `${pdfFile.name || pdfFile.file?.filename || 'document'}_page_${idx + 1}`
-											})));
+											allPdfImages.push(
+												...pdfImages.map((url, idx) => ({
+													url,
+													filename: `${pdfFile.name || pdfFile.file?.filename || 'document'}_page_${idx + 1}`
+												}))
+											);
 										} catch (pdfError) {
 											console.error(`Failed to render PDF ${pdfFile.name}:`, pdfError);
 											throw new Error(`Failed to render PDF: ${pdfFile.name || 'unknown'}`);
@@ -2232,7 +2265,10 @@
 										{
 											role: 'user',
 											content: [
-												{ type: 'text', text: `I have uploaded ${allPdfImages.length} page(s) from PDF document(s). Please analyze them:\n\n${userContent}` },
+												{
+													type: 'text',
+													text: `I have uploaded ${allPdfImages.length} page(s) from PDF document(s). Please analyze them:\n\n${userContent}`
+												},
 												...allPdfImages.map((img) => ({
 													type: 'image_url',
 													image_url: { url: img.url }
@@ -2276,7 +2312,7 @@
 									await saveChatHandler(_chatId, _history);
 								} catch (pdfError) {
 									console.error('PDF preprocessing failed:', pdfError);
-									
+
 									// Block message and show error
 									responseMessage = _history.messages[responseMessageId];
 									responseMessage.statusHistory.push({
@@ -2420,14 +2456,12 @@
 				? {
 						role: 'system',
 						content: `${params?.system ?? $settings?.system ?? ''}`
-				  }
+					}
 				: undefined,
 			...expandMessagesForToolResumption(_messages).map((message) => ({
 				...message,
 				content:
-					typeof message.content === 'string'
-						? processDetails(message.content)
-						: message.content
+					typeof message.content === 'string' ? processDetails(message.content) : message.content
 			}))
 		].filter((message) => message);
 
@@ -2481,9 +2515,11 @@
 				}
 
 				// Check if message has PDF files
-				const hasPdfFiles = message.files?.some((file) =>
-					file.type === 'file' &&
-					(file.name?.toLowerCase().endsWith('.pdf') || file.file?.filename?.toLowerCase().endsWith('.pdf'))
+				const hasPdfFiles = message.files?.some(
+					(file) =>
+						file.type === 'file' &&
+						(file.name?.toLowerCase().endsWith('.pdf') ||
+							file.file?.filename?.toLowerCase().endsWith('.pdf'))
 				);
 
 				if ((hasImages || hasPdfFiles) && isUser && modelSupportsVision) {
@@ -2505,9 +2541,11 @@
 								})),
 							// Add PDF file content parts for OpenRouter native processing
 							...message.files
-								.filter((file) =>
-									file.type === 'file' &&
-									(file.name?.toLowerCase().endsWith('.pdf') || file.file?.filename?.toLowerCase().endsWith('.pdf'))
+								.filter(
+									(file) =>
+										file.type === 'file' &&
+										(file.name?.toLowerCase().endsWith('.pdf') ||
+											file.file?.filename?.toLowerCase().endsWith('.pdf'))
 								)
 								.map((file) => ({
 									type: 'file',
@@ -2947,9 +2985,7 @@
 						}
 					],
 					preservedToolContext: undefined,
-					...(message.reasoning_details
-						? { reasoning_details: message.reasoning_details }
-						: {})
+					...(message.reasoning_details ? { reasoning_details: message.reasoning_details } : {})
 				});
 
 				expandedMessages.push({
@@ -3354,17 +3390,17 @@
 								const title =
 									messages.find((m) => m.role === 'user')?.content ?? $i18n.t('New Chat');
 
-							const savedChat = await createNewChat(
-								localStorage.token,
-								{
-									id: uuidv4(),
-									title: title.length > 50 ? `${title.slice(0, 50)}...` : title,
-									models: selectedModels,
-									params: params,
-									history: history,
-									messages: messages,
-									timestamp: Date.now()
-								},
+								const savedChat = await createNewChat(
+									localStorage.token,
+									{
+										id: uuidv4(),
+										title: title.length > 50 ? `${title.slice(0, 50)}...` : title,
+										models: selectedModels,
+										params: params,
+										history: history,
+										messages: messages,
+										timestamp: Date.now()
+									},
 									null
 								);
 
@@ -3424,7 +3460,8 @@
 									<div class="bg-gray-50 dark:bg-gray-850 rounded-lg p-3 text-xs">
 										{#each relevantGroups as [groupName, groupData]}
 											{@const effectiveUsage = groupData.effectiveUsage}
-											{@const isOverLimit = groupData.limit && effectiveUsage.total > groupData.limit}
+											{@const isOverLimit =
+												groupData.limit && effectiveUsage.total > groupData.limit}
 											<div class="flex items-center justify-between mb-1 last:mb-0">
 												<span
 													class="font-medium {isOverLimit
