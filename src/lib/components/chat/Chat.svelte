@@ -622,7 +622,20 @@
 						message.statusHistory = [data];
 					}
 				} else if (type === 'chat:completion') {
+					console.log(
+						'[COMPLETION DATA]',
+						JSON.stringify(data).substring(0, 300),
+						'msg content before:',
+						JSON.stringify(message.content).substring(0, 100)
+					);
 					chatCompletionEventHandler(data, message, event.chat_id);
+					console.log(
+						'[COMPLETION AFTER]',
+						'msg content:',
+						JSON.stringify(message.content).substring(0, 300),
+						'done:',
+						message.done
+					);
 				} else if (type === 'chat:tasks:cancel') {
 					taskIds = null;
 					const responseMessage = history.messages[history.currentId];
