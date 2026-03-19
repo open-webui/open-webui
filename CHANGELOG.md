@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 💬 **Temporary chat folder support.** Temporary chats can now use folder-level system prompts and knowledge files, making them more powerful for quick explorations. [Commit](https://github.com/open-webui/open-webui/commit/adcc50d3370301afd5561e0f58ff6f3ab3750818)
 - 🔗 **Web fetch content length config.** Administrators can now configure the maximum characters to return from fetched URLs via WEB_FETCH_MAX_CONTENT_LENGTH environment variable or the admin settings page, instead of the previous hardcoded 50K limit. [Commit](https://github.com/open-webui/open-webui/commit/b171b0216b916745420c7caf513093a315ed9560), [#22774](https://github.com/open-webui/open-webui/issues/22774)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 Translations for Finnish, Portuguese (Portugal), Catalan, Turkish, Japanese, Simplified Chinese, Traditional Chinese, and Estonian were enhanced and expanded.
+- 🌐 Translations for Finnish, Portuguese (Portugal), Catalan, Turkish, Japanese, Simplified Chinese, Traditional Chinese, Estonian, and Spanish were enhanced and expanded.
 
 ### Fixed
 
