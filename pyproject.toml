@@ -77,7 +77,6 @@ dependencies = [
     "pymdown-extensions==10.21",
     "docx2txt==0.9",
     "python-pptx==1.0.2",
-    "unstructured==0.18.31",
     "msoffcrypto-tool==6.0.0",
     "nltk==3.9.3",
     "Markdown==3.10.2",
@@ -140,12 +139,14 @@ postgres = [
 mariadb = [
     "mariadb==1.1.14",
 ]
+unstructured = [
+    "unstructured==0.18.31",
+]
 
 all = [
     "pymongo",
     "psycopg2-binary==2.9.11",
     "pgvector==0.4.2",
-    "mariadb==1.1.14",
     "moto[s3]>=5.0.26",
     "gcp-storage-emulator>=2024.8.3",
     "docker~=7.1.0",
@@ -164,6 +165,7 @@ all = [
 
     "firecrawl-py==4.18.0",
     "azure-search-documents==11.6.0",
+    "unstructured==0.18.31",
 ]
 
 [project.scripts]
@@ -211,4 +213,31 @@ ignore-words-list = 'ans'
 [dependency-groups]
 dev = [
     "pytest-asyncio>=1.0.0",
+    "ruff>=0.15.5",
 ]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.format]
+quote-style = "single"
+docstring-code-format = false
+
+[tool.ruff.lint]
+select = [
+  "E",    # pycodestyle errors
+  "F",    # pyflakes
+  "W",    # pycodestyle warnings
+  "I",    # isort
+  "UP",   # pyupgrade
+  "C90",  # mccabe
+  "Q",    # flake8-quotes
+  "ICN",  # flake8-import-conventions
+]
+
+# Plugin configs:
+flake8-import-conventions.banned-from = [ "ast", "datetime" ]
+flake8-import-conventions.aliases = { datetime = "dt" }
+flake8-quotes.inline-quotes = "single"
+mccabe.max-complexity = 10
+pydocstyle.convention = "google"

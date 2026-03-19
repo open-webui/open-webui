@@ -20,15 +20,15 @@ def create_insecure_httpx_client(headers=None, timeout=None, auth=None):
     after construction does not affect the underlying transport's SSL context.
     """
     kwargs = {
-        "follow_redirects": True,
-        "verify": False,
+        'follow_redirects': True,
+        'verify': False,
     }
     if timeout is not None:
-        kwargs["timeout"] = timeout
+        kwargs['timeout'] = timeout
     if headers is not None:
-        kwargs["headers"] = headers
+        kwargs['headers'] = headers
     if auth is not None:
-        kwargs["auth"] = auth
+        kwargs['auth'] = auth
     return httpx.AsyncClient(**kwargs)
 
 
@@ -52,13 +52,9 @@ class MCPClient:
                 transport = await exit_stack.enter_async_context(self._streams_context)
                 read_stream, write_stream, _ = transport
 
-                self._session_context = ClientSession(
-                    read_stream, write_stream
-                )  # pylint: disable=W0201
+                self._session_context = ClientSession(read_stream, write_stream)  # pylint: disable=W0201
 
-                self.session = await exit_stack.enter_async_context(
-                    self._session_context
-                )
+                self.session = await exit_stack.enter_async_context(self._session_context)
                 with anyio.fail_after(10):
                     await self.session.initialize()
                 self.exit_stack = exit_stack.pop_all()
@@ -68,7 +64,7 @@ class MCPClient:
 
     async def list_tool_specs(self) -> Optional[dict]:
         if not self.session:
-            raise RuntimeError("MCP client is not connected.")
+            raise RuntimeError('MCP client is not connected.')
 
         result = await self.session.list_tools()
         tools = result.tools
@@ -81,26 +77,22 @@ class MCPClient:
             inputSchema = tool.inputSchema
 
             # TODO: handle outputSchema if needed
-            outputSchema = getattr(tool, "outputSchema", None)
+            outputSchema = getattr(tool, 'outputSchema', None)
 
-            tool_specs.append(
-                {"name": name, "description": description, "parameters": inputSchema}
-            )
+            tool_specs.append({'name': name, 'description': description, 'parameters': inputSchema})
 
         return tool_specs
 
-    async def call_tool(
-        self, function_name: str, function_args: dict
-    ) -> Optional[dict]:
+    async def call_tool(self, function_name: str, function_args: dict) -> Optional[dict]:
         if not self.session:
-            raise RuntimeError("MCP client is not connected.")
+            raise RuntimeError('MCP client is not connected.')
 
         result = await self.session.call_tool(function_name, function_args)
         if not result:
-            raise Exception("No result returned from MCP tool call.")
+            raise Exception('No result returned from MCP tool call.')
 
-        result_dict = result.model_dump(mode="json")
-        result_content = result_dict.get("content", {})
+        result_dict = result.model_dump(mode='json')
+        result_content = result_dict.get('content', {})
 
         if result.isError:
             raise Exception(result_content)
@@ -109,24 +101,24 @@ class MCPClient:
 
     async def list_resources(self, cursor: Optional[str] = None) -> Optional[dict]:
         if not self.session:
-            raise RuntimeError("MCP client is not connected.")
+            raise RuntimeError('MCP client is not connected.')
 
         result = await self.session.list_resources(cursor=cursor)
         if not result:
-            raise Exception("No result returned from MCP list_resources call.")
+            raise Exception('No result returned from MCP list_resources call.')
 
         result_dict = result.model_dump()
-        resources = result_dict.get("resources", [])
+        resources = result_dict.get('resources', [])
 
         return resources
 
     async def read_resource(self, uri: str) -> Optional[dict]:
         if not self.session:
-            raise RuntimeError("MCP client is not connected.")
+            raise RuntimeError('MCP client is not connected.')
 
         result = await self.session.read_resource(uri)
         if not result:
-            raise Exception("No result returned from MCP read_resource call.")
+            raise Exception('No result returned from MCP read_resource call.')
         result_dict = result.model_dump()
 
         return result_dict

@@ -1430,18 +1430,6 @@
 		}
 
 		taskIds = null;
-
-		// Process message queue - combine all queued messages and submit at once
-		if (messageQueue.length > 0) {
-			const combinedPrompt = messageQueue.map((m) => m.prompt).join('\n\n');
-			const combinedFiles = messageQueue.flatMap((m) => m.files);
-			messageQueue = [];
-
-			// Set the files and submit
-			files = combinedFiles;
-			await tick();
-			await submitPrompt(combinedPrompt);
-		}
 	};
 
 	const chatActionHandler = async (_chatId, actionId, modelId, responseMessageId, event = null) => {
@@ -1783,12 +1771,26 @@
 				scrollToBottom();
 			}
 
-			await chatCompletedHandler(
+			// Fire-and-forget: run chatCompletedHandler for background work
+			// (outlet filters, chat save, title gen, follow-ups, tags)
+			// without blocking the user from sending new messages.
+			chatCompletedHandler(
 				chatId,
 				message.model,
 				message.id,
 				createMessagesList(history, message.id)
 			);
+
+			// Process message queue immediately after main response finishes
+			if (messageQueue.length > 0) {
+				const combinedPrompt = messageQueue.map((m) => m.prompt).join('\n\n');
+				const combinedFiles = messageQueue.flatMap((m) => m.files);
+				messageQueue = [];
+
+				files = combinedFiles;
+				await tick();
+				await submitPrompt(combinedPrompt);
+			}
 		}
 
 		console.log(data);
@@ -1845,8 +1847,12 @@
 			return;
 		}
 
-		// Check if there are pending tasks (more reliable than lastMessage.done)
-		if (taskIds !== null && taskIds.length > 0) {
+		// Check if the assistant is still generating the main response
+		// (don't block on background tasks like title gen, follow-ups, tags)
+		const lastMessage = history.currentId ? history.messages[history.currentId] : null;
+		const isGenerating = lastMessage && lastMessage.role === 'assistant' && !lastMessage.done;
+
+		if (isGenerating) {
 			if ($settings?.enableMessageQueue ?? true) {
 				// Queue the message
 				const _files = structuredClone(files);
@@ -1871,9 +1877,9 @@
 		}
 
 		if (history?.currentId) {
-			const lastMessage = history.messages[history.currentId];
+			const currentMessage = history.messages[history.currentId];
 
-			if (lastMessage.error && !lastMessage.content) {
+			if (currentMessage.error && !currentMessage.content) {
 				// Error in response
 				toast.error($i18n.t(`Oops! There was an error in the previous response.`));
 				return;
@@ -2189,6 +2195,8 @@
 
 				return {
 					role: message.role,
+					// Preserve output items so backend can reconstruct tool_calls/tool-role messages (temp chats)
+					...(message.output ? { output: message.output } : {}),
 					...(message.role === 'user' && imageFiles.length > 0
 						? {
 								content: [
