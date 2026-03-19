@@ -20,6 +20,16 @@
 	let loading = false;
 	let variableValues = {};
 
+	/**
+	 * Returns all properties of a variable definition except 'type'.
+	 * Used to spread extra attributes (placeholder, min, max, etc.) onto input elements.
+	 */
+	const getVariableAttributes = (variableDef) => {
+		if (!variableDef) return {};
+		const { type, ...rest } = variableDef;
+		return rest;
+	};
+
 	const submitHandler = async () => {
 		// Normalize Windows CRLF (\r\n) to LF (\n) for all string values
 		for (const key of Object.keys(variableValues)) {
@@ -83,8 +93,6 @@
 						{#if !loading}
 							<div class="flex flex-col gap-1">
 								{#each Object.keys(variables) as variable, idx}
-									{@const { type, ...variableAttributes } = variables[variable] ?? {}}
-
 									<div class=" py-0.5 w-full justify-between">
 										<div class="flex w-full justify-between mb-1.5">
 											<div class=" self-center text-xs font-medium">
@@ -99,8 +107,8 @@
 										<div class="flex mt-0.5 mb-0.5 space-x-2">
 											<div class=" flex-1">
 												{#if variables[variable]?.type === 'select'}
-													{@const options = variableAttributes?.options ?? []}
-													{@const placeholder = variableAttributes?.placeholder ?? ''}
+													{@const options = getVariableAttributes(variables[variable])?.options ?? []}
+													{@const placeholder = getVariableAttributes(variables[variable])?.placeholder ?? ''}
 
 													<select
 														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
@@ -126,7 +134,7 @@
 																bind:checked={variableValues[variable]}
 																class="size-3.5 rounded cursor-pointer border border-gray-200 dark:border-gray-700"
 																id="input-variable-{idx}"
-																{...variableAttributes}
+																{...getVariableAttributes(variables[variable])}
 															/>
 
 															<label for="input-variable-{idx}" class="text-sm"
@@ -155,7 +163,7 @@
 																	// Convert the color value to uppercase immediately
 																	variableValues[variable] = e.target.value.toUpperCase();
 																}}
-																{...variableAttributes}
+																{...getVariableAttributes(variables[variable])}
 															/>
 														</div>
 
@@ -177,7 +185,7 @@
 														autocomplete="off"
 														id="input-variable-{idx}"
 														required={variables[variable]?.required ?? false}
-														{...variableAttributes}
+														{...getVariableAttributes(variables[variable])}
 													/>
 												{:else if variables[variable]?.type === 'datetime-local'}
 													<input
@@ -188,7 +196,7 @@
 														autocomplete="off"
 														id="input-variable-{idx}"
 														required={variables[variable]?.required ?? false}
-														{...variableAttributes}
+														{...getVariableAttributes(variables[variable])}
 													/>
 												{:else if variables[variable]?.type === 'email'}
 													<input
@@ -199,7 +207,7 @@
 														autocomplete="off"
 														id="input-variable-{idx}"
 														required={variables[variable]?.required ?? false}
-														{...variableAttributes}
+														{...getVariableAttributes(variables[variable])}
 													/>
 												{:else if variables[variable]?.type === 'month'}
 													<input
@@ -210,7 +218,7 @@
 														autocomplete="off"
 														id="input-variable-{idx}"
 														required={variables[variable]?.required ?? false}
-														{...variableAttributes}
+														{...getVariableAttributes(variables[variable])}
 													/>
 												{:else if variables[variable]?.type === 'number'}
 													<input
@@ -221,7 +229,7 @@
 														autocomplete="off"
 														id="input-variable-{idx}"
 														required={variables[variable]?.required ?? false}
-														{...variableAttributes}
+														{...getVariableAttributes(variables[variable])}
 													/>
 												{:else if variables[variable]?.type === 'range'}
 													<div class="flex items-center space-x-2">
@@ -231,7 +239,7 @@
 																bind:value={variableValues[variable]}
 																class="w-full rounded-lg py-1 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 																id="input-variable-{idx}"
-																{...variableAttributes}
+																{...getVariableAttributes(variables[variable])}
 															/>
 														</div>
 
@@ -263,7 +271,7 @@
 														autocomplete="off"
 														id="input-variable-{idx}"
 														required={variables[variable]?.required ?? false}
-														{...variableAttributes}
+														{...getVariableAttributes(variables[variable])}
 													/>
 												{:else if variables[variable]?.type === 'text'}
 													<input
@@ -274,7 +282,7 @@
 														autocomplete="off"
 														id="input-variable-{idx}"
 														required={variables[variable]?.required ?? false}
-														{...variableAttributes}
+														{...getVariableAttributes(variables[variable])}
 													/>
 												{:else if variables[variable]?.type === 'time'}
 													<input
@@ -285,7 +293,7 @@
 														autocomplete="off"
 														id="input-variable-{idx}"
 														required={variables[variable]?.required ?? false}
-														{...variableAttributes}
+														{...getVariableAttributes(variables[variable])}
 													/>
 												{:else if variables[variable]?.type === 'url'}
 													<input
@@ -296,7 +304,7 @@
 														autocomplete="off"
 														id="input-variable-{idx}"
 														required={variables[variable]?.required ?? false}
-														{...variableAttributes}
+														{...getVariableAttributes(variables[variable])}
 													/>
 												{:else if variables[variable]?.type === 'map'}
 													<!-- EXPERIMENTAL INPUT TYPE, DO NOT USE IN PRODUCTION -->
