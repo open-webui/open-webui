@@ -21,26 +21,22 @@ def search_serpstack(
         query (str): The query to search for
         https_enabled (bool): Whether to use HTTPS or HTTP for the API request
     """
-    url = f"{'https' if https_enabled else 'http'}://api.serpstack.com/search"
+    url = f'{"https" if https_enabled else "http"}://api.serpstack.com/search'
 
-    headers = {"Content-Type": "application/json"}
+    headers = {'Content-Type': 'application/json'}
     params = {
-        "access_key": api_key,
-        "query": query,
+        'access_key': api_key,
+        'query': query,
     }
 
-    response = requests.request("POST", url, headers=headers, params=params)
+    response = requests.request('POST', url, headers=headers, params=params)
     response.raise_for_status()
 
     json_response = response.json()
-    results = sorted(
-        json_response.get("organic_results", []), key=lambda x: x.get("position", 0)
-    )
+    results = sorted(json_response.get('organic_results', []), key=lambda x: x.get('position', 0))
     if filter_list:
         results = get_filtered_results(results, filter_list)
     return [
-        SearchResult(
-            link=result["url"], title=result.get("title"), snippet=result.get("snippet")
-        )
+        SearchResult(link=result['url'], title=result.get('title'), snippet=result.get('snippet'))
         for result in results[:count]
     ]
