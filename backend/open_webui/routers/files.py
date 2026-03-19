@@ -2,6 +2,7 @@ import logging
 import os
 import uuid
 import json
+import threading
 from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
@@ -47,7 +48,7 @@ from open_webui.routers.audio import transcribe
 from open_webui.storage.provider import Storage
 
 
-from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, FILE_UPLOAD_CONCURRENT_PROCESSING
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.misc import strict_match_mime_type
 from pydantic import BaseModel
@@ -56,6 +57,8 @@ log = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# Limit concurrent file processing to prevent resource exhaustion
+_file_processing_semaphore = threading.Semaphore(FILE_UPLOAD_CONCURRENT_PROCESSING)
 
 from open_webui.utils.access_control.files import has_access_to_file
 
@@ -157,11 +160,12 @@ def process_uploaded_file(
                 db=db_session,
             )
 
-    if db:
-        _process_handler(db)
-    else:
-        with SessionLocal() as db_session:
-            _process_handler(db_session)
+    with _file_processing_semaphore:
+        if db:
+            _process_handler(db)
+        else:
+            with SessionLocal() as db_session:
+                _process_handler(db_session)
 
 
 @router.post("/", response_model=FileModelResponse)

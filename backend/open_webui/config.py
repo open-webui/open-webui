@@ -1794,6 +1794,10 @@ if THREAD_POOL_SIZE is not None and isinstance(THREAD_POOL_SIZE, str):
         )
         THREAD_POOL_SIZE = None
 
+FILE_UPLOAD_CONCURRENT_PROCESSING = int(
+    os.getenv("FILE_UPLOAD_CONCURRENT_PROCESSING", "2")
+)
+
 
 def validate_cors_origin(origin):
     parsed_url = urlparse(origin)
