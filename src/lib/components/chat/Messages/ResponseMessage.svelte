@@ -197,7 +197,7 @@
 	const stopAudio = () => {
 		try {
 			speechSynthesis.cancel();
-			$audioQueue.stop();
+			$audioQueue?.stop();
 		} catch {}
 
 		if (speaking) {
@@ -260,6 +260,12 @@
 				}
 			}, 100);
 		} else {
+			if (!$audioQueue) {
+				toast.error($i18n.t('Audio queue is not available'));
+				speaking = false;
+				return;
+			}
+
 			$audioQueue.setId(`${message.id}`);
 			$audioQueue.setPlaybackRate($settings.audio?.tts?.playbackRate ?? 1);
 			$audioQueue.onStopped = () => {
