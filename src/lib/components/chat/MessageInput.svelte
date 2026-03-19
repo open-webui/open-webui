@@ -688,7 +688,7 @@
 			return;
 		}
 
-		inputFiles.forEach(async (file) => {
+		for (const file of inputFiles) {
 			console.log('Processing file:', {
 				name: file.name,
 				type: file.type,
@@ -709,13 +709,13 @@
 						maxSize: $config?.file?.max_size
 					})
 				);
-				return;
+				continue;
 			}
 
 			if (file['type'].startsWith('image/')) {
 				if (visionCapableModels.length === 0) {
 					toast.error($i18n.t('Selected model(s) do not support image inputs'));
-					return;
+					continue;
 				}
 
 				const compressImageHandler = async (imageUrl, settings = {}, config = {}) => {
@@ -780,9 +780,9 @@
 
 				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
 			} else {
-				uploadFileHandler(file);
+				await uploadFileHandler(file);
 			}
-		});
+		}
 	};
 
 	const createNote = async () => {

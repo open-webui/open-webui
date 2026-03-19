@@ -353,7 +353,7 @@
 	};
 
 	const inputFilesHandler = async (inputFiles) => {
-		inputFiles.forEach(async (file) => {
+		for (const file of inputFiles) {
 			console.info('Processing file:', {
 				name: file.name,
 				type: file.type,
@@ -374,7 +374,7 @@
 						maxSize: $config?.file?.max_size
 					})
 				);
-				return;
+				continue;
 			}
 
 			if (file['type'].startsWith('image/')) {
@@ -431,9 +431,9 @@
 
 				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
 			} else {
-				uploadFileHandler(file);
+				await uploadFileHandler(file);
 			}
-		});
+		}
 	};
 
 	const uploadFileHandler = async (file, process = true) => {
