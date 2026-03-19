@@ -642,6 +642,12 @@ OAUTH_AUDIENCE = PersistentConfig(
     os.environ.get('OAUTH_AUDIENCE', ''),
 )
 
+OAUTH_AUTHORIZE_PARAMS = PersistentConfig(
+    "OAUTH_AUTHORIZE_PARAMS",
+    "oauth.oidc.authorize_params",
+    os.environ.get("OAUTH_AUTHORIZE_PARAMS", ""),
+)
+
 
 def load_oauth_providers():
     OAUTH_PROVIDERS.clear()

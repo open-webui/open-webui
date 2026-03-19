@@ -60,6 +60,7 @@ from open_webui.config import (
     OAUTH_UPDATE_EMAIL_ON_LOGIN,
     OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID,
     OAUTH_AUDIENCE,
+    OAUTH_AUTHORIZE_PARAMS,
     WEBHOOK_URL,
     JWT_EXPIRES_IN,
     AppConfig,
@@ -134,6 +135,7 @@ auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN = OAUTH_UPDATE_PICTURE_ON_LOGI
 auth_manager_config.OAUTH_UPDATE_NAME_ON_LOGIN = OAUTH_UPDATE_NAME_ON_LOGIN
 auth_manager_config.OAUTH_UPDATE_EMAIL_ON_LOGIN = OAUTH_UPDATE_EMAIL_ON_LOGIN
 auth_manager_config.OAUTH_AUDIENCE = OAUTH_AUDIENCE
+auth_manager_config.OAUTH_AUTHORIZE_PARAMS = OAUTH_AUTHORIZE_PARAMS
 
 
 FERNET = None
@@ -1286,6 +1288,13 @@ class OAuthManager:
         kwargs = {}
         if auth_manager_config.OAUTH_AUDIENCE:
             kwargs['audience'] = auth_manager_config.OAUTH_AUDIENCE
+        if auth_manager_config.OAUTH_AUTHORIZE_PARAMS:
+            try:
+                extra = json.loads(auth_manager_config.OAUTH_AUTHORIZE_PARAMS)
+                if isinstance(extra, dict):
+                    kwargs.update(extra)
+            except (json.JSONDecodeError, TypeError):
+                log.warning("OAUTH_AUTHORIZE_PARAMS is not valid JSON, ignoring")
 
         return await client.authorize_redirect(request, redirect_uri, **kwargs)
 
