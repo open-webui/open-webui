@@ -82,12 +82,16 @@ class RedisDict:
         return [(k, json.loads(v)) for k, v in self.redis.hgetall(self.name).items()]
 
     def set(self, mapping: dict):
-        pipe = self.redis.pipeline()
+        serialized = {k: json.dumps(v) for k, v in mapping.items()} if mapping else {}
+        existing_keys = set(self.redis.hkeys(self.name))
+        new_keys = set(serialized.keys())
+        removed_keys = existing_keys - new_keys
 
-        pipe.delete(self.name)
-        if mapping:
-            pipe.hset(self.name, mapping={k: json.dumps(v) for k, v in mapping.items()})
-
+        pipe = self.redis.pipeline(transaction=True)
+        if removed_keys:
+            pipe.hdel(self.name, *removed_keys)
+        if serialized:
+            pipe.hset(self.name, mapping=serialized)
         pipe.execute()
 
     def get(self, key, default=None):
