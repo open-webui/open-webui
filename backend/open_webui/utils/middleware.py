@@ -2146,24 +2146,30 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Check if the request has chat_id and is inside of a folder
     # Uses lightweight column query — only fetches folder_id, not the full chat JSON blob
     chat_id = metadata.get('chat_id', None)
+    folder_id = None
     if chat_id and user:
         folder_id = Chats.get_chat_folder_id(chat_id, user.id)
-        if folder_id:
-            folder = Folders.get_folder_by_id_and_user_id(folder_id, user.id)
 
-            if folder and folder.data:
-                if 'system_prompt' in folder.data:
-                    form_data = apply_system_prompt_to_body(folder.data['system_prompt'], form_data, metadata, user)
-                if 'files' in folder.data:
-                    if metadata.get('params', {}).get('function_calling') != 'native':
-                        form_data['files'] = [
-                            *folder.data['files'],
-                            *form_data.get('files', []),
-                        ]
-                    else:
-                        # Native FC: skip RAG injection, builtin tools
-                        # will read folder knowledge from metadata.
-                        metadata['folder_knowledge'] = folder.data['files']
+    # Fallback: use folder_id from metadata (temporary chats have no DB record)
+    if not folder_id:
+        folder_id = metadata.get('folder_id', None)
+
+    if folder_id and user:
+        folder = Folders.get_folder_by_id_and_user_id(folder_id, user.id)
+
+        if folder and folder.data:
+            if 'system_prompt' in folder.data:
+                form_data = apply_system_prompt_to_body(folder.data['system_prompt'], form_data, metadata, user)
+            if 'files' in folder.data:
+                if metadata.get('params', {}).get('function_calling') != 'native':
+                    form_data['files'] = [
+                        *folder.data['files'],
+                        *form_data.get('files', []),
+                    ]
+                else:
+                    # Native FC: skip RAG injection, builtin tools
+                    # will read folder knowledge from metadata.
+                    metadata['folder_knowledge'] = folder.data['files']
 
     # Model "Knowledge" handling
     user_message = get_last_user_message(form_data['messages'])

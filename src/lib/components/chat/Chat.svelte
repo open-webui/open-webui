@@ -2221,6 +2221,7 @@
 
 				session_id: $socket?.id,
 				chat_id: $chatId,
+				folder_id: $selectedFolder?.id ?? undefined,
 
 				id: responseMessageId,
 				parent_id: userMessage?.id ?? null,
