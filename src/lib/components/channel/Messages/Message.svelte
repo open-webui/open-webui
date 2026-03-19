@@ -66,7 +66,7 @@
 	let showDeleteConfirmDialog = false;
 
 	const loadMessageData = async () => {
-		if (message && message?.data) {
+		if (!pending && message && message?.data) {
 			const res = await getMessageData(localStorage.token, channel?.id, message.id);
 			if (res) {
 				message.data = res;
@@ -75,7 +75,7 @@
 	};
 
 	onMount(async () => {
-		if (message && message?.data) {
+		if (!pending && message && message?.data) {
 			await loadMessageData();
 		}
 	});
