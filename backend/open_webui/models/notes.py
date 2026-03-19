@@ -21,7 +21,7 @@ from sqlalchemy import or_, func, cast
 
 
 class Note(Base):
-    __tablename__ = "note"
+    __tablename__ = 'note'
 
     id = Column(Text, primary_key=True, unique=True)
     user_id = Column(Text)
@@ -88,10 +88,8 @@ class NoteListResponse(BaseModel):
 
 
 class NoteTable:
-    def _get_access_grants(
-        self, note_id: str, db: Optional[Session] = None
-    ) -> list[AccessGrantModel]:
-        return AccessGrants.get_grants_by_resource("note", note_id, db=db)
+    def _get_access_grants(self, note_id: str, db: Optional[Session] = None) -> list[AccessGrantModel]:
+        return AccessGrants.get_grants_by_resource('note', note_id, db=db)
 
     def _to_note_model(
         self,
@@ -99,51 +97,43 @@ class NoteTable:
         access_grants: Optional[list[AccessGrantModel]] = None,
         db: Optional[Session] = None,
     ) -> NoteModel:
-        note_data = NoteModel.model_validate(note).model_dump(exclude={"access_grants"})
-        note_data["access_grants"] = (
-            access_grants
-            if access_grants is not None
-            else self._get_access_grants(note_data["id"], db=db)
+        note_data = NoteModel.model_validate(note).model_dump(exclude={'access_grants'})
+        note_data['access_grants'] = (
+            access_grants if access_grants is not None else self._get_access_grants(note_data['id'], db=db)
         )
         return NoteModel.model_validate(note_data)
 
-    def _has_permission(self, db, query, filter: dict, permission: str = "read"):
+    def _has_permission(self, db, query, filter: dict, permission: str = 'read'):
         return AccessGrants.has_permission_filter(
             db=db,
             query=query,
             DocumentModel=Note,
             filter=filter,
-            resource_type="note",
+            resource_type='note',
             permission=permission,
         )
 
-    def insert_new_note(
-        self, user_id: str, form_data: NoteForm, db: Optional[Session] = None
-    ) -> Optional[NoteModel]:
+    def insert_new_note(self, user_id: str, form_data: NoteForm, db: Optional[Session] = None) -> Optional[NoteModel]:
         with get_db_context(db) as db:
             note = NoteModel(
                 **{
-                    "id": str(uuid.uuid4()),
-                    "user_id": user_id,
-                    **form_data.model_dump(exclude={"access_grants"}),
-                    "created_at": int(time.time_ns()),
-                    "updated_at": int(time.time_ns()),
-                    "access_grants": [],
+                    'id': str(uuid.uuid4()),
+                    'user_id': user_id,
+                    **form_data.model_dump(exclude={'access_grants'}),
+                    'created_at': int(time.time_ns()),
+                    'updated_at': int(time.time_ns()),
+                    'access_grants': [],
                 }
             )
 
-            new_note = Note(**note.model_dump(exclude={"access_grants"}))
+            new_note = Note(**note.model_dump(exclude={'access_grants'}))
 
             db.add(new_note)
             db.commit()
-            AccessGrants.set_access_grants(
-                "note", note.id, form_data.access_grants, db=db
-            )
+            AccessGrants.set_access_grants('note', note.id, form_data.access_grants, db=db)
             return self._to_note_model(new_note, db=db)
 
-    def get_notes(
-        self, skip: int = 0, limit: int = 50, db: Optional[Session] = None
-    ) -> list[NoteModel]:
+    def get_notes(self, skip: int = 0, limit: int = 50, db: Optional[Session] = None) -> list[NoteModel]:
         with get_db_context(db) as db:
             query = db.query(Note).order_by(Note.updated_at.desc())
             if skip is not None:
@@ -152,13 +142,8 @@ class NoteTable:
                 query = query.limit(limit)
             notes = query.all()
             note_ids = [note.id for note in notes]
-            grants_map = AccessGrants.get_grants_by_resources("note", note_ids, db=db)
-            return [
-                self._to_note_model(
-                    note, access_grants=grants_map.get(note.id, []), db=db
-                )
-                for note in notes
-            ]
+            grants_map = AccessGrants.get_grants_by_resources('note', note_ids, db=db)
+            return [self._to_note_model(note, access_grants=grants_map.get(note.id, []), db=db) for note in notes]
 
     def search_notes(
         self,
@@ -171,36 +156,32 @@ class NoteTable:
         with get_db_context(db) as db:
             query = db.query(Note, User).outerjoin(User, User.id == Note.user_id)
             if filter:
-                query_key = filter.get("query")
+                query_key = filter.get('query')
                 if query_key:
                     # Normalize search by removing hyphens and spaces (e.g., "todo" matches "to-do" and "to do")
-                    normalized_query = query_key.replace("-", "").replace(" ", "")
+                    normalized_query = query_key.replace('-', '').replace(' ', '')
                     query = query.filter(
                         or_(
+                            func.replace(func.replace(Note.title, '-', ''), ' ', '').ilike(f'%{normalized_query}%'),
                             func.replace(
-                                func.replace(Note.title, "-", ""), " ", ""
-                            ).ilike(f"%{normalized_query}%"),
-                            func.replace(
-                                func.replace(
-                                    cast(Note.data["content"]["md"], Text), "-", ""
-                                ),
-                                " ",
-                                "",
-                            ).ilike(f"%{normalized_query}%"),
+                                func.replace(cast(Note.data['content']['md'], Text), '-', ''),
+                                ' ',
+                                '',
+                            ).ilike(f'%{normalized_query}%'),
                         )
                     )
 
-                view_option = filter.get("view_option")
-                if view_option == "created":
+                view_option = filter.get('view_option')
+                if view_option == 'created':
                     query = query.filter(Note.user_id == user_id)
-                elif view_option == "shared":
+                elif view_option == 'shared':
                     query = query.filter(Note.user_id != user_id)
 
                 # Apply access control filtering
-                if "permission" in filter:
-                    permission = filter["permission"]
+                if 'permission' in filter:
+                    permission = filter['permission']
                 else:
-                    permission = "write"
+                    permission = 'write'
 
                 query = self._has_permission(
                     db,
@@ -209,21 +190,21 @@ class NoteTable:
                     permission=permission,
                 )
 
-                order_by = filter.get("order_by")
-                direction = filter.get("direction")
+                order_by = filter.get('order_by')
+                direction = filter.get('direction')
 
-                if order_by == "name":
-                    if direction == "asc":
+                if order_by == 'name':
+                    if direction == 'asc':
                         query = query.order_by(Note.title.asc())
                     else:
                         query = query.order_by(Note.title.desc())
-                elif order_by == "created_at":
-                    if direction == "asc":
+                elif order_by == 'created_at':
+                    if direction == 'asc':
                         query = query.order_by(Note.created_at.asc())
                     else:
                         query = query.order_by(Note.created_at.desc())
-                elif order_by == "updated_at":
-                    if direction == "asc":
+                elif order_by == 'updated_at':
+                    if direction == 'asc':
                         query = query.order_by(Note.updated_at.asc())
                     else:
                         query = query.order_by(Note.updated_at.desc())
@@ -244,7 +225,7 @@ class NoteTable:
             items = query.all()
 
             note_ids = [note.id for note, _ in items]
-            grants_map = AccessGrants.get_grants_by_resources("note", note_ids, db=db)
+            grants_map = AccessGrants.get_grants_by_resources('note', note_ids, db=db)
 
             notes = []
             for note, user in items:
@@ -255,11 +236,7 @@ class NoteTable:
                             access_grants=grants_map.get(note.id, []),
                             db=db,
                         ).model_dump(),
-                        user=(
-                            UserResponse(**UserModel.model_validate(user).model_dump())
-                            if user
-                            else None
-                        ),
+                        user=(UserResponse(**UserModel.model_validate(user).model_dump()) if user else None),
                     )
                 )
 
@@ -268,20 +245,16 @@ class NoteTable:
     def get_notes_by_user_id(
         self,
         user_id: str,
-        permission: str = "read",
+        permission: str = 'read',
         skip: int = 0,
         limit: int = 50,
         db: Optional[Session] = None,
     ) -> list[NoteModel]:
         with get_db_context(db) as db:
-            user_group_ids = [
-                group.id for group in Groups.get_groups_by_member_id(user_id, db=db)
-            ]
+            user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id, db=db)]
 
             query = db.query(Note).order_by(Note.updated_at.desc())
-            query = self._has_permission(
-                db, query, {"user_id": user_id, "group_ids": user_group_ids}, permission
-            )
+            query = self._has_permission(db, query, {'user_id': user_id, 'group_ids': user_group_ids}, permission)
 
             if skip is not None:
                 query = query.offset(skip)
@@ -290,17 +263,10 @@ class NoteTable:
 
             notes = query.all()
             note_ids = [note.id for note in notes]
-            grants_map = AccessGrants.get_grants_by_resources("note", note_ids, db=db)
-            return [
-                self._to_note_model(
-                    note, access_grants=grants_map.get(note.id, []), db=db
-                )
-                for note in notes
-            ]
+            grants_map = AccessGrants.get_grants_by_resources('note', note_ids, db=db)
+            return [self._to_note_model(note, access_grants=grants_map.get(note.id, []), db=db) for note in notes]
 
-    def get_note_by_id(
-        self, id: str, db: Optional[Session] = None
-    ) -> Optional[NoteModel]:
+    def get_note_by_id(self, id: str, db: Optional[Session] = None) -> Optional[NoteModel]:
         with get_db_context(db) as db:
             note = db.query(Note).filter(Note.id == id).first()
             return self._to_note_model(note, db=db) if note else None
@@ -315,17 +281,15 @@ class NoteTable:
 
             form_data = form_data.model_dump(exclude_unset=True)
 
-            if "title" in form_data:
-                note.title = form_data["title"]
-            if "data" in form_data:
-                note.data = {**note.data, **form_data["data"]}
-            if "meta" in form_data:
-                note.meta = {**note.meta, **form_data["meta"]}
+            if 'title' in form_data:
+                note.title = form_data['title']
+            if 'data' in form_data:
+                note.data = {**note.data, **form_data['data']}
+            if 'meta' in form_data:
+                note.meta = {**note.meta, **form_data['meta']}
 
-            if "access_grants" in form_data:
-                AccessGrants.set_access_grants(
-                    "note", id, form_data["access_grants"], db=db
-                )
+            if 'access_grants' in form_data:
+                AccessGrants.set_access_grants('note', id, form_data['access_grants'], db=db)
 
             note.updated_at = int(time.time_ns())
 
@@ -335,7 +299,7 @@ class NoteTable:
     def delete_note_by_id(self, id: str, db: Optional[Session] = None) -> bool:
         try:
             with get_db_context(db) as db:
-                AccessGrants.revoke_all_access("note", id, db=db)
+                AccessGrants.revoke_all_access('note', id, db=db)
                 db.query(Note).filter(Note.id == id).delete()
                 db.commit()
                 return True

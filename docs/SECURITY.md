@@ -82,7 +82,12 @@ Your remediation guidance can include, for example:
 > Similar to rule "Default Configuration Testing": If you believe you have found a vulnerability that affects admins and is NOT caused by admin negligence or intentionally malicious actions,
 > **then we absolutely want to hear about it.** This policy is intended to filter social engineering attacks on admins, malicious plugins being deployed by admins and similar malicious actions, not to discourage legitimate security research.
 
-10. **AI report transparency:** Due to an extreme spike in AI-aided vulnerability reports **you MUST DISCLOSE if AI was used in any capacity** - whether for writing the report, generating the PoC, or identifying the vulnerability. If AI helped you in any way shape or form in the creation of the report, PoC or finding the vulnerability, you MUST disclose it.
+10. **Tools & Functions Code Execution Is Intended Behavior:** Open WebUI's Tools and Functions feature is **designed** to execute user-provided Python code on the server. This is core, intentional functionality — not a vulnerability. Function creation is **restricted to administrators only**. Tool creation is controlled by the `workspace.tools` permission, which is **disabled by default** for non-admin users and should only be granted to fully trusted users who are equivalent to system administrators in terms of trust. Granting a user the ability to create Tools is equivalent to giving them shell access to the server. Reports that describe the expected behavior of `exec()` in the Tools/Functions pipeline as a vulnerability will be closed as **not a vulnerability / intended behavior**. This applies to both direct code execution and frontmatter-based package installation (`pip install`).
+
+> [!IMPORTANT]
+> **For administrators:** Treat the `workspace.tools` permission as **root-equivalent access**. Only grant it to users you would trust with direct access to your server. If you enable this permission for untrusted users, you are accepting the risk of arbitrary code execution on your host.
+
+11. **AI report transparency:** Due to an extreme spike in AI-aided vulnerability reports **you MUST DISCLOSE if AI was used in any capacity** - whether for writing the report, generating the PoC, or identifying the vulnerability. If AI helped you in any way shape or form in the creation of the report, PoC or finding the vulnerability, you MUST disclose it.
 
 > [!NOTE]
 > AI-aided vulnerability reports **will not be rejected by us by default**. But:
@@ -134,4 +139,4 @@ For any other immediate concerns and questions, please create an issue in our [i
 
 ---
 
-_Last updated on **2026-02-25**._
+_Last updated on **2026-03-15**._

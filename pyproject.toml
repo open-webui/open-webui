@@ -213,4 +213,31 @@ ignore-words-list = 'ans'
 [dependency-groups]
 dev = [
     "pytest-asyncio>=1.0.0",
+    "ruff>=0.15.5",
 ]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.format]
+quote-style = "single"
+docstring-code-format = false
+
+[tool.ruff.lint]
+select = [
+  "E",    # pycodestyle errors
+  "F",    # pyflakes
+  "W",    # pycodestyle warnings
+  "I",    # isort
+  "UP",   # pyupgrade
+  "C90",  # mccabe
+  "Q",    # flake8-quotes
+  "ICN",  # flake8-import-conventions
+]
+
+# Plugin configs:
+flake8-import-conventions.banned-from = [ "ast", "datetime" ]
+flake8-import-conventions.aliases = { datetime = "dt" }
+flake8-quotes.inline-quotes = "single"
+mccabe.max-complexity = 10
+pydocstyle.convention = "google"
