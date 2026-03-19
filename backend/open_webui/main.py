@@ -403,6 +403,7 @@ from open_webui.config import (
     # WebUI (OAuth)
     ENABLE_OAUTH_ROLE_MANAGEMENT,
     OAUTH_ROLES_CLAIM,
+    OAUTH_SUB_CLAIM,
     OAUTH_EMAIL_CLAIM,
     OAUTH_PICTURE_CLAIM,
     OAUTH_USERNAME_CLAIM,
@@ -891,6 +892,7 @@ if any("access_control" in m.get("meta", {}) for m in arena_models):
 app.state.config.OAUTH_USERNAME_CLAIM = OAUTH_USERNAME_CLAIM
 app.state.config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
 app.state.config.OAUTH_EMAIL_CLAIM = OAUTH_EMAIL_CLAIM
+app.state.config.OAUTH_SUB_CLAIM = OAUTH_SUB_CLAIM
 
 app.state.config.ENABLE_OAUTH_ROLE_MANAGEMENT = ENABLE_OAUTH_ROLE_MANAGEMENT
 app.state.config.OAUTH_ROLES_CLAIM = OAUTH_ROLES_CLAIM
