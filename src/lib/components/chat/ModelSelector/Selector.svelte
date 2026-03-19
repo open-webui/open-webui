@@ -436,8 +436,7 @@
 		</div>
 	</DropdownMenu.Trigger>
 
-	<DropdownMenu.Portal>
-		<DropdownMenu.Content
+	<DropdownMenu.Content
 			forceMount
 			trapFocus={false}
 			preventScroll={false}
@@ -741,6 +740,5 @@
 					</div>
 				{/if}
 			{/snippet}
-		</DropdownMenu.Content>
-	</DropdownMenu.Portal>
+	</DropdownMenu.Content>
 </DropdownMenu.Root>
