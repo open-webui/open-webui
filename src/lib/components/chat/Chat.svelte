@@ -169,6 +169,7 @@
 	let chatFiles = [];
 	let files = [];
 	let params = {};
+	let temporaryChatFolderId: string | null = null;
 
 	// Message queue for storing messages while generating
 	let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
@@ -1129,6 +1130,7 @@
 
 		chatFiles = [];
 		params = {};
+		temporaryChatFolderId = null;
 		taskIds = null;
 		messageQueue = [];
 
@@ -2213,6 +2215,7 @@
 
 				session_id: $socket?.id,
 				chat_id: $chatId,
+				...(temporaryChatFolderId ? { folder_id: temporaryChatFolderId } : {}),
 
 				id: responseMessageId,
 				parent_id: userMessage?.id ?? null,
@@ -2544,6 +2547,9 @@
 		} else {
 			_chatId = `local:${$socket?.id}`; // Use socket id for temporary chat
 			await chatId.set(_chatId);
+
+			// Capture folder id so temporary chats can still use folder prompts
+			temporaryChatFolderId = $selectedFolder?.id ?? null;
 		}
 		await tick();
 
