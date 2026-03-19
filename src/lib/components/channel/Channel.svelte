@@ -141,6 +141,9 @@
 					messages[idx] = data;
 				}
 			} else if (type === 'message:delete') {
+				if (threadId !== null && data.id === threadId) {
+					threadId = null;
+				}
 				messages = messages.filter((message) => message.id !== data.id);
 			} else if (type === 'message:reply') {
 				const idx = messages.findIndex((message) => message.id === data.id);
