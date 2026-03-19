@@ -435,9 +435,7 @@ async def update_embedding_config(request: Request, form_data: EmbeddingModelUpd
 
 
 @router.get('/config/metadata_fields')
-async def get_file_metadata_fields(
-    request: Request, user=Depends(get_verified_user)
-):
+async def get_file_metadata_fields(request: Request, user=Depends(get_verified_user)):
     """
     Returns the list of configured file metadata field definitions.
     Available to all authenticated users so API consumers can discover
@@ -1026,7 +1024,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
     if form_data.FILE_METADATA_FIELDS is not None:
         # Validate each field definition has a 'key' string
         for idx, field in enumerate(form_data.FILE_METADATA_FIELDS):
-            if not isinstance(field, dict) or not field.get("key"):
+            if not isinstance(field, dict) or not field.get('key'):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"FILE_METADATA_FIELDS[{idx}] must be a dict with a 'key' field",
@@ -1569,17 +1567,15 @@ def _get_file_metadata_fields(request: Request, file_meta: dict) -> dict:
     consistent, human-readable values in both the vector DB and BM25
     enrichment text.
     """
-    metadata_fields = getattr(
-        request.app.state.config, "FILE_METADATA_FIELDS", []
-    ) or []
+    metadata_fields = getattr(request.app.state.config, 'FILE_METADATA_FIELDS', []) or []
     result = {}
     for field_def in metadata_fields:
-        key = field_def.get("key")
+        key = field_def.get('key')
         if key and file_meta.get(key) is not None:
             value = file_meta[key]
             # Convert lists to comma-separated strings for vector DB compatibility
             if isinstance(value, list):
-                result[key] = ", ".join(str(v) for v in value)
+                result[key] = ', '.join(str(v) for v in value)
             else:
                 result[key] = value
     return result
@@ -1617,9 +1613,7 @@ def process_file(
                 collection_name = f'file-{file.id}'
 
             # Extract config-driven metadata fields from file.meta
-            file_custom_metadata = _get_file_metadata_fields(
-                request, file.meta if file.meta else {}
-            )
+            file_custom_metadata = _get_file_metadata_fields(request, file.meta if file.meta else {})
 
             if form_data.content:
                 # Update the content in the file

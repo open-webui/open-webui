@@ -192,13 +192,11 @@ def get_enriched_texts(
     """
     # Pre-compute the set of custom embed field keys (excluding built-in ones
     # that are already handled explicitly below)
-    _BUILTIN_KEYS = {"name", "title", "headings", "source", "snippet"}
+    _BUILTIN_KEYS = {'name', 'title', 'headings', 'source', 'snippet'}
     custom_embed_keys = []
     if embed_metadata_fields:
         custom_embed_keys = [
-            f["key"]
-            for f in embed_metadata_fields
-            if f.get("embed") and f.get("key") not in _BUILTIN_KEYS
+            f['key'] for f in embed_metadata_fields if f.get('embed') and f.get('key') not in _BUILTIN_KEYS
         ]
 
     enriched_texts = []
@@ -285,9 +283,7 @@ async def query_doc_with_hybrid_search(
         ]
 
         bm25_texts = (
-            get_enriched_texts(collection_result, embed_metadata_fields)
-            if enable_enriched_texts
-            else original_texts
+            get_enriched_texts(collection_result, embed_metadata_fields) if enable_enriched_texts else original_texts
         )
 
         bm25_retriever = BM25Retriever.from_texts(
@@ -1181,9 +1177,7 @@ async def get_sources_from_items(
                                 r=r,
                                 hybrid_bm25_weight=hybrid_bm25_weight,
                                 enable_enriched_texts=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
-                                embed_metadata_fields=getattr(
-                                    request.app.state.config, "FILE_METADATA_FIELDS", None
-                                ),
+                                embed_metadata_fields=getattr(request.app.state.config, 'FILE_METADATA_FIELDS', None),
                             )
                         except Exception as e:
                             log.debug('Error when using hybrid search, using non hybrid search as fallback.')

@@ -240,23 +240,17 @@ def upload_file_handler(
         # so they propagate to vector DB during processing. Any remaining
         # metadata keys are stored under meta.data for backwards compatibility.
         file_meta = {
-            "name": name,
-            "content_type": (
-                file.content_type
-                if isinstance(file.content_type, str)
-                else None
-            ),
-            "size": len(contents),
+            'name': name,
+            'content_type': (file.content_type if isinstance(file.content_type, str) else None),
+            'size': len(contents),
         }
 
         # Extract known metadata fields to top-level meta
         remaining_metadata = dict(file_metadata)
         configured_keys = {
-            f.get("key")
-            for f in (
-                getattr(request.app.state.config, "FILE_METADATA_FIELDS", None) or []
-            )
-            if f.get("key")
+            f.get('key')
+            for f in (getattr(request.app.state.config, 'FILE_METADATA_FIELDS', None) or [])
+            if f.get('key')
         }
         for key in list(remaining_metadata.keys()):
             if key in configured_keys:
@@ -264,7 +258,7 @@ def upload_file_handler(
 
         # Store any remaining non-configured metadata under 'data' key
         if remaining_metadata:
-            file_meta["data"] = remaining_metadata
+            file_meta['data'] = remaining_metadata
 
         file_item = Files.insert_new_file(
             user.id,
@@ -438,7 +432,7 @@ async def delete_all_files(user=Depends(get_admin_user), db: Session = Depends(g
 
 # System-managed meta keys that cannot be overwritten via the metadata API.
 # These are set during file upload and managed internally.
-_PROTECTED_META_KEYS = {"name", "content_type", "size", "collection_name", "data"}
+_PROTECTED_META_KEYS = {'name', 'content_type', 'size', 'collection_name', 'data'}
 
 
 class FileMetadataUpdateForm(BaseModel):
@@ -463,7 +457,7 @@ class FileMetadataBatchUpdateForm(BaseModel):
     meta: dict
 
 
-@router.get("/{id}/meta")
+@router.get('/{id}/meta')
 async def get_file_metadata_by_id(
     id: str,
     user=Depends(get_verified_user),
@@ -482,12 +476,8 @@ async def get_file_metadata_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if (
-        file.user_id == user.id
-        or user.role == "admin"
-        or has_access_to_file(id, "read", user, db=db)
-    ):
-        return {"meta": file.meta or {}}
+    if file.user_id == user.id or user.role == 'admin' or has_access_to_file(id, 'read', user, db=db):
+        return {'meta': file.meta or {}}
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -503,7 +493,7 @@ def _reprocess_file_vectors(request: Request, file_id: str, user, db: Session):
     """
     try:
         # Delete and rebuild the file-level vector collection
-        VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file_id}")
+        VECTOR_DB_CLIENT.delete_collection(collection_name=f'file-{file_id}')
     except Exception:
         pass
 
@@ -515,16 +505,14 @@ def _reprocess_file_vectors(request: Request, file_id: str, user, db: Session):
             db=db,
         )
     except Exception as e:
-        log.warning(f"Failed to reprocess file {file_id}: {e}")
+        log.warning(f'Failed to reprocess file {file_id}: {e}')
         return
 
     # Propagate to all knowledge base collections referencing this file
     knowledges = Knowledges.get_knowledges_by_file_id(file_id, db=db)
     for knowledge in knowledges:
         try:
-            VECTOR_DB_CLIENT.delete(
-                collection_name=knowledge.id, filter={"file_id": file_id}
-            )
+            VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'file_id': file_id})
             process_file(
                 request,
                 ProcessFileForm(file_id=file_id, collection_name=knowledge.id),
@@ -532,13 +520,10 @@ def _reprocess_file_vectors(request: Request, file_id: str, user, db: Session):
                 db=db,
             )
         except Exception as e:
-            log.warning(
-                f"Failed to update knowledge {knowledge.id} after "
-                f"metadata change for file {file_id}: {e}"
-            )
+            log.warning(f'Failed to update knowledge {knowledge.id} after metadata change for file {file_id}: {e}')
 
 
-@router.post("/{id}/meta/update")
+@router.post('/{id}/meta/update')
 def update_file_metadata(
     request: Request,
     id: str,
@@ -563,19 +548,13 @@ def update_file_metadata(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if (
-        file.user_id == user.id
-        or user.role == "admin"
-        or has_access_to_file(id, "write", user, db=db)
-    ):
+    if file.user_id == user.id or user.role == 'admin' or has_access_to_file(id, 'write', user, db=db):
         # Reject attempts to overwrite system-managed keys
         protected = set(form_data.meta.keys()) & _PROTECTED_META_KEYS
         if protected:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(
-                    f"Cannot modify protected meta keys: {', '.join(sorted(protected))}"
-                ),
+                detail=ERROR_MESSAGES.DEFAULT(f'Cannot modify protected meta keys: {", ".join(sorted(protected))}'),
             )
 
         # Merge new metadata into existing, removing keys set to None
@@ -586,19 +565,17 @@ def update_file_metadata(
             else:
                 existing_meta[key] = value
 
-        updated_file = Files.update_file_metadata_by_id(
-            id, existing_meta, overwrite=True, db=db
-        )
+        updated_file = Files.update_file_metadata_by_id(id, existing_meta, overwrite=True, db=db)
         if not updated_file:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("Error updating file metadata"),
+                detail=ERROR_MESSAGES.DEFAULT('Error updating file metadata'),
             )
 
         # Re-process vector embeddings with the updated metadata
         _reprocess_file_vectors(request, id, user, db)
 
-        return {"meta": updated_file.meta}
+        return {'meta': updated_file.meta}
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -606,7 +583,7 @@ def update_file_metadata(
         )
 
 
-@router.post("/meta/batch/update")
+@router.post('/meta/batch/update')
 def batch_update_file_metadata(
     request: Request,
     form_data: FileMetadataBatchUpdateForm,
@@ -628,9 +605,7 @@ def batch_update_file_metadata(
     if protected:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(
-                f"Cannot modify protected meta keys: {', '.join(sorted(protected))}"
-            ),
+            detail=ERROR_MESSAGES.DEFAULT(f'Cannot modify protected meta keys: {", ".join(sorted(protected))}'),
         )
 
     updated = []
@@ -639,15 +614,11 @@ def batch_update_file_metadata(
     for file_id in form_data.file_ids:
         file = Files.get_file_by_id(file_id, db=db)
         if not file:
-            skipped.append({"id": file_id, "reason": "not_found"})
+            skipped.append({'id': file_id, 'reason': 'not_found'})
             continue
 
-        if not (
-            file.user_id == user.id
-            or user.role == "admin"
-            or has_access_to_file(file_id, "write", user, db=db)
-        ):
-            skipped.append({"id": file_id, "reason": "no_access"})
+        if not (file.user_id == user.id or user.role == 'admin' or has_access_to_file(file_id, 'write', user, db=db)):
+            skipped.append({'id': file_id, 'reason': 'no_access'})
             continue
 
         existing_meta = file.meta or {}
@@ -657,16 +628,14 @@ def batch_update_file_metadata(
             else:
                 existing_meta[key] = value
 
-        result = Files.update_file_metadata_by_id(
-            file_id, existing_meta, overwrite=True, db=db
-        )
+        result = Files.update_file_metadata_by_id(file_id, existing_meta, overwrite=True, db=db)
         if result:
             _reprocess_file_vectors(request, file_id, user, db)
             updated.append(file_id)
         else:
-            skipped.append({"id": file_id, "reason": "update_failed"})
+            skipped.append({'id': file_id, 'reason': 'update_failed'})
 
-    return {"updated": updated, "skipped": skipped}
+    return {'updated': updated, 'skipped': skipped}
 
 
 ############################

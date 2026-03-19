@@ -886,15 +886,20 @@ def get_source_context(
     # Pre-compute which metadata keys to include as source tag attributes.
     # Uses the "context" flag (not "embed" which controls BM25 enrichment).
     # Built-in keys (name, source) are already handled explicitly.
-    _BUILTIN_KEYS = {'name', 'source', 'file_id', 'created_by', 'hash',
-                     'embedding_config', 'headings', 'snippet', 'start_index'}
+    _BUILTIN_KEYS = {
+        'name',
+        'source',
+        'file_id',
+        'created_by',
+        'hash',
+        'embedding_config',
+        'headings',
+        'snippet',
+        'start_index',
+    }
     extra_attr_keys = []
     if metadata_fields:
-        extra_attr_keys = [
-            f['key']
-            for f in metadata_fields
-            if f.get('context') and f.get('key') not in _BUILTIN_KEYS
-        ]
+        extra_attr_keys = [f['key'] for f in metadata_fields if f.get('context') and f.get('key') not in _BUILTIN_KEYS]
 
     context_string = ''
     if source_ids is None:
@@ -946,9 +951,7 @@ def apply_source_context_to_messages(
     context = get_source_context(
         sources,
         include_content=include_content,
-        metadata_fields=getattr(
-            request.app.state.config, "FILE_METADATA_FIELDS", None
-        ),
+        metadata_fields=getattr(request.app.state.config, 'FILE_METADATA_FIELDS', None),
     )
 
     context = context.strip()
@@ -4168,9 +4171,7 @@ async def streaming_chat_response_handler(response, ctx):
                             # Build context: file sources with content,
                             # tool sources as citation markers only.
                             source_ids = {}
-                            _meta_fields = getattr(
-                                request.app.state.config, "FILE_METADATA_FIELDS", None
-                            )
+                            _meta_fields = getattr(request.app.state.config, 'FILE_METADATA_FIELDS', None)
                             source_context = get_source_context(
                                 metadata.get('sources', []),
                                 source_ids,

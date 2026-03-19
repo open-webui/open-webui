@@ -2910,13 +2910,13 @@ CHUNK_OVERLAP = PersistentConfig(
 # Example: FILE_METADATA_FIELDS='[{"key":"title","type":"string","embed":true,"context":true,"filter":true}]'
 
 _DEFAULT_FILE_METADATA_FIELDS = [
-    {"key": "title", "type": "string", "embed": True, "context": True, "filter": True},
-    {"key": "author", "type": "string", "embed": False, "context": True, "filter": True},
-    {"key": "source_url", "type": "string", "embed": False, "context": True, "filter": True},
-    {"key": "tags", "type": "list", "embed": True, "context": True, "filter": True},
-    {"key": "description", "type": "string", "embed": True, "context": False, "filter": True},
-    {"key": "published_at", "type": "integer", "embed": False, "context": False, "filter": True},
-    {"key": "language", "type": "string", "embed": False, "context": True, "filter": True},
+    {'key': 'title', 'type': 'string', 'embed': True, 'context': True, 'filter': True},
+    {'key': 'author', 'type': 'string', 'embed': False, 'context': True, 'filter': True},
+    {'key': 'source_url', 'type': 'string', 'embed': False, 'context': True, 'filter': True},
+    {'key': 'tags', 'type': 'list', 'embed': True, 'context': True, 'filter': True},
+    {'key': 'description', 'type': 'string', 'embed': True, 'context': False, 'filter': True},
+    {'key': 'published_at', 'type': 'integer', 'embed': False, 'context': False, 'filter': True},
+    {'key': 'language', 'type': 'string', 'embed': False, 'context': True, 'filter': True},
 ]
 
 
@@ -2936,9 +2936,9 @@ def _parse_file_metadata_fields(env_value: str) -> list:
 
 
 FILE_METADATA_FIELDS = PersistentConfig(
-    "FILE_METADATA_FIELDS",
-    "rag.file_metadata_fields",
-    _parse_file_metadata_fields(os.environ.get("FILE_METADATA_FIELDS", "")),
+    'FILE_METADATA_FIELDS',
+    'rag.file_metadata_fields',
+    _parse_file_metadata_fields(os.environ.get('FILE_METADATA_FIELDS', '')),
 )
 
 
