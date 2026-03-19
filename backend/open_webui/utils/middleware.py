@@ -2148,6 +2148,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     chat_id = metadata.get('chat_id', None)
     if chat_id and user:
         folder_id = Chats.get_chat_folder_id(chat_id, user.id)
+        if not folder_id and metadata.get('folder_id'):
+            folder_id = metadata.get('folder_id')
         if folder_id:
             folder = Folders.get_folder_by_id_and_user_id(folder_id, user.id)
 

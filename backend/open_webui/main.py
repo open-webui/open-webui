@@ -1707,6 +1707,7 @@ async def chat_completion(
         metadata = {
             'user_id': user.id,
             'chat_id': form_data.pop('chat_id', None),
+            'folder_id': form_data.pop('folder_id', None),
             'message_id': form_data.pop('id', None),
             'parent_message': form_data.pop('parent_message', None),
             'parent_message_id': form_data.pop('parent_id', None),
