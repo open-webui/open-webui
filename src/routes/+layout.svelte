@@ -53,6 +53,12 @@
 	import { getSessionUser, userSignOut } from '$lib/apis/auths';
 	import { getAllTags, getChatList } from '$lib/apis/chats';
 	import { chatCompletion } from '$lib/apis/openai';
+	import {
+		addOpenAIConnection,
+		removeOpenAIConnection,
+		addTerminalConnection,
+		removeTerminalConnection
+	} from '$lib/utils/connections';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
 	import { bestMatchingLanguage, displayFileHandler } from '$lib/utils';
@@ -692,6 +698,45 @@
 		}
 	};
 
+	const desktopEventHandler = async (event) => {
+		// Events that don't require auth
+		if (event.type === 'page:reload') {
+			location.reload();
+			return;
+		}
+
+		const token = localStorage.token;
+		if (!token) return;
+
+		// Only admins can modify system-level connections
+		if ($user?.role !== 'admin') return;
+
+		try {
+			if (event.type === 'connections:terminal') {
+				if (event.data.action === 'add') {
+					await addTerminalConnection(token, {
+						url: event.data.url,
+						key: event.data.key,
+						name: 'Local Open Terminal'
+					});
+				} else if (event.data.action === 'remove') {
+					await removeTerminalConnection(token, event.data.url);
+				}
+			} else if (event.type === 'connections:openai') {
+				if (event.data.action === 'add') {
+					await addOpenAIConnection(token, {
+						url: event.data.url,
+						key: event.data.key
+					});
+				} else if (event.data.action === 'remove') {
+					await removeOpenAIConnection(token, event.data.url);
+				}
+			}
+		} catch (e) {
+			console.error('Desktop connection update failed:', e);
+		}
+	};
+
 	const windowMessageEventHandler = async (event) => {
 		if (
 			!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:9999'].includes(
@@ -766,6 +811,11 @@
 				if (data) {
 					appData.set(data);
 				}
+			}
+
+			// Listen for desktop service lifecycle events (scalable protocol)
+			if (window.electronAPI.onEvent) {
+				window.electronAPI.onEvent(desktopEventHandler);
 			}
 		}
 
