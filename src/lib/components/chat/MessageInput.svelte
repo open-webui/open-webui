@@ -1665,7 +1665,7 @@
 											</Tooltip>
 										{/if}
 
-										{#each selectedFilterIds as filterId}
+										{#each selectedFilterIds as filterId (filterId)}
 											{@const filter = toggleFilters.find((f) => f.id === filterId)}
 											{#if filter}
 												<Tooltip content={filter?.name} placement="top">
