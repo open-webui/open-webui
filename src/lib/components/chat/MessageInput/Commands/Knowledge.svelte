@@ -138,19 +138,6 @@
 		await tick();
 	});
 
-	const onKeyDown = (e) => {
-		if (e.key === 'Enter') {
-			e.preventDefault();
-			select();
-		}
-	};
-	onMount(() => {
-		window.addEventListener('keydown', onKeyDown);
-	});
-
-	onDestroy(() => {
-		window.removeEventListener('keydown', onKeyDown);
-	});
 </script>
 
 {#if filteredItems.length > 0 || query.startsWith('http')}
