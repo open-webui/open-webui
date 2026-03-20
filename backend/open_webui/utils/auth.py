@@ -145,7 +145,7 @@ def get_license_data(app, key):
             pn, pt = nt(pb)
 
             data = json.loads(aesgcm.decrypt(pn, pt, None).decode())
-            if not data.get("exp") and data.get("exp") < datetime.now().date():
+            if not data.get("exp") or data.get("exp") < datetime.now().date():
                 return False
 
             data_handler(data)
