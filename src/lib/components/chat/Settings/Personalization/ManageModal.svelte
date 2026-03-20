@@ -225,7 +225,7 @@
 											<Tooltip content={$i18n.t('Edit')}>
 												<button
 													class="self-center w-fit text-sm p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-													on:click={() => {
+													on:click|stopPropagation={() => {
 														selectedMemory = memory;
 														showEditMemoryModal = true;
 													}}
@@ -237,7 +237,7 @@
 											<Tooltip content={$i18n.t('Delete')}>
 												<button
 													class="self-center w-fit text-sm p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-													on:click={async () => {
+													on:click|stopPropagation={async () => {
 														const res = await deleteMemoryById(
 															localStorage.token,
 															memory.id
