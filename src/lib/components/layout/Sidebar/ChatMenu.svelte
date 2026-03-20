@@ -301,6 +301,7 @@
 					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
 					on:click={() => {
 						shareHandler();
+						show = false;
 					}}
 				>
 					<Share strokeWidth="1.5" />
@@ -324,6 +325,7 @@
 						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
 						on:click={() => {
 							downloadJSONExport();
+							show = false;
 						}}
 					>
 						<div class="flex items-center line-clamp-1">{$i18n.t('Export chat (.json)')}</div>
@@ -335,6 +337,7 @@
 					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
 					on:click={() => {
 						downloadTxt();
+						show = false;
 					}}
 				>
 					<div class="flex items-center line-clamp-1">{$i18n.t('Plain text (.txt)')}</div>
@@ -345,6 +348,7 @@
 					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
 					on:click={() => {
 						downloadPdf();
+						show = false;
 					}}
 				>
 					<div class="flex items-center line-clamp-1">{$i18n.t('PDF document (.pdf)')}</div>
@@ -356,6 +360,7 @@
 				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
 				on:click={() => {
 					renameHandler();
+					show = false;
 				}}
 			>
 				<Pencil strokeWidth="1.5" />
@@ -369,6 +374,7 @@
 				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
 				on:click={() => {
 					pinHandler();
+					show = false;
 				}}
 			>
 				{#if pinned}
@@ -385,6 +391,7 @@
 				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
 				on:click={() => {
 					cloneChatHandler();
+					show = false;
 				}}
 			>
 				<DocumentDuplicate strokeWidth="1.5" />
@@ -408,6 +415,7 @@
 							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl overflow-hidden w-full"
 							on:click={() => {
 								moveChatHandler(chatId, folder.id);
+								show = false;
 							}}
 						>
 							<div class="shrink-0">
@@ -425,6 +433,7 @@
 				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
 				on:click={() => {
 					archiveChatHandler();
+					show = false;
 				}}
 			>
 				<ArchiveBox strokeWidth="1.5" />
@@ -436,6 +445,7 @@
 				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
 				on:click={() => {
 					deleteHandler();
+					show = false;
 				}}
 			>
 				<GarbageBin strokeWidth="1.5" />
