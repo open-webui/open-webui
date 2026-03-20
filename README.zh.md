@@ -54,7 +54,7 @@
 
 - 📚 **本地 RAG 集成**：支持多种向量数据库（共 9 种）和内容提取引擎（Tika、Docling、Document Intelligence、Mistral OCR、外部加载器）。直接将文档加载到聊天中或添加到文档库，在查询前使用 `#` 命令即可轻松访问。
 
-- 🔍 **用于 RAG 的 Web 搜索**：使用包括 `SearXNG`、`Google PSE`、`Brave Search`、`Tavily`、`Perplexity`、`DuckDuckGo`、`Jina` 等在内的 15+ 个提供商执行 Web 搜索，并将结果直接注入聊天体验。
+- 🔍 **用于 RAG 的 Web 搜索**：使用包括 `SearXNG`、`Google PSE`、`Brave Search`、`Tavily`、`Perplexity`、`DuckDuckGo`、`Jina` 等在内的多个提供商执行 Web 搜索，并将结果直接注入聊天体验。
 
 - 🌐 **网页浏览能力**：使用 `#` 命令后跟 URL，将网站无缝集成到您的聊天体验中。
 
