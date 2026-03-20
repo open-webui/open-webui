@@ -33,7 +33,7 @@ def upgrade() -> None:
     inspector = Inspector.from_engine(conn)
 
     for table, column in TABLES:
-        pk = inspector.get_pk_constraint(table)
+        pk = inspector.get_pk_constraint(table) or {}
         if column in (pk.get("constrained_columns") or []):
             continue
 
@@ -46,6 +46,13 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    conn = op.get_bind()
+    inspector = Inspector.from_engine(conn)
+
     for table, column in TABLES:
+        pk = inspector.get_pk_constraint(table) or {}
+        if column not in (pk.get("constrained_columns") or []):
+            continue
+
         with op.batch_alter_table(table, schema=None) as batch_op:
             batch_op.drop_constraint(f"pk_{column}", type_="primary")
