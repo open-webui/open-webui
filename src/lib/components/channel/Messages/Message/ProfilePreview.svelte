@@ -15,18 +15,22 @@
 	let openPreview = false;
 </script>
 
-<LinkPreview.Root openDelay={0} closeDelay={200} bind:open={openPreview}>
-	<LinkPreview.Trigger class="flex items-center">
-		<button
-			type="button"
-			class=" cursor-pointer no-underline! font-normal!"
-			on:click={() => {
-				openPreview = !openPreview;
-			}}
-		>
-			<slot />
-		</button>
-	</LinkPreview.Trigger>
+{#if user?.role === 'webhook'}
+	<slot />
+{:else}
+	<LinkPreview.Root openDelay={0} closeDelay={200} bind:open={openPreview}>
+		<LinkPreview.Trigger class="flex items-center">
+			<button
+				type="button"
+				class=" cursor-pointer no-underline! font-normal!"
+				on:click={() => {
+					openPreview = !openPreview;
+				}}
+			>
+				<slot />
+			</button>
+		</LinkPreview.Trigger>
 
-	<UserStatusLinkPreview id={user?.id} {side} {align} {sideOffset} />
-</LinkPreview.Root>
+		<UserStatusLinkPreview id={user?.id} {side} {align} {sideOffset} />
+	</LinkPreview.Root>
+{/if}
