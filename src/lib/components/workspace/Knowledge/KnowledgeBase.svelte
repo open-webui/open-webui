@@ -1109,6 +1109,46 @@
 										{/if}
 									</div>
 
+									<!-- File metadata bar: shows non-system metadata fields -->
+									{#if selectedFile?.meta}
+										{@const systemKeys = [
+											'name',
+											'content_type',
+											'size',
+											'collection_name',
+											'data'
+										]}
+										{@const metaEntries = Object.entries(selectedFile.meta).filter(
+											([key, value]) => !systemKeys.includes(key) && value != null && value !== ''
+										)}
+										{#if metaEntries.length > 0}
+											<div
+												class="shrink-0 flex flex-wrap gap-x-3 gap-y-1 px-3 pb-2 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-850"
+											>
+												{#each metaEntries as [key, value]}
+													<span>
+														<span class="font-medium text-gray-600 dark:text-gray-300"
+															>{key.replace(/_/g, ' ')}:</span
+														>
+														{#if typeof value === 'string' && (value.startsWith('http://') || value.startsWith('https://'))}
+															<a
+																href={value}
+																target="_blank"
+																rel="noopener noreferrer"
+																class="underline hover:text-gray-700 dark:hover:text-gray-200"
+																>{value}</a
+															>
+														{:else if Array.isArray(value)}
+															{value.join(', ')}
+														{:else}
+															{value}
+														{/if}
+													</span>
+												{/each}
+											</div>
+										{/if}
+									{/if}
+
 									{#key selectedFile.id}
 										<textarea
 											class="w-full h-full text-sm outline-none resize-none px-3 py-2"

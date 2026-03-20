@@ -234,6 +234,32 @@ def upload_file_handler(
             },
         )
 
+        # Build file meta: start with system fields, then merge in any
+        # user-provided metadata fields (e.g. title, author, tags, source_url).
+        # Configured FILE_METADATA_FIELDS are stored at the top level of meta
+        # so they propagate to vector DB during processing. Any remaining
+        # metadata keys are stored under meta.data for backwards compatibility.
+        file_meta = {
+            'name': name,
+            'content_type': (file.content_type if isinstance(file.content_type, str) else None),
+            'size': len(contents),
+        }
+
+        # Extract known metadata fields to top-level meta
+        remaining_metadata = dict(file_metadata)
+        configured_keys = {
+            f.get('key')
+            for f in (getattr(request.app.state.config, 'FILE_METADATA_FIELDS', None) or [])
+            if f.get('key')
+        }
+        for key in list(remaining_metadata.keys()):
+            if key in configured_keys:
+                file_meta[key] = remaining_metadata.pop(key)
+
+        # Store any remaining non-configured metadata under 'data' key
+        if remaining_metadata:
+            file_meta['data'] = remaining_metadata
+
         file_item = Files.insert_new_file(
             user.id,
             FileForm(
@@ -244,12 +270,7 @@ def upload_file_handler(
                     'data': {
                         **({'status': 'pending'} if process else {}),
                     },
-                    'meta': {
-                        'name': name,
-                        'content_type': (file.content_type if isinstance(file.content_type, str) else None),
-                        'size': len(contents),
-                        'data': file_metadata,
-                    },
+                    'meta': file_meta,
                 }
             ),
             db=db,
@@ -402,6 +423,219 @@ async def delete_all_files(user=Depends(get_admin_user), db: Session = Depends(g
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT('Error deleting files'),
         )
+
+
+############################
+# File Metadata API
+############################
+
+
+# System-managed meta keys that cannot be overwritten via the metadata API.
+# These are set during file upload and managed internally.
+_PROTECTED_META_KEYS = {'name', 'content_type', 'size', 'collection_name', 'data'}
+
+
+class FileMetadataUpdateForm(BaseModel):
+    """
+    Request body for updating file metadata fields.
+    Accepts any key-value pairs that correspond to configured
+    FILE_METADATA_FIELDS (e.g. title, author, tags, source_url).
+    Unknown keys are stored but not used in embedding/filtering.
+    Protected system keys (name, content_type, size) cannot be overwritten.
+    """
+
+    meta: dict
+
+
+class FileMetadataBatchUpdateForm(BaseModel):
+    """
+    Request body for batch updating metadata across multiple files.
+    The provided meta dict is merged into each file's existing meta.
+    """
+
+    file_ids: list[str]
+    meta: dict
+
+
+@router.get('/{id}/meta')
+async def get_file_metadata_by_id(
+    id: str,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    """
+    Get the metadata for a specific file. Returns the full meta dict
+    including both system fields (name, content_type, size) and
+    user-defined metadata fields (title, author, tags, etc.).
+    """
+    file = Files.get_file_by_id(id, db=db)
+
+    if not file:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if file.user_id == user.id or user.role == 'admin' or has_access_to_file(id, 'read', user, db=db):
+        return {'meta': file.meta or {}}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+def _reprocess_file_vectors(request: Request, file_id: str, user, db: Session):
+    """
+    Re-process a file's vector DB embeddings after metadata changes.
+    Rebuilds the file-level collection and propagates to all knowledge
+    bases that reference this file.
+    """
+    try:
+        # Delete and rebuild the file-level vector collection
+        VECTOR_DB_CLIENT.delete_collection(collection_name=f'file-{file_id}')
+    except Exception:
+        pass
+
+    try:
+        process_file(
+            request,
+            ProcessFileForm(file_id=file_id),
+            user=user,
+            db=db,
+        )
+    except Exception as e:
+        log.warning(f'Failed to reprocess file {file_id}: {e}')
+        return
+
+    # Propagate to all knowledge base collections referencing this file
+    knowledges = Knowledges.get_knowledges_by_file_id(file_id, db=db)
+    for knowledge in knowledges:
+        try:
+            VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'file_id': file_id})
+            process_file(
+                request,
+                ProcessFileForm(file_id=file_id, collection_name=knowledge.id),
+                user=user,
+                db=db,
+            )
+        except Exception as e:
+            log.warning(f'Failed to update knowledge {knowledge.id} after metadata change for file {file_id}: {e}')
+
+
+@router.post('/{id}/meta/update')
+def update_file_metadata(
+    request: Request,
+    id: str,
+    form_data: FileMetadataUpdateForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    """
+    Update metadata fields for a specific file. The provided meta dict
+    is merged into the file's existing meta (existing keys are preserved
+    unless explicitly overwritten). Set a key to null to remove it.
+
+    After updating, the file's vector DB embeddings are automatically
+    re-processed so the new metadata is available for RAG retrieval
+    and BM25 hybrid search.
+    """
+    file = Files.get_file_by_id(id, db=db)
+
+    if not file:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if file.user_id == user.id or user.role == 'admin' or has_access_to_file(id, 'write', user, db=db):
+        # Reject attempts to overwrite system-managed keys
+        protected = set(form_data.meta.keys()) & _PROTECTED_META_KEYS
+        if protected:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT(f'Cannot modify protected meta keys: {", ".join(sorted(protected))}'),
+            )
+
+        # Merge new metadata into existing, removing keys set to None
+        existing_meta = file.meta or {}
+        for key, value in form_data.meta.items():
+            if value is None:
+                existing_meta.pop(key, None)
+            else:
+                existing_meta[key] = value
+
+        updated_file = Files.update_file_metadata_by_id(id, existing_meta, overwrite=True, db=db)
+        if not updated_file:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT('Error updating file metadata'),
+            )
+
+        # Re-process vector embeddings with the updated metadata
+        _reprocess_file_vectors(request, id, user, db)
+
+        return {'meta': updated_file.meta}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+@router.post('/meta/batch/update')
+def batch_update_file_metadata(
+    request: Request,
+    form_data: FileMetadataBatchUpdateForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    """
+    Batch update metadata across multiple files. The provided meta dict
+    is merged into each file's existing meta. Only files the user has
+    write access to will be updated; inaccessible files are skipped.
+
+    After updating, each file's vector DB embeddings are automatically
+    re-processed so the new metadata is available for RAG retrieval.
+
+    Returns the list of successfully updated file IDs and any skipped ones.
+    """
+    # Reject attempts to overwrite system-managed keys
+    protected = set(form_data.meta.keys()) & _PROTECTED_META_KEYS
+    if protected:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(f'Cannot modify protected meta keys: {", ".join(sorted(protected))}'),
+        )
+
+    updated = []
+    skipped = []
+
+    for file_id in form_data.file_ids:
+        file = Files.get_file_by_id(file_id, db=db)
+        if not file:
+            skipped.append({'id': file_id, 'reason': 'not_found'})
+            continue
+
+        if not (file.user_id == user.id or user.role == 'admin' or has_access_to_file(file_id, 'write', user, db=db)):
+            skipped.append({'id': file_id, 'reason': 'no_access'})
+            continue
+
+        existing_meta = file.meta or {}
+        for key, value in form_data.meta.items():
+            if value is None:
+                existing_meta.pop(key, None)
+            else:
+                existing_meta[key] = value
+
+        result = Files.update_file_metadata_by_id(file_id, existing_meta, overwrite=True, db=db)
+        if result:
+            _reprocess_file_vectors(request, file_id, user, db)
+            updated.append(file_id)
+        else:
+            skipped.append({'id': file_id, 'reason': 'update_failed'})
+
+    return {'updated': updated, 'skipped': skipped}
 
 
 ############################

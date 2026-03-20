@@ -355,18 +355,27 @@ class FilesTable:
             except Exception as e:
                 return None
 
-    def update_file_metadata_by_id(self, id: str, meta: dict, db: Optional[Session] = None) -> Optional[FileModel]:
+    def update_file_metadata_by_id(
+        self, id: str, meta: dict, overwrite: bool = False, db: Optional[Session] = None
+    ) -> Optional[FileModel]:
+        """
+        Update file metadata. By default merges the provided meta dict
+        into existing metadata. If overwrite=True, replaces the entire
+        meta dict (useful when the caller has already performed the merge
+        and needs to support key deletion).
+        """
         with get_db_context(db) as db:
             try:
                 file = db.query(File).filter_by(id=id).first()
-                file.meta = {**(file.meta if file.meta else {}), **meta}
+                if overwrite:
+                    file.meta = meta
+                else:
+                    file.meta = {**(file.meta if file.meta else {}), **meta}
                 file.updated_at = int(time.time())
                 db.commit()
                 return FileModel.model_validate(file)
             except Exception:
                 return None
-
-                return False
 
     def delete_file_by_id(self, id: str, db: Optional[Session] = None) -> bool:
         with get_db_context(db) as db:

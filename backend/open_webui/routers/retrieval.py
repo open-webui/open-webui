@@ -434,6 +434,25 @@ async def update_embedding_config(request: Request, form_data: EmbeddingModelUpd
         )
 
 
+@router.get('/config/metadata_fields')
+async def get_file_metadata_fields(request: Request, user=Depends(get_verified_user)):
+    """
+    Returns the list of configured file metadata field definitions.
+    Available to all authenticated users so API consumers can discover
+    which metadata fields are accepted when uploading or updating files.
+
+    Each field definition includes:
+    - key: The metadata field name (e.g. "title", "author", "tags")
+    - type: Value type ("string", "integer", "list", "boolean")
+    - embed: Whether this field is included in BM25 hybrid search enrichment
+    - context: Whether this field is included in <source> tags sent to the LLM
+    - filter: Whether this field can be used for filtering in search queries
+    """
+    return {
+        'fields': request.app.state.config.FILE_METADATA_FIELDS or [],
+    }
+
+
 @router.get('/config')
 async def get_rag_config(request: Request, user=Depends(get_admin_user)):
     return {
@@ -493,6 +512,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         'CHUNK_SIZE': request.app.state.config.CHUNK_SIZE,
         'CHUNK_MIN_SIZE_TARGET': request.app.state.config.CHUNK_MIN_SIZE_TARGET,
         'CHUNK_OVERLAP': request.app.state.config.CHUNK_OVERLAP,
+        # File metadata fields configuration
+        'FILE_METADATA_FIELDS': request.app.state.config.FILE_METADATA_FIELDS,
         # File upload settings
         'FILE_MAX_SIZE': request.app.state.config.FILE_MAX_SIZE,
         'FILE_MAX_COUNT': request.app.state.config.FILE_MAX_COUNT,
@@ -701,6 +722,9 @@ class ConfigForm(BaseModel):
     CHUNK_SIZE: Optional[int] = None
     CHUNK_MIN_SIZE_TARGET: Optional[int] = None
     CHUNK_OVERLAP: Optional[int] = None
+
+    # File metadata fields configuration
+    FILE_METADATA_FIELDS: Optional[List[dict]] = None
 
     # File upload settings
     FILE_MAX_SIZE: Optional[Union[int, str]] = None
@@ -996,6 +1020,17 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         form_data.CHUNK_OVERLAP if form_data.CHUNK_OVERLAP is not None else request.app.state.config.CHUNK_OVERLAP
     )
 
+    # File metadata fields configuration
+    if form_data.FILE_METADATA_FIELDS is not None:
+        # Validate each field definition has a 'key' string
+        for idx, field in enumerate(form_data.FILE_METADATA_FIELDS):
+            if not isinstance(field, dict) or not field.get('key'):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"FILE_METADATA_FIELDS[{idx}] must be a dict with a 'key' field",
+                )
+        request.app.state.config.FILE_METADATA_FIELDS = form_data.FILE_METADATA_FIELDS
+
     # File upload settings
     # Empty string means "clear to None" (unlimited/no compression),
     # None means "don't change", int means "set to this value"
@@ -1156,6 +1191,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         'CHUNK_MIN_SIZE_TARGET': request.app.state.config.CHUNK_MIN_SIZE_TARGET,
         'ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER': request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER,
         'CHUNK_OVERLAP': request.app.state.config.CHUNK_OVERLAP,
+        # File metadata fields configuration
+        'FILE_METADATA_FIELDS': request.app.state.config.FILE_METADATA_FIELDS,
         # File upload settings
         'FILE_MAX_SIZE': request.app.state.config.FILE_MAX_SIZE,
         'FILE_MAX_COUNT': request.app.state.config.FILE_MAX_COUNT,
@@ -1517,6 +1554,33 @@ def save_docs_to_vector_db(
         raise e
 
 
+def _get_file_metadata_fields(request: Request, file_meta: dict) -> dict:
+    """
+    Extract config-driven metadata fields from file.meta for inclusion
+    in vector DB Document metadata. Only includes fields that are defined
+    in FILE_METADATA_FIELDS config and have non-None values in file.meta.
+
+    Note: List values (e.g. tags) are converted to comma-separated strings
+    because most vector DB backends (Chroma, Milvus, PGVector, etc.) call
+    process_metadata() which converts lists via str(), producing ugly
+    "['a', 'b']" representations. Pre-converting to "a, b" ensures
+    consistent, human-readable values in both the vector DB and BM25
+    enrichment text.
+    """
+    metadata_fields = getattr(request.app.state.config, 'FILE_METADATA_FIELDS', []) or []
+    result = {}
+    for field_def in metadata_fields:
+        key = field_def.get('key')
+        if key and file_meta.get(key) is not None:
+            value = file_meta[key]
+            # Convert lists to comma-separated strings for vector DB compatibility
+            if isinstance(value, list):
+                result[key] = ', '.join(str(v) for v in value)
+            else:
+                result[key] = value
+    return result
+
+
 class ProcessFileForm(BaseModel):
     file_id: str
     content: Optional[str] = None
@@ -1548,6 +1612,9 @@ def process_file(
             if collection_name is None:
                 collection_name = f'file-{file.id}'
 
+            # Extract config-driven metadata fields from file.meta
+            file_custom_metadata = _get_file_metadata_fields(request, file.meta if file.meta else {})
+
             if form_data.content:
                 # Update the content in the file
                 # Usage: /files/{file_id}/data/content/update, /files/ (audio file upload pipeline)
@@ -1564,6 +1631,7 @@ def process_file(
                         page_content=form_data.content.replace('<br/>', '\n'),
                         metadata={
                             **file.meta,
+                            **file_custom_metadata,
                             'name': file.filename,
                             'created_by': file.user_id,
                             'file_id': file.id,
@@ -1593,6 +1661,7 @@ def process_file(
                             page_content=file.data.get('content', ''),
                             metadata={
                                 **file.meta,
+                                **file_custom_metadata,
                                 'name': file.filename,
                                 'created_by': file.user_id,
                                 'file_id': file.id,
@@ -1648,6 +1717,7 @@ def process_file(
                             page_content=doc.page_content,
                             metadata={
                                 **filter_metadata(doc.metadata),
+                                **file_custom_metadata,
                                 'name': file.filename,
                                 'created_by': file.user_id,
                                 'file_id': file.id,
@@ -1662,6 +1732,7 @@ def process_file(
                             page_content=file.data.get('content', ''),
                             metadata={
                                 **file.meta,
+                                **file_custom_metadata,
                                 'name': file.filename,
                                 'created_by': file.user_id,
                                 'file_id': file.id,
@@ -2396,6 +2467,7 @@ async def query_doc_handler(
                     if form_data.hybrid_bm25_weight
                     else request.app.state.config.HYBRID_BM25_WEIGHT
                 ),
+                embed_metadata_fields=request.app.state.config.FILE_METADATA_FIELDS,
                 user=user,
             )
         else:
@@ -2461,6 +2533,7 @@ async def query_collection_handler(
                     if form_data.enable_enriched_texts is not None
                     else request.app.state.config.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS
                 ),
+                embed_metadata_fields=request.app.state.config.FILE_METADATA_FIELDS,
             )
         else:
             return await query_collection(
