@@ -3,7 +3,7 @@
 
 	import { onMount, getContext, tick } from 'svelte';
 	import { models, tools, functions, user } from '$lib/stores';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_URL, DEFAULT_CAPABILITIES } from '$lib/constants';
 
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
@@ -95,18 +95,7 @@
 	let filterIds = [];
 	let defaultFilterIds = [];
 
-	let capabilities = {
-		file_context: true,
-		vision: true,
-		file_upload: true,
-		web_search: true,
-		image_generation: true,
-		code_interpreter: true,
-		citations: true,
-		status_updates: true,
-		usage: undefined,
-		builtin_tools: true
-	};
+	let capabilities = { ...DEFAULT_CAPABILITIES };
 	let defaultFeatureIds = [];
 	let builtinTools = {};
 
@@ -229,7 +218,11 @@
 		}
 
 		info.params.system = system.trim() === '' ? null : system;
-		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
+		info.params.stop = params.stop
+			? (typeof params.stop === 'string' ? params.stop.split(',') : params.stop).filter((s) =>
+					s.trim()
+				)
+			: null;
 		Object.keys(info.params).forEach((key) => {
 			if (info.params[key] === '' || info.params[key] === null) {
 				delete info.params[key];
@@ -342,14 +335,20 @@
 		bind:accessGrants
 		accessRoles={preset ? ['read', 'write'] : ['read']}
 		share={$user?.permissions?.sharing?.models || $user?.role === 'admin'}
-		sharePublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin' || edit}
+		sharePublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
+		shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) || $user?.role === 'admin'}
 		onChange={async () => {
 			if (edit && model?.id) {
 				try {
-					await updateModelAccessGrants(localStorage.token, model.id, accessGrants);
+					await updateModelAccessGrants(
+						localStorage.token,
+						model.id,
+						model.name ?? name,
+						accessGrants
+					);
 					toast.success($i18n.t('Saved'));
 				} catch (error) {
-					toast.error(`${error}`);
+					toast.error(error?.detail ?? `${error}`);
 				}
 			}
 		}}
@@ -466,15 +465,16 @@
 				}}
 			>
 				<div class="w-full px-1">
-					<div class="flex flex-col md:flex-row gap-4 w-full">
-						<div class="self-center md:self-start flex justify-center my-2 shrink-0">
+					<div class="flex flex-row gap-4 md:gap-6 w-full">
+						<div class="self-start flex justify-center my-2 shrink-0">
 							<div class="self-center">
 								<button
-									class="rounded-xl flex shrink-0 items-center {info.meta.profile_image_url !==
+									class="rounded-2xl flex shrink-0 items-center {info.meta.profile_image_url !==
 									`${WEBUI_BASE_URL}/static/favicon.png`
 										? 'bg-transparent'
 										: 'bg-white'} shadow-xl group relative"
 									type="button"
+									aria-label={$i18n.t('Upload profile image')}
 									on:click={() => {
 										filesInputElement.click();
 									}}
@@ -483,13 +483,13 @@
 										<img
 											src={info.meta.profile_image_url}
 											alt="model profile"
-											class="rounded-xl size-60 object-cover shrink-0"
+											class="rounded-xl size-20 md:size-48 object-cover shrink-0"
 										/>
 									{:else}
 										<img
 											src="{WEBUI_BASE_URL}/static/favicon.png"
 											alt="model profile"
-											class=" rounded-xl size-60 object-cover shrink-0"
+											class=" rounded-xl size-20 md:size-48 object-cover shrink-0"
 										/>
 									{/if}
 
@@ -538,7 +538,7 @@
 								<div class=" flex flex-col w-full">
 									<div class="flex-1 w-full">
 										<input
-											class="text-4xl font-medium w-full bg-transparent outline-hidden"
+											class="text-3xl w-full bg-transparent outline-hidden"
 											placeholder={$i18n.t('Model Name')}
 											bind:value={name}
 											required
@@ -583,7 +583,7 @@
 
 									<div>
 										<select
-											class="dark:bg-gray-900 text-sm w-full bg-transparent outline-hidden"
+											class="text-sm w-full bg-transparent outline-hidden"
 											placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
 											bind:value={info.base_model_id}
 											required

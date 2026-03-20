@@ -83,7 +83,7 @@
 	}
 
 	const setFilteredItems = () => {
-		filteredItems = functions
+		filteredItems = (functions ?? [])
 			.filter(
 				(f) =>
 					(selectedType !== '' ? f.type === selectedType : true) &&
@@ -340,7 +340,7 @@
 							}}
 						>
 							<div
-								class=" px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
+								class="cursor-pointer px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
 							>
 								<Plus className="size-3" strokeWidth="2.5" />
 
@@ -681,7 +681,8 @@
 				}
 
 				toast.success($i18n.t('Functions imported successfully'));
-				functions.set(await getFunctions(localStorage.token));
+				functions = await getFunctionList(localStorage.token);
+				_functions.set(await getFunctions(localStorage.token));
 				models.set(
 					await getModels(
 						localStorage.token,
@@ -690,6 +691,8 @@
 						true
 					)
 				);
+				importFiles = null;
+				functionsImportInputElement.value = '';
 			};
 
 			reader.readAsText(importFiles[0]);

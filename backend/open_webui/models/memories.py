@@ -13,7 +13,7 @@ from sqlalchemy import BigInteger, Column, String, Text
 
 
 class Memory(Base):
-    __tablename__ = "memory"
+    __tablename__ = 'memory'
 
     id = Column(String, primary_key=True, unique=True)
     user_id = Column(String)
@@ -49,11 +49,11 @@ class MemoriesTable:
 
             memory = MemoryModel(
                 **{
-                    "id": id,
-                    "user_id": user_id,
-                    "content": content,
-                    "created_at": int(time.time()),
-                    "updated_at": int(time.time()),
+                    'id': id,
+                    'user_id': user_id,
+                    'content': content,
+                    'created_at': int(time.time()),
+                    'updated_at': int(time.time()),
                 }
             )
             result = Memory(**memory.model_dump())
@@ -95,9 +95,7 @@ class MemoriesTable:
             except Exception:
                 return None
 
-    def get_memories_by_user_id(
-        self, user_id: str, db: Optional[Session] = None
-    ) -> list[MemoryModel]:
+    def get_memories_by_user_id(self, user_id: str, db: Optional[Session] = None) -> list[MemoryModel]:
         with get_db_context(db) as db:
             try:
                 memories = db.query(Memory).filter_by(user_id=user_id).all()
@@ -105,9 +103,7 @@ class MemoriesTable:
             except Exception:
                 return None
 
-    def get_memory_by_id(
-        self, id: str, db: Optional[Session] = None
-    ) -> Optional[MemoryModel]:
+    def get_memory_by_id(self, id: str, db: Optional[Session] = None) -> Optional[MemoryModel]:
         with get_db_context(db) as db:
             try:
                 memory = db.get(Memory, id)
@@ -126,9 +122,7 @@ class MemoriesTable:
             except Exception:
                 return False
 
-    def delete_memories_by_user_id(
-        self, user_id: str, db: Optional[Session] = None
-    ) -> bool:
+    def delete_memories_by_user_id(self, user_id: str, db: Optional[Session] = None) -> bool:
         with get_db_context(db) as db:
             try:
                 db.query(Memory).filter_by(user_id=user_id).delete()
@@ -138,9 +132,7 @@ class MemoriesTable:
             except Exception:
                 return False
 
-    def delete_memory_by_id_and_user_id(
-        self, id: str, user_id: str, db: Optional[Session] = None
-    ) -> bool:
+    def delete_memory_by_id_and_user_id(self, id: str, user_id: str, db: Optional[Session] = None) -> bool:
         with get_db_context(db) as db:
             try:
                 memory = db.get(Memory, id)

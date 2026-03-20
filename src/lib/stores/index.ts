@@ -3,6 +3,7 @@ import { type Writable, writable } from 'svelte/store';
 import type { ModelConfig } from '$lib/apis';
 import type { Banner } from '$lib/types';
 import type { Socket } from 'socket.io-client';
+import type { AudioQueue } from '$lib/utils/audio';
 
 import emojiShortCodes from '$lib/emoji-shortcodes.json';
 
@@ -63,19 +64,22 @@ export const selectedFolder = writable(null);
 
 export const models: Writable<Model[]> = writable([]);
 
-export const prompts: Writable<null | Prompt[]> = writable(null);
 export const knowledge: Writable<null | Document[]> = writable(null);
 export const tools = writable(null);
 export const skills = writable(null);
 export const functions = writable(null);
 
 export const toolServers = writable([]);
+export const terminalServers = writable([]);
+
+// Persistent Pyodide worker for code interpreter FS
+export const pyodideWorker: Writable<Worker | null> = writable(null);
 
 export const banners: Writable<Banner[]> = writable([]);
 
 export const settings: Writable<Settings> = writable({});
 
-export const audioQueue = writable(null);
+export const audioQueue = writable<AudioQueue | null>(null);
 
 export const sidebarWidth = writable(260);
 
@@ -91,6 +95,10 @@ export const showEmbeds = writable(false);
 export const showOverview = writable(false);
 export const showArtifacts = writable(false);
 export const showCallOverlay = writable(false);
+export const showFileNav = writable(false);
+export const showFileNavPath: Writable<string | null> = writable(null);
+export const showFileNavDir: Writable<string | null> = writable(null);
+export const selectedTerminalId: Writable<string | null> = writable(null);
 
 export const artifactCode = writable(null);
 export const artifactContents = writable(null);
@@ -205,6 +213,7 @@ type Settings = {
 	splitLargeDeltas?: boolean;
 	chatDirection?: 'LTR' | 'RTL' | 'auto';
 	ctrlEnterToSend?: boolean;
+	renderMarkdownInPreviews?: boolean;
 
 	system?: string;
 	seed?: number;
@@ -239,14 +248,6 @@ type TitleSettings = {
 	prompt?: string;
 };
 
-type Prompt = {
-	command: string;
-	user_id: string;
-	title: string;
-	content: string;
-	timestamp: number;
-};
-
 type Document = {
 	collection_name: string;
 	filename: string;
@@ -274,6 +275,7 @@ type Config = {
 		enable_image_generation: boolean;
 		enable_admin_export: boolean;
 		enable_admin_chat_access: boolean;
+		enable_admin_analytics: boolean;
 		enable_community_sharing: boolean;
 		enable_memories: boolean;
 		enable_autocomplete_generation: boolean;

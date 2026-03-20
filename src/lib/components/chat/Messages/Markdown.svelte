@@ -1,4 +1,5 @@
 <script>
+	import { onDestroy } from 'svelte';
 	import { marked } from 'marked';
 	import { replaceTokens, processResponseContent } from '$lib/utils';
 	import { user } from '$lib/stores';
@@ -34,6 +35,9 @@
 	export let onTaskClick = () => {};
 
 	let tokens = [];
+	let pendingUpdate = null;
+	let lastContent = '';
+	let lastParsedContent = '';
 
 	const options = {
 		throwOnError: false,
@@ -53,13 +57,38 @@
 		]
 	});
 
-	$: (async () => {
+	const parseTokens = () => {
+		if (content === lastContent) return;
+		lastContent = content;
+
+		const processed = replaceTokens(processResponseContent(content), model?.name, $user?.name);
+		if (processed === lastParsedContent) return;
+		lastParsedContent = processed;
+
+		tokens = marked.lexer(processed);
+	};
+
+	const updateHandler = (content) => {
 		if (content) {
-			tokens = marked.lexer(
-				replaceTokens(processResponseContent(content), model?.name, $user?.name)
-			);
+			if (done) {
+				cancelAnimationFrame(pendingUpdate);
+				pendingUpdate = null;
+				parseTokens();
+			} else if (!pendingUpdate) {
+				pendingUpdate = requestAnimationFrame(() => {
+					pendingUpdate = null;
+					parseTokens();
+				});
+			}
 		}
-	})();
+	};
+
+	$: updateHandler(content);
+
+	// Throttle parsing to once per animation frame while streaming
+	$: onDestroy(() => {
+		cancelAnimationFrame(pendingUpdate);
+	});
 </script>
 
 {#key id}

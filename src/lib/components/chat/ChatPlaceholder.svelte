@@ -57,6 +57,9 @@
 								class=" size-[2.7rem] rounded-full border-[1px] border-gray-100 dark:border-none"
 								alt="logo"
 								draggable="false"
+								on:error={(e) => {
+									e.currentTarget.src = '/favicon.png';
+								}}
 							/>
 						</Tooltip>
 					</button>

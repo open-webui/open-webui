@@ -134,7 +134,7 @@
 		<div class="relative w-full group mb-2">
 			<div class="scrollbar-hidden relative overflow-x-auto max-w-full">
 				<table
-					class=" w-full text-sm text-left text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
+					class=" w-full text-sm text-start text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
 					dir="auto"
 				>
 					<thead
@@ -145,9 +145,9 @@
 								<th
 									scope="col"
 									class="px-2.5! py-2! cursor-pointer border-b border-gray-100! dark:border-gray-800!"
-									style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}
+									style={token.align[headerIdx] ? `text-align: ${token.align[headerIdx]}` : ''}
 								>
-									<div class="gap-1.5 text-left">
+									<div class="gap-1.5 text-start">
 										<div class="shrink-0 break-normal">
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-header-${headerIdx}`}

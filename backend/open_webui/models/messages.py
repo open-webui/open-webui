@@ -21,7 +21,7 @@ from sqlalchemy.sql import exists
 
 
 class MessageReaction(Base):
-    __tablename__ = "message_reaction"
+    __tablename__ = 'message_reaction'
     id = Column(Text, primary_key=True, unique=True)
     user_id = Column(Text)
     message_id = Column(Text)
@@ -40,7 +40,7 @@ class MessageReactionModel(BaseModel):
 
 
 class Message(Base):
-    __tablename__ = "message"
+    __tablename__ = 'message'
     id = Column(Text, primary_key=True, unique=True)
 
     user_id = Column(Text)
@@ -112,7 +112,7 @@ class MessageUserResponse(MessageModel):
 class MessageUserSlimResponse(MessageUserResponse):
     data: bool | None = None
 
-    @field_validator("data", mode="before")
+    @field_validator('data', mode='before')
     def convert_data_to_bool(cls, v):
         # No data or not a dict → False
         if not isinstance(v, dict):
@@ -152,19 +152,19 @@ class MessageTable:
 
             message = MessageModel(
                 **{
-                    "id": id,
-                    "user_id": user_id,
-                    "channel_id": channel_id,
-                    "reply_to_id": form_data.reply_to_id,
-                    "parent_id": form_data.parent_id,
-                    "is_pinned": False,
-                    "pinned_at": None,
-                    "pinned_by": None,
-                    "content": form_data.content,
-                    "data": form_data.data,
-                    "meta": form_data.meta,
-                    "created_at": ts,
-                    "updated_at": ts,
+                    'id': id,
+                    'user_id': user_id,
+                    'channel_id': channel_id,
+                    'reply_to_id': form_data.reply_to_id,
+                    'parent_id': form_data.parent_id,
+                    'is_pinned': False,
+                    'pinned_at': None,
+                    'pinned_by': None,
+                    'content': form_data.content,
+                    'data': form_data.data,
+                    'meta': form_data.meta,
+                    'created_at': ts,
+                    'updated_at': ts,
                 }
             )
             result = Message(**message.model_dump())
@@ -186,9 +186,7 @@ class MessageTable:
                 return None
 
             reply_to_message = (
-                self.get_message_by_id(
-                    message.reply_to_id, include_thread_replies=False, db=db
-                )
+                self.get_message_by_id(message.reply_to_id, include_thread_replies=False, db=db)
                 if message.reply_to_id
                 else None
             )
@@ -200,22 +198,22 @@ class MessageTable:
                 thread_replies = self.get_thread_replies_by_message_id(id, db=db)
 
             # Check if message was sent by webhook (webhook info in meta takes precedence)
-            webhook_info = message.meta.get("webhook") if message.meta else None
-            if webhook_info and webhook_info.get("id"):
+            webhook_info = message.meta.get('webhook') if message.meta else None
+            if webhook_info and webhook_info.get('id'):
                 # Look up webhook by ID to get current name
-                webhook = Channels.get_webhook_by_id(webhook_info.get("id"), db=db)
+                webhook = Channels.get_webhook_by_id(webhook_info.get('id'), db=db)
                 if webhook:
                     user_info = {
-                        "id": webhook.id,
-                        "name": webhook.name,
-                        "role": "webhook",
+                        'id': webhook.id,
+                        'name': webhook.name,
+                        'role': 'webhook',
                     }
                 else:
                     # Webhook was deleted, use placeholder
                     user_info = {
-                        "id": webhook_info.get("id"),
-                        "name": "Deleted Webhook",
-                        "role": "webhook",
+                        'id': webhook_info.get('id'),
+                        'name': 'Deleted Webhook',
+                        'role': 'webhook',
                     }
             else:
                 user = Users.get_user_by_id(message.user_id, db=db)
@@ -224,79 +222,57 @@ class MessageTable:
             return MessageResponse.model_validate(
                 {
                     **MessageModel.model_validate(message).model_dump(),
-                    "user": user_info,
-                    "reply_to_message": (
-                        reply_to_message.model_dump() if reply_to_message else None
-                    ),
-                    "latest_reply_at": (
-                        thread_replies[0].created_at if thread_replies else None
-                    ),
-                    "reply_count": len(thread_replies),
-                    "reactions": reactions,
+                    'user': user_info,
+                    'reply_to_message': (reply_to_message.model_dump() if reply_to_message else None),
+                    'latest_reply_at': (thread_replies[0].created_at if thread_replies else None),
+                    'reply_count': len(thread_replies),
+                    'reactions': reactions,
                 }
             )
 
-    def get_thread_replies_by_message_id(
-        self, id: str, db: Optional[Session] = None
-    ) -> list[MessageReplyToResponse]:
+    def get_thread_replies_by_message_id(self, id: str, db: Optional[Session] = None) -> list[MessageReplyToResponse]:
         with get_db_context(db) as db:
-            all_messages = (
-                db.query(Message)
-                .filter_by(parent_id=id)
-                .order_by(Message.created_at.desc())
-                .all()
-            )
+            all_messages = db.query(Message).filter_by(parent_id=id).order_by(Message.created_at.desc()).all()
 
             messages = []
             for message in all_messages:
                 reply_to_message = (
-                    self.get_message_by_id(
-                        message.reply_to_id, include_thread_replies=False, db=db
-                    )
+                    self.get_message_by_id(message.reply_to_id, include_thread_replies=False, db=db)
                     if message.reply_to_id
                     else None
                 )
 
-                webhook_info = message.meta.get("webhook") if message.meta else None
+                webhook_info = message.meta.get('webhook') if message.meta else None
                 user_info = None
-                if webhook_info and webhook_info.get("id"):
-                    webhook = Channels.get_webhook_by_id(webhook_info.get("id"), db=db)
+                if webhook_info and webhook_info.get('id'):
+                    webhook = Channels.get_webhook_by_id(webhook_info.get('id'), db=db)
                     if webhook:
                         user_info = {
-                            "id": webhook.id,
-                            "name": webhook.name,
-                            "role": "webhook",
+                            'id': webhook.id,
+                            'name': webhook.name,
+                            'role': 'webhook',
                         }
                     else:
                         user_info = {
-                            "id": webhook_info.get("id"),
-                            "name": "Deleted Webhook",
-                            "role": "webhook",
+                            'id': webhook_info.get('id'),
+                            'name': 'Deleted Webhook',
+                            'role': 'webhook',
                         }
 
                 messages.append(
                     MessageReplyToResponse.model_validate(
                         {
                             **MessageModel.model_validate(message).model_dump(),
-                            "user": user_info,
-                            "reply_to_message": (
-                                reply_to_message.model_dump()
-                                if reply_to_message
-                                else None
-                            ),
+                            'user': user_info,
+                            'reply_to_message': (reply_to_message.model_dump() if reply_to_message else None),
                         }
                     )
                 )
             return messages
 
-    def get_reply_user_ids_by_message_id(
-        self, id: str, db: Optional[Session] = None
-    ) -> list[str]:
+    def get_reply_user_ids_by_message_id(self, id: str, db: Optional[Session] = None) -> list[str]:
         with get_db_context(db) as db:
-            return [
-                message.user_id
-                for message in db.query(Message).filter_by(parent_id=id).all()
-            ]
+            return [message.user_id for message in db.query(Message).filter_by(parent_id=id).all()]
 
     def get_messages_by_channel_id(
         self,
@@ -318,40 +294,34 @@ class MessageTable:
             messages = []
             for message in all_messages:
                 reply_to_message = (
-                    self.get_message_by_id(
-                        message.reply_to_id, include_thread_replies=False, db=db
-                    )
+                    self.get_message_by_id(message.reply_to_id, include_thread_replies=False, db=db)
                     if message.reply_to_id
                     else None
                 )
 
-                webhook_info = message.meta.get("webhook") if message.meta else None
+                webhook_info = message.meta.get('webhook') if message.meta else None
                 user_info = None
-                if webhook_info and webhook_info.get("id"):
-                    webhook = Channels.get_webhook_by_id(webhook_info.get("id"), db=db)
+                if webhook_info and webhook_info.get('id'):
+                    webhook = Channels.get_webhook_by_id(webhook_info.get('id'), db=db)
                     if webhook:
                         user_info = {
-                            "id": webhook.id,
-                            "name": webhook.name,
-                            "role": "webhook",
+                            'id': webhook.id,
+                            'name': webhook.name,
+                            'role': 'webhook',
                         }
                     else:
                         user_info = {
-                            "id": webhook_info.get("id"),
-                            "name": "Deleted Webhook",
-                            "role": "webhook",
+                            'id': webhook_info.get('id'),
+                            'name': 'Deleted Webhook',
+                            'role': 'webhook',
                         }
 
                 messages.append(
                     MessageReplyToResponse.model_validate(
                         {
                             **MessageModel.model_validate(message).model_dump(),
-                            "user": user_info,
-                            "reply_to_message": (
-                                reply_to_message.model_dump()
-                                if reply_to_message
-                                else None
-                            ),
+                            'user': user_info,
+                            'reply_to_message': (reply_to_message.model_dump() if reply_to_message else None),
                         }
                     )
                 )
@@ -387,55 +357,42 @@ class MessageTable:
             messages = []
             for message in all_messages:
                 reply_to_message = (
-                    self.get_message_by_id(
-                        message.reply_to_id, include_thread_replies=False, db=db
-                    )
+                    self.get_message_by_id(message.reply_to_id, include_thread_replies=False, db=db)
                     if message.reply_to_id
                     else None
                 )
 
-                webhook_info = message.meta.get("webhook") if message.meta else None
+                webhook_info = message.meta.get('webhook') if message.meta else None
                 user_info = None
-                if webhook_info and webhook_info.get("id"):
-                    webhook = Channels.get_webhook_by_id(webhook_info.get("id"), db=db)
+                if webhook_info and webhook_info.get('id'):
+                    webhook = Channels.get_webhook_by_id(webhook_info.get('id'), db=db)
                     if webhook:
                         user_info = {
-                            "id": webhook.id,
-                            "name": webhook.name,
-                            "role": "webhook",
+                            'id': webhook.id,
+                            'name': webhook.name,
+                            'role': 'webhook',
                         }
                     else:
                         user_info = {
-                            "id": webhook_info.get("id"),
-                            "name": "Deleted Webhook",
-                            "role": "webhook",
+                            'id': webhook_info.get('id'),
+                            'name': 'Deleted Webhook',
+                            'role': 'webhook',
                         }
 
                 messages.append(
                     MessageReplyToResponse.model_validate(
                         {
                             **MessageModel.model_validate(message).model_dump(),
-                            "user": user_info,
-                            "reply_to_message": (
-                                reply_to_message.model_dump()
-                                if reply_to_message
-                                else None
-                            ),
+                            'user': user_info,
+                            'reply_to_message': (reply_to_message.model_dump() if reply_to_message else None),
                         }
                     )
                 )
             return messages
 
-    def get_last_message_by_channel_id(
-        self, channel_id: str, db: Optional[Session] = None
-    ) -> Optional[MessageModel]:
+    def get_last_message_by_channel_id(self, channel_id: str, db: Optional[Session] = None) -> Optional[MessageModel]:
         with get_db_context(db) as db:
-            message = (
-                db.query(Message)
-                .filter_by(channel_id=channel_id)
-                .order_by(Message.created_at.desc())
-                .first()
-            )
+            message = db.query(Message).filter_by(channel_id=channel_id).order_by(Message.created_at.desc()).first()
             return MessageModel.model_validate(message) if message else None
 
     def get_pinned_messages_by_channel_id(
@@ -513,11 +470,7 @@ class MessageTable:
     ) -> Optional[MessageReactionModel]:
         with get_db_context(db) as db:
             # check for existing reaction
-            existing_reaction = (
-                db.query(MessageReaction)
-                .filter_by(message_id=id, user_id=user_id, name=name)
-                .first()
-            )
+            existing_reaction = db.query(MessageReaction).filter_by(message_id=id, user_id=user_id, name=name).first()
             if existing_reaction:
                 return MessageReactionModel.model_validate(existing_reaction)
 
@@ -535,9 +488,7 @@ class MessageTable:
             db.refresh(result)
             return MessageReactionModel.model_validate(result) if result else None
 
-    def get_reactions_by_message_id(
-        self, id: str, db: Optional[Session] = None
-    ) -> list[Reactions]:
+    def get_reactions_by_message_id(self, id: str, db: Optional[Session] = None) -> list[Reactions]:
         with get_db_context(db) as db:
             # JOIN User so all user info is fetched in one query
             results = (
@@ -552,18 +503,18 @@ class MessageTable:
             for reaction, user in results:
                 if reaction.name not in reactions:
                     reactions[reaction.name] = {
-                        "name": reaction.name,
-                        "users": [],
-                        "count": 0,
+                        'name': reaction.name,
+                        'users': [],
+                        'count': 0,
                     }
 
-                reactions[reaction.name]["users"].append(
+                reactions[reaction.name]['users'].append(
                     {
-                        "id": user.id,
-                        "name": user.name,
+                        'id': user.id,
+                        'name': user.name,
                     }
                 )
-                reactions[reaction.name]["count"] += 1
+                reactions[reaction.name]['count'] += 1
 
             return [Reactions(**reaction) for reaction in reactions.values()]
 
@@ -571,9 +522,7 @@ class MessageTable:
         self, id: str, user_id: str, name: str, db: Optional[Session] = None
     ) -> bool:
         with get_db_context(db) as db:
-            db.query(MessageReaction).filter_by(
-                message_id=id, user_id=user_id, name=name
-            ).delete()
+            db.query(MessageReaction).filter_by(message_id=id, user_id=user_id, name=name).delete()
             db.commit()
             return True
 
@@ -612,21 +561,15 @@ class MessageTable:
         with get_db_context(db) as db:
             query_builder = db.query(Message).filter(
                 Message.channel_id.in_(channel_ids),
-                Message.content.ilike(f"%{query}%"),
+                Message.content.ilike(f'%{query}%'),
             )
 
             if start_timestamp:
-                query_builder = query_builder.filter(
-                    Message.created_at >= start_timestamp
-                )
+                query_builder = query_builder.filter(Message.created_at >= start_timestamp)
             if end_timestamp:
-                query_builder = query_builder.filter(
-                    Message.created_at <= end_timestamp
-                )
+                query_builder = query_builder.filter(Message.created_at <= end_timestamp)
 
-            messages = (
-                query_builder.order_by(Message.created_at.desc()).limit(limit).all()
-            )
+            messages = query_builder.order_by(Message.created_at.desc()).limit(limit).all()
             return [MessageModel.model_validate(msg) for msg in messages]
 
 
