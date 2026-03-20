@@ -25,6 +25,7 @@
 	let selectedPeriod =
 		(typeof localStorage !== 'undefined' && localStorage.getItem('analyticsPeriod')) || '7d';
 	$: periods = [
+		{ value: '1h', label: $i18n.t('Last 1 hour') },
 		{ value: '24h', label: $i18n.t('Last 24 hours') },
 		{ value: '7d', label: $i18n.t('Last 7 days') },
 		{ value: '30d', label: $i18n.t('Last 30 days') },
@@ -38,8 +39,11 @@
 
 	const getDateRange = (period: string): { start: number | null; end: number | null } => {
 		const now = Math.floor(Date.now() / 1000);
+		const hour = 3600;
 		const day = 86400;
 		switch (period) {
+			case '1h':
+				return { start: now - hour, end: now };
 			case '24h':
 				return { start: now - day, end: now };
 			case '7d':
@@ -106,7 +110,7 @@
 		loading = true;
 		try {
 			const { start, end } = getDateRange(selectedPeriod);
-			const granularity = selectedPeriod === '24h' ? 'hourly' : 'daily';
+			const granularity = selectedPeriod === '1h' || selectedPeriod === '24h' ? 'hourly' : 'daily';
 			const [summaryRes, modelsRes, usersRes, dailyRes, tokensRes] = await Promise.all([
 				getSummary(localStorage.token, start, end, selectedGroupId),
 				getModelAnalytics(localStorage.token, start, end, selectedGroupId, filterByUserId),
@@ -332,10 +336,12 @@
 			'#06b6d4',
 			'#84cc16'
 		]}
-		{@const periodMap = { '24h': 'hour', '7d': 'week', '30d': 'month', '90d': 'year', all: 'all' }}
+		{@const periodMap = { '1h': 'hour', '24h': 'hour', '7d': 'week', '30d': 'month', '90d': 'year', all: 'all' }}
 		<div class="mb-4">
 			<div class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2 px-0.5">
-				{selectedPeriod === '24h' ? $i18n.t('Hourly Messages') : $i18n.t('Daily Messages')}
+				{selectedPeriod === '1h' || selectedPeriod === '24h'
+					? $i18n.t('Hourly Messages')
+					: $i18n.t('Daily Messages')}
 			</div>
 			<ChartLine
 				data={dailyStats}
