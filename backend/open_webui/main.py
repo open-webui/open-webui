@@ -1440,7 +1440,7 @@ async def check_url(request: Request, call_next):
     # Fallback to x-api-key header for Anthropic Messages API routes
     if request.state.token is None and request.headers.get('x-api-key'):
         request_path = request.url.path
-        if request_path in ('/api/message', '/api/v1/messages'):
+        if request_path in ('/api/message', '/api/v1/messages') or request_path.startswith('/ollama/v1/messages'):
             from fastapi.security import HTTPAuthorizationCredentials
 
             request.state.token = HTTPAuthorizationCredentials(
