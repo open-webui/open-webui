@@ -283,6 +283,14 @@ def upload_file_handler(
                     channel.id, file_item.id, user.id, db=db
                 )
 
+        if "knowledge_id" in file_metadata:
+            Knowledges.add_file_to_knowledge_by_id(
+                knowledge_id=file_metadata["knowledge_id"],
+                file_id=file_item.id,
+                user_id=user.id,
+                db=db,
+            )
+
         if process:
             if background_tasks and process_in_background:
                 background_tasks.add_task(
