@@ -2,6 +2,14 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
+		<script>
+			(() => {
+				const locale = localStorage?.getItem('locale');
+				if (locale) {
+					document.documentElement.setAttribute('lang', locale);
+				}
+			})();
+		</script>
 		<link rel="icon" type="image/png" href="/static/favicon.png" crossorigin="use-credentials" />
 		<link
 			rel="icon"
