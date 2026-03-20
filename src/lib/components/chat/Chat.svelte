@@ -735,12 +735,25 @@
 		};
 		init();
 
+		const onVisibilityChange = () => {
+			if (document.visibilityState === 'visible') {
+				getContents();
+				const contents = get(artifactContents);
+				if (contents && contents.length > 0 && !get(showControls) && !get(mobile)) {
+					showArtifacts.set(true);
+					showControls.set(true);
+				}
+			}
+		};
+		document.addEventListener('visibilitychange', onVisibilityChange);
+
 		return () => {
 			try {
 				pageSubscribe();
 				showControlsSubscribe();
 				selectedFolderSubscribe();
 				window.removeEventListener('message', onMessageHandler);
+				document.removeEventListener('visibilitychange', onVisibilityChange);
 				$socket?.off('events', chatEventHandler);
 				audioQueueInstance?.destroy();
 				audioQueue.set(null);
