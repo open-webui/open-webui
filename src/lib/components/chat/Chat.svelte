@@ -1239,7 +1239,7 @@
 
 				if (history.currentId) {
 					for (const message of Object.values(history.messages)) {
-						if (message && message.role === 'assistant') {
+						if (message && message.role === 'assistant' && message.done !== false) {
 							message.done = true;
 						}
 					}

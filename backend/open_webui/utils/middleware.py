@@ -3027,6 +3027,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                         metadata['chat_id'],
                         metadata['message_id'],
                         {
+                            'done': True,
                             'role': 'assistant',
                             'content': content,
                             'output': response_output,
@@ -4376,6 +4377,7 @@ async def streaming_chat_response_handler(response, ctx):
                         metadata['chat_id'],
                         metadata['message_id'],
                         {
+                            'done': True,
                             'content': serialize_output(output),
                             'output': output,
                             **({'usage': usage} if usage else {}),
@@ -4385,7 +4387,13 @@ async def streaming_chat_response_handler(response, ctx):
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata['chat_id'],
                         metadata['message_id'],
-                        {'usage': usage},
+                        {'done': True, 'usage': usage},
+                    )
+                else:
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata['chat_id'],
+                        metadata['message_id'],
+                        {'done': True},
                     )
 
                 # Send a webhook notification if the user is not active
@@ -4422,9 +4430,16 @@ async def streaming_chat_response_handler(response, ctx):
                         metadata['chat_id'],
                         metadata['message_id'],
                         {
+                            'done': True,
                             'content': serialize_output(output),
                             'output': output,
                         },
+                    )
+                else:
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata['chat_id'],
+                        metadata['message_id'],
+                        {'done': True},
                     )
 
             if response.background is not None:
