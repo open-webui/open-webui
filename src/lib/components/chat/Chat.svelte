@@ -2012,6 +2012,7 @@
 			history = structuredClone(_history);
 		};
 		syncHistorySnapshot();
+		generating = true;
 
 		const mirrorHistoryMessage = (messageId) => {
 			const nextMessage = _history.messages[messageId];
@@ -2077,293 +2078,302 @@
 		// Save chat after all messages have been created
 		await saveChatHandler(_chatId, _history);
 
-		await Promise.all(
-			selectedModelIds.map(async (modelId, _modelIdx) => {
-				console.log('modelId', modelId);
-				const model = $models.filter((m) => m.id === modelId).at(0);
+		try {
+			if (!generating) {
+				return;
+			}
 
-				if (model) {
-					// If there are image files, check if model is vision capable
-					const hasImages = createMessagesList(_history, parentId).some((message) =>
-						message.files?.some((file) => file.type === 'image')
-					);
+			await Promise.all(
+				selectedModelIds.map(async (modelId, _modelIdx) => {
+					console.log('modelId', modelId);
+					const model = $models.filter((m) => m.id === modelId).at(0);
 
-					const hasNativeVision = model.info?.meta?.capabilities?.vision ?? true;
-					const hasPreprocessor = !!model.info?.meta?.vision_preprocessor_model_id;
-
-					if (hasImages && !hasNativeVision && !hasPreprocessor) {
-						toast.error(
-							$i18n.t('Model {{modelName}} is not vision capable', {
-								modelName: model.name ?? model.id
-							})
+					if (model) {
+						// If there are image files, check if model is vision capable
+						const hasImages = createMessagesList(_history, parentId).some((message) =>
+							message.files?.some((file) => file.type === 'image')
 						);
-					}
 
-					let responseMessageId =
-						responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`];
+						const hasNativeVision = model.info?.meta?.capabilities?.vision ?? true;
+						const hasPreprocessor = !!model.info?.meta?.vision_preprocessor_model_id;
 
-					if (hasImages && !hasNativeVision && hasPreprocessor) {
-						const preprocessorId = model.info.meta.vision_preprocessor_model_id;
-						const preprocessorModel = $models.find((m) => m.id === preprocessorId);
-						if (!preprocessorModel) {
-							toast.error(`Vision preprocessor model not found: ${preprocessorId}`);
-						} else {
-							const userMessage = _history.messages[parentId];
-							const userImages = userMessage.files?.filter((f) => f.type === 'image') || [];
-
-							if (userImages.length > 0) {
-								let responseMessage = _history.messages[responseMessageId];
-								responseMessage.statusHistory = responseMessage.statusHistory || [];
-								responseMessage.statusHistory.push({
-									done: false,
-									action: '🖼️',
-									description: 'Preprocessing images with vision model...'
-								});
-								_history.messages[responseMessageId] = responseMessage;
-								history.messages[responseMessageId] = responseMessage;
-								history = { ...history };
-
-								const userContent = userMessage.content;
-
-								const visionPrompt = (
-									model.info.meta.vision_preprocessor_prompt ||
-									'Perform OCR on this image and describe its contents in the context of the user query: {query}'
-								).replace('{query}', userContent);
-								const visionMessages = [
-									{ role: 'system', content: visionPrompt },
-									{
-										role: 'user',
-										content: [
-											{ type: 'text', text: userContent },
-											...userImages.map((f) => ({
-												type: 'image_url',
-												image_url: { url: f.url }
-											}))
-										]
-									}
-								];
-
-								try {
-									const visionRes = await generateOpenAIChatCompletion(
-										localStorage.token,
-										{
-											model: preprocessorModel.id,
-											messages: visionMessages,
-											stream: false,
-											params: { max_tokens: 2048 }
-										},
-										`${WEBUI_BASE_URL}/api`
-									);
-
-									const visionResponse = visionRes.choices[0].message.content;
-
-									responseMessage = _history.messages[responseMessageId];
-									responseMessage.statusHistory.push({
-										done: true,
-										action: '🖼️',
-										description: 'Vision analysis complete',
-										vision_prompt: visionPrompt,
-										vision_response: visionResponse
-									});
-									_history.messages[responseMessageId] = responseMessage;
-									history.messages[responseMessageId] = responseMessage;
-
-									// Prepend FULL analysis to user content
-									userMessage.content = `[Vision Analysis:\n${visionResponse}\n]\n\n${userMessage.content}`;
-									userMessage.vision_processed = true;
-
-									_history.messages[parentId] = userMessage;
-									history.messages[parentId] = userMessage;
-									history = { ...history };
-
-									await saveChatHandler(_chatId, _history);
-								} catch (visionError) {
-									console.error('Vision preprocessing failed:', visionError);
-									toast.error('Vision preprocessing failed. Sending without analysis.');
-
-									responseMessage = _history.messages[responseMessageId];
-									responseMessage.statusHistory.push({
-										done: true,
-										action: '🖼️❌',
-										description: 'Vision preprocessing failed (text-only mode)'
-									});
-									_history.messages[responseMessageId] = responseMessage;
-									history.messages[responseMessageId] = responseMessage;
-
-									userMessage.vision_processed = false; // Don't strip if failed
-									_history.messages[parentId] = userMessage;
-									history.messages[parentId] = userMessage;
-									history = { ...history };
-								}
-							}
+						if (hasImages && !hasNativeVision && !hasPreprocessor) {
+							toast.error(
+								$i18n.t('Model {{modelName}} is not vision capable', {
+									modelName: model.name ?? model.id
+								})
+							);
 						}
-					}
 
-					// PDF Preprocessing for non-vision models
-					const hasPdfs = createMessagesList(_history, parentId).some((message) =>
-						message.files?.some(
-							(file) =>
-								file.type === 'file' &&
-								(file.name?.toLowerCase().endsWith('.pdf') ||
-									file.file?.filename?.toLowerCase().endsWith('.pdf'))
-						)
-					);
+						let responseMessageId =
+							responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`];
 
-					if (hasPdfs && !hasNativeVision && hasPreprocessor) {
-						const preprocessorId = model.info.meta.vision_preprocessor_model_id;
-						const preprocessorModel = $models.find((m) => m.id === preprocessorId);
-						if (!preprocessorModel) {
-							toast.error(`Vision preprocessor model not found: ${preprocessorId}`);
-						} else {
-							const userMessage = _history.messages[parentId];
-							const userPdfs =
-								userMessage.files?.filter(
-									(f) =>
-										f.type === 'file' &&
-										(f.name?.toLowerCase().endsWith('.pdf') ||
-											f.file?.filename?.toLowerCase().endsWith('.pdf'))
-								) || [];
+						if (hasImages && !hasNativeVision && hasPreprocessor) {
+							const preprocessorId = model.info.meta.vision_preprocessor_model_id;
+							const preprocessorModel = $models.find((m) => m.id === preprocessorId);
+							if (!preprocessorModel) {
+								toast.error(`Vision preprocessor model not found: ${preprocessorId}`);
+							} else {
+								const userMessage = _history.messages[parentId];
+								const userImages = userMessage.files?.filter((f) => f.type === 'image') || [];
 
-							if (userPdfs.length > 0) {
-								let responseMessage = _history.messages[responseMessageId];
-								responseMessage.statusHistory = responseMessage.statusHistory || [];
-								responseMessage.statusHistory.push({
-									done: false,
-									action: '📄',
-									description: 'Preprocessing PDF with vision model...'
-								});
-								_history.messages[responseMessageId] = responseMessage;
-								history.messages[responseMessageId] = responseMessage;
-								history = { ...history };
-
-								try {
-									// Convert all PDFs to images
-									let allPdfImages = [];
-									for (const pdfFile of userPdfs) {
-										const pdfUrl =
-											pdfFile.url || `${WEBUI_API_BASE_URL}/files/${pdfFile.id}/content`;
-										try {
-											const pdfImages = await renderPdfToImageDataUrls(pdfUrl);
-											allPdfImages.push(
-												...pdfImages.map((url, idx) => ({
-													url,
-													filename: `${pdfFile.name || pdfFile.file?.filename || 'document'}_page_${idx + 1}`
-												}))
-											);
-										} catch (pdfError) {
-											console.error(`Failed to render PDF ${pdfFile.name}:`, pdfError);
-											throw new Error(`Failed to render PDF: ${pdfFile.name || 'unknown'}`);
-										}
-									}
-
-									if (allPdfImages.length === 0) {
-										throw new Error('No pages could be extracted from PDF(s)');
-									}
+								if (userImages.length > 0) {
+									let responseMessage = _history.messages[responseMessageId];
+									responseMessage.statusHistory = responseMessage.statusHistory || [];
+									responseMessage.statusHistory.push({
+										done: false,
+										action: '🖼️',
+										description: 'Preprocessing images with vision model...'
+									});
+									_history.messages[responseMessageId] = responseMessage;
+									history.messages[responseMessageId] = responseMessage;
+									history = { ...history };
 
 									const userContent = userMessage.content;
+
 									const visionPrompt = (
 										model.info.meta.vision_preprocessor_prompt ||
 										'Perform OCR on this image and describe its contents in the context of the user query: {query}'
 									).replace('{query}', userContent);
-
 									const visionMessages = [
 										{ role: 'system', content: visionPrompt },
 										{
 											role: 'user',
 											content: [
-												{
-													type: 'text',
-													text: `I have uploaded ${allPdfImages.length} page(s) from PDF document(s). Please analyze them:\n\n${userContent}`
-												},
-												...allPdfImages.map((img) => ({
+												{ type: 'text', text: userContent },
+												...userImages.map((f) => ({
 													type: 'image_url',
-													image_url: { url: img.url }
+													image_url: { url: f.url }
 												}))
 											]
 										}
 									];
 
-									const visionRes = await generateOpenAIChatCompletion(
-										localStorage.token,
-										{
-											model: preprocessorModel.id,
-											messages: visionMessages,
-											stream: false,
-											params: { max_tokens: 4096 }
-										},
-										`${WEBUI_BASE_URL}/api`
-									);
+									try {
+										const visionRes = await generateOpenAIChatCompletion(
+											localStorage.token,
+											{
+												model: preprocessorModel.id,
+												messages: visionMessages,
+												stream: false,
+												params: { max_tokens: 2048 }
+											},
+											`${WEBUI_BASE_URL}/api`
+										);
 
-									const visionResponse = visionRes.choices[0].message.content;
+										const visionResponse = visionRes.choices[0].message.content;
 
-									responseMessage = _history.messages[responseMessageId];
-									responseMessage.statusHistory.push({
-										done: true,
-										action: '📄',
-										description: `PDF analysis complete (${allPdfImages.length} pages)`,
-										vision_prompt: visionPrompt,
-										vision_response: visionResponse
-									});
-									_history.messages[responseMessageId] = responseMessage;
-									history.messages[responseMessageId] = responseMessage;
+										responseMessage = _history.messages[responseMessageId];
+										responseMessage.statusHistory.push({
+											done: true,
+											action: '🖼️',
+											description: 'Vision analysis complete',
+											vision_prompt: visionPrompt,
+											vision_response: visionResponse
+										});
+										_history.messages[responseMessageId] = responseMessage;
+										history.messages[responseMessageId] = responseMessage;
 
-									// Prepend PDF analysis to user content
-									userMessage.content = `[PDF Analysis (${allPdfImages.length} pages):\n${visionResponse}\n]\n\n${userMessage.content}`;
-									userMessage.pdf_processed = true;
+										// Prepend FULL analysis to user content
+										userMessage.content = `[Vision Analysis:\n${visionResponse}\n]\n\n${userMessage.content}`;
+										userMessage.vision_processed = true;
 
-									_history.messages[parentId] = userMessage;
-									history.messages[parentId] = userMessage;
-									history = { ...history };
+										_history.messages[parentId] = userMessage;
+										history.messages[parentId] = userMessage;
+										history = { ...history };
 
-									await saveChatHandler(_chatId, _history);
-								} catch (pdfError) {
-									console.error('PDF preprocessing failed:', pdfError);
+										await saveChatHandler(_chatId, _history);
+									} catch (visionError) {
+										console.error('Vision preprocessing failed:', visionError);
+										toast.error('Vision preprocessing failed. Sending without analysis.');
 
-									// Block message and show error
-									responseMessage = _history.messages[responseMessageId];
-									responseMessage.statusHistory.push({
-										done: true,
-										action: '📄❌',
-										description: `PDF preprocessing failed: ${pdfError.message}`
-									});
-									responseMessage.error = {
-										content: `PDF preprocessing failed: ${pdfError.message}\n\nThe selected model does not support vision natively, and PDF preprocessing could not be completed.`
-									};
-									responseMessage.done = true;
-									_history.messages[responseMessageId] = responseMessage;
-									history.messages[responseMessageId] = responseMessage;
-									history = { ...history };
+										responseMessage = _history.messages[responseMessageId];
+										responseMessage.statusHistory.push({
+											done: true,
+											action: '🖼️❌',
+											description: 'Vision preprocessing failed (text-only mode)'
+										});
+										_history.messages[responseMessageId] = responseMessage;
+										history.messages[responseMessageId] = responseMessage;
 
-									await saveChatHandler(_chatId, _history);
-									return; // Stop processing this model
+										userMessage.vision_processed = false; // Don't strip if failed
+										_history.messages[parentId] = userMessage;
+										history.messages[parentId] = userMessage;
+										history = { ...history };
+									}
 								}
 							}
 						}
+
+						// PDF Preprocessing for non-vision models
+						const hasPdfs = createMessagesList(_history, parentId).some((message) =>
+							message.files?.some(
+								(file) =>
+									file.type === 'file' &&
+									(file.name?.toLowerCase().endsWith('.pdf') ||
+										file.file?.filename?.toLowerCase().endsWith('.pdf'))
+							)
+						);
+
+						if (hasPdfs && !hasNativeVision && hasPreprocessor) {
+							const preprocessorId = model.info.meta.vision_preprocessor_model_id;
+							const preprocessorModel = $models.find((m) => m.id === preprocessorId);
+							if (!preprocessorModel) {
+								toast.error(`Vision preprocessor model not found: ${preprocessorId}`);
+							} else {
+								const userMessage = _history.messages[parentId];
+								const userPdfs =
+									userMessage.files?.filter(
+										(f) =>
+											f.type === 'file' &&
+											(f.name?.toLowerCase().endsWith('.pdf') ||
+												f.file?.filename?.toLowerCase().endsWith('.pdf'))
+									) || [];
+
+								if (userPdfs.length > 0) {
+									let responseMessage = _history.messages[responseMessageId];
+									responseMessage.statusHistory = responseMessage.statusHistory || [];
+									responseMessage.statusHistory.push({
+										done: false,
+										action: '📄',
+										description: 'Preprocessing PDF with vision model...'
+									});
+									_history.messages[responseMessageId] = responseMessage;
+									history.messages[responseMessageId] = responseMessage;
+									history = { ...history };
+
+									try {
+										// Convert all PDFs to images
+										let allPdfImages = [];
+										for (const pdfFile of userPdfs) {
+											const pdfUrl =
+												pdfFile.url || `${WEBUI_API_BASE_URL}/files/${pdfFile.id}/content`;
+											try {
+												const pdfImages = await renderPdfToImageDataUrls(pdfUrl);
+												allPdfImages.push(
+													...pdfImages.map((url, idx) => ({
+														url,
+														filename: `${pdfFile.name || pdfFile.file?.filename || 'document'}_page_${idx + 1}`
+													}))
+												);
+											} catch (pdfError) {
+												console.error(`Failed to render PDF ${pdfFile.name}:`, pdfError);
+												throw new Error(`Failed to render PDF: ${pdfFile.name || 'unknown'}`);
+											}
+										}
+
+										if (allPdfImages.length === 0) {
+											throw new Error('No pages could be extracted from PDF(s)');
+										}
+
+										const userContent = userMessage.content;
+										const visionPrompt = (
+											model.info.meta.vision_preprocessor_prompt ||
+											'Perform OCR on this image and describe its contents in the context of the user query: {query}'
+										).replace('{query}', userContent);
+
+										const visionMessages = [
+											{ role: 'system', content: visionPrompt },
+											{
+												role: 'user',
+												content: [
+													{
+														type: 'text',
+														text: `I have uploaded ${allPdfImages.length} page(s) from PDF document(s). Please analyze them:\n\n${userContent}`
+													},
+													...allPdfImages.map((img) => ({
+														type: 'image_url',
+														image_url: { url: img.url }
+													}))
+												]
+											}
+										];
+
+										const visionRes = await generateOpenAIChatCompletion(
+											localStorage.token,
+											{
+												model: preprocessorModel.id,
+												messages: visionMessages,
+												stream: false,
+												params: { max_tokens: 4096 }
+											},
+											`${WEBUI_BASE_URL}/api`
+										);
+
+										const visionResponse = visionRes.choices[0].message.content;
+
+										responseMessage = _history.messages[responseMessageId];
+										responseMessage.statusHistory.push({
+											done: true,
+											action: '📄',
+											description: `PDF analysis complete (${allPdfImages.length} pages)`,
+											vision_prompt: visionPrompt,
+											vision_response: visionResponse
+										});
+										_history.messages[responseMessageId] = responseMessage;
+										history.messages[responseMessageId] = responseMessage;
+
+										// Prepend PDF analysis to user content
+										userMessage.content = `[PDF Analysis (${allPdfImages.length} pages):\n${visionResponse}\n]\n\n${userMessage.content}`;
+										userMessage.pdf_processed = true;
+
+										_history.messages[parentId] = userMessage;
+										history.messages[parentId] = userMessage;
+										history = { ...history };
+
+										await saveChatHandler(_chatId, _history);
+									} catch (pdfError) {
+										console.error('PDF preprocessing failed:', pdfError);
+
+										// Block message and show error
+										responseMessage = _history.messages[responseMessageId];
+										responseMessage.statusHistory.push({
+											done: true,
+											action: '📄❌',
+											description: `PDF preprocessing failed: ${pdfError.message}`
+										});
+										responseMessage.error = {
+											content: `PDF preprocessing failed: ${pdfError.message}\n\nThe selected model does not support vision natively, and PDF preprocessing could not be completed.`
+										};
+										responseMessage.done = true;
+										_history.messages[responseMessageId] = responseMessage;
+										history.messages[responseMessageId] = responseMessage;
+										history = { ...history };
+
+										await saveChatHandler(_chatId, _history);
+										return; // Stop processing this model
+									}
+								}
+							}
+						}
+
+						const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
+						startUsagePolling(FAST_POLL_MS);
+						scrollToBottom();
+						await sendMessageSocket(
+							model,
+							messages && messages.length > 0
+								? messages
+								: createMessagesList(_history, responseMessageId),
+							_history,
+							responseMessageId,
+							_chatId
+						);
+
+						if (chatEventEmitter) clearInterval(chatEventEmitter);
+						startUsagePolling(SLOW_POLL_MS);
+					} else {
+						toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 					}
+				})
+			);
 
-					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
-					startUsagePolling(FAST_POLL_MS);
-					scrollToBottom();
-					await sendMessageSocket(
-						model,
-						messages && messages.length > 0
-							? messages
-							: createMessagesList(_history, responseMessageId),
-						_history,
-						responseMessageId,
-						_chatId
-					);
-
-					if (chatEventEmitter) clearInterval(chatEventEmitter);
-					startUsagePolling(SLOW_POLL_MS);
-				} else {
-					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
-				}
-			})
-		);
-
-		currentChatPage.set(1);
-		chats.set(await getChatList(localStorage.token, $currentChatPage));
+			currentChatPage.set(1);
+			chats.set(await getChatList(localStorage.token, $currentChatPage));
+		} finally {
+			generating = false;
+			generationController = null;
+		}
 	};
 
 	const getFeatures = () => {
@@ -2708,6 +2718,10 @@
 					if (shouldUseDirectStream) {
 						const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
 						for await (const update of textStream) {
+							if (!generating) {
+								break;
+							}
+
 							const { value, done, sources, error, usage, selectedModelId } = update;
 
 							if (error) {
@@ -2839,24 +2853,31 @@
 			}
 
 			taskIds = null;
-
-			const responseMessage = history.messages[history.currentId];
-			// Set all response messages to done
-			for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
-				history.messages[messageId].done = true;
-			}
-
-			history.messages[history.currentId] = responseMessage;
-
-			if (autoScroll) {
-				scrollToBottom();
-			}
 		}
 
-		if (generating) {
-			generating = false;
-			generationController?.abort();
-			generationController = null;
+		const responseMessage = history.messages[history.currentId];
+		if (responseMessage) {
+			// Mark current response(s) as done immediately so the UI can finish.
+			if (responseMessage.parentId !== null && history.messages[responseMessage.parentId]) {
+				for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
+					if (history.messages[messageId]) {
+						history.messages[messageId].done = true;
+						history.messages[messageId] = { ...history.messages[messageId] };
+					}
+				}
+			} else {
+				responseMessage.done = true;
+				history.messages[history.currentId] = { ...responseMessage };
+			}
+			history = { ...history };
+		}
+
+		generating = false;
+		generationController?.abort();
+		generationController = null;
+
+		if (autoScroll) {
+			scrollToBottom();
 		}
 	};
 
