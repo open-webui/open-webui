@@ -58,7 +58,27 @@
 	};
 
 	// Data
-	let summary = { total_messages: 0, total_chats: 0, total_models: 0, total_users: 0 };
+	let summary: {
+		total_messages: number;
+		total_chats: number;
+		total_models: number;
+		total_users: number;
+		avg_ttft_ms: number | null;
+		avg_tokens_per_second: number | null;
+		error_requests: number;
+		total_requests: number;
+		error_rate: number;
+	} = {
+		total_messages: 0,
+		total_chats: 0,
+		total_models: 0,
+		total_users: 0,
+		avg_ttft_ms: null,
+		avg_tokens_per_second: null,
+		error_requests: 0,
+		total_requests: 0,
+		error_rate: 0
+	};
 	let modelStats: Array<{ model_id: string; count: number; name?: string }> = [];
 	let userStats: Array<{ user_id: string; name?: string; email?: string; count: number }> = [];
 	let dailyStats: Array<{ date: string; models: Record<string, number> }> = [];
@@ -320,6 +340,41 @@
 			><span class="font-medium text-gray-900 dark:text-gray-300">{summary.total_users}</span>
 			{$i18n.t('users')}</span
 		>
+		<Tooltip
+			content={$i18n.t(
+				'Time to First Token is shown when provider usage data includes timing information.'
+			)}
+		>
+			<span class="cursor-help"
+				><span class="font-medium text-gray-900 dark:text-gray-300"
+					>{summary.avg_ttft_ms != null ? `${summary.avg_ttft_ms.toFixed(0)} ms` : 'N/A'}</span
+				>
+				TTFT</span
+			>
+		</Tooltip>
+		<Tooltip
+			content={$i18n.t(
+				'Token/s is shown when provider usage data includes throughput or duration details.'
+			)}
+		>
+			<span class="cursor-help"
+				><span class="font-medium text-gray-900 dark:text-gray-300"
+					>{summary.avg_tokens_per_second != null
+						? `${summary.avg_tokens_per_second.toFixed(1)}/s`
+						: 'N/A'}</span
+				>
+				{$i18n.t('Token/s')}</span
+			>
+		</Tooltip>
+		<span
+			><span class="font-medium text-gray-900 dark:text-gray-300"
+				>{summary.error_requests.toLocaleString()}</span
+			>
+			{$i18n.t('request errors')}
+			{#if summary.total_requests > 0}
+				({summary.error_rate.toFixed(1)}%)
+			{/if}
+		</span>
 	</div>
 
 	<!-- Daily usage chart -->

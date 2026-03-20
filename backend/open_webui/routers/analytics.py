@@ -171,6 +171,11 @@ class SummaryResponse(BaseModel):
     total_chats: int
     total_models: int
     total_users: int
+    avg_ttft_ms: Optional[float] = None
+    avg_tokens_per_second: Optional[float] = None
+    error_requests: int = 0
+    total_requests: int = 0
+    error_rate: float = 0.0
 
 
 @router.get('/summary', response_model=SummaryResponse)
@@ -191,12 +196,20 @@ async def get_summary(
     chat_counts = ChatMessages.get_message_count_by_chat(
         start_date=start_date, end_date=end_date, group_id=group_id, db=db
     )
+    performance = ChatMessages.get_performance_metrics(
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
+    )
 
     return SummaryResponse(
         total_messages=sum(model_counts.values()),
         total_chats=len(chat_counts),
         total_models=len(model_counts),
         total_users=len(user_counts),
+        avg_ttft_ms=performance["avg_ttft_ms"],
+        avg_tokens_per_second=performance["avg_tokens_per_second"],
+        error_requests=performance["error_requests"],
+        total_requests=performance["total_requests"],
+        error_rate=performance["error_rate"],
     )
 
 

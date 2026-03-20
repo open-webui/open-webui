@@ -515,6 +515,110 @@ class ChatMessageTable:
             results = query.group_by(ChatMessage.chat_id).all()
             return {row.chat_id: row.count for row in results}
 
+    def get_performance_metrics(
+        self,
+        start_date: Optional[int] = None,
+        end_date: Optional[int] = None,
+        group_id: Optional[str] = None,
+        db: Optional[Session] = None,
+    ) -> dict[str, Optional[float] | int]:
+        with get_db_context(db) as db:
+            from open_webui.models.groups import GroupMember
+
+            def _to_float(value: Any) -> Optional[float]:
+                if value is None:
+                    return None
+                if isinstance(value, str):
+                    if value.strip().lower() in {"", "n/a", "na", "none", "null"}:
+                        return None
+                try:
+                    return float(value)
+                except (TypeError, ValueError):
+                    return None
+
+            query = db.query(ChatMessage.usage, ChatMessage.error).filter(
+                ChatMessage.role == "assistant",
+                ~ChatMessage.user_id.like("shared-%"),
+            )
+
+            if start_date:
+                query = query.filter(ChatMessage.created_at >= start_date)
+            if end_date:
+                query = query.filter(ChatMessage.created_at <= end_date)
+            if group_id:
+                group_users = (
+                    db.query(GroupMember.user_id)
+                    .filter(GroupMember.group_id == group_id)
+                    .subquery()
+                )
+                query = query.filter(ChatMessage.user_id.in_(group_users))
+
+            rows = query.all()
+
+            total_requests = 0
+            error_requests = 0
+            ttft_values: list[float] = []
+            tps_values: list[float] = []
+
+            for usage, error in rows:
+                total_requests += 1
+
+                if error not in (None, {}, "", []):
+                    error_requests += 1
+
+                if not isinstance(usage, dict):
+                    continue
+
+                ttft_ms = (
+                    _to_float(usage.get("ttft_ms"))
+                    or _to_float(usage.get("time_to_first_token_ms"))
+                    or _to_float(usage.get("time_to_first_token"))
+                )
+
+                if ttft_ms is None:
+                    prompt_eval_duration = _to_float(usage.get("prompt_eval_duration"))
+                    if prompt_eval_duration and prompt_eval_duration > 0:
+                        ttft_ms = prompt_eval_duration / 1_000_000
+
+                if ttft_ms and ttft_ms > 0:
+                    ttft_values.append(ttft_ms)
+
+                tokens_per_second = (
+                    _to_float(usage.get("tokens_per_second"))
+                    or _to_float(usage.get("response_token/s"))
+                )
+
+                if tokens_per_second is None:
+                    output_tokens = _to_float(usage.get("output_tokens")) or _to_float(
+                        usage.get("completion_tokens")
+                    )
+                    eval_duration = _to_float(usage.get("eval_duration"))
+                    if output_tokens and eval_duration and eval_duration > 0:
+                        tokens_per_second = output_tokens / (eval_duration / 1_000_000_000)
+
+                if tokens_per_second and tokens_per_second > 0:
+                    tps_values.append(tokens_per_second)
+
+            avg_ttft_ms = (
+                round(sum(ttft_values) / len(ttft_values), 2) if ttft_values else None
+            )
+            avg_tokens_per_second = (
+                round(sum(tps_values) / len(tps_values), 2) if tps_values else None
+            )
+            error_rate = (
+                round((error_requests / total_requests) * 100, 2)
+                if total_requests > 0
+                else 0.0
+            )
+
+            return {
+                "avg_ttft_ms": avg_ttft_ms,
+                "avg_tokens_per_second": avg_tokens_per_second,
+                "error_requests": error_requests,
+                "total_requests": total_requests,
+                "error_rate": error_rate,
+            }
+
     def get_daily_message_counts_by_model(
         self,
         start_date: Optional[int] = None,
