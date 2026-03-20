@@ -55,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🖼️ **Model profile image fallbacks.** Model profile images now display a fallback icon when they fail to load, and model icons no longer disappear on paginated Models pages in admin and workspace settings. [#22485](https://github.com/open-webui/open-webui/pull/22485)
 - 🖼️ **Profile image fallbacks.** Added fallback handlers for model and user profile images throughout the chat interface, preventing broken image icons when avatars fail to load. [#22486](https://github.com/open-webui/open-webui/pull/22486)
 - 🗄️ **Oracle 23AI hybrid search.** Fixed an UnboundLocalError that occurred when using hybrid search with Oracle 23AI as the vector store, preventing knowledge base queries from failing. [Commit](https://github.com/open-webui/open-webui/commit/fcf720835285a4cea10fc1ebed0b454971463b20), [#22616](https://github.com/open-webui/open-webui/issues/22616)
+- 🌐 **Dynamic HTML language attribute.** The HTML lang attribute now dynamically updates when users change their interface language, preventing browsers from triggering unwanted translation popups. [Commit](https://github.com/open-webui/open-webui/commit/de5e0fbc00e7abcd84e1272c301b0707f8ea5ac6)
 
 ### Changed
 
