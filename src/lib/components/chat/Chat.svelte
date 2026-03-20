@@ -566,11 +566,20 @@
 		origin: string;
 		data: { type: string; text: string };
 	}) => {
-		if (event.origin !== window.origin) {
+		const isSameOrigin = event.origin === window.origin;
+		const type = event.data?.type;
+
+		// These message types only submit text to the chat input — functionally
+		// equivalent to the user typing.  They are safe to accept from sandboxed
+		// iframes whose origin is opaque ("null") because they cannot read or
+		// modify any page state.
+		const iframePromptTypes = ['input:prompt', 'input:prompt:submit', 'action:submit'];
+
+		if (!isSameOrigin && !iframePromptTypes.includes(type)) {
 			return;
 		}
 
-		if (event.data.type === 'action:submit') {
+		if (type === 'action:submit') {
 			console.debug(event.data.text);
 
 			if (prompt !== '') {
@@ -579,8 +588,7 @@
 			}
 		}
 
-		// Replace with your iframe's origin
-		if (event.data.type === 'input:prompt') {
+		if (type === 'input:prompt') {
 			console.debug(event.data.text);
 
 			const inputElement = document.getElementById('chat-input');
@@ -591,7 +599,7 @@
 			}
 		}
 
-		if (event.data.type === 'input:prompt:submit') {
+		if (type === 'input:prompt:submit') {
 			console.debug(event.data.text);
 
 			if (event.data.text !== '') {
