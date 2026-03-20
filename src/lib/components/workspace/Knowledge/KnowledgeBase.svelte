@@ -170,6 +170,11 @@
 
 	const fileSelectHandler = async (file) => {
 		try {
+			const status = file?.data?.status;
+			if (status && status !== 'completed' && status !== 'failed') {
+				toast.info($i18n.t('This file is still being processed.'));
+				return;
+			}
 			selectedFile = file;
 			selectedFileContent = selectedFile?.data?.content || '';
 		} catch (e) {
