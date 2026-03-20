@@ -32,6 +32,9 @@ class DLPEngine:
                 {"name": "MEDICAL_ID"},
                 {"name": "MEDICAL_RECORD_NUMBER"},
                 {"name": "STREET_ADDRESS"},
+                {"name": "DATE_OF_BIRTH"},
+                {"name": "DATE"},
+                {"name": "US_TOLLFREE_PHONE_NUMBER"},
                 {"name": "CREDIT_CARD_DATA"},
             ]
         }
