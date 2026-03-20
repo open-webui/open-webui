@@ -1771,7 +1771,7 @@ async def query_knowledge_files(
         from open_webui.models.knowledge import Knowledges
         from open_webui.models.files import Files
         from open_webui.models.notes import Notes
-        from open_webui.retrieval.utils import query_collection
+        from open_webui.retrieval.utils import query_collection, query_collection_with_hybrid_search
         from open_webui.models.access_grants import AccessGrants
 
         user_id = __user__.get('id')
@@ -1873,12 +1873,40 @@ async def query_knowledge_files(
 
         # Query vector collections if any
         if collection_names:
-            query_results = await query_collection(
-                collection_names=collection_names,
-                queries=[query],
-                embedding_function=embedding_function,
-                k=count,
-            )
+            query_results = None
+
+            # Use hybrid search + reranking when enabled (same as middleware RAG pipeline)
+            if __request__.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
+                try:
+                    reranking_function = None
+                    if __request__.app.state.RERANKING_FUNCTION:
+                        reranking_function = lambda q, docs: __request__.app.state.RERANKING_FUNCTION(
+                            q, docs, user=__user__
+                        )
+
+                    query_results = await query_collection_with_hybrid_search(
+                        collection_names=collection_names,
+                        queries=[query],
+                        embedding_function=embedding_function,
+                        k=count,
+                        reranking_function=reranking_function,
+                        k_reranker=__request__.app.state.config.TOP_K_RERANKER,
+                        r=__request__.app.state.config.RELEVANCE_THRESHOLD,
+                        hybrid_bm25_weight=__request__.app.state.config.HYBRID_BM25_WEIGHT,
+                        enable_enriched_texts=__request__.app.state.config.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
+                    )
+                except Exception as e:
+                    log.debug(f'Hybrid search failed, falling back to vector search: {e}')
+                    query_results = None
+
+            # Fallback to plain vector search
+            if query_results is None:
+                query_results = await query_collection(
+                    collection_names=collection_names,
+                    queries=[query],
+                    embedding_function=embedding_function,
+                    k=count,
+                )
 
             if query_results and 'documents' in query_results:
                 documents = query_results.get('documents', [[]])[0]
