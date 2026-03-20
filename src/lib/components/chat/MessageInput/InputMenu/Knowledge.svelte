@@ -78,7 +78,9 @@
 			}
 
 			if (selectedFileItems) {
-				selectedFileItems = [...selectedFileItems, ...pageItems];
+				const existingIds = new Set(selectedFileItems.map((item) => item.id));
+				const newItems = pageItems.filter((item) => !existingIds.has(item.id));
+				selectedFileItems = [...selectedFileItems, ...newItems];
 			} else {
 				selectedFileItems = pageItems;
 			}
@@ -137,7 +139,9 @@
 			}
 
 			if (items) {
-				items = [...items, ...pageItems];
+				const existingIds = new Set(items.map((item) => item.id));
+				const newItems = pageItems.filter((item) => !existingIds.has(item.id));
+				items = [...items, ...newItems];
 			} else {
 				items = pageItems;
 			}

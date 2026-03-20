@@ -2228,6 +2228,7 @@
 
 				session_id: $socket?.id,
 				chat_id: $chatId,
+				folder_id: $selectedFolder?.id ?? undefined,
 
 				id: responseMessageId,
 				context_message_id: contextMessageId ?? undefined,

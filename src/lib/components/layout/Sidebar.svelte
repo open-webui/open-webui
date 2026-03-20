@@ -249,7 +249,9 @@
 
 		// once the bottom of the list has been reached (no results) there is no need to continue querying
 		allChatsLoaded = newChatList.length === 0;
-		await chats.set([...($chats ? $chats : []), ...newChatList]);
+		const existingIds = new Set(($chats ?? []).map((c) => c.id));
+		const uniqueNewChats = newChatList.filter((c) => !existingIds.has(c.id));
+		await chats.set([...($chats ? $chats : []), ...uniqueNewChats]);
 
 		chatListLoading = false;
 	};

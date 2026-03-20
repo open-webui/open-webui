@@ -904,6 +904,9 @@
 								}
 							];
 						} else {
+							if (files.find((f) => f.url === data || f.name === data)) {
+								return;
+							}
 							onUpload(e);
 						}
 					}
@@ -939,6 +942,9 @@
 								}
 							];
 						} else {
+							if (files.find((f) => f.url === data || f.name === data)) {
+								return;
+							}
 							onUpload(e);
 						}
 					}
@@ -974,6 +980,9 @@
 								}
 							];
 						} else {
+							if (files.find((f) => f.url === data || f.name === data)) {
+								return;
+							}
 							onUpload(e);
 						}
 					}

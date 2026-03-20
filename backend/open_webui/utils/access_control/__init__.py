@@ -13,9 +13,7 @@ from open_webui.config import DEFAULT_USER_PERMISSIONS
 from sqlalchemy.orm import Session
 
 
-def fill_missing_permissions(
-    permissions: dict[str, Any], default_permissions: dict[str, Any]
-) -> dict[str, Any]:
+def fill_missing_permissions(permissions: dict[str, Any], default_permissions: dict[str, Any]) -> dict[str, Any]:
     """
     Recursively fills in missing properties in the permissions dictionary
     using the default permissions as a template.
@@ -23,9 +21,7 @@ def fill_missing_permissions(
     for key, value in default_permissions.items():
         if key not in permissions:
             permissions[key] = value
-        elif isinstance(value, dict) and isinstance(
-            permissions[key], dict
-        ):  # Both are nested dictionaries
+        elif isinstance(value, dict) and isinstance(permissions[key], dict):  # Both are nested dictionaries
             permissions[key] = fill_missing_permissions(permissions[key], value)
 
     return permissions
@@ -42,9 +38,7 @@ def get_permissions(
     Permissions are nested in a dict with the permission key as the key and a boolean as the value.
     """
 
-    def combine_permissions(
-        permissions: dict[str, Any], group_permissions: dict[str, Any]
-    ) -> dict[str, Any]:
+    def combine_permissions(permissions: dict[str, Any], group_permissions: dict[str, Any]) -> dict[str, Any]:
         """Combine permissions from multiple groups by taking the most permissive value."""
         for key, value in group_permissions.items():
             if isinstance(value, dict):
@@ -55,9 +49,7 @@ def get_permissions(
                 if key not in permissions:
                     permissions[key] = value
                 else:
-                    permissions[key] = (
-                        permissions[key] or value
-                    )  # Use the most permissive value (True > False)
+                    permissions[key] = permissions[key] or value  # Use the most permissive value (True > False)
         return permissions
 
     user_groups = Groups.get_groups_by_member_id(user_id, db=db)
@@ -97,7 +89,7 @@ def has_permission(
 
         return bool(permissions)  # Return the boolean at the final level
 
-    permission_hierarchy = permission_key.split(".")
+    permission_hierarchy = permission_key.split('.')
 
     # Retrieve user group permissions
     user_groups = Groups.get_groups_by_member_id(user_id, db=db)
@@ -107,15 +99,13 @@ def has_permission(
             return True
 
     # Check default permissions afterward if the group permissions don't allow it
-    default_permissions = fill_missing_permissions(
-        default_permissions, DEFAULT_USER_PERMISSIONS
-    )
+    default_permissions = fill_missing_permissions(default_permissions, DEFAULT_USER_PERMISSIONS)
     return get_permission(default_permissions, permission_hierarchy)
 
 
 def has_access(
     user_id: str,
-    permission: str = "read",
+    permission: str = 'read',
     access_grants: list | None = None,
     user_group_ids: set[str] | None = None,
     db: Session | None = None,
@@ -141,19 +131,13 @@ def has_access(
     for grant in access_grants:
         if not isinstance(grant, dict):
             continue
-        if grant.get("permission") != permission:
+        if grant.get('permission') != permission:
             continue
-        principal_type = grant.get("principal_type")
-        principal_id = grant.get("principal_id")
-        if principal_type == "user" and (
-            principal_id == "*" or principal_id == user_id
-        ):
+        principal_type = grant.get('principal_type')
+        principal_id = grant.get('principal_id')
+        if principal_type == 'user' and (principal_id == '*' or principal_id == user_id):
             return True
-        if (
-            principal_type == "group"
-            and user_group_ids
-            and principal_id in user_group_ids
-        ):
+        if principal_type == 'group' and user_group_ids and principal_id in user_group_ids:
             return True
 
     return False
@@ -174,19 +158,17 @@ def has_connection_access(
     """
     from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 
-    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
+    if user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL:
         return True
 
     if user_group_ids is None:
         user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
 
-    access_grants = (connection.get("config") or {}).get("access_grants", [])
-    return has_access(user.id, "read", access_grants, user_group_ids)
+    access_grants = (connection.get('config') or {}).get('access_grants', [])
+    return has_access(user.id, 'read', access_grants, user_group_ids)
 
 
-def migrate_access_control(
-    data: dict, ac_key: str = "access_control", grants_key: str = "access_grants"
-) -> None:
+def migrate_access_control(data: dict, ac_key: str = 'access_control', grants_key: str = 'access_grants') -> None:
     """
     Auto-migrate a config dict in-place from legacy access_control dict to access_grants list.
 
@@ -202,24 +184,24 @@ def migrate_access_control(
 
     grants: list[dict[str, str]] = []
     if access_control and isinstance(access_control, dict):
-        for perm in ["read", "write"]:
+        for perm in ['read', 'write']:
             perm_data = access_control.get(perm, {})
             if not perm_data:
                 continue
-            for group_id in perm_data.get("group_ids", []):
+            for group_id in perm_data.get('group_ids', []):
                 grants.append(
                     {
-                        "principal_type": "group",
-                        "principal_id": group_id,
-                        "permission": perm,
+                        'principal_type': 'group',
+                        'principal_id': group_id,
+                        'permission': perm,
                     }
                 )
-            for uid in perm_data.get("user_ids", []):
+            for uid in perm_data.get('user_ids', []):
                 grants.append(
                     {
-                        "principal_type": "user",
-                        "principal_id": uid,
-                        "permission": perm,
+                        'principal_type': 'user',
+                        'principal_id': uid,
+                        'permission': perm,
                     }
                 )
 
@@ -239,7 +221,7 @@ def filter_allowed_access_grants(
     Checks if the user has the required permissions to grant access to a resource.
     Returns the filtered list of access grants if permissions are missing.
     """
-    if user_role == "admin" or not access_grants:
+    if user_role == 'admin' or not access_grants:
         return access_grants
 
     # Check if user can share publicly
@@ -253,25 +235,17 @@ def filter_allowed_access_grants(
             grant
             for grant in access_grants
             if not (
-                (
-                    grant.get("principal_type")
-                    if isinstance(grant, dict)
-                    else getattr(grant, "principal_type", None)
-                )
-                == "user"
-                and (
-                    grant.get("principal_id")
-                    if isinstance(grant, dict)
-                    else getattr(grant, "principal_id", None)
-                )
-                == "*"
+                (grant.get('principal_type') if isinstance(grant, dict) else getattr(grant, 'principal_type', None))
+                == 'user'
+                and (grant.get('principal_id') if isinstance(grant, dict) else getattr(grant, 'principal_id', None))
+                == '*'
             )
         ]
 
     # Strip individual user sharing if user lacks permission
     if has_user_access_grant(access_grants) and not has_permission(
         user_id,
-        "access_grants.allow_users",
+        'access_grants.allow_users',
         default_permissions,
         db=db,
     ):

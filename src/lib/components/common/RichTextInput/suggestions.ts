@@ -22,7 +22,7 @@ export function getSuggestionRenderer(Component: any, ComponentProps = {}) {
 					component: Component,
 					target: container,
 					props: {
-						char: props?.text,
+						char: props?.text?.charAt(0),
 						query: props?.query,
 						command: (item) => {
 							props.command({ id: item.id, label: item.label });
