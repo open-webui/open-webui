@@ -1431,7 +1431,8 @@
 						...(history.messages[message.id].content !== message.content
 							? { originalContent: history.messages[message.id].content }
 							: {}),
-						...message
+						...message,
+						...(message.role === 'assistant' ? { done: true } : {})
 					};
 				}
 			}
@@ -1803,6 +1804,7 @@
 
 		if (done) {
 			message.done = true;
+			message = { ...message };
 
 			if ($settings.responseAutoCopy) {
 				copyToClipboard(message.content);
@@ -1836,6 +1838,7 @@
 			);
 
 			history.messages[message.id] = message;
+			history = { ...history };
 
 			await tick();
 			if (autoScroll) {
