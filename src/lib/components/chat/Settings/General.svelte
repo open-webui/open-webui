@@ -4,7 +4,7 @@
 	import { getLanguages, changeLanguage } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
-	import { models, settings, theme, user } from '$lib/stores';
+	import { config, models, settings, theme, user } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -42,6 +42,7 @@
 	let params = {
 		// Advanced
 		stream_response: null,
+		stream_delta_chunk_size: null,
 		function_calling: null,
 		seed: null,
 		temperature: null,
@@ -71,6 +72,8 @@
 			system: system !== '' ? system : undefined,
 			params: {
 				stream_response: params.stream_response !== null ? params.stream_response : undefined,
+				stream_delta_chunk_size:
+					params.stream_delta_chunk_size !== null ? params.stream_delta_chunk_size : undefined,
 				function_calling: params.function_calling !== null ? params.function_calling : undefined,
 				seed: (params.seed !== null ? params.seed : undefined) ?? undefined,
 				stop: params.stop ? params.stop.split(',').filter((e) => e) : undefined,
@@ -109,6 +112,10 @@
 
 		languages = await getLanguages();
 
+		if (!$config?.features?.enable_easter_eggs) {
+			languages = languages.filter((l) => l.code !== 'dg-DG');
+		}
+
 		notificationEnabled = $settings.notificationEnabled ?? false;
 		system = $settings.system ?? '';
 
@@ -117,7 +124,7 @@
 	});
 
 	const applyTheme = (_theme: string) => {
-		let themeToApply = _theme === 'oled-dark' ? 'dark' : _theme;
+		let themeToApply = _theme === 'oled-dark' ? 'dark' : _theme === 'her' ? 'light' : _theme;
 
 		if (_theme === 'system') {
 			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -187,27 +194,29 @@
 	};
 </script>
 
-<div class="flex flex-col h-full justify-between text-sm">
-	<div class="  overflow-y-scroll max-h-[28rem] lg:max-h-full">
+<div class="flex flex-col h-full justify-between text-sm" id="tab-general">
+	<div class="  overflow-y-scroll max-h-[28rem] md:max-h-full">
 		<div class="">
-			<div class=" mb-1 text-sm font-medium">{$i18n.t('GSM Settings')}</div>
+			<div class=" mb-1 text-sm font-medium">{$i18n.t('WebUI Settings')}</div>
 
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Theme')}</div>
 				<div class="flex items-center relative">
 					<select
-						class=" dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right"
+						class="w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent text-right {$settings.highContrastMode
+							? ''
+							: 'outline-hidden'}"
 						bind:value={selectedTheme}
-						placeholder="Select a theme"
+						placeholder={$i18n.t('Select a theme')}
 						on:change={() => themeChangeHandler(selectedTheme)}
 					>
 						<option value="system">⚙️ {$i18n.t('System')}</option>
 						<option value="dark">🌑 {$i18n.t('Dark')}</option>
 						<option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option>
 						<option value="light">☀️ {$i18n.t('Light')}</option>
-						<option value="her">🌷 Her</option>
-						<!-- <option value="rose-pine dark">🪻 {$i18n.t('Rosé Pine')}</option>
-						<option value="rose-pine-dawn light">🌷 {$i18n.t('Rosé Pine Dawn')}</option> -->
+						{#if $config?.features?.enable_easter_eggs}
+							<option value="her">🌷 Her</option>
+						{/if}
 					</select>
 				</div>
 			</div>
@@ -216,9 +225,11 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Language')}</div>
 				<div class="flex items-center relative">
 					<select
-						class=" dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right"
+						class="w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent text-right {$settings.highContrastMode
+							? ''
+							: 'outline-hidden'}"
 						bind:value={lang}
-						placeholder="Select a language"
+						placeholder={$i18n.t('Select a language')}
 						on:change={(e) => {
 							changeLanguage(lang);
 						}}
@@ -229,15 +240,21 @@
 					</select>
 				</div>
 			</div>
-			{#if $i18n.language === 'en-US'}
-				<div class="mb-2 text-xs text-gray-400 dark:text-gray-500">
+			{#if $i18n.language === 'en-US' && !($config?.license_metadata ?? false)}
+				<div
+					class="mb-2 text-xs {($settings?.highContrastMode ?? false)
+						? 'text-gray-800 dark:text-gray-100'
+						: 'text-gray-400 dark:text-gray-500'}"
+				>
 					Couldn't find your language?
 					<a
-						class=" text-gray-300 font-medium underline"
-						href="#"
+						class="font-medium underline {($settings?.highContrastMode ?? false)
+							? 'text-gray-700 dark:text-gray-200'
+							: 'text-gray-300'}"
+						href="https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
 						target="_blank"
 					>
-						Help us translate GSM!
+						Help us translate Open WebUI!
 					</a>
 				</div>
 			{/if}
@@ -252,6 +269,8 @@
 							toggleNotification();
 						}}
 						type="button"
+						role="switch"
+						aria-checked={notificationEnabled}
 					>
 						{#if notificationEnabled === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
@@ -263,25 +282,33 @@
 			</div>
 		</div>
 
-		{#if $user?.role === 'admin' || $user?.permissions.chat?.controls}
-			<hr class="border-gray-50 dark:border-gray-850 my-3" />
+		{#if $user?.role === 'admin' || (($user?.permissions.chat?.controls ?? true) && ($user?.permissions.chat?.system_prompt ?? true))}
+			<hr class="border-gray-100/30 dark:border-gray-850/30 my-3" />
 
 			<div>
 				<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
 				<Textarea
 					bind:value={system}
-					className="w-full text-sm bg-white dark:text-gray-300 dark:bg-gray-900 outline-hidden resize-none"
+					className={'w-full text-sm outline-hidden resize-vertical' +
+						($settings.highContrastMode
+							? ' p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-transparent text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 overflow-y-hidden'
+							: '  dark:text-gray-300 ')}
 					rows="4"
 					placeholder={$i18n.t('Enter system prompt here')}
 				/>
 			</div>
+		{/if}
 
+		{#if $user?.role === 'admin' || (($user?.permissions.chat?.controls ?? true) && ($user?.permissions.chat?.params ?? true))}
 			<div class="mt-2 space-y-3 pr-1.5">
 				<div class="flex justify-between items-center text-sm">
 					<div class="  font-medium">{$i18n.t('Advanced Parameters')}</div>
 					<button
-						class=" text-xs font-medium text-gray-500"
+						class=" text-xs font-medium {($settings?.highContrastMode ?? false)
+							? 'text-gray-800 dark:text-gray-100'
+							: 'text-gray-400 dark:text-gray-500'}"
 						type="button"
+						aria-expanded={showAdvanced}
 						on:click={() => {
 							showAdvanced = !showAdvanced;
 						}}>{showAdvanced ? $i18n.t('Hide') : $i18n.t('Show')}</button

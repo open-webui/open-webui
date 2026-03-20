@@ -1,17 +1,20 @@
 <script lang="ts">
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
+	import { getContext } from 'svelte';
 
 	import ProfileImage from '../Messages/ProfileImage.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Heart from '$lib/components/icons/Heart.svelte';
+
+	const i18n = getContext('i18n');
 
 	type $$Props = NodeProps;
 	export let data: $$Props['data'];
 </script>
 
 <div
-	class="px-4 py-3 shadow-md rounded-xl dark:bg-black bg-white border dark:border-gray-900 w-60 h-20 group"
+	class="px-4 py-3 shadow-md rounded-xl dark:bg-black bg-white border border-gray-100 dark:border-gray-900 w-60 h-20 group"
 >
 	<Tooltip
 		content={data?.message?.error ? data.message.error.content : data.message.content}
@@ -21,8 +24,8 @@
 		{#if data.message.role === 'user'}
 			<div class="flex w-full">
 				<ProfileImage
-					src={data.user?.profile_image_url ?? '/user.png'}
-					className={'size-5 -translate-y-[1px]'}
+					src={`${WEBUI_API_BASE_URL}/users/${data.user.id}/profile/image`}
+					className={'size-5 -translate-y-[1px] flex-shrink-0'}
 				/>
 				<div class="ml-2">
 					<div class=" flex justify-between items-center">
@@ -41,8 +44,8 @@
 		{:else}
 			<div class="flex w-full">
 				<ProfileImage
-					src={data?.model?.info?.meta?.profile_image_url ?? ''}
-					className={'size-5 -translate-y-[1px]'}
+					src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${data.model?.id ?? data.message.model}&lang=${$i18n.language}`}
+					className={'size-5 -translate-y-[1px] flex-shrink-0'}
 				/>
 
 				<div class="ml-2">
@@ -53,6 +56,9 @@
 
 						<button
 							class={data?.message?.favorite ? '' : 'invisible group-hover:visible'}
+							aria-label={data?.message?.favorite
+								? $i18n.t('Remove from favorites')
+								: $i18n.t('Add to favorites')}
 							on:click={() => {
 								data.message.favorite = !(data?.message?.favorite ?? false);
 							}}

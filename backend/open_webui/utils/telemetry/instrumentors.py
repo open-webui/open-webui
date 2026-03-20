@@ -20,18 +20,17 @@ from opentelemetry.instrumentation.redis import RedisInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
+from opentelemetry.instrumentation.system_metrics import SystemMetricsInstrumentor
 from opentelemetry.trace import Span, StatusCode
 from redis import Redis
+from redis.cluster import RedisCluster
 from requests import PreparedRequest, Response
 from sqlalchemy import Engine
 from fastapi import status
 
 from open_webui.utils.telemetry.constants import SPAN_REDIS_TYPE, SpanAttributes
 
-from open_webui.env import SRC_LOG_LEVELS
-
 logger = logging.getLogger(__name__)
-logger.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 def requests_hook(span: Span, request: PreparedRequest):
@@ -61,16 +60,28 @@ def response_hook(span: Span, request: PreparedRequest, response: Response):
     span.set_status(StatusCode.ERROR if response.status_code >= 400 else StatusCode.OK)
 
 
-def redis_request_hook(span: Span, instance: Redis, args, kwargs):
+def redis_request_hook(span: Span, instance: Union[Redis | RedisCluster], args, kwargs):
     """
     Redis Request Hook
     """
 
+    # In cluster mode, the instance can be of two types:
+    # - redis.asyncio.cluster.RedisCluster
+    # - redis.cluster.RedisCluster
+    # Instead of checking the type, we check if the instance has a nodes_manager attribute.
     try:
-        connection_kwargs: dict = instance.connection_pool.connection_kwargs
-        host = connection_kwargs.get("host")
-        port = connection_kwargs.get("port")
-        db = connection_kwargs.get("db")
+        db = ""
+        if hasattr(instance, "nodes_manager"):
+            default_node = instance.nodes_manager.default_node
+            if not default_node:
+                return
+            host = default_node.host
+            port = default_node.port
+        else:
+            connection_kwargs: dict = instance.connection_pool.connection_kwargs
+            host = connection_kwargs.get("host")
+            port = connection_kwargs.get("port")
+            db = connection_kwargs.get("db")
         span.set_attributes(
             {
                 SpanAttributes.DB_INSTANCE: f"{host}/{db}",
@@ -194,6 +205,7 @@ class Instrumentor(BaseInstrumentor):
             request_hook=aiohttp_request_hook,
             response_hook=aiohttp_response_hook,
         )
+        SystemMetricsInstrumentor().instrument()
 
     def _uninstrument(self, **kwargs):
         if getattr(self, "instrumentors", None) is None:

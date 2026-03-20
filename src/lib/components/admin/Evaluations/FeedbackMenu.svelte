@@ -25,14 +25,14 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[150px] rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+			class="w-full max-w-[150px] rounded-xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 			sideOffset={-2}
 			side="bottom"
 			align="start"
 			transition={flyAndScale}
 		>
 			<DropdownMenu.Item
-				class="flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				class="select-none flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
 					dispatch('delete');
 					show = false;

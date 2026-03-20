@@ -35,9 +35,6 @@
 	import ChevronUp from '../icons/ChevronUp.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Spinner from './Spinner.svelte';
-	import CodeBlock from '../chat/Messages/CodeBlock.svelte';
-	import Markdown from '../chat/Messages/Markdown.svelte';
-	import Image from './Image.svelte';
 
 	export let open = false;
 
@@ -60,30 +57,6 @@
 	$: onChange(open);
 
 	const collapsibleId = uuidv4();
-
-	function parseJSONString(str) {
-		try {
-			return parseJSONString(JSON.parse(str));
-		} catch (e) {
-			return str;
-		}
-	}
-
-	function formatJSONString(str) {
-		try {
-			const parsed = parseJSONString(str);
-			// If parsed is an object/array, then it's valid JSON
-			if (typeof parsed === 'object') {
-				return JSON.stringify(parsed, null, 2);
-			} else {
-				// It's a primitive value like a number, boolean, etc.
-				return `${JSON.stringify(String(parsed))}`;
-			}
-		} catch (e) {
-			// Not valid JSON, return as-is
-			return str;
-		}
-	}
 </script>
 
 <div {id} class={className}>
@@ -91,7 +64,7 @@
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<!-- svelte-ignore a11y-click-events-have-key-events -->
 		<div
-			class="{buttonClassName} cursor-pointer"
+			class="{buttonClassName} {disabled ? '' : 'cursor-pointer'}"
 			on:pointerup={() => {
 				if (!disabled) {
 					open = !open;
@@ -99,7 +72,7 @@
 			}}
 		>
 			<div
-				class=" w-full font-medium flex items-center justify-between gap-2 {attributes?.done &&
+				class=" w-full flex items-center justify-between gap-2 {attributes?.done &&
 				attributes?.done !== 'true'
 					? 'shimmer'
 					: ''}
@@ -114,7 +87,9 @@
 				<div class="">
 					{#if attributes?.type === 'reasoning'}
 						{#if attributes?.done === 'true' && attributes?.duration}
-							{#if attributes.duration < 60}
+							{#if attributes.duration < 1}
+								{$i18n.t('Thought for less than a second')}
+							{:else if attributes.duration < 60}
 								{$i18n.t('Thought for {{DURATION}} seconds', {
 									DURATION: attributes.duration
 								})}
@@ -132,34 +107,20 @@
 						{:else}
 							{$i18n.t('Analyzing...')}
 						{/if}
-					{:else if attributes?.type === 'tool_calls'}
-						{#if attributes?.done === 'true'}
-							<Markdown
-								id={`${collapsibleId}-tool-calls-${attributes?.id}`}
-								content={$i18n.t('View Result from **{{NAME}}**', {
-									NAME: attributes.name
-								})}
-							/>
-						{:else}
-							<Markdown
-								id={`${collapsibleId}-tool-calls-${attributes?.id}-executing`}
-								content={$i18n.t('Executing **{{NAME}}**...', {
-									NAME: attributes.name
-								})}
-							/>
-						{/if}
 					{:else}
 						{title}
 					{/if}
 				</div>
 
-				<div class="flex self-center translate-y-[1px]">
-					{#if open}
-						<ChevronUp strokeWidth="3.5" className="size-3.5" />
-					{:else}
-						<ChevronDown strokeWidth="3.5" className="size-3.5" />
-					{/if}
-				</div>
+				{#if !disabled}
+					<div class="flex self-center translate-y-[1px]">
+						{#if open}
+							<ChevronUp strokeWidth="3.5" className="size-3.5" />
+						{:else}
+							<ChevronDown strokeWidth="3.5" className="size-3.5" />
+						{/if}
+					</div>
+				{/if}
 			</div>
 		</div>
 	{:else}
@@ -167,7 +128,10 @@
 		<!-- svelte-ignore a11y-click-events-have-key-events -->
 		<div
 			class="{buttonClassName} cursor-pointer"
-			on:pointerup={() => {
+			on:click={(e) => {
+				e.stopPropagation();
+			}}
+			on:pointerup={(e) => {
 				if (!disabled) {
 					open = !open;
 				}
@@ -204,52 +168,7 @@
 		</div>
 	{/if}
 
-	{#if attributes?.type === 'tool_calls'}
-		{@const args = decode(attributes?.arguments)}
-		{@const result = decode(attributes?.result ?? '')}
-		{@const files = parseJSONString(decode(attributes?.files ?? ''))}
-
-		{#if !grow}
-			{#if open && !hide}
-				<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
-					{#if attributes?.type === 'tool_calls'}
-						{#if attributes?.done === 'true'}
-							<Markdown
-								id={`${collapsibleId}-tool-calls-${attributes?.id}-result`}
-								content={`> \`\`\`json
-> ${formatJSONString(args)}
-> ${formatJSONString(result)}
-> \`\`\``}
-							/>
-						{:else}
-							<Markdown
-								id={`${collapsibleId}-tool-calls-${attributes?.id}-result`}
-								content={`> \`\`\`json
-> ${formatJSONString(args)}
-> \`\`\``}
-							/>
-						{/if}
-					{:else}
-						<slot name="content" />
-					{/if}
-				</div>
-			{/if}
-
-			{#if attributes?.done === 'true'}
-				{#if typeof files === 'object'}
-					{#each files ?? [] as file, idx}
-						{#if file.startsWith('data:image/')}
-							<Image
-								id={`${collapsibleId}-tool-calls-${attributes?.id}-result-${idx}`}
-								src={file}
-								alt="Image"
-							/>
-						{/if}
-					{/each}
-				{/if}
-			{/if}
-		{/if}
-	{:else if !grow}
+	{#if !grow}
 		{#if open && !hide}
 			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
 				<slot name="content" />

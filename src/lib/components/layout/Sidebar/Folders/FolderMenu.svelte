@@ -11,6 +11,13 @@
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
+	import Folder from '$lib/components/icons/Folder.svelte';
+
+	export let align: 'start' | 'end' = 'start';
+	export let onEdit = () => {};
+	export let onExport = () => {};
+	export let onDelete = () => {};
+	export let onCreateSub = () => {};
 
 	let show = false;
 </script>
@@ -24,45 +31,64 @@
 	}}
 >
 	<Tooltip content={$i18n.t('More')}>
-		<slot />
+		<button
+			on:click={(e) => {
+				e.stopPropagation();
+				show = !show;
+			}}
+		>
+			<slot />
+		</button>
 	</Tooltip>
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[170px] rounded-lg px-1 py-1.5  z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+			class="w-full max-w-[170px] rounded-2xl px-1 py-1 border border-gray-100  dark:border-gray-800   z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 			sideOffset={-2}
 			side="bottom"
-			align="start"
+			{align}
 			transition={flyAndScale}
 		>
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				class="flex gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 				on:click={() => {
-					dispatch('rename');
+					onCreateSub();
 				}}
 			>
-				<Pencil strokeWidth="2" />
-				<div class="flex items-center">{$i18n.t('Rename')}</div>
+				<Folder />
+				<div class="flex items-center">{$i18n.t('Create Folder')}</div>
+			</DropdownMenu.Item>
+
+			<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+				on:click={() => {
+					onEdit();
+				}}
+			>
+				<Pencil />
+				<div class="flex items-center">{$i18n.t('Edit')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				class="flex gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 				on:click={() => {
-					dispatch('export');
+					onExport();
 				}}
 			>
-				<Download strokeWidth="2" />
+				<Download />
 
 				<div class="flex items-center">{$i18n.t('Export')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				class="flex gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 				on:click={() => {
-					dispatch('delete');
+					onDelete();
 				}}
 			>
-				<GarbageBin strokeWidth="2" />
+				<GarbageBin />
 				<div class="flex items-center">{$i18n.t('Delete')}</div>
 			</DropdownMenu.Item>
 		</DropdownMenu.Content>

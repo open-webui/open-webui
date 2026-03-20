@@ -5,8 +5,14 @@ import os
 import pkgutil
 import sys
 import shutil
+import traceback
+from datetime import datetime, timezone
+from typing import Any
 from uuid import uuid4
 from pathlib import Path
+from cryptography.hazmat.primitives import serialization
+import re
+
 
 import markdown
 from bs4 import BeautifulSoup
@@ -16,14 +22,17 @@ from open_webui.constants import ERROR_MESSAGES
 # Load .env file
 ####################################
 
-OPEN_WEBUI_DIR = Path(__file__).parent  # the path containing this file
-print(OPEN_WEBUI_DIR)
+# Use .resolve() to get the canonical path, removing any '..' or '.' components
+ENV_FILE_PATH = Path(__file__).resolve()
 
-BACKEND_DIR = OPEN_WEBUI_DIR.parent  # the path containing this file
-BASE_DIR = BACKEND_DIR.parent  # the path containing the backend/
+# OPEN_WEBUI_DIR should be the directory where env.py resides (open_webui/)
+OPEN_WEBUI_DIR = ENV_FILE_PATH.parent
 
-print(BACKEND_DIR)
-print(BASE_DIR)
+# BACKEND_DIR is the parent of OPEN_WEBUI_DIR (backend/)
+BACKEND_DIR = OPEN_WEBUI_DIR.parent
+
+# BASE_DIR is the parent of BACKEND_DIR (open-webui-dev/)
+BASE_DIR = BACKEND_DIR.parent
 
 try:
     from dotenv import find_dotenv, load_dotenv
@@ -66,9 +75,51 @@ except Exception:
 # LOGGING
 ####################################
 
+_LEVEL_MAP = {
+    "DEBUG": "debug",
+    "INFO": "info",
+    "WARNING": "warn",
+    "ERROR": "error",
+    "CRITICAL": "fatal",
+}
+
+
+class JSONFormatter(logging.Formatter):
+    """Format log records as single-line JSON objects for structured logging."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        log_entry: dict[str, Any] = {
+            "ts": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(
+                timespec="milliseconds"
+            ),
+            "level": _LEVEL_MAP.get(record.levelname, record.levelname.lower()),
+            "msg": record.getMessage(),
+            "caller": record.name,
+        }
+
+        if record.exc_info and record.exc_info[0] is not None:
+            log_entry["error"] = "".join(
+                traceback.format_exception(*record.exc_info)
+            ).rstrip()
+        elif record.exc_text:
+            log_entry["error"] = record.exc_text
+
+        if record.stack_info:
+            log_entry["stacktrace"] = record.stack_info
+
+        return json.dumps(log_entry, ensure_ascii=False, default=str)
+
+
+LOG_FORMAT = os.environ.get("LOG_FORMAT", "").lower()
+
 GLOBAL_LOG_LEVEL = os.environ.get("GLOBAL_LOG_LEVEL", "").upper()
 if GLOBAL_LOG_LEVEL in logging.getLevelNamesMapping():
-    logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL, force=True)
+    if LOG_FORMAT == "json":
+        _handler = logging.StreamHandler(sys.stdout)
+        _handler.setFormatter(JSONFormatter())
+        logging.basicConfig(handlers=[_handler], level=GLOBAL_LOG_LEVEL, force=True)
+    else:
+        logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL, force=True)
 else:
     GLOBAL_LOG_LEVEL = "INFO"
 
@@ -79,32 +130,7 @@ if "cuda_error" in locals():
     log.exception(cuda_error)
     del cuda_error
 
-log_sources = [
-    "AUDIO",
-    "COMFYUI",
-    "CONFIG",
-    "DB",
-    "IMAGES",
-    "MAIN",
-    "MODELS",
-    "OLLAMA",
-    "OPENAI",
-    "RAG",
-    "WEBHOOK",
-    "SOCKET",
-    "OAUTH",
-]
-
-SRC_LOG_LEVELS = {}
-
-for source in log_sources:
-    log_env_var = source + "_LOG_LEVEL"
-    SRC_LOG_LEVELS[source] = os.environ.get(log_env_var, "").upper()
-    if SRC_LOG_LEVELS[source] not in logging.getLevelNamesMapping():
-        SRC_LOG_LEVELS[source] = GLOBAL_LOG_LEVEL
-    log.info(f"{log_env_var}: {SRC_LOG_LEVELS[source]}")
-
-log.setLevel(SRC_LOG_LEVELS["CONFIG"])
+SRC_LOG_LEVELS = {}  # Legacy variable, do not remove
 
 WEBUI_NAME = os.environ.get("WEBUI_NAME", "GSM")
 if WEBUI_NAME != "GSM":
@@ -131,7 +157,12 @@ else:
         PACKAGE_DATA = {"version": "0.0.0"}
 
 VERSION = PACKAGE_DATA["version"]
+
+
+DEPLOYMENT_ID = os.environ.get("DEPLOYMENT_ID", "")
 INSTANCE_ID = os.environ.get("INSTANCE_ID", str(uuid4()))
+
+ENABLE_DB_MIGRATIONS = os.environ.get("ENABLE_DB_MIGRATIONS", "True").lower() == "true"
 
 
 # Function to parse each section
@@ -199,6 +230,7 @@ CHANGELOG = changelog_json
 
 SAFE_MODE = os.environ.get("SAFE_MODE", "false").lower() == "true"
 
+
 ####################################
 # ENABLE_FORWARD_USER_INFO_HEADERS
 ####################################
@@ -206,6 +238,35 @@ SAFE_MODE = os.environ.get("SAFE_MODE", "false").lower() == "true"
 ENABLE_FORWARD_USER_INFO_HEADERS = (
     os.environ.get("ENABLE_FORWARD_USER_INFO_HEADERS", "False").lower() == "true"
 )
+
+# Header names for user info forwarding (customizable via environment variables)
+FORWARD_USER_INFO_HEADER_USER_NAME = os.environ.get(
+    "FORWARD_USER_INFO_HEADER_USER_NAME", "X-OpenWebUI-User-Name"
+)
+FORWARD_USER_INFO_HEADER_USER_ID = os.environ.get(
+    "FORWARD_USER_INFO_HEADER_USER_ID", "X-OpenWebUI-User-Id"
+)
+FORWARD_USER_INFO_HEADER_USER_EMAIL = os.environ.get(
+    "FORWARD_USER_INFO_HEADER_USER_EMAIL", "X-OpenWebUI-User-Email"
+)
+FORWARD_USER_INFO_HEADER_USER_ROLE = os.environ.get(
+    "FORWARD_USER_INFO_HEADER_USER_ROLE", "X-OpenWebUI-User-Role"
+)
+
+# Header name for chat ID forwarding (customizable via environment variable)
+FORWARD_SESSION_INFO_HEADER_MESSAGE_ID = os.environ.get(
+    "FORWARD_SESSION_INFO_HEADER_MESSAGE_ID", "X-OpenWebUI-Message-Id"
+)
+FORWARD_SESSION_INFO_HEADER_CHAT_ID = os.environ.get(
+    "FORWARD_SESSION_INFO_HEADER_CHAT_ID", "X-OpenWebUI-Chat-Id"
+)
+
+# Experimental feature, may be removed in future
+ENABLE_STAR_SESSIONS_MIDDLEWARE = (
+    os.environ.get("ENABLE_STAR_SESSIONS_MIDDLEWARE", "False").lower() == "true"
+)
+
+ENABLE_EASTER_EGGS = os.environ.get("ENABLE_EASTER_EGGS", "True").lower() == "true"
 
 ####################################
 # WEBUI_BUILD_HASH
@@ -266,21 +327,43 @@ else:
 
 DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
 
+DATABASE_TYPE = os.environ.get("DATABASE_TYPE")
+DATABASE_USER = os.environ.get("DATABASE_USER")
+DATABASE_PASSWORD = os.environ.get("DATABASE_PASSWORD")
+
+DATABASE_CRED = ""
+if DATABASE_USER:
+    DATABASE_CRED += f"{DATABASE_USER}"
+if DATABASE_PASSWORD:
+    DATABASE_CRED += f":{DATABASE_PASSWORD}"
+
+DB_VARS = {
+    "db_type": DATABASE_TYPE,
+    "db_cred": DATABASE_CRED,
+    "db_host": os.environ.get("DATABASE_HOST"),
+    "db_port": os.environ.get("DATABASE_PORT"),
+    "db_name": os.environ.get("DATABASE_NAME"),
+}
+
+if all(DB_VARS.values()):
+    DATABASE_URL = f"{DB_VARS['db_type']}://{DB_VARS['db_cred']}@{DB_VARS['db_host']}:{DB_VARS['db_port']}/{DB_VARS['db_name']}"
+elif DATABASE_TYPE == "sqlite+sqlcipher" and not os.environ.get("DATABASE_URL"):
+    # Handle SQLCipher with local file when DATABASE_URL wasn't explicitly set
+    DATABASE_URL = f"sqlite+sqlcipher:///{DATA_DIR}/webui.db"
+
 # Replace the postgres:// with postgresql://
 if "postgres://" in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://")
 
 DATABASE_SCHEMA = os.environ.get("DATABASE_SCHEMA", None)
 
-DATABASE_POOL_SIZE = os.environ.get("DATABASE_POOL_SIZE", 0)
+DATABASE_POOL_SIZE = os.environ.get("DATABASE_POOL_SIZE", None)
 
-if DATABASE_POOL_SIZE == "":
-    DATABASE_POOL_SIZE = 0
-else:
+if DATABASE_POOL_SIZE != None:
     try:
         DATABASE_POOL_SIZE = int(DATABASE_POOL_SIZE)
     except Exception:
-        DATABASE_POOL_SIZE = 0
+        DATABASE_POOL_SIZE = None
 
 DATABASE_POOL_MAX_OVERFLOW = os.environ.get("DATABASE_POOL_MAX_OVERFLOW", 0)
 
@@ -312,6 +395,31 @@ else:
     except Exception:
         DATABASE_POOL_RECYCLE = 3600
 
+DATABASE_ENABLE_SQLITE_WAL = (
+    os.environ.get("DATABASE_ENABLE_SQLITE_WAL", "False").lower() == "true"
+)
+
+DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = os.environ.get(
+    "DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL", None
+)
+if DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL is not None:
+    try:
+        DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = float(
+            DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL
+        )
+    except Exception:
+        DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = 0.0
+
+# When enabled, get_db_context reuses existing sessions; set to False to always create new sessions
+DATABASE_ENABLE_SESSION_SHARING = (
+    os.environ.get("DATABASE_ENABLE_SESSION_SHARING", "False").lower() == "true"
+)
+
+# Enable public visibility of active user count (when disabled, only admins can see it)
+ENABLE_PUBLIC_ACTIVE_USERS_COUNT = (
+    os.environ.get("ENABLE_PUBLIC_ACTIVE_USERS_COUNT", "True").lower() == "true"
+)
+
 RESET_CONFIG_ON_START = (
     os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"
 )
@@ -320,13 +428,49 @@ ENABLE_REALTIME_CHAT_SAVE = (
     os.environ.get("ENABLE_REALTIME_CHAT_SAVE", "False").lower() == "true"
 )
 
+ENABLE_QUERIES_CACHE = os.environ.get("ENABLE_QUERIES_CACHE", "False").lower() == "true"
+
+RAG_SYSTEM_CONTEXT = os.environ.get("RAG_SYSTEM_CONTEXT", "False").lower() == "true"
+
 ####################################
 # REDIS
 ####################################
 
 REDIS_URL = os.environ.get("REDIS_URL", "")
+REDIS_CLUSTER = os.environ.get("REDIS_CLUSTER", "False").lower() == "true"
+
+REDIS_KEY_PREFIX = os.environ.get("REDIS_KEY_PREFIX", "open-webui")
+
 REDIS_SENTINEL_HOSTS = os.environ.get("REDIS_SENTINEL_HOSTS", "")
 REDIS_SENTINEL_PORT = os.environ.get("REDIS_SENTINEL_PORT", "26379")
+
+# Maximum number of retries for Redis operations when using Sentinel fail-over
+REDIS_SENTINEL_MAX_RETRY_COUNT = os.environ.get("REDIS_SENTINEL_MAX_RETRY_COUNT", "2")
+try:
+    REDIS_SENTINEL_MAX_RETRY_COUNT = int(REDIS_SENTINEL_MAX_RETRY_COUNT)
+    if REDIS_SENTINEL_MAX_RETRY_COUNT < 1:
+        REDIS_SENTINEL_MAX_RETRY_COUNT = 2
+except ValueError:
+    REDIS_SENTINEL_MAX_RETRY_COUNT = 2
+
+
+REDIS_SOCKET_CONNECT_TIMEOUT = os.environ.get("REDIS_SOCKET_CONNECT_TIMEOUT", "")
+try:
+    REDIS_SOCKET_CONNECT_TIMEOUT = float(REDIS_SOCKET_CONNECT_TIMEOUT)
+except ValueError:
+    REDIS_SOCKET_CONNECT_TIMEOUT = None
+
+REDIS_RECONNECT_DELAY = os.environ.get("REDIS_RECONNECT_DELAY", "")
+
+if REDIS_RECONNECT_DELAY == "":
+    REDIS_RECONNECT_DELAY = None
+else:
+    try:
+        REDIS_RECONNECT_DELAY = float(REDIS_RECONNECT_DELAY)
+        if REDIS_RECONNECT_DELAY < 0:
+            REDIS_RECONNECT_DELAY = None
+    except Exception:
+        REDIS_RECONNECT_DELAY = None
 
 ####################################
 # UVICORN WORKERS
@@ -347,6 +491,24 @@ except ValueError:
 ####################################
 
 WEBUI_AUTH = os.environ.get("WEBUI_AUTH", "True").lower() == "true"
+
+ENABLE_INITIAL_ADMIN_SIGNUP = (
+    os.environ.get("ENABLE_INITIAL_ADMIN_SIGNUP", "False").lower() == "true"
+)
+ENABLE_SIGNUP_PASSWORD_CONFIRMATION = (
+    os.environ.get("ENABLE_SIGNUP_PASSWORD_CONFIRMATION", "False").lower() == "true"
+)
+
+####################################
+# Admin Account Runtime Creation
+####################################
+
+# Optional env vars for creating an admin account on startup
+# Useful for headless/automated deployments
+WEBUI_ADMIN_EMAIL = os.environ.get("WEBUI_ADMIN_EMAIL", "")
+WEBUI_ADMIN_PASSWORD = os.environ.get("WEBUI_ADMIN_PASSWORD", "")
+WEBUI_ADMIN_NAME = os.environ.get("WEBUI_ADMIN_NAME", "Admin")
+
 WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
     "WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None
 )
@@ -354,6 +516,27 @@ WEBUI_AUTH_TRUSTED_NAME_HEADER = os.environ.get("WEBUI_AUTH_TRUSTED_NAME_HEADER"
 WEBUI_AUTH_TRUSTED_GROUPS_HEADER = os.environ.get(
     "WEBUI_AUTH_TRUSTED_GROUPS_HEADER", None
 )
+
+
+ENABLE_PASSWORD_VALIDATION = (
+    os.environ.get("ENABLE_PASSWORD_VALIDATION", "False").lower() == "true"
+)
+PASSWORD_VALIDATION_REGEX_PATTERN = os.environ.get(
+    "PASSWORD_VALIDATION_REGEX_PATTERN",
+    r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$",
+)
+
+
+try:
+    PASSWORD_VALIDATION_REGEX_PATTERN = rf"{PASSWORD_VALIDATION_REGEX_PATTERN}"
+    PASSWORD_VALIDATION_REGEX_PATTERN = re.compile(PASSWORD_VALIDATION_REGEX_PATTERN)
+except Exception as e:
+    log.error(f"Invalid PASSWORD_VALIDATION_REGEX_PATTERN: {e}")
+    PASSWORD_VALIDATION_REGEX_PATTERN = re.compile(
+        r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$"
+    )
+
+PASSWORD_VALIDATION_HINT = os.environ.get("PASSWORD_VALIDATION_HINT", "")
 
 
 BYPASS_MODEL_ACCESS_CONTROL = (
@@ -396,18 +579,227 @@ WEBUI_AUTH_COOKIE_SECURE = (
 if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
     raise ValueError(ERROR_MESSAGES.ENV_VAR_NOT_FOUND)
 
+ENABLE_COMPRESSION_MIDDLEWARE = (
+    os.environ.get("ENABLE_COMPRESSION_MIDDLEWARE", "True").lower() == "true"
+)
+
+####################################
+# OAUTH Configuration
+####################################
+ENABLE_OAUTH_EMAIL_FALLBACK = (
+    os.environ.get("ENABLE_OAUTH_EMAIL_FALLBACK", "False").lower() == "true"
+)
+
+ENABLE_OAUTH_ID_TOKEN_COOKIE = (
+    os.environ.get("ENABLE_OAUTH_ID_TOKEN_COOKIE", "True").lower() == "true"
+)
+
+OAUTH_CLIENT_INFO_ENCRYPTION_KEY = os.environ.get(
+    "OAUTH_CLIENT_INFO_ENCRYPTION_KEY", WEBUI_SECRET_KEY
+)
+
+OAUTH_SESSION_TOKEN_ENCRYPTION_KEY = os.environ.get(
+    "OAUTH_SESSION_TOKEN_ENCRYPTION_KEY", WEBUI_SECRET_KEY
+)
+
+# Maximum number of concurrent OAuth sessions per user per provider
+# This prevents unbounded session growth while allowing multi-device usage
+OAUTH_MAX_SESSIONS_PER_USER = int(os.environ.get("OAUTH_MAX_SESSIONS_PER_USER", "10"))
+
+# Token Exchange Configuration
+# Allows external apps to exchange OAuth tokens for OpenWebUI tokens
+ENABLE_OAUTH_TOKEN_EXCHANGE = (
+    os.environ.get("ENABLE_OAUTH_TOKEN_EXCHANGE", "False").lower() == "true"
+)
+
+####################################
+# SCIM Configuration
+####################################
+
+ENABLE_SCIM = (
+    os.environ.get("ENABLE_SCIM", os.environ.get("SCIM_ENABLED", "False")).lower()
+    == "true"
+)
+SCIM_TOKEN = os.environ.get("SCIM_TOKEN", "")
+SCIM_AUTH_PROVIDER = os.environ.get("SCIM_AUTH_PROVIDER", "")
+
+if ENABLE_SCIM and not SCIM_AUTH_PROVIDER:
+    log.warning(
+        "SCIM is enabled but SCIM_AUTH_PROVIDER is not set. "
+        "Set SCIM_AUTH_PROVIDER to the OAuth provider name (e.g. 'microsoft', 'oidc') "
+        "to enable externalId storage."
+    )
+
+####################################
+# LICENSE_KEY
+####################################
+
+LICENSE_KEY = os.environ.get("LICENSE_KEY", "")
+
+LICENSE_BLOB = None
+LICENSE_BLOB_PATH = os.environ.get("LICENSE_BLOB_PATH", DATA_DIR / "l.data")
+if LICENSE_BLOB_PATH and os.path.exists(LICENSE_BLOB_PATH):
+    with open(LICENSE_BLOB_PATH, "rb") as f:
+        LICENSE_BLOB = f.read()
+
+LICENSE_PUBLIC_KEY = os.environ.get("LICENSE_PUBLIC_KEY", "")
+
+pk = None
+if LICENSE_PUBLIC_KEY:
+    pk = serialization.load_pem_public_key(f"""
+-----BEGIN PUBLIC KEY-----
+{LICENSE_PUBLIC_KEY}
+-----END PUBLIC KEY-----
+""".encode("utf-8"))
+
+
+####################################
+# MODELS
+####################################
+
+ENABLE_CUSTOM_MODEL_FALLBACK = (
+    os.environ.get("ENABLE_CUSTOM_MODEL_FALLBACK", "False").lower() == "true"
+)
+
+MODELS_CACHE_TTL = os.environ.get("MODELS_CACHE_TTL", "1")
+if MODELS_CACHE_TTL == "":
+    MODELS_CACHE_TTL = None
+else:
+    try:
+        MODELS_CACHE_TTL = int(MODELS_CACHE_TTL)
+    except Exception:
+        MODELS_CACHE_TTL = 1
+
+
+####################################
+# CHAT
+####################################
+
+ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION = (
+    os.environ.get("ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION", "False").lower()
+    == "true"
+)
+
+CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = os.environ.get(
+    "CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE", "1"
+)
+
+if CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE == "":
+    CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = 1
+else:
+    try:
+        CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = int(
+            CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE
+        )
+    except Exception:
+        CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = 1
+
+
+CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = os.environ.get(
+    "CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES", "30"
+)
+
+if CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES == "":
+    CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = 30
+else:
+    try:
+        CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = int(CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES)
+    except Exception:
+        CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = 30
+
+
+CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE = os.environ.get(
+    "CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE", ""
+)
+
+if CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE == "":
+    CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE = None
+else:
+    try:
+        CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE = int(
+            CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
+        )
+    except Exception:
+        CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE = None
+
+
+####################################
+# WEBSOCKET SUPPORT
+####################################
+
 ENABLE_WEBSOCKET_SUPPORT = (
     os.environ.get("ENABLE_WEBSOCKET_SUPPORT", "True").lower() == "true"
 )
 
+
 WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "")
 
+WEBSOCKET_REDIS_OPTIONS = os.environ.get("WEBSOCKET_REDIS_OPTIONS", "")
+
+
+if WEBSOCKET_REDIS_OPTIONS == "":
+    if REDIS_SOCKET_CONNECT_TIMEOUT:
+        WEBSOCKET_REDIS_OPTIONS = {
+            "socket_connect_timeout": REDIS_SOCKET_CONNECT_TIMEOUT
+        }
+    else:
+        log.debug("No WEBSOCKET_REDIS_OPTIONS provided, defaulting to None")
+        WEBSOCKET_REDIS_OPTIONS = None
+else:
+    try:
+        WEBSOCKET_REDIS_OPTIONS = json.loads(WEBSOCKET_REDIS_OPTIONS)
+    except Exception:
+        log.warning("Invalid WEBSOCKET_REDIS_OPTIONS, defaulting to None")
+        WEBSOCKET_REDIS_OPTIONS = None
+
 WEBSOCKET_REDIS_URL = os.environ.get("WEBSOCKET_REDIS_URL", REDIS_URL)
-WEBSOCKET_REDIS_LOCK_TIMEOUT = os.environ.get("WEBSOCKET_REDIS_LOCK_TIMEOUT", 60)
+WEBSOCKET_REDIS_CLUSTER = (
+    os.environ.get("WEBSOCKET_REDIS_CLUSTER", str(REDIS_CLUSTER)).lower() == "true"
+)
+
+websocket_redis_lock_timeout = os.environ.get("WEBSOCKET_REDIS_LOCK_TIMEOUT", "60")
+
+try:
+    WEBSOCKET_REDIS_LOCK_TIMEOUT = int(websocket_redis_lock_timeout)
+except ValueError:
+    WEBSOCKET_REDIS_LOCK_TIMEOUT = 60
 
 WEBSOCKET_SENTINEL_HOSTS = os.environ.get("WEBSOCKET_SENTINEL_HOSTS", "")
-
 WEBSOCKET_SENTINEL_PORT = os.environ.get("WEBSOCKET_SENTINEL_PORT", "26379")
+WEBSOCKET_SERVER_LOGGING = (
+    os.environ.get("WEBSOCKET_SERVER_LOGGING", "False").lower() == "true"
+)
+WEBSOCKET_SERVER_ENGINEIO_LOGGING = (
+    os.environ.get(
+        "WEBSOCKET_SERVER_ENGINEIO_LOGGING",
+        os.environ.get("WEBSOCKET_SERVER_LOGGING", "False"),
+    ).lower()
+    == "true"
+)
+WEBSOCKET_SERVER_PING_TIMEOUT = os.environ.get("WEBSOCKET_SERVER_PING_TIMEOUT", "20")
+try:
+    WEBSOCKET_SERVER_PING_TIMEOUT = int(WEBSOCKET_SERVER_PING_TIMEOUT)
+except ValueError:
+    WEBSOCKET_SERVER_PING_TIMEOUT = 20
+
+WEBSOCKET_SERVER_PING_INTERVAL = os.environ.get("WEBSOCKET_SERVER_PING_INTERVAL", "25")
+try:
+    WEBSOCKET_SERVER_PING_INTERVAL = int(WEBSOCKET_SERVER_PING_INTERVAL)
+except ValueError:
+    WEBSOCKET_SERVER_PING_INTERVAL = 25
+
+WEBSOCKET_EVENT_CALLER_TIMEOUT = os.environ.get("WEBSOCKET_EVENT_CALLER_TIMEOUT", "")
+
+if WEBSOCKET_EVENT_CALLER_TIMEOUT == "":
+    WEBSOCKET_EVENT_CALLER_TIMEOUT = None
+else:
+    try:
+        WEBSOCKET_EVENT_CALLER_TIMEOUT = int(WEBSOCKET_EVENT_CALLER_TIMEOUT)
+    except ValueError:
+        WEBSOCKET_EVENT_CALLER_TIMEOUT = 300
+
+
+REQUESTS_VERIFY = os.environ.get("REQUESTS_VERIFY", "True").lower() == "true"
 
 AIOHTTP_CLIENT_TIMEOUT = os.environ.get("AIOHTTP_CLIENT_TIMEOUT", "")
 
@@ -458,6 +850,17 @@ AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL = (
 )
 
 
+RAG_EMBEDDING_TIMEOUT = os.environ.get("RAG_EMBEDDING_TIMEOUT", "")
+
+if RAG_EMBEDDING_TIMEOUT == "":
+    RAG_EMBEDDING_TIMEOUT = None
+else:
+    try:
+        RAG_EMBEDDING_TIMEOUT = int(RAG_EMBEDDING_TIMEOUT)
+    except Exception:
+        RAG_EMBEDDING_TIMEOUT = None
+
+
 ####################################
 # SENTENCE TRANSFORMERS
 ####################################
@@ -502,23 +905,51 @@ else:
     except Exception:
         SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS = None
 
+# Whether to apply sigmoid normalization to CrossEncoder reranking scores.
+# When enabled (default), scores are normalized to 0-1 range for proper
+# relevance threshold behavior with MS MARCO models.
+SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION = (
+    os.environ.get(
+        "SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION", "True"
+    ).lower()
+    == "true"
+)
+
 ####################################
 # OFFLINE_MODE
 ####################################
 
+ENABLE_VERSION_UPDATE_CHECK = (
+    os.environ.get("ENABLE_VERSION_UPDATE_CHECK", "true").lower() == "true"
+)
 OFFLINE_MODE = os.environ.get("OFFLINE_MODE", "false").lower() == "true"
 
 if OFFLINE_MODE:
     os.environ["HF_HUB_OFFLINE"] = "1"
-
+    ENABLE_VERSION_UPDATE_CHECK = False
 
 ####################################
 # AUDIT LOGGING
 ####################################
+
+
+ENABLE_AUDIT_STDOUT = os.getenv("ENABLE_AUDIT_STDOUT", "False").lower() == "true"
+ENABLE_AUDIT_LOGS_FILE = os.getenv("ENABLE_AUDIT_LOGS_FILE", "True").lower() == "true"
+
 # Where to store log file
-AUDIT_LOGS_FILE_PATH = f"{DATA_DIR}/audit.log"
+# Defaults to the DATA_DIR/audit.log. To set AUDIT_LOGS_FILE_PATH you need to
+# provide the whole path, like: /app/audit.log
+AUDIT_LOGS_FILE_PATH = os.getenv("AUDIT_LOGS_FILE_PATH", f"{DATA_DIR}/audit.log")
 # Maximum size of a file before rotating into a new log file
 AUDIT_LOG_FILE_ROTATION_SIZE = os.getenv("AUDIT_LOG_FILE_ROTATION_SIZE", "10MB")
+
+# Comma separated list of logger names to use for audit logging
+# Default is "uvicorn.access" which is the access log for Uvicorn
+# You can add more logger names to this list if you want to capture more logs
+AUDIT_UVICORN_LOGGER_NAMES = os.getenv(
+    "AUDIT_UVICORN_LOGGER_NAMES", "uvicorn.access"
+).split(",")
+
 # METADATA | REQUEST | REQUEST_RESPONSE
 AUDIT_LOG_LEVEL = os.getenv("AUDIT_LOG_LEVEL", "NONE").upper()
 try:
@@ -539,8 +970,33 @@ AUDIT_EXCLUDED_PATHS = [path.lstrip("/") for path in AUDIT_EXCLUDED_PATHS]
 ####################################
 
 ENABLE_OTEL = os.environ.get("ENABLE_OTEL", "False").lower() == "true"
+ENABLE_OTEL_TRACES = os.environ.get("ENABLE_OTEL_TRACES", "False").lower() == "true"
+ENABLE_OTEL_METRICS = os.environ.get("ENABLE_OTEL_METRICS", "False").lower() == "true"
+ENABLE_OTEL_LOGS = os.environ.get("ENABLE_OTEL_LOGS", "False").lower() == "true"
+
 OTEL_EXPORTER_OTLP_ENDPOINT = os.environ.get(
     "OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"
+)
+OTEL_METRICS_EXPORTER_OTLP_ENDPOINT = os.environ.get(
+    "OTEL_METRICS_EXPORTER_OTLP_ENDPOINT", OTEL_EXPORTER_OTLP_ENDPOINT
+)
+OTEL_LOGS_EXPORTER_OTLP_ENDPOINT = os.environ.get(
+    "OTEL_LOGS_EXPORTER_OTLP_ENDPOINT", OTEL_EXPORTER_OTLP_ENDPOINT
+)
+OTEL_EXPORTER_OTLP_INSECURE = (
+    os.environ.get("OTEL_EXPORTER_OTLP_INSECURE", "False").lower() == "true"
+)
+OTEL_METRICS_EXPORTER_OTLP_INSECURE = (
+    os.environ.get(
+        "OTEL_METRICS_EXPORTER_OTLP_INSECURE", str(OTEL_EXPORTER_OTLP_INSECURE)
+    ).lower()
+    == "true"
+)
+OTEL_LOGS_EXPORTER_OTLP_INSECURE = (
+    os.environ.get(
+        "OTEL_LOGS_EXPORTER_OTLP_INSECURE", str(OTEL_EXPORTER_OTLP_INSECURE)
+    ).lower()
+    == "true"
 )
 OTEL_SERVICE_NAME = os.environ.get("OTEL_SERVICE_NAME", "open-webui")
 OTEL_RESOURCE_ATTRIBUTES = os.environ.get(
@@ -549,10 +1005,42 @@ OTEL_RESOURCE_ATTRIBUTES = os.environ.get(
 OTEL_TRACES_SAMPLER = os.environ.get(
     "OTEL_TRACES_SAMPLER", "parentbased_always_on"
 ).lower()
+OTEL_BASIC_AUTH_USERNAME = os.environ.get("OTEL_BASIC_AUTH_USERNAME", "")
+OTEL_BASIC_AUTH_PASSWORD = os.environ.get("OTEL_BASIC_AUTH_PASSWORD", "")
+
+OTEL_METRICS_BASIC_AUTH_USERNAME = os.environ.get(
+    "OTEL_METRICS_BASIC_AUTH_USERNAME", OTEL_BASIC_AUTH_USERNAME
+)
+OTEL_METRICS_BASIC_AUTH_PASSWORD = os.environ.get(
+    "OTEL_METRICS_BASIC_AUTH_PASSWORD", OTEL_BASIC_AUTH_PASSWORD
+)
+OTEL_LOGS_BASIC_AUTH_USERNAME = os.environ.get(
+    "OTEL_LOGS_BASIC_AUTH_USERNAME", OTEL_BASIC_AUTH_USERNAME
+)
+OTEL_LOGS_BASIC_AUTH_PASSWORD = os.environ.get(
+    "OTEL_LOGS_BASIC_AUTH_PASSWORD", OTEL_BASIC_AUTH_PASSWORD
+)
+
+OTEL_OTLP_SPAN_EXPORTER = os.environ.get(
+    "OTEL_OTLP_SPAN_EXPORTER", "grpc"
+).lower()  # grpc or http
+
+OTEL_METRICS_OTLP_SPAN_EXPORTER = os.environ.get(
+    "OTEL_METRICS_OTLP_SPAN_EXPORTER", OTEL_OTLP_SPAN_EXPORTER
+).lower()  # grpc or http
+
+OTEL_LOGS_OTLP_SPAN_EXPORTER = os.environ.get(
+    "OTEL_LOGS_OTLP_SPAN_EXPORTER", OTEL_OTLP_SPAN_EXPORTER
+).lower()  # grpc or http
 
 ####################################
 # TOOLS/FUNCTIONS PIP OPTIONS
 ####################################
+
+ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS = (
+    os.environ.get("ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS", "True").lower()
+    == "true"
+)
 
 PIP_OPTIONS = os.getenv("PIP_OPTIONS", "").split()
 PIP_PACKAGE_INDEX_OPTIONS = os.getenv("PIP_PACKAGE_INDEX_OPTIONS", "").split()
@@ -563,3 +1051,16 @@ PIP_PACKAGE_INDEX_OPTIONS = os.getenv("PIP_PACKAGE_INDEX_OPTIONS", "").split()
 ####################################
 
 EXTERNAL_PWA_MANIFEST_URL = os.environ.get("EXTERNAL_PWA_MANIFEST_URL")
+
+####################################
+# GROUP DEFAULTS
+####################################
+
+# Controls the default "Who can share to this group" setting for new groups.
+# Env var values: "true" (anyone), "false" (no one), "members" (only group members).
+_default_group_share = (
+    os.environ.get("DEFAULT_GROUP_SHARE_PERMISSION", "members").strip().lower()
+)
+DEFAULT_GROUP_SHARE_PERMISSION = (
+    "members" if _default_group_share == "members" else _default_group_share == "true"
+)

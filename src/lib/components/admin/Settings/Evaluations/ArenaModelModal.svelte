@@ -3,6 +3,7 @@
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
+	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import { models } from '$lib/stores';
 	import Plus from '$lib/components/icons/Plus.svelte';
@@ -11,6 +12,8 @@
 	import { toast } from 'svelte-sonner';
 	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	export let show = false;
 	export let edit = false;
@@ -34,14 +37,14 @@
 		}
 	};
 
-	let profileImageUrl = '/favicon.png';
+	let profileImageUrl = `${WEBUI_BASE_URL}/favicon.png`;
 	let description = '';
 
 	let selectedModelId = '';
 	let modelIds = [];
 	let filterMode = 'include';
 
-	let accessControl = {};
+	let accessGrants = [];
 
 	let imageInputElement;
 	let loading = false;
@@ -59,7 +62,7 @@
 
 		if (!name || !id) {
 			loading = false;
-			toast.error('Name and ID are required, please fill them out');
+			toast.error($i18n.t('Name and ID are required, please fill them out'));
 			return;
 		}
 
@@ -67,7 +70,7 @@
 			if ($models.find((model) => model.name === name)) {
 				loading = false;
 				name = '';
-				toast.error('Model name already exists, please choose a different one');
+				toast.error($i18n.t('Model name already exists, please choose a different one'));
 				return;
 			}
 		}
@@ -80,7 +83,7 @@
 				description: description || null,
 				model_ids: modelIds.length > 0 ? modelIds : null,
 				filter_mode: modelIds.length > 0 ? (filterMode ? filterMode : null) : null,
-				access_control: accessControl
+				access_grants: accessGrants
 			}
 		};
 
@@ -90,7 +93,7 @@
 
 		name = '';
 		id = '';
-		profileImageUrl = '/favicon.png';
+		profileImageUrl = `${WEBUI_BASE_URL}/favicon.png`;
 		description = '';
 		modelIds = [];
 		selectedModelId = '';
@@ -104,7 +107,7 @@
 			description = model.meta.description;
 			modelIds = model.meta.model_ids || [];
 			filterMode = model.meta?.filter_mode ?? 'include';
-			accessControl = 'access_control' in model.meta ? model.meta.access_control : {};
+			accessGrants = model.meta.access_grants ?? [];
 		}
 	};
 
@@ -141,16 +144,7 @@
 					show = false;
 				}}
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="w-5 h-5"
-				>
-					<path
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-					/>
-				</svg>
+				<XMark className={'size-5'} />
 			</button>
 		</div>
 
@@ -207,7 +201,7 @@
 											ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
 
 											// Get the base64 representation of the compressed image
-											const compressedSrc = canvas.toDataURL('image/jpeg');
+											const compressedSrc = canvas.toDataURL('image/webp', 0.8);
 
 											// Display the compressed image
 											profileImageUrl = compressedSrc;
@@ -298,10 +292,8 @@
 
 						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
-						<div class="my-2 -mx-2">
-							<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
-								<AccessControl bind:accessControl />
-							</div>
+						<div class="my-2">
+							<AccessControl bind:accessGrants />
 						</div>
 
 						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
@@ -406,29 +398,7 @@
 
 							{#if loading}
 								<div class="ml-2 self-center">
-									<svg
-										class=" w-4 h-4"
-										viewBox="0 0 24 24"
-										fill="currentColor"
-										xmlns="http://www.w3.org/2000/svg"
-										><style>
-											.spinner_ajPY {
-												transform-origin: center;
-												animation: spinner_AtaB 0.75s infinite linear;
-											}
-											@keyframes spinner_AtaB {
-												100% {
-													transform: rotate(360deg);
-												}
-											}
-										</style><path
-											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-											opacity=".25"
-										/><path
-											d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-											class="spinner_ajPY"
-										/></svg
-									>
+									<Spinner />
 								</div>
 							{/if}
 						</button>

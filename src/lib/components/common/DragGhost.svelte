@@ -12,7 +12,14 @@
 	});
 
 	onDestroy(() => {
-		document.body.removeChild(popupElement);
+		if (popupElement && popupElement.parentNode) {
+			try {
+				popupElement.parentNode.removeChild(popupElement);
+			} catch (err) {
+				console.warn('Failed to remove popupElement:', err);
+			}
+		}
+
 		document.body.style.overflow = 'unset';
 	});
 </script>

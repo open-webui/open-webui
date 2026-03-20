@@ -1,4 +1,6 @@
 <script lang="ts">
+	import '$lib/utils/codemirror';
+
 	import { basicSetup, EditorView } from 'codemirror';
 	import { keymap, placeholder } from '@codemirror/view';
 	import { Compartment, EditorState } from '@codemirror/state';
@@ -6,7 +8,7 @@
 	import { acceptCompletion } from '@codemirror/autocomplete';
 	import { indentWithTab } from '@codemirror/commands';
 
-	import { indentUnit, LanguageDescription } from '@codemirror/language';
+	import { indentUnit } from '@codemirror/language';
 	import { languages } from '@codemirror/language-data';
 
 	import { oneDark } from '@codemirror/theme-one-dark';
@@ -48,68 +50,42 @@
 	/**
 	 * Finds multiple diffs in two strings and generates minimal change edits.
 	 */
-	function findChanges(oldStr, newStr) {
-		let changes = [];
-		let oldIndex = 0,
-			newIndex = 0;
-
-		while (oldIndex < oldStr.length || newIndex < newStr.length) {
-			if (oldStr[oldIndex] !== newStr[newIndex]) {
-				let start = oldIndex;
-
-				// Identify the changed portion
-				while (oldIndex < oldStr.length && oldStr[oldIndex] !== newStr[newIndex]) {
-					oldIndex++;
-				}
-				while (newIndex < newStr.length && newStr[newIndex] !== oldStr[start]) {
-					newIndex++;
-				}
-
-				changes.push({
-					from: start,
-					to: oldIndex, // Replace the differing part
-					insert: newStr.substring(start, newIndex)
-				});
-			} else {
-				oldIndex++;
-				newIndex++;
-			}
+	function findChanges(oldStr: string, newStr: string) {
+		// Find the start of the difference
+		let start = 0;
+		while (start < oldStr.length && start < newStr.length && oldStr[start] === newStr[start]) {
+			start++;
 		}
-
-		return changes;
+		// If equal, nothing to change
+		if (oldStr === newStr) return [];
+		// Find the end of the difference by comparing backwards
+		let endOld = oldStr.length,
+			endNew = newStr.length;
+		while (endOld > start && endNew > start && oldStr[endOld - 1] === newStr[endNew - 1]) {
+			endOld--;
+			endNew--;
+		}
+		return [
+			{
+				from: start,
+				to: endOld,
+				insert: newStr.slice(start, endNew)
+			}
+		];
 	}
 
 	export let id = '';
 	export let lang = '';
 
-	let codeEditor;
+	let codeEditor: EditorView | null = null;
 
 	export const focus = () => {
-		codeEditor.focus();
+		codeEditor?.focus();
 	};
 
 	let isDarkMode = false;
 	let editorTheme = new Compartment();
 	let editorLanguage = new Compartment();
-
-	languages.push(
-		LanguageDescription.of({
-			name: 'HCL',
-			extensions: ['hcl', 'tf'],
-			load() {
-				return import('codemirror-lang-hcl').then((m) => m.hcl());
-			}
-		})
-	);
-	languages.push(
-		LanguageDescription.of({
-			name: 'Elixir',
-			extensions: ['ex', 'exs'],
-			load() {
-				return import('codemirror-lang-elixir').then((m) => m.elixir());
-			}
-		})
-	);
 
 	const getLang = async () => {
 		const language = languages.find((l) => l.alias.includes(lang));
@@ -134,9 +110,14 @@
 			let timeout;
 			const worker = getPyodideWorker();
 
+			const startTag = `--||CODE-START-${id}||--`;
+			const endTag = `--||CODE-END-${id}||--`;
+
 			const script = `
 import black
+print("${startTag}")
 print(black.format_str("""${code.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/"/g, '\\"')}""", mode=black.Mode()))
+print("${endTag}")
 `;
 
 			const packages = ['black'];
@@ -151,7 +132,20 @@ print(black.format_str("""${code.replace(/\\/g, '\\\\').replace(/`/g, '\\`').rep
 				if (stderr) {
 					reject(stderr);
 				} else {
-					const formatted = stdout && typeof stdout === 'string' ? stdout.trim() : '';
+					function extractBetweenDelimiters(stdout, start, end) {
+						console.log('stdout', stdout);
+						const startIdx = stdout.indexOf(start);
+						const endIdx = stdout.indexOf(end, startIdx + start.length);
+						if (startIdx === -1 || endIdx === -1) return null;
+						return stdout.slice(startIdx + start.length, endIdx).trim();
+					}
+
+					const formatted = extractBetweenDelimiters(
+						stdout && typeof stdout === 'string' ? stdout : '',
+						startTag,
+						endTag
+					);
+
 					resolve({ code: formatted });
 				}
 			}
@@ -214,7 +208,7 @@ print(black.format_str("""${code.replace(/\\/g, '\\\\').replace(/`/g, '\\`').rep
 		basicSetup,
 		keymap.of([{ key: 'Tab', run: acceptCompletion }, indentWithTab]),
 		indentUnit.of('    '),
-		placeholder('Enter your code here...'),
+		placeholder($i18n.t('Enter your code here...')),
 		EditorView.updateListener.of((e) => {
 			if (e.docChanged) {
 				_value = e.state.doc.toString();
@@ -239,7 +233,6 @@ print(black.format_str("""${code.replace(/\\/g, '\\\\').replace(/`/g, '\\`').rep
 	};
 
 	onMount(() => {
-		console.log(value);
 		if (value === '') {
 			value = boilerplate;
 		}
@@ -310,6 +303,11 @@ print(black.format_str("""${code.replace(/\\/g, '\\\\').replace(/`/g, '\\`').rep
 		return () => {
 			observer.disconnect();
 			document.removeEventListener('keydown', keydownHandler);
+			// Must destroy EditorView so CodeMirror releases internal DOMObserver and DOM refs
+			if (codeEditor) {
+				codeEditor.destroy();
+				codeEditor = null;
+			}
 		};
 	});
 

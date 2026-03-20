@@ -9,6 +9,7 @@
 	viewBox="0 0 24 24"
 	stroke-width={strokeWidth}
 	stroke="currentColor"
+	aria-hidden="true"
 	class={className}
 >
 	<path

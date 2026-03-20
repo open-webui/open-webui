@@ -234,7 +234,7 @@ export const getOllamaModels = async (token: string = '', urlIdx: null | number 
 	return (res?.models ?? [])
 		.map((model) => ({ id: model.model, name: model.name ?? model.model, ...model }))
 		.sort((a, b) => {
-			return a.name.localeCompare(b.name);
+			return (a?.name ?? a?.id ?? '').localeCompare(b?.name ?? b?.id ?? '');
 		});
 };
 
@@ -331,7 +331,7 @@ export const generateTextCompletion = async (token: string = '', model: string, 
 };
 
 export const generateChatCompletion = async (token: string = '', body: object) => {
-	let controller = new AbortController();
+	const controller = new AbortController();
 	let error = null;
 
 	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/chat`, {
@@ -366,7 +366,7 @@ export const unloadModel = async (token: string, tagName: string) => {
 			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			name: tagName
+			model: tagName
 		})
 	}).catch((err) => {
 		error = err;
@@ -419,7 +419,7 @@ export const deleteModel = async (token: string, tagName: string, urlIdx: string
 				Authorization: `Bearer ${token}`
 			},
 			body: JSON.stringify({
-				name: tagName
+				model: tagName
 			})
 		}
 	)

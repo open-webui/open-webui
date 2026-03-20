@@ -5,7 +5,7 @@ type NoteItem = {
 	title: string;
 	data: object;
 	meta?: null | object;
-	access_control?: null | object;
+	access_grants?: object[];
 };
 
 export const createNewNote = async (token: string, note: NoteItem) => {
@@ -39,7 +39,7 @@ export const createNewNote = async (token: string, note: NoteItem) => {
 	return res;
 };
 
-export const getNotes = async (token: string = '') => {
+export const getNotes = async (token: string = '', raw: boolean = false) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/`, {
@@ -67,6 +67,10 @@ export const getNotes = async (token: string = '') => {
 		throw error;
 	}
 
+	if (raw) {
+		return res; // Return raw response if requested
+	}
+
 	if (!Array.isArray(res)) {
 		return {}; // or throw new Error("Notes response is not an array")
 	}
@@ -85,6 +89,101 @@ export const getNotes = async (token: string = '') => {
 	}
 
 	return grouped;
+};
+
+export const searchNotes = async (
+	token: string = '',
+	query: string | null = null,
+	viewOption: string | null = null,
+	permission: string | null = null,
+	sortKey: string | null = null,
+	page: number | null = null
+) => {
+	let error = null;
+	const searchParams = new URLSearchParams();
+
+	if (query !== null) {
+		searchParams.append('query', query);
+	}
+
+	if (viewOption !== null) {
+		searchParams.append('view_option', viewOption);
+	}
+
+	if (permission !== null) {
+		searchParams.append('permission', permission);
+	}
+
+	if (sortKey !== null) {
+		searchParams.append('order_by', sortKey);
+	}
+
+	if (page !== null) {
+		searchParams.append('page', `${page}`);
+	}
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/search?${searchParams.toString()}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getNoteList = async (token: string = '', page: number | null = null) => {
+	let error = null;
+	const searchParams = new URLSearchParams();
+
+	if (page !== null) {
+		searchParams.append('page', `${page}`);
+	}
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/?${searchParams.toString()}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
 };
 
 export const getNoteById = async (token: string, id: string) => {
@@ -143,6 +242,35 @@ export const updateNoteById = async (token: string, id: string, note: NoteItem) 
 		.catch((err) => {
 			error = err.detail;
 
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updateNoteAccessGrants = async (token: string, id: string, accessGrants: any[]) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/${id}/access/update`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ access_grants: accessGrants })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
 			console.error(err);
 			return null;
 		});

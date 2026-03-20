@@ -4,32 +4,55 @@ from typing import Optional
 import time
 import re
 import aiohttp
+from open_webui.env import AIOHTTP_CLIENT_TIMEOUT
+from open_webui.models.groups import Groups
 from pydantic import BaseModel, HttpUrl
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy.orm import Session
+from open_webui.internal.db import get_session
 
+
+from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.tools import (
     ToolForm,
     ToolModel,
     ToolResponse,
     ToolUserResponse,
+    ToolAccessResponse,
     Tools,
 )
-from open_webui.utils.plugin import load_tool_module_by_id, replace_imports
-from open_webui.config import CACHE_DIR
-from open_webui.constants import ERROR_MESSAGES
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from open_webui.models.access_grants import AccessGrants
+from open_webui.utils.plugin import (
+    load_tool_module_by_id,
+    replace_imports,
+    get_tool_module_from_cache,
+    resolve_valves_schema_options,
+)
 from open_webui.utils.tools import get_tool_specs
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_access, has_permission
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.utils.access_control import (
+    has_permission,
+    has_access,
+    filter_allowed_access_grants,
+)
+from open_webui.utils.tools import get_tool_servers
 
-from open_webui.utils.tools import get_tool_servers_data
-
+from open_webui.config import CACHE_DIR, BYPASS_ADMIN_ACCESS_CONTROL
+from open_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 router = APIRouter()
+
+
+def get_tool_module(request, tool_id, load_from_db=True):
+    """
+    Get the tool module by its ID.
+    """
+    tool_module, _ = get_tool_module_from_cache(request, tool_id, load_from_db)
+    return tool_module
+
 
 ############################
 # GetTools
@@ -37,24 +60,47 @@ router = APIRouter()
 
 
 @router.get("/", response_model=list[ToolUserResponse])
-async def get_tools(request: Request, user=Depends(get_verified_user)):
+async def get_tools(
+    request: Request,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    tools = []
 
-    if not request.app.state.TOOL_SERVERS:
-        # If the tool servers are not set, we need to set them
-        # This is done only once when the server starts
-        # This is done to avoid loading the tool servers every time
-
-        request.app.state.TOOL_SERVERS = await get_tool_servers_data(
-            request.app.state.config.TOOL_SERVER_CONNECTIONS
+    # Local Tools
+    for tool in Tools.get_tools(defer_content=True, db=db):
+        tool_module = (
+            request.app.state.TOOLS.get(tool.id)
+            if hasattr(request.app.state, "TOOLS")
+            else None
         )
-
-    tools = Tools.get_tools()
-    for server in request.app.state.TOOL_SERVERS:
         tools.append(
             ToolUserResponse(
                 **{
-                    "id": f"server:{server['idx']}",
-                    "user_id": f"server:{server['idx']}",
+                    **tool.model_dump(),
+                    "has_user_valves": (
+                        hasattr(tool_module, "UserValves") if tool_module else False
+                    ),
+                }
+            )
+        )
+
+    # OpenAPI Tool Servers
+    server_access_grants = {}
+    for server in await get_tool_servers(request):
+        connection = request.app.state.config.TOOL_SERVER_CONNECTIONS[
+            server.get("idx", 0)
+        ]
+        server_config = connection.get("config", {})
+
+        server_id = f"server:{server.get('id')}"
+        server_access_grants[server_id] = server_config.get("access_grants", [])
+
+        tools.append(
+            ToolUserResponse(
+                **{
+                    "id": server_id,
+                    "user_id": server_id,
                     "name": server.get("openapi", {})
                     .get("info", {})
                     .get("title", "Tool Server"),
@@ -63,26 +109,91 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
                         .get("info", {})
                         .get("description", ""),
                     },
-                    "access_control": request.app.state.config.TOOL_SERVER_CONNECTIONS[
-                        server["idx"]
-                    ]
-                    .get("config", {})
-                    .get("access_control", None),
                     "updated_at": int(time.time()),
                     "created_at": int(time.time()),
                 }
             )
         )
 
-    if user.role != "admin":
+    # MCP Tool Servers
+    for server in request.app.state.config.TOOL_SERVER_CONNECTIONS:
+        if server.get("type", "openapi") == "mcp" and server.get("config", {}).get(
+            "enable"
+        ):
+            server_id = server.get("info", {}).get("id")
+            auth_type = server.get("auth_type", "none")
+
+            session_token = None
+            if auth_type == "oauth_2.1":
+                splits = server_id.split(":")
+                server_id = splits[-1] if len(splits) > 1 else server_id
+
+                session_token = (
+                    await request.app.state.oauth_client_manager.get_oauth_token(
+                        user.id, f"mcp:{server_id}"
+                    )
+                )
+
+            server_config = server.get("config", {})
+
+            tool_id = f"server:mcp:{server.get('info', {}).get('id')}"
+            server_access_grants[tool_id] = server_config.get("access_grants", [])
+
+            tools.append(
+                ToolUserResponse(
+                    **{
+                        "id": tool_id,
+                        "user_id": tool_id,
+                        "name": server.get("info", {}).get("name", "MCP Tool Server"),
+                        "meta": {
+                            "description": server.get("info", {}).get(
+                                "description", ""
+                            ),
+                        },
+                        "updated_at": int(time.time()),
+                        "created_at": int(time.time()),
+                        **(
+                            {
+                                "authenticated": session_token is not None,
+                            }
+                            if auth_type == "oauth_2.1"
+                            else {}
+                        ),
+                    }
+                )
+            )
+
+    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
+        # Admin can see all tools
+        return tools
+    else:
+        user_group_ids = {
+            group.id for group in Groups.get_groups_by_member_id(user.id, db=db)
+        }
         tools = [
             tool
             for tool in tools
             if tool.user_id == user.id
-            or has_access(user.id, "read", tool.access_control)
+            or (
+                has_access(
+                    user.id,
+                    "read",
+                    server_access_grants.get(str(tool.id), []),
+                    user_group_ids,
+                    db=db,
+                )
+                if str(tool.id).startswith("server:")
+                else AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type="tool",
+                    resource_id=tool.id,
+                    permission="read",
+                    user_group_ids=user_group_ids,
+                    db=db,
+                )
+            )
         ]
-
-    return tools
+        return tools
 
 
 ############################
@@ -90,13 +201,45 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
 ############################
 
 
-@router.get("/list", response_model=list[ToolUserResponse])
-async def get_tool_list(user=Depends(get_verified_user)):
-    if user.role == "admin":
-        tools = Tools.get_tools()
+@router.get("/list", response_model=list[ToolAccessResponse])
+async def get_tool_list(
+    user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
+    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
+        tools = Tools.get_tools(defer_content=True, db=db)
     else:
-        tools = Tools.get_tools_by_user_id(user.id, "write")
-    return tools
+        tools = Tools.get_tools_by_user_id(user.id, "read", defer_content=True, db=db)
+
+    user_group_ids = {
+        group.id for group in Groups.get_groups_by_member_id(user.id, db=db)
+    }
+
+    result = []
+    for tool in tools:
+        has_write = (
+            (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+            or user.id == tool.user_id
+            or any(
+                g.permission == "write"
+                and (
+                    (
+                        g.principal_type == "user"
+                        and (g.principal_id == user.id or g.principal_id == "*")
+                    )
+                    or (
+                        g.principal_type == "group" and g.principal_id in user_group_ids
+                    )
+                )
+                for g in tool.access_grants
+            )
+        )
+        result.append(
+            ToolAccessResponse(
+                **tool.model_dump(),
+                write_access=has_write,
+            )
+        )
+    return result
 
 
 ############################
@@ -153,7 +296,9 @@ async def load_tool_from_url(
     )
 
     try:
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(
+            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+        ) as session:
             async with session.get(
                 url, headers={"Content-Type": "application/json"}
             ) as resp:
@@ -180,9 +325,26 @@ async def load_tool_from_url(
 
 
 @router.get("/export", response_model=list[ToolModel])
-async def export_tools(user=Depends(get_admin_user)):
-    tools = Tools.get_tools()
-    return tools
+async def export_tools(
+    request: Request,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    if user.role != "admin" and not has_permission(
+        user.id,
+        "workspace.tools_export",
+        request.app.state.config.USER_PERMISSIONS,
+        db=db,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
+        return Tools.get_tools(db=db)
+    else:
+        return Tools.get_tools_by_user_id(user.id, "read", db=db)
 
 
 ############################
@@ -195,9 +357,18 @@ async def create_new_tools(
     request: Request,
     form_data: ToolForm,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
-    if user.role != "admin" and not has_permission(
-        user.id, "workspace.tools", request.app.state.config.USER_PERMISSIONS
+    if user.role != "admin" and not (
+        has_permission(
+            user.id, "workspace.tools", request.app.state.config.USER_PERMISSIONS, db=db
+        )
+        or has_permission(
+            user.id,
+            "workspace.tools_import",
+            request.app.state.config.USER_PERMISSIONS,
+            db=db,
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -212,7 +383,7 @@ async def create_new_tools(
 
     form_data.id = form_data.id.lower()
 
-    tools = Tools.get_tool_by_id(form_data.id)
+    tools = Tools.get_tool_by_id(form_data.id, db=db)
     if tools is None:
         try:
             form_data.content = replace_imports(form_data.content)
@@ -225,7 +396,7 @@ async def create_new_tools(
             TOOLS[form_data.id] = tool_module
 
             specs = get_tool_specs(TOOLS[form_data.id])
-            tools = Tools.insert_new_tool(user.id, form_data, specs)
+            tools = Tools.insert_new_tool(user.id, form_data, specs, db=db)
 
             tool_cache_dir = CACHE_DIR / "tools" / form_data.id
             tool_cache_dir.mkdir(parents=True, exist_ok=True)
@@ -255,20 +426,46 @@ async def create_new_tools(
 ############################
 
 
-@router.get("/id/{id}", response_model=Optional[ToolModel])
-async def get_tools_by_id(id: str, user=Depends(get_verified_user)):
-    tools = Tools.get_tool_by_id(id)
+@router.get("/id/{id}", response_model=Optional[ToolAccessResponse])
+async def get_tools_by_id(
+    id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
+    tools = Tools.get_tool_by_id(id, db=db)
 
     if tools:
         if (
             user.role == "admin"
             or tools.user_id == user.id
-            or has_access(user.id, "read", tools.access_control)
+            or AccessGrants.has_access(
+                user_id=user.id,
+                resource_type="tool",
+                resource_id=tools.id,
+                permission="read",
+                db=db,
+            )
         ):
-            return tools
+            return ToolAccessResponse(
+                **tools.model_dump(),
+                write_access=(
+                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    or user.id == tools.user_id
+                    or AccessGrants.has_access(
+                        user_id=user.id,
+                        resource_type="tool",
+                        resource_id=tools.id,
+                        permission="write",
+                        db=db,
+                    )
+                ),
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
     else:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
@@ -284,8 +481,9 @@ async def update_tools_by_id(
     id: str,
     form_data: ToolForm,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
-    tools = Tools.get_tool_by_id(id)
+    tools = Tools.get_tool_by_id(id, db=db)
     if not tools:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -295,7 +493,13 @@ async def update_tools_by_id(
     # Is the user the original creator, in a group with write access, or an admin
     if (
         tools.user_id != user.id
-        and not has_access(user.id, "write", tools.access_control)
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="tool",
+            resource_id=tools.id,
+            permission="write",
+            db=db,
+        )
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -319,7 +523,7 @@ async def update_tools_by_id(
         }
 
         log.debug(updated)
-        tools = Tools.update_tool_by_id(id, updated)
+        tools = Tools.update_tool_by_id(id, updated, db=db)
 
         if tools:
             return tools
@@ -337,15 +541,71 @@ async def update_tools_by_id(
 
 
 ############################
+# UpdateToolAccessById
+############################
+
+
+class ToolAccessGrantsForm(BaseModel):
+    access_grants: list[dict]
+
+
+@router.post("/id/{id}/access/update", response_model=Optional[ToolModel])
+async def update_tool_access_by_id(
+    request: Request,
+    id: str,
+    form_data: ToolAccessGrantsForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    tools = Tools.get_tool_by_id(id, db=db)
+    if not tools:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        tools.user_id != user.id
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="tool",
+            resource_id=tools.id,
+            permission="write",
+            db=db,
+        )
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    form_data.access_grants = filter_allowed_access_grants(
+        request.app.state.config.USER_PERMISSIONS,
+        user.id,
+        user.role,
+        form_data.access_grants,
+        "sharing.public_tools",
+    )
+
+    AccessGrants.set_access_grants("tool", id, form_data.access_grants, db=db)
+
+    return Tools.get_tool_by_id(id, db=db)
+
+
+############################
 # DeleteToolsById
 ############################
 
 
 @router.delete("/id/{id}/delete", response_model=bool)
 async def delete_tools_by_id(
-    request: Request, id: str, user=Depends(get_verified_user)
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
-    tools = Tools.get_tool_by_id(id)
+    tools = Tools.get_tool_by_id(id, db=db)
     if not tools:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -354,7 +614,13 @@ async def delete_tools_by_id(
 
     if (
         tools.user_id != user.id
-        and not has_access(user.id, "write", tools.access_control)
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="tool",
+            resource_id=tools.id,
+            permission="write",
+            db=db,
+        )
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -362,7 +628,7 @@ async def delete_tools_by_id(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    result = Tools.delete_tool_by_id(id)
+    result = Tools.delete_tool_by_id(id, db=db)
     if result:
         TOOLS = request.app.state.TOOLS
         if id in TOOLS:
@@ -377,11 +643,13 @@ async def delete_tools_by_id(
 
 
 @router.get("/id/{id}/valves", response_model=Optional[dict])
-async def get_tools_valves_by_id(id: str, user=Depends(get_verified_user)):
-    tools = Tools.get_tool_by_id(id)
+async def get_tools_valves_by_id(
+    id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
+    tools = Tools.get_tool_by_id(id, db=db)
     if tools:
         try:
-            valves = Tools.get_tool_valves_by_id(id)
+            valves = Tools.get_tool_valves_by_id(id, db=db)
             return valves
         except Exception as e:
             raise HTTPException(
@@ -402,9 +670,12 @@ async def get_tools_valves_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.get("/id/{id}/valves/spec", response_model=Optional[dict])
 async def get_tools_valves_spec_by_id(
-    request: Request, id: str, user=Depends(get_verified_user)
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
-    tools = Tools.get_tool_by_id(id)
+    tools = Tools.get_tool_by_id(id, db=db)
     if tools:
         if id in request.app.state.TOOLS:
             tools_module = request.app.state.TOOLS[id]
@@ -414,7 +685,10 @@ async def get_tools_valves_spec_by_id(
 
         if hasattr(tools_module, "Valves"):
             Valves = tools_module.Valves
-            return Valves.schema()
+            schema = Valves.schema()
+            # Resolve dynamic options for select dropdowns
+            schema = resolve_valves_schema_options(Valves, schema, user)
+            return schema
         return None
     else:
         raise HTTPException(
@@ -430,9 +704,13 @@ async def get_tools_valves_spec_by_id(
 
 @router.post("/id/{id}/valves/update", response_model=Optional[dict])
 async def update_tools_valves_by_id(
-    request: Request, id: str, form_data: dict, user=Depends(get_verified_user)
+    request: Request,
+    id: str,
+    form_data: dict,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
-    tools = Tools.get_tool_by_id(id)
+    tools = Tools.get_tool_by_id(id, db=db)
     if not tools:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -441,7 +719,13 @@ async def update_tools_valves_by_id(
 
     if (
         tools.user_id != user.id
-        and not has_access(user.id, "write", tools.access_control)
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="tool",
+            resource_id=tools.id,
+            permission="write",
+            db=db,
+        )
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -465,8 +749,9 @@ async def update_tools_valves_by_id(
     try:
         form_data = {k: v for k, v in form_data.items() if v is not None}
         valves = Valves(**form_data)
-        Tools.update_tool_valves_by_id(id, valves.model_dump())
-        return valves.model_dump()
+        valves_dict = valves.model_dump(exclude_unset=True)
+        Tools.update_tool_valves_by_id(id, valves_dict, db=db)
+        return valves_dict
     except Exception as e:
         log.exception(f"Failed to update tool valves by id {id}: {e}")
         raise HTTPException(
@@ -481,11 +766,13 @@ async def update_tools_valves_by_id(
 
 
 @router.get("/id/{id}/valves/user", response_model=Optional[dict])
-async def get_tools_user_valves_by_id(id: str, user=Depends(get_verified_user)):
-    tools = Tools.get_tool_by_id(id)
+async def get_tools_user_valves_by_id(
+    id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
+    tools = Tools.get_tool_by_id(id, db=db)
     if tools:
         try:
-            user_valves = Tools.get_user_valves_by_id_and_user_id(id, user.id)
+            user_valves = Tools.get_user_valves_by_id_and_user_id(id, user.id, db=db)
             return user_valves
         except Exception as e:
             raise HTTPException(
@@ -501,9 +788,12 @@ async def get_tools_user_valves_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.get("/id/{id}/valves/user/spec", response_model=Optional[dict])
 async def get_tools_user_valves_spec_by_id(
-    request: Request, id: str, user=Depends(get_verified_user)
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
-    tools = Tools.get_tool_by_id(id)
+    tools = Tools.get_tool_by_id(id, db=db)
     if tools:
         if id in request.app.state.TOOLS:
             tools_module = request.app.state.TOOLS[id]
@@ -513,7 +803,10 @@ async def get_tools_user_valves_spec_by_id(
 
         if hasattr(tools_module, "UserValves"):
             UserValves = tools_module.UserValves
-            return UserValves.schema()
+            schema = UserValves.schema()
+            # Resolve dynamic options for select dropdowns
+            schema = resolve_valves_schema_options(UserValves, schema, user)
+            return schema
         return None
     else:
         raise HTTPException(
@@ -524,9 +817,13 @@ async def get_tools_user_valves_spec_by_id(
 
 @router.post("/id/{id}/valves/user/update", response_model=Optional[dict])
 async def update_tools_user_valves_by_id(
-    request: Request, id: str, form_data: dict, user=Depends(get_verified_user)
+    request: Request,
+    id: str,
+    form_data: dict,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
-    tools = Tools.get_tool_by_id(id)
+    tools = Tools.get_tool_by_id(id, db=db)
 
     if tools:
         if id in request.app.state.TOOLS:
@@ -541,10 +838,11 @@ async def update_tools_user_valves_by_id(
             try:
                 form_data = {k: v for k, v in form_data.items() if v is not None}
                 user_valves = UserValves(**form_data)
+                user_valves_dict = user_valves.model_dump(exclude_unset=True)
                 Tools.update_user_valves_by_id_and_user_id(
-                    id, user.id, user_valves.model_dump()
+                    id, user.id, user_valves_dict, db=db
                 )
-                return user_valves.model_dump()
+                return user_valves_dict
             except Exception as e:
                 log.exception(f"Failed to update user valves by id {id}: {e}")
                 raise HTTPException(

@@ -1,13 +1,11 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
-	import { KokoroTTS } from 'kokoro-js';
 
 	import { user, settings, config } from '$lib/stores';
 	import { getVoices as _getVoices } from '$lib/apis/audio';
 
 	import Switch from '$lib/components/common/Switch.svelte';
-	import { round } from '@huggingface/transformers';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	const dispatch = createEventDispatcher();
@@ -128,6 +126,7 @@
 
 				const model_id = 'onnx-community/Kokoro-82M-v1.0-ONNX';
 
+				const { KokoroTTS } = await import('kokoro-js');
 				TTSModel = await KokoroTTS.from_pretrained(model_id, {
 					dtype: TTSEngineConfig.dtype, // Options: "fp32", "fp16", "q8", "q4", "q4f16"
 					device: !!navigator?.gpu ? 'webgpu' : 'wasm', // Detect WebGPU
@@ -154,6 +153,7 @@
 </script>
 
 <form
+	id="tab-audio"
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={async () => {
 		saveSettings({
@@ -175,7 +175,7 @@
 		dispatch('save');
 	}}
 >
-	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full">
+	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] md:max-h-full">
 		<div>
 			<div class=" mb-1 text-sm font-medium">{$i18n.t('STT Settings')}</div>
 
@@ -184,9 +184,10 @@
 					<div class=" self-center text-xs font-medium">{$i18n.t('Speech-to-Text Engine')}</div>
 					<div class="flex items-center relative">
 						<select
-							class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+							class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 							bind:value={STTEngine}
-							placeholder="Select an engine"
+							aria-label={$i18n.t('Speech-to-Text Engine')}
+							placeholder={$i18n.t('Select an engine')}
 						>
 							<option value="">{$i18n.t('Default')}</option>
 							<option value="web">{$i18n.t('Web API')}</option>
@@ -207,6 +208,7 @@
 							<input
 								type="text"
 								bind:value={STTLanguage}
+								aria-label={$i18n.t('Speech-to-Text Language')}
 								placeholder={$i18n.t('e.g. en')}
 								class=" text-sm text-right bg-transparent dark:text-gray-300 outline-hidden"
 							/>
@@ -226,6 +228,8 @@
 						toggleSpeechAutoSend();
 					}}
 					type="button"
+					role="switch"
+					aria-checked={speechAutoSend}
 				>
 					{#if speechAutoSend === true}
 						<span class="ml-2 self-center">{$i18n.t('On')}</span>
@@ -243,9 +247,10 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Text-to-Speech Engine')}</div>
 				<div class="flex items-center relative">
 					<select
-						class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+						class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 						bind:value={TTSEngine}
-						placeholder="Select an engine"
+						aria-label={$i18n.t('Text-to-Speech Engine')}
+						placeholder={$i18n.t('Select an engine')}
 					>
 						<option value="">{$i18n.t('Default')}</option>
 						<option value="browser-kokoro">{$i18n.t('Kokoro.js (Browser)')}</option>
@@ -258,11 +263,12 @@
 					<div class=" self-center text-xs font-medium">{$i18n.t('Kokoro.js Dtype')}</div>
 					<div class="flex items-center relative">
 						<select
-							class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+							class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 							bind:value={TTSEngineConfig.dtype}
-							placeholder="Select dtype"
+							aria-label={$i18n.t('Kokoro.js Dtype')}
+							placeholder={$i18n.t('Select dtype')}
 						>
-							<option value="" disabled selected>Select dtype</option>
+							<option value="" disabled selected>{$i18n.t('Select dtype')}</option>
 							<option value="fp32">fp32</option>
 							<option value="fp16">fp16</option>
 							<option value="q8">q8</option>
@@ -281,6 +287,8 @@
 						toggleResponseAutoPlayback();
 					}}
 					type="button"
+					role="switch"
+					aria-checked={responseAutoPlayback}
 				>
 					{#if responseAutoPlayback === true}
 						<span class="ml-2 self-center">{$i18n.t('On')}</span>
@@ -299,6 +307,7 @@
 						min="0"
 						step="0.01"
 						bind:value={playbackRate}
+						aria-label={$i18n.t('Speech Playback Speed')}
 						class=" text-sm text-right bg-transparent dark:text-gray-300 outline-hidden"
 					/>
 					x
@@ -306,7 +315,7 @@
 			</div>
 		</div>
 
-		<hr class=" border-gray-100 dark:border-gray-850" />
+		<hr class=" border-gray-100/30 dark:border-gray-850/30" />
 
 		{#if TTSEngine === 'browser-kokoro'}
 			{#if TTSModel}
@@ -318,7 +327,8 @@
 								list="voice-list"
 								class="w-full text-sm bg-transparent dark:text-gray-300 outline-hidden"
 								bind:value={voice}
-								placeholder="Select a voice"
+								aria-label={$i18n.t('Voice')}
+								placeholder={$i18n.t('Select a voice')}
 							/>
 
 							<datalist id="voice-list">
@@ -355,6 +365,7 @@
 						<select
 							class="w-full text-sm bg-transparent dark:text-gray-300 outline-hidden"
 							bind:value={voice}
+							aria-label={$i18n.t('Voice')}
 						>
 							<option value="" selected={voice !== ''}>{$i18n.t('Default')}</option>
 							{#each voices.filter((v) => nonLocalVoices || v.localService === true) as _voice}
@@ -386,7 +397,8 @@
 							list="voice-list"
 							class="w-full text-sm bg-transparent dark:text-gray-300 outline-hidden"
 							bind:value={voice}
-							placeholder="Select a voice"
+							aria-label={$i18n.t('Voice')}
+							placeholder={$i18n.t('Select a voice')}
 						/>
 
 						<datalist id="voice-list">
