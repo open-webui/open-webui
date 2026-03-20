@@ -569,10 +569,10 @@
 		const isSameOrigin = event.origin === window.origin;
 		const type = event.data?.type;
 
-		// These message types only submit text to the chat input — functionally
-		// equivalent to the user typing.  They are safe to accept from sandboxed
-		// iframes whose origin is opaque ("null") because they cannot read or
-		// modify any page state.
+		// Prompt-related message types only submit text to the chat input —
+		// functionally equivalent to the user typing.  When same-origin is
+		// enabled they go through immediately.  When it is disabled (opaque
+		// origin) we show a confirmation dialog so the user stays in control.
 		const iframePromptTypes = ['input:prompt', 'input:prompt:submit', 'action:submit'];
 
 		if (!isSameOrigin && !iframePromptTypes.includes(type)) {
@@ -603,8 +603,22 @@
 			console.debug(event.data.text);
 
 			if (event.data.text !== '') {
-				await tick();
-				submitPrompt(event.data.text);
+				if (isSameOrigin) {
+					await tick();
+					submitPrompt(event.data.text);
+				} else {
+					// Cross-origin: ask user to confirm before submitting
+					eventConfirmationInput = false;
+					eventConfirmationTitle = $i18n.t('Confirm Prompt from Embed');
+					eventConfirmationMessage = event.data.text;
+					eventCallback = async (confirmed: boolean) => {
+						if (confirmed) {
+							await tick();
+							submitPrompt(event.data.text);
+						}
+					};
+					showEventConfirmation = true;
+				}
 			}
 		}
 	};
