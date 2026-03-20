@@ -138,19 +138,7 @@
 		await tick();
 	});
 
-	const onKeyDown = (e) => {
-		if (e.key === 'Enter') {
-			e.preventDefault();
-			select();
-		}
-	};
-	onMount(() => {
-		window.addEventListener('keydown', onKeyDown);
-	});
 
-	onDestroy(() => {
-		window.removeEventListener('keydown', onKeyDown);
-	});
 </script>
 
 {#if filteredItems.length > 0 || query.startsWith('http')}
@@ -220,7 +208,7 @@
 		<button
 			class="px-2 py-1 rounded-xl w-full text-left bg-gray-50 dark:bg-gray-800 dark:text-gray-100 selected-command-option-button"
 			type="button"
-			data-selected={true}
+			data-selected={selectedIdx === filteredItems.findIndex((i) => i.type === 'youtube')}
 			on:click={() => {
 				if (isValidHttpUrl(query)) {
 					onSelect({
@@ -248,7 +236,7 @@
 		<button
 			class="px-2 py-1 rounded-xl w-full text-left bg-gray-50 dark:bg-gray-800 dark:text-gray-100 selected-command-option-button"
 			type="button"
-			data-selected={true}
+			data-selected={selectedIdx === filteredItems.findIndex((i) => i.type === 'web')}
 			on:click={() => {
 				if (isValidHttpUrl(query)) {
 					onSelect({
