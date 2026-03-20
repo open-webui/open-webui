@@ -285,12 +285,15 @@
 								e.currentTarget.src = '/favicon.png';
 							}}
 						/>
+					{:else if message.user?.role === 'webhook'}
+						<ProfileImage
+							src={`${WEBUI_API_BASE_URL}/channels/webhooks/${message.user?.id}/profile/image`}
+							className={'size-8 ml-0.5'}
+						/>
 					{:else}
 						<ProfilePreview user={message.user}>
 							<ProfileImage
-								src={message.user?.role === 'webhook'
-									? `${WEBUI_API_BASE_URL}/channels/webhooks/${message.user?.id}/profile/image`
-									: `${WEBUI_API_BASE_URL}/users/${message.user?.id}/profile/image`}
+								src={`${WEBUI_API_BASE_URL}/users/${message.user?.id}/profile/image`}
 								className={'size-8 ml-0.5'}
 							/>
 						</ProfilePreview>
