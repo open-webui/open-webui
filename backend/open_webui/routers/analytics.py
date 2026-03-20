@@ -28,6 +28,11 @@ router = APIRouter()
 class ModelAnalyticsEntry(BaseModel):
     model_id: str
     count: int
+    avg_ttft_ms: Optional[float] = None
+    avg_tokens_per_second: Optional[float] = None
+    error_requests: int = 0
+    total_requests: int = 0
+    error_rate: float = 0.0
 
 
 class ModelAnalyticsResponse(BaseModel):
@@ -75,9 +80,19 @@ async def get_model_analytics(
     counts = ChatMessages.get_message_count_by_model(
         start_date=start_date, end_date=end_date, group_id=group_id, user_id=user_id, db=db
     )
+<<<<<<< HEAD
 >>>>>>> cb4222bda (feat(analytics): add cross-filter by model and user in admin dashboard)
+=======
+    perf = ChatMessages.get_performance_metrics_by_model(
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
+    )
+>>>>>>> 03ad110b3 (feat(analytics): add per-model TTFT, Token/s and error metrics in Model Usage table)
     models = [
-        ModelAnalyticsEntry(model_id=model_id, count=count)
+        ModelAnalyticsEntry(
+            model_id=model_id,
+            count=count,
+            **perf.get(model_id, {}),
+        )
         for model_id, count in sorted(counts.items(), key=lambda x: -x[1])
     ]
     return ModelAnalyticsResponse(models=models)

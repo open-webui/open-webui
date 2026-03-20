@@ -79,7 +79,16 @@
 		total_requests: 0,
 		error_rate: 0
 	};
-	let modelStats: Array<{ model_id: string; count: number; name?: string }> = [];
+	let modelStats: Array<{
+		model_id: string;
+		count: number;
+		name?: string;
+		avg_ttft_ms?: number | null;
+		avg_tokens_per_second?: number | null;
+		error_requests?: number;
+		total_requests?: number;
+		error_rate?: number;
+	}> = [];
 	let userStats: Array<{ user_id: string; name?: string; email?: string; count: number }> = [];
 	let dailyStats: Array<{ date: string; models: Record<string, number> }> = [];
 	let tokenStats: Record<
@@ -247,6 +256,21 @@
 			const aTokens = tokenStats[a.model_id]?.total_tokens ?? 0;
 			const bTokens = tokenStats[b.model_id]?.total_tokens ?? 0;
 			return modelDirection === 'asc' ? aTokens - bTokens : bTokens - aTokens;
+		}
+		if (modelOrderBy === 'ttft') {
+			const aV = a.avg_ttft_ms ?? (modelDirection === 'asc' ? Infinity : -Infinity);
+			const bV = b.avg_ttft_ms ?? (modelDirection === 'asc' ? Infinity : -Infinity);
+			return modelDirection === 'asc' ? aV - bV : bV - aV;
+		}
+		if (modelOrderBy === 'tps') {
+			const aV = a.avg_tokens_per_second ?? (modelDirection === 'asc' ? -Infinity : Infinity);
+			const bV = b.avg_tokens_per_second ?? (modelDirection === 'asc' ? -Infinity : Infinity);
+			return modelDirection === 'asc' ? aV - bV : bV - aV;
+		}
+		if (modelOrderBy === 'errors') {
+			const aV = a.error_requests ?? 0;
+			const bV = b.error_requests ?? 0;
+			return modelDirection === 'asc' ? aV - bV : bV - aV;
 		}
 		return modelDirection === 'asc' ? a.count - b.count : b.count - a.count;
 	});
@@ -561,12 +585,23 @@
 									{totalModelMessages > 0
 										? ((model.count / totalModelMessages) * 100).toFixed(1)
 										: 0}%
-								</td>
-							</tr>
+								</td>							<td class="px-3 py-1 text-right text-gray-500">
+								{model.avg_ttft_ms != null ? `${model.avg_ttft_ms.toFixed(0)} ms` : '—'}
+							</td>
+							<td class="px-3 py-1 text-right text-gray-500">
+								{model.avg_tokens_per_second != null
+									? `${model.avg_tokens_per_second.toFixed(1)}/s`
+									: '—'}
+							</td>
+							<td class="px-3 py-1 text-right {model.error_requests > 0 ? 'text-red-400' : 'text-gray-400'}">
+								{model.error_requests > 0
+									? `${model.error_requests} (${model.error_rate.toFixed(1)}%)`
+									: '—'}
+							</td>							</tr>
 						{/each}
 						{#if sortedModels.length === 0}
 							<tr
-								><td colspan="5" class="px-3 py-2 text-center text-gray-400"
+								><td colspan="8" class="px-3 py-2 text-center text-gray-400"
 									>{$i18n.t('No data')}</td
 								></tr
 							>

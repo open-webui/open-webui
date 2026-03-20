@@ -515,6 +515,111 @@ class ChatMessageTable:
             results = query.group_by(ChatMessage.chat_id).all()
             return {row.chat_id: row.count for row in results}
 
+    def get_performance_metrics_by_model(
+        self,
+        start_date: Optional[int] = None,
+        end_date: Optional[int] = None,
+        group_id: Optional[str] = None,
+        db: Optional[Session] = None,
+    ) -> dict[str, dict]:
+        """Aggregate TTFT, Token/s and error metrics grouped by model_id."""
+        with get_db_context(db) as db:
+            from open_webui.models.groups import GroupMember
+
+            def _to_float(value: Any) -> Optional[float]:
+                if value is None:
+                    return None
+                if isinstance(value, str):
+                    if value.strip().lower() in {"", "n/a", "na", "none", "null"}:
+                        return None
+                try:
+                    return float(value)
+                except (TypeError, ValueError):
+                    return None
+
+            query = db.query(
+                ChatMessage.model_id, ChatMessage.usage, ChatMessage.error
+            ).filter(
+                ChatMessage.role == "assistant",
+                ChatMessage.model_id.isnot(None),
+                ~ChatMessage.user_id.like("shared-%"),
+            )
+
+            if start_date:
+                query = query.filter(ChatMessage.created_at >= start_date)
+            if end_date:
+                query = query.filter(ChatMessage.created_at <= end_date)
+            if group_id:
+                group_users = (
+                    db.query(GroupMember.user_id)
+                    .filter(GroupMember.group_id == group_id)
+                    .subquery()
+                )
+                query = query.filter(ChatMessage.user_id.in_(group_users))
+
+            rows = query.all()
+
+            buckets: dict[str, dict] = {}
+
+            for model_id, usage, error in rows:
+                if model_id not in buckets:
+                    buckets[model_id] = {
+                        "total": 0,
+                        "errors": 0,
+                        "ttft": [],
+                        "tps": [],
+                    }
+                b = buckets[model_id]
+                b["total"] += 1
+
+                if error not in (None, {}, "", []):
+                    b["errors"] += 1
+
+                if not isinstance(usage, dict):
+                    continue
+
+                ttft_ms = (
+                    _to_float(usage.get("ttft_ms"))
+                    or _to_float(usage.get("time_to_first_token_ms"))
+                    or _to_float(usage.get("time_to_first_token"))
+                )
+                if ttft_ms is None:
+                    pev_dur = _to_float(usage.get("prompt_eval_duration"))
+                    if pev_dur and pev_dur > 0:
+                        ttft_ms = pev_dur / 1_000_000
+                if ttft_ms and ttft_ms > 0:
+                    b["ttft"].append(ttft_ms)
+
+                tps = _to_float(usage.get("tokens_per_second")) or _to_float(
+                    usage.get("response_token/s")
+                )
+                if tps is None:
+                    out_tok = _to_float(usage.get("output_tokens")) or _to_float(
+                        usage.get("completion_tokens")
+                    )
+                    eval_dur = _to_float(usage.get("eval_duration"))
+                    if out_tok and eval_dur and eval_dur > 0:
+                        tps = out_tok / (eval_dur / 1_000_000_000)
+                if tps and tps > 0:
+                    b["tps"].append(tps)
+
+            result = {}
+            for model_id, b in buckets.items():
+                result[model_id] = {
+                    "avg_ttft_ms": (
+                        round(sum(b["ttft"]) / len(b["ttft"]), 2) if b["ttft"] else None
+                    ),
+                    "avg_tokens_per_second": (
+                        round(sum(b["tps"]) / len(b["tps"]), 2) if b["tps"] else None
+                    ),
+                    "error_requests": b["errors"],
+                    "total_requests": b["total"],
+                    "error_rate": (
+                        round((b["errors"] / b["total"]) * 100, 2) if b["total"] > 0 else 0.0
+                    ),
+                }
+            return result
+
     def get_performance_metrics(
         self,
         start_date: Optional[int] = None,
