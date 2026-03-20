@@ -333,9 +333,11 @@
 				}
 			} else {
 				toast.error($i18n.t('Failed to upload file.'));
+				fileItems = fileItems.filter((item) => item.itemId !== fileItem.itemId);
 			}
 		} catch (e) {
 			toast.error(`${e}`);
+			fileItems = fileItems.filter((item) => item.itemId !== fileItem.itemId);
 		}
 	};
 
