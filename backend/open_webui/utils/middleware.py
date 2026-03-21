@@ -2884,7 +2884,7 @@ async def background_tasks_handler(ctx):
                                 }
                             )
 
-                    if title == None and len(messages) == 2:
+                    if title == None and len(messages) == 2 and (not messages_map or len(messages_map) <= 2):
                         title = messages[0].get('content', user_message)
 
                         Chats.update_chat_title_by_id(metadata['chat_id'], title)
