@@ -63,6 +63,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📎 **File upload deduplication.** Attaching files that are already in the chat no longer triggers duplicate uploads. [Commit](https://github.com/open-webui/open-webui/commit/10f06a64fed474e9958b96295a953e0eebf9e4be)
 - 🔍 **Serper.dev search results.** Fixed web search results not displaying properly when using the Serper.dev provider by using the correct API response field. [#22869](https://github.com/open-webui/open-webui/pull/22869)
 - 📝 **Markdown task list checkbox styling.** Fixed task list checkboxes in markdown rendering to display consistently without shrinking in narrow layouts. [#22886](https://github.com/open-webui/open-webui/pull/22886)
+- 🎨 **Artifacts sidebar tab background fix.** The Artifacts sidebar now correctly updates and displays when switching back to a browser tab that was in the background, ensuring artifacts are visible without requiring a manual refresh. [#22889](https://github.com/open-webui/open-webui/issues/22889)
+- 💬 **Chat input URL indexing fix.** Fixed an issue where URLs could be indexed twice when using multiple triggers followed by backspace and re-entering a URL. [#22749](https://github.com/open-webui/open-webui/issues/22749)
 
 ### Changed
 
