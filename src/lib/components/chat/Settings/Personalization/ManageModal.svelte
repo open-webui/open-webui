@@ -239,20 +239,10 @@
 											<Tooltip content={$i18n.t('Delete')}>
 												<button
 													class="self-center w-fit text-sm p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-													on:click={async (e) => {
+													on:click={(e) => {
 														e.stopPropagation();
-														const res = await deleteMemoryById(
-															localStorage.token,
-															memory.id
-														).catch((error) => {
-															toast.error(`${error}`);
-															return null;
-														});
-
-														if (res) {
-															toast.success($i18n.t('Memory deleted successfully'));
-															memories = await getMemories(localStorage.token);
-														}
+														selectedMemory = memory;
+														showDeleteConfirm = true;
 													}}
 												>
 													<GarbageBin className="size-4" strokeWidth="1.5" />
