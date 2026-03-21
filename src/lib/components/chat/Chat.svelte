@@ -237,6 +237,8 @@
 					if (!$temporaryChatEnabled) {
 						messageInput?.setText(input.prompt);
 						files = input.files;
+						selectedModels = input.selectedModels ?? selectedModels;
+						atSelectedModel = input.atSelectedModel;
 						selectedToolIds = input.selectedToolIds;
 						selectedFilterIds = input.selectedFilterIds;
 						webSearchEnabled = input.webSearchEnabled;
@@ -721,6 +723,8 @@
 					if (!$temporaryChatEnabled) {
 						messageInput?.setText(input.prompt);
 						files = input.files;
+						selectedModels = input.selectedModels ?? selectedModels;
+						atSelectedModel = input.atSelectedModel;
 						selectedToolIds = input.selectedToolIds;
 						selectedFilterIds = input.selectedFilterIds;
 						webSearchEnabled = input.webSearchEnabled;

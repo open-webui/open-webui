@@ -165,11 +165,13 @@
 					access_grants: undefined
 				};
 			}),
+		selectedModels,
 		selectedToolIds,
 		selectedFilterIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
-		codeInterpreterEnabled
+		codeInterpreterEnabled,
+		atSelectedModel
 	});
 
 	const inputVariableHandler = async (text: string): Promise<string> => {
