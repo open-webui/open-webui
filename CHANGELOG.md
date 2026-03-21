@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔗 **Web fetch content length config.** Administrators can now configure the maximum characters to return from fetched URLs via WEB_FETCH_MAX_CONTENT_LENGTH environment variable or the admin settings page, instead of the previous hardcoded 50K limit. [Commit](https://github.com/open-webui/open-webui/commit/b171b0216b916745420c7caf513093a315ed9560), [#22774](https://github.com/open-webui/open-webui/issues/22774)
 - 🤖 **Ollama Anthropic endpoint support.** The Ollama proxy now supports the Anthropic-compatible /v1/messages endpoint, allowing clients using the Anthropic API format to work through Open WebUI with proper authentication and model access controls. [Commit](https://github.com/open-webui/open-webui/commit/f23296b22d3304e5bfcd19151e5802eec55bd98f), [#22861](https://github.com/open-webui/open-webui/issues/22861)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 Translations for Finnish, Portuguese (Portugal), Catalan, Turkish, Japanese, Simplified Chinese, Traditional Chinese, Estonian, and Spanish were enhanced and expanded.
+- 🌐 Translations for Finnish, Portuguese (Portugal), Catalan, Turkish, Japanese, Simplified Chinese, Traditional Chinese, Estonian, Spanish, and Azerbaijani were enhanced and expanded.
 
 ### Fixed
 
