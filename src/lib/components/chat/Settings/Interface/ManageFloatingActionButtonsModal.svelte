@@ -22,6 +22,11 @@
 	};
 
 	$: if (show) {
+		if (floatingActionButtons !== null) {
+			floatingActionButtons = floatingActionButtons.filter(
+				(a) => !(a.id === 'ask' && (a.prompt ?? '').trim() === '{{SELECTED_CONTENT}}\n\n\n{{INPUT_CONTENT}}')
+			);
+		}
 	}
 
 	onMount(() => {});
@@ -64,15 +69,8 @@
 										if (floatingActionButtons === null) {
 											floatingActionButtons = [
 												{
-													id: 'ask',
-													label: $i18n.t('Ask'),
-													input: true,
-													prompt: `{{SELECTED_CONTENT}}\n\n\n{{INPUT_CONTENT}}`
-												},
-												{
 													id: 'explain',
 													label: $i18n.t('Explain'),
-													input: false,
 													prompt: `{{SELECTED_CONTENT}}\n\n\n${$i18n.t('Explain')}`
 												}
 											];
@@ -106,8 +104,7 @@
 												{
 													id: id,
 													label: `${$i18n.t('New Button')}`,
-													input: true,
-													prompt: `{{CONTENT}}\n\n\n{{INPUT_CONTENT}}`
+													prompt: `{{SELECTED_CONTENT}}\n\n\n`
 												}
 											];
 										}}
