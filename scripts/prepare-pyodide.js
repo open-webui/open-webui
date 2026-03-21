@@ -14,7 +14,8 @@ const packages = [
 	'seaborn',
 	'pytz',
 	'black',
-	'openai'
+	'openai',
+	'openpyxl'
 ];
 
 import { loadPyodide } from 'pyodide';
