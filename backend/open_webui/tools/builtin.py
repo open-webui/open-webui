@@ -1874,6 +1874,7 @@ async def query_knowledge_files(
         # Query vector collections if any
         if collection_names:
             query_results = await query_collection(
+                __request__,
                 collection_names=collection_names,
                 queries=[query],
                 embedding_function=embedding_function,
