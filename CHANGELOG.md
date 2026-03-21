@@ -70,6 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔤 **Emoji removal for text normalization.** Fixed the emoji removal function used in search and title generation to correctly handle all emoji types, including those with variation selectors (❤️, ☀️, ✅), keycap sequences (1️⃣), and ZWJ family sequences (👨‍👩‍👧‍👦). [#22915](https://github.com/open-webui/open-webui/pull/22915)
 - 💬 **Filter icon display fix.** Fixed filter icons showing the wrong icon after removing one of multiple active filters below the chat input. [#22862](https://github.com/open-webui/open-webui/pull/22862)
 - 💬 **Channel message data loading.** Fixed redundant 404 API calls that occurred when rendering channel messages, preventing unnecessary requests and console errors. [#22894](https://github.com/open-webui/open-webui/pull/22894)
+- 💬 **Response message skeleton display.** Fixed an issue where the skeleton loader would incorrectly show or hide based on complex status history conditions, by extracting the visibility logic into a cleaner reactive variable. [Commit](https://github.com/open-webui/open-webui/commit/5df4277216fbb9de603fdf4289f8366292568234)
 
 ### Changed
 
