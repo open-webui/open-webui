@@ -157,8 +157,8 @@
 			await archiveChatById(localStorage.token, id);
 
 			if ($chatId === id) {
+				await goto('/');
 				chatId.set('');
-				window.history.replaceState({}, '', '/');
 			}
 
 			dispatch('change');
