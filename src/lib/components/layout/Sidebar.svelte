@@ -592,6 +592,12 @@
 	onUpdate={async () => {
 		await initChatList();
 	}}
+	onDelete={(id) => {
+		if ($chatId === id) {
+			chatId.set('');
+			window.history.replaceState({}, '', '/');
+		}
+	}}
 />
 
 <ChannelModal

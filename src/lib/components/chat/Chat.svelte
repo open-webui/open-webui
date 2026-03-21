@@ -2632,12 +2632,8 @@
 			currentChatPage.set(1);
 			initNewChat();
 			await goto('/');
-			getChatList(localStorage.token, $currentChatPage).then((chats) => {
-				chats.set(chats);
-			});
-			getPinnedChatList(localStorage.token).then((pinnedChats) => {
-				pinnedChats.set(pinnedChats);
-			});
+			chats.set(await getChatList(localStorage.token, $currentChatPage));
+			pinnedChats.set(await getPinnedChatList(localStorage.token));
 			toast.success($i18n.t('Chat archived.'));
 		} catch (error) {
 			console.error('Error archiving chat:', error);
