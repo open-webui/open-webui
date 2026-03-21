@@ -936,11 +936,11 @@
 
 	const onHistoryChange = (history) => {
 		if (history) {
-			cancelAnimationFrame(contentsRAF);
-			contentsRAF = requestAnimationFrame(() => {
+			clearTimeout(contentsRAF);
+			contentsRAF = setTimeout(() => {
 				getContents();
 				contentsRAF = null;
-			});
+			}, 0);
 		} else {
 			artifactContents.set([]);
 		}
@@ -1239,7 +1239,7 @@
 
 				if (history.currentId) {
 					for (const message of Object.values(history.messages)) {
-						if (message && message.role === 'assistant') {
+						if (message && message.role === 'assistant' && message.done !== false) {
 							message.done = true;
 						}
 					}

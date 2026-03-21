@@ -31,7 +31,7 @@ def search_serper(api_key: str, query: str, count: int, filter_list: Optional[li
         SearchResult(
             link=result['link'],
             title=result.get('title'),
-            snippet=result.get('description'),
+            snippet=result.get('snippet'),
         )
         for result in results[:count]
     ]

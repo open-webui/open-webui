@@ -404,11 +404,34 @@ def get_all_items_from_collections(collection_names: list[str]) -> dict:
 
 
 async def query_collection(
+    request,
     collection_names: list[str],
     queries: list[str],
     embedding_function,
     k: int,
 ) -> dict:
+    # When request is provided, try hybrid search + reranking if enabled
+    if request and request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
+        try:
+            reranking_function = (
+                (lambda query, documents: request.app.state.RERANKING_FUNCTION(query, documents))
+                if request.app.state.RERANKING_FUNCTION
+                else None
+            )
+            return await query_collection_with_hybrid_search(
+                collection_names=collection_names,
+                queries=queries,
+                embedding_function=embedding_function,
+                k=k,
+                reranking_function=reranking_function,
+                k_reranker=request.app.state.config.TOP_K_RERANKER,
+                r=request.app.state.config.RELEVANCE_THRESHOLD,
+                hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
+                enable_enriched_texts=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
+            )
+        except Exception as e:
+            log.debug(f'Hybrid search failed, falling back to vector search: {e}')
+
     results = []
     error = False
 
@@ -1126,31 +1149,13 @@ async def get_sources_from_items(
                 if full_context:
                     query_result = get_all_items_from_collections(collection_names)
                 else:
-                    query_result = None  # Initialize to None
-                    if hybrid_search:
-                        try:
-                            query_result = await query_collection_with_hybrid_search(
-                                collection_names=collection_names,
-                                queries=queries,
-                                embedding_function=embedding_function,
-                                k=k,
-                                reranking_function=reranking_function,
-                                k_reranker=k_reranker,
-                                r=r,
-                                hybrid_bm25_weight=hybrid_bm25_weight,
-                                enable_enriched_texts=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
-                            )
-                        except Exception as e:
-                            log.debug('Error when using hybrid search, using non hybrid search as fallback.')
-
-                    # fallback to non-hybrid search
-                    if not hybrid_search and query_result is None:
-                        query_result = await query_collection(
-                            collection_names=collection_names,
-                            queries=queries,
-                            embedding_function=embedding_function,
-                            k=k,
-                        )
+                    query_result = await query_collection(
+                        request,
+                        collection_names=collection_names,
+                        queries=queries,
+                        embedding_function=embedding_function,
+                        k=k,
+                    )
             except Exception as e:
                 log.exception(e)
 
