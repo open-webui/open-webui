@@ -149,6 +149,7 @@
 	let codeInterpreterEnabled = false;
 
 	let showCommands = false;
+	let selectedSkillId = null;
 
 	let generating = false;
 	let dragged = false;
@@ -235,8 +236,9 @@
 					const input = JSON.parse(storageChatInput);
 
 					if (!$temporaryChatEnabled) {
-						messageInput?.setText(input.prompt);
+						messageInput?.setText(input.prompt, null, input.content);
 						files = input.files;
+						selectedSkillId = input.selectedSkillId;
 						selectedToolIds = input.selectedToolIds;
 						selectedFilterIds = input.selectedFilterIds;
 						webSearchEnabled = input.webSearchEnabled;
@@ -719,8 +721,9 @@
 					const input = JSON.parse(storageChatInput);
 
 					if (!$temporaryChatEnabled) {
-						messageInput?.setText(input.prompt);
+						messageInput?.setText(input.prompt, null, input.content);
 						files = input.files;
+						selectedSkillId = input.selectedSkillId;
 						selectedToolIds = input.selectedToolIds;
 						selectedFilterIds = input.selectedFilterIds;
 						webSearchEnabled = input.webSearchEnabled;
@@ -2818,6 +2821,7 @@
 									bind:webSearchEnabled
 									bind:atSelectedModel
 									bind:showCommands
+									bind:selectedSkillId
 									bind:dragged
 									toolServers={$toolServers}
 									{generating}
@@ -2889,6 +2893,7 @@
 									bind:webSearchEnabled
 									bind:atSelectedModel
 									bind:showCommands
+									bind:selectedSkillId
 									bind:dragged
 									toolServers={$toolServers}
 									{stopResponse}

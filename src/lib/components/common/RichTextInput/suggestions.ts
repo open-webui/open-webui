@@ -87,6 +87,7 @@ export function getSuggestionRenderer(Component: any, ComponentProps = {}) {
 
 				component.$set({
 					query: props.query,
+					selectedSkillId: props.selectedSkillId,
 					command: (item) => {
 						props.command({ id: item.id, label: item.label });
 					}

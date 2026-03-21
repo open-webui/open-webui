@@ -12,6 +12,23 @@
 	let selectedIdx = 0;
 	export let filteredItems = [];
 
+	export let selectedSkillId = null;
+
+	// When filteredItems loads AND selectedSkillId is set (from draft restore), highlight the matching skill
+	$: if (filteredItems.length > 0 && selectedSkillId !== null) {
+		const idx = filteredItems.findIndex((item) => `${item.id}|${item.name}` === selectedSkillId);
+		if (idx !== -1) {
+			selectedIdx = idx;
+		}
+	}
+
+	// Reset selectedSkillId when user actively searches (query changes AND skills already loaded).
+	// Don't clear if filteredItems is still empty — that means skills haven't loaded yet
+	// and selectedSkillId should be preserved for when they do (draft restore scenario).
+	$: if (query && filteredItems.length > 0) {
+		selectedSkillId = null;
+	}
+
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
 	$: if (query !== undefined) {

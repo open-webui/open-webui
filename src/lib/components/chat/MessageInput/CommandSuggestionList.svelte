@@ -11,6 +11,7 @@
 	export let onSelect = (e) => {};
 	export let onUpload = (e) => {};
 	export let insertTextHandler = (text) => {};
+	export let selectedSkillId = null;
 
 	let suggestionElement = null;
 	let filteredItems = [];
@@ -119,6 +120,7 @@
 				bind:this={suggestionElement}
 				{query}
 				bind:filteredItems
+				{selectedSkillId}
 				onSelect={(e) => {
 					const { type, data } = e;
 

@@ -165,11 +165,15 @@
 					access_grants: undefined
 				};
 			}),
+		selectedModels,
 		selectedToolIds,
 		selectedFilterIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
-		codeInterpreterEnabled
+		codeInterpreterEnabled,
+		atSelectedModel,
+		selectedSkillId,
+		content: inputContent
 	});
 
 	const inputVariableHandler = async (text: string): Promise<string> => {
@@ -324,7 +328,7 @@
 		}
 	};
 
-	export const setText = async (text?: string, cb?: (text: string) => void) => {
+	export const setText = async (text?: string, cb?: (text: string) => void, content?: any) => {
 		const chatInput = document.getElementById('chat-input');
 
 		if (chatInput) {
@@ -332,7 +336,13 @@
 				text = await textVariableHandler(text || '');
 			}
 
-			chatInputElement?.setText(text);
+			// If TipTap JSON content is provided (e.g., from draft restore), use setContent
+			// to preserve mention nodes. Otherwise fall back to setText which creates plain text.
+			if (content?.json) {
+				chatInputElement?.setContent(content.json);
+			} else {
+				chatInputElement?.setText(text);
+			}
 			chatInputElement?.focus();
 
 			if (text !== '') {
@@ -340,6 +350,15 @@
 			}
 
 			await tick();
+
+			// Re-derive command so $ or @ suggestions re-appear after programmatic setText.
+			// After clearContent()+insert+selectNextTemplate (which finds no template),
+			// cursor is left at position 0 of empty doc, causing getWordAtDocPos() to read
+			// empty content. Fix: explicitly focus 'end' so cursor is at the actual content.
+			chatInputElement?.focus('end');
+			await tick();
+			command = getCommand();
+
 			if (cb) await cb(text);
 		}
 	};
@@ -404,6 +423,8 @@
 	$: showCommands =
 		['/', '#', '@', '$'].includes(command?.charAt(0)) || '\\#' === command?.slice(0, 2);
 	let suggestions = null;
+
+	let selectedSkillId = null;
 
 	let showTools = false;
 
@@ -993,11 +1014,16 @@
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					i18n,
 					onSelect: (e) => {
+						const { type, data } = e;
+						if (type === 'skill') {
+							selectedSkillId = `${data.id}|${data.name}`;
+						}
 						document.getElementById('chat-input')?.focus();
 					},
 
 					insertTextHandler: insertTextAtCursor,
-					onUpload: () => {}
+					onUpload: () => {},
+					selectedSkillId
 				})
 			}
 		];
