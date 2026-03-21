@@ -49,6 +49,7 @@
 	let selectedMemory = null;
 
 	let showClearConfirmDialog = false;
+	let showDeleteConfirm = false;
 
 	$: filteredMemories = query
 		? memories.filter((m) => m.content?.toLowerCase().includes(query.toLowerCase()))
@@ -238,20 +239,10 @@
 											<Tooltip content={$i18n.t('Delete')}>
 												<button
 													class="self-center w-fit text-sm p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-													on:click={async (e) => {
+													on:click={(e) => {
 														e.stopPropagation();
-														const res = await deleteMemoryById(
-															localStorage.token,
-															memory.id
-														).catch((error) => {
-															toast.error(`${error}`);
-															return null;
-														});
-
-														if (res) {
-															toast.success($i18n.t('Memory deleted successfully'));
-															memories = await getMemories(localStorage.token);
-														}
+														selectedMemory = memory;
+														showDeleteConfirm = true;
 													}}
 												>
 													<GarbageBin className="size-4" strokeWidth="1.5" />
@@ -303,6 +294,33 @@
 		showClearConfirmDialog = false;
 	}}
 />
+
+<ConfirmDialog
+	title={$i18n.t('Delete Memory?')}
+	show={showDeleteConfirm}
+	on:confirm={async () => {
+		const res = await deleteMemoryById(localStorage.token, selectedMemory.id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Memory deleted successfully'));
+			memories = await getMemories(localStorage.token);
+		}
+		showDeleteConfirm = false;
+	}}
+	on:cancel={() => {
+		showDeleteConfirm = false;
+	}}
+>
+	<div class=" text-sm text-gray-500 flex-1">
+		{$i18n.t('Are you sure you want to delete this memory? This action cannot be undone.')}
+		<div class=" mt-2 bg-gray-50 dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-800 text-black dark:text-white whitespace-pre-wrap break-words max-h-32 overflow-y-auto">
+			{selectedMemory?.content}
+		</div>
+	</div>
+</ConfirmDialog>
 
 <AddMemoryModal
 	bind:show={showAddMemoryModal}
