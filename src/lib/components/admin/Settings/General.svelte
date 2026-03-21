@@ -11,11 +11,12 @@
 		updateLdapConfig,
 		updateLdapServer
 	} from '$lib/apis/auths';
-	import { getBanners, setBanners } from '$lib/apis/configs';
+	import { getBanners, setBanners, getChannelsConfig, setChannelsConfig } from '$lib/apis/configs';
 	import { getGroups } from '$lib/apis/groups';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
 	import { WEBUI_BUILD_HASH, WEBUI_VERSION } from '$lib/constants';
 	import { banners as _banners, config, showChangelog } from '$lib/stores';
 	import type { Banner } from '$lib/types';
@@ -40,6 +41,20 @@
 	let groups = [];
 
 	let banners: Banner[] = [];
+
+	// Channels
+	let channelsConfig = null;
+
+	const addIceServer = () => {
+		channelsConfig.ICE_SERVERS = [
+			...(channelsConfig.ICE_SERVERS ?? []),
+			{ urls: '', username: '', credential: '' }
+		];
+	};
+
+	const removeIceServer = (index) => {
+		channelsConfig.ICE_SERVERS = channelsConfig.ICE_SERVERS.filter((_, i) => i !== index);
+	};
 
 	// LDAP
 	let ENABLE_LDAP = false;
@@ -94,6 +109,10 @@
 		await updateLdapConfig(localStorage.token, ENABLE_LDAP);
 		await updateLdapServerHandler();
 
+		if (channelsConfig) {
+			await setChannelsConfig(localStorage.token, channelsConfig);
+		}
+
 		await updateBanners();
 
 		await config.set(await getBackendConfig());
@@ -123,6 +142,9 @@
 			})(),
 			(async () => {
 				groups = await getGroups(localStorage.token);
+			})(),
+			(async () => {
+				channelsConfig = await getChannelsConfig(localStorage.token);
 			})()
 		]);
 
@@ -755,6 +777,64 @@
 
 						<Switch bind:state={adminConfig.ENABLE_CHANNELS} />
 					</div>
+
+					{#if adminConfig.ENABLE_CHANNELS && channelsConfig}
+						<div class="mb-2.5 w-full justify-between">
+							<div class="flex w-full justify-between">
+								<div class=" self-center text-xs font-medium">
+									{$i18n.t('ICE Servers')}
+								</div>
+
+								<Tooltip content={$i18n.t('Add ICE Server')}>
+									<button
+										class="px-1"
+										on:click={addIceServer}
+										type="button"
+									>
+										<Plus />
+									</button>
+								</Tooltip>
+							</div>
+
+							{#each channelsConfig.ICE_SERVERS ?? [] as server, i}
+								<div class="flex mt-2 gap-2 items-center">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										type="text"
+										placeholder="stun:stun.l.google.com:19302"
+										bind:value={server.urls}
+									/>
+									<input
+										class="w-28 rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										type="text"
+										placeholder={$i18n.t('Username')}
+										bind:value={server.username}
+									/>
+									<input
+										class="w-28 rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										type="password"
+										placeholder={$i18n.t('Credential')}
+										bind:value={server.credential}
+									/>
+									<button
+										class="px-1 text-gray-400 hover:text-red-500 transition"
+										type="button"
+										on:click={() => removeIceServer(i)}
+									>
+										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+											<path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+										</svg>
+									</button>
+								</div>
+							{/each}
+
+							<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+								{$i18n.t(
+									'Configure STUN and TURN servers for WebRTC call connectivity across NATs and firewalls.'
+								)}
+							</div>
+						</div>
+					{/if}
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
