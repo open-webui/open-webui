@@ -58,7 +58,7 @@
 				<DropdownMenu.SubContent
 					class="w-full rounded-xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 					transition={flyAndScale}
-					sideOffset={8}
+					sideOffset={2}
 					align="end"
 				>
 					<DropdownMenu.Item
@@ -102,7 +102,7 @@
 					<DropdownMenu.SubContent
 						class="w-full rounded-xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 						transition={flyAndScale}
-						sideOffset={8}
+						sideOffset={2}
 						align="end"
 					>
 						{#if onCopyLink}
