@@ -23,6 +23,7 @@
 
 	import HtmlToken from './HTMLToken.svelte';
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
+	import ColonFenceBlock from './ColonFenceBlock.svelte';
 
 	export let id: string;
 	export let tokens: Token[];
@@ -434,6 +435,17 @@
 		{#if token.text}
 			<KatexRenderer content={token.text} displayMode={token?.displayMode ?? false} />
 		{/if}
+	{:else if token.type === 'colonFence'}
+		<ColonFenceBlock
+			id={`${id}-${tokenIdx}`}
+			{token}
+			{tokenIdx}
+			{done}
+			{editCodeBlock}
+			{sourceIds}
+			{onTaskClick}
+			{onSourceClick}
+		/>
 	{:else if token.type === 'space'}
 		<div class="my-2" />
 	{:else}
