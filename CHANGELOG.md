@@ -60,6 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🌐 **Dynamic HTML language attribute.** The HTML lang attribute now dynamically updates when users change their interface language, preventing browsers from triggering unwanted translation popups. [Commit](https://github.com/open-webui/open-webui/commit/de5e0fbc00e7abcd84e1272c301b0707f8ea5ac6)
 - 📎 **File upload deduplication.** Attaching files that are already in the chat no longer triggers duplicate uploads. [Commit](https://github.com/open-webui/open-webui/commit/10f06a64fed474e9958b96295a953e0eebf9e4be)
 - 🔍 **Serper.dev search results.** Fixed web search results not displaying properly when using the Serper.dev provider by using the correct API response field. [#22869](https://github.com/open-webui/open-webui/pull/22869)
+- 📝 **Markdown task list checkbox styling.** Fixed task list checkboxes in markdown rendering to display consistently without shrinking in narrow layouts. [#22886](https://github.com/open-webui/open-webui/pull/22886)
 
 ### Changed
 
