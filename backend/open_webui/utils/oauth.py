@@ -1533,6 +1533,10 @@ class OAuthManager:
 
         response = RedirectResponse(url=redirect_url, headers=response.headers)
 
+        # Compute cookie expiry from JWT lifetime
+        expires_delta = parse_duration(auth_manager_config.JWT_EXPIRES_IN)
+        cookie_max_age = int(expires_delta.total_seconds()) if expires_delta else None
+
         # Set the cookie token
         # Redirect back to the frontend with the JWT token
         response.set_cookie(
@@ -1541,6 +1545,7 @@ class OAuthManager:
             httponly=False,  # Required for frontend access
             samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
             secure=WEBUI_AUTH_COOKIE_SECURE,
+            **({'max_age': cookie_max_age} if cookie_max_age is not None else {}),
         )
 
         # Legacy cookies for compatibility with older frontend versions
@@ -1551,6 +1556,7 @@ class OAuthManager:
                 httponly=True,
                 samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
                 secure=WEBUI_AUTH_COOKIE_SECURE,
+                **({'max_age': cookie_max_age} if cookie_max_age is not None else {}),
             )
 
         try:
@@ -1588,6 +1594,7 @@ class OAuthManager:
                     httponly=True,
                     samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
                     secure=WEBUI_AUTH_COOKIE_SECURE,
+                    **({'max_age': cookie_max_age, 'expires': cookie_expires} if cookie_max_age is not None else {}),
                 )
 
                 log.info(f'Stored OAuth session server-side for user {user.id}, provider {provider}')

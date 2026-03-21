@@ -117,6 +117,7 @@ def create_session_response(request: Request, user, db, response: Response = Non
 
     if set_cookie and response:
         datetime_expires_at = datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc) if expires_at else None
+        max_age = int(expires_delta.total_seconds()) if expires_delta else None
         response.set_cookie(
             key='token',
             value=token,
@@ -124,6 +125,7 @@ def create_session_response(request: Request, user, db, response: Response = Non
             httponly=True,
             samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
             secure=WEBUI_AUTH_COOKIE_SECURE,
+            **({'max_age': max_age} if max_age is not None else {}),
         )
 
     user_permissions = get_permissions(user.id, request.app.state.config.USER_PERMISSIONS, db=db)
@@ -181,6 +183,7 @@ async def get_session_user(
             )
 
         # Set the cookie token
+        max_age = int(expires_at - time.time()) if expires_at else None
         response.set_cookie(
             key='token',
             value=token,
@@ -188,6 +191,7 @@ async def get_session_user(
             httponly=True,  # Ensures the cookie is not accessible via JavaScript
             samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
             secure=WEBUI_AUTH_COOKIE_SECURE,
+            **({'max_age': max_age} if max_age is not None else {}),
         )
 
     user_permissions = get_permissions(user.id, request.app.state.config.USER_PERMISSIONS, db=db)
