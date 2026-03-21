@@ -165,6 +165,8 @@ from open_webui.config import (
     ENABLE_BASE_MODELS_CACHE,
     ENABLE_CALENDAR,
     ENABLE_CHANNELS,
+    # Channel Calls
+    ICE_SERVERS,
     # Code Execution
     ENABLE_CODE_EXECUTION,
     ENABLE_CODE_INTERPRETER,
@@ -515,6 +517,7 @@ from open_webui.socket.main import (
     get_models_in_use,
     get_user_id_from_session_pool,
     periodic_session_pool_cleanup,
+    channel_call_message_relayer,
     periodic_usage_pool_cleanup,
 )
 from open_webui.socket.main import (
@@ -666,6 +669,7 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     asyncio.create_task(periodic_session_pool_cleanup())
+    asyncio.create_task(channel_call_message_relayer())
 
     from open_webui.utils.automations import scheduler_worker_loop
 
@@ -903,6 +907,7 @@ app.state.config.AUTOMATION_MAX_COUNT = AUTOMATION_MAX_COUNT
 app.state.config.AUTOMATION_MIN_INTERVAL = AUTOMATION_MIN_INTERVAL
 app.state.config.ENABLE_CHANNELS = ENABLE_CHANNELS
 app.state.config.ENABLE_CALENDAR = ENABLE_CALENDAR
+app.state.config.ICE_SERVERS = ICE_SERVERS
 app.state.config.ENABLE_NOTES = ENABLE_NOTES
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
 app.state.config.ENABLE_MESSAGE_RATING = ENABLE_MESSAGE_RATING
@@ -2377,6 +2382,7 @@ async def get_app_config(request: Request):
                     'enable_channels': app.state.config.ENABLE_CHANNELS,
                     'enable_calendar': app.state.config.ENABLE_CALENDAR,
                     'enable_automations': app.state.config.ENABLE_AUTOMATIONS,
+                    'ice_servers': app.state.config.ICE_SERVERS,
                     'enable_notes': app.state.config.ENABLE_NOTES,
                     'enable_web_search': app.state.config.ENABLE_WEB_SEARCH,
                     'enable_code_execution': app.state.config.ENABLE_CODE_EXECUTION,

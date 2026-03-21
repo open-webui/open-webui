@@ -1,12 +1,14 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, onMount, onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
-	import { mobile, showArchivedChats, showSidebar, user } from '$lib/stores';
+	import { mobile, showArchivedChats, showSidebar, socket, user } from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 
+	import { config } from '$lib/stores';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
@@ -19,6 +21,7 @@
 	import ChannelInfoModal from './ChannelInfoModal.svelte';
 	import Users from '../icons/Users.svelte';
 	import Pin from '../icons/Pin.svelte';
+	import Phone from '../icons/Phone.svelte';
 	import PinnedMessagesModal from './PinnedMessagesModal.svelte';
 
 	const i18n = getContext('i18n');
@@ -45,10 +48,37 @@
 		return hasPublicReadGrant(channel?.access_grants);
 	};
 
+	const onCall = (channel: any) => {
+		goto(`/channels/${channel.id}/call`);
+	};
+
 	export let channel;
 
 	export let onPin = (messageId, pinned) => {};
 	export let onUpdate = () => {};
+
+	let callStatus = { active: false, count: 0 };
+
+	const handleCallStatus = (data: {
+		channel_id: string;
+		active: boolean;
+		participantCount: number;
+	}) => {
+		if (data?.channel_id !== channel?.id) return;
+		callStatus = { active: data.active, count: data.participantCount };
+	};
+
+	$: if ($socket && channel?.id) {
+		$socket.emit('channel:call:status:get', { channel_id: channel.id });
+	}
+
+	onMount(() => {
+		$socket?.on('channel:call:status', handleCallStatus);
+	});
+
+	onDestroy(() => {
+		$socket?.off('channel:call:status');
+	});
 </script>
 
 <PinnedMessagesModal bind:show={showChannelPinnedMessagesModal} {channel} {onPin} />
@@ -157,6 +187,36 @@
 				class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400 gap-1 shrink-0"
 			>
 				{#if channel}
+					<Tooltip content={$i18n.t('Call Channel')}>
+						<button
+							class="flex cursor-pointer py-1.5 px-1.5 border dark:border-gray-850 border-gray-50 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							aria-label="Call Channel"
+							type="button"
+							on:click={() => {
+								onCall(channel);
+							}}
+						>
+							<div class=" flex items-center gap-1 m-auto self-center">
+								{#if callStatus.active}
+									<span class="relative flex size-2">
+										<span
+											class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
+										></span>
+										<span class="relative inline-flex size-2 rounded-full bg-green-500"></span>
+									</span>
+								{/if}
+								<Phone className="size-4" strokeWidth="1.5" />
+								{#if callStatus.active && callStatus.count > 0}
+									<div
+										class="text-xs font-medium bg-green-500/20 text-green-500 rounded-full px-1.5"
+									>
+										{callStatus.count}
+									</div>
+								{/if}
+							</div>
+						</button>
+					</Tooltip>
+
 					<Tooltip content={$i18n.t('Pinned Messages')}>
 						<button
 							class=" flex cursor-pointer py-1.5 px-1.5 border dark:border-gray-850 border-gray-50 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
