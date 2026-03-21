@@ -76,6 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 💬 **Filter icon display fix.** Fixed filter icons showing the wrong icon after removing one of multiple active filters below the chat input. [#22862](https://github.com/open-webui/open-webui/pull/22862)
 - 💬 **Channel message data loading.** Fixed redundant 404 API calls that occurred when rendering channel messages, preventing unnecessary requests and console errors. [#22894](https://github.com/open-webui/open-webui/pull/22894)
 - 💬 **Response message skeleton display.** Fixed an issue where the skeleton loader would incorrectly show or hide based on complex status history conditions, by extracting the visibility logic into a cleaner reactive variable. [Commit](https://github.com/open-webui/open-webui/commit/5df4277216fbb9de603fdf4289f8366292568234)
+- 🐛 **Shared chat viewing crash.** Shared chats can now be viewed by unauthenticated users without crashing, with proper fallback handling for missing user profile information. [#22751](https://github.com/open-webui/open-webui/pull/22751), [#22742](https://github.com/open-webui/open-webui/issues/22742)
 
 ### Changed
 
