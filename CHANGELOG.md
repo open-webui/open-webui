@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - ⚡ **Svelte upgrade performance.** Page and markdown rendering are now approximately 25% faster across the board, with significantly less memory usage for smoother UI interactions. [#22611](https://github.com/open-webui/open-webui/issues/22611)
+- 🚀 **Function list API optimization.** The functions list API now returns only essential metadata without function source code, reducing payload sizes by over 99% and making the Functions admin page load significantly faster. [#22788](https://github.com/open-webui/open-webui/pull/22788)
 - ✨ **Smoother loading animation.** The loading shimmer animation now looks smoother and more natural, with softer highlight colors. [#22516](https://github.com/open-webui/open-webui/pull/22516)
 - 🧪 **Terminal connection verification.** Users can now verify their terminal server connection is working before saving the configuration, making setup more reliable. [#22567](https://github.com/open-webui/open-webui/pull/22567)
 - 📁 **Chat folder emoji reset.** Users can now reset chat folder emojis back to the default icon using a "Reset to Default" button in the emoji picker, making it easier to revert custom icons. [#22554](https://github.com/open-webui/open-webui/pull/22554)
