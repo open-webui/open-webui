@@ -1161,6 +1161,10 @@
 
 								if ($settings?.speechAutoSend ?? false) {
 									dispatch('submit', prompt);
+									// Dismiss mobile soft keyboard after speech auto-send
+									if ('ontouchstart' in window) {
+										document.activeElement?.blur();
+									}
 								}
 							}}
 						/>
@@ -1170,6 +1174,10 @@
 						on:submit|preventDefault={() => {
 							// check if selectedModels support image input
 							dispatch('submit', prompt);
+							// Dismiss mobile soft keyboard after send
+							if ('ontouchstart' in window) {
+								document.activeElement?.blur();
+							}
 						}}
 					>
 						<button
@@ -1462,6 +1470,10 @@
 																	e.preventDefault();
 																	if (prompt !== '' || files.length > 0) {
 																		dispatch('submit', prompt);
+																		// Dismiss mobile soft keyboard after send
+																		if ('ontouchstart' in window) {
+																			document.activeElement?.blur();
+																		}
 																	}
 																}
 															}

@@ -559,7 +559,13 @@
 
 			await tick();
 
-			chatInputElement.focus();
+			// On mobile, dismiss the soft keyboard after send.
+			// On desktop, keep focus in the input for rapid follow-up messages.
+			if ('ontouchstart' in window) {
+				document.activeElement?.blur();
+			} else {
+				chatInputElement.focus();
+			}
 		}
 	};
 
