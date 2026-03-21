@@ -569,11 +569,20 @@
 		origin: string;
 		data: { type: string; text: string };
 	}) => {
-		if (event.origin !== window.origin) {
+		const isSameOrigin = event.origin === window.origin;
+		const type = event.data?.type;
+
+		// Prompt-related message types only submit text to the chat input —
+		// functionally equivalent to the user typing.  When same-origin is
+		// enabled they go through immediately.  When it is disabled (opaque
+		// origin) we show a confirmation dialog so the user stays in control.
+		const iframePromptTypes = ['input:prompt', 'input:prompt:submit', 'action:submit'];
+
+		if (!isSameOrigin && !iframePromptTypes.includes(type)) {
 			return;
 		}
 
-		if (event.data.type === 'action:submit') {
+		if (type === 'action:submit') {
 			console.debug(event.data.text);
 
 			if (prompt !== '') {
@@ -582,8 +591,7 @@
 			}
 		}
 
-		// Replace with your iframe's origin
-		if (event.data.type === 'input:prompt') {
+		if (type === 'input:prompt') {
 			console.debug(event.data.text);
 
 			const inputElement = document.getElementById('chat-input');
@@ -594,12 +602,26 @@
 			}
 		}
 
-		if (event.data.type === 'input:prompt:submit') {
+		if (type === 'input:prompt:submit') {
 			console.debug(event.data.text);
 
 			if (event.data.text !== '') {
-				await tick();
-				submitPrompt(event.data.text);
+				if (isSameOrigin) {
+					await tick();
+					submitPrompt(event.data.text);
+				} else {
+					// Cross-origin: ask user to confirm before submitting
+					eventConfirmationInput = false;
+					eventConfirmationTitle = $i18n.t('Confirm Prompt from Embed');
+					eventConfirmationMessage = event.data.text;
+					eventCallback = async (confirmed: boolean) => {
+						if (confirmed) {
+							await tick();
+							submitPrompt(event.data.text);
+						}
+					};
+					showEventConfirmation = true;
+				}
 			}
 		}
 	};
