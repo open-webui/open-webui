@@ -836,8 +836,12 @@ export const isYoutubeUrl = (url: string) => {
 };
 
 export const removeEmojis = (str: string) => {
-	// Regular expression to match emojis
-	const emojiRegex = /[\uD800-\uDBFF][\uDC00-\uDFFF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDE4F]/g;
+	// Use Unicode property escape with the 'v' flag (ES2024) to match all
+	// standardised emoji sequences, including text-presentation emoji + variation
+	// selector (e.g. ❤️, ☀️, ✅), keycap sequences (e.g. 1️⃣), ZWJ families
+	// (e.g. 👨‍👩‍👧‍👦) and flag sequences (e.g. 🏳️‍🌈).
+	// The previous surrogate-pair regex missed the entire BMP emoji category.
+	const emojiRegex = /\p{RGI_Emoji}/gv;
 
 	// Replace emojis with an empty string
 	return str.replace(emojiRegex, '');
