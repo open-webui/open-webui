@@ -68,6 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔍 **Search modal chat preview avatars.** Fixed assistant profile images not displaying in the chat preview pane of the Search Modal. [#22782](https://github.com/open-webui/open-webui/pull/22782)
 - 📋 **Prompts search pagination fix.** Fixed a bug where searching prompts from a paginated page would incorrectly use the current page number, resulting in "No prompts found" even when matching results existed. [#22912](https://github.com/open-webui/open-webui/pull/22912)
 - 🔤 **Emoji removal for text normalization.** Fixed the emoji removal function used in search and title generation to correctly handle all emoji types, including those with variation selectors (❤️, ☀️, ✅), keycap sequences (1️⃣), and ZWJ family sequences (👨‍👩‍👧‍👦). [#22915](https://github.com/open-webui/open-webui/pull/22915)
+- 💬 **Filter icon display fix.** Fixed filter icons showing the wrong icon after removing one of multiple active filters below the chat input. [#22862](https://github.com/open-webui/open-webui/pull/22862)
 
 ### Changed
 
