@@ -65,6 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📝 **Markdown task list checkbox styling.** Fixed task list checkboxes in markdown rendering to display consistently without shrinking in narrow layouts. [#22886](https://github.com/open-webui/open-webui/pull/22886)
 - 🎨 **Artifacts sidebar tab background fix.** The Artifacts sidebar now correctly updates and displays when switching back to a browser tab that was in the background, ensuring artifacts are visible without requiring a manual refresh. [#22889](https://github.com/open-webui/open-webui/issues/22889)
 - 💬 **Chat input URL indexing fix.** Fixed an issue where URLs could be indexed twice when using multiple triggers followed by backspace and re-entering a URL. [#22749](https://github.com/open-webui/open-webui/issues/22749)
+- 📋 **Prompts search pagination fix.** Fixed a bug where searching prompts from a paginated page would incorrectly use the current page number, resulting in "No prompts found" even when matching results existed. [#22912](https://github.com/open-webui/open-webui/pull/22912)
 - 🔤 **Emoji removal for text normalization.** Fixed the emoji removal function used in search and title generation to correctly handle all emoji types, including those with variation selectors (❤️, ☀️, ✅), keycap sequences (1️⃣), and ZWJ family sequences (👨‍👩‍👧‍👦). [#22915](https://github.com/open-webui/open-webui/pull/22915)
 
 ### Changed
