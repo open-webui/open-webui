@@ -83,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 💬 **Response message skeleton display.** Fixed an issue where the skeleton loader would incorrectly show or hide based on complex status history conditions, by extracting the visibility logic into a cleaner reactive variable. [Commit](https://github.com/open-webui/open-webui/commit/5df4277216fbb9de603fdf4289f8366292568234)
 - 🐛 **Shared chat viewing crash.** Shared chats can now be viewed by unauthenticated users without crashing, with proper fallback handling for missing user profile information. [#22751](https://github.com/open-webui/open-webui/pull/22751), [#22742](https://github.com/open-webui/open-webui/issues/22742)
 - 🛠️ **Plugin ID sanitization.** Creating Functions or Tools with emojis or special characters in their names now generates valid IDs that pass backend validation, instead of failing with an error. [#22695](https://github.com/open-webui/open-webui/pull/22695)
+- 📝 **Chat title preservation.** Regenerating responses or using branches no longer overwrites user-specified chat titles when auto-naming is disabled, by checking the full chat message count instead of just the current branch. [#22754](https://github.com/open-webui/open-webui/pull/22754)
 
 ### Changed
 
