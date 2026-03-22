@@ -3887,6 +3887,23 @@ async def streaming_chat_response_handler(response, ctx):
                     if response_tool_calls:
                         tool_calls.append(_split_tool_calls(response_tool_calls))
 
+                    # Responses API path: extract function_call items from output
+                    if not response_tool_calls and output:
+                        responses_api_tool_calls = []
+                        for item in output:
+                            if item.get('type') == 'function_call' and item.get('status') != 'completed':
+                                arguments = item.get('arguments', '{}')
+                                responses_api_tool_calls.append({
+                                    'id': item.get('call_id', ''),
+                                    'index': len(responses_api_tool_calls),
+                                    'function': {
+                                        'name': item.get('name', ''),
+                                        'arguments': arguments if isinstance(arguments, str) else json.dumps(arguments),
+                                    },
+                                })
+                        if responses_api_tool_calls:
+                            tool_calls.append(_split_tool_calls(responses_api_tool_calls))
+
                     if response.background:
                         await response.background()
 
