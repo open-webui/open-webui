@@ -771,6 +771,25 @@
 	};
 
 	onMount(async () => {
+		const API_PATHS = ['/api/', '/ollama/', '/openai/', '/ws/'];
+		let handlingAuthRedirect = false;
+		const originalFetch = window.fetch;
+		window.fetch = async (...args) => {
+			const response = await originalFetch(...args);
+			if (response.status === 401 && !handlingAuthRedirect) {
+				const input = args[0];
+				const href = input instanceof Request ? input.url : String(input);
+				const pathname = href.startsWith('/') ? href : new URL(href, location.origin).pathname;
+				if (API_PATHS.some((p) => pathname.startsWith(p))) {
+					handlingAuthRedirect = true;
+					user.set(null);
+					localStorage.removeItem('token');
+					location.reload();
+				}
+			}
+			return response;
+		};
+
 		window.addEventListener('message', windowMessageEventHandler);
 
 		let touchstartY = 0;
