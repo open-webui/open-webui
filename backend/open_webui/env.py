@@ -157,15 +157,29 @@ def parse_section(section):
     return items
 
 
-try:
+def load_changelog_content() -> str:
     changelog_path = BASE_DIR / "CHANGELOG.md"
-    with open(str(changelog_path.absolute()), "r", encoding="utf8") as file:
-        changelog_content = file.read()
 
-except Exception:
-    changelog_content = (pkgutil.get_data("open_webui", "CHANGELOG.md") or b"").decode()
+    try:
+        return changelog_path.read_text(encoding="utf8")
+    except FileNotFoundError:
+        pass
+    except UnicodeDecodeError:
+        log.warning("Local CHANGELOG.md is not valid UTF-8; falling back to bundled data")
+    except Exception as e:
+        log.debug(f"Unable to read local CHANGELOG.md: {e}")
+
+    try:
+        changelog_bytes = pkgutil.get_data("open_webui", "CHANGELOG.md")
+        if not changelog_bytes:
+            return ""
+        return changelog_bytes.decode("utf-8", errors="replace")
+    except Exception as e:
+        log.debug(f"Unable to read bundled CHANGELOG.md: {e}")
+        return ""
 
 # Convert markdown content to HTML
+changelog_content = load_changelog_content()
 html_content = markdown.markdown(changelog_content)
 
 # Parse the HTML content
