@@ -36,7 +36,7 @@ from open_webui.models.channels import (
     ChannelWebhookModel,
     ChannelWebhookForm,
 )
-from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant
+from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant, has_public_write_access_grant
 from open_webui.models.messages import (
     Messages,
     MessageModel,
@@ -88,7 +88,7 @@ def channel_has_access(
     ):
         return True
 
-    if not strict and permission == 'write' and has_public_read_access_grant(channel.access_grants):
+    if not strict and permission == 'write' and has_public_write_access_grant(channel.access_grants):
         return True
 
     return False
