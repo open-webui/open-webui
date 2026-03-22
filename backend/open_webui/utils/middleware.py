@@ -3365,6 +3365,7 @@ async def streaming_chat_response_handler(response, ctx):
                     output = []
 
             usage = None
+            prior_output = []
 
             reasoning_tags_param = metadata.get('params', {}).get('reasoning_tags')
             DETECT_REASONING_TAGS = reasoning_tags_param is not False
@@ -3399,13 +3400,9 @@ async def streaming_chat_response_handler(response, ctx):
                     nonlocal content
                     nonlocal usage
                     nonlocal output
+                    nonlocal prior_output
 
                     response_tool_calls = []
-
-                    # Responses API output_index values are relative to the
-                    # current response (0, 1, ...). During re-invocations,
-                    # output has accumulated history, so we offset indices.
-                    responses_output_offset = len(output)
 
                     delta_count = 0
                     delta_chunk_size = max(
@@ -3475,15 +3472,12 @@ async def streaming_chat_response_handler(response, ctx):
                                     )
                                 # Check for Responses API events (type field starts with "response.")
                                 elif data.get('type', '').startswith('response.'):
-                                    # Offset output_index for re-invocations
-                                    if responses_output_offset and 'output_index' in data:
-                                        data = {**data, 'output_index': data['output_index'] + responses_output_offset}
 
                                     output, response_metadata = handle_responses_streaming_event(data, output)
 
                                     processed_data = {
-                                        'output': output,
-                                        'content': serialize_output(output),
+                                        'output': prior_output + output,
+                                        'content': serialize_output(prior_output + output),
                                     }
 
                                     # print(data)
@@ -4233,17 +4227,17 @@ async def streaming_chat_response_handler(response, ctx):
                         )
 
                         if isinstance(res, StreamingResponse):
-                            # Save output before re-invocation. Responses API
-                            # response.completed replaces the entire output
-                            # with only the new response's items, losing tool
-                            # call history. Restore previous items afterward.
-                            output_prefix = list(output)
+                            # Save accumulated output and start fresh.
+                            # Responses API output_index values are relative
+                            # to the current response — a clean output list
+                            # keeps indices aligned. The display prefix
+                            # ensures the UI shows tool history during
+                            # streaming.
+                            prior_output = list(output)
+                            output = []
                             await stream_body_handler(res, new_form_data)
-                            if output_prefix and (
-                                not output
-                                or output[0].get('id') != output_prefix[0].get('id')
-                            ):
-                                output[:0] = output_prefix
+                            output[:0] = prior_output
+                            prior_output = []
                         else:
                             break
                     except Exception as e:
