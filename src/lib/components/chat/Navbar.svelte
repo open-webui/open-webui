@@ -3,9 +3,7 @@
 	import { toast } from 'svelte-sonner';
 
 	import {
-		WEBUI_NAME,
 		banners,
-		chatId,
 		config,
 		mobile,
 		settings,
@@ -16,8 +14,6 @@
 		user
 	} from '$lib/stores';
 
-	import { slide } from 'svelte/transition';
-	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
@@ -26,9 +22,7 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import Menu from '$lib/components/layout/Navbar/Menu.svelte';
 	import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
-	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
 
-	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Banner from '../common/Banner.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
 
@@ -61,10 +55,16 @@
 	let closedBannerIds = [];
 
 	let showShareChatModal = false;
-	let showDownloadChatModal = false;
+	let currentChatId = '';
+	let hasPersistentChat = false;
+	let isTemporaryLocalChat = false;
+
+	$: currentChatId = chat?.id ?? '';
+	$: hasPersistentChat = Boolean(currentChatId) && !currentChatId.startsWith('local:');
+	$: isTemporaryLocalChat = $temporaryChatEnabled && currentChatId.startsWith('local:');
 </script>
 
-<ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
+<ShareChatModal bind:show={showShareChatModal} chatId={currentChatId} />
 
 <button
 	id="new-chat-button"
@@ -113,9 +113,9 @@
 				</div>
 
 				<!-- Token stats display - shows input/output/total tokens for current chat -->
-				{#if chat?.id && !$temporaryChatEnabled}
+				{#if hasPersistentChat && !$temporaryChatEnabled}
 					<div class="hidden md:flex self-start flex-none items-center mt-0.5 mr-1">
-						<ChatTokenStats />
+						<ChatTokenStats chatId={currentChatId} />
 					</div>
 				{/if}
 
@@ -172,8 +172,8 @@
 						{/if}
 					{/if}
 
-					{#if $mobile && !$temporaryChatEnabled && chat && chat.id}
-						<Tooltip content={$i18n.t('New Chat')}>
+						{#if $mobile && !$temporaryChatEnabled && hasPersistentChat}
+							<Tooltip content={$i18n.t('New Chat')}>
 							<button
 								class=" flex {$showSidebar
 									? 'md:hidden'
@@ -190,8 +190,8 @@
 						</Tooltip>
 					{/if}
 
-					{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
-						<Tooltip content={$i18n.t('Share')}>
+						{#if shareEnabled && chat && hasPersistentChat}
+							<Tooltip content={$i18n.t('Share')}>
 							<button
 								class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 								on:click={async () => {
@@ -291,14 +291,14 @@
 		</div>
 	</div>
 
-	{#if $temporaryChatEnabled && ($chatId ?? '').startsWith('local:')}
+	{#if isTemporaryLocalChat}
 		<div class=" w-full z-30 text-center">
 			<div class="text-xs text-gray-500">{$i18n.t('Temporary Chat')}</div>
 		</div>
 	{/if}
 
 	<div class="absolute top-[100%] left-0 right-0 h-fit">
-		{#if !history.currentId && !$chatId && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
+		{#if !history.currentId && !currentChatId && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
 			<div class=" w-full z-30">
 				<div class=" flex flex-col gap-1 w-full">
 					{#if ($config?.license_metadata?.type ?? null) === 'trial'}

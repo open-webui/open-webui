@@ -1,27 +1,40 @@
 <script lang="ts">
-	import { getContext, onMount, onDestroy } from 'svelte';
-	import { chatId, chatTokenStats, chatTokenStatsRefreshTrigger } from '$lib/stores';
+	import { getContext, onDestroy } from 'svelte';
+	import {
+		chatId as currentChatIdStore,
+		chatTokenStats,
+		chatTokenStatsRefreshTrigger
+	} from '$lib/stores';
 	import { getChatTokenStats, formatTokenCount } from '$lib/apis/analytics';
 	import Tooltip from '../common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
 
+	export let chatId = '';
+
 	// Track the last trigger value to detect changes
 	let lastTrigger = 0;
+	let trackedChatId = '';
+
+	$: trackedChatId = chatId || $currentChatIdStore || '';
 
 	// Reactive fetch when chatId changes
-	$: if ($chatId && $chatId !== '' && !$chatId.startsWith('local:')) {
-		fetchTokenStats($chatId);
+	$: if (trackedChatId && !trackedChatId.startsWith('local:')) {
+		fetchTokenStats(trackedChatId);
 	} else {
 		chatTokenStats.set(null);
 	}
 
 	// Reactive fetch when refresh trigger changes (debounced)
-	$: if ($chatTokenStatsRefreshTrigger > lastTrigger && $chatId && !$chatId.startsWith('local:')) {
+	$: if (
+		$chatTokenStatsRefreshTrigger > lastTrigger &&
+		trackedChatId &&
+		!trackedChatId.startsWith('local:')
+	) {
 		lastTrigger = $chatTokenStatsRefreshTrigger;
 		// Debounce the refresh slightly to allow backend to process
 		setTimeout(() => {
-			fetchTokenStats($chatId);
+			fetchTokenStats(trackedChatId);
 		}, 500);
 	}
 
@@ -44,43 +57,43 @@
 		}));
 
 		try {
-				const token = localStorage.getItem('token');
-				if (!token) {
-					console.log('[ChatTokenStats] No token found, setting null');
-					chatTokenStats.set(null);
-					return;
-				}
-	
-				console.log('[ChatTokenStats] Fetching stats for chat:', id);
-				const stats = await getChatTokenStats(token, id);
-				console.log('[ChatTokenStats] API Response:', stats);
-				
-				if (stats) {
-					chatTokenStats.set({
-						chat_id: stats.chat_id,
-						total_input_tokens: stats.total_input_tokens,
-						total_output_tokens: stats.total_output_tokens,
-						total_tokens: stats.total_tokens,
-						last_input_tokens: stats.last_input_tokens,
-						last_output_tokens: stats.last_output_tokens,
-						message_count: stats.message_count,
-						loading: false
-					});
-					console.log('[ChatTokenStats] Stats set, total_tokens:', stats.total_tokens);
-				} else {
-					console.log('[ChatTokenStats] No stats returned, setting null');
-					chatTokenStats.set(null);
-				}
-			} catch (error) {
-				console.error('[ChatTokenStats] Error fetching token stats:', error);
+			const requestedChatId = id;
+			const token = localStorage.getItem('token');
+			if (!token) {
+				chatTokenStats.set(null);
+				return;
+			}
+
+			const stats = await getChatTokenStats(token, requestedChatId);
+
+			if (requestedChatId !== trackedChatId) {
+				return;
+			}
+
+			if (stats) {
+				chatTokenStats.set({
+					chat_id: stats.chat_id,
+					total_input_tokens: stats.total_input_tokens,
+					total_output_tokens: stats.total_output_tokens,
+					total_tokens: stats.total_tokens,
+					last_input_tokens: stats.last_input_tokens,
+					last_output_tokens: stats.last_output_tokens,
+					message_count: stats.message_count,
+					loading: false
+				});
+			} else {
 				chatTokenStats.set(null);
 			}
+		} catch (error) {
+			console.error('[ChatTokenStats] Error fetching token stats:', error);
+			chatTokenStats.set(null);
+		}
 	}
 
 	// Function to refresh stats (can be called from parent)
 	export function refresh() {
-		if ($chatId && $chatId !== '' && !$chatId.startsWith('local:')) {
-			fetchTokenStats($chatId);
+		if (trackedChatId && !trackedChatId.startsWith('local:')) {
+			fetchTokenStats(trackedChatId);
 		}
 	}
 

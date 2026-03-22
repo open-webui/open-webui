@@ -183,7 +183,7 @@
 				{:else if $showEmbeds}
 					<Embeds />
 				{:else if $showArtifacts}
-					<Artifacts {history} />
+					<Artifacts {history} {chatId} />
 				{:else if $showOverview}
 					{#await import('./Overview.svelte') then { default: Overview }}
 						<Overview
@@ -273,7 +273,7 @@
 					{:else if $showEmbeds}
 						<Embeds overlay={dragged} />
 					{:else if $showArtifacts}
-						<Artifacts {history} overlay={dragged} />
+						<Artifacts {history} {chatId} overlay={dragged} />
 					{:else if $showOverview}
 						{#await import('./Overview.svelte') then { default: Overview }}
 							<Overview

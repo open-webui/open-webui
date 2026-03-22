@@ -1,6 +1,7 @@
 <script lang="ts">
 	import dayjs from 'dayjs';
 	import { onMount, tick, getContext } from 'svelte';
+	import { page as routePage } from '$app/stores';
 
 	import { decodeString } from '$lib/utils';
 	import { getChatList } from '$lib/apis/chats';
@@ -8,9 +9,14 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Loader from '$lib/components/common/Loader.svelte';
-	import { chatId } from '$lib/stores';
+	import { chatId as currentChatIdStore, temporaryChatEnabled } from '$lib/stores';
 
 	const i18n = getContext('i18n');
+
+	const parseChatIdFromPath = (pathname = '') => {
+		const match = pathname.match(/^\/c\/([^/?#]+)/);
+		return match?.[1] ? decodeURIComponent(match[1]) : '';
+	};
 
 	export let onSelect = (e) => {};
 
@@ -22,6 +28,18 @@
 	let page = 1;
 	let itemsLoading = false;
 	let allItemsLoaded = false;
+	let visibleChatId = '';
+
+	$: {
+		const browserPathname = typeof window !== 'undefined' ? window.location.pathname : '';
+		const routeChatId =
+			parseChatIdFromPath(browserPathname) || parseChatIdFromPath($routePage.url.pathname);
+		visibleChatId =
+			routeChatId ||
+			($temporaryChatEnabled || ($currentChatIdStore ?? '').startsWith('local:')
+				? ($currentChatIdStore ?? '')
+				: '');
+	}
 
 	const loadMoreItems = async () => {
 		if (allItemsLoaded) return;
@@ -44,7 +62,7 @@
 		items = [
 			...items,
 			...res
-				.filter((item) => item?.id !== $chatId)
+				.filter((item) => item?.id !== visibleChatId)
 				.map((item) => {
 					return {
 						...item,

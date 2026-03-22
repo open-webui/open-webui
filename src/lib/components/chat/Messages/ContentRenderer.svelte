@@ -5,7 +5,6 @@
 	import Markdown from './Markdown.svelte';
 	import {
 		artifactCode,
-		chatId,
 		mobile,
 		settings,
 		showArtifacts,
@@ -21,6 +20,7 @@
 
 	export let history;
 	export let messageId;
+	export let chatId = '';
 
 	export let selectedModels = [];
 
@@ -183,7 +183,7 @@
 				($settings?.detectArtifacts ?? true) &&
 				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
 				!$mobile &&
-				$chatId
+				chatId
 			) {
 				showArtifacts.set(true);
 				showControls.set(true);
@@ -205,6 +205,7 @@
 		bind:this={floatingButtonsElement}
 		{id}
 		{messageId}
+		{chatId}
 		actions={$settings?.floatingActionButtons ?? []}
 		model={(selectedModels ?? []).includes(model?.id)
 			? model?.id

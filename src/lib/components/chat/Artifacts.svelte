@@ -4,7 +4,7 @@
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
-	import { artifactCode, chatId, settings, showArtifacts, showControls } from '$lib/stores';
+	import { artifactCode, settings, showArtifacts, showControls } from '$lib/stores';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
 
 	import XMark from '../icons/XMark.svelte';
@@ -16,6 +16,7 @@
 
 	export let overlay = false;
 	export let history;
+	export let chatId = '';
 	let messages = [];
 
 	let contents: Array<{ type: string; content: string }> = [];
@@ -189,7 +190,7 @@
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement('a');
 		a.href = url;
-		a.download = `artifact-${$chatId}-${selectedContentIdx}.html`;
+		a.download = `artifact-${chatId || 'chat'}-${selectedContentIdx}.html`;
 		document.body.appendChild(a);
 		a.click();
 		document.body.removeChild(a);

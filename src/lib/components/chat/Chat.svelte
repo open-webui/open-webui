@@ -170,14 +170,14 @@
 
 	// Persist per-chat web search changes immediately so they survive reloads and other devices.
 	$: if (
-		$chatId &&
+		activeChatId &&
 		!loading &&
 		!$temporaryChatEnabled &&
 		lastPersistedWebSearchEnabled !== null &&
 		webSearchEnabled !== lastPersistedWebSearchEnabled
 	) {
 		const nextParams = { ...params, webSearchEnabled };
-		const chatIdToPersist = $chatId;
+		const chatIdToPersist = activeChatId;
 
 		params = nextParams;
 		lastPersistedWebSearchEnabled = webSearchEnabled;
@@ -559,10 +559,101 @@
 		}
 	};
 
+	const parseChatIdFromPath = (pathname = '') => {
+		const match = pathname.match(/^\/c\/([^/?#]+)/);
+		return match?.[1] ? decodeURIComponent(match[1]) : '';
+	};
+
+	const resolveRouteChatId = () => {
+		const browserPathname = typeof window !== 'undefined' ? window.location.pathname : '';
+		return chatIdProp || parseChatIdFromPath(browserPathname) || parseChatIdFromPath($page.url.pathname);
+	};
+
+	const isPersistentChatView = () => {
+		const browserPathname = typeof window !== 'undefined' ? window.location.pathname : '';
+		return browserPathname.includes('/c/') || $page.url.pathname.includes('/c/');
+	};
+
+	let routeChatId = '';
+	let activeChatId = '';
+
+	$: routeChatId = resolveRouteChatId();
+	$: activeChatId = (() => {
+		if (routeChatId) {
+			return routeChatId;
+		}
+
+		const currentChatId = $chatId ?? '';
+		if ($temporaryChatEnabled || currentChatId.startsWith('local:') || isPersistentChatView()) {
+			return currentChatId;
+		}
+
+		return '';
+	})();
+
+	$: if (routeChatId && routeChatId !== $chatId) {
+		chatId.set(routeChatId);
+	}
+
+	const getVisibleChatId = () => {
+		const currentRouteChatId = resolveRouteChatId();
+		if (currentRouteChatId) {
+			return currentRouteChatId;
+		}
+
+		const currentChatId = $chatId ?? '';
+		return ($temporaryChatEnabled ||
+			currentChatId.startsWith('local:') ||
+			isPersistentChatView())
+			? currentChatId
+			: '';
+	};
+
+	const getDraftChatId = () => getVisibleChatId() || null;
+
+	const isVisibleChatEvent = (eventChatId) => {
+		if (!eventChatId) {
+			return false;
+		}
+
+		return getVisibleChatId() === eventChatId;
+	};
+
+	const getPendingAssistantMessageIds = () => {
+		return Object.entries(history.messages)
+			.filter(([, message]) => message.role === 'assistant' && message.done !== true)
+			.map(([messageId]) => messageId);
+	};
+
+	const resolveChatEventMessageId = (eventMessageId) => {
+		if (eventMessageId && history.messages[eventMessageId]) {
+			return eventMessageId;
+		}
+
+		const pendingAssistantMessageIds = getPendingAssistantMessageIds();
+
+		return pendingAssistantMessageIds.length === 1 ? pendingAssistantMessageIds[0] : null;
+	};
+
+	const markPendingAssistantMessagesDone = () => {
+		const pendingAssistantMessageIds = getPendingAssistantMessageIds();
+
+		for (const messageId of pendingAssistantMessageIds) {
+			history.messages[messageId] = {
+				...history.messages[messageId],
+				done: true
+			};
+		}
+
+		if (pendingAssistantMessageIds.length > 0) {
+			history = { ...history };
+		}
+	};
+
 	const showMessage = async (message, ignoreSettings = false) => {
 		await tick();
 
-		const _chatId = $chatId;
+		const _chatId = getVisibleChatId();
 		let _messageId = message.id;
 
 		let messageChildrenIds = [];
@@ -597,149 +688,217 @@
 	};
 
 	const chatEventHandler = async (event, cb) => {
-		if (event.chat_id === $chatId) {
-			await tick();
-			let message = history.messages[event.message_id];
+		if (!isVisibleChatEvent(event.chat_id)) {
+			console.log('❌ Chat ID mismatch - event ignored', {
+				eventChatId: event.chat_id,
+				visibleChatId: getVisibleChatId()
+			});
+			return;
+		}
 
-			if (message) {
-				const type = event?.data?.type ?? null;
-				const data = event?.data?.data ?? null;
+		await tick();
 
-				if (type === 'status') {
-					if (message?.statusHistory) {
-						message.statusHistory.push(data);
-					} else {
-						message.statusHistory = [data];
-					}
-				} else if (type === 'chat:completion') {
-					chatCompletionEventHandler(data, message, event.chat_id);
-				} else if (type === 'chat:tasks:cancel') {
-					taskIds = null;
-					const responseMessage = history.messages[history.currentId];
-					// Set all response messages to done
-					for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
+		const visibleChatId = getVisibleChatId();
+		const type = event?.data?.type ?? null;
+		const data = event?.data?.data ?? null;
+
+		if (type === 'chat:title') {
+			chatTitle.set(data);
+			currentChatPage.set(1);
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			return;
+		}
+
+		if (type === 'chat:tags') {
+			chat = await getChatById(localStorage.token, visibleChatId);
+			allTags.set(await getAllTags(localStorage.token));
+			return;
+		}
+
+		if (type === 'notification') {
+			const toastType = data?.type ?? 'info';
+			const toastContent = data?.content ?? '';
+
+			if (toastType === 'success') {
+				toast.success(toastContent);
+			} else if (toastType === 'error') {
+				toast.error(toastContent);
+			} else if (toastType === 'warning') {
+				toast.warning(toastContent);
+			} else {
+				toast.info(toastContent);
+			}
+
+			return;
+		}
+
+		if (type === 'confirmation') {
+			eventCallback = cb;
+
+			eventConfirmationInput = false;
+			showEventConfirmation = true;
+
+			eventConfirmationTitle = data.title;
+			eventConfirmationMessage = data.message;
+			return;
+		}
+
+		if (type === 'execute') {
+			eventCallback = cb;
+
+			try {
+				// Use Function constructor to evaluate code in a safer way
+				const asyncFunction = new Function(`return (async () => { ${data.code} })()`);
+				const result = await asyncFunction();
+
+				if (cb) {
+					cb(result);
+				}
+			} catch (error) {
+				console.error('Error executing code:', error);
+			}
+
+			return;
+		}
+
+		if (type === 'input') {
+			eventCallback = cb;
+
+			eventConfirmationInput = true;
+			showEventConfirmation = true;
+
+			eventConfirmationTitle = data.title;
+			eventConfirmationMessage = data.message;
+			eventConfirmationInputPlaceholder = data.placeholder;
+			eventConfirmationInputValue = data?.value ?? '';
+			return;
+		}
+
+		const resolvedMessageId = resolveChatEventMessageId(event.message_id);
+		let message = resolvedMessageId ? history.messages[resolvedMessageId] : null;
+
+		if (!message) {
+			if (type === 'chat:tasks:cancel') {
+				taskIds = null;
+				generating = false;
+				generationController = null;
+				markPendingAssistantMessagesDone();
+				return;
+			}
+
+			if (type === 'chat:message:error') {
+				taskIds = null;
+				generating = false;
+				generationController = null;
+
+				if (visibleChatId && !$temporaryChatEnabled) {
+					await loadChat();
+					return;
+				}
+			}
+
+			if (type === 'chat:completion' && data?.done && visibleChatId && !$temporaryChatEnabled) {
+				await loadChat();
+				return;
+			}
+
+			console.warn('Unable to resolve live chat message for current chat event', event);
+			return;
+		}
+
+		if (type === 'status') {
+			if (message?.statusHistory) {
+				message.statusHistory.push(data);
+			} else {
+				message.statusHistory = [data];
+			}
+		} else if (type === 'chat:completion') {
+			await chatCompletionEventHandler(data, message, event.chat_id);
+		} else if (type === 'chat:tasks:cancel') {
+			taskIds = null;
+			generating = false;
+			generationController = null;
+
+			const responseMessage = history.messages[history.currentId] ?? message;
+			if (responseMessage?.parentId !== null && history.messages[responseMessage?.parentId]) {
+				for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
+					if (history.messages[messageId]) {
 						history.messages[messageId].done = true;
 					}
-				} else if (type === 'chat:message:delta' || type === 'message') {
-					message.content += data.content;
-					history.messages[event.message_id] = message;
-					history = { ...history };
-				} else if (type === 'chat:message' || type === 'replace') {
-					message.content = data.content;
-					history.messages[event.message_id] = message;
-					history = { ...history };
-				} else if (type === 'chat:message:files' || type === 'files') {
-					message.files = data.files;
-				} else if (type === 'chat:message:embeds' || type === 'embeds') {
-					message.embeds = data.embeds;
-				} else if (type === 'chat:message:error') {
-					message.error = data.error;
-				} else if (type === 'chat:message:follow_ups') {
-					message.followUps = data.follow_ups;
+				}
+			} else {
+				message.done = true;
+			}
 
-					if (autoScroll) {
-						scrollToBottom('smooth');
-					}
-				} else if (type === 'model-switch:pending') {
-					// Model switch has been queued
-					message.pendingSwitchModel = data.model_id;
-					toast.info(
-						$i18n.t('Model switch to {{model}} queued for next iteration', { model: data.model_id })
-					);
-				} else if (type === 'model-switch:applied') {
-					// Model switch was applied
-					message.model = data.new_model_id;
-					message.modelName =
-						$models.find((m) => m.id === data.new_model_id)?.name ?? data.new_model_id;
-					message.pendingSwitchModel = null;
-					toast.success($i18n.t('Switched to model: {{model}}', { model: message.modelName }));
-				} else if (type === 'chat:title') {
-					chatTitle.set(data);
-					currentChatPage.set(1);
-					await chats.set(await getChatList(localStorage.token, $currentChatPage));
-				} else if (type === 'chat:tags') {
-					chat = await getChatById(localStorage.token, $chatId);
-					allTags.set(await getAllTags(localStorage.token));
-				} else if (type === 'source' || type === 'citation') {
-					if (data?.type === 'code_execution') {
-						// Code execution; update existing code execution by ID, or add new one.
-						if (!message?.code_executions) {
-							message.code_executions = [];
-						}
+			history = { ...history };
+		} else if (type === 'chat:message:delta' || type === 'message') {
+			message.content += data.content;
+			history.messages[resolvedMessageId] = message;
+			history = { ...history };
+		} else if (type === 'chat:message' || type === 'replace') {
+			message.content = data.content;
+			history.messages[resolvedMessageId] = message;
+			history = { ...history };
+		} else if (type === 'chat:message:files' || type === 'files') {
+			message.files = data.files;
+		} else if (type === 'chat:message:embeds' || type === 'embeds') {
+			message.embeds = data.embeds;
+		} else if (type === 'chat:message:error') {
+			message.error = data.error;
+			message.done = true;
+			taskIds = null;
+			generating = false;
+			generationController = null;
+		} else if (type === 'chat:message:follow_ups') {
+			message.followUps = data.follow_ups;
 
-						const existingCodeExecutionIndex = message.code_executions.findIndex(
-							(execution) => execution.id === data.id
-						);
-
-						if (existingCodeExecutionIndex !== -1) {
-							message.code_executions[existingCodeExecutionIndex] = data;
-						} else {
-							message.code_executions.push(data);
-						}
-
-						message.code_executions = message.code_executions;
-					} else {
-						// Regular source.
-						if (message?.sources) {
-							message.sources.push(data);
-						} else {
-							message.sources = [data];
-						}
-					}
-				} else if (type === 'notification') {
-					const toastType = data?.type ?? 'info';
-					const toastContent = data?.content ?? '';
-
-					if (toastType === 'success') {
-						toast.success(toastContent);
-					} else if (toastType === 'error') {
-						toast.error(toastContent);
-					} else if (toastType === 'warning') {
-						toast.warning(toastContent);
-					} else {
-						toast.info(toastContent);
-					}
-				} else if (type === 'confirmation') {
-					eventCallback = cb;
-
-					eventConfirmationInput = false;
-					showEventConfirmation = true;
-
-					eventConfirmationTitle = data.title;
-					eventConfirmationMessage = data.message;
-				} else if (type === 'execute') {
-					eventCallback = cb;
-
-					try {
-						// Use Function constructor to evaluate code in a safer way
-						const asyncFunction = new Function(`return (async () => { ${data.code} })()`);
-						const result = await asyncFunction(); // Await the result of the async function
-
-						if (cb) {
-							cb(result);
-						}
-					} catch (error) {
-						console.error('Error executing code:', error);
-					}
-				} else if (type === 'input') {
-					eventCallback = cb;
-
-					eventConfirmationInput = true;
-					showEventConfirmation = true;
-
-					eventConfirmationTitle = data.title;
-					eventConfirmationMessage = data.message;
-					eventConfirmationInputPlaceholder = data.placeholder;
-					eventConfirmationInputValue = data?.value ?? '';
-				} else {
-					console.log('Unknown message type', data);
+			if (autoScroll) {
+				scrollToBottom('smooth');
+			}
+		} else if (type === 'model-switch:pending') {
+			// Model switch has been queued
+			message.pendingSwitchModel = data.model_id;
+			toast.info(
+				$i18n.t('Model switch to {{model}} queued for next iteration', { model: data.model_id })
+			);
+		} else if (type === 'model-switch:applied') {
+			// Model switch was applied
+			message.model = data.new_model_id;
+			message.modelName =
+				$models.find((m) => m.id === data.new_model_id)?.name ?? data.new_model_id;
+			message.pendingSwitchModel = null;
+			toast.success($i18n.t('Switched to model: {{model}}', { model: message.modelName }));
+		} else if (type === 'source' || type === 'citation') {
+			if (data?.type === 'code_execution') {
+				// Code execution; update existing code execution by ID, or add new one.
+				if (!message?.code_executions) {
+					message.code_executions = [];
 				}
 
-				history.messages[event.message_id] = message;
+				const existingCodeExecutionIndex = message.code_executions.findIndex(
+					(execution) => execution.id === data.id
+				);
+
+				if (existingCodeExecutionIndex !== -1) {
+					message.code_executions[existingCodeExecutionIndex] = data;
+				} else {
+					message.code_executions.push(data);
+				}
+
+				message.code_executions = message.code_executions;
+			} else {
+				// Regular source.
+				if (message?.sources) {
+					message.sources.push(data);
+				} else {
+					message.sources = [data];
+				}
 			}
 		} else {
-			console.log('❌ Chat ID mismatch - event ignored');
+			console.log('Unknown message type', data);
 		}
+
+		history.messages[resolvedMessageId] = message;
 	};
 
 	const onMessageHandler = async (event: {
@@ -1288,92 +1447,98 @@
 	};
 
 	const loadChat = async () => {
-		chatId.set(chatIdProp);
+		const currentChatId = chatIdProp || getVisibleChatId();
+
+		if (!currentChatId) {
+			return false;
+		}
+
+		chatId.set(currentChatId);
 
 		if ($temporaryChatEnabled) {
 			temporaryChatEnabled.set(false);
 		}
 
-		chat = await getChatById(localStorage.token, $chatId).catch(async (error) => {
+		chat = await getChatById(localStorage.token, currentChatId).catch(async (error) => {
 			await goto('/');
 			return null;
 		});
 
-		if (chat) {
-			tags = await getTagsById(localStorage.token, $chatId).catch(async (error) => {
-				return [];
-			});
+		if (!chat) {
+			return null;
+		}
 
-			const chatContent = chat.chat;
+		tags = await getTagsById(localStorage.token, currentChatId).catch(async (error) => {
+			return [];
+		});
 
-			if (chatContent) {
-				console.log(chatContent);
+		const chatContent = chat.chat;
 
-				selectedModels =
-					(chatContent?.models ?? undefined) !== undefined
-						? chatContent.models
-						: [chatContent.models ?? ''];
+		if (!chatContent) {
+			return null;
+		}
 
-				if (!($user?.role === 'admin' || ($user?.permissions?.chat?.multiple_models ?? true))) {
-					selectedModels = selectedModels.length > 0 ? [selectedModels[0]] : [''];
-				}
+		console.log(chatContent);
 
-				oldSelectedModelIds = selectedModels;
+		selectedModels =
+			(chatContent?.models ?? undefined) !== undefined
+				? chatContent.models
+				: [chatContent.models ?? ''];
 
-				history =
-					(chatContent?.history ?? undefined) !== undefined
-						? chatContent.history
-						: convertMessagesToHistory(chatContent.messages);
+		if (!($user?.role === 'admin' || ($user?.permissions?.chat?.multiple_models ?? true))) {
+			selectedModels = selectedModels.length > 0 ? [selectedModels[0]] : [''];
+		}
 
-				chatTitle.set(chatContent.title);
+		oldSelectedModelIds = selectedModels;
 
-				const userSettings = await getUserSettings(localStorage.token);
+		history =
+			(chatContent?.history ?? undefined) !== undefined
+				? chatContent.history
+				: convertMessagesToHistory(chatContent.messages);
 
-				if (userSettings) {
-					await settings.set(userSettings.ui);
-				} else {
-					await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
-				}
+		chatTitle.set(chatContent.title);
 
-				params = chatContent?.params ?? {};
-				chatFiles = chatContent?.files ?? [];
+		const userSettings = await getUserSettings(localStorage.token);
 
-				// Restore webSearchEnabled from saved params
-				if (params.webSearchEnabled !== undefined) {
-					const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
-					if (model?.info?.meta?.capabilities?.web_search ?? true) {
-						webSearchEnabled = params.webSearchEnabled;
-					}
-				}
+		if (userSettings) {
+			await settings.set(userSettings.ui);
+		} else {
+			await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
+		}
 
-				lastPersistedWebSearchEnabled = webSearchEnabled;
+		params = chatContent?.params ?? {};
+		chatFiles = chatContent?.files ?? [];
 
-				autoScroll = true;
-				await tick();
-
-				if (history.currentId) {
-					for (const message of Object.values(history.messages)) {
-						if (message.role === 'assistant') {
-							message.done = true;
-						}
-					}
-				}
-
-				const taskRes = await getTaskIdsByChatId(localStorage.token, $chatId).catch((error) => {
-					return null;
-				});
-
-				if (taskRes) {
-					taskIds = taskRes.task_ids;
-				}
-
-				await tick();
-
-				return true;
-			} else {
-				return null;
+		// Restore webSearchEnabled from saved params
+		if (params.webSearchEnabled !== undefined) {
+			const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
+			if (model?.info?.meta?.capabilities?.web_search ?? true) {
+				webSearchEnabled = params.webSearchEnabled;
 			}
 		}
+
+		lastPersistedWebSearchEnabled = webSearchEnabled;
+
+		autoScroll = true;
+		await tick();
+
+		if (history.currentId) {
+			for (const message of Object.values(history.messages)) {
+				if (message.role === 'assistant') {
+					message.done = true;
+				}
+			}
+		}
+
+		const taskRes = await getTaskIdsByChatId(localStorage.token, currentChatId).catch((error) => {
+			return null;
+		});
+
+		taskIds = taskRes?.task_ids ?? null;
+
+		await tick();
+
+		return true;
 	};
 
 	const scrollToBottom = debounce(100, async (behavior = 'auto') => {
@@ -1440,7 +1605,7 @@
 
 		await tick();
 
-		if ($chatId == chatId) {
+		if (isVisibleChatEvent(chatId)) {
 			if (!$temporaryChatEnabled) {
 				chat = await updateChatById(localStorage.token, chatId, {
 					models: selectedModels,
@@ -1497,7 +1662,7 @@
 			}
 		}
 
-		if ($chatId == chatId) {
+		if (isVisibleChatEvent(chatId)) {
 			if (!$temporaryChatEnabled) {
 				chat = await updateChatById(localStorage.token, chatId, {
 					models: selectedModels,
@@ -1578,7 +1743,7 @@
 			if (messages.length === 0) {
 				await initChatHandler(history);
 			} else {
-				await saveChatHandler($chatId, history);
+				await saveChatHandler(getVisibleChatId(), history);
 			}
 		}
 	};
@@ -1642,7 +1807,7 @@
 		if (messages.length === 0) {
 			await initChatHandler(history);
 		} else {
-			await saveChatHandler($chatId, history);
+			await saveChatHandler(getVisibleChatId(), history);
 		}
 	};
 
@@ -1870,7 +2035,7 @@
 	//////////////////////////
 
 	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
-		console.log('submitPrompt', userPrompt, $chatId);
+		console.log('submitPrompt', userPrompt, getVisibleChatId());
 
 		const _selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
@@ -2005,7 +2170,7 @@
 			scrollToBottom();
 		}
 
-		let _chatId = $chatId;
+		let _chatId = getVisibleChatId();
 		_history = structuredClone(_history);
 
 		const syncHistorySnapshot = () => {
@@ -2637,7 +2802,7 @@
 				model_item: $models.find((m) => m.id === model.id),
 
 				session_id: $socket?.id,
-				chat_id: $chatId,
+				chat_id: _chatId,
 				id: responseMessageId,
 
 				background_tasks: {
@@ -3186,7 +3351,7 @@
 		}
 
 		const messages = createMessagesList(history, responseMessageId);
-		const _chatId = $chatId;
+		const _chatId = getVisibleChatId();
 		const chatEventEmitter = await getChatEventEmitter(targetModelId, _chatId);
 		startUsagePolling(FAST_POLL_MS);
 
@@ -3228,7 +3393,7 @@
 
 	const continueResponse = async () => {
 		console.log('continueResponse');
-		const _chatId = $chatId;
+		const _chatId = getVisibleChatId();
 
 		if (history.currentId && history.messages[history.currentId].done == true) {
 			const responseMessage = history.messages[history.currentId];
@@ -3311,7 +3476,7 @@
 	};
 
 	const initChatHandler = async (history) => {
-		let _chatId = $chatId;
+		let _chatId = getVisibleChatId();
 
 		if (!$temporaryChatEnabled) {
 			chat = await createNewChat(
@@ -3352,7 +3517,7 @@
 	};
 
 	const saveChatHandler = async (_chatId, history, nextParams = params) => {
-		if ($chatId == _chatId) {
+		if (isVisibleChatEvent(_chatId)) {
 			if (!$temporaryChatEnabled) {
 				chat = await updateChatById(localStorage.token, _chatId, {
 					models: selectedModels,
@@ -3483,7 +3648,7 @@
 					<Navbar
 						bind:this={navbarElement}
 						chat={{
-							id: $chatId,
+							id: activeChatId,
 							chat: {
 								title: $chatTitle,
 								models: selectedModels,
@@ -3549,7 +3714,7 @@
 							>
 								<div class=" h-full w-full flex flex-col">
 									<Messages
-										chatId={$chatId}
+										chatId={activeChatId}
 										bind:history
 										bind:autoScroll
 										bind:prompt
@@ -3631,7 +3796,7 @@
 									{createMessagePair}
 									onChange={(data) => {
 										if (!$temporaryChatEnabled) {
-											saveDraft(data, $chatId);
+											saveDraft(data, getDraftChatId());
 										}
 										// Capture reasoning effort from MessageInput (only if changed to prevent infinite loop)
 										if (data.reasoning && data.reasoning.effort !== reasoning.effort) {
@@ -3650,7 +3815,7 @@
 										}
 									}}
 									on:submit={async (e) => {
-										clearDraft();
+										clearDraft(getDraftChatId());
 										if (e.detail || files.length > 0) {
 											await tick();
 
@@ -3688,7 +3853,7 @@
 									{onSelect}
 									onChange={(data) => {
 										if (!$temporaryChatEnabled) {
-											saveDraft(data);
+											saveDraft(data, getDraftChatId());
 										}
 									}}
 									on:upload={async (e) => {
@@ -3701,7 +3866,7 @@
 										}
 									}}
 									on:submit={async (e) => {
-										clearDraft();
+										clearDraft(getDraftChatId());
 										if (e.detail || files.length > 0) {
 											await tick();
 											submitPrompt(e.detail.replaceAll('\n\n', '\n'));
@@ -3720,7 +3885,7 @@
 					bind:params
 					bind:files
 					bind:pane={controlPane}
-					chatId={$chatId}
+					chatId={activeChatId}
 					modelId={selectedModelIds?.at(0) ?? null}
 					models={selectedModelIds.reduce((a, e, i, arr) => {
 						const model = $models.find((m) => m.id === e);

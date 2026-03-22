@@ -69,6 +69,44 @@
 
 	const BREAKPOINT = 768;
 
+	const parseChatIdFromPath = (pathname = '') => {
+		const match = pathname.match(/^\/c\/([^/?#]+)/);
+		return match?.[1] ? decodeURIComponent(match[1]) : '';
+	};
+
+	const getVisibleChatId = () => {
+		const browserPathname = typeof window !== 'undefined' ? window.location.pathname : '';
+		const routeChatId =
+			parseChatIdFromPath(browserPathname) || parseChatIdFromPath($page.url.pathname);
+		if (routeChatId) {
+			return routeChatId;
+		}
+
+		const currentChatId = $chatId ?? '';
+		const isPersistentChatView =
+			browserPathname.includes('/c/') || $page.url.pathname.includes('/c/');
+
+		return $temporaryChatEnabled || currentChatId.startsWith('local:') || isPersistentChatView
+			? currentChatId
+			: '';
+	};
+
+	const isWindowFocused = async () => {
+		let focused = document.visibilityState === 'visible';
+
+		if (window.electronAPI) {
+			const res = await window.electronAPI.send({
+				type: 'window:isFocused'
+			});
+
+			if (res) {
+				focused = Boolean(res.isFocused);
+			}
+		}
+
+		return focused;
+	};
+
 	const setupSocket = async (enableWebsocket) => {
 		const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
 			reconnection: true,
@@ -259,23 +297,15 @@
 	};
 
 	const chatEventHandler = async (event, cb) => {
-		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
-
-		let isFocused = document.visibilityState !== 'visible';
-		if (window.electronAPI) {
-			const res = await window.electronAPI.send({
-				type: 'window:isFocused'
-			});
-			if (res) {
-				isFocused = res.isFocused;
-			}
-		}
+		const visibleChatId = getVisibleChatId();
+		const isCurrentChatEvent = Boolean(event.chat_id) && visibleChatId === event.chat_id;
+		const windowFocused = await isWindowFocused();
 
 		await tick();
 		const type = event?.data?.type ?? null;
 		const data = event?.data?.data ?? null;
 
-		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isFocused) {
+		if (!isCurrentChatEvent || !windowFocused) {
 			if (type === 'chat:completion') {
 				const { done, content, title } = data;
 
@@ -422,18 +452,9 @@
 
 		// check url path
 		const channel = $page.url.pathname.includes(`/channels/${event.channel_id}`);
+		const windowFocused = await isWindowFocused();
 
-		let isFocused = document.visibilityState !== 'visible';
-		if (window.electronAPI) {
-			const res = await window.electronAPI.send({
-				type: 'window:isFocused'
-			});
-			if (res) {
-				isFocused = res.isFocused;
-			}
-		}
-
-		if ((!channel || isFocused) && event?.user?.id !== $user?.id) {
+		if ((!channel || !windowFocused) && event?.user?.id !== $user?.id) {
 			await tick();
 			const type = event?.data?.type ?? null;
 			const data = event?.data?.data ?? null;
