@@ -504,7 +504,7 @@ async def ldap_auth(
             user = Auths.authenticate_user_by_email(email, db=db)
 
             if user:
-                if user.role != 'admin' and ENABLE_LDAP_GROUP_MANAGEMENT and user_groups:
+                if ENABLE_LDAP_GROUP_MANAGEMENT and user_groups:
                     if ENABLE_LDAP_GROUP_CREATION:
                         Groups.create_groups_by_group_names(user.id, user_groups, db=db)
                     try:
@@ -565,7 +565,7 @@ async def signin(
             )
 
         user = Auths.authenticate_user_by_email(email, db=db)
-        if WEBUI_AUTH_TRUSTED_GROUPS_HEADER and user and user.role != 'admin':
+        if WEBUI_AUTH_TRUSTED_GROUPS_HEADER and user:
             group_names = request.headers.get(WEBUI_AUTH_TRUSTED_GROUPS_HEADER, '').split(',')
             group_names = [name.strip() for name in group_names if name.strip()]
 
