@@ -266,6 +266,7 @@ export const updateKnowledgeById = async (token: string, id: string, form: Knowl
 			name: form?.name ? form.name : undefined,
 			description: form?.description ? form.description : undefined,
 			data: form?.data ? form.data : undefined,
+			meta: form?.meta ? form.meta : undefined,
 			access_grants: form.access_grants
 		})
 	})
