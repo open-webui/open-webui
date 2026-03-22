@@ -630,6 +630,13 @@ else:
         CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = 30
 
 
+# WARNING: Experimental. Only enable if your upstream Responses API endpoint
+# supports stateful sessions (i.e. server-side response storage with
+# previous_response_id anchoring). Most proxies and third-party endpoints
+# are stateless and will break if this is enabled.
+ENABLE_RESPONSES_API_STATEFUL = os.environ.get('ENABLE_RESPONSES_API_STATEFUL', 'False').lower() == 'true'
+
+
 CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE = os.environ.get('CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE', '')
 
 if CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE == '':

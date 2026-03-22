@@ -779,6 +779,31 @@ def convert_to_azure_payload(url, payload: dict, api_version: str):
     return url, payload
 
 
+# Fields accepted by the Responses API for each input item type.
+RESPONSES_ALLOWED_FIELDS: dict[str, set[str]] = {
+    'message': {'type', 'role', 'content'},
+    'function_call': {'type', 'call_id', 'name', 'arguments', 'id'},
+    'function_call_output': {'type', 'call_id', 'output'},
+}
+
+
+def _normalize_stored_item(item: dict) -> dict:
+    """Strip local-only fields from a stored output item before replaying it.
+
+    Open WebUI stores extra bookkeeping fields (``id``, ``status``,
+    ``started_at``, ``ended_at``, ``duration``, ``_tag_type``,
+    ``attributes``, ``summary``, etc.) that the Responses API does
+    not accept.  This helper returns a copy containing only the
+    fields the API understands.
+    """
+    item_type = item.get('type', '')
+    allowed = RESPONSES_ALLOWED_FIELDS.get(item_type)
+    if allowed is None:
+        # Unknown type — pass through as-is (e.g. reasoning, extension items).
+        return item
+    return {k: v for k, v in item.items() if k in allowed}
+
+
 def convert_to_responses_payload(payload: dict) -> dict:
     """
     Convert Chat Completions payload to Responses API format.
@@ -798,7 +823,7 @@ def convert_to_responses_payload(payload: dict) -> dict:
         # Check for stored output items (from previous Responses API turn)
         stored_output = msg.get('output')
         if stored_output and isinstance(stored_output, list):
-            input_items.extend(stored_output)
+            input_items.extend(_normalize_stored_item(item) for item in stored_output)
             continue
 
         if role == 'system':
@@ -860,6 +885,12 @@ def convert_to_responses_payload(payload: dict) -> dict:
         input_items.append({'type': 'message', 'role': role, 'content': content_parts})
 
     responses_payload = {**payload, 'input': input_items}
+
+    # Forward previous_response_id when the middleware has set it
+    # (only used when ENABLE_RESPONSES_API_STATEFUL is enabled).
+    previous_response_id = responses_payload.pop('previous_response_id', None)
+    if previous_response_id:
+        responses_payload['previous_response_id'] = previous_response_id
 
     if system_content:
         responses_payload['instructions'] = system_content

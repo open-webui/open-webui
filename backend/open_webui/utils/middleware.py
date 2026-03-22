@@ -136,6 +136,7 @@ from open_webui.env import (
     ENABLE_FORWARD_USER_INFO_HEADERS,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     FORWARD_SESSION_INFO_HEADER_MESSAGE_ID,
+    ENABLE_RESPONSES_API_STATEFUL,
 )
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.constants import TASKS
@@ -850,7 +851,11 @@ def handle_responses_streaming_event(
                 if item.get('type') == 'reasoning' and item.get('status') != 'completed':
                     item['status'] = 'completed'
 
-        return new_output, {'usage': response_data.get('usage'), 'done': True}
+        return new_output, {
+            'usage': response_data.get('usage'),
+            'done': True,
+            'response_id': response_data.get('id'),
+        }
 
     elif event_type == 'response.in_progress':
         # State Machine Event: In Progress
@@ -3393,6 +3398,7 @@ async def streaming_chat_response_handler(response, ctx):
 
             usage = None
             prior_output = []
+            last_response_id = None
 
             def full_output():
                 return prior_output + output if prior_output else output
@@ -3431,6 +3437,7 @@ async def streaming_chat_response_handler(response, ctx):
                     nonlocal usage
                     nonlocal output
                     nonlocal prior_output
+                    nonlocal last_response_id
 
                     response_tool_calls = []
 
@@ -3519,6 +3526,10 @@ async def streaming_chat_response_handler(response, ctx):
                                     # calls. The outer middleware manages the
                                     # actual completion signal.
                                     if response_metadata:
+                                        if ENABLE_RESPONSES_API_STATEFUL:
+                                            response_id = response_metadata.pop('response_id', None)
+                                            if response_id:
+                                                last_response_id = response_id
                                         processed_data.update(response_metadata)
                                         processed_data.pop('done', None)
 
@@ -3927,10 +3938,12 @@ async def streaming_chat_response_handler(response, ctx):
 
                     # Responses API path: extract function_call items from output
                     if not response_tool_calls and output:
-                        # Collect call_ids that already have results
+                        # Collect call_ids that already have results,
+                        # including those from prior_output so we don't
+                        # re-process tool calls from a previous turn.
                         handled_call_ids = {
                             item.get('call_id')
-                            for item in output
+                            for item in (prior_output + output)
                             if item.get('type') == 'function_call_output'
                         }
                         responses_api_tool_calls = []
@@ -4249,11 +4262,20 @@ async def streaming_chat_response_handler(response, ctx):
                             **form_data,
                             'model': model_id,
                             'stream': True,
-                            'messages': [
+                        }
+
+                        if ENABLE_RESPONSES_API_STATEFUL and last_response_id:
+                            system_message = get_system_message(form_data['messages'])
+                            new_form_data['messages'] = (
+                                ([system_message] if system_message else [])
+                                + convert_output_to_messages(output, raw=True)
+                            )
+                            new_form_data['previous_response_id'] = last_response_id
+                        else:
+                            new_form_data['messages'] = [
                                 *form_data['messages'],
                                 *convert_output_to_messages(output, raw=True),
-                            ],
-                        }
+                            ]
 
                         res = await generate_chat_completion(
                             request,
@@ -4270,6 +4292,20 @@ async def streaming_chat_response_handler(response, ctx):
                             # ensures the UI shows tool history during
                             # streaming.
                             prior_output = list(output)
+                            # Trim the trailing empty placeholder message
+                            # so it doesn't persist as a ghost item once
+                            # the new stream produces real content.
+                            if (
+                                prior_output
+                                and prior_output[-1].get('type') == 'message'
+                                and prior_output[-1].get('status') == 'in_progress'
+                            ):
+                                msg_parts = prior_output[-1].get('content', [])
+                                if (
+                                    not msg_parts
+                                    or (len(msg_parts) == 1 and not msg_parts[0].get('text', '').strip())
+                                ):
+                                    prior_output.pop()
                             output = []
                             await stream_body_handler(res, new_form_data)
                             output[:0] = prior_output
