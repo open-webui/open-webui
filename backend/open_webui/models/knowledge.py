@@ -30,8 +30,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import defer
 
 
-from open_webui.utils.access_control import has_access
-from open_webui.utils.db.access_control import has_permission
+from open_webui.utils.access_control import has_access, has_permission
 
 log = logging.getLogger(__name__)
 
