@@ -938,6 +938,13 @@ def process_tool_result(
     tool_result_embeds = []
     EXTERNAL_TOOL_TYPES = ('external', 'action', 'terminal')
 
+    # Support (HTMLResponse, result_context) tuples: the optional second
+    # element lets tool authors provide the LLM with actionable context
+    # about the generated embed instead of the generic fallback message.
+    result_context = None
+    if isinstance(tool_result, tuple) and len(tool_result) == 2 and isinstance(tool_result[0], HTMLResponse):
+        tool_result, result_context = tool_result
+
     if isinstance(tool_result, HTMLResponse):
         content_disposition = tool_result.headers.get('Content-Disposition', '')
         if 'inline' in content_disposition:
@@ -945,11 +952,14 @@ def process_tool_result(
             tool_result_embeds.append(content)
 
             if 200 <= tool_result.status_code < 300:
-                tool_result = {
-                    'status': 'success',
-                    'code': 'ui_component',
-                    'message': f'{tool_function_name}: Embedded UI result is active and visible to the user.',
-                }
+                if result_context is not None and isinstance(result_context, (str, dict, list)):
+                    tool_result = result_context
+                else:
+                    tool_result = {
+                        'status': 'success',
+                        'code': 'ui_component',
+                        'message': f'{tool_function_name}: Embedded UI result is active and visible to the user.',
+                    }
             elif 400 <= tool_result.status_code < 500:
                 tool_result = {
                     'status': 'error',
@@ -1000,20 +1010,37 @@ def process_tool_result(
                 )
 
                 if 'text/html' in content_type:
+                    # Support (html_content, result_context) nested tuple
+                    result_context = None
+                    html_content = tool_result
+                    if isinstance(tool_result, (tuple, list)) and len(tool_result) == 2:
+                        html_content, result_context = tool_result
+
                     # Display as iframe embed
-                    tool_result_embeds.append(tool_result)
-                    tool_result = {
-                        'status': 'success',
-                        'code': 'ui_component',
-                        'message': f'{tool_function_name}: Embedded UI result is active and visible to the user.',
-                    }
+                    tool_result_embeds.append(html_content)
+                    if result_context is not None and isinstance(result_context, (str, dict, list)):
+                        tool_result = result_context
+                    else:
+                        tool_result = {
+                            'status': 'success',
+                            'code': 'ui_component',
+                            'message': f'{tool_function_name}: Embedded UI result is active and visible to the user.',
+                        }
                 elif location:
+                    # Support (html_content, result_context) nested tuple for location embeds
+                    result_context = None
+                    if isinstance(tool_result, (tuple, list)) and len(tool_result) == 2:
+                        _, result_context = tool_result
+
                     tool_result_embeds.append(location)
-                    tool_result = {
-                        'status': 'success',
-                        'code': 'ui_component',
-                        'message': f'{tool_function_name}: Embedded UI result is active and visible to the user.',
-                    }
+                    if result_context is not None and isinstance(result_context, (str, dict, list)):
+                        tool_result = result_context
+                    else:
+                        tool_result = {
+                            'status': 'success',
+                            'code': 'ui_component',
+                            'message': f'{tool_function_name}: Embedded UI result is active and visible to the user.',
+                        }
 
     tool_result_files = []
 
