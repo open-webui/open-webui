@@ -9,6 +9,7 @@
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
 	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
+	import GoogleDrive from '$lib/components/icons/GoogleDrive.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -16,6 +17,7 @@
 
 	export let onSync: Function = () => {};
 	export let onUpload: Function = (data) => {};
+	export let googleDriveEnabled: boolean = false;
 
 	let show = false;
 </script>
@@ -110,6 +112,19 @@
 				<BarsArrowUp strokeWidth="2" />
 				<div class="flex items-center">{$i18n.t('Add text content')}</div>
 			</button>
+
+			{#if googleDriveEnabled}
+				<hr class="border-gray-100 dark:border-gray-800 my-1" />
+				<button
+					class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+					on:click={() => {
+						onUpload({ type: 'google_drive' });
+					}}
+				>
+					<GoogleDrive strokeWidth="2" />
+					<div class="flex items-center">{$i18n.t('Link Google Drive')}</div>
+				</button>
+			{/if}
 		</div>
 	</div>
 </Dropdown>
