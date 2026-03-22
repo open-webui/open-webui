@@ -617,6 +617,7 @@
 				...knowledge,
 				name: knowledge.name,
 				description: knowledge.description,
+				meta: knowledge.meta ?? {},
 				access_grants: knowledge.access_grants ?? []
 			}).catch((e) => {
 				toast.error(`${e}`);
@@ -910,6 +911,32 @@
 							placeholder={$i18n.t('Knowledge Description')}
 							disabled={!knowledge?.write_access}
 							on:input={() => {
+								changeDebounceHandler();
+							}}
+						/>
+					</div>
+
+					<div class="flex items-center gap-2 mt-1">
+						<label class="text-xs text-gray-500" for="kb-top-k">
+							{$i18n.t('Document Snippets Returned')}
+						</label>
+						<input
+							id="kb-top-k"
+							type="number"
+							class="w-16 text-xs text-right bg-transparent outline-hidden border border-gray-200 dark:border-gray-700 rounded px-1 py-0.5"
+							placeholder={$i18n.t('Global')}
+							value={knowledge?.meta?.rag_config?.top_k ?? ''}
+							disabled={!knowledge?.write_access}
+							min="1"
+							on:input={(e) => {
+								if (!knowledge.meta) knowledge.meta = {};
+								if (!knowledge.meta.rag_config) knowledge.meta.rag_config = {};
+								const val = e.target.value;
+								if (val === '' || val === null) {
+									delete knowledge.meta.rag_config.top_k;
+								} else {
+									knowledge.meta.rag_config.top_k = parseInt(val);
+								}
 								changeDebounceHandler();
 							}}
 						/>

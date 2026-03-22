@@ -1017,6 +1017,7 @@ async def get_sources_from_items(
     for item in items:
         query_result = None
         collection_names = []
+        item_k = k  # Default to global k; may be overridden by per-KB top_k
 
         if item.get("type") == "text":
             # Raw Text
@@ -1165,6 +1166,15 @@ async def get_sources_from_items(
                     permission="read",
                 )
             ):
+                # Check for per-KB top_k override
+                kb_top_k = (
+                    (knowledge_base.meta or {})
+                    .get("rag_config", {})
+                    .get("top_k")
+                )
+                if kb_top_k is not None:
+                    item_k = kb_top_k
+
                 if (
                     item.get("context") == "full"
                     or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
@@ -1236,7 +1246,7 @@ async def get_sources_from_items(
                                 collection_names=collection_names,
                                 queries=queries,
                                 embedding_function=embedding_function,
-                                k=k,
+                                k=item_k,
                                 reranking_function=reranking_function,
                                 k_reranker=k_reranker,
                                 r=r,
@@ -1254,7 +1264,7 @@ async def get_sources_from_items(
                             collection_names=collection_names,
                             queries=queries,
                             embedding_function=embedding_function,
-                            k=k,
+                            k=item_k,
                         )
             except Exception as e:
                 log.exception(e)

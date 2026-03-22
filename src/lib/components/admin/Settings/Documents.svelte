@@ -1186,7 +1186,7 @@
 							{/if}
 
 							<div class="  mb-2.5 flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">{$i18n.t('Top K')}</div>
+								<div class=" self-center text-xs font-medium">{$i18n.t('Document Snippets Returned')}</div>
 								<div class="flex items-center relative">
 									<input
 										class="flex-1 w-full text-sm bg-transparent outline-hidden"
@@ -1201,7 +1201,7 @@
 
 							{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
 								<div class="mb-2.5 flex w-full justify-between">
-									<div class="self-center text-xs font-medium">{$i18n.t('Top K Reranker')}</div>
+									<div class="self-center text-xs font-medium">{$i18n.t('Document Snippets After Reranking')}</div>
 									<div class="flex items-center relative">
 										<input
 											class="flex-1 w-full text-sm bg-transparent outline-hidden"
@@ -1326,6 +1326,26 @@
 								>
 									<Textarea
 										bind:value={RAGConfig.RAG_TEMPLATE}
+										placeholder={$i18n.t(
+											'Leave empty to use the default prompt, or enter a custom prompt'
+										)}
+									/>
+								</Tooltip>
+							</div>
+						</div>
+
+						<div class="  mb-2.5 flex flex-col w-full justify-between">
+							<div class=" mb-1 text-xs font-medium">{$i18n.t('Image RAG Query Generation Prompt')}</div>
+							<div class="flex w-full items-center relative">
+								<Tooltip
+									content={$i18n.t(
+										'Prompt used to generate RAG search queries from images when no text is provided. Leave empty for default.'
+									)}
+									placement="top-start"
+									className="w-full"
+								>
+									<Textarea
+										bind:value={RAGConfig.IMAGE_RAG_QUERY_GENERATION_PROMPT_TEMPLATE}
 										placeholder={$i18n.t(
 											'Leave empty to use the default prompt, or enter a custom prompt'
 										)}

@@ -115,6 +115,7 @@ class KnowledgeUserResponse(KnowledgeUserModel):
 class KnowledgeForm(BaseModel):
     name: str
     description: str
+    meta: Optional[dict] = None
     access_grants: Optional[list[dict]] = None
 
 class FileUserResponse(FileModelResponse):
@@ -666,9 +667,12 @@ class KnowledgeTable:
         try:
             with get_db_context(db) as db:
                 knowledge = self.get_knowledge_by_id(id=id, db=db)
+                exclude_fields = {"access_grants"}
+                if form_data.meta is None:
+                    exclude_fields.add("meta")
                 db.query(Knowledge).filter_by(id=id).update(
                     {
-                        **form_data.model_dump(exclude={"access_grants"}),
+                        **form_data.model_dump(exclude=exclude_fields),
                         "updated_at": int(time.time()),
                     }
                 )

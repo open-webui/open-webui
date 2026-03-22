@@ -122,6 +122,7 @@ from open_webui.config import (
     DEFAULT_CODE_INTERPRETER_PROMPT,
     CODE_INTERPRETER_PYODIDE_PROMPT,
     CODE_INTERPRETER_BLOCKED_MODULES,
+    DEFAULT_IMAGE_RAG_QUERY_GENERATION_PROMPT_TEMPLATE,
 )
 from open_webui.env import (
     GLOBAL_LOG_LEVEL,
@@ -1888,11 +1889,95 @@ async def chat_image_generation_handler(
     return form_data
 
 
+def get_image_urls_from_message(message: dict) -> list[dict]:
+    """Extract image_url content parts from a message."""
+    content = message.get("content")
+    if not isinstance(content, list):
+        return []
+    return [part for part in content if part.get("type") == "image_url"]
+
+
+async def generate_image_rag_queries(
+    request: Request, body: dict, user: UserModel
+) -> list[str]:
+    """
+    Use a vision-capable model to generate RAG search queries from image content
+    when the user message has no text (image-only message).
+    """
+    from open_webui.utils.task import get_task_model_id, prompt_template
+
+    last_msg = get_last_user_message_item(body.get("messages", []))
+    if not last_msg:
+        return []
+
+    image_parts = get_image_urls_from_message(last_msg)
+    if not image_parts:
+        return []
+
+    template = (
+        request.app.state.config.IMAGE_RAG_QUERY_GENERATION_PROMPT_TEMPLATE
+    ).strip()
+    if not template:
+        template = DEFAULT_IMAGE_RAG_QUERY_GENERATION_PROMPT_TEMPLATE
+
+    template = prompt_template(template, user)
+
+    # Build a multimodal message with the prompt + images
+    content_parts = [
+        {"type": "text", "text": template},
+        *image_parts,
+    ]
+
+    models = request.app.state.MODELS
+    model_id = body["model"]
+    task_model_id = get_task_model_id(
+        model_id,
+        request.app.state.config.TASK_MODEL,
+        request.app.state.config.TASK_MODEL_EXTERNAL,
+        models,
+    )
+
+    payload = {
+        "model": task_model_id,
+        "messages": [{"role": "user", "content": content_parts}],
+        "stream": False,
+        "metadata": {
+            **(request.state.metadata if hasattr(request.state, "metadata") else {}),
+            "task": str(TASKS.QUERY_GENERATION),
+            "task_body": body,
+            "chat_id": body.get("metadata", {}).get("chat_id"),
+        },
+    }
+
+    try:
+        response = await generate_chat_completion(
+            request, form_data=payload, user=user
+        )
+        response_content = response["choices"][0]["message"]["content"]
+
+        bracket_start = response_content.find("{")
+        bracket_end = response_content.rfind("}") + 1
+        if bracket_start == -1 or bracket_end == 0:
+            return [response_content.strip()]
+
+        parsed = json.loads(response_content[bracket_start:bracket_end])
+        queries = parsed.get("queries", [])
+        return queries if queries else []
+    except Exception as e:
+        log.warning(f"Failed to generate image RAG queries: {e}")
+        return []
+
+
 async def chat_completion_files_handler(
-    request: Request, body: dict, extra_params: dict, user: UserModel
+    request: Request,
+    body: dict,
+    extra_params: dict,
+    user: UserModel,
+    model_rag_top_k: Optional[int] = None,
 ) -> tuple[dict, dict[str, list]]:
     __event_emitter__ = extra_params["__event_emitter__"]
     sources = []
+    queries = []
 
     if files := body.get("metadata", {}).get("files", None):
         # Check if all files are in full context mode
@@ -1941,7 +2026,31 @@ async def chat_completion_files_handler(
             )
 
         if len(queries) == 0:
-            queries = [get_last_user_message(body["messages"])]
+            user_message_text = get_last_user_message(body["messages"])
+            if not user_message_text:
+                # Image-only message: use vision model to generate queries
+                try:
+                    queries = await generate_image_rag_queries(
+                        request, body, user
+                    )
+                    if queries:
+                        log.debug(
+                            f"Generated image RAG queries: {queries}"
+                        )
+                        await __event_emitter__(
+                            {
+                                "type": "status",
+                                "data": {
+                                    "action": "queries_generated",
+                                    "queries": queries,
+                                    "done": False,
+                                },
+                            }
+                        )
+                except Exception as e:
+                    log.warning(f"Image RAG query generation failed: {e}")
+            if len(queries) == 0:
+                queries = [user_message_text or ""]
 
         try:
             # Directly await async get_sources_from_items (no thread needed - fully async now)
@@ -1952,7 +2061,7 @@ async def chat_completion_files_handler(
                 embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
                     query, prefix=prefix, user=user
                 ),
-                k=request.app.state.config.TOP_K,
+                k=model_rag_top_k or request.app.state.config.TOP_K,
                 reranking_function=(
                     (
                         lambda query, documents: request.app.state.RERANKING_FUNCTION(
@@ -2005,7 +2114,7 @@ async def chat_completion_files_handler(
             }
         )
 
-    return body, {"sources": sources}
+    return body, {"sources": sources, "image_rag_queries": queries if sources else []}
 
 
 def apply_params_to_form_data(form_data, model):
@@ -2738,10 +2847,20 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     if file_context_enabled:
         try:
+            _model_rag_top_k = (
+                model.get("info", {}).get("meta", {}).get("rag_top_k")
+                if model else None
+            )
             form_data, flags = await chat_completion_files_handler(
-                request, form_data, extra_params, user
+                request, form_data, extra_params, user,
+                model_rag_top_k=_model_rag_top_k,
             )
             sources.extend(flags.get("sources", []))
+            # If prompt is empty (image-only message) but we generated
+            # vision-based RAG queries, use them as the prompt so that
+            # RAG context injection is not skipped.
+            if not prompt and flags.get("image_rag_queries"):
+                prompt = "; ".join(flags["image_rag_queries"])
         except Exception as e:
             log.exception(e)
 
