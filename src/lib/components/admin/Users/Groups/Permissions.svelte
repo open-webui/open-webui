@@ -95,7 +95,7 @@
 					</div>
 				</div>
 			{/if}
-			</div>
+		</div>
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
@@ -155,7 +155,7 @@
 					</div>
 				</div>
 			{/if}
-			</div>
+		</div>
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">

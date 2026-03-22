@@ -59,3 +59,31 @@ class TestModels(AbstractPostgresTest):
             response = self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
         assert len(response.json()) == 0
+
+    def test_cache_control_ephemeral_flag_persists(self):
+        with mock_webui_user(id="2"):
+            response = self.fast_api_client.post(
+                self.create_url("/add"),
+                json={
+                    "id": "ephemeral-model",
+                    "base_model_id": "base-model-id",
+                    "name": "Ephemeral Model",
+                    "meta": {
+                        "profile_image_url": "/static/favicon.png",
+                        "description": "description",
+                        "cache_control_ephemeral": False,
+                        "capabilities": None,
+                        "model_config": {},
+                    },
+                    "params": {},
+                },
+            )
+        assert response.status_code == 200
+
+        with mock_webui_user(id="2"):
+            response = self.fast_api_client.get(
+                self.create_url(query_params={"id": "ephemeral-model"})
+            )
+        assert response.status_code == 200
+        data = response.json()[0]
+        assert data["meta"]["cache_control_ephemeral"] is False

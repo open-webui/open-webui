@@ -3,6 +3,7 @@
 ## Overview
 
 This plan outlines the changes needed to:
+
 1. **Remove** the existing documents/RAG/knowledge base functionality
 2. **Implement** direct PDF-to-model handling for vision-capable models via OpenRouter
 3. **Implement** PDF preprocessing for non-vision models (PDF → images → vision model description)
@@ -88,15 +89,18 @@ sequenceDiagram
 ### Files to Remove
 
 #### Frontend Routes
+
 - `src/routes/(app)/workspace/knowledge/` - entire directory
 - `src/routes/(app)/workspace/knowledge/[id]/` - subdirectory
 - `src/routes/(app)/workspace/knowledge/create/` - subdirectory
 
-#### Frontend Components  
+#### Frontend Components
+
 - `src/lib/components/workspace/Knowledge/` - entire directory
 - `src/lib/components/workspace/Knowledge/KnowledgeBase/` - subdirectory
 
 #### Frontend APIs (Partial)
+
 - `src/lib/apis/knowledge/` - entire directory (if exists)
 - `src/lib/apis/retrieval/index.ts` - KEEP web search functions, REMOVE:
   - `processFile` - document processing
@@ -109,6 +113,7 @@ sequenceDiagram
 ### Files to Modify
 
 #### Backend
+
 - `backend/open_webui/routers/retrieval.py`:
   - KEEP: Web search endpoints (`/process/web/search`, web config)
   - KEEP: YouTube processing (simple text extraction)
@@ -123,6 +128,7 @@ sequenceDiagram
   - REMOVE: Document loaders for RAG (or keep minimal for web)
 
 #### Frontend Components
+
 - `src/lib/components/chat/Chat.svelte`:
   - Line 2320-2322: Remove `knowledge_search` status filtering
   - Line 66: Keep `processWeb`, `processWebSearch`, `processYoutubeVideo` imports
@@ -134,6 +140,7 @@ sequenceDiagram
   - Remove Knowledge workspace link from navigation menus
 
 ### Configuration Changes
+
 - Admin settings: Remove any Knowledge/Documents settings panels
 - Keep WebSearch settings (`src/lib/components/admin/Settings/WebSearch.svelte`)
 
@@ -148,132 +155,136 @@ Location: After line 1986 (after image preprocessing block), add PDF preprocessi
 ```typescript
 // PDF Preprocessing for non-vision models
 const hasPdfs = createMessagesList(_history, parentId).some((message) =>
-  message.files?.some((file) => 
-    file.type === 'file' && 
-    (file.name?.toLowerCase().endsWith('.pdf') || 
-     file.file?.meta?.content_type === 'application/pdf')
-  )
+	message.files?.some(
+		(file) =>
+			file.type === 'file' &&
+			(file.name?.toLowerCase().endsWith('.pdf') ||
+				file.file?.meta?.content_type === 'application/pdf')
+	)
 );
 
 if (hasPdfs && !hasNativeVision && hasPreprocessor) {
-  const preprocessorId = model.info.meta.vision_preprocessor_model_id;
-  const preprocessorModel = $models.find((m) => m.id === preprocessorId);
-  
-  if (!preprocessorModel) {
-    toast.error(`Vision preprocessor model not found: ${preprocessorId}`);
-  } else {
-    const userMessage = _history.messages[parentId];
-    const userPdfs = userMessage.files?.filter((f) => 
-      f.type === 'file' && f.name?.toLowerCase().endsWith('.pdf')
-    ) || [];
+	const preprocessorId = model.info.meta.vision_preprocessor_model_id;
+	const preprocessorModel = $models.find((m) => m.id === preprocessorId);
 
-    if (userPdfs.length > 0) {
-      let responseMessage = _history.messages[responseMessageId];
-      responseMessage.statusHistory = responseMessage.statusHistory || [];
-      responseMessage.statusHistory.push({
-        done: false,
-        action: '📄',
-        description: 'Preprocessing PDF with vision model...'
-      });
-      // Update history for UI
-      _history.messages[responseMessageId] = responseMessage;
-      history.messages[responseMessageId] = responseMessage;
-      history = { ...history };
+	if (!preprocessorModel) {
+		toast.error(`Vision preprocessor model not found: ${preprocessorId}`);
+	} else {
+		const userMessage = _history.messages[parentId];
+		const userPdfs =
+			userMessage.files?.filter(
+				(f) => f.type === 'file' && f.name?.toLowerCase().endsWith('.pdf')
+			) || [];
 
-      // Convert PDFs to images
-      const allPdfImages = [];
-      for (const pdfFile of userPdfs) {
-        try {
-          // Fetch PDF data from file URL
-          const pdfResponse = await fetch(pdfFile.url);
-          const pdfData = await pdfResponse.arrayBuffer();
-          
-          const { images } = await renderPdfToImageDataUrls(pdfData, {
-            maxPages: 10, // Limit pages to avoid token overflow
-            scale: 1.5
-          });
-          
-          allPdfImages.push(...images.map((img, idx) => ({
-            url: img,
-            pageNum: idx + 1,
-            filename: pdfFile.name
-          })));
-        } catch (e) {
-          console.error('Error converting PDF to images:', e);
-        }
-      }
+		if (userPdfs.length > 0) {
+			let responseMessage = _history.messages[responseMessageId];
+			responseMessage.statusHistory = responseMessage.statusHistory || [];
+			responseMessage.statusHistory.push({
+				done: false,
+				action: '📄',
+				description: 'Preprocessing PDF with vision model...'
+			});
+			// Update history for UI
+			_history.messages[responseMessageId] = responseMessage;
+			history.messages[responseMessageId] = responseMessage;
+			history = { ...history };
 
-      if (allPdfImages.length > 0) {
-        const userContent = userMessage.content;
-        const visionPrompt = (
-          model.info.meta.vision_preprocessor_prompt ||
-          'Extract all text and describe the contents of these PDF pages in the context of the user query: {query}'
-        ).replace('{query}', userContent);
+			// Convert PDFs to images
+			const allPdfImages = [];
+			for (const pdfFile of userPdfs) {
+				try {
+					// Fetch PDF data from file URL
+					const pdfResponse = await fetch(pdfFile.url);
+					const pdfData = await pdfResponse.arrayBuffer();
 
-        const visionMessages = [
-          { role: 'system', content: visionPrompt },
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: userContent },
-              ...allPdfImages.map((img) => ({
-                type: 'image_url',
-                image_url: { url: img.url }
-              }))
-            ]
-          }
-        ];
+					const { images } = await renderPdfToImageDataUrls(pdfData, {
+						maxPages: 10, // Limit pages to avoid token overflow
+						scale: 1.5
+					});
 
-        try {
-          const visionRes = await generateOpenAIChatCompletion(
-            localStorage.token,
-            {
-              model: preprocessorModel.id,
-              messages: visionMessages,
-              stream: false,
-              params: { max_tokens: 4096 }
-            },
-            `${WEBUI_BASE_URL}/api`
-          );
+					allPdfImages.push(
+						...images.map((img, idx) => ({
+							url: img,
+							pageNum: idx + 1,
+							filename: pdfFile.name
+						}))
+					);
+				} catch (e) {
+					console.error('Error converting PDF to images:', e);
+				}
+			}
 
-          const visionResponse = visionRes.choices[0].message.content;
+			if (allPdfImages.length > 0) {
+				const userContent = userMessage.content;
+				const visionPrompt = (
+					model.info.meta.vision_preprocessor_prompt ||
+					'Extract all text and describe the contents of these PDF pages in the context of the user query: {query}'
+				).replace('{query}', userContent);
 
-          responseMessage = _history.messages[responseMessageId];
-          responseMessage.statusHistory.push({
-            done: true,
-            action: '📄',
-            description: 'PDF analysis complete',
-            pdf_response: visionResponse
-          });
-          _history.messages[responseMessageId] = responseMessage;
-          history.messages[responseMessageId] = responseMessage;
+				const visionMessages = [
+					{ role: 'system', content: visionPrompt },
+					{
+						role: 'user',
+						content: [
+							{ type: 'text', text: userContent },
+							...allPdfImages.map((img) => ({
+								type: 'image_url',
+								image_url: { url: img.url }
+							}))
+						]
+					}
+				];
 
-          // Prepend PDF analysis to user content
-          userMessage.content = `[PDF Analysis:\n${visionResponse}\n]\n\n${userMessage.content}`;
-          userMessage.pdf_processed = true;
+				try {
+					const visionRes = await generateOpenAIChatCompletion(
+						localStorage.token,
+						{
+							model: preprocessorModel.id,
+							messages: visionMessages,
+							stream: false,
+							params: { max_tokens: 4096 }
+						},
+						`${WEBUI_BASE_URL}/api`
+					);
 
-          _history.messages[parentId] = userMessage;
-          history.messages[parentId] = userMessage;
-          history = { ...history };
+					const visionResponse = visionRes.choices[0].message.content;
 
-          await saveChatHandler(_chatId, _history);
-        } catch (pdfError) {
-          console.error('PDF preprocessing failed:', pdfError);
-          toast.error('PDF preprocessing failed. Sending without analysis.');
+					responseMessage = _history.messages[responseMessageId];
+					responseMessage.statusHistory.push({
+						done: true,
+						action: '📄',
+						description: 'PDF analysis complete',
+						pdf_response: visionResponse
+					});
+					_history.messages[responseMessageId] = responseMessage;
+					history.messages[responseMessageId] = responseMessage;
 
-          responseMessage = _history.messages[responseMessageId];
-          responseMessage.statusHistory.push({
-            done: true,
-            action: '📄❌',
-            description: 'PDF preprocessing failed'
-          });
-          _history.messages[responseMessageId] = responseMessage;
-          history.messages[responseMessageId] = responseMessage;
-          history = { ...history };
-        }
-      }
-    }
-  }
+					// Prepend PDF analysis to user content
+					userMessage.content = `[PDF Analysis:\n${visionResponse}\n]\n\n${userMessage.content}`;
+					userMessage.pdf_processed = true;
+
+					_history.messages[parentId] = userMessage;
+					history.messages[parentId] = userMessage;
+					history = { ...history };
+
+					await saveChatHandler(_chatId, _history);
+				} catch (pdfError) {
+					console.error('PDF preprocessing failed:', pdfError);
+					toast.error('PDF preprocessing failed. Sending without analysis.');
+
+					responseMessage = _history.messages[responseMessageId];
+					responseMessage.statusHistory.push({
+						done: true,
+						action: '📄❌',
+						description: 'PDF preprocessing failed'
+					});
+					_history.messages[responseMessageId] = responseMessage;
+					history.messages[responseMessageId] = responseMessage;
+					history = { ...history };
+				}
+			}
+		}
+	}
 }
 ```
 
@@ -327,32 +338,32 @@ Ensure PDFs are sent with correct format:
 
 ```json
 {
-  "messages": [
-    {
-      "role": "user",
-      "content": [
-        {
-          "type": "text",
-          "text": "What are the main points in this document?"
-        },
-        {
-          "type": "file",
-          "file": {
-            "filename": "document.pdf",
-            "file_data": "data:application/pdf;base64,..."
-          }
-        }
-      ]
-    }
-  ],
-  "plugins": [
-    {
-      "id": "file-parser",
-      "pdf": {
-        "engine": "native"
-      }
-    }
-  ]
+	"messages": [
+		{
+			"role": "user",
+			"content": [
+				{
+					"type": "text",
+					"text": "What are the main points in this document?"
+				},
+				{
+					"type": "file",
+					"file": {
+						"filename": "document.pdf",
+						"file_data": "data:application/pdf;base64,..."
+					}
+				}
+			]
+		}
+	],
+	"plugins": [
+		{
+			"id": "file-parser",
+			"pdf": {
+				"engine": "native"
+			}
+		}
+	]
 }
 ```
 
@@ -395,6 +406,7 @@ PDFs should follow the existing file upload pattern:
 ## Implementation Order
 
 ### Week 1: Phase 1 - Remove Documents/RAG
+
 1. Remove Knowledge workspace routes and components
 2. Modify navigation to remove Knowledge links
 3. Clean up retrieval API (keep web search)
@@ -402,6 +414,7 @@ PDFs should follow the existing file upload pattern:
 5. Remove/archive vector DB code
 
 ### Week 2: Phase 2 - PDF Preprocessing
+
 1. Add PDF detection in Chat.svelte
 2. Implement PDF-to-images conversion
 3. Add preprocessing status messages
@@ -409,12 +422,14 @@ PDFs should follow the existing file upload pattern:
 5. Handle errors gracefully
 
 ### Week 3: Phase 3 & 4 - Native PDF & Storage
+
 1. Verify OpenRouter native plugin
 2. Test PDF format in messages
 3. Verify file upload/storage works for PDFs
 4. Test chat history with PDF attachments
 
 ### Week 4: Testing & Cleanup
+
 1. End-to-end testing
 2. Remove dead code
 3. Documentation updates
@@ -437,13 +452,13 @@ PDFs should follow the existing file upload pattern:
 
 ## Risks and Mitigations
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Breaking web search | High | Carefully identify dependencies before removal |
-| Token overflow from PDF images | Medium | Limit maxPages, compress images |
-| PDF conversion failures | Medium | Graceful error handling, fallback behavior |
-| Chat history corruption | High | Backup testing, incremental changes |
-| API compatibility | Medium | Test with multiple OpenRouter models |
+| Risk                           | Impact | Mitigation                                     |
+| ------------------------------ | ------ | ---------------------------------------------- |
+| Breaking web search            | High   | Carefully identify dependencies before removal |
+| Token overflow from PDF images | Medium | Limit maxPages, compress images                |
+| PDF conversion failures        | Medium | Graceful error handling, fallback behavior     |
+| Chat history corruption        | High   | Backup testing, incremental changes            |
+| API compatibility              | Medium | Test with multiple OpenRouter models           |
 
 ---
 

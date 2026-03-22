@@ -37,11 +37,11 @@
 			'connections',
 			'models',
 			'model-limits',
-				'evaluations',
-				'tools',
-				'web',
-				'study',
-				'code-execution',
+			'evaluations',
+			'tools',
+			'web',
+			'study',
+			'code-execution',
 			'interface',
 			'audio',
 			'images',
@@ -233,11 +233,11 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('External Tools')}</div>
-			</button>
+		</button>
 
-			<button
-				id="web"
-				class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+		<button
+			id="web"
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 			'web'
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -481,14 +481,14 @@
 					toast.success($i18n.t('Token limits saved successfully!'));
 				}}
 			/>
-			{:else if selectedTab === 'evaluations'}
-				<Evaluations />
-			{:else if selectedTab === 'tools'}
-				<Tools />
-			{:else if selectedTab === 'web'}
-				<WebSearch
-					saveHandler={async () => {
-						toast.success($i18n.t('Settings saved successfully!'));
+		{:else if selectedTab === 'evaluations'}
+			<Evaluations />
+		{:else if selectedTab === 'tools'}
+			<Tools />
+		{:else if selectedTab === 'web'}
+			<WebSearch
+				saveHandler={async () => {
+					toast.success($i18n.t('Settings saved successfully!'));
 
 					await tick();
 					await config.set(await getBackendConfig());

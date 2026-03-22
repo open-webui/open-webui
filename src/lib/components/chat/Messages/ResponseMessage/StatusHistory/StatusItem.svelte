@@ -123,11 +123,13 @@
 						<div slot="content" class="mt-2 space-y-2 text-sm px-2">
 							{#if status.vision_prompt}
 								<div><strong>System Prompt:</strong></div>
-								<pre class="p-2 bg-gray-50 dark:bg-gray-850 rounded text-xs overflow-auto max-h-32 whitespace-pre-wrap">{status.vision_prompt}</pre>
+								<pre
+									class="p-2 bg-gray-50 dark:bg-gray-850 rounded text-xs overflow-auto max-h-32 whitespace-pre-wrap">{status.vision_prompt}</pre>
 							{/if}
 							{#if status.vision_response}
 								<div><strong>Vision Model Response:</strong></div>
-								<pre class="p-2 bg-gray-50 dark:bg-gray-850 rounded text-xs overflow-auto max-h-48 whitespace-pre-wrap">{status.vision_response}</pre>
+								<pre
+									class="p-2 bg-gray-50 dark:bg-gray-850 rounded text-xs overflow-auto max-h-48 whitespace-pre-wrap">{status.vision_response}</pre>
 							{/if}
 							{#if status.error}
 								<div class="text-red-600"><strong>Error:</strong> {status.error}</div>
@@ -135,7 +137,11 @@
 						</div>
 					</Collapsible>
 				{:else}
-					<div class="{(done || status?.done) === false ? 'shimmer' : ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap">
+					<div
+						class="{(done || status?.done) === false
+							? 'shimmer'
+							: ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
+					>
 						{status?.description}
 					</div>
 				{/if}
@@ -152,11 +158,13 @@
 						<div slot="content" class="mt-2 space-y-2 text-sm px-2">
 							{#if status.vision_prompt}
 								<div><strong>System Prompt:</strong></div>
-								<pre class="p-2 bg-gray-50 dark:bg-gray-850 rounded text-xs overflow-auto max-h-32 whitespace-pre-wrap">{status.vision_prompt}</pre>
+								<pre
+									class="p-2 bg-gray-50 dark:bg-gray-850 rounded text-xs overflow-auto max-h-32 whitespace-pre-wrap">{status.vision_prompt}</pre>
 							{/if}
 							{#if status.vision_response}
 								<div><strong>PDF Vision Analysis:</strong></div>
-								<pre class="p-2 bg-gray-50 dark:bg-gray-850 rounded text-xs overflow-auto max-h-64 whitespace-pre-wrap">{status.vision_response}</pre>
+								<pre
+									class="p-2 bg-gray-50 dark:bg-gray-850 rounded text-xs overflow-auto max-h-64 whitespace-pre-wrap">{status.vision_response}</pre>
 							{/if}
 							{#if status.error}
 								<div class="text-red-600"><strong>Error:</strong> {status.error}</div>
@@ -164,7 +172,11 @@
 						</div>
 					</Collapsible>
 				{:else}
-					<div class="{(done || status?.done) === false ? 'shimmer' : ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap">
+					<div
+						class="{(done || status?.done) === false
+							? 'shimmer'
+							: ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
+					>
 						{status?.description}
 					</div>
 				{/if}

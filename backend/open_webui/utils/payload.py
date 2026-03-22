@@ -67,6 +67,37 @@ def apply_model_params_to_body(
     return form_data
 
 
+def apply_ephemeral_cache_control_to_last_message(
+    form_data: dict, enabled: bool = True
+) -> dict:
+    if not enabled:
+        return form_data
+
+    messages = form_data.get("messages")
+    if not isinstance(messages, list) or len(messages) == 0:
+        return form_data
+
+    last_message = messages[-1]
+    if not isinstance(last_message, dict):
+        return form_data
+
+    # Preserve multipart content and only mark the final user-visible part.
+    if isinstance(last_message.get("content"), list) and len(last_message["content"]) > 0:
+        last_part = last_message["content"][-1]
+        if isinstance(last_part, dict):
+            last_part["cache_control"] = {"type": "ephemeral"}
+    elif isinstance(last_message.get("content"), str):
+        last_message["content"] = [
+            {
+                "type": "text",
+                "text": last_message["content"],
+                "cache_control": {"type": "ephemeral"},
+            }
+        ]
+
+    return form_data
+
+
 def remove_open_webui_params(params: dict) -> dict:
     """
     Removes OpenWebUI specific parameters from the provided dictionary.

@@ -110,6 +110,7 @@
 	// Reasoning model configuration (per-model)
 	let reasoningModelEnabled = true; // default to enabled
 	let extraReasoningEfforts: string[] = [];
+	let cacheControlEphemeralEnabled = true;
 
 	const addUsage = (base_model_id) => {
 		const baseModel = $models.find((m) => m.id === base_model_id);
@@ -137,17 +138,17 @@
 			return;
 		}
 
-			if (name === '') {
-				toast.error($i18n.t('Model Name is required.'));
-				loading = false;
+		if (name === '') {
+			toast.error($i18n.t('Model Name is required.'));
+			loading = false;
 
-				return;
-			}
+			return;
+		}
 
-			info.params = { ...info.params, ...params };
+		info.params = { ...info.params, ...params };
 
-			info.access_control = accessControl;
-			info.meta.capabilities = capabilities;
+		info.access_control = accessControl;
+		info.meta.capabilities = capabilities;
 
 		// Persist reasoning config
 		const normalizedExtraEfforts = Array.from(new Set(extraReasoningEfforts)).filter(Boolean);
@@ -162,11 +163,13 @@
 				extra_efforts: normalizedExtraEfforts
 			};
 		} else {
-			// Default state (enabled + no extras): omit to preserve backward compatible defaults
+			// Default state (enabled + no extras): omit to preserve backward compatible defaults.
 			if (info.meta.reasoning) {
 				delete info.meta.reasoning;
 			}
 		}
+
+		info.meta.cache_control_ephemeral = cacheControlEphemeralEnabled;
 
 		if (vision_preprocessor_model_id) {
 			info.meta.vision_preprocessor_model_id = vision_preprocessor_model_id;
@@ -179,50 +182,40 @@
 			delete info.meta.vision_preprocessor_prompt;
 		}
 
-			if (enableDescription) {
-				info.meta.description = info.meta.description.trim() === '' ? null : info.meta.description;
-			} else {
-				info.meta.description = null;
-			}
+		if (enableDescription) {
+			info.meta.description = info.meta.description.trim() === '' ? null : info.meta.description;
+		} else {
+			info.meta.description = null;
+		}
 
-			if (toolIds.length > 0) {
-				info.meta.toolIds = toolIds;
-			} else {
-			if (info.meta.toolIds) {
-				delete info.meta.toolIds;
-			}
+		if (toolIds.length > 0) {
+			info.meta.toolIds = toolIds;
+		} else if (info.meta.toolIds) {
+			delete info.meta.toolIds;
 		}
 
 		if (filterIds.length > 0) {
 			info.meta.filterIds = filterIds;
-		} else {
-			if (info.meta.filterIds) {
-				delete info.meta.filterIds;
-			}
+		} else if (info.meta.filterIds) {
+			delete info.meta.filterIds;
 		}
 
 		if (defaultFilterIds.length > 0) {
 			info.meta.defaultFilterIds = defaultFilterIds;
-		} else {
-			if (info.meta.defaultFilterIds) {
-				delete info.meta.defaultFilterIds;
-			}
+		} else if (info.meta.defaultFilterIds) {
+			delete info.meta.defaultFilterIds;
 		}
 
 		if (actionIds.length > 0) {
 			info.meta.actionIds = actionIds;
-		} else {
-			if (info.meta.actionIds) {
-				delete info.meta.actionIds;
-			}
+		} else if (info.meta.actionIds) {
+			delete info.meta.actionIds;
 		}
 
 		if (defaultFeatureIds.length > 0) {
 			info.meta.defaultFeatureIds = defaultFeatureIds;
-		} else {
-			if (info.meta.defaultFeatureIds) {
-				delete info.meta.defaultFeatureIds;
-			}
+		} else if (info.meta.defaultFeatureIds) {
+			delete info.meta.defaultFeatureIds;
 		}
 
 		info.params.system = system.trim() === '' ? null : system;
@@ -239,13 +232,13 @@
 		success = false;
 	};
 
-		onMount(async () => {
-			await tools.set(await getTools(localStorage.token));
-			await functions.set(await getFunctions(localStorage.token));
+	onMount(async () => {
+		await tools.set(await getTools(localStorage.token));
+		await functions.set(await getFunctions(localStorage.token));
 
-			// Scroll to top 'workspace-container' element
-			const workspaceContainer = document.getElementById('workspace-container');
-			if (workspaceContainer) {
+		// Scroll to top 'workspace-container' element
+		const workspaceContainer = document.getElementById('workspace-container');
+		if (workspaceContainer) {
 			workspaceContainer.scrollTop = 0;
 		}
 
@@ -280,14 +273,15 @@
 					)
 				: null;
 
-				toolIds = model?.meta?.toolIds ?? [];
-				filterIds = model?.meta?.filterIds ?? [];
-				defaultFilterIds = model?.meta?.defaultFilterIds ?? [];
-				actionIds = model?.meta?.actionIds ?? [];
+			toolIds = model?.meta?.toolIds ?? [];
+			filterIds = model?.meta?.filterIds ?? [];
+			defaultFilterIds = model?.meta?.defaultFilterIds ?? [];
+			actionIds = model?.meta?.actionIds ?? [];
 
 			// Load reasoning config (default enabled if omitted)
 			reasoningModelEnabled = model?.meta?.reasoning?.enabled ?? true;
 			extraReasoningEfforts = model?.meta?.reasoning?.extra_efforts ?? [];
+			cacheControlEphemeralEnabled = model?.meta?.cache_control_ephemeral ?? true;
 
 			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
 			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? [];
@@ -749,11 +743,11 @@
 						{/if}
 					</div>
 
-						<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
+					<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
 
-						<div class="my-2">
-							<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
-						</div>
+					<div class="my-2">
+						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
+					</div>
 
 					<div class="my-2">
 						<FiltersSelector
@@ -804,13 +798,17 @@
 								</div>
 							</div>
 							<div class="mt-1 text-xs text-gray-500 dark:text-gray-500">
-								{$i18n.t('Controls whether the chat UI should expose reasoning effort controls for this model.')}
+								{$i18n.t(
+									'Controls whether the chat UI should expose reasoning effort controls for this model.'
+								)}
 							</div>
 
 							<div class="mt-3">
 								<div class="text-xs font-semibold mb-1">{$i18n.t('Extra reasoning efforts')}</div>
 								<div class="text-xs text-gray-500 dark:text-gray-500 mb-2">
-									{$i18n.t('Enable additional effort values supported by some reasoning models (in addition to low/medium/high).')}
+									{$i18n.t(
+										'Enable additional effort values supported by some reasoning models (in addition to low/medium/high).'
+									)}
 								</div>
 
 								<div class="flex flex-wrap gap-3 text-xs">
@@ -826,6 +824,22 @@
 										</label>
 									{/each}
 								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="my-2">
+						<div class="px-4 py-3 bg-gray-50 dark:bg-gray-950 rounded-3xl">
+							<div class="flex w-full justify-between items-center">
+								<div class="self-center text-sm font-semibold">{$i18n.t('Cache Control')}</div>
+								<div class="pr-2">
+									<Switch bind:state={cacheControlEphemeralEnabled} />
+								</div>
+							</div>
+							<div class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+								{$i18n.t(
+									'Adds cache_control: { type: "ephemeral" } to the last message before forwarding the request upstream.'
+								)}
 							</div>
 						</div>
 					</div>

@@ -40,6 +40,7 @@ from open_webui.env import SRC_LOG_LEVELS
 
 
 from open_webui.utils.payload import (
+    apply_ephemeral_cache_control_to_last_message,
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
 )
@@ -1316,24 +1317,25 @@ async def generate_chat_completion(
         elif isinstance(payload["stream_options"], dict):
             payload["stream_options"]["include_usage"] = True
 
-    # Cache Control: set "cache_control": {"type": "ephemeral"} on the very last message
-    if "messages" in payload and isinstance(payload["messages"], list) and len(payload["messages"]) > 0:
-        last_message = payload["messages"][-1]
-        
-        # If content is a list of parts, add cache_control to the last part
-        if isinstance(last_message.get("content"), list) and len(last_message["content"]) > 0:
-            last_part = last_message["content"][-1]
-            if isinstance(last_part, dict):
-                last_part["cache_control"] = {"type": "ephemeral"}
-        # If content is a string, convert it to a list and add cache_control to the text part
-        elif isinstance(last_message.get("content"), str):
-            last_message["content"] = [
-                {
-                    "type": "text", 
-                    "text": last_message["content"],
-                    "cache_control": {"type": "ephemeral"}
-                }
-            ]
+    # Cache Control: optionally set "cache_control": {"type": "ephemeral"}
+    # on the very last message.
+    cache_control_enabled = True
+    model_cache_control_enabled = None
+    if model_info and model_info.meta:
+        model_cache_control_enabled = getattr(
+            model_info.meta, "cache_control_ephemeral", None
+        )
+    if model_cache_control_enabled is None and isinstance(model, dict):
+        model_cache_control_enabled = (
+            (model.get("info", {}) or {}).get("meta", {})
+            .get("cache_control_ephemeral", None)
+        )
+    if model_cache_control_enabled is not None:
+        cache_control_enabled = bool(model_cache_control_enabled)
+
+    payload = apply_ephemeral_cache_control_to_last_message(
+        payload, enabled=cache_control_enabled
+    )
 
     # Background Tasks: Title Generation
     task_type = None

@@ -19,7 +19,20 @@
 	let weeks: { date: string; tokens: number; level: number; dayOfWeek: number }[][] = [];
 
 	const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-	const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+	const MONTHS = [
+		'Jan',
+		'Feb',
+		'Mar',
+		'Apr',
+		'May',
+		'Jun',
+		'Jul',
+		'Aug',
+		'Sep',
+		'Oct',
+		'Nov',
+		'Dec'
+	];
 
 	// Color levels for heatmap (0-4 scale, from light to dark)
 	const COLORS = [
@@ -51,10 +64,10 @@
 				heatmapData = response.data;
 				maxTokens = response.max_tokens;
 				totalDaysActive = response.total_days_active;
-				
+
 				// Calculate total tokens
 				totalTokens = heatmapData.reduce((sum, d) => sum + d.tokens, 0);
-				
+
 				// Generate weeks structure
 				generateWeeksStructure(response.year);
 			} else {
@@ -78,7 +91,7 @@
 		// Generate all days for the year
 		const startDate = new Date(displayYear, 0, 1);
 		const endDate = new Date(displayYear, 11, 31);
-		
+
 		// Adjust start to first Sunday
 		const firstDayOfWeek = startDate.getDay();
 		if (firstDayOfWeek > 0) {
@@ -98,7 +111,7 @@
 		while (currentDate <= endDate) {
 			const dateStr = currentDate.toISOString().split('T')[0];
 			const dayOfWeek = currentDate.getDay();
-			
+
 			const point = dataMap.get(dateStr);
 			currentWeek.push({
 				date: dateStr,
@@ -122,10 +135,10 @@
 
 	function getMonthLabels() {
 		if (weeks.length === 0) return [];
-		
+
 		const labels: { month: string; weekIndex: number }[] = [];
 		let lastMonth = -1;
-		
+
 		for (let i = 0; i < weeks.length; i++) {
 			// Check the first day of each week
 			const firstDay = weeks[i][0];
@@ -138,17 +151,17 @@
 				}
 			}
 		}
-		
+
 		return labels;
 	}
 
 	function formatDate(dateStr: string): string {
 		const date = new Date(dateStr);
-		return date.toLocaleDateString(undefined, { 
-			weekday: 'short', 
-			year: 'numeric', 
-			month: 'short', 
-			day: 'numeric' 
+		return date.toLocaleDateString(undefined, {
+			weekday: 'short',
+			year: 'numeric',
+			month: 'short',
+			day: 'numeric'
 		});
 	}
 
@@ -174,11 +187,13 @@
 				</span>
 				<span>•</span>
 				<span>
-					<span class="font-medium text-gray-900 dark:text-gray-100">{formatTokenCount(totalTokens)}</span>
+					<span class="font-medium text-gray-900 dark:text-gray-100"
+						>{formatTokenCount(totalTokens)}</span
+					>
 					{$i18n.t('tokens total')}
 				</span>
 			</div>
-			
+
 			<!-- Legend -->
 			<div class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
 				<span>{$i18n.t('Less')}</span>
@@ -195,10 +210,7 @@
 				<!-- Month labels -->
 				<div class="flex mb-1 text-xs text-gray-500 dark:text-gray-400" style="padding-left: 32px;">
 					{#each monthLabels as label, i}
-						<div 
-							class="absolute"
-							style="transform: translateX({label.weekIndex * 14}px);"
-						>
+						<div class="absolute" style="transform: translateX({label.weekIndex * 14}px);">
 							{label.month}
 						</div>
 					{/each}
@@ -206,14 +218,21 @@
 
 				<div class="flex gap-0.5 mt-6">
 					<!-- Day labels -->
-					<div class="flex flex-col gap-0.5 text-xs text-gray-500 dark:text-gray-400 mr-1" style="width: 24px;">
-						<div class="h-3"></div> <!-- Sun - hidden -->
+					<div
+						class="flex flex-col gap-0.5 text-xs text-gray-500 dark:text-gray-400 mr-1"
+						style="width: 24px;"
+					>
+						<div class="h-3"></div>
+						<!-- Sun - hidden -->
 						<div class="h-3 flex items-center">{DAYS[1].substring(0, 1)}</div>
-						<div class="h-3"></div> <!-- Tue - hidden -->
+						<div class="h-3"></div>
+						<!-- Tue - hidden -->
 						<div class="h-3 flex items-center">{DAYS[3].substring(0, 1)}</div>
-						<div class="h-3"></div> <!-- Thu - hidden -->
+						<div class="h-3"></div>
+						<!-- Thu - hidden -->
 						<div class="h-3 flex items-center">{DAYS[5].substring(0, 1)}</div>
-						<div class="h-3"></div> <!-- Sat - hidden -->
+						<div class="h-3"></div>
+						<!-- Sat - hidden -->
 					</div>
 
 					<!-- Weeks -->
@@ -229,8 +248,10 @@
 									`}
 									placement="top"
 								>
-									<div 
-										class="w-3 h-3 rounded-sm {COLORS[day.level]} cursor-default transition-all hover:ring-2 hover:ring-gray-400 dark:hover:ring-gray-500"
+									<div
+										class="w-3 h-3 rounded-sm {COLORS[
+											day.level
+										]} cursor-default transition-all hover:ring-2 hover:ring-gray-400 dark:hover:ring-gray-500"
 									></div>
 								</Tooltip>
 							{/each}

@@ -350,7 +350,9 @@
 
 					<div class="mb-2.5 flex w-full justify-between pr-2">
 						<div class="flex flex-col">
-							<div class=" self-center text-xs font-medium">{$i18n.t('Enable API Debug Logging')}</div>
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Enable API Debug Logging')}
+							</div>
 							<div class="text-xs text-gray-500">
 								{$i18n.t('Log all API requests and responses to the console.')}
 							</div>

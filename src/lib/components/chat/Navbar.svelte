@@ -172,8 +172,8 @@
 						{/if}
 					{/if}
 
-						{#if $mobile && !$temporaryChatEnabled && hasPersistentChat}
-							<Tooltip content={$i18n.t('New Chat')}>
+					{#if $mobile && !$temporaryChatEnabled && hasPersistentChat}
+						<Tooltip content={$i18n.t('New Chat')}>
 							<button
 								class=" flex {$showSidebar
 									? 'md:hidden'
@@ -190,8 +190,8 @@
 						</Tooltip>
 					{/if}
 
-						{#if shareEnabled && chat && hasPersistentChat}
-							<Tooltip content={$i18n.t('Share')}>
+					{#if shareEnabled && chat && hasPersistentChat}
+						<Tooltip content={$i18n.t('Share')}>
 							<button
 								class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 								on:click={async () => {

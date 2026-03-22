@@ -27,7 +27,7 @@
 
 	const switchModel = async (modelId: string) => {
 		pendingSwitch = modelId;
-		
+
 		// Emit model-switch event via socket
 		$socket?.emit('model-switch', {
 			chat_id: chatId,
@@ -41,10 +41,7 @@
 	};
 </script>
 
-<Dropdown
-	bind:show
-	align="end"
->
+<Dropdown bind:show align="end">
 	<Tooltip content={$i18n.t('Switch Model')} placement="bottom">
 		<button
 			class="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition animate-pulse"
@@ -75,15 +72,27 @@
 			align="end"
 			transition={flyAndScale}
 		>
-			<div class="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800 mb-1">
+			<div
+				class="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800 mb-1"
+			>
 				{$i18n.t('Switch to another model')}
 			</div>
-			
+
 			{#if pendingSwitch}
 				<div class="px-3 py-2 text-sm text-amber-600 dark:text-amber-400 flex items-center gap-2">
-					<svg class="w-4 h-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-						<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+					<svg
+						class="w-4 h-4 animate-spin"
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+					>
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+						></circle>
+						<path
+							class="opacity-75"
+							fill="currentColor"
+							d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+						></path>
 					</svg>
 					{$i18n.t('Switching...')}
 				</div>
@@ -100,7 +109,9 @@
 								alt={model.name}
 							/>
 						{:else}
-							<div class="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs">
+							<div
+								class="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs"
+							>
 								{model.name?.charAt(0) ?? 'M'}
 							</div>
 						{/if}

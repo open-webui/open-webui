@@ -50,7 +50,6 @@
 			inputFilesHandler(inputFiles);
 		}
 	};
-
 </script>
 
 <!-- Hidden file input used to open the camera on mobile -->
@@ -138,12 +137,12 @@
 						>
 							<Camera />
 							<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
-					</DropdownMenu.Item>
-				</Tooltip>
+						</DropdownMenu.Item>
+					</Tooltip>
 
-				{#if fileUploadEnabled}
-					{#if $config?.features?.enable_google_drive_integration}
-						<DropdownMenu.Item
+					{#if fileUploadEnabled}
+						{#if $config?.features?.enable_google_drive_integration}
+							<DropdownMenu.Item
 								class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
 								on:click={() => {
 									uploadGoogleDriveHandler();
@@ -287,10 +286,10 @@
 						{/if}
 					{/if}
 				</div>
-				{:else if tab === 'microsoft_onedrive'}
-					<div in:fly={{ x: 20, duration: 150 }}>
-						<button
-							class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+			{:else if tab === 'microsoft_onedrive'}
+				<div in:fly={{ x: 20, duration: 150 }}>
+					<button
+						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
 						on:click={() => {
 							tab = '';
 						}}

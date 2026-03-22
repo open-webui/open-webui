@@ -160,7 +160,13 @@ export const uploadFile = async (
 	const uploadUrl = `${WEBUI_API_BASE_URL}/files/`;
 
 	const res = options.onProgress
-		? await uploadFileWithProgress(token, uploadUrl, data, options.onProgress, options.signal).catch((err) => {
+		? await uploadFileWithProgress(
+				token,
+				uploadUrl,
+				data,
+				options.onProgress,
+				options.signal
+			).catch((err) => {
 				error = err;
 				console.error(err);
 				return null;

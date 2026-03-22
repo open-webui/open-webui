@@ -43,6 +43,12 @@ class ModelMeta(BaseModel):
         User-facing description of the model.
     """
 
+    cache_control_ephemeral: Optional[bool] = True
+    """
+        Controls whether the last message is marked with cache_control: { type: "ephemeral" }
+        before the request is forwarded upstream.
+    """
+
     capabilities: Optional[dict] = None
 
     model_config = ConfigDict(extra="allow")

@@ -74,10 +74,10 @@
 	id="suggestions-container"
 >
 	<div class="overflow-y-auto scrollbar-thin max-h-60">
-			{#if !loading}
-				{#if char === '/'}
-					<Prompts
-						bind:this={suggestionElement}
+		{#if !loading}
+			{#if char === '/'}
+				<Prompts
+					bind:this={suggestionElement}
 					{query}
 					bind:filteredItems
 					prompts={$prompts ?? []}
@@ -87,12 +87,12 @@
 						if (type === 'prompt') {
 							insertTextHandler(data.content);
 						}
-						}}
-					/>
-				{:else if char === '@'}
-					<Models
-						bind:this={suggestionElement}
-						{query}
+					}}
+				/>
+			{:else if char === '@'}
+				<Models
+					bind:this={suggestionElement}
+					{query}
 					bind:filteredItems
 					onSelect={(e) => {
 						const { type, data } = e;

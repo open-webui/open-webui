@@ -51,7 +51,6 @@
 	$: if (show) {
 		loadContent();
 	}
-
 </script>
 
 <Modal bind:show size="lg">
@@ -89,28 +88,28 @@
 			</div>
 
 			<div>
-					<div class="flex flex-col items-center md:flex-row gap-1 justify-between w-full">
-						<div class=" flex flex-wrap text-xs gap-1 text-gray-500">
-							{#if item.size}
-								<div class="capitalize shrink-0">{formatFileSize(item.size)}</div>
-							{/if}
-						</div>
+				<div class="flex flex-col items-center md:flex-row gap-1 justify-between w-full">
+					<div class=" flex flex-wrap text-xs gap-1 text-gray-500">
+						{#if item.size}
+							<div class="capitalize shrink-0">{formatFileSize(item.size)}</div>
+						{/if}
 					</div>
 				</div>
 			</div>
+		</div>
 
-			<div class="max-h-[75vh] overflow-auto">
-				{#if !loading}
-					{#if isPDF}
-						<iframe
-							title={item?.name}
+		<div class="max-h-[75vh] overflow-auto">
+			{#if !loading}
+				{#if isPDF}
+					<iframe
+						title={item?.name}
+						src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
+						class="w-full h-[70vh] border-0 rounded-lg"
+					/>
+				{:else}
+					{#if isAudio}
+						<audio
 							src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
-							class="w-full h-[70vh] border-0 rounded-lg"
-						/>
-					{:else}
-						{#if isAudio}
-							<audio
-								src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
 							class="w-full border-0 rounded-lg mb-2"
 							controls
 							playsinline

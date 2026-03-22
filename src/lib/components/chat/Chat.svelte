@@ -566,7 +566,9 @@
 
 	const resolveRouteChatId = () => {
 		const browserPathname = typeof window !== 'undefined' ? window.location.pathname : '';
-		return chatIdProp || parseChatIdFromPath(browserPathname) || parseChatIdFromPath($page.url.pathname);
+		return (
+			chatIdProp || parseChatIdFromPath(browserPathname) || parseChatIdFromPath($page.url.pathname)
+		);
 	};
 
 	const isPersistentChatView = () => {
@@ -602,9 +604,7 @@
 		}
 
 		const currentChatId = $chatId ?? '';
-		return ($temporaryChatEnabled ||
-			currentChatId.startsWith('local:') ||
-			isPersistentChatView())
+		return $temporaryChatEnabled || currentChatId.startsWith('local:') || isPersistentChatView()
 			? currentChatId
 			: '';
 	};
@@ -798,6 +798,9 @@
 			}
 
 			if (type === 'chat:completion' && data?.done && visibleChatId && !$temporaryChatEnabled) {
+				taskIds = null;
+				generating = false;
+				generationController = null;
 				await loadChat();
 				return;
 			}
@@ -975,6 +978,33 @@
 				_socket.off('events', chatEventHandler);
 				// Register new listener
 				_socket.on('events', chatEventHandler);
+
+				// Reload chat if we reconnect while generating to catch missed completion events
+				const connectHandler = async () => {
+					if (generating || taskIds) {
+						console.log('Socket reconnected while generating. Checking task status...');
+						const visibleChatId = getVisibleChatId();
+
+						if (visibleChatId && !$temporaryChatEnabled) {
+							try {
+								const taskRes = await getTaskIdsByChatId(localStorage.token, visibleChatId);
+								if (!taskRes || !taskRes.task_ids || taskRes.task_ids.length === 0) {
+									console.log('Task finished while disconnected. Reloading chat...');
+									taskIds = null;
+									generating = false;
+									generationController = null;
+									await loadChat();
+								} else {
+									console.log('Task is still running on the backend. Resuming stream...');
+								}
+							} catch (e) {
+								console.error('Failed to check task status on reconnect', e);
+							}
+						}
+					}
+				};
+				_socket.off('connect', connectHandler);
+				_socket.on('connect', connectHandler);
 			}
 		});
 
@@ -1562,119 +1592,129 @@
 		scrollToBottom.cancel();
 	});
 	const chatCompletedHandler = async (chatId, modelId, responseMessageId, messages) => {
-		const res = await chatCompleted(localStorage.token, {
-			model: modelId,
-			messages: messages.map((m) => ({
-				id: m.id,
-				role: m.role,
-				content: m.content,
-				info: m.info ? m.info : undefined,
-				timestamp: m.timestamp,
-				...(m.usage ? { usage: m.usage } : {}),
-				...(m.sources ? { sources: m.sources } : {}),
-				...(m.reasoning_details ? { reasoning_details: m.reasoning_details } : {})
-			})),
-			filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
-			model_item: $models.find((m) => m.id === modelId),
-			chat_id: chatId,
-			session_id: $socket?.id,
-			id: responseMessageId
-		}).catch((error) => {
-			toast.error(`${error}`);
-			messages.at(-1).error = { content: error };
+		try {
+			const res = await chatCompleted(localStorage.token, {
+				model: modelId,
+				messages: messages.map((m) => ({
+					id: m.id,
+					role: m.role,
+					content: m.content,
+					info: m.info ? m.info : undefined,
+					timestamp: m.timestamp,
+					...(m.usage ? { usage: m.usage } : {}),
+					...(m.sources ? { sources: m.sources } : {}),
+					...(m.reasoning_details ? { reasoning_details: m.reasoning_details } : {})
+				})),
+				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
+				model_item: $models.find((m) => m.id === modelId),
+				chat_id: chatId,
+				session_id: $socket?.id,
+				id: responseMessageId
+			}).catch((error) => {
+				toast.error(`${error}`);
+				messages.at(-1).error = { content: error };
 
-			return null;
-		});
+				return null;
+			});
 
-		if (res !== null && res.messages) {
-			// Update chat history with the new messages
-			for (const message of res.messages) {
-				if (message?.id) {
-					// Add null check for message and message.id
+			if (res !== null && res.messages) {
+				// Update chat history with the new messages
+				for (const message of res.messages) {
+					if (message?.id) {
+						// Add null check for message and message.id
+						history.messages[message.id] = {
+							...history.messages[message.id],
+							...(history.messages[message.id].content !== message.content
+								? { originalContent: history.messages[message.id].content }
+								: {}),
+							...message,
+							...(message.role === 'assistant' ? { done: true } : {})
+						};
+					}
+				}
+			}
+
+			await tick();
+
+			if (isVisibleChatEvent(chatId)) {
+				if (!$temporaryChatEnabled) {
+					chat = await updateChatById(localStorage.token, chatId, {
+						models: selectedModels,
+						messages: messages,
+						history: history,
+						params: params,
+						reasoning: reasoning,
+						files: chatFiles
+					});
+
+					currentChatPage.set(1);
+					await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				}
+			}
+		} finally {
+			taskIds = null;
+			generating = false;
+			generationController = null;
+		}
+	};
+
+	const chatActionHandler = async (chatId, actionId, modelId, responseMessageId, event = null) => {
+		try {
+			const messages = createMessagesList(history, responseMessageId);
+
+			const res = await chatAction(localStorage.token, actionId, {
+				model: modelId,
+				messages: messages.map((m) => ({
+					id: m.id,
+					role: m.role,
+					content: m.content,
+					info: m.info ? m.info : undefined,
+					timestamp: m.timestamp,
+					...(m.sources ? { sources: m.sources } : {}),
+					...(m.reasoning_details ? { reasoning_details: m.reasoning_details } : {})
+				})),
+				...(event ? { event: event } : {}),
+				model_item: $models.find((m) => m.id === modelId),
+				chat_id: chatId,
+				session_id: $socket?.id,
+				id: responseMessageId
+			}).catch((error) => {
+				toast.error(`${error}`);
+				messages.at(-1).error = { content: error };
+				return null;
+			});
+
+			if (res !== null && res.messages) {
+				// Update chat history with the new messages
+				for (const message of res.messages) {
 					history.messages[message.id] = {
 						...history.messages[message.id],
 						...(history.messages[message.id].content !== message.content
 							? { originalContent: history.messages[message.id].content }
 							: {}),
-						...message,
-						...(message.role === 'assistant' ? { done: true } : {})
+						...message
 					};
 				}
 			}
-		}
 
-		await tick();
+			if (isVisibleChatEvent(chatId)) {
+				if (!$temporaryChatEnabled) {
+					chat = await updateChatById(localStorage.token, chatId, {
+						models: selectedModels,
+						messages: messages,
+						history: history,
+						params: params,
+						files: chatFiles
+					});
 
-		if (isVisibleChatEvent(chatId)) {
-			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, chatId, {
-					models: selectedModels,
-					messages: messages,
-					history: history,
-					params: params,
-					reasoning: reasoning,
-					files: chatFiles
-				});
-
-				currentChatPage.set(1);
-				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+					currentChatPage.set(1);
+					await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				}
 			}
-		}
-
-		taskIds = null;
-	};
-
-	const chatActionHandler = async (chatId, actionId, modelId, responseMessageId, event = null) => {
-		const messages = createMessagesList(history, responseMessageId);
-
-		const res = await chatAction(localStorage.token, actionId, {
-			model: modelId,
-			messages: messages.map((m) => ({
-				id: m.id,
-				role: m.role,
-				content: m.content,
-				info: m.info ? m.info : undefined,
-				timestamp: m.timestamp,
-				...(m.sources ? { sources: m.sources } : {}),
-				...(m.reasoning_details ? { reasoning_details: m.reasoning_details } : {})
-			})),
-			...(event ? { event: event } : {}),
-			model_item: $models.find((m) => m.id === modelId),
-			chat_id: chatId,
-			session_id: $socket?.id,
-			id: responseMessageId
-		}).catch((error) => {
-			toast.error(`${error}`);
-			messages.at(-1).error = { content: error };
-			return null;
-		});
-
-		if (res !== null && res.messages) {
-			// Update chat history with the new messages
-			for (const message of res.messages) {
-				history.messages[message.id] = {
-					...history.messages[message.id],
-					...(history.messages[message.id].content !== message.content
-						? { originalContent: history.messages[message.id].content }
-						: {}),
-					...message
-				};
-			}
-		}
-
-		if (isVisibleChatEvent(chatId)) {
-			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, chatId, {
-					models: selectedModels,
-					messages: messages,
-					history: history,
-					params: params,
-					files: chatFiles
-				});
-
-				currentChatPage.set(1);
-				await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			}
+		} finally {
+			taskIds = null;
+			generating = false;
+			generationController = null;
 		}
 	};
 
@@ -3449,8 +3489,6 @@
 				for await (const update of textStream) {
 					const { value, done, sources, error, usage } = update;
 					if (error || done) {
-						generating = false;
-						generationController = null;
 						break;
 					}
 
@@ -3472,6 +3510,9 @@
 			}
 		} catch (e) {
 			console.error(e);
+		} finally {
+			generating = false;
+			generationController = null;
 		}
 	};
 

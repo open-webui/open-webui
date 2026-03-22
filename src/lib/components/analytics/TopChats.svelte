@@ -83,10 +83,12 @@
 									{chat.title || $i18n.t('Untitled Chat')}
 								</span>
 							</div>
-							
+
 							<!-- Token bar -->
-							<div class="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-2">
-								<div 
+							<div
+								class="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-2"
+							>
+								<div
 									class="absolute top-0 left-0 h-full bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full transition-all duration-500"
 									style="width: {getBarWidth(chat.total_tokens, maxTokens)}%"
 								></div>
@@ -94,14 +96,32 @@
 
 							<div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
 								<span class="flex items-center gap-1">
-									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-3 text-blue-500">
-										<path fill-rule="evenodd" d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z" clip-rule="evenodd" />
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="size-3 text-blue-500"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
+											clip-rule="evenodd"
+										/>
 									</svg>
 									{formatTokenCount(chat.total_input_tokens)}
 								</span>
 								<span class="flex items-center gap-1">
-									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-3 text-green-500">
-										<path fill-rule="evenodd" d="M8 2a.75.75 0 0 1 .75.75v8.69l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.22 3.22V2.75A.75.75 0 0 1 8 2Z" clip-rule="evenodd" />
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="size-3 text-green-500"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M8 2a.75.75 0 0 1 .75.75v8.69l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.22 3.22V2.75A.75.75 0 0 1 8 2Z"
+											clip-rule="evenodd"
+										/>
 									</svg>
 									{formatTokenCount(chat.total_output_tokens)}
 								</span>

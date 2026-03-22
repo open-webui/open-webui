@@ -108,7 +108,10 @@ export interface GlobalWrappedSummary {
 /**
  * Get token usage stats for a specific chat
  */
-export const getChatTokenStats = async (token: string, chatId: string): Promise<ChatTokenStats | null> => {
+export const getChatTokenStats = async (
+	token: string,
+	chatId: string
+): Promise<ChatTokenStats | null> => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/analytics/chat/${chatId}`, {
@@ -140,7 +143,10 @@ export const getChatTokenStats = async (token: string, chatId: string): Promise<
 /**
  * Get user's wrapped summary
  */
-export const getUserWrapped = async (token: string, year?: number): Promise<WrappedSummary | null> => {
+export const getUserWrapped = async (
+	token: string,
+	year?: number
+): Promise<WrappedSummary | null> => {
 	let error = null;
 
 	const params = new URLSearchParams();
@@ -177,7 +183,10 @@ export const getUserWrapped = async (token: string, year?: number): Promise<Wrap
 /**
  * Get user's activity heatmap data
  */
-export const getUserHeatmap = async (token: string, year?: number): Promise<HeatmapResponse | null> => {
+export const getUserHeatmap = async (
+	token: string,
+	year?: number
+): Promise<HeatmapResponse | null> => {
 	let error = null;
 
 	const params = new URLSearchParams();
@@ -251,7 +260,11 @@ export const getUserModelUsage = async (token: string, year?: number): Promise<M
 /**
  * Get user's top chats by token count
  */
-export const getUserTopChats = async (token: string, year?: number, limit: number = 10): Promise<TopChat[]> => {
+export const getUserTopChats = async (
+	token: string,
+	year?: number,
+	limit: number = 10
+): Promise<TopChat[]> => {
 	let error = null;
 
 	const params = new URLSearchParams();
@@ -289,7 +302,10 @@ export const getUserTopChats = async (token: string, year?: number, limit: numbe
 /**
  * Get global/site-wide wrapped summary (Admin only)
  */
-export const getGlobalWrapped = async (token: string, year?: number): Promise<GlobalWrappedSummary | null> => {
+export const getGlobalWrapped = async (
+	token: string,
+	year?: number
+): Promise<GlobalWrappedSummary | null> => {
 	let error = null;
 
 	const params = new URLSearchParams();
@@ -326,7 +342,10 @@ export const getGlobalWrapped = async (token: string, year?: number): Promise<Gl
 /**
  * Get global model usage (Admin only)
  */
-export const getGlobalModelUsage = async (token: string, limit: number = 20): Promise<ModelUsage[]> => {
+export const getGlobalModelUsage = async (
+	token: string,
+	limit: number = 20
+): Promise<ModelUsage[]> => {
 	let error = null;
 
 	const params = new URLSearchParams();
@@ -361,7 +380,10 @@ export const getGlobalModelUsage = async (token: string, limit: number = 20): Pr
 /**
  * Get global activity heatmap (Admin only)
  */
-export const getGlobalHeatmap = async (token: string, year?: number): Promise<HeatmapResponse | null> => {
+export const getGlobalHeatmap = async (
+	token: string,
+	year?: number
+): Promise<HeatmapResponse | null> => {
 	let error = null;
 
 	const params = new URLSearchParams();

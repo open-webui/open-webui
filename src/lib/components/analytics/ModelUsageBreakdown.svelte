@@ -21,7 +21,7 @@
 		'#06B6D4', // cyan-500
 		'#F97316', // orange-500
 		'#84CC16', // lime-500
-		'#6366F1'  // indigo-500
+		'#6366F1' // indigo-500
 	];
 
 	onMount(async () => {
@@ -78,20 +78,20 @@
 		// Convert percentages to angles (in radians)
 		const startAngle = (startPercent / 100) * 2 * Math.PI - Math.PI / 2;
 		const endAngle = (endPercent / 100) * 2 * Math.PI - Math.PI / 2;
-		
+
 		const radius = 45;
 		const centerX = 50;
 		const centerY = 50;
-		
+
 		// Calculate points
 		const x1 = centerX + radius * Math.cos(startAngle);
 		const y1 = centerY + radius * Math.sin(startAngle);
 		const x2 = centerX + radius * Math.cos(endAngle);
 		const y2 = centerY + radius * Math.sin(endAngle);
-		
+
 		// Large arc flag
-		const largeArcFlag = (endPercent - startPercent) > 50 ? 1 : 0;
-		
+		const largeArcFlag = endPercent - startPercent > 50 ? 1 : 0;
+
 		// Create path
 		return `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
 	}
@@ -150,8 +150,10 @@
 			<!-- Model List -->
 			<div class="flex-1 space-y-2">
 				{#each modelUsage.slice(0, 6) as model, index}
-					<div class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-850 transition-colors">
-						<div 
+					<div
+						class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-850 transition-colors"
+					>
+						<div
 							class="w-3 h-3 rounded-full flex-shrink-0"
 							style="background-color: {getColor(index)}"
 						></div>
@@ -175,14 +177,17 @@
 
 				{#if modelUsage.length > 6}
 					<div class="text-xs text-gray-500 dark:text-gray-400 pl-6">
-						+{modelUsage.length - 6} {$i18n.t('more models')}
+						+{modelUsage.length - 6}
+						{$i18n.t('more models')}
 					</div>
 				{/if}
 			</div>
 		</div>
 
 		<!-- Total footer -->
-		<div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
+		<div
+			class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center"
+		>
 			<span class="text-sm text-gray-500 dark:text-gray-400">
 				{$i18n.t('Total tokens processed')}
 			</span>

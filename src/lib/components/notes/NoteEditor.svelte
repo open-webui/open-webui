@@ -537,20 +537,20 @@ ${content}
 					}
 				};
 
-					const fileType = (file['type'] || '').toLowerCase();
-					const isHeicLike =
-						fileType === 'image/heic' ||
-						fileType === 'image/heif' ||
-						fileType === 'image/heic-sequence' ||
-						fileType === 'image/heif-sequence' ||
-						(file.name || '').toLowerCase().endsWith('.heic') ||
-						(file.name || '').toLowerCase().endsWith('.heif');
+				const fileType = (file['type'] || '').toLowerCase();
+				const isHeicLike =
+					fileType === 'image/heic' ||
+					fileType === 'image/heif' ||
+					fileType === 'image/heic-sequence' ||
+					fileType === 'image/heif-sequence' ||
+					(file.name || '').toLowerCase().endsWith('.heic') ||
+					(file.name || '').toLowerCase().endsWith('.heif');
 
-					reader.readAsDataURL(isHeicLike ? await convertHeicToJpeg(file) : file);
-				});
+				reader.readAsDataURL(isHeicLike ? await convertHeicToJpeg(file) : file);
+			});
 
-				return await uploadImagePromise;
-			} else {
+			return await uploadImagePromise;
+		} else {
 			return await uploadFileHandler(file);
 		}
 	};

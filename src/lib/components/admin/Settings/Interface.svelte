@@ -291,14 +291,14 @@
 					<div class=" self-center text-xs font-medium">
 						{$i18n.t('Follow Up Generation')}
 					</div>
-	
+
 					<Switch bind:state={taskConfig.ENABLE_FOLLOW_UP_GENERATION} />
 				</div>
-	
+
 				{#if taskConfig.ENABLE_FOLLOW_UP_GENERATION}
 					<div class="mb-2.5">
 						<div class=" mb-1 text-xs font-medium">{$i18n.t('Follow Up Generation Prompt')}</div>
-	
+
 						<Tooltip
 							content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 							placement="top-start"
@@ -311,7 +311,7 @@
 							/>
 						</Tooltip>
 					</div>
-	
+
 					<div class="mb-2.5">
 						<div class=" mb-1 text-xs font-medium">{$i18n.t('Admin Override')}</div>
 						<select

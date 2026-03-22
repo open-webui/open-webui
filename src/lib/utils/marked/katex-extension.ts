@@ -101,7 +101,7 @@ function inlineKatex(options) {
 				if (/^\s*\d+(?:[.,]\d+)*\s*$/.test(content)) {
 					return;
 				}
-				
+
 				return {
 					type: 'inlineKatex',
 					raw: match[0],

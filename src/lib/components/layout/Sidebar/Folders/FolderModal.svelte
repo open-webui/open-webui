@@ -7,12 +7,12 @@
 
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/stores';
-		import { goto } from '$app/navigation';
-		import { user } from '$lib/stores';
+	import { goto } from '$app/navigation';
+	import { user } from '$lib/stores';
 
-		import Textarea from '$lib/components/common/Textarea.svelte';
-		import { getFolderById } from '$lib/apis/folders';
-		const i18n = getContext('i18n');
+	import Textarea from '$lib/components/common/Textarea.svelte';
+	import { getFolderById } from '$lib/apis/folders';
+	const i18n = getContext('i18n');
 
 	export let show = false;
 	export let onSubmit: Function = (e) => {};
@@ -25,18 +25,18 @@
 	let meta = {
 		background_image_url: null
 	};
-		let data = {
-			system_prompt: ''
-		};
+	let data = {
+		system_prompt: ''
+	};
 
 	let loading = false;
 
-		const submitHandler = async () => {
-			loading = true;
+	const submitHandler = async () => {
+		loading = true;
 
-			await onSubmit({
-				name,
-				meta,
+		await onSubmit({
+			name,
+			meta,
 			data
 		});
 		show = false;
@@ -54,10 +54,10 @@
 			meta = folder.meta || {
 				background_image_url: null
 			};
-				data = folder.data || {
-					system_prompt: ''
-				};
-			}
+			data = folder.data || {
+				system_prompt: ''
+			};
+		}
 
 		focusInput();
 	};
@@ -80,11 +80,11 @@
 		meta = {
 			background_image_url: null
 		};
-			data = {
-				system_prompt: ''
-			};
-		}
-	</script>
+		data = {
+			system_prompt: ''
+		};
+	}
+</script>
 
 <Modal size="md" bind:show>
 	<div>
@@ -206,9 +206,9 @@
 						</div>
 					{/if}
 
-						<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
-							<button
-								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-950 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
+					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
+						<button
+							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-950 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
 								? ' cursor-not-allowed'
 								: ''}"
 							type="submit"

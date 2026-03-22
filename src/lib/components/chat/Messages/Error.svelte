@@ -40,7 +40,8 @@
 	</div>
 
 	{#if showRaw}
-		<pre class="text-xs text-red-700 dark:text-red-400 whitespace-pre-wrap break-words mt-2 p-2 bg-red-600/5 rounded-sm">
+		<pre
+			class="text-xs text-red-700 dark:text-red-400 whitespace-pre-wrap break-words mt-2 p-2 bg-red-600/5 rounded-sm">
 			{JSON.stringify(content, null, 2)}
 		</pre>
 	{/if}

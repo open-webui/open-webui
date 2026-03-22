@@ -792,7 +792,7 @@
 									<ContentRenderer
 										id={`${chatId}-${message.id}`}
 										messageId={message.id}
-										chatId={chatId}
+										{chatId}
 										{history}
 										{selectedModels}
 										content={messageTextContent}

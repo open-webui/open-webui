@@ -2472,7 +2472,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🕒 Conversation Turn Limits**: Set limits on conversation turns to manage interactions better through Pipelines.
 - **🛡️ Toxic Message Filtering**: Automatically filter out toxic messages to maintain a safe environment using Pipelines.
 - **🔍 Web Search Support**: Introducing built-in web search capabilities via RAG API, allowing users to search using SearXNG, Google Programmatic Search Engine, Brave Search, serpstack, and serper. Activate it effortlessly by adding necessary variables from Document settings > Web Params.
-- **🗂� Models Workspace**: Create and manage model presets for both Ollama/OpenAI API. Note: The old Modelfiles workspace is deprecated.
+- **🗂� Models Workspace**: Create and manage model presets for both Ollama/OpenAI API. Note: The old Modelfiles workspace is deprecated.
 - **🛠️ Model Builder Feature**: Build and edit all models with persistent builder mode.
 - **🏷️ Model Tagging Support**: Organize models with tagging features in the models workspace.
 - **📋 Model Ordering Support**: Effortlessly organize models by dragging and dropping them into the desired positions within the models workspace.
@@ -2884,7 +2884,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **🔗 Built-in LiteLLM Proxy**: Now includes LiteLLM proxy within Open WebUI for enhanced functionality.
-
   - Easily integrate existing LiteLLM configurations using `-v /path/to/config.yaml:/app/backend/data/litellm/config.yaml` flag.
   - When utilizing Docker container to run Open WebUI, ensure connections to localhost use `host.docker.internal`.
 

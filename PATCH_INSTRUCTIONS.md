@@ -5,6 +5,7 @@
 ### Change 1: backend/open_webui/socket/main.py
 
 **Location 1: Line ~360 (channel events handler)**
+
 ```python
 # BEFORE
 @sio.on("channel-events")
@@ -16,6 +17,7 @@ async def channel_events(sid, data):
 ```
 
 **Location 2: Line ~376 (emit channel events)**
+
 ```python
 # BEFORE
 await sio.emit(
@@ -35,6 +37,7 @@ await sio.emit(
 ```
 
 **Location 3: Line ~718 (get_event_emitter - main emit)**
+
 ```python
 # BEFORE
 emit_tasks = [
@@ -66,6 +69,7 @@ emit_tasks = [
 ```
 
 **Location 4: Line ~773 (get_event_call - call)**
+
 ```python
 # BEFORE
 response = await sio.call(
@@ -95,6 +99,7 @@ response = await sio.call(
 ### Change 2: src/lib/components/chat/Chat.svelte
 
 **Location 1: Line ~514 (mount - socket listener)**
+
 ```svelte
 <!-- BEFORE -->
 $socket?.on('chat-events', chatEventHandler);
@@ -104,6 +109,7 @@ $socket?.on('events', chatEventHandler);
 ```
 
 **Location 2: Line ~588 (destroy - socket cleanup)**
+
 ```svelte
 <!-- BEFORE -->
 $socket?.off('chat-events', chatEventHandler);
@@ -181,6 +187,7 @@ git diff > /tmp/socket-events.patch
 ```
 
 Then apply it:
+
 ```bash
 # Verify patch
 patch -p1 --dry-run < socket-events.patch
@@ -297,12 +304,12 @@ alembic downgrade 38d63c18f30f  # Rolls back to state before user table changes
 
 ## Summary of Changes
 
-| File | Type | Old | New | Count |
-|------|------|-----|-----|-------|
-| socket/main.py | String | `"chat-events"` | `"events"` | 2 |
-| socket/main.py | String | `"channel-events"` | `"events:channel"` | 2 |
-| Chat.svelte | String | `'chat-events'` | `'events'` | 2 |
-| database | Schema | N/A | Add user columns + indexes | 4 migrations |
+| File           | Type   | Old                | New                        | Count        |
+| -------------- | ------ | ------------------ | -------------------------- | ------------ |
+| socket/main.py | String | `"chat-events"`    | `"events"`                 | 2            |
+| socket/main.py | String | `"channel-events"` | `"events:channel"`         | 2            |
+| Chat.svelte    | String | `'chat-events'`    | `'events'`                 | 2            |
+| database       | Schema | N/A                | Add user columns + indexes | 4 migrations |
 
 **Total code changes: 8 string replacements + 4 database migrations**
 
@@ -329,4 +336,3 @@ After applying patches:
 - Database schema includes new user columns
 - No TypeScript compilation errors
 - No browser console errors
-

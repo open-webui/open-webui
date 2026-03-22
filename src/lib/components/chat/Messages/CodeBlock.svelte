@@ -551,8 +551,8 @@
 								result) &&
 								'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
 								class="language-{lang} rounded-t-none whitespace-pre text-sm"
-								>{#if visible}{@html hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value ||
-									code}{:else}{code}{/if}</code
+								>{#if visible}{@html hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases)
+										.value || code}{:else}{code}{/if}</code
 							></pre>
 					{/if}
 				{:else}

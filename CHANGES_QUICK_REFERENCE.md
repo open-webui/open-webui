@@ -3,9 +3,11 @@
 ## TL;DR - Critical Changes in 3 Files
 
 ### 1. Backend Socket Events (CRITICAL)
+
 **File:** `/backend/open_webui/socket/main.py`
 
 Replace these 7 occurrences:
+
 ```diff
 - sio.emit("chat-events", ...)
 + sio.emit("events", ...)
@@ -18,13 +20,16 @@ Replace these 7 occurrences:
 ```
 
 Line numbers in your fork:
+
 - Line 718: `emit_tasks` - "chat-events" → "events"
 - Line 739: Another `sio.emit("chat-events"` → "events"
 
 ### 2. Frontend Socket Listener (CRITICAL)
+
 **File:** `/src/lib/components/chat/Chat.svelte`
 
 Replace 2 occurrences:
+
 ```diff
 - $socket?.on('chat-events', chatEventHandler);
 + $socket?.on('events', chatEventHandler);
@@ -34,6 +39,7 @@ Replace 2 occurrences:
 ```
 
 Line numbers in your fork:
+
 - Line 514: `$socket?.on('chat-events'...`
 - Line 588: `$socket?.off('chat-events'...`
 
@@ -57,30 +63,33 @@ alembic upgrade a5c220713937  # add_reply_to_id_column_to_message
 
 ## File Changes Summary
 
-| File | Change Type | Details | Lines |
-|------|-------------|---------|-------|
-| `backend/open_webui/socket/main.py` | Event name refactor | `chat-events` → `events` | 718, 739, 773 |
-| `backend/open_webui/socket/main.py` | Event name refactor | `channel-events` → `events:channel` | 359 |
-| `src/lib/components/chat/Chat.svelte` | Event listener | `chat-events` → `events` | 514, 588 |
-| `backend/open_webui/models/users.py` | Add columns (via migration) | username, bio, gender, date_of_birth | - |
-| `backend/open_webui/utils/middleware.py` | Enhancement | New stream_delta_chunk_size param | 952 |
-| `src/lib/components/chat/MessageInput.svelte` | Refactor | Integrate with new component structure | - |
+| File                                          | Change Type                 | Details                                | Lines         |
+| --------------------------------------------- | --------------------------- | -------------------------------------- | ------------- |
+| `backend/open_webui/socket/main.py`           | Event name refactor         | `chat-events` → `events`               | 718, 739, 773 |
+| `backend/open_webui/socket/main.py`           | Event name refactor         | `channel-events` → `events:channel`    | 359           |
+| `src/lib/components/chat/Chat.svelte`         | Event listener              | `chat-events` → `events`               | 514, 588      |
+| `backend/open_webui/models/users.py`          | Add columns (via migration) | username, bio, gender, date_of_birth   | -             |
+| `backend/open_webui/utils/middleware.py`      | Enhancement                 | New stream_delta_chunk_size param      | 952           |
+| `src/lib/components/chat/MessageInput.svelte` | Refactor                    | Integrate with new component structure | -             |
 
 ---
 
 ## Affected Custom Features
 
 ### Token Usage Tracking ✓ (MOSTLY OK)
+
 - **Impact:** Low - Your system is architecture-compatible
 - **Action:** Update socket event names above
 - **Note:** Migration order matters for database schema
 
 ### Reasoning Effort Selection ✓ (NEEDS INTEGRATION)
+
 - **Impact:** Medium - Component refactored, feature not in upstream
 - **Action:** Manually integrate reasoning effort UI with new MessageInput
 - **Note:** Your payload structure remains compatible
 
 ### Live Usage Display ❌ (WILL BREAK)
+
 - **Impact:** CRITICAL - WebSocket event name changed
 - **Action:** Update socket listeners to use `'events'` instead of `'chat-events'`
 - **Note:** Must update both backend and frontend
@@ -90,6 +99,7 @@ alembic upgrade a5c220713937  # add_reply_to_id_column_to_message
 ## Upstream Migration Details
 
 **User Table Migration: 3af16a1c9fb6**
+
 ```sql
 ALTER TABLE user ADD COLUMN username VARCHAR(50);
 ALTER TABLE user ADD COLUMN bio TEXT;
@@ -98,11 +108,13 @@ ALTER TABLE user ADD COLUMN date_of_birth DATE;
 ```
 
 **Message Table Migration: a5c220713937**
+
 ```sql
 ALTER TABLE message ADD COLUMN reply_to_id VARCHAR;
 ```
 
 **OAuth Session Table: 38d63c18f30f**
+
 ```sql
 CREATE TABLE oauth_session (
     id VARCHAR PRIMARY KEY,
@@ -115,6 +127,7 @@ CREATE TABLE oauth_session (
 ```
 
 **Indexes: 018012973d35**
+
 - Adds performance indexes on frequently queried columns
 
 ---
@@ -122,6 +135,7 @@ CREATE TABLE oauth_session (
 ## Testing After Changes
 
 Quick verification:
+
 1. Backend starts: `python -m open_webui.main`
 2. Frontend compiles: `npm run build`
 3. Socket connects: Check browser console for no WebSocket errors
@@ -134,18 +148,22 @@ Quick verification:
 ## Common Errors & Fixes
 
 ### Error: "Unknown event 'chat-events'"
+
 **Cause:** Missed updating socket listener
 **Fix:** Verify all 7 event name changes above are applied
 
 ### Error: "chat_events" column not found
+
 **Cause:** Missing database migrations
 **Fix:** Run all 4 upstream migrations in order
 
 ### Error: TypeError: Cannot read property 'emit' of undefined
+
 **Cause:** Socket not initialized
 **Fix:** Verify socket connection in root layout
 
 ### Error: "user.bio is undefined"
+
 **Cause:** Migration applied but frontend code didn't update
 **Fix:** Clear browser cache, rebuild frontend
 
@@ -205,4 +223,3 @@ If changes don't work:
 4. **Test WebSocket connection** (check browser console)
 5. **Verify features still work** (chat, token usage, reasoning effort)
 6. **Deploy to production** (after local testing)
-

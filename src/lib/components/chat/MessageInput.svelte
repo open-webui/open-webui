@@ -712,11 +712,11 @@
 			type: 'file',
 			file: '',
 			id: null,
-				url: '',
-				name: file.name,
-				status: 'uploading',
-				size: file.size,
-				error: '',
+			url: '',
+			name: file.name,
+			status: 'uploading',
+			size: file.size,
+			error: '',
 			itemId: tempItemId,
 			...(fullContext ? { context: 'full' } : {})
 		};
@@ -744,11 +744,11 @@
 				// Upload as a chat attachment (no background content extraction / RAG ingestion).
 				const uploadedFile = await uploadFile(localStorage.token, file, metadata);
 
-					if (uploadedFile) {
-						console.log('File upload completed:', {
-							id: uploadedFile.id,
-							name: fileItem.name
-						});
+				if (uploadedFile) {
+					console.log('File upload completed:', {
+						id: uploadedFile.id,
+						name: fileItem.name
+					});
 
 					if (uploadedFile.error) {
 						console.warn('File upload warning:', uploadedFile.error);
@@ -799,312 +799,317 @@
 		}
 	};
 
-		const getFileExtension = (filename: string) => {
-			const dotIndex = filename.lastIndexOf('.');
-			return dotIndex === -1 ? '' : filename.slice(dotIndex).toLowerCase();
-		};
+	const getFileExtension = (filename: string) => {
+		const dotIndex = filename.lastIndexOf('.');
+		return dotIndex === -1 ? '' : filename.slice(dotIndex).toLowerCase();
+	};
 
-		const normalizeImageMimeType = (type: string) => {
-			const normalized = (type || '').toLowerCase();
-			if (normalized === 'image/jpg') return 'image/jpeg';
-			return normalized;
-		};
+	const normalizeImageMimeType = (type: string) => {
+		const normalized = (type || '').toLowerCase();
+		if (normalized === 'image/jpg') return 'image/jpeg';
+		return normalized;
+	};
 
-		const inferImageMimeTypeFromExtension = (filename: string) => {
-			const ext = getFileExtension(filename || '');
-			switch (ext) {
-				case '.png':
-					return 'image/png';
-				case '.jpg':
-				case '.jpeg':
-					return 'image/jpeg';
-				case '.gif':
-					return 'image/gif';
-				case '.webp':
-					return 'image/webp';
-				default:
-					return null;
-			}
-		};
+	const inferImageMimeTypeFromExtension = (filename: string) => {
+		const ext = getFileExtension(filename || '');
+		switch (ext) {
+			case '.png':
+				return 'image/png';
+			case '.jpg':
+			case '.jpeg':
+				return 'image/jpeg';
+			case '.gif':
+				return 'image/gif';
+			case '.webp':
+				return 'image/webp';
+			default:
+				return null;
+		}
+	};
 
-		const isHeicLikeImage = (file: File) => {
-			const type = (file.type || '').toLowerCase();
-			const ext = getFileExtension(file.name || '');
-			return (
-				type === 'image/heic' ||
-				type === 'image/heif' ||
-				type === 'image/heic-sequence' ||
-				type === 'image/heif-sequence' ||
-				ext === '.heic' ||
-				ext === '.heif'
+	const isHeicLikeImage = (file: File) => {
+		const type = (file.type || '').toLowerCase();
+		const ext = getFileExtension(file.name || '');
+		return (
+			type === 'image/heic' ||
+			type === 'image/heif' ||
+			type === 'image/heic-sequence' ||
+			type === 'image/heif-sequence' ||
+			ext === '.heic' ||
+			ext === '.heif'
+		);
+	};
+
+	const isImageLikeFile = (file: File) => {
+		const type = normalizeImageMimeType(file.type || '');
+		if (
+			[
+				'image/png',
+				'image/jpeg',
+				'image/webp',
+				'image/gif',
+				'image/heic',
+				'image/heif',
+				'image/heic-sequence',
+				'image/heif-sequence'
+			].includes(type)
+		) {
+			return true;
+		}
+
+		const ext = getFileExtension(file.name || '');
+		return ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.heic', '.heif'].includes(ext);
+	};
+
+	const replaceExtension = (filename: string, newExtension: string) => {
+		const dotIndex = filename.lastIndexOf('.');
+		if (dotIndex === -1) return `${filename}${newExtension}`;
+		return `${filename.slice(0, dotIndex)}${newExtension}`;
+	};
+
+	const inputFilesHandler = async (inputFiles: File[] | FileList) => {
+		const inputFilesArray = Array.from(inputFiles ?? []);
+		console.log('Input files handler called with:', inputFilesArray);
+
+		if (
+			($config?.file?.max_count ?? null) !== null &&
+			files.length + inputFilesArray.length > ($config?.file?.max_count ?? 0)
+		) {
+			toast.error(
+				$i18n.t(`You can only chat with a maximum of {{maxCount}} file(s) at a time.`, {
+					maxCount: $config?.file?.max_count
+				})
 			);
-		};
+			return;
+		}
 
-		const isImageLikeFile = (file: File) => {
-			const type = normalizeImageMimeType(file.type || '');
-			if (
-				[
-					'image/png',
-					'image/jpeg',
-					'image/webp',
-					'image/gif',
-					'image/heic',
-					'image/heif',
-					'image/heic-sequence',
-					'image/heif-sequence'
-				].includes(type)
-			) {
-				return true;
-			}
+		const maxSizeMb = $config?.file?.max_size ?? null;
+		const maxSizeBytes = maxSizeMb !== null ? maxSizeMb * 1024 * 1024 : null;
 
-			const ext = getFileExtension(file.name || '');
-			return ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.heic', '.heif'].includes(ext);
-		};
+		const getErrorText = (err: any) => {
+			const truncate = (text: string, maxLength = 500) =>
+				text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
 
-		const replaceExtension = (filename: string, newExtension: string) => {
-			const dotIndex = filename.lastIndexOf('.');
-			if (dotIndex === -1) return `${filename}${newExtension}`;
-			return `${filename.slice(0, dotIndex)}${newExtension}`;
-		};
+			if (!err) return null;
 
-		const inputFilesHandler = async (inputFiles: File[] | FileList) => {
-			const inputFilesArray = Array.from(inputFiles ?? []);
-			console.log('Input files handler called with:', inputFilesArray);
+			let text: string | null = null;
 
-			if (
-				($config?.file?.max_count ?? null) !== null &&
-				files.length + inputFilesArray.length > ($config?.file?.max_count ?? 0)
-			) {
-				toast.error(
-					$i18n.t(`You can only chat with a maximum of {{maxCount}} file(s) at a time.`, {
-						maxCount: $config?.file?.max_count
-					})
-				);
-				return;
-			}
-
-			const maxSizeMb = $config?.file?.max_size ?? null;
-			const maxSizeBytes = maxSizeMb !== null ? maxSizeMb * 1024 * 1024 : null;
-
-			const getErrorText = (err: any) => {
-				const truncate = (text: string, maxLength = 500) =>
-					text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
-
-				if (!err) return null;
-
-				let text: string | null = null;
-
-				if (typeof err === 'string') {
-					text = err;
-				} else if (typeof err?.detail === 'string') {
-					text = err.detail;
-				} else if (typeof err?.message === 'string') {
-					text = err.message;
-				} else {
-					const detail = err?.detail;
-					if (detail && typeof detail === 'object') {
-						if (typeof detail.message === 'string') text = detail.message;
-						else if (typeof detail.error === 'string') text = detail.error;
-						else {
-							try {
-								text = JSON.stringify(detail);
-							} catch {
-								// ignore
-							}
-						}
-					}
-
-					if (text === null) {
+			if (typeof err === 'string') {
+				text = err;
+			} else if (typeof err?.detail === 'string') {
+				text = err.detail;
+			} else if (typeof err?.message === 'string') {
+				text = err.message;
+			} else {
+				const detail = err?.detail;
+				if (detail && typeof detail === 'object') {
+					if (typeof detail.message === 'string') text = detail.message;
+					else if (typeof detail.error === 'string') text = detail.error;
+					else {
 						try {
-							text = JSON.stringify(err);
+							text = JSON.stringify(detail);
 						} catch {
 							// ignore
 						}
 					}
+				}
 
-					if (text === null) {
-						text = String(err);
+				if (text === null) {
+					try {
+						text = JSON.stringify(err);
+					} catch {
+						// ignore
 					}
 				}
 
-				return text ? truncate(text) : null;
+				if (text === null) {
+					text = String(err);
+				}
+			}
+
+			return text ? truncate(text) : null;
+		};
+
+		const handleInputFile = async (file: File) => {
+			console.log('Processing file:', {
+				name: file.name,
+				type: file.type,
+				size: file.size,
+				extension: file.name.split('.').at(-1)
+			});
+
+			const isImageLike = isImageLikeFile(file);
+			if (!isImageLike) {
+				if (maxSizeBytes !== null && file.size > maxSizeBytes) {
+					console.log('File exceeds max size limit:', {
+						fileSize: file.size,
+						maxSize: maxSizeBytes
+					});
+					toast.error(
+						$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
+							maxSize: maxSizeMb
+						})
+					);
+					return;
+				}
+
+				await uploadFileHandler(file);
+				return;
+			}
+
+			if (effectiveVisionCapableModels.length === 0) {
+				toast.error($i18n.t('Selected model(s) do not support image inputs'));
+				return;
+			}
+
+			const tempImageId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+			const abortController = new AbortController();
+			imageUploadAbortControllers.set(tempImageId, abortController);
+
+			let fileToUpload: File = file;
+
+			if (!isHeicLikeImage(file)) {
+				const normalizedType = normalizeImageMimeType(file.type || '');
+				const inferredType = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(
+					normalizedType
+				)
+					? normalizedType
+					: inferImageMimeTypeFromExtension(file.name || '');
+
+				if (inferredType) {
+					const currentType = (fileToUpload.type || '').toLowerCase();
+					const fileName = fileToUpload.name || `image-${Date.now()}`;
+					fileToUpload =
+						currentType === inferredType
+							? fileToUpload
+							: new File([fileToUpload], fileName, {
+									type: inferredType,
+									lastModified: fileToUpload.lastModified
+								});
+				}
+			}
+
+			let previewUrl = URL.createObjectURL(fileToUpload);
+			files = [
+				...files,
+				{
+					type: 'image',
+					url: previewUrl,
+					status: 'uploading',
+					progress: 0,
+					itemId: tempImageId
+				}
+			];
+
+			const updateProgress = (progress: number) => {
+				const fileIndex = files.findIndex((f) => f.itemId === tempImageId);
+				if (fileIndex !== -1) {
+					// Upload progress can reach 100% before the server responds (e.g. remote storage),
+					// so cap at 99% until we actually mark the file as uploaded.
+					files[fileIndex].progress = Math.max(0, Math.min(99, progress));
+					files = files;
+				}
 			};
 
-			const handleInputFile = async (file: File) => {
-				console.log('Processing file:', {
-					name: file.name,
-					type: file.type,
-					size: file.size,
-					extension: file.name.split('.').at(-1)
-				});
-
-				const isImageLike = isImageLikeFile(file);
-				if (!isImageLike) {
-					if (maxSizeBytes !== null && file.size > maxSizeBytes) {
-						console.log('File exceeds max size limit:', {
-							fileSize: file.size,
-							maxSize: maxSizeBytes
-						});
-						toast.error(
-							$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
-								maxSize: maxSizeMb
-							})
+			try {
+				if (isHeicLikeImage(file)) {
+					let converted: any;
+					try {
+						converted = await convertHeicToJpeg(file, { quality: 0.92 });
+					} catch (conversionErr) {
+						const conversionText = getErrorText(conversionErr);
+						throw new Error(
+							conversionText
+								? `HEIC/HEIF conversion failed: ${conversionText}`
+								: 'HEIC/HEIF conversion failed'
 						);
-						return;
 					}
-
-					await uploadFileHandler(file);
-					return;
-				}
-
-				if (effectiveVisionCapableModels.length === 0) {
-					toast.error($i18n.t('Selected model(s) do not support image inputs'));
-					return;
-				}
-
-				const tempImageId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-				const abortController = new AbortController();
-				imageUploadAbortControllers.set(tempImageId, abortController);
-
-				let fileToUpload: File = file;
-
-				if (!isHeicLikeImage(file)) {
-					const normalizedType = normalizeImageMimeType(file.type || '');
-					const inferredType = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(normalizedType)
-						? normalizedType
-						: inferImageMimeTypeFromExtension(file.name || '');
-
-					if (inferredType) {
-						const currentType = (fileToUpload.type || '').toLowerCase();
-						const fileName = fileToUpload.name || `image-${Date.now()}`;
-						fileToUpload =
-							currentType === inferredType
-								? fileToUpload
-								: new File([fileToUpload], fileName, {
-										type: inferredType,
-										lastModified: fileToUpload.lastModified
-									});
-					}
-				}
-
-				let previewUrl = URL.createObjectURL(fileToUpload);
-				files = [
-					...files,
-					{
-						type: 'image',
-						url: previewUrl,
-						status: 'uploading',
-						progress: 0,
-						itemId: tempImageId
-					}
-				];
-
-				const updateProgress = (progress: number) => {
-					const fileIndex = files.findIndex((f) => f.itemId === tempImageId);
-					if (fileIndex !== -1) {
-						// Upload progress can reach 100% before the server responds (e.g. remote storage),
-						// so cap at 99% until we actually mark the file as uploaded.
-						files[fileIndex].progress = Math.max(0, Math.min(99, progress));
-						files = files;
-					}
-				};
-
-				try {
-					if (isHeicLikeImage(file)) {
-						let converted: any;
-						try {
-							converted = await convertHeicToJpeg(file, { quality: 0.92 });
-						} catch (conversionErr) {
-							const conversionText = getErrorText(conversionErr);
-							throw new Error(
-								conversionText
-									? `HEIC/HEIF conversion failed: ${conversionText}`
-									: 'HEIC/HEIF conversion failed'
-							);
-						}
-						const outputName = replaceExtension(file.name || 'image', '.jpg');
-						fileToUpload = new File([converted as BlobPart], outputName, {
-							type: 'image/jpeg',
-							lastModified: file.lastModified
-						});
-
-						const jpegPreviewUrl = URL.createObjectURL(fileToUpload);
-						URL.revokeObjectURL(previewUrl);
-						previewUrl = jpegPreviewUrl;
-
-						const fileIndex = files.findIndex((f) => f.itemId === tempImageId);
-						if (fileIndex !== -1) {
-							files[fileIndex].url = previewUrl;
-							files = files;
-						}
-					}
-
-					const uploadedFile = await uploadFile(localStorage.token, fileToUpload, null, {
-						onProgress: updateProgress,
-						signal: abortController.signal
+					const outputName = replaceExtension(file.name || 'image', '.jpg');
+					fileToUpload = new File([converted as BlobPart], outputName, {
+						type: 'image/jpeg',
+						lastModified: file.lastModified
 					});
 
-					if (!uploadedFile) {
-						throw new Error('Upload failed: server returned an empty response');
-					}
-
+					const jpegPreviewUrl = URL.createObjectURL(fileToUpload);
 					URL.revokeObjectURL(previewUrl);
+					previewUrl = jpegPreviewUrl;
 
 					const fileIndex = files.findIndex((f) => f.itemId === tempImageId);
-					if (fileIndex === -1 || canceledImageUploads.has(tempImageId)) {
-						try {
-							await deleteFileById(localStorage.token, uploadedFile.id);
-						} catch (err) {
-							console.error(err);
-						}
-						return;
+					if (fileIndex !== -1) {
+						files[fileIndex].url = previewUrl;
+						files = files;
 					}
-
-					files[fileIndex] = {
-						type: 'image',
-						url: `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}/content`,
-						status: 'uploaded',
-						progress: 100,
-						itemId: tempImageId,
-						file: uploadedFile,
-						id: uploadedFile.id
-					};
-					files = files;
-				} catch (err: any) {
-					URL.revokeObjectURL(previewUrl);
-
-					const isAbortError = err?.name === 'AbortError';
-					if (isAbortError || canceledImageUploads.has(tempImageId)) {
-						files = files.filter((f) => f.itemId !== tempImageId);
-						return;
-					}
-
-					console.error(err);
-					files = files.filter((f) => f.itemId !== tempImageId);
-					const errorText = getErrorText(err);
-					const name = file?.name || 'image';
-					toast.error(
-						errorText ? `${name}: ${errorText}` : `${name}: ${$i18n.t('Failed to upload image')}`
-					);
-				} finally {
-					canceledImageUploads.delete(tempImageId);
-					imageUploadAbortControllers.delete(tempImageId);
 				}
-			};
 
-			const maxConcurrentUploads = $mobile ? 2 : 4;
-			const queue = [...inputFilesArray];
-			const workers = Array.from({ length: Math.min(maxConcurrentUploads, queue.length) }, async () => {
+				const uploadedFile = await uploadFile(localStorage.token, fileToUpload, null, {
+					onProgress: updateProgress,
+					signal: abortController.signal
+				});
+
+				if (!uploadedFile) {
+					throw new Error('Upload failed: server returned an empty response');
+				}
+
+				URL.revokeObjectURL(previewUrl);
+
+				const fileIndex = files.findIndex((f) => f.itemId === tempImageId);
+				if (fileIndex === -1 || canceledImageUploads.has(tempImageId)) {
+					try {
+						await deleteFileById(localStorage.token, uploadedFile.id);
+					} catch (err) {
+						console.error(err);
+					}
+					return;
+				}
+
+				files[fileIndex] = {
+					type: 'image',
+					url: `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}/content`,
+					status: 'uploaded',
+					progress: 100,
+					itemId: tempImageId,
+					file: uploadedFile,
+					id: uploadedFile.id
+				};
+				files = files;
+			} catch (err: any) {
+				URL.revokeObjectURL(previewUrl);
+
+				const isAbortError = err?.name === 'AbortError';
+				if (isAbortError || canceledImageUploads.has(tempImageId)) {
+					files = files.filter((f) => f.itemId !== tempImageId);
+					return;
+				}
+
+				console.error(err);
+				files = files.filter((f) => f.itemId !== tempImageId);
+				const errorText = getErrorText(err);
+				const name = file?.name || 'image';
+				toast.error(
+					errorText ? `${name}: ${errorText}` : `${name}: ${$i18n.t('Failed to upload image')}`
+				);
+			} finally {
+				canceledImageUploads.delete(tempImageId);
+				imageUploadAbortControllers.delete(tempImageId);
+			}
+		};
+
+		const maxConcurrentUploads = $mobile ? 2 : 4;
+		const queue = [...inputFilesArray];
+		const workers = Array.from(
+			{ length: Math.min(maxConcurrentUploads, queue.length) },
+			async () => {
 				while (queue.length > 0) {
 					const nextFile = queue.shift();
 					if (nextFile) {
 						await handleInputFile(nextFile);
 					}
 				}
-			});
+			}
+		);
 
-			void Promise.all(workers);
-		};
+		void Promise.all(workers);
+	};
 
 	const onDragOver = (e) => {
 		e.preventDefault();
@@ -1144,9 +1149,13 @@
 		if (e.key === 'Escape') {
 			console.log('Escape');
 			dragged = false;
-			
+
 			// Stop response if generating (allows Escape to work even when input is not focused)
-			if (generating || (taskIds && taskIds.length > 0) || (history?.currentId && history.messages[history.currentId]?.done != true)) {
+			if (
+				generating ||
+				(taskIds && taskIds.length > 0) ||
+				(history?.currentId && history.messages[history.currentId]?.done != true)
+			) {
 				stopResponse();
 			}
 		}
@@ -1574,26 +1583,28 @@
 													<div class="absolute top-1.5 right-1.5 flex gap-1">
 														<button
 															class="p-1.5 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow-sm {($settings?.highContrastMode ??
-															false) || $mobile || file.status === 'uploading'
+																false) ||
+															$mobile ||
+															file.status === 'uploading'
 																? ''
 																: 'group-hover:opacity-100 opacity-0 transition-opacity'}"
 															type="button"
 															aria-label={$i18n.t('Remove file')}
-																on:click={() => {
-																	const fileToRemove = files[fileIdx];
-																	if (
-																		fileToRemove?.type === 'image' &&
-																		fileToRemove?.status === 'uploading' &&
-																		fileToRemove?.itemId
-																	) {
-																		canceledImageUploads.add(fileToRemove.itemId);
-																		imageUploadAbortControllers.get(fileToRemove.itemId)?.abort();
-																		imageUploadAbortControllers.delete(fileToRemove.itemId);
-																	}
+															on:click={() => {
+																const fileToRemove = files[fileIdx];
+																if (
+																	fileToRemove?.type === 'image' &&
+																	fileToRemove?.status === 'uploading' &&
+																	fileToRemove?.itemId
+																) {
+																	canceledImageUploads.add(fileToRemove.itemId);
+																	imageUploadAbortControllers.get(fileToRemove.itemId)?.abort();
+																	imageUploadAbortControllers.delete(fileToRemove.itemId);
+																}
 
-																	const url = fileToRemove?.url;
-																	if (typeof url === 'string' && url.startsWith('blob:')) {
-																		URL.revokeObjectURL(url);
+																const url = fileToRemove?.url;
+																if (typeof url === 'string' && url.startsWith('blob:')) {
+																	URL.revokeObjectURL(url);
 																}
 
 																files.splice(fileIdx, 1);
@@ -1897,51 +1908,53 @@
 											class="flex self-center w-[1px] h-5 mx-1 bg-gray-200/50 dark:bg-gray-800/50"
 										/>
 
-									{#if showWebSearchButton}
-										<Tooltip content={$i18n.t('Web Search')} placement="top">
-											<button
-												on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
-												type="button"
-												class="group p-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
-												($settings?.webSearch ?? false) === 'always'
-													? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-600/10 border border-sky-200/40 dark:border-sky-500/20'
-													: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
-											>
-												<GlobeAlt className="size-5" strokeWidth="1.75" />
-												{#if webSearchEnabled}
-													<div class="hidden group-hover:block">
-														<XMark className="size-4" strokeWidth="1.75" />
-													</div>
-												{/if}
-											</button>
-										</Tooltip>
-									{/if}
-
-									{#if toolSelectionReady}
-										{#each activeServerToolIds as toolId (toolId)}
-											<Tooltip content={getToolLabel(toolId)} placement="top">
+										{#if showWebSearchButton}
+											<Tooltip content={$i18n.t('Web Search')} placement="top">
 												<button
-													on:click|preventDefault={() => {
-														selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
-												}}
-												type="button"
-												class="group px-2 py-1.5 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-600/10 border border-sky-200/40 dark:border-sky-500/20"
-												aria-label={$i18n.t('Disable {{NAME}}', { NAME: getToolLabel(toolId) })}
-											>
-												<Wrench className="size-4" strokeWidth="1.75" />
-												<span class="max-w-24 truncate text-xs font-medium">{getToolLabel(toolId)}</span>
-												<div class="hidden group-hover:block">
-													<XMark className="size-4" strokeWidth="1.75" />
-												</div>
-											</button>
-										</Tooltip>
-										{/each}
-									{/if}
+													on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
+													type="button"
+													class="group p-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
+													($settings?.webSearch ?? false) === 'always'
+														? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-600/10 border border-sky-200/40 dark:border-sky-500/20'
+														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
+												>
+													<GlobeAlt className="size-5" strokeWidth="1.75" />
+													{#if webSearchEnabled}
+														<div class="hidden group-hover:block">
+															<XMark className="size-4" strokeWidth="1.75" />
+														</div>
+													{/if}
+												</button>
+											</Tooltip>
+										{/if}
 
-									{#if showStudyModeButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || (toggleFilters && toggleFilters.length > 0)}
-										<IntegrationsMenu
-											selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
-											{toggleFilters}
+										{#if toolSelectionReady}
+											{#each activeServerToolIds as toolId (toolId)}
+												<Tooltip content={getToolLabel(toolId)} placement="top">
+													<button
+														on:click|preventDefault={() => {
+															selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
+														}}
+														type="button"
+														class="group px-2 py-1.5 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-600/10 border border-sky-200/40 dark:border-sky-500/20"
+														aria-label={$i18n.t('Disable {{NAME}}', { NAME: getToolLabel(toolId) })}
+													>
+														<Wrench className="size-4" strokeWidth="1.75" />
+														<span class="max-w-24 truncate text-xs font-medium"
+															>{getToolLabel(toolId)}</span
+														>
+														<div class="hidden group-hover:block">
+															<XMark className="size-4" strokeWidth="1.75" />
+														</div>
+													</button>
+												</Tooltip>
+											{/each}
+										{/if}
+
+										{#if showStudyModeButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || (toggleFilters && toggleFilters.length > 0)}
+											<IntegrationsMenu
+												selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
+												{toggleFilters}
 												showWebSearchButton={false}
 												{showStudyModeButton}
 												{showImageGenerationButton}
@@ -1995,12 +2008,12 @@
 										{/if}
 
 										<div class="ml-1 flex gap-1.5">
-										{#if toolSelectionReady && (selectedToolIds ?? []).length > 0}
-											<Tooltip
-												content={$i18n.t('{{COUNT}} Available Tools', {
-													COUNT: selectedToolIds.length
-												})}
-											>
+											{#if toolSelectionReady && (selectedToolIds ?? []).length > 0}
+												<Tooltip
+													content={$i18n.t('{{COUNT}} Available Tools', {
+														COUNT: selectedToolIds.length
+													})}
+												>
 													<button
 														class="translate-y-[0.5px] px-1 flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg self-center transition"
 														aria-label="Available Tools"
@@ -2074,10 +2087,10 @@
 																stroke-linejoin="round"
 																class="size-4"
 															>
-															<path
-																d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-															/>
-														</svg>
+																<path
+																	d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+																/>
+															</svg>
 															<span class="text-xs font-medium">{reasoningEffort}</span>
 
 															<select
