@@ -124,6 +124,8 @@
 	$: isSvg = getFileExt(selectedFile) === 'svg';
 	$: isNotebook = getFileExt(selectedFile) === 'ipynb';
 	$: isCode = isCodeFile(selectedFile);
+	$: isPreviewFormat = isMarkdown || isCsv || isJson || isSvg || isNotebook;
+	$: isCodeEditorFile = isCode && !isPreviewFormat;
 	$: isOfficeFile = OFFICE_EXTS.has(getFileExt(selectedFile));
 	$: isTextFile =
 		fileContent !== null && fileImageUrl === null && filePdfData === null && !isOfficeFile;
@@ -745,7 +747,7 @@
 					</Tooltip>
 				{:else if isHtml}
 					<!-- HTML preview mode: no edit/save buttons -->
-				{:else if isCode}
+				{:else if isCodeEditorFile}
 					<Tooltip content={$i18n.t('Save')}>
 						<button
 							class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
