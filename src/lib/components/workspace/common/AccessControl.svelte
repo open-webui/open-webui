@@ -519,7 +519,7 @@
 		{#if hasPublicReadGrant(accessGrants ?? []) && accessRoles.includes('write')}
 			<div class="flex w-full justify-between mt-2 ml-0.5">
 				<div class="self-center text-xs">
-					{$i18n.t('Allow everyone to edit')}
+					{$i18n.t('Allow public write access')}
 				</div>
 				<Switch
 					state={hasPublicWriteGrant(accessGrants ?? [])}
