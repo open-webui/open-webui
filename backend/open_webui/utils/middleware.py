@@ -3402,6 +3402,11 @@ async def streaming_chat_response_handler(response, ctx):
 
                     response_tool_calls = []
 
+                    # Responses API output_index values are relative to the
+                    # current response (0, 1, ...). During re-invocations,
+                    # output has accumulated history, so we offset indices.
+                    responses_output_offset = len(output)
+
                     delta_count = 0
                     delta_chunk_size = max(
                         CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE,
@@ -3470,6 +3475,10 @@ async def streaming_chat_response_handler(response, ctx):
                                     )
                                 # Check for Responses API events (type field starts with "response.")
                                 elif data.get('type', '').startswith('response.'):
+                                    # Offset output_index for re-invocations
+                                    if responses_output_offset and 'output_index' in data:
+                                        data = {**data, 'output_index': data['output_index'] + responses_output_offset}
+
                                     output, response_metadata = handle_responses_streaming_event(data, output)
 
                                     processed_data = {
@@ -3480,9 +3489,14 @@ async def streaming_chat_response_handler(response, ctx):
                                     # print(data)
                                     # print(processed_data)
 
-                                    # Merge any metadata (usage, done, etc.)
+                                    # Merge any metadata (usage, etc.)
+                                    # Strip 'done' — response.completed emits
+                                    # it but we may still need to execute tool
+                                    # calls. The outer middleware manages the
+                                    # actual completion signal.
                                     if response_metadata:
                                         processed_data.update(response_metadata)
+                                        processed_data.pop('done', None)
 
                                     await event_emitter(
                                         {
@@ -3889,9 +3903,18 @@ async def streaming_chat_response_handler(response, ctx):
 
                     # Responses API path: extract function_call items from output
                     if not response_tool_calls and output:
+                        # Collect call_ids that already have results
+                        handled_call_ids = {
+                            item.get('call_id')
+                            for item in output
+                            if item.get('type') == 'function_call_output'
+                        }
                         responses_api_tool_calls = []
                         for item in output:
-                            if item.get('type') == 'function_call' and item.get('status') != 'completed':
+                            if (
+                                item.get('type') == 'function_call'
+                                and item.get('call_id') not in handled_call_ids
+                            ):
                                 arguments = item.get('arguments', '{}')
                                 responses_api_tool_calls.append({
                                     'id': item.get('call_id', ''),
@@ -4210,7 +4233,17 @@ async def streaming_chat_response_handler(response, ctx):
                         )
 
                         if isinstance(res, StreamingResponse):
+                            # Save output before re-invocation. Responses API
+                            # response.completed replaces the entire output
+                            # with only the new response's items, losing tool
+                            # call history. Restore previous items afterward.
+                            output_prefix = list(output)
                             await stream_body_handler(res, new_form_data)
+                            if output_prefix and (
+                                not output
+                                or output[0].get('id') != output_prefix[0].get('id')
+                            ):
+                                output[:0] = output_prefix
                         else:
                             break
                     except Exception as e:
