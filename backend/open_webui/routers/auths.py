@@ -566,22 +566,23 @@ async def signin(
             )
 
         user = Auths.authenticate_user_by_email(email, db=db)
-        if WEBUI_AUTH_TRUSTED_GROUPS_HEADER and user:
-            group_names = request.headers.get(WEBUI_AUTH_TRUSTED_GROUPS_HEADER, '').split(',')
-            group_names = [name.strip() for name in group_names if name.strip()]
+        if user:
+            if WEBUI_AUTH_TRUSTED_GROUPS_HEADER:
+                group_names = request.headers.get(WEBUI_AUTH_TRUSTED_GROUPS_HEADER, '').split(',')
+                group_names = [name.strip() for name in group_names if name.strip()]
 
-            if group_names:
-                Groups.sync_groups_by_group_names(user.id, group_names, db=db)
+                if group_names:
+                    Groups.sync_groups_by_group_names(user.id, group_names, db=db)
 
-        if WEBUI_AUTH_TRUSTED_ROLE_HEADER and user:
-            trusted_role = request.headers.get(WEBUI_AUTH_TRUSTED_ROLE_HEADER, '').lower().strip()
-            if trusted_role in {'admin', 'user', 'pending'}:
-                if user.role != trusted_role:
-                    Users.update_user_role_by_id(user.id, trusted_role, db=db)
-            elif trusted_role:
-                log.warning(
-                    f'Ignoring invalid trusted role header value: {trusted_role}'
-                )
+            if WEBUI_AUTH_TRUSTED_ROLE_HEADER:
+                trusted_role = request.headers.get(WEBUI_AUTH_TRUSTED_ROLE_HEADER, '').lower().strip()
+                if trusted_role in {'admin', 'user', 'pending'}:
+                    if user.role != trusted_role:
+                        Users.update_user_role_by_id(user.id, trusted_role, db=db)
+                elif trusted_role:
+                    log.warning(
+                        f'Ignoring invalid trusted role header value: {trusted_role}'
+                    )
 
     elif WEBUI_AUTH == False:
         admin_email = 'admin@localhost'
