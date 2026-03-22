@@ -45,7 +45,8 @@
 		showEmbeds,
 		selectedTerminalId,
 		showFileNavPath,
-		showFileNavDir
+		showFileNavDir,
+		chatRequestQueues
 	} from '$lib/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -170,8 +171,7 @@
 	let files = [];
 	let params = {};
 
-	// Message queue for storing messages while generating
-	let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
+
 
 	$: if (chatIdProp) {
 		navigateHandler();
@@ -180,16 +180,10 @@
 	const navigateHandler = async () => {
 		loading = true;
 
-		// Save current queue to sessionStorage before navigating away
-		if (messageQueue.length > 0 && $chatId) {
-			sessionStorage.setItem(`chat-queue-${$chatId}`, JSON.stringify(messageQueue));
-		}
-
 		prompt = '';
 		messageInput?.setText('');
 
 		files = [];
-		messageQueue = [];
 		selectedToolIds = [];
 		selectedFilterIds = [];
 		webSearchEnabled = false;
@@ -206,28 +200,11 @@
 
 			await tick();
 
-			// Restore queue from sessionStorage
-			const storedQueueData = sessionStorage.getItem(`chat-queue-${chatIdProp}`);
-			if (storedQueueData) {
-				try {
-					const restoredQueue = JSON.parse(storedQueueData);
-
-					if (restoredQueue.length > 0) {
-						sessionStorage.removeItem(`chat-queue-${chatIdProp}`);
-						// Check if there are pending tasks (still generating)
-						const hasPendingTask = taskIds !== null && taskIds.length > 0;
-						if (!hasPendingTask) {
-							// No pending tasks - process the queue
-							files = restoredQueue.flatMap((m) => m.files);
-							await tick();
-							const combinedPrompt = restoredQueue.map((m) => m.prompt).join('\n\n');
-							await submitPrompt(combinedPrompt);
-						} else {
-							// Has pending tasks - show as queued (chatCompletedHandler will process)
-							messageQueue = restoredQueue;
-						}
-					}
-				} catch (e) {}
+			// Process any queued requests if the chat is idle
+			const lastMessage = history.currentId ? history.messages[history.currentId] : null;
+			const isIdle = !lastMessage || lastMessage.role !== 'assistant' || lastMessage.done;
+			if (isIdle) {
+				await processNextInQueue(chatIdProp);
 			}
 
 			if (storageChatInput) {
@@ -444,6 +421,7 @@
 						for (const messageId of history.messages[message.parentId].childrenIds) {
 							history.messages[messageId].done = true;
 						}
+						await processNextInQueue($chatId);
 					} else {
 						message.done = true;
 					}
@@ -562,6 +540,9 @@
 
 				history.messages[event.message_id] = message;
 			}
+		} else {
+			// Non-active chat completion: queue stays in the global store.
+			// navigateHandler will process it when the user returns to that chat.
 		}
 	};
 
@@ -1155,7 +1136,6 @@
 		chatFiles = [];
 		params = {};
 		taskIds = null;
-		messageQueue = [];
 
 		if ($page.url.searchParams.get('youtube')) {
 			await uploadWeb(`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`);
@@ -1307,6 +1287,24 @@
 			});
 		}
 	};
+
+	const processNextInQueue = async (targetChatId: string) => {
+		const queue = $chatRequestQueues[targetChatId];
+		if (!queue || queue.length === 0) return;
+
+		const combinedPrompt = queue.map((m) => m.prompt).join('\n\n');
+		const combinedFiles = queue.flatMap((m) => m.files);
+
+		chatRequestQueues.update((q) => {
+			const { [targetChatId]: _, ...rest } = q;
+			return rest;
+		});
+
+		files = combinedFiles;
+		await tick();
+		await submitPrompt(combinedPrompt);
+	};
+
 	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
 		const res = await chatCompleted(localStorage.token, {
 			model: modelId,
@@ -1716,16 +1714,8 @@
 				createMessagesList(history, message.id)
 			);
 
-			// Process message queue immediately after main response finishes
-			if (messageQueue.length > 0) {
-				const combinedPrompt = messageQueue.map((m) => m.prompt).join('\n\n');
-				const combinedFiles = messageQueue.flatMap((m) => m.files);
-				messageQueue = [];
-
-				files = combinedFiles;
-				await tick();
-				await submitPrompt(combinedPrompt);
-			}
+			// Process next queued request if any
+			await processNextInQueue(chatId);
 		}
 
 		console.log(data);
@@ -1789,16 +1779,15 @@
 
 		if (isGenerating) {
 			if ($settings?.enableMessageQueue ?? true) {
-				// Queue the message
+				// Enqueue the request
 				const _files = structuredClone(files);
-				messageQueue = [
-					...messageQueue,
-					{
-						id: uuidv4(),
-						prompt: userPrompt,
-						files: _files
-					}
-				];
+				chatRequestQueues.update((q) => ({
+					...q,
+					[$chatId]: [
+						...(q[$chatId] ?? []),
+						{ id: uuidv4(), prompt: userPrompt, files: _files }
+					]
+				}));
 				// Clear input
 				messageInput?.setText('');
 				prompt = '';
@@ -2392,6 +2381,8 @@
 			generationController?.abort();
 			generationController = null;
 		}
+
+		await processNextInQueue($chatId);
 	};
 
 	const submitMessage = async (parentId, prompt) => {
@@ -2845,12 +2836,16 @@
 									{stopResponse}
 									{createMessagePair}
 									{onUpload}
-									{messageQueue}
+									messageQueue={$chatRequestQueues[$chatId] ?? []}
 									onQueueSendNow={async (id) => {
-										const item = messageQueue.find((m) => m.id === id);
+										const queue = $chatRequestQueues[$chatId] ?? [];
+										const item = queue.find((m) => m.id === id);
 										if (item) {
 											// Remove from queue
-											messageQueue = messageQueue.filter((m) => m.id !== id);
+											chatRequestQueues.update((q) => ({
+												...q,
+												[$chatId]: queue.filter((m) => m.id !== id)
+											}));
 											// Stop current generation first
 											await stopResponse();
 											await tick();
@@ -2861,17 +2856,25 @@
 										}
 									}}
 									onQueueEdit={(id) => {
-										const item = messageQueue.find((m) => m.id === id);
+										const queue = $chatRequestQueues[$chatId] ?? [];
+										const item = queue.find((m) => m.id === id);
 										if (item) {
 											// Remove from queue
-											messageQueue = messageQueue.filter((m) => m.id !== id);
+											chatRequestQueues.update((q) => ({
+												...q,
+												[$chatId]: queue.filter((m) => m.id !== id)
+											}));
 											// Set files and restore prompt to input
 											files = item.files;
 											messageInput?.setText(item.prompt);
 										}
 									}}
 									onQueueDelete={(id) => {
-										messageQueue = messageQueue.filter((m) => m.id !== id);
+										const queue = $chatRequestQueues[$chatId] ?? [];
+										chatRequestQueues.update((q) => ({
+											...q,
+											[$chatId]: queue.filter((m) => m.id !== id)
+										}));
 									}}
 									onChange={(data) => {
 										if (!$temporaryChatEnabled) {
