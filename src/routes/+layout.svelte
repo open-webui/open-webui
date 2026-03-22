@@ -614,25 +614,100 @@
 		});
 
 		let backendConfig = null;
+
+		// SWR: Load from cache immediately for instant splash screen dismissal
 		try {
-			backendConfig = await getBackendConfig();
+			const cachedBackendConfig = localStorage.getItem('backendConfig');
+			if (cachedBackendConfig) {
+				backendConfig = JSON.parse(cachedBackendConfig);
+				config.set(backendConfig);
+				WEBUI_NAME.set(backendConfig.name);
+			}
+
+			const cachedSessionUser = localStorage.getItem('sessionUser');
+			if (cachedSessionUser) {
+				user.set(JSON.parse(cachedSessionUser));
+			}
+
+			if (cachedBackendConfig && (!localStorage.token || cachedSessionUser)) {
+				initI18n(localStorage?.locale);
+				loaded = true;
+				document.getElementById('splash-screen')?.remove();
+			}
+		} catch (e) {
+			console.error('Error parsing cached data', e);
+		}
+
+		// Run initialization queries in parallel if we have a token
+		try {
+			if (localStorage.token) {
+				const [_config, _sessionUser, _languages] = await Promise.all([
+					getBackendConfig(),
+					getSessionUser(localStorage.token).catch((error) => {
+						toast.error(`${error}`);
+						return null;
+					}),
+					!localStorage.locale ? getLanguages() : Promise.resolve(null)
+				]);
+				backendConfig = _config;
+
+				if (_config) {
+					localStorage.setItem('backendConfig', JSON.stringify(_config));
+				}
+
+				if (_sessionUser) {
+					localStorage.setItem('sessionUser', JSON.stringify(_sessionUser));
+					await user.set(_sessionUser);
+				} else {
+					localStorage.removeItem('token');
+					localStorage.removeItem('sessionUser');
+					const currentUrl = `${window.location.pathname}${window.location.search}`;
+					if ($page.url.pathname !== '/auth' && !$page.url.pathname.startsWith('/s/')) {
+						await goto(`/auth?redirect=${encodeURIComponent(currentUrl)}`);
+					}
+				}
+
+				initI18n(localStorage?.locale);
+				if (!localStorage.locale && _languages) {
+					const browserLanguages = navigator.languages
+						? navigator.languages
+						: [navigator.language || navigator.userLanguage];
+					const lang = backendConfig?.default_locale
+						? backendConfig.default_locale
+						: bestMatchingLanguage(_languages, browserLanguages, 'en-US');
+					changeLanguage(lang);
+				}
+			} else {
+				// No token, just get config
+				backendConfig = await getBackendConfig();
+
+				if (backendConfig) {
+					localStorage.setItem('backendConfig', JSON.stringify(backendConfig));
+				}
+
+				initI18n(localStorage?.locale);
+				if (!localStorage.locale) {
+					const languages = await getLanguages();
+					const browserLanguages = navigator.languages
+						? navigator.languages
+						: [navigator.language || navigator.userLanguage];
+					const lang = backendConfig?.default_locale
+						? backendConfig.default_locale
+						: bestMatchingLanguage(languages, browserLanguages, 'en-US');
+					changeLanguage(lang);
+				}
+
+				const currentUrl = `${window.location.pathname}${window.location.search}`;
+				if ($page.url.pathname !== '/auth' && !$page.url.pathname.startsWith('/s/')) {
+					await goto(`/auth?redirect=${encodeURIComponent(currentUrl)}`);
+				}
+			}
 			console.log('Backend config:', backendConfig);
 		} catch (error) {
 			console.error('Error loading backend config:', error);
-		}
-		// Initialize i18n even if we didn't get a backend config,
-		// so `/error` can show something that's not `undefined`.
-
-		initI18n(localStorage?.locale);
-		if (!localStorage.locale) {
-			const languages = await getLanguages();
-			const browserLanguages = navigator.languages
-				? navigator.languages
-				: [navigator.language || navigator.userLanguage];
-			const lang = backendConfig.default_locale
-				? backendConfig.default_locale
-				: bestMatchingLanguage(languages, browserLanguages, 'en-US');
-			changeLanguage(lang);
+			// Initialize i18n even if we didn't get a backend config,
+			// so `/error` can show something that's not `undefined`.
+			initI18n(localStorage?.locale);
 		}
 
 		if (backendConfig) {
@@ -642,33 +717,6 @@
 
 			if ($config) {
 				await setupSocket($config.features?.enable_websocket ?? true);
-
-				const currentUrl = `${window.location.pathname}${window.location.search}`;
-				const encodedUrl = encodeURIComponent(currentUrl);
-
-				if (localStorage.token) {
-					// Get Session User Info
-					const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
-						toast.error(`${error}`);
-						return null;
-					});
-
-					if (sessionUser) {
-						await user.set(sessionUser);
-						await config.set(await getBackendConfig());
-					} else {
-						// Redirect Invalid Session User to /auth Page
-						localStorage.removeItem('token');
-						await goto(`/auth?redirect=${encodedUrl}`);
-					}
-				} else {
-					// Don't redirect if we're already on the auth page or viewing a shared chat
-					// Needed because we pass in tokens from OAuth logins via URL fragments
-					// Shared chats (/s/[id]) should be publicly accessible
-					if ($page.url.pathname !== '/auth' && !$page.url.pathname.startsWith('/s/')) {
-						await goto(`/auth?redirect=${encodedUrl}`);
-					}
-				}
 			}
 		} else {
 			// Redirect to /error when Backend Not Detected

@@ -11,7 +11,7 @@
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
-	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
+	const loadCodeBlock = () => import('$lib/components/chat/Messages/CodeBlock.svelte');
 	import MarkdownInlineTokens from '$lib/components/chat/Messages/Markdown/MarkdownInlineTokens.svelte';
 	import KatexRenderer from './KatexRenderer.svelte';
 	import AlertRenderer, { alertComponent } from './AlertRenderer.svelte';
@@ -99,27 +99,30 @@
 		</svelte:element>
 	{:else if token.type === 'code'}
 		{#if token.raw.includes('```')}
-			<CodeBlock
-				id={`${id}-${tokenIdx}`}
-				collapsed={$settings?.collapseCodeBlocks ?? false}
-				{token}
-				lang={token?.lang ?? ''}
-				code={token?.text ?? ''}
-				{attributes}
-				{save}
-				{preview}
-				edit={editCodeBlock}
-				stickyButtonsClassName={topPadding ? 'top-7' : 'top-0'}
-				onSave={(value) => {
-					onSave({
-						raw: token.raw,
-						oldContent: token.text,
-						newContent: value
-					});
-				}}
-				{onUpdate}
-				{onPreview}
-			/>
+			{#await loadCodeBlock() then CodeBlock}
+				<svelte:component
+					this={CodeBlock.default}
+					id={`${id}-${tokenIdx}`}
+					collapsed={$settings?.collapseCodeBlocks ?? false}
+					{token}
+					lang={token?.lang ?? ''}
+					code={token?.text ?? ''}
+					{attributes}
+					{save}
+					{preview}
+					edit={editCodeBlock}
+					stickyButtonsClassName={topPadding ? 'top-7' : 'top-0'}
+					onSave={(value) => {
+						onSave({
+							raw: token.raw,
+							oldContent: token.text,
+							newContent: value
+						});
+					}}
+					{onUpdate}
+					{onPreview}
+				/>
+			{/await}
 		{:else}
 			{token.text}
 		{/if}

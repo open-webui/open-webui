@@ -105,6 +105,7 @@
 	import { updateFolderById } from '$lib/apis/folders';
 
 	export let chatIdProp = '';
+	export let preloadedData = null;
 
 	let loading = true;
 
@@ -1489,18 +1490,39 @@
 			temporaryChatEnabled.set(false);
 		}
 
-		chat = await getChatById(localStorage.token, currentChatId).catch(async (error) => {
-			await goto('/');
-			return null;
-		});
+		let _chat, _tags, _userSettings, _taskRes;
+
+		if (preloadedData && preloadedData.chatId === currentChatId && preloadedData.chat) {
+			_chat = preloadedData.chat;
+			_tags = preloadedData.tags;
+			_userSettings = preloadedData.userSettings;
+			_taskRes = preloadedData.taskRes;
+			// Clear preloadedData so subsequent loads (like manual refresh) hit the network
+			preloadedData = null;
+		} else {
+			// Parallelize network requests for much faster chat loading
+			[_chat, _tags, _userSettings, _taskRes] = await Promise.all([
+				getChatById(localStorage.token, currentChatId).catch(async (error) => {
+					await goto('/');
+					return null;
+				}),
+				getTagsById(localStorage.token, currentChatId).catch(async (error) => {
+					return [];
+				}),
+				getUserSettings(localStorage.token).catch(() => null),
+				getTaskIdsByChatId(localStorage.token, currentChatId).catch((error) => {
+					return null;
+				})
+			]);
+		}
+
+		chat = _chat;
 
 		if (!chat) {
 			return null;
 		}
 
-		tags = await getTagsById(localStorage.token, currentChatId).catch(async (error) => {
-			return [];
-		});
+		tags = _tags;
 
 		const chatContent = chat.chat;
 
@@ -1528,10 +1550,8 @@
 
 		chatTitle.set(chatContent.title);
 
-		const userSettings = await getUserSettings(localStorage.token);
-
-		if (userSettings) {
-			await settings.set(userSettings.ui);
+		if (_userSettings) {
+			await settings.set(_userSettings.ui);
 		} else {
 			await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
 		}
@@ -1560,11 +1580,7 @@
 			}
 		}
 
-		const taskRes = await getTaskIdsByChatId(localStorage.token, currentChatId).catch((error) => {
-			return null;
-		});
-
-		taskIds = taskRes?.task_ids ?? null;
+		taskIds = _taskRes?.task_ids ?? null;
 
 		await tick();
 
