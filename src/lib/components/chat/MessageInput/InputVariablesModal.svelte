@@ -17,7 +17,7 @@
 
 	export let onSave = (e) => {};
 
-	let loading = false;
+	let loading = true;
 	let variableValues = {};
 
 	const submitHandler = async () => {

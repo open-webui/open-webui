@@ -97,6 +97,7 @@ from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
     get_content_from_message,
     convert_output_to_messages,
+    strip_empty_content_blocks,
 )
 from open_webui.utils.tools import (
     get_tools,
@@ -2633,6 +2634,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 },
             }
         )
+
+    # Strip empty text content blocks from multimodal messages
+    # to prevent errors from providers like Gemini and Claude
+    form_data['messages'] = strip_empty_content_blocks(form_data.get('messages', []))
 
     return form_data, metadata, events
 
