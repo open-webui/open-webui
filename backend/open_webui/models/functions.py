@@ -86,6 +86,8 @@ class FunctionResponse(BaseModel):
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class FunctionUserResponse(FunctionResponse):
     user: Optional[UserResponse] = None
