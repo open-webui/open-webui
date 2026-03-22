@@ -2047,6 +2047,29 @@ Strictly return in JSON format:
 </chat_history>
 """
 
+IMAGE_RAG_QUERY_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+    "IMAGE_RAG_QUERY_GENERATION_PROMPT_TEMPLATE",
+    "task.query.image_rag.prompt_template",
+    os.environ.get("IMAGE_RAG_QUERY_GENERATION_PROMPT_TEMPLATE", ""),
+)
+
+DEFAULT_IMAGE_RAG_QUERY_GENERATION_PROMPT_TEMPLATE = """### Task:
+Analyze the provided image and generate 1-3 search queries that would help retrieve relevant information from a knowledge base. The queries should capture the key subjects, concepts, and context visible in the image.
+
+### Guidelines:
+- Respond **EXCLUSIVELY** with a JSON object. Any form of extra commentary, explanation, or additional text is strictly prohibited.
+- Generate queries that describe what is shown in the image, including objects, text, diagrams, or concepts depicted.
+- If the image contains text, include key terms from that text in your queries.
+- Queries should be broad enough to retrieve useful context but specific enough to be relevant.
+- Today's date is: {{CURRENT_DATE}}.
+
+### Output:
+Strictly return in JSON format:
+{
+  "queries": ["query1", "query2"]
+}
+"""
+
 ENABLE_AUTOCOMPLETE_GENERATION = PersistentConfig(
     "ENABLE_AUTOCOMPLETE_GENERATION",
     "task.autocomplete.enable",

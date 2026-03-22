@@ -102,6 +102,7 @@
 	let actionIds = [];
 	let accessGrants = [];
 	let tts = { voice: '' };
+	let ragTopK: number | null = null;
 
 	const submitHandler = async () => {
 		loading = true;
@@ -217,6 +218,14 @@
 			}
 		}
 
+		if (ragTopK !== null && ragTopK > 0) {
+			info.meta.rag_top_k = ragTopK;
+		} else {
+			if (info.meta.rag_top_k) {
+				delete info.meta.rag_top_k;
+			}
+		}
+
 		info.params.system = system.trim() === '' ? null : system;
 		info.params.stop = params.stop
 			? (typeof params.stop === 'string' ? params.stop.split(',') : params.stop).filter((s) =>
@@ -305,6 +314,7 @@
 			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? [];
 			builtinTools = model?.meta?.builtinTools ?? {};
 			tts = { voice: model?.meta?.tts?.voice ?? '' };
+			ragTopK = model?.meta?.rag_top_k ?? null;
 
 			accessGrants = model?.access_grants ?? [];
 
@@ -742,6 +752,22 @@
 					<div class="my-4">
 						<Knowledge bind:selectedItems={knowledge} />
 					</div>
+
+					{#if knowledge.length > 0}
+						<div class="my-2 flex items-center gap-2 px-1">
+							<label class="text-xs text-gray-500 dark:text-gray-400" for="model-rag-top-k">
+								{$i18n.t('Document Snippets Returned')}
+							</label>
+							<input
+								id="model-rag-top-k"
+								type="number"
+								class="w-20 text-xs text-right bg-transparent outline-hidden border border-gray-200 dark:border-gray-700 rounded px-1.5 py-0.5"
+								placeholder={$i18n.t('Global')}
+								bind:value={ragTopK}
+								min="1"
+							/>
+						</div>
+					{/if}
 
 					<div class="my-4">
 						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools ?? []} />

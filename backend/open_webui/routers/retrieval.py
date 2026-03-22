@@ -468,6 +468,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "status": True,
         # RAG settings
         "RAG_TEMPLATE": request.app.state.config.RAG_TEMPLATE,
+        "IMAGE_RAG_QUERY_GENERATION_PROMPT_TEMPLATE": request.app.state.config.IMAGE_RAG_QUERY_GENERATION_PROMPT_TEMPLATE,
         "TOP_K": request.app.state.config.TOP_K,
         "BYPASS_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL,
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
@@ -666,6 +667,7 @@ class WebConfig(BaseModel):
 class ConfigForm(BaseModel):
     # RAG settings
     RAG_TEMPLATE: Optional[str] = None
+    IMAGE_RAG_QUERY_GENERATION_PROMPT_TEMPLATE: Optional[str] = None
     TOP_K: Optional[int] = None
     BYPASS_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
     RAG_FULL_CONTEXT: Optional[bool] = None
@@ -752,6 +754,11 @@ async def update_rag_config(
         form_data.RAG_TEMPLATE
         if form_data.RAG_TEMPLATE is not None
         else request.app.state.config.RAG_TEMPLATE
+    )
+    request.app.state.config.IMAGE_RAG_QUERY_GENERATION_PROMPT_TEMPLATE = (
+        form_data.IMAGE_RAG_QUERY_GENERATION_PROMPT_TEMPLATE
+        if form_data.IMAGE_RAG_QUERY_GENERATION_PROMPT_TEMPLATE is not None
+        else request.app.state.config.IMAGE_RAG_QUERY_GENERATION_PROMPT_TEMPLATE
     )
     request.app.state.config.TOP_K = (
         form_data.TOP_K
@@ -1226,6 +1233,7 @@ async def update_rag_config(
         "status": True,
         # RAG settings
         "RAG_TEMPLATE": request.app.state.config.RAG_TEMPLATE,
+        "IMAGE_RAG_QUERY_GENERATION_PROMPT_TEMPLATE": request.app.state.config.IMAGE_RAG_QUERY_GENERATION_PROMPT_TEMPLATE,
         "TOP_K": request.app.state.config.TOP_K,
         "BYPASS_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL,
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,

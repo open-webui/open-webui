@@ -248,6 +248,7 @@ type KnowledgeUpdateForm = {
 	name?: string;
 	description?: string;
 	data?: object;
+	meta?: object;
 	access_grants?: object[];
 };
 
