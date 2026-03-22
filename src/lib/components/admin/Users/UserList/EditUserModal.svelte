@@ -153,14 +153,14 @@
 									</div>
 
 									<div class="flex flex-col w-full">
-										<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
+										<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Username')}</div>
 
 										<div class="flex-1">
 											<input
 												class="w-full text-sm bg-transparent outline-hidden"
 												type="text"
 												bind:value={_user.name}
-												aria-label={$i18n.t('Name')}
+												aria-label={$i18n.t('Username')}
 												placeholder={$i18n.t('Enter Your Name')}
 												autocomplete="off"
 												required

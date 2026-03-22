@@ -282,7 +282,7 @@
 										{#if mode === 'signup'}
 											<div class="mb-2">
 												<label for="name" class="text-sm font-medium text-left mb-1 block"
-													>{$i18n.t('Name')}</label
+													>{$i18n.t('Username')}</label
 												>
 												<input
 													bind:value={name}

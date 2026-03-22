@@ -143,14 +143,14 @@
 				<div class="flex flex-1 flex-col">
 					<div class=" flex-1">
 						<div class="flex flex-col w-full">
-							<div class=" mb-1 text-xs font-medium">{$i18n.t('Name')}</div>
+							<div class=" mb-1 text-xs font-medium">{$i18n.t('Username')}</div>
 
 							<div class="flex-1">
 								<input
 									class="w-full text-sm dark:text-gray-300 bg-transparent outline-hidden"
 									type="text"
 									bind:value={name}
-									aria-label={$i18n.t('Name')}
+									aria-label={$i18n.t('Username')}
 									required
 									placeholder={$i18n.t('Enter your name')}
 								/>
