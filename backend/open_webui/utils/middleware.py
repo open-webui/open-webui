@@ -3367,6 +3367,9 @@ async def streaming_chat_response_handler(response, ctx):
             usage = None
             prior_output = []
 
+            def full_output():
+                return prior_output + output if prior_output else output
+
             reasoning_tags_param = metadata.get('params', {}).get('reasoning_tags')
             DETECT_REASONING_TAGS = reasoning_tags_param is not False
             DETECT_CODE_INTERPRETER = metadata.get('features', {}).get('code_interpreter', False)
@@ -3476,8 +3479,8 @@ async def streaming_chat_response_handler(response, ctx):
                                     output, response_metadata = handle_responses_streaming_event(data, output)
 
                                     processed_data = {
-                                        'output': prior_output + output,
-                                        'content': serialize_output(prior_output + output),
+                                        'output': full_output(),
+                                        'content': serialize_output(full_output()),
                                     }
 
                                     # print(data)
@@ -3832,13 +3835,13 @@ async def streaming_chat_response_handler(response, ctx):
                                                 metadata['chat_id'],
                                                 metadata['message_id'],
                                                 {
-                                                    'content': serialize_output(output),
-                                                    'output': output,
+                                                    'content': serialize_output(full_output()),
+                                                    'output': full_output(),
                                                 },
                                             )
                                         else:
                                             data = {
-                                                'content': serialize_output(output),
+                                                'content': serialize_output(full_output()),
                                             }
 
                                 if delta:
@@ -3952,26 +3955,32 @@ async def streaming_chat_response_handler(response, ctx):
                     response_tool_calls = tool_calls.pop(0)
 
                     # Append function_call items for each tool call
+                    # (Responses API already has them from streaming, so skip duplicates)
+                    existing_call_ids = {
+                        item.get('call_id') for item in output
+                        if item.get('type') == 'function_call'
+                    }
                     for tc in response_tool_calls:
                         call_id = tc.get('id', '')
-                        func = tc.get('function', {})
-                        output.append(
-                            {
-                                'type': 'function_call',
-                                'id': call_id or output_id('fc'),
-                                'call_id': call_id,
-                                'name': func.get('name', ''),
-                                'arguments': func.get('arguments', '{}'),
-                                'status': 'in_progress',
-                            }
-                        )
+                        if call_id not in existing_call_ids:
+                            func = tc.get('function', {})
+                            output.append(
+                                {
+                                    'type': 'function_call',
+                                    'id': call_id or output_id('fc'),
+                                    'call_id': call_id,
+                                    'name': func.get('name', ''),
+                                    'arguments': func.get('arguments', '{}'),
+                                    'status': 'in_progress',
+                                }
+                            )
 
                     await event_emitter(
                         {
                             'type': 'chat:completion',
                             'data': {
-                                'content': serialize_output(output),
-                                'output': output,
+                                'content': serialize_output(full_output()),
+                                'output': full_output(),
                             },
                         }
                     )
