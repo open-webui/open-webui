@@ -75,7 +75,7 @@ nltk==3.9.3
 Markdown==3.10.2
 beautifulsoup4
 pypandoc==1.16.2
-pandas==3.0.1
+pandas==2.3.3
 openpyxl==3.1.5
 pyxlsb==1.0.10
 xlrd==2.0.2
@@ -89,7 +89,7 @@ opencv-python-headless==4.13.0.92
 rapidocr-onnxruntime==1.4.4
 rank-bm25==0.2.2
 
-onnxruntime==1.24.3
+onnxruntime==1.23.2
 faster-whisper==1.2.1
 
 black==26.1.0
@@ -97,7 +97,7 @@ youtube-transcript-api==1.2.4
 pytube==15.0.0
 
 pydub
-ddgs==9.11.2
+ddgs==9.11.4
 
 azure-ai-documentintelligence==1.0.2
 azure-identity==1.25.2
