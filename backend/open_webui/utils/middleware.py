@@ -1977,6 +1977,7 @@ async def chat_completion_files_handler(
 ) -> tuple[dict, dict[str, list]]:
     __event_emitter__ = extra_params["__event_emitter__"]
     sources = []
+    queries = []
 
     if files := body.get("metadata", {}).get("files", None):
         # Check if all files are in full context mode
