@@ -483,19 +483,22 @@ def serialize_output(output: list) -> str:
             # Check if previous content ends with an opening code fence (e.g., ```python)
             # If so, strip the fence characters since code_interpreter replaces it
             if content_parts:
-                last_part = content_parts[-1]
-                if last_part:
-                    # Preserve trailing whitespace
-                    stripped = last_part.rstrip()
-                    trailing_ws = last_part[len(stripped):]
+                backtick_count = sum(part.count('```') for part in content_parts)
 
-                    backtick_count = sum(part.count('```') for part in content_parts)
-
-                    # Odd count of ``` means opening fence
-                    if backtick_count % 2 == 1:
-                        # Remove trailing backticks from the stripped content
-                        stripped = stripped.rstrip('`').rstrip()
-                    content_parts[-1] = stripped + trailing_ws
+                # Odd count of ``` means opening fence
+                if backtick_count % 2 == 1:
+                    # Iterate backwards to find the last non-empty part
+                    for i in range(len(content_parts) - 1, -1, -1):
+                        part = content_parts[i]
+                        if part:
+                            stripped = part.rstrip()
+                            if stripped:  # Only process if there's actual content after stripping whitespace
+                                # Preserve trailing whitespace
+                                trailing_ws = part[len(stripped):]
+                                # Remove fence pattern: ```<lang> or ``` with any trailing spaces
+                                stripped = re.sub(r'```\w*\s*$', '', stripped).rstrip()
+                                content_parts[i] = stripped + trailing_ws
+                                break
 
             ensure_trailing_newline(content_parts)
 
