@@ -339,7 +339,7 @@ ENABLE_OAUTH_SIGNUP = PersistentConfig(
 OAUTH_MERGE_ACCOUNTS_BY_EMAIL = PersistentConfig(
     "OAUTH_MERGE_ACCOUNTS_BY_EMAIL",
     "oauth.merge_accounts_by_email",
-    os.environ.get("OAUTH_MERGE_ACCOUNTS_BY_EMAIL", "False").lower() == "true",
+    os.environ.get("OAUTH_MERGE_ACCOUNTS_BY_EMAIL", "True").lower() == "true",
 )
 
 OAUTH_PROVIDERS = {}
