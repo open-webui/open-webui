@@ -1528,9 +1528,11 @@ async def search_knowledge_files(
     skip: int = 0,
     __request__: Request = None,
     __user__: dict = None,
+    __model_knowledge__: Optional[list[dict]] = None,
 ) -> str:
     """
-    Search files across knowledge bases the user has access to.
+    Search files by filename across knowledge bases the user has access to.
+    When the model has attached knowledge, searches only within attached KBs and files.
 
     :param query: The search query to find matching files by filename
     :param knowledge_id: Optional KB id to limit search to a specific knowledge base
@@ -1546,10 +1548,87 @@ async def search_knowledge_files(
 
     try:
         from open_webui.models.knowledge import Knowledges
+        from open_webui.models.files import Files
+        from open_webui.models.access_grants import AccessGrants
 
         user_id = __user__.get('id')
+        user_role = __user__.get('role', 'user')
         user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
 
+        # When model has attached knowledge, scope to attached KBs/files only
+        if __model_knowledge__:
+            attached_kb_ids = set()
+            attached_file_ids = set()
+
+            for item in __model_knowledge__:
+                item_type = item.get('type')
+                item_id = item.get('id')
+                if item_type == 'collection':
+                    attached_kb_ids.add(item_id)
+                elif item_type == 'file':
+                    attached_file_ids.add(item_id)
+
+            # If knowledge_id specified, verify it's in the attached set
+            if knowledge_id:
+                if knowledge_id not in attached_kb_ids:
+                    return json.dumps({'error': f'Knowledge base {knowledge_id} is not attached to this model'})
+                attached_kb_ids = {knowledge_id}
+
+            all_files = []
+
+            # Search within attached KBs
+            for kb_id in attached_kb_ids:
+                knowledge = Knowledges.get_knowledge_by_id(kb_id)
+                if not knowledge:
+                    continue
+
+                if not (
+                    user_role == 'admin'
+                    or knowledge.user_id == user_id
+                    or AccessGrants.has_access(
+                        user_id=user_id,
+                        resource_type='knowledge',
+                        resource_id=knowledge.id,
+                        permission='read',
+                        user_group_ids=set(user_group_ids),
+                    )
+                ):
+                    continue
+
+                result = Knowledges.search_files_by_id(
+                    knowledge_id=kb_id,
+                    user_id=user_id,
+                    filter={'query': query},
+                    skip=0,
+                    limit=count + skip,
+                )
+
+                for file in result.items:
+                    all_files.append({
+                        'id': file.id,
+                        'filename': file.filename,
+                        'knowledge_id': knowledge.id,
+                        'knowledge_name': knowledge.name,
+                        'updated_at': file.updated_at,
+                    })
+
+            # Search within directly attached files (filename match)
+            if not knowledge_id and attached_file_ids:
+                query_lower = query.lower() if query else ''
+                for file_id in attached_file_ids:
+                    file = Files.get_file_by_id(file_id)
+                    if file and (not query_lower or query_lower in file.filename.lower()):
+                        all_files.append({
+                            'id': file.id,
+                            'filename': file.filename,
+                            'updated_at': file.updated_at,
+                        })
+
+            # Apply pagination across combined results
+            all_files = all_files[skip:skip + count]
+            return json.dumps(all_files, ensure_ascii=False)
+
+        # No attached knowledge - search all accessible KBs
         if knowledge_id:
             result = Knowledges.search_files_by_id(
                 knowledge_id=knowledge_id,
@@ -1793,7 +1872,7 @@ async def view_knowledge_file(
         return json.dumps({'error': str(e)})
 
 
-async def list_attached_knowledge(
+async def list_knowledge(
     __request__: Request = None,
     __user__: dict = None,
     __model_knowledge__: Optional[list[dict]] = None,
@@ -1895,121 +1974,7 @@ async def list_attached_knowledge(
             'notes': notes,
         }, ensure_ascii=False)
     except Exception as e:
-        log.exception(f'list_attached_knowledge error: {e}')
-        return json.dumps({'error': str(e)})
-
-
-async def search_attached_files(
-    query: str,
-    knowledge_id: Optional[str] = None,
-    count: int = 10,
-    skip: int = 0,
-    __request__: Request = None,
-    __user__: dict = None,
-    __model_knowledge__: Optional[list[dict]] = None,
-) -> str:
-    """
-    Search files by filename within the attached knowledge scope.
-    Only searches knowledge bases and files that are attached to the current model.
-
-    :param query: The filename search query
-    :param knowledge_id: Optional KB id to limit search to a specific attached knowledge base
-    :param count: Maximum number of results to return (default: 10)
-    :param skip: Number of results to skip for pagination (default: 0)
-    :return: JSON with matching files containing id, filename, knowledge_id, and knowledge_name
-    """
-    if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
-
-    if not __user__:
-        return json.dumps({'error': 'User context not available'})
-
-    if not __model_knowledge__:
-        return json.dumps([])
-
-    try:
-        from open_webui.models.knowledge import Knowledges
-        from open_webui.models.files import Files
-        from open_webui.models.access_grants import AccessGrants
-
-        user_id = __user__.get('id')
-        user_role = __user__.get('role', 'user')
-        user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
-
-        # Collect attached KB IDs and direct file IDs
-        attached_kb_ids = set()
-        attached_file_ids = set()
-
-        for item in __model_knowledge__:
-            item_type = item.get('type')
-            item_id = item.get('id')
-            if item_type == 'collection':
-                attached_kb_ids.add(item_id)
-            elif item_type == 'file':
-                attached_file_ids.add(item_id)
-
-        # If knowledge_id is specified, verify it's in the attached set
-        if knowledge_id:
-            if knowledge_id not in attached_kb_ids:
-                return json.dumps({'error': f'Knowledge base {knowledge_id} is not attached to this model'})
-            attached_kb_ids = {knowledge_id}
-
-        all_files = []
-
-        # Search within attached KBs
-        for kb_id in attached_kb_ids:
-            knowledge = Knowledges.get_knowledge_by_id(kb_id)
-            if not knowledge:
-                continue
-
-            if not (
-                user_role == 'admin'
-                or knowledge.user_id == user_id
-                or AccessGrants.has_access(
-                    user_id=user_id,
-                    resource_type='knowledge',
-                    resource_id=knowledge.id,
-                    permission='read',
-                    user_group_ids=set(user_group_ids),
-                )
-            ):
-                continue
-
-            result = Knowledges.search_files_by_id(
-                knowledge_id=kb_id,
-                user_id=user_id,
-                filter={'query': query},
-                skip=0,
-                limit=count + skip,  # Fetch enough for pagination across KBs
-            )
-
-            for file in result.items:
-                all_files.append({
-                    'id': file.id,
-                    'filename': file.filename,
-                    'knowledge_id': knowledge.id,
-                    'knowledge_name': knowledge.name,
-                    'updated_at': file.updated_at,
-                })
-
-        # Search within directly attached files (filename match)
-        if not knowledge_id and attached_file_ids:
-            query_lower = query.lower() if query else ''
-            for file_id in attached_file_ids:
-                file = Files.get_file_by_id(file_id)
-                if file and (not query_lower or query_lower in file.filename.lower()):
-                    all_files.append({
-                        'id': file.id,
-                        'filename': file.filename,
-                        'updated_at': file.updated_at,
-                    })
-
-        # Apply pagination across combined results
-        all_files = all_files[skip:skip + count]
-
-        return json.dumps(all_files, ensure_ascii=False)
-    except Exception as e:
-        log.exception(f'search_attached_files error: {e}')
+        log.exception(f'list_knowledge error: {e}')
         return json.dumps({'error': str(e)})
 
 
