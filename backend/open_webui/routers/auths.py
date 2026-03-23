@@ -580,9 +580,7 @@ async def signin(
                     if user.role != trusted_role:
                         Users.update_user_role_by_id(user.id, trusted_role, db=db)
                 elif trusted_role:
-                    log.warning(
-                        f'Ignoring invalid trusted role header value: {trusted_role}'
-                    )
+                    log.warning(f'Ignoring invalid trusted role header value: {trusted_role}')
 
     elif WEBUI_AUTH == False:
         admin_email = 'admin@localhost'
@@ -1155,8 +1153,9 @@ async def update_ldap_config(request: Request, form_data: LdapConfigForm, user=D
 # create api key
 @router.post('/api_key', response_model=ApiKey)
 async def generate_api_key(request: Request, user=Depends(get_current_user), db: Session = Depends(get_session)):
-    if not request.app.state.config.ENABLE_API_KEYS or not has_permission(
-        user.id, 'features.api_keys', request.app.state.config.USER_PERMISSIONS
+    if not request.app.state.config.ENABLE_API_KEYS or (
+        user.role != 'admin'
+        and not has_permission(user.id, 'features.api_keys', request.app.state.config.USER_PERMISSIONS)
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
