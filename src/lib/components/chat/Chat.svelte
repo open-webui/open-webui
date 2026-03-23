@@ -538,7 +538,13 @@
 					console.log('Unknown message type', data);
 				}
 
-				history.messages[event.message_id] = message;
+				if (type === 'chat:message:delta' || type === 'message' || type === 'status') {
+					scheduleHistoryFlush();
+				} else {
+					cancelAnimationFrame(historyRAF);
+					historyRAF = null;
+					history.messages[event.message_id] = message;
+				}
 			}
 		} else {
 			// Non-active chat completion: queue stays in the global store.
@@ -1282,6 +1288,15 @@
 
 	let scrollRAF = null;
 	let contentsRAF = null;
+	let historyRAF = null;
+	const scheduleHistoryFlush = () => {
+		if (!historyRAF) {
+			historyRAF = requestAnimationFrame(() => {
+				historyRAF = null;
+				history = history;
+			});
+		}
+	};
 	const scheduleScrollToBottom = () => {
 		if (!scrollRAF) {
 			scrollRAF = requestAnimationFrame(async () => {
