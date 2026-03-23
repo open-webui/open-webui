@@ -26,7 +26,7 @@
 		setCwd,
 		type FileEntry
 	} from '$lib/apis/terminal';
-	import { isCodeFile } from '$lib/utils/codeHighlight';
+	import { isCodeEditorFile } from '$lib/utils/codeHighlight';
 	import Folder from '../icons/Folder.svelte';
 	import Document from '../icons/Document.svelte';
 	import PenAlt from '../icons/PenAlt.svelte';
@@ -124,7 +124,7 @@
 	$: isJson = ['json', 'jsonc', 'jsonl', 'json5'].includes(getFileExt(selectedFile));
 	$: isSvg = getFileExt(selectedFile) === 'svg';
 	$: isNotebook = getFileExt(selectedFile) === 'ipynb';
-	$: isCode = isCodeFile(selectedFile);
+	$: isCode = isCodeEditorFile(selectedFile);
 	$: isOfficeFile = OFFICE_EXTS.has(getFileExt(selectedFile));
 	$: isTextFile =
 		fileContent !== null && fileImageUrl === null && filePdfData === null && !isOfficeFile;

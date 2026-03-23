@@ -143,6 +143,8 @@ const KNOWN_LANG_IDS = new Set([
 	'zig'
 ]);
 
+const MARKDOWN_EXTENSIONS = new Set(['md', 'markdown', 'mdx']);
+
 /**
  * Resolve a file extension to a Shiki language id, or null if not supported.
  */
@@ -162,6 +164,16 @@ export function isCodeFile(path: string | null): boolean {
 	if (!path) return false;
 	const ext = path.split('.').pop()?.toLowerCase() ?? '';
 	return extToLang(ext) !== null;
+}
+
+/**
+ * Returns true when a file should use the code-editor path in file navigation.
+ * Markdown files keep their preview/plain-text edit flow instead.
+ */
+export function isCodeEditorFile(path: string | null): boolean {
+	if (!path) return false;
+	const ext = path.split('.').pop()?.toLowerCase() ?? '';
+	return !MARKDOWN_EXTENSIONS.has(ext) && isCodeFile(path);
 }
 
 /**

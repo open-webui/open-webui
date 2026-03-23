@@ -4,7 +4,7 @@
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
 	import { settings } from '$lib/stores';
-	import { isCodeFile } from '$lib/utils/codeHighlight';
+	import { isCodeEditorFile } from '$lib/utils/codeHighlight';
 	import { initMermaid, renderMermaidDiagram } from '$lib/utils';
 	import Spinner from '../../common/Spinner.svelte';
 	import PDFViewer from '../../common/PDFViewer.svelte';
@@ -101,7 +101,7 @@
 	$: isJson = JSON_EXTS.has(getExt(selectedFile));
 	$: isSvg = getExt(selectedFile) === 'svg';
 	$: isNotebook = getExt(selectedFile) === 'ipynb';
-	$: isCode = isCodeFile(selectedFile);
+	$: isCode = isCodeEditorFile(selectedFile);
 	$: csvDelimiter = getExt(selectedFile) === 'tsv' ? '\t' : ',';
 	$: renderedHtml =
 		isMarkdown && fileContent
