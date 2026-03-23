@@ -130,11 +130,11 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
             ]
         models = models + arena_models
 
-    global_action_ids = [function.id for function in Functions.get_global_action_functions()]
-    enabled_action_ids = [function.id for function in Functions.get_functions_by_type('action', active_only=True)]
+    global_action_ids = {function.id for function in Functions.get_global_action_functions()}
+    enabled_action_ids = {function.id for function in Functions.get_functions_by_type('action', active_only=True)}
 
-    global_filter_ids = [function.id for function in Functions.get_global_filter_functions()]
-    enabled_filter_ids = [function.id for function in Functions.get_functions_by_type('filter', active_only=True)]
+    global_filter_ids = {function.id for function in Functions.get_global_filter_functions()}
+    enabled_filter_ids = {function.id for function in Functions.get_functions_by_type('filter', active_only=True)}
 
     custom_models = Models.get_all_models()
 
