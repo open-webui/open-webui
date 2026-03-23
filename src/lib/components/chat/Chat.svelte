@@ -399,7 +399,6 @@
 		console.log(event);
 
 		if (event.chat_id === $chatId) {
-			await tick();
 			let message = history.messages[event.message_id];
 
 			if (message) {
