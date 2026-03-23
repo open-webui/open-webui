@@ -3672,7 +3672,7 @@ async def streaming_chat_response_handler(response, ctx):
                                                         'status': 'in_progress',
                                                     }
                                                 )
-                                            pending_output = output + pending_fc_items
+                                            pending_output = full_output() + pending_fc_items
                                             await event_emitter(
                                                 {
                                                     'type': 'chat:completion',
