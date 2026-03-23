@@ -105,7 +105,7 @@
 		modelsToEnable.forEach((m) => (m.is_active = true));
 		models = models;
 		// Sync with server
-		await Promise.all(modelsToEnable.map((model) => toggleModelById(localStorage.token, model.id)));
+		await Promise.all(modelsToEnable.map((model) => persistModelToggle(model)));
 	};
 
 	const disableAllHandler = async () => {
@@ -114,9 +114,23 @@
 		modelsToDisable.forEach((m) => (m.is_active = false));
 		models = models;
 		// Sync with server
-		await Promise.all(
-			modelsToDisable.map((model) => toggleModelById(localStorage.token, model.id))
-		);
+		await Promise.all(modelsToDisable.map((model) => persistModelToggle(model)));
+	};
+
+	const persistModelToggle = async (model) => {
+		if (!Object.keys(model).includes('base_model_id')) {
+			await createNewModel(localStorage.token, {
+				id: model.id,
+				name: model.name,
+				base_model_id: null,
+				meta: {},
+				params: {},
+				access_grants: [],
+				is_active: model.is_active
+			}).catch((error) => null);
+		} else {
+			await toggleModelById(localStorage.token, model.id);
+		}
 	};
 
 	const showAllHandler = async () => {
@@ -215,21 +229,7 @@
 	};
 
 	const toggleModelHandler = async (model) => {
-		if (!Object.keys(model).includes('base_model_id')) {
-			await createNewModel(localStorage.token, {
-				id: model.id,
-				name: model.name,
-				base_model_id: null,
-				meta: {},
-				params: {},
-				access_grants: [],
-				is_active: model.is_active
-			}).catch((error) => {
-				return null;
-			});
-		} else {
-			await toggleModelById(localStorage.token, model.id);
-		}
+		await persistModelToggle(model);
 
 		// await init();
 		_models.set(
