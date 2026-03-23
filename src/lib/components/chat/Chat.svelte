@@ -2814,7 +2814,7 @@
 								</div>
 							</div>
 
-							<div class=" pb-2 z-10">
+							<div class=" pb-2 {dragged ? 'z-0' : 'z-10'}">
 								<MessageInput
 									bind:this={messageInput}
 									{history}
