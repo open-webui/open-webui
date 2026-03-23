@@ -392,12 +392,38 @@ export const getToolServersData = async (servers: object[]) => {
 							specs: convertOpenApiToToolPayload(res)
 						};
 
-						return {
+						const result: Record<string, any> = {
 							url: server?.url,
 							openapi: openapi,
 							info: info,
 							specs: specs
 						};
+
+						// Fetch system prompt if the server supports it
+						try {
+							const baseUrl = (server?.url ?? '').replace(/\/$/, '');
+							const configRes = await fetch(`${baseUrl}/api/config`);
+							if (configRes.ok) {
+								const config = await configRes.json();
+								if (config?.features?.system) {
+									const headers: Record<string, string> = {};
+									if (toolServerToken) {
+										headers['Authorization'] = `Bearer ${toolServerToken}`;
+									}
+									const systemRes = await fetch(`${baseUrl}/system`, { headers });
+									if (systemRes.ok) {
+										const systemData = await systemRes.json();
+										if (systemData?.prompt) {
+											result.system_prompt = systemData.prompt;
+										}
+									}
+								}
+							}
+						} catch (e) {
+							// Server doesn't support /system — that's fine
+						}
+
+						return result;
 					} else if (error) {
 						return {
 							error,

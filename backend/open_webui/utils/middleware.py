@@ -2557,7 +2557,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         # so system terminals work even when no other tools are selected)
         if terminal_id:
             try:
-                terminal_tools = await get_terminal_tools(
+                terminal_tools, system_prompt = await get_terminal_tools(
                     request,
                     terminal_id,
                     user,
@@ -2565,11 +2565,25 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
                 if terminal_tools:
                     tools_dict = {**tools_dict, **terminal_tools}
+                if system_prompt:
+                    form_data['messages'] = add_or_update_system_message(
+                        system_prompt,
+                        form_data['messages'],
+                        append=True,
+                    )
             except Exception as e:
                 log.exception(e)
 
         if direct_tool_servers:
             for tool_server in direct_tool_servers:
+                system_prompt = tool_server.pop('system_prompt', None)
+                if system_prompt:
+                    form_data['messages'] = add_or_update_system_message(
+                        system_prompt,
+                        form_data['messages'],
+                        append=True,
+                    )
+
                 tool_specs = tool_server.pop('specs', [])
 
                 for tool in tool_specs:
