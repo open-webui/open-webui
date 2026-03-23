@@ -17,7 +17,7 @@
 
 	export let onSave = (e) => {};
 
-	let loading = false;
+	let loading = true;
 	let variableValues = {};
 
 	const submitHandler = async () => {
@@ -33,14 +33,17 @@
 
 	const init = async () => {
 		loading = true;
-		variableValues = {};
-		for (const variable of Object.keys(variables)) {
-			if (variables[variable]?.default !== undefined) {
-				variableValues[variable] = variables[variable].default;
+		const newValues = {};
+		const keys = Object.keys(variables ?? {});
+		for (const key of keys) {
+			const variable = variables[key];
+			if (variable?.default !== undefined) {
+				newValues[key] = variable.default;
 			} else {
-				variableValues[variable] = '';
+				newValues[key] = '';
 			}
 		}
+		variableValues = newValues;
 		loading = false;
 
 		await tick();

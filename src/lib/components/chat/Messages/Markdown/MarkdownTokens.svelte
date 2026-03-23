@@ -23,6 +23,7 @@
 
 	import HtmlToken from './HTMLToken.svelte';
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
+	import ColonFenceBlock from './ColonFenceBlock.svelte';
 
 	export let id: string;
 	export let tokens: Token[];
@@ -241,7 +242,7 @@
 					<li class="text-start">
 						{#if item?.task}
 							<input
-								class=" translate-y-[1px] -translate-x-1"
+								class=" translate-y-[1px] -translate-x-1 flex-shrink-0"
 								type="checkbox"
 								checked={item.checked}
 								on:change={(e) => {
@@ -276,7 +277,7 @@
 					<li class="text-start {item?.task ? 'flex -translate-x-6.5 gap-3 ' : ''}">
 						{#if item?.task}
 							<input
-								class=""
+								class="flex-shrink-0"
 								type="checkbox"
 								checked={item.checked}
 								on:change={(e) => {
@@ -434,6 +435,17 @@
 		{#if token.text}
 			<KatexRenderer content={token.text} displayMode={token?.displayMode ?? false} />
 		{/if}
+	{:else if token.type === 'colonFence'}
+		<ColonFenceBlock
+			id={`${id}-${tokenIdx}`}
+			{token}
+			{tokenIdx}
+			{done}
+			{editCodeBlock}
+			{sourceIds}
+			{onTaskClick}
+			{onSourceClick}
+		/>
 	{:else if token.type === 'space'}
 		<div class="my-2" />
 	{:else}

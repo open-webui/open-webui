@@ -403,6 +403,7 @@ from open_webui.config import (
     EVALUATION_ARENA_MODELS,
     # WebUI (OAuth)
     ENABLE_OAUTH_ROLE_MANAGEMENT,
+    OAUTH_SUB_CLAIM,
     OAUTH_ROLES_CLAIM,
     OAUTH_EMAIL_CLAIM,
     OAUTH_PICTURE_CLAIM,
@@ -888,6 +889,7 @@ if any('access_control' in m.get('meta', {}) for m in arena_models):
         migrate_access_control(model.get('meta', {}))
     app.state.config.EVALUATION_ARENA_MODELS = arena_models
 
+app.state.config.OAUTH_SUB_CLAIM = OAUTH_SUB_CLAIM
 app.state.config.OAUTH_USERNAME_CLAIM = OAUTH_USERNAME_CLAIM
 app.state.config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
 app.state.config.OAUTH_EMAIL_CLAIM = OAUTH_EMAIL_CLAIM

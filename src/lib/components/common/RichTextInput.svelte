@@ -801,8 +801,8 @@
 									if (!editor || !editor.view || editor.isDestroyed) {
 										return false;
 									}
-									// default logic
-									return from !== to;
+									// Only show when editor is focused and text is selected
+									return view.hasFocus() && from !== to;
 								}
 							}),
 							FloatingMenu.configure({
@@ -905,6 +905,24 @@
 			},
 			editorProps: {
 				attributes: { id },
+				handleDrop: (view, event) => {
+					// Intercept sidebar chat item drops to prevent ProseMirror
+					// from inserting the raw JSON as text. The actual handling
+					// (adding as Reference Chat) is done by MessageInput's onDrop.
+					const textData = event.dataTransfer?.getData('text/plain');
+					if (textData) {
+						try {
+							const data = JSON.parse(textData);
+							if (data.type === 'chat' && data.id) {
+								// Swallow the drop — let the parent handler deal with it
+								return true;
+							}
+						} catch (_) {
+							// Not JSON, let ProseMirror handle normally
+						}
+					}
+					return false;
+				},
 				handlePaste: (view, event) => {
 					// Force plain-text pasting when richText === false
 					if (!richText) {
@@ -1170,6 +1188,18 @@
 				}
 			},
 			onSelectionUpdate: onSelectionUpdate,
+			onBlur: () => {
+				// Force-hide floating menus when editor loses focus.
+				// shouldShow alone isn't enough because it only runs on transactions.
+				if (bubbleMenuElement) {
+					bubbleMenuElement.style.visibility = 'hidden';
+					bubbleMenuElement.style.opacity = '0';
+				}
+				if (floatingMenuElement) {
+					floatingMenuElement.style.visibility = 'hidden';
+					floatingMenuElement.style.opacity = '0';
+				}
+			},
 			enableInputRules: richText,
 			enablePasteRules: richText
 		});

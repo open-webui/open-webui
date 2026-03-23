@@ -4,6 +4,7 @@
 
 	const i18n = getContext('i18n');
 
+	import { nameToId } from '$lib/utils';
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
@@ -36,7 +37,7 @@
 	};
 
 	$: if (name && !edit && !clone) {
-		id = name.replace(/\s+/g, '_').toLowerCase();
+		id = nameToId(name);
 	}
 
 	let codeEditor;

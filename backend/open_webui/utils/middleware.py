@@ -98,6 +98,7 @@ from open_webui.utils.misc import (
     get_content_from_message,
     convert_output_to_messages,
     merge_assistant_content_into_output_messages,
+    strip_empty_content_blocks,
 )
 from open_webui.utils.tools import (
     get_tools,
@@ -136,6 +137,7 @@ from open_webui.env import (
     ENABLE_FORWARD_USER_INFO_HEADERS,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     FORWARD_SESSION_INFO_HEADER_MESSAGE_ID,
+    ENABLE_RESPONSES_API_STATEFUL,
 )
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.constants import TASKS
@@ -850,7 +852,11 @@ def handle_responses_streaming_event(
                 if item.get('type') == 'reasoning' and item.get('status') != 'completed':
                     item['status'] = 'completed'
 
-        return new_output, {'usage': response_data.get('usage'), 'done': True}
+        return new_output, {
+            'usage': response_data.get('usage'),
+            'done': True,
+            'response_id': response_data.get('id'),
+        }
 
     elif event_type == 'response.in_progress':
         # State Machine Event: In Progress
@@ -938,6 +944,13 @@ def process_tool_result(
     tool_result_embeds = []
     EXTERNAL_TOOL_TYPES = ('external', 'action', 'terminal')
 
+    # Support (HTMLResponse, result_context) tuples: the optional second
+    # element lets tool authors provide the LLM with actionable context
+    # about the generated embed instead of the generic fallback message.
+    result_context = None
+    if isinstance(tool_result, tuple) and len(tool_result) == 2 and isinstance(tool_result[0], HTMLResponse):
+        tool_result, result_context = tool_result
+
     if isinstance(tool_result, HTMLResponse):
         content_disposition = tool_result.headers.get('Content-Disposition', '')
         if 'inline' in content_disposition:
@@ -945,11 +958,14 @@ def process_tool_result(
             tool_result_embeds.append(content)
 
             if 200 <= tool_result.status_code < 300:
-                tool_result = {
-                    'status': 'success',
-                    'code': 'ui_component',
-                    'message': f'{tool_function_name}: Embedded UI result is active and visible to the user.',
-                }
+                if result_context is not None and isinstance(result_context, (str, dict, list)):
+                    tool_result = result_context
+                else:
+                    tool_result = {
+                        'status': 'success',
+                        'code': 'ui_component',
+                        'message': f'{tool_function_name}: Embedded UI result is active and visible to the user.',
+                    }
             elif 400 <= tool_result.status_code < 500:
                 tool_result = {
                     'status': 'error',
@@ -1000,20 +1016,37 @@ def process_tool_result(
                 )
 
                 if 'text/html' in content_type:
+                    # Support (html_content, result_context) nested tuple
+                    result_context = None
+                    html_content = tool_result
+                    if isinstance(tool_result, (tuple, list)) and len(tool_result) == 2:
+                        html_content, result_context = tool_result
+
                     # Display as iframe embed
-                    tool_result_embeds.append(tool_result)
-                    tool_result = {
-                        'status': 'success',
-                        'code': 'ui_component',
-                        'message': f'{tool_function_name}: Embedded UI result is active and visible to the user.',
-                    }
+                    tool_result_embeds.append(html_content)
+                    if result_context is not None and isinstance(result_context, (str, dict, list)):
+                        tool_result = result_context
+                    else:
+                        tool_result = {
+                            'status': 'success',
+                            'code': 'ui_component',
+                            'message': f'{tool_function_name}: Embedded UI result is active and visible to the user.',
+                        }
                 elif location:
+                    # Support (html_content, result_context) nested tuple for location embeds
+                    result_context = None
+                    if isinstance(tool_result, (tuple, list)) and len(tool_result) == 2:
+                        _, result_context = tool_result
+
                     tool_result_embeds.append(location)
-                    tool_result = {
-                        'status': 'success',
-                        'code': 'ui_component',
-                        'message': f'{tool_function_name}: Embedded UI result is active and visible to the user.',
-                    }
+                    if result_context is not None and isinstance(result_context, (str, dict, list)):
+                        tool_result = result_context
+                    else:
+                        tool_result = {
+                            'status': 'success',
+                            'code': 'ui_component',
+                            'message': f'{tool_function_name}: Embedded UI result is active and visible to the user.',
+                        }
 
     tool_result_files = []
 
@@ -2531,7 +2564,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         # so system terminals work even when no other tools are selected)
         if terminal_id:
             try:
-                terminal_tools = await get_terminal_tools(
+                terminal_tools, system_prompt = await get_terminal_tools(
                     request,
                     terminal_id,
                     user,
@@ -2539,11 +2572,25 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
                 if terminal_tools:
                     tools_dict = {**tools_dict, **terminal_tools}
+                if system_prompt:
+                    form_data['messages'] = add_or_update_system_message(
+                        system_prompt,
+                        form_data['messages'],
+                        append=True,
+                    )
             except Exception as e:
                 log.exception(e)
 
         if direct_tool_servers:
             for tool_server in direct_tool_servers:
+                system_prompt = tool_server.pop('system_prompt', None)
+                if system_prompt:
+                    form_data['messages'] = add_or_update_system_message(
+                        system_prompt,
+                        form_data['messages'],
+                        append=True,
+                    )
+
                 tool_specs = tool_server.pop('specs', [])
 
                 for tool in tool_specs:
@@ -2640,6 +2687,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 },
             }
         )
+
+    # Strip empty text content blocks from multimodal messages
+    # to prevent errors from providers like Gemini and Claude
+    form_data['messages'] = strip_empty_content_blocks(form_data.get('messages', []))
 
     return form_data, metadata, events
 
@@ -2891,7 +2942,7 @@ async def background_tasks_handler(ctx):
                                 }
                             )
 
-                    if title == None and len(messages) == 2:
+                    if title == None and len(messages) == 2 and (not messages_map or len(messages_map) <= 2):
                         title = messages[0].get('content', user_message)
 
                         Chats.update_chat_title_by_id(metadata['chat_id'], title)
@@ -3034,6 +3085,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                         metadata['chat_id'],
                         metadata['message_id'],
                         {
+                            'done': True,
                             'role': 'assistant',
                             'content': content,
                             'output': response_output,
@@ -3366,6 +3418,11 @@ async def streaming_chat_response_handler(response, ctx):
                     output = []
 
             usage = None
+            prior_output = []
+            last_response_id = None
+
+            def full_output():
+                return prior_output + output if prior_output else output
 
             reasoning_tags_param = metadata.get('params', {}).get('reasoning_tags')
             DETECT_REASONING_TAGS = reasoning_tags_param is not False
@@ -3400,6 +3457,8 @@ async def streaming_chat_response_handler(response, ctx):
                     nonlocal content
                     nonlocal usage
                     nonlocal output
+                    nonlocal prior_output
+                    nonlocal last_response_id
 
                     response_tool_calls = []
 
@@ -3471,19 +3530,29 @@ async def streaming_chat_response_handler(response, ctx):
                                     )
                                 # Check for Responses API events (type field starts with "response.")
                                 elif data.get('type', '').startswith('response.'):
+
                                     output, response_metadata = handle_responses_streaming_event(data, output)
 
                                     processed_data = {
-                                        'output': output,
-                                        'content': serialize_output(output),
+                                        'output': full_output(),
+                                        'content': serialize_output(full_output()),
                                     }
 
                                     # print(data)
                                     # print(processed_data)
 
-                                    # Merge any metadata (usage, done, etc.)
+                                    # Merge any metadata (usage, etc.)
+                                    # Strip 'done' — response.completed emits
+                                    # it but we may still need to execute tool
+                                    # calls. The outer middleware manages the
+                                    # actual completion signal.
                                     if response_metadata:
+                                        if ENABLE_RESPONSES_API_STATEFUL:
+                                            response_id = response_metadata.pop('response_id', None)
+                                            if response_id:
+                                                last_response_id = response_id
                                         processed_data.update(response_metadata)
+                                        processed_data.pop('done', None)
 
                                     await event_emitter(
                                         {
@@ -3825,13 +3894,13 @@ async def streaming_chat_response_handler(response, ctx):
                                                 metadata['chat_id'],
                                                 metadata['message_id'],
                                                 {
-                                                    'content': serialize_output(output),
-                                                    'output': output,
+                                                    'content': serialize_output(full_output()),
+                                                    'output': full_output(),
                                                 },
                                             )
                                         else:
                                             data = {
-                                                'content': serialize_output(output),
+                                                'content': serialize_output(full_output()),
                                             }
 
                                 if delta:
@@ -3888,6 +3957,34 @@ async def streaming_chat_response_handler(response, ctx):
                     if response_tool_calls:
                         tool_calls.append(_split_tool_calls(response_tool_calls))
 
+                    # Responses API path: extract function_call items from output
+                    if not response_tool_calls and output:
+                        # Collect call_ids that already have results,
+                        # including those from prior_output so we don't
+                        # re-process tool calls from a previous turn.
+                        handled_call_ids = {
+                            item.get('call_id')
+                            for item in (prior_output + output)
+                            if item.get('type') == 'function_call_output'
+                        }
+                        responses_api_tool_calls = []
+                        for item in output:
+                            if (
+                                item.get('type') == 'function_call'
+                                and item.get('call_id') not in handled_call_ids
+                            ):
+                                arguments = item.get('arguments', '{}')
+                                responses_api_tool_calls.append({
+                                    'id': item.get('call_id', ''),
+                                    'index': len(responses_api_tool_calls),
+                                    'function': {
+                                        'name': item.get('name', ''),
+                                        'arguments': arguments if isinstance(arguments, str) else json.dumps(arguments),
+                                    },
+                                })
+                        if responses_api_tool_calls:
+                            tool_calls.append(_split_tool_calls(responses_api_tool_calls))
+
                     if response.background:
                         await response.background()
 
@@ -3919,26 +4016,32 @@ async def streaming_chat_response_handler(response, ctx):
                     response_tool_calls = tool_calls.pop(0)
 
                     # Append function_call items for each tool call
+                    # (Responses API already has them from streaming, so skip duplicates)
+                    existing_call_ids = {
+                        item.get('call_id') for item in output
+                        if item.get('type') == 'function_call'
+                    }
                     for tc in response_tool_calls:
                         call_id = tc.get('id', '')
-                        func = tc.get('function', {})
-                        output.append(
-                            {
-                                'type': 'function_call',
-                                'id': call_id or output_id('fc'),
-                                'call_id': call_id,
-                                'name': func.get('name', ''),
-                                'arguments': func.get('arguments', '{}'),
-                                'status': 'in_progress',
-                            }
-                        )
+                        if call_id not in existing_call_ids:
+                            func = tc.get('function', {})
+                            output.append(
+                                {
+                                    'type': 'function_call',
+                                    'id': call_id or output_id('fc'),
+                                    'call_id': call_id,
+                                    'name': func.get('name', ''),
+                                    'arguments': func.get('arguments', '{}'),
+                                    'status': 'in_progress',
+                                }
+                            )
 
                     await event_emitter(
                         {
                             'type': 'chat:completion',
                             'data': {
-                                'content': serialize_output(output),
-                                'output': output,
+                                'content': serialize_output(full_output()),
+                                'output': full_output(),
                             },
                         }
                     )
@@ -4180,11 +4283,20 @@ async def streaming_chat_response_handler(response, ctx):
                             **form_data,
                             'model': model_id,
                             'stream': True,
-                            'messages': [
+                        }
+
+                        if ENABLE_RESPONSES_API_STATEFUL and last_response_id:
+                            system_message = get_system_message(form_data['messages'])
+                            new_form_data['messages'] = (
+                                ([system_message] if system_message else [])
+                                + convert_output_to_messages(output, raw=True)
+                            )
+                            new_form_data['previous_response_id'] = last_response_id
+                        else:
+                            new_form_data['messages'] = [
                                 *form_data['messages'],
                                 *convert_output_to_messages(output, raw=True),
-                            ],
-                        }
+                            ]
 
                         res = await generate_chat_completion(
                             request,
@@ -4194,7 +4306,31 @@ async def streaming_chat_response_handler(response, ctx):
                         )
 
                         if isinstance(res, StreamingResponse):
+                            # Save accumulated output and start fresh.
+                            # Responses API output_index values are relative
+                            # to the current response — a clean output list
+                            # keeps indices aligned. The display prefix
+                            # ensures the UI shows tool history during
+                            # streaming.
+                            prior_output = list(output)
+                            # Trim the trailing empty placeholder message
+                            # so it doesn't persist as a ghost item once
+                            # the new stream produces real content.
+                            if (
+                                prior_output
+                                and prior_output[-1].get('type') == 'message'
+                                and prior_output[-1].get('status') == 'in_progress'
+                            ):
+                                msg_parts = prior_output[-1].get('content', [])
+                                if (
+                                    not msg_parts
+                                    or (len(msg_parts) == 1 and not msg_parts[0].get('text', '').strip())
+                                ):
+                                    prior_output.pop()
+                            output = []
                             await stream_body_handler(res, new_form_data)
+                            output[:0] = prior_output
+                            prior_output = []
                         else:
                             break
                     except Exception as e:
@@ -4383,6 +4519,7 @@ async def streaming_chat_response_handler(response, ctx):
                         metadata['chat_id'],
                         metadata['message_id'],
                         {
+                            'done': True,
                             'content': serialize_output(output),
                             'output': output,
                             **({'usage': usage} if usage else {}),
@@ -4392,7 +4529,13 @@ async def streaming_chat_response_handler(response, ctx):
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata['chat_id'],
                         metadata['message_id'],
-                        {'usage': usage},
+                        {'done': True, 'usage': usage},
+                    )
+                else:
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata['chat_id'],
+                        metadata['message_id'],
+                        {'done': True},
                     )
 
                 # Send a webhook notification if the user is not active
@@ -4429,9 +4572,16 @@ async def streaming_chat_response_handler(response, ctx):
                         metadata['chat_id'],
                         metadata['message_id'],
                         {
+                            'done': True,
                             'content': serialize_output(output),
                             'output': output,
                         },
+                    )
+                else:
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata['chat_id'],
+                        metadata['message_id'],
+                        {'done': True},
                     )
 
             if response.background is not None:

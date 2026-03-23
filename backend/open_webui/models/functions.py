@@ -2,9 +2,9 @@ import logging
 import time
 from typing import Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
-from open_webui.models.users import Users, UserModel
+from open_webui.models.users import Users, UserModel, UserResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, Index
 
@@ -75,10 +75,6 @@ class FunctionWithValvesModel(BaseModel):
 ####################
 
 
-class FunctionUserResponse(FunctionModel):
-    user: Optional[UserModel] = None
-
-
 class FunctionResponse(BaseModel):
     id: str
     user_id: str
@@ -89,6 +85,12 @@ class FunctionResponse(BaseModel):
     is_global: bool
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class FunctionUserResponse(FunctionResponse):
+    user: Optional[UserResponse] = None
 
 
 class FunctionForm(BaseModel):
@@ -224,7 +226,12 @@ class FunctionsTable:
 
     def get_function_list(self, db: Optional[Session] = None) -> list[FunctionUserResponse]:
         with get_db_context(db) as db:
-            functions = db.query(Function).order_by(Function.updated_at.desc()).all()
+            functions = (
+                db.query(Function)
+                .options(defer(Function.content))
+                .order_by(Function.updated_at.desc())
+                .all()
+            )
             user_ids = list(set(func.user_id for func in functions))
 
             users = Users.get_users_by_user_ids(user_ids, db=db) if user_ids else []
@@ -233,8 +240,17 @@ class FunctionsTable:
             return [
                 FunctionUserResponse.model_validate(
                     {
-                        **FunctionModel.model_validate(func).model_dump(),
-                        'user': (users_dict.get(func.user_id).model_dump() if func.user_id in users_dict else None),
+                        **FunctionResponse.model_validate(func).model_dump(),
+                        'user': (
+                            UserResponse(
+                                id=users_dict[func.user_id].id,
+                                name=users_dict[func.user_id].name,
+                                role=users_dict[func.user_id].role,
+                                email=users_dict[func.user_id].email,
+                            ).model_dump()
+                            if func.user_id in users_dict
+                            else None
+                        ),
                     }
                 )
                 for func in functions

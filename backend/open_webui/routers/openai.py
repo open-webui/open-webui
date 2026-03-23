@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import re
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -739,8 +740,16 @@ def get_azure_allowed_params(api_version: str) -> set[str]:
     return allowed_params
 
 
-def is_openai_reasoning_model(model: str) -> bool:
-    return model.lower().startswith(('o1', 'o3', 'o4', 'gpt-5'))
+def is_openai_new_model(model: str) -> bool:
+    model_lower = model.lower()
+    # o-series models (o1, o3, o4, o5, ...)
+    if re.match(r'^o\d+', model_lower):
+        return True
+    # gpt-N where N >= 5 (gpt-5, gpt-5.2, gpt-6, ...)
+    m = re.match(r'^gpt-(\d+)', model_lower)
+    if m and int(m.group(1)) >= 5:
+        return True
+    return False
 
 
 def convert_to_azure_payload(url, payload: dict, api_version: str):
@@ -750,7 +759,7 @@ def convert_to_azure_payload(url, payload: dict, api_version: str):
     allowed_params = get_azure_allowed_params(api_version)
 
     # Special handling for o-series models
-    if is_openai_reasoning_model(model):
+    if is_openai_new_model(model):
         # Convert max_tokens to max_completion_tokens for o-series models
         if 'max_tokens' in payload:
             payload['max_completion_tokens'] = payload['max_tokens']
@@ -768,6 +777,31 @@ def convert_to_azure_payload(url, payload: dict, api_version: str):
 
     url = f'{url}/openai/deployments/{model}'
     return url, payload
+
+
+# Fields accepted by the Responses API for each input item type.
+RESPONSES_ALLOWED_FIELDS: dict[str, set[str]] = {
+    'message': {'type', 'role', 'content'},
+    'function_call': {'type', 'call_id', 'name', 'arguments', 'id'},
+    'function_call_output': {'type', 'call_id', 'output'},
+}
+
+
+def _normalize_stored_item(item: dict) -> dict:
+    """Strip local-only fields from a stored output item before replaying it.
+
+    Open WebUI stores extra bookkeeping fields (``id``, ``status``,
+    ``started_at``, ``ended_at``, ``duration``, ``_tag_type``,
+    ``attributes``, ``summary``, etc.) that the Responses API does
+    not accept.  This helper returns a copy containing only the
+    fields the API understands.
+    """
+    item_type = item.get('type', '')
+    allowed = RESPONSES_ALLOWED_FIELDS.get(item_type)
+    if allowed is None:
+        # Unknown type — pass through as-is (e.g. reasoning, extension items).
+        return item
+    return {k: v for k, v in item.items() if k in allowed}
 
 
 def convert_to_responses_payload(payload: dict) -> dict:
@@ -789,7 +823,7 @@ def convert_to_responses_payload(payload: dict) -> dict:
         # Check for stored output items (from previous Responses API turn)
         stored_output = msg.get('output')
         if stored_output and isinstance(stored_output, list):
-            input_items.extend(stored_output)
+            input_items.extend(_normalize_stored_item(item) for item in stored_output)
             continue
 
         if role == 'system':
@@ -797,6 +831,38 @@ def convert_to_responses_payload(payload: dict) -> dict:
                 system_content = content
             elif isinstance(content, list):
                 system_content = '\n'.join(p.get('text', '') for p in content if p.get('type') == 'text')
+            continue
+
+        # Handle assistant messages with tool_calls (from convert_output_to_messages)
+        if role == 'assistant' and msg.get('tool_calls'):
+            # Add text content as message if present
+            if content:
+                text = content if isinstance(content, str) else '\n'.join(
+                    p.get('text', '') for p in content if p.get('type') == 'text'
+                )
+                if text.strip():
+                    input_items.append({
+                        'type': 'message', 'role': 'assistant',
+                        'content': [{'type': 'output_text', 'text': text}],
+                    })
+            # Convert each tool_call to a function_call input item
+            for tool_call in msg['tool_calls']:
+                func = tool_call.get('function', {})
+                input_items.append({
+                    'type': 'function_call',
+                    'call_id': tool_call.get('id', ''),
+                    'name': func.get('name', ''),
+                    'arguments': func.get('arguments', '{}'),
+                })
+            continue
+
+        # Handle tool result messages
+        if role == 'tool':
+            input_items.append({
+                'type': 'function_call_output',
+                'call_id': msg.get('tool_call_id', ''),
+                'output': msg.get('content', ''),
+            })
             continue
 
         # Convert content format
@@ -820,11 +886,20 @@ def convert_to_responses_payload(payload: dict) -> dict:
 
     responses_payload = {**payload, 'input': input_items}
 
+    # Forward previous_response_id when the middleware has set it
+    # (only used when ENABLE_RESPONSES_API_STATEFUL is enabled).
+    previous_response_id = responses_payload.pop('previous_response_id', None)
+    if previous_response_id:
+        responses_payload['previous_response_id'] = previous_response_id
+
     if system_content:
         responses_payload['instructions'] = system_content
 
     if 'max_tokens' in responses_payload:
         responses_payload['max_output_tokens'] = responses_payload.pop('max_tokens')
+
+    if 'max_completion_tokens' in responses_payload:
+        responses_payload['max_output_tokens'] = responses_payload.pop('max_completion_tokens')
 
     # Remove Chat Completions-only parameters not supported by the Responses API
     for unsupported_key in (
@@ -864,11 +939,36 @@ def convert_to_responses_payload(payload: dict) -> dict:
 
 def convert_responses_result(response: dict) -> dict:
     """
-    Convert non-streaming Responses API result.
-    Just add done flag - pass through raw response, frontend handles output.
+    Convert non-streaming Responses API result to Chat Completions format.
+
+    Extracts text from message output items so all downstream consumers
+    (frontend tasks, get_content_from_response) work without modification.
     """
-    response['done'] = True
-    return response
+    output_items = response.get('output', [])
+
+    content = ''
+    for item in output_items:
+        if item.get('type') == 'message':
+            for part in item.get('content', []):
+                if part.get('type') == 'output_text':
+                    content += part.get('text', '')
+
+    return {
+        'id': response.get('id', ''),
+        'object': 'chat.completion',
+        'model': response.get('model', ''),
+        'choices': [
+            {
+                'index': 0,
+                'message': {
+                    'role': 'assistant',
+                    'content': content,
+                },
+                'finish_reason': 'stop',
+            }
+        ],
+        'usage': response.get('usage', {}),
+    }
 
 
 @router.post('/chat/completions')
@@ -980,7 +1080,7 @@ async def generate_chat_completion(
     key = request.app.state.config.OPENAI_API_KEYS[idx]
 
     # Check if model is a reasoning model that needs special handling
-    if is_openai_reasoning_model(payload['model']):
+    if is_openai_new_model(payload['model']):
         payload = openai_reasoning_model_handler(payload)
     elif 'api.openai.com' not in url:
         # Remove "max_completion_tokens" from the payload for backward compatibility

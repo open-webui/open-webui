@@ -35,6 +35,7 @@ from open_webui.env import (
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
     WEBUI_AUTH_TRUSTED_GROUPS_HEADER,
+    WEBUI_AUTH_TRUSTED_ROLE_HEADER,
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
@@ -117,6 +118,7 @@ def create_session_response(request: Request, user, db, response: Response = Non
 
     if set_cookie and response:
         datetime_expires_at = datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc) if expires_at else None
+        max_age = int(expires_delta.total_seconds()) if expires_delta else None
         response.set_cookie(
             key='token',
             value=token,
@@ -124,6 +126,7 @@ def create_session_response(request: Request, user, db, response: Response = Non
             httponly=True,
             samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
             secure=WEBUI_AUTH_COOKIE_SECURE,
+            **({'max_age': max_age} if max_age is not None else {}),
         )
 
     user_permissions = get_permissions(user.id, request.app.state.config.USER_PERMISSIONS, db=db)
@@ -181,6 +184,7 @@ async def get_session_user(
             )
 
         # Set the cookie token
+        max_age = int(expires_at - time.time()) if expires_at else None
         response.set_cookie(
             key='token',
             value=token,
@@ -188,6 +192,7 @@ async def get_session_user(
             httponly=True,  # Ensures the cookie is not accessible via JavaScript
             samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
             secure=WEBUI_AUTH_COOKIE_SECURE,
+            **({'max_age': max_age} if max_age is not None else {}),
         )
 
     user_permissions = get_permissions(user.id, request.app.state.config.USER_PERMISSIONS, db=db)
@@ -500,7 +505,7 @@ async def ldap_auth(
             user = Auths.authenticate_user_by_email(email, db=db)
 
             if user:
-                if user.role != 'admin' and ENABLE_LDAP_GROUP_MANAGEMENT and user_groups:
+                if ENABLE_LDAP_GROUP_MANAGEMENT and user_groups:
                     if ENABLE_LDAP_GROUP_CREATION:
                         Groups.create_groups_by_group_names(user.id, user_groups, db=db)
                     try:
@@ -561,12 +566,23 @@ async def signin(
             )
 
         user = Auths.authenticate_user_by_email(email, db=db)
-        if WEBUI_AUTH_TRUSTED_GROUPS_HEADER and user and user.role != 'admin':
-            group_names = request.headers.get(WEBUI_AUTH_TRUSTED_GROUPS_HEADER, '').split(',')
-            group_names = [name.strip() for name in group_names if name.strip()]
+        if user:
+            if WEBUI_AUTH_TRUSTED_GROUPS_HEADER:
+                group_names = request.headers.get(WEBUI_AUTH_TRUSTED_GROUPS_HEADER, '').split(',')
+                group_names = [name.strip() for name in group_names if name.strip()]
 
-            if group_names:
-                Groups.sync_groups_by_group_names(user.id, group_names, db=db)
+                if group_names:
+                    Groups.sync_groups_by_group_names(user.id, group_names, db=db)
+
+            if WEBUI_AUTH_TRUSTED_ROLE_HEADER:
+                trusted_role = request.headers.get(WEBUI_AUTH_TRUSTED_ROLE_HEADER, '').lower().strip()
+                if trusted_role in {'admin', 'user', 'pending'}:
+                    if user.role != trusted_role:
+                        Users.update_user_role_by_id(user.id, trusted_role, db=db)
+                elif trusted_role:
+                    log.warning(
+                        f'Ignoring invalid trusted role header value: {trusted_role}'
+                    )
 
     elif WEBUI_AUTH == False:
         admin_email = 'admin@localhost'

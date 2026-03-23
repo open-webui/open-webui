@@ -30,6 +30,7 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import (
     has_permission,
     has_public_read_access_grant,
+    has_public_write_access_grant,
     filter_allowed_access_grants,
 )
 from open_webui.models.access_grants import AccessGrants
@@ -234,7 +235,7 @@ async def get_note_by_id(
             permission='write',
             db=db,
         )
-        or has_public_read_access_grant(note.access_grants)
+        or has_public_write_access_grant(note.access_grants)
     )
 
     return NoteResponse(**note.model_dump(), write_access=write_access)

@@ -55,6 +55,7 @@
 	import { uploadFile } from '$lib/apis/files';
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
+	import { getChatById } from '$lib/apis/chats';
 	import { getSessionUser } from '$lib/apis/auths';
 	import { getTools } from '$lib/apis/tools';
 
@@ -806,8 +807,11 @@
 	const onDragOver = (e: DragEvent) => {
 		e.preventDefault();
 
-		// Check if a file is being dragged.
-		if (e.dataTransfer?.types?.includes('Files')) {
+		// Check if a file or a sidebar chat item is being dragged.
+		if (
+			e.dataTransfer?.types?.includes('Files') ||
+			e.dataTransfer?.types?.includes('text/plain')
+		) {
 			dragged = true;
 		} else {
 			dragged = false;
@@ -824,6 +828,35 @@
 	const onDrop = async (e: DragEvent) => {
 		e.preventDefault();
 		console.log(e);
+
+		// Check if the dropped data is a sidebar chat item
+		const textData = e.dataTransfer?.getData('text/plain');
+		if (textData) {
+			try {
+				const data = JSON.parse(textData);
+				if (data.type === 'chat' && data.id) {
+					// Fetch the chat to get its title, then add as a reference chat
+					const chat = await getChatById(localStorage.token, data.id);
+					if (chat) {
+						const chatItem = {
+							type: 'chat',
+							id: chat.id,
+							name: chat.title,
+							collection_name: '',
+							status: 'processed'
+						};
+						if (!files.find((f) => f.id === chatItem.id)) {
+							files = [...files, chatItem];
+						}
+					}
+					dragged = false;
+					e.stopPropagation();
+					return;
+				}
+			} catch (_) {
+				// Not valid JSON — fall through to file handling
+			}
+		}
 
 		if (e.dataTransfer?.files) {
 			const inputFiles = Array.from(e.dataTransfer?.files);
@@ -1022,8 +1055,8 @@
 
 			dropzoneElement = document.getElementById('chat-pane');
 			if (dropzoneElement) {
-				dropzoneElement.addEventListener('dragover', onDragOver);
-				dropzoneElement.addEventListener('drop', onDrop);
+				dropzoneElement.addEventListener('dragover', onDragOver, true);
+				dropzoneElement.addEventListener('drop', onDrop, true);
 				dropzoneElement.addEventListener('dragleave', onDragLeave);
 			}
 
@@ -1041,8 +1074,8 @@
 			window.removeEventListener('blur', onBlur);
 
 			if (dropzoneElement) {
-				dropzoneElement.removeEventListener('dragover', onDragOver);
-				dropzoneElement.removeEventListener('drop', onDrop);
+				dropzoneElement.removeEventListener('dragover', onDragOver, true);
+				dropzoneElement.removeEventListener('drop', onDrop, true);
 				dropzoneElement.removeEventListener('dragleave', onDragLeave);
 			}
 		};
@@ -1674,7 +1707,7 @@
 											</Tooltip>
 										{/if}
 
-										{#each selectedFilterIds as filterId}
+										{#each selectedFilterIds as filterId (filterId)}
 											{@const filter = toggleFilters.find((f) => f.id === filterId)}
 											{#if filter}
 												<Tooltip content={filter?.name} placement="top">

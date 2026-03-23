@@ -427,7 +427,7 @@
 			</div>
 			<div
 				id="chat-preview"
-				class="hidden md:flex md:flex-1 w-full overflow-y-auto h-96 md:h-[40rem] scrollbar-hidden"
+				class="hidden md:flex md:flex-1 w-full overflow-y-auto h-96 md:h-[40rem] scrollbar-hidden @container"
 			>
 				{#if messages === null}
 					<div

@@ -446,6 +446,31 @@ def append_or_update_assistant_message(content: str, messages: list[dict]):
     return messages
 
 
+def strip_empty_content_blocks(messages: list[dict]) -> list[dict]:
+    """
+    Remove empty text content blocks from multimodal message content arrays.
+
+    Providers like Gemini and Claude reject messages where a text block has
+    an empty string.  This can happen when a user sends only file/image
+    attachments without typing any text.
+    """
+    for message in messages:
+        content = message.get('content')
+        if isinstance(content, list):
+            cleaned = [
+                block
+                for block in content
+                if not (
+                    isinstance(block, dict)
+                    and block.get('type') == 'text'
+                    and not block.get('text', '').strip()
+                )
+            ]
+            if cleaned:
+                message['content'] = cleaned
+    return messages
+
+
 def openai_chat_message_template(model: str):
     return {
         'id': f'{model}-{str(uuid.uuid4())}',
