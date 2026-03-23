@@ -643,11 +643,14 @@
 		const audioQueueInstance = new AudioQueue(document.getElementById('audioElement'));
 		audioQueue.set(audioQueueInstance);
 
-		// Reset direct terminal enabled states — selectedTerminalId starts null on every page load
-		if ($settings?.terminalServers?.some((s) => s.enabled)) {
+		// Restore direct terminal enabled states based on persisted selectedTerminalId
+		if ($settings?.terminalServers?.length) {
 			settings.set({
 				...$settings,
-				terminalServers: ($settings.terminalServers ?? []).map((s) => ({ ...s, enabled: false }))
+				terminalServers: ($settings.terminalServers ?? []).map((s) => ({
+					...s,
+					enabled: $selectedTerminalId !== null && s.url === $selectedTerminalId
+				}))
 			});
 		}
 
