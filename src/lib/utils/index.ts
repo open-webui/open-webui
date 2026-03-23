@@ -1729,9 +1729,18 @@ export const getCodeBlockContents = (content: string): object => {
 
 	let codeBlocks = [];
 
-	let htmlContent = '';
-	let cssContent = '';
-	let jsContent = '';
+	// Groups of related HTML/CSS/JS blocks. Each HTML block starts a new group;
+	// CSS and JS blocks attach to the current (most recent) group.
+	// This preserves the existing behaviour for "dumb" models that output
+	// separate html/css/js blocks meant to form a single page, while also
+	// allowing multiple distinct HTML blocks to produce separate artifacts.
+	let htmlGroups: Array<{ html: string; css: string; js: string }> = [];
+
+	const initDefaultGroup = () => {
+		if (htmlGroups.length === 0) {
+			htmlGroups.push({ html: '', css: '', js: '' });
+		}
+	};
 
 	if (codeBlockContents) {
 		codeBlockContents.forEach((block) => {
@@ -1744,11 +1753,14 @@ export const getCodeBlockContents = (content: string): object => {
 			const { lang, code } = block;
 
 			if (lang === 'html') {
-				htmlContent += code + '\n';
+				// Each HTML block starts a new group
+				htmlGroups.push({ html: code + '\n', css: '', js: '' });
 			} else if (lang === 'css') {
-				cssContent += code + '\n';
+				initDefaultGroup();
+				htmlGroups[htmlGroups.length - 1].css += code + '\n';
 			} else if (lang === 'javascript' || lang === 'js') {
-				jsContent += code + '\n';
+				initDefaultGroup();
+				htmlGroups[htmlGroups.length - 1].js += code + '\n';
 			}
 		});
 	} else {
@@ -1763,28 +1775,42 @@ export const getCodeBlockContents = (content: string): object => {
 		if (inlineHtml) {
 			inlineHtml.forEach((block) => {
 				const content = block.replace(/<\/?html>/gi, ''); // Remove <html> tags
-				htmlContent += content + '\n';
+				htmlGroups.push({ html: content + '\n', css: '', js: '' });
 			});
 		}
 		if (inlineCss) {
 			inlineCss.forEach((block) => {
 				const content = block.replace(/<\/?style>/gi, ''); // Remove <style> tags
-				cssContent += content + '\n';
+				initDefaultGroup();
+				htmlGroups[htmlGroups.length - 1].css += content + '\n';
 			});
 		}
 		if (inlineJs) {
 			inlineJs.forEach((block) => {
 				const content = block.replace(/<\/?script>/gi, ''); // Remove <script> tags
-				jsContent += content + '\n';
+				initDefaultGroup();
+				htmlGroups[htmlGroups.length - 1].js += content + '\n';
 			});
 		}
 	}
+
+	// Backward-compatible flat fields (merged from all groups)
+	const htmlContent = htmlGroups.map((g) => g.html).join('');
+	const cssContent = htmlGroups.map((g) => g.css).join('');
+	const jsContent = htmlGroups.map((g) => g.js).join('');
 
 	return {
 		codeBlocks: codeBlocks,
 		html: htmlContent.trim(),
 		css: cssContent.trim(),
-		js: jsContent.trim()
+		js: jsContent.trim(),
+		htmlGroups: htmlGroups
+			.filter((g) => g.html.trim() || g.css.trim() || g.js.trim())
+			.map((g) => ({
+				html: g.html.trim(),
+				css: g.css.trim(),
+				js: g.js.trim()
+			}))
 	};
 };
 export const parseFrontmatter = (content) => {

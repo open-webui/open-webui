@@ -961,13 +961,12 @@
 			if (message?.role !== 'user' && message?.content) {
 				const {
 					codeBlocks: codeBlocks,
-					html: htmlContent,
-					css: cssContent,
-					js: jsContent
+					htmlGroups: htmlGroups
 				} = getCodeBlockContents(message.content);
 
-				if (htmlContent || cssContent || jsContent) {
-					const renderedContent = `
+				if (htmlGroups && htmlGroups.length > 0) {
+					htmlGroups.forEach((group) => {
+						const renderedContent = `
                         <!DOCTYPE html>
                         <html lang="en">
                         <head>
@@ -978,19 +977,20 @@
 									background-color: white; /* Ensure the iframe has a white background */
 								}
 
-								${cssContent}
+								${group.css}
 							</${''}style>
                         </head>
                         <body>
-                            ${htmlContent}
+                            ${group.html}
 
 							<${''}script>
-                            	${jsContent}
+                            	${group.js}
 							</${''}script>
                         </body>
                         </html>
                     `;
-					contents = [...contents, { type: 'iframe', content: renderedContent }];
+						contents = [...contents, { type: 'iframe', content: renderedContent }];
+					});
 				} else {
 					// Check for SVG content
 					for (const block of codeBlocks) {
