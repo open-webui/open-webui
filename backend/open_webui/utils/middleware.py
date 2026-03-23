@@ -227,7 +227,7 @@ def get_citation_source_from_tool_result(
     Returns a list of sources (usually one, but query_knowledge_files may return multiple).
     """
     _EXPECTS_LIST = {'search_web', 'query_knowledge_files'}
-    _EXPECTS_DICT = {'view_knowledge_file'}
+    _EXPECTS_DICT = {'view_knowledge_file', 'view_file'}
 
     try:
         try:
@@ -271,7 +271,7 @@ def get_citation_source_from_tool_result(
                 }
             ]
 
-        elif tool_name == 'view_knowledge_file':
+        elif tool_name in ('view_knowledge_file', 'view_file'):
             file_data = tool_result
             filename = file_data.get('filename', 'Unknown File')
             file_id = file_data.get('id', '')
@@ -4143,6 +4143,7 @@ async def streaming_chat_response_handler(response, ctx):
                             in [
                                 'search_web',
                                 'fetch_url',
+                                'view_file',
                                 'view_knowledge_file',
                                 'query_knowledge_files',
                             ]
