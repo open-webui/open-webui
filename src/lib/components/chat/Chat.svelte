@@ -2967,6 +2967,16 @@
 								responseMessage.done = true;
 								history.messages[responseMessageId] = responseMessage;
 								history = { ...history };
+
+								// We must save the chat here for direct streams, as there is no backend socket event to do it for us
+								if (!$temporaryChatEnabled && isVisibleChatEvent(_chatId)) {
+									await chatCompletedHandler(
+										_chatId,
+										model.id,
+										responseMessageId,
+										createMessagesList(history, responseMessageId)
+									);
+								}
 								break;
 							}
 
@@ -2997,10 +3007,13 @@
 						if (payload?.error) {
 							await handleOpenAIError(payload.error, responseMessage);
 						} else if (payload?.task_id) {
-							if (taskIds) {
-								taskIds.push(payload.task_id);
-							} else {
-								taskIds = [payload.task_id];
+							const currentMessage = history.messages[responseMessageId];
+							if (currentMessage && !currentMessage.done) {
+								if (taskIds) {
+									taskIds = [...taskIds, payload.task_id];
+								} else {
+									taskIds = [payload.task_id];
+								}
 							}
 						}
 					}
@@ -3015,10 +3028,13 @@
 				if (data.error) {
 					await handleOpenAIError(data.error, responseMessage);
 				} else {
-					if (taskIds) {
-						taskIds.push(data.task_id);
-					} else {
-						taskIds = [data.task_id];
+					const currentMessage = history.messages[responseMessageId];
+					if (currentMessage && !currentMessage.done) {
+						if (taskIds) {
+							taskIds = [...taskIds, data.task_id];
+						} else {
+							taskIds = [data.task_id];
+						}
 					}
 				}
 			}
