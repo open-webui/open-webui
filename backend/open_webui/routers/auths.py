@@ -291,7 +291,7 @@ async def update_password(
 
         if user:
             try:
-                validate_password(form_data.password)
+                validate_password(form_data.new_password)
             except Exception as e:
                 raise HTTPException(400, detail=str(e))
             hashed = get_password_hash(form_data.new_password)
