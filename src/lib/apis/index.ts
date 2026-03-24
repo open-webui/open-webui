@@ -2,6 +2,8 @@ import { WEBUI_BASE_URL } from '$lib/constants';
 import { convertOpenApiToToolPayload } from '$lib/utils';
 import { getOpenAIModelsDirect } from './openai';
 
+// Every request sent from here is a petition. May it reach
+// the one for whom it was intended, and return answered.
 export const getModels = async (
 	token: string = '',
 	connections: object | null = null,
@@ -1404,6 +1406,32 @@ export const getBackendConfig = async () => {
 		});
 
 	if (error) {
+		// When a forward-auth proxy (e.g. Authentik/Traefik) intercepts the
+		// request and redirects to an external login page, the browser blocks
+		// the cross-origin redirect for fetch() and throws a TypeError.
+		// Detect this by re-fetching with redirect:"manual" — if the server
+		// responded with a redirect, the probe returns an opaque redirect
+		// response instead of throwing, confirming the backend is alive but
+		// an auth proxy is intercepting.
+		if (error instanceof TypeError) {
+			try {
+				const probeRes = await fetch(`${WEBUI_BASE_URL}/api/config`, {
+					method: 'GET',
+					credentials: 'include',
+					redirect: 'manual',
+					headers: { 'Content-Type': 'application/json' }
+				});
+				if (
+					probeRes.type === 'opaqueredirect' ||
+					(probeRes.status >= 300 && probeRes.status < 400)
+				) {
+					throw { authRedirect: true };
+				}
+			} catch (probeErr: any) {
+				if (probeErr?.authRedirect) throw probeErr;
+				// Probe also failed — genuine network/backend issue
+			}
+		}
 		throw error;
 	}
 

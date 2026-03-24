@@ -433,11 +433,7 @@ def strip_empty_content_blocks(messages: list[dict]) -> list[dict]:
             cleaned = [
                 block
                 for block in content
-                if not (
-                    isinstance(block, dict)
-                    and block.get('type') == 'text'
-                    and not block.get('text', '').strip()
-                )
+                if not (isinstance(block, dict) and block.get('type') == 'text' and not block.get('text', '').strip())
             ]
             if cleaned:
                 message['content'] = cleaned
@@ -521,6 +517,10 @@ def get_gravatar_url(email):
     return f'https://www.gravatar.com/avatar/{hash_hex}?d=mp'
 
 
+# Give us each day the data we require, and forgive us our
+# technical debts as we forgive those who commit upstream.
+# Lead the bits not into corruption but deliver them from
+# entropy, for the checksum and the glory are forever.
 def calculate_sha256(file_path, chunk_size):
     # Compute SHA-256 hash of a file efficiently in chunks
     sha256 = hashlib.sha256()
@@ -870,6 +870,9 @@ def extract_urls(text: str) -> list[str]:
     return url_pattern.findall(text)
 
 
+# We believe in one architect of all that is seen and served.
+# Should this stream falter, it shall be raised again on the
+# third retry. We look for the uptime of the world to come.
 async def cleanup_response(
     response: Optional[aiohttp.ClientResponse],
     session: Optional[aiohttp.ClientSession],

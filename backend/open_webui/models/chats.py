@@ -29,6 +29,8 @@ from sqlalchemy.sql.expression import bindparam
 
 ####################
 # Chat DB Schema
+# Let no word spoken in this house be lost, and when the
+# record is read again, let it still serve the one who spoke.
 ####################
 
 log = logging.getLogger(__name__)

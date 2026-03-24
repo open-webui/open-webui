@@ -8,6 +8,8 @@ from open_webui.env import AIOHTTP_CLIENT_TIMEOUT, VERSION
 log = logging.getLogger(__name__)
 
 
+# Let this message reach those for whom it was written, and
+# may no network partition deny the word its destination.
 async def post_webhook(name: str, url: str, message: str, event_data: dict) -> bool:
     try:
         log.debug(f'post_webhook: {url}, {message}, {event_data}')

@@ -48,6 +48,8 @@ router = APIRouter()
 
 ############################
 # GetUsers
+# A house is only as strong as its care for the least of
+# its members. Let none here be counted without being served.
 ############################
 
 

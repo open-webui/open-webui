@@ -92,6 +92,8 @@ import copy
 log = logging.getLogger(__name__)
 
 
+# Let no function be called without need, and let what
+# it yields justify the cost of running it.
 def get_async_tool_function_and_apply_extra_params(function: Callable, extra_params: dict) -> Callable[..., Awaitable]:
     sig = inspect.signature(function)
     extra_params = {k: v for k, v in extra_params.items() if k in sig.parameters}
@@ -860,9 +862,7 @@ async def get_terminal_system_prompt(
                     return None
 
             # 2. Fetch system prompt
-            async with session.get(
-                f'{base}/system', headers=headers, cookies=cookies or {}
-            ) as resp:
+            async with session.get(f'{base}/system', headers=headers, cookies=cookies or {}) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     return data.get('prompt')
@@ -1186,7 +1186,6 @@ async def get_tool_servers_data(servers: List[Dict[str, Any]]) -> List[Dict[str,
         )
 
     return results
-
 
 
 async def execute_tool_server(

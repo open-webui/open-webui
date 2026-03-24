@@ -19,6 +19,7 @@
 		listFiles,
 		readFile,
 		downloadFileBlob,
+		archiveFromTerminal,
 		uploadToTerminal,
 		createDirectory,
 		deleteEntry,
@@ -403,7 +404,11 @@
 		const terminal = selectedTerminal;
 		if (!terminal) return;
 
-		const result = await downloadFileBlob(terminal.url, terminal.key, path);
+		// Directories end with '/' — download as ZIP archive
+		const isDir = path.endsWith('/');
+		const result = isDir
+			? await archiveFromTerminal(terminal.url, terminal.key, [path.replace(/\/$/, '')])
+			: await downloadFileBlob(terminal.url, terminal.key, path);
 		if (!result) return;
 		const url = URL.createObjectURL(result.blob);
 		const a = document.createElement('a');
@@ -644,10 +649,24 @@
 		const terminal = selectedTerminal;
 		if (!terminal) return;
 
-		const filePaths = [...selectedEntries].filter((p) => !p.endsWith('/'));
-		for (const p of filePaths) {
-			await downloadFile(p);
+		const paths = [...selectedEntries].map((p) => p.replace(/\/$/, ''));
+		if (paths.length === 0) return;
+
+		// Single file (not dir) — use the regular downloadFile path
+		if (paths.length === 1 && ![...selectedEntries][0].endsWith('/')) {
+			await downloadFile([...selectedEntries][0]);
+			return;
 		}
+
+		// Archive everything into a single ZIP
+		const result = await archiveFromTerminal(terminal.url, terminal.key, paths);
+		if (!result) return;
+		const url = URL.createObjectURL(result.blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = result.filename;
+		a.click();
+		URL.revokeObjectURL(url);
 	};
 
 	// Escape to clear selection
@@ -840,6 +859,7 @@
 				onNewFolder={startNewFolder}
 				onNewFile={startNewFile}
 				onUploadFiles={handleUploadFiles}
+				onDownloadDir={() => downloadFile(currentPath)}
 				onMove={handleMove}
 			>
 				{#if fileImageUrl !== null || (fileOfficeSlides !== null && fileOfficeSlides.length > 0)}
@@ -1131,6 +1151,7 @@
 				<PortPreview
 					baseUrl={selectedTerminal?.url ?? ''}
 					port={previewPort}
+					overlay={overlay || isDraggingHandle}
 					onClose={() => {
 						previewPort = null;
 					}}
@@ -1163,7 +1184,7 @@
 					}}
 					baseUrl={selectedTerminal?.url ?? ''}
 					apiKey={selectedTerminal?.key ?? ''}
-					{overlay}
+					overlay={overlay || isDraggingHandle}
 					onSave={async (content) => {
 						const terminal = selectedTerminal;
 						if (!terminal || !selectedFile) return;
@@ -1290,17 +1311,17 @@
 				{#if terminalExpanded}
 					<!-- Drag handle (at top of panel) -->
 					<!-- svelte-ignore a11y-no-static-element-interactions -->
-					<div
-						class="h-1 cursor-row-resize hover:bg-blue-400/30 transition group relative"
-						on:mousedown={onHandleMouseDown}
-					>
-						<div class="absolute inset-x-0 -top-1 -bottom-1" />
+					<div class="relative cursor-row-resize group" on:mousedown={onHandleMouseDown}>
+						<div
+							class="h-px bg-transparent group-hover:bg-black/10 dark:group-hover:bg-white/10 transition"
+						/>
+						<div class="absolute inset-x-0 -top-1.5 -bottom-1.5" />
 					</div>
 				{/if}
 
 				<!-- Toggle header (full-width button) -->
 				<button
-					class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
+					class="w-full flex items-center gap-2 px-3 py-1 mb-0.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
 					on:click={toggleTerminal}
 				>
 					<svg
@@ -1344,7 +1365,7 @@
 				{#if terminalExpanded}
 					<div style="height: {terminalHeight}px" class="min-h-0">
 						<XTerminal
-							{overlay}
+							overlay={overlay || isDraggingHandle}
 							bind:connected={terminalConnected}
 							bind:connecting={terminalConnecting}
 						/>

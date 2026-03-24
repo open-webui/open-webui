@@ -906,6 +906,12 @@
 			backendConfig = await getBackendConfig();
 			console.log('Backend config:', backendConfig);
 		} catch (error) {
+			if (error?.authRedirect) {
+				// Forward-auth proxy is redirecting to an external login page.
+				// Full-page navigation lets the browser follow the redirect natively.
+				window.location.href = '/';
+				return;
+			}
 			console.error('Error loading backend config:', error);
 		}
 		// Initialize i18n even if we didn't get a backend config,

@@ -60,6 +60,7 @@ from open_webui.config import (
     OAUTH_UPDATE_EMAIL_ON_LOGIN,
     OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID,
     OAUTH_AUDIENCE,
+    OAUTH_AUTHORIZE_PARAMS,
     WEBHOOK_URL,
     JWT_EXPIRES_IN,
     AppConfig,
@@ -266,11 +267,11 @@ async def get_authorization_server_discovery_urls(server_url: str) -> list[str]:
             ) as response:
                 if response.status == 401:
                     match = re.search(
-                        r'resource_metadata="([^"]+)"',
+                        r'resource_metadata=(?:"([^"]+)"|([^\s,]+))',
                         response.headers.get('WWW-Authenticate', ''),
                     )
                     if match:
-                        resource_metadata_url = match.group(1)
+                        resource_metadata_url = match.group(1) or match.group(2)
                         log.debug(f'Found resource_metadata URL: {resource_metadata_url}')
 
                         # Step 2: Fetch Protected Resource metadata
@@ -1080,21 +1081,30 @@ class OAuthManager:
             log.debug(f'Accepted user roles: {oauth_allowed_roles}')
             log.debug(f'Accepted admin roles: {oauth_admin_roles}')
 
-            # If any roles are found, check if they match the allowed or admin roles
+            # If roles are present in the token, they must match; otherwise deny access
             if oauth_roles:
-                # If role management is enabled, and matching roles are provided, use the roles
+                matched = False
                 for allowed_role in oauth_allowed_roles:
-                    # If the user has any of the allowed roles, assign the role "user"
                     if allowed_role in oauth_roles:
                         log.debug('Assigned user the user role')
                         role = 'user'
+                        matched = True
                         break
                 for admin_role in oauth_admin_roles:
-                    # If the user has any of the admin roles, assign the role "admin"
                     if admin_role in oauth_roles:
                         log.debug('Assigned user the admin role')
                         role = 'admin'
+                        matched = True
                         break
+                if not matched:
+                    log.warning(
+                        f'OAuth role management enabled but user roles do not match any allowed/admin roles. '
+                        f'User roles: {oauth_roles}, allowed: {oauth_allowed_roles}, admin: {oauth_admin_roles}'
+                    )
+                    raise HTTPException(
+                        status.HTTP_403_FORBIDDEN,
+                        detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                    )
         else:
             if not user:
                 # If role management is disabled, use the default role for new users
@@ -1286,6 +1296,8 @@ class OAuthManager:
         kwargs = {}
         if auth_manager_config.OAUTH_AUDIENCE:
             kwargs['audience'] = auth_manager_config.OAUTH_AUDIENCE
+        if OAUTH_AUTHORIZE_PARAMS:
+            kwargs.update(OAUTH_AUTHORIZE_PARAMS)
 
         return await client.authorize_redirect(request, redirect_uri, **kwargs)
 

@@ -13,6 +13,8 @@ from open_webui.config import DEFAULT_RAG_TEMPLATE
 log = logging.getLogger(__name__)
 
 
+# Let the right tool be given for the work at hand,
+# not the one that flatters, but the one that serves.
 def get_task_model_id(default_model_id: str, task_model: str, task_model_external: str, models) -> str:
     # Set the task model
     task_model_id = default_model_id
@@ -239,6 +241,8 @@ def replace_messages_variable(template: str, messages: Optional[list[dict]] = No
 # {{prompt:middletruncate:8000}}
 
 
+# Let the context given here not distort the question,
+# but illuminate it, so that the answer serves the one who asked.
 def rag_template(template: str, context: str, query: str):
     if template.strip() == '':
         template = DEFAULT_RAG_TEMPLATE

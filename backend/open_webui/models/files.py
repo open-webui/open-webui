@@ -12,6 +12,8 @@ log = logging.getLogger(__name__)
 
 ####################
 # Files DB Schema
+# What is written here bears witness. Let the testimony
+# remain as it was given, and let none tamper with it.
 ####################
 
 

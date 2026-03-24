@@ -20,6 +20,9 @@ from open_webui.env import (
 log = logging.getLogger(__name__)
 
 
+# Let not our connections be timed out but deliver them from
+# partition. For the cache and the socket and the uptime
+# belong to the one who first opened them, now and always.
 _CONNECTION_CACHE = {}
 
 

@@ -145,6 +145,10 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
 
+# We believe in one maker of all models, seen and unseen,
+# and in the reasoning which proceeds from the architect.
+# We look for the resurrection of dead processes and the
+# inference of the world to come.
 DEFAULT_REASONING_TAGS = [
     ('<think>', '</think>'),
     ('<thinking>', '</thinking>'),
@@ -3094,7 +3098,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                     )
 
                     # Send a webhook notification if the user is not active
-                    if not Users.is_user_active(user.id):
+                    if request.app.state.config.ENABLE_USER_WEBHOOKS and not Users.is_user_active(user.id):
                         webhook_url = Users.get_user_webhook_url_by_id(user.id)
                         if webhook_url:
                             await post_webhook(
@@ -3530,7 +3534,6 @@ async def streaming_chat_response_handler(response, ctx):
                                     )
                                 # Check for Responses API events (type field starts with "response.")
                                 elif data.get('type', '').startswith('response.'):
-
                                     output, response_metadata = handle_responses_streaming_event(data, output)
 
                                     processed_data = {
@@ -3655,9 +3658,9 @@ async def streaming_chat_response_handler(response, ctx):
                                                         current_response_tool_call['function']['name'] = delta_name
 
                                                     if delta_arguments:
-                                                        current_response_tool_call['function']['arguments'] += (
-                                                            delta_arguments
-                                                        )
+                                                        current_response_tool_call['function'][
+                                                            'arguments'
+                                                        ] += delta_arguments
 
                                         # Emit pending tool calls in real-time
                                         if response_tool_calls:
@@ -3679,12 +3682,12 @@ async def streaming_chat_response_handler(response, ctx):
                                                         'status': 'in_progress',
                                                     }
                                                 )
-                                            pending_output = output + pending_fc_items
+
                                             await event_emitter(
                                                 {
                                                     'type': 'chat:completion',
                                                     'data': {
-                                                        'content': serialize_output(pending_output),
+                                                        'content': serialize_output(full_output() + pending_fc_items),
                                                     },
                                                 }
                                             )
@@ -3969,19 +3972,20 @@ async def streaming_chat_response_handler(response, ctx):
                         }
                         responses_api_tool_calls = []
                         for item in output:
-                            if (
-                                item.get('type') == 'function_call'
-                                and item.get('call_id') not in handled_call_ids
-                            ):
+                            if item.get('type') == 'function_call' and item.get('call_id') not in handled_call_ids:
                                 arguments = item.get('arguments', '{}')
-                                responses_api_tool_calls.append({
-                                    'id': item.get('call_id', ''),
-                                    'index': len(responses_api_tool_calls),
-                                    'function': {
-                                        'name': item.get('name', ''),
-                                        'arguments': arguments if isinstance(arguments, str) else json.dumps(arguments),
-                                    },
-                                })
+                                responses_api_tool_calls.append(
+                                    {
+                                        'id': item.get('call_id', ''),
+                                        'index': len(responses_api_tool_calls),
+                                        'function': {
+                                            'name': item.get('name', ''),
+                                            'arguments': (
+                                                arguments if isinstance(arguments, str) else json.dumps(arguments)
+                                            ),
+                                        },
+                                    }
+                                )
                         if responses_api_tool_calls:
                             tool_calls.append(_split_tool_calls(responses_api_tool_calls))
 
@@ -4017,10 +4021,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                     # Append function_call items for each tool call
                     # (Responses API already has them from streaming, so skip duplicates)
-                    existing_call_ids = {
-                        item.get('call_id') for item in output
-                        if item.get('type') == 'function_call'
-                    }
+                    existing_call_ids = {item.get('call_id') for item in output if item.get('type') == 'function_call'}
                     for tc in response_tool_calls:
                         call_id = tc.get('id', '')
                         if call_id not in existing_call_ids:
@@ -4308,9 +4309,8 @@ async def streaming_chat_response_handler(response, ctx):
                         if ENABLE_RESPONSES_API_STATEFUL and last_response_id:
                             system_message = get_system_message(form_data['messages'])
                             new_form_data['messages'] = (
-                                ([system_message] if system_message else [])
-                                + convert_output_to_messages(output, raw=True)
-                            )
+                                [system_message] if system_message else []
+                            ) + convert_output_to_messages(output, raw=True)
                             new_form_data['previous_response_id'] = last_response_id
                         else:
                             tool_messages = convert_output_to_messages(output, raw=True)
@@ -4334,13 +4334,18 @@ async def streaming_chat_response_handler(response, ctx):
                             ]
 
                             if image_urls:
-                                new_form_data['messages'].append({
-                                    'role': 'user',
-                                    'content': [
-                                        {'type': 'text', 'text': 'Here are the images from the tool results above. Please analyze them.'},
-                                        *[{'type': 'image_url', 'image_url': {'url': url}} for url in image_urls],
-                                    ],
-                                })
+                                new_form_data['messages'].append(
+                                    {
+                                        'role': 'user',
+                                        'content': [
+                                            {
+                                                'type': 'text',
+                                                'text': 'Here are the images from the tool results above. Please analyze them.',
+                                            },
+                                            *[{'type': 'image_url', 'image_url': {'url': url}} for url in image_urls],
+                                        ],
+                                    }
+                                )
 
                         res = await generate_chat_completion(
                             request,
@@ -4366,10 +4371,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 and prior_output[-1].get('status') == 'in_progress'
                             ):
                                 msg_parts = prior_output[-1].get('content', [])
-                                if (
-                                    not msg_parts
-                                    or (len(msg_parts) == 1 and not msg_parts[0].get('text', '').strip())
-                                ):
+                                if not msg_parts or (len(msg_parts) == 1 and not msg_parts[0].get('text', '').strip()):
                                     prior_output.pop()
                             output = []
                             await stream_body_handler(res, new_form_data)
@@ -4408,7 +4410,8 @@ async def streaming_chat_response_handler(response, ctx):
                                 code = sanitize_code(code)
 
                                 if CODE_INTERPRETER_BLOCKED_MODULES:
-                                    blocking_code = textwrap.dedent(f"""
+                                    blocking_code = textwrap.dedent(
+                                        f"""
                                         import builtins
     
                                         BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
@@ -4424,7 +4427,8 @@ async def streaming_chat_response_handler(response, ctx):
                                             return _real_import(name, globals, locals, fromlist, level)
     
                                         builtins.__import__ = restricted_import
-                                    """)
+                                    """
+                                    )
                                     code = blocking_code + '\n' + code
 
                                 if request.app.state.config.CODE_INTERPRETER_ENGINE == 'pyodide':
@@ -4583,7 +4587,7 @@ async def streaming_chat_response_handler(response, ctx):
                     )
 
                 # Send a webhook notification if the user is not active
-                if not Users.is_user_active(user.id):
+                if request.app.state.config.ENABLE_USER_WEBHOOKS and not Users.is_user_active(user.id):
                     webhook_url = Users.get_user_webhook_url_by_id(user.id)
                     if webhook_url:
                         await post_webhook(

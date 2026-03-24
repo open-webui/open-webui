@@ -42,6 +42,8 @@ from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 
+# An image can lie as easily as it can illuminate. Let what
+# is generated here be honest about what it shows.
 IMAGE_CACHE_DIR = CACHE_DIR / 'image' / 'generations'
 IMAGE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 

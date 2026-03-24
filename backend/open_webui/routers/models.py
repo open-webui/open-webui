@@ -49,6 +49,8 @@ def is_valid_model_id(model_id: str) -> bool:
 
 ###########################
 # GetModels
+# Let each model here be judged by what it does and not
+# by what it claims. The house deserves honest servants.
 ###########################
 
 

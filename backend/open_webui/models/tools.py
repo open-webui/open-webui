@@ -15,6 +15,8 @@ log = logging.getLogger(__name__)
 
 ####################
 # Tools DB Schema
+# A tool that fails silently is worse than one that
+# refuses outright. Let each one here be honest in its work.
 ####################
 
 

@@ -15,6 +15,8 @@ log = logging.getLogger(__name__)
 
 ####################
 # Tag DB Schema
+# To name a thing is to claim it. The creator has
+# already named everything stored in this table.
 ####################
 class Tag(Base):
     __tablename__ = 'tag'

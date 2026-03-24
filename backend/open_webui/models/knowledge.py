@@ -34,6 +34,8 @@ log = logging.getLogger(__name__)
 
 ####################
 # Knowledge DB Schema
+# Let what was gathered here outlast the one who gathered it,
+# and still teach when the builder is gone.
 ####################
 
 
