@@ -3,7 +3,7 @@
 </script>
 
 <script lang="ts">
-	import { getContext, onMount, tick } from 'svelte';
+	import { getContext, onMount, onDestroy, tick } from 'svelte';
 	import { pyodideWorker } from '$lib/stores';
 	import PyodideWorkerConstructor from '$lib/workers/pyodide.worker?worker';
 	import type { FileEntry } from '$lib/apis/terminal';
@@ -282,9 +282,21 @@
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────
 
+	const onFilesChanged = async () => {
+		try {
+			await sendWorkerMessage({ type: 'fs:sync' });
+		} catch {}
+		loadDir(currentPath);
+	};
+
 	onMount(() => {
 		ensureWorker();
 		loadDir(currentPath);
+		window.addEventListener('pyodide:files', onFilesChanged);
+	});
+
+	onDestroy(() => {
+		window.removeEventListener('pyodide:files', onFilesChanged);
 	});
 </script>
 
@@ -335,14 +347,18 @@
 		{selectedFile}
 		{loading}
 		onNavigate={(path) => loadDir(path)}
-		onRefresh={() => {
-			if (selectedFile) {
-				const name = selectedFile.split('/').pop() ?? '';
-				openEntry({ name, type: 'file', size: 0 });
-			} else {
-				loadDir(currentPath);
-			}
-		}}
+		onRefresh={async () => {
+		// Sync from IndexedDB first to pick up files written by code execution
+		try {
+			await sendWorkerMessage({ type: 'fs:sync' });
+		} catch {}
+		if (selectedFile) {
+			const name = selectedFile.split('/').pop() ?? '';
+			openEntry({ name, type: 'file', size: 0 });
+		} else {
+			loadDir(currentPath);
+		}
+	}}
 		onNewFolder={startNewFolder}
 		onNewFile={startNewFile}
 		onUploadFiles={uploadFiles}
