@@ -292,9 +292,10 @@
 						class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
 						on:click={(e) => {
 							e.stopPropagation();
-							const path = entry.type === 'directory'
-								? `${currentPath}${entry.name}/`
-								: `${currentPath}${entry.name}`;
+							const path =
+								entry.type === 'directory'
+									? `${currentPath}${entry.name}/`
+									: `${currentPath}${entry.name}`;
 							onDownload(path);
 						}}
 					>

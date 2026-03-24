@@ -839,32 +839,41 @@ def convert_to_responses_payload(payload: dict) -> dict:
         if role == 'assistant' and msg.get('tool_calls'):
             # Add text content as message if present
             if content:
-                text = content if isinstance(content, str) else '\n'.join(
-                    p.get('text', '') for p in content if p.get('type') == 'text'
+                text = (
+                    content
+                    if isinstance(content, str)
+                    else '\n'.join(p.get('text', '') for p in content if p.get('type') == 'text')
                 )
                 if text.strip():
-                    input_items.append({
-                        'type': 'message', 'role': 'assistant',
-                        'content': [{'type': 'output_text', 'text': text}],
-                    })
+                    input_items.append(
+                        {
+                            'type': 'message',
+                            'role': 'assistant',
+                            'content': [{'type': 'output_text', 'text': text}],
+                        }
+                    )
             # Convert each tool_call to a function_call input item
             for tool_call in msg['tool_calls']:
                 func = tool_call.get('function', {})
-                input_items.append({
-                    'type': 'function_call',
-                    'call_id': tool_call.get('id', ''),
-                    'name': func.get('name', ''),
-                    'arguments': func.get('arguments', '{}'),
-                })
+                input_items.append(
+                    {
+                        'type': 'function_call',
+                        'call_id': tool_call.get('id', ''),
+                        'name': func.get('name', ''),
+                        'arguments': func.get('arguments', '{}'),
+                    }
+                )
             continue
 
         # Handle tool result messages
         if role == 'tool':
-            input_items.append({
-                'type': 'function_call_output',
-                'call_id': msg.get('tool_call_id', ''),
-                'output': msg.get('content', ''),
-            })
+            input_items.append(
+                {
+                    'type': 'function_call_output',
+                    'call_id': msg.get('tool_call_id', ''),
+                    'output': msg.get('content', ''),
+                }
+            )
             continue
 
         # Convert content format
@@ -1132,8 +1141,7 @@ async def generate_chat_completion(
         for message in payload['messages']:
             if message.get('role') == 'tool' and isinstance(message.get('content'), list):
                 message['content'] = ''.join(
-                    part.get('text', '') for part in message['content']
-                    if part.get('type') in ('input_text', 'text')
+                    part.get('text', '') for part in message['content'] if part.get('type') in ('input_text', 'text')
                 )
 
     payload = json.dumps(payload)

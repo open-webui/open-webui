@@ -1604,13 +1604,15 @@ async def search_knowledge_files(
                 )
 
                 for file in result.items:
-                    all_files.append({
-                        'id': file.id,
-                        'filename': file.filename,
-                        'knowledge_id': knowledge.id,
-                        'knowledge_name': knowledge.name,
-                        'updated_at': file.updated_at,
-                    })
+                    all_files.append(
+                        {
+                            'id': file.id,
+                            'filename': file.filename,
+                            'knowledge_id': knowledge.id,
+                            'knowledge_name': knowledge.name,
+                            'updated_at': file.updated_at,
+                        }
+                    )
 
             # Search within directly attached files (filename match)
             if not knowledge_id and attached_file_ids:
@@ -1618,14 +1620,16 @@ async def search_knowledge_files(
                 for file_id in attached_file_ids:
                     file = Files.get_file_by_id(file_id)
                     if file and (not query_lower or query_lower in file.filename.lower()):
-                        all_files.append({
-                            'id': file.id,
-                            'filename': file.filename,
-                            'updated_at': file.updated_at,
-                        })
+                        all_files.append(
+                            {
+                                'id': file.id,
+                                'filename': file.filename,
+                                'updated_at': file.updated_at,
+                            }
+                        )
 
             # Apply pagination across combined results
-            all_files = all_files[skip:skip + count]
+            all_files = all_files[skip : skip + count]
             return json.dumps(all_files, ensure_ascii=False)
 
         # No attached knowledge - search all accessible KBs
@@ -1739,7 +1743,7 @@ async def view_file(
             content = file.data.get('content', '')
 
         total_chars = len(content)
-        sliced = content[offset:offset + max_chars]
+        sliced = content[offset : offset + max_chars]
         is_truncated = (offset + len(sliced)) < total_chars
 
         result = {
@@ -1844,7 +1848,7 @@ async def view_knowledge_file(
             content = file.data.get('content', '')
 
         total_chars = len(content)
-        sliced = content[offset:offset + max_chars]
+        sliced = content[offset : offset + max_chars]
         is_truncated = (offset + len(sliced)) < total_chars
 
         result = {
@@ -1935,21 +1939,20 @@ async def list_knowledge(
 
                     # Include file listing for each KB
                     if kb_files:
-                        kb_entry['files'] = [
-                            {'id': f.id, 'filename': f.filename}
-                            for f in kb_files
-                        ]
+                        kb_entry['files'] = [{'id': f.id, 'filename': f.filename} for f in kb_files]
 
                     knowledge_bases.append(kb_entry)
 
             elif item_type == 'file':
                 file = Files.get_file_by_id(item_id)
                 if file:
-                    files.append({
-                        'id': file.id,
-                        'filename': file.filename,
-                        'updated_at': file.updated_at,
-                    })
+                    files.append(
+                        {
+                            'id': file.id,
+                            'filename': file.filename,
+                            'updated_at': file.updated_at,
+                        }
+                    )
 
             elif item_type == 'note':
                 note = Notes.get_note_by_id(item_id)
@@ -1963,16 +1966,21 @@ async def list_knowledge(
                         permission='read',
                     )
                 ):
-                    notes.append({
-                        'id': note.id,
-                        'title': note.title,
-                    })
+                    notes.append(
+                        {
+                            'id': note.id,
+                            'title': note.title,
+                        }
+                    )
 
-        return json.dumps({
-            'knowledge_bases': knowledge_bases,
-            'files': files,
-            'notes': notes,
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                'knowledge_bases': knowledge_bases,
+                'files': files,
+                'notes': notes,
+            },
+            ensure_ascii=False,
+        )
     except Exception as e:
         log.exception(f'list_knowledge error: {e}')
         return json.dumps({'error': str(e)})

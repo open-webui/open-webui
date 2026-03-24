@@ -1311,11 +1311,10 @@
 				{#if terminalExpanded}
 					<!-- Drag handle (at top of panel) -->
 					<!-- svelte-ignore a11y-no-static-element-interactions -->
-					<div
-						class="relative cursor-row-resize group"
-						on:mousedown={onHandleMouseDown}
-					>
-						<div class="h-px bg-transparent group-hover:bg-black/10 dark:group-hover:bg-white/10 transition" />
+					<div class="relative cursor-row-resize group" on:mousedown={onHandleMouseDown}>
+						<div
+							class="h-px bg-transparent group-hover:bg-black/10 dark:group-hover:bg-white/10 transition"
+						/>
 						<div class="absolute inset-x-0 -top-1.5 -bottom-1.5" />
 					</div>
 				{/if}

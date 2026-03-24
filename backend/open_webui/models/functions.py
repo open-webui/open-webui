@@ -228,12 +228,7 @@ class FunctionsTable:
 
     def get_function_list(self, db: Optional[Session] = None) -> list[FunctionUserResponse]:
         with get_db_context(db) as db:
-            functions = (
-                db.query(Function)
-                .options(defer(Function.content))
-                .order_by(Function.updated_at.desc())
-                .all()
-            )
+            functions = db.query(Function).options(defer(Function.content)).order_by(Function.updated_at.desc()).all()
             user_ids = list(set(func.user_id for func in functions))
 
             users = Users.get_users_by_user_ids(user_ids, db=db) if user_ids else []

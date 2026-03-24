@@ -3534,7 +3534,6 @@ async def streaming_chat_response_handler(response, ctx):
                                     )
                                 # Check for Responses API events (type field starts with "response.")
                                 elif data.get('type', '').startswith('response.'):
-
                                     output, response_metadata = handle_responses_streaming_event(data, output)
 
                                     processed_data = {
@@ -3973,19 +3972,20 @@ async def streaming_chat_response_handler(response, ctx):
                         }
                         responses_api_tool_calls = []
                         for item in output:
-                            if (
-                                item.get('type') == 'function_call'
-                                and item.get('call_id') not in handled_call_ids
-                            ):
+                            if item.get('type') == 'function_call' and item.get('call_id') not in handled_call_ids:
                                 arguments = item.get('arguments', '{}')
-                                responses_api_tool_calls.append({
-                                    'id': item.get('call_id', ''),
-                                    'index': len(responses_api_tool_calls),
-                                    'function': {
-                                        'name': item.get('name', ''),
-                                        'arguments': arguments if isinstance(arguments, str) else json.dumps(arguments),
-                                    },
-                                })
+                                responses_api_tool_calls.append(
+                                    {
+                                        'id': item.get('call_id', ''),
+                                        'index': len(responses_api_tool_calls),
+                                        'function': {
+                                            'name': item.get('name', ''),
+                                            'arguments': arguments
+                                            if isinstance(arguments, str)
+                                            else json.dumps(arguments),
+                                        },
+                                    }
+                                )
                         if responses_api_tool_calls:
                             tool_calls.append(_split_tool_calls(responses_api_tool_calls))
 
@@ -4021,10 +4021,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                     # Append function_call items for each tool call
                     # (Responses API already has them from streaming, so skip duplicates)
-                    existing_call_ids = {
-                        item.get('call_id') for item in output
-                        if item.get('type') == 'function_call'
-                    }
+                    existing_call_ids = {item.get('call_id') for item in output if item.get('type') == 'function_call'}
                     for tc in response_tool_calls:
                         call_id = tc.get('id', '')
                         if call_id not in existing_call_ids:
@@ -4312,9 +4309,8 @@ async def streaming_chat_response_handler(response, ctx):
                         if ENABLE_RESPONSES_API_STATEFUL and last_response_id:
                             system_message = get_system_message(form_data['messages'])
                             new_form_data['messages'] = (
-                                ([system_message] if system_message else [])
-                                + convert_output_to_messages(output, raw=True)
-                            )
+                                [system_message] if system_message else []
+                            ) + convert_output_to_messages(output, raw=True)
                             new_form_data['previous_response_id'] = last_response_id
                         else:
                             tool_messages = convert_output_to_messages(output, raw=True)
@@ -4338,13 +4334,18 @@ async def streaming_chat_response_handler(response, ctx):
                             ]
 
                             if image_urls:
-                                new_form_data['messages'].append({
-                                    'role': 'user',
-                                    'content': [
-                                        {'type': 'text', 'text': 'Here are the images from the tool results above. Please analyze them.'},
-                                        *[{'type': 'image_url', 'image_url': {'url': url}} for url in image_urls],
-                                    ],
-                                })
+                                new_form_data['messages'].append(
+                                    {
+                                        'role': 'user',
+                                        'content': [
+                                            {
+                                                'type': 'text',
+                                                'text': 'Here are the images from the tool results above. Please analyze them.',
+                                            },
+                                            *[{'type': 'image_url', 'image_url': {'url': url}} for url in image_urls],
+                                        ],
+                                    }
+                                )
 
                         res = await generate_chat_completion(
                             request,
@@ -4370,10 +4371,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 and prior_output[-1].get('status') == 'in_progress'
                             ):
                                 msg_parts = prior_output[-1].get('content', [])
-                                if (
-                                    not msg_parts
-                                    or (len(msg_parts) == 1 and not msg_parts[0].get('text', '').strip())
-                                ):
+                                if not msg_parts or (len(msg_parts) == 1 and not msg_parts[0].get('text', '').strip()):
                                     prior_output.pop()
                             output = []
                             await stream_body_handler(res, new_form_data)

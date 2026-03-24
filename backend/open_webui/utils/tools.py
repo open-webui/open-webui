@@ -862,9 +862,7 @@ async def get_terminal_system_prompt(
                     return None
 
             # 2. Fetch system prompt
-            async with session.get(
-                f'{base}/system', headers=headers, cookies=cookies or {}
-            ) as resp:
+            async with session.get(f'{base}/system', headers=headers, cookies=cookies or {}) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     return data.get('prompt')
@@ -1188,7 +1186,6 @@ async def get_tool_servers_data(servers: List[Dict[str, Any]]) -> List[Dict[str,
         )
 
     return results
-
 
 
 async def execute_tool_server(

@@ -1096,7 +1096,7 @@ async def export_knowledge_by_id(id: str, user=Depends(get_admin_user), db: Sess
 
     # Use RFC 5987 filename* for non-ASCII names so the browser gets the real name
     quoted_name = quote(f'{knowledge.name}.zip')
-    content_disposition = f"attachment; filename=\"{zip_filename}\"; filename*=UTF-8''{quoted_name}"
+    content_disposition = f'attachment; filename="{zip_filename}"; filename*=UTF-8\'\'{quoted_name}'
 
     return StreamingResponse(
         zip_buffer,

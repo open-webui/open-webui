@@ -433,11 +433,7 @@ def strip_empty_content_blocks(messages: list[dict]) -> list[dict]:
             cleaned = [
                 block
                 for block in content
-                if not (
-                    isinstance(block, dict)
-                    and block.get('type') == 'text'
-                    and not block.get('text', '').strip()
-                )
+                if not (isinstance(block, dict) and block.get('type') == 'text' and not block.get('text', '').strip())
             ]
             if cleaned:
                 message['content'] = cleaned
@@ -519,7 +515,6 @@ def get_gravatar_url(email):
 
     # Grab the actual image URL
     return f'https://www.gravatar.com/avatar/{hash_hex}?d=mp'
-
 
 
 # Give us each day the data we require, and forgive us our
