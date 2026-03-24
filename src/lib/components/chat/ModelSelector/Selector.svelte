@@ -9,6 +9,7 @@
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { flyAndScale } from '$lib/utils/transitions';
+
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 
@@ -396,7 +397,12 @@
 
 		resetView();
 	}}
-	closeFocus={false}
+	onOpenChangeComplete={(open) => {
+		if (!open) {
+			// Replaces the old closeFocus={false} behavior - prevent focus jump back to trigger
+			document.getElementById(`model-selector-${id}-button`)?.blur();
+		}
+	}}
 >
 	<DropdownMenu.Trigger
 		class="relative w-full {($settings?.highContrastMode ?? false)
@@ -430,294 +436,322 @@
 		</div>
 	</DropdownMenu.Trigger>
 
-	<DropdownMenu.Content
-		class=" z-40 {$mobile
-			? `w-full`
-			: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-2xl  bg-white dark:bg-gray-850 dark:text-white shadow-lg  outline-hidden"
-		transition={flyAndScale}
-		side={$mobile ? 'bottom' : 'bottom-start'}
-		sideOffset={2}
-		alignOffset={-1}
-	>
-		<slot>
-			{#if searchEnabled}
-				<div class="flex items-center gap-2.5 px-4.5 mt-3.5 mb-1.5">
-					<Search className="size-4" strokeWidth="2.5" />
-
-					<input
-						id="model-search-input"
-						bind:value={searchValue}
-						class="w-full text-sm bg-transparent outline-hidden"
-						placeholder={searchPlaceholder}
-						autocomplete="off"
-						aria-label={$i18n.t('Search In Models')}
-						on:keydown={(e) => {
-							if (e.code === 'Enter' && filteredItems.length > 0) {
-								value = filteredItems[selectedModelIdx].value;
-								show = false;
-								return; // dont need to scroll on selection
-							} else if (e.code === 'ArrowDown') {
-								e.stopPropagation();
-								selectedModelIdx = Math.min(selectedModelIdx + 1, filteredItems.length - 1);
-							} else if (e.code === 'ArrowUp') {
-								e.stopPropagation();
-								selectedModelIdx = Math.max(selectedModelIdx - 1, 0);
-							} else {
-								// if the user types something, reset to the top selection.
-								selectedModelIdx = 0;
-							}
-
-							const item = document.querySelector(`[data-arrow-selected="true"]`);
-							item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
-						}}
-					/>
-				</div>
-			{/if}
-
-			<div class="px-2">
-				{#if tags && items.filter((item) => !(item.model?.info?.meta?.hidden ?? false)).length > 0}
-					<div
-						class=" flex w-full bg-white dark:bg-gray-850 overflow-x-auto scrollbar-none font-[450] mb-0.5"
-						on:wheel={(e) => {
-							if (e.deltaY !== 0) {
-								e.preventDefault();
-								e.currentTarget.scrollLeft += e.deltaY;
-							}
-						}}
-					>
+	<DropdownMenu.Portal>
+		<DropdownMenu.Content
+			forceMount
+			trapFocus={false}
+			preventScroll={false}
+			side="bottom"
+			align={$mobile ? 'center' : 'start'}
+			sideOffset={2}
+			alignOffset={-1}
+		>
+			{#snippet child({ wrapperProps, props, open })}
+				{#if open}
+					<div {...wrapperProps}>
 						<div
-							class="flex gap-1 w-fit text-center text-sm rounded-full bg-transparent px-1.5 whitespace-nowrap"
-							bind:this={tagsContainerElement}
+							{...props}
+							class="{props.class} z-40 {$mobile
+								? `w-full`
+								: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-2xl bg-white dark:bg-gray-850 dark:text-white shadow-lg outline-hidden"
+							transition:flyAndScale
 						>
-							{#if items.find((item) => item.model?.connection_type === 'local') || items.find((item) => item.model?.connection_type === 'external') || items.find((item) => item.model?.direct) || tags.length > 0}
-								<button
-									class="min-w-fit outline-none px-1.5 py-0.5 {selectedTag === '' &&
-									selectedConnectionType === ''
-										? ''
-										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-									aria-pressed={selectedTag === '' && selectedConnectionType === ''}
-									on:click={() => {
-										selectedConnectionType = '';
-										selectedTag = '';
-									}}
-								>
-									{$i18n.t('All')}
-								</button>
-							{/if}
+							<slot>
+								{#if searchEnabled}
+									<div class="flex items-center gap-2.5 px-4.5 pt-3.5 mb-1.5">
+										<Search className="size-4" strokeWidth="2.5" />
 
-							{#if items.find((item) => item.model?.connection_type === 'local')}
-								<button
-									class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType === 'local'
-										? ''
-										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-									aria-pressed={selectedConnectionType === 'local'}
-									on:click={() => {
-										selectedTag = '';
-										selectedConnectionType = 'local';
-									}}
-								>
-									{$i18n.t('Local')}
-								</button>
-							{/if}
+										<input
+											id="model-search-input"
+											bind:value={searchValue}
+											class="w-full text-sm bg-transparent outline-hidden"
+											placeholder={searchPlaceholder}
+											autocomplete="off"
+											aria-label={$i18n.t('Search In Models')}
+											on:keydown={(e) => {
+												if (e.code === 'Enter' && filteredItems.length > 0) {
+													value = filteredItems[selectedModelIdx].value;
+													show = false;
+													return; // dont need to scroll on selection
+												} else if (e.code === 'ArrowDown') {
+													e.stopPropagation();
+													selectedModelIdx = Math.min(
+														selectedModelIdx + 1,
+														filteredItems.length - 1
+													);
+												} else if (e.code === 'ArrowUp') {
+													e.stopPropagation();
+													selectedModelIdx = Math.max(selectedModelIdx - 1, 0);
+												} else {
+													// if the user types something, reset to the top selection.
+													selectedModelIdx = 0;
+												}
 
-							{#if items.find((item) => item.model?.connection_type === 'external')}
-								<button
-									class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType === 'external'
-										? ''
-										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-									aria-pressed={selectedConnectionType === 'external'}
-									on:click={() => {
-										selectedTag = '';
-										selectedConnectionType = 'external';
-									}}
-								>
-									{$i18n.t('External')}
-								</button>
-							{/if}
-
-							{#if items.find((item) => item.model?.direct)}
-								<button
-									class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType === 'direct'
-										? ''
-										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-									aria-pressed={selectedConnectionType === 'direct'}
-									on:click={() => {
-										selectedTag = '';
-										selectedConnectionType = 'direct';
-									}}
-								>
-									{$i18n.t('Direct')}
-								</button>
-							{/if}
-
-							{#each tags as tag}
-								<Tooltip content={tag}>
-									<button
-										class="min-w-fit outline-none px-1.5 py-0.5 {selectedTag === tag
-											? ''
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-										aria-pressed={selectedTag === tag}
-										on:click={() => {
-											selectedConnectionType = '';
-											selectedTag = tag;
-										}}
-									>
-										{tag.length > 16 ? `${tag.slice(0, 16)}...` : tag}
-									</button>
-								</Tooltip>
-							{/each}
-						</div>
-					</div>
-				{/if}
-			</div>
-
-			<div class="px-2.5 group relative">
-				{#if filteredItems.length === 0}
-					{#if items.length === 0 && $user?.role === 'admin'}
-						<div class="flex flex-col items-start justify-center py-6 px-4 text-start">
-							<div class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
-								{$i18n.t('No models available')}
-							</div>
-							<div class="text-xs text-gray-500 dark:text-gray-400 mb-4">
-								{$i18n.t('Connect to an AI provider to start chatting')}
-							</div>
-							<a
-								href="/admin/settings/connections"
-								class="px-4 py-1.5 rounded-xl text-xs font-medium bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 transition"
-								on:click={() => {
-									show = false;
-								}}
-							>
-								{$i18n.t('Manage Connections')}
-							</a>
-						</div>
-					{:else}
-						<div class="">
-							<div class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-100">
-								{$i18n.t('No results found')}
-							</div>
-						</div>
-					{/if}
-				{:else}
-					<!-- svelte-ignore a11y-no-static-element-interactions -->
-					<div
-						class="max-h-64 overflow-y-auto"
-						role="listbox"
-						aria-label={$i18n.t('Available models')}
-						bind:this={listContainer}
-						on:scroll={() => {
-							listScrollTop = listContainer.scrollTop;
-						}}
-					>
-						<div style="height: {visibleStart * ITEM_HEIGHT}px;" />
-						{#each filteredItems.slice(visibleStart, visibleEnd) as item, i (item.value)}
-							{@const index = visibleStart + i}
-							<ModelItem
-								{selectedModelIdx}
-								{item}
-								{index}
-								{value}
-								{pinModelHandler}
-								{unloadModelHandler}
-								onClick={() => {
-									value = item.value;
-									selectedModelIdx = index;
-
-									show = false;
-								}}
-							/>
-						{/each}
-						<div style="height: {(filteredItems.length - visibleEnd) * ITEM_HEIGHT}px;" />
-					</div>
-				{/if}
-
-				{#if !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user?.role === 'admin'}
-					<Tooltip
-						content={$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, {
-							searchValue: searchValue
-						})}
-						placement="top-start"
-					>
-						<button
-							class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl cursor-pointer data-highlighted:bg-muted"
-							on:click={() => {
-								pullModelHandler();
-							}}
-						>
-							<div class=" truncate">
-								{$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, { searchValue: searchValue })}
-							</div>
-						</button>
-					</Tooltip>
-				{/if}
-
-				{#each Object.keys($MODEL_DOWNLOAD_POOL) as model}
-					<div
-						class="flex w-full justify-between font-medium select-none rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 rounded-xl cursor-pointer data-highlighted:bg-muted"
-					>
-						<div class="flex">
-							<div class="mr-2.5 translate-y-0.5">
-								<Spinner />
-							</div>
-
-							<div class="flex flex-col self-start">
-								<div class="flex gap-1">
-									<div class="line-clamp-1">
-										Downloading "{model}"
-									</div>
-
-									<div class="shrink-0">
-										{'pullProgress' in $MODEL_DOWNLOAD_POOL[model]
-											? `(${$MODEL_DOWNLOAD_POOL[model].pullProgress}%)`
-											: ''}
-									</div>
-								</div>
-
-								{#if 'digest' in $MODEL_DOWNLOAD_POOL[model] && $MODEL_DOWNLOAD_POOL[model].digest}
-									<div class="-mt-1 h-fit text-[0.7rem] dark:text-gray-500 line-clamp-1">
-										{$MODEL_DOWNLOAD_POOL[model].digest}
+												const item = document.querySelector(`[data-arrow-selected="true"]`);
+												item?.scrollIntoView({
+													block: 'center',
+													inline: 'nearest',
+													behavior: 'instant'
+												});
+											}}
+										/>
 									</div>
 								{/if}
-							</div>
-						</div>
 
-						<div class="mr-2 ml-1 translate-y-0.5">
-							<Tooltip content={$i18n.t('Cancel')}>
-								<button
-									class="text-gray-800 dark:text-gray-100"
-									aria-label={$i18n.t('Cancel download of {{model}}', { model: model })}
-									on:click={() => {
-										cancelModelPullHandler(model);
-									}}
-								>
-									<svg
-										class="w-4 h-4 text-gray-800 dark:text-white"
-										aria-hidden="true"
-										xmlns="http://www.w3.org/2000/svg"
-										width="24"
-										height="24"
-										fill="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke="currentColor"
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M6 18 17.94 6M18 18 6.06 6"
-										/>
-									</svg>
-								</button>
-							</Tooltip>
+								<div class="px-2">
+									{#if tags && items.filter((item) => !(item.model?.info?.meta?.hidden ?? false)).length > 0}
+										<div
+											class=" flex w-full bg-white dark:bg-gray-850 overflow-x-auto scrollbar-none font-[450] mb-0.5"
+											on:wheel={(e) => {
+												if (e.deltaY !== 0) {
+													e.preventDefault();
+													e.currentTarget.scrollLeft += e.deltaY;
+												}
+											}}
+										>
+											<div
+												class="flex gap-1 w-fit text-center text-sm rounded-full bg-transparent px-1.5 whitespace-nowrap"
+												bind:this={tagsContainerElement}
+											>
+												{#if items.find((item) => item.model?.connection_type === 'local') || items.find((item) => item.model?.connection_type === 'external') || items.find((item) => item.model?.direct) || tags.length > 0}
+													<button
+														class="min-w-fit outline-none px-1.5 py-0.5 {selectedTag === '' &&
+														selectedConnectionType === ''
+															? ''
+															: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+														aria-pressed={selectedTag === '' && selectedConnectionType === ''}
+														on:click={() => {
+															selectedConnectionType = '';
+															selectedTag = '';
+														}}
+													>
+														{$i18n.t('All')}
+													</button>
+												{/if}
+
+												{#if items.find((item) => item.model?.connection_type === 'local')}
+													<button
+														class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType ===
+														'local'
+															? ''
+															: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+														aria-pressed={selectedConnectionType === 'local'}
+														on:click={() => {
+															selectedTag = '';
+															selectedConnectionType = 'local';
+														}}
+													>
+														{$i18n.t('Local')}
+													</button>
+												{/if}
+
+												{#if items.find((item) => item.model?.connection_type === 'external')}
+													<button
+														class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType ===
+														'external'
+															? ''
+															: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+														aria-pressed={selectedConnectionType === 'external'}
+														on:click={() => {
+															selectedTag = '';
+															selectedConnectionType = 'external';
+														}}
+													>
+														{$i18n.t('External')}
+													</button>
+												{/if}
+
+												{#if items.find((item) => item.model?.direct)}
+													<button
+														class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType ===
+														'direct'
+															? ''
+															: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+														aria-pressed={selectedConnectionType === 'direct'}
+														on:click={() => {
+															selectedTag = '';
+															selectedConnectionType = 'direct';
+														}}
+													>
+														{$i18n.t('Direct')}
+													</button>
+												{/if}
+
+												{#each tags as tag}
+													<Tooltip content={tag}>
+														<button
+															class="min-w-fit outline-none px-1.5 py-0.5 {selectedTag === tag
+																? ''
+																: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+															aria-pressed={selectedTag === tag}
+															on:click={() => {
+																selectedConnectionType = '';
+																selectedTag = tag;
+															}}
+														>
+															{tag.length > 16 ? `${tag.slice(0, 16)}...` : tag}
+														</button>
+													</Tooltip>
+												{/each}
+											</div>
+										</div>
+									{/if}
+								</div>
+
+								<div class="px-2.5 group relative">
+									{#if filteredItems.length === 0}
+										{#if items.length === 0 && $user?.role === 'admin'}
+											<div class="flex flex-col items-start justify-center py-6 px-4 text-start">
+												<div class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+													{$i18n.t('No models available')}
+												</div>
+												<div class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+													{$i18n.t('Connect to an AI provider to start chatting')}
+												</div>
+												<a
+													href="/admin/settings/connections"
+													class="px-4 py-1.5 rounded-xl text-xs font-medium bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 transition"
+													on:click={() => {
+														show = false;
+													}}
+												>
+													{$i18n.t('Manage Connections')}
+												</a>
+											</div>
+										{:else}
+											<div class="">
+												<div class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-100">
+													{$i18n.t('No results found')}
+												</div>
+											</div>
+										{/if}
+									{:else}
+										<!-- svelte-ignore a11y-no-static-element-interactions -->
+										<div
+											class="max-h-64 overflow-y-auto"
+											role="listbox"
+											aria-label={$i18n.t('Available models')}
+											bind:this={listContainer}
+											on:scroll={() => {
+												listScrollTop = listContainer.scrollTop;
+											}}
+										>
+											<div style="height: {visibleStart * ITEM_HEIGHT}px;" />
+											{#each filteredItems.slice(visibleStart, visibleEnd) as item, i (item.value)}
+												{@const index = visibleStart + i}
+												<ModelItem
+													{selectedModelIdx}
+													{item}
+													{index}
+													{value}
+													{pinModelHandler}
+													{unloadModelHandler}
+													onClick={() => {
+														value = item.value;
+														selectedModelIdx = index;
+
+														show = false;
+													}}
+												/>
+											{/each}
+											<div style="height: {(filteredItems.length - visibleEnd) * ITEM_HEIGHT}px;" />
+										</div>
+									{/if}
+
+									{#if !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user?.role === 'admin'}
+										<Tooltip
+											content={$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, {
+												searchValue: searchValue
+											})}
+											placement="top-start"
+										>
+											<button
+												class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl cursor-pointer data-highlighted:bg-muted"
+												on:click={() => {
+													pullModelHandler();
+												}}
+											>
+												<div class=" truncate">
+													{$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, {
+														searchValue: searchValue
+													})}
+												</div>
+											</button>
+										</Tooltip>
+									{/if}
+
+									{#each Object.keys($MODEL_DOWNLOAD_POOL) as model}
+										<div
+											class="flex w-full justify-between font-medium select-none rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 rounded-xl cursor-pointer data-highlighted:bg-muted"
+										>
+											<div class="flex">
+												<div class="mr-2.5 translate-y-0.5">
+													<Spinner />
+												</div>
+
+												<div class="flex flex-col self-start">
+													<div class="flex gap-1">
+														<div class="line-clamp-1">
+															Downloading "{model}"
+														</div>
+
+														<div class="shrink-0">
+															{'pullProgress' in $MODEL_DOWNLOAD_POOL[model]
+																? `(${$MODEL_DOWNLOAD_POOL[model].pullProgress}%)`
+																: ''}
+														</div>
+													</div>
+
+													{#if 'digest' in $MODEL_DOWNLOAD_POOL[model] && $MODEL_DOWNLOAD_POOL[model].digest}
+														<div class="-mt-1 h-fit text-[0.7rem] dark:text-gray-500 line-clamp-1">
+															{$MODEL_DOWNLOAD_POOL[model].digest}
+														</div>
+													{/if}
+												</div>
+											</div>
+
+											<div class="mr-2 ml-1 translate-y-0.5">
+												<Tooltip content={$i18n.t('Cancel')}>
+													<button
+														class="text-gray-800 dark:text-gray-100"
+														aria-label={$i18n.t('Cancel download of {{model}}', { model: model })}
+														on:click={() => {
+															cancelModelPullHandler(model);
+														}}
+													>
+														<svg
+															class="w-4 h-4 text-gray-800 dark:text-white"
+															aria-hidden="true"
+															xmlns="http://www.w3.org/2000/svg"
+															width="24"
+															height="24"
+															fill="currentColor"
+															viewBox="0 0 24 24"
+														>
+															<path
+																stroke="currentColor"
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="2"
+																d="M6 18 17.94 6M18 18 6.06 6"
+															/>
+														</svg>
+													</button>
+												</Tooltip>
+											</div>
+										</div>
+									{/each}
+								</div>
+
+								<div class="pb-2.5"></div>
+
+								<div class="hidden w-[42rem]" />
+								<div class="hidden w-[32rem]" />
+							</slot>
 						</div>
 					</div>
-				{/each}
-			</div>
-
-			<div class="mb-2.5"></div>
-
-			<div class="hidden w-[42rem]" />
-			<div class="hidden w-[32rem]" />
-		</slot>
-	</DropdownMenu.Content>
+				{/if}
+			{/snippet}
+		</DropdownMenu.Content>
+	</DropdownMenu.Portal>
 </DropdownMenu.Root>

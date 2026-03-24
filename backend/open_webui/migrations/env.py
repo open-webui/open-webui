@@ -16,7 +16,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # Re-apply JSON formatter after fileConfig replaces handlers.
-if LOG_FORMAT == "json":
+if LOG_FORMAT == 'json':
     from open_webui.env import JSONFormatter
 
     for handler in logging.root.handlers:
@@ -36,7 +36,7 @@ target_metadata = Auth.metadata
 DB_URL = DATABASE_URL
 
 if DB_URL:
-    config.set_main_option("sqlalchemy.url", DB_URL.replace("%", "%%"))
+    config.set_main_option('sqlalchemy.url', DB_URL.replace('%', '%%'))
 
 
 def run_migrations_offline() -> None:
@@ -51,12 +51,12 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = config.get_main_option('sqlalchemy.url')
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
+        dialect_opts={'paramstyle': 'named'},
     )
 
     with context.begin_transaction():
@@ -71,15 +71,13 @@ def run_migrations_online() -> None:
 
     """
     # Handle SQLCipher URLs
-    if DB_URL and DB_URL.startswith("sqlite+sqlcipher://"):
-        if not DATABASE_PASSWORD or DATABASE_PASSWORD.strip() == "":
-            raise ValueError(
-                "DATABASE_PASSWORD is required when using sqlite+sqlcipher:// URLs"
-            )
+    if DB_URL and DB_URL.startswith('sqlite+sqlcipher://'):
+        if not DATABASE_PASSWORD or DATABASE_PASSWORD.strip() == '':
+            raise ValueError('DATABASE_PASSWORD is required when using sqlite+sqlcipher:// URLs')
 
         # Extract database path from SQLCipher URL
-        db_path = DB_URL.replace("sqlite+sqlcipher://", "")
-        if db_path.startswith("/"):
+        db_path = DB_URL.replace('sqlite+sqlcipher://', '')
+        if db_path.startswith('/'):
             db_path = db_path[1:]  # Remove leading slash for relative paths
 
         # Create a custom creator function that uses sqlcipher3
@@ -91,7 +89,7 @@ def run_migrations_online() -> None:
             return conn
 
         connectable = create_engine(
-            "sqlite://",  # Dummy URL since we're using creator
+            'sqlite://',  # Dummy URL since we're using creator
             creator=create_sqlcipher_connection,
             echo=False,
         )
@@ -99,7 +97,7 @@ def run_migrations_online() -> None:
         # Standard database connection (existing logic)
         connectable = engine_from_config(
             config.get_section(config.config_ini_section, {}),
-            prefix="sqlalchemy.",
+            prefix='sqlalchemy.',
             poolclass=pool.NullPool,
         )
 

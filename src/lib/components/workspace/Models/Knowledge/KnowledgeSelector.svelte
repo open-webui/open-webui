@@ -1,11 +1,10 @@
 <script lang="ts">
 	import dayjs from 'dayjs';
-	import { DropdownMenu } from 'bits-ui';
+
 	import { onMount, onDestroy, getContext, createEventDispatcher } from 'svelte';
 	import { searchNotes } from '$lib/apis/notes';
 	import { searchKnowledgeBases, searchKnowledgeFiles } from '$lib/apis/knowledge';
 
-	import { flyAndScale } from '$lib/utils/transitions';
 	import { decodeString } from '$lib/utils';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -118,12 +117,8 @@
 	<slot />
 
 	<div slot="content">
-		<DropdownMenu.Content
+		<div
 			class="z-[10000] text-black dark:text-white rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-70 p-1.5"
-			sideOffset={8}
-			side="bottom"
-			align="start"
-			transition={flyAndScale}
 		>
 			<div class=" flex w-full space-x-2 px-2 pb-0.5">
 				<div class="flex flex-1">
@@ -210,6 +205,6 @@
 					{/each}
 				{/if}
 			</div>
-		</DropdownMenu.Content>
+		</div>
 	</div>
 </Dropdown>
