@@ -393,7 +393,7 @@ async def heartbeat(sid, data):
     user = SESSION_POOL.get(sid)
     if user:
         SESSION_POOL[sid] = {**user, 'last_seen_at': int(time.time())}
-        Users.update_last_active_by_id(user['id'])
+        await asyncio.to_thread(Users.update_last_active_by_id, user['id'])
 
 
 @sio.on('join-channels')
