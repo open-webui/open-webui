@@ -3658,9 +3658,9 @@ async def streaming_chat_response_handler(response, ctx):
                                                         current_response_tool_call['function']['name'] = delta_name
 
                                                     if delta_arguments:
-                                                        current_response_tool_call['function']['arguments'] += (
-                                                            delta_arguments
-                                                        )
+                                                        current_response_tool_call['function'][
+                                                            'arguments'
+                                                        ] += delta_arguments
 
                                         # Emit pending tool calls in real-time
                                         if response_tool_calls:
@@ -3682,12 +3682,12 @@ async def streaming_chat_response_handler(response, ctx):
                                                         'status': 'in_progress',
                                                     }
                                                 )
-                                            pending_output = output + pending_fc_items
+
                                             await event_emitter(
                                                 {
                                                     'type': 'chat:completion',
                                                     'data': {
-                                                        'content': serialize_output(pending_output),
+                                                        'content': serialize_output(full_output() + pending_fc_items),
                                                     },
                                                 }
                                             )
@@ -3980,9 +3980,9 @@ async def streaming_chat_response_handler(response, ctx):
                                         'index': len(responses_api_tool_calls),
                                         'function': {
                                             'name': item.get('name', ''),
-                                            'arguments': arguments
-                                            if isinstance(arguments, str)
-                                            else json.dumps(arguments),
+                                            'arguments': (
+                                                arguments if isinstance(arguments, str) else json.dumps(arguments)
+                                            ),
                                         },
                                     }
                                 )
@@ -4410,7 +4410,8 @@ async def streaming_chat_response_handler(response, ctx):
                                 code = sanitize_code(code)
 
                                 if CODE_INTERPRETER_BLOCKED_MODULES:
-                                    blocking_code = textwrap.dedent(f"""
+                                    blocking_code = textwrap.dedent(
+                                        f"""
                                         import builtins
     
                                         BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
@@ -4426,7 +4427,8 @@ async def streaming_chat_response_handler(response, ctx):
                                             return _real_import(name, globals, locals, fromlist, level)
     
                                         builtins.__import__ = restricted_import
-                                    """)
+                                    """
+                                    )
                                     code = blocking_code + '\n' + code
 
                                 if request.app.state.config.CODE_INTERPRETER_ENGINE == 'pyodide':
