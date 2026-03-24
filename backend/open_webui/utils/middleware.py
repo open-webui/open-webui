@@ -2384,7 +2384,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 if engine != "jupyter":
                     prompt += CODE_INTERPRETER_PYODIDE_PROMPT
 
-                form_data["messages"] = add_or_update_user_message(
+                form_data["messages"] = add_or_update_system_message(
                     prompt,
                     form_data["messages"],
                 )
@@ -2392,7 +2392,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 # Native FC: tool docstring can't be dynamic, so inject
                 # filesystem context into messages for pyodide engine
                 if engine != "jupyter":
-                    form_data["messages"] = add_or_update_user_message(
+                    form_data["messages"] = add_or_update_system_message(
                         CODE_INTERPRETER_PYODIDE_PROMPT,
                         form_data["messages"],
                     )
