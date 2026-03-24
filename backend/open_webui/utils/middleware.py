@@ -1457,7 +1457,7 @@ async def chat_web_search_handler(request: Request, form_data: dict, extra_param
         response = res['choices'][0]['message']['content']
 
         try:
-            bracket_start = response.find('{')
+            bracket_start = response.rfind('{')
             bracket_end = response.rfind('}') + 1
 
             if bracket_start == -1 or bracket_end == -1:
@@ -1779,7 +1779,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
                 response = res['choices'][0]['message']['content']
 
                 try:
-                    bracket_start = response.find('{')
+                    bracket_start = response.rfind('{')
                     bracket_end = response.rfind('}') + 1
 
                     if bracket_start == -1 or bracket_end == -1:
@@ -1883,7 +1883,7 @@ async def chat_completion_files_handler(
                 queries_response = queries_response['choices'][0]['message']['content']
 
                 try:
-                    bracket_start = queries_response.find('{')
+                    bracket_start = queries_response.rfind('{')
                     bracket_end = queries_response.rfind('}') + 1
 
                     if bracket_start == -1 or bracket_end == -1:
