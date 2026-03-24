@@ -339,6 +339,9 @@
 									let parts = toolId.split(':');
 									let serverId = parts?.at(-1) ?? toolId;
 
+									// Persist the tool ID so it can be auto-enabled after OAuth completes
+									sessionStorage.setItem('oauth-tool-pending', toolId);
+
 									const authUrl = getOAuthClientAuthorizationUrl(serverId, 'mcp');
 									window.open(authUrl, '_self', 'noopener');
 								} else {

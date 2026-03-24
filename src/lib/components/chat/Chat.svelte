@@ -1177,6 +1177,15 @@
 				.filter((id) => id);
 		}
 
+		// Auto-enable tool after returning from OAuth authentication flow
+		const pendingOAuthToolId = sessionStorage.getItem('oauth-tool-pending');
+		if (pendingOAuthToolId) {
+			sessionStorage.removeItem('oauth-tool-pending');
+			if (!selectedToolIds.includes(pendingOAuthToolId)) {
+				selectedToolIds = [...selectedToolIds, pendingOAuthToolId];
+			}
+		}
+
 		if ($page.url.searchParams.get('call') === 'true') {
 			showCallOverlay.set(true);
 			showControls.set(true);
