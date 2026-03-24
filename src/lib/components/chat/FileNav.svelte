@@ -487,6 +487,25 @@
 		await loadDir(currentPath);
 	};
 
+	// ── Rename ──────────────────────────────────────────────────────────
+	const handleRename = async (oldPath: string, newName: string) => {
+		const terminal = selectedTerminal;
+		if (!terminal || !newName) return;
+
+		const dir = oldPath.substring(0, oldPath.lastIndexOf('/') + 1) || currentPath;
+		const destination = `${dir}${newName}`;
+
+		if (oldPath === destination) return;
+
+		const result = await moveEntry(terminal.url, terminal.key, oldPath, destination);
+		if ('error' in result) {
+			toast.error(result.error);
+		} else {
+			toast.success($i18n.t('Renamed to {{name}}', { name: newName }));
+		}
+		await loadDir(currentPath);
+	};
+
 	// ── Lifecycle ────────────────────────────────────────────────────────
 	onMount(async () => {
 		const terminal = getTerminal();
@@ -1041,6 +1060,7 @@
 									onDownload={downloadFile}
 									onDelete={requestDelete}
 									onMove={handleMove}
+									onRename={handleRename}
 								/>
 							{/each}
 						</ul>

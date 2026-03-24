@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, tick } from 'svelte';
 	import { formatFileSize } from '$lib/utils';
 	import type { FileEntry } from '$lib/apis/terminal';
 
@@ -7,6 +7,7 @@
 	import Folder from '../../icons/Folder.svelte';
 	import EllipsisHorizontal from '../../icons/EllipsisHorizontal.svelte';
 	import GarbageBin from '../../icons/GarbageBin.svelte';
+	import Pencil from '../../icons/Pencil.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -19,8 +20,40 @@
 	export let onDownload: (path: string) => void = () => {};
 	export let onDelete: (path: string, name: string) => void = () => {};
 	export let onMove: (source: string, destFolder: string) => void = () => {};
+	export let onRename: (oldPath: string, newName: string) => void = () => {};
 
 	let dragOverFolder = false;
+
+	// ── Rename state ─────────────────────────────────────────────────────
+	let renaming = false;
+	let renameValue = '';
+	let renameInput: HTMLInputElement;
+
+	const startRename = async () => {
+		renameValue = entry.name;
+		renaming = true;
+		await tick();
+		renameInput?.focus();
+		// Select the name without extension for files
+		if (entry.type === 'file') {
+			const dotIdx = entry.name.lastIndexOf('.');
+			renameInput?.setSelectionRange(0, dotIdx > 0 ? dotIdx : entry.name.length);
+		} else {
+			renameInput?.select();
+		}
+	};
+
+	const submitRename = () => {
+		const newName = renameValue.trim();
+		renaming = false;
+		if (!newName || newName === entry.name) return;
+		onRename(`${currentPath}${entry.name}`, newName);
+	};
+
+	const cancelRename = () => {
+		renaming = false;
+		renameValue = '';
+	};
 </script>
 
 <li class="group">
@@ -83,7 +116,12 @@
 					);
 				}
 			}}
-			on:click={() => onOpen(entry)}
+			on:click={() => {
+				if (!renaming) onOpen(entry);
+			}}
+			on:dblclick|preventDefault|stopPropagation={() => {
+				startRename();
+			}}
 		>
 			{#if entry.type === 'directory'}
 				<Folder className="size-4 shrink-0 text-blue-400 dark:text-blue-300" />
@@ -103,10 +141,25 @@
 					/>
 				</svg>
 			{/if}
-			<span class="flex-1 text-xs text-gray-800 dark:text-gray-200 truncate">
-				{entry.name}
-			</span>
-			{#if entry.type === 'file' && entry.size !== undefined}
+			{#if renaming}
+				<!-- svelte-ignore a11y-click-events-have-key-events -->
+				<input
+					bind:this={renameInput}
+					bind:value={renameValue}
+					class="flex-1 text-xs bg-transparent border border-gray-200 dark:border-gray-700 rounded px-1.5 py-0.5 outline-none focus:border-blue-400 dark:focus:border-blue-500 text-gray-800 dark:text-gray-200 min-w-0"
+					on:keydown={(e) => {
+						if (e.key === 'Enter') { e.preventDefault(); submitRename(); }
+						if (e.key === 'Escape') { e.preventDefault(); cancelRename(); }
+					}}
+					on:blur={submitRename}
+					on:click|stopPropagation
+				/>
+			{:else}
+				<span class="flex-1 text-xs text-gray-800 dark:text-gray-200 truncate">
+					{entry.name}
+				</span>
+			{/if}
+			{#if entry.type === 'file' && entry.size !== undefined && !renaming}
 				<span class="text-xs text-gray-400 shrink-0">{formatFileSize(entry.size)}</span>
 			{/if}
 		</button>
@@ -150,6 +203,18 @@
 							<div class="flex items-center">{$i18n.t('Download')}</div>
 						</button>
 					{/if}
+
+					<button
+						type="button"
+						class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+						on:click={(e) => {
+							e.stopPropagation();
+							startRename();
+						}}
+					>
+						<Pencil className="size-4" strokeWidth="1.5" />
+						<div class="flex items-center">{$i18n.t('Rename')}</div>
+					</button>
 
 					<button
 						type="button"
