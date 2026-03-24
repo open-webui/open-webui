@@ -859,6 +859,7 @@
 				onNewFolder={startNewFolder}
 				onNewFile={startNewFile}
 				onUploadFiles={handleUploadFiles}
+				onDownloadDir={() => downloadFile(currentPath)}
 				onMove={handleMove}
 			>
 				{#if fileImageUrl !== null || (fileOfficeSlides !== null && fileOfficeSlides.length > 0)}
