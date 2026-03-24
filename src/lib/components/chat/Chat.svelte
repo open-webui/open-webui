@@ -1112,9 +1112,11 @@
 		await showCallOverlay.set(false);
 		await showArtifacts.set(false);
 
-		if ($page.url.pathname.includes('/c/')) {
-			window.history.replaceState(history.state, '', `/`);
-		}
+		// Clear model search params so new chat uses configured default instead of inherited model
+		const url = new URL(window.location.href);
+		url.searchParams.delete('models');
+		url.searchParams.delete('model');
+		window.history.replaceState(history.state, '', url.pathname + url.search);
 
 		autoScroll = true;
 
