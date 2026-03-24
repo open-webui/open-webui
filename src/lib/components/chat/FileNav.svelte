@@ -653,7 +653,7 @@
 		if (paths.length === 0) return;
 
 		// Single file (not dir) — use the regular downloadFile path
-		if (paths.length === 1 && !([...selectedEntries][0]).endsWith('/')) {
+		if (paths.length === 1 && ![...selectedEntries][0].endsWith('/')) {
 			await downloadFile([...selectedEntries][0]);
 			return;
 		}
@@ -1321,7 +1321,7 @@
 
 				<!-- Toggle header (full-width button) -->
 				<button
-					class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
+					class="w-full flex items-center gap-2 px-3 py-1 mb-0.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
 					on:click={toggleTerminal}
 				>
 					<svg
