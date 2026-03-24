@@ -3746,7 +3746,7 @@ async def streaming_chat_response_handler(response, ctx):
                                                 }
                                             ]
 
-                                        data = {'content': serialize_output(output)}
+                                        data = {'content': serialize_output(full_output())}
 
                                     if value:
                                         if (
