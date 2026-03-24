@@ -40,6 +40,7 @@
 	import FilePreview from './FileNav/FilePreview.svelte';
 	import FileEntryRow from './FileNav/FileEntryRow.svelte';
 	import PortList from './FileNav/PortList.svelte';
+	import PortPreview from './FileNav/PortPreview.svelte';
 	import XTerminal from './XTerminal.svelte';
 
 	const i18n = getContext('i18n');
@@ -90,6 +91,7 @@
 
 	// ── File preview state ───────────────────────────────────────────────
 	let selectedFile: string | null = null;
+	let previewPort: number | null = null;
 	let fileContent: string | null = null;
 	let fileImageUrl: string | null = null;
 	let fileVideoUrl: string | null = null;
@@ -253,6 +255,7 @@
 		loading = true;
 		error = null;
 		selectedFile = null;
+		previewPort = null;
 		clearFilePreview();
 		currentPath = path;
 		savedPath = path;
@@ -632,6 +635,7 @@
 			</div>
 		{/if}
 
+		{#if previewPort === null}
 		<FileNavToolbar
 			breadcrumbs={buildBreadcrumbs(currentPath)}
 			{selectedFile}
@@ -911,10 +915,17 @@
 				</button>
 			</Tooltip>
 		</FileNavToolbar>
+		{/if}
 
 		<!-- Content -->
 		<div class="flex-1 overflow-y-auto min-h-0 min-w-0">
-			{#if selectedFile !== null}
+			{#if previewPort !== null}
+				<PortPreview
+					baseUrl={selectedTerminal?.url ?? ''}
+					port={previewPort}
+					onClose={() => { previewPort = null; }}
+				/>
+			{:else if selectedFile !== null}
 				<FilePreview
 					bind:this={filePreviewRef}
 					bind:editing
@@ -1039,9 +1050,17 @@
 		</div>
 
 		<!-- Port detection -->
-		{#if selectedTerminal && !selectedFile}
+		{#if selectedTerminal && !selectedFile && previewPort === null}
 			<div class="shrink-0 border-t border-gray-100 dark:border-gray-800">
-				<PortList baseUrl={selectedTerminal.url} apiKey={selectedTerminal.key} />
+				<PortList
+					baseUrl={selectedTerminal.url}
+					apiKey={selectedTerminal.key}
+					on:previewPort={(e) => {
+						selectedFile = null;
+						clearFilePreview();
+						previewPort = e.detail;
+					}}
+				/>
 			</div>
 		{/if}
 
