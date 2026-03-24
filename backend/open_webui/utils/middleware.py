@@ -3322,7 +3322,7 @@ async def streaming_chat_response_handler(response, ctx):
                     else:
                         block_content = get_last_text(output)
 
-                    if re.search(end_tag_pattern, block_content):
+                    if end_tag in block_content[-512:]:
                         end_flag = True
 
                         # Strip start and end tags from content
