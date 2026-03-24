@@ -110,6 +110,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📝 **Chat title preservation.** Regenerating responses or using branches no longer overwrites user-specified chat titles when auto-naming is disabled, by checking the full chat message count instead of just the current branch. [#22754](https://github.com/open-webui/open-webui/pull/22754)
 - 🎧 **Read Aloud in chat preview.** The Read Aloud button in the Search Chats modal preview no longer causes crashes, and TTS functionality is now properly hidden in read-only chat contexts. [Commit](https://github.com/open-webui/open-webui/commit/d8fa0f426a88f5c27b3216b7db35e1db47bbba28)
 - 📡 **Heartbeat event loop blocking.** The WebSocket heartbeat handler no longer blocks the event loop when updating user activity, improving responsiveness under heavy load with many concurrent connections. [#22980](https://github.com/open-webui/open-webui/pull/22980)
+- 💬 **Message upsert API reliability.** The message upsert API endpoint no longer crashes when called, fixing an error where a database session was incorrectly passed to a function that doesn't accept it. [#22959](https://github.com/open-webui/open-webui/issues/22959), [Commit](https://github.com/open-webui/open-webui/commit/70285fb6cad26b50d783583b68be5227ace16055)
 
 ### Changed
 
