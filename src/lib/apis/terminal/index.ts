@@ -120,6 +120,49 @@ export const downloadFileBlob = async (
 	return { blob, filename };
 };
 
+export const downloadDirectoryArchive = async (
+	baseUrl: string,
+	apiKey: string,
+	path: string
+): Promise<{ blob: Blob; filename: string } | null> => {
+	const url = `${baseUrl.replace(/\/$/, '')}/files/download?path=${encodeURIComponent(path)}`;
+	const res = await fetch(url, {
+		headers: { Authorization: `Bearer ${apiKey}` }
+	}).catch(() => null);
+
+	if (!res || !res.ok) return null;
+
+	const disposition = res.headers.get('content-disposition') ?? '';
+	const match = disposition.match(/filename="?([^"]+)"?/);
+	const filename = match?.[1] ?? `${path.split('/').filter(Boolean).pop() ?? 'download'}.zip`;
+	const blob = await res.blob();
+	return { blob, filename };
+};
+
+export const downloadMultipleAsZip = async (
+	baseUrl: string,
+	apiKey: string,
+	paths: string[]
+): Promise<{ blob: Blob; filename: string } | null> => {
+	const url = `${baseUrl.replace(/\/$/, '')}/files/download`;
+	const res = await fetch(url, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${apiKey}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({ paths })
+	}).catch(() => null);
+
+	if (!res || !res.ok) return null;
+
+	const disposition = res.headers.get('content-disposition') ?? '';
+	const match = disposition.match(/filename="?([^"]+)"?/);
+	const filename = match?.[1] ?? 'download.zip';
+	const blob = await res.blob();
+	return { blob, filename };
+};
+
 export const uploadToTerminal = async (
 	baseUrl: string,
 	apiKey: string,
