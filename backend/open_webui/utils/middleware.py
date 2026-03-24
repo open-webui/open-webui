@@ -92,6 +92,7 @@ from open_webui.utils.misc import (
     get_last_user_message_item,
     get_last_assistant_message,
     get_system_message,
+    merge_system_messages,
     replace_system_message_content,
     prepend_to_first_user_message_content,
     convert_logit_bias_input_to_json,
@@ -2695,6 +2696,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Strip empty text content blocks from multimodal messages
     # to prevent errors from providers like Gemini and Claude
     form_data['messages'] = strip_empty_content_blocks(form_data.get('messages', []))
+
+    # Merge any duplicate system messages into a single message at position 0
+    # to prevent template parsing errors with strict chat templates (e.g. Qwen)
+    form_data['messages'] = merge_system_messages(form_data.get('messages', []))
 
     return form_data, metadata, events
 
