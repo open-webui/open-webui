@@ -49,6 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📋 **Drag chats as references.** Users can now drag chats from the sidebar and drop them into the message input to add them as Reference Chats. [Commit](https://github.com/open-webui/open-webui/commit/ebb7ce2092efc8d78da4974623647dbd18b6e372)
 - ⌨️ **Terminal system prompts.** Terminal servers can now provide custom system prompts that are automatically included when their tools are used. [Commit](https://github.com/open-webui/open-webui/commit/6a9d67b5bb4c93fd343b334bee3e37703dff59f6)
 - 💾 **Terminal state persistence.** The selected terminal server and its enabled state now persist across page loads, making terminal usage more seamless. [Commit](https://github.com/open-webui/open-webui/commit/d577ff1e4af750dda09e558dac7edb8dd2470850)
+- 📦 **Terminal folder downloads.** Users can now download folders as ZIP archives and bulk-download multiple selected files as a single ZIP, making file exports from the File Navigator faster and more convenient. [Commit](https://github.com/open-webui/open-webui/commit/3841e85abb3ea3e8d8b364dff0102f0124844d22)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for Finnish, Portuguese (Portugal), Catalan, Turkish, Japanese, Simplified Chinese, Traditional Chinese, Estonian, Spanish, and Azerbaijani were enhanced and expanded.
 
