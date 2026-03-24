@@ -6,6 +6,7 @@
 
 	import { getOllamaConfig, updateOllamaConfig } from '$lib/apis/ollama';
 	import { getOpenAIConfig, updateOpenAIConfig, getOpenAIModels } from '$lib/apis/openai';
+	import { getNovitaConfig, updateNovitaConfig, getNovitaModels } from '$lib/apis/novita';
 	import { getModels as _getModels, getBackendConfig } from '$lib/apis';
 	import { getConnectionsConfig, setConnectionsConfig } from '$lib/apis/configs';
 
@@ -17,6 +18,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 
 	import OpenAIConnection from './Connections/OpenAIConnection.svelte';
+	import NovitaConnection from './Connections/NovitaConnection.svelte';
 	import AddConnectionModal from '$lib/components/AddConnectionModal.svelte';
 	import OllamaConnection from './Connections/OllamaConnection.svelte';
 
@@ -40,13 +42,19 @@
 	let OPENAI_API_BASE_URLS = [''];
 	let OPENAI_API_CONFIGS = {};
 
+	let NOVITA_API_KEYS = [''];
+	let NOVITA_API_BASE_URLS = [''];
+	let NOVITA_API_CONFIGS = {};
+
 	let ENABLE_OPENAI_API: null | boolean = null;
+	let ENABLE_NOVITA_API: null | boolean = null;
 	let ENABLE_OLLAMA_API: null | boolean = null;
 
 	let connectionsConfig = null;
 
 	let pipelineUrls = {};
 	let showAddOpenAIConnectionModal = false;
+	let showAddNovitaConnectionModal = false;
 	let showAddOllamaConnectionModal = false;
 
 	const updateOpenAIHandler = async () => {
@@ -81,6 +89,39 @@
 
 			if (res) {
 				toast.success($i18n.t('OpenAI API settings updated'));
+				await models.set(await getModels());
+			}
+		}
+	};
+
+	const updateNovitaHandler = async () => {
+		if (ENABLE_NOVITA_API !== null) {
+			NOVITA_API_BASE_URLS = NOVITA_API_BASE_URLS.map((url) => url.replace(/\/$/, ''));
+
+			if (NOVITA_API_KEYS.length !== NOVITA_API_BASE_URLS.length) {
+				if (NOVITA_API_KEYS.length > NOVITA_API_BASE_URLS.length) {
+					NOVITA_API_KEYS = NOVITA_API_KEYS.slice(0, NOVITA_API_BASE_URLS.length);
+				}
+
+				if (NOVITA_API_KEYS.length < NOVITA_API_BASE_URLS.length) {
+					const diff = NOVITA_API_BASE_URLS.length - NOVITA_API_KEYS.length;
+					for (let i = 0; i < diff; i++) {
+						NOVITA_API_KEYS.push('');
+					}
+				}
+			}
+
+			const res = await updateNovitaConfig(localStorage.token, {
+				ENABLE_NOVITA_API: ENABLE_NOVITA_API,
+				NOVITA_API_BASE_URLS: NOVITA_API_BASE_URLS,
+				NOVITA_API_KEYS: NOVITA_API_KEYS,
+				NOVITA_API_CONFIGS: NOVITA_API_CONFIGS
+			}).catch((error) => {
+				toast.error(`${error}`);
+			});
+
+			if (res) {
+				toast.success($i18n.t('Novita API settings updated'));
 				await models.set(await getModels());
 			}
 		}
@@ -126,6 +167,14 @@
 		await updateOpenAIHandler();
 	};
 
+	const addNovitaConnectionHandler = async (connection) => {
+		NOVITA_API_BASE_URLS = [...NOVITA_API_BASE_URLS, connection.url];
+		NOVITA_API_KEYS = [...NOVITA_API_KEYS, connection.key];
+		NOVITA_API_CONFIGS[NOVITA_API_BASE_URLS.length - 1] = connection.config;
+
+		await updateNovitaHandler();
+	};
+
 	const addOllamaConnectionHandler = async (connection) => {
 		OLLAMA_BASE_URLS = [...OLLAMA_BASE_URLS, connection.url];
 		OLLAMA_API_CONFIGS[OLLAMA_BASE_URLS.length - 1] = {
@@ -140,6 +189,7 @@
 		if ($user?.role === 'admin') {
 			let ollamaConfig = {};
 			let openaiConfig = {};
+			let novitaConfig = {};
 
 			await Promise.all([
 				(async () => {
@@ -149,16 +199,24 @@
 					openaiConfig = await getOpenAIConfig(localStorage.token);
 				})(),
 				(async () => {
+					novitaConfig = await getNovitaConfig(localStorage.token);
+				})(),
+				(async () => {
 					connectionsConfig = await getConnectionsConfig(localStorage.token);
 				})()
 			]);
 
 			ENABLE_OPENAI_API = openaiConfig.ENABLE_OPENAI_API;
+			ENABLE_NOVITA_API = novitaConfig.ENABLE_NOVITA_API;
 			ENABLE_OLLAMA_API = ollamaConfig.ENABLE_OLLAMA_API;
 
 			OPENAI_API_BASE_URLS = openaiConfig.OPENAI_API_BASE_URLS;
 			OPENAI_API_KEYS = openaiConfig.OPENAI_API_KEYS;
 			OPENAI_API_CONFIGS = openaiConfig.OPENAI_API_CONFIGS;
+
+			NOVITA_API_BASE_URLS = novitaConfig.NOVITA_API_BASE_URLS;
+			NOVITA_API_KEYS = novitaConfig.NOVITA_API_KEYS;
+			NOVITA_API_CONFIGS = novitaConfig.NOVITA_API_CONFIGS;
 
 			OLLAMA_BASE_URLS = ollamaConfig.OLLAMA_BASE_URLS;
 			OLLAMA_API_CONFIGS = ollamaConfig.OLLAMA_API_CONFIGS;
@@ -196,6 +254,7 @@
 
 	const submitHandler = async () => {
 		updateOpenAIHandler();
+		updateNovitaHandler();
 		updateOllamaHandler();
 
 		dispatch('save');
@@ -210,6 +269,11 @@
 />
 
 <AddConnectionModal
+	bind:show={showAddNovitaConnectionModal}
+	onSubmit={addNovitaConnectionHandler}
+/>
+
+<AddConnectionModal
 	ollama
 	bind:show={showAddOllamaConnectionModal}
 	onSubmit={addOllamaConnectionHandler}
@@ -217,7 +281,7 @@
 
 <form class="flex flex-col h-full justify-between text-sm" on:submit|preventDefault={submitHandler}>
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
-		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && connectionsConfig !== null}
+		{#if ENABLE_OPENAI_API !== null && ENABLE_NOVITA_API !== null && ENABLE_OLLAMA_API !== null && connectionsConfig !== null}
 			<div class="mb-3.5">
 				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
@@ -281,6 +345,72 @@
 												});
 												OPENAI_API_CONFIGS = newConfig;
 												updateOpenAIHandler();
+											}}
+										/>
+									{/each}
+								</div>
+							</div>
+						{/if}
+					</div>
+				</div>
+
+				<div class="my-2">
+					<div class="mt-2 space-y-2">
+						<div class="flex justify-between items-center text-sm">
+							<div class="font-medium">{$i18n.t('Novita API')}</div>
+
+							<div class="flex items-center">
+								<div class="">
+									<Switch
+										bind:state={ENABLE_NOVITA_API}
+										on:change={async () => {
+											updateNovitaHandler();
+										}}
+									/>
+								</div>
+							</div>
+						</div>
+
+						{#if ENABLE_NOVITA_API}
+							<div class="">
+								<div class="flex justify-between items-center">
+									<div class="font-medium text-xs">{$i18n.t('Manage Novita API Connections')}</div>
+
+									<Tooltip content={$i18n.t(`Add Connection`)}>
+										<button
+											class="px-1"
+											on:click={() => {
+												showAddNovitaConnectionModal = true;
+											}}
+											type="button"
+										>
+											<Plus />
+										</button>
+									</Tooltip>
+								</div>
+
+								<div class="flex flex-col gap-1.5 mt-1.5">
+									{#each NOVITA_API_BASE_URLS as url, idx}
+										<NovitaConnection
+											bind:url={NOVITA_API_BASE_URLS[idx]}
+											bind:key={NOVITA_API_KEYS[idx]}
+											bind:config={NOVITA_API_CONFIGS[idx]}
+											onSubmit={() => {
+												updateNovitaHandler();
+											}}
+											onDelete={() => {
+												NOVITA_API_BASE_URLS = NOVITA_API_BASE_URLS.filter(
+													(url, urlIdx) => idx !== urlIdx
+												);
+												NOVITA_API_KEYS = NOVITA_API_KEYS.filter((key, keyIdx) => idx !== keyIdx);
+
+												let newConfig = {};
+												NOVITA_API_BASE_URLS.forEach((url, newIdx) => {
+													newConfig[newIdx] =
+														NOVITA_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
+												});
+												NOVITA_API_CONFIGS = newConfig;
+												updateNovitaHandler();
 											}}
 										/>
 									{/each}

@@ -1171,6 +1171,55 @@ OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
 
 ####################################
+# NOVITA_API
+####################################
+
+ENABLE_NOVITA_API = PersistentConfig(
+    "ENABLE_NOVITA_API",
+    "novita.enable",
+    os.environ.get("ENABLE_NOVITA_API", "False").lower() == "true",
+)
+
+NOVITA_API_KEY = os.environ.get("NOVITA_API_KEY", "")
+NOVITA_API_BASE_URL = os.environ.get(
+    "NOVITA_API_BASE_URL", "https://api.novita.ai/openai"
+)
+
+if NOVITA_API_BASE_URL == "":
+    NOVITA_API_BASE_URL = "https://api.novita.ai/openai"
+else:
+    if NOVITA_API_BASE_URL.endswith("/"):
+        NOVITA_API_BASE_URL = NOVITA_API_BASE_URL[:-1]
+
+NOVITA_API_KEYS = os.environ.get("NOVITA_API_KEYS", "")
+NOVITA_API_KEYS = NOVITA_API_KEYS if NOVITA_API_KEYS != "" else NOVITA_API_KEY
+
+NOVITA_API_KEYS = [key.strip() for key in NOVITA_API_KEYS.split(";")]
+NOVITA_API_KEYS = PersistentConfig(
+    "NOVITA_API_KEYS", "novita.api_keys", NOVITA_API_KEYS
+)
+
+NOVITA_API_BASE_URLS = os.environ.get("NOVITA_API_BASE_URLS", "")
+NOVITA_API_BASE_URLS = (
+    NOVITA_API_BASE_URLS if NOVITA_API_BASE_URLS != "" else NOVITA_API_BASE_URL
+)
+
+NOVITA_API_BASE_URLS = [
+    url.strip() if url != "" else "https://api.novita.ai/openai"
+    for url in NOVITA_API_BASE_URLS.split(";")
+]
+NOVITA_API_BASE_URLS = PersistentConfig(
+    "NOVITA_API_BASE_URLS", "novita.api_base_urls", NOVITA_API_BASE_URLS
+)
+
+NOVITA_API_CONFIGS = PersistentConfig(
+    "NOVITA_API_CONFIGS",
+    "novita.api_configs",
+    {},
+)
+
+
+####################################
 # MODELS
 ####################################
 

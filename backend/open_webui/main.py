@@ -72,6 +72,7 @@ from open_webui.routers import (
     analytics,
     audio,
     images,
+    novita,
     ollama,
     openai,
     retrieval,
@@ -125,6 +126,11 @@ from open_webui.config import (
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
+    # Novita
+    ENABLE_NOVITA_API,
+    NOVITA_API_BASE_URLS,
+    NOVITA_API_KEYS,
+    NOVITA_API_CONFIGS,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
     # Model list
@@ -773,6 +779,13 @@ app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
 app.state.config.OPENAI_API_CONFIGS = OPENAI_API_CONFIGS
 
 app.state.OPENAI_MODELS = {}
+
+app.state.config.ENABLE_NOVITA_API = ENABLE_NOVITA_API
+app.state.config.NOVITA_API_BASE_URLS = NOVITA_API_BASE_URLS
+app.state.config.NOVITA_API_KEYS = NOVITA_API_KEYS
+app.state.config.NOVITA_API_CONFIGS = NOVITA_API_CONFIGS
+
+app.state.NOVITA_MODELS = {}
 
 ########################################
 #
@@ -1526,6 +1539,7 @@ app.mount("/ws", socket_app)
 
 app.include_router(ollama.router, prefix="/ollama", tags=["ollama"])
 app.include_router(openai.router, prefix="/openai", tags=["openai"])
+app.include_router(novita.router, prefix="/novita", tags=["novita"])
 
 
 app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["pipelines"])
@@ -1805,7 +1819,6 @@ async def chat_completion(
             if not metadata["chat_id"].startswith(
                 "local:"
             ):  # temporary chats are not stored
-
                 # Verify chat ownership — lightweight EXISTS check avoids
                 # deserializing the full chat JSON blob just to confirm the row exists
                 if (
