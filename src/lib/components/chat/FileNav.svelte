@@ -1151,6 +1151,7 @@
 				<PortPreview
 					baseUrl={selectedTerminal?.url ?? ''}
 					port={previewPort}
+					overlay={overlay || isDraggingHandle}
 					onClose={() => {
 						previewPort = null;
 					}}
@@ -1183,7 +1184,7 @@
 					}}
 					baseUrl={selectedTerminal?.url ?? ''}
 					apiKey={selectedTerminal?.key ?? ''}
-					{overlay}
+					overlay={overlay || isDraggingHandle}
 					onSave={async (content) => {
 						const terminal = selectedTerminal;
 						if (!terminal || !selectedFile) return;
@@ -1364,7 +1365,7 @@
 				{#if terminalExpanded}
 					<div style="height: {terminalHeight}px" class="min-h-0">
 						<XTerminal
-							{overlay}
+							overlay={overlay || isDraggingHandle}
 							bind:connected={terminalConnected}
 							bind:connecting={terminalConnecting}
 						/>

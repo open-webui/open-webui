@@ -9,6 +9,7 @@
 	export let port: number;
 	export let path: string = '';
 	export let onClose: () => void = () => {};
+	export let overlay = false;
 
 	let iframeEl: HTMLIFrameElement;
 	let urlInput: string = '';
@@ -257,16 +258,21 @@
 	{/if}
 
 	<!-- Iframe -->
-	{#key iframeKey}
-		<iframe
-			bind:this={iframeEl}
-			src={proxyUrl}
-			title="Port {port} preview"
-			class="flex-1 w-full min-h-0 border-0 bg-white"
-			sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
-			on:load={onIframeLoad}
-		/>
-	{/key}
+	<div class="flex-1 min-h-0 relative">
+		{#if overlay}
+			<div class="absolute inset-0 z-10"></div>
+		{/if}
+		{#key iframeKey}
+			<iframe
+				bind:this={iframeEl}
+				src={proxyUrl}
+				title="Port {port} preview"
+				class="w-full h-full border-0 bg-white"
+				sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
+				on:load={onIframeLoad}
+			/>
+		{/key}
+	</div>
 </div>
 
 <style>
