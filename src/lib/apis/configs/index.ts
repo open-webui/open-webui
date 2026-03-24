@@ -342,6 +342,7 @@ type RegisterOAuthClientForm = {
 	url: string;
 	client_id: string;
 	client_name?: string;
+	client_secret?: string;
 };
 
 export const registerOAuthClient = async (
