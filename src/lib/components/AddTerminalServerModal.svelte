@@ -13,7 +13,6 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import { detectTerminalServerType, putOrchestratorPolicy } from '$lib/apis/configs';
-	import { getTerminalConfig } from '$lib/apis/terminal';
 
 	export let show = false;
 	export let edit = false;
@@ -110,40 +109,33 @@
 
 		verifying = true;
 		try {
-			if (admin) {
-				// Admin: detect orchestrator vs terminal
-				const type = await detectTerminalServerType(_url, key);
+			const type = await detectTerminalServerType(localStorage.token, {
+				url: _url,
+				key,
+				auth_type
+			});
 
-				if (type) {
-					serverType = type;
-					toast.success(
-						$i18n.t('Connected ({{type}})', {
-							type: type === 'orchestrator' ? 'Orchestrator' : 'Terminal'
-						})
-					);
-					// Default policy_id to connection id when orchestrator detected
-					if (type === 'orchestrator' && !policyId) {
-						policyId =
-							id ||
-							name
-								.toLowerCase()
-								.replace(/[^a-z0-9-]/g, '-')
-								.replace(/-+/g, '-')
-								.replace(/^-|-$/g, '') ||
-							'default';
-					}
-				} else {
-					serverType = null;
-					toast.error($i18n.t('Server connection failed'));
+			if (type) {
+				serverType = type;
+				toast.success(
+					$i18n.t('Connected ({{type}})', {
+						type: type === 'orchestrator' ? 'Orchestrator' : 'Terminal'
+					})
+				);
+				// Default policy_id to connection id when orchestrator detected
+				if (type === 'orchestrator' && !policyId) {
+					policyId =
+						id ||
+						name
+							.toLowerCase()
+							.replace(/[^a-z0-9-]/g, '-')
+							.replace(/-+/g, '-')
+							.replace(/^-|-$/g, '') ||
+						'default';
 				}
 			} else {
-				// Non-admin: simple terminal verification
-				const res = await getTerminalConfig(_url, key);
-				if (res) {
-					toast.success($i18n.t('Server connection verified'));
-				} else {
-					toast.error($i18n.t('Server connection failed'));
-				}
+				serverType = null;
+				toast.error($i18n.t('Server connection failed'));
 			}
 		} catch {
 			serverType = null;
@@ -194,7 +186,7 @@
 		// Save policy to orchestrator if applicable
 		if (serverType === 'orchestrator' && admin && policyId) {
 			try {
-				await putOrchestratorPolicy(url, key, policyId, buildPolicyData());
+				await putOrchestratorPolicy(localStorage.token, url, key, auth_type, policyId, buildPolicyData());
 			} catch (err) {
 				toast.error($i18n.t('Failed to save policy: {{error}}', { error: err }));
 				return;

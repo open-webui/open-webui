@@ -231,65 +231,67 @@ export const setTerminalServerConnections = async (token: string, connections: o
 
 /**
  * Detect whether a terminal server URL points to an Orchestrator or a direct
- * Open Terminal instance.
- *
- * - GET {url}/api/v1/policies → 200 → "orchestrator"
- * - GET {url}/api/config      → 200 → "terminal"
- * - Neither                         → null
+ * Open Terminal instance.  Proxied through the backend so cluster-internal
+ * URLs are reachable.
  */
 export const detectTerminalServerType = async (
-	url: string,
-	key: string
+	token: string,
+	connection: object
 ): Promise<'orchestrator' | 'terminal' | null> => {
-	const baseUrl = url.replace(/\/$/, '');
-	const headers: Record<string, string> = {};
-	if (key) {
-		headers['Authorization'] = `Bearer ${key}`;
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/terminal_servers/verify`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ ...connection })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
 	}
 
-	// Orchestrators expose a policies API; plain terminals don't.
-	try {
-		const res = await fetch(`${baseUrl}/api/v1/policies`, { headers });
-		if (res.ok) return 'orchestrator';
-	} catch {
-		// ignore
-	}
-
-	// Fall back to open-terminal config endpoint.
-	try {
-		const res = await fetch(`${baseUrl}/api/config`, { headers });
-		if (res.ok) return 'terminal';
-	} catch {
-		// ignore
-	}
-
-	return null;
+	return res?.server_type ?? null;
 };
 
 /**
- * Create or update a policy on the orchestrator.
- * PUT {url}/api/v1/policies/{policyId}
+ * Create or update a policy on the orchestrator, proxied through the backend
+ * so cluster-internal URLs are reachable.
  */
 export const putOrchestratorPolicy = async (
+	token: string,
 	url: string,
 	key: string,
+	authType: string,
 	policyId: string,
 	policyData: object
 ): Promise<object | null> => {
 	let error = null;
 
-	const baseUrl = url.replace(/\/$/, '');
-	const headers: Record<string, string> = {
-		'Content-Type': 'application/json'
-	};
-	if (key) {
-		headers['Authorization'] = `Bearer ${key}`;
-	}
-
-	const res = await fetch(`${baseUrl}/api/v1/policies/${encodeURIComponent(policyId)}`, {
-		method: 'PUT',
-		headers,
-		body: JSON.stringify(policyData)
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/terminal_servers/policy`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			url,
+			key,
+			auth_type: authType,
+			policy_id: policyId,
+			policy_data: policyData
+		})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

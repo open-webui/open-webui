@@ -255,6 +255,130 @@ async def set_terminal_servers_config(
     }
 
 
+@router.post('/terminal_servers/verify')
+async def verify_terminal_servers_config(
+    request: Request,
+    form_data: TerminalServerConnection,
+    user=Depends(get_admin_user),
+):
+    """
+    Verify the connection to a terminal server and detect its type.
+
+    Returns {"status": True, "server_type": "orchestrator" | "terminal"}
+    """
+    base_url = form_data.url.rstrip('/')
+    headers = {'X-User-Id': user.id}
+
+    if form_data.auth_type == 'bearer' and form_data.key:
+        headers['Authorization'] = f'Bearer {form_data.key}'
+    elif form_data.auth_type == 'session':
+        headers['Authorization'] = f'Bearer {request.state.token.credentials}'
+    elif form_data.auth_type == 'system_oauth':
+        try:
+            if request.cookies.get('oauth_session_id', None):
+                oauth_token = await request.app.state.oauth_manager.get_oauth_token(
+                    user.id,
+                    request.cookies.get('oauth_session_id', None),
+                )
+                if oauth_token:
+                    headers['Authorization'] = f'Bearer {oauth_token.get("access_token", "")}'
+        except Exception:
+            pass
+
+    async with aiohttp.ClientSession(
+        trust_env=True,
+        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+    ) as session:
+        # Orchestrators expose a policies API; plain terminals don't.
+        try:
+            async with session.get(f'{base_url}/api/v1/policies', headers=headers) as resp:
+                if resp.ok:
+                    return {'status': True, 'server_type': 'orchestrator'}
+        except Exception:
+            pass
+
+        # Fall back to open-terminal config endpoint.
+        try:
+            async with session.get(f'{base_url}/api/config', headers=headers) as resp:
+                if resp.ok:
+                    return {'status': True, 'server_type': 'terminal'}
+        except Exception:
+            pass
+
+    raise HTTPException(
+        status_code=400,
+        detail='Failed to connect to the terminal server',
+    )
+
+
+class TerminalServerPolicyForm(BaseModel):
+    url: str
+    key: Optional[str] = ''
+    auth_type: Optional[str] = 'bearer'
+    policy_id: str
+    policy_data: dict
+
+
+@router.post('/terminal_servers/policy')
+async def put_terminal_server_policy(
+    request: Request,
+    form_data: TerminalServerPolicyForm,
+    user=Depends(get_admin_user),
+):
+    """
+    Create or update a policy on an orchestrator.
+    """
+    base_url = form_data.url.rstrip('/')
+    headers = {'Content-Type': 'application/json', 'X-User-Id': user.id}
+
+    if form_data.auth_type == 'bearer' and form_data.key:
+        headers['Authorization'] = f'Bearer {form_data.key}'
+    elif form_data.auth_type == 'session':
+        headers['Authorization'] = f'Bearer {request.state.token.credentials}'
+    elif form_data.auth_type == 'system_oauth':
+        try:
+            if request.cookies.get('oauth_session_id', None):
+                oauth_token = await request.app.state.oauth_manager.get_oauth_token(
+                    user.id,
+                    request.cookies.get('oauth_session_id', None),
+                )
+                if oauth_token:
+                    headers['Authorization'] = f'Bearer {oauth_token.get("access_token", "")}'
+        except Exception:
+            pass
+
+    import json
+
+    policy_url = f'{base_url}/api/v1/policies/{form_data.policy_id}'
+
+    async with aiohttp.ClientSession(
+        trust_env=True,
+        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+    ) as session:
+        try:
+            async with session.put(
+                policy_url,
+                headers=headers,
+                data=json.dumps(form_data.policy_data),
+            ) as resp:
+                if resp.ok:
+                    return await resp.json()
+
+                error_body = await resp.text()
+                raise HTTPException(
+                    status_code=resp.status,
+                    detail=f'Orchestrator returned {resp.status}: {error_body}',
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            log.debug(f'Failed to save policy to orchestrator: {e}')
+            raise HTTPException(
+                status_code=400,
+                detail='Failed to connect to the orchestrator',
+            )
+
+
 @router.post('/tool_servers/verify')
 async def verify_tool_servers_config(request: Request, form_data: ToolServerConnection, user=Depends(get_admin_user)):
     """
