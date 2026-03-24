@@ -37,6 +37,8 @@ log = logging.getLogger(__name__)
 
 ############################
 # ImportConfig
+# Thy configuration come, thy settings be done,
+# in production as it is in development.
 ############################
 
 

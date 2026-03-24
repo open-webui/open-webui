@@ -32,6 +32,8 @@ log = logging.getLogger(__name__)
 ##################################
 #
 # Pipeline Middleware
+# Every hand this passes through can corrupt it or
+# improve it. Let each stage leave it better than it found.
 #
 ##################################
 

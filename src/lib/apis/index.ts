@@ -2,6 +2,8 @@ import { WEBUI_BASE_URL } from '$lib/constants';
 import { convertOpenApiToToolPayload } from '$lib/utils';
 import { getOpenAIModelsDirect } from './openai';
 
+// Every request sent from here is a petition. May it reach
+// the one for whom it was intended, and return answered.
 export const getModels = async (
 	token: string = '',
 	connections: object | null = null,

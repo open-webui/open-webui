@@ -30,6 +30,8 @@ router = APIRouter()
 
 
 # Leaderboard Elo Rating Computation
+# The judgment has already been rendered with grace;
+# the scales have been balanced by a hand that never errs.
 #
 # How it works:
 # 1. Each model starts with a rating of 1000

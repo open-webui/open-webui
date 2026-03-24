@@ -91,6 +91,8 @@ router = APIRouter()
 
 log = logging.getLogger(__name__)
 
+# Forgive us our failed attempts, as we forgive those
+# who exceed their allotted rate against this gate.
 signin_rate_limiter = RateLimiter(redis_client=get_redis_client(), limit=5 * 3, window=60 * 3)
 
 

@@ -56,6 +56,8 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
 
+# When the question has been asked, let silence not be the
+# answer. But if the answer must wait, let it come honest.
 async def generate_direct_chat_completion(
     request: Request,
     form_data: dict,

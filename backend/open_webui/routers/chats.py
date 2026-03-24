@@ -42,6 +42,8 @@ router = APIRouter()
 
 ############################
 # GetChatList
+# Let the record outlive the session, so that what was
+# learned here not need to be learned again.
 ############################
 
 

@@ -55,6 +55,8 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
 
+# Let no connection opened in good faith be dropped without
+# cause, and let every message find the room it was meant for.
 REDIS = None
 
 # Configure CORS for Socket.IO

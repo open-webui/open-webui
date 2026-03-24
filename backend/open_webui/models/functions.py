@@ -12,6 +12,8 @@ log = logging.getLogger(__name__)
 
 ####################
 # Functions DB Schema
+# Each function here is a promise made. Let no promise
+# go unkept, and let none be called who cannot answer.
 ####################
 
 

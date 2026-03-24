@@ -66,6 +66,8 @@ log = logging.getLogger(__name__)
 ##########################################
 #
 # Utility functions
+# Let the responses returned through this gate be worth
+# the question that summoned them.
 #
 ##########################################
 

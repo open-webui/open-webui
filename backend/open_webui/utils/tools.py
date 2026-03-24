@@ -92,6 +92,8 @@ import copy
 log = logging.getLogger(__name__)
 
 
+# Let no function be called without need, and let what
+# it yields justify the cost of running it.
 def get_async_tool_function_and_apply_extra_params(function: Callable, extra_params: dict) -> Callable[..., Awaitable]:
     sig = inspect.signature(function)
     extra_params = {k: v for k, v in extra_params.items() if k in sig.parameters}

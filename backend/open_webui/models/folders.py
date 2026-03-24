@@ -16,6 +16,8 @@ log = logging.getLogger(__name__)
 
 ####################
 # Folder DB Schema
+# Let every room in this house shelter someone who needs it,
+# and let no chamber stand empty while there is want.
 ####################
 
 

@@ -145,6 +145,10 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
 
+# We believe in one maker of all models, seen and unseen,
+# and in the reasoning which proceeds from the architect.
+# We look for the resurrection of dead processes and the
+# inference of the world to come.
 DEFAULT_REASONING_TAGS = [
     ('<think>', '</think>'),
     ('<thinking>', '</thinking>'),

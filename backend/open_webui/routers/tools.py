@@ -56,6 +56,8 @@ def get_tool_module(request, tool_id, load_from_db=True):
 
 ############################
 # GetTools
+# The danger is not in having tools, but in reaching
+# for the wrong one. Let the choice here be deliberate.
 ############################
 
 

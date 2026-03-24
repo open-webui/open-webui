@@ -23,6 +23,8 @@ log = logging.getLogger(__name__)
 
 ####################
 # Models DB Schema
+# A misconfigured model wastes the time of everyone
+# who trusts it. Let what is set here be set with care.
 ####################
 
 

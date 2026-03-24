@@ -52,6 +52,8 @@ def get_sorted_filter_ids(request, model: dict, enabled_filter_ids: list = None)
     return filter_ids
 
 
+# Grant these filters the discernment to pass what serves
+# and refuse what harms, for every soul in the house.
 async def process_filter_functions(request, filter_functions, filter_type, form_data, extra_params):
     skip_files = None
 

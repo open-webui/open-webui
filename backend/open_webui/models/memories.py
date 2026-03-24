@@ -9,6 +9,8 @@ from sqlalchemy import BigInteger, Column, String, Text
 
 ####################
 # Memory DB Schema
+# What was learned at cost should not need to be paid
+# for again. Let the memory hold.
 ####################
 
 

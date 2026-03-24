@@ -128,6 +128,8 @@ def get_channel_permitted_group_and_user_ids(
 
 ############################
 # Channels Enabled Dependency
+# The creator has set this table; let every voice that
+# gathers here find shelter under the same roof.
 ############################
 
 
