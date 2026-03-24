@@ -171,8 +171,6 @@
 	let files = [];
 	let params = {};
 
-
-
 	$: if (chatIdProp) {
 		navigateHandler();
 	}
@@ -962,10 +960,9 @@
 		let contents = [];
 		messages.forEach((message) => {
 			if (message?.role !== 'user' && message?.content) {
-				const {
-					codeBlocks: codeBlocks,
-					htmlGroups: htmlGroups
-				} = getCodeBlockContents(message.content);
+				const { codeBlocks: codeBlocks, htmlGroups: htmlGroups } = getCodeBlockContents(
+					message.content
+				);
 
 				if (htmlGroups && htmlGroups.length > 0) {
 					htmlGroups.forEach((group) => {
@@ -1786,10 +1783,7 @@
 				const _files = structuredClone(files);
 				chatRequestQueues.update((q) => ({
 					...q,
-					[$chatId]: [
-						...(q[$chatId] ?? []),
-						{ id: uuidv4(), prompt: userPrompt, files: _files }
-					]
+					[$chatId]: [...(q[$chatId] ?? []), { id: uuidv4(), prompt: userPrompt, files: _files }]
 				}));
 				// Clear input
 				messageInput?.setText('');

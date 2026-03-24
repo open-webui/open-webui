@@ -5,7 +5,6 @@
 	import { searchNotes } from '$lib/apis/notes';
 	import { searchKnowledgeBases, searchKnowledgeFiles } from '$lib/apis/knowledge';
 
-
 	import { decodeString } from '$lib/utils';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';

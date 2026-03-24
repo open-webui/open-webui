@@ -1,6 +1,4 @@
 <script lang="ts">
-
-
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Check from '../icons/Check.svelte';
 	import Search from '../icons/Search.svelte';
@@ -34,7 +32,9 @@
 	{placeholder}
 	triggerClass="relative w-full"
 	contentClass="w-full rounded-lg bg-white dark:bg-gray-900 dark:text-white shadow-lg border border-gray-300/30 dark:border-gray-700/40 outline-hidden"
-	onClose={() => { searchValue = ''; }}
+	onClose={() => {
+		searchValue = '';
+	}}
 >
 	<svelte:fragment slot="trigger" let:selectedLabel>
 		<span

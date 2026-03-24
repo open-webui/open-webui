@@ -155,7 +155,10 @@
 												placement="top"
 											>
 												<button
-													class="p-1.5 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition {selected === emojiItem.shortCodes[0] ? 'bg-gray-200 dark:bg-gray-700' : ''}"
+													class="p-1.5 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition {selected ===
+													emojiItem.shortCodes[0]
+														? 'bg-gray-200 dark:bg-gray-700'
+														: ''}"
 													on:click={() => selectEmoji(emojiItem)}
 												>
 													<img

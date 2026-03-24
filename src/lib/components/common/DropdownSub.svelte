@@ -3,7 +3,8 @@
 	import { tick } from 'svelte';
 
 	/** CSS classes for the sub-content container */
-	export let contentClass = 'select-none rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800';
+	export let contentClass =
+		'select-none rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800';
 
 	/** Max width in px, enforced at the component level */
 	export let maxWidth = 200;
@@ -48,12 +49,12 @@
 		// Vertical positioning with robust bounds clamping (shift method)
 		const contentHeight = contentEl.offsetHeight || 0;
 		let top = rect.top;
-		
+
 		// If it overflows the bottom edge
 		if (top + contentHeight + 16 > window.innerHeight) {
 			top = window.innerHeight - contentHeight - 16;
 		}
-		
+
 		// If shifting it up causes it to overflow the top edge, cap it at 16px
 		if (top < 16) {
 			top = 16;

@@ -829,11 +829,7 @@
 
 									// Only show on empty paragraphs at root depth
 									return (
-										view.hasFocus() &&
-										empty &&
-										isRootDepth &&
-										isEmptyTextBlock &&
-										editor.isEditable
+										view.hasFocus() && empty && isRootDepth && isEmptyTextBlock && editor.isEditable
 									);
 								}
 							})
@@ -1275,11 +1271,21 @@
 </script>
 
 {#if richText && showFormattingToolbar}
-	<div bind:this={bubbleMenuElement} id="bubble-menu" class="p-0" style="visibility: hidden; opacity: 0; position: absolute; z-index: 9999;">
+	<div
+		bind:this={bubbleMenuElement}
+		id="bubble-menu"
+		class="p-0"
+		style="visibility: hidden; opacity: 0; position: absolute; z-index: 9999;"
+	>
 		<FormattingButtons {editor} />
 	</div>
 
-	<div bind:this={floatingMenuElement} id="floating-menu" class="p-0" style="visibility: hidden; opacity: 0; position: absolute; z-index: 9999;">
+	<div
+		bind:this={floatingMenuElement}
+		id="floating-menu"
+		class="p-0"
+		style="visibility: hidden; opacity: 0; position: absolute; z-index: 9999;"
+	>
 		<FormattingButtons {editor} />
 	</div>
 {/if}

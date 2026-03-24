@@ -930,7 +930,9 @@
 
 <ConfirmDialog
 	bind:show={showDeleteConfirmDialog}
-	message={$i18n.t('Are you sure you want to delete this connection? This action cannot be undone.')}
+	message={$i18n.t(
+		'Are you sure you want to delete this connection? This action cannot be undone.'
+	)}
 	confirmLabel={$i18n.t('Delete')}
 	on:confirm={() => {
 		onDelete();

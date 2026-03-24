@@ -21,10 +21,12 @@
 	export let labelClass = '';
 
 	/** CSS classes for the dropdown content container */
-	export let contentClass = 'rounded-2xl min-w-[170px] p-1 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 dark:text-white shadow-lg';
+	export let contentClass =
+		'rounded-2xl min-w-[170px] p-1 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 dark:text-white shadow-lg';
 
 	/** CSS classes for each item button */
-	export let itemClass = 'flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl';
+	export let itemClass =
+		'flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl';
 
 	/** Alignment of the dropdown: 'start' | 'end' */
 	export let align = 'start';
@@ -99,7 +101,12 @@
 	}
 </script>
 
-<svelte:window on:click={handleWindowClick} on:keydown={handleKeydown} on:scroll|capture={positionContent} on:resize={positionContent} />
+<svelte:window
+	on:click={handleWindowClick}
+	on:keydown={handleKeydown}
+	on:scroll|capture={positionContent}
+	on:resize={positionContent}
+/>
 
 <button
 	bind:this={triggerEl}
@@ -116,19 +123,10 @@
 </button>
 
 {#if open}
-	<div
-		use:portal
-		bind:this={contentEl}
-		class={contentClass}
-		transition:flyAndScale
-	>
+	<div use:portal bind:this={contentEl} class={contentClass} transition:flyAndScale>
 		<slot {open} {selectItem}>
 			{#each items as item}
-				<button
-					class={itemClass}
-					type="button"
-					on:click={() => selectItem(item)}
-				>
+				<button class={itemClass} type="button" on:click={() => selectItem(item)}>
 					<slot name="item" {item} selected={value === item.value}>
 						{item.label}
 					</slot>

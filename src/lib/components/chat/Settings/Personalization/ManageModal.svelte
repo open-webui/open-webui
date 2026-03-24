@@ -316,7 +316,9 @@
 >
 	<div class=" text-sm text-gray-500 flex-1">
 		{$i18n.t('Are you sure you want to delete this memory? This action cannot be undone.')}
-		<div class=" mt-2 bg-gray-50 dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-800 text-black dark:text-white whitespace-pre-wrap break-words max-h-32 overflow-y-auto">
+		<div
+			class=" mt-2 bg-gray-50 dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-800 text-black dark:text-white whitespace-pre-wrap break-words max-h-32 overflow-y-auto"
+		>
 			{selectedMemory?.content}
 		</div>
 	</div>

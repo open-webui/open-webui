@@ -90,8 +90,6 @@
 	import PlusAlt from '../icons/PlusAlt.svelte';
 	import Dropdown from '../common/Dropdown.svelte';
 
-
-
 	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
 	import Knobs from '../icons/Knobs.svelte';
 	import ValvesModal from '../workspace/common/ValvesModal.svelte';
@@ -808,10 +806,7 @@
 		e.preventDefault();
 
 		// Check if a file or a sidebar chat item is being dragged.
-		if (
-			e.dataTransfer?.types?.includes('Files') ||
-			e.dataTransfer?.types?.includes('text/plain')
-		) {
+		if (e.dataTransfer?.types?.includes('Files') || e.dataTransfer?.types?.includes('text/plain')) {
 			dragged = true;
 		} else {
 			dragged = false;

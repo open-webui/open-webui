@@ -163,7 +163,9 @@
 	const hasPublicWriteGrant = (grants: AccessGrant[]): boolean =>
 		grants.some(
 			(grant) =>
-				grant.principal_type === 'user' && grant.principal_id === '*' && grant.permission === 'write'
+				grant.principal_type === 'user' &&
+				grant.principal_id === '*' &&
+				grant.permission === 'write'
 		);
 
 	const currentGrants = (): AccessGrant[] =>
@@ -203,11 +205,7 @@
 	const setPublic = (isPublic: boolean) => {
 		// Remove all user:* grants
 		const filtered = currentGrants().filter(
-			(grant) =>
-				!(
-					grant.principal_type === 'user' &&
-					grant.principal_id === '*'
-				)
+			(grant) => !(grant.principal_type === 'user' && grant.principal_id === '*')
 		);
 		if (isPublic) {
 			filtered.push({
