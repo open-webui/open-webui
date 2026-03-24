@@ -4,6 +4,7 @@
 	import { getCodeExecutionConfig, setCodeExecutionConfig } from '$lib/apis/configs';
 
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import SelectDropdown from '$lib/components/common/SelectDropdown.svelte';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
@@ -37,7 +38,7 @@
 		saveHandler();
 	}}
 >
-	<div class="space-y-5 overflow-y-scroll scrollbar-hidden h-full px-1">
+	<div class="space-y-5 overflow-y-auto scrollbar-hidden h-full px-1">
 		{#if config}
 			<!-- General Settings Section -->
 			<div class="bg-gradient-to-b from-gray-50/50 to-transparent dark:from-gray-800/20 dark:to-transparent rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/30">
@@ -61,7 +62,7 @@
 						<Switch bind:state={config.ENABLE_CODE_EXECUTION} />
 					</div>
 
-					<div class="flex items-center justify-between p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200/80 dark:border-gray-700/50 shadow-sm">
+					<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200/80 dark:border-gray-700/50 shadow-sm">
 						<div class="flex flex-col gap-1 flex-1 mr-4">
 							<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
 								{$i18n.t('Code Execution Engine')}
@@ -70,17 +71,16 @@
 								Choose the execution environment
 							</span>
 						</div>
-						<select
-							class="bg-gray-100 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 rounded-lg px-3 py-2 text-sm font-medium text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-orange-500/20 dark:focus:ring-orange-400/20 focus:border-transparent outline-none transition-colors"
-							bind:value={config.CODE_EXECUTION_ENGINE}
-							placeholder={$i18n.t('Select a engine')}
-							required
-						>
-							<option disabled selected value="">{$i18n.t('Select a engine')}</option>
-							{#each engines as engine}
-								<option value={engine}>{engine}</option>
-							{/each}
-						</select>
+						<div class="w-full sm:w-auto">
+							<SelectDropdown
+								value={config.CODE_EXECUTION_ENGINE}
+								options={[
+									{ value: '', label: 'Select a engine' },
+									...engines.map((engine) => ({ value: engine, label: engine }))
+								]}
+								on:change={(e) => (config.CODE_EXECUTION_ENGINE = e.detail.value)}
+							/>
+						</div>
 					</div>
 
 					{#if config.CODE_EXECUTION_ENGINE === 'jupyter'}
@@ -108,19 +108,21 @@
 							</div>
 
 							<div class="space-y-2">
-								<div class="flex items-center justify-between">
+								<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 									<label class="text-sm font-medium text-gray-700 dark:text-gray-300">
 										{$i18n.t('Jupyter Auth')}
 									</label>
-									<select
-										class="bg-gray-100 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 rounded-lg px-3 py-2 text-sm font-medium text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-orange-500/20 dark:focus:ring-orange-400/20 focus:border-transparent outline-none transition-colors"
-										bind:value={config.CODE_EXECUTION_JUPYTER_AUTH}
-										placeholder={$i18n.t('Select an auth method')}
-									>
-										<option selected value="">{$i18n.t('None')}</option>
-										<option value="token">{$i18n.t('Token')}</option>
-										<option value="password">{$i18n.t('Password')}</option>
-									</select>
+									<div class="w-full sm:w-auto">
+										<SelectDropdown
+											value={config.CODE_EXECUTION_JUPYTER_AUTH}
+											options={[
+												{ value: '', label: 'None' },
+												{ value: 'token', label: 'Token' },
+												{ value: 'password', label: 'Password' }
+											]}
+											on:change={(e) => (config.CODE_EXECUTION_JUPYTER_AUTH = e.detail.value)}
+										/>
+									</div>
 								</div>
 
 								{#if config.CODE_EXECUTION_JUPYTER_AUTH}
@@ -186,7 +188,7 @@
 					</div>
 
 					{#if config.ENABLE_CODE_INTERPRETER}
-						<div class="flex items-center justify-between p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200/80 dark:border-gray-700/50 shadow-sm">
+						<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200/80 dark:border-gray-700/50 shadow-sm">
 							<div class="flex flex-col gap-1 flex-1 mr-4">
 								<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
 									{$i18n.t('Code Interpreter Engine')}
@@ -195,17 +197,16 @@
 									Choose the interpreter environment
 								</span>
 							</div>
-							<select
-								class="bg-gray-100 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 rounded-lg px-3 py-2 text-sm font-medium text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-purple-500/20 dark:focus:ring-purple-400/20 focus:border-transparent outline-none transition-colors"
-								bind:value={config.CODE_INTERPRETER_ENGINE}
-								placeholder={$i18n.t('Select a engine')}
-								required
-							>
-								<option disabled selected value="">{$i18n.t('Select a engine')}</option>
-								{#each engines as engine}
-									<option value={engine}>{engine}</option>
-								{/each}
-							</select>
+							<div class="w-full sm:w-auto">
+								<SelectDropdown
+									value={config.CODE_INTERPRETER_ENGINE}
+									options={[
+										{ value: '', label: 'Select a engine' },
+										...engines.map((engine) => ({ value: engine, label: engine }))
+									]}
+									on:change={(e) => (config.CODE_INTERPRETER_ENGINE = e.detail.value)}
+								/>
+							</div>
 						</div>
 
 						{#if config.CODE_INTERPRETER_ENGINE === 'jupyter'}
@@ -233,19 +234,21 @@
 								</div>
 
 								<div class="space-y-2">
-									<div class="flex items-center justify-between">
+									<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 										<label class="text-sm font-medium text-gray-700 dark:text-gray-300">
 											{$i18n.t('Jupyter Auth')}
 										</label>
-										<select
-											class="bg-gray-100 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 rounded-lg px-3 py-2 text-sm font-medium text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-purple-500/20 dark:focus:ring-purple-400/20 focus:border-transparent outline-none transition-colors"
-											bind:value={config.CODE_INTERPRETER_JUPYTER_AUTH}
-											placeholder={$i18n.t('Select an auth method')}
-										>
-											<option selected value="">{$i18n.t('None')}</option>
-											<option value="token">{$i18n.t('Token')}</option>
-											<option value="password">{$i18n.t('Password')}</option>
-										</select>
+										<div class="w-full sm:w-auto">
+											<SelectDropdown
+												value={config.CODE_INTERPRETER_JUPYTER_AUTH}
+												options={[
+													{ value: '', label: 'None' },
+													{ value: 'token', label: 'Token' },
+													{ value: 'password', label: 'Password' }
+												]}
+												on:change={(e) => (config.CODE_INTERPRETER_JUPYTER_AUTH = e.detail.value)}
+											/>
+										</div>
 									</div>
 
 									{#if config.CODE_INTERPRETER_JUPYTER_AUTH}

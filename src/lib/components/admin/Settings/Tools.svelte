@@ -69,7 +69,6 @@
 						})} -->
 						<div class="flex justify-between items-center mb-0.5">
 							<div class="font-medium">{$i18n.t('Manage Tool Servers')}</div>
-
 							<Tooltip content={$i18n.t(`Add Connection`)}>
 								<button
 									class="px-1"

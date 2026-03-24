@@ -168,6 +168,77 @@ def get_config():
 
 CONFIG_DATA = get_config()
 
+# Honor env var overrides (take precedence over persisted DB values)
+config_overridden = False
+
+
+def _has_non_empty_env(name: str) -> bool:
+    value = os.environ.get(name)
+    return value is not None and value.strip() != ""
+
+if "ENABLE_SIGNUP" in os.environ:
+    if "ui" not in CONFIG_DATA:
+        CONFIG_DATA["ui"] = {}
+    CONFIG_DATA["ui"]["enable_signup"] = (
+        os.environ.get("ENABLE_SIGNUP", "True").lower() == "true"
+    )
+    config_overridden = True
+
+if "DEFAULT_USER_ROLE" in os.environ:
+    if "ui" not in CONFIG_DATA:
+        CONFIG_DATA["ui"] = {}
+    CONFIG_DATA["ui"]["default_user_role"] = os.environ.get(
+        "DEFAULT_USER_ROLE", "user"
+    )
+    config_overridden = True
+
+if _has_non_empty_env("WEBUI_URL"):
+    if "webui" not in CONFIG_DATA:
+        CONFIG_DATA["webui"] = {}
+    CONFIG_DATA["webui"]["url"] = os.environ.get("WEBUI_URL", "")
+    config_overridden = True
+
+if _has_non_empty_env("ENABLE_OAUTH_SIGNUP"):
+    if "oauth" not in CONFIG_DATA:
+        CONFIG_DATA["oauth"] = {}
+    CONFIG_DATA["oauth"]["enable_signup"] = (
+        os.environ.get("ENABLE_OAUTH_SIGNUP", "False").lower() == "true"
+    )
+    config_overridden = True
+
+if _has_non_empty_env("GOOGLE_CLIENT_ID"):
+    if "oauth" not in CONFIG_DATA:
+        CONFIG_DATA["oauth"] = {}
+    if "google" not in CONFIG_DATA["oauth"]:
+        CONFIG_DATA["oauth"]["google"] = {}
+    CONFIG_DATA["oauth"]["google"]["client_id"] = os.environ.get(
+        "GOOGLE_CLIENT_ID", ""
+    )
+    config_overridden = True
+
+if _has_non_empty_env("GOOGLE_CLIENT_SECRET"):
+    if "oauth" not in CONFIG_DATA:
+        CONFIG_DATA["oauth"] = {}
+    if "google" not in CONFIG_DATA["oauth"]:
+        CONFIG_DATA["oauth"]["google"] = {}
+    CONFIG_DATA["oauth"]["google"]["client_secret"] = os.environ.get(
+        "GOOGLE_CLIENT_SECRET", ""
+    )
+    config_overridden = True
+
+if _has_non_empty_env("GOOGLE_REDIRECT_URI"):
+    if "oauth" not in CONFIG_DATA:
+        CONFIG_DATA["oauth"] = {}
+    if "google" not in CONFIG_DATA["oauth"]:
+        CONFIG_DATA["oauth"]["google"] = {}
+    CONFIG_DATA["oauth"]["google"]["redirect_uri"] = os.environ.get(
+        "GOOGLE_REDIRECT_URI", ""
+    )
+    config_overridden = True
+
+if config_overridden:
+    save_to_db(CONFIG_DATA)
+
 
 def get_config_value(config_path: str):
     path_parts = config_path.split(".")
@@ -995,7 +1066,7 @@ MODEL_ORDER_LIST = PersistentConfig(
 DEFAULT_USER_ROLE = PersistentConfig(
     "DEFAULT_USER_ROLE",
     "ui.default_user_role",
-    os.getenv("DEFAULT_USER_ROLE", "pending"),
+    os.getenv("DEFAULT_USER_ROLE", "user"),
 )
 
 USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS = (

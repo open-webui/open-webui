@@ -8,11 +8,13 @@
 	export let size = 'md';
 	export let containerClassName = 'p-3';
 	export let className = 'bg-white dark:bg-gray-900 rounded-2xl';
+	export let backdropClassName = 'bg-black/40 backdrop-blur-sm';
+	export let position = 'center'; // 'center', 'left', 'right'
 
-	let modalElement = null;
+	let modalElement: HTMLDivElement | null = null;
 	let mounted = false;
 
-	const sizeToWidth = (size) => {
+	const sizeToWidth = (size: string) => {
 		if (size === 'full') {
 			return 'w-full';
 		}
@@ -25,6 +27,17 @@
 		} else {
 			return 'w-[56rem]';
 		}
+	};
+
+	const positionToJustify = (position: string) => {
+		if (position === 'left') {
+			return 'justify-start';
+		}
+		if (position === 'right') {
+			return 'justify-end';
+		}
+
+		return 'justify-center';
 	};
 
 	const handleKeyDown = (event: KeyboardEvent) => {
@@ -66,16 +79,14 @@
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
 		bind:this={modalElement}
-		class="modal fixed top-0 right-0 left-0 bottom-0 bg-black/40 backdrop-blur-sm w-full h-screen max-h-[100dvh] {containerClassName} flex justify-center z-9999 overflow-y-auto overscroll-contain transition-all duration-200"
+		class="modal fixed top-0 right-0 left-0 bottom-0 {backdropClassName} w-full h-screen max-h-[100dvh] flex items-center {positionToJustify(position)} z-9999 overflow-y-auto overscroll-contain transition-all duration-200"
 		in:fade={{ duration: 150 }}
 		on:mousedown={() => {
 			show = false;
 		}}
 	>
 		<div
-			class="m-auto max-w-full {sizeToWidth(size)} {size !== 'full'
-				? 'mx-2'
-				: ''} shadow-2xl min-h-fit scrollbar-hidden {className}"
+			class="m-auto max-w-full {sizeToWidth(size)} px-2 min-h-fit scrollbar-hidden {containerClassName} {className}"
 			in:flyAndScale
 			on:mousedown={(e) => {
 				e.stopPropagation();

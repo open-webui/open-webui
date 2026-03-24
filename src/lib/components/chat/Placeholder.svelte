@@ -117,13 +117,13 @@
 	<div class="flex flex-col items-center justify-center text-center font-primary mb-4">
 		<img
 			src={`${WEBUI_BASE_URL}/static/favicon.png`}
-			alt="Cook Logo"
+			alt="COPAI Logo"
 			class="w-14 h-14 mb-4"
 			draggable="false"
 		/>
 
 		<h1 class="text-3xl @sm:text-4xl font-semibold text-gray-900 dark:text-gray-100">
-			Welcome to Cook
+			Welcome to COPAI
 		</h1>
 
 		<p class="mt-2 text-sm text-gray-500 dark:text-gray-400 max-w-md">

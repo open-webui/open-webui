@@ -6,6 +6,7 @@
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import SelectDropdown from '$lib/components/common/SelectDropdown.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
@@ -33,6 +34,16 @@
 		'sougou'
 	];
 	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily'];
+
+	$: webSearchEngineOptions = [
+		{ value: '', label: 'Select a engine' },
+		...webSearchEngines.map((engine) => ({ value: engine, label: engine }))
+	];
+
+	$: webLoaderEngineOptions = [
+		{ value: '', label: 'Default' },
+		...webLoaderEngines.map((engine) => ({ value: engine, label: engine }))
+	];
 
 	let webConfig = null;
 
@@ -86,7 +97,7 @@
 		saveHandler();
 	}}
 >
-	<div class="space-y-3 overflow-y-scroll scrollbar-hidden h-full" style="padding-right: 4px;">
+	<div class="space-y-3 overflow-y-auto scrollbar-hidden h-full" style="padding-right: 4px;">
 		{#if webConfig}
 			<div class="">
 				<!-- General Section -->
@@ -110,23 +121,16 @@
 						</div>
 
 						<!-- Web Search Engine -->
-						<div class="flex w-full justify-between items-center" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
+						<div class="flex w-full flex-col gap-2 sm:flex-row sm:justify-between sm:items-center" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
 							<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">
 								{$i18n.t('Web Search Engine')}
 							</div>
-							<div class="flex items-center relative">
-								<select
-									class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
-									bind:value={webConfig.WEB_SEARCH_ENGINE}
-									placeholder={$i18n.t('Select a engine')}
-									required
-									style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; padding: 6px 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;"
-								>
-									<option disabled selected value="">{$i18n.t('Select a engine')}</option>
-									{#each webSearchEngines as engine}
-										<option value={engine}>{engine}</option>
-									{/each}
-								</select>
+							<div class="w-full sm:w-auto">
+								<SelectDropdown
+									value={webConfig.WEB_SEARCH_ENGINE}
+									options={webSearchEngineOptions}
+									on:change={(e) => (webConfig.WEB_SEARCH_ENGINE = e.detail.value)}
+								/>
 							</div>
 						</div>
 
@@ -555,22 +559,16 @@
 
 					<div class="space-y-3" style="background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.06);">
 						<!-- Web Loader Engine -->
-						<div class="flex w-full justify-between items-center" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
+						<div class="flex w-full flex-col gap-2 sm:flex-row sm:justify-between sm:items-center" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
 							<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">
 								{$i18n.t('Web Loader Engine')}
 							</div>
-							<div class="flex items-center relative">
-								<select
-									class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
-									bind:value={webConfig.WEB_LOADER_ENGINE}
-									placeholder={$i18n.t('Select a engine')}
-									style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; padding: 6px 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;"
-								>
-									<option value="">{$i18n.t('Default')}</option>
-									{#each webLoaderEngines as engine}
-										<option value={engine}>{engine}</option>
-									{/each}
-								</select>
+							<div class="w-full sm:w-auto">
+								<SelectDropdown
+									value={webConfig.WEB_LOADER_ENGINE}
+									options={webLoaderEngineOptions}
+									on:change={(e) => (webConfig.WEB_LOADER_ENGINE = e.detail.value)}
+								/>
 							</div>
 						</div>
 

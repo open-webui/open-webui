@@ -5,6 +5,7 @@
 
 	import { getGroups } from '$lib/apis/groups';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import SelectDropdown from '$lib/components/common/SelectDropdown.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -82,13 +83,13 @@
 	};
 </script>
 
-<div class=" rounded-lg flex flex-col gap-2">
-	<div class="">
-		<div class=" text-sm font-semibold mb-1">{$i18n.t('Visibility')}</div>
+<div class="rounded-lg flex flex-col gap-3 sm:gap-4">
+	<div>
+		<div class="text-xs sm:text-sm font-semibold mb-2 sm:mb-3 text-gray-700 dark:text-gray-300">{$i18n.t('Visibility')}</div>
 
-		<div class="flex gap-2.5 items-center mb-1">
+		<div class="flex gap-2.5 sm:gap-3 items-center mb-2 sm:mb-3">
 			<div>
-				<div class=" p-2 bg-black/5 dark:bg-white/5 rounded-full">
+				<div class="p-2 sm:p-2.5 bg-blue-500/10 dark:bg-blue-500/20 rounded-lg">
 					{#if accessControl !== null}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -96,7 +97,7 @@
 							viewBox="0 0 24 24"
 							stroke-width="1.5"
 							stroke="currentColor"
-							class="w-5 h-5"
+							class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400"
 						>
 							<path
 								stroke-linecap="round"
@@ -111,7 +112,7 @@
 							viewBox="0 0 24 24"
 							stroke-width="1.5"
 							stroke="currentColor"
-							class="w-5 h-5"
+							class="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400"
 						>
 							<path
 								stroke-linecap="round"
@@ -123,35 +124,31 @@
 				</div>
 			</div>
 
-			<div>
-				<select
-					id="models"
-					class="outline-hidden bg-transparent text-sm font-medium rounded-lg block w-fit pr-10 max-w-full placeholder-gray-400"
-					value={accessControl !== null ? 'private' : 'public'}
-					on:change={(e) => {
-						if (e.target.value === 'public') {
-							accessControl = null;
-						} else {
-							accessControl = {
-								read: {
-									group_ids: [],
-									user_ids: []
-								},
-								write: {
-									group_ids: [],
-									user_ids: []
-								}
-							};
-						}
-					}}
-				>
-					<option class=" text-gray-700" value="private" selected>{$i18n.t('Private')}</option>
-					{#if allowPublic}
-						<option class=" text-gray-700" value="public" selected>{$i18n.t('Public')}</option>
-					{/if}
-				</select>
-
-				<div class=" text-xs text-gray-400 font-medium">
+			<div class="flex-1">
+			<SelectDropdown
+				value={accessControl !== null ? 'private' : 'public'}
+				options={[
+					{ value: 'private', label: $i18n.t('Private') },
+					...(allowPublic ? [{ value: 'public', label: $i18n.t('Public') }] : [])
+				]}
+				on:change={(e) => {
+					if (e.detail.value === 'public') {
+						accessControl = null;
+					} else {
+						accessControl = {
+							read: {
+								group_ids: [],
+								user_ids: []
+							},
+							write: {
+								group_ids: [],
+								user_ids: []
+							}
+						};
+					}
+				}}
+			/>
+				<div class="text-xs sm:text-xs text-gray-500 dark:text-gray-400 font-medium mt-1 sm:mt-1.5">
 					{#if accessControl !== null}
 						{$i18n.t('Only select users and groups with permission can access')}
 					{:else}
@@ -167,30 +164,32 @@
 		)}
 		<div>
 			<div class="">
-				<div class="flex justify-between mb-1.5">
-					<div class="text-sm font-semibold">
-						{$i18n.t('Groups')}
-					</div>
+<div class="flex justify-between mb-2 sm:mb-3">
+				<div class="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">
+					{$i18n.t('Groups')}
 				</div>
+			</div>
 
-				<div class="mb-1">
-					<div class="flex w-full">
-						<div class="flex flex-1 items-center">
-							<div class="w-full px-0.5">
-								<select
-									class="outline-hidden bg-transparent text-sm rounded-lg block w-full pr-10 max-w-full
-									{selectedGroupId ? '' : 'text-gray-500'}
-									dark:placeholder-gray-500"
-									bind:value={selectedGroupId}
-								>
-									<option class=" text-gray-700" value="" disabled selected
-										>{$i18n.t('Select a group')}</option
-									>
-									{#each groups.filter((group) => !accessControl.read.group_ids.includes(group.id)) as group}
-										<option class=" text-gray-700" value={group.id}>{group.name}</option>
-									{/each}
-								</select>
-							</div>
+			<div class="mb-3 sm:mb-4">
+				<div class="flex w-full">
+					<div class="flex flex-1 items-center">
+						<div class="w-full relative">
+						<SelectDropdown
+							value={selectedGroupId}
+							options={[
+								{ value: '', label: $i18n.t('Select a group') },
+								...groups
+									.filter((group) => !accessControl.read.group_ids.includes(group.id))
+									.map((group) => ({ value: group.id, label: group.name }))
+							]}
+							on:change={(e) => {
+								if (e.detail.value !== '') {
+									accessControl.read.group_ids = [...accessControl.read.group_ids, e.detail.value];
+									selectedGroupId = '';
+								}
+							}}
+						/>
+					</div>
 							<!-- <div>
 								<Tooltip content={$i18n.t('Add Group')}>
 									<button
@@ -206,25 +205,25 @@
 					</div>
 				</div>
 
-				<hr class=" border-gray-100 dark:border-gray-700/10 mt-1.5 mb-2.5 w-full" />
+				<hr class="border-gray-200 dark:border-gray-700 mt-2 sm:mt-3 mb-2.5 sm:mb-3 w-full" />
 
-				<div class="flex flex-col gap-2 mb-1 px-0.5">
+				<div class="flex flex-col gap-2 sm:gap-2.5 mb-2 sm:mb-3 px-0">
 					{#if accessGroups.length > 0}
 						{#each accessGroups as group}
-							<div class="flex items-center gap-3 justify-between text-xs w-full transition">
-								<div class="flex items-center gap-1.5 w-full font-medium">
+							<div class="flex items-center gap-2 sm:gap-3 justify-between text-xs w-full transition hover:bg-gray-50 dark:hover:bg-gray-750/50 p-2 sm:p-3 rounded-lg -mx-2 sm:-mx-3">
+								<div class="flex items-center gap-1.5 sm:gap-2 w-full font-medium text-gray-700 dark:text-gray-300">
 									<div>
-										<UserCircleSolid className="size-4" />
+										<UserCircleSolid className="size-3.5 sm:size-4 text-blue-600 dark:text-blue-400" />
 									</div>
 
-									<div>
+									<div class="text-xs sm:text-sm truncate">
 										{group.name}
 									</div>
 								</div>
 
-								<div class="w-full flex justify-end items-center gap-0.5">
+								<div class="w-full flex justify-end items-center gap-1 sm:gap-1.5 flex-shrink-0">
 									<button
-										class=""
+										class="transition-all duration-200"
 										type="button"
 										on:click={() => {
 											if (accessRoles.includes('write')) {
@@ -249,7 +248,7 @@
 									</button>
 
 									<button
-										class=" rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+										class="rounded-full p-1.5 sm:p-2 hover:bg-red-50 dark:hover:bg-red-950/30 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-all duration-200"
 										type="button"
 										on:click={() => {
 											accessControl.read.group_ids = accessControl.read.group_ids.filter(
@@ -264,7 +263,7 @@
 						{/each}
 					{:else}
 						<div class="flex items-center justify-center">
-							<div class="text-gray-500 text-xs text-center py-2 px-10">
+							<div class="text-gray-500 dark:text-gray-400 text-xs text-center py-3 sm:py-4 px-4">
 								{$i18n.t('No groups with access, add a group to grant access')}
 							</div>
 						</div>
@@ -274,3 +273,4 @@
 		</div>
 	{/if}
 </div>
+

@@ -13,6 +13,7 @@
 	import { getBanners, setBanners } from '$lib/apis/configs';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import SelectDropdown from '$lib/components/common/SelectDropdown.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 
@@ -68,7 +69,7 @@
 			dispatch('save');
 		}}
 	>
-		<div class="overflow-y-scroll scrollbar-hidden h-full pr-1.5" style="padding-right: 4px;">
+		<div class="overflow-y-auto scrollbar-hidden h-full pr-1.5" style="padding-right: 4px;">
 			<!-- Tasks Section -->
 			<div class="mb-3.5" style="background: linear-gradient(to bottom, rgba(0,0,0,0.02), transparent); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.05);">
 				<div class="mb-4 flex items-center gap-2">
@@ -106,39 +107,31 @@
 							</Tooltip>
 						</div>
 
-						<div class="mb-2.5 flex w-full gap-2" style="gap: 12px; margin-top: 8px;">
+						<div class="mb-2.5 flex w-full flex-col gap-2 sm:flex-row" style="gap: 12px; margin-top: 8px;">
 							<div class="flex-1">
 								<div class="text-xs mb-1" style="color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px;">{$i18n.t('Local Models')}</div>
-								<select
-									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-									bind:value={taskConfig.TASK_MODEL}
-									placeholder={$i18n.t('Select a model')}
-									style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 10px 14px; transition: all 0.2s; cursor: pointer;"
-								>
-									<option value="" selected>{$i18n.t('Current Model')}</option>
-									{#each $models.filter((m) => m.owned_by === 'ollama') as model}
-										<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
-											{model.name}
-										</option>
-									{/each}
-								</select>
+								<SelectDropdown
+									value={taskConfig.TASK_MODEL}
+									options={[
+										{ value: '', label: 'Current Model' },
+										...$models
+											.filter((m) => m.owned_by === 'ollama')
+											.map((model) => ({ value: model.id, label: model.name }))
+									]}
+									on:change={(e) => (taskConfig.TASK_MODEL = e.detail.value)}
+								/>
 							</div>
 
 							<div class="flex-1">
 								<div class="text-xs mb-1" style="color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px;">{$i18n.t('External Models')}</div>
-								<select
-									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-									bind:value={taskConfig.TASK_MODEL_EXTERNAL}
-									placeholder={$i18n.t('Select a model')}
-									style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 10px 14px; transition: all 0.2s; cursor: pointer;"
-								>
-									<option value="" selected>{$i18n.t('Current Model')}</option>
-									{#each $models as model}
-										<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
-											{model.name}
-										</option>
-									{/each}
-								</select>
+								<SelectDropdown
+									value={taskConfig.TASK_MODEL_EXTERNAL}
+									options={[
+										{ value: '', label: 'Current Model' },
+										...$models.map((model) => ({ value: model.id, label: model.name }))
+									]}
+									on:change={(e) => (taskConfig.TASK_MODEL_EXTERNAL = e.detail.value)}
+								/>
 							</div>
 						</div>
 					</div>
@@ -357,22 +350,22 @@
 									class="flex flex-row flex-1 border rounded-xl border-gray-100 dark:border-gray-850"
 									style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.08); border-radius: 10px; overflow: hidden;"
 								>
-									<select
-										class="w-fit capitalize rounded-xl py-2 px-4 text-xs bg-transparent outline-hidden"
-										bind:value={banner.type}
-										required
-										style="background: transparent; border: none; border-right: 1px solid rgba(0,0,0,0.08); cursor: pointer; font-weight: 600; padding: 10px 14px;"
-									>
-										{#if banner.type == ''}
-											<option value="" selected disabled class="text-gray-900"
-												>{$i18n.t('Type')}</option
-											>
-										{/if}
-										<option value="info" class="text-gray-900">{$i18n.t('Info')}</option>
-										<option value="warning" class="text-gray-900">{$i18n.t('Warning')}</option>
-										<option value="error" class="text-gray-900">{$i18n.t('Error')}</option>
-										<option value="success" class="text-gray-900">{$i18n.t('Success')}</option>
-									</select>
+									<div class="min-w-36 border-r border-gray-100 dark:border-gray-850 px-2 py-1">
+										<SelectDropdown
+											value={banner.type}
+											options={[
+												{ value: '', label: 'Type' },
+												{ value: 'info', label: 'Info' },
+												{ value: 'warning', label: 'Warning' },
+												{ value: 'error', label: 'Error' },
+												{ value: 'success', label: 'Success' }
+											]}
+											on:change={(e) => {
+												banner.type = e.detail.value;
+												banners = banners;
+											}}
+										/>
+									</div>
 
 									<input
 										class="pr-5 py-1.5 text-xs w-full bg-transparent outline-hidden"

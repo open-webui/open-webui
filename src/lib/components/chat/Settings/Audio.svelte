@@ -9,6 +9,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import { round } from '@huggingface/transformers';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import SelectDropdown from '$lib/components/common/SelectDropdown.svelte';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -172,46 +173,46 @@
 		dispatch('save');
 	}}
 >
-	<div class="space-y-6 overflow-y-auto">
+	<div class="space-y-4 sm:space-y-6 overflow-y-auto">
 		<!-- STT Settings Section -->
-		<div class="space-y-4">
+		<div class="space-y-3 sm:space-y-4">
 			<div>
-				<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+				<h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1">
 					{$i18n.t('STT Settings')}
 				</h3>
-				<p class="text-sm text-gray-500 dark:text-gray-400">
+				<p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
 					Configure speech-to-text recognition
 				</p>
 			</div>
 
 			{#if $config.audio.stt.engine !== 'web'}
 				<!-- Speech-to-Text Engine -->
-				<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-					<div class="flex items-center justify-between">
-						<div>
-							<div class="text-sm font-medium text-gray-900 dark:text-white">
+				<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 sm:p-4">
+					<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+						<div class="flex-1">
+							<div class="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
 								{$i18n.t('Speech-to-Text Engine')}
 							</div>
 							<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
 								Select your preferred STT engine
 							</div>
 						</div>
-						<select
-							class="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+						<SelectDropdown
 							bind:value={STTEngine}
-						>
-							<option value="">{$i18n.t('Default')}</option>
-							<option value="web">{$i18n.t('Web API')}</option>
-						</select>
+							options={[
+								{ value: '', label: $i18n.t('Default') },
+								{ value: 'web', label: $i18n.t('Web API') }
+							]}
+						/>
 					</div>
 				</div>
 			{/if}
 
 			<!-- Auto-Send After Transcription -->
-			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-				<div class="flex items-center justify-between">
+			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 sm:p-4">
+				<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
 					<div>
-						<div class="text-sm font-medium text-gray-900 dark:text-white">
+						<div class="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
 							{$i18n.t('Instant Auto-Send After Voice Transcription')}
 						</div>
 						<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -238,68 +239,67 @@
 		</div>
 
 		<!-- TTS Settings Section -->
-		<div class="space-y-4 pt-2">
+		<div class="space-y-3 sm:space-y-4 pt-2">
 			<div>
-				<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+				<h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1">
 					{$i18n.t('TTS Settings')}
 				</h3>
-				<p class="text-sm text-gray-500 dark:text-gray-400">
+				<p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
 					Configure text-to-speech synthesis
 				</p>
 			</div>
 
 			<!-- Text-to-Speech Engine -->
-			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-				<div class="flex items-center justify-between">
+			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 sm:p-4">
+				<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
 					<div>
-						<div class="text-sm font-medium text-gray-900 dark:text-white">
+						<div class="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
 							{$i18n.t('Text-to-Speech Engine')}
 						</div>
 						<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
 							Select your preferred TTS engine
 						</div>
 					</div>
-					<select
-						class="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+					<SelectDropdown
 						bind:value={TTSEngine}
-					>
-						<option value="">{$i18n.t('Default')}</option>
-						<option value="browser-kokoro">{$i18n.t('Kokoro.js (Browser)')}</option>
-					</select>
+						options={[
+							{ value: '', label: $i18n.t('Default') },
+							{ value: 'browser-kokoro', label: $i18n.t('Kokoro.js (Browser)') }
+						]}
+					/>
 				</div>
 			</div>
 
 			{#if TTSEngine === 'browser-kokoro'}
 				<!-- Kokoro.js Dtype -->
-				<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-					<div class="flex items-center justify-between">
+				<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 sm:p-4">
+					<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
 						<div>
-							<div class="text-sm font-medium text-gray-900 dark:text-white">
+							<div class="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
 								{$i18n.t('Kokoro.js Dtype')}
 							</div>
 							<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
 								Data type precision for model computation
 							</div>
 						</div>
-						<select
-							class="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+						<SelectDropdown
 							bind:value={TTSEngineConfig.dtype}
-						>
-							<option value="" disabled selected>Select dtype</option>
-							<option value="fp32">fp32</option>
-							<option value="fp16">fp16</option>
-							<option value="q8">q8</option>
-							<option value="q4">q4</option>
-						</select>
+							options={[
+								{ value: 'fp32', label: 'fp32' },
+								{ value: 'fp16', label: 'fp16' },
+								{ value: 'q8', label: 'q8' },
+								{ value: 'q4', label: 'q4' }
+							]}
+						/>
 					</div>
 				</div>
 			{/if}
 
 			<!-- Auto-playback Response -->
-			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-				<div class="flex items-center justify-between">
+			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 sm:p-4">
+				<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
 					<div>
-						<div class="text-sm font-medium text-gray-900 dark:text-white">
+						<div class="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
 							{$i18n.t('Auto-playback response')}
 						</div>
 						<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -325,24 +325,23 @@
 			</div>
 
 			<!-- Playback Speed -->
-			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-				<div class="flex items-center justify-between">
+			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 sm:p-4">
+				<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
 					<div>
-						<div class="text-sm font-medium text-gray-900 dark:text-white">
+						<div class="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
 							{$i18n.t('Speech Playback Speed')}
 						</div>
 						<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
 							Adjust audio playback speed
 						</div>
 					</div>
-					<select
-						class="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+					<SelectDropdown
 						bind:value={playbackRate}
-					>
-						{#each speedOptions as option}
-							<option value={option} selected={playbackRate === option}>{option}x</option>
-						{/each}
-					</select>
+						options={speedOptions.map((speed) => ({
+							value: speed.toString(),
+							label: `${speed}x`
+						}))}
+					/>
 				</div>
 			</div>
 		</div>

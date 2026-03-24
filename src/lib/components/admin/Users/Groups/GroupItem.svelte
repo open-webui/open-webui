@@ -56,29 +56,36 @@
 />
 
 <button
-	class="flex items-center gap-3 justify-between px-1 text-xs w-full transition"
+	class="w-full px-6 py-3.5 text-sm text-left transition-colors"
 	on:click={() => {
 		showEdit = true;
 	}}
+	aria-label={`Edit group ${group.name}`}
 >
-	<div class="flex items-center gap-1.5 w-full font-medium">
-		<div>
-			<UserCircleSolid className="size-4" />
+	<div class="flex items-center gap-3 text-gray-800 dark:text-gray-100">
+		<div class="flex-1 min-w-0 flex items-center gap-3 font-medium">
+			<div class="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex-shrink-0">
+				<UserCircleSolid className="size-4" />
+			</div>
+			<span class="truncate">{group.name}</span>
 		</div>
-		{group.name}
-	</div>
 
-	<div class="flex items-center gap-1.5 w-full font-medium">
-		{group.user_ids.length}
+		<div class="flex-1 flex items-center gap-2 text-gray-600 dark:text-gray-300 font-medium">
+			<span class="inline-flex min-w-8 justify-center rounded-md bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs font-semibold text-gray-700 dark:text-gray-200">
+				{group.user_ids.length}
+			</span>
+			<span class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Users</span>
 
-		<div>
-			<User className="size-3.5" />
+			<div class="text-gray-500 dark:text-gray-400">
+				<User className="size-3.5" />
+			</div>
 		</div>
-	</div>
 
-	<div class="w-full flex justify-end">
-		<div class=" rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition">
-			<Pencil className="size-3.5" />
+		<div class="w-24 flex justify-end">
+			<div class="rounded-lg px-2.5 py-1.5 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors inline-flex items-center gap-1.5">
+				<Pencil className="size-3.5" />
+				<span class="text-xs font-medium">Edit</span>
+			</div>
 		</div>
 	</div>
 </button>

@@ -45,14 +45,15 @@
 	----------------------------- */
 	const getFilteredPrompts = (value: string): void => {
 		if (value.length > 500) {
-			filteredPrompts = [];
+			filteredPrompts = sortedPrompts;
 			return;
 		}
 
-		const next =
-			value.trim() && fuse
-				? fuse.search(value.trim()).map((r: any) => r.item)
-				: sortedPrompts;
+		const searched =
+			value.trim() && fuse ? fuse.search(value.trim()).map((r: any) => r.item) : sortedPrompts;
+
+		// Keep layout stable while typing by falling back to default prompts when no match exists.
+		const next = searched.length > 0 ? searched : sortedPrompts;
 
 		if (!arraysEqual(filteredPrompts, next)) {
 			filteredPrompts = next;

@@ -350,20 +350,20 @@
 		}}
 	/>
 
-	<div class="space-y-6 overflow-y-auto">
+	<div class="space-y-4 sm:space-y-6 overflow-y-auto">
 		<!-- UI Display Section -->
-		<div class="space-y-4">
+		<div class="space-y-3 sm:space-y-4">
 			<div>
-				<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+				<h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1">
 					{$i18n.t('UI')}
 				</h3>
-				<p class="text-sm text-gray-500 dark:text-gray-400">
+				<p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
 					Customize your interface display and layout
 				</p>
 			</div>
 
 			<!-- Landing Page Mode -->
-			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 sm:p-4">
 				<div class="flex items-center justify-between">
 					<div>
 						<div class="text-sm font-medium text-gray-900 dark:text-white">
@@ -389,10 +389,10 @@
 			</div>
 
 			<!-- Chat Bubble UI -->
-			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 sm:p-4">
 				<div class="flex items-center justify-between">
 					<div>
-						<div class="text-sm font-medium text-gray-900 dark:text-white">
+						<div class="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
 							{$i18n.t('Chat Bubble UI')}
 						</div>
 						<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -400,8 +400,8 @@
 						</div>
 					</div>
 					<button
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {chatBubble
-							? 'bg-blue-600'
+						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {chatBubble
+							? 'bg-emerald-600'
 							: 'bg-gray-300 dark:bg-gray-700'}"
 						on:click={() => {
 							toggleChatBubble();
@@ -419,10 +419,10 @@
 
 			<!-- Show Username -->
 			{#if !$settings.chatBubble}
-				<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+				<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 sm:p-4">
 					<div class="flex items-center justify-between">
 						<div>
-							<div class="text-sm font-medium text-gray-900 dark:text-white">
+							<div class="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
 								{$i18n.t('Display the username instead of You in the Chat')}
 							</div>
 							<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -430,8 +430,8 @@
 							</div>
 						</div>
 						<button
-							class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {showUsername
-								? 'bg-blue-600'
+							class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {showUsername
+								? 'bg-emerald-600'
 								: 'bg-gray-300 dark:bg-gray-700'}"
 							on:click={() => {
 								toggleShowUsername();
@@ -449,10 +449,10 @@
 			{/if}
 
 			<!-- Widescreen Mode -->
-			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 sm:p-4">
 				<div class="flex items-center justify-between">
 					<div>
-						<div class="text-sm font-medium text-gray-900 dark:text-white">
+						<div class="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
 							{$i18n.t('Widescreen Mode')}
 						</div>
 						<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -460,8 +460,8 @@
 						</div>
 					</div>
 					<button
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {widescreenMode
-							? 'bg-blue-600'
+						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {widescreenMode
+							? 'bg-emerald-600'
 							: 'bg-gray-300 dark:bg-gray-700'}"
 						on:click={() => {
 							toggleWidescreenMode();
@@ -478,10 +478,10 @@
 			</div>
 
 			<!-- Chat Direction -->
-			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 sm:p-4">
 				<div class="flex items-center justify-between">
 					<div>
-						<div class="text-sm font-medium text-gray-900 dark:text-white">
+						<div class="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
 							{$i18n.t('Chat direction')}
 						</div>
 						<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -516,8 +516,8 @@
 						</div>
 					</div>
 					<button
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {notificationSound
-							? 'bg-blue-600'
+						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {notificationSound
+							? 'bg-emerald-600'
 							: 'bg-gray-300 dark:bg-gray-700'}"
 						on:click={() => {
 							toggleNotificationSound();
@@ -546,8 +546,8 @@
 							</div>
 						</div>
 						<button
-							class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {showUpdateToast
-								? 'bg-blue-600'
+							class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {showUpdateToast
+								? 'bg-emerald-600'
 								: 'bg-gray-300 dark:bg-gray-700'}"
 							on:click={() => {
 								toggleShowUpdateToast();
@@ -574,8 +574,8 @@
 							</div>
 						</div>
 						<button
-							class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {showChangelog
-								? 'bg-blue-600'
+							class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {showChangelog
+								? 'bg-emerald-600'
 								: 'bg-gray-300 dark:bg-gray-700'}"
 							on:click={() => {
 								toggleShowChangelog();
@@ -616,8 +616,8 @@
 						</div>
 					</div>
 					<button
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {titleAutoGenerate
-							? 'bg-blue-600'
+						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {titleAutoGenerate
+							? 'bg-emerald-600'
 							: 'bg-gray-300 dark:bg-gray-700'}"
 						on:click={() => {
 							toggleTitleAutoGenerate();
@@ -645,8 +645,8 @@
 						</div>
 					</div>
 					<button
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {autoTags
-							? 'bg-blue-600'
+						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {autoTags
+							? 'bg-emerald-600'
 							: 'bg-gray-300 dark:bg-gray-700'}"
 						on:click={() => {
 							toggleAutoTags();
@@ -674,8 +674,8 @@
 						</div>
 					</div>
 					<button
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {detectArtifacts
-							? 'bg-blue-600'
+						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {detectArtifacts
+							? 'bg-emerald-600'
 							: 'bg-gray-300 dark:bg-gray-700'}"
 						on:click={() => {
 							toggleDetectArtifacts();
@@ -703,8 +703,8 @@
 						</div>
 					</div>
 					<button
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {responseAutoCopy
-							? 'bg-blue-600'
+						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {responseAutoCopy
+							? 'bg-emerald-600'
 							: 'bg-gray-300 dark:bg-gray-700'}"
 						on:click={() => {
 							toggleResponseAutoCopy();
@@ -732,8 +732,8 @@
 						</div>
 					</div>
 					<button
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {richTextInput
-							? 'bg-blue-600'
+						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {richTextInput
+							? 'bg-emerald-600'
 							: 'bg-gray-300 dark:bg-gray-700'}"
 						on:click={() => {
 							toggleRichTextInput();
@@ -762,8 +762,8 @@
 							</div>
 						</div>
 						<button
-							class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {promptAutocomplete
-								? 'bg-blue-600'
+							class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {promptAutocomplete
+								? 'bg-emerald-600'
 								: 'bg-gray-300 dark:bg-gray-700'}"
 							on:click={() => {
 								togglePromptAutocomplete();
@@ -792,8 +792,8 @@
 						</div>
 					</div>
 					<button
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {largeTextAsFile
-							? 'bg-blue-600'
+						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {largeTextAsFile
+							? 'bg-emerald-600'
 							: 'bg-gray-300 dark:bg-gray-700'}"
 						on:click={() => {
 							toggleLargeTextAsFile();
@@ -821,8 +821,8 @@
 						</div>
 					</div>
 					<button
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {copyFormatted
-							? 'bg-blue-600'
+						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {copyFormatted
+							? 'bg-emerald-600'
 							: 'bg-gray-300 dark:bg-gray-700'}"
 						on:click={() => {
 							toggleCopyFormatted();
@@ -850,8 +850,8 @@
 						</div>
 					</div>
 					<button
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {collapseCodeBlocks
-							? 'bg-blue-600'
+						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {collapseCodeBlocks
+							? 'bg-emerald-600'
 							: 'bg-gray-300 dark:bg-gray-700'}"
 						on:click={() => {
 							toggleCollapseCodeBlocks();
@@ -879,8 +879,8 @@
 						</div>
 					</div>
 					<button
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {expandDetails
-							? 'bg-blue-600'
+						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {expandDetails
+							? 'bg-emerald-600'
 							: 'bg-gray-300 dark:bg-gray-700'}"
 						on:click={() => {
 							toggleExpandDetails();
@@ -939,8 +939,8 @@
 						</div>
 					</div>
 					<button
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {userLocation
-							? 'bg-blue-600'
+						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {userLocation
+							? 'bg-emerald-600'
 							: 'bg-gray-300 dark:bg-gray-700'}"
 						on:click={() => {
 							toggleUserLocation();
@@ -968,8 +968,8 @@
 						</div>
 					</div>
 					<button
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {hapticFeedback
-							? 'bg-blue-600'
+						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {hapticFeedback
+							? 'bg-emerald-600'
 							: 'bg-gray-300 dark:bg-gray-700'}"
 						on:click={() => {
 							toggleHapticFeedback();
@@ -1020,8 +1020,8 @@
 						</div>
 					</div>
 					<button
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {scrollOnBranchChange
-							? 'bg-blue-600'
+						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {scrollOnBranchChange
+							? 'bg-emerald-600'
 							: 'bg-gray-300 dark:bg-gray-700'}"
 						on:click={() => {
 							togglesScrollOnBranchChange();
@@ -1075,8 +1075,8 @@
 						</div>
 					</div>
 					<button
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {iframeSandboxAllowSameOrigin
-							? 'bg-blue-600'
+						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {iframeSandboxAllowSameOrigin
+							? 'bg-emerald-600'
 							: 'bg-gray-300 dark:bg-gray-700'}"
 						on:click={() => {
 							toggleIframeSandboxAllowSameOrigin();
@@ -1103,8 +1103,8 @@
 						</div>
 					</div>
 					<button
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {iframeSandboxAllowForms
-							? 'bg-blue-600'
+						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {iframeSandboxAllowForms
+							? 'bg-emerald-600'
 							: 'bg-gray-300 dark:bg-gray-700'}"
 						on:click={() => {
 							toggleIframeSandboxAllowForms();
@@ -1144,8 +1144,8 @@
 						</div>
 					</div>
 					<button
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {voiceInterruption
-							? 'bg-blue-600'
+						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {voiceInterruption
+							? 'bg-emerald-600'
 							: 'bg-gray-300 dark:bg-gray-700'}"
 						on:click={() => {
 							toggleVoiceInterruption();
@@ -1173,8 +1173,8 @@
 						</div>
 					</div>
 					<button
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {showEmojiInCall
-							? 'bg-blue-600'
+						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {showEmojiInCall
+							? 'bg-emerald-600'
 							: 'bg-gray-300 dark:bg-gray-700'}"
 						on:click={() => {
 							toggleEmojiInCall();
@@ -1214,8 +1214,8 @@
 						</div>
 					</div>
 					<button
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {imageCompression
-							? 'bg-blue-600'
+						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {imageCompression
+							? 'bg-emerald-600'
 							: 'bg-gray-300 dark:bg-gray-700'}"
 						on:click={() => {
 							toggleImageCompression();
@@ -1240,7 +1240,7 @@
 								<input
 									bind:value={imageCompressionSize.width}
 									type="number"
-									class="w-20 px-2 py-1 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-center"
+									class="w-20 px-2 py-1 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-center"
 									min="0"
 									placeholder="Width"
 								/>
@@ -1248,7 +1248,7 @@
 								<input
 									bind:value={imageCompressionSize.height}
 									type="number"
-									class="w-20 px-2 py-1 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-center"
+									class="w-20 px-2 py-1 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-center"
 									min="0"
 									placeholder="Height"
 								/>

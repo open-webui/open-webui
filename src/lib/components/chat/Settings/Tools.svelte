@@ -47,22 +47,22 @@
 		updateHandler();
 	}}
 >
-	<div class="space-y-6 overflow-y-auto">
+	<div class="space-y-4 sm:space-y-6 overflow-y-auto">
 		{#if servers !== null}
 			<!-- Tool Servers Section -->
-			<div class="space-y-4">
-				<div class="flex items-start justify-between gap-4">
+			<div class="space-y-3 sm:space-y-4">
+				<div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
 					<div class="flex-1">
-						<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+						<h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1">
 							{$i18n.t('Manage Tool Servers')}
 						</h3>
-						<p class="text-sm text-gray-500 dark:text-gray-400">
+						<p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
 							Connect to your own OpenAPI compatible external tool servers
 						</p>
 					</div>
 					<Tooltip content={$i18n.t(`Add Connection`)}>
 						<button
-							class="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+							class="w-full sm:w-auto flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
 							on:click={() => {
 								showConnectionModal = true;
 							}}
@@ -76,9 +76,9 @@
 
 				<!-- Tool Servers List -->
 				{#if servers?.length > 0}
-					<div class="space-y-3">
+					<div class="space-y-2 sm:space-y-3">
 						{#each servers as server, idx}
-							<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+							<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 sm:p-4">
 								<Connection
 									bind:connection={server}
 									direct
@@ -94,8 +94,8 @@
 						{/each}
 					</div>
 				{:else}
-					<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-8 text-center">
-						<div class="flex flex-col items-center gap-3">
+					<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-6 sm:p-8 text-center">
+						<div class="flex flex-col items-center gap-2 sm:gap-3">
 							<div
 								class="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center"
 							>
@@ -115,7 +115,7 @@
 								</svg>
 							</div>
 							<div>
-								<div class="text-sm font-medium text-gray-900 dark:text-white mb-1">
+								<div class="text-xs sm:text-sm font-medium text-gray-900 dark:text-white mb-1">
 									No tool servers configured
 								</div>
 								<div class="text-xs text-gray-500 dark:text-gray-400">
@@ -128,9 +128,9 @@
 
 				<!-- Info Box -->
 				<div
-					class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
+					class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4"
 				>
-					<div class="flex gap-3">
+					<div class="flex gap-2 sm:gap-3">
 						<div class="flex-shrink-0">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -148,7 +148,7 @@
 							</svg>
 						</div>
 						<div class="flex-1">
-							<div class="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+							<div class="text-xs sm:text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
 								Important Information
 							</div>
 							<div class="text-xs text-blue-800 dark:text-blue-200 space-y-1">

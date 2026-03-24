@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
@@ -37,7 +37,11 @@
 	});
 </script>
 
-<Modal size="sm" bind:show>
+<Modal
+	size="sm"
+	bind:show
+	backdropClassName="bg-black/20 backdrop-blur-[1px] dark:bg-black/35"
+>
 	<div class="bg-white dark:bg-gray-900 rounded-xl">
 		<!-- Header -->
 		<div class="flex items-center justify-between px-6 py-5 border-b border-gray-200 dark:border-gray-700">

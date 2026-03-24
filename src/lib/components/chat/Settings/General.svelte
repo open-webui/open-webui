@@ -10,6 +10,7 @@
 
 	import AdvancedParams from './Advanced/AdvancedParams.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
+	import SelectDropdown from '$lib/components/common/SelectDropdown.svelte';
 
 	export let saveSettings: Function;
 	export let getModels: Function;
@@ -233,86 +234,86 @@
 </script>
 
 <div class="flex flex-col h-full justify-between">
-	<div class="space-y-6 overflow-y-auto">
+	<div class="space-y-4 sm:space-y-6 overflow-y-auto">
 		<!-- WebUI Settings Section -->
 		<div class="space-y-4">
 			<div>
-				<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+				<h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1">
 					{$i18n.t('WebUI Settings')}
 				</h3>
-				<p class="text-sm text-gray-500 dark:text-gray-400">Customize your interface preferences</p>
+				<p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Customize your interface preferences</p>
 			</div>
 
 			<!-- Theme Setting -->
-			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-				<div class="flex items-center justify-between gap-4">
+			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 sm:p-4">
+				<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
 					<div class="flex-1">
-						<div class="font-medium text-gray-800 dark:text-gray-200">
+						<div class="font-medium text-sm sm:text-base text-gray-800 dark:text-gray-200">
 							{$i18n.t('Theme')}
 						</div>
 						<div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
 							Choose your preferred color theme
 						</div>
 					</div>
-					<select
-						class="px-4 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors cursor-pointer hover:border-gray-300 dark:hover:border-gray-500"
+					<SelectDropdown
 						bind:value={selectedTheme}
-						on:change={() => themeChangeHandler(selectedTheme)}
-					>
-						<option value="system">{$i18n.t('System')}</option>
-						<option value="dark"> {$i18n.t('Dark')}</option>
-						<option value="oled-dark"> {$i18n.t('OLED Dark')}</option>
-						<option value="light"> {$i18n.t('Light')}</option>
-						
-					</select>
+						options={[
+							{ value: 'system', label: $i18n.t('System') },
+							{ value: 'dark', label: $i18n.t('Dark') },
+							{ value: 'oled-dark', label: $i18n.t('OLED Dark') },
+							{ value: 'light', label: $i18n.t('Light') }
+						]}
+						on:change={(e) => {
+							themeChangeHandler(selectedTheme);
+						}}
+					/>
 				</div>
 			</div>
 
 			<!-- Language Setting -->
-			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 space-y-3">
-				<div class="flex items-center justify-between">
-					<div>
-						<div class="text-sm font-medium text-gray-900 dark:text-white">
-							{$i18n.t('Language')}
+			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 sm:p-4">
+				<div class="space-y-3">
+					<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+						<div>
+							<div class="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
+								{$i18n.t('Language')}
+							</div>
+							<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+								Select your preferred language
+							</div>
 						</div>
-						<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-							Select your preferred language
-						</div>
+						<SelectDropdown
+							bind:value={lang}
+							options={languages.map((language) => ({
+								value: language['code'],
+								label: language['title']
+							}))}
+							on:change={() => changeLanguage(lang)}
+						/>
 					</div>
-					<select
-						class="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-						bind:value={lang}
-						on:change={(e) => {
-							changeLanguage(lang);
-						}}
-					>
-						{#each languages as language}
-							<option value={language['code']}>{language['title']}</option>
-						{/each}
-					</select>
-				</div>
 
-				{#if $i18n.language === 'en-US'}
-					<div
-						class="text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-gray-700"
-					>
-						Couldn't find your language?
-						<a
-							class="text-blue-600 dark:text-blue-400 font-medium hover:underline"
-							href="https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
-							target="_blank"
+					{#if $i18n.language === 'en-US'}
+						<div
+							class="text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-gray-700"
 						>
-							Help us translate Open WebUI!
-						</a>
-					</div>
-				{/if}
+							Couldn't find your language?
+							<a
+								class="text-blue-600 dark:text-blue-400 font-medium hover:underline"
+								href="https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
+								target="_blank"
+							>
+								Help us translate Open WebUI!
+							</a>
+						</div>
+					{/if}
+				</div>
 			</div>
 
 			<!-- Notifications Setting -->
-			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-				<div class="flex items-center justify-between">
+			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 sm:p-4">
+				<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
 					<div>
-						<div class="text-sm font-medium text-gray-900 dark:text-white">
+						<div class="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
 							{$i18n.t('Notifications')}
 						</div>
 						<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -320,8 +321,8 @@
 						</div>
 					</div>
 					<button
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {notificationEnabled
-							? 'bg-blue-600'
+						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {notificationEnabled
+							? 'bg-emerald-600'
 							: 'bg-gray-300 dark:bg-gray-700'}"
 						on:click={() => {
 							toggleNotification();
@@ -353,7 +354,7 @@
 				<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
 					<Textarea
 						bind:value={system}
-						className="w-full text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none transition-all"
+						className="w-full text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg p-3 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none resize-none transition-all"
 						rows="4"
 						placeholder={$i18n.t('Enter system prompt here')}
 					/>
@@ -416,7 +417,7 @@
 							{#if keepAlive !== null}
 								<div class="pt-2 border-t border-gray-200 dark:border-gray-700">
 									<input
-										class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+										class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
 										type="text"
 										placeholder={$i18n.t("e.g. '30s','10m'. Valid time units are 's', 'm', 'h'.")}
 										bind:value={keepAlive}
@@ -452,7 +453,7 @@
 							{#if requestFormat !== null}
 								<div class="pt-2 border-t border-gray-200 dark:border-gray-700">
 									<Textarea
-										className="w-full text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none transition-all"
+										className="w-full text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg p-3 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none resize-none transition-all"
 										placeholder={$i18n.t('e.g. "json" or a JSON schema')}
 										bind:value={requestFormat}
 										rows="3"
@@ -466,17 +467,17 @@
 		{/if}
 	</div>
 
-	<!-- Save Button -->
-	<div class="flex justify-end pt-6 border-t border-gray-200 dark:border-gray-700 mt-6">
-		<button
-			class="px-6 py-2.5 text-sm font-medium bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
-			on:click={() => {
-				saveHandler();
-			}}
-		>
-			{$i18n.t('Save')}
-		</button>
-	</div>
+<!-- Save Button -->
+<div class="flex justify-end pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-700 mt-4 sm:mt-6">
+	<button
+		class="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+		on:click={() => {
+			saveHandler();
+		}}
+	>
+		{$i18n.t('Save')}
+	</button>
+</div>
 </div>
 
 <style>

@@ -87,14 +87,14 @@
 	});
 </script>
 
-<div class="px-1 mb-1 flex justify-center space-x-2 relative z-10" id="search-container">
-	<div class="flex w-full rounded-xl" id="chat-search">
-		<div class="self-center pl-3 py-2 rounded-l-xl bg-transparent">
+<div class="px-2.5 mb-2 flex justify-center space-x-2 relative z-10" id="search-container">
+	<div class="flex w-full rounded-xl border border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-800 hover:border-gray-300/80 dark:hover:border-gray-600/80 transition-all duration-200 shadow-sm hover:shadow-md" id="chat-search">
+		<div class="self-center pl-3.5 py-2.5 rounded-l-xl bg-transparent">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				viewBox="0 0 20 20"
 				fill="currentColor"
-				class="w-4 h-4"
+				class="w-4 h-4 text-gray-400 dark:text-gray-500"
 			>
 				<path
 					fill-rule="evenodd"
@@ -105,7 +105,7 @@
 		</div>
 
 		<input
-			class="w-full rounded-r-xl py-1.5 pl-2.5 text-sm bg-transparent dark:text-gray-300 outline-hidden"
+			class="w-full rounded-r-xl py-2.5 pl-3 text-sm bg-transparent dark:text-gray-100 text-gray-900 placeholder-gray-400 dark:placeholder-gray-500 outline-none font-medium"
 			placeholder={placeholder ? placeholder : $i18n.t('Search')}
 			bind:value
 			on:input={() => {
@@ -149,12 +149,12 @@
 		/>
 
 		{#if showClearButton && value}
-			<div class="self-center pr-2 pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
+			<div class="self-center pr-3 pl-2 translate-y-[0.5px] rounded-l-xl bg-transparent">
 				<button
-					class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 active:scale-95"
 					on:click={clearSearchInput}
 				>
-					<XMark className="size-3" strokeWidth="2" />
+					<XMark className="size-4 text-gray-500 dark:text-gray-400" strokeWidth="2.5" />
 				</button>
 			</div>
 		{/if}
@@ -163,8 +163,8 @@
 	{#if focused && (filteredOptions.length > 0 || filteredTags.length > 0)}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div
-			class="absolute top-0 mt-8 left-0 right-1 border border-gray-100 dark:border-gray-900 bg-gray-50 dark:bg-gray-950 rounded-lg z-10 shadow-lg"
-			in:fade={{ duration: 50 }}
+			class="absolute top-0 mt-10 left-0 right-1 border border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-800 rounded-xl z-10 shadow-lg hover:shadow-xl transition-all"
+			in:fade={{ duration: 100 }}
 			on:mouseenter={() => {
 				selectedIdx = null;
 			}}
@@ -172,16 +172,16 @@
 				selectedIdx = 0;
 			}}
 		>
-			<div class="px-2 py-2 text-xs group">
+			<div class="px-3 py-3 text-xs group">
 				{#if filteredTags.length > 0}
-					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1">Tags</div>
+					<div class="px-2 font-bold dark:text-gray-300 text-gray-700 mb-2 uppercase tracking-wider text-gray-500 dark:text-gray-400">Tags</div>
 
-					<div class="max-h-60 overflow-auto">
+					<div class="max-h-64 overflow-auto space-y-1">
 						{#each filteredTags as tag, tagIdx}
 							<button
-								class=" px-1.5 py-0.5 flex gap-1 hover:bg-gray-100 dark:hover:bg-gray-900 w-full rounded {selectedIdx ===
+								class="px-2 py-1.5 flex gap-2 hover:bg-orange-50 dark:hover:bg-orange-900/20 w-full rounded-lg transition-all duration-150 {selectedIdx ===
 								tagIdx
-									? 'bg-gray-100 dark:bg-gray-900'
+									? 'bg-orange-100/60 dark:bg-orange-900/30'
 									: ''}"
 								id="search-tag-{tagIdx}"
 								on:click|stopPropagation={async () => {
@@ -195,27 +195,27 @@
 									dispatch('input');
 								}}
 							>
-								<div class="dark:text-gray-300 text-gray-700 font-medium line-clamp-1 shrink-0">
+								<div class="dark:text-gray-200 text-gray-900 font-semibold line-clamp-1 shrink-0">
 									{tag.name}
 								</div>
 
-								<div class=" text-gray-500 line-clamp-1">
+								<div class="text-gray-400 dark:text-gray-500 line-clamp-1 text-xs">
 									{tag.id}
 								</div>
 							</button>
 						{/each}
 					</div>
 				{:else if filteredOptions.length > 0}
-					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1">
+					<div class="px-2 font-bold dark:text-gray-300 text-gray-700 mb-2 uppercase tracking-wider text-gray-500 dark:text-gray-400">
 						{$i18n.t('Search options')}
 					</div>
 
-					<div class=" max-h-60 overflow-auto">
+					<div class="max-h-64 overflow-auto space-y-1">
 						{#each filteredOptions as option, optionIdx}
 							<button
-								class=" px-1.5 py-0.5 flex gap-1 hover:bg-gray-100 dark:hover:bg-gray-900 w-full rounded {selectedIdx ===
+								class="px-2 py-1.5 flex gap-2 hover:bg-orange-50 dark:hover:bg-orange-900/20 w-full rounded-lg transition-all duration-150 {selectedIdx ===
 								optionIdx
-									? 'bg-gray-100 dark:bg-gray-900'
+									? 'bg-orange-100/60 dark:bg-orange-900/30'
 									: ''}"
 								id="search-option-{optionIdx}"
 								on:click|stopPropagation={async () => {
@@ -229,9 +229,9 @@
 									dispatch('input');
 								}}
 							>
-								<div class="dark:text-gray-300 text-gray-700 font-medium">{option.name}</div>
+								<div class="dark:text-gray-200 text-gray-900 font-semibold">{option.name}</div>
 
-								<div class=" text-gray-500 line-clamp-1">
+								<div class="text-gray-400 dark:text-gray-500 line-clamp-1 text-xs">
 									{option.description}
 								</div>
 							</button>

@@ -14,6 +14,7 @@
 		verifyConfigUrl
 	} from '$lib/apis/images';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import SelectDropdown from '$lib/components/common/SelectDropdown.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	const dispatch = createEventDispatcher();
@@ -232,7 +233,7 @@
 		saveHandler();
 	}}
 >
-	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden pr-2">
+	<div class=" space-y-3 overflow-y-auto scrollbar-hidden pr-2">
 		{#if config && imageGenerationConfig}
 			<div>
 				<div class=" mb-1 text-sm font-medium">{$i18n.t('Image Settings')}</div>
@@ -287,22 +288,22 @@
 					</div>
 				{/if}
 
-				<div class=" py-1 flex w-full justify-between">
+				<div class="py-1 flex w-full flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
 					<div class=" self-center text-xs font-medium">{$i18n.t('Image Generation Engine')}</div>
-					<div class="flex items-center relative">
-						<select
-							class=" dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
-							bind:value={config.engine}
-							placeholder={$i18n.t('Select Engine')}
-							on:change={async () => {
-								updateConfigHandler();
+					<div class="w-full sm:w-auto">
+						<SelectDropdown
+							value={config.engine}
+							options={[
+								{ value: 'openai', label: 'Default (Open AI)' },
+								{ value: 'comfyui', label: 'ComfyUI' },
+								{ value: 'automatic1111', label: 'Automatic1111' },
+								{ value: 'gemini', label: 'Gemini' }
+							]}
+							on:change={async (e) => {
+								config.engine = e.detail.value;
+								await updateConfigHandler();
 							}}
-						>
-							<option value="openai">{$i18n.t('Default (Open AI)')}</option>
-							<option value="comfyui">{$i18n.t('ComfyUI')}</option>
-							<option value="automatic1111">{$i18n.t('Automatic1111')}</option>
-							<option value="gemini">{$i18n.t('Gemini')}</option>
-						</select>
+						/>
 					</div>
 				</div>
 			</div>

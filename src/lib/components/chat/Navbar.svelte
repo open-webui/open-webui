@@ -61,9 +61,9 @@
 						? 'md:hidden'
 						: ''} mr-1 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
 				>
-					<!-- Toggle between Logo and Menu Icon based on sidebar state -->
-					{#if $showSidebar}
-						<!-- Show menu icon when sidebar is open -->
+					<!-- Always show menu icon on mobile, logo on desktop -->
+					{#if $mobile}
+						<!-- Show menu icon on mobile -->
 						<button
 							id="sidebar-toggle-button"
 							class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
@@ -77,30 +77,51 @@
 							</div>
 						</button>
 					{:else}
-						<!-- Show logo when sidebar is closed -->
-						<Tooltip content={$showSidebar ? $i18n.t('Close Bar') : $i18n.t('Open Bar')}>
+						<!-- Show logo on desktop, with toggle based on sidebar state -->
+						{#if $showSidebar}
+							<!-- Show menu icon when sidebar is open on desktop -->
 							<button
 								id="sidebar-toggle-button"
-								class="cursor-pointer px-2 py-2 flex rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+								class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 								on:click={() => {
 									showSidebar.set(!$showSidebar);
 								}}
 								aria-label="Toggle Sidebar"
 							>
-								<div class="m-auto self-center">
-									<img
-										crossorigin="anonymous"
-										src="{WEBUI_BASE_URL}/static/favicon.png"
-										class="size-5 rounded"
-										alt="logo"
-									/>
+								<div class=" m-auto self-center">
+									<MenuLines />
 								</div>
 							</button>
-						</Tooltip>
-
+						{:else}
+							<!-- Show logo when sidebar is closed on desktop -->
+							<Tooltip content={$i18n.t('Open Bar')}>
+								<button
+									id="sidebar-toggle-button"
+									class="cursor-pointer px-2 py-2 flex rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition group"
+									on:click={() => {
+										showSidebar.set(!$showSidebar);
+									}}
+									aria-label="Toggle Sidebar"
+								>
+									<div class="m-auto self-center">
+										<img
+											crossorigin="anonymous"
+											src="{WEBUI_BASE_URL}/static/favicon.png"
+											class="size-5 rounded group-hover:hidden"
+											alt="logo"
+										/>
+										<div class="hidden group-hover:flex">
+											<MenuLines />
+										</div>
+									</div>
+								</button>
+							</Tooltip>
+						{/if}
 					{/if}
+
+				
 					
-					<Tooltip content={$i18n.t('New Chat')}>
+					<!-- <Tooltip content={$i18n.t('New Chat')}>
 						<button
 							id="new-chat-button"
 							class=" flex {$showSidebar
@@ -115,7 +136,7 @@
 								<PencilSquare className=" size-5" strokeWidth="2" />
 							</div>
 						</button>
-					</Tooltip>
+					</Tooltip> -->
 				</div>
 
 				<div
@@ -129,8 +150,10 @@
 					{/if}
 				</div>
 
-				<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
-					<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
+				<div class="self-start flex flex-none items-center gap-1 text-gray-600 dark:text-gray-400">
+					
+					
+					<!-- Menu Button -->
 					{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
 						<Menu
 							{chat}
@@ -168,7 +191,7 @@
 					
 					<!-- Theme Toggle Button -->
 					<button
-						class="flex items-center h-6 cursor-pointer rounded-full
+						class="hidden md:flex items-center h-6 cursor-pointer rounded-full
 							transition-all duration-300 ease-in-out
 							bg-gray-200 dark:bg-gray-600 hover:shadow-md"
 						on:click={() => {
@@ -233,6 +256,7 @@
 						</div>
 					</button>
 
+{#if !$chatId}
 					<Tooltip content={$i18n.t('Controls')}>
 						<button
 							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
@@ -246,6 +270,7 @@
 							</div>
 						</button>
 					</Tooltip>
+				{/if}
 
 					<!-- <Tooltip content={$i18n.t('New Chat')}>
 						<button

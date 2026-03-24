@@ -105,10 +105,14 @@
 	}}
 />
 
-<Modal size="md" bind:show>
-	<div>
-		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 mb-1.5">
-			<div class=" text-lg font-medium self-center font-primary">
+<Modal
+	size="md"
+	bind:show
+	backdropClassName="bg-black/20 backdrop-blur-[1px] dark:bg-black/35"
+>
+	<div class="rounded-2xl overflow-hidden bg-white dark:bg-gray-900 max-h-[88dvh] flex flex-col">
+		<div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 px-4 sm:px-5 py-3.5 sm:py-4 shrink-0">
+			<div class="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 font-primary pr-2">
 				{#if custom}
 					{#if edit}
 						{$i18n.t('Edit User Group')}
@@ -120,10 +124,11 @@
 				{/if}
 			</div>
 			<button
-				class="self-center"
+				class="inline-flex items-center justify-center rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 transition-colors"
 				on:click={() => {
 					show = false;
 				}}
+				aria-label="Close"
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
@@ -138,26 +143,26 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full px-3 sm:px-4 pb-3 sm:pb-4 pt-3 md:space-x-4 dark:text-gray-200 min-h-0 flex-1 overflow-hidden">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
-					class="flex flex-col w-full"
+					class="flex flex-col w-full min-h-0"
 					on:submit={(e) => {
 						e.preventDefault();
 						submitHandler();
 					}}
 				>
-					<div class="flex flex-col lg:flex-row w-full h-full pb-2 lg:space-x-4">
+					<div class="flex flex-col lg:flex-row w-full h-full pb-2 lg:space-x-4 min-h-0">
 						<div
 							id="admin-settings-tabs-container"
-							class="tabs flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"
+							class="tabs flex w-full flex-wrap gap-2 max-w-full lg:gap-1.5 lg:flex-col lg:flex-none lg:w-44 lg:p-2 lg:rounded-xl lg:bg-gray-50 lg:dark:bg-gray-800/60 dark:text-gray-200 text-sm font-medium text-left"
 						>
 							{#if tabs.includes('general')}
 								<button
-									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+									class="h-11 px-3 py-2 rounded-lg flex-1 min-w-[7rem] lg:min-w-0 lg:w-full lg:max-w-none lg:flex-none flex justify-center lg:justify-start items-center transition-colors {selectedTab ===
 									'general'
-										? ''
-										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+										? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+										: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/60 hover:text-gray-700 dark:hover:text-gray-200'}"
 									on:click={() => {
 										selectedTab = 'general';
 									}}
@@ -177,16 +182,16 @@
 											/>
 										</svg>
 									</div>
-									<div class=" self-center">{$i18n.t('General')}</div>
+									<div class="self-center whitespace-nowrap">{$i18n.t('General')}</div>
 								</button>
 							{/if}
 
 							{#if tabs.includes('permissions')}
 								<button
-									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+									class="h-11 px-3 py-2 rounded-lg flex-1 min-w-[7rem] lg:min-w-0 lg:w-full lg:max-w-none lg:flex-none flex justify-center lg:justify-start items-center transition-colors {selectedTab ===
 									'permissions'
-										? ''
-										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+										? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+										: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/60 hover:text-gray-700 dark:hover:text-gray-200'}"
 									on:click={() => {
 										selectedTab = 'permissions';
 									}}
@@ -195,16 +200,16 @@
 									<div class=" self-center mr-2">
 										<WrenchSolid />
 									</div>
-									<div class=" self-center">{$i18n.t('Permissions')}</div>
+									<div class="self-center whitespace-nowrap">{$i18n.t('Permissions')}</div>
 								</button>
 							{/if}
 
 							{#if tabs.includes('users')}
 								<button
-									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+									class="h-11 px-3 py-2 rounded-lg flex-1 min-w-[7rem] lg:min-w-0 lg:w-full lg:max-w-none lg:flex-none flex justify-center lg:justify-start items-center transition-colors {selectedTab ===
 									'users'
-										? ''
-										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+										? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+										: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/60 hover:text-gray-700 dark:hover:text-gray-200'}"
 									on:click={() => {
 										selectedTab = 'users';
 									}}
@@ -213,13 +218,13 @@
 									<div class=" self-center mr-2">
 										<UserPlusSolid />
 									</div>
-									<div class=" self-center">{$i18n.t('Users')} ({userIds.length})</div>
+									<div class="self-center whitespace-nowrap">{$i18n.t('Users')} ({userIds.length})</div>
 								</button>
 							{/if}
 						</div>
 
 						<div
-							class="flex-1 mt-1 lg:mt-1 lg:h-[22rem] lg:max-h-[22rem] overflow-y-auto scrollbar-hidden"
+							class="flex-1 min-h-0 mt-2 lg:mt-1 lg:h-[22rem] lg:max-h-[22rem] overflow-y-auto scrollbar-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-900/50 p-3"
 						>
 							{#if selectedTab == 'general'}
 								<Display bind:name bind:description />
@@ -280,10 +285,10 @@
 						{/if}
 					</div> -->
 
-					<div class="flex justify-between pt-3 text-sm font-medium gap-1.5">
+					<div class="flex justify-end items-center pt-3 sm:pt-4 mt-1 border-t border-gray-200 dark:border-gray-800 text-sm font-medium gap-2 shrink-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm">
 						{#if edit}
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-900 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+								class="px-4 py-1.5 text-xs font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800 transition rounded-lg flex flex-row justify-center space-x-1 items-center"
 								type="button"
 								on:click={() => {
 									showDeleteConfirmDialog = true;
@@ -291,12 +296,10 @@
 							>
 								{$i18n.t('Delete')}
 							</button>
-						{:else}
-							<div></div>
 						{/if}
 
 						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
+							class="px-4 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600 transition rounded-lg shadow-sm flex flex-row justify-center space-x-1 items-center {loading
 								? ' cursor-not-allowed'
 								: ''}"
 							type="submit"

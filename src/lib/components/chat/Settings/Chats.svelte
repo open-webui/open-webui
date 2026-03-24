@@ -108,14 +108,14 @@
 <ArchivedChatsModal bind:show={showArchivedChatsModal} on:change={handleArchivedChatsChange} />
 
 <div class="flex flex-col h-full justify-between">
-	<div class="space-y-6 overflow-y-auto">
+	<div class="space-y-4 sm:space-y-6 overflow-y-auto">
 		<!-- Import & Export Section -->
-		<div class="space-y-4">
+		<div class="space-y-3 sm:space-y-4">
 			<div>
-				<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+				<h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1">
 					{$i18n.t('Import & Export')}
 				</h3>
-				<p class="text-sm text-gray-500 dark:text-gray-400">
+				<p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
 					Backup and restore your chat history
 				</p>
 			</div>
@@ -129,10 +129,10 @@
 				hidden
 			/>
 
-			<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
 				<!-- Import Button -->
 				<button
-					class="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left group"
+					class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left group"
 					on:click={() => {
 						chatImportInputElement.click();
 					}}
@@ -154,7 +154,7 @@
 						</svg>
 					</div>
 					<div class="flex-1">
-						<div class="text-sm font-medium text-gray-900 dark:text-white">
+						<div class="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
 							{$i18n.t('Import Chats')}
 						</div>
 						<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -165,7 +165,7 @@
 
 				<!-- Export Button -->
 				<button
-					class="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left group"
+					class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left group"
 					on:click={() => {
 						exportChats();
 					}}
@@ -187,7 +187,7 @@
 						</svg>
 					</div>
 					<div class="flex-1">
-						<div class="text-sm font-medium text-gray-900 dark:text-white">
+						<div class="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
 							{$i18n.t('Export Chats')}
 						</div>
 						<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">

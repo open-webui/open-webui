@@ -8,6 +8,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Minus from '$lib/components/icons/Minus.svelte';
 	import PencilSolid from '$lib/components/icons/PencilSolid.svelte';
+	import SelectDropdown from '$lib/components/common/SelectDropdown.svelte';
 	import { toast } from 'svelte-sonner';
 	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -48,11 +49,17 @@
 	let showDeleteConfirmDialog = false;
 
 	const addModelHandler = () => {
-		if (selectedModelId) {
+		if (selectedModelId && !modelIds.includes(selectedModelId)) {
 			modelIds = [...modelIds, selectedModelId];
 			selectedModelId = '';
 		}
 	};
+
+	$: selectableModels = $models.filter((m) => !modelIds.includes(m.id));
+	$: selectableModelOptions = [
+		{ value: '', label: 'Select a model' },
+		...selectableModels.map((m) => ({ value: m.id, label: m.name }))
+	];
 
 	const submitHandler = () => {
 		loading = true;
@@ -126,9 +133,9 @@
 />
 
 <Modal size="sm" bind:show>
-	<div>
+	<div class="max-h-[85vh] overflow-hidden rounded-xl bg-white dark:bg-gray-950">
 		<!-- Header -->
-		<div class="flex justify-between items-center px-6 pt-5 pb-4 border-b border-gray-200 dark:border-gray-800">
+		<div class="flex justify-between items-center px-4 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-900/40">
 			<h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">
 				{#if edit}
 					{$i18n.t('Edit Arena Model')}
@@ -156,7 +163,7 @@
 		</div>
 
 		<!-- Content -->
-		<div class="flex flex-col md:flex-row w-full px-6 py-5 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full px-4 sm:px-6 py-4 sm:py-5 dark:text-gray-200 overflow-y-auto max-h-[calc(85vh-72px)]">
 			<div class="flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full space-y-5"
@@ -317,21 +324,30 @@
 							<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
 								{$i18n.t('Models')}
 							</label>
-							<button
-								class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 {filterMode === 'include' 
-									? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-300 dark:border-blue-700' 
-									: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-300 dark:border-red-700'}"
-								type="button"
-								on:click={() => {
-									filterMode = filterMode === 'include' ? 'exclude' : 'include';
-								}}
-							>
-								{#if filterMode === 'include'}
+							<div class="inline-flex rounded-lg border border-gray-300 dark:border-gray-700 overflow-hidden">
+								<button
+									class="px-3 py-1.5 text-xs font-medium transition-all duration-200 {filterMode === 'include'
+										? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+										: 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400'}"
+									type="button"
+									on:click={() => {
+										filterMode = 'include';
+									}}
+								>
 									{$i18n.t('Include')}
-								{:else}
+								</button>
+								<button
+									class="px-3 py-1.5 text-xs font-medium border-l border-gray-300 dark:border-gray-700 transition-all duration-200 {filterMode === 'exclude'
+										? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+										: 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400'}"
+									type="button"
+									on:click={() => {
+										filterMode = 'exclude';
+									}}
+								>
 									{$i18n.t('Exclude')}
-								{/if}
-							</button>
+								</button>
+							</div>
 						</div>
 
 						<!-- Models List -->
@@ -369,22 +385,20 @@
 
 						<!-- Add Model Section -->
 						<div class="flex gap-2">
-							<select
-								class="flex-1 px-3 py-2.5 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg {selectedModelId
-									? 'text-gray-900 dark:text-gray-100'
-									: 'text-gray-500 dark:text-gray-400'} focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
-								bind:value={selectedModelId}
-							>
-								<option value="">{$i18n.t('Select a model')}</option>
-								{#each $models.filter((m) => m?.owned_by !== 'arena') as model}
-									<option value={model.id} class="bg-white dark:bg-gray-800">{model.name}</option>
-								{/each}
-							</select>
+							<div class="flex-1">
+								<SelectDropdown
+									value={selectedModelId}
+									options={selectableModelOptions}
+									on:change={(e) => {
+										selectedModelId = e.detail.value;
+									}}
+								/>
+							</div>
 
 							<button
 								class="flex-shrink-0 p-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
 								type="button"
-								disabled={!selectedModelId}
+								disabled={!selectedModelId || modelIds.includes(selectedModelId)}
 								on:click={() => {
 									addModelHandler();
 								}}

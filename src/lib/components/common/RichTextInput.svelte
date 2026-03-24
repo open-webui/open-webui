@@ -247,6 +247,13 @@
 					},
 					keydown: (view, event) => {
 						if (messageInput) {
+							// Ensure select-all targets the chat editor content.
+							if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
+								editor.commands.selectAll();
+								event.preventDefault();
+								return true;
+							}
+
 							// Handle Tab Key
 							if (event.key === 'Tab') {
 								const handled = selectNextTemplate(view.state, view.dispatch);

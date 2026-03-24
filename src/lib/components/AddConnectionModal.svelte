@@ -32,7 +32,7 @@
 
 	let prefixId = '';
 	let enable = true;
-	let tags: string[] = [];
+	let tags: { name: string }[] = [];
 
 	let modelId = '';
 	let modelIds: string[] = [];
@@ -133,9 +133,9 @@
 </script>
 
 <Modal size="sm" bind:show>
-	<div>
-		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
-			<div class=" text-lg font-medium self-center font-primary">
+	<div class="max-h-[85vh] overflow-hidden rounded-xl bg-white dark:bg-gray-950">
+		<div class="flex justify-between items-center dark:text-gray-100 px-4 sm:px-5 pt-4 pb-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-900/40">
+			<div class="text-lg font-semibold self-center font-primary text-gray-900 dark:text-gray-100">
 				{#if edit}
 					{$i18n.t('Edit Connection')}
 				{:else}
@@ -143,7 +143,7 @@
 				{/if}
 			</div>
 			<button
-				class="self-center"
+				class="self-center p-1.5 rounded-lg hover:bg-gray-200/70 dark:hover:bg-gray-800 transition-colors"
 				on:click={() => {
 					show = false;
 				}}
@@ -161,7 +161,7 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full px-3 sm:px-4 pb-4 md:space-x-4 dark:text-gray-200 overflow-y-auto max-h-[calc(85vh-66px)]">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full"
@@ -170,14 +170,15 @@
 						submitHandler();
 					}}
 				>
-					<div class="px-1">
-						<div class="flex gap-2">
+					<div class="px-1 space-y-3">
+						<div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3 sm:p-4 space-y-2.5">
+							<div class="flex gap-2">
 							<div class="flex flex-col w-full">
-								<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('URL')}</div>
+								<div class="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{$i18n.t('URL')}</div>
 
 								<div class="flex-1">
 									<input
-										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+										class="w-full text-sm bg-gray-50/70 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-hidden"
 										type="text"
 										bind:value={url}
 										placeholder={$i18n.t('API Base URL')}
@@ -189,7 +190,7 @@
 
 							<Tooltip content={$i18n.t('Verify Connection')} className="self-end -mb-1">
 								<button
-									class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
+									class="self-center p-1.5 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
 									on:click={() => {
 										verifyHandler();
 									}}
@@ -216,14 +217,16 @@
 								</Tooltip>
 							</div>
 						</div>
+						</div>
 
-						<div class="flex gap-2 mt-2">
+						<div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3 sm:p-4">
+							<div class="flex gap-2 mt-0">
 							<div class="flex flex-col w-full">
-								<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('Key')}</div>
+								<div class="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{$i18n.t('Key')}</div>
 
 								<div class="flex-1">
 									<SensitiveInput
-										className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+										inputClassName="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 										bind:value={key}
 										placeholder={$i18n.t('API Key')}
 										required={false}
@@ -232,7 +235,7 @@
 							</div>
 
 							<div class="flex flex-col w-full">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Prefix ID')}</div>
+								<div class="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{$i18n.t('Prefix ID')}</div>
 
 								<div class="flex-1">
 									<Tooltip
@@ -241,7 +244,7 @@
 										)}
 									>
 										<input
-											class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+											class="w-full text-sm bg-gray-50/70 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-hidden"
 											type="text"
 											bind:value={prefixId}
 											placeholder={$i18n.t('Prefix ID')}
@@ -250,11 +253,11 @@
 									</Tooltip>
 								</div>
 							</div>
-						</div>
+							</div>
 
-						<div class="flex gap-2 mt-2">
+							<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
-								<div class=" mb-1.5 text-xs text-gray-500">{$i18n.t('Tags')}</div>
+								<div class="mb-1.5 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{$i18n.t('Tags')}</div>
 
 								<div class="flex-1">
 									<Tags
@@ -273,13 +276,15 @@
 									/>
 								</div>
 							</div>
+							</div>
 						</div>
 
 						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
-						<div class="flex flex-col w-full">
+						<div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3 sm:p-4">
+							<div class="flex flex-col w-full">
 							<div class="mb-1 flex justify-between">
-								<div class="text-xs text-gray-500">{$i18n.t('Model IDs')}</div>
+								<div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{$i18n.t('Model IDs')}</div>
 							</div>
 
 							{#if modelIds.length > 0}
@@ -303,7 +308,7 @@
 									{/each}
 								</div>
 							{:else}
-								<div class="text-gray-500 text-xs text-center py-2 px-10">
+								<div class="text-gray-500 dark:text-gray-400 text-xs text-center py-2 px-4 sm:px-10">
 									{#if ollama}
 										{$i18n.t('Leave empty to include all models from "{{url}}/api/tags" endpoint', {
 											url: url
@@ -315,11 +320,12 @@
 									{/if}
 								</div>
 							{/if}
+							</div>
 						</div>
 
 						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
-						<div class="flex items-center">
+						<div class="flex items-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-900/50 px-2 py-1.5">
 							<input
 								class="w-full py-1 text-sm rounded-lg bg-transparent {modelId
 									? ''
@@ -330,6 +336,7 @@
 
 							<div>
 								<button
+									class="p-1.5 rounded-lg hover:bg-gray-200/70 dark:hover:bg-gray-800 transition-colors"
 									type="button"
 									on:click={() => {
 										addModelHandler();
@@ -341,10 +348,10 @@
 						</div>
 					</div>
 
-					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
+					<div class="flex justify-end pt-3 text-sm font-medium gap-2 border-t border-gray-200 dark:border-gray-800 mt-2">
 						{#if edit}
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-900 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+								class="px-3.5 py-2 text-sm font-medium dark:bg-black dark:hover:bg-gray-900 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-lg flex flex-row space-x-1 items-center"
 								type="button"
 								on:click={() => {
 									onDelete();
@@ -356,7 +363,7 @@
 						{/if}
 
 						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
+							class="px-4 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg flex flex-row space-x-1 items-center {loading
 								? ' cursor-not-allowed'
 								: ''}"
 							type="submit"

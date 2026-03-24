@@ -365,28 +365,43 @@ export const generateOpenAIChatCompletion = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${url}/chat/completions`, {
+	const fetchRes = await fetch(`${url}/chat/completions`, {
 		method: 'POST',
 		headers: {
 			Authorization: `Bearer ${token}`,
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify(body)
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = `${err?.detail ?? err}`;
-			return null;
-		});
+	}).catch((err) => {
+		error = `${err?.detail ?? err}`;
+		return null;
+	});
 
 	if (error) {
 		throw error;
 	}
 
-	return res;
+	if (!fetchRes) {
+		return null;
+	}
+
+	if (!fetchRes.ok) {
+		const errData = await fetchRes.json().catch(() => ({}));
+		throw errData;
+	}
+
+	// When the backend has no active socket for this session it falls back to a raw SSE
+	// stream. Return the Response object so the caller can consume it directly instead
+	// of trying to JSON.parse the SSE body (which would throw a SyntaxError).
+	const contentType = fetchRes.headers.get('content-type') ?? '';
+	if (contentType.includes('text/event-stream') || contentType.includes('application/x-ndjson')) {
+		return fetchRes;
+	}
+
+	return fetchRes.json().catch((err) => {
+		error = `${err?.detail ?? err}`;
+		return null;
+	});
 };
 
 export const synthesizeOpenAISpeech = async (

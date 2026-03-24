@@ -2,8 +2,6 @@
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Plus from '$lib/components/icons/Plus.svelte';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
@@ -43,13 +41,15 @@
 			return a.name.localeCompare(b.name);
 		});
 
+	$: selectedCount = userIds.length;
+
 	let query = '';
 </script>
 
-<div>
-	<div class="flex w-full">
-		<div class="flex flex-1">
-			<div class=" self-center mr-3">
+<div class="space-y-3">
+	<div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-900/40 px-3 py-2.5">
+		<div class="flex w-full items-center gap-2.5">
+			<div class="self-center text-gray-400 dark:text-gray-500">
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 20 20"
@@ -64,19 +64,30 @@
 				</svg>
 			</div>
 			<input
-				class=" w-full text-sm pr-4 rounded-r-xl outline-hidden bg-transparent"
+				class="w-full text-sm pr-2 outline-none bg-transparent text-gray-800 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
 				bind:value={query}
 				placeholder={$i18n.t('Search')}
 			/>
+			{#if selectedCount > 0}
+				<div class="text-xs font-medium text-blue-600 dark:text-blue-400 whitespace-nowrap">
+					{selectedCount} selected
+				</div>
+			{/if}
 		</div>
 	</div>
 
-	<div class="mt-3 max-h-[22rem] overflow-y-auto scrollbar-hidden">
-		<div class="flex flex-col gap-2.5">
+	<div class="max-h-[22rem] overflow-y-auto scrollbar-hidden pr-0.5">
+		<div class="flex flex-col gap-1.5">
 			{#if filteredUsers.length > 0}
 				{#each filteredUsers as user, userIdx (user.id)}
-					<div class="flex flex-row items-center gap-3 w-full text-sm">
-						<div class="flex items-center">
+					<div
+						class="flex flex-row items-center gap-3 w-full text-sm rounded-xl border px-3 py-2.5 transition-colors {userIds.includes(
+							user.id
+						)
+							? 'border-blue-200 bg-blue-50/60 dark:border-blue-800/60 dark:bg-blue-900/20'
+							: 'border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/40 hover:bg-gray-50 dark:hover:bg-gray-800/60'}"
+					>
+						<div class="flex items-center pt-0.5">
 							<Checkbox
 								state={userIds.includes(user.id) ? 'checked' : 'unchecked'}
 								on:change={(e) => {
@@ -90,21 +101,22 @@
 						</div>
 
 						<div class="flex w-full items-center justify-between">
-							<Tooltip content={user.email} placement="top-start">
-								<div class="flex">
-									<img
-										class=" rounded-full size-5 object-cover mr-2.5"
-										src={user.profile_image_url.startsWith(WEBUI_BASE_URL) ||
-										user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
-										user.profile_image_url.startsWith('data:')
-											? user.profile_image_url
-											: `/user.png`}
-										alt="user"
-									/>
+							<div class="flex min-w-0 items-center">
+								<img
+									class="rounded-full size-7 object-cover mr-2.5 border border-gray-200 dark:border-gray-700"
+									src={user.profile_image_url.startsWith(WEBUI_BASE_URL) ||
+									user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
+									user.profile_image_url.startsWith('data:')
+										? user.profile_image_url
+										: `/user.png`}
+									alt="user"
+								/>
 
-									<div class=" font-medium self-center">{user.name}</div>
+								<div class="min-w-0">
+									<div class="font-medium text-gray-800 dark:text-gray-100 truncate">{user.name}</div>
+									<div class="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</div>
 								</div>
-							</Tooltip>
+							</div>
 
 							{#if userIds.includes(user.id)}
 								<Badge type="success" content="member" />
@@ -113,8 +125,9 @@
 					</div>
 				{/each}
 			{:else}
-				<div class="text-gray-500 text-xs text-center py-2 px-10">
-					{$i18n.t('No users were found.')}
+				<div class="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 py-8 px-6 text-center bg-white/50 dark:bg-gray-900/30">
+					<div class="text-sm font-medium text-gray-600 dark:text-gray-300">{$i18n.t('No users were found.')}</div>
+					<div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Try searching with a different name or email.</div>
 				</div>
 			{/if}
 		</div>

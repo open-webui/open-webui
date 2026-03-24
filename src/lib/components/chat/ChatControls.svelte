@@ -135,19 +135,27 @@
 <SvelteFlowProvider>
 	{#if !largeScreen}
 		{#if $showControls}
-			<Drawer
-				show={$showControls}
-				on:close={() => {
-					showControls.set(false);
-				}}
+			<!-- svelte-ignore a11y-click-events-have-key-events -->
+			<!-- svelte-ignore a11y-no-static-element-interactions -->
+			<div
+				class="fixed inset-0 z-[999] bg-black/35 backdrop-blur-[1px]"
+				in:fade={{ duration: 140, easing: cubicOut }}
+				out:fade={{ duration: 100, easing: cubicOut }}
+				on:mousedown={closeHandler}
 			>
+				<!-- svelte-ignore a11y-click-events-have-key-events -->
+				<!-- svelte-ignore a11y-no-static-element-interactions -->
 				<div
-					class=" {$showCallOverlay || $showOverview || $showArtifacts
-						? ' h-screen  w-full'
-						: 'px-6 py-4'} h-full"
-					in:fade={{ duration: 120, easing: cubicOut }}
-					out:fade={{ duration: 100, easing: cubicOut }}
+					class="absolute right-0 top-0 h-full max-h-[100dvh] bg-gray-50 dark:bg-gray-900 border-l border-gray-200/90 dark:border-gray-700 shadow-2xl overflow-y-auto scrollbar-hidden {$showCallOverlay ||
+					$showOverview ||
+					$showArtifacts
+						? 'w-full'
+						: 'w-[min(90vw,360px)]'}"
+					in:fly={{ x: 360, duration: 220, easing: cubicOut }}
+					out:fly={{ x: 360, duration: 160, easing: cubicOut }}
+					on:mousedown|stopPropagation
 				>
+					<div class="h-full {$showCallOverlay || $showOverview || $showArtifacts ? '' : 'px-2.5 py-2.5'}">
 					{#if $showCallOverlay}
 						<div
 							class="h-full max-h-[100dvh] bg-white text-gray-700 dark:bg-black dark:text-gray-300 flex justify-center"
@@ -160,7 +168,7 @@
 								{chatId}
 								{eventTarget}
 								on:close={() => {
-									showControls.set(false);
+									closeHandler();
 								}}
 							/>
 						</div>
@@ -173,21 +181,22 @@
 								showMessage(e.detail.node.data.message);
 							}}
 							on:close={() => {
-								showControls.set(false);
+								closeHandler();
 							}}
 						/>
 					{:else}
 						<Controls
 							on:close={() => {
-								showControls.set(false);
+								closeHandler();
 							}}
 							{models}
 							bind:chatFiles
 							bind:params
 						/>
 					{/if}
+					</div>
 				</div>
-			</Drawer>
+			</div>
 		{/if}
 	{:else}
 		<!-- Desktop View -->
@@ -195,10 +204,10 @@
 			<!-- Resizable divider - only show when Artifacts is active -->
 			{#if $showArtifacts}
 				<PaneResizer
-					class="group relative w-1 bg-gray-200 dark:bg-gray-700 hover:bg-blue-500 dark:hover:bg-blue-500 cursor-col-resize select-none"
+					class="group relative w-1 bg-gray-200 dark:bg-gray-700 hover:bg-orange-500 dark:hover:bg-orange-500 cursor-col-resize select-none"
 				>
 					<div
-						class="absolute inset-y-0 -left-1 -right-1 group-hover:bg-blue-500/20"
+						class="absolute inset-y-0 -left-1 -right-1 group-hover:bg-orange-500/20"
 					></div>
 				</PaneResizer>
 			{:else}
@@ -219,7 +228,7 @@
 		>
 			{#if $showControls}
 				<div
-					class="flex max-h-full min-h-full"
+					class="flex max-h-full min-h-full w-full"
 					in:fly={{ x: 50, duration: 180, easing: quintOut }}
 					out:fly={{ x: 50, duration: 120, easing: cubicOut }}
 				>

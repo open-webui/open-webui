@@ -126,6 +126,7 @@
 />
 <UserChatsModal bind:show={showUserChatsModal} user={selectedUser} />
 
+<div class="w-full max-w-full overflow-x-hidden">
 {#if ($config?.license_metadata?.seats ?? null) !== null && users.length > $config?.license_metadata?.seats}
 	<div class="mt-1 mb-3">
 		<Banner
@@ -142,38 +143,38 @@
 {/if}
 
 <!-- Header Section -->
-<div class="mb-6 space-y-4">
+<div class="mb-4 sm:mb-6 space-y-4 w-full max-w-full">
 	<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 		<!-- Title and Count -->
-		<div class="flex items-center gap-3">
-			<h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
+		<div class="flex flex-wrap items-center gap-2 sm:gap-3">
+			<h2 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100">
 				{$i18n.t('Users')}
 			</h2>
-			<div class="h-6 w-px bg-gray-300 dark:bg-gray-700"></div>
+			<div class="hidden sm:block h-6 w-px bg-gray-300 dark:bg-gray-700"></div>
 			{#if ($config?.license_metadata?.seats ?? null) !== null}
 				{#if users.length > $config?.license_metadata?.seats}
 					<div class="flex items-baseline gap-1.5">
-						<span class="text-lg font-semibold text-red-600 dark:text-red-400">{users.length}</span>
+						<span class="text-base sm:text-lg font-semibold text-red-600 dark:text-red-400">{users.length}</span>
 						<span class="text-sm text-gray-500 dark:text-gray-400">of</span>
-						<span class="text-lg font-semibold text-red-600 dark:text-red-400">{$config?.license_metadata?.seats}</span>
+						<span class="text-base sm:text-lg font-semibold text-red-600 dark:text-red-400">{$config?.license_metadata?.seats}</span>
 						<span class="text-sm text-gray-500 dark:text-gray-400">seats</span>
 					</div>
 				{:else}
 					<div class="flex items-baseline gap-1.5">
-						<span class="text-lg font-semibold text-gray-700 dark:text-gray-300">{users.length}</span>
+						<span class="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300">{users.length}</span>
 						<span class="text-sm text-gray-500 dark:text-gray-400">of</span>
-						<span class="text-lg font-semibold text-gray-700 dark:text-gray-300">{$config?.license_metadata?.seats}</span>
+						<span class="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300">{$config?.license_metadata?.seats}</span>
 						<span class="text-sm text-gray-500 dark:text-gray-400">seats</span>
 					</div>
 				{/if}
 			{:else}
-				<span class="text-lg font-semibold text-gray-700 dark:text-gray-300">{users.length}</span>
+				<span class="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300">{users.length}</span>
 			{/if}
 		</div>
 
 		<!-- Search and Add Button -->
-		<div class="flex items-center gap-3">
-			<div class="relative flex-1 md:w-80">
+		<div class="flex w-full md:w-auto items-stretch sm:items-center gap-2 sm:gap-3">
+			<div class="relative flex-1 min-w-0 md:w-80">
 				<div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -189,7 +190,7 @@
 					</svg>
 				</div>
 				<input
-					class="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent outline-none transition-all duration-150"
+					class="w-full pl-10 pr-4 py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent outline-none transition-all duration-150"
 					bind:value={search}
 					placeholder={$i18n.t('Search users...')}
 				/>
@@ -197,7 +198,7 @@
 
 			<Tooltip content={$i18n.t('Add User')}>
 				<button
-					class="p-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white transition-colors duration-150 shadow-sm hover:shadow"
+					class="shrink-0 p-2 rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white transition-colors duration-150 shadow-sm hover:shadow"
 					on:click={() => {
 						showAddUserModal = !showAddUserModal;
 					}}
@@ -209,10 +210,147 @@
 	</div>
 </div>
 
-<!-- Table Container -->
-<div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-	<div class="overflow-x-auto">
-		<table class="w-full text-sm text-left">
+<!-- Mobile Cards -->
+<div class="sm:hidden space-y-2.5">
+	{#each filteredUsers as user}
+		<div class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 shadow-sm">
+			<div class="flex items-start justify-between gap-2">
+				<div class="flex items-center gap-2.5 min-w-0">
+					<img
+						class="rounded-full w-9 h-9 object-cover ring-2 ring-gray-100 dark:ring-gray-800"
+						src={user.profile_image_url.startsWith(WEBUI_BASE_URL) ||
+						user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
+						user.profile_image_url.startsWith('data:')
+							? user.profile_image_url
+							: `/user.png`}
+						alt="user"
+					/>
+					<div class="min-w-0">
+						<div class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{user.name}</div>
+						<div class="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</div>
+					</div>
+				</div>
+
+				<button
+					class="shrink-0"
+					on:click={() => {
+						if (user.role === 'user') {
+							updateRoleHandler(user.id, 'admin');
+						} else if (user.role === 'pending') {
+							updateRoleHandler(user.id, 'user');
+						} else {
+							updateRoleHandler(user.id, 'pending');
+						}
+					}}
+				>
+					<Badge
+						type={user.role === 'admin' ? 'info' : user.role === 'user' ? 'success' : 'muted'}
+						content={$i18n.t(user.role)}
+					/>
+				</button>
+			</div>
+
+			<div class="mt-2.5 grid grid-cols-2 gap-2 text-xs">
+				<div class="rounded-md bg-gray-50 dark:bg-gray-800/70 px-2 py-1.5">
+					<div class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
+						{$i18n.t('Last Active')}
+					</div>
+					<div class="mt-0.5 text-gray-700 dark:text-gray-200">
+						{dayjs(user.last_active_at * 1000).fromNow()}
+					</div>
+				</div>
+				<div class="rounded-md bg-gray-50 dark:bg-gray-800/70 px-2 py-1.5">
+					<div class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
+						{$i18n.t('Created at')}
+					</div>
+					<div class="mt-0.5 text-gray-700 dark:text-gray-200">
+						{dayjs(user.created_at * 1000).format('LL')}
+					</div>
+				</div>
+			</div>
+
+			{#if user.oauth_sub}
+				<div class="mt-2 text-[11px] text-gray-500 dark:text-gray-400 truncate">
+					<span class="font-medium text-gray-600 dark:text-gray-300">{$i18n.t('OAuth ID')}:</span>
+					{user.oauth_sub}
+				</div>
+			{/if}
+
+			<div class="mt-2.5 flex items-center justify-end gap-1.5">
+				{#if $config.features.enable_admin_chat_access && user.role !== 'admin'}
+					<Tooltip content={$i18n.t('Chats')}>
+						<button
+							class="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors duration-150"
+							on:click={async () => {
+								showUserChatsModal = !showUserChatsModal;
+								selectedUser = user;
+							}}
+						>
+							<ChatBubbles className="size-4" />
+						</button>
+					</Tooltip>
+				{/if}
+
+				<Tooltip content={$i18n.t('Edit User')}>
+					<button
+						class="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors duration-150"
+						on:click={async () => {
+							showEditUserModal = !showEditUserModal;
+							selectedUser = user;
+						}}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="2"
+							stroke="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+							/>
+						</svg>
+					</button>
+				</Tooltip>
+
+				{#if user.role !== 'admin'}
+					<Tooltip content={$i18n.t('Delete User')}>
+						<button
+							class="p-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors duration-150"
+							on:click={async () => {
+								showDeleteConfirmDialog = true;
+								selectedUser = user;
+							}}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="2"
+								stroke="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+								/>
+							</svg>
+						</button>
+					</Tooltip>
+				{/if}
+			</div>
+		</div>
+	{/each}
+</div>
+
+<!-- Desktop Table Container -->
+<div class="hidden sm:block w-full max-w-full bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+	<div class="overflow-x-auto max-w-full overscroll-x-contain">
+		<table class="w-full min-w-[680px] text-sm text-left">
 			<thead class="bg-gray-50 dark:bg-gray-850 border-b border-gray-200 dark:border-gray-800">
 				<tr>
 					<th
@@ -261,7 +399,7 @@
 					</th>
 					<th
 						scope="col"
-						class="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+						class="hidden sm:table-cell px-4 py-3 font-semibold text-xs uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
 						on:click={() => setSortKey('email')}
 					>
 						<div class="flex items-center gap-2">
@@ -327,7 +465,7 @@
 					</th>
 					<th
 						scope="col"
-						class="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+						class="hidden lg:table-cell px-4 py-3 font-semibold text-xs uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
 						on:click={() => setSortKey('oauth_sub')}
 					>
 						<div class="flex items-center gap-2">
@@ -385,17 +523,17 @@
 										: `/user.png`}
 									alt="user"
 								/>
-								<span class="font-medium text-gray-900 dark:text-gray-100">{user.name}</span>
+								<span class="font-medium text-gray-900 dark:text-gray-100 truncate">{user.name}</span>
 							</div>
 						</td>
-						<td class="px-4 py-3 text-gray-600 dark:text-gray-400">{user.email}</td>
+						<td class="hidden sm:table-cell px-4 py-3 text-gray-600 dark:text-gray-400">{user.email}</td>
 						<td class="px-4 py-3 text-gray-600 dark:text-gray-400">
 							{dayjs(user.last_active_at * 1000).fromNow()}
 						</td>
 						<td class="px-4 py-3 text-gray-600 dark:text-gray-400">
 							{dayjs(user.created_at * 1000).format('LL')}
 						</td>
-						<td class="px-4 py-3 text-gray-600 dark:text-gray-400">
+						<td class="hidden lg:table-cell px-4 py-3 text-gray-600 dark:text-gray-400">
 							{user.oauth_sub ?? '—'}
 						</td>
 						<td class="px-4 py-3">
@@ -518,3 +656,5 @@
 		</div>
 	{/if}
 {/if}
+
+</div>

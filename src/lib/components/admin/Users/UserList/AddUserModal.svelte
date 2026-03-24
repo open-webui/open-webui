@@ -8,7 +8,7 @@
 
 	import Modal from '$lib/components/common/Modal.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
 	export let show = false;
@@ -119,7 +119,11 @@
 	};
 </script>
 
-<Modal size="sm" bind:show>
+<Modal
+	size="sm"
+	bind:show
+	backdropClassName="bg-black/20 backdrop-blur-[1px] dark:bg-black/35"
+>
 	<div class="bg-white dark:bg-gray-900 rounded-xl">
 		<!-- Header -->
 		<div class="flex items-center justify-between px-6 py-5 border-b border-gray-200 dark:border-gray-700">
@@ -218,7 +222,7 @@
 							</div>
 							<select
 								id="user-role"
-								class="w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white capitalize focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent outline-none transition-all appearance-none"
+								class="w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white capitalize focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent outline-none transition-all"
 								bind:value={_user.role}
 								placeholder={$i18n.t('Enter Your Role')}
 								required
@@ -227,11 +231,6 @@
 								<option value="user"> {$i18n.t('user')} </option>
 								<option value="admin"> {$i18n.t('admin')} </option>
 							</select>
-							<div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-								<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-gray-400">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-								</svg>
-							</div>
 						</div>
 					</div>
 

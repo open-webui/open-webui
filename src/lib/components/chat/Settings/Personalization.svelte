@@ -31,24 +31,24 @@
 		dispatch('save');
 	}}
 >
-	<div class="space-y-6 overflow-y-auto">
+	<div class="space-y-4 sm:space-y-6 overflow-y-auto">
 		<!-- Memory Section -->
-		<div class="space-y-4">
+		<div class="space-y-3 sm:space-y-4">
 			<div>
-				<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+				<h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1">
 					{$i18n.t('Memory')}
 				</h3>
-				<p class="text-sm text-gray-500 dark:text-gray-400">
+				<p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
 					Personalize your interactions with AI assistants
 				</p>
 			</div>
 
 			<!-- Memory Toggle Card -->
-			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 sm:p-4">
 				<div class="flex items-center justify-between">
 					<div class="flex-1">
 						<div class="flex items-center gap-2">
-							<div class="text-sm font-medium text-gray-900 dark:text-white">
+							<div class="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
 								{$i18n.t('Enable Memory')}
 							</div>
 							<Tooltip
@@ -78,9 +78,9 @@
 
 			<!-- Description Box -->
 			<div
-				class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
+				class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4"
 			>
-				<div class="flex gap-3">
+				<div class="flex gap-2 sm:gap-3">
 					<div class="flex-shrink-0">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -98,7 +98,7 @@
 						</svg>
 					</div>
 					<div class="flex-1">
-						<div class="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+						<div class="text-xs sm:text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
 							How it works
 						</div>
 						<div class="text-xs text-blue-800 dark:text-blue-200">
@@ -114,7 +114,7 @@
 			<div class="flex justify-start">
 				<button
 					type="button"
-					class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+					class="w-full sm:w-auto inline-flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
 					on:click={() => {
 						showManageModal = true;
 					}}
@@ -187,9 +187,9 @@
 	</div>
 
 	<!-- Save Button -->
-	<div class="flex justify-end pt-6 border-t border-gray-200 dark:border-gray-700 mt-6">
+	<div class="flex justify-end pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-700 mt-4 sm:mt-6">
 		<button
-			class="px-6 py-2.5 text-sm font-medium bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+			class="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
 			type="submit"
 		>
 			{$i18n.t('Save')}

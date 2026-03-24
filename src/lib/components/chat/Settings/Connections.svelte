@@ -75,22 +75,22 @@
 		updateHandler();
 	}}
 >
-	<div class="space-y-6 overflow-y-auto">
+	<div class="space-y-4 sm:space-y-6 overflow-y-auto">
 		{#if config !== null}
 			<!-- Direct Connections Section -->
-			<div class="space-y-4">
-				<div class="flex items-start justify-between gap-4">
+			<div class="space-y-3 sm:space-y-4">
+				<div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
 					<div class="flex-1">
-						<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+						<h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1">
 							{$i18n.t('Manage Direct Connections')}
 						</h3>
-						<p class="text-sm text-gray-500 dark:text-gray-400">
+						<p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
 							Connect to your own OpenAI compatible API endpoints
 						</p>
 					</div>
 					<Tooltip content={$i18n.t(`Add Connection`)}>
 						<button
-							class="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+						class="w-full sm:w-auto flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
 							on:click={() => {
 								showConnectionModal = true;
 							}}
@@ -104,9 +104,9 @@
 
 				<!-- Connections List -->
 				{#if config?.OPENAI_API_BASE_URLS?.length > 0}
-					<div class="space-y-3">
-						{#each config?.OPENAI_API_BASE_URLS ?? [] as url, idx}
-							<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+				<div class="space-y-2 sm:space-y-3">
+					{#each config?.OPENAI_API_BASE_URLS ?? [] as url, idx}
+						<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 sm:p-4">
 								<Connection
 									bind:url
 									bind:key={config.OPENAI_API_KEYS[idx]}

@@ -24,6 +24,7 @@
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ReindexKnowledgeFilesConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import SelectDropdown from '$lib/components/common/SelectDropdown.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
@@ -271,7 +272,7 @@
 	}}
 >
 	{#if RAGConfig}
-		<div class="space-y-2.5 overflow-y-scroll scrollbar-hidden h-full pr-1.5" style="padding-right: 4px;">
+		<div class="space-y-2.5 overflow-y-auto scrollbar-hidden h-full pr-1.5" style="padding-right: 4px;">
 			<div class="">
 				<!-- General Section -->
 				<div class="mb-3" style="background: linear-gradient(to bottom, rgba(0,0,0,0.02), transparent); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.05);">
@@ -285,22 +286,24 @@
 					<div class="space-y-3" style="background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.06);">
 						<!-- Content Extraction Engine -->
 						<div class="flex flex-col w-full justify-between" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
-							<div class="flex w-full justify-between items-center">
+							<div class="flex w-full justify-between items-center gap-2">
 								<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">
 									{$i18n.t('Content Extraction Engine')}
 								</div>
-								<div class="">
-									<select
-										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-										bind:value={RAGConfig.CONTENT_EXTRACTION_ENGINE}
-										style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; padding: 6px 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;"
-									>
-										<option value="">{$i18n.t('Default')}</option>
-										<option value="tika">{$i18n.t('Tika')}</option>
-										<option value="docling">{$i18n.t('Docling')}</option>
-										<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
-										<option value="mistral_ocr">{$i18n.t('Mistral OCR')}</option>
-									</select>
+								<div class="w-full sm:w-auto">
+									<SelectDropdown
+										value={RAGConfig.CONTENT_EXTRACTION_ENGINE}
+										options={[
+											{ value: '', label: $i18n.t('Default') },
+											{ value: 'tika', label: $i18n.t('Tika') },
+											{ value: 'docling', label: $i18n.t('Docling') },
+											{ value: 'document_intelligence', label: $i18n.t('Document Intelligence') },
+											{ value: 'mistral_ocr', label: $i18n.t('Mistral OCR') }
+										]}
+										on:change={(e) => {
+											RAGConfig.CONTENT_EXTRACTION_ENGINE = e.detail.value;
+										}}
+									/>
 								</div>
 							</div>
 
@@ -382,17 +385,19 @@
 
 						{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
 							<!-- Text Splitter -->
-							<div class="flex w-full justify-between items-center" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
+							<div class="flex w-full justify-between items-center gap-2" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
 								<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">{$i18n.t('Text Splitter')}</div>
-								<div class="flex items-center relative">
-									<select
-										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-										bind:value={RAGConfig.TEXT_SPLITTER}
-										style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; padding: 6px 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;"
-									>
-										<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
-										<option value="token">{$i18n.t('Token')} ({$i18n.t('Tiktoken')})</option>
-									</select>
+								<div class="w-full sm:w-auto">
+									<SelectDropdown
+										value={RAGConfig.TEXT_SPLITTER}
+										options={[
+											{ value: '', label: `${$i18n.t('Default')} (${$i18n.t('Character')})` },
+											{ value: 'token', label: `${$i18n.t('Token')} (${$i18n.t('Tiktoken')})` }
+										]}
+										on:change={(e) => {
+											RAGConfig.TEXT_SPLITTER = e.detail.value;
+										}}
+									/>
 								</div>
 							</div>
 
@@ -452,30 +457,29 @@
 						<div class="space-y-3" style="background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.06);">
 							<!-- Embedding Model Engine -->
 							<div class="flex flex-col w-full justify-between" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
-								<div class="flex w-full justify-between items-center">
+								<div class="flex w-full justify-between items-center gap-2">
 									<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">
 										{$i18n.t('Embedding Model Engine')}
 									</div>
-									<div class="flex items-center relative">
-										<select
-											class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
-											bind:value={embeddingEngine}
-											placeholder="Select an embedding model engine"
+									<div class="w-full sm:w-auto">
+										<SelectDropdown
+											value={embeddingEngine}
+											options={[
+												{ value: '', label: $i18n.t('Default (SentenceTransformers)') },
+												{ value: 'ollama', label: $i18n.t('Ollama') },
+												{ value: 'openai', label: $i18n.t('OpenAI') }
+											]}
 											on:change={(e) => {
-												if (e.target.value === 'ollama') {
+												embeddingEngine = e.detail.value;
+												if (embeddingEngine === 'ollama') {
 													embeddingModel = '';
-												} else if (e.target.value === 'openai') {
+												} else if (embeddingEngine === 'openai') {
 													embeddingModel = 'text-embedding-3-small';
-												} else if (e.target.value === '') {
+												} else {
 													embeddingModel = 'sentence-transformers/all-MiniLM-L6-v2';
 												}
 											}}
-											style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; padding: 6px 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;"
-										>
-											<option value="">{$i18n.t('Default (SentenceTransformers)')}</option>
-											<option value="ollama">{$i18n.t('Ollama')}</option>
-											<option value="openai">{$i18n.t('OpenAI')}</option>
-										</select>
+										/>
 									</div>
 								</div>
 

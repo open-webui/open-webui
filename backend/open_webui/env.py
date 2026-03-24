@@ -109,7 +109,7 @@ log.setLevel(SRC_LOG_LEVELS["CONFIG"])
 # if WEBUI_NAME != "Open WebUI":
 #     WEBUI_NAME += " (Open WebUI)"
 
-WEBUI_NAME = "Cook AI"
+WEBUI_NAME = "COPAI"
 WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
 
 TRUSTED_SIGNATURE_KEY = os.environ.get("TRUSTED_SIGNATURE_KEY", "")

@@ -52,7 +52,6 @@
 	import Spinner from '../common/Spinner.svelte';
 	import Loader from '../common/Loader.svelte';
 	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
-	import SearchInput from './Sidebar/SearchInput.svelte';
 	import Folder from '../common/Folder.svelte';
 	import Plus from '../icons/Plus.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -74,10 +73,84 @@
 	let selectedChatId: string | null = null;
 	let showDropdown = false;
 	let showPinnedChat = true;
+	let lastObservedChatId = '';
 
 	let showCreateChannel = false;
 	let showCreateProject = false;
-	
+	let sidebarCollapsed = false; // State for collapsed sidebar on desktop
+	let showSearchInput = false; // State for collapsed search input
+	let overlaySearch = '';
+
+	const collapseAllProjectFolders = () => {
+		if (!folders || Object.keys(folders).length === 0) {
+			return;
+		}
+
+		folders = Object.fromEntries(
+			Object.entries(folders).map(([id, folder]) => [id, { ...folder, is_expanded: false }])
+		);
+	};
+
+	const toggleSidebar = () => {
+		const nextState = !$showSidebar;
+
+		if (nextState && !$mobile) {
+			collapseAllProjectFolders();
+		}
+
+		showSidebar.set(nextState);
+	};
+
+	const handleNewChatClick = async (closeSearch = false) => {
+		selectedChatId = null;
+		chatId.set('');
+		await goto('/');
+
+		if ($mobile) {
+			showSidebar.set(false);
+		}
+
+		if (closeSearch) {
+			showSearchInput = false;
+		}
+	};
+
+	const handleSearchClick = async () => {
+		overlaySearch = '';
+		showSearchInput = true;
+	};
+
+	const handleOverlayChatClick = async (id: string) => {
+		selectedChatId = id;
+		chatId.set(id);
+		showSearchInput = false;
+		await goto(`/c/${id}`);
+
+		if ($mobile) {
+			showSidebar.set(false);
+		}
+	};
+
+	const getTitleWithoutEmoji = (title: string) => {
+		if (!title) {
+			return '';
+		}
+
+		return title
+			.replace(/[\p{Extended_Pictographic}\uFE0F\u200D\u{1F3FB}-\u{1F3FF}]/gu, '')
+			.replace(/\s{2,}/g, ' ')
+			.trim();
+	};
+
+	const handleFolderSelect = async (folderId: string) => {
+		selectedChatId = null;
+		chatId.set('');
+		await goto(`/?folder_id=${encodeURIComponent(folderId)}`);
+
+		if ($mobile) {
+			showSidebar.set(false);
+		}
+	};
 
 	// Pagination variables
 	let chatListLoading = false;
@@ -401,6 +474,19 @@
 		time_range: c?.time_range,
 		showTimeRange: idx === 0 || (idx > 0 && c?.time_range !== chatList[idx - 1]?.time_range)
 	}));
+	$: overlayFilteredChatList = renderChatList.filter(
+		(c: any) => !overlaySearch || c.title.toLowerCase().includes(overlaySearch.toLowerCase())
+	);
+
+	// Keep sidebar list in sync when a new chat is created from the chat view.
+	$: if (!$temporaryChatEnabled && !search && $chatId && $chatId !== lastObservedChatId) {
+		lastObservedChatId = $chatId;
+		void initChatList();
+	}
+
+	$: if (!$chatId && lastObservedChatId !== '') {
+		lastObservedChatId = '';
+	}
 
 	const onFocus = () => {};
 
@@ -503,36 +589,231 @@
 
 {#if $showSidebar}
 	<div
-		class="sidebar-overlay {$isApp ? 'ml-[4.5rem] md:ml-0' : ''} fixed md:hidden z-40 top-0 right-0 left-0 bottom-0 bg-black/60 backdrop-blur-md w-full min-h-screen h-screen flex justify-center overflow-hidden overscroll-contain"
+		class="sidebar-overlay {$isApp ? 'ml-[4.5rem] md:ml-0' : ''} fixed md:hidden z-40 top-0 right-0 left-0 bottom-0 bg-black/10  w-full min-h-screen h-screen flex justify-center overflow-hidden overscroll-contain"
 		on:mousedown={() => {
 			showSidebar.set(!$showSidebar);
+
 		}}
 	/>
+{/if}
+
+{#if showSearchInput}
+	<div class="fixed inset-0 z-[10000] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+		<button
+			type="button"
+			class="absolute inset-0 bg-black/12 backdrop-blur-[1.5px]"
+			on:click={() => {
+				showSearchInput = false;
+			}}
+			aria-label="Close search"
+		/>
+
+		<div
+			class="relative bg-white/95 dark:bg-gray-900/92 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-3xl max-h-[78vh] flex flex-col border border-gray-200/70 dark:border-gray-800/70"
+			role="document"
+		>
+			<div class="px-6 py-5 border-b border-gray-200/70 dark:border-gray-800/70 rounded-t-2xl">
+				<div class="flex items-center gap-3">
+					<input
+						type="text"
+						bind:value={overlaySearch}
+						placeholder={$i18n.t('Search chats...')}
+						class="flex-1 bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none text-lg font-medium"
+					/>
+					<button
+						class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
+						on:click={() => {
+							showSearchInput = false;
+						}}
+						aria-label="Close"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5 text-gray-500 dark:text-gray-400">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+						</svg>
+					</button>
+				</div>
+			</div>
+
+			<div class="flex-1 overflow-y-auto px-3 py-3">
+				<a
+					href="/"
+					class="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-100/80 dark:bg-gray-800/80 hover:bg-gray-200/70 dark:hover:bg-gray-700/80 transition-all duration-150"
+					on:click={async () => {
+						await handleNewChatClick(true);
+					}}
+				>
+					<PencilSquare className="size-5 text-gray-700 dark:text-gray-300" strokeWidth="2.5" />
+					<span class="text-base font-semibold text-gray-900 dark:text-gray-100">{$i18n.t('New chat')}</span>
+				</a>
+
+				<div class="mt-4">
+					{#if overlayFilteredChatList.length > 0}
+						{#each overlayFilteredChatList as chat, idx (chat.id)}
+							{#if chat.showTimeRange}
+								<div class="px-3 pt-3 pb-2 text-sm font-semibold text-gray-500 dark:text-gray-400">
+									{chat.time_range}
+								</div>
+							{/if}
+
+							<button
+								type="button"
+								class="w-full text-left flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100/80 dark:hover:bg-gray-800/70 transition-all duration-150"
+								on:click={async () => {
+									await handleOverlayChatClick(chat.id);
+								}}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="w-5 h-5 text-gray-600 dark:text-gray-400"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+								<span class="text-lg font-medium text-gray-900 dark:text-gray-100 truncate">{getTitleWithoutEmoji(chat.title)}</span>
+							</button>
+						{/each}
+					{:else if overlaySearch}
+						<div class="py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+							{$i18n.t('No chats found')}
+						</div>
+					{/if}
+				</div>
+			</div>
+		</div>
+	</div>
 {/if}
 
 <div
 	bind:this={navElement}
 	id="sidebar"
 	class="sidebar-container h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
-		? 'md:relative w-[280px] max-w-[280px] shadow-[0_8px_30px_rgb(0,0,0,0.12)] md:shadow-none'
-		: '-translate-x-[280px] w-[0px]'} {$isApp
+		? 'md:relative md:w-[280px] md:max-w-[280px] shadow-[0_8px_30px_rgb(0,0,0,0.12)] md:shadow-none'
+		: 'md:relative md:w-[64px] md:max-w-[64px] md:shadow-none'} {$mobile && !$showSidebar ? '-translate-x-[280px] w-[0px]' : ''} {$isApp
 		? 'ml-[4.5rem] md:ml-0'
-		: 'transition-all duration-300 ease-out'} shrink-0 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-950/80 text-gray-900 dark:text-gray-100 text-sm fixed z-50 top-0 left-0 overflow-x-hidden border-r border-gray-200/80 dark:border-gray-800/80"
+		: ''} transition-[width,transform] duration-300 ease-out shrink-0 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm fixed z-50 top-0 left-0 overflow-x-hidden border-r border-gray-200/80 dark:border-gray-800/80"
 	data-state={$showSidebar}
 >
 
 	<div
-		class="py-3 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[280px] overflow-x-hidden z-50 {$showSidebar
-			? ''
-			: 'invisible'}"
+		class="py-3 my-auto flex flex-col justify-between h-screen max-h-[100dvh] {$showSidebar
+			? 'md:w-[280px] w-[280px]'
+			: 'md:w-[64px] w-[0px] md:visible invisible'} overflow-x-hidden z-50 {$mobile && !$showSidebar
+			? 'invisible'
+			: ''}"
 	>
-		<!-- Enhanced Header with subtle gradient -->
-		<div class="px-2.5 flex items-center gap-2">
+		<!-- Desktop Collapsed Icons View -->
+		{#if !$showSidebar && !$mobile}
+
+			<div class="flex w-full flex-col items-start gap-2 px-2.5">
+				<Tooltip content={$i18n.t('Toggle sidebar')}>
+					<button
+						class="sidebar-toggle p-2.5 flex rounded-xl hover:bg-white/80 dark:hover:bg-gray-800/80 transition-all duration-200 group border border-transparent hover:border-gray-200/50 dark:hover:border-gray-700/50 hover:shadow-sm"
+						on:click={toggleSidebar}
+						aria-label="Toggle sidebar"
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="2.5"
+							stroke="currentColor"
+							class="size-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors duration-200"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
+							/>
+						</svg>
+					</button>
+				</Tooltip>
+
+				<Tooltip content={$i18n.t('New Chat')}>
+					<a
+						class="p-2.5 flex rounded-xl hover:bg-white/90 dark:hover:bg-gray-800/90 transition-all duration-200 group border border-transparent hover:border-gray-200/60 dark:hover:border-gray-700/60 hover:shadow-sm"
+						href="/"
+						draggable="false"
+						on:click={async () => {
+							await handleNewChatClick();
+						}}
+					>
+						<div class="flex-shrink-0 p-1.5 bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-900/20 dark:to-orange-800/20 rounded-lg group-hover:from-orange-100 group-hover:to-orange-200/50 dark:group-hover:from-orange-900/30 dark:group-hover:to-orange-800/30 transition-all duration-200">
+							<PencilSquare className="size-4 text-orange-600 dark:text-orange-400" strokeWidth="2.5" />
+						</div>
+					</a>
+				</Tooltip>
+
+				{#if hasWorkspaceAccess}
+					<Tooltip content={$i18n.t('Workspace')}>
+						<a
+							href="/workspace"
+							class="p-2.5 flex rounded-xl hover:bg-white/90 dark:hover:bg-gray-800/90 transition-all duration-200 group border border-transparent hover:border-gray-200/60 dark:hover:border-gray-700/60 hover:shadow-sm"
+							aria-label="Workspace"
+						>
+							<div class="flex-shrink-0 p-1.5 bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-900/40 dark:to-gray-950/40 rounded-lg group-hover:from-gray-200 group-hover:to-gray-100 dark:group-hover:from-gray-800/50 dark:group-hover:to-gray-900/50 transition-all duration-200 border border-gray-200/30 dark:border-gray-800/30">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke-width="2.5"
+									stroke="currentColor"
+									class="size-4 text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors duration-200"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z"
+									/>
+								</svg>
+							</div>
+						</a>
+					</Tooltip>
+				{/if}
+
+				<Tooltip content={$i18n.t('Search')}>
+					<button
+						class="p-2.5 flex rounded-xl hover:bg-white/90 dark:hover:bg-gray-800/90 transition-all duration-200 group border border-transparent hover:border-gray-200/60 dark:hover:border-gray-700/60 hover:shadow-sm"
+						on:click={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							handleSearchClick();
+						}}
+						aria-label="Search"
+						type="button"
+					>
+						<div class="flex-shrink-0 p-1.5 bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-900/40 dark:to-gray-950/40 rounded-lg group-hover:from-gray-200 group-hover:to-gray-100 dark:group-hover:from-gray-800/50 dark:group-hover:to-gray-900/50 transition-all duration-200 border border-gray-200/30 dark:border-gray-800/30">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								class="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors duration-200"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						</div>
+					</button>
+				</Tooltip>
+			</div>
+
+			<!-- Collapsed User Menu at bottom -->
+			<div class="flex flex-col items-center">
+				<UserMenu />
+			</div>
+		{:else}
+			
+			<div class="px-2.5 flex items-center gap-2">
 			<button
-				class="sidebar-toggle p-2.5 flex rounded-xl hover:bg-white/80 dark:hover:bg-gray-800/80 transition-all duration-200 active:scale-95 group border border-transparent hover:border-gray-200/50 dark:hover:border-gray-700/50 hover:shadow-sm"
-				on:click={() => {
-					showSidebar.set(!$showSidebar);
-				}}
+				class="sidebar-toggle -mt-[5px] p-2.5 flex rounded-xl hover:bg-white/80 dark:hover:bg-gray-800/80 transition-all duration-200 group border border-transparent hover:border-gray-200/50 dark:hover:border-gray-700/50 hover:shadow-sm"
+				on:click={toggleSidebar}
 				aria-label="Toggle sidebar"
 			>
 				<svg
@@ -564,15 +845,7 @@
 				href="/"
 				draggable="false"
 				on:click={async () => {
-					selectedChatId = null;
-					await goto('/');
-					const newChatButton = document.getElementById('new-chat-button');
-					setTimeout(() => {
-						newChatButton?.click();
-						if ($mobile) {
-							showSidebar.set(false);
-						}
-					}, 0);
+					await handleNewChatClick();
 				}}
 			>
 				<div class="flex items-center gap-2.5 min-w-0">
@@ -648,12 +921,29 @@
 			{/if}
 
 			<div class="search-wrapper">
-				<SearchInput
-					bind:value={search}
-					on:input={searchDebounceHandler}
-					placeholder={$i18n.t('Search')}
-					showClearButton={true}
-				/>
+				<button
+					type="button"
+					class="flex w-full items-center gap-2.5 rounded-xl border border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-800 px-3 py-2.5 text-left hover:border-gray-300/80 dark:hover:border-gray-600/80 hover:shadow-sm transition-all duration-200"
+					on:click={(e) => {
+						e.preventDefault();
+						handleSearchClick();
+					}}
+					aria-label="Open search"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 20 20"
+						fill="currentColor"
+						class="w-4 h-4 text-gray-400 dark:text-gray-500"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+					<span class="text-sm text-gray-400 dark:text-gray-500">{$i18n.t('Search chats...')}</span>
+				</button>
 			</div>
 		</div>
 
@@ -743,6 +1033,9 @@
 							}}
 							on:change={async () => {
 								initChatList();
+							}}
+							on:select={(e) => {
+								handleFolderSelect(e.detail.folderId);
 							}}
 						/>
 					{/if}
@@ -986,6 +1279,7 @@
 				{/if}
 			</div>
 		</div>
+		{/if}
 	</div>
 </div>
 

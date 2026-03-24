@@ -68,10 +68,22 @@ class SessionUserResponse(Token, UserResponse):
     permissions: Optional[dict] = None
 
 
+def ensure_active_user_role(request: Request, user):
+    if user and user.role == "pending":
+        default_role = request.app.state.config.DEFAULT_USER_ROLE
+        role = default_role if default_role in ["user", "admin"] else "user"
+        updated_user = Users.update_user_role_by_id(user.id, role)
+        if updated_user:
+            return updated_user
+    return user
+
+
 @router.get("/", response_model=SessionUserResponse)
 async def get_session_user(
     request: Request, response: Response, user=Depends(get_current_user)
 ):
+    user = ensure_active_user_role(request, user)
+
     expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
     expires_at = None
     if expires_delta:
@@ -372,6 +384,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
         user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
 
     if user:
+        user = ensure_active_user_role(request, user)
 
         expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
         expires_at = None
@@ -454,10 +467,6 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             "admin" if user_count == 0 else request.app.state.config.DEFAULT_USER_ROLE
         )
 
-        if user_count == 0:
-            # Disable signup after the first user is created
-            request.app.state.config.ENABLE_SIGNUP = False
-
         # The password passed to bcrypt must be 72 bytes or fewer. If it is longer, it will be truncated before hashing.
         if len(form_data.password.encode("utf-8")) > 72:
             raise HTTPException(
@@ -538,10 +547,11 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 @router.get("/signout")
 async def signout(request: Request, response: Response):
     response.delete_cookie("token")
+    response.delete_cookie("oauth_id_token")
 
     if ENABLE_OAUTH_SIGNUP.value:
         oauth_id_token = request.cookies.get("oauth_id_token")
-        if oauth_id_token:
+        if oauth_id_token and OPENID_PROVIDER_URL.value:
             try:
                 async with ClientSession() as session:
                     async with session.get(OPENID_PROVIDER_URL.value) as resp:
@@ -549,22 +559,13 @@ async def signout(request: Request, response: Response):
                             openid_data = await resp.json()
                             logout_url = openid_data.get("end_session_endpoint")
                             if logout_url:
-                                response.delete_cookie("oauth_id_token")
                                 return RedirectResponse(
                                     headers=response.headers,
                                     url=f"{logout_url}?id_token_hint={oauth_id_token}",
                                 )
-                        else:
-                            raise HTTPException(
-                                status_code=resp.status,
-                                detail="Failed to fetch OpenID configuration",
-                            )
             except Exception as e:
-                log.error(f"OpenID signout error: {str(e)}")
-                raise HTTPException(
-                    status_code=500,
-                    detail="Failed to sign out from the OpenID provider.",
-                )
+                # Local signout should still succeed even if external OIDC logout fails.
+                log.warning(f"OpenID signout skipped: {str(e)}")
 
     return {"status": True}
 

@@ -21,6 +21,10 @@
 
 	export let onSubmit: Function;
 	export let onBack: null | Function = null;
+	export let onCancel: Function = () => {
+		if (onBack) onBack();
+		else window.history.back();
+	};
 
 	export let model = null;
 	export let edit = false;
@@ -262,30 +266,31 @@
 </script>
 
 {#if loaded}
-	{#if onBack}
-		<button
-			class="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-300"
-			on:click={() => {
-				onBack();
-			}}
-		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 20 20"
-				fill="currentColor"
-				class="size-4"
+	<div class="w-full min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-3 sm:p-6">
+		{#if onBack}
+			<button
+				class="flex items-center gap-2 mb-4 sm:mb-6 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-300"
+				on:click={() => {
+					onBack();
+				}}
 			>
-				<path
-					fill-rule="evenodd"
-					d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
-					clip-rule="evenodd"
-				/>
-			</svg>
-			<span class="text-sm font-medium">{$i18n.t('Back')}</span>
-		</button>
-	{/if}
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="size-4"
+				>
+					<path
+						fill-rule="evenodd"
+						d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+				<span class="text-sm font-medium">{$i18n.t('Back')}</span>
+			</button>
+		{/if}
 
-	<div class="w-full max-h-full flex justify-center">
+		<div class="w-full flex justify-center">
 		<input
 			bind:this={filesInputElement}
 			bind:files={inputFiles}
@@ -354,18 +359,18 @@
 			}}
 		/>
 
-		{#if !edit || (edit && model)}
-			<form
-				class="flex flex-col lg:flex-row w-full gap-6"
-				on:submit|preventDefault={() => {
-					submitHandler();
-				}}
-			>
-				<!-- Profile Image Section -->
-				<div class="flex-shrink-0">
-					<div class="sticky top-4">
+			{#if !edit || (edit && model)}
+				<form
+					class="flex flex-col lg:flex-row w-full gap-6 sm:gap-8"
+					on:submit|preventDefault={() => {
+						submitHandler();
+					}}
+				>
+					<!-- Profile Image Section -->
+					<div class="flex-shrink-0">
+						<div class="sticky top-8 sm:top-12">
 						<button
-							class="relative group rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow bg-white dark:bg-gray-800"
+							class="relative group rounded-lg sm:rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-shadow bg-white dark:bg-gray-800"
 							type="button"
 							on:click={() => {
 								filesInputElement.click();
@@ -374,7 +379,7 @@
 							<img
 								src={info.meta.profile_image_url || '/static/favicon.png'}
 								alt="model profile"
-								class="w-64 h-64 object-cover"
+								class="w-48 h-48 sm:w-64 sm:h-64 object-cover"
 							/>
 
 							<div
@@ -393,13 +398,13 @@
 											clip-rule="evenodd"
 										/>
 									</svg>
-									<p class="text-sm font-medium">{$i18n.t('Change Image')}</p>
+									<p class="text-xs sm:text-sm font-medium">{$i18n.t('Change Image')}</p>
 								</div>
 							</div>
 						</button>
 
 						<button
-							class="w-full mt-3 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+							class="w-full mt-3 sm:mt-4 px-3 py-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
 							on:click={() => {
 								info.meta.profile_image_url = '/static/favicon.png';
 							}}
@@ -411,29 +416,27 @@
 				</div>
 
 				<!-- Form Content -->
-				<div class="flex-1 space-y-6">
-					<!-- Basic Info Section -->
-					<div class="bg-white dark:bg-gray-850 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+					<div class="flex-1 space-y-4 sm:space-y-6 pb-10">
+						<!-- Basic Info Section -->
+						<div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
 						<div class="space-y-4">
 							<div>
-								<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-									{$i18n.t('Model Name')}
-								</label>
-								<input
-									class="w-full px-4 py-3 text-lg font-semibold bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-									placeholder={$i18n.t('Enter model name')}
+							<label class="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 sm:mb-2 uppercase tracking-wide">
+								{$i18n.t('Model Name')}
+							</label>
+							<input
+								class="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base font-medium bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-lg sm:rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
 									bind:value={name}
 									required
 								/>
 							</div>
 
 							<div>
-								<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-									{$i18n.t('Model ID')}
-								</label>
-								<input
-									class="w-full px-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-									placeholder={$i18n.t('model-id')}
+							<label class="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 sm:mb-2 uppercase tracking-wide">
+								{$i18n.t('Model ID')}
+							</label>
+							<input
+								class="w-full px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-mono bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-lg sm:rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
 									bind:value={id}
 									disabled={edit}
 									required
@@ -442,11 +445,11 @@
 
 							{#if preset}
 								<div>
-									<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-										{$i18n.t('Base Model (From)')}
-									</label>
-									<select
-										class="w-full px-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
+								<label class="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 sm:mb-2 uppercase tracking-wide">
+									{$i18n.t('Base Model (From)')}
+								</label>
+								<select
+									class="w-full px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-lg sm:rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all cursor-pointer"
 										bind:value={info.base_model_id}
 										on:change={(e) => {
 											addUsage(e.target.value);
@@ -513,11 +516,11 @@
 					</div>
 
 					<!-- Access Control Section -->
-					<div class="bg-white dark:bg-gray-850 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-						<h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">
-							{$i18n.t('Access Control')}
-						</h3>
-						<div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+						<div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+							<h3 class="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4 uppercase tracking-wide">
+								{$i18n.t('Access Control')}
+							</h3>
+							<div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 sm:p-4">
 							<AccessControl
 								bind:accessControl
 								accessRoles={['read', 'write']}
@@ -527,9 +530,8 @@
 					</div>
 
 					<!-- Model Parameters Section -->
-					<div class="bg-white dark:bg-gray-850 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-						<h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">
-							{$i18n.t('Model Params')}
+						<div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+							<h3 class="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4 uppercase tracking-wide">
 						</h3>
 
 						<div class="space-y-4">
@@ -579,9 +581,9 @@
 					</div>
 
 					<!-- Prompt Suggestions Section -->
-					<div class="bg-white dark:bg-gray-850 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-						<div class="flex items-center justify-between mb-4">
-							<h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+						<div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+							<div class="flex items-center justify-between mb-3 sm:mb-4">
+								<h3 class="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wide">
 								{$i18n.t('Prompt suggestions')}
 							</h3>
 							<div class="flex items-center gap-2">
@@ -639,15 +641,15 @@
 							<div class="space-y-2">
 								{#if info.meta.suggestion_prompts.length > 0}
 									{#each info.meta.suggestion_prompts as prompt, promptIdx}
-										<div class="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 rounded-lg p-2">
-											<input
-												class="flex-1 px-3 py-2 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-												placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
-												bind:value={prompt.content}
-											/>
+									<div class="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 rounded-lg p-2.5 sm:p-3">
+										<input
+											class="flex-1 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
+											placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
+											bind:value={prompt.content}
+										/>
 
-											<button
-												class="p-2 text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+										<button
+											class="p-1.5 text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
 												type="button"
 												on:click={() => {
 													info.meta.suggestion_prompts.splice(promptIdx, 1);
@@ -677,59 +679,58 @@
 					</div>
 
 					<!-- Knowledge Section -->
-					<div class="bg-white dark:bg-gray-850 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-						<Knowledge bind:selectedKnowledge={knowledge} collections={$knowledgeCollections} />
-					</div>
-
-					<!-- Tools Section -->
-					<div class="bg-white dark:bg-gray-850 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
-					</div>
-
-					<!-- Filters Section -->
-					<div class="bg-white dark:bg-gray-850 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-						<FiltersSelector
-							bind:selectedFilterIds={filterIds}
-							filters={$functions.filter((func) => func.type === 'filter')}
-						/>
-					</div>
-
-					<!-- Actions Section -->
-					<div class="bg-white dark:bg-gray-850 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-						<ActionsSelector
-							bind:selectedActionIds={actionIds}
-							actions={$functions.filter((func) => func.type === 'action')}
-						/>
-					</div>
-
-					<!-- Capabilities Section -->
-					<div class="bg-white dark:bg-gray-850 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-						<Capabilities bind:capabilities />
-					</div>
-
-					<!-- JSON Preview Section -->
-					<div class="bg-white dark:bg-gray-850 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-						<div class="flex items-center justify-between mb-4">
-							<h3 class="text-sm font-semibold text-gray-900 dark:text-white">
-								{$i18n.t('JSON Preview')}
-							</h3>
-							<button
-								class="px-3 py-1 text-xs font-medium rounded-md {showPreview
-									? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
-									: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'} transition-colors"
-								type="button"
-								on:click={() => {
-									showPreview = !showPreview;
-								}}
-							>
-								{showPreview ? $i18n.t('Hide') : $i18n.t('Show')}
-							</button>
+						<div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+							<Knowledge bind:selectedKnowledge={knowledge} collections={$knowledgeCollections} />
 						</div>
 
-						{#if showPreview}
-							<textarea
-								class="w-full px-4 py-3 text-xs font-mono bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg outline-none resize-none"
-								rows="12"
+						<!-- Tools Section -->
+						<div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+							<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
+						</div>
+
+						<!-- Filters Section -->
+						<div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+							<FiltersSelector
+								bind:selectedFilterIds={filterIds}
+								filters={$functions.filter((func) => func.type === 'filter')}
+							/>
+						</div>
+
+						<!-- Actions Section -->
+						<div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+							<ActionsSelector
+								bind:selectedActionIds={actionIds}
+								actions={$functions.filter((func) => func.type === 'action')}
+							/>
+						</div>
+
+						<!-- Capabilities Section -->
+						<div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+							<Capabilities bind:capabilities />
+						</div>
+
+						<!-- JSON Preview Section -->
+						<div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+							<div class="flex items-center justify-between mb-3 sm:mb-4">
+								<h3 class="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wide">
+									{$i18n.t('JSON Preview')}
+								</h3>
+								<button
+									class="px-2.5 sm:px-3 py-1 text-xs font-medium rounded-md {showPreview
+										? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+										: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'} transition-colors"
+									type="button"
+									on:click={() => {
+										showPreview = !showPreview;
+									}}
+								>
+									{showPreview ? $i18n.t('Hide') : $i18n.t('Show')}
+								</button>
+							</div>
+
+							{#if showPreview}
+								<textarea
+									class="w-full px-3 sm:px-4 py-2 sm:py-3 text-xs font-mono bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-lg outline-none resize-none"
 								value={JSON.stringify(info, null, 2)}
 								disabled
 								readonly
@@ -738,40 +739,57 @@
 					</div>
 
 					<!-- Submit Button -->
-					<div class="sticky bottom-0 bg-white dark:bg-gray-900 py-4 border-t border-gray-200 dark:border-gray-700">
-						<button
-							class="w-full px-6 py-3 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white transition-colors shadow-sm hover:shadow-md flex items-center justify-center gap-2"
-							type="submit"
-							disabled={loading}
-						>
-							<span>
-								{#if edit}
-									{$i18n.t('Save & Update')}
-								{:else}
-									{$i18n.t('Save & Create')}
-								{/if}
-							</span>
+					<div class="sticky bottom-0 bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 py-3 sm:py-4 px-3 sm:px-6 border-t border-gray-200 dark:border-gray-700">
+						<div class="flex items-center justify-end gap-2 sm:gap-3">
+							<button
+								type="button"
+								class="px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 border border-gray-300 dark:border-gray-600 rounded-lg transition-all duration-200 focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700"
+								on:click={() => {
+									onCancel();
+								}}
+							>
+								{$i18n.t('Cancel')}
+							</button>
+							<button
+								class="group relative px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700 rounded-lg sm:rounded-xl transition-all duration-200 focus:ring-4 focus:ring-blue-500/30 shadow-lg shadow-blue-500/25 flex items-center gap-1.5 sm:gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-blue-600 disabled:hover:to-blue-600"
+								type="submit"
+								disabled={loading}
+							>
+								<span class="font-semibold">
+									{#if edit}
+										{$i18n.t('Save & Update')}
+									{:else}
+										{$i18n.t('Save & Create')}
+									{/if}
+								</span>
 
-							{#if loading}
-								<svg
-									class="size-4 animate-spin"
-									viewBox="0 0 24 24"
-									fill="currentColor"
-									xmlns="http://www.w3.org/2000/svg"
-								>
-									<path
-										d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-										opacity=".25"
-									/>
-									<path
-										d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-									/>
-								</svg>
-							{/if}
-						</button>
+								{#if loading}
+									<svg
+										class="size-3 sm:size-4 animate-spin"
+										viewBox="0 0 24 24"
+										fill="currentColor"
+										xmlns="http://www.w3.org/2000/svg"
+									>
+										<path
+											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+											opacity=".25"
+										/>
+										<path
+											d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+											class="spinner_ajPY"
+										/>
+									</svg>
+								{:else}
+									<svg class="size-3 sm:size-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+									</svg>
+								{/if}
+							</button>
+						</div>
 					</div>
 				</div>
-			</form>
-		{/if}
+				</form>
+			{/if}
+		</div>
 	</div>
 {/if}

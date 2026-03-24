@@ -40,7 +40,19 @@ IF "%WEBUI_SECRET_KEY%%WEBUI_JWT_SECRET_KEY%" == " " (
 )
 
 :: Execute uvicorn
+SET ENABLE_SIGNUP=True
+SET DEFAULT_USER_ROLE=user
+SET ENABLE_OAUTH_SIGNUP=True
+IF "%GOOGLE_OAUTH_SCOPE%"=="" SET "GOOGLE_OAUTH_SCOPE=openid email profile"
+IF "%GOOGLE_REDIRECT_URI%"=="" SET "GOOGLE_REDIRECT_URI=http://localhost:%PORT%/oauth/google/callback"
+
 SET "WEBUI_SECRET_KEY=%WEBUI_SECRET_KEY%"
 IF "%UVICORN_WORKERS%"=="" SET UVICORN_WORKERS=1
+
+FOR /F "tokens=5" %%P IN ('netstat -ano ^| findstr /R /C:":%PORT% .*LISTENING"') DO (
+    echo Port %PORT% is already in use by PID %%P. Stopping it before restart...
+    taskkill /PID %%P /F >nul 2>&1
+)
+
 uvicorn open_webui.main:app --host "%HOST%" --port "%PORT%" --forwarded-allow-ips '*' --workers %UVICORN_WORKERS% --ws auto
 :: For ssl user uvicorn open_webui.main:app --host "%HOST%" --port "%PORT%" --forwarded-allow-ips '*' --ssl-keyfile "key.pem" --ssl-certfile "cert.pem" --ws auto

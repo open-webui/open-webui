@@ -139,9 +139,9 @@
 </script>
 
 <Modal size="sm" bind:show>
-	<div>
-		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
-			<div class=" text-lg font-medium self-center font-primary">
+	<div class="max-h-[85vh] overflow-hidden rounded-xl bg-white dark:bg-gray-950">
+		<div class="flex justify-between items-center dark:text-gray-100 px-4 sm:px-5 pt-4 pb-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-900/40">
+			<div class="text-lg font-semibold self-center font-primary text-gray-900 dark:text-gray-100">
 				{#if edit}
 					{$i18n.t('Edit Connection')}
 				{:else}
@@ -149,7 +149,7 @@
 				{/if}
 			</div>
 			<button
-				class="self-center"
+				class="self-center p-1.5 rounded-lg hover:bg-gray-200/70 dark:hover:bg-gray-800 transition-colors"
 				on:click={() => {
 					show = false;
 				}}
@@ -167,7 +167,7 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full px-3 sm:px-4 pb-4 md:space-x-4 dark:text-gray-200 overflow-y-auto max-h-[calc(85vh-66px)]">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full"
@@ -176,26 +176,14 @@
 						submitHandler();
 					}}
 				>
-					<div class="px-1">
-						<div class="flex gap-2">
-							<div class="flex flex-col w-full">
-								<div class="flex justify-between mb-0.5">
-									<div class=" text-xs text-gray-500">{$i18n.t('URL')}</div>
-								</div>
-
-								<div class="flex flex-1 items-center">
-									<input
-										class="w-full flex-1 text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
-										type="text"
-										bind:value={url}
-										placeholder={$i18n.t('API Base URL')}
-										autocomplete="off"
-										required
-									/>
-
+					<div class="px-1 space-y-3">
+						<div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3 sm:p-4 space-y-2.5">
+							<div class="flex justify-between items-center">
+								<div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{$i18n.t('URL')}</div>
+								<div class="flex items-center gap-1.5">
 									<Tooltip
 										content={$i18n.t('Verify Connection')}
-										className="shrink-0 flex items-center mr-1"
+										className="shrink-0 flex items-center"
 									>
 										<button
 											class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
@@ -223,11 +211,24 @@
 										<Switch bind:state={enable} />
 									</Tooltip>
 								</div>
+							</div>
 
-								<div class="flex-1 flex items-center">
-									<div class="text-sm">/</div>
+							<div class="flex flex-1 items-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-900/40 px-2.5 py-2">
 									<input
-										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+										class="w-full flex-1 text-sm bg-transparent placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-hidden"
+										type="text"
+										bind:value={url}
+										placeholder={$i18n.t('API Base URL')}
+										autocomplete="off"
+										required
+									/>
+
+								</div>
+
+								<div class="flex-1 flex items-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-900/40 px-2.5 py-2">
+									<div class="text-sm text-gray-500">/</div>
+									<input
+										class="w-full text-sm bg-transparent placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-hidden"
 										type="text"
 										bind:value={path}
 										placeholder={$i18n.t('openapi.json Path')}
@@ -236,22 +237,21 @@
 									/>
 								</div>
 							</div>
-						</div>
 
-						<div class="text-xs text-gray-500 mt-1">
+						<div class="text-xs text-gray-500 dark:text-gray-400">
 							{$i18n.t(`WebUI will make requests to "{{url}}"`, {
 								url: `${url}/${path}`
 							})}
 						</div>
 
-						<div class="flex gap-2 mt-2">
+						<div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3 sm:p-4">
 							<div class="flex flex-col w-full">
-								<div class="  text-xs text-gray-500">{$i18n.t('Auth')}</div>
+								<div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">{$i18n.t('Auth')}</div>
 
-								<div class="flex gap-2">
+								<div class="flex gap-2 items-center">
 									<div class="flex-shrink-0 self-start">
 										<select
-											class="w-full text-sm bg-transparent dark:bg-gray-900 placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden pr-5"
+											class="min-w-[108px] text-sm bg-gray-50 dark:bg-gray-850 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 outline-hidden"
 											bind:value={auth_type}
 										>
 											<option value="bearer">Bearer</option>
@@ -262,7 +262,7 @@
 									<div class="flex flex-1 items-center">
 										{#if auth_type === 'bearer'}
 											<SensitiveInput
-												className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+												inputClassName="w-full text-sm"
 												bind:value={key}
 												placeholder={$i18n.t('API Key')}
 												required={false}
@@ -280,18 +280,18 @@
 						{#if !direct}
 							<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
-							<div class="my-2 -mx-2">
-								<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+							<div class="my-2">
+								<div class="px-3 py-2.5 bg-gray-50 dark:bg-gray-950 rounded-xl border border-gray-200 dark:border-gray-800">
 									<AccessControl bind:accessControl />
 								</div>
 							</div>
 						{/if}
 					</div>
 
-					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
+					<div class="flex justify-end pt-2 text-sm font-medium gap-2 border-t border-gray-200 dark:border-gray-800 mt-2">
 						{#if edit}
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-900 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+								class="px-3.5 py-2 text-sm font-medium dark:bg-black dark:hover:bg-gray-900 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-lg flex flex-row space-x-1 items-center"
 								type="button"
 								on:click={() => {
 									onDelete();
@@ -303,7 +303,7 @@
 						{/if}
 
 						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
+							class="px-4 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg flex flex-row space-x-1 items-center {loading
 								? ' cursor-not-allowed'
 								: ''}"
 							type="submit"

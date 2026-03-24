@@ -226,7 +226,9 @@
 	.left-panel {
 		position: relative;
 		overflow: hidden;
-		background: linear-gradient(145deg, #f97316 0%, #fb923c 30%, #ea580c 60%, #c2410c 100%);
+		background: linear-gradient(145deg, #f97316 0%, #fb923c 32%, #ea580c 68%, #c2410c 100%);
+		border-radius: 12px;
+		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 	}
 
 	/* Blurred blob shapes */
@@ -322,11 +324,10 @@
 
 	/* Logo badge */
 	.logo-badge {
-		background: rgba(255,255,255,0.2);
-		backdrop-filter: blur(12px);
-		border: 1px solid rgba(255,255,255,0.35);
-		border-radius: 18px;
-		padding: 10px 14px;
+		background: rgba(255, 255, 255, 0.22);
+		border: 1px solid rgba(255, 255, 255, 0.72);
+		border-radius: 8px;
+		padding: 8px 12px;
 		display: flex;
 		align-items: center;
 		gap: 10px;
@@ -334,11 +335,11 @@
 
 	/* RIGHT PANEL */
 	.right-panel {
-		background: #ffffff;
+		background: transparent;
 	}
 
 	.dark .right-panel {
-		background: #111827;
+		background: transparent;
 	}
 
 	/* Input */
@@ -346,8 +347,8 @@
 		width: 100%;
 		padding: 12px 44px;
 		border-radius: 999px;
-		border: 1.5px solid #e5e7eb;
-		background: #f9fafb;
+		border: 1px solid #d9dde3;
+		background: #f3f4f6;
 		font-size: 14px;
 		color: #111827;
 		transition: all 0.25s ease;
@@ -362,9 +363,9 @@
 	}
 
 	.auth-input:focus {
-		border-color: #f97316;
+		border-color: #fb923c;
 		background: #fff;
-		box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.12);
+		box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.18);
 	}
 
 	.dark .auth-input:focus {
@@ -421,7 +422,7 @@
 		width: 100%;
 		padding: 14px;
 		border-radius: 999px;
-		background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+		background: linear-gradient(135deg, #ff7a17 0%, #fb5f00 100%);
 		color: white;
 		font-weight: 800;
 		font-size: 15px;
@@ -435,8 +436,8 @@
 	}
 
 	.btn-submit:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 12px 30px rgba(249, 115, 22, 0.45);
+		transform: translateY(-1px);
+		box-shadow: 0 10px 24px rgba(251, 95, 0, 0.34);
 	}
 
 	.btn-submit::after {
@@ -531,16 +532,16 @@
 	/* Auth card (right side) */
 	.auth-card-inner {
 		width: 100%;
-		max-width: 420px;
+		max-width: 430px;
 	}
 
 	/* Heading */
 	.auth-title {
-		font-size: 32px;
+		font-size: 50px;
 		font-weight: 900;
 		color: #111827;
 		margin-bottom: 6px;
-		line-height: 1.15;
+		line-height: 1.05;
 	}
 
 	.dark .auth-title {
@@ -593,6 +594,18 @@
 		border-radius: 16px;
 		padding: 14px 16px;
 	}
+
+	@media (max-width: 1023px) {
+		.auth-title {
+			font-size: 40px;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.auth-title {
+			font-size: 34px;
+		}
+	}
 </style>
 
 <OnBoarding
@@ -603,100 +616,63 @@
 	}}
 />
 
-<div class="w-full h-screen max-h-[100dvh] flex overflow-hidden">
+<div class="w-full min-h-screen bg-white dark:bg-white flex items-center justify-center overflow-hidden p-4 sm:p-8">
 	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region z-50" />
 
 	{#if loaded}
+		<div class="w-full max-w-[1180px] h-[calc(100dvh-2rem)] max-h-[760px] flex items-stretch gap-8 lg:gap-12">
 		<!-- ========== LEFT PANEL ========== -->
-		<div class="hidden lg:flex lg:w-1/2 left-panel flex-col justify-between p-12 text-white">
-			
-			<!-- Blurred blobs -->
+		<div class="hidden lg:flex lg:w-[48%] left-panel p-6 text-white">
 			<div class="blob blob-1"></div>
 			<div class="blob blob-2"></div>
 			<div class="blob blob-3"></div>
 			<div class="blob blob-4"></div>
 
-			<!-- Dots grid (top right) -->
 			<div class="dots-grid">
-				{#each Array(25) as _}
+				{#each Array(20) as _}
 					<div class="dot"></div>
 				{/each}
 			</div>
 
-			<!-- Dots grid (bottom left) -->
-			<div style="position:absolute; bottom:80px; left:40px; display:grid; grid-template-columns: repeat(5,8px); gap:6px; opacity:0.3;">
-				{#each Array(25) as _}
-					<div style="width:4px;height:4px;border-radius:50%;background:white;"></div>
-				{/each}
-			</div>
-
-			<!-- Decorative circles -->
-			<div class="deco-circle" style="width:50px;height:50px;top:35%;left:8%;animation-delay:0s;"></div>
-			<div class="deco-circle" style="width:28px;height:28px;bottom:25%;right:12%;animation-delay:1.5s;"></div>
-			<div class="deco-circle" style="width:18px;height:18px;top:65%;left:15%;animation-delay:0.8s;"></div>
-
-			<!-- Plus signs -->
-			<div class="deco-plus" style="top:10%;left:62%;animation-delay:0.3s;">+</div>
-			<div class="deco-plus" style="bottom:35%;left:5%;animation-delay:1s;">+</div>
-			<div class="deco-plus" style="top:50%;right:8%;animation-delay:2s;font-size:16px;">+</div>
-
-			<!-- Wavy SVG -->
-			<svg class="wavy-lines" viewBox="0 0 600 400" fill="none" xmlns="http://www.w3.org/2000/svg" style="height:220px;">
-				<path d="M-20 300 Q80 240 160 280 Q240 320 320 260 Q400 200 480 240 Q560 280 640 220" stroke="white" stroke-width="2.5" fill="none"/>
-				<path d="M-20 340 Q80 280 160 320 Q240 360 320 300 Q400 240 480 280 Q560 320 640 260" stroke="white" stroke-width="2" fill="none"/>
-				<path d="M-20 260 Q100 200 180 240 Q260 280 340 220 Q420 160 500 200 Q580 240 660 180" stroke="white" stroke-width="1.5" fill="none" opacity="0.6"/>
+			<svg class="wavy-lines" viewBox="0 0 600 400" fill="none" xmlns="http://www.w3.org/2000/svg" style="height:180px;">
+				<path d="M-20 300 Q80 240 160 280 Q240 320 320 260 Q400 200 480 240 Q560 280 640 220" stroke="white" stroke-width="2" fill="none"/>
+				<path d="M-20 340 Q80 280 160 320 Q240 360 320 300 Q400 240 480 280 Q560 320 640 260" stroke="white" stroke-width="1.5" fill="none" opacity="0.7"/>
 			</svg>
 
-			<!-- Content -->
-			<div class="relative z-10 animate-slide-left">
-				<!-- Logo -->
-				<div class="logo-badge mb-16">
+			<div class="w-full animate-slide-left flex flex-col relative z-10">
+				<div class="logo-badge mb-14">
 					<img
 						id="logo"
 						crossorigin="anonymous"
 						src="{WEBUI_BASE_URL}/static/splash.png"
-						class="w-8 h-8 rounded-lg"
+						class="w-9 h-9 rounded-lg"
 						alt="logo"
 					/>
-					<span class="text-xl font-extrabold tracking-wide">{$WEBUI_NAME}</span>
+					<span class="text-3xl font-extrabold tracking-wide">{$WEBUI_NAME}</span>
 				</div>
 
-				<!-- Welcome text -->
-				<div>
-					
-					<h1 class="font-black mb-4" style="font-size:52px; line-height:1.1; text-shadow: 0 2px 20px rgba(0,0,0,0.15);">
-						{#if mode === 'signup'}
-							Get<br/>Started!
-						{:else}
-							Welcome to {$WEBUI_NAME}!
-						{/if}
-					</h1>
-					<p style="font-size:16px; color:rgba(255,255,255,0.88); font-weight:600; max-width:280px; line-height:1.6;">
-						{#if $config?.onboarding ?? false}
-							Create your admin account to continue using {$WEBUI_NAME}.
-						{:else if mode === 'signin'}
-							You can sign in to access with your existing account.
-						{:else}
-							Fill in your details to create your new account.
-						{/if}
-					</p>
-				</div>
-			</div>
+				<h1 class="font-black mb-2 leading-tight text-[48px]">
+					{#if mode === 'signup'}
+						Get Started!
+					{:else}
+						Welcome to {$WEBUI_NAME}!
+					{/if}
+				</h1>
 
-			<!-- Footer -->
-			<div class="relative z-10">
-				{#if $config?.onboarding ?? false}
-					<div class="security-note">
-						<p style="font-size:13px; color:rgba(255,255,255,0.92); font-weight:600;">
-							🔒 <strong>Secure & Private:</strong> {$WEBUI_NAME} does not make any external connections, and your data stays securely on your locally hosted server.
-						</p>
-					</div>
-				{/if}
+				<p class="text-white/90 font-semibold text-lg max-w-[340px] leading-relaxed">
+					{#if $config?.onboarding ?? false}
+						Create your admin account to continue using {$WEBUI_NAME}.
+					{:else if mode === 'signin'}
+						You can sign in to access with your existing account.
+					{:else}
+						Fill in your details to create your new account.
+					{/if}
+				</p>
 			</div>
 		</div>
 
 		<!-- ========== RIGHT PANEL ========== -->
-		<div class="w-full lg:w-1/2 right-panel flex items-center justify-center p-6 sm:p-12">
+		<div class="w-full lg:w-[52%] right-panel flex items-center justify-center p-2 sm:p-6 lg:p-10">
 			<div class="auth-card-inner animate-fade-up">
 
 				{#if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}
@@ -849,7 +825,7 @@
 						</div>
 
 						<!-- Toggle -->
-						{#if $config?.features.enable_signup && !($config?.onboarding ?? false) && mode !== 'ldap'}
+						{#if !($config?.onboarding ?? false) && mode !== 'ldap'}
 							<div style="text-align:center;font-size:14px;color:#6b7280;padding-top:4px;">
 								{mode === 'signin' ? "New here?" : 'Already have an account?'}
 								<button
@@ -939,6 +915,7 @@
 
 				{/if}
 			</div>
+		</div>
 		</div>
 	{/if}
 </div>

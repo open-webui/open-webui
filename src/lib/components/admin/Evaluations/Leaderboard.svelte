@@ -268,23 +268,23 @@
 	});
 </script>
 
-<div class="mb-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-	<div class="flex items-center gap-3">
-		<h2 class="text-2xl font-semibold text-gray-900 dark:text-white">
+<div class="mb-3 sm:mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+	<div class="flex items-center gap-2 sm:gap-3 min-w-0">
+		<h2 class="text-lg sm:text-2xl font-semibold text-gray-900 dark:text-white truncate">
 			{$i18n.t('Leaderboard')}
 		</h2>
-		<span class="text-sm text-gray-500 dark:text-gray-400">
+		<span class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">
 			{rankedModels.length} {rankedModels.length === 1 ? 'model' : 'models'}
 		</span>
 	</div>
 
 	<Tooltip content={$i18n.t('Re-rank models by topic similarity')}>
-		<div class="relative md:w-64">
+		<div class="relative flex-1 sm:flex-none sm:w-64">
 			<div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
 				<MagnifyingGlass className="size-4 text-gray-400" />
 			</div>
 			<input
-				class="w-full pl-10 pr-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent outline-none transition-all"
+				class="w-full pl-10 pr-4 py-2.5 sm:py-2 text-xs sm:text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent outline-none transition-all"
 				bind:value={query}
 				placeholder={$i18n.t('Search by topic...')}
 				on:focus={() => {
@@ -308,22 +308,22 @@
 		</div>
 	{:else}
 		<div class="overflow-x-auto">
-			<table class="w-full">
+			<table class="w-full text-xs sm:text-sm">
 				<thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
 					<tr>
-						<th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider w-16">
+						<th scope="col" class="px-3 sm:px-4 py-2.5 sm:py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider w-12 sm:w-16 whitespace-nowrap">
 							{$i18n.t('RK')}
 						</th>
-						<th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+						<th scope="col" class="px-3 sm:px-4 py-2.5 sm:py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
 							{$i18n.t('Model')}
 						</th>
-						<th scope="col" class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider w-24">
+						<th scope="col" class="px-3 sm:px-4 py-2.5 sm:py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider w-20 sm:w-24 whitespace-nowrap">
 							{$i18n.t('Rating')}
 						</th>
-						<th scope="col" class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider w-20">
+						<th scope="col" class="px-3 sm:px-4 py-2.5 sm:py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider w-16 sm:w-20 whitespace-nowrap">
 							{$i18n.t('Won')}
 						</th>
-						<th scope="col" class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider w-20">
+						<th scope="col" class="px-3 sm:px-4 py-2.5 sm:py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider w-16 sm:w-20 whitespace-nowrap">
 							{$i18n.t('Lost')}
 						</th>
 					</tr>
@@ -331,25 +331,25 @@
 				<tbody class="divide-y divide-gray-200 dark:divide-gray-700">
 					{#each rankedModels as model, modelIdx (model.id)}
 						<tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
-							<td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+							<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">
 								{model?.rating !== '-' ? modelIdx + 1 : '-'}
 							</td>
-							<td class="px-4 py-3">
-								<div class="flex items-center gap-3">
+							<td class="px-3 sm:px-4 py-2.5 sm:py-3">
+								<div class="flex items-center gap-2 sm:gap-3 min-w-0">
 									<img
 										src={model?.info?.meta?.profile_image_url ?? '/favicon.png'}
 										alt={model.name}
-										class="w-8 h-8 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800"
+										class="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800 flex-shrink-0"
 									/>
-									<span class="text-sm font-medium text-gray-900 dark:text-white">
+									<span class="text-xs sm:text-sm font-medium text-gray-900 dark:text-white truncate">
 										{model.name}
 									</span>
 								</div>
 							</td>
-							<td class="px-4 py-3 text-right text-sm font-semibold text-gray-900 dark:text-white">
+							<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right text-xs sm:text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">
 								{model.rating}
 							</td>
-							<td class="px-4 py-3 text-right text-sm font-semibold text-green-600 dark:text-green-400">
+							<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right text-xs sm:text-sm font-semibold text-green-600 dark:text-green-400 whitespace-nowrap">
 								{#if model.stats.won === '-'}
 									-
 								{:else}
@@ -359,7 +359,7 @@
 									<span class="group-hover:hidden">{model.stats.won}</span>
 								{/if}
 							</td>
-							<td class="px-4 py-3 text-right text-sm font-semibold text-red-600 dark:text-red-400">
+							<td class="px-3 sm:px-4 py-2.5 sm:py-3 text-right text-xs sm:text-sm font-semibold text-red-600 dark:text-red-400 whitespace-nowrap">
 								{#if model.stats.lost === '-'}
 									-
 								{:else}
@@ -377,11 +377,11 @@
 	{/if}
 </div>
 
-<div class="mt-3 flex items-start gap-2 text-xs text-gray-500 dark:text-gray-400">
-	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 flex-shrink-0 mt-0.5">
+<div class="mt-2 sm:mt-3 flex items-start gap-2 text-xs text-gray-500 dark:text-gray-400">
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 mt-0.5">
 		<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd" />
 	</svg>
-	<div>
+	<div class="text-xs md:text-sm">
 		<div>
 			{$i18n.t(
 				'The evaluation leaderboard is based on the Elo rating system and is updated in real-time.'

@@ -385,6 +385,11 @@
 			<button
 				id="folder-{folderId}-button"
 				class="relative w-full py-2 px-2.5 rounded-lg flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-800/60 active:bg-gray-100 dark:active:bg-gray-800 transition-all duration-150 ease-out"
+				on:click={() => {
+					if (!edit) {
+						dispatch('select', { folderId });
+					}
+				}}
 				on:dblclick={() => {
 					editHandler();
 				}}
@@ -486,6 +491,9 @@
 								}}
 								on:change={(e) => {
 									dispatch('change', e.detail);
+								}}
+								on:select={(e) => {
+									dispatch('select', e.detail);
 								}}
 							/>
 						{/each}

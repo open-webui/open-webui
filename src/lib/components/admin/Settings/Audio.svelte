@@ -13,6 +13,7 @@
 	import { config, settings } from '$lib/stores';
 
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import SelectDropdown from '$lib/components/common/SelectDropdown.svelte';
 
 	import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
@@ -172,7 +173,7 @@
 		dispatch('save');
 	}}
 >
-	<div class="space-y-3 overflow-y-scroll scrollbar-hidden h-full" style="padding-right: 4px;">
+	<div class="space-y-3 overflow-y-auto scrollbar-hidden h-full" style="padding-right: 4px;">
 		<div class="flex flex-col gap-3" style="gap: 20px;">
 			<!-- STT Settings Section -->
 			<div style="background: linear-gradient(to bottom, rgba(0,0,0,0.02), transparent); border-radius: 12px; padding: 20px; border: 1px solid rgba(0,0,0,0.05);">
@@ -185,21 +186,20 @@
 
 				<div class="space-y-3" style="background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.06);">
 					<!-- Speech-to-Text Engine -->
-					<div class="py-0.5 flex w-full justify-between items-center" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
+					<div class="py-0.5 flex w-full flex-col gap-2 sm:flex-row sm:justify-between sm:items-center" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
 						<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">{$i18n.t('Speech-to-Text Engine')}</div>
-						<div class="flex items-center relative">
-							<select
-								class="dark:bg-gray-900 cursor-pointer w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
-								bind:value={STT_ENGINE}
-								placeholder="Select an engine"
-								style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; padding: 6px 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;"
-							>
-								<option value="">{$i18n.t('Whisper (Local)')}</option>
-								<option value="openai">OpenAI</option>
-								<option value="web">{$i18n.t('Web API')}</option>
-								<option value="deepgram">Deepgram</option>
-								<option value="azure">Azure AI Speech</option>
-							</select>
+						<div class="w-full sm:w-auto">
+							<SelectDropdown
+								value={STT_ENGINE}
+								options={[
+									{ value: '', label: $i18n.t('Whisper (Local)') },
+									{ value: 'openai', label: 'OpenAI' },
+									{ value: 'web', label: $i18n.t('Web API') },
+									{ value: 'deepgram', label: 'Deepgram' },
+									{ value: 'azure', label: 'Azure AI Speech' }
+								]}
+								on:change={(e) => (STT_ENGINE = e.detail.value)}
+							/>
 						</div>
 					</div>
 
@@ -408,19 +408,25 @@
 
 				<div class="space-y-3" style="background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.06);">
 					<!-- Text-to-Speech Engine -->
-					<div class="py-0.5 flex w-full justify-between items-center" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
+					<div class="py-0.5 flex w-full flex-col gap-2 sm:flex-row sm:justify-between sm:items-center" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
 						<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">{$i18n.t('Text-to-Speech Engine')}</div>
-						<div class="flex items-center relative">
-							<select
-								class="dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
-								bind:value={TTS_ENGINE}
-								placeholder="Select a mode"
+						<div class="w-full sm:w-auto">
+							<SelectDropdown
+								value={TTS_ENGINE}
+								options={[
+									{ value: '', label: $i18n.t('Web API') },
+									{ value: 'transformers', label: `${$i18n.t('Transformers')} (${$i18n.t('Local')})` },
+									{ value: 'openai', label: $i18n.t('OpenAI') },
+									{ value: 'elevenlabs', label: $i18n.t('ElevenLabs') },
+									{ value: 'azure', label: $i18n.t('Azure AI Speech') }
+								]}
 								on:change={async (e) => {
+									TTS_ENGINE = e.detail.value;
 									await updateConfigHandler();
 									await getVoices();
 									await getModels();
 
-									if (e.target?.value === 'openai') {
+									if (e.detail.value === 'openai') {
 										TTS_VOICE = 'alloy';
 										TTS_MODEL = 'tts-1';
 									} else {
@@ -428,14 +434,7 @@
 										TTS_MODEL = '';
 									}
 								}}
-								style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; padding: 6px 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;"
-							>
-								<option value="">{$i18n.t('Web API')}</option>
-								<option value="transformers">{$i18n.t('Transformers')} ({$i18n.t('Local')})</option>
-								<option value="openai">{$i18n.t('OpenAI')}</option>
-								<option value="elevenlabs">{$i18n.t('ElevenLabs')}</option>
-								<option value="azure">{$i18n.t('Azure AI Speech')}</option>
-							</select>
+							/>
 						</div>
 					</div>
 
@@ -500,20 +499,14 @@
 								<div class="mb-1.5 text-sm font-medium" style="color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px;">{$i18n.t('TTS Voice')}</div>
 								<div class="flex w-full">
 									<div class="flex-1">
-										<select
-											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-											bind:value={TTS_VOICE}
-											style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 10px 14px; transition: all 0.2s; cursor: pointer;"
-										>
-											<option value="" selected={TTS_VOICE !== ''}>{$i18n.t('Default')}</option>
-											{#each voices as voice}
-												<option
-													value={voice.voiceURI}
-													class="bg-gray-100 dark:bg-gray-700"
-													selected={TTS_VOICE === voice.voiceURI}>{voice.name}</option
-												>
-											{/each}
-										</select>
+										<SelectDropdown
+											value={TTS_VOICE}
+											options={[
+												{ value: '', label: $i18n.t('Default') },
+												...voices.map((voice) => ({ value: voice.voiceURI, label: voice.name }))
+											]}
+											on:change={(e) => (TTS_VOICE = e.detail.value)}
+										/>
 									</div>
 								</div>
 							</div>
@@ -697,21 +690,17 @@
 					</div>
 
 					<!-- Response Splitting -->
-					<div class="pt-0.5 flex w-full justify-between items-center" style="padding: 8px 0;">
+					<div class="pt-0.5 flex w-full flex-col gap-2 sm:flex-row sm:justify-between sm:items-center" style="padding: 8px 0;">
 						<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">{$i18n.t('Response splitting')}</div>
-						<div class="flex items-center relative">
-							<select
-								class="dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
-								aria-label="Select how to split message text for TTS requests"
-								bind:value={TTS_SPLIT_ON}
-								style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; padding: 6px 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;"
-							>
-								{#each Object.values(TTS_RESPONSE_SPLIT) as split}
-									<option value={split}
-										>{$i18n.t(split.charAt(0).toUpperCase() + split.slice(1))}</option
-									>
-								{/each}
-							</select>
+						<div class="w-full sm:w-auto">
+							<SelectDropdown
+								value={TTS_SPLIT_ON}
+								options={Object.values(TTS_RESPONSE_SPLIT).map((split) => ({
+									value: split,
+									label: $i18n.t(split.charAt(0).toUpperCase() + split.slice(1))
+								}))}
+								on:change={(e) => (TTS_SPLIT_ON = e.detail.value)}
+							/>
 						</div>
 					</div>
 					<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500" style="line-height: 1.5; color: #6b7280; background: #f3f4f6; padding: 10px 14px; border-radius: 8px; border-left: 3px solid #10b981;">

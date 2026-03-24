@@ -49,13 +49,13 @@
 <div class="flex flex-col lg:flex-row w-full h-full pb-2 lg:space-x-4">
 	<div
 		id="users-tabs-container"
-		class=" flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"
+		class="flex flex-row overflow-x-auto gap-2 max-w-full rounded-xl bg-gray-50 p-1.5 dark:bg-gray-800/60 lg:gap-1 lg:flex-col lg:flex-none lg:w-44 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"
 	>
 		<button
-			class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition {selectedTab ===
+			class="px-3 py-2 min-w-fit rounded-lg lg:flex-none flex text-right transition-colors {selectedTab ===
 			'overview'
-				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+				? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+				: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/70 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'overview';
 			}}
@@ -76,10 +76,10 @@
 		</button>
 
 		<button
-			class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition {selectedTab ===
+			class="px-3 py-2 min-w-fit rounded-lg lg:flex-none flex text-right transition-colors {selectedTab ===
 			'groups'
-				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+				? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+				: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/70 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'groups';
 			}}
@@ -100,7 +100,7 @@
 		</button>
 	</div>
 
-	<div class="flex-1 mt-1 lg:mt-0 overflow-y-scroll">
+	<div class="flex-1 mt-2 lg:mt-0 overflow-y-auto rounded-xl border border-gray-200/80 bg-white p-2 dark:border-gray-800/80 dark:bg-gray-900/60">
 		{#if selectedTab === 'overview'}
 			<UserList {users} />
 		{:else if selectedTab === 'groups'}

@@ -21,6 +21,7 @@
 		}
 		settings.set({ ...$settings, models: selectedModels });
 		await updateUserSettings(localStorage.token, { ui: $settings });
+		
 
 		toast.success($i18n.t('Default model updated'));
 	};
@@ -29,6 +30,11 @@
 		selectedModels = selectedModels.map((model) =>
 			$models.map((m) => m.id).includes(model) ? model : ''
 		);
+		// Save selected models to localStorage immediately
+		const validModels = selectedModels.filter(m => m !== '');
+		if (validModels.length > 0) {
+			localStorage.lastSelectedModels = JSON.stringify(selectedModels);
+		}
 	}
 </script>
 

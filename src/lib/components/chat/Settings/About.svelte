@@ -43,23 +43,23 @@
 </script>
 
 <div class="flex flex-col h-full">
-	<div class="space-y-6 overflow-y-auto pb-6">
+	<div class="space-y-4 sm:space-y-6 overflow-y-auto pb-6">
 		<!-- Version Information Section -->
-		<div class="space-y-4">
+		<div class="space-y-3 sm:space-y-4">
 			<div>
-				<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+				<h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1">
 					{$i18n.t('Version Information')}
 				</h3>
-				<p class="text-sm text-gray-500 dark:text-gray-400">
+				<p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
 					Current version and update status
 				</p>
 			</div>
 
 			<!-- Web UI Version Card -->
-			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-				<div class="flex items-start justify-between gap-4">
+			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 sm:p-4">
+				<div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
 					<div class="flex-1">
-						<div class="text-sm font-medium text-gray-900 dark:text-white mb-1">
+						<div class="text-xs sm:text-sm font-medium text-gray-900 dark:text-white mb-1">
 							{$WEBUI_NAME}
 							{$i18n.t('Version')}
 						</div>
@@ -74,7 +74,7 @@
 								<a
 									href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
 									target="_blank"
-									class="text-blue-600 dark:text-blue-400 hover:underline"
+									class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
 								>
 									{updateAvailable === null
 										? $i18n.t('Checking for updates...')
@@ -85,7 +85,7 @@
 							</div>
 
 							<button
-								class="text-xs text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left w-fit"
+								class="text-xs text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left w-full sm:w-fit"
 								on:click={() => {
 									showChangelog.set(true);
 								}}
@@ -96,7 +96,7 @@
 					</div>
 
 					<button
-						class="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+						class="w-full sm:w-auto px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
 						on:click={() => {
 							checkForVersionUpdates();
 						}}
@@ -108,8 +108,8 @@
 
 			{#if ollamaVersion}
 				<!-- Ollama Version Card -->
-				<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-					<div class="text-sm font-medium text-gray-900 dark:text-white mb-1">
+				<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 sm:p-4">
+					<div class="text-xs sm:text-sm font-medium text-gray-900 dark:text-white mb-1">
 						{$i18n.t('Ollama Version')}
 					</div>
 					<div class="text-xs font-mono text-gray-700 dark:text-gray-300">
@@ -120,16 +120,16 @@
 		</div>
 
 		<!-- License or Community Section -->
-		<div class="space-y-4 pt-2">
+		<div class="space-y-3 sm:space-y-4 pt-2">
 			<div>
-				<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+				<h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1">
 					{#if $config?.license_metadata}
 						{$i18n.t('License Information')}
 					{:else}
 						{$i18n.t('Community')}
 					{/if}
 				</h3>
-				<p class="text-sm text-gray-500 dark:text-gray-400">
+				<p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
 					{#if $config?.license_metadata}
 						Your license details
 					{:else}
@@ -139,8 +139,8 @@
 			</div>
 
 			{#if $config?.license_metadata}
-				<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-					<div class="flex items-start gap-3">
+				<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4">
+					<div class="flex items-start gap-2 sm:gap-3">
 						<div class="flex-shrink-0">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"

@@ -107,14 +107,14 @@
 </script>
 
 <!-- Header Section with improved spacing and alignment -->
-<div class="mb-6">
-	<div class="flex items-center justify-between gap-4">
-		<div class="flex items-center gap-3">
-			<h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
+<div class="mb-3 sm:mb-6">
+	<div class="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-2 sm:gap-4">
+		<div class="flex items-center gap-2 sm:gap-3 min-w-0">
+			<h2 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100 truncate">
 				{$i18n.t('Feedback History')}
 			</h2>
-			<div class="h-6 w-px bg-gray-200 dark:bg-gray-700" />
-			<span class="inline-flex items-center justify-center min-w-[2rem] h-6 px-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-full">
+			<div class="h-6 w-px bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
+			<span class="inline-flex items-center justify-center h-6 px-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-full flex-shrink-0">
 				{feedbacks.length}
 			</span>
 		</div>
@@ -122,13 +122,13 @@
 		{#if feedbacks.length > 0}
 			<Tooltip content={$i18n.t('Export')}>
 				<button
-					class="inline-flex items-center justify-center p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-750 transition-colors duration-200"
+					class="inline-flex items-center justify-center p-2 sm:p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-750 transition-colors duration-200 flex-shrink-0"
 					on:click={() => {
 						exportHandler();
 					}}
 					aria-label="Export feedbacks"
 				>
-					<ArrowDownTray className="size-4 text-gray-700 dark:text-gray-300" />
+					<ArrowDownTray className="size-3.5 sm:size-4 text-gray-700 dark:text-gray-300" />
 				</button>
 			</Tooltip>
 		{/if}
@@ -153,26 +153,26 @@
 		</div>
 	{:else}
 		<div class="overflow-x-auto">
-			<table class="w-full text-sm">
+			<table class="w-full text-xs sm:text-sm">
 				<thead class="bg-gray-50 dark:bg-gray-850 border-b border-gray-200 dark:border-gray-800">
 					<tr>
-						<th scope="col" class="px-6 py-3.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+						<th scope="col" class="px-3 sm:px-6 py-2.5 sm:py-3.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
 							{$i18n.t('User')}
 						</th>
 
-						<th scope="col" class="px-6 py-3.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+						<th scope="col" class="px-3 sm:px-6 py-2.5 sm:py-3.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
 							{$i18n.t('Models')}
 						</th>
 
-						<th scope="col" class="px-6 py-3.5 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+						<th scope="col" class="px-3 sm:px-6 py-2.5 sm:py-3.5 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
 							{$i18n.t('Result')}
 						</th>
 
-						<th scope="col" class="px-6 py-3.5 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+						<th scope="col" class="px-3 sm:px-6 py-2.5 sm:py-3.5 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
 							{$i18n.t('Updated At')}
 						</th>
 
-						<th scope="col" class="px-6 py-3.5 w-12">
+						<th scope="col" class="px-3 sm:px-6 py-2.5 sm:py-3.5 w-10 sm:w-12">
 							<span class="sr-only">Actions</span>
 						</th>
 					</tr>
@@ -180,24 +180,24 @@
 				<tbody class="divide-y divide-gray-200 dark:divide-gray-800">
 					{#each paginatedFeedbacks as feedback (feedback.id)}
 						<tr class="hover:bg-gray-50 dark:hover:bg-gray-850 transition-colors duration-150">
-							<td class="px-6 py-4 whitespace-nowrap">
+							<td class="px-3 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap">
 								<Tooltip content={feedback?.user?.name}>
 									<div class="flex items-center">
 										<div class="shrink-0">
 											<img
 												src={feedback?.user?.profile_image_url ?? '/user.png'}
 												alt={feedback?.user?.name}
-												class="size-8 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800"
+												class="size-7 sm:size-8 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800"
 											/>
 										</div>
 									</div>
 								</Tooltip>
 							</td>
 
-							<td class="px-6 py-4">
-								<div class="flex flex-col gap-1">
+							<td class="px-3 sm:px-6 py-2.5 sm:py-4">
+								<div class="flex flex-col gap-1 min-w-0">
 									{#if feedback.data?.sibling_model_ids}
-										<div class="font-medium text-gray-900 dark:text-gray-100">
+										<div class="font-medium text-gray-900 dark:text-gray-100 truncate text-xs sm:text-sm">
 											{feedback.data?.model_id}
 										</div>
 
@@ -214,14 +214,14 @@
 											</div>
 										</Tooltip>
 									{:else}
-										<div class="font-medium text-gray-900 dark:text-gray-100">
+										<div class="font-medium text-gray-900 dark:text-gray-100 truncate text-xs sm:text-sm">
 											{feedback.data?.model_id}
 										</div>
 									{/if}
 								</div>
 							</td>
 
-							<td class="px-6 py-4 whitespace-nowrap text-center">
+							<td class="px-3 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap text-center">
 								{#if feedback.data.rating.toString() === '1'}
 									<Badge type="info" content={$i18n.t('Won')} />
 								{:else if feedback.data.rating.toString() === '0'}
@@ -231,21 +231,21 @@
 								{/if}
 							</td>
 
-							<td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-600 dark:text-gray-400">
+							<td class="px-3 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap text-right text-xs sm:text-sm text-gray-600 dark:text-gray-400">
 								{dayjs(feedback.updated_at * 1000).fromNow()}
 							</td>
 
-							<td class="px-6 py-4 whitespace-nowrap text-right">
+							<td class="px-3 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap text-right">
 								<FeedbackMenu
 									on:delete={(e) => {
 										deleteFeedbackHandler(feedback.id);
 									}}
 								>
 									<button
-										class="inline-flex items-center justify-center p-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200"
+										class="inline-flex items-center justify-center p-1 sm:p-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200"
 										aria-label="Open menu"
 									>
-										<EllipsisHorizontal />
+										<EllipsisHorizontal className="size-4 sm:size-5" />
 									</button>
 								</FeedbackMenu>
 							</td>
@@ -259,10 +259,10 @@
 
 <!-- Community Share Section with improved layout -->
 {#if feedbacks.length > 0}
-	<div class="mt-6 p-4 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-850 dark:to-gray-800 border border-blue-100 dark:border-gray-700">
-		<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-			<div class="flex-1">
-				<p class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+	<div class="mt-3 sm:mt-6 p-3 sm:p-4 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-850 dark:to-gray-800 border border-blue-100 dark:border-gray-700">
+		<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
+			<div class="flex-1 min-w-0">
+				<p class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
 					Share with the Community
 				</p>
 				<p class="text-xs text-gray-600 dark:text-gray-400">
@@ -276,13 +276,13 @@
 				)}
 			>
 				<button
-					class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-850 border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 transition-all duration-200 hover:shadow-sm whitespace-nowrap"
+					class="inline-flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-850 border border-gray-200 dark:border-gray-700 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 transition-all duration-200 hover:shadow-sm whitespace-nowrap flex-shrink-0"
 					on:click={async () => {
 						shareHandler();
 					}}
 				>
 					<span>{$i18n.t('Share to Open WebUI Community')}</span>
-					<CloudArrowUp className="size-4" strokeWidth="2.5" />
+					<CloudArrowUp className="size-3.5 sm:size-4" strokeWidth="2.5" />
 				</button>
 			</Tooltip>
 		</div>
@@ -291,7 +291,7 @@
 
 <!-- Pagination with improved spacing -->
 {#if feedbacks.length > 10}
-	<div class="mt-6">
+	<div class="mt-3 sm:mt-6">
 		<Pagination bind:page count={feedbacks.length} perPage={10} />
 	</div>
 {/if}

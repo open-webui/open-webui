@@ -367,17 +367,22 @@
 	}
 </script>
 
-<Modal size="3xl" bind:show className="bg-white dark:bg-gray-900 rounded-lg shadow-lg">
-	<div class="text-gray-700 dark:text-gray-100 flex flex-col h-[85vh] max-h-[85vh] rounded-lg overflow-hidden">
+<Modal
+	size="md"
+	bind:show
+	backdropClassName="bg-black/20 backdrop-blur-[1px]"
+	className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-[30rem] sm:w-[42rem] md:w-[56rem] lg:w-[70rem]"
+>
+	<div class="text-gray-700 dark:text-gray-100 flex flex-col h-[90vh] md:h-[80vh] rounded-lg overflow-hidden">
 
 		<!-- Header -->
-		<div class="flex justify-between items-center dark:text-gray-200 px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 bg-white dark:bg-gray-900">
+		<div class="flex justify-between items-center dark:text-gray-200 px-3 sm:px-6 py-2 sm:py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 bg-white dark:bg-gray-900">
 
-			<div class="flex items-center gap-3">
-				<div class="text-2xl font-semibold">{$i18n.t('Settings')}</div>
+			<div class="flex items-center gap-2 sm:gap-3">
+				<div class="text-lg sm:text-2xl font-semibold">{$i18n.t('Settings')}</div>
 			</div>
 			<button
-				class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+				class="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
 				on:click={() => {
 					show = false;
 				}}
@@ -396,18 +401,18 @@
 		</div>
 
 		<!-- Content -->
-		<div class="flex flex-1 min-h-0 md:flex-row w-full overflow-hidden bg-white dark:bg-gray-900">
+		<div class="flex flex-1 min-h-0 flex-col md:flex-row w-full overflow-hidden bg-white dark:bg-gray-900">
 
 			<!-- Sidebar -->
 			<div
 				id="settings-tabs-container"
-				class="tabs flex flex-row md:flex-col overflow-x-auto md:overflow-y-auto flex-shrink-0 md:w-64 min-h-0 md:border-r border-gray-200 dark:border-gray-700 text-sm bg-gray-50 dark:bg-gray-900"
+				class="tabs flex flex-row md:flex-col overflow-x-auto md:overflow-y-auto flex-shrink-0 md:w-40 lg:w-48 w-full h-auto md:h-auto min-h-0 md:border-r border-b md:border-b-0 border-gray-200 dark:border-gray-700 text-xs sm:text-sm bg-gray-50 dark:bg-gray-900 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent"
 			>
 			{#if visibleTabs.length > 0}
 				{#each visibleTabs as tabId (tabId)}
 					{#if tabId === 'general'}
 						<button
-							class="px-4 py-3 min-w-fit flex-1 md:flex-none flex items-center gap-3 text-left transition-colors border-l-2 {selectedTab ===
+								class="px-2 sm:px-4 py-2 sm:py-3 min-w-fit flex-1 md:flex-none flex items-center gap-2 sm:gap-3 text-left transition-colors border-l-2 {selectedTab ===
 							'general'
 								? 'bg-gray-100 dark:bg-gray-800 border-orange-500 text-gray-900 dark:text-white'
 								: 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
@@ -420,7 +425,7 @@
 									xmlns="http://www.w3.org/2000/svg"
 									viewBox="0 0 20 20"
 									fill="currentColor"
-									class="w-5 h-5"
+								class="w-4 h-4 sm:w-5 sm:h-5"
 								>
 									<path
 										fill-rule="evenodd"
@@ -429,11 +434,11 @@
 									/>
 								</svg>
 							</div>
-							<div class="hidden md:inline font-normal">{$i18n.t('General')}</div>
+							<div class="hidden sm:inline font-normal text-xs sm:text-sm">{$i18n.t('General')}</div>
 						</button>
 					{:else if tabId === 'interface'}
 						<button
-							class="px-4 py-3 min-w-fit flex-1 md:flex-none flex items-center gap-3 text-left transition-colors border-l-2 {selectedTab ===
+						class="px-3 sm:px-4 py-2.5 sm:py-3 min-w-fit flex-1 md:flex-none flex items-center gap-2 sm:gap-3 text-left transition-colors border-b-2 md:border-b-0 md:border-l-2 {selectedTab ===
 							'interface'
 								? 'bg-gray-100 dark:bg-gray-800 border-orange-500 text-gray-900 dark:text-white'
 								: 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
@@ -455,12 +460,12 @@
 									/>
 								</svg>
 							</div>
-							<div class="hidden md:inline font-normal">{$i18n.t('Interface')}</div>
+							<div class="hidden sm:inline font-normal text-xs sm:text-sm">{$i18n.t('Interface')}</div>
 						</button>
 					{:else if tabId === 'connections'}
 						{#if $user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections)}
 							<button
-							class="px-4 py-3 min-w-fit flex-1 md:flex-none flex items-center gap-3 text-left transition-colors border-l-2 {selectedTab ===
+						class="px-3 sm:px-4 py-2.5 sm:py-3 min-w-fit flex-1 md:flex-none flex items-center gap-2 sm:gap-3 text-left transition-colors border-b-2 md:border-b-0 md:border-l-2 {selectedTab ===
 							'connections'
 								? 'bg-gray-100 dark:bg-gray-800 border-orange-500 text-gray-900 dark:text-white'
 								: 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
@@ -473,20 +478,20 @@
 										xmlns="http://www.w3.org/2000/svg"
 										viewBox="0 0 16 16"
 										fill="currentColor"
-										class="w-5 h-5"
+										class="w-4 h-4 sm:w-5 sm:h-5"
 									>
 										<path
 											d="M1 9.5A3.5 3.5 0 0 0 4.5 13H12a3 3 0 0 0 .917-5.857 2.503 2.503 0 0 0-3.198-3.019 3.5 3.5 0 0 0-6.628 2.171A3.5 3.5 0 0 0 1 9.5Z"
 										/>
 									</svg>
 								</div>
-								<div class="hidden md:inline font-normal">{$i18n.t('Connections')}</div>
+								<div class="hidden sm:inline font-normal text-xs sm:text-sm">{$i18n.t('Connections')}</div>
 							</button>
 						{/if}
 					{:else if tabId === 'tools'}
 						{#if $user?.role === 'admin' || ($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)}
 							<button
-								class="px-4 py-3 min-w-fit flex-1 md:flex-none flex items-center gap-3 text-left transition-colors border-l-2 {selectedTab ===
+								class="px-3 sm:px-4 py-2.5 sm:py-3 min-w-fit flex-1 md:flex-none flex items-center gap-2 sm:gap-3 text-left transition-colors border-b-2 md:border-b-0 md:border-l-2 {selectedTab ===
 								'tools'
 									? 'bg-gray-100 dark:bg-gray-800 border-orange-500 text-gray-900 dark:text-white'
 									: 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
@@ -508,12 +513,12 @@
 										/>
 									</svg>
 								</div>
-								<div class="hidden md:inline font-normal">{$i18n.t('Tools')}</div>
+								<div class="hidden sm:inline font-normal text-xs sm:text-sm">{$i18n.t('Tools')}</div>
 							</button>
 						{/if}
 					{:else if tabId === 'personalization'}
 						<button
-							class="px-4 py-3 min-w-fit flex-1 md:flex-none flex items-center gap-3 text-left transition-colors border-l-2 {selectedTab ===
+						class="px-3 sm:px-4 py-2.5 sm:py-3 min-w-fit flex-1 md:flex-none flex items-center gap-2 sm:gap-3 text-left transition-colors border-b-2 md:border-b-0 md:border-l-2 {selectedTab ===
 							'personalization'
 								? 'bg-gray-100 dark:bg-gray-800 border-orange-500 text-gray-900 dark:text-white'
 								: 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
@@ -524,11 +529,11 @@
 							<div class="flex-shrink-0">
 								<User />
 							</div>
-							<div class="hidden md:inline font-normal">{$i18n.t('Personalization')}</div>
+							<div class="hidden sm:inline font-normal text-xs sm:text-sm">{$i18n.t('Personalization')}</div>
 						</button>
 					{:else if tabId === 'audio'}
 						<button
-							class="px-4 py-3 min-w-fit flex-1 md:flex-none flex items-center gap-3 text-left transition-colors border-l-2 {selectedTab ===
+						class="px-3 sm:px-4 py-2.5 sm:py-3 min-w-fit flex-1 md:flex-none flex items-center gap-2 sm:gap-3 text-left transition-colors border-b-2 md:border-b-0 md:border-l-2 {selectedTab ===
 							'audio'
 								? 'bg-gray-100 dark:bg-gray-800 border-orange-500 text-gray-900 dark:text-white'
 								: 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
@@ -541,7 +546,7 @@
 									xmlns="http://www.w3.org/2000/svg"
 									viewBox="0 0 16 16"
 									fill="currentColor"
-									class="w-5 h-5"
+									class="w-4 h-4 sm:w-5 sm:h-5"
 								>
 									<path
 										d="M7.557 2.066A.75.75 0 0 1 8 2.75v10.5a.75.75 0 0 1-1.248.56L3.59 11H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1.59l3.162-2.81a.75.75 0 0 1 .805-.124ZM12.95 3.05a.75.75 0 1 0-1.06 1.06 5.5 5.5 0 0 1 0 7.78.75.75 0 1 0 1.06 1.06 7 7 0 0 0 0-9.9Z"
@@ -551,11 +556,11 @@
 									/>
 								</svg>
 							</div>
-							<div class="hidden md:inline font-normal">{$i18n.t('Audio')}</div>
+							<div class="hidden sm:inline font-normal text-xs sm:text-sm">{$i18n.t('Audio')}</div>
 						</button>
 					{:else if tabId === 'chats'}
 						<button
-							class="px-4 py-3 min-w-fit flex-1 md:flex-none flex items-center gap-3 text-left transition-colors border-l-2 {selectedTab ===
+						class="px-3 sm:px-4 py-2.5 sm:py-3 min-w-fit flex-1 md:flex-none flex items-center gap-2 sm:gap-3 text-left transition-colors border-b-2 md:border-b-0 md:border-l-2 {selectedTab ===
 							'chats'
 								? 'bg-gray-100 dark:bg-gray-800 border-orange-500 text-gray-900 dark:text-white'
 								: 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
@@ -568,7 +573,7 @@
 									xmlns="http://www.w3.org/2000/svg"
 									viewBox="0 0 16 16"
 									fill="currentColor"
-									class="w-5 h-5"
+								class="w-4 h-4 sm:w-5 sm:h-5"
 								>
 									<path
 										fill-rule="evenodd"
@@ -577,11 +582,11 @@
 									/>
 								</svg>
 							</div>
-							<div class="hidden md:inline font-normal">{$i18n.t('Chats')}</div>
+							<div class="hidden sm:inline font-normal text-xs sm:text-sm">{$i18n.t('Chats')}</div>
 						</button>
 					{:else if tabId === 'account'}
 						<button
-							class="px-4 py-3 min-w-fit flex-1 md:flex-none flex items-center gap-3 text-left transition-colors border-l-2 {selectedTab ===
+						class="px-3 sm:px-4 py-2.5 sm:py-3 min-w-fit flex-1 md:flex-none flex items-center gap-2 sm:gap-3 text-left transition-colors border-b-2 md:border-b-0 md:border-l-2 {selectedTab ===
 							'account'
 								? 'bg-gray-100 dark:bg-gray-800 border-orange-500 text-gray-900 dark:text-white'
 								: 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
@@ -594,7 +599,7 @@
 									xmlns="http://www.w3.org/2000/svg"
 									viewBox="0 0 16 16"
 									fill="currentColor"
-									class="w-5 h-5"
+									class="w-4 h-4 sm:w-5 sm:h-5"
 								>
 									<path
 										fill-rule="evenodd"
@@ -603,11 +608,11 @@
 									/>
 								</svg>
 							</div>
-							<div class="hidden md:inline font-normal">{$i18n.t('Account')}</div>
+							<div class="hidden sm:inline font-normal text-xs sm:text-sm">{$i18n.t('Account')}</div>
 						</button>
 					{:else if tabId === 'about'}
 						<button
-							class="px-4 py-3 min-w-fit flex-1 md:flex-none flex items-center gap-3 text-left transition-colors border-l-2 {selectedTab ===
+						class="px-3 sm:px-4 py-2.5 sm:py-3 min-w-fit flex-1 md:flex-none flex items-center gap-2 sm:gap-3 text-left transition-colors border-b-2 md:border-b-0 md:border-l-2 {selectedTab ===
 							'about'
 								? 'bg-gray-100 dark:bg-gray-800 border-orange-500 text-gray-900 dark:text-white'
 								: 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
@@ -620,7 +625,7 @@
 									xmlns="http://www.w3.org/2000/svg"
 									viewBox="0 0 20 20"
 									fill="currentColor"
-									class="w-5 h-5"
+									class="w-4 h-4 sm:w-5 sm:h-5"
 								>
 									<path
 										fill-rule="evenodd"
@@ -629,12 +634,12 @@
 									/>
 								</svg>
 							</div>
-							<div class="hidden md:inline font-normal">{$i18n.t('About')}</div>
+							<div class="hidden sm:inline font-normal text-xs sm:text-sm">{$i18n.t('About')}</div>
 						</button>
 					{:else if tabId === 'admin'}
 						{#if $user?.role === 'admin'}
 							<button
-								class="px-4 py-3 min-w-fit flex-1 md:flex-none flex items-center gap-3 text-left transition-colors border-l-2 {selectedTab ===
+								class="px-3 sm:px-4 py-2.5 sm:py-3 min-w-fit flex-1 md:flex-none flex items-center gap-2 sm:gap-3 text-left transition-colors border-b-2 md:border-b-0 md:border-l-2 {selectedTab ===
 								'admin'
 									? 'bg-gray-100 dark:bg-gray-800 border-orange-500 text-gray-900 dark:text-white'
 									: 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
@@ -648,7 +653,7 @@
 										xmlns="http://www.w3.org/2000/svg"
 										viewBox="0 0 24 24"
 										fill="currentColor"
-										class="size-5"
+									class="size-4 sm:size-5"
 									>
 										<path
 											fill-rule="evenodd"
@@ -657,7 +662,7 @@
 										/>
 									</svg>
 								</div>
-								<div class="hidden md:inline font-normal">{$i18n.t('Admin Settings')}</div>
+								<div class="hidden sm:inline font-normal text-xs sm:text-sm">{$i18n.t('Admin Settings')}</div>
 							</button>
 						{/if}
 						{/if}
@@ -668,8 +673,8 @@
 					</div>
 				{/if}
 			</div>
-			<div class="flex-1 overflow-y-auto px-8 py-6 bg-white dark:bg-gray-900">
-				<div class="space-y-6 max-w-4xl">
+			<div class="flex-1 overflow-y-auto px-3 sm:px-6 md:px-8 py-3 sm:py-6 bg-white dark:bg-gray-900 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-gray-100 dark:scrollbar-track-gray-900">
+				<div class="space-y-3 sm:space-y-6 max-w-5xl lg:max-w-6xl">
 
 				{#if selectedTab === 'general'}
 					<General

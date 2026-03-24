@@ -19,6 +19,7 @@
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import SelectDropdown from '$lib/components/common/SelectDropdown.svelte';
 	import Valves from '$lib/components/common/Valves.svelte';
 
 	const dispatch = createEventDispatcher();
@@ -34,6 +35,8 @@
 
 	let valvesSpec = null;
 	let valves = {};
+	let typeOptions = [];
+	let itemOptions = [];
 
 	let debounceTimer;
 
@@ -121,6 +124,22 @@
 		init();
 	}
 
+	$: typeOptions = [
+		{ value: 'tools', label: $i18n.t('Tools') },
+		{ value: 'functions', label: $i18n.t('Functions') }
+	];
+
+	$: itemOptions =
+		tab === 'tools'
+			? [
+					{ value: '', label: $i18n.t('Select a tool') },
+					...(($tools ?? []) as any[]).map((tool) => ({ value: tool.id, label: tool.name }))
+				]
+			: [
+					{ value: '', label: $i18n.t('Select a function') },
+					...(($functions ?? []) as any[]).map((func) => ({ value: func.id, label: func.name }))
+				];
+
 	const init = async () => {
 		loading = true;
 
@@ -149,55 +168,34 @@
 				<div class="space-y-3">
 					<!-- Tab Selection -->
 					<div>
-						<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+						<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 							{$i18n.t('Type')}
-						</label>
-						<select
-							class="w-full px-3 py-2.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-colors cursor-pointer"
-							bind:value={tab}
-							placeholder="Select"
-						>
-							<option value="tools" class="bg-white dark:bg-gray-700">{$i18n.t('Tools')}</option>
-							<option value="functions" class="bg-white dark:bg-gray-700">
-								{$i18n.t('Functions')}
-							</option>
-						</select>
+						</div>
+						<SelectDropdown
+							value={tab}
+							options={typeOptions}
+							on:change={(e) => {
+								tab = e.detail.value;
+							}}
+						/>
 					</div>
 
 					<!-- Item Selection -->
 					<div>
-						<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+						<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 							{#if tab === 'tools'}
 								{$i18n.t('Select Tool')}
 							{:else}
 								{$i18n.t('Select Function')}
 							{/if}
-						</label>
-						<select
-							class="w-full px-3 py-2.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-							bind:value={selectedId}
-							on:change={async () => {
-								await tick();
+						</div>
+						<SelectDropdown
+							value={selectedId}
+							options={itemOptions}
+							on:change={(e) => {
+								selectedId = e.detail.value;
 							}}
-						>
-							{#if tab === 'tools'}
-								<option value="" selected disabled class="bg-white dark:bg-gray-700">
-									{$i18n.t('Select a tool')}
-								</option>
-
-								{#each $tools as tool, toolIdx}
-									<option value={tool.id} class="bg-white dark:bg-gray-700">{tool.name}</option>
-								{/each}
-							{:else if tab === 'functions'}
-								<option value="" selected disabled class="bg-white dark:bg-gray-700">
-									{$i18n.t('Select a function')}
-								</option>
-
-								{#each $functions as func, funcIdx}
-									<option value={func.id} class="bg-white dark:bg-gray-700">{func.name}</option>
-								{/each}
-							{/if}
-						</select>
+						/>
 					</div>
 				</div>
 			</div>

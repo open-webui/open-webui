@@ -3,7 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import Modal from '$lib/components/common/Modal.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	export let show = false;
 
@@ -43,15 +43,21 @@
 	};
 </script>
 
-<Modal size="sm" bind:show>
+
+<Modal
+	size="sm"
+	bind:show
+	backdropClassName="bg-black/20 backdrop-blur-[1px] dark:bg-black/35"
+	className="rounded-3xl border border-gray-200 bg-white/96 shadow-2xl dark:border-gray-800 dark:bg-gray-900/96"
+>
 	<div>
 		<!-- Header -->
-		<div class="flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
-			<div class="text-lg font-medium self-center">
+		<div class="flex items-center justify-between px-6 pt-5 pb-2 dark:text-gray-300">
+			<div class="text-xl font-semibold self-center text-gray-900 dark:text-gray-100 tracking-tight">
 				{$i18n.t('Create Project')}
 			</div>
 			<button
-				class="self-center"
+				class="self-center rounded-full p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100"
 				on:click={handleClose}
 			>
 				<svg
@@ -70,54 +76,28 @@
 		</div>
 
 		<!-- Content -->
-		<div class="flex flex-col w-full px-5 pb-4 dark:text-gray-200">
+		<div class="flex flex-col w-full px-6 pb-5 dark:text-gray-200">
 			<form
 				class="flex flex-col w-full"
 				on:submit|preventDefault={handleSubmit}
 			>
 				<!-- Project Name Input -->
-				<div class="flex flex-col w-full mt-2">
-					<div class="mb-1 text-xs text-gray-500">{$i18n.t('Project Name')}</div>
+				<div class="flex flex-col w-full mt-1">
+					<div class="mb-1.5 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{$i18n.t('Project Name')}</div>
 					<div class="flex-1">
 						<input
-							class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+							class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-100 dark:border-gray-700 dark:bg-gray-800/80 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-orange-500/60 dark:focus:ring-orange-500/20"
 							type="text"
 							bind:value={projectName}
-							placeholder={$i18n.t('Copenhagen Trip')}
+							placeholder={$i18n.t('Create your new project')}
 							autocomplete="off"
-							autofocus
 						/>
 					</div>
 				</div>
 
-				<hr class="border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
+				<hr class="my-3.5 w-full border-gray-100 dark:border-gray-700/40" />
 
-				<!-- Category Selection -->
-				<!-- <div class="my-2">
-					<div class="mb-2 text-xs text-gray-500">{$i18n.t('Category')} ({$i18n.t('Optional')})</div>
-					<div class="flex flex-wrap gap-2">
-						{#each categories as category}
-							<button
-								type="button"
-								class="category-button px-3 py-2 rounded-lg border-2 transition-all duration-200 flex items-center gap-2 text-sm {selectedCategory ===
-								category.id
-									? `${category.color} font-medium`
-									: 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'}"
-								on:click={() => {
-									selectedCategory = selectedCategory === category.id ? '' : category.id;
-								}}
-							>
-								<span>{category.icon}</span>
-								<span>{$i18n.t(category.name)}</span>
-							</button>
-						{/each}
-					</div>
-				</div>
-
-				<hr class="border-gray-100 dark:border-gray-700/10 my-2.5 w-full" /> -->
-
-				<!-- Info Banner -->
-				<div class="my-2 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg">
+				<div class="rounded-xl border border-blue-200 bg-gradient-to-b from-blue-50 to-blue-100/60 p-3 dark:border-blue-900/70 dark:from-blue-950/40 dark:to-blue-950/20">
 					<div class="flex gap-2.5">
 						<div class="flex-shrink-0 mt-0.5">
 							<svg
@@ -136,7 +116,7 @@
 							</svg>
 						</div>
 						<div class="flex-1">
-							<p class="text-xs text-blue-900 dark:text-blue-200 leading-relaxed">
+							<p class="text-xs leading-relaxed text-blue-900 dark:text-blue-200">
 								{$i18n.t('Projects keep chats, files, and custom instructions in one place. Use them for ongoing work, or just to keep things tidy.')}
 							</p>
 						</div>
@@ -144,9 +124,9 @@
 				</div>
 
 				<!-- Submit Button -->
-				<div class="flex justify-end pt-3 text-sm font-medium">
+				<div class="flex justify-end pt-4 text-sm font-medium">
 					<button
-						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-950 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
+						class="rounded-full bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
 						type="submit"
 						disabled={!projectName.trim()}
 					>
@@ -158,13 +138,3 @@
 	</div>
 </Modal>
 
-<style>
-	.category-button {
-		user-select: none;
-		-webkit-user-select: none;
-	}
-
-	.category-button:active {
-		transform: scale(0.98);
-	}
-</style>

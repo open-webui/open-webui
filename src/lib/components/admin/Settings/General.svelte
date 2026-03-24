@@ -11,6 +11,7 @@
 		updateLdapServer
 	} from '$lib/apis/auths';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import SelectDropdown from '$lib/components/common/SelectDropdown.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { WEBUI_BUILD_HASH, WEBUI_VERSION } from '$lib/constants';
@@ -114,23 +115,23 @@
 		updateHandler();
 	}}
 >
-	<div class="mt-0.5 space-y-3 overflow-y-scroll scrollbar-hidden h-full" style="padding-right: 4px;">
+	<div class="mt-0.5 space-y-3 sm:space-y-4 overflow-y-auto scrollbar-hidden h-full pr-1">
 		{#if adminConfig !== null}
 			<div class="">
 				<!-- General Section -->
-				<div class="mb-6 bg-gradient-to-b from-gray-50/50 to-transparent dark:from-gray-800/20 dark:to-transparent rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/30">
+				<div class="mb-6 bg-gradient-to-b from-gray-50/50 to-transparent dark:from-gray-800/20 dark:to-transparent rounded-xl p-3 sm:p-5 border border-gray-200/60 dark:border-gray-700/30">
 					<div class="mb-4 flex items-center gap-2">
 						<div class="w-1 h-6 bg-orange-500 rounded-sm"></div>
 						<div class="text-base font-semibold text-gray-900 dark:text-gray-100" style="letter-spacing: -0.01em;">{$i18n.t('General')}</div>
 					</div>
 
 					<!-- Version Info Card -->
-					<div class="mb-4 bg-white dark:bg-gray-800/50 rounded-lg p-4 shadow-sm border border-gray-200/80 dark:border-gray-700/50">
+					<div class="mb-4 bg-white dark:bg-gray-800/50 rounded-lg p-3 sm:p-4 shadow-sm border border-gray-200/80 dark:border-gray-700/50">
 						<div class="mb-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 							{$i18n.t('Version')}
 						</div>
-						<div class="flex w-full justify-between items-center">
-							<div class="flex flex-col text-xs text-gray-700 dark:text-gray-300 gap-1.5">
+						<div class="flex w-full flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+							<div class="flex flex-col text-xs text-gray-700 dark:text-gray-300 gap-1.5 w-full sm:w-auto">
 								<div class="flex gap-1 items-center">
 									<Tooltip content={WEBUI_BUILD_HASH}>
 										<span class="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-xs font-semibold text-gray-800 dark:text-gray-200">v{WEBUI_VERSION}</span>
@@ -161,7 +162,7 @@
 							</div>
 
 							<button
-								class="text-xs px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors rounded-lg font-semibold shadow-sm border border-gray-300/50 dark:border-gray-600/50"
+								class="w-full sm:w-auto text-xs px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors rounded-lg font-semibold shadow-sm border border-gray-300/50 dark:border-gray-600/50"
 								type="button"
 								on:click={() => {
 									checkForVersionUpdates();
@@ -173,8 +174,8 @@
 					</div>
 
 					<!-- Help Card -->
-					<div class="mb-4 bg-white dark:bg-gray-800/50 rounded-lg p-4 shadow-sm border border-gray-200/80 dark:border-gray-700/50">
-						<div class="flex w-full justify-between items-center">
+					<div class="mb-4 bg-white dark:bg-gray-800/50 rounded-lg p-3 sm:p-4 shadow-sm border border-gray-200/80 dark:border-gray-700/50">
+						<div class="flex w-full flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
 							<div class="text-xs pr-2">
 								<div class="font-semibold text-gray-900 dark:text-gray-100 mb-1 text-sm">
 									{$i18n.t('Help')}
@@ -223,8 +224,8 @@
 					</div>
 
 					<!-- License Card -->
-					<div class="mb-2 bg-white dark:bg-gray-800/50 rounded-lg p-4 shadow-sm border border-gray-200/80 dark:border-gray-700/50">
-						<div class="flex w-full justify-between items-center">
+					<div class="mb-2 bg-white dark:bg-gray-800/50 rounded-lg p-3 sm:p-4 shadow-sm border border-gray-200/80 dark:border-gray-700/50">
+						<div class="flex w-full flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
 							<div class="text-xs pr-2">
 								<div class="font-semibold text-gray-900 dark:text-gray-100 mb-1 text-sm">
 									{$i18n.t('License')}
@@ -273,37 +274,39 @@
 				</div>
 
 				<!-- Authentication Section -->
-				<div class="mb-6 bg-gradient-to-b from-gray-50/50 to-transparent dark:from-gray-800/20 dark:to-transparent rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/30">
+				<div class="mb-6 bg-gradient-to-b from-gray-50/50 to-transparent dark:from-gray-800/20 dark:to-transparent rounded-xl p-3 sm:p-5 border border-gray-200/60 dark:border-gray-700/30">
 					<div class="mb-4 flex items-center gap-2">
 						<div class="w-1 h-6 bg-orange-500 rounded-sm"></div>
 						<div class="text-base font-semibold text-gray-900 dark:text-gray-100" style="letter-spacing: -0.01em;">{$i18n.t('Authentication')}</div>
 					</div>
 
-					<div class="space-y-3 bg-white dark:bg-gray-800/50 rounded-lg p-4 shadow-sm border border-gray-200/80 dark:border-gray-700/50">
+					<div class="space-y-3 bg-white dark:bg-gray-800/50 rounded-lg p-3 sm:p-4 shadow-sm border border-gray-200/80 dark:border-gray-700/50">
 						<!-- Default User Role -->
-						<div class="flex w-full justify-between items-center py-2 border-b border-gray-200/60 dark:border-gray-700/40">
+						<div class="flex w-full flex-col sm:flex-row justify-between items-start sm:items-center gap-2 py-2 border-b border-gray-200/60 dark:border-gray-700/40">
 							<div class="self-center text-sm font-medium text-gray-800 dark:text-gray-200">{$i18n.t('Default User Role')}</div>
-							<div class="flex items-center relative">
-								<select
-									class="w-fit pr-8 rounded-md px-3 py-1.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300/50 dark:border-gray-600/50 outline-none font-medium cursor-pointer transition-colors hover:bg-gray-200 dark:hover:bg-gray-600"
-									bind:value={adminConfig.DEFAULT_USER_ROLE}
-									placeholder="Select a role"
-								>
-									<option value="pending">{$i18n.t('pending')}</option>
-									<option value="user">{$i18n.t('user')}</option>
-									<option value="admin">{$i18n.t('admin')}</option>
-								</select>
+							<div class="w-full sm:w-auto">
+								<SelectDropdown
+									value={adminConfig.DEFAULT_USER_ROLE}
+									options={[
+										{ value: 'pending', label: $i18n.t('pending') },
+										{ value: 'user', label: $i18n.t('user') },
+										{ value: 'admin', label: $i18n.t('admin') }
+									]}
+									on:change={(e) => {
+										adminConfig.DEFAULT_USER_ROLE = e.detail.value;
+									}}
+								/>
 							</div>
 						</div>
 
 						<!-- Enable New Sign Ups -->
-						<div class="flex w-full justify-between items-center py-2 border-b border-gray-200/60 dark:border-gray-700/40">
+						<div class="flex w-full flex-col sm:flex-row justify-between items-start sm:items-center gap-2 py-2 border-b border-gray-200/60 dark:border-gray-700/40">
 							<div class="self-center text-sm font-medium text-gray-800 dark:text-gray-200">{$i18n.t('Enable New Sign Ups')}</div>
 							<Switch bind:state={adminConfig.ENABLE_SIGNUP} />
 						</div>
 
 						<!-- Show Admin Details -->
-						<div class="flex w-full items-center justify-between py-2 border-b border-gray-200/60 dark:border-gray-700/40">
+						<div class="flex w-full flex-col sm:flex-row items-start sm:items-center justify-between gap-2 py-2 border-b border-gray-200/60 dark:border-gray-700/40">
 							<div class="self-center text-sm font-medium text-gray-800 dark:text-gray-200">
 								{$i18n.t('Show Admin Details in Account Pending Overlay')}
 							</div>
@@ -311,13 +314,13 @@
 						</div>
 
 						<!-- Enable API Key -->
-						<div class="flex w-full justify-between items-center py-2 border-b border-gray-200/60 dark:border-gray-700/40">
+						<div class="flex w-full flex-col sm:flex-row justify-between items-start sm:items-center gap-2 py-2 border-b border-gray-200/60 dark:border-gray-700/40">
 							<div class="self-center text-sm font-medium text-gray-800 dark:text-gray-200">{$i18n.t('Enable API Key')}</div>
 							<Switch bind:state={adminConfig.ENABLE_API_KEY} />
 						</div>
 
 						{#if adminConfig?.ENABLE_API_KEY}
-							<div class="flex w-full justify-between items-center py-2 pl-4 border-b border-gray-200/60 dark:border-gray-700/40 border-l-4 border-l-blue-500 dark:border-l-blue-400">
+							<div class="flex w-full flex-col sm:flex-row justify-between items-start sm:items-center gap-2 py-2 pl-3 sm:pl-4 border-b border-gray-200/60 dark:border-gray-700/40 border-l-4 border-l-blue-500 dark:border-l-blue-400">
 								<div class="self-center text-sm font-medium text-gray-800 dark:text-gray-200">
 									{$i18n.t('API Key Endpoint Restrictions')}
 								</div>
@@ -325,7 +328,7 @@
 							</div>
 
 							{#if adminConfig?.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS}
-								<div class="flex w-full flex-col py-3 pl-4 border-l-4 border-l-blue-500 dark:border-l-blue-400">
+								<div class="flex w-full flex-col py-3 pl-3 sm:pl-4 border-l-4 border-l-blue-500 dark:border-l-blue-400">
 									<div class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">
 										{$i18n.t('Allowed Endpoints')}
 									</div>
@@ -390,7 +393,7 @@
 
 								{#if ENABLE_LDAP}
 									<div class="flex flex-col gap-3 bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-300/50 dark:border-gray-700/50">
-										<div class="flex w-full gap-2">
+										<div class="flex w-full flex-col sm:flex-row gap-2">
 											<div class="w-full">
 												<div class="self-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1.5">
 													{$i18n.t('Label')}
@@ -402,9 +405,9 @@
 													bind:value={LDAP_SERVER.label}
 												/>
 											</div>
-											<div class="w-full"></div>
+											<div class="hidden sm:block w-full"></div>
 										</div>
-										<div class="flex w-full gap-2">
+										<div class="flex w-full flex-col sm:flex-row gap-2">
 											<div class="w-full">
 												<div class="self-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1.5">
 													{$i18n.t('Host')}
@@ -434,7 +437,7 @@
 												</Tooltip>
 											</div>
 										</div>
-										<div class="flex w-full gap-2">
+										<div class="flex w-full flex-col sm:flex-row gap-2">
 											<div class="w-full">
 												<div class="self-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1.5">
 													{$i18n.t('Application DN')}
@@ -550,7 +553,7 @@
 												</div>
 											</div>
 											{#if LDAP_SERVER.use_tls}
-												<div class="flex w-full gap-2 mt-3">
+												<div class="flex w-full flex-col sm:flex-row gap-2 mt-3">
 													<div class="w-full">
 														<div class="self-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1.5">
 															{$i18n.t('Certificate Path')}
@@ -562,7 +565,7 @@
 														/>
 													</div>
 												</div>
-												<div class="flex w-full gap-2 mt-3">
+												<div class="flex w-full flex-col sm:flex-row gap-2 mt-3">
 													<div class="w-full">
 														<div class="self-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1.5">
 															{$i18n.t('Ciphers')}
@@ -575,7 +578,7 @@
 															/>
 														</Tooltip>
 													</div>
-													<div class="w-full"></div>
+													<div class="hidden sm:block w-full"></div>
 												</div>
 											{/if}
 										</div>
@@ -587,15 +590,15 @@
 				</div>
 
 				<!-- Features Section -->
-				<div class="mb-3 bg-gradient-to-b from-gray-50/50 to-transparent dark:from-gray-800/20 dark:to-transparent rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/30">
+				<div class="mb-3 bg-gradient-to-b from-gray-50/50 to-transparent dark:from-gray-800/20 dark:to-transparent rounded-xl p-3 sm:p-5 border border-gray-200/60 dark:border-gray-700/30">
 					<div class="mb-4 flex items-center gap-2">
 						<div class="w-1 h-6 bg-gradient-to-b from-amber-500 to-red-500 rounded-sm"></div>
 						<div class="text-base font-semibold text-gray-900 dark:text-gray-100" style="letter-spacing: -0.01em;">{$i18n.t('Features')}</div>
 					</div>
 
-					<div class="space-y-3 bg-white dark:bg-gray-800/50 rounded-lg p-4 shadow-sm border border-gray-200/80 dark:border-gray-700/50">
+					<div class="space-y-3 bg-white dark:bg-gray-800/50 rounded-lg p-3 sm:p-4 shadow-sm border border-gray-200/80 dark:border-gray-700/50">
 						<!-- Enable Community Sharing -->
-						<div class="flex w-full items-center justify-between py-2 border-b border-gray-200/60 dark:border-gray-700/40">
+						<div class="flex w-full flex-col sm:flex-row items-start sm:items-center justify-between gap-2 py-2 border-b border-gray-200/60 dark:border-gray-700/40">
 							<div class="self-center text-sm font-medium text-gray-800 dark:text-gray-200">
 								{$i18n.t('Enable Community Sharing')}
 							</div>
@@ -603,13 +606,13 @@
 						</div>
 
 						<!-- Enable Message Rating -->
-						<div class="flex w-full items-center justify-between py-2 border-b border-gray-200/60 dark:border-gray-700/40">
+						<div class="flex w-full flex-col sm:flex-row items-start sm:items-center justify-between gap-2 py-2 border-b border-gray-200/60 dark:border-gray-700/40">
 							<div class="self-center text-sm font-medium text-gray-800 dark:text-gray-200">{$i18n.t('Enable Message Rating')}</div>
 							<Switch bind:state={adminConfig.ENABLE_MESSAGE_RATING} />
 						</div>
 
 						<!-- Channels -->
-						<div class="flex w-full items-center justify-between py-2 border-b border-gray-200/60 dark:border-gray-700/40">
+						<div class="flex w-full flex-col sm:flex-row items-start sm:items-center justify-between gap-2 py-2 border-b border-gray-200/60 dark:border-gray-700/40">
 							<div class="self-center text-sm font-medium text-gray-800 dark:text-gray-200">
 								{$i18n.t('Channels')} <span class="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded text-[10px] font-bold ml-1">({$i18n.t('Beta')})</span>
 							</div>
@@ -617,7 +620,7 @@
 						</div>
 
 						<!-- User Webhooks -->
-						<div class="flex w-full items-center justify-between py-2 border-b border-gray-200/60 dark:border-gray-700/40">
+						<div class="flex w-full flex-col sm:flex-row items-start sm:items-center justify-between gap-2 py-2 border-b border-gray-200/60 dark:border-gray-700/40">
 							<div class="self-center text-sm font-medium text-gray-800 dark:text-gray-200">
 								{$i18n.t('User Webhooks')}
 							</div>
@@ -669,7 +672,7 @@
 
 	<div class="flex justify-end pt-4 text-sm font-medium border-t border-gray-200 dark:border-gray-700/50">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-orange-600 hover:bg-orange-700 text-white transition rounded-lg"
+			class="w-full sm:w-auto px-3.5 py-2 text-sm font-medium bg-orange-600 hover:bg-orange-700 text-white transition rounded-lg"
 			type="submit"
 		>
 			{$i18n.t('Save')}

@@ -84,6 +84,13 @@
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
 
+	let canSubmit = false;
+	$: canSubmit =
+		(prompt ?? '')
+			.replace(/<p><\/p>/g, '')
+			.replace(/<br\s*\/?>/g, '')
+			.trim() !== '' || files.length > 0;
+
 	$: onChange({
 		prompt,
 		files,
@@ -122,6 +129,24 @@
 			top: element.scrollHeight,
 			behavior: 'smooth'
 		});
+	};
+
+	const submitInput = () => {
+		const isSendDebugEnabled = localStorage.getItem('debug-send') === '1';
+		if (isSendDebugEnabled) {
+			console.log('[send-debug][MessageInput.submitInput]', {
+				canSubmit,
+				prompt,
+				filesCount: files.length
+			});
+		}
+
+		if (!canSubmit) {
+			return;
+		}
+
+		showControls.set(false);
+		dispatch('submit', prompt);
 	};
 
 	const screenCaptureHandler = async () => {
@@ -485,23 +510,21 @@
 								document.getElementById('chat-input')?.focus();
 
 								if ($settings?.speechAutoSend ?? false) {
-									dispatch('submit', prompt);
+									submitInput();
 								}
 							}}
 						/>
 					{:else}
 						<form
-							class="w-full flex gap-2 @sm:gap-2.5"
-							on:submit|preventDefault={() => {
-								dispatch('submit', prompt);
-							}}
+							class="w-full flex gap-1.5 @sm:gap-2.5"
+							on:submit|preventDefault={submitInput}
 						>
 							<div
-								class="flex-1 flex flex-col relative w-full min-w-0 rounded-3xl border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 focus-within:border-gray-300 dark:focus-within:border-gray-600 transition-all duration-200 bg-white dark:bg-gray-800 shadow-sm hover:shadow-sm dark:text-gray-100"
+								class="flex-1 flex flex-col relative w-full min-w-0 rounded-[1.35rem] sm:rounded-3xl border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 focus-within:border-gray-300 dark:focus-within:border-gray-600 transition-all duration-200 bg-white dark:bg-gray-800 shadow-sm hover:shadow-sm dark:text-gray-100"
 								dir={$settings?.chatDirection ?? 'auto'}
 							>
 								{#if files.length > 0}
-									<div class="mx-4 mt-4 mb-2 flex items-center flex-wrap gap-3">
+									<div class="mx-3 mt-3 mb-2 flex items-center flex-wrap gap-3 sm:mx-4 sm:mt-4">
 										{#each files as file, fileIdx}
 											{#if file.type === 'image'}
 												<div class="relative group">
@@ -589,16 +612,16 @@
 									</div>
 								{/if}
 
-								<!-- ✅ INCREASED: Changed from 70px to 140px to show ~4 lines -->
-								<div class="px-4" style="max-height: 500px; overflow-y: auto;">
+								<div class="px-2 sm:px-4 max-h-[220px] sm:max-h-[500px] overflow-y-auto">
 									{#if $settings?.richTextInput ?? true}
 										<div
-											class="text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-4 px-2"
+											class="text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-2 sm:pt-4 px-1.5 sm:px-2"
 											id="chat-input-container"
 										>
 											<RichTextInput
 												bind:this={chatInputElement}
 												bind:value={prompt}
+												className="input-prose max-h-[112px] sm:max-h-[160px]"
 												id="chat-input"
 												messageInput={true}
 												shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
@@ -724,28 +747,19 @@
 															}
 														}
 													} else {
-														if (
-															!$mobile ||
-															!(
-																'ontouchstart' in window ||
-																navigator.maxTouchPoints > 0 ||
-																navigator.msMaxTouchPoints > 0
-															)
-														) {
-															if (isComposing) {
-																return;
-															}
+														if (isComposing) {
+															return;
+														}
 
-															const enterPressed =
-																($settings?.ctrlEnterToSend ?? false)
-																	? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
-																	: (e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey;
+														const enterPressed =
+															($settings?.ctrlEnterToSend ?? false)
+																? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
+																: (e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey;
 
-															if (enterPressed) {
-																e.preventDefault();
-																if (prompt !== '' || files.length > 0) {
-																	dispatch('submit', prompt);
-																}
+														if (enterPressed) {
+															e.preventDefault();
+															if (prompt !== '' || files.length > 0) {
+																submitInput();
 															}
 														}
 													}
@@ -806,7 +820,7 @@
 											id="chat-input"
 											dir="auto"
 											bind:this={chatInputElement}
-											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-hidden w-full pt-4 px-2 resize-none"
+											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-hidden w-full pt-2 sm:pt-4 px-1.5 sm:px-2 resize-none"
 											style="max-height: 160px; overflow-y: auto;"
 											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 											bind:value={prompt}
@@ -902,33 +916,24 @@
 														commandOptionButton?.click();
 													}
 												} else {
-													if (
-														!$mobile ||
-														!(
-															'ontouchstart' in window ||
-															navigator.maxTouchPoints > 0 ||
-															navigator.msMaxTouchPoints > 0
-														)
-													) {
-														if (isComposing) {
-															return;
-														}
+													if (isComposing) {
+														return;
+													}
 
-														const isCtrlPressed = e.ctrlKey || e.metaKey;
-														const enterPressed =
-															($settings?.ctrlEnterToSend ?? false)
-																? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
-																: (e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey;
+													const isCtrlPressed = e.ctrlKey || e.metaKey;
+													const enterPressed =
+														($settings?.ctrlEnterToSend ?? false)
+															? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
+															: (e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey;
 
-														console.log('Enter pressed:', enterPressed);
+													console.log('Enter pressed:', enterPressed);
 
-														if (enterPressed) {
-															e.preventDefault();
-														}
+													if (enterPressed) {
+														e.preventDefault();
+													}
 
-														if ((prompt !== '' || files.length > 0) && enterPressed) {
-															dispatch('submit', prompt);
-														}
+													if ((prompt !== '' || files.length > 0) && enterPressed) {
+														submitInput();
 													}
 												}
 
@@ -950,9 +955,8 @@
 														e.target.setSelectionRange(word?.startIndex, word.endIndex + 1);
 													}
 
-													// ✅ INCREASED: Changed from 160px to 200px to show ~4 lines
 													e.target.style.height = '';
-													e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+													e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px';
 												}
 
 												if (e.key === 'Escape') {
@@ -965,14 +969,12 @@
 											}}
 											rows="1"
 											on:input={async (e) => {
-												// ✅ INCREASED: Changed from 160px to 200px to show ~4 lines
 												e.target.style.height = '';
-												e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+												e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px';
 											}}
 											on:focus={async (e) => {
-												// ✅ INCREASED: Changed from 160px to 200px to show ~4 lines
 												e.target.style.height = '';
-												e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+												e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px';
 											}}
 											on:paste={async (e) => {
 												const clipboardData = e.clipboardData || window.clipboardData;
@@ -1016,7 +1018,7 @@
 									{/if}
 								</div>
 
-								<div class="grid grid-cols-[1fr_auto] mt-2 mb-4 mx-1 @sm:mx-2 max-w-full items-end gap-2 @sm:gap-3">
+								<div class="grid grid-cols-[1fr_auto] mt-1.5 mb-2 sm:mt-2 sm:mb-4 mx-1 sm:mx-2 max-w-full items-end gap-1.5 sm:gap-3">
 									<div class="ml-1 @sm:ml-2 self-end flex items-center flex-1 min-w-0 max-w-[75%] @sm:max-w-[80%] gap-1.5 @sm:gap-2 overflow-hidden">
 										<InputMenu
 											bind:selectedToolIds
@@ -1068,7 +1070,7 @@
 											}}
 										>
 											<button
-												class="group bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all duration-200 rounded-xl p-2.5 outline-hidden focus:outline-hidden"
+												class="group bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all duration-200 rounded-lg sm:rounded-xl p-2 sm:p-2.5 outline-hidden focus:outline-hidden"
 												type="button"
 												aria-label="More"
 											>
@@ -1093,7 +1095,7 @@
 													})}
 												>
 													<button
-														class="group flex gap-2 items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-xl px-3 py-2 self-center transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 border border-transparent hover:border-gray-200 dark:hover:border-gray-600"
+														class="group flex gap-2 items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg sm:rounded-xl px-2.5 sm:px-3 py-1.5 sm:py-2 self-center transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 border border-transparent hover:border-gray-200 dark:hover:border-gray-600"
 														aria-label="Available Tools"
 														type="button"
 														on:click={() => {
@@ -1114,7 +1116,7 @@
 														<button
 															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
 															type="button"
-															class="group px-3 py-2 flex gap-2 items-center text-sm rounded-xl font-semibold transition-all duration-200 focus:outline-hidden max-w-full overflow-hidden border-2 {webSearchEnabled ||
+															class="group px-2.5 sm:px-3 py-1.5 sm:py-2 flex gap-2 items-center text-sm rounded-lg sm:rounded-xl font-semibold transition-all duration-200 focus:outline-hidden max-w-full overflow-hidden border-2 {webSearchEnabled ||
 															($settings?.webSearch ?? false) === 'always'
 																? 'bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-500/20 dark:to-blue-500/10 border-blue-400 dark:border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm'
 																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-200 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-white'}"
@@ -1135,7 +1137,7 @@
 															on:click|preventDefault={() =>
 																(imageGenerationEnabled = !imageGenerationEnabled)}
 															type="button"
-															class="group px-3 py-2 flex gap-2 items-center text-sm rounded-xl font-semibold transition-all duration-200 focus:outline-hidden max-w-full overflow-hidden border-2 {imageGenerationEnabled
+															class="group px-2.5 sm:px-3 py-1.5 sm:py-2 flex gap-2 items-center text-sm rounded-lg sm:rounded-xl font-semibold transition-all duration-200 focus:outline-hidden max-w-full overflow-hidden border-2 {imageGenerationEnabled
 																? 'bg-gradient-to-r from-purple-50 to-purple-100/50 dark:from-purple-500/20 dark:to-purple-500/10 border-purple-400 dark:border-purple-500 text-purple-600 dark:text-purple-400 shadow-sm'
 																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-200 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-white'}"
 														>
@@ -1155,7 +1157,7 @@
 															on:click|preventDefault={() =>
 																(codeInterpreterEnabled = !codeInterpreterEnabled)}
 															type="button"
-															class="group px-3 py-2 flex gap-2 items-center text-sm rounded-xl font-semibold transition-all duration-200 focus:outline-hidden max-w-full overflow-hidden border-2 {codeInterpreterEnabled
+															class="group px-2.5 sm:px-3 py-1.5 sm:py-2 flex gap-2 items-center text-sm rounded-lg sm:rounded-xl font-semibold transition-all duration-200 focus:outline-hidden max-w-full overflow-hidden border-2 {codeInterpreterEnabled
 																? 'bg-gradient-to-r from-green-50 to-green-100/50 dark:from-green-500/20 dark:to-green-500/10 border-green-400 dark:border-green-500 text-green-600 dark:text-green-400 shadow-sm'
 																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-200 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-white'}"
 														>
@@ -1172,15 +1174,12 @@
 										</div>
 									</div>
 
-									<div
-										class="self-end mr-1 @sm:mr-2 shrink-0 relative flex items-center justify-end"
-										style="width: 90px; min-width: 90px;"
-									>
+									<div class="self-end mr-1 @sm:mr-2 shrink-0 relative flex items-center justify-end w-[78px] min-w-[78px] sm:w-[90px] sm:min-w-[90px]">
 										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
 											<Tooltip content={$i18n.t('Record voice')}>
 												<button
 													id="voice-input-button"
-													class="group text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all duration-200 rounded-xl p-2.5 mr-1 self-center hover:bg-gray-100 dark:hover:bg-gray-700 border border-transparent hover:border-gray-200 dark:hover:border-gray-600"
+													class="group text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all duration-200 rounded-lg sm:rounded-xl p-2 sm:p-2.5 mr-0.5 sm:mr-1 self-center hover:bg-gray-100 dark:hover:bg-gray-700 border border-transparent hover:border-gray-200 dark:hover:border-gray-600"
 													type="button"
 													on:click={async () => {
 														try {
@@ -1214,7 +1213,7 @@
 														xmlns="http://www.w3.org/2000/svg"
 														viewBox="0 0 20 20"
 														fill="currentColor"
-														class="w-5 h-5 transition-transform duration-200 group-hover:scale-110"
+														class="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-200 group-hover:scale-110"
 													>
 														<path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
 														<path
@@ -1229,8 +1228,9 @@
 											<div class="flex items-center">
 												<Tooltip content={$i18n.t('Stop')}>
 													<button
-														class="group bg-white hover:bg-orange-50 text-orange-600 dark:bg-orange-700 dark:text-orange dark:hover:bg-orange-600 transition-all duration-200 rounded-full p-3 shadow-lg hover:shadow-xl hover:scale-105"
-														on:click={() => {
+														class="group bg-white hover:bg-orange-50 text-orange-600 dark:bg-orange-700 dark:text-orange dark:hover:bg-orange-600 transition-all duration-200 rounded-full p-2.5 sm:p-3 shadow-lg hover:shadow-xl hover:scale-105"
+														type="button"
+														on:click|preventDefault|stopPropagation={() => {
 															stopResponse();
 														}}
 													>
@@ -1238,7 +1238,7 @@
 															xmlns="http://www.w3.org/2000/svg"
 															viewBox="0 0 24 24"
 															fill="currentColor"
-															class="size-5"
+															class="size-4 sm:size-5"
 														>
 															<path
 																fill-rule="evenodd"
@@ -1253,7 +1253,7 @@
 											<div class="flex items-center">
 												<Tooltip content={$i18n.t('Call')}>
 													<button
-														class="group bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 dark:from-orange-500 dark:to-orange-600 dark:hover:from-orange-400 dark:hover:to-orange-500 transition-all duration-200 rounded-full p-3 self-center shadow-lg hover:shadow-xl hover:scale-105"
+														class="group bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 dark:from-orange-500 dark:to-orange-600 dark:hover:from-orange-400 dark:hover:to-orange-500 transition-all duration-200 rounded-full p-2.5 sm:p-3 self-center shadow-lg hover:shadow-xl hover:scale-105"
 														type="button"
 														on:click={async () => {
 															if (selectedModels.length > 1) {
@@ -1303,7 +1303,7 @@
 														}}
 														aria-label="Call"
 													>
-														<Headphone className="size-5" />
+														<Headphone className="size-4 sm:size-5" />
 													</button>
 												</Tooltip>
 											</div>
@@ -1312,17 +1312,18 @@
 												<Tooltip content={$i18n.t('Send message')}>
 													<button
 														id="send-message-button"
-														class="group {!(prompt === '' && files.length === 0)
+														class="group {canSubmit
 															? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 dark:from-orange-500 dark:to-orange-600 dark:hover:from-orange-400 dark:hover:to-orange-500 shadow-lg hover:shadow-xl hover:scale-105'
-															: 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'} transition-all duration-200 rounded-full p-3 self-center"
-														type="submit"
-														disabled={prompt === '' && files.length === 0}
+															: 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'} transition-all duration-200 rounded-full p-2.5 sm:p-3 self-center"
+														type="button"
+														disabled={!canSubmit}
+														on:click={submitInput}
 													>
 														<svg
 															xmlns="http://www.w3.org/2000/svg"
 															viewBox="0 0 16 16"
 															fill="currentColor"
-															class="size-5 transition-transform duration-200 {!(prompt === '' && files.length === 0) ? 'group-hover:-translate-y-0.5' : ''}"
+															class="size-4 sm:size-5 transition-transform duration-200 {canSubmit ? 'group-hover:-translate-y-0.5' : ''}"
 														>
 															<path
 																fill-rule="evenodd"

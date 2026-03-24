@@ -57,7 +57,7 @@
 	>
 		<nav class="sticky top-0 z-10 px-3 py-2 backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border-b border-gray-100 dark:border-gray-800 drag-region">
 			<div class="flex items-center gap-3">
-				<div class="{$showSidebar ? 'md:hidden' : ''} flex-none">
+				<div class="md:hidden flex-none">
 					<button
 						id="sidebar-toggle-button"
 						class="p-2 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"

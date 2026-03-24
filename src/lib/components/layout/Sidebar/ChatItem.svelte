@@ -242,7 +242,7 @@
 			<div class="flex items-center gap-1">
 				<Document className=" size-[18px]" strokeWidth="2" />
 				<div class=" text-xs text-white line-clamp-1">
-					{title}
+					{previewTitle(title, 80)}
 				</div>
 			</div>
 		</div>

@@ -1,0 +1,312 @@
+[33m58f37c551[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mnew-ui[m[33m)[m update new-ui and responsive
+[33ma96f130e7[m[33m ([m[1;31morigin/new-ui[m[33m)[m feat: improve UI
+[33m782075e4d[m last commit2/12
+[33m4f78493ed[m last push
+[33ma9a05721f[m first commit
+[33mec90b76c4[m[33m ([m[1;31morigin/4-feat-update-logo[m[33m)[m update logo
+[33mcea9c26fd[m rename
+[33m8e78c3db5[m name
+[33m283225e6c[m name
+[33m852d9dcbe[m chore: cla
+[33m07d846012[m Merge pull request #12809 from open-webui/dev
+[33me4c741752[m refac
+[33m91523bbb0[m chore: bump
+[33m49bf3207e[m chore: format
+[33mec730b08c[m chore: format
+[33m815d18b57[m revert
+[33m8d33b5e06[m refac
+[33maa8db4037[m enh: copy formatted option
+[33m95fca7b70[m refac
+[33m87aa01a5c[m refac: styling
+[33md932fc555[m enh: tts/stt user permissions
+[33mec3b8fab5[m refac
+[33m403295600[m refac: audio tts voice list
+[33mceffac87b[m Merge pull request #12835 from weisser-dev/dev
+[33me7332fd6f[m refac
+[33m60596c362[m Merge pull request #12815 from TomBayne/enh/vad_filter
+[33mc74908393[m Update auths.py
+[33m70718dda9[m refac
+[33m2fcf5d857[m refac
+[33mbc2b5d3cc[m Merge pull request #12816 from SadmL/dev
+[33m370f93415[m Merge pull request #12819 from athoik/dev
+[33mc70fedb62[m Properly handle ldap3.abstract.attribute.Attribute value
+[33m08bcfdb8c[m [i18n] Russian locale update
+[33m24367d459[m Enable vad_filter to improve quality of transcription in faster-whisper model.
+[33m8158609c9[m Merge pull request #12810 from tth37/i18n_small_fix
+[33m70d9405e6[m i18n: update zh-CN
+[33maaefba277[m chore: bump
+[33maca37f592[m Merge pull request #12807 from open-webui/dev
+[33m888b46857[m fix
+[33m9348c05f1[m doc: changelog
+[33m4dafbbccf[m fix: rag template display issue
+[33m8b0e565e2[m Merge pull request #12715 from open-webui/dev
+[33m2766d7df6[m doc: changelog
+[33m8e810e758[m Merge pull request #12806 from tth37/fix_web_rag_settings
+[33me7821288f[m doc: changelog
+[33mdb9d4ead5[m format
+[33m1a6eaf644[m chore: dependency bump
+[33m8d53f1e77[m fix: small bugs on updated web/rag settings
+[33mc1444cbbb[m refac
+[33m40f9747ae[m refac
+[33mac8e81834[m refac
+[33m8d62cc193[m refac
+[33mf3fe82da8[m fix: ongoing chat stop issue
+[33mfa61065c1[m refac
+[33m584477938[m refac: styling
+[33m451465151[m refac
+[33m85ef912f6[m Merge pull request #12794 from TiancongLx/dev
+[33m2b8cd4dff[m i18n: update zh-TW
+[33mf6c8184a7[m fix: model hide issue
+[33mbde89fd29[m refac: audio
+[33mdaabc188e[m fix: model list hide issue
+[33md5ee39de2[m fix: katex display overflow issue
+[33mcdb490499[m refac
+[33m577406e00[m Merge pull request #12788 from TiancongLx/dev
+[33m175919c78[m enh: widescreen mode in shared chats
+[33m03e2e5279[m i18n: update zh-TW
+[33m4ca624749[m chore: format
+[33m40a3e7786[m refac: voice recording
+[33m79dff685e[m feat: multiple models chat user permissions
+[33m881d81d87[m refac: default tool calling behaviour
+[33mdb8780fd9[m refac: default tool boilerplate
+[33m0a69db291[m enh: iframe sandbox policy setting
+[33maf0d99b2a[m refac: artifacts styling
+[33m540c27c58[m Merge pull request #12784 from rgaricano/dev
+[33m410668188[m UPD: Spanish Translation (es-ES)  Rev.0.6.3
+[33m91a455a28[m chore: format
+[33m77b25ae36[m refac
+[33m48a23ce3f[m refac: web/rag config
+[33mc3497da5d[m enh: only copy text message content
+[33mbdef1001a[m refac
+[33m6862d8fba[m Merge pull request #12769 from tth37/feat_frontend_web_loader
+[33m02ba7aeb9[m Merge pull request #12366 from Ithanil/redis_sentinel_2
+[33mc6755f915[m bump python-socketio to 5.13.0 (to support Redis Sentinel natively)
+[33m5eac5960e[m feat: Add frontend configuration for web loader
+[33m30d02c638[m refac: banners
+[33mc5636ff68[m refac
+[33mc846a550f[m refac
+[33m59dd79815[m refac/security: set ac to private by default
+[33m5fea0a222[m refac: styling
+[33m6d63337ee[m refac
+[33mb97ea7261[m refac: tool call result display
+[33m192142031[m refac
+[33ma47a958ed[m refac: rename functions
+[33m53df5d394[m refac: rename hard to understand cryptic function names
+[33m0f27968ce[m fix: tool server session auth
+[33m36ac81b22[m Merge pull request #12727 from decent-engineer-decent-datascientist/main
+[33m9a55257c5[m feat: add Azure AI Speech STT provider
+[33m05aa9c6d9[m refac
+[33mf0efee5de[m Merge pull request #12603 from alpha-pet/fix-convert-ogg-container-openai-transcription
+[33mbf0716e85[m refac: styling
+[33mf9bd49bf5[m refac
+[33m4cbf16c45[m Merge pull request #12717 from Kheiden/progressive-webapp-enhancements
+[33m1eba6a812[m enh: smaller code text size
+[33m3f71929a6[m refac: styling
+[33md8780e4de[m feat: detect artifacts toggle
+[33mc12f8d28b[m Add PWA external manifest URL env var
+[33md4297a3e3[m refac: styling
+[33mfb0ee1329[m enh: tool server data timeout
+[33m23dcae705[m refac: selector
+[33m7aab8b930[m Merge pull request #12567 from aleprj/fix/ms-sso
+[33mf10566f3d[m feat: allow events from pipelines
+[33m0611eb8ac[m refac: layout load
+[33ma3e477e10[m Merge pull request #12602 from alpha-pet/fix-tool-server-indexing-mismatch
+[33mb40b50fb2[m Merge pull request #12563 from IONOS-Productivity/oidc-add-support-for-pkce
+[33me065073be[m Merge pull request #12689 from asncx/fix-folder-chat-rename
+[33m33b35b797[m Merge pull request #12594 from gaby/search-files
+[33mef14d0b46[m Merge pull request #12562 from almajo/fix/agrimm/correct_knowledge_base_citations
+[33m62ef0bad6[m Merge pull request #12680 from lucyknada/patch-1
+[33m63e5200e2[m refac
+[33m1865e29bf[m Merge pull request #12683 from Youggls/dev
+[33mf7dc6474e[m Merge pull request #12694 from SadmL/dev
+[33m536bc36e3[m chore: bump duckduckgo
+[33mde926a060[m [i18n] Russian locale misspelling fix
+[33m4731e0d0e[m fix: convert webm to wav for OpenAI transcription endpoint
+[33m3e2a6df1f[m feat: Add sougou web search API for backend, add config panel in for frontend.
+[33mbc295546c[m fix #12678
+[33m6c9a4d6ce[m Merge pull request #12606 from alpha-pet/feat-openapi-yaml-support
+[33me27c5989b[m Merge pull request #12657 from noamtamim/patch-1
+[33m5f116d69c[m Merge pull request #12664 from Beni34/main
+[33ma27dcc84a[m Merge pull request #12654 from valckmir/main
+[33m7cee0073c[m Update translation.json
+[33ma5faaf388[m refactor: rename persistent config variable
+[33m87af2692e[m fix: folder chat rename
+[33m15fd82291[m Set FastAPI title to `Open WebUI`
+[33m68aea6bf1[m feat: disable persistent config
+[33m38d5b0368[m Merge pull request #12647 from behrmann/multimail
+[33m2e7a01f30[m fix: choose the first mail if multiple are returned from LDAP
+[33ma363c0619[m Merge pull request #12638 from panda44312/patch-12
+[33mf49d3d09f[m Merge pull request #12637 from TiancongLx/dev
+[33m17ea20d3a[m feat: OpenAPI YAML support for frontend toolserver
+[33m92611b588[m i18n: zh-cn
+[33mde1e9f3c0[m i18n: update zh-TW
+[33md8c0a1227[m Merge pull request #12552 from tth37/dev
+[33m84ea9ea01[m Merge pull request #12555 from SadmL/dev
+[33mb130b55f5[m Merge pull request #12571 from hurxxxx/feat/reindex-knowledge-files
+[33m2ff1657a7[m Merge pull request #12573 from gem85247/dev
+[33m2575dac4e[m Merge pull request #12604 from maurerle/ddg_improve_stacktrace
+[33m8c3146f6f[m Merge pull request #12615 from robert-norberg/additional-RAG-logging
+[33m1f12023d8[m Merge pull request #12617 from Classic298/dev
+[33m63eab4220[m refac
+[33m60d11c1f6[m enh: password max length verification
+[33mf17befc85[m Update __init__.py
+[33m65b5c6c0c[m Update start_windows.bat
+[33m2c1d0e385[m Update start.sh
+[33m4c9a791b0[m Update env.py
+[33mf822d8935[m Update env.py
+[33m2337b3660[m add debug logging to RAG utils
+[33m81af20aa9[m refac: use logging instead of print
+[33m27e8c6fce[m feat: add support for OpenAPI spec in YAML format
+[33md99a88386[m fix: convert ogg to wav for OpenAI transcription endpoint
+[33mf5b2867e4[m fix: mismatch between TOOL_SERVERS / TOOL_SERVER_CONNECTIONS indexing
+[33m760ea3f4a[m duckduckgo: backend api has been deprecated since december
+[33m337c7caaf[m improve stack trace of duckduckgo exception
+[33md50ca0aa4[m Update zh-CN translation.json
+[33m399e7b167[m Update zh-CN translation.json
+[33me92d3073b[m Update zh-CN translation.json - Minor fix
+[33m00f58658f[m i18n: Apply i18n to Web Search proxy tooltips
+[33mb15adc63f[m Update zh-CN translation.json
+[33mfed47f2e2[m Add content param to /search route
+[33m1c60b8d54[m Rewrite logic
+[33m8609ca365[m Fix formatting again
+[33me06ff17a7[m Fix formatting
+[33m7c1b00468[m simplify logic
+[33m353b104c7[m add support for searching files
+[33m66322727e[m Merge pull request #12580 from lainedfles/opentelemetry-requirements-fix
+[33m0e71b9659[m fix: Upgrade OpenTelemetry instrumentation packages to 0.52b1
+[33mf3f45209e[m fix: manifest.json cross-origin
+[33me7715f376[m i18n: add reindex knowledge files dialog
+[33m7c828015d[m fix: ReindexKnowledgeFilesConfirmDialog
+[33m4e545d432[m feat: add new admin func - reindex knowledge files
+[33me8f02328f[m Merge branch 'open-webui:main' into fix/ms-sso
+[33m818d24e67[m fix: add appid to the URL to ensure we fetch the correct parameters in all scenarios
+[33m1e7a36478[m ~ update to latest change
+[33md8a7e9c66[m fix: correct document citation
+[33m5c658a487[m feat(config): add config OAUTH_CODE_CHALLENGE_METHOD
+[33mb81789190[m [i18n] Russian locale update
+[33mf17240304[m Update zh-CN translation.json
+[33m9cb1104f0[m refac
+[33md1a77a911[m Merge pull request #12549 from ulagbulag/fix/500-when-unknown-models
+[33m1efae95a3[m fix: internal server error when calling completions API with non-existent model names
+[33m54a74b2c0[m chore: bump
+[33m908492702[m chore: bump
+[33m5553ec3e5[m Merge pull request #12537 from open-webui/dependabot/npm_and_yarn/dev/tiptap/pm-2.11.7
+[33mddec6cf0f[m Merge pull request #12545 from mogorman/elixir_syntax_highlighting
+[33m1857f152c[m Merge pull request #12548 from aleixdorca/dev
+[33mc5deb5cda[m Merge pull request #12541 from open-webui/dependabot/uv/dev/opentelemetry-instrumentation-logging-0.52b0
+[33md3ed20e90[m Merge pull request #12535 from open-webui/dependabot/pip/backend/dev/youtube-transcript-api-1.0.3
+[33m82252cb76[m Merge pull request #12532 from open-webui/dependabot/pip/backend/dev/chromadb-0.6.3
+[33m9e700dc9a[m Merge pull request #12533 from open-webui/dependabot/pip/backend/dev/pgvector-0.4.0
+[33me1f60feb7[m Merge pull request #12529 from open-webui/dependabot/pip/backend/dev/azure-identity-1.21.0
+[33maefb3117d[m fix: chat completion non-existent model issue
+[33m76d8935d0[m Update catalan translation.json
+[33mdbc06084a[m build(deps): bump opentelemetry-instrumentation-logging
+[33m8a81f5f18[m add support for elixir code syntax highlighting
+[33mba6699553[m build(deps): bump @tiptap/pm from 2.10.0 to 2.11.7
+[33m96ecdc37b[m build(deps): bump youtube-transcript-api from 0.6.3 to 1.0.3 in /backend
+[33mf187a1c9e[m build(deps): bump pgvector from 0.3.5 to 0.4.0 in /backend
+[33m9e8b7ac61[m build(deps): bump chromadb from 0.6.2 to 0.6.3 in /backend
+[33m5379c08b9[m build(deps): bump azure-identity from 1.20.0 to 1.21.0 in /backend
+[33m63533c9e3[m Merge pull request #12524 from open-webui/dev
+[33m8e8bc3125[m doc: changelog
+[33m2c083f58d[m chore: format
+[33m93962f01c[m doc: changelog
+[33m40d019ff5[m refac
+[33m3885ea4a1[m Merge pull request #12526 from gaby/dependabot-update
+[33mbd28173de[m Track backend/requirements.txt updates
+[33m06820e701[m refac: citations modal
+[33m2be08f27e[m revert
+[33mfabe5876c[m Merge pull request #12525 from TiancongLx/dev
+[33mf1a4afeb8[m i18n: update zh-TW
+[33m914eb4976[m chore: include `accelerate` dependency
+[33ma8bc0d65a[m chore: format
+[33mcbe205658[m fix: audio file upload response issue
+[33m65ed76abe[m refac: embedding prefix
+[33mbc17511a0[m refac
+[33m3413dd8ae[m refac
+[33m03759e79a[m refac
+[33m20211a489[m refac
+[33m5d2e725f8[m refac
+[33m2722613cd[m refac
+[33mf243e523a[m refac
+[33m155dbd5a6[m refac
+[33m9825d0360[m Merge pull request #12507 from Ithanil/fix_web_result_collection_source_ids
+[33m66cd40f95[m chore: format
+[33mdc2f8ec8c[m refac
+[33mbf118718b[m Merge pull request #12521 from gaby/optimize-workflow
+[33m64a0b28da[m refac
+[33m6751d6803[m Merge pull request #12506 from Ithanil/fix_web_result_source_ids
+[33m6274f4d0d[m Merge pull request #12520 from gaby/bump-docker
+[33m624c5250b[m Optimize GitHub actions
+[33mc1ff69721[m refac
+[33m1e98ae760[m Merge pull request #12431 from gaby/fix-12237
+[33m1bde36e07[m Merge pull request #12510 from newnol/patch-1
+[33m89e7913ff[m Bump Python base Docker image to 3.12
+[33m51bf9eaa8[m Merge pull request #12493 from TiancongLx/dev
+[33mb8cf9b738[m Merge pull request #12511 from panda44312/patch-11
+[33m635c08a5a[m Merge pull request #12517 from Ithanil/only_keep_retrieved_urls
+[33m6323b9f4f[m Merge pull request #12515 from gaby/fix-dependabot
+[33m94453839b[m Update index.ts
+[33ma506a1a61[m only keep URLs as sources for which the content could actually be retrieved
+[33md26649086[m Fix dependabot configuration
+[33mff1d454bd[m Fix formatting
+[33meda3eba08[m Merge branch 'open-webui:main' into fix-12237
+[33m60c6e00d9[m i18n: fix
+[33m246c839ee[m i18n: zh-cn
+[33m2994c58fd[m Update translation.json
+[33m447606004[m fix web results all getting the same source id when using embedding and retrieval
+[33m2729d8aab[m fix web results all getting the same source id when bypassing embedding and retrieval
+[33m26e1bfc77[m Merge remote-tracking branch 'upstream/dev' into dev
+[33m9ea6cea0b[m refac
+[33m71625663c[m Merge pull request #12496 from dan-sullivan/fix-12479/add-desc-to-openapi-tools
+[33m33451cf66[m i18n: update zh-TW
+[33m41aca8491[m Merge pull request #12491 from open-webui/dev
+[33m5296ee0f7[m refac
+[33mda9483516[m Merge pull request #12373 from open-webui/dev
+[33m13dfca4e7[m chore: bump
+[33md5063f47f[m doc: changelog
+[33mef787e4a7[m Merge pull request #12486 from FabioPolito24/text-file-handling-docling
+[33m48d690c55[m Merge pull request #12481 from gaby/generic-errors
+[33m69c68df34[m Merge pull request #12480 from Kylapaallikko/dev
+[33mb3110ca29[m Merge branch 'dev' into dev
+[33mcd0a1b485[m fix: fix for text file handling with docling
+[33m32f309b41[m chore: format
+[33md23f757c1[m refac
+[33m324550423[m Fix formatting issues
+[33mb4277c7d2[m Make auth error messages generic
+[33m84788b73c[m Update translation.json
+[33m09344bbb8[m Fallback from desc to summary to placeholder
+[33mfe4f760b4[m refac
+[33m807b20841[m refac
+[33mae484e8ed[m refac
+[33m56dc7c564[m refac
+[33me570a98bf[m refac: substandard codebase overhauled
+[33m93bb77ede[m refac
+[33m66db2e151[m refac: tools removed UNNECESSARY CODE
+[33mc9e9ce931[m refac
+[33m9747a0e1f[m refac: tool servers
+[33m61778c8f7[m Merge pull request #12478 from theredcat/main
+[33m579aca65b[m Merge pull request #12477 from Ithanil/improved_rag_template
+[33mee44383c8[m refac
+[33m0c0505e1c[m refac
+[33m1b8557ce8[m i18n: improve fr translation
+[33me0da6003f[m tweak default rag template to be more coherent and improve consistency with citations
+[33m0f310b350[m Merge pull request #12476 from Phlogi/dev-hybrid-search
+[33m8cf812181[m Update utils.py
+[33ma2f220332[m Merge pull request #12426 from silentoplayz/fix-feedback
+[33m193a927ab[m fix: temp chat
+[33m4ad10f0c6[m chore: format
+[33m5e06b6d3f[m refac: styling
+[33mcb94a87cb[m refac: tools styling
+[33m793aa307e[m Merge pull request #12433 from gaby/fix-allowed-endpoints
+[33m7e46cc456[m Merge pull request #12439 from narutopden/i18n-add-Tibetan-translation
+[33mb612af29e[m refac
+[33mfeaf434d4[m refac: input prompt
+[33m77fa11098[m enh: openapi tool server custom path
+[33ma32bb850f[m Merge pull request #12450 from mahenning/fix-missing-parameter-rag
+[33m64b68b364[m Merge pull request #12447 from floriankick/fix-openai-api-empty-message-after-tool-call
+[33m3b2b6e183[m Added missing parameter for query_doc_with_hybrid_search.
+[33m138e985d6[m Rename field to include_content
+[33mec3435de0[m make content parameter optional in OpenAI chat completion API endpoint
+[33ma25d87607[m i18n: add Tibetan language
+[33m1c57e3e02[m Fix API_KEY_ALLOWED_ENDPOINTS

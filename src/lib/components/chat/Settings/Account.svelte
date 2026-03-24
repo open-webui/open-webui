@@ -87,7 +87,7 @@
 </script>
 
 <div class="flex flex-col h-full justify-between">
-	<div class="space-y-6 overflow-y-scroll max-h-[28rem] lg:max-h-full px-1">
+	<div class="space-y-4 sm:space-y-6 overflow-y-scroll max-h-[28rem] lg:max-h-full px-1">
 		<input
 			id="profile-image-input"
 			bind:this={profileImageInputElement}
@@ -151,8 +151,8 @@
 		/>
 
 		<!-- Profile Section -->
-		<div class="space-y-4">
-			<div class="flex items-start gap-6">
+		<div class="space-y-3 sm:space-y-4">
+			<div class="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
 				<div class="flex-shrink-0">
 					<button
 						class="relative group rounded-full ring-2 ring-gray-200 dark:ring-gray-700 hover:ring-gray-300 dark:hover:ring-gray-600 transition-all duration-200"
@@ -184,14 +184,14 @@
 					</button>
 				</div>
 
-				<div class="flex-1 space-y-3">
+				<div class="flex-1 space-y-2 sm:space-y-3">
 					<div>
-						<div class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+						<div class="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
 							{$i18n.t('Profile Image')}
 						</div>
 						<div class="flex flex-wrap gap-2">
 							<button
-								class="text-xs font-medium text-gray-700 dark:text-gray-300 rounded-lg px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-750 transition-colors duration-150"
+								class="w-full sm:w-auto text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-750 transition-colors duration-150"
 								on:click={async () => {
 									if (canvasPixelTest()) {
 										profileImageUrl = generateInitialsImage(name);
