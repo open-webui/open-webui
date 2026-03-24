@@ -669,7 +669,7 @@
 					continue;
 				}
 
-				// Not sure why you have to call webkitGetAsEntry and isDirectory seperate, but it won't work if you try item.webkitGetAsEntry().isDirectory
+				// Not sure why you have to call webkitGetAsEntry and isDirectory separately, but it won't work if you try item.webkitGetAsEntry().isDirectory
 				const wkentry = item.webkitGetAsEntry();
 				const isDirectory = wkentry.isDirectory;
 				if (isDirectory) {
