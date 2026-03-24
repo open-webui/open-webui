@@ -60,6 +60,7 @@ from open_webui.config import (
     OAUTH_UPDATE_EMAIL_ON_LOGIN,
     OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID,
     OAUTH_AUDIENCE,
+    OAUTH_AUTHORIZE_PARAMS,
     WEBHOOK_URL,
     JWT_EXPIRES_IN,
     AppConfig,
@@ -1286,6 +1287,8 @@ class OAuthManager:
         kwargs = {}
         if auth_manager_config.OAUTH_AUDIENCE:
             kwargs['audience'] = auth_manager_config.OAUTH_AUDIENCE
+        if OAUTH_AUTHORIZE_PARAMS:
+            kwargs.update(OAUTH_AUTHORIZE_PARAMS)
 
         return await client.authorize_redirect(request, redirect_uri, **kwargs)
 
