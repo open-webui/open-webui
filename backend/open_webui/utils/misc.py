@@ -196,21 +196,39 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
             # Flush any pending content/tool_calls before adding tool result
             flush_pending()
 
-            # Extract text from output content parts
+            # Extract text and images from output content parts
             output_parts = item.get('output', [])
             content = ''
+            image_urls = []
             for part in output_parts:
                 if part.get('type') == 'input_text':
                     output_text = part.get('text', '')
                     content += str(output_text) if not isinstance(output_text, str) else output_text
+                elif part.get('type') == 'input_image':
+                    url = part.get('image_url', '')
+                    if url:
+                        image_urls.append(url)
 
-            messages.append(
-                {
-                    'role': 'tool',
-                    'tool_call_id': item.get('call_id', ''),
-                    'content': content,
-                }
-            )
+            if image_urls:
+                # Multimodal tool content with image(s)
+                messages.append(
+                    {
+                        'role': 'tool',
+                        'tool_call_id': item.get('call_id', ''),
+                        'content': [
+                            {'type': 'input_text', 'text': content},
+                            *[{'type': 'input_image', 'image_url': url} for url in image_urls],
+                        ],
+                    }
+                )
+            else:
+                messages.append(
+                    {
+                        'role': 'tool',
+                        'tool_call_id': item.get('call_id', ''),
+                        'content': content,
+                    }
+                )
 
         elif item_type == 'reasoning':
             if raw:

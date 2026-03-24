@@ -1049,6 +1049,13 @@ def process_tool_result(
 
     tool_result_files = []
 
+    # Detect base64 image data URIs from tool results (e.g. binary image
+    # responses from execute_tool_server).  Move the data URI to
+    # tool_result_files and replace tool_result with a text summary.
+    if isinstance(tool_result, str) and tool_result.startswith('data:image/'):
+        tool_result_files.append({'type': 'image', 'url': tool_result})
+        tool_result = f'{tool_function_name}: Image file read successfully.'
+
     if isinstance(tool_result, list):
         if tool_type == 'mcp':  # MCP
             tool_response = []
@@ -4181,19 +4188,27 @@ async def streaming_chat_response_handler(response, ctx):
                                 break
 
                     for result in results:
+                        output_parts = [{'type': 'input_text', 'text': result.get('content', '')}]
+
+                        # Separate image data URIs (for LLM via input_image) from
+                        # other files (for frontend display via files attribute).
+                        display_files = []
+                        for file_item in result.get('files', []):
+                            if file_item.get('type') == 'image' and file_item.get('url', '').startswith('data:'):
+                                # LLM-only: add as input_image part (invisible to serialize_output)
+                                output_parts.append({'type': 'input_image', 'image_url': file_item['url']})
+                            else:
+                                # Frontend display (MCP images, audio, etc.)
+                                display_files.append(file_item)
+
                         output.append(
                             {
                                 'type': 'function_call_output',
                                 'id': output_id('fco'),
                                 'call_id': result.get('tool_call_id', ''),
-                                'output': [
-                                    {
-                                        'type': 'input_text',
-                                        'text': result.get('content', ''),
-                                    }
-                                ],
+                                'output': output_parts,
                                 'status': 'completed',
-                                **({'files': result.get('files')} if result.get('files') else {}),
+                                **({'files': display_files} if display_files else {}),
                                 **({'embeds': result.get('embeds')} if result.get('embeds') else {}),
                             }
                         )
@@ -4262,12 +4277,23 @@ async def streaming_chat_response_handler(response, ctx):
                                     )
                         tool_call_sources.clear()
 
+                    # Strip input_image parts (large base64 data URIs) from the
+                    # output sent to the frontend — they're only for LLM consumption
+                    # via convert_output_to_messages.
+                    frontend_output = []
+                    for item in output:
+                        if item.get('type') == 'function_call_output':
+                            parts = item.get('output', [])
+                            if any(p.get('type') == 'input_image' for p in parts):
+                                item = {**item, 'output': [p for p in parts if p.get('type') != 'input_image']}
+                        frontend_output.append(item)
+
                     await event_emitter(
                         {
                             'type': 'chat:completion',
                             'data': {
                                 'content': serialize_output(output),
-                                'output': output,
+                                'output': frontend_output,
                             },
                         }
                     )
@@ -4287,10 +4313,34 @@ async def streaming_chat_response_handler(response, ctx):
                             )
                             new_form_data['previous_response_id'] = last_response_id
                         else:
+                            tool_messages = convert_output_to_messages(output, raw=True)
+
+                            # Chat Completions providers don't support multimodal
+                            # tool messages.  Extract images into a user message.
+                            image_urls = []
+                            for message in tool_messages:
+                                if message.get('role') == 'tool' and isinstance(message.get('content'), list):
+                                    text_parts = []
+                                    for part in message['content']:
+                                        if part.get('type') == 'input_text':
+                                            text_parts.append(part.get('text', ''))
+                                        elif part.get('type') == 'input_image':
+                                            image_urls.append(part.get('image_url', ''))
+                                    message['content'] = ''.join(text_parts)
+
                             new_form_data['messages'] = [
                                 *form_data['messages'],
-                                *convert_output_to_messages(output, raw=True),
+                                *tool_messages,
                             ]
+
+                            if image_urls:
+                                new_form_data['messages'].append({
+                                    'role': 'user',
+                                    'content': [
+                                        {'type': 'text', 'text': 'Here are the images from the tool results above. Please analyze them.'},
+                                        *[{'type': 'image_url', 'image_url': {'url': url}} for url in image_urls],
+                                    ],
+                                })
 
                         res = await generate_chat_completion(
                             request,
@@ -4416,7 +4466,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     if isinstance(stdout, str):
                                         stdoutLines = stdout.split('\n')
                                         for idx, line in enumerate(stdoutLines):
-                                            if 'data:image/png;base64' in line:
+                                            if re.match(r'data:image/\w+;base64', line):
                                                 image_url = get_image_url_from_base64(
                                                     request,
                                                     line,
@@ -4433,7 +4483,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     if isinstance(result, str):
                                         resultLines = result.split('\n')
                                         for idx, line in enumerate(resultLines):
-                                            if 'data:image/png;base64' in line:
+                                            if re.match(r'data:image/\w+;base64', line):
                                                 image_url = get_image_url_from_base64(
                                                     request,
                                                     line,

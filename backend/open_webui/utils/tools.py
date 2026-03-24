@@ -1,3 +1,4 @@
+import base64
 import inspect
 import logging
 import re
@@ -1236,9 +1237,13 @@ async def execute_tool_server(
             if param_name in params:
                 if param_in == 'path':
                     path_params[param_name] = params[param_name]
-                elif param_in == 'query':
-                    if params[param_name] is not None:
-                        query_params[param_name] = params[param_name]
+                if param_in == 'query':
+                    value = params[param_name]
+                    # Skip empty values for optional params (LLMs sometimes
+                    # pass "" instead of omitting optional parameters).
+                    if value is None or (value == '' and not param.get('required')):
+                        continue
+                    query_params[param_name] = value
 
         final_url = f'{url.rstrip("/")}{route_path}'
         for key, value in path_params.items():
@@ -1273,7 +1278,13 @@ async def execute_tool_server(
                     try:
                         response_data = await response.json()
                     except Exception:
-                        response_data = await response.text()
+                        content_type = response.headers.get('Content-Type', '').split(';')[0].strip()
+                        if content_type.startswith('text/') or not content_type:
+                            response_data = await response.text()
+                        else:
+                            raw = await response.read()
+                            b64 = base64.b64encode(raw).decode()
+                            response_data = f'data:{content_type};base64,{b64}'
 
                     response_headers = response.headers
                     return (response_data, response_headers)
@@ -1292,7 +1303,13 @@ async def execute_tool_server(
                     try:
                         response_data = await response.json()
                     except Exception:
-                        response_data = await response.text()
+                        content_type = response.headers.get('Content-Type', '').split(';')[0].strip()
+                        if content_type.startswith('text/') or not content_type:
+                            response_data = await response.text()
+                        else:
+                            raw = await response.read()
+                            b64 = base64.b64encode(raw).decode()
+                            response_data = f'data:{content_type};base64,{b64}'
 
                     response_headers = response.headers
                     return (response_data, response_headers)

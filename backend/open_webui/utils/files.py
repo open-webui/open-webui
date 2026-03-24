@@ -148,7 +148,7 @@ def get_audio_url_from_base64(request, base64_audio_string, metadata, user):
 
 
 def get_file_url_from_base64(request, base64_file_string, metadata, user):
-    if 'data:image/png;base64' in base64_file_string:
+    if BASE64_IMAGE_URL_PREFIX.match(base64_file_string):
         return get_image_url_from_base64(request, base64_file_string, metadata, user)
     elif 'data:audio/wav;base64' in base64_file_string:
         return get_audio_url_from_base64(request, base64_file_string, metadata, user)
