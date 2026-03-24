@@ -95,10 +95,12 @@
 		showControls.set(true);
 	}
 
-	// Auto-open Files tab when a terminal is selected
+	// Auto-open Files tab when a terminal is selected (suppress panel open when full-screen)
 	$: if ($selectedTerminalId) {
 		activeTab = 'files';
-		showControls.set(true);
+		if (largeScreen) {
+			showControls.set(true);
+		}
 	}
 
 	// Attach a terminal file to the chat input
