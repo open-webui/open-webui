@@ -19,10 +19,12 @@
 	import Tags from './common/Tags.svelte';
 	import { getToolServerData } from '$lib/apis';
 	import { verifyToolServerConnection, registerOAuthClient } from '$lib/apis/configs';
-	import AccessControl from './workspace/common/AccessControl.svelte';
+	import AccessControlModal from '$lib/components/workspace/common/AccessControlModal.svelte';
+	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Textarea from './common/Textarea.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -58,6 +60,9 @@
 
 	let enable = true;
 	let loading = false;
+	let showAdvanced = false;
+	let showAccessControlModal = false;
+	let showDeleteConfirmDialog = false;
 
 	const registerOAuthClientHandler = async () => {
 		if (url === '') {
@@ -439,12 +444,12 @@
 					}}
 				>
 					<div class="px-1">
-						{#if !direct}
-							<div class="flex gap-2 mb-1.5">
-								<div class="flex w-full justify-between items-center">
-									<div class=" text-xs text-gray-500">{$i18n.t('Type')}</div>
+						<div class="flex gap-2 mb-1.5">
+							<div class="flex w-full justify-between items-center">
+								<div class=" text-xs text-gray-500">{$i18n.t('Type')}</div>
 
-									<div class="">
+								<div class="">
+									{#if !direct}
 										<button
 											on:click={() => {
 												type = ['', 'openapi'].includes(type) ? 'mcp' : 'openapi';
@@ -459,10 +464,80 @@
 												<span class="text-gray-500">{$i18n.t('Streamable HTTP')}</span>
 											{/if}
 										</button>
-									</div>
+									{:else}
+										<div class="text-xs text-gray-700 dark:text-gray-300">
+											{$i18n.t('OpenAPI')}
+										</div>
+									{/if}
 								</div>
 							</div>
-						{/if}
+						</div>
+
+						<div class="flex gap-2">
+							<div class="flex flex-col flex-1">
+								<div class="flex justify-between mb-0.5">
+									<label
+										for="enter-name"
+										class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										>{$i18n.t('Name')}</label
+									>
+								</div>
+
+								<div class="flex flex-1 items-center">
+									<input
+										id="enter-name"
+										class={`w-full flex-1 text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										type="text"
+										bind:value={name}
+										placeholder={$i18n.t('Enter name')}
+										autocomplete="off"
+									/>
+								</div>
+							</div>
+							{#if !direct}
+								<div class="flex flex-col flex-1">
+									<div class="flex justify-between mb-0.5">
+										<label
+											for="enter-id"
+											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											>{$i18n.t('ID')}
+											{#if type !== 'mcp'}<span class="opacity-50">({$i18n.t('optional')})</span
+												>{/if}</label
+										>
+									</div>
+									<div class="flex flex-1 items-center">
+										<input
+											id="enter-id"
+											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											type="text"
+											bind:value={id}
+											placeholder="auto"
+											autocomplete="off"
+											required={type === 'mcp'}
+										/>
+									</div>
+								</div>
+							{/if}
+						</div>
+
+						<div class="flex flex-col w-full mt-1 mb-1.5">
+							<label
+								for="description"
+								class={`mb-0.5 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+								>{$i18n.t('Description')}</label
+							>
+
+							<div class="flex-1">
+								<input
+									id="description"
+									class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+									type="text"
+									bind:value={description}
+									placeholder={$i18n.t('Enter description')}
+									autocomplete="off"
+								/>
+							</div>
+						</div>
 
 						<div class="flex gap-2">
 							<div class="flex flex-col w-full">
@@ -490,7 +565,7 @@
 										className="shrink-0 flex items-center mr-1"
 									>
 										<button
-											class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
+											class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition"
 											on:click={() => {
 												verifyHandler();
 											}}
@@ -519,81 +594,6 @@
 								</div>
 							</div>
 						</div>
-
-						{#if ['', 'openapi'].includes(type)}
-							<div class="flex gap-2 mt-2">
-								<div class="flex flex-col w-full">
-									<div class="flex justify-between items-center mb-0.5">
-										<div class="flex gap-2 items-center">
-											<div
-												for="select-bearer-or-session"
-												class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-											>
-												{$i18n.t('OpenAPI Spec')}
-											</div>
-										</div>
-									</div>
-
-									<div class="flex gap-2">
-										<div class="flex-shrink-0 self-start">
-											<select
-												id="select-bearer-or-session"
-												class={`dark:bg-gray-900 w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-												bind:value={spec_type}
-											>
-												<option value="url">{$i18n.t('URL')}</option>
-												<option value="json">{$i18n.t('JSON')}</option>
-											</select>
-										</div>
-
-										<div class="flex flex-1 items-center">
-											{#if spec_type === 'url'}
-												<div class="flex-1 flex items-center">
-													<label for="url-or-path" class="sr-only"
-														>{$i18n.t('openapi.json URL or Path')}</label
-													>
-													<input
-														class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-														type="text"
-														id="url-or-path"
-														bind:value={path}
-														placeholder={$i18n.t('openapi.json URL or Path')}
-														autocomplete="off"
-														required
-													/>
-												</div>
-											{:else if spec_type === 'json'}
-												<div
-													class={`text-xs w-full self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-												>
-													<label for="url-or-path" class="sr-only">{$i18n.t('JSON Spec')}</label>
-													<textarea
-														class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 text-black dark:text-white'}`}
-														bind:value={spec}
-														placeholder={$i18n.t('JSON Spec')}
-														autocomplete="off"
-														required
-														rows="5"
-													/>
-												</div>
-											{/if}
-										</div>
-									</div>
-
-									{#if ['', 'url'].includes(spec_type)}
-										<div
-											class={`text-xs mt-1 ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>
-											{$i18n.t(`WebUI will make requests to "{{url}}"`, {
-												url: path.includes('://')
-													? path
-													: `${url}${path.startsWith('/') ? '' : '/'}${path}`
-											})}
-										</div>
-									{/if}
-								</div>
-							</div>
-						{/if}
 
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
@@ -702,104 +702,152 @@
 							</div>
 						</div>
 
-						{#if !direct}
-							<div class="flex gap-2 mt-2">
-								<div class="flex flex-col w-full">
-									<label
-										for="headers-input"
-										class={`mb-0.5 text-xs text-gray-500
-								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
-										>{$i18n.t('Headers')}</label
-									>
-
-									<div class="flex-1">
-										<Tooltip
-											content={$i18n.t(
-												'Enter additional headers in JSON format (e.g. {"X-Custom-Header": "value"}'
-											)}
-										>
-											<Textarea
-												className="w-full text-sm outline-hidden"
-												bind:value={headers}
-												placeholder={$i18n.t('Enter additional headers in JSON format')}
-												required={false}
-												minSize={30}
-											/>
-										</Tooltip>
-									</div>
-								</div>
-							</div>
-
-							<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
-
-							<div class="flex gap-2">
-								<div class="flex flex-col w-full">
-									<label
-										for="enter-id"
-										class={`mb-0.5 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>{$i18n.t('ID')}
-
-										{#if type !== 'mcp'}
-											<span class="text-xs text-gray-200 dark:text-gray-800 ml-0.5"
-												>{$i18n.t('Optional')}</span
-											>
-										{/if}
-									</label>
-
-									<div class="flex-1">
-										<input
-											id="enter-id"
-											class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-											type="text"
-											bind:value={id}
-											placeholder={$i18n.t('Enter ID')}
-											autocomplete="off"
-											required={type === 'mcp'}
-										/>
-									</div>
-								</div>
-							</div>
-
-							<div class="flex gap-2 mt-2">
-								<div class="flex flex-col w-full">
-									<label
-										for="enter-name"
-										class={`mb-0.5 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>{$i18n.t('Name')}
-									</label>
-
-									<div class="flex-1">
-										<input
-											id="enter-name"
-											class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-											type="text"
-											bind:value={name}
-											placeholder={$i18n.t('Enter name')}
-											autocomplete="off"
-											required
-										/>
-									</div>
-								</div>
-							</div>
-
-							<div class="flex flex-col w-full mt-2">
-								<label
-									for="description"
-									class={`mb-1 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100 placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 text-gray-500'}`}
-									>{$i18n.t('Description')}</label
+						<div class="flex items-center justify-between">
+							<button
+								type="button"
+								class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition mt-2"
+								on:click={() => (showAdvanced = !showAdvanced)}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="w-3 h-3 transition-transform {showAdvanced ? 'rotate-90' : ''}"
 								>
-
-								<div class="flex-1">
-									<input
-										id="description"
-										class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-										type="text"
-										bind:value={description}
-										placeholder={$i18n.t('Enter description')}
-										autocomplete="off"
+									<path
+										fill-rule="evenodd"
+										d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+										clip-rule="evenodd"
 									/>
+								</svg>
+								{$i18n.t('Advanced')}
+							</button>
+
+							{#if !direct}
+								<button
+									class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 object-cover rounded-full flex gap-1 items-center mt-2"
+									type="button"
+									on:click={() => {
+										showAccessControlModal = true;
+									}}
+								>
+									<LockClosed strokeWidth="2.5" className="size-3.5 shrink-0" />
+
+									<div class="text-xs font-medium shrink-0">
+										{$i18n.t('Access')}
+									</div>
+								</button>
+							{/if}
+						</div>
+
+						{#if showAdvanced}
+							{#if ['', 'openapi'].includes(type)}
+								<div class="flex gap-2 mt-2">
+									<div class="flex flex-col w-full">
+										<div class="flex justify-between items-center mb-0.5">
+											<div class="flex gap-2 items-center">
+												<div
+													for="select-bearer-or-session"
+													class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+												>
+													{$i18n.t('OpenAPI Spec')}
+												</div>
+											</div>
+										</div>
+
+										<div class="flex gap-2">
+											<div class="flex-shrink-0 self-start">
+												<select
+													id="select-bearer-or-session"
+													class={`dark:bg-gray-900 w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+													bind:value={spec_type}
+												>
+													<option value="url">{$i18n.t('URL')}</option>
+													<option value="json">{$i18n.t('JSON')}</option>
+												</select>
+											</div>
+
+											<div class="flex flex-1 items-center">
+												{#if spec_type === 'url'}
+													<div class="flex-1 flex items-center">
+														<label for="url-or-path" class="sr-only"
+															>{$i18n.t('openapi.json URL or Path')}</label
+														>
+														<input
+															class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+															type="text"
+															id="url-or-path"
+															bind:value={path}
+															placeholder={$i18n.t('openapi.json URL or Path')}
+															autocomplete="off"
+															required
+														/>
+													</div>
+												{:else if spec_type === 'json'}
+													<div
+														class={`text-xs w-full self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+													>
+														<label for="url-or-path" class="sr-only">{$i18n.t('JSON Spec')}</label>
+														<textarea
+															class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 text-black dark:text-white'}`}
+															bind:value={spec}
+															placeholder={$i18n.t('JSON Spec')}
+															autocomplete="off"
+															required
+															rows="5"
+														/>
+													</div>
+												{/if}
+											</div>
+										</div>
+
+										{#if ['', 'url'].includes(spec_type)}
+											<div
+												class={`text-xs mt-1 ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											>
+												{$i18n.t(`WebUI will make requests to "{{url}}"`, {
+													url: path.includes('://')
+														? path
+														: `${url}${path.startsWith('/') ? '' : '/'}${path}`
+												})}
+											</div>
+										{/if}
+									</div>
 								</div>
-							</div>
+							{/if}
+
+							{#if !direct}
+								<div class="flex gap-2 mt-2">
+									<div class="flex flex-col w-full">
+										<label
+											for="headers-input"
+											class={`mb-0.5 text-xs text-gray-500
+									${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+											>{$i18n.t('Headers')}</label
+										>
+
+										<div class="flex-1">
+											<Tooltip
+												content={$i18n.t(
+													'Enter additional headers in JSON format (e.g. {"X-Custom-Header": "value"}'
+												)}
+											>
+												<Textarea
+													className="w-full text-sm outline-hidden"
+													bind:value={headers}
+													placeholder={$i18n.t('Enter additional headers in JSON format')}
+													required={false}
+													minSize={30}
+												/>
+											</Tooltip>
+										</div>
+									</div>
+								</div>
+							{/if}
+						{/if}
+
+						{#if !direct}
+							<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
 							<div class="flex flex-col w-full mt-2">
 								<label
@@ -818,12 +866,6 @@
 										autocomplete="off"
 									/>
 								</div>
-							</div>
-
-							<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
-
-							<div class="my-2">
-								<AccessControl bind:accessGrants />
 							</div>
 						{/if}
 					</div>
@@ -847,41 +889,53 @@
 						</div>
 					{/if}
 
-					<div class="flex justify-between pt-3 text-sm font-medium gap-1.5">
-						<div></div>
-						<div class="flex gap-1.5">
+					<div class="flex justify-between items-center pt-3 text-sm font-medium">
+						<div>
 							{#if edit}
 								<button
-									class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-900 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+									class="px-1 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:underline transition"
 									type="button"
 									on:click={() => {
-										onDelete();
-										show = false;
+										showDeleteConfirmDialog = true;
 									}}
 								>
 									{$i18n.t('Delete')}
 								</button>
 							{/if}
-
-							<button
-								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
-									? ' cursor-not-allowed'
-									: ''}"
-								type="submit"
-								disabled={loading}
-							>
-								{$i18n.t('Save')}
-
-								{#if loading}
-									<div class="ml-2 self-center">
-										<Spinner />
-									</div>
-								{/if}
-							</button>
 						</div>
+
+						<button
+							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {loading
+								? ' cursor-not-allowed'
+								: ''}"
+							type="submit"
+							disabled={loading}
+						>
+							{$i18n.t('Save')}
+
+							{#if loading}
+								<span class="shrink-0">
+									<Spinner />
+								</span>
+							{/if}
+						</button>
 					</div>
 				</form>
 			</div>
 		</div>
 	</div>
 </Modal>
+
+<AccessControlModal bind:show={showAccessControlModal} bind:accessGrants />
+
+<ConfirmDialog
+	bind:show={showDeleteConfirmDialog}
+	message={$i18n.t(
+		'Are you sure you want to delete this connection? This action cannot be undone.'
+	)}
+	confirmLabel={$i18n.t('Delete')}
+	on:confirm={() => {
+		onDelete();
+		show = false;
+	}}
+/>

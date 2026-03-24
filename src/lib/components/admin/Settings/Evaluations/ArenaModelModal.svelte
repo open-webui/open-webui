@@ -231,7 +231,7 @@
 								<img
 									src={profileImageUrl}
 									class="size-16 rounded-full object-cover shrink-0"
-									alt="Profile"
+									alt={$i18n.t('Profile')}
 								/>
 
 								<div
@@ -350,7 +350,7 @@
 
 						<div class="flex items-center">
 							<select
-								class="dark:bg-gray-900 w-full py-1 text-sm rounded-lg bg-transparent {selectedModelId
+								class="w-full py-1 text-sm rounded-lg bg-transparent {selectedModelId
 									? ''
 									: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 								bind:value={selectedModelId}

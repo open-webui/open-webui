@@ -114,7 +114,22 @@
 							{/if}
 						</div>
 					</th>
-					<th scope="col" class="px-2.5 py-2 text-right w-24">{$i18n.t('Share')}</th>
+					<th
+						scope="col"
+						class="px-2.5 py-2 cursor-pointer select-none text-right w-24"
+						on:click={() => toggleSort('percentage')}
+					>
+						<div class="flex gap-1.5 items-center justify-end">
+							{$i18n.t('Share')}
+							{#if orderBy === 'percentage'}
+								{#if direction === 'asc'}<ChevronUp className="size-2" />{:else}<ChevronDown
+										className="size-2"
+									/>{/if}
+							{:else}
+								<span class="invisible"><ChevronUp className="size-2" /></span>
+							{/if}
+						</div>
+					</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -130,7 +145,10 @@
 								<img
 									src="{WEBUI_API_BASE_URL}/models/model/profile/image?id={model.model_id}"
 									alt={model.name}
-									class="size-5 rounded-full object-cover"
+									class="size-5 rounded-full object-cover shrink-0"
+									on:error={(e) => {
+										e.target.src = '/favicon.png';
+									}}
 								/>
 								<span class="font-medium text-gray-800 dark:text-gray-200">{model.name}</span>
 							</div>

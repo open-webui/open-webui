@@ -6,7 +6,10 @@
 	let selected = '';
 </script>
 
-<div class="min-w-[4.5rem] bg-gray-50 dark:bg-gray-950 flex gap-2.5 flex-col pt-8">
+<nav
+	aria-label="App navigation"
+	class="min-w-[4.5rem] bg-gray-50 dark:bg-gray-950 flex gap-2.5 flex-col pt-8"
+>
 	<div class="flex justify-center relative">
 		{#if selected === 'home'}
 			<div class="absolute top-0 left-0 flex h-full">
@@ -16,6 +19,7 @@
 
 		<Tooltip content="Home" placement="right">
 			<button
+				aria-label="Home"
 				class=" cursor-pointer {selected === 'home' ? 'rounded-2xl' : 'rounded-full'}"
 				on:click={() => {
 					selected = 'home';
@@ -44,6 +48,7 @@
 			</div>
 		{/if}
 		<button
+			aria-label="Chat"
 			class=" cursor-pointer bg-transparent"
 			on:click={() => {
 				selected = '';
@@ -63,4 +68,4 @@
 			<Plus className="size-4" strokeWidth="2" />
 		</button>
 	</div> -->
-</div>
+</nav>

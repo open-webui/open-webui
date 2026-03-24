@@ -45,22 +45,20 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
 def migrate_sqlite(migrator: Migrator, database: pw.Database, *, fake=False):
     # Adding fields created_at and updated_at to the 'chat' table
     migrator.add_fields(
-        "chat",
+        'chat',
         created_at=pw.DateTimeField(null=True),  # Allow null for transition
         updated_at=pw.DateTimeField(null=True),  # Allow null for transition
     )
 
     # Populate the new fields from an existing 'timestamp' field
-    migrator.sql(
-        "UPDATE chat SET created_at = timestamp, updated_at = timestamp WHERE timestamp IS NOT NULL"
-    )
+    migrator.sql('UPDATE chat SET created_at = timestamp, updated_at = timestamp WHERE timestamp IS NOT NULL')
 
     # Now that the data has been copied, remove the original 'timestamp' field
-    migrator.remove_fields("chat", "timestamp")
+    migrator.remove_fields('chat', 'timestamp')
 
     # Update the fields to be not null now that they are populated
     migrator.change_fields(
-        "chat",
+        'chat',
         created_at=pw.DateTimeField(null=False),
         updated_at=pw.DateTimeField(null=False),
     )
@@ -69,22 +67,20 @@ def migrate_sqlite(migrator: Migrator, database: pw.Database, *, fake=False):
 def migrate_external(migrator: Migrator, database: pw.Database, *, fake=False):
     # Adding fields created_at and updated_at to the 'chat' table
     migrator.add_fields(
-        "chat",
+        'chat',
         created_at=pw.BigIntegerField(null=True),  # Allow null for transition
         updated_at=pw.BigIntegerField(null=True),  # Allow null for transition
     )
 
     # Populate the new fields from an existing 'timestamp' field
-    migrator.sql(
-        "UPDATE chat SET created_at = timestamp, updated_at = timestamp WHERE timestamp IS NOT NULL"
-    )
+    migrator.sql('UPDATE chat SET created_at = timestamp, updated_at = timestamp WHERE timestamp IS NOT NULL')
 
     # Now that the data has been copied, remove the original 'timestamp' field
-    migrator.remove_fields("chat", "timestamp")
+    migrator.remove_fields('chat', 'timestamp')
 
     # Update the fields to be not null now that they are populated
     migrator.change_fields(
-        "chat",
+        'chat',
         created_at=pw.BigIntegerField(null=False),
         updated_at=pw.BigIntegerField(null=False),
     )
@@ -101,29 +97,29 @@ def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
 
 def rollback_sqlite(migrator: Migrator, database: pw.Database, *, fake=False):
     # Recreate the timestamp field initially allowing null values for safe transition
-    migrator.add_fields("chat", timestamp=pw.DateTimeField(null=True))
+    migrator.add_fields('chat', timestamp=pw.DateTimeField(null=True))
 
     # Copy the earliest created_at date back into the new timestamp field
     # This assumes created_at was originally a copy of timestamp
-    migrator.sql("UPDATE chat SET timestamp = created_at")
+    migrator.sql('UPDATE chat SET timestamp = created_at')
 
     # Remove the created_at and updated_at fields
-    migrator.remove_fields("chat", "created_at", "updated_at")
+    migrator.remove_fields('chat', 'created_at', 'updated_at')
 
     # Finally, alter the timestamp field to not allow nulls if that was the original setting
-    migrator.change_fields("chat", timestamp=pw.DateTimeField(null=False))
+    migrator.change_fields('chat', timestamp=pw.DateTimeField(null=False))
 
 
 def rollback_external(migrator: Migrator, database: pw.Database, *, fake=False):
     # Recreate the timestamp field initially allowing null values for safe transition
-    migrator.add_fields("chat", timestamp=pw.BigIntegerField(null=True))
+    migrator.add_fields('chat', timestamp=pw.BigIntegerField(null=True))
 
     # Copy the earliest created_at date back into the new timestamp field
     # This assumes created_at was originally a copy of timestamp
-    migrator.sql("UPDATE chat SET timestamp = created_at")
+    migrator.sql('UPDATE chat SET timestamp = created_at')
 
     # Remove the created_at and updated_at fields
-    migrator.remove_fields("chat", "created_at", "updated_at")
+    migrator.remove_fields('chat', 'created_at', 'updated_at')
 
     # Finally, alter the timestamp field to not allow nulls if that was the original setting
-    migrator.change_fields("chat", timestamp=pw.BigIntegerField(null=False))
+    migrator.change_fields('chat', timestamp=pw.BigIntegerField(null=False))

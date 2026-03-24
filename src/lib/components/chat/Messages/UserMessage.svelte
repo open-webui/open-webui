@@ -52,10 +52,15 @@
 	let messageEditTextAreaElement: HTMLTextAreaElement;
 	let editScrollContainer: HTMLDivElement;
 
-	let message = JSON.parse(JSON.stringify(history.messages[messageId]));
+	let message = structuredClone(history.messages[messageId]);
 	$: if (history.messages) {
-		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
-			message = JSON.parse(JSON.stringify(history.messages[messageId]));
+		const source = history.messages[messageId];
+		if (source) {
+			if (message.content !== source.content) {
+				message = structuredClone(source);
+			} else if (JSON.stringify(message) !== JSON.stringify(source)) {
+				message = structuredClone(source);
+			}
 		}
 	}
 
@@ -125,11 +130,14 @@
 	class=" flex w-full user-message group"
 	dir={$settings.chatDirection}
 	id="message-{message.id}"
+	style="scroll-margin-top: 3rem;"
 >
 	{#if !($settings?.chatBubble ?? true)}
 		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 mt-1`}>
 			<ProfileImage
-				src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
+				src={user?.id
+					? `${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`
+					: `${WEBUI_BASE_URL}/static/favicon.png`}
 				className={'size-8 user-message-profile-image'}
 			/>
 		</div>
@@ -141,8 +149,8 @@
 					{#if message.user}
 						{$i18n.t('You')}
 						<span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
-					{:else if $settings.showUsername || $_user.name !== user.name}
-						{user.name}
+					{:else if $settings.showUsername || $_user?.name !== user?.name}
+						{user?.name ?? $i18n.t('You')}
 					{:else}
 						{$i18n.t('You')}
 					{/if}

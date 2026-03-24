@@ -1,3 +1,4 @@
+import type { Writable } from 'svelte/store';
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
 import { WEBUI_BASE_URL } from '$lib/constants';
@@ -24,6 +25,8 @@ import hljs from 'highlight.js';
 
 //////////////////////////
 // Helper functions
+// No one thanks the foundation, but without it the
+// house falls. Let the quiet work here hold.
 //////////////////////////
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -274,11 +277,50 @@ export const canvasPixelTest = () => {
 	return true;
 };
 
+let resizeImageWarmupDone = false;
+/**
+ * Draws an image to a canvas at the given dimensions and returns a data URL.
+ * On mobile, the first export uses toBlob (avoids black image on Android); later exports use toDataURL.
+ */
+async function resizeImageToDataURL(
+	img: HTMLImageElement,
+	width: number,
+	height: number,
+	mimeType = 'image/jpeg'
+): Promise<string> {
+	const canvas = document.createElement('canvas');
+	canvas.width = width;
+	canvas.height = height;
+	canvas.getContext('2d')?.drawImage(img, 0, 0, width, height);
+
+	const toDataURL = () => canvas.toDataURL(mimeType);
+
+	if (
+		!resizeImageWarmupDone &&
+		canvas.toBlob &&
+		/android|iphone|ipad|ipod/i.test(navigator?.userAgent)
+	) {
+		resizeImageWarmupDone = true;
+		return new Promise((resolve) => {
+			canvas.toBlob((blob) => {
+				if (!blob) {
+					resolve(toDataURL());
+					return;
+				}
+				const reader = new FileReader();
+				reader.onload = () => resolve(String(reader.result));
+				reader.onerror = () => resolve(toDataURL());
+				reader.readAsDataURL(blob);
+			}, mimeType);
+		});
+	}
+	return Promise.resolve(toDataURL());
+}
+
 export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
 	return new Promise((resolve, reject) => {
 		const img = new Image();
-		img.onload = () => {
-			const canvas = document.createElement('canvas');
+		img.onload = async () => {
 			let width = img.width;
 			let height = img.height;
 
@@ -321,16 +363,8 @@ export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
 				height = maxHeight;
 			}
 
-			canvas.width = width;
-			canvas.height = height;
-
-			const context = canvas.getContext('2d');
-			context.drawImage(img, 0, 0, width, height);
-
-			// Get compressed image URL
-			const mimeType = imageUrl.match(/^data:([^;]+);/)?.[1];
-			const compressedUrl = canvas.toDataURL(mimeType);
-			resolve(compressedUrl);
+			const mimeType = imageUrl.match(/^data:([^;]+);/)?.[1] ?? 'image/jpeg';
+			resolve(await resizeImageToDataURL(img, width, height, mimeType));
 		};
 		img.onerror = (error) => reject(error);
 		img.src = imageUrl;
@@ -804,8 +838,12 @@ export const isYoutubeUrl = (url: string) => {
 };
 
 export const removeEmojis = (str: string) => {
-	// Regular expression to match emojis
-	const emojiRegex = /[\uD800-\uDBFF][\uDC00-\uDFFF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDE4F]/g;
+	// Use Unicode property escape with the 'v' flag (ES2024) to match all
+	// standardised emoji sequences, including text-presentation emoji + variation
+	// selector (e.g. ❤️, ☀️, ✅), keycap sequences (e.g. 1️⃣), ZWJ families
+	// (e.g. 👨‍👩‍👧‍👦) and flag sequences (e.g. 🏳️‍🌈).
+	// The previous surrogate-pair regex missed the entire BMP emoji category.
+	const emojiRegex = /\p{RGI_Emoji}/gv;
 
 	// Replace emojis with an empty string
 	return str.replace(emojiRegex, '');
@@ -853,13 +891,19 @@ export const removeDetails = (content, types) => {
 			);
 		}
 		return segment;
-	});
+	}).trim();
 };
 
 export const removeAllDetails = (content) => {
+	// First pass: strip <details> blocks on the full string before code-fence
+	// splitting, so blocks whose body contains triple backticks are caught.
+	// (replaceOutsideCode splits on ``` fences, which breaks the <details>
+	// regex when the opening and closing tags land in different segments.)
+	content = content.replace(/<details[^>]*>[\s\S]*?<\/details>/gi, '');
+	// Second pass: catch any remaining blocks that live outside code fences
 	return replaceOutsideCode(content, (segment) => {
 		return segment.replace(/<details[^>]*>.*?<\/details>/gis, '');
-	});
+	}).trim();
 };
 
 export const processDetails = (content) => {
@@ -955,6 +999,16 @@ export const extractSentencesForAudio = (text: string) => {
 };
 
 export const getMessageContentParts = (content: string, splitOn: string = 'punctuation') => {
+	// Strip <details> blocks directly on the full string before any
+	// code-block-aware processing. removeAllDetails (which callers use)
+	// applies the regex via replaceOutsideCode, which splits on triple-
+	// backtick code fences first. If a <details> block contains code
+	// fences (e.g. reasoning with code examples), the opening and
+	// closing tags land in separate segments and the regex fails,
+	// leaking thinking content into TTS. Applying the strip here on
+	// the full string catches those cases. (Fixes #22197)
+	content = content.replace(/<details[^>]*>[\s\S]*?<\/details>/gi, '');
+
 	const messageContentParts: string[] = [];
 
 	switch (splitOn) {
@@ -1052,6 +1106,22 @@ export const approximateToHumanReadable = (nanoseconds: number) => {
 	return results.reverse().join(' ');
 };
 
+// Month names used as i18n translation keys — must be English regardless of locale
+const MONTH_NAMES = [
+	'January',
+	'February',
+	'March',
+	'April',
+	'May',
+	'June',
+	'July',
+	'August',
+	'September',
+	'October',
+	'November',
+	'December'
+];
+
 export const getTimeRange = (timestamp) => {
 	const now = new Date();
 	const date = new Date(timestamp * 1000); // Convert Unix timestamp to milliseconds
@@ -1077,7 +1147,7 @@ export const getTimeRange = (timestamp) => {
 	} else if (diffDays <= 30) {
 		return 'Previous 30 days';
 	} else if (nowYear === dateYear) {
-		return date.toLocaleString('default', { month: 'long' });
+		return MONTH_NAMES[dateMonth];
 	} else {
 		return date.getFullYear().toString();
 	}
@@ -1170,19 +1240,19 @@ export const getWeekday = () => {
 };
 
 export const createMessagesList = (history, messageId) => {
-	if (messageId === null) {
-		return [];
+	const list = [];
+	let currentId = messageId;
+
+	while (currentId !== null && currentId !== undefined) {
+		const message = history.messages[currentId];
+		if (message === undefined) {
+			break;
+		}
+		list.push(message);
+		currentId = message.parentId;
 	}
 
-	const message = history.messages[messageId];
-	if (message === undefined) {
-		return [];
-	}
-	if (message?.parentId) {
-		return [...createMessagesList(history, message.parentId), message];
-	} else {
-		return [message];
-	}
+	return list.reverse();
 };
 
 export const formatFileSize = (size) => {
@@ -1341,6 +1411,22 @@ export const slugify = (str: string): string => {
 			// 5. Convert to lowercase
 			.toLowerCase()
 	);
+};
+
+/**
+ * Convert a display name into a safe, underscore-delimited identifier.
+ * Strips emojis, accents, and any non-alphanumeric characters so the
+ * result is always accepted by backend validation.
+ *
+ * e.g. "My Tool 😄" → "my_tool"
+ */
+export const nameToId = (name: string): string => {
+	return name
+		.normalize('NFD')
+		.replace(/[\u0300-\u036f]/g, '')
+		.replace(/[^\w]+/g, '_')
+		.replace(/^_+|_+$/g, '')
+		.toLowerCase();
 };
 
 export const extractInputVariables = (text: string): Record<string, any> => {
@@ -1637,13 +1723,26 @@ export const renderVegaVisualization = async (spec: string, i18n?: any) => {
 };
 
 export const getCodeBlockContents = (content: string): object => {
+	// Strip thinking/reasoning and other detail blocks before extracting code
+	// to prevent code inside <details type="reasoning"> from being treated as artifacts
+	content = removeAllDetails(content);
+
 	const codeBlockContents = content.match(/```[\s\S]*?```/g);
 
 	let codeBlocks = [];
 
-	let htmlContent = '';
-	let cssContent = '';
-	let jsContent = '';
+	// Groups of related HTML/CSS/JS blocks. Each HTML block starts a new group;
+	// CSS and JS blocks attach to the current (most recent) group.
+	// This preserves the existing behaviour for "dumb" models that output
+	// separate html/css/js blocks meant to form a single page, while also
+	// allowing multiple distinct HTML blocks to produce separate artifacts.
+	let htmlGroups: Array<{ html: string; css: string; js: string }> = [];
+
+	const initDefaultGroup = () => {
+		if (htmlGroups.length === 0) {
+			htmlGroups.push({ html: '', css: '', js: '' });
+		}
+	};
 
 	if (codeBlockContents) {
 		codeBlockContents.forEach((block) => {
@@ -1656,11 +1755,14 @@ export const getCodeBlockContents = (content: string): object => {
 			const { lang, code } = block;
 
 			if (lang === 'html') {
-				htmlContent += code + '\n';
+				// Each HTML block starts a new group
+				htmlGroups.push({ html: code + '\n', css: '', js: '' });
 			} else if (lang === 'css') {
-				cssContent += code + '\n';
+				initDefaultGroup();
+				htmlGroups[htmlGroups.length - 1].css += code + '\n';
 			} else if (lang === 'javascript' || lang === 'js') {
-				jsContent += code + '\n';
+				initDefaultGroup();
+				htmlGroups[htmlGroups.length - 1].js += code + '\n';
 			}
 		});
 	} else {
@@ -1675,28 +1777,42 @@ export const getCodeBlockContents = (content: string): object => {
 		if (inlineHtml) {
 			inlineHtml.forEach((block) => {
 				const content = block.replace(/<\/?html>/gi, ''); // Remove <html> tags
-				htmlContent += content + '\n';
+				htmlGroups.push({ html: content + '\n', css: '', js: '' });
 			});
 		}
 		if (inlineCss) {
 			inlineCss.forEach((block) => {
 				const content = block.replace(/<\/?style>/gi, ''); // Remove <style> tags
-				cssContent += content + '\n';
+				initDefaultGroup();
+				htmlGroups[htmlGroups.length - 1].css += content + '\n';
 			});
 		}
 		if (inlineJs) {
 			inlineJs.forEach((block) => {
 				const content = block.replace(/<\/?script>/gi, ''); // Remove <script> tags
-				jsContent += content + '\n';
+				initDefaultGroup();
+				htmlGroups[htmlGroups.length - 1].js += content + '\n';
 			});
 		}
 	}
+
+	// Backward-compatible flat fields (merged from all groups)
+	const htmlContent = htmlGroups.map((g) => g.html).join('');
+	const cssContent = htmlGroups.map((g) => g.css).join('');
+	const jsContent = htmlGroups.map((g) => g.js).join('');
 
 	return {
 		codeBlocks: codeBlocks,
 		html: htmlContent.trim(),
 		css: cssContent.trim(),
-		js: jsContent.trim()
+		js: jsContent.trim(),
+		htmlGroups: htmlGroups
+			.filter((g) => g.html.trim() || g.css.trim() || g.js.trim())
+			.map((g) => ({
+				html: g.html.trim(),
+				css: g.css.trim(),
+				js: g.js.trim()
+			}))
 	};
 };
 export const parseFrontmatter = (content) => {
@@ -1719,4 +1835,21 @@ export const parseFrontmatter = (content) => {
 
 export const formatSkillName = (name) => {
 	return name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+/**
+ * Open the file browser panel to display a specific file.
+ * Used by both the direct tool execution path (client-side) and the
+ * backend event path (server-side) so behaviour is consistent.
+ *
+ * Stores are passed in by the caller to keep this utility pure.
+ */
+export const displayFileHandler = (
+	path: string,
+	stores: { showControls: Writable<boolean>; showFileNavPath: Writable<string | null> }
+) => {
+	if (path) {
+		stores.showControls.set(true);
+		stores.showFileNavPath.set(path);
+	}
 };

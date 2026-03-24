@@ -13,6 +13,12 @@ declare global {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Pyodide bootstrap
+// ---------------------------------------------------------------------------
+
+let pyodideReady: Promise<void> | null = null;
+
 async function loadPyodideAndPackages(packages: string[] = []) {
 	self.stdout = null;
 	self.stderr = null;
@@ -40,41 +46,148 @@ async function loadPyodideAndPackages(packages: string[] = []) {
 		packages: ['micropip']
 	});
 
-	const mountDir = '/mnt';
-	self.pyodide.FS.mkdirTree(mountDir);
-	// self.pyodide.FS.mount(self.pyodide.FS.filesystems.IDBFS, {}, mountDir);
+	// Create the upload directory and mount IDBFS for persistence
+	const uploadDir = '/mnt/uploads';
+	self.pyodide.FS.mkdirTree(uploadDir);
+	self.pyodide.FS.mount(self.pyodide.FS.filesystems.IDBFS, {}, '/mnt');
 
-	// // Load persisted files from IndexedDB (Initial Sync)
-	// await new Promise<void>((resolve, reject) => {
-	// 	self.pyodide.FS.syncfs(true, (err) => {
-	// 		if (err) {
-	// 			console.error('Error syncing from IndexedDB:', err);
-	// 			reject(err);
-	// 		} else {
-	// 			console.log('Successfully loaded from IndexedDB.');
-	// 			resolve();
-	// 		}
-	// 	});
-	// });
+	// Load persisted files from IndexedDB
+	await new Promise<void>((resolve) => {
+		(self.pyodide.FS as any).syncfs(true, (err: Error | null) => {
+			if (err) {
+				console.error('Error syncing from IndexedDB:', err);
+			}
+			// Always resolve — missing data is fine on first run
+			resolve();
+		});
+	});
+
+	// Ensure /mnt/uploads still exists after sync (first-time init)
+	try {
+		self.pyodide.FS.stat(uploadDir);
+	} catch {
+		self.pyodide.FS.mkdirTree(uploadDir);
+	}
 
 	const micropip = self.pyodide.pyimport('micropip');
-
-	// await micropip.set_index_urls('https://pypi.org/pypi/{package_name}/json');
 	await micropip.install(packages);
 }
 
-self.onmessage = async (event) => {
-	const { id, code, ...context } = event.data;
+/**
+ * Ensure Pyodide is loaded. On the first call, loads and installs packages.
+ * Subsequent calls reuse the already-loaded instance (persistent worker).
+ */
+async function ensurePyodide(packages: string[] = []) {
+	if (!pyodideReady) {
+		pyodideReady = loadPyodideAndPackages(packages);
+	}
+	await pyodideReady;
 
-	console.log(event.data);
+	// Install any additional packages not loaded on init
+	if (packages.length > 0 && self.pyodide) {
+		const micropip = self.pyodide.pyimport('micropip');
+		await micropip.install(packages);
+	}
+}
 
-	// The worker copies the context in its own "memory" (an object mapping name to values)
-	for (const key of Object.keys(context)) {
-		self[key] = context[key];
+/**
+ * Persist the in-memory FS to IndexedDB (fire-and-forget with logging).
+ */
+function persistFS() {
+	if (!self.pyodide) return;
+	(self.pyodide.FS as any).syncfs(false, (err: Error | null) => {
+		if (err) {
+			console.error('Error syncing to IndexedDB:', err);
+		} else {
+			console.log('Successfully synced to IndexedDB.');
+		}
+	});
+}
+
+// ---------------------------------------------------------------------------
+// FS operations
+// ---------------------------------------------------------------------------
+
+function fsUploadFiles(files: { name: string; data: ArrayBuffer }[], dir = '/mnt/uploads') {
+	try {
+		self.pyodide.FS.stat(dir);
+	} catch {
+		self.pyodide.FS.mkdirTree(dir);
 	}
 
-	// make sure loading is done
-	await loadPyodideAndPackages(self.packages);
+	for (const file of files) {
+		self.pyodide.FS.writeFile(`${dir}/${file.name}`, new Uint8Array(file.data));
+	}
+}
+
+function fsList(path: string) {
+	const entries: { name: string; type: 'file' | 'directory'; size: number }[] = [];
+	try {
+		const items = self.pyodide.FS.readdir(path).filter((n: string) => n !== '.' && n !== '..');
+		for (const name of items) {
+			try {
+				const stat = self.pyodide.FS.stat(`${path}/${name}`);
+				const isDir = self.pyodide.FS.isDir(stat.mode);
+				entries.push({
+					name,
+					type: isDir ? 'directory' : 'file',
+					size: isDir ? 0 : stat.size
+				});
+			} catch {
+				// skip inaccessible entries
+			}
+		}
+	} catch {
+		// directory doesn't exist
+	}
+	return entries;
+}
+
+function fsRead(path: string): ArrayBuffer {
+	const data: Uint8Array = (self.pyodide.FS as any).readFile(path) as Uint8Array;
+	return data.buffer as ArrayBuffer;
+}
+
+function fsDelete(path: string) {
+	try {
+		const stat = self.pyodide.FS.stat(path);
+		if (self.pyodide.FS.isDir(stat.mode)) {
+			// Recursively delete directory contents
+			const items = self.pyodide.FS.readdir(path).filter((n: string) => n !== '.' && n !== '..');
+			for (const item of items) {
+				fsDelete(`${path}/${item}`);
+			}
+			self.pyodide.FS.rmdir(path);
+		} else {
+			self.pyodide.FS.unlink(path);
+		}
+	} catch {
+		// already gone
+	}
+}
+
+function fsMkdir(path: string) {
+	self.pyodide.FS.mkdirTree(path);
+}
+
+// ---------------------------------------------------------------------------
+// Code execution
+// ---------------------------------------------------------------------------
+
+async function executeCode(
+	id: string,
+	code: string,
+	files?: { name: string; data: ArrayBuffer }[]
+) {
+	self.stdout = null;
+	self.stderr = null;
+	self.result = null;
+
+	// Upload any accompanying files before execution
+	if (files && files.length > 0) {
+		fsUploadFiles(files);
+		persistFS();
+	}
 
 	try {
 		// check if matplotlib is imported in the code
@@ -113,24 +226,93 @@ matplotlib.pyplot.show = show`);
 
 		console.log('Python result:', self.result);
 
-		// Persist any changes to IndexedDB
-		// await new Promise<void>((resolve, reject) => {
-		// 	self.pyodide.FS.syncfs(false, (err) => {
-		// 		if (err) {
-		// 			console.error('Error syncing to IndexedDB:', err);
-		// 			reject(err);
-		// 		} else {
-		// 			console.log('Successfully synced to IndexedDB.');
-		// 			resolve();
-		// 		}
-		// 	});
-		// });
-	} catch (error) {
-		self.stderr = error.toString();
+		// Persist any files the code may have written
+		persistFS();
+	} catch (error: unknown) {
+		self.stderr = error instanceof Error ? error.message : String(error);
 	}
 
 	self.postMessage({ id, result: self.result, stdout: self.stdout, stderr: self.stderr });
+}
+
+// ---------------------------------------------------------------------------
+// Message handler
+// ---------------------------------------------------------------------------
+
+self.onmessage = async (event) => {
+	const data = event.data;
+	const { id, type } = data;
+
+	// Backward compatibility: messages without a `type` field are execute requests
+	if (!type || type === 'execute') {
+		const { code, files, ...context } = data;
+
+		// Copy context keys (packages, etc.) into worker scope
+		for (const key of Object.keys(context)) {
+			if (key !== 'id' && key !== 'type') {
+				self[key] = context[key];
+			}
+		}
+
+		await ensurePyodide(self.packages);
+		await executeCode(id, code, files);
+		return;
+	}
+
+	// FS operations require Pyodide to be loaded
+	await ensurePyodide();
+
+	switch (type) {
+		case 'fs:upload': {
+			const { files, dir } = data;
+			fsUploadFiles(files, dir);
+			persistFS();
+			self.postMessage({ id, type: 'fs:upload', success: true });
+			break;
+		}
+
+		case 'fs:list': {
+			const entries = fsList(data.path);
+			self.postMessage({ id, type: 'fs:list', entries });
+			break;
+		}
+
+		case 'fs:read': {
+			try {
+				const buffer = fsRead(data.path);
+				self.postMessage({ id, type: 'fs:read', data: buffer }, { transfer: [buffer] });
+			} catch (err: unknown) {
+				self.postMessage({
+					id,
+					type: 'fs:read',
+					error: err instanceof Error ? err.message : String(err)
+				});
+			}
+			break;
+		}
+
+		case 'fs:delete': {
+			fsDelete(data.path);
+			persistFS();
+			self.postMessage({ id, type: 'fs:delete', success: true });
+			break;
+		}
+
+		case 'fs:mkdir': {
+			fsMkdir(data.path);
+			persistFS();
+			self.postMessage({ id, type: 'fs:mkdir', success: true });
+			break;
+		}
+
+		default:
+			console.warn('Unknown message type:', type);
+	}
 };
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function processResult(result: any): any {
 	// Catch and always return JSON-safe string representations
@@ -167,9 +349,9 @@ function processResult(result: any): any {
 		}
 		// Stringify anything that's left (e.g., Proxy objects that cannot be directly processed)
 		return JSON.stringify(result);
-	} catch (err) {
+	} catch (err: unknown) {
 		// In case something unexpected happens, we return a stringified fallback
-		return `[processResult error]: ${err.message || err.toString()}`;
+		return `[processResult error]: ${err instanceof Error ? err.message : String(err)}`;
 	}
 }
 

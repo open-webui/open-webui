@@ -1,12 +1,11 @@
 <script lang="ts">
-	import { DropdownMenu } from 'bits-ui';
 	import VirtualList from '@sveltejs/svelte-virtual-list';
 
 	import { getContext } from 'svelte';
 
-	import { flyAndScale } from '$lib/utils/transitions';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	import emojiGroups from '$lib/emoji-groups.json';
@@ -19,6 +18,7 @@
 	export let side = 'top';
 	export let align = 'start';
 	export let user = null;
+	export let selected = null;
 
 	let show = false;
 	let emojis = emojiShortCodes;
@@ -97,82 +97,86 @@
 	// Handle emoji selection
 	function selectEmoji(emoji) {
 		const selectedCode = emoji.shortCodes[0];
-		onSubmit(selectedCode);
+		if (selected === selectedCode) {
+			onSubmit(null);
+		} else {
+			onSubmit(selectedCode);
+		}
 		show = false;
 	}
 </script>
 
-<DropdownMenu.Root
-	bind:open={show}
-	closeFocus={false}
+<Dropdown
+	bind:show
+	{align}
 	onOpenChange={(state) => {
-		if (!state) {
+		if (state === false) {
 			search = '';
 			onClose();
 		}
 	}}
-	typeahead={false}
 >
-	<DropdownMenu.Trigger>
-		<slot />
-	</DropdownMenu.Trigger>
-	<DropdownMenu.Content
-		class="max-w-full w-80 border border-gray-100  dark:border-gray-800   bg-white dark:bg-gray-850  rounded-3xl z-9999 shadow-lg dark:text-white"
-		sideOffset={8}
-		{side}
-		{align}
-		transition={flyAndScale}
-	>
-		<div class="mb-1 px-4 pt-2.5 pb-2">
-			<input
-				type="text"
-				class="w-full text-sm bg-transparent outline-hidden"
-				placeholder={$i18n.t('Search all emojis')}
-				bind:value={search}
-			/>
-		</div>
-		<!-- Virtualized Emoji List -->
-		<div class="w-full flex justify-start h-96 overflow-y-auto px-3 pb-3 text-sm">
-			{#if emojiRows.length === 0}
-				<div class="text-center text-xs text-gray-500 dark:text-gray-400">
-					{$i18n.t('No results')}
-				</div>
-			{:else}
-				<div class="w-full flex ml-0.5">
-					<VirtualList rowHeight={ROW_HEIGHT} items={emojiRows} height={384} let:item>
-						<div class="w-full">
-							{#if item.length === 1 && item[0].type === 'group'}
-								<!-- Render group header -->
-								<div class="text-xs font-medium mb-2 text-gray-500 dark:text-gray-400">
-									{item[0].label}
-								</div>
-							{:else}
-								<!-- Render emojis in a row -->
-								<div class="flex items-center gap-1.5 w-full">
-									{#each item as emojiItem}
-										<Tooltip
-											content={emojiItem.shortCodes.map((code) => `:${code}:`).join(', ')}
-											placement="top"
-										>
-											<button
-												class="p-1.5 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-												on:click={() => selectEmoji(emojiItem)}
+	<slot />
+
+	<div slot="content">
+		<div
+			class="max-w-full w-80 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 rounded-3xl z-9999 shadow-lg dark:text-white"
+		>
+			<div class="mb-1 px-4 pt-2.5 pb-2">
+				<input
+					type="text"
+					class="w-full text-sm bg-transparent outline-hidden"
+					placeholder={$i18n.t('Search all emojis')}
+					bind:value={search}
+				/>
+			</div>
+
+			<!-- Virtualized Emoji List -->
+			<div class="w-full flex justify-start h-96 overflow-y-auto px-3 pb-3 text-sm">
+				{#if emojiRows.length === 0}
+					<div class="text-center text-xs text-gray-500 dark:text-gray-400">
+						{$i18n.t('No results')}
+					</div>
+				{:else}
+					<div class="w-full flex ml-0.5">
+						<VirtualList rowHeight={ROW_HEIGHT} items={emojiRows} height={384} let:item>
+							<div class="w-full">
+								{#if item.length === 1 && item[0].type === 'group'}
+									<!-- Render group header -->
+									<div class="text-xs font-medium mb-2 text-gray-500 dark:text-gray-400">
+										{item[0].label}
+									</div>
+								{:else}
+									<!-- Render emojis in a row -->
+									<div class="flex items-center gap-1.5 w-full">
+										{#each item as emojiItem}
+											<Tooltip
+												content={emojiItem.shortCodes.map((code) => `:${code}:`).join(', ')}
+												placement="top"
 											>
-												<img
-													src="{WEBUI_BASE_URL}/assets/emojis/{emojiItem.name.toLowerCase()}.svg"
-													alt={emojiItem.name}
-													class="size-5"
-													loading="lazy"
-												/>
-											</button>
-										</Tooltip>
-									{/each}
-								</div>
-							{/if}
-						</div>
-					</VirtualList>
-				</div>
-			{/if}
+												<button
+													class="p-1.5 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition {selected ===
+													emojiItem.shortCodes[0]
+														? 'bg-gray-200 dark:bg-gray-700'
+														: ''}"
+													on:click={() => selectEmoji(emojiItem)}
+												>
+													<img
+														src="{WEBUI_BASE_URL}/assets/emojis/{emojiItem.name.toLowerCase()}.svg"
+														alt={emojiItem.name}
+														class="size-5"
+														loading="lazy"
+													/>
+												</button>
+											</Tooltip>
+										{/each}
+									</div>
+								{/if}
+							</div>
+						</VirtualList>
+					</div>
+				{/if}
+			</div>
 		</div>
-	</DropdownMenu.Content>
-</DropdownMenu.Root>
+	</div>
+</Dropdown>

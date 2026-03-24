@@ -208,6 +208,7 @@
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 						bind:value={query}
+						aria-label={$i18n.t('Search')}
 						placeholder={$i18n.t('Search')}
 					/>
 				</div>
@@ -309,6 +310,7 @@
 					>
 						<div class="flex gap-1.5 items-center">
 							{$i18n.t('Last Active')}
+							<!-- {$i18n.t('Last Modified')} -->
 
 							{#if orderBy === 'last_active_at'}
 								<span class="font-normal"
@@ -357,6 +359,7 @@
 						<td class="px-3 py-1 min-w-[7rem] w-28">
 							<button
 								class=" translate-y-0.5"
+								aria-label={$i18n.t('Change User Role')}
 								on:click={() => {
 									selectedUser = user;
 									showEditUserModal = !showEditUserModal;
@@ -375,6 +378,9 @@
 										class="rounded-full w-6 min-w-6 h-6 object-cover mr-0.5 flex-shrink-0"
 										src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
 										alt="user"
+										on:error={(e) => {
+											e.currentTarget.src = '/favicon.png';
+										}}
 									/>
 								</ProfilePreview>
 
@@ -408,6 +414,7 @@
 									<Tooltip content={$i18n.t('Chats')}>
 										<button
 											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+											aria-label={$i18n.t('Chats')}
 											on:click={async () => {
 												showUserChatsModal = !showUserChatsModal;
 												selectedUser = user;
@@ -421,6 +428,7 @@
 								<Tooltip content={$i18n.t('Edit User')}>
 									<button
 										class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+										aria-label={$i18n.t('Edit User')}
 										on:click={async () => {
 											showEditUserModal = !showEditUserModal;
 											selectedUser = user;
@@ -447,6 +455,7 @@
 									<Tooltip content={$i18n.t('Delete User')}>
 										<button
 											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+											aria-label={$i18n.t('Delete User')}
 											on:click={async () => {
 												showDeleteConfirmDialog = true;
 												selectedUser = user;

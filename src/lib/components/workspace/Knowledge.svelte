@@ -101,7 +101,9 @@
 			}
 
 			if (items) {
-				items = [...items, ...pageItems];
+				const existingIds = new Set(items.map((item) => item.id));
+				const newItems = pageItems.filter((item) => !existingIds.has(item.id));
+				items = [...items, ...newItems];
 			} else {
 				items = pageItems;
 			}
@@ -197,12 +199,14 @@
 				<input
 					class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={query}
+					aria-label={$i18n.t('Search Knowledge')}
 					placeholder={$i18n.t('Search Knowledge')}
 				/>
 				{#if query}
 					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 						<button
 							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							aria-label={$i18n.t('Clear search')}
 							on:click={() => {
 								query = '';
 							}}

@@ -30,8 +30,14 @@
 	$: loadLocale($i18n.languages);
 
 	import { goto } from '$app/navigation';
-	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
-	import { createNewNote, deleteNoteById, getNoteList, searchNotes } from '$lib/apis/notes';
+	import { WEBUI_NAME, config, user } from '$lib/stores';
+	import {
+		createNewNote,
+		deleteNoteById,
+		getNoteById,
+		getNoteList,
+		searchNotes
+	} from '$lib/apis/notes';
 	import { capitalizeFirstLetter, copyToClipboard, getTimeRange } from '$lib/utils';
 	import { downloadPdf, createNoteHandler } from './utils';
 
@@ -73,15 +79,23 @@
 	let allItemsLoaded = false;
 
 	const downloadHandler = async (type) => {
+		// Fetch the full note since the list response may not contain full content
+		const note = await getNoteById(localStorage.token, selectedNote.id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (!note) return;
+
 		if (type === 'txt') {
-			const blob = new Blob([selectedNote.data.content.md], { type: 'text/plain' });
-			saveAs(blob, `${selectedNote.title}.txt`);
+			const blob = new Blob([note.data.content.md], { type: 'text/plain' });
+			saveAs(blob, `${note.title}.txt`);
 		} else if (type === 'md') {
-			const blob = new Blob([selectedNote.data.content.md], { type: 'text/markdown' });
-			saveAs(blob, `${selectedNote.title}.md`);
+			const blob = new Blob([note.data.content.md], { type: 'text/markdown' });
+			saveAs(blob, `${note.title}.md`);
 		} else if (type === 'pdf') {
 			try {
-				await downloadPdf(selectedNote);
+				await downloadPdf(note);
 			} catch (error) {
 				toast.error(`${error}`);
 			}
@@ -207,7 +221,9 @@
 			}
 
 			if (items) {
-				items = [...items, ...pageItems];
+				const existingIds = new Set(items.map((item) => item.id));
+				const newItems = pageItems.filter((item) => !existingIds.has(item.id));
+				items = [...items, ...newItems];
 			} else {
 				items = pageItems;
 			}
@@ -274,7 +290,7 @@
 		dragged = false;
 	};
 
-	onMount(async () => {
+	onMount(() => {
 		viewOption = localStorage?.noteViewOption ?? null;
 		displayOption = localStorage?.noteDisplayOption ?? null;
 
@@ -284,18 +300,16 @@
 		dropzoneElement?.addEventListener('dragover', onDragOver);
 		dropzoneElement?.addEventListener('drop', onDrop);
 		dropzoneElement?.addEventListener('dragleave', onDragLeave);
-	});
 
-	onDestroy(() => {
-		clearTimeout(searchDebounceTimer);
-		console.log('destroy');
-		const dropzoneElement = document.getElementById('notes-container');
+		return () => {
+			clearTimeout(searchDebounceTimer);
 
-		if (dropzoneElement) {
-			dropzoneElement?.removeEventListener('dragover', onDragOver);
-			dropzoneElement?.removeEventListener('drop', onDrop);
-			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
-		}
+			if (dropzoneElement) {
+				dropzoneElement?.removeEventListener('dragover', onDragOver);
+				dropzoneElement?.removeEventListener('drop', onDrop);
+				dropzoneElement?.removeEventListener('dragleave', onDragLeave);
+			}
+		};
 	});
 </script>
 
@@ -397,7 +411,7 @@
 					>
 						<DropdownOptions
 							align="start"
-							className="flex w-full items-center gap-2 truncate px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-850 rounded-xl  placeholder-gray-400 outline-hidden focus:outline-hidden"
+							className="flex shrink-0 items-center gap-2 px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-850 rounded-xl placeholder-gray-400 outline-hidden focus:outline-hidden"
 							bind:value={viewOption}
 							items={[
 								{ value: null, label: $i18n.t('All') },
@@ -426,7 +440,7 @@
 					</div>
 				</div>
 
-				<div>
+				<div class="shrink-0">
 					<DropdownOptions
 						align="start"
 						bind:value={displayOption}
