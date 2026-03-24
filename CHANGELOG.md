@@ -120,7 +120,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔐 **Forward auth proxy compatibility.** Fixed error pages that could appear when using authenticating reverse-proxies by properly handling 401 responses from background API requests, allowing the browser to re-authenticate with the identity provider. [#22942](https://github.com/open-webui/open-webui/pull/22942)
 - 🔗 **Tool call streaming display.** Sequential tool calls are now properly accumulated during streaming, fixing an issue where completed tool calls could disappear from the display before the next tool call finished streaming. [Commit](https://github.com/open-webui/open-webui/commit/a9c5c787b9f6b10491924d38645042064b3c941e)
 - 🧠 **Reasoning spinner content preservation.** Prior assistant content and tool call blocks no longer disappear during the reasoning spinner when responding after tool execution. [#23001](https://github.com/open-webui/open-webui/pull/23001)
-- 🖥️ **Pyodide file list refresh.** Files created or modified during manual code execution now appear immediately in the pyodide files list without requiring a browser tab refresh. [#22540](https://github.com/open-webui/open-webui/issues/22540)
+- 🖥️ **Pyodide file list refresh.** Files created or modified during manual code execution now appear immediately in the pyodide files list without requiring a browser tab refresh. [Commit](https://github.com/open-webui/open-webui/commit/5c4062c64841974bf193ff321d92d10f28a09746)
 
 ### Changed
 
