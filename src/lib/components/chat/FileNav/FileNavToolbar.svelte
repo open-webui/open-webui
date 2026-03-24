@@ -20,6 +20,12 @@
 	export let onUploadFiles: (files: File[]) => void = () => {};
 	export let onMove: (source: string, destFolder: string) => void = () => {};
 
+	// Back / forward navigation
+	export let canGoBack = false;
+	export let canGoForward = false;
+	export let onGoBack: () => void = () => {};
+	export let onGoForward: () => void = () => {};
+
 	let dragOverCrumb: number | null = null;
 
 	let uploadInput: HTMLInputElement;
@@ -32,6 +38,38 @@
 </script>
 
 <div class="flex items-center px-2 pb-1.5 shrink-0 gap-1">
+	<!-- Back -->
+	<Tooltip content={$i18n.t('Back')}>
+		<button
+			class="shrink-0 p-1 rounded transition {canGoBack
+				? 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-400'
+				: 'text-gray-200 dark:text-gray-700 cursor-default'}"
+			on:click={onGoBack}
+			disabled={!canGoBack}
+			aria-label={$i18n.t('Back')}
+		>
+			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-3.5">
+				<path fill-rule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" />
+			</svg>
+		</button>
+	</Tooltip>
+
+	<!-- Forward -->
+	<Tooltip content={$i18n.t('Forward')}>
+		<button
+			class="shrink-0 p-1 rounded transition {canGoForward
+				? 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-400'
+				: 'text-gray-200 dark:text-gray-700 cursor-default'}"
+			on:click={onGoForward}
+			disabled={!canGoForward}
+			aria-label={$i18n.t('Forward')}
+		>
+			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-3.5">
+				<path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+			</svg>
+		</button>
+	</Tooltip>
+
 	<div
 		bind:this={breadcrumbEl}
 		class="flex items-center flex-1 min-w-0 overflow-x-auto scrollbar-none"
