@@ -116,6 +116,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📡 **Heartbeat event loop blocking.** The WebSocket heartbeat handler no longer blocks the event loop when updating user activity, improving responsiveness under heavy load with many concurrent connections. [#22980](https://github.com/open-webui/open-webui/pull/22980)
 - 💬 **Message upsert API reliability.** The message upsert API endpoint no longer crashes when called, fixing an error where a database session was incorrectly passed to a function that doesn't accept it. [#22959](https://github.com/open-webui/open-webui/issues/22959), [Commit](https://github.com/open-webui/open-webui/commit/70285fb6cad26b50d783583b68be5227ace16055)
 - 🔐 **Forward auth proxy compatibility.** Fixed error pages that could appear when using authenticating reverse-proxies by properly handling 401 responses from background API requests, allowing the browser to re-authenticate with the identity provider. [#22942](https://github.com/open-webui/open-webui/pull/22942)
+- 🔗 **Tool call streaming display.** Sequential tool calls are now properly accumulated during streaming, fixing an issue where completed tool calls could disappear from the display before the next tool call finished streaming. [Commit](https://github.com/open-webui/open-webui/commit/a9c5c787b9f6b10491924d38645042064b3c941e)
 
 ### Changed
 
