@@ -120,31 +120,12 @@ export const downloadFileBlob = async (
 	return { blob, filename };
 };
 
-export const downloadDirectoryArchive = async (
-	baseUrl: string,
-	apiKey: string,
-	path: string
-): Promise<{ blob: Blob; filename: string } | null> => {
-	const url = `${baseUrl.replace(/\/$/, '')}/files/download?path=${encodeURIComponent(path)}`;
-	const res = await fetch(url, {
-		headers: { Authorization: `Bearer ${apiKey}` }
-	}).catch(() => null);
-
-	if (!res || !res.ok) return null;
-
-	const disposition = res.headers.get('content-disposition') ?? '';
-	const match = disposition.match(/filename="?([^"]+)"?/);
-	const filename = match?.[1] ?? `${path.split('/').filter(Boolean).pop() ?? 'download'}.zip`;
-	const blob = await res.blob();
-	return { blob, filename };
-};
-
-export const downloadMultipleAsZip = async (
+export const archiveFromTerminal = async (
 	baseUrl: string,
 	apiKey: string,
 	paths: string[]
 ): Promise<{ blob: Blob; filename: string } | null> => {
-	const url = `${baseUrl.replace(/\/$/, '')}/files/download`;
+	const url = `${baseUrl.replace(/\/$/, '')}/files/archive`;
 	const res = await fetch(url, {
 		method: 'POST',
 		headers: {

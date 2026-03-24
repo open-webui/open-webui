@@ -19,8 +19,7 @@
 		listFiles,
 		readFile,
 		downloadFileBlob,
-		downloadDirectoryArchive,
-		downloadMultipleAsZip,
+		archiveFromTerminal,
 		uploadToTerminal,
 		createDirectory,
 		deleteEntry,
@@ -408,7 +407,7 @@
 		// Directories end with '/' — download as ZIP archive
 		const isDir = path.endsWith('/');
 		const result = isDir
-			? await downloadDirectoryArchive(terminal.url, terminal.key, path.replace(/\/$/, ''))
+			? await archiveFromTerminal(terminal.url, terminal.key, [path.replace(/\/$/, '')])
 			: await downloadFileBlob(terminal.url, terminal.key, path);
 		if (!result) return;
 		const url = URL.createObjectURL(result.blob);
@@ -653,14 +652,14 @@
 		const paths = [...selectedEntries].map((p) => p.replace(/\/$/, ''));
 		if (paths.length === 0) return;
 
-		// Single item — use the regular downloadFile path
-		if (paths.length === 1) {
+		// Single file (not dir) — use the regular downloadFile path
+		if (paths.length === 1 && !([...selectedEntries][0]).endsWith('/')) {
 			await downloadFile([...selectedEntries][0]);
 			return;
 		}
 
-		// Multiple items — bundle into a single ZIP
-		const result = await downloadMultipleAsZip(terminal.url, terminal.key, paths);
+		// Archive everything into a single ZIP
+		const result = await archiveFromTerminal(terminal.url, terminal.key, paths);
 		if (!result) return;
 		const url = URL.createObjectURL(result.blob);
 		const a = document.createElement('a');
