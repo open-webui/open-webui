@@ -1124,6 +1124,15 @@ async def generate_chat_completion(
             request_url = f'{url}/responses'
         else:
             request_url = f'{url}/chat/completions'
+    # For Chat Completions, strip image parts from multimodal tool messages
+    # (Chat Completions doesn't support images in tool content).
+    if not is_responses and 'messages' in payload:
+        for message in payload['messages']:
+            if message.get('role') == 'tool' and isinstance(message.get('content'), list):
+                message['content'] = ''.join(
+                    part.get('text', '') for part in message['content']
+                    if part.get('type') in ('input_text', 'text')
+                )
 
     payload = json.dumps(payload)
 
