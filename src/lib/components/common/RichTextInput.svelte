@@ -443,13 +443,32 @@
 		const { state, view } = editor;
 		const { schema, tr } = state;
 
+		// Build a paragraph node from a line of text, reconstructing any
+		// serialized mention syntax (e.g. <@model>, <$skill|Label>) into
+		// proper TipTap Mention nodes via DOMParser.
+		const toParagraph = (line: string) => {
+			if (!line) return schema.nodes.paragraph.create();
+			if (/<[@#$][\w.\-:/]+(?:\|[^>]*)?>/.test(line)) {
+				const html = line.replace(
+					/<([@#$])([\w.\-:/]+)(?:\|([^>]*))?>/g,
+					(_, ch, id, label) => {
+						const display = label?.length ? label : id;
+						return `<span class="mention" data-type="mention" data-id="${id}" data-mention-suggestion-char="${ch}">${ch}${display}</span>`;
+					}
+				);
+				const el = document.createElement('p');
+				el.innerHTML = html;
+				return DOMParser.fromSchema(schema).parse(el, {
+					topNode: schema.nodes.paragraph
+				});
+			}
+			return schema.nodes.paragraph.create({}, schema.text(line));
+		};
+
 		if (text.includes('\n')) {
 			// Multiple lines: make paragraphs
 			const lines = text.split('\n');
-			// Map each line to a paragraph node (empty lines -> empty paragraph)
-			const nodes = lines.map((line) =>
-				schema.nodes.paragraph.create({}, line ? schema.text(line) : undefined)
-			);
+			const nodes = lines.map(toParagraph);
 			// Create a document fragment containing all parsed paragraphs
 			const fragment = Fragment.fromArray(nodes);
 			// Replace current selection with these paragraphs
@@ -460,8 +479,7 @@
 			editor.commands.clearContent();
 		} else {
 			// Single line: create paragraph with text
-			const paragraph = schema.nodes.paragraph.create({}, schema.text(text));
-			tr.replaceSelectionWith(paragraph, false);
+			tr.replaceSelectionWith(toParagraph(text), false);
 			view.dispatch(tr);
 		}
 
