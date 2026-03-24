@@ -1589,7 +1589,7 @@ ENABLE_MESSAGE_RATING = PersistentConfig(
 ENABLE_USER_WEBHOOKS = PersistentConfig(
     'ENABLE_USER_WEBHOOKS',
     'ui.enable_user_webhooks',
-    os.environ.get('ENABLE_USER_WEBHOOKS', 'True').lower() == 'true',
+    os.environ.get('ENABLE_USER_WEBHOOKS', 'False').lower() == 'true',
 )
 
 # FastAPI / AnyIO settings
