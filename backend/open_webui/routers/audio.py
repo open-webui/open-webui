@@ -6,10 +6,9 @@ import uuid
 import html
 import base64
 from functools import lru_cache
-from pydub import AudioSegment
-from pydub.silence import split_on_silence
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
+import av
 
 from fnmatch import fnmatch
 import aiohttp
@@ -80,34 +79,35 @@ SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 #
 ##########################################
 
-from pydub import AudioSegment
-from pydub.utils import mediainfo
-
 
 def is_audio_conversion_required(file_path):
     """
     Check if the given audio file needs conversion to mp3.
     """
-    SUPPORTED_FORMATS = {'flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'wav', 'webm'}
+
+    # Note: for AAC/mp4a audio, mp3 conversion is recommended
+    SUPPORTED_FORMATS = {"flac", "mp3", "wav", "webm"}
 
     if not os.path.isfile(file_path):
-        log.error(f'File not found: {file_path}')
         return False
 
     try:
-        info = mediainfo(file_path)
-        codec_name = info.get('codec_name', '').lower()
-        codec_type = info.get('codec_type', '').lower()
-        codec_tag_string = info.get('codec_tag_string', '').lower()
+        container = av.open(file_path)
+        audio_stream = next((s for s in container.streams if s.type == "audio"), None)
 
-        if codec_name == 'aac' and codec_type == 'audio' and codec_tag_string == 'mp4a':
-            # File is AAC/mp4a audio, recommend mp3 conversion
-            return True
-
-        # If the codec name is in the supported formats
-        if codec_name in SUPPORTED_FORMATS:
+        if audio_stream is None:
+            container.close()
             return False
 
+        codec_name = (audio_stream.codec_context.name or "").lower()
+        codec_type = audio_stream.type.lower()
+        format_name = (container.format.name or "").lower()
+
+        if codec_name in SUPPORTED_FORMATS:
+            container.close()
+            return False
+
+        container.close()
         return True
     except Exception as e:
         log.error(f'Error getting audio format: {e}')
@@ -116,15 +116,25 @@ def is_audio_conversion_required(file_path):
 
 def convert_audio_to_mp3(file_path):
     """Convert audio file to mp3 format."""
-    try:
-        output_path = os.path.splitext(file_path)[0] + '.mp3'
-        audio = AudioSegment.from_file(file_path)
-        audio.export(output_path, format='mp3')
-        log.info(f'Converted {file_path} to {output_path}')
-        return output_path
-    except Exception as e:
-        log.error(f'Error converting audio file: {e}')
-        return None
+    output_path = os.path.splitext(file_path)[0] + ".mp3"
+    in_container = av.open(file_path)
+    audio_stream = next(s for s in in_container.streams if s.type == "audio")
+    out_container = av.open(output_path, mode="w")
+    out_stream = out_container.add_stream("mp3", rate=audio_stream.rate)
+
+    for frame in in_container.decode(audio_stream):
+        frame.pts = None
+        packet = out_stream.encode(frame)
+        if packet:
+            out_container.mux(packet)
+
+    for packet in out_stream.encode(None):
+        out_container.mux(packet)
+
+    out_container.close()
+    in_container.close()
+
+    return output_path
 
 
 def set_faster_whisper_model(model: str, auto_update: bool = False):
@@ -1070,20 +1080,49 @@ def transcribe(request: Request, file_path: str, metadata: Optional[dict] = None
 
 
 def compress_audio(file_path):
-    if os.path.getsize(file_path) > MAX_FILE_SIZE:
-        id = os.path.splitext(os.path.basename(file_path))[0]  # Handles names with multiple dots
-        file_dir = os.path.dirname(file_path)
-
-        audio = AudioSegment.from_file(file_path)
-        audio = audio.set_frame_rate(16000).set_channels(1)  # Compress audio
-
-        compressed_path = os.path.join(file_dir, f'{id}_compressed.mp3')
-        audio.export(compressed_path, format='mp3', bitrate='32k')
-        # log.debug(f"Compressed audio to {compressed_path}")  # Uncomment if log is defined
-
-        return compressed_path
-    else:
+    """Convert audio files bigger than our threshold to a normalized mp3 format."""
+    if os.path.getsize(file_path) <= MAX_FILE_SIZE:
         return file_path
+
+    file_id = os.path.splitext(os.path.basename(file_path))[0] # Handles names with multiple dots
+    file_dir = os.path.dirname(file_path)
+    compressed_path = os.path.join(file_dir, f"{file_id}_compressed.mp3")
+
+    in_container = av.open(file_path)
+    audio_stream = next(s for s in in_container.streams if s.type == "audio")
+
+    out_container = av.open(compressed_path, mode="w")
+
+    # Compress audio:
+    # - 16KHz sample rate
+    # - mono
+    # - 32k bitrate
+
+    out_stream = out_container.add_stream("mp3", rate=16000)
+    out_stream.bit_rate = 32000
+    out_stream.channels = 1
+
+    for frame in in_container.decode(audio_stream):
+        if frame.layout.name != "mono":
+            frame = frame.reformat(layout="mono")
+
+        if frame.sample_rate != 16000:
+            frame = frame.reformat(rate=16000)
+
+        frame.pts = None
+        packet = out_stream.encode(frame)
+        if packet:
+            out_container.mux(packet)
+
+    for packet in out_stream.encode(None):
+        out_container.mux(packet)
+
+    out_container.close()
+    in_container.close()
+
+    # log.debug(f"Compressed audio to {compressed_path}")  # Uncomment if log is defined
+
+    return compressed_path
 
 
 def split_audio(file_path, max_bytes, format='mp3', bitrate='32k'):
@@ -1091,45 +1130,100 @@ def split_audio(file_path, max_bytes, format='mp3', bitrate='32k'):
     Splits audio into chunks not exceeding max_bytes.
     Returns a list of chunk file paths. If audio fits, returns list with original path.
     """
+
     file_size = os.path.getsize(file_path)
     if file_size <= max_bytes:
         return [file_path]  # Nothing to split
 
-    audio = AudioSegment.from_file(file_path)
-    duration_ms = len(audio)
+    # Parse bitrate string like "32k" or "32000"
+    target_bitrate = int(bitrate.lower().replace("k", "")) * (
+        1000 if bitrate.lower().endswith("k") else 1
+    )
+
+    in_container = av.open(file_path)
+    audio_stream = next(s for s in in_container.streams if s.type == "audio")
+
+    # Total duration
+    duration_sec = float(audio_stream.duration * audio_stream.time_base)
     orig_size = file_size
 
-    approx_chunk_ms = max(int(duration_ms * (max_bytes / orig_size)) - 1000, 1000)
-    chunks = []
-    start = 0
-    i = 0
+    # Estimated average chunk size
+    approx_chunk_sec = max((duration_sec * (max_bytes / orig_size)) - 1.0, 1.0)
 
+    chunks = []
+    start_sec = 0.0
+    i = 0
     base, _ = os.path.splitext(file_path)
 
-    while start < duration_ms:
-        end = min(start + approx_chunk_ms, duration_ms)
-        chunk = audio[start:end]
-        chunk_path = f'{base}_chunk_{i}.{format}'
-        chunk.export(chunk_path, format=format, bitrate=bitrate)
+    while start_sec < duration_sec:
+        end_sec = min(start_sec + approx_chunk_sec, duration_sec)
 
-        # Reduce chunk duration if still too large
-        while os.path.getsize(chunk_path) > max_bytes and (end - start) > 5000:
-            end = start + ((end - start) // 2)
-            chunk = audio[start:end]
-            chunk.export(chunk_path, format=format, bitrate=bitrate)
+        chunk_path = f"{base}_chunk_{i}.{format}"
 
-        if os.path.getsize(chunk_path) > max_bytes:
-            os.remove(chunk_path)
-            raise Exception('Audio chunk cannot be reduced below max file size.')
+        while True:
+            _split_audio_encode_chunk(
+                file_path,
+                chunk_path,
+                start_sec,
+                end_sec,
+                target_bitrate,
+            )
+
+            if os.path.getsize(chunk_path) <= max_bytes:
+                break
+
+            if (end_sec - start_sec) <= 5:
+                os.remove(chunk_path)
+                raise Exception("Audio chunk cannot be reduced below max file size.")
+
+            # Halve the segment
+            end_sec = start_sec + ((end_sec - start_sec) / 2)
 
         chunks.append(chunk_path)
-        start = end
+        start_sec = end_sec
         i += 1
 
+    in_container.close()
     return chunks
 
 
-@router.post('/transcriptions')
+def _split_audio_encode_chunk(input_path, output_path, start_sec, end_sec, bitrate):
+    """
+    Helper function to convert a chunk in mp3
+    """
+
+    in_container = av.open(input_path)
+    audio_stream = next(s for s in in_container.streams if s.type == "audio")
+
+    out_container = av.open(output_path, mode="w")
+    out_stream = out_container.add_stream("mp3", rate=audio_stream.rate)
+    out_stream.bit_rate = bitrate
+
+    start_pts = int(start_sec / audio_stream.time_base)
+    in_container.seek(start_pts, stream=audio_stream)
+
+    for frame in in_container.decode(audio_stream):
+        current_sec = float(frame.pts * audio_stream.time_base)
+
+        if current_sec < start_sec:
+            continue
+        if current_sec >= end_sec:
+            break
+
+        frame.pts = None
+        packet = out_stream.encode(frame)
+        if packet:
+            out_container.mux(packet)
+
+    # flush encoder
+    for packet in out_stream.encode(None):
+        out_container.mux(packet)
+
+    out_container.close()
+    in_container.close()
+
+
+@router.post("/transcriptions")
 def transcription(
     request: Request,
     file: UploadFile = File(...),

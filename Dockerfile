@@ -129,7 +129,7 @@ RUN apt-get update && \
     git build-essential pandoc gcc netcat-openbsd curl jq \
     libmariadb-dev \
     python3-dev \
-    ffmpeg libsm6 libxext6 zstd \
+    libsm6 libxext6 zstd \
     && rm -rf /var/lib/apt/lists/*
 
 # install python dependencies
