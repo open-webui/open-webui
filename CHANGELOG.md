@@ -51,7 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 💾 **Terminal state persistence.** The selected terminal server and its enabled state now persist across page loads, making terminal usage more seamless. [Commit](https://github.com/open-webui/open-webui/commit/d577ff1e4af750dda09e558dac7edb8dd2470850)
 - 📦 **Terminal folder downloads.** Users can now download folders as ZIP archives and bulk-download multiple selected files as a single ZIP directly from the File Navigator toolbar, making file exports faster and more convenient. [Commit](https://github.com/open-webui/open-webui/commit/3841e85abb3ea3e8d8b364dff0102f0124844d22), [Commit](https://github.com/open-webui/open-webui/commit/cf60b1882f1929200649b59f867289dea54e4210)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 Translations for Finnish, Portuguese (Portugal), Catalan, Turkish, Japanese, Simplified Chinese, Traditional Chinese, Estonian, Spanish, and Azerbaijani were enhanced and expanded.
+- 🌐 Translations for Finnish, Portuguese (Portugal), Catalan, Turkish, Japanese, Simplified Chinese, Traditional Chinese, Estonian, Spanish, Azerbaijani, and German were enhanced and expanded.
 
 ### Fixed
 
