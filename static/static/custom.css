@@ -1,0 +1,110 @@
+/* VenomX Theme Tokens (vx-) */
+:root {
+	--vx-bg: #f4f9ff;
+	--vx-bg2: #e6f0fb;
+	--vx-surface-1: rgba(255, 255, 255, 0.84);
+	--vx-surface-2: rgba(247, 251, 255, 0.78);
+	--vx-surface-3: rgba(240, 247, 255, 0.94);
+	--vx-border: rgba(22, 53, 88, 0.18);
+	--vx-text: #133354;
+	--vx-muted: #456486;
+	--vx-accent: #1f5d96;
+	--vx-accent-2: #2d76bd;
+	--vx-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+	--vx-radius-lg: 18px;
+	--vx-radius-md: 12px;
+	--vx-ring: rgba(31, 93, 150, 0.38);
+}
+
+html.dark {
+	--vx-bg: #0b1728;
+	--vx-bg2: #112842;
+	--vx-surface-1: rgba(16, 33, 54, 0.72);
+	--vx-surface-2: rgba(18, 38, 62, 0.78);
+	--vx-surface-3: rgba(23, 46, 73, 0.9);
+	--vx-border: rgba(146, 173, 202, 0.2);
+	--vx-text: #d7e4f1;
+	--vx-muted: #9bb2ca;
+	--vx-accent: #4c88c2;
+	--vx-accent-2: #6aa2d7;
+	--vx-shadow: 0 14px 30px rgba(2, 8, 18, 0.34);
+	--vx-ring: rgba(76, 136, 194, 0.42);
+}
+
+.vx-page-bg {
+	position: relative;
+	isolation: isolate;
+	overflow: hidden;
+	background-image:
+		radial-gradient(85% 60% at 50% 36%, rgba(108, 156, 207, 0.12) 0%, rgba(108, 156, 207, 0) 72%),
+		linear-gradient(180deg, var(--vx-bg) 0%, var(--vx-bg2) 100%);
+	background-repeat: no-repeat;
+	background-attachment: fixed;
+}
+
+.vx-page-bg::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: -1;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+	background-size: 140px 140px;
+	opacity: 0.04;
+}
+
+.vx-card {
+	background: var(--vx-surface-2);
+	border: 1px solid rgba(151, 178, 206, 0.24);
+	border-radius: var(--vx-radius-lg);
+	box-shadow:
+		0 18px 38px rgba(6, 17, 32, 0.2),
+		0 1px 0 rgba(255, 255, 255, 0.2) inset,
+		var(--vx-shadow);
+	backdrop-filter: blur(16px);
+}
+
+.vx-input {
+	background:
+		linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)),
+		var(--vx-surface-3);
+	border: 1px solid var(--vx-border);
+	border-radius: var(--vx-radius-md);
+	color: var(--vx-text);
+	box-shadow:
+		0 1px 0 rgba(255, 255, 255, 0.24) inset,
+		0 6px 16px rgba(9, 22, 39, 0.12);
+}
+
+.vx-chip {
+	background: var(--vx-surface-1);
+	border: 1px solid var(--vx-border);
+	border-radius: 13px;
+	color: var(--vx-text);
+	font-size: 0.84rem;
+	font-weight: 500;
+	transition:
+		background-color 140ms ease,
+		border-color 140ms ease,
+		box-shadow 140ms ease,
+		transform 140ms ease;
+}
+
+.vx-chip:hover {
+	background: rgba(255, 255, 255, 0.94);
+	border-color: rgba(122, 151, 182, 0.36);
+	box-shadow: 0 5px 14px rgba(15, 23, 42, 0.1);
+	transform: translateY(-1px);
+}
+
+html.dark .vx-chip:hover {
+	background: rgba(38, 58, 84, 0.9);
+	border-color: rgba(161, 187, 214, 0.3);
+	box-shadow: 0 6px 16px rgba(2, 8, 18, 0.28);
+}
+
+.vx-focus:focus-visible {
+	outline: 2px solid var(--vx-ring);
+	outline-offset: 2px;
+	box-shadow: 0 0 0 3px var(--vx-ring);
+}

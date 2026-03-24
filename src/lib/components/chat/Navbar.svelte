@@ -38,6 +38,7 @@
 	import ChatPlus from '../icons/ChatPlus.svelte';
 	import ChatCheck from '../icons/ChatCheck.svelte';
 	import Knobs from '../icons/Knobs.svelte';
+	import Target from '../icons/Target.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	const i18n = getContext('i18n');
@@ -50,6 +51,9 @@
 	export let history;
 	export let selectedModels;
 	export let showModelSelector = true;
+	export let showTargetToggle = false;
+	export let targetSidebarVisible = false;
+	export let toggleTargetSidebar: () => void = () => {};
 
 	export let onSaveTempChat: () => {};
 	export let archiveChatHandler: (id: string) => void;
@@ -117,6 +121,24 @@
 				</div>
 
 				<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
+					{#if showTargetToggle && !targetSidebarVisible}
+						<Tooltip
+							content={targetSidebarVisible ? $i18n.t('Hide Targets') : $i18n.t('Show Targets')}
+						>
+							<button
+								class="hidden xl:flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+								aria-label={targetSidebarVisible ? $i18n.t('Hide Targets') : $i18n.t('Show Targets')}
+								on:click={() => {
+									toggleTargetSidebar();
+								}}
+							>
+								<div class="m-auto self-center">
+									<Target className="size-4.5" strokeWidth="1.6" />
+								</div>
+							</button>
+						</Tooltip>
+					{/if}
+
 					<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
 
 					{#if $user?.role === 'user' ? ($user?.permissions?.chat?.temporary ?? true) && !($user?.permissions?.chat?.temporary_enforced ?? false) : true}

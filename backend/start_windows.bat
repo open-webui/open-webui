@@ -24,6 +24,7 @@ IF NOT "%WEBUI_SECRET_KEY_FILE%" == "" (
 
 IF "%PORT%"=="" SET PORT=8080
 IF "%HOST%"=="" SET HOST=0.0.0.0
+IF "%ENABLE_WEBSOCKET_SUPPORT%"=="" SET ENABLE_WEBSOCKET_SUPPORT=True
 SET "WEBUI_SECRET_KEY=%WEBUI_SECRET_KEY%"
 SET "WEBUI_JWT_SECRET_KEY=%WEBUI_JWT_SECRET_KEY%"
 
@@ -34,8 +35,7 @@ IF "%WEBUI_SECRET_KEY% %WEBUI_JWT_SECRET_KEY%" == " " (
     IF NOT EXIST "%KEY_FILE%" (
         echo Generating WEBUI_SECRET_KEY
         :: Generate a random value to use as a WEBUI_SECRET_KEY in case the user didn't provide one
-        SET /p WEBUI_SECRET_KEY=<nul
-        FOR /L %%i IN (1,1,12) DO SET /p WEBUI_SECRET_KEY=<!random!>>%KEY_FILE%
+        python -c "import secrets,string;print(''.join(secrets.choice(string.ascii_letters+string.digits) for _ in range(32)), end='')" > "%KEY_FILE%"
         echo WEBUI_SECRET_KEY generated
     )
 
@@ -46,5 +46,10 @@ IF "%WEBUI_SECRET_KEY% %WEBUI_JWT_SECRET_KEY%" == " " (
 :: Execute uvicorn
 SET "WEBUI_SECRET_KEY=%WEBUI_SECRET_KEY%"
 IF "%UVICORN_WORKERS%"=="" SET UVICORN_WORKERS=1
-uvicorn open_webui.main:app --host "%HOST%" --port "%PORT%" --forwarded-allow-ips '*' --workers %UVICORN_WORKERS% --ws auto
+SET "PYTHON_EXEC=python"
+IF EXIST "%SCRIPT_DIR%.venv\Scripts\python.exe" (
+    SET "PYTHON_EXEC=%SCRIPT_DIR%.venv\Scripts\python.exe"
+)
+
+"%PYTHON_EXEC%" -m uvicorn open_webui.main:app --host "%HOST%" --port "%PORT%" --forwarded-allow-ips '*' --workers %UVICORN_WORKERS% --ws auto
 :: For ssl user uvicorn open_webui.main:app --host "%HOST%" --port "%PORT%" --forwarded-allow-ips '*' --ssl-keyfile "key.pem" --ssl-certfile "cert.pem" --ws auto

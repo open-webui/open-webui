@@ -903,15 +903,15 @@
 </script>
 
 <svelte:head>
-	<title>{$WEBUI_NAME}</title>
-	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
+	<title>VenomX</title>
+	<link crossorigin="anonymous" rel="icon" href="/venomx-logo.png" />
 
-	<meta name="apple-mobile-web-app-title" content={$WEBUI_NAME} />
-	<meta name="description" content={$WEBUI_NAME} />
+	<meta name="apple-mobile-web-app-title" content="VenomX" />
+	<meta name="description" content="VenomX" />
 	<link
 		rel="search"
 		type="application/opensearchdescription+xml"
-		title={$WEBUI_NAME}
+		title="VenomX"
 		href="/opensearch.xml"
 		crossorigin="use-credentials"
 	/>

@@ -1192,8 +1192,8 @@
 						<div
 							id="message-input-container"
 							class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border {$temporaryChatEnabled
-								? 'border-dashed border-gray-100 dark:border-gray-800 hover:border-gray-200 focus-within:border-gray-200 hover:dark:border-gray-700 focus-within:dark:border-gray-700'
-								: ' border-gray-100/30 dark:border-gray-850/30 hover:border-gray-200 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800'}  transition px-1 bg-white/5 dark:bg-gray-500/5 backdrop-blur-sm dark:text-gray-100"
+								? 'border-dashed border-gray-200/85 dark:border-slate-700/80 hover:border-gray-300 focus-within:border-gray-300 hover:dark:border-slate-600 focus-within:dark:border-slate-600'
+								: 'border-gray-200/85 dark:border-slate-700/80 hover:border-gray-300 focus-within:border-gray-300 hover:dark:border-slate-600 focus-within:dark:border-slate-600'} transition px-1 bg-white/76 dark:bg-slate-900/76 backdrop-blur-md shadow-[0_10px_26px_rgba(10,24,40,0.12)] dark:shadow-[0_12px_30px_rgba(2,8,18,0.45)] dark:text-gray-100"
 							dir={$settings?.chatDirection ?? 'auto'}
 						>
 							{#if atSelectedModel !== undefined}
@@ -1203,10 +1203,10 @@
 											<img
 												alt="model profile"
 												class="size-3.5 max-w-[28px] object-cover rounded-full"
-												src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${$models.find((model) => model.id === atSelectedModel.id).id}&lang=${$i18n.language}`}
+												src={'/venomx-logo.png'}
 											/>
 											<div class="translate-y-[0.5px]">
-												<span class="">{atSelectedModel.name}</span>
+												<span class="">VenomX</span>
 											</div>
 										</div>
 										<div>
@@ -1974,3 +1974,22 @@
 		</div>
 	</div>
 {/if}
+
+<style>
+	:global(.copilot-landing-active-surface #message-input-container [class*='text-gray']),
+	:global(.copilot-landing-active-surface #message-input-container [class*='dark:text-gray']),
+	:global(.copilot-landing-active-surface #message-input-container [class*='hover:text-gray']),
+	:global(.copilot-landing-active-surface #message-input-container [class*='dark:hover:text-gray']) {
+		color: #0f2b48 !important;
+	}
+
+	:global(.copilot-landing-active-surface #message-input-container [class*='stroke-gray']),
+	:global(.copilot-landing-active-surface #message-input-container [class*='dark:stroke-gray']) {
+		stroke: #0f2b48 !important;
+	}
+
+	:global(.copilot-landing-active-surface #message-input-container [class*='fill-gray']),
+	:global(.copilot-landing-active-surface #message-input-container [class*='dark:fill-gray']) {
+		fill: #0f2b48 !important;
+	}
+</style>

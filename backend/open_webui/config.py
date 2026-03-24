@@ -856,51 +856,44 @@ load_oauth_providers()
 
 STATIC_DIR = Path(os.getenv("STATIC_DIR", OPEN_WEBUI_DIR / "static")).resolve()
 
-try:
-    if STATIC_DIR.exists():
-        for item in STATIC_DIR.iterdir():
-            if item.is_file() or item.is_symlink():
-                try:
-                    item.unlink()
-                except Exception as e:
-                    pass
-except Exception as e:
-    pass
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
 
-for file_path in (FRONTEND_BUILD_DIR / "static").glob("**/*"):
-    if file_path.is_file():
-        target_path = STATIC_DIR / file_path.relative_to(
-            (FRONTEND_BUILD_DIR / "static")
-        )
-        target_path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            shutil.copyfile(file_path, target_path)
-        except Exception as e:
-            logging.error(f"An error occurred: {e}")
+base_dir = OPEN_WEBUI_DIR.parent.parent
+static_sources = [
+    FRONTEND_BUILD_DIR / "static",
+    base_dir / "static" / "static",
+    base_dir / "static",
+]
 
-frontend_favicon = FRONTEND_BUILD_DIR / "static" / "favicon.png"
+static_source_dir = next((path for path in static_sources if path.exists()), None)
 
-if frontend_favicon.exists():
-    try:
-        shutil.copyfile(frontend_favicon, STATIC_DIR / "favicon.png")
-    except Exception as e:
-        logging.error(f"An error occurred: {e}")
+if static_source_dir is None:
+    log.warning(
+        f"No frontend static source found. Keeping existing static assets in '{STATIC_DIR}'."
+    )
+else:
+    for file_path in static_source_dir.glob("**/*"):
+        if file_path.is_file():
+            target_path = STATIC_DIR / file_path.relative_to(static_source_dir)
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                shutil.copyfile(file_path, target_path)
+            except Exception as e:
+                logging.error(f"Error copying static asset {file_path}: {e}")
 
-frontend_splash = FRONTEND_BUILD_DIR / "static" / "splash.png"
+for required_file in ["favicon.png", "splash.png", "loader.js"]:
+    target_file = STATIC_DIR / required_file
+    if target_file.exists():
+        continue
 
-if frontend_splash.exists():
-    try:
-        shutil.copyfile(frontend_splash, STATIC_DIR / "splash.png")
-    except Exception as e:
-        logging.error(f"An error occurred: {e}")
-
-frontend_loader = FRONTEND_BUILD_DIR / "static" / "loader.js"
-
-if frontend_loader.exists():
-    try:
-        shutil.copyfile(frontend_loader, STATIC_DIR / "loader.js")
-    except Exception as e:
-        logging.error(f"An error occurred: {e}")
+    for source_dir in static_sources:
+        source_file = source_dir / required_file
+        if source_file.exists():
+            try:
+                shutil.copyfile(source_file, target_file)
+                break
+            except Exception as e:
+                logging.error(f"Error copying fallback static asset {source_file}: {e}")
 
 
 ####################################
@@ -1249,31 +1242,16 @@ except Exception as e:
 if default_prompt_suggestions == []:
     default_prompt_suggestions = [
         {
-            "title": ["Help me study", "vocabulary for a college entrance exam"],
-            "content": "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
+            "title": ["Nmap scan plan"],
+            "content": "Draft an Nmap scan plan for 10.0.0.0/24 (authorized testing)",
         },
         {
-            "title": ["Give me ideas", "for what to do with my kids' art"],
-            "content": "What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter.",
+            "title": ["Common pentest findings"],
+            "content": "Summarize common findings and remediations for a web app pentest",
         },
         {
-            "title": ["Tell me a fun fact", "about the Roman Empire"],
-            "content": "Tell me a random fun fact about the Roman Empire",
-        },
-        {
-            "title": ["Show me a code snippet", "of a website's sticky header"],
-            "content": "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
-        },
-        {
-            "title": [
-                "Explain options trading",
-                "if I'm familiar with buying and selling stocks",
-            ],
-            "content": "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
-        },
-        {
-            "title": ["Overcome procrastination", "give me tips"],
-            "content": "Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?",
+            "title": ["Pentest report template"],
+            "content": "Create a pentest report template with severity ratings",
         },
     ]
 
