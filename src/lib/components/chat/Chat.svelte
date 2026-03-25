@@ -2603,8 +2603,6 @@
 					params: params,
 					files: chatFiles
 				});
-				currentChatPage.set(1);
-				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			}
 		}
 	};
