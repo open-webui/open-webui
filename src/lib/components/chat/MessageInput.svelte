@@ -1834,7 +1834,7 @@
 											<Tooltip content={$i18n.t('Create note')} className=" flex items-center">
 												<button
 													id="create-note-button"
-													class=" text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition rounded-full p-1.5 -mr-1 self-center"
+													class=" text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 -mr-1 self-center"
 													type="button"
 													disabled={prompt === '' && files.length === 0}
 													on:click={() => {
