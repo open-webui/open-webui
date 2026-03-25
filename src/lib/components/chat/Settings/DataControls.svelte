@@ -140,12 +140,16 @@
 	};
 </script>
 
-<ArchivedChatsModal bind:show={showArchivedChatsModal} onUpdate={handleArchivedChatsChange} onDelete={(id) => {
-	if ($chatId === id) {
-		goto('/');
-		chatId.set('');
-	}
-}} />
+<ArchivedChatsModal
+	bind:show={showArchivedChatsModal}
+	onUpdate={handleArchivedChatsChange}
+	onDelete={(id) => {
+		if ($chatId === id) {
+			goto('/');
+			chatId.set('');
+		}
+	}}
+/>
 <SharedChatsModal bind:show={showSharedChatsModal} />
 <FilesModal bind:show={showFilesModal} />
 

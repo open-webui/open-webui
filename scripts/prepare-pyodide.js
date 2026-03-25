@@ -199,5 +199,3 @@ initNetworkProxyFromEnv();
 await downloadPackages();
 await copyPyodide();
 await downloadPyPIWheels();
-
-

@@ -3692,9 +3692,9 @@ async def streaming_chat_response_handler(response, ctx):
                                                         current_response_tool_call['function']['name'] = delta_name
 
                                                     if delta_arguments:
-                                                        current_response_tool_call['function'][
-                                                            'arguments'
-                                                        ] += delta_arguments
+                                                        current_response_tool_call['function']['arguments'] += (
+                                                            delta_arguments
+                                                        )
 
                                         # Emit pending tool calls in real-time
                                         if response_tool_calls:

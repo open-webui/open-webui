@@ -73,15 +73,17 @@ log = logging.getLogger(__name__)
 
 
 async def send_get_request(
-    request: Request = None, url=None, key=None, user: UserModel = None, config=None,
+    request: Request = None,
+    url=None,
+    key=None,
+    user: UserModel = None,
+    config=None,
 ):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             if request and config:
-                headers, cookies = await get_headers_and_cookies(
-                    request, url, key, config, user=user
-                )
+                headers, cookies = await get_headers_and_cookies(request, url, key, config, user=user)
             else:
                 headers = {
                     **({'Authorization': f'Bearer {key}'} if key else {}),
@@ -105,7 +107,11 @@ async def send_get_request(
 
 
 async def get_models_request(
-    request: Request = None, url=None, key=None, user: UserModel = None, config=None,
+    request: Request = None,
+    url=None,
+    key=None,
+    user: UserModel = None,
+    config=None,
 ):
     if is_anthropic_url(url):
         return await get_anthropic_models(url, key, user=user)
@@ -383,9 +389,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
             if enable:
                 if len(model_ids) == 0:
-                    request_tasks.append(
-                        get_models_request(request, url, api_keys[idx], user=user, config=api_config)
-                    )
+                    request_tasks.append(get_models_request(request, url, api_keys[idx], user=user, config=api_config))
                 else:
                     model_list = {
                         'object': 'list',

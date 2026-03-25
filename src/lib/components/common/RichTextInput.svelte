@@ -452,10 +452,7 @@
 					// Escape HTML entities in the line FIRST so we don't corrupt
 					// user text that happens to contain < or >, then re-inject
 					// the mention spans.
-					const escaped = line
-						.replace(/&/g, '&amp;')
-						.replace(/</g, '&lt;')
-						.replace(/>/g, '&gt;');
+					const escaped = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 					// Now replace the escaped mention patterns back into real spans
 					const withMentions = escaped.replace(
 						/&lt;([@#$])([\w.\-:/]+)(?:\|([^&]*?))?&gt;/g,

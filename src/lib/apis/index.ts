@@ -410,8 +410,8 @@ export const getToolServersData = async (servers: object[]) => {
 						try {
 							const baseUrl = (server?.url ?? '').replace(/\/$/, '');
 							const configRes = await fetch(`${baseUrl}/api/config`, {
-							signal: AbortSignal.timeout(TOOL_SERVER_FETCH_TIMEOUT)
-						});
+								signal: AbortSignal.timeout(TOOL_SERVER_FETCH_TIMEOUT)
+							});
 							if (configRes.ok) {
 								const config = await configRes.json();
 								if (config?.features?.system) {
@@ -420,9 +420,9 @@ export const getToolServersData = async (servers: object[]) => {
 										headers['Authorization'] = `Bearer ${toolServerToken}`;
 									}
 									const systemRes = await fetch(`${baseUrl}/system`, {
-									signal: AbortSignal.timeout(TOOL_SERVER_FETCH_TIMEOUT),
-									headers
-								});
+										signal: AbortSignal.timeout(TOOL_SERVER_FETCH_TIMEOUT),
+										headers
+									});
 									if (systemRes.ok) {
 										const systemData = await systemRes.json();
 										if (systemData?.prompt) {

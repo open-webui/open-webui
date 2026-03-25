@@ -367,7 +367,11 @@
 			</ul>
 		{/if}
 	{:else if token.type === 'detail_group'}
-		<ConsecutiveDetailsGroup id={`${id}-${tokenIdx}-detail-group`} tokens={token.items} messageDone={done}>
+		<ConsecutiveDetailsGroup
+			id={`${id}-${tokenIdx}-detail-group`}
+			tokens={token.items}
+			messageDone={done}
+		>
 			<div slot="content" class="space-y-1">
 				{#each token.items as detailToken, detailIdx}
 					{@const textContent = getDetailTextContent(detailToken)}

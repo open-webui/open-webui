@@ -314,7 +314,8 @@
 					if (tool && tool.authenticated === false) {
 						const parts = id.split(':');
 						const serverId = parts.at(-1) ?? id;
-						const authType = parts.length > 1 ? parts[0] === 'server' ? parts[1] : parts[0] : null;
+						const authType =
+							parts.length > 1 ? (parts[0] === 'server' ? parts[1] : parts[0]) : null;
 						unauthed.push({ id, name: tool.name ?? id, serverId, authType });
 					} else {
 						authed.push(id);
@@ -1770,9 +1771,7 @@
 		}
 
 		if (pendingOAuthTools.length > 0) {
-			toast.warning(
-				$i18n.t('Please connect all required integrations before sending a message')
-			);
+			toast.warning($i18n.t('Please connect all required integrations before sending a message'));
 			return;
 		}
 		if (userPrompt === '' && files.length === 0) {

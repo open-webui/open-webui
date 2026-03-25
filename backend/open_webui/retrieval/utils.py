@@ -840,9 +840,7 @@ def get_embedding_function(
                 embeddings = []
                 for i, batch_embeddings in enumerate(batch_results):
                     if batch_embeddings is None:
-                        raise Exception(
-                            f'Embedding generation failed for batch {i + 1}/{len(batches)}'
-                        )
+                        raise Exception(f'Embedding generation failed for batch {i + 1}/{len(batches)}')
                     embeddings.extend(batch_embeddings)
 
                 log.debug(
