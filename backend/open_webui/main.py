@@ -98,6 +98,7 @@ from open_webui.routers import (
     scim,
     terminals,
 )
+from open_webui.clapnclaw.router import router as clapnclaw_router
 
 from open_webui.routers.retrieval import (
     get_embedding_function,
@@ -1563,6 +1564,9 @@ app.include_router(
 if ENABLE_ADMIN_ANALYTICS:
     app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
+
+# ClapNClaw API bridge (proxy to ClapNClaw backend)
+app.include_router(clapnclaw_router)
 app.include_router(terminals.router, prefix="/api/v1/terminals", tags=["terminals"])
 
 # SCIM 2.0 API for identity management

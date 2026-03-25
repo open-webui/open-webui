@@ -7,6 +7,21 @@ export default {
 	content: ['./src/**/*.{html,js,svelte,ts}'],
 	theme: {
 		extend: {
+			colors: {
+				claw: {
+					50: '#fef3ee',
+					100: '#fde4d6',
+					200: '#fac5ac',
+					300: '#f69d78',
+					400: '#f17042',
+					500: '#ed4d1e',
+					600: '#de3514',
+					700: '#b82512',
+					800: '#932017',
+					900: '#771d16',
+					950: '#400c09'
+				}
+			},
 			typography: {
 				DEFAULT: {
 					css: {

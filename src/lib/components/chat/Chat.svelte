@@ -94,6 +94,7 @@
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
+	import PresetActionsBar from '$lib/components/chat/PresetActionsBar.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/chat/Navbar.svelte';
 	import ChatControls from './ChatControls.svelte';
@@ -2792,6 +2793,16 @@
 									/>
 								</div>
 							</div>
+
+							{#if history.currentId === null}
+								<div class="pb-1 z-10">
+									<PresetActionsBar
+										onSelect={(presetPrompt) => {
+											prompt = presetPrompt;
+										}}
+									/>
+								</div>
+							{/if}
 
 							<div class=" pb-2 z-10">
 								<MessageInput
