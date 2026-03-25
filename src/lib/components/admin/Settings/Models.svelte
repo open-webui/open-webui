@@ -105,7 +105,7 @@
 		modelsToEnable.forEach((m) => (m.is_active = true));
 		models = models;
 		// Sync with server
-		await Promise.all(modelsToEnable.map((model) => toggleModelById(localStorage.token, model.id)));
+		await Promise.all(modelsToEnable.map((model) => upsertModelHandler(model, { is_active: true }, false)));
 	};
 
 	const disableAllHandler = async () => {
@@ -114,9 +114,7 @@
 		modelsToDisable.forEach((m) => (m.is_active = false));
 		models = models;
 		// Sync with server
-		await Promise.all(
-			modelsToDisable.map((model) => toggleModelById(localStorage.token, model.id))
-		);
+		await Promise.all(modelsToDisable.map((model) => upsertModelHandler(model, { is_active: false }, false)));
 	};
 
 	const showAllHandler = async () => {
@@ -127,7 +125,7 @@
 		});
 		models = models;
 		// Sync with server
-		await Promise.all(modelsToShow.map((model) => upsertModelHandler(model, false)));
+		await Promise.all(modelsToShow.map((model) => upsertModelHandler(model, { meta: { ...model.meta, hidden: false } }, false)));
 		toast.success($i18n.t('All models are now visible'));
 	};
 
@@ -139,7 +137,7 @@
 		});
 		models = models;
 		// Sync with server
-		await Promise.all(modelsToHide.map((model) => upsertModelHandler(model, false)));
+		await Promise.all(modelsToHide.map((model) => upsertModelHandler(model, { meta: { ...model.meta, hidden: true } }, false)));
 		toast.success($i18n.t('All models are now hidden'));
 	};
 
@@ -176,8 +174,8 @@
 		});
 	};
 
-	const upsertModelHandler = async (model, showToast = true) => {
-		model.base_model_id = null;
+	const upsertModelHandler = async (model, overrides = {}, showToast = true) => {
+		model = { ...model, base_model_id: null, ...overrides };
 
 		if (workspaceModels.find((m) => m.id === model.id)) {
 			const res = await updateModelById(localStorage.token, model.id, model).catch((error) => {
@@ -200,7 +198,7 @@
 				return null;
 			});
 
-			if (res && !silent) {
+			if (res && showToast) {
 				toast.success($i18n.t('Model updated successfully'));
 			}
 		}
@@ -248,7 +246,7 @@
 
 		console.debug(model);
 
-		upsertModelHandler(model, false);
+		upsertModelHandler(model, { meta: model.meta }, false);
 
 		toast.success(
 			model.meta.hidden
