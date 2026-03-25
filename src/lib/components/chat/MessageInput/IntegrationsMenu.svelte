@@ -1,8 +1,6 @@
 <script lang="ts">
-	import { DropdownMenu } from 'bits-ui';
 	import { getContext, onMount, tick } from 'svelte';
 	import { fly } from 'svelte/transition';
-	import { flyAndScale } from '$lib/utils/transitions';
 
 	import {
 		config,
@@ -102,8 +100,8 @@
 
 <Dropdown
 	bind:show
-	on:change={(e) => {
-		if (e.detail === false) {
+	onOpenChange={(state) => {
+		if (state === false) {
 			onClose();
 		}
 	}}
@@ -112,13 +110,8 @@
 		<slot />
 	</Tooltip>
 	<div slot="content">
-		<DropdownMenu.Content
-			class="w-full max-w-70 rounded-2xl px-1 py-1  border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
-			sideOffset={4}
-			alignOffset={-6}
-			side="bottom"
-			align="start"
-			transition={flyAndScale}
+		<div
+			class="min-w-70 max-w-70 rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
 		>
 			{#if tab === ''}
 				<div in:fly={{ x: -20, duration: 150 }}>
@@ -346,6 +339,9 @@
 									let parts = toolId.split(':');
 									let serverId = parts?.at(-1) ?? toolId;
 
+									// Persist the tool ID so we can re-enable it after OAuth redirect
+									sessionStorage.setItem('pendingOAuthToolId', toolId);
+
 									const authUrl = getOAuthClientAuthorizationUrl(serverId, 'mcp');
 									window.open(authUrl, '_self', 'noopener');
 								} else {
@@ -407,6 +403,6 @@
 					{/each}
 				</div>
 			{/if}
-		</DropdownMenu.Content>
+		</div>
 	</div>
 </Dropdown>

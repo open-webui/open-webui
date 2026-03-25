@@ -44,30 +44,25 @@ from open_webui.env import (
     OTEL_METRICS_BASIC_AUTH_PASSWORD,
     OTEL_METRICS_OTLP_SPAN_EXPORTER,
     OTEL_METRICS_EXPORTER_OTLP_INSECURE,
+    OTEL_METRICS_EXPORT_INTERVAL_MILLIS,
 )
 from open_webui.models.users import Users
-
-_EXPORT_INTERVAL_MILLIS = 10_000  # 10 seconds
 
 
 def _build_meter_provider(resource: Resource) -> MeterProvider:
     """Return a configured MeterProvider."""
     headers = []
     if OTEL_METRICS_BASIC_AUTH_USERNAME and OTEL_METRICS_BASIC_AUTH_PASSWORD:
-        auth_string = (
-            f"{OTEL_METRICS_BASIC_AUTH_USERNAME}:{OTEL_METRICS_BASIC_AUTH_PASSWORD}"
-        )
+        auth_string = f'{OTEL_METRICS_BASIC_AUTH_USERNAME}:{OTEL_METRICS_BASIC_AUTH_PASSWORD}'
         auth_header = b64encode(auth_string.encode()).decode()
-        headers = [("authorization", f"Basic {auth_header}")]
+        headers = [('authorization', f'Basic {auth_header}')]
 
     # Periodic reader pushes metrics over OTLP/gRPC to collector
-    if OTEL_METRICS_OTLP_SPAN_EXPORTER == "http":
+    if OTEL_METRICS_OTLP_SPAN_EXPORTER == 'http':
         readers: List[PeriodicExportingMetricReader] = [
             PeriodicExportingMetricReader(
-                OTLPHttpMetricExporter(
-                    endpoint=OTEL_METRICS_EXPORTER_OTLP_ENDPOINT, headers=headers
-                ),
-                export_interval_millis=_EXPORT_INTERVAL_MILLIS,
+                OTLPHttpMetricExporter(endpoint=OTEL_METRICS_EXPORTER_OTLP_ENDPOINT, headers=headers),
+                export_interval_millis=OTEL_METRICS_EXPORT_INTERVAL_MILLIS,
             )
         ]
     else:
@@ -78,28 +73,28 @@ def _build_meter_provider(resource: Resource) -> MeterProvider:
                     insecure=OTEL_METRICS_EXPORTER_OTLP_INSECURE,
                     headers=headers,
                 ),
-                export_interval_millis=_EXPORT_INTERVAL_MILLIS,
+                export_interval_millis=OTEL_METRICS_EXPORT_INTERVAL_MILLIS,
             )
         ]
 
     # Optional view to limit cardinality: drop user-agent etc.
     views: List[View] = [
         View(
-            instrument_name="http.server.duration",
-            attribute_keys=["http.method", "http.route", "http.status_code"],
+            instrument_name='http.server.duration',
+            attribute_keys=['http.method', 'http.route', 'http.status_code'],
         ),
         View(
-            instrument_name="http.server.requests",
-            attribute_keys=["http.method", "http.route", "http.status_code"],
+            instrument_name='http.server.requests',
+            attribute_keys=['http.method', 'http.route', 'http.status_code'],
         ),
         View(
-            instrument_name="webui.users.total",
+            instrument_name='webui.users.total',
         ),
         View(
-            instrument_name="webui.users.active",
+            instrument_name='webui.users.active',
         ),
         View(
-            instrument_name="webui.users.active.today",
+            instrument_name='webui.users.active.today',
         ),
     ]
 
@@ -119,14 +114,14 @@ def setup_metrics(app: FastAPI, resource: Resource) -> None:
 
     # Instruments
     request_counter = meter.create_counter(
-        name="http.server.requests",
-        description="Counts the total number of inbound HTTP requests.",
-        unit="1",
+        name='http.server.requests',
+        description='Counts the total number of inbound HTTP requests.',
+        unit='1',
     )
     duration_histogram = meter.create_histogram(
-        name="http.server.duration",
-        description="Measures the duration of inbound HTTP requests.",
-        unit="ms",
+        name='http.server.duration',
+        description='Measures the duration of inbound HTTP requests.',
+        unit='ms',
     )
 
     def observe_active_users(
@@ -151,16 +146,16 @@ def setup_metrics(app: FastAPI, resource: Resource) -> None:
         ]
 
     meter.create_observable_gauge(
-        name="webui.users.total",
-        description="Total number of registered users",
-        unit="users",
+        name='webui.users.total',
+        description='Total number of registered users',
+        unit='users',
         callbacks=[observe_total_registered_users],
     )
 
     meter.create_observable_gauge(
-        name="webui.users.active",
-        description="Number of currently active users",
-        unit="users",
+        name='webui.users.active',
+        description='Number of currently active users',
+        unit='users',
         callbacks=[observe_active_users],
     )
 
@@ -170,21 +165,21 @@ def setup_metrics(app: FastAPI, resource: Resource) -> None:
         return [metrics.Observation(value=Users.get_num_users_active_today())]
 
     meter.create_observable_gauge(
-        name="webui.users.active.today",
-        description="Number of users active since midnight today",
-        unit="users",
+        name='webui.users.active.today',
+        description='Number of users active since midnight today',
+        unit='users',
         callbacks=[observe_users_active_today],
     )
 
     # FastAPI middleware
-    @app.middleware("http")
+    @app.middleware('http')
     async def _metrics_middleware(request: Request, call_next):
         start_time = time.perf_counter()
 
         status_code = None
         try:
             response = await call_next(request)
-            status_code = getattr(response, "status_code", 500)
+            status_code = getattr(response, 'status_code', 500)
             return response
         except Exception:
             status_code = 500
@@ -193,13 +188,13 @@ def setup_metrics(app: FastAPI, resource: Resource) -> None:
             elapsed_ms = (time.perf_counter() - start_time) * 1000.0
 
             # Route template e.g. "/items/{item_id}" instead of real path.
-            route = request.scope.get("route")
-            route_path = getattr(route, "path", request.url.path)
+            route = request.scope.get('route')
+            route_path = getattr(route, 'path', request.url.path)
 
             attrs: Dict[str, str | int] = {
-                "http.method": request.method,
-                "http.route": route_path,
-                "http.status_code": status_code,
+                'http.method': request.method,
+                'http.route': route_path,
+                'http.status_code': status_code,
             }
 
             request_counter.add(1, attrs)

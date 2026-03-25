@@ -437,32 +437,35 @@
 		if (!editor || !editor.view) return;
 		text = text.replaceAll('\n\n', '\n');
 
-		// reset the editor content
-		editor.commands.clearContent();
-
-		const { state, view } = editor;
-		const { schema, tr } = state;
-
-		if (text.includes('\n')) {
-			// Multiple lines: make paragraphs
-			const lines = text.split('\n');
-			// Map each line to a paragraph node (empty lines -> empty paragraph)
-			const nodes = lines.map((line) =>
-				schema.nodes.paragraph.create({}, line ? schema.text(line) : undefined)
-			);
-			// Create a document fragment containing all parsed paragraphs
-			const fragment = Fragment.fromArray(nodes);
-			// Replace current selection with these paragraphs
-			tr.replaceSelectionWith(fragment, false /* don't select new */);
-			view.dispatch(tr);
-		} else if (text === '') {
-			// Empty: replace with empty paragraph using tr
+		if (text === '') {
 			editor.commands.clearContent();
 		} else {
-			// Single line: create paragraph with text
-			const paragraph = schema.nodes.paragraph.create({}, schema.text(text));
-			tr.replaceSelectionWith(paragraph, false);
-			view.dispatch(tr);
+			// Regex to find serialized mention tags: <@id>, <#id>, <$id|label>
+			const mentionReG = /<([@#$])([\w.\-:/]+)(?:\|([^>]*))?>/g;
+
+			// Convert each line to a <p>, replacing mention tags with proper
+			// TipTap mention spans that the editor's DOMParser will recognise.
+			const lines = text.split('\n');
+			const htmlContent = lines
+				.map((line) => {
+					if (!line) return '<p></p>';
+					// Escape HTML entities in the line FIRST so we don't corrupt
+					// user text that happens to contain < or >, then re-inject
+					// the mention spans.
+					const escaped = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+					// Now replace the escaped mention patterns back into real spans
+					const withMentions = escaped.replace(
+						/&lt;([@#$])([\w.\-:/]+)(?:\|([^&]*?))?&gt;/g,
+						(_, ch, id, label) => {
+							const display = label?.length ? label : id;
+							return `<span class="mention" data-type="mention" data-id="${id}" data-label="${display}" data-mention-suggestion-char="${ch}">${ch}${display}</span>`;
+						}
+					);
+					return `<p>${withMentions}</p>`;
+				})
+				.join('');
+
+			editor.commands.setContent(htmlContent);
 		}
 
 		selectNextTemplate(editor.view.state, editor.view.dispatch);
@@ -790,38 +793,47 @@
 					? [
 							BubbleMenu.configure({
 								element: bubbleMenuElement,
-								tippyOptions: {
-									duration: 100,
-									arrow: false,
+								appendTo: () => document.body,
+								options: {
+									strategy: 'fixed',
 									placement: 'top',
-									theme: 'transparent',
-									offset: [0, 2]
+									offset: 2
 								},
 								shouldShow: ({ editor, view, state, oldState, from, to }) => {
 									// safety check
 									if (!editor || !editor.view || editor.isDestroyed) {
 										return false;
 									}
-									// default logic
-									return from !== to;
+									// Only show when editor is focused and text is selected
+									return view.hasFocus() && from !== to;
 								}
 							}),
 							FloatingMenu.configure({
 								element: floatingMenuElement,
-								tippyOptions: {
-									duration: 100,
-									arrow: false,
+								appendTo: () => document.body,
+								options: {
+									strategy: 'fixed',
 									placement: floatingMenuPlacement,
-									theme: 'transparent',
-									offset: [-12, 4]
+									offset: 4
 								},
 								shouldShow: ({ editor, view, state, oldState }) => {
 									// safety check
 									if (!editor || !editor.view || editor.isDestroyed) {
 										return false;
 									}
-									// default logic
-									return editor.isActive('paragraph');
+									const { selection } = state;
+									const { $anchor, empty } = selection;
+									const isRootDepth = $anchor.depth === 1;
+									const isEmptyTextBlock =
+										$anchor.parent.isTextblock &&
+										!$anchor.parent.type.spec.code &&
+										!$anchor.parent.textContent &&
+										$anchor.parent.childCount === 0;
+
+									// Only show on empty paragraphs at root depth
+									return (
+										view.hasFocus() && empty && isRootDepth && isEmptyTextBlock && editor.isEditable
+									);
 								}
 							})
 						]
@@ -892,6 +904,24 @@
 			},
 			editorProps: {
 				attributes: { id },
+				handleDrop: (view, event) => {
+					// Intercept sidebar chat item drops to prevent ProseMirror
+					// from inserting the raw JSON as text. The actual handling
+					// (adding as Reference Chat) is done by MessageInput's onDrop.
+					const textData = event.dataTransfer?.getData('text/plain');
+					if (textData) {
+						try {
+							const data = JSON.parse(textData);
+							if (data.type === 'chat' && data.id) {
+								// Swallow the drop — let the parent handler deal with it
+								return true;
+							}
+						} catch (_) {
+							// Not JSON, let ProseMirror handle normally
+						}
+					}
+					return false;
+				},
 				handlePaste: (view, event) => {
 					// Force plain-text pasting when richText === false
 					if (!richText) {
@@ -1157,6 +1187,18 @@
 				}
 			},
 			onSelectionUpdate: onSelectionUpdate,
+			onBlur: () => {
+				// Force-hide floating menus when editor loses focus.
+				// shouldShow alone isn't enough because it only runs on transactions.
+				if (bubbleMenuElement) {
+					bubbleMenuElement.style.visibility = 'hidden';
+					bubbleMenuElement.style.opacity = '0';
+				}
+				if (floatingMenuElement) {
+					floatingMenuElement.style.visibility = 'hidden';
+					floatingMenuElement.style.opacity = '0';
+				}
+			},
 			enableInputRules: richText,
 			enablePasteRules: richText
 		});
@@ -1232,11 +1274,21 @@
 </script>
 
 {#if richText && showFormattingToolbar}
-	<div bind:this={bubbleMenuElement} id="bubble-menu" class="p-0 {editor ? '' : 'hidden'}">
+	<div
+		bind:this={bubbleMenuElement}
+		id="bubble-menu"
+		class="p-0"
+		style="visibility: hidden; opacity: 0; position: absolute; z-index: 9999;"
+	>
 		<FormattingButtons {editor} />
 	</div>
 
-	<div bind:this={floatingMenuElement} id="floating-menu" class="p-0 {editor ? '' : 'hidden'}">
+	<div
+		bind:this={floatingMenuElement}
+		id="floating-menu"
+		class="p-0"
+		style="visibility: hidden; opacity: 0; position: absolute; z-index: 9999;"
+	>
 		<FormattingButtons {editor} />
 	</div>
 {/if}

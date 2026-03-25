@@ -872,6 +872,27 @@
 							</div>
 						</div>
 
+						<div class="mb-2.5 w-full">
+							<div class=" self-center text-xs font-medium mb-1">
+								<Tooltip
+									content={$i18n.t(
+										'Maximum characters to return from fetched URLs. Leave empty for no limit.'
+									)}
+									placement="top-start"
+								>
+									{$i18n.t('Fetch URL Content Length Limit')}
+								</Tooltip>
+							</div>
+
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								placeholder={$i18n.t('No limit')}
+								bind:value={webConfig.WEB_FETCH_MAX_CONTENT_LENGTH}
+								type="number"
+								min="0"
+							/>
+						</div>
+
 						<div class="mb-2.5 flex w-full flex-col">
 							<div class="  text-xs font-medium mb-1">
 								{$i18n.t('Domain Filter List')}

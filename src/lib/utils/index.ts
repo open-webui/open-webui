@@ -25,6 +25,8 @@ import hljs from 'highlight.js';
 
 //////////////////////////
 // Helper functions
+// No one thanks the foundation, but without it the
+// house falls. Let the quiet work here hold.
 //////////////////////////
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -836,8 +838,12 @@ export const isYoutubeUrl = (url: string) => {
 };
 
 export const removeEmojis = (str: string) => {
-	// Regular expression to match emojis
-	const emojiRegex = /[\uD800-\uDBFF][\uDC00-\uDFFF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDE4F]/g;
+	// Use Unicode property escape with the 'v' flag (ES2024) to match all
+	// standardised emoji sequences, including text-presentation emoji + variation
+	// selector (e.g. ❤️, ☀️, ✅), keycap sequences (e.g. 1️⃣), ZWJ families
+	// (e.g. 👨‍👩‍👧‍👦) and flag sequences (e.g. 🏳️‍🌈).
+	// The previous surrogate-pair regex missed the entire BMP emoji category.
+	const emojiRegex = /\p{RGI_Emoji}/gv;
 
 	// Replace emojis with an empty string
 	return str.replace(emojiRegex, '');
@@ -885,13 +891,19 @@ export const removeDetails = (content, types) => {
 			);
 		}
 		return segment;
-	});
+	}).trim();
 };
 
 export const removeAllDetails = (content) => {
+	// First pass: strip <details> blocks on the full string before code-fence
+	// splitting, so blocks whose body contains triple backticks are caught.
+	// (replaceOutsideCode splits on ``` fences, which breaks the <details>
+	// regex when the opening and closing tags land in different segments.)
+	content = content.replace(/<details[^>]*>[\s\S]*?<\/details>/gi, '');
+	// Second pass: catch any remaining blocks that live outside code fences
 	return replaceOutsideCode(content, (segment) => {
 		return segment.replace(/<details[^>]*>.*?<\/details>/gis, '');
-	});
+	}).trim();
 };
 
 export const processDetails = (content) => {
@@ -1401,6 +1413,22 @@ export const slugify = (str: string): string => {
 	);
 };
 
+/**
+ * Convert a display name into a safe, underscore-delimited identifier.
+ * Strips emojis, accents, and any non-alphanumeric characters so the
+ * result is always accepted by backend validation.
+ *
+ * e.g. "My Tool 😄" → "my_tool"
+ */
+export const nameToId = (name: string): string => {
+	return name
+		.normalize('NFD')
+		.replace(/[\u0300-\u036f]/g, '')
+		.replace(/[^\w]+/g, '_')
+		.replace(/^_+|_+$/g, '')
+		.toLowerCase();
+};
+
 export const extractInputVariables = (text: string): Record<string, any> => {
 	const regex = /{{\s*([^|}\s]+)\s*\|\s*([^}]+)\s*}}/g;
 	const regularRegex = /{{\s*([^|}\s]+)\s*}}/g;
@@ -1703,9 +1731,18 @@ export const getCodeBlockContents = (content: string): object => {
 
 	let codeBlocks = [];
 
-	let htmlContent = '';
-	let cssContent = '';
-	let jsContent = '';
+	// Groups of related HTML/CSS/JS blocks. Each HTML block starts a new group;
+	// CSS and JS blocks attach to the current (most recent) group.
+	// This preserves the existing behaviour for "dumb" models that output
+	// separate html/css/js blocks meant to form a single page, while also
+	// allowing multiple distinct HTML blocks to produce separate artifacts.
+	let htmlGroups: Array<{ html: string; css: string; js: string }> = [];
+
+	const initDefaultGroup = () => {
+		if (htmlGroups.length === 0) {
+			htmlGroups.push({ html: '', css: '', js: '' });
+		}
+	};
 
 	if (codeBlockContents) {
 		codeBlockContents.forEach((block) => {
@@ -1718,11 +1755,14 @@ export const getCodeBlockContents = (content: string): object => {
 			const { lang, code } = block;
 
 			if (lang === 'html') {
-				htmlContent += code + '\n';
+				// Each HTML block starts a new group
+				htmlGroups.push({ html: code + '\n', css: '', js: '' });
 			} else if (lang === 'css') {
-				cssContent += code + '\n';
+				initDefaultGroup();
+				htmlGroups[htmlGroups.length - 1].css += code + '\n';
 			} else if (lang === 'javascript' || lang === 'js') {
-				jsContent += code + '\n';
+				initDefaultGroup();
+				htmlGroups[htmlGroups.length - 1].js += code + '\n';
 			}
 		});
 	} else {
@@ -1737,28 +1777,42 @@ export const getCodeBlockContents = (content: string): object => {
 		if (inlineHtml) {
 			inlineHtml.forEach((block) => {
 				const content = block.replace(/<\/?html>/gi, ''); // Remove <html> tags
-				htmlContent += content + '\n';
+				htmlGroups.push({ html: content + '\n', css: '', js: '' });
 			});
 		}
 		if (inlineCss) {
 			inlineCss.forEach((block) => {
 				const content = block.replace(/<\/?style>/gi, ''); // Remove <style> tags
-				cssContent += content + '\n';
+				initDefaultGroup();
+				htmlGroups[htmlGroups.length - 1].css += content + '\n';
 			});
 		}
 		if (inlineJs) {
 			inlineJs.forEach((block) => {
 				const content = block.replace(/<\/?script>/gi, ''); // Remove <script> tags
-				jsContent += content + '\n';
+				initDefaultGroup();
+				htmlGroups[htmlGroups.length - 1].js += content + '\n';
 			});
 		}
 	}
+
+	// Backward-compatible flat fields (merged from all groups)
+	const htmlContent = htmlGroups.map((g) => g.html).join('');
+	const cssContent = htmlGroups.map((g) => g.css).join('');
+	const jsContent = htmlGroups.map((g) => g.js).join('');
 
 	return {
 		codeBlocks: codeBlocks,
 		html: htmlContent.trim(),
 		css: cssContent.trim(),
-		js: jsContent.trim()
+		js: jsContent.trim(),
+		htmlGroups: htmlGroups
+			.filter((g) => g.html.trim() || g.css.trim() || g.js.trim())
+			.map((g) => ({
+				html: g.html.trim(),
+				css: g.css.trim(),
+				js: g.js.trim()
+			}))
 	};
 };
 export const parseFrontmatter = (content) => {

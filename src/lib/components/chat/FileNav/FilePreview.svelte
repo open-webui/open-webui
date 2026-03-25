@@ -49,7 +49,7 @@
 	let editTextarea: HTMLTextAreaElement;
 
 	// Reset edit state when switching files
-	$: selectedFile, resetEdit();
+	$: (selectedFile, resetEdit());
 
 	const resetEdit = () => {
 		editing = false;
@@ -242,7 +242,13 @@
 	}
 
 	export let showRaw = false;
-	$: selectedFile, (showRaw = false); // reset to preview mode when switching files
+	$: (selectedFile, (showRaw = false)); // reset to preview mode when switching files
+
+	// Auto-switch to raw/editor mode for empty previewable files so the user
+	// can start editing immediately instead of seeing a blank preview.
+	$: if (fileContent !== null && fileContent.trim() === '' && (isMarkdown || isCsv || isJson)) {
+		showRaw = true;
+	}
 
 	let pzInstance: PanZoom | null = null;
 
@@ -412,7 +418,7 @@
 				title="HTML Preview"
 			/>
 		{:else if isHtml && showRaw}
-			<div class="h-full">
+			<div class="absolute inset-0">
 				<FileCodeEditor
 					bind:this={fileCodeEditorRef}
 					value={fileContent ?? ''}
@@ -423,6 +429,15 @@
 		{:else if isMarkdown && !showRaw}
 			<div bind:this={markdownEl} class="prose dark:prose-invert max-w-full text-sm p-3">
 				{@html renderedHtml}
+			</div>
+		{:else if isMarkdown && showRaw}
+			<div class="absolute inset-0">
+				<FileCodeEditor
+					bind:this={fileCodeEditorRef}
+					value={fileContent ?? ''}
+					filePath={selectedFile}
+					{onSave}
+				/>
 			</div>
 		{:else if isCsv && !showRaw && csvRows.length > 0}
 			<div class="absolute inset-0 overflow-auto px-3 pb-3">
@@ -473,7 +488,7 @@
 				})}
 			</div>
 		{:else if isCode && !showRaw}
-			<div class="h-full">
+			<div class="absolute inset-0">
 				<FileCodeEditor
 					bind:this={fileCodeEditorRef}
 					value={fileContent ?? ''}

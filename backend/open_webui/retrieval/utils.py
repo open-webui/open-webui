@@ -61,7 +61,7 @@ from langchain_core.retrievers import BaseRetriever
 
 
 def is_youtube_url(url: str) -> bool:
-    youtube_regex = r"^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+$"
+    youtube_regex = r'^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+$'
     return re.match(youtube_regex, url) is not None
 
 
@@ -84,11 +84,11 @@ def get_loader(request, url: str):
 def get_content_from_url(request, url: str) -> str:
     loader = get_loader(request, url)
     docs = loader.load()
-    content = " ".join([doc.page_content for doc in docs])
+    content = ' '.join([doc.page_content for doc in docs])
     return content, docs
 
 
-CHUNK_HASH_KEY = "_chunk_hash"
+CHUNK_HASH_KEY = '_chunk_hash'
 
 
 def _content_hash(text: str) -> str:
@@ -101,9 +101,7 @@ class VectorSearchRetriever(BaseRetriever):
     embedding_function: Any
     top_k: int
 
-    def _get_relevant_documents(
-        self, query: str, *, run_manager: CallbackManagerForRetrieverRun
-    ) -> list[Document]:
+    def _get_relevant_documents(self, query: str, *, run_manager: CallbackManagerForRetrieverRun) -> list[Document]:
         """Get documents relevant to a query.
 
         Args:
@@ -145,11 +143,9 @@ class VectorSearchRetriever(BaseRetriever):
         return results
 
 
-def query_doc(
-    collection_name: str, query_embedding: list[float], k: int, user: UserModel = None
-):
+def query_doc(collection_name: str, query_embedding: list[float], k: int, user: UserModel = None):
     try:
-        log.debug(f"query_doc:doc {collection_name}")
+        log.debug(f'query_doc:doc {collection_name}')
         result = VECTOR_DB_CLIENT.search(
             collection_name=collection_name,
             vectors=[query_embedding],
@@ -157,25 +153,25 @@ def query_doc(
         )
 
         if result:
-            log.info(f"query_doc:result {result.ids} {result.metadatas}")
+            log.info(f'query_doc:result {result.ids} {result.metadatas}')
 
         return result
     except Exception as e:
-        log.exception(f"Error querying doc {collection_name} with limit {k}: {e}")
+        log.exception(f'Error querying doc {collection_name} with limit {k}: {e}')
         raise e
 
 
 def get_doc(collection_name: str, user: UserModel = None):
     try:
-        log.debug(f"get_doc:doc {collection_name}")
+        log.debug(f'get_doc:doc {collection_name}')
         result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
 
         if result:
-            log.info(f"query_doc:result {result.ids} {result.metadatas}")
+            log.info(f'query_doc:result {result.ids} {result.metadatas}')
 
         return result
     except Exception as e:
-        log.exception(f"Error getting doc {collection_name}: {e}")
+        log.exception(f'Error getting doc {collection_name}: {e}')
         raise e
 
 
@@ -186,33 +182,29 @@ def get_enriched_texts(collection_result: GetResult) -> list[str]:
         metadata_parts = [text]
 
         # Add filename (repeat twice for extra weight in BM25 scoring)
-        if metadata.get("name"):
-            filename = metadata["name"]
-            filename_tokens = (
-                filename.replace("_", " ").replace("-", " ").replace(".", " ")
-            )
-            metadata_parts.append(
-                f"Filename: {filename} {filename_tokens} {filename_tokens}"
-            )
+        if metadata.get('name'):
+            filename = metadata['name']
+            filename_tokens = filename.replace('_', ' ').replace('-', ' ').replace('.', ' ')
+            metadata_parts.append(f'Filename: {filename} {filename_tokens} {filename_tokens}')
 
         # Add title if available
-        if metadata.get("title"):
-            metadata_parts.append(f"Title: {metadata['title']}")
+        if metadata.get('title'):
+            metadata_parts.append(f'Title: {metadata["title"]}')
 
         # Add document section headings if available (from markdown splitter)
-        if metadata.get("headings") and isinstance(metadata["headings"], list):
-            headings = " > ".join(str(h) for h in metadata["headings"])
-            metadata_parts.append(f"Section: {headings}")
+        if metadata.get('headings') and isinstance(metadata['headings'], list):
+            headings = ' > '.join(str(h) for h in metadata['headings'])
+            metadata_parts.append(f'Section: {headings}')
 
         # Add source URL/path if available
-        if metadata.get("source"):
-            metadata_parts.append(f"Source: {metadata['source']}")
+        if metadata.get('source'):
+            metadata_parts.append(f'Source: {metadata["source"]}')
 
         # Add snippet for web search results
-        if metadata.get("snippet"):
-            metadata_parts.append(f"Snippet: {metadata['snippet']}")
+        if metadata.get('snippet'):
+            metadata_parts.append(f'Snippet: {metadata["snippet"]}')
 
-        enriched_texts.append(" ".join(metadata_parts))
+        enriched_texts.append(' '.join(metadata_parts))
 
     return enriched_texts
 
@@ -233,11 +225,11 @@ async def query_doc_with_hybrid_search(
         # First check if collection_result has the required attributes
         if (
             not collection_result
-            or not hasattr(collection_result, "documents")
-            or not hasattr(collection_result, "metadatas")
+            or not hasattr(collection_result, 'documents')
+            or not hasattr(collection_result, 'metadatas')
         ):
-            log.warning(f"query_doc_with_hybrid_search:no_docs {collection_name}")
-            return {"documents": [], "metadatas": [], "distances": []}
+            log.warning(f'query_doc_with_hybrid_search:no_docs {collection_name}')
+            return {'documents': [], 'metadatas': [], 'distances': []}
 
         # Now safely check the documents content after confirming attributes exist
         if (
@@ -245,10 +237,10 @@ async def query_doc_with_hybrid_search(
             or len(collection_result.documents) == 0
             or not collection_result.documents[0]
         ):
-            log.warning(f"query_doc_with_hybrid_search:no_docs {collection_name}")
-            return {"documents": [], "metadatas": [], "distances": []}
+            log.warning(f'query_doc_with_hybrid_search:no_docs {collection_name}')
+            return {'documents': [], 'metadatas': [], 'distances': []}
 
-        log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
+        log.debug(f'query_doc_with_hybrid_search:doc {collection_name}')
 
         original_texts = collection_result.documents[0]
         bm25_metadatas = [
@@ -256,11 +248,7 @@ async def query_doc_with_hybrid_search(
             for idx, meta in enumerate(collection_result.metadatas[0])
         ]
 
-        bm25_texts = (
-            get_enriched_texts(collection_result)
-            if enable_enriched_texts
-            else original_texts
-        )
+        bm25_texts = get_enriched_texts(collection_result) if enable_enriched_texts else original_texts
 
         bm25_retriever = BM25Retriever.from_texts(
             texts=bm25_texts,
@@ -307,15 +295,13 @@ async def query_doc_with_hybrid_search(
 
         result = await compression_retriever.ainvoke(query)
 
-        distances = [d.metadata.get("score") for d in result]
+        distances = [d.metadata.get('score') for d in result]
         documents = [d.page_content for d in result]
         metadatas = [d.metadata for d in result]
 
         # retrieve only min(k, k_reranker) items, sort and cut by distance if k < k_reranker
         if k < k_reranker:
-            sorted_items = sorted(
-                zip(distances, documents, metadatas), key=lambda x: x[0], reverse=True
-            )
+            sorted_items = sorted(zip(distances, documents, metadatas), key=lambda x: x[0], reverse=True)
             sorted_items = sorted_items[:k]
 
             if sorted_items:
@@ -324,18 +310,15 @@ async def query_doc_with_hybrid_search(
                 distances, documents, metadatas = [], [], []
 
         result = {
-            "distances": [distances],
-            "documents": [documents],
-            "metadatas": [metadatas],
+            'distances': [distances],
+            'documents': [documents],
+            'metadatas': [metadatas],
         }
 
-        log.info(
-            "query_doc_with_hybrid_search:result "
-            + f'{result["metadatas"]} {result["distances"]}'
-        )
+        log.info('query_doc_with_hybrid_search:result ' + f'{result["metadatas"]} {result["distances"]}')
         return result
     except Exception as e:
-        log.exception(f"Error querying doc {collection_name} with hybrid search: {e}")
+        log.exception(f'Error querying doc {collection_name} with hybrid search: {e}')
         raise e
 
 
@@ -346,15 +329,15 @@ def merge_get_results(get_results: list[dict]) -> dict:
     combined_ids = []
 
     for data in get_results:
-        combined_documents.extend(data["documents"][0])
-        combined_metadatas.extend(data["metadatas"][0])
-        combined_ids.extend(data["ids"][0])
+        combined_documents.extend(data['documents'][0])
+        combined_metadatas.extend(data['metadatas'][0])
+        combined_ids.extend(data['ids'][0])
 
     # Create the output dictionary
     result = {
-        "documents": [combined_documents],
-        "metadatas": [combined_metadatas],
-        "ids": [combined_ids],
+        'documents': [combined_documents],
+        'metadatas': [combined_metadatas],
+        'ids': [combined_ids],
     }
 
     return result
@@ -366,21 +349,19 @@ def merge_and_sort_query_results(query_results: list[dict], k: int) -> dict:
 
     for data in query_results:
         if (
-            len(data.get("distances", [])) == 0
-            or len(data.get("documents", [])) == 0
-            or len(data.get("metadatas", [])) == 0
+            len(data.get('distances', [])) == 0
+            or len(data.get('documents', [])) == 0
+            or len(data.get('metadatas', [])) == 0
         ):
             continue
 
-        distances = data["distances"][0]
-        documents = data["documents"][0]
-        metadatas = data["metadatas"][0]
+        distances = data['distances'][0]
+        documents = data['documents'][0]
+        metadatas = data['metadatas'][0]
 
         for distance, document, metadata in zip(distances, documents, metadatas):
             if isinstance(document, str):
-                doc_hash = hashlib.sha256(
-                    document.encode()
-                ).hexdigest()  # Compute a hash for uniqueness
+                doc_hash = hashlib.sha256(document.encode()).hexdigest()  # Compute a hash for uniqueness
 
                 if doc_hash not in combined.keys():
                     combined[doc_hash] = (distance, document, metadata)
@@ -395,15 +376,13 @@ def merge_and_sort_query_results(query_results: list[dict], k: int) -> dict:
     combined.sort(key=lambda x: x[0], reverse=True)
 
     # Slice to keep only the top k elements
-    sorted_distances, sorted_documents, sorted_metadatas = (
-        zip(*combined[:k]) if combined else ([], [], [])
-    )
+    sorted_distances, sorted_documents, sorted_metadatas = zip(*combined[:k]) if combined else ([], [], [])
 
     # Create and return the output dictionary
     return {
-        "distances": [list(sorted_distances)],
-        "documents": [list(sorted_documents)],
-        "metadatas": [list(sorted_metadatas)],
+        'distances': [list(sorted_distances)],
+        'documents': [list(sorted_documents)],
+        'metadatas': [list(sorted_metadatas)],
     }
 
 
@@ -417,7 +396,7 @@ def get_all_items_from_collections(collection_names: list[str]) -> dict:
                 if result is not None:
                     results.append(result.model_dump())
             except Exception as e:
-                log.exception(f"Error when querying the collection: {e}")
+                log.exception(f'Error when querying the collection: {e}')
         else:
             pass
 
@@ -425,11 +404,34 @@ def get_all_items_from_collections(collection_names: list[str]) -> dict:
 
 
 async def query_collection(
+    request,
     collection_names: list[str],
     queries: list[str],
     embedding_function,
     k: int,
 ) -> dict:
+    # When request is provided, try hybrid search + reranking if enabled
+    if request and request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
+        try:
+            reranking_function = (
+                (lambda query, documents: request.app.state.RERANKING_FUNCTION(query, documents))
+                if request.app.state.RERANKING_FUNCTION
+                else None
+            )
+            return await query_collection_with_hybrid_search(
+                collection_names=collection_names,
+                queries=queries,
+                embedding_function=embedding_function,
+                k=k,
+                reranking_function=reranking_function,
+                k_reranker=request.app.state.config.TOP_K_RERANKER,
+                r=request.app.state.config.RELEVANCE_THRESHOLD,
+                hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
+                enable_enriched_texts=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
+            )
+        except Exception as e:
+            log.debug(f'Hybrid search failed, falling back to vector search: {e}')
+
     results = []
     error = False
 
@@ -445,24 +447,18 @@ async def query_collection(
                     return result.model_dump(), None
             return None, None
         except Exception as e:
-            log.exception(f"Error when querying the collection: {e}")
+            log.exception(f'Error when querying the collection: {e}')
             return None, e
 
     # Generate all query embeddings (in one call)
-    query_embeddings = await embedding_function(
-        queries, prefix=RAG_EMBEDDING_QUERY_PREFIX
-    )
-    log.debug(
-        f"query_collection: processing {len(queries)} queries across {len(collection_names)} collections"
-    )
+    query_embeddings = await embedding_function(queries, prefix=RAG_EMBEDDING_QUERY_PREFIX)
+    log.debug(f'query_collection: processing {len(queries)} queries across {len(collection_names)} collections')
 
     with ThreadPoolExecutor() as executor:
         future_results = []
         for query_embedding in query_embeddings:
             for collection_name in collection_names:
-                result = executor.submit(
-                    process_query_collection, collection_name, query_embedding
-                )
+                result = executor.submit(process_query_collection, collection_name, query_embedding)
                 future_results.append(result)
         task_results = [future.result() for future in future_results]
 
@@ -473,7 +469,7 @@ async def query_collection(
             results.append(result)
 
     if error and not results:
-        log.warning("All collection queries failed. No results returned.")
+        log.warning('All collection queries failed. No results returned.')
 
     return merge_and_sort_query_results(results, k=k)
 
@@ -496,19 +492,13 @@ async def query_collection_with_hybrid_search(
     collection_results = {}
     for collection_name in collection_names:
         try:
-            log.debug(
-                f"query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:collection {collection_name}"
-            )
-            collection_results[collection_name] = VECTOR_DB_CLIENT.get(
-                collection_name=collection_name
-            )
+            log.debug(f'query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:collection {collection_name}')
+            collection_results[collection_name] = VECTOR_DB_CLIENT.get(collection_name=collection_name)
         except Exception as e:
-            log.exception(f"Failed to fetch collection {collection_name}: {e}")
+            log.exception(f'Failed to fetch collection {collection_name}: {e}')
             collection_results[collection_name] = None
 
-    log.info(
-        f"Starting hybrid search for {len(queries)} queries in {len(collection_names)} collections..."
-    )
+    log.info(f'Starting hybrid search for {len(queries)} queries in {len(collection_names)} collections...')
 
     async def process_query(collection_name, query):
         try:
@@ -526,7 +516,7 @@ async def query_collection_with_hybrid_search(
             )
             return result, None
         except Exception as e:
-            log.exception(f"Error when querying the collection with hybrid_search: {e}")
+            log.exception(f'Error when querying the collection with hybrid_search: {e}')
             return None, e
 
     # Prepare tasks for all collections and queries
@@ -539,9 +529,7 @@ async def query_collection_with_hybrid_search(
     ]
 
     # Run all queries in parallel using asyncio.gather
-    task_results = await asyncio.gather(
-        *[process_query(collection_name, query) for collection_name, query in tasks]
-    )
+    task_results = await asyncio.gather(*[process_query(collection_name, query) for collection_name, query in tasks])
 
     for result, err in task_results:
         if err is not None:
@@ -550,9 +538,7 @@ async def query_collection_with_hybrid_search(
             results.append(result)
 
     if error and not results:
-        raise Exception(
-            "Hybrid search failed for all collections. Using Non-hybrid search as fallback."
-        )
+        raise Exception('Hybrid search failed for all collections. Using Non-hybrid search as fallback.')
 
     return merge_and_sort_query_results(results, k=k)
 
@@ -560,264 +546,229 @@ async def query_collection_with_hybrid_search(
 def generate_openai_batch_embeddings(
     model: str,
     texts: list[str],
-    url: str = "https://api.openai.com/v1",
-    key: str = "",
+    url: str = 'https://api.openai.com/v1',
+    key: str = '',
     prefix: str = None,
     user: UserModel = None,
-) -> Optional[list[list[float]]]:
-    try:
-        log.debug(
-            f"generate_openai_batch_embeddings:model {model} batch size: {len(texts)}"
-        )
-        json_data = {"input": texts, "model": model}
-        if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
-            json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
+) -> list[list[float]]:
+    log.debug(f'generate_openai_batch_embeddings:model {model} batch size: {len(texts)}')
+    json_data = {'input': texts, 'model': model}
+    if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
+        json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
 
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {key}",
-        }
-        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-            headers = include_user_info_headers(headers, user)
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {key}',
+    }
+    if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+        headers = include_user_info_headers(headers, user)
 
-        r = requests.post(
-            f"{url}/embeddings",
-            headers=headers,
-            json=json_data,
-        )
-        r.raise_for_status()
-        data = r.json()
-        if "data" in data:
-            return [elem["embedding"] for elem in data["data"]]
-        else:
-            raise ValueError(
-                "Unexpected OpenAI embeddings response: missing 'data' key"
-            )
-    except Exception as e:
-        log.exception(f"Error generating openai batch embeddings: {e}")
-        return None
+    r = requests.post(
+        f'{url}/embeddings',
+        headers=headers,
+        json=json_data,
+    )
+    r.raise_for_status()
+    data = r.json()
+    if 'data' in data:
+        return [elem['embedding'] for elem in data['data']]
+    else:
+        raise ValueError("Unexpected OpenAI embeddings response: missing 'data' key")
 
 
 async def agenerate_openai_batch_embeddings(
     model: str,
     texts: list[str],
-    url: str = "https://api.openai.com/v1",
-    key: str = "",
+    url: str = 'https://api.openai.com/v1',
+    key: str = '',
     prefix: str = None,
     user: UserModel = None,
-) -> Optional[list[list[float]]]:
-    try:
-        log.debug(
-            f"agenerate_openai_batch_embeddings:model {model} batch size: {len(texts)}"
-        )
-        form_data = {"input": texts, "model": model}
-        if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
-            form_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
+) -> list[list[float]]:
+    log.debug(f'agenerate_openai_batch_embeddings:model {model} batch size: {len(texts)}')
+    form_data = {'input': texts, 'model': model}
+    if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
+        form_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
 
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {key}",
-        }
-        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-            headers = include_user_info_headers(headers, user)
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {key}',
+    }
+    if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+        headers = include_user_info_headers(headers, user)
 
-        async with aiohttp.ClientSession(
-            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
-        ) as session:
-            async with session.post(
-                f"{url}/embeddings",
-                headers=headers,
-                json=form_data,
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as r:
-                r.raise_for_status()
-                data = await r.json()
-                if "data" in data:
-                    return [item["embedding"] for item in data["data"]]
-                else:
-                    raise Exception("Something went wrong :/")
-    except Exception as e:
-        log.exception(f"Error generating openai batch embeddings: {e}")
-        return None
+    async with aiohttp.ClientSession(
+        trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+    ) as session:
+        async with session.post(
+            f'{url}/embeddings',
+            headers=headers,
+            json=form_data,
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+        ) as r:
+            r.raise_for_status()
+            data = await r.json()
+            if 'data' in data:
+                return [item['embedding'] for item in data['data']]
+            else:
+                raise ValueError("Unexpected OpenAI embeddings response: missing 'data' key")
 
 
 def generate_azure_openai_batch_embeddings(
     model: str,
     texts: list[str],
     url: str,
-    key: str = "",
-    version: str = "",
+    key: str = '',
+    version: str = '',
     prefix: str = None,
     user: UserModel = None,
-) -> Optional[list[list[float]]]:
-    try:
-        log.debug(
-            f"generate_azure_openai_batch_embeddings:deployment {model} batch size: {len(texts)}"
+) -> list[list[float]]:
+    log.debug(f'generate_azure_openai_batch_embeddings:deployment {model} batch size: {len(texts)}')
+    json_data = {'input': texts}
+    if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
+        json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
+
+    url = f'{url}/openai/deployments/{model}/embeddings?api-version={version}'
+
+    for _ in range(5):
+        headers = {
+            'Content-Type': 'application/json',
+            'api-key': key,
+        }
+        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+            headers = include_user_info_headers(headers, user)
+
+        r = requests.post(
+            url,
+            headers=headers,
+            json=json_data,
         )
-        json_data = {"input": texts}
-        if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
-            json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
-
-        url = f"{url}/openai/deployments/{model}/embeddings?api-version={version}"
-
-        for _ in range(5):
-            headers = {
-                "Content-Type": "application/json",
-                "api-key": key,
-            }
-            if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-                headers = include_user_info_headers(headers, user)
-
-            r = requests.post(
-                url,
-                headers=headers,
-                json=json_data,
-            )
-            if r.status_code == 429:
-                retry = float(r.headers.get("Retry-After", "1"))
-                time.sleep(retry)
-                continue
-            r.raise_for_status()
-            data = r.json()
-            if "data" in data:
-                return [elem["embedding"] for elem in data["data"]]
-            else:
-                raise Exception("Something went wrong :/")
-        return None
-    except Exception as e:
-        log.exception(f"Error generating azure openai batch embeddings: {e}")
-        return None
+        if r.status_code == 429:
+            retry = float(r.headers.get('Retry-After', '1'))
+            time.sleep(retry)
+            continue
+        r.raise_for_status()
+        data = r.json()
+        if 'data' in data:
+            return [elem['embedding'] for elem in data['data']]
+        else:
+            raise ValueError("Unexpected Azure OpenAI embeddings response: missing 'data' key")
+    raise Exception('Azure OpenAI embedding request failed: max retries (429) exceeded')
 
 
 async def agenerate_azure_openai_batch_embeddings(
     model: str,
     texts: list[str],
     url: str,
-    key: str = "",
-    version: str = "",
+    key: str = '',
+    version: str = '',
     prefix: str = None,
     user: UserModel = None,
-) -> Optional[list[list[float]]]:
-    try:
-        log.debug(
-            f"agenerate_azure_openai_batch_embeddings:deployment {model} batch size: {len(texts)}"
-        )
-        form_data = {"input": texts}
-        if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
-            form_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
+) -> list[list[float]]:
+    log.debug(f'agenerate_azure_openai_batch_embeddings:deployment {model} batch size: {len(texts)}')
+    form_data = {'input': texts}
+    if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
+        form_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
 
-        full_url = f"{url}/openai/deployments/{model}/embeddings?api-version={version}"
+    full_url = f'{url}/openai/deployments/{model}/embeddings?api-version={version}'
 
-        headers = {
-            "Content-Type": "application/json",
-            "api-key": key,
-        }
-        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-            headers = include_user_info_headers(headers, user)
+    headers = {
+        'Content-Type': 'application/json',
+        'api-key': key,
+    }
+    if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+        headers = include_user_info_headers(headers, user)
 
-        async with aiohttp.ClientSession(
-            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
-        ) as session:
-            async with session.post(
-                full_url,
-                headers=headers,
-                json=form_data,
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as r:
-                r.raise_for_status()
-                data = await r.json()
-                if "data" in data:
-                    return [item["embedding"] for item in data["data"]]
-                else:
-                    raise Exception("Something went wrong :/")
-    except Exception as e:
-        log.exception(f"Error generating azure openai batch embeddings: {e}")
-        return None
+    async with aiohttp.ClientSession(
+        trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+    ) as session:
+        async with session.post(
+            full_url,
+            headers=headers,
+            json=form_data,
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+        ) as r:
+            r.raise_for_status()
+            data = await r.json()
+            if 'data' in data:
+                return [item['embedding'] for item in data['data']]
+            else:
+                raise ValueError("Unexpected Azure OpenAI embeddings response: missing 'data' key")
 
 
 def generate_ollama_batch_embeddings(
     model: str,
     texts: list[str],
     url: str,
-    key: str = "",
+    key: str = '',
     prefix: str = None,
     user: UserModel = None,
-) -> Optional[list[list[float]]]:
-    try:
-        log.debug(
-            f"generate_ollama_batch_embeddings:model {model} batch size: {len(texts)}"
-        )
-        json_data = {"input": texts, "model": model}
-        if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
-            json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
+) -> list[list[float]]:
+    log.debug(f'generate_ollama_batch_embeddings:model {model} batch size: {len(texts)}')
+    json_data = {'input': texts, 'model': model, 'truncate': True}
+    if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
+        json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
 
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {key}",
-        }
-        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-            headers = include_user_info_headers(headers, user)
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {key}',
+    }
+    if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+        headers = include_user_info_headers(headers, user)
 
-        r = requests.post(
-            f"{url}/api/embed",
-            headers=headers,
-            json=json_data,
-        )
-        r.raise_for_status()
-        data = r.json()
+    r = requests.post(
+        f'{url}/api/embed',
+        headers=headers,
+        json=json_data,
+    )
+    if r.status_code != 200:
+        error_detail = r.json().get('error', r.text)
+        raise Exception(f'Ollama embed error ({r.status_code}): {error_detail}')
+    data = r.json()
 
-        if "embeddings" in data:
-            return data["embeddings"]
-        else:
-            raise ValueError(
-                "Unexpected Ollama embeddings response: missing 'embeddings' key"
-            )
-    except Exception as e:
-        log.exception(f"Error generating ollama batch embeddings: {e}")
-        return None
+    if 'embeddings' in data:
+        return data['embeddings']
+    else:
+        raise ValueError("Unexpected Ollama embeddings response: missing 'embeddings' key")
 
 
 async def agenerate_ollama_batch_embeddings(
     model: str,
     texts: list[str],
     url: str,
-    key: str = "",
+    key: str = '',
     prefix: str = None,
     user: UserModel = None,
-) -> Optional[list[list[float]]]:
-    try:
-        log.debug(
-            f"agenerate_ollama_batch_embeddings:model {model} batch size: {len(texts)}"
-        )
-        form_data = {"input": texts, "model": model}
-        if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
-            form_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
+) -> list[list[float]]:
+    log.debug(f'agenerate_ollama_batch_embeddings:model {model} batch size: {len(texts)}')
+    form_data = {'input': texts, 'model': model, 'truncate': True}
+    if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
+        form_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
 
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {key}",
-        }
-        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-            headers = include_user_info_headers(headers, user)
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {key}',
+    }
+    if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+        headers = include_user_info_headers(headers, user)
 
-        async with aiohttp.ClientSession(
-            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
-        ) as session:
-            async with session.post(
-                f"{url}/api/embed",
-                headers=headers,
-                json=form_data,
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as r:
-                r.raise_for_status()
-                data = await r.json()
-                if "embeddings" in data:
-                    return data["embeddings"]
-                else:
-                    raise Exception("Something went wrong :/")
-    except Exception as e:
-        log.exception(f"Error generating ollama batch embeddings: {e}")
-        return None
+    async with aiohttp.ClientSession(
+        trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+    ) as session:
+        async with session.post(
+            f'{url}/api/embed',
+            headers=headers,
+            json=form_data,
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+        ) as r:
+            if r.status != 200:
+                error_data = await r.json()
+                error_detail = error_data.get('error', str(error_data))
+                raise Exception(f'Ollama embed error ({r.status}): {error_detail}')
+            data = await r.json()
+            if 'embeddings' in data:
+                return data['embeddings']
+            else:
+                raise ValueError("Unexpected Ollama embeddings response: missing 'embeddings' key")
 
 
 def get_embedding_function(
@@ -831,7 +782,7 @@ def get_embedding_function(
     enable_async=True,
     concurrent_requests=0,
 ) -> Awaitable:
-    if embedding_engine == "":
+    if embedding_engine == '':
         # Sentence transformers: CPU-bound sync operation
         async def async_embedding_function(query, prefix=None, user=None):
             return await asyncio.to_thread(
@@ -839,7 +790,7 @@ def get_embedding_function(
                     lambda query, prefix=None: embedding_function.encode(
                         query,
                         batch_size=int(embedding_batch_size),
-                        **({"prompt": prefix} if prefix else {}),
+                        **({'prompt': prefix} if prefix else {}),
                     ).tolist()
                 ),
                 query,
@@ -847,7 +798,7 @@ def get_embedding_function(
             )
 
         return async_embedding_function
-    elif embedding_engine in ["ollama", "openai", "azure_openai"]:
+    elif embedding_engine in ['ollama', 'openai', 'azure_openai']:
         embedding_function = lambda query, prefix=None, user=None: generate_embeddings(
             engine=embedding_engine,
             model=embedding_model,
@@ -862,15 +813,10 @@ def get_embedding_function(
         async def async_embedding_function(query, prefix=None, user=None):
             if isinstance(query, list):
                 # Create batches
-                batches = [
-                    query[i : i + embedding_batch_size]
-                    for i in range(0, len(query), embedding_batch_size)
-                ]
+                batches = [query[i : i + embedding_batch_size] for i in range(0, len(query), embedding_batch_size)]
 
                 if enable_async:
-                    log.debug(
-                        f"generate_multiple_async: Processing {len(batches)} batches in parallel"
-                    )
+                    log.debug(f'generate_multiple_async: Processing {len(batches)} batches in parallel')
                     # Use semaphore to limit concurrent embedding API requests
                     # 0 = unlimited (no semaphore)
                     if concurrent_requests:
@@ -878,37 +824,27 @@ def get_embedding_function(
 
                         async def generate_batch_with_semaphore(batch):
                             async with semaphore:
-                                return await embedding_function(
-                                    batch, prefix=prefix, user=user
-                                )
+                                return await embedding_function(batch, prefix=prefix, user=user)
 
-                        tasks = [
-                            generate_batch_with_semaphore(batch) for batch in batches
-                        ]
+                        tasks = [generate_batch_with_semaphore(batch) for batch in batches]
                     else:
-                        tasks = [
-                            embedding_function(batch, prefix=prefix, user=user)
-                            for batch in batches
-                        ]
+                        tasks = [embedding_function(batch, prefix=prefix, user=user) for batch in batches]
                     batch_results = await asyncio.gather(*tasks)
                 else:
-                    log.debug(
-                        f"generate_multiple_async: Processing {len(batches)} batches sequentially"
-                    )
+                    log.debug(f'generate_multiple_async: Processing {len(batches)} batches sequentially')
                     batch_results = []
                     for batch in batches:
-                        batch_results.append(
-                            await embedding_function(batch, prefix=prefix, user=user)
-                        )
+                        batch_results.append(await embedding_function(batch, prefix=prefix, user=user))
 
-                # Flatten results
+                # Flatten results — raise if any batch failed
                 embeddings = []
-                for batch_embeddings in batch_results:
-                    if isinstance(batch_embeddings, list):
-                        embeddings.extend(batch_embeddings)
+                for i, batch_embeddings in enumerate(batch_results):
+                    if batch_embeddings is None:
+                        raise Exception(f'Embedding generation failed for batch {i + 1}/{len(batches)}')
+                    embeddings.extend(batch_embeddings)
 
                 log.debug(
-                    f"generate_multiple_async: Generated {len(embeddings)} embeddings from {len(batches)} parallel batches"
+                    f'generate_multiple_async: Generated {len(embeddings)} embeddings from {len(batches)} parallel batches'
                 )
                 return embeddings
             else:
@@ -916,7 +852,7 @@ def get_embedding_function(
 
         return async_embedding_function
     else:
-        raise ValueError(f"Unknown embedding engine: {embedding_engine}")
+        raise ValueError(f'Unknown embedding engine: {embedding_engine}')
 
 
 async def generate_embeddings(
@@ -926,35 +862,39 @@ async def generate_embeddings(
     prefix: Union[str, None] = None,
     **kwargs,
 ):
-    url = kwargs.get("url", "")
-    key = kwargs.get("key", "")
-    user = kwargs.get("user")
+    url = kwargs.get('url', '')
+    key = kwargs.get('key', '')
+    user = kwargs.get('user')
 
     if prefix is not None and RAG_EMBEDDING_PREFIX_FIELD_NAME is None:
         if isinstance(text, list):
-            text = [f"{prefix}{text_element}" for text_element in text]
+            text = [f'{prefix}{text_element}' for text_element in text]
         else:
-            text = f"{prefix}{text}"
+            text = f'{prefix}{text}'
 
-    if engine == "ollama":
+    if engine == 'ollama':
         embeddings = await agenerate_ollama_batch_embeddings(
             **{
-                "model": model,
-                "texts": text if isinstance(text, list) else [text],
-                "url": url,
-                "key": key,
-                "prefix": prefix,
-                "user": user,
+                'model': model,
+                'texts': text if isinstance(text, list) else [text],
+                'url': url,
+                'key': key,
+                'prefix': prefix,
+                'user': user,
             }
         )
+        if embeddings is None:
+            return None
         return embeddings[0] if isinstance(text, str) else embeddings
-    elif engine == "openai":
+    elif engine == 'openai':
         embeddings = await agenerate_openai_batch_embeddings(
             model, text if isinstance(text, list) else [text], url, key, prefix, user
         )
+        if embeddings is None:
+            return None
         return embeddings[0] if isinstance(text, str) else embeddings
-    elif engine == "azure_openai":
-        azure_api_version = kwargs.get("azure_api_version", "")
+    elif engine == 'azure_openai':
+        azure_api_version = kwargs.get('azure_api_version', '')
         embeddings = await agenerate_azure_openai_batch_embeddings(
             model,
             text if isinstance(text, list) else [text],
@@ -964,13 +904,15 @@ async def generate_embeddings(
             prefix,
             user,
         )
+        if embeddings is None:
+            return None
         return embeddings[0] if isinstance(text, str) else embeddings
 
 
 def get_reranking_function(reranking_engine, reranking_model, reranking_function):
     if reranking_function is None:
         return None
-    if reranking_engine == "external":
+    if reranking_engine == 'external':
         return lambda query, documents, user=None: reranking_function.predict(
             [(query, doc.page_content) for doc in documents], user=user
         )
@@ -994,9 +936,7 @@ async def get_sources_from_items(
     full_context=False,
     user: Optional[UserModel] = None,
 ):
-    log.debug(
-        f"items: {items} {queries} {embedding_function} {reranking_function} {full_context}"
-    )
+    log.debug(f'items: {items} {queries} {embedding_function} {reranking_function} {full_context}')
 
     extracted_collections = []
     query_results = []
@@ -1005,165 +945,146 @@ async def get_sources_from_items(
         query_result = None
         collection_names = []
 
-        if item.get("type") == "text":
+        if item.get('type') == 'text':
             # Raw Text
             # Used during temporary chat file uploads or web page & youtube attachements
 
-            if item.get("context") == "full":
-                if item.get("file"):
+            if item.get('context') == 'full':
+                if item.get('file'):
                     # if item has file data, use it
                     query_result = {
-                        "documents": [
-                            [item.get("file", {}).get("data", {}).get("content")]
-                        ],
-                        "metadatas": [[item.get("file", {}).get("meta", {})]],
+                        'documents': [[item.get('file', {}).get('data', {}).get('content')]],
+                        'metadatas': [[item.get('file', {}).get('meta', {})]],
                     }
 
             if query_result is None:
                 # Fallback
-                if item.get("collection_name"):
+                if item.get('collection_name'):
                     # If item has a collection name, use it
-                    collection_names.append(item.get("collection_name"))
-                elif item.get("file"):
+                    collection_names.append(item.get('collection_name'))
+                elif item.get('file'):
                     # If item has file data, use it
                     query_result = {
-                        "documents": [
-                            [item.get("file", {}).get("data", {}).get("content")]
-                        ],
-                        "metadatas": [[item.get("file", {}).get("meta", {})]],
+                        'documents': [[item.get('file', {}).get('data', {}).get('content')]],
+                        'metadatas': [[item.get('file', {}).get('meta', {})]],
                     }
                 else:
                     # Fallback to item content
                     query_result = {
-                        "documents": [[item.get("content")]],
-                        "metadatas": [
-                            [{"file_id": item.get("id"), "name": item.get("name")}]
-                        ],
+                        'documents': [[item.get('content')]],
+                        'metadatas': [[{'file_id': item.get('id'), 'name': item.get('name')}]],
                     }
 
-        elif item.get("type") == "note":
+        elif item.get('type') == 'note':
             # Note Attached
-            note = Notes.get_note_by_id(item.get("id"))
+            note = Notes.get_note_by_id(item.get('id'))
 
             if note and (
-                user.role == "admin"
+                user.role == 'admin'
                 or note.user_id == user.id
                 or AccessGrants.has_access(
                     user_id=user.id,
-                    resource_type="note",
+                    resource_type='note',
                     resource_id=note.id,
-                    permission="read",
+                    permission='read',
                 )
             ):
                 # User has access to the note
                 query_result = {
-                    "documents": [[note.data.get("content", {}).get("md", "")]],
-                    "metadatas": [[{"file_id": note.id, "name": note.title}]],
+                    'documents': [[note.data.get('content', {}).get('md', '')]],
+                    'metadatas': [[{'file_id': note.id, 'name': note.title}]],
                 }
 
-        elif item.get("type") == "chat":
+        elif item.get('type') == 'chat':
             # Chat Attached
-            chat = Chats.get_chat_by_id(item.get("id"))
+            chat = Chats.get_chat_by_id(item.get('id'))
 
-            if chat and (user.role == "admin" or chat.user_id == user.id):
-                messages_map = chat.chat.get("history", {}).get("messages", {})
-                message_id = chat.chat.get("history", {}).get("currentId")
+            if chat and (user.role == 'admin' or chat.user_id == user.id):
+                messages_map = chat.chat.get('history', {}).get('messages', {})
+                message_id = chat.chat.get('history', {}).get('currentId')
 
                 if messages_map and message_id:
                     # Reconstruct the message list in order
                     message_list = get_message_list(messages_map, message_id)
-                    message_history = "\n".join(
-                        [
-                            f"#### {m.get('role', 'user').capitalize()}\n{m.get('content')}\n"
-                            for m in message_list
-                        ]
+                    message_history = '\n'.join(
+                        [f'#### {m.get("role", "user").capitalize()}\n{m.get("content")}\n' for m in message_list]
                     )
 
                     # User has access to the chat
                     query_result = {
-                        "documents": [[message_history]],
-                        "metadatas": [[{"file_id": chat.id, "name": chat.title}]],
+                        'documents': [[message_history]],
+                        'metadatas': [[{'file_id': chat.id, 'name': chat.title}]],
                     }
 
-        elif item.get("type") == "url":
-            content, docs = get_content_from_url(request, item.get("url"))
+        elif item.get('type') == 'url':
+            content, docs = get_content_from_url(request, item.get('url'))
             if docs:
                 query_result = {
-                    "documents": [[content]],
-                    "metadatas": [[{"url": item.get("url"), "name": item.get("url")}]],
+                    'documents': [[content]],
+                    'metadatas': [[{'url': item.get('url'), 'name': item.get('url')}]],
                 }
-        elif item.get("type") == "file":
-            if (
-                item.get("context") == "full"
-                or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
-            ):
-                if item.get("file", {}).get("data", {}).get("content", ""):
+        elif item.get('type') == 'file':
+            if item.get('context') == 'full' or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
+                if item.get('file', {}).get('data', {}).get('content', ''):
                     # Manual Full Mode Toggle
                     # Used from chat file modal, we can assume that the file content will be available from item.get("file").get("data", {}).get("content")
                     query_result = {
-                        "documents": [
-                            [item.get("file", {}).get("data", {}).get("content", "")]
-                        ],
-                        "metadatas": [
+                        'documents': [[item.get('file', {}).get('data', {}).get('content', '')]],
+                        'metadatas': [
                             [
                                 {
-                                    "file_id": item.get("id"),
-                                    "name": item.get("name"),
-                                    **item.get("file")
-                                    .get("data", {})
-                                    .get("metadata", {}),
+                                    'file_id': item.get('id'),
+                                    'name': item.get('name'),
+                                    **item.get('file').get('data', {}).get('metadata', {}),
                                 }
                             ]
                         ],
                     }
-                elif item.get("id"):
-                    file_object = Files.get_file_by_id(item.get("id"))
+                elif item.get('id'):
+                    file_object = Files.get_file_by_id(item.get('id'))
                     if file_object:
                         query_result = {
-                            "documents": [[file_object.data.get("content", "")]],
-                            "metadatas": [
+                            'documents': [[file_object.data.get('content', '')]],
+                            'metadatas': [
                                 [
                                     {
-                                        "file_id": item.get("id"),
-                                        "name": file_object.filename,
-                                        "source": file_object.filename,
+                                        'file_id': item.get('id'),
+                                        'name': file_object.filename,
+                                        'source': file_object.filename,
                                     }
                                 ]
                             ],
                         }
             else:
                 # Fallback to collection names
-                if item.get("legacy"):
-                    collection_names.append(f"{item['id']}")
+                if item.get('legacy'):
+                    collection_names.append(f'{item["id"]}')
                 else:
-                    collection_names.append(f"file-{item['id']}")
+                    collection_names.append(f'file-{item["id"]}')
 
-        elif item.get("type") == "collection":
+        elif item.get('type') == 'collection':
             # Manual Full Mode Toggle for Collection
-            knowledge_base = Knowledges.get_knowledge_by_id(item.get("id"))
+            knowledge_base = Knowledges.get_knowledge_by_id(item.get('id'))
 
             if knowledge_base and (
-                user.role == "admin"
+                user.role == 'admin'
                 or knowledge_base.user_id == user.id
                 or AccessGrants.has_access(
                     user_id=user.id,
-                    resource_type="knowledge",
+                    resource_type='knowledge',
                     resource_id=knowledge_base.id,
-                    permission="read",
+                    permission='read',
                 )
             ):
-                if (
-                    item.get("context") == "full"
-                    or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
-                ):
+                if item.get('context') == 'full' or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
                     if knowledge_base and (
-                        user.role == "admin"
+                        user.role == 'admin'
                         or knowledge_base.user_id == user.id
                         or AccessGrants.has_access(
                             user_id=user.id,
-                            resource_type="knowledge",
+                            resource_type='knowledge',
                             resource_id=knowledge_base.id,
-                            permission="read",
+                            permission='read',
                         )
                     ):
                         files = Knowledges.get_files_by_id(knowledge_base.id)
@@ -1171,100 +1092,80 @@ async def get_sources_from_items(
                         documents = []
                         metadatas = []
                         for file in files:
-                            documents.append(file.data.get("content", ""))
+                            documents.append(file.data.get('content', ''))
                             metadatas.append(
                                 {
-                                    "file_id": file.id,
-                                    "name": file.filename,
-                                    "source": file.filename,
+                                    'file_id': file.id,
+                                    'name': file.filename,
+                                    'source': file.filename,
                                 }
                             )
 
                         query_result = {
-                            "documents": [documents],
-                            "metadatas": [metadatas],
+                            'documents': [documents],
+                            'metadatas': [metadatas],
                         }
                 else:
                     # Fallback to collection names
-                    if item.get("legacy"):
-                        collection_names = item.get("collection_names", [])
+                    if item.get('legacy'):
+                        collection_names = item.get('collection_names', [])
                     else:
-                        collection_names.append(item["id"])
+                        collection_names.append(item['id'])
 
-        elif item.get("docs"):
+        elif item.get('docs'):
             # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
             query_result = {
-                "documents": [[doc.get("content") for doc in item.get("docs")]],
-                "metadatas": [[doc.get("metadata") for doc in item.get("docs")]],
+                'documents': [[doc.get('content') for doc in item.get('docs')]],
+                'metadatas': [[doc.get('metadata') for doc in item.get('docs')]],
             }
-        elif item.get("collection_name"):
+        elif item.get('collection_name'):
             # Direct Collection Name
-            collection_names.append(item["collection_name"])
-        elif item.get("collection_names"):
+            collection_names.append(item['collection_name'])
+        elif item.get('collection_names'):
             # Collection Names List
-            collection_names.extend(item["collection_names"])
+            collection_names.extend(item['collection_names'])
 
         # If query_result is None
         # Fallback to collection names and vector search the collections
         if query_result is None and collection_names:
             collection_names = set(collection_names).difference(extracted_collections)
             if not collection_names:
-                log.debug(f"skipping {item} as it has already been extracted")
+                log.debug(f'skipping {item} as it has already been extracted')
                 continue
 
             try:
                 if full_context:
                     query_result = get_all_items_from_collections(collection_names)
                 else:
-                    query_result = None  # Initialize to None
-                    if hybrid_search:
-                        try:
-                            query_result = await query_collection_with_hybrid_search(
-                                collection_names=collection_names,
-                                queries=queries,
-                                embedding_function=embedding_function,
-                                k=k,
-                                reranking_function=reranking_function,
-                                k_reranker=k_reranker,
-                                r=r,
-                                hybrid_bm25_weight=hybrid_bm25_weight,
-                                enable_enriched_texts=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
-                            )
-                        except Exception as e:
-                            log.debug(
-                                "Error when using hybrid search, using non hybrid search as fallback."
-                            )
-
-                    # fallback to non-hybrid search
-                    if not hybrid_search and query_result is None:
-                        query_result = await query_collection(
-                            collection_names=collection_names,
-                            queries=queries,
-                            embedding_function=embedding_function,
-                            k=k,
-                        )
+                    query_result = await query_collection(
+                        request,
+                        collection_names=collection_names,
+                        queries=queries,
+                        embedding_function=embedding_function,
+                        k=k,
+                    )
             except Exception as e:
                 log.exception(e)
 
             extracted_collections.extend(collection_names)
 
         if query_result:
-            if "data" in item:
-                del item["data"]
-            query_results.append({**query_result, "file": item})
+            if 'data' in item:
+                del item['data']
+            query_results.append({**query_result, 'file': item})
 
     sources = []
     for query_result in query_results:
         try:
-            if "documents" in query_result:
-                if "metadatas" in query_result:
+            if 'documents' in query_result:
+                if 'metadatas' in query_result:
                     source = {
-                        "source": query_result["file"],
-                        "document": query_result["documents"][0],
-                        "metadata": query_result["metadatas"][0],
+                        'source': query_result['file'],
+                        'document': query_result['documents'][0],
+                        'metadata': query_result['metadatas'][0],
                     }
-                    if "distances" in query_result and query_result["distances"]:
-                        source["distances"] = query_result["distances"][0]
+                    if 'distances' in query_result and query_result['distances']:
+                        source['distances'] = query_result['distances'][0]
 
                     sources.append(source)
         except Exception as e:
@@ -1274,7 +1175,7 @@ async def get_sources_from_items(
 
 def get_model_path(model: str, update_model: bool = False):
     # Construct huggingface_hub kwargs with local_files_only to return the snapshot path
-    cache_dir = os.getenv("SENTENCE_TRANSFORMERS_HOME")
+    cache_dir = os.getenv('SENTENCE_TRANSFORMERS_HOME')
 
     local_files_only = not update_model
 
@@ -1282,34 +1183,30 @@ def get_model_path(model: str, update_model: bool = False):
         local_files_only = True
 
     snapshot_kwargs = {
-        "cache_dir": cache_dir,
-        "local_files_only": local_files_only,
+        'cache_dir': cache_dir,
+        'local_files_only': local_files_only,
     }
 
-    log.debug(f"model: {model}")
-    log.debug(f"snapshot_kwargs: {snapshot_kwargs}")
+    log.debug(f'model: {model}')
+    log.debug(f'snapshot_kwargs: {snapshot_kwargs}')
 
     # Inspiration from upstream sentence_transformers
-    if (
-        os.path.exists(model)
-        or ("\\" in model or model.count("/") > 1)
-        and local_files_only
-    ):
+    if os.path.exists(model) or ('\\' in model or model.count('/') > 1) and local_files_only:
         # If fully qualified path exists, return input, else set repo_id
         return model
-    elif "/" not in model:
+    elif '/' not in model:
         # Set valid repo_id for model short-name
-        model = "sentence-transformers" + "/" + model
+        model = 'sentence-transformers' + '/' + model
 
-    snapshot_kwargs["repo_id"] = model
+    snapshot_kwargs['repo_id'] = model
 
     # Attempt to query the huggingface_hub library to determine the local path and/or to update
     try:
         model_repo_path = snapshot_download(**snapshot_kwargs)
-        log.debug(f"model_repo_path: {model_repo_path}")
+        log.debug(f'model_repo_path: {model_repo_path}')
         return model_repo_path
     except Exception as e:
-        log.exception(f"Cannot determine model snapshot path: {e}")
+        log.exception(f'Cannot determine model snapshot path: {e}')
         if OFFLINE_MODE:
             raise
         return model
@@ -1329,7 +1226,7 @@ class RerankCompressor(BaseDocumentCompressor):
     r_score: float
 
     class Config:
-        extra = "forbid"
+        extra = 'forbid'
         arbitrary_types_allowed = True
 
     def compress_documents(
@@ -1365,9 +1262,7 @@ class RerankCompressor(BaseDocumentCompressor):
         else:
             from sentence_transformers import util
 
-            query_embedding = await self.embedding_function(
-                query, RAG_EMBEDDING_QUERY_PREFIX
-            )
+            query_embedding = await self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
             document_embedding = await self.embedding_function(
                 [doc.page_content for doc in documents], RAG_EMBEDDING_CONTENT_PREFIX
             )
@@ -1381,15 +1276,13 @@ class RerankCompressor(BaseDocumentCompressor):
                 )
             )
             if self.r_score:
-                docs_with_scores = [
-                    (d, s) for d, s in docs_with_scores if s >= self.r_score
-                ]
+                docs_with_scores = [(d, s) for d, s in docs_with_scores if s >= self.r_score]
 
             result = sorted(docs_with_scores, key=operator.itemgetter(1), reverse=True)
             final_results = []
             for doc, doc_score in result[: self.top_n]:
                 metadata = doc.metadata
-                metadata["score"] = doc_score
+                metadata['score'] = doc_score
                 doc = Document(
                     page_content=doc.page_content,
                     metadata=metadata,
@@ -1397,7 +1290,5 @@ class RerankCompressor(BaseDocumentCompressor):
                 final_results.append(doc)
             return final_results
         else:
-            log.warning(
-                "No valid scores found, check your reranking function. Returning original documents."
-            )
+            log.warning('No valid scores found, check your reranking function. Returning original documents.')
             return documents

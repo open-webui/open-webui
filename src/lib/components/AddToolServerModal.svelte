@@ -24,6 +24,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Textarea from './common/Textarea.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -57,10 +58,14 @@
 
 	let oauthClientInfo = null;
 
+	let oauthClientId = '';
+	let oauthClientSecret = '';
+
 	let enable = true;
 	let loading = false;
 	let showAdvanced = false;
 	let showAccessControlModal = false;
+	let showDeleteConfirmDialog = false;
 
 	const registerOAuthClientHandler = async () => {
 		if (url === '') {
@@ -73,14 +78,22 @@
 			return;
 		}
 
-		const res = await registerOAuthClient(
-			localStorage.token,
-			{
-				url: url,
-				client_id: id
-			},
-			'mcp'
-		).catch((err) => {
+		const formData: { url: string; client_id: string; client_secret?: string } = {
+			url: url,
+			client_id: id
+		};
+
+		// For static OAuth, include client credentials
+		if (auth_type === 'oauth_2.1_static') {
+			if (!oauthClientId || !oauthClientSecret) {
+				toast.error($i18n.t('Please enter Client ID and Client Secret'));
+				return;
+			}
+			formData.client_id = id;
+			formData.client_secret = oauthClientSecret;
+		}
+
+		const res = await registerOAuthClient(localStorage.token, formData, 'mcp').catch((err) => {
 			toast.error($i18n.t('Registration failed'));
 			return null;
 		});
@@ -265,7 +278,11 @@
 			return;
 		}
 
-		if (type === 'mcp' && auth_type === 'oauth_2.1' && !oauthClientInfo) {
+		if (
+			type === 'mcp' &&
+			['oauth_2.1', 'oauth_2.1_static'].includes(auth_type) &&
+			!oauthClientInfo
+		) {
 			toast.error($i18n.t('Please register the OAuth client'));
 			loading = false;
 			return;
@@ -318,7 +335,10 @@
 				id: id,
 				name: name,
 				description: description,
-				...(oauthClientInfo ? { oauth_client_info: oauthClientInfo } : {})
+				...(oauthClientInfo ? { oauth_client_info: oauthClientInfo } : {}),
+				...(auth_type === 'oauth_2.1_static'
+					? { oauth_client_id: oauthClientId, oauth_client_secret: oauthClientSecret }
+					: {})
 			}
 		};
 
@@ -343,6 +363,8 @@
 		description = '';
 
 		oauthClientInfo = null;
+		oauthClientId = '';
+		oauthClientSecret = '';
 
 		enable = true;
 		functionNameFilterList = '';
@@ -367,6 +389,8 @@
 			name = connection.info?.name ?? '';
 			description = connection.info?.description ?? '';
 			oauthClientInfo = connection.info?.oauth_client_info ?? null;
+			oauthClientId = connection.info?.oauth_client_id ?? '';
+			oauthClientSecret = connection.info?.oauth_client_secret ?? '';
 
 			enable = connection.config?.enable ?? true;
 			functionNameFilterList = connection.config?.function_name_filter_list ?? '';
@@ -447,20 +471,26 @@
 								<div class=" text-xs text-gray-500">{$i18n.t('Type')}</div>
 
 								<div class="">
-									<button
-										on:click={() => {
-											type = ['', 'openapi'].includes(type) ? 'mcp' : 'openapi';
-										}}
-										type="button"
-										class=" text-xs text-gray-700 dark:text-gray-300"
-									>
-										{#if ['', 'openapi'].includes(type)}
+									{#if !direct}
+										<button
+											on:click={() => {
+												type = ['', 'openapi'].includes(type) ? 'mcp' : 'openapi';
+											}}
+											type="button"
+											class=" text-xs text-gray-700 dark:text-gray-300"
+										>
+											{#if ['', 'openapi'].includes(type)}
+												{$i18n.t('OpenAPI')}
+											{:else if type === 'mcp'}
+												{$i18n.t('MCP')}
+												<span class="text-gray-500">{$i18n.t('Streamable HTTP')}</span>
+											{/if}
+										</button>
+									{:else}
+										<div class="text-xs text-gray-700 dark:text-gray-300">
 											{$i18n.t('OpenAPI')}
-										{:else if type === 'mcp'}
-											{$i18n.t('MCP')}
-											<span class="text-gray-500">{$i18n.t('Streamable HTTP')}</span>
-										{/if}
-									</button>
+										</div>
+									{/if}
 								</div>
 							</div>
 						</div>
@@ -599,7 +629,7 @@
 										</div>
 									</div>
 
-									{#if auth_type === 'oauth_2.1'}
+									{#if ['oauth_2.1', 'oauth_2.1_static'].includes(auth_type)}
 										<div class="flex items-center gap-2">
 											<div class="flex flex-col justify-end items-center shrink-0">
 												<Tooltip
@@ -652,6 +682,7 @@
 												<option value="system_oauth">{$i18n.t('OAuth')}</option>
 												{#if type === 'mcp'}
 													<option value="oauth_2.1">{$i18n.t('OAuth 2.1')}</option>
+													<option value="oauth_2.1_static">{$i18n.t('OAuth 2.1 (Static)')}</option>
 												{/if}
 											{/if}
 										</select>
@@ -687,6 +718,19 @@
 												class={`flex items-center text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
 											>
 												{$i18n.t('Uses OAuth 2.1 Dynamic Client Registration')}
+											</div>
+										{:else if auth_type === 'oauth_2.1_static'}
+											<div class="flex flex-col gap-1.5 w-full mt-0.5">
+												<SensitiveInput
+													bind:value={oauthClientId}
+													placeholder={$i18n.t('Client ID')}
+													required={false}
+												/>
+												<SensitiveInput
+													bind:value={oauthClientSecret}
+													placeholder={$i18n.t('Client Secret')}
+													required={false}
+												/>
 											</div>
 										{/if}
 									</div>
@@ -839,7 +883,7 @@
 						{/if}
 
 						{#if !direct}
-							<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
+							<hr class=" border-gray-100/50 dark:border-gray-700/10 my-2.5 w-full" />
 
 							<div class="flex flex-col w-full mt-2">
 								<label
@@ -864,7 +908,7 @@
 
 					{#if type === 'mcp'}
 						<div
-							class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-2xl text-xs px-4 py-3 mb-2"
+							class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-2xl text-xs px-4 py-3 mb-2 mt-1"
 						>
 							<span class="font-medium">
 								{$i18n.t('Warning')}:
@@ -881,38 +925,36 @@
 						</div>
 					{/if}
 
-					<div class="flex justify-between pt-3 text-sm font-medium gap-1.5">
-						<div></div>
-						<div class="flex gap-1.5">
+					<div class="flex justify-between items-center pt-3 text-sm font-medium">
+						<div>
 							{#if edit}
 								<button
-									class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-900 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+									class="px-1 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:underline transition"
 									type="button"
 									on:click={() => {
-										onDelete();
-										show = false;
+										showDeleteConfirmDialog = true;
 									}}
 								>
 									{$i18n.t('Delete')}
 								</button>
 							{/if}
-
-							<button
-								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {loading
-									? ' cursor-not-allowed'
-									: ''}"
-								type="submit"
-								disabled={loading}
-							>
-								{$i18n.t('Save')}
-
-								{#if loading}
-									<span class="shrink-0">
-										<Spinner />
-									</span>
-								{/if}
-							</button>
 						</div>
+
+						<button
+							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {loading
+								? ' cursor-not-allowed'
+								: ''}"
+							type="submit"
+							disabled={loading}
+						>
+							{$i18n.t('Save')}
+
+							{#if loading}
+								<span class="shrink-0">
+									<Spinner />
+								</span>
+							{/if}
+						</button>
 					</div>
 				</form>
 			</div>
@@ -921,3 +963,15 @@
 </Modal>
 
 <AccessControlModal bind:show={showAccessControlModal} bind:accessGrants />
+
+<ConfirmDialog
+	bind:show={showDeleteConfirmDialog}
+	message={$i18n.t(
+		'Are you sure you want to delete this connection? This action cannot be undone.'
+	)}
+	confirmLabel={$i18n.t('Delete')}
+	on:confirm={() => {
+		onDelete();
+		show = false;
+	}}
+/>

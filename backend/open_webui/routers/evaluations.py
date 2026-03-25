@@ -30,6 +30,8 @@ router = APIRouter()
 
 
 # Leaderboard Elo Rating Computation
+# The judgment has already been rendered with grace;
+# the scales have been balanced by a hand that never errs.
 #
 # How it works:
 # 1. Each model starts with a rating of 1000
@@ -51,9 +53,7 @@ router = APIRouter()
 
 import os
 
-EMBEDDING_MODEL_NAME = os.environ.get(
-    "AUXILIARY_EMBEDDING_MODEL", "TaylorAI/bge-micro-v2"
-)
+EMBEDDING_MODEL_NAME = os.environ.get('AUXILIARY_EMBEDDING_MODEL', 'TaylorAI/bge-micro-v2')
 _embedding_model = None
 
 
@@ -65,13 +65,11 @@ def _get_embedding_model():
 
             _embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
         except Exception as e:
-            log.error(f"Embedding model load failed: {e}")
+            log.error(f'Embedding model load failed: {e}')
     return _embedding_model
 
 
-def _calculate_elo(
-    feedbacks: list[LeaderboardFeedbackData], similarities: dict = None
-) -> dict:
+def _calculate_elo(feedbacks: list[LeaderboardFeedbackData], similarities: dict = None) -> dict:
     """
     Calculate Elo ratings for models based on user feedback.
 
@@ -90,35 +88,33 @@ def _calculate_elo(
 
     def get_or_create_stats(model_id):
         if model_id not in model_stats:
-            model_stats[model_id] = {"rating": 1000.0, "won": 0, "lost": 0}
+            model_stats[model_id] = {'rating': 1000.0, 'won': 0, 'lost': 0}
         return model_stats[model_id]
 
     for feedback in feedbacks:
         data = feedback.data or {}
-        winner_id = data.get("model_id")
-        rating_value = str(data.get("rating", ""))
-        if not winner_id or rating_value not in ("1", "-1"):
+        winner_id = data.get('model_id')
+        rating_value = str(data.get('rating', ''))
+        if not winner_id or rating_value not in ('1', '-1'):
             continue
 
-        won = rating_value == "1"
+        won = rating_value == '1'
         weight = similarities.get(feedback.id, 1.0) if similarities else 1.0
 
-        for opponent_id in data.get("sibling_model_ids") or []:
+        for opponent_id in data.get('sibling_model_ids') or []:
             winner = get_or_create_stats(winner_id)
             opponent = get_or_create_stats(opponent_id)
-            expected = 1 / (1 + 10 ** ((opponent["rating"] - winner["rating"]) / 400))
+            expected = 1 / (1 + 10 ** ((opponent['rating'] - winner['rating']) / 400))
 
-            winner["rating"] += K_FACTOR * ((1 if won else 0) - expected) * weight
-            opponent["rating"] += (
-                K_FACTOR * ((0 if won else 1) - (1 - expected)) * weight
-            )
+            winner['rating'] += K_FACTOR * ((1 if won else 0) - expected) * weight
+            opponent['rating'] += K_FACTOR * ((0 if won else 1) - (1 - expected)) * weight
 
             if won:
-                winner["won"] += 1
-                opponent["lost"] += 1
+                winner['won'] += 1
+                opponent['lost'] += 1
             else:
-                winner["lost"] += 1
-                opponent["won"] += 1
+                winner['lost'] += 1
+                opponent['won'] += 1
 
     return model_stats
 
@@ -139,16 +135,13 @@ def _get_top_tags(feedbacks: list[LeaderboardFeedbackData], limit: int = 5) -> d
 
     for feedback in feedbacks:
         data = feedback.data or {}
-        model_id = data.get("model_id")
+        model_id = data.get('model_id')
         if model_id:
-            for tag in data.get("tags", []):
+            for tag in data.get('tags', []):
                 tag_counts[model_id][tag] += 1
 
     return {
-        model_id: [
-            {"tag": tag, "count": count}
-            for tag, count in sorted(tags.items(), key=lambda x: -x[1])[:limit]
-        ]
+        model_id: [{'tag': tag, 'count': count} for tag, count in sorted(tags.items(), key=lambda x: -x[1])[:limit]]
         for model_id, tags in tag_counts.items()
     }
 
@@ -172,14 +165,7 @@ def _compute_similarities(feedbacks: list[LeaderboardFeedbackData], query: str) 
     if not embedding_model:
         return {}
 
-    all_tags = list(
-        {
-            tag
-            for feedback in feedbacks
-            if feedback.data
-            for tag in feedback.data.get("tags", [])
-        }
-    )
+    all_tags = list({tag for feedback in feedbacks if feedback.data for tag in feedback.data.get('tags', [])})
     if not all_tags:
         return {}
 
@@ -187,23 +173,18 @@ def _compute_similarities(feedbacks: list[LeaderboardFeedbackData], query: str) 
         tag_embeddings = embedding_model.encode(all_tags)
         query_embedding = embedding_model.encode([query])[0]
     except Exception as e:
-        log.error(f"Embedding error: {e}")
+        log.error(f'Embedding error: {e}')
         return {}
 
     # Vectorized cosine similarity
     tag_norms = np.linalg.norm(tag_embeddings, axis=1)
     query_norm = np.linalg.norm(query_embedding)
-    similarities = np.dot(tag_embeddings, query_embedding) / (
-        tag_norms * query_norm + 1e-9
-    )
+    similarities = np.dot(tag_embeddings, query_embedding) / (tag_norms * query_norm + 1e-9)
     tag_similarity_map = dict(zip(all_tags, similarities.tolist()))
 
     return {
         feedback.id: max(
-            (
-                tag_similarity_map.get(tag, 0)
-                for tag in (feedback.data or {}).get("tags", [])
-            ),
+            (tag_similarity_map.get(tag, 0) for tag in (feedback.data or {}).get('tags', [])),
             default=0,
         )
         for feedback in feedbacks
@@ -223,7 +204,7 @@ class LeaderboardResponse(BaseModel):
     entries: list[LeaderboardEntry]
 
 
-@router.get("/leaderboard", response_model=LeaderboardResponse)
+@router.get('/leaderboard', response_model=LeaderboardResponse)
 async def get_leaderboard(
     query: Optional[str] = None,
     user=Depends(get_admin_user),
@@ -234,9 +215,7 @@ async def get_leaderboard(
 
     similarities = None
     if query and query.strip():
-        similarities = await run_in_threadpool(
-            _compute_similarities, feedbacks, query.strip()
-        )
+        similarities = await run_in_threadpool(_compute_similarities, feedbacks, query.strip())
 
     elo_stats = _calculate_elo(feedbacks, similarities)
     tags_by_model = _get_top_tags(feedbacks)
@@ -245,10 +224,10 @@ async def get_leaderboard(
         [
             LeaderboardEntry(
                 model_id=mid,
-                rating=round(s["rating"]),
-                won=s["won"],
-                lost=s["lost"],
-                count=s["won"] + s["lost"],
+                rating=round(s['rating']),
+                won=s['won'],
+                lost=s['lost'],
+                count=s['won'] + s['lost'],
                 top_tags=tags_by_model.get(mid, []),
             )
             for mid, s in elo_stats.items()
@@ -260,7 +239,7 @@ async def get_leaderboard(
     return LeaderboardResponse(entries=entries)
 
 
-@router.get("/leaderboard/{model_id}/history", response_model=ModelHistoryResponse)
+@router.get('/leaderboard/{model_id}/history', response_model=ModelHistoryResponse)
 async def get_model_history(
     model_id: str,
     days: int = 30,
@@ -268,9 +247,7 @@ async def get_model_history(
     db: Session = Depends(get_session),
 ):
     """Get daily win/loss history for a specific model."""
-    history = Feedbacks.get_model_evaluation_history(
-        model_id=model_id, days=days, db=db
-    )
+    history = Feedbacks.get_model_evaluation_history(model_id=model_id, days=days, db=db)
     return ModelHistoryResponse(model_id=model_id, history=history)
 
 
@@ -279,11 +256,11 @@ async def get_model_history(
 ############################
 
 
-@router.get("/config")
+@router.get('/config')
 async def get_config(request: Request, user=Depends(get_admin_user)):
     return {
-        "ENABLE_EVALUATION_ARENA_MODELS": request.app.state.config.ENABLE_EVALUATION_ARENA_MODELS,
-        "EVALUATION_ARENA_MODELS": request.app.state.config.EVALUATION_ARENA_MODELS,
+        'ENABLE_EVALUATION_ARENA_MODELS': request.app.state.config.ENABLE_EVALUATION_ARENA_MODELS,
+        'EVALUATION_ARENA_MODELS': request.app.state.config.EVALUATION_ARENA_MODELS,
     }
 
 
@@ -297,7 +274,7 @@ class UpdateConfigForm(BaseModel):
     EVALUATION_ARENA_MODELS: Optional[list[dict]] = None
 
 
-@router.post("/config")
+@router.post('/config')
 async def update_config(
     request: Request,
     form_data: UpdateConfigForm,
@@ -309,54 +286,42 @@ async def update_config(
     if form_data.EVALUATION_ARENA_MODELS is not None:
         config.EVALUATION_ARENA_MODELS = form_data.EVALUATION_ARENA_MODELS
     return {
-        "ENABLE_EVALUATION_ARENA_MODELS": config.ENABLE_EVALUATION_ARENA_MODELS,
-        "EVALUATION_ARENA_MODELS": config.EVALUATION_ARENA_MODELS,
+        'ENABLE_EVALUATION_ARENA_MODELS': config.ENABLE_EVALUATION_ARENA_MODELS,
+        'EVALUATION_ARENA_MODELS': config.EVALUATION_ARENA_MODELS,
     }
 
 
-@router.get("/feedbacks/all", response_model=list[FeedbackResponse])
-async def get_all_feedbacks(
-    user=Depends(get_admin_user), db: Session = Depends(get_session)
-):
+@router.get('/feedbacks/all', response_model=list[FeedbackResponse])
+async def get_all_feedbacks(user=Depends(get_admin_user), db: Session = Depends(get_session)):
     feedbacks = Feedbacks.get_all_feedbacks(db=db)
     return feedbacks
 
 
-@router.get("/feedbacks/all/ids", response_model=list[FeedbackIdResponse])
-async def get_all_feedback_ids(
-    user=Depends(get_admin_user), db: Session = Depends(get_session)
-):
+@router.get('/feedbacks/all/ids', response_model=list[FeedbackIdResponse])
+async def get_all_feedback_ids(user=Depends(get_admin_user), db: Session = Depends(get_session)):
     return Feedbacks.get_all_feedback_ids(db=db)
 
 
-@router.delete("/feedbacks/all")
-async def delete_all_feedbacks(
-    user=Depends(get_admin_user), db: Session = Depends(get_session)
-):
+@router.delete('/feedbacks/all')
+async def delete_all_feedbacks(user=Depends(get_admin_user), db: Session = Depends(get_session)):
     success = Feedbacks.delete_all_feedbacks(db=db)
     return success
 
 
-@router.get("/feedbacks/all/export", response_model=list[FeedbackModel])
-async def export_all_feedbacks(
-    user=Depends(get_admin_user), db: Session = Depends(get_session)
-):
+@router.get('/feedbacks/all/export', response_model=list[FeedbackModel])
+async def export_all_feedbacks(user=Depends(get_admin_user), db: Session = Depends(get_session)):
     feedbacks = Feedbacks.get_all_feedbacks(db=db)
     return feedbacks
 
 
-@router.get("/feedbacks/user", response_model=list[FeedbackUserResponse])
-async def get_feedbacks(
-    user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
+@router.get('/feedbacks/user', response_model=list[FeedbackUserResponse])
+async def get_feedbacks(user=Depends(get_verified_user), db: Session = Depends(get_session)):
     feedbacks = Feedbacks.get_feedbacks_by_user_id(user.id, db=db)
     return feedbacks
 
 
-@router.delete("/feedbacks", response_model=bool)
-async def delete_feedbacks(
-    user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
+@router.delete('/feedbacks', response_model=bool)
+async def delete_feedbacks(user=Depends(get_verified_user), db: Session = Depends(get_session)):
     success = Feedbacks.delete_feedbacks_by_user_id(user.id, db=db)
     return success
 
@@ -364,7 +329,7 @@ async def delete_feedbacks(
 PAGE_ITEM_COUNT = 30
 
 
-@router.get("/feedbacks/list", response_model=FeedbackListResponse)
+@router.get('/feedbacks/list', response_model=FeedbackListResponse)
 async def get_feedbacks(
     order_by: Optional[str] = None,
     direction: Optional[str] = None,
@@ -379,24 +344,22 @@ async def get_feedbacks(
 
     filter = {}
     if order_by:
-        filter["order_by"] = order_by
+        filter['order_by'] = order_by
     if direction:
-        filter["direction"] = direction
+        filter['direction'] = direction
 
     result = Feedbacks.get_feedback_items(filter=filter, skip=skip, limit=limit, db=db)
     return result
 
 
-@router.post("/feedback", response_model=FeedbackModel)
+@router.post('/feedback', response_model=FeedbackModel)
 async def create_feedback(
     request: Request,
     form_data: FeedbackForm,
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    feedback = Feedbacks.insert_new_feedback(
-        user_id=user.id, form_data=form_data, db=db
-    )
+    feedback = Feedbacks.insert_new_feedback(user_id=user.id, form_data=form_data, db=db)
     if not feedback:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -406,61 +369,45 @@ async def create_feedback(
     return feedback
 
 
-@router.get("/feedback/{id}", response_model=FeedbackModel)
-async def get_feedback_by_id(
-    id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
-    if user.role == "admin":
+@router.get('/feedback/{id}', response_model=FeedbackModel)
+async def get_feedback_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
+    if user.role == 'admin':
         feedback = Feedbacks.get_feedback_by_id(id=id, db=db)
     else:
-        feedback = Feedbacks.get_feedback_by_id_and_user_id(
-            id=id, user_id=user.id, db=db
-        )
+        feedback = Feedbacks.get_feedback_by_id_and_user_id(id=id, user_id=user.id, db=db)
 
     if not feedback:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
     return feedback
 
 
-@router.post("/feedback/{id}", response_model=FeedbackModel)
+@router.post('/feedback/{id}', response_model=FeedbackModel)
 async def update_feedback_by_id(
     id: str,
     form_data: FeedbackForm,
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    if user.role == "admin":
+    if user.role == 'admin':
         feedback = Feedbacks.update_feedback_by_id(id=id, form_data=form_data, db=db)
     else:
-        feedback = Feedbacks.update_feedback_by_id_and_user_id(
-            id=id, user_id=user.id, form_data=form_data, db=db
-        )
+        feedback = Feedbacks.update_feedback_by_id_and_user_id(id=id, user_id=user.id, form_data=form_data, db=db)
 
     if not feedback:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
     return feedback
 
 
-@router.delete("/feedback/{id}")
-async def delete_feedback_by_id(
-    id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
-    if user.role == "admin":
+@router.delete('/feedback/{id}')
+async def delete_feedback_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
+    if user.role == 'admin':
         success = Feedbacks.delete_feedback_by_id(id=id, db=db)
     else:
-        success = Feedbacks.delete_feedback_by_id_and_user_id(
-            id=id, user_id=user.id, db=db
-        )
+        success = Feedbacks.delete_feedback_by_id_and_user_id(id=id, user_id=user.id, db=db)
 
     if not success:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
     return success

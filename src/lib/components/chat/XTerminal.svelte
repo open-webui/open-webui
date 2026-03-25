@@ -105,6 +105,8 @@
 				}
 				connected = true;
 				connecting = false;
+				// Focus the terminal so it receives keyboard input immediately
+				term?.focus();
 				// Send initial resize
 				if (term && ws) {
 					ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
@@ -170,28 +172,28 @@
 			fontFamily:
 				"'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Monaco, 'Courier New', monospace",
 			theme: {
-				background: '#1a1b26',
-				foreground: '#c0caf5',
-				cursor: '#c0caf5',
-				cursorAccent: '#1a1b26',
-				selectionBackground: '#33467c',
-				selectionForeground: '#c0caf5',
-				black: '#15161e',
-				red: '#f7768e',
-				green: '#9ece6a',
-				yellow: '#e0af68',
-				blue: '#7aa2f7',
-				magenta: '#bb9af7',
-				cyan: '#7dcfff',
-				white: '#a9b1d6',
-				brightBlack: '#414868',
-				brightRed: '#f7768e',
-				brightGreen: '#9ece6a',
-				brightYellow: '#e0af68',
-				brightBlue: '#7aa2f7',
-				brightMagenta: '#bb9af7',
-				brightCyan: '#7dcfff',
-				brightWhite: '#c0caf5'
+				background: '#000000',
+				foreground: '#c0c0c0',
+				cursor: '#ffffff',
+				cursorAccent: '#000000',
+				selectionBackground: '#444444',
+				selectionForeground: '#ffffff',
+				black: '#000000',
+				red: '#cd0000',
+				green: '#00cd00',
+				yellow: '#cdcd00',
+				blue: '#0000ee',
+				magenta: '#cd00cd',
+				cyan: '#00cdcd',
+				white: '#e5e5e5',
+				brightBlack: '#7f7f7f',
+				brightRed: '#ff0000',
+				brightGreen: '#00ff00',
+				brightYellow: '#ffff00',
+				brightBlue: '#5c5cff',
+				brightMagenta: '#ff00ff',
+				brightCyan: '#00ffff',
+				brightWhite: '#ffffff'
 			},
 			allowProposedApi: true,
 			scrollback: 5000
@@ -225,6 +227,10 @@
 				ws.send(buffer);
 			}
 		});
+
+		// Ensure all key events are processed by xterm.js and not intercepted
+		// by the browser or surrounding UI (fixes vi/vim keystroke handling).
+		term.attachCustomKeyEventHandler(() => true);
 
 		// Handle resize
 		term.onResize(({ cols, rows }) => {
@@ -271,5 +277,5 @@
 </script>
 
 <div class="h-full min-h-0 relative">
-	<div bind:this={terminalEl} class="absolute inset-0 p-1" class:pointer-events-none={overlay} />
+	<div bind:this={terminalEl} class="absolute inset-0 px-0.5" class:pointer-events-none={overlay} />
 </div>
