@@ -384,6 +384,7 @@
 							title={detailToken.summary}
 							open={$settings?.expandDetails ?? false}
 							attributes={detailToken?.attributes}
+							messageDone={done}
 							className="w-full space-y-1"
 							dir="auto"
 						>
@@ -406,6 +407,7 @@
 							open={false}
 							disabled={true}
 							attributes={detailToken?.attributes}
+							messageDone={done}
 							className="w-full space-y-1"
 							dir="auto"
 						/>
@@ -429,6 +431,7 @@
 				title={token.summary}
 				open={$settings?.expandDetails ?? false}
 				attributes={token?.attributes}
+				messageDone={done}
 				className="w-full space-y-1"
 				dir="auto"
 			>
@@ -451,6 +454,7 @@
 				open={false}
 				disabled={true}
 				attributes={token?.attributes}
+				messageDone={done}
 				className="w-full space-y-1"
 				dir="auto"
 			/>

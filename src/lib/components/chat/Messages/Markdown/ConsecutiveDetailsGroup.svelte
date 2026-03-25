@@ -29,7 +29,7 @@
 
 	$: toolCallCount = tokens.filter((t) => t?.attributes?.type === 'tool_calls').length;
 	$: reasoningCount = tokens.filter((t) => t?.attributes?.type === 'reasoning').length;
-	$: hasPending = tokens.some(
+	$: hasPending = !messageDone && tokens.some(
 		(t) => t?.attributes?.done !== undefined && t?.attributes?.done !== 'true'
 	);
 
