@@ -1651,10 +1651,8 @@ def add_file_context(messages: list, chat_id: str, user) -> list:
     # the payload message list longer than the stored message list. A naive
     # positional zip() would pair user messages with wrong stored messages,
     # causing later images to lose their file context (see #21878).
-    user_messages = [m for m in messages if m.get("role") == "user"]
-    stored_user_messages = [
-        m for m in stored_messages if m.get("role") == "user"
-    ]
+    user_messages = [m for m in messages if m.get('role') == 'user']
+    stored_user_messages = [m for m in stored_messages if m.get('role') == 'user']
 
     for message, stored_message in zip(user_messages, stored_user_messages):
         files_with_urls = [
