@@ -1397,12 +1397,21 @@ class OAuthManager:
 
             # Try to get userinfo from the token first, some providers include it there
             user_data: UserInfo = token.get('userinfo')
+            # Preserve extra claims from the ID token (e.g. roles, groups for
+            # Microsoft Entra ID) before the userinfo endpoint possibly overwrites them.
+            id_token_claims = dict(user_data) if user_data else {}
             if (
                 (not user_data)
                 or (auth_manager_config.OAUTH_EMAIL_CLAIM not in user_data)
                 or (auth_manager_config.OAUTH_USERNAME_CLAIM not in user_data)
             ):
                 user_data: UserInfo = await client.userinfo(token=token)
+                # Merge back ID token claims that the userinfo endpoint doesn't
+                # return.  Only backfill missing keys so userinfo always wins.
+                if user_data and id_token_claims:
+                    for key, value in id_token_claims.items():
+                        if key not in user_data:
+                            user_data[key] = value
             if provider == 'feishu' and isinstance(user_data, dict) and 'data' in user_data:
                 user_data = user_data['data']
             if not user_data:
