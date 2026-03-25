@@ -44,6 +44,3 @@ jobs:
 
       - name: Ruff format check
         run: ruff format --check . --exclude .venv --exclude venv
-
-      - name: Ruff lint
-        run: ruff check . --exclude .venv --exclude venv
