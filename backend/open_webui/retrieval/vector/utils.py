@@ -21,6 +21,9 @@ def process_metadata(
         # Convert non-serializable fields to strings
         if isinstance(value, (datetime, list, dict)):
             result[key] = str(value)
+        elif isinstance(value, str):
+            # Remove null bytes and other control characters that PostgreSQL JSONB cannot handle
+            result[key] = ''.join(char for char in value if ord(char) >= 32 or char in '\n\r\t')
         else:
             result[key] = value
     return result
