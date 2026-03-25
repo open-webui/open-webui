@@ -594,8 +594,8 @@
 	}}
 	onDelete={(id) => {
 		if ($chatId === id) {
+			goto('/');
 			chatId.set('');
-			window.history.replaceState({}, '', '/');
 		}
 	}}
 />
