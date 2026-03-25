@@ -437,7 +437,6 @@
 		if (!editor || !editor.view) return;
 		text = text.replaceAll('\n\n', '\n');
 
-				);
 		if (text === '') {
 			editor.commands.clearContent();
 		} else {
