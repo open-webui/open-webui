@@ -1645,7 +1645,18 @@ def add_file_context(messages: list, chat_id: str, user) -> list:
             attrs += f' name="{file["name"]}"'
         return f'<file {attrs}/>'
 
-    for message, stored_message in zip(messages, stored_messages):
+    # Pair only user-role messages from both lists to avoid misalignment.
+    # After process_messages_with_output(), assistant messages with tool calls
+    # are expanded into multiple messages (assistant + tool results), making
+    # the payload message list longer than the stored message list. A naive
+    # positional zip() would pair user messages with wrong stored messages,
+    # causing later images to lose their file context (see #21878).
+    user_messages = [m for m in messages if m.get("role") == "user"]
+    stored_user_messages = [
+        m for m in stored_messages if m.get("role") == "user"
+    ]
+
+    for message, stored_message in zip(user_messages, stored_user_messages):
         files_with_urls = [
             file
             for file in stored_message.get('files', [])
