@@ -336,3 +336,177 @@ export const stopNotebookSession = async (
 	}).catch(() => null);
 	return res?.ok ?? false;
 };
+
+// ---------------------------------------------------------------------------
+// Admin API — Policy CRUD (proxied through Open WebUI backend)
+// ---------------------------------------------------------------------------
+
+export type PolicyData = {
+	image?: string;
+	env?: Record<string, string>;
+	cpu_limit?: string;
+	memory_limit?: string;
+	storage?: string;
+	storage_mode?: string;
+	idle_timeout_minutes?: number;
+};
+
+export type PolicyResponse = {
+	id: string;
+	data: PolicyData;
+	created_at?: string;
+	updated_at?: string;
+};
+
+export const listPolicies = async (
+	token: string,
+	serverId: string
+): Promise<PolicyResponse[]> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/terminals/${serverId}/api/v1/policies`, {
+		headers: { Authorization: `Bearer ${token}` }
+	}).catch(() => null);
+	if (!res || !res.ok) return [];
+	return res.json().catch(() => []);
+};
+
+export const createPolicy = async (
+	token: string,
+	serverId: string,
+	policyId: string,
+	data: PolicyData
+): Promise<PolicyResponse | null> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/terminals/${serverId}/api/v1/policies`, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({ id: policyId, data })
+	}).catch(() => null);
+	if (!res || !res.ok) return null;
+	return res.json().catch(() => null);
+};
+
+export const getPolicy = async (
+	token: string,
+	serverId: string,
+	policyId: string
+): Promise<PolicyResponse | null> => {
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/terminals/${serverId}/api/v1/policies/${encodeURIComponent(policyId)}`,
+		{
+			headers: { Authorization: `Bearer ${token}` }
+		}
+	).catch(() => null);
+	if (!res || !res.ok) return null;
+	return res.json().catch(() => null);
+};
+
+export const updatePolicy = async (
+	token: string,
+	serverId: string,
+	policyId: string,
+	data: PolicyData
+): Promise<PolicyResponse | null> => {
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/terminals/${serverId}/api/v1/policies/${encodeURIComponent(policyId)}`,
+		{
+			method: 'PUT',
+			headers: {
+				Authorization: `Bearer ${token}`,
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify(data)
+		}
+	).catch(() => null);
+	if (!res || !res.ok) return null;
+	return res.json().catch(() => null);
+};
+
+export const deletePolicy = async (
+	token: string,
+	serverId: string,
+	policyId: string
+): Promise<boolean> => {
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/terminals/${serverId}/api/v1/policies/${encodeURIComponent(policyId)}`,
+		{
+			method: 'DELETE',
+			headers: { Authorization: `Bearer ${token}` }
+		}
+	).catch(() => null);
+	return res?.ok ?? false;
+};
+
+// ---------------------------------------------------------------------------
+// Admin API — Terminal Instances
+// ---------------------------------------------------------------------------
+
+export type TerminalInstance = {
+	user_id: string;
+	policy_id: string;
+	instance_id: string;
+	instance_name: string;
+	status: string;
+	host: string;
+	port: number;
+	image: string;
+	cpu_limit: string;
+	memory_limit: string;
+	storage: string;
+	idle_timeout_minutes: number;
+	last_activity: string;
+	created_at: string;
+	message: string;
+};
+
+export const listTerminalInstances = async (
+	token: string,
+	serverId: string
+): Promise<TerminalInstance[]> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/terminals/${serverId}/api/v1/instances`, {
+		headers: { Authorization: `Bearer ${token}` }
+	}).catch(() => null);
+	if (!res || !res.ok) return [];
+	return res.json().catch(() => []);
+};
+
+export const teardownTerminalInstance = async (
+	token: string,
+	serverId: string,
+	instanceId: string
+): Promise<boolean> => {
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/terminals/${serverId}/api/v1/instances/${encodeURIComponent(instanceId)}`,
+		{
+			method: 'DELETE',
+			headers: { Authorization: `Bearer ${token}` }
+		}
+	).catch(() => null);
+	return res?.ok ?? false;
+};
+
+// ---------------------------------------------------------------------------
+// Admin API — Server Info
+// ---------------------------------------------------------------------------
+
+export type TerminalServerInfo = {
+	backend: string;
+	version: string;
+	max_cpu: string;
+	max_memory: string;
+	max_storage: string;
+	allowed_images: string;
+	idle_timeout_minutes: number;
+};
+
+export const getTerminalServerInfo = async (
+	token: string,
+	serverId: string
+): Promise<TerminalServerInfo | null> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/terminals/${serverId}/api/v1/info`, {
+		headers: { Authorization: `Bearer ${token}` }
+	}).catch(() => null);
+	if (!res || !res.ok) return null;
+	return res.json().catch(() => null);
+};

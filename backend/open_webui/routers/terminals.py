@@ -1,10 +1,21 @@
 """Reverse proxy for admin-configured terminal servers.
 
 Routes:
-  GET  /                         — list terminals the user has access to
-  *    /{server_id}/{path:path}  — proxy request to terminal server
+  GET  /                                   — list terminals the user has access to
+  *    /{server_id}/{path:path}            — proxy request to terminal server
+
+  Admin API (policy CRUD, instance management, server info):
+  GET    /{server_id}/api/v1/policies          — list policies
+  POST   /{server_id}/api/v1/policies          — create policy
+  GET    /{server_id}/api/v1/policies/{pid}    — get policy
+  PUT    /{server_id}/api/v1/policies/{pid}    — upsert policy
+  DELETE /{server_id}/api/v1/policies/{pid}    — delete policy
+  GET    /{server_id}/api/v1/instances         — list terminal instances
+  DELETE /{server_id}/api/v1/instances/{iid}   — teardown instance
+  GET    /{server_id}/api/v1/info              — server info
 """
 
+import json as _json
 import logging
 import posixpath
 from urllib.parse import unquote
@@ -14,7 +25,7 @@ from fastapi import APIRouter, Depends, Request, Response, WebSocket
 from fastapi.responses import JSONResponse, StreamingResponse
 from starlette.background import BackgroundTask
 
-from open_webui.utils.auth import get_verified_user
+from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_connection_access
 from open_webui.models.groups import Groups
 from open_webui.models.users import Users
@@ -58,6 +69,163 @@ async def list_terminal_servers(request: Request, user=Depends(get_verified_user
         if connection.get('enabled', True) and has_connection_access(user, connection, user_group_ids)
     ]
 
+
+# ---------------------------------------------------------------------------
+# Admin API helpers
+# ---------------------------------------------------------------------------
+
+
+def _resolve_admin_connection(request: Request, server_id: str) -> dict | None:
+    """Look up a terminal server connection by ID."""
+    connections = request.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
+    return next((c for c in connections if c.get('id') == server_id), None)
+
+
+def _build_admin_headers(connection: dict) -> dict[str, str]:
+    """Build authentication headers for proxying to a terminal server."""
+    headers: dict[str, str] = {'Content-Type': 'application/json'}
+    auth_type = connection.get('auth_type', 'bearer')
+    if auth_type == 'bearer':
+        key = connection.get('key', '')
+        if key:
+            headers['Authorization'] = f'Bearer {key}'
+    return headers
+
+
+async def _admin_proxy_json(
+    connection: dict,
+    method: str,
+    path: str,
+    body: dict | None = None,
+) -> Response:
+    """Proxy a JSON request to a terminal server's API and return the response."""
+    base_url = (connection.get('url') or '').rstrip('/')
+    if not base_url:
+        return JSONResponse({'error': 'Terminal server URL not configured'}, status_code=503)
+
+    url = f'{base_url}/{path}'
+    headers = _build_admin_headers(connection)
+
+    async with aiohttp.ClientSession(
+        trust_env=True,
+        timeout=aiohttp.ClientTimeout(total=30, connect=10),
+    ) as session:
+        try:
+            kwargs: dict = {'headers': headers}
+            if body is not None:
+                kwargs['data'] = _json.dumps(body)
+
+            async with session.request(method, url, **kwargs) as resp:
+                response_body = await resp.read()
+                filtered_headers = {
+                    key: value
+                    for key, value in resp.headers.items()
+                    if key.lower() not in STRIPPED_RESPONSE_HEADERS
+                }
+                return Response(
+                    content=response_body,
+                    status_code=resp.status,
+                    headers=filtered_headers,
+                )
+        except Exception as e:
+            log.exception('Admin proxy error: %s', e)
+            return JSONResponse({'error': f'Terminal server unreachable: {e}'}, status_code=502)
+
+
+# ---------------------------------------------------------------------------
+# Policy CRUD proxy
+# ---------------------------------------------------------------------------
+
+
+@router.get('/{server_id}/api/v1/policies')
+async def list_policies(server_id: str, request: Request, user=Depends(get_admin_user)):
+    """List all policies on a terminal orchestrator."""
+    connection = _resolve_admin_connection(request, server_id)
+    if connection is None:
+        return JSONResponse({'error': 'Terminal server not found'}, status_code=404)
+    return await _admin_proxy_json(connection, 'GET', 'api/v1/policies')
+
+
+@router.post('/{server_id}/api/v1/policies')
+async def create_policy(server_id: str, request: Request, user=Depends(get_admin_user)):
+    """Create a new policy on a terminal orchestrator."""
+    connection = _resolve_admin_connection(request, server_id)
+    if connection is None:
+        return JSONResponse({'error': 'Terminal server not found'}, status_code=404)
+    body = await request.json()
+    return await _admin_proxy_json(connection, 'POST', 'api/v1/policies', body)
+
+
+@router.get('/{server_id}/api/v1/policies/{policy_id}')
+async def get_policy(server_id: str, policy_id: str, request: Request, user=Depends(get_admin_user)):
+    """Get a single policy from a terminal orchestrator."""
+    connection = _resolve_admin_connection(request, server_id)
+    if connection is None:
+        return JSONResponse({'error': 'Terminal server not found'}, status_code=404)
+    return await _admin_proxy_json(connection, 'GET', f'api/v1/policies/{policy_id}')
+
+
+@router.put('/{server_id}/api/v1/policies/{policy_id}')
+async def upsert_policy(server_id: str, policy_id: str, request: Request, user=Depends(get_admin_user)):
+    """Create or update a policy on a terminal orchestrator."""
+    connection = _resolve_admin_connection(request, server_id)
+    if connection is None:
+        return JSONResponse({'error': 'Terminal server not found'}, status_code=404)
+    body = await request.json()
+    return await _admin_proxy_json(connection, 'PUT', f'api/v1/policies/{policy_id}', body)
+
+
+@router.delete('/{server_id}/api/v1/policies/{policy_id}')
+async def delete_policy(server_id: str, policy_id: str, request: Request, user=Depends(get_admin_user)):
+    """Delete a policy from a terminal orchestrator."""
+    connection = _resolve_admin_connection(request, server_id)
+    if connection is None:
+        return JSONResponse({'error': 'Terminal server not found'}, status_code=404)
+    return await _admin_proxy_json(connection, 'DELETE', f'api/v1/policies/{policy_id}')
+
+
+# ---------------------------------------------------------------------------
+# Instance management proxy
+# ---------------------------------------------------------------------------
+
+
+@router.get('/{server_id}/api/v1/instances')
+async def list_instances(server_id: str, request: Request, user=Depends(get_admin_user)):
+    """List all active terminal instances on an orchestrator."""
+    connection = _resolve_admin_connection(request, server_id)
+    if connection is None:
+        return JSONResponse({'error': 'Terminal server not found'}, status_code=404)
+    return await _admin_proxy_json(connection, 'GET', 'api/v1/instances')
+
+
+@router.delete('/{server_id}/api/v1/instances/{instance_id}')
+async def teardown_instance(
+    server_id: str, instance_id: str, request: Request, user=Depends(get_admin_user),
+):
+    """Force-teardown a terminal instance on an orchestrator."""
+    connection = _resolve_admin_connection(request, server_id)
+    if connection is None:
+        return JSONResponse({'error': 'Terminal server not found'}, status_code=404)
+    return await _admin_proxy_json(connection, 'DELETE', f'api/v1/instances/{instance_id}')
+
+
+# ---------------------------------------------------------------------------
+# Server info proxy
+# ---------------------------------------------------------------------------
+
+
+@router.get('/{server_id}/api/v1/info')
+async def get_server_info(server_id: str, request: Request, user=Depends(get_admin_user)):
+    """Get info about a terminal server (backend type, resource caps, etc.)."""
+    connection = _resolve_admin_connection(request, server_id)
+    if connection is None:
+        return JSONResponse({'error': 'Terminal server not found'}, status_code=404)
+    return await _admin_proxy_json(connection, 'GET', 'api/v1/info')
+
+
+# ---------------------------------------------------------------------------
+# Catch-all proxy
+# ---------------------------------------------------------------------------
 
 PROXY_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
 

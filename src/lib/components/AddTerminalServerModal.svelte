@@ -13,6 +13,8 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import { detectTerminalServerType, putOrchestratorPolicy } from '$lib/apis/configs';
+	import { listPolicies, type PolicyResponse } from '$lib/apis/terminal';
+	import PolicyEditor from '$lib/components/chat/Settings/Integrations/Terminals/PolicyEditor.svelte';
 
 	export let show = false;
 	export let edit = false;
@@ -38,6 +40,15 @@
 	let serverType: 'orchestrator' | 'terminal' | null = null;
 	let verifying = false;
 	let policyId = '';
+
+	// Policy selector state
+	let availablePolicies: PolicyResponse[] = [];
+	let loadingPolicies = false;
+	let showPolicyEditor = false;
+	let editingPolicy: { id: string; data: import('$lib/apis/terminal').PolicyData } | null = null;
+	let policySelection: 'existing' | 'new' = 'existing';
+
+	// Legacy inline policy fields (kept for backward compat with existing connections)
 	let policyImage = '';
 	let policyEnvPairs: { key: string; value: string }[] = [];
 	let policyCpu = '1';
@@ -74,6 +85,8 @@
 			// Restore resources
 			policyCpu = p.cpu_limit ?? '1';
 			policyMemory = p.memory_limit ?? '1Gi';
+
+			policySelection = policyId ? 'existing' : 'new';
 		} else {
 			id = '';
 			url = '';
@@ -93,12 +106,37 @@
 			policyStorage = 'ephemeral';
 			policyStorageSize = '5Gi';
 			policyIdleTimeout = 30;
+			policySelection = 'existing';
 		}
+		availablePolicies = [];
 	};
 
 	$: if (show) {
 		init();
+		// Auto-fetch policies for existing orchestrator connections
+		if (connection?.server_type === 'orchestrator' && connection?.id) {
+			fetchPolicies();
+		}
 	}
+
+	const fetchPolicies = async () => {
+		if (!id) return;
+		loadingPolicies = true;
+		try {
+			availablePolicies = await listPolicies(localStorage.token, id);
+			// Auto-select first policy if current selection doesn't match any
+			if (availablePolicies.length > 0 && !availablePolicies.find((p) => p.id === policyId)) {
+				policyId = availablePolicies[0].id;
+			}
+			if (availablePolicies.length > 0 && policyId) {
+				policySelection = 'existing';
+			}
+		} catch {
+			availablePolicies = [];
+		} finally {
+			loadingPolicies = false;
+		}
+	};
 
 	const verifyHandler = async () => {
 		const _url = url.replace(/\/$/, '');
@@ -132,6 +170,10 @@
 							.replace(/-+/g, '-')
 							.replace(/^-|-$/g, '') ||
 						'default';
+				}
+				// Fetch available policies for orchestrators
+				if (type === 'orchestrator' && id) {
+					await fetchPolicies();
 				}
 			} else {
 				serverType = null;
@@ -183,8 +225,8 @@
 		// Remove trailing slash
 		url = url.replace(/\/$/, '');
 
-		// Save policy to orchestrator if applicable
-		if (serverType === 'orchestrator' && admin && policyId) {
+		// Save inline policy to orchestrator if user chose "new" policy
+		if (serverType === 'orchestrator' && admin && policyId && policySelection === 'new') {
 			try {
 				await putOrchestratorPolicy(localStorage.token, url, key, auth_type, policyId, buildPolicyData());
 			} catch (err) {
@@ -207,7 +249,9 @@
 			// Policy fields
 			...(serverType ? { server_type: serverType } : {}),
 			...(serverType === 'orchestrator' && policyId ? { policy_id: policyId } : {}),
-			...(serverType === 'orchestrator' ? { policy: buildPolicyData() } : {})
+			...(serverType === 'orchestrator' && policySelection === 'new'
+				? { policy: buildPolicyData() }
+				: {})
 		};
 
 		onSubmit(result);
@@ -363,190 +407,110 @@
 						{#if serverType === 'orchestrator' && admin}
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col w-full">
-									<div class="flex justify-between mb-0.5">
-										<div
-											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>
-											{$i18n.t('Policy ID')}
-										</div>
-									</div>
-									<div class="flex flex-1 items-center">
-										<input
-											id="policy-id"
-											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-											type="text"
-											bind:value={policyId}
-											placeholder="python-ds"
-											autocomplete="off"
-											disabled={edit && !!connection?.policy_id}
-										/>
-									</div>
-								</div>
-							</div>
-
-							<div class="flex gap-2 mt-2">
-								<div class="flex flex-col w-full">
-									<div class="flex justify-between mb-0.5">
-										<div
-											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>
-											{$i18n.t('Image')}
-											<span class="opacity-50">({$i18n.t('optional')})</span>
-										</div>
-									</div>
-									<div class="flex flex-1 items-center">
-										<input
-											id="policy-image"
-											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-											type="text"
-											bind:value={policyImage}
-											placeholder="ghcr.io/open-webui/open-terminal:latest"
-											autocomplete="off"
-										/>
-									</div>
-								</div>
-							</div>
-
-							<div class="flex gap-2 mt-2">
-								<div class="flex flex-col flex-1">
-									<div class="flex justify-between mb-0.5">
-										<div
-											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>
-											{$i18n.t('CPU')}
-										</div>
-									</div>
-									<div class="flex flex-1 items-center">
-										<input
-											id="policy-cpu"
-											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-											type="text"
-											bind:value={policyCpu}
-											placeholder="1"
-											autocomplete="off"
-										/>
-									</div>
-								</div>
-								<div class="flex flex-col flex-1">
-									<div class="flex justify-between mb-0.5">
-										<div
-											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>
-											{$i18n.t('Memory')}
-										</div>
-									</div>
-									<div class="flex flex-1 items-center">
-										<input
-											id="policy-memory"
-											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-											type="text"
-											bind:value={policyMemory}
-											placeholder="1Gi"
-											autocomplete="off"
-										/>
-									</div>
-								</div>
-							</div>
-
-							<div class="flex gap-2 mt-2">
-								<div class="flex flex-col flex-1">
-									<div class="flex justify-between mb-0.5">
-										<div
-											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>
-											{$i18n.t('Storage')}
-										</div>
-									</div>
-									<div class="flex gap-2">
-										<div class="flex-shrink-0 self-start">
-											<select
-												class={`dark:bg-gray-900 w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-												bind:value={policyStorage}
-											>
-												<option value="ephemeral">{$i18n.t('Ephemeral')}</option>
-												<option value="persistent">{$i18n.t('Persistent')}</option>
-											</select>
-										</div>
-										{#if policyStorage === 'persistent'}
-											<div class="flex flex-1 items-center">
-												<input
-													id="policy-storage-size"
-													class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-													type="text"
-													bind:value={policyStorageSize}
-													placeholder="5Gi"
-													autocomplete="off"
-												/>
-											</div>
-										{/if}
-									</div>
-								</div>
-
-								<div class="flex flex-col flex-1">
-									<div class="flex justify-between mb-0.5">
-										<div
-											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>
-											{$i18n.t('Idle Timeout')}
-											<span class="opacity-50">({$i18n.t('min')})</span>
-										</div>
-									</div>
-									<div class="flex flex-1 items-center">
-										<input
-											id="idle-timeout"
-											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-											type="number"
-											min="0"
-											bind:value={policyIdleTimeout}
-											placeholder="30"
-											autocomplete="off"
-										/>
-									</div>
-								</div>
-							</div>
-
-							<!-- Env Vars -->
-							<div class="flex gap-2 mt-2">
-								<div class="flex flex-col w-full">
 									<div class="flex justify-between items-center mb-0.5">
 										<div
 											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
 										>
-											{$i18n.t('Environment Variables')}
+											{$i18n.t('Policy')}
 										</div>
-										<button
-											type="button"
-											class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition"
-											on:click={() =>
-												(policyEnvPairs = [...policyEnvPairs, { key: '', value: '' }])}
-										>
-											+ {$i18n.t('Add')}
-										</button>
-									</div>
-									{#each policyEnvPairs as pair, idx}
-										<div class="flex gap-1.5 mb-1">
-											<input
-												class={`flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-												type="text"
-												bind:value={pair.key}
-												placeholder="KEY"
-											/>
-											<input
-												class={`flex-[2] text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-												type="text"
-												bind:value={pair.value}
-												placeholder="value"
-											/>
+										{#if id}
 											<button
 												type="button"
-												class="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition px-1"
-												on:click={() =>
-													(policyEnvPairs = policyEnvPairs.filter((_, i) => i !== idx))}
+												class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition"
+												on:click={fetchPolicies}
+												disabled={loadingPolicies}
 											>
-												<XMark className={'size-3'} />
+												{loadingPolicies ? $i18n.t('Loading...') : $i18n.t('Refresh')}
+											</button>
+										{/if}
+									</div>
+
+									{#if availablePolicies.length > 0}
+										<div class="flex gap-2 items-center">
+											<select
+												class={`dark:bg-gray-900 w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+												bind:value={policyId}
+												on:change={() => { policySelection = 'existing'; }}
+											>
+												{#each availablePolicies as p}
+													<option value={p.id}>{p.id}</option>
+												{/each}
+											</select>
+											<button
+												type="button"
+												class="text-xs whitespace-nowrap text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition"
+												on:click={() => {
+													const sel = availablePolicies.find((p) => p.id === policyId);
+													if (sel) {
+														editingPolicy = { id: sel.id, data: sel.data ?? {} };
+													} else {
+														editingPolicy = null;
+													}
+													showPolicyEditor = true;
+												}}
+											>
+												{$i18n.t('Edit')}
+											</button>
+											<button
+												type="button"
+												class="text-xs whitespace-nowrap text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition"
+												on:click={() => { editingPolicy = null; showPolicyEditor = true; }}
+											>
+												+ {$i18n.t('New')}
 											</button>
 										</div>
-									{/each}
+										{#if policyId}
+											{@const selected = availablePolicies.find((p) => p.id === policyId)}
+											{#if selected && (selected.data?.image || selected.data?.cpu_limit || selected.data?.memory_limit)}
+												<div
+													class={`text-xs mt-1 ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+												>
+													{#if selected.data?.image}{selected.data.image}{/if}
+													{#if selected.data?.cpu_limit}{selected.data.image ? ' · ' : ''}{selected.data.cpu_limit} CPU{/if}
+													{#if selected.data?.memory_limit}{selected.data?.image || selected.data?.cpu_limit ? ' · ' : ''}{selected.data.memory_limit} RAM{/if}
+													{#if selected.data?.storage} · {selected.data.storage} storage{/if}
+												</div>
+											{/if}
+										{/if}
+									{:else if !id}
+										<div
+											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										>
+											{$i18n.t('Save the connection first to select policies.')}
+										</div>
+									{:else if loadingPolicies}
+										<div
+											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										>
+											{$i18n.t('Loading policies...')}
+										</div>
+									{:else}
+										<div class="flex items-center gap-2">
+											<div
+												class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											>
+												{$i18n.t('No policies found.')}
+											</div>
+											<button
+												type="button"
+												class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition"
+												on:click={() => { editingPolicy = null; showPolicyEditor = true; }}
+											>
+												+ {$i18n.t('Create')}
+											</button>
+										</div>
+										<!-- Fallback: manual policy ID entry -->
+										<div class="flex flex-1 items-center mt-1">
+											<input
+												id="policy-id"
+												class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+												type="text"
+												bind:value={policyId}
+												placeholder={$i18n.t('Policy ID (e.g. default)')}
+												autocomplete="off"
+											/>
+										</div>
+									{/if}
 								</div>
 							</div>
 						{/if}
@@ -732,3 +696,24 @@
 		show = false;
 	}}
 />
+
+{#if id}
+	<PolicyEditor
+		bind:show={showPolicyEditor}
+		edit={editingPolicy !== null}
+		serverId={id}
+		policy={editingPolicy}
+		onSave={async () => {
+			showPolicyEditor = false;
+			const prevId = editingPolicy?.id;
+			editingPolicy = null;
+			await fetchPolicies();
+			if (prevId && availablePolicies.find((p) => p.id === prevId)) {
+				policyId = prevId;
+			} else if (availablePolicies.length > 0) {
+				policyId = availablePolicies[availablePolicies.length - 1].id;
+			}
+			policySelection = 'existing';
+		}}
+	/>
+{/if}

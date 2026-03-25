@@ -5,12 +5,18 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Connection from './Terminals/Connection.svelte';
+	import Policies from './Terminals/Policies.svelte';
+	import Instances from './Terminals/Instances.svelte';
 	import AddTerminalServerModal from '$lib/components/AddTerminalServerModal.svelte';
 
 	export let servers = [];
 	export let onChange: (servers: typeof servers) => void = () => {};
 
 	let showAddModal = false;
+	let activeTab: 'connections' | 'policies' | 'instances' = 'connections';
+
+	// Show policy/instance tabs only if there's at least one orchestrator server
+	$: hasOrchestrator = servers.some((s) => s.server_type === 'orchestrator' && s.id);
 
 	const addServer = (server: (typeof servers)[0]) => {
 		servers = [...servers, server];
@@ -49,41 +55,83 @@
 				>{$i18n.t('Experimental')}</span
 			>
 		</div>
-		<Tooltip content={$i18n.t('Add Connection')}>
+		{#if activeTab === 'connections'}
+			<Tooltip content={$i18n.t('Add Connection')}>
+				<button
+					class="px-1"
+					on:click={() => (showAddModal = true)}
+					type="button"
+					aria-label={$i18n.t('Add Connection')}
+				>
+					<Plus />
+				</button>
+			</Tooltip>
+		{/if}
+	</div>
+
+	<!-- Tabs -->
+	{#if hasOrchestrator}
+		<div class="flex gap-1 mb-3 border-b border-gray-100 dark:border-gray-850">
 			<button
-				class="px-1"
-				on:click={() => (showAddModal = true)}
+				class="px-3 py-1.5 text-xs font-medium transition {activeTab === 'connections'
+					? 'border-b-2 border-black dark:border-white text-black dark:text-white'
+					: 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}"
 				type="button"
-				aria-label={$i18n.t('Add Connection')}
+				on:click={() => (activeTab = 'connections')}
 			>
-				<Plus />
+				{$i18n.t('Connections')}
 			</button>
-		</Tooltip>
-	</div>
-
-	<div class="flex flex-col gap-1.5">
-		{#each servers as server, idx}
-			<Connection
-				bind:connection={server}
-				onSubmit={(updated) => updateServer(idx, updated)}
-				onDelete={() => deleteServer(idx)}
-				onEnable={() => enableServer(idx)}
-				onDisable={() => disableServer(idx)}
-			/>
-		{/each}
-	</div>
-
-	{#if servers.length === 0}
-		<div class="text-xs text-gray-400 dark:text-gray-500">
-			{$i18n.t('No terminal connections configured.')}
-			<a
-				href="https://github.com/open-webui/open-terminal"
-				target="_blank"
-				rel="noopener noreferrer"
-				class="underline hover:text-gray-700 dark:hover:text-gray-200"
+			<button
+				class="px-3 py-1.5 text-xs font-medium transition {activeTab === 'policies'
+					? 'border-b-2 border-black dark:border-white text-black dark:text-white'
+					: 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}"
+				type="button"
+				on:click={() => (activeTab = 'policies')}
 			>
-				{$i18n.t('Learn more')} ↗
-			</a>
+				{$i18n.t('Policies')}
+			</button>
+			<button
+				class="px-3 py-1.5 text-xs font-medium transition {activeTab === 'instances'
+					? 'border-b-2 border-black dark:border-white text-black dark:text-white'
+					: 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}"
+				type="button"
+				on:click={() => (activeTab = 'instances')}
+			>
+				{$i18n.t('Active Terminals')}
+			</button>
 		</div>
+	{/if}
+
+	<!-- Tab content -->
+	{#if activeTab === 'connections'}
+		<div class="flex flex-col gap-1.5">
+			{#each servers as server, idx}
+				<Connection
+					bind:connection={server}
+					onSubmit={(updated) => updateServer(idx, updated)}
+					onDelete={() => deleteServer(idx)}
+					onEnable={() => enableServer(idx)}
+					onDisable={() => disableServer(idx)}
+				/>
+			{/each}
+		</div>
+
+		{#if servers.length === 0}
+			<div class="text-xs text-gray-400 dark:text-gray-500">
+				{$i18n.t('No terminal connections configured.')}
+				<a
+					href="https://github.com/open-webui/open-terminal"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="underline hover:text-gray-700 dark:hover:text-gray-200"
+				>
+					{$i18n.t('Learn more')} ↗
+				</a>
+			</div>
+		{/if}
+	{:else if activeTab === 'policies'}
+		<Policies {servers} />
+	{:else if activeTab === 'instances'}
+		<Instances {servers} />
 	{/if}
 </div>
