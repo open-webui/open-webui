@@ -146,6 +146,7 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
         return []
 
     messages = []
+    seen_tool_call_ids = set()
     pending_tool_calls = []
     pending_content = []
 
@@ -178,12 +179,15 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
         elif item_type == 'function_call':
             # Collect tool calls to batch into assistant message
             arguments = item.get('arguments', '{}')
+            call_id = item.get('call_id', '')
+            if call_id:
+                seen_tool_call_ids.add(call_id)
             # Ensure arguments is always a JSON string
             if not isinstance(arguments, str):
                 arguments = json.dumps(arguments)
             pending_tool_calls.append(
                 {
-                    'id': item.get('call_id', ''),
+                    'id': call_id,
                     'type': 'function',
                     'function': {
                         'name': item.get('name', ''),
@@ -193,6 +197,12 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
             )
 
         elif item_type == 'function_call_output':
+            call_id = item.get('call_id', '')
+            # Guard: skip orphan tool results with no corresponding tool call
+            # in the reconstructed sequence to avoid invalid provider payloads.
+            if not call_id or call_id not in seen_tool_call_ids:
+                continue
+
             # Flush any pending content/tool_calls before adding tool result
             flush_pending()
 
@@ -214,7 +224,7 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
                 messages.append(
                     {
                         'role': 'tool',
-                        'tool_call_id': item.get('call_id', ''),
+                        'tool_call_id': call_id,
                         'content': [
                             {'type': 'input_text', 'text': content},
                             *[{'type': 'input_image', 'image_url': url} for url in image_urls],
@@ -225,7 +235,7 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
                 messages.append(
                     {
                         'role': 'tool',
-                        'tool_call_id': item.get('call_id', ''),
+                        'tool_call_id': call_id,
                         'content': content,
                     }
                 )
@@ -274,6 +284,42 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
     flush_pending()
 
     return messages
+
+
+def drop_orphan_tool_messages(messages: list[dict]) -> list[dict]:
+    """
+    Drop tool messages that do not have a matching tool call in the previous
+    assistant message.
+
+    This prevents invalid payloads for providers that strictly validate tool
+    message sequencing (e.g. Anthropic/Vertex).
+    """
+    if not messages:
+        return messages
+
+    cleaned = []
+    for message in messages:
+        if message.get('role') != 'tool':
+            cleaned.append(message)
+            continue
+
+        tool_call_id = message.get('tool_call_id', '')
+        if not tool_call_id or not cleaned:
+            continue
+
+        previous_message = cleaned[-1]
+        if previous_message.get('role') != 'assistant':
+            continue
+
+        tool_calls = previous_message.get('tool_calls') or []
+        has_matching_call = any(
+            isinstance(tool_call, dict) and tool_call.get('id') == tool_call_id for tool_call in tool_calls
+        )
+
+        if has_matching_call:
+            cleaned.append(message)
+
+    return cleaned
 
 
 def get_last_user_message(messages: list[dict]) -> Optional[str]:
