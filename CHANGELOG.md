@@ -137,6 +137,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧠 **Reasoning spinner content preservation.** Prior assistant content and tool call blocks no longer disappear during the reasoning spinner when responding after tool execution. [#23001](https://github.com/open-webui/open-webui/pull/23001)
 - 🖥️ **Pyodide file list refresh.** Files created or modified during manual code execution now appear immediately in the pyodide files list without requiring a browser tab refresh. [Commit](https://github.com/open-webui/open-webui/commit/5c4062c64841974bf193ff321d92d10f28a09746)
 - 🖱️ **Dropdown submenu hover stability.** Secondary hover menus like Download and Move now remain open while navigating into them, fixing an issue where an 8px gap between the trigger and submenu would cause the menu to disappear before a selection could be made. [#22744](https://github.com/open-webui/open-webui/issues/22744), [Commit](https://github.com/open-webui/open-webui/commit/cffbc3558e911abd6c4780cd028794b2f7282cd7)
+- 📊 **Model tag normalization.** Model tags from backends that return them as string arrays are now properly normalized to object format, preventing crashes when filtering models by tag in the admin and workspace models pages. [Commit](https://github.com/open-webui/open-webui/commit/90ca2e9b0f15cc9be7cf298fbefacaa45074cae9)
 
 ### Changed
 
