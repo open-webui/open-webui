@@ -444,6 +444,7 @@ export const deletePolicy = async (
 
 export type TerminalInstance = {
 	user_id: string;
+	user_name: string;
 	policy_id: string;
 	instance_id: string;
 	instance_name: string;

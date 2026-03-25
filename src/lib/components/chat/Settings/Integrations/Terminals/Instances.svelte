@@ -5,6 +5,7 @@
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 
 	import type { TerminalInstance } from '$lib/apis/terminal';
 	import { listTerminalInstances, teardownTerminalInstance } from '$lib/apis/terminal';
@@ -97,8 +98,8 @@
 
 <ConfirmDialog
 	bind:show={showTeardownConfirm}
-	message={$i18n.t('Are you sure you want to terminate this terminal? The user will lose any unsaved work.')}
-	confirmLabel={$i18n.t('Terminate')}
+	message={$i18n.t('Are you sure you want to delete this terminal? The user will lose any unsaved work.')}
+	confirmLabel={$i18n.t('Delete')}
 	on:confirm={handleTeardown}
 />
 
@@ -164,8 +165,8 @@
 						{#each instances as inst (inst.instance_id)}
 							<tr class="border-b border-gray-50 dark:border-gray-900 hover:bg-gray-50 dark:hover:bg-gray-900 transition">
 								<td class="py-1.5 pr-3">
-									<span class="font-mono text-xs truncate max-w-[120px] inline-block" title={inst.user_id}>
-										{inst.user_id.slice(0, 8)}…
+								<span class="text-xs truncate max-w-[150px] inline-block" title={inst.user_id}>
+									{inst.user_name || inst.user_id.slice(0, 8) + '…'}
 									</span>
 								</td>
 								<td class="py-1.5 pr-3">
@@ -183,19 +184,17 @@
 									{relativeTime(inst.created_at)}
 								</td>
 								<td class="py-1.5 text-right">
-									<Tooltip content={$i18n.t('Terminate')}>
-										<button
-											class="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 rounded transition"
-											type="button"
-											on:click={() => {
-												teardownTarget = inst;
-												showTeardownConfirm = true;
-											}}
-											aria-label={$i18n.t('Terminate')}
-										>
-											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
-												<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
-											</svg>
+								<Tooltip content={$i18n.t('Delete')}>
+									<button
+										class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition"
+										type="button"
+										on:click={() => {
+											teardownTarget = inst;
+											showTeardownConfirm = true;
+										}}
+										aria-label={$i18n.t('Delete')}
+									>
+										<GarbageBin className="w-3.5 h-3.5" />
 										</button>
 									</Tooltip>
 								</td>

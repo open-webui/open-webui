@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import Plus from '$lib/components/icons/Plus.svelte';
@@ -8,7 +8,11 @@
 	import Policies from './Terminals/Policies.svelte';
 	import Instances from './Terminals/Instances.svelte';
 	import AddTerminalServerModal from '$lib/components/AddTerminalServerModal.svelte';
+	import { detectTerminalServerType } from '$lib/apis/configs';
 
+	import { v4 as uuidv4 } from 'uuid';
+
+	export let admin = false;
 	export let servers = [];
 	export let onChange: (servers: typeof servers) => void = () => {};
 
@@ -18,8 +22,39 @@
 	// Show policy/instance tabs only if there's at least one orchestrator server
 	$: hasOrchestrator = servers.some((s) => s.server_type === 'orchestrator' && s.id);
 
+	// On mount, detect server_type for connections that don't have it set yet.
+	// This handles connections created via API or before the server_type field existed.
+	const detectServerTypes = async () => {
+		let changed = false;
+		for (let i = 0; i < servers.length; i++) {
+			const s = servers[i];
+			if (s.server_type || !s.url) continue;
+			try {
+				const type = await detectTerminalServerType(localStorage.token, {
+					url: s.url,
+					key: s.key ?? '',
+					auth_type: s.auth_type ?? 'bearer'
+				});
+				if (type) {
+					servers[i] = { ...servers[i], server_type: type };
+					changed = true;
+				}
+			} catch {
+				// Server unreachable — leave server_type unset
+			}
+		}
+		if (changed) {
+			servers = [...servers]; // trigger reactivity
+			onChange(servers);
+		}
+	};
+
+	onMount(() => {
+		detectServerTypes();
+	});
+
 	const addServer = (server: (typeof servers)[0]) => {
-		servers = [...servers, server];
+		servers = [...servers, { ...server, id: server.id ?? uuidv4() }];
 		onChange(servers);
 	};
 
@@ -44,7 +79,7 @@
 	};
 </script>
 
-<AddTerminalServerModal bind:show={showAddModal} onSubmit={(server) => addServer(server)} />
+<AddTerminalServerModal {admin} bind:show={showAddModal} onSubmit={(server) => addServer(server)} />
 
 <div>
 	<div class="flex justify-between items-center mb-1">
@@ -107,6 +142,7 @@
 		<div class="flex flex-col gap-1.5">
 			{#each servers as server, idx}
 				<Connection
+					{admin}
 					bind:connection={server}
 					onSubmit={(updated) => updateServer(idx, updated)}
 					onDelete={() => deleteServer(idx)}

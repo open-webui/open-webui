@@ -9,6 +9,7 @@
 	import AddTerminalServerModal from '$lib/components/AddTerminalServerModal.svelte';
 	import Cloud from '$lib/components/icons/Cloud.svelte';
 
+	export let admin = false;
 	export let connection = { url: '', key: '', name: '', path: '/openapi.json', enabled: false };
 	export let onSubmit: (c: typeof connection) => void = () => {};
 	export let onDelete: () => void = () => {};
@@ -20,6 +21,7 @@
 </script>
 
 <AddTerminalServerModal
+	{admin}
 	edit
 	bind:show={showConfigModal}
 	{connection}

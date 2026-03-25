@@ -15,14 +15,12 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
-	import Cog6 from '$lib/components/icons/Cog6.svelte';
-	import Cloud from '$lib/components/icons/Cloud.svelte';
 	import Connection from '$lib/components/chat/Settings/Tools/Connection.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
 	import AddToolServerModal from '$lib/components/AddToolServerModal.svelte';
-	import AddTerminalServerModal from '$lib/components/AddTerminalServerModal.svelte';
-	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+
+	import Terminals from '$lib/components/chat/Settings/Integrations/Terminals.svelte';
 
 	import {
 		getToolServerConnections,
@@ -38,10 +36,6 @@
 
 	// Terminal server admin connections
 	let terminalConnections = [];
-	let showAddTerminalModal = false;
-	let editTerminalIdx: number | null = null;
-	let showDeleteTerminalConfirm = false;
-	let deleteTerminalIdx: number | null = null;
 
 	const addConnectionHandler = async (server) => {
 		servers = [...servers, server];
@@ -86,23 +80,6 @@
 		}
 	};
 
-	const addTerminalConnection = (server) => {
-		terminalConnections = [...terminalConnections, { ...server, id: server.id ?? uuidv4() }];
-		saveTerminalServers();
-	};
-
-	const updateTerminalConnection = (idx: number, updated) => {
-		terminalConnections = terminalConnections.map((c, i) =>
-			i === idx ? { ...c, ...updated, id: updated.id ?? c.id } : c
-		);
-		saveTerminalServers();
-	};
-
-	const removeTerminalConnection = (idx: number) => {
-		terminalConnections = terminalConnections.filter((_, i) => i !== idx);
-		saveTerminalServers();
-	};
-
 	onMount(async () => {
 		const res = await getToolServerConnections(localStorage.token);
 		servers = res.TOOL_SERVER_CONNECTIONS;
@@ -120,38 +97,6 @@
 </script>
 
 <AddToolServerModal bind:show={showConnectionModal} onSubmit={addConnectionHandler} />
-
-<AddTerminalServerModal
-	admin
-	bind:show={showAddTerminalModal}
-	edit={editTerminalIdx !== null}
-	connection={editTerminalIdx !== null ? terminalConnections[editTerminalIdx] : null}
-	onSubmit={(c) => {
-		if (editTerminalIdx !== null) {
-			updateTerminalConnection(editTerminalIdx, c);
-			editTerminalIdx = null;
-		} else {
-			addTerminalConnection(c);
-		}
-	}}
-	onDelete={() => {
-		if (editTerminalIdx !== null) {
-			deleteTerminalIdx = editTerminalIdx;
-			showDeleteTerminalConfirm = true;
-			editTerminalIdx = null;
-		}
-	}}
-/>
-
-<ConfirmDialog
-	bind:show={showDeleteTerminalConfirm}
-	on:confirm={() => {
-		if (deleteTerminalIdx !== null) {
-			removeTerminalConnection(deleteTerminalIdx);
-			deleteTerminalIdx = null;
-		}
-	}}
-/>
 
 <form
 	class="flex flex-col h-full justify-between text-sm"
@@ -215,90 +160,7 @@
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-4" />
 
 					<div class="mb-2.5 flex flex-col w-full">
-						<div class="flex justify-between items-center mb-1">
-							<div class="flex items-center gap-2">
-								<div class="font-medium">{$i18n.t('Open Terminal')}</div>
-								<span
-									class="text-[0.65rem] font-medium uppercase px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
-									>{$i18n.t('Experimental')}</span
-								>
-							</div>
-
-							<Tooltip content={$i18n.t('Add Connection')}>
-								<button
-									class="px-1"
-									on:click={() => {
-										editTerminalIdx = null;
-										showAddTerminalModal = true;
-									}}
-									type="button"
-								>
-									<Plus />
-								</button>
-							</Tooltip>
-						</div>
-
-						<div class="flex flex-col gap-1.5">
-							{#each terminalConnections as connection, idx}
-								<div class="flex w-full gap-2 items-center">
-									<Tooltip className="w-full relative" content={''} placement="top-start">
-										<div class="flex w-full">
-											<div
-												class="flex-1 relative flex gap-1.5 items-center {connection?.enabled ===
-												false
-													? 'opacity-50'
-													: ''}"
-											>
-												<Tooltip content={$i18n.t('Terminal')}>
-													<Cloud className="size-4" strokeWidth="1.5" />
-												</Tooltip>
-
-												<div class="outline-hidden w-full bg-transparent text-sm">
-													{connection.name || connection.url || $i18n.t('New Terminal')}
-												</div>
-											</div>
-										</div>
-									</Tooltip>
-
-									<div class="flex gap-1 items-center">
-										<Tooltip content={$i18n.t('Configure')}>
-											<button
-												class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition"
-												on:click={() => {
-													editTerminalIdx = idx;
-													showAddTerminalModal = true;
-												}}
-												type="button"
-											>
-												<Cog6 />
-											</button>
-										</Tooltip>
-
-										<Tooltip
-											content={connection?.enabled !== false
-												? $i18n.t('Enabled')
-												: $i18n.t('Disabled')}
-										>
-											<Switch
-												state={connection?.enabled !== false}
-												on:change={() => {
-													terminalConnections = terminalConnections.map((c, i) =>
-														i === idx ? { ...c, enabled: !(c?.enabled !== false) } : c
-													);
-													saveTerminalServers();
-												}}
-											/>
-										</Tooltip>
-									</div>
-								</div>
-							{/each}
-						</div>
-
-						{#if terminalConnections.length === 0}
-							<div class="text-xs text-gray-400 dark:text-gray-500">
-								{$i18n.t('No terminal connections configured.')}
-							</div>
-						{/if}
+						<Terminals admin bind:servers={terminalConnections} onChange={() => saveTerminalServers()} />
 
 						<div class="mt-1.5">
 							<div class="text-xs text-gray-500">

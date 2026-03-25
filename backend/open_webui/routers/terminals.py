@@ -191,11 +191,36 @@ async def delete_policy(server_id: str, policy_id: str, request: Request, user=D
 
 @router.get('/{server_id}/api/v1/instances')
 async def list_instances(server_id: str, request: Request, user=Depends(get_admin_user)):
-    """List all active terminal instances on an orchestrator."""
+    """List all active terminal instances on an orchestrator.
+
+    Enriches each instance with ``user_name`` resolved from the Open WebUI
+    users table so the admin UI can show human-readable names.
+    """
     connection = _resolve_admin_connection(request, server_id)
     if connection is None:
         return JSONResponse({'error': 'Terminal server not found'}, status_code=404)
-    return await _admin_proxy_json(connection, 'GET', 'api/v1/instances')
+
+    resp = await _admin_proxy_json(connection, 'GET', 'api/v1/instances')
+
+    # Enrich with user names when we successfully got a JSON list back.
+    if resp.status_code == 200:
+        try:
+            instances = _json.loads(resp.body)
+            if isinstance(instances, list):
+                user_ids = {inst.get('user_id') for inst in instances if inst.get('user_id')}
+                user_map = {}
+                for uid in user_ids:
+                    u = Users.get_user_by_id(uid)
+                    if u:
+                        user_map[uid] = u.name
+                for inst in instances:
+                    uid = inst.get('user_id', '')
+                    inst['user_name'] = user_map.get(uid, '')
+                return JSONResponse(instances)
+        except Exception:
+            pass  # Return the original response on any parse error
+
+    return resp
 
 
 @router.delete('/{server_id}/api/v1/instances/{instance_id}')
