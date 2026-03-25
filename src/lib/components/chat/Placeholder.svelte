@@ -236,18 +236,5 @@
 		>
 			<FolderPlaceholder folder={$selectedFolder} />
 		</div>
-	{:else}
-		<div class="mx-auto max-w-2xl font-primary mt-2" in:fade={{ duration: 200, delay: 200 }}>
-			<div class="mx-5">
-				<Suggestions
-					suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
-						models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
-						$config?.default_prompt_suggestions ??
-						[]}
-					inputValue={prompt}
-					{onSelect}
-				/>
-			</div>
-		</div>
 	{/if}
 </div>

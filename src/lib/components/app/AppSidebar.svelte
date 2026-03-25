@@ -8,8 +8,17 @@
 
 <nav
 	aria-label="App navigation"
-	class="min-w-[4.5rem] bg-gray-50 dark:bg-gray-950 flex gap-2.5 flex-col pt-8"
+	class="min-w-[4.5rem] bg-gray-50 dark:bg-gray-950 flex gap-2.5 flex-col pt-4"
 >
+	<div class="flex justify-center pb-2">
+		<img
+			src="{WEBUI_BASE_URL}/static/user_v2.png"
+			class="size-9 rounded-full"
+			alt="logo"
+			draggable="false"
+		/>
+	</div>
+
 	<div class="flex justify-center relative">
 		{#if selected === 'home'}
 			<div class="absolute top-0 left-0 flex h-full">
@@ -30,8 +39,8 @@
 				}}
 			>
 				<img
-					src="{WEBUI_BASE_URL}/static/splash.png"
-					class="size-11 dark:invert p-0.5"
+					src="{WEBUI_BASE_URL}/static/splash.png?v=2"
+					class="size-11 p-0.5"
 					alt="logo"
 					draggable="false"
 				/>

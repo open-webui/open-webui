@@ -310,3 +310,9 @@ dist
 cypress/videos
 cypress/screenshots
 .vscode/settings.json
+
+# Local dev
+.webui_secret_key
+openwebui-venv/
+sandbox_editor.md
+/user_v2.png
