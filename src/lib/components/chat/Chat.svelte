@@ -144,6 +144,7 @@
 
 	let selectedToolIds = [];
 	let selectedFilterIds = [];
+	let pendingOAuthTools = [];
 
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
@@ -274,6 +275,7 @@
 	const resetInput = () => {
 		selectedToolIds = [];
 		selectedFilterIds = [];
+		pendingOAuthTools = [];
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
@@ -298,11 +300,28 @@
 		if (model) {
 			// Set Default Tools
 			if (model?.info?.meta?.toolIds) {
-				selectedToolIds = [
+				const defaultIds = [
 					...new Set(
 						[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
 					)
 				];
+
+				// Separate unauthenticated OAuth tools
+				const unauthed = [];
+				const authed = [];
+				for (const id of defaultIds) {
+					const tool = $tools.find((t) => t.id === id);
+					if (tool && tool.authenticated === false) {
+						const parts = id.split(':');
+						const serverId = parts.at(-1) ?? id;
+						const authType = parts.length > 1 ? parts[0] === 'server' ? parts[1] : parts[0] : null;
+						unauthed.push({ id, name: tool.name ?? id, serverId, authType });
+					} else {
+						authed.push(id);
+					}
+				}
+				selectedToolIds = authed;
+				pendingOAuthTools = unauthed;
 			} else if ($settings?.tools) {
 				selectedToolIds = $settings.tools;
 			} else {
@@ -1765,6 +1784,12 @@
 			selectedModels = _selectedModels;
 		}
 
+		if (pendingOAuthTools.length > 0) {
+			toast.warning(
+				$i18n.t('Please connect all required integrations before sending a message')
+			);
+			return;
+		}
 		if (userPrompt === '' && files.length === 0) {
 			toast.error($i18n.t('Please enter a prompt'));
 			return;
@@ -2843,6 +2868,7 @@
 									bind:selectedFilterIds
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
+									{pendingOAuthTools}
 									bind:webSearchEnabled
 									bind:atSelectedModel
 									bind:showCommands
@@ -2930,6 +2956,7 @@
 									bind:atSelectedModel
 									bind:showCommands
 									bind:dragged
+									{pendingOAuthTools}
 									toolServers={$toolServers}
 									{stopResponse}
 									{createMessagePair}
