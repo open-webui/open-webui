@@ -1177,6 +1177,15 @@
 				.filter((id) => id);
 		}
 
+		// Restore tool selection after OAuth redirect
+		const pendingToolId = sessionStorage.getItem('pendingOAuthToolId');
+		if (pendingToolId) {
+			sessionStorage.removeItem('pendingOAuthToolId');
+			if (!selectedToolIds.includes(pendingToolId)) {
+				selectedToolIds = [...selectedToolIds, pendingToolId];
+			}
+		}
+
 		if ($page.url.searchParams.get('call') === 'true') {
 			showCallOverlay.set(true);
 			showControls.set(true);
