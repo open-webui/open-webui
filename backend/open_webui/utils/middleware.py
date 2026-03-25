@@ -1242,7 +1242,7 @@ async def chat_completion_tools_handler(
     )
 
     try:
-        response = await generate_chat_completion(request, form_data=payload, user=user)
+        response = await generate_chat_completion(request, form_data=payload, user=user, bypass_filter=True)
         log.debug(f"{response=}")
         content = await get_content_from_response(response)
         log.debug(f"{content=}")
@@ -4553,6 +4553,7 @@ async def streaming_chat_response_handler(response, ctx):
                             new_form_data,
                             user,
                             bypass_system_prompt=True,
+                            bypass_filter=True,
                         )
 
                         if isinstance(res, StreamingResponse):
@@ -4738,6 +4739,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 new_form_data,
                                 user,
                                 bypass_system_prompt=True,
+                                bypass_filter=True,
                             )
 
                             if isinstance(res, StreamingResponse):
