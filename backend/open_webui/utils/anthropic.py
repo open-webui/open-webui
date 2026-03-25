@@ -181,13 +181,54 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
                     )
                 elif block_type == 'tool_result':
                     # Tool results become separate tool messages in OpenAI format
-                    tool_content = block.get('content', '')
+                    # https://platform.claude.com/docs/en/api/messages/create#:~:text=tool_use_id%3A%20string-,type%3A%20%22tool_result%22,-cache_control%3A%20optional
+                    tool_content = block.get("content", [])
                     if isinstance(tool_content, list):
                         tool_text_parts = []
+
                         for tc in tool_content:
-                            if isinstance(tc, dict) and tc.get('type') == 'text':
-                                tool_text_parts.append(tc.get('text', ''))
-                        tool_content = '\n'.join(tool_text_parts)
+                            if isinstance(tc, dict):
+                                source_type = tc.get("type")
+                                if source_type == "text":
+                                    tool_text_parts.append(tc.get("text", ""))
+                                elif source_type == "image":
+                                    # openai does not have a native way to attach images to tool calls
+                                    # in it's stead, we insert an image into the entire message chain and insert a text image that says "refer to image"
+                                    # hacky, but there is no alternative for multimodal
+                                    source = tc.get("source", {})
+                                    if source.get("type") == "base64":
+                                        media_type = source.get("media_type", "image/png")
+                                        data = source.get("data", "")
+                                        openai_content.append(
+                                            {
+                                                "type": "image_url",
+                                                "image_url": {
+                                                    "url": f"data:{media_type};base64,{data}",
+                                                },
+                                            }
+                                        )
+                                    elif source.get("type") == "url":
+                                        openai_content.append(
+                                            {
+                                                "type": "image_url",
+                                                "image_url": {"url": source.get("url", "")},
+                                            }
+                                        )
+                                    # above code is copied verbatim from the handling for "image" block types
+                                    tool_text_parts.append("!! This tool call returned the above image")
+                                elif source_type == "search_result":
+                                    raise NotImplementedError("SearchResultBlockParam not implemented")
+                                elif source_type == "document":
+                                    raise NotImplementedError("DocumentBlockParam not implemented")
+                                elif source_type == "tool_reference":
+                                    # no handling necessary 
+                                    pass
+                            elif isinstance(tc, str):
+                                tool_text_parts.append(tc)
+                            else:
+                                raise ValueError(f"Illegal ToolResultBlockParam content type")
+                        
+                        tool_content = "\n".join(tool_text_parts)
 
                     # Propagate error status if present
                     if block.get('is_error'):

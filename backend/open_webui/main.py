@@ -1915,7 +1915,12 @@ async def generate_messages(
     # Convert Anthropic payload to OpenAI format
     requested_model = form_data.get('model', '')
 
-    openai_payload = convert_anthropic_to_openai_payload(form_data)
+    try:
+        openai_payload = convert_anthropic_to_openai_payload(form_data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except NotImplementedError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     # Route through the existing chat_completion handler
     response = await chat_completion(request, openai_payload, user)
