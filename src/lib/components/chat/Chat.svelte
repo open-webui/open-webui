@@ -131,6 +131,7 @@
 	let eventConfirmationInputPlaceholder = '';
 	let eventConfirmationInputValue = '';
 	let eventConfirmationInputType = '';
+	let eventConfirmationPrefilled = false;
 	let eventCallback = null;
 
 	let selectedModels = [''];
@@ -549,6 +550,7 @@
 					eventConfirmationInputPlaceholder = data.placeholder;
 					eventConfirmationInputValue = data?.value ?? '';
 					eventConfirmationInputType = data?.type ?? '';
+					eventConfirmationPrefilled = !!data?.value;
 				} else if (type.startsWith('terminal:')) {
 					terminalEventHandler(type, data);
 				} else {
@@ -2714,6 +2716,7 @@
 	inputPlaceholder={eventConfirmationInputPlaceholder}
 	inputValue={eventConfirmationInputValue}
 	inputType={eventConfirmationInputType}
+	prefilled={eventConfirmationPrefilled}
 	on:confirm={(e) => {
 		if (e.detail) {
 			eventCallback(e.detail);
