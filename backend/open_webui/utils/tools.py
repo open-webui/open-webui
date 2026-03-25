@@ -439,7 +439,7 @@ def get_builtin_tools(
         builtin_functions.extend([search_chats, view_chat])
 
     # Add memory tools if builtin category enabled AND enabled for this chat
-    if is_builtin_tool_enabled('memory') and features.get('memory'):
+    if is_builtin_tool_enabled('memory') and (features.get('memory') or get_model_capability('memory', False)):
         builtin_functions.extend(
             [
                 search_memories,
