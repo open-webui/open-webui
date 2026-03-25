@@ -105,7 +105,12 @@
 		modelsToEnable.forEach((m) => (m.is_active = true));
 		models = models;
 		// Sync with server
-		await Promise.all(modelsToEnable.map((model) => upsertModelHandler(model, { is_active: true }, false)));
+		await Promise.all(
+			modelsToEnable.map((model) => upsertModelHandler(model, { is_active: true }, false))
+		);
+
+		await tick();
+		await init();
 	};
 
 	const disableAllHandler = async () => {
@@ -114,7 +119,12 @@
 		modelsToDisable.forEach((m) => (m.is_active = false));
 		models = models;
 		// Sync with server
-		await Promise.all(modelsToDisable.map((model) => upsertModelHandler(model, { is_active: false }, false)));
+		await Promise.all(
+			modelsToDisable.map((model) => upsertModelHandler(model, { is_active: false }, false))
+		);
+
+		await tick();
+		await init();
 	};
 
 	const showAllHandler = async () => {
@@ -125,8 +135,15 @@
 		});
 		models = models;
 		// Sync with server
-		await Promise.all(modelsToShow.map((model) => upsertModelHandler(model, { meta: { ...model.meta, hidden: false } }, false)));
+		await Promise.all(
+			modelsToShow.map((model) =>
+				upsertModelHandler(model, { meta: { ...model.meta, hidden: false } }, false)
+			)
+		);
+
 		toast.success($i18n.t('All models are now visible'));
+		await tick();
+		await init();
 	};
 
 	const hideAllHandler = async () => {
@@ -137,8 +154,15 @@
 		});
 		models = models;
 		// Sync with server
-		await Promise.all(modelsToHide.map((model) => upsertModelHandler(model, { meta: { ...model.meta, hidden: true } }, false)));
+		await Promise.all(
+			modelsToHide.map((model) =>
+				upsertModelHandler(model, { meta: { ...model.meta, hidden: true } }, false)
+			)
+		);
+
 		toast.success($i18n.t('All models are now hidden'));
+		await tick();
+		await init();
 	};
 
 	const downloadModels = async (models) => {
@@ -172,6 +196,13 @@
 				};
 			}
 		});
+
+		_models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			)
+		);
 	};
 
 	const upsertModelHandler = async (model, overrides = {}, showToast = true) => {
@@ -200,16 +231,9 @@
 
 			if (res && showToast) {
 				toast.success($i18n.t('Model updated successfully'));
+				await init();
 			}
 		}
-		await init();
-
-		_models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-			)
-		);
 	};
 
 	const toggleModelHandler = async (model) => {
