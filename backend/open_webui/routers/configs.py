@@ -489,6 +489,13 @@ class ModelsConfigForm(BaseModel):
     DEFAULT_MODEL_PARAMS: Optional[dict] = None
 
 
+@router.get('/models/defaults')
+async def get_models_defaults(request: Request, user=Depends(get_verified_user)):
+    return {
+        'DEFAULT_MODEL_METADATA': request.app.state.config.DEFAULT_MODEL_METADATA,
+    }
+
+
 @router.get('/models', response_model=ModelsConfigForm)
 async def get_models_config(request: Request, user=Depends(get_admin_user)):
     return {
