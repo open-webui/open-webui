@@ -1999,9 +1999,6 @@
 				}
 			})
 		);
-
-		currentChatPage.set(1);
-		chats.set(await getChatList(localStorage.token, $currentChatPage));
 	};
 
 	const getFeatures = () => {
