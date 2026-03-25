@@ -151,10 +151,14 @@ async def get_model_tags(user=Depends(get_verified_user), db: Session = Depends(
         if model.meta:
             meta = model.meta.model_dump()
             for tag in meta.get('tags', []):
-                tags_set.add((tag.get('name')))
+                try:
+                    name = tag.get('name') if isinstance(tag, dict) else str(tag)
+                    if name:
+                        tags_set.add(name)
+                except Exception:
+                    continue
 
-    tags = [tag for tag in tags_set]
-    tags.sort()
+    tags = sorted(tags_set)
     return tags
 
 
