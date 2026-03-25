@@ -2652,6 +2652,7 @@
 	inputPlaceholder={eventConfirmationInputPlaceholder}
 	inputValue={eventConfirmationInputValue}
 	inputType={eventConfirmationInputType}
+	prefilled={!!eventConfirmationInputValue}
 	on:confirm={(e) => {
 		if (e.detail) {
 			eventCallback(e.detail);

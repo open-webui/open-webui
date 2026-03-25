@@ -26,8 +26,9 @@
 	export let inputType = '';
 
 	export let show = false;
+	export let prefilled = false;
 
-	$: if (show) {
+	$: if (show && !prefilled) {
 		init();
 	}
 
