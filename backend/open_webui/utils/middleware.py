@@ -4552,6 +4552,7 @@ async def streaming_chat_response_handler(response, ctx):
                             request,
                             new_form_data,
                             user,
+                            bypass_filter=True,
                             bypass_system_prompt=True,
                         )
 
@@ -4737,6 +4738,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 request,
                                 new_form_data,
                                 user,
+                                bypass_filter=True,
                                 bypass_system_prompt=True,
                             )
 
