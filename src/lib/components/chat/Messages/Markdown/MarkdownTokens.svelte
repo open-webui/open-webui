@@ -55,8 +55,23 @@
 
 	const GROUPABLE_DETAIL_TYPES = new Set(['tool_calls', 'reasoning', 'code_interpreter']);
 
-	const isGroupableDetailToken = (token: Token & { attributes?: { type?: string } }) => {
-		return token?.type === 'details' && GROUPABLE_DETAIL_TYPES.has(token?.attributes?.type ?? '');
+	const hasRichUIEmbeds = (token: Token & { attributes?: { embeds?: string } }): boolean => {
+		const raw = token?.attributes?.embeds;
+		if (!raw) return false;
+		try {
+			const parsed = JSON.parse(decode(raw));
+			return Array.isArray(parsed) && parsed.length > 0;
+		} catch {
+			return false;
+		}
+	};
+
+	const isGroupableDetailToken = (token: Token & { attributes?: { type?: string; embeds?: string } }) => {
+		if (token?.type !== 'details') return false;
+		if (!GROUPABLE_DETAIL_TYPES.has(token?.attributes?.type ?? '')) return false;
+		// Tool calls with embeds (rich UI) must render outside the collapsed group
+		if (token?.attributes?.type === 'tool_calls' && hasRichUIEmbeds(token)) return false;
+		return true;
 	};
 
 	const getDisplayTokens = (tokenList: Token[] = []) => {
