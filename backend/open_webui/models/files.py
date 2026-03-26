@@ -66,8 +66,9 @@ class FileMeta(BaseModel):
     @classmethod
     def sanitize_meta(cls, data):
         """Sanitize metadata fields to handle malformed legacy data."""
+        # Handle None or non-dict input - return empty dict to satisfy required meta field
         if not isinstance(data, dict):
-            return data
+            return {}
 
         # Handle content_type that may be a list like ['application/pdf', None]
         content_type = data.get('content_type')
