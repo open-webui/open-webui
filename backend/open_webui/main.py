@@ -559,6 +559,7 @@ from open_webui.tasks import (
     create_task,
     stop_task,
     list_tasks,
+    clear_all_redis_tasks,
 )  # Import from tasks.py
 
 from open_webui.utils.redis import get_sentinels_from_env
@@ -639,6 +640,8 @@ async def lifespan(app: FastAPI):
     )
 
     if app.state.redis is not None:
+        # Clear stale tasks from Redis on startup (from previous crashes)
+        await clear_all_redis_tasks(app.state.redis)
         app.state.redis_task_command_listener = asyncio.create_task(redis_task_command_listener(app))
 
     if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0:

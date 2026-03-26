@@ -21,6 +21,10 @@ REDIS_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks'
 REDIS_ITEM_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks:item'
 REDIS_PUBSUB_CHANNEL = f'{REDIS_KEY_PREFIX}:tasks:commands'
 
+# Task TTL in seconds (24 hours)
+# This ensures stale tasks are cleaned up even if the server crashes
+REDIS_TASK_TTL = 86400
+
 
 async def redis_task_command_listener(app):
     redis: Redis = app.state.redis
@@ -51,6 +55,7 @@ async def redis_save_task(redis: Redis, task_id: str, item_id: Optional[str]):
     pipe.hset(REDIS_TASKS_KEY, task_id, item_id or '')
     if item_id:
         pipe.sadd(f'{REDIS_ITEM_TASKS_KEY}:{item_id}', task_id)
+        pipe.expire(f'{REDIS_ITEM_TASKS_KEY}:{item_id}', REDIS_TASK_TTL)
     await pipe.execute()
 
 
@@ -208,3 +213,29 @@ async def get_active_chat_ids(redis, chat_ids: List[str]) -> List[str]:
         if await has_active_tasks(redis, chat_id):
             active.append(chat_id)
     return active
+
+
+async def clear_all_redis_tasks(redis: Redis):
+    """
+    Clear all task records from Redis.
+    Called on startup to clean up stale tasks from previous crashes.
+    """
+    if not redis:
+        return
+    
+    # Delete all task hash entries
+    task_ids = await redis.hkeys(REDIS_TASKS_KEY)
+    if task_ids:
+        await redis.delete(REDIS_TASKS_KEY)
+        log.info(f"Cleared {len(task_ids)} stale task(s) from Redis on startup")
+    
+    # Delete all item task sets
+    # Scan for keys matching the pattern
+    cursor = 0
+    while True:
+        cursor, keys = await redis.scan(cursor, match=f"{REDIS_ITEM_TASKS_KEY}:*", count=100)
+        if keys:
+            await redis.delete(*keys)
+            log.info(f"Cleared {len(keys)} item task set(s) from Redis on startup")
+        if cursor == 0:
+            break
