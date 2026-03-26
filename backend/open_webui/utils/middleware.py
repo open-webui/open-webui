@@ -4001,7 +4001,11 @@ async def streaming_chat_response_handler(response, ctx):
                                 reasoning_item['status'] = 'completed'
 
                     if response_tool_calls:
-                        tool_calls.append(_split_tool_calls(response_tool_calls))
+                        # Split tool calls with multiple JSON objects in arguments
+                        split_calls = _split_tool_calls(response_tool_calls)
+                        # Only add if there are actual tool calls to process
+                        if split_calls:
+                            tool_calls.append(split_calls)
 
                     # Responses API path: extract function_call items from output
                     if not response_tool_calls and output:
@@ -4030,7 +4034,11 @@ async def streaming_chat_response_handler(response, ctx):
                                     }
                                 )
                         if responses_api_tool_calls:
-                            tool_calls.append(_split_tool_calls(responses_api_tool_calls))
+                            # Split tool calls with multiple JSON objects in arguments
+                            split_calls = _split_tool_calls(responses_api_tool_calls)
+                            # Only add if there are actual tool calls to process
+                            if split_calls:
+                                tool_calls.append(split_calls)
 
                     if response.background:
                         await response.background()
@@ -4061,6 +4069,10 @@ async def streaming_chat_response_handler(response, ctx):
                     tool_call_retries += 1
 
                     response_tool_calls = tool_calls.pop(0)
+
+                    # Skip empty tool calls arrays to prevent infinite loops
+                    if not response_tool_calls:
+                        continue
 
                     # Append function_call items for each tool call
                     # (Responses API already has them from streaming, so skip duplicates)
