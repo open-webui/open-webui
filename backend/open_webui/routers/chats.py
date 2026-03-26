@@ -733,9 +733,36 @@ async def get_user_pinned_chats(
 
 @router.get("/all", response_model=list[ChatResponse])
 async def get_user_chats(
-    user=Depends(get_verified_user), db: Session = Depends(get_session)
+    page: Optional[int] = None,
+    limit: Optional[int] = None,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
-    result = Chats.get_chats_by_user_id(user.id, db=db)
+    """
+    Get all chats for the user with optional pagination.
+    
+    Args:
+        page: Page number (1-indexed). If None, returns all chats up to limit.
+        limit: Max number of chats per page. Defaults to 1000 to prevent OOM.
+    
+    Returns:
+        List of ChatResponse objects.
+    
+    Note:
+        To avoid OOM issues, the endpoint now caps results at 1000 by default.
+        Use pagination (page + limit) for users with many chats.
+        For backward compatibility, response is still a list (not paginated response).
+    """
+    # Default limit to prevent OOM for users with many chats
+    effective_limit = limit if limit is not None else 1000
+    skip = None
+    
+    if page is not None:
+        skip = (page - 1) * effective_limit
+    
+    result = Chats.get_chats_by_user_id(
+        user.id, skip=skip, limit=effective_limit, db=db
+    )
     return [ChatResponse(**chat.model_dump()) for chat in result.items]
 
 
