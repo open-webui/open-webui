@@ -1,0 +1,59 @@
+name: Image Smoke Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: open-webui:smoke-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_HASH=${{ github.sha }}
+
+      - name: Start container
+        run: |
+          docker run -d \
+            --name owui-smoke \
+            -p 8080:8080 \
+            -e WEBUI_SECRET_KEY=ci-test-key \
+            -e WEBUI_AUTH=false \
+            open-webui:smoke-test
+
+      - name: Wait for app to boot
+        run: |
+          timeout 120 bash -c \
+            'until curl -sf http://localhost:8080/api/version; do
+               echo "waiting..."; sleep 5
+             done'
+
+      - name: Assert /api/version responds with version field
+        run: |
+          curl -sf http://localhost:8080/api/version | jq -e '.version != null'
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f owui-smoke || true
