@@ -104,6 +104,17 @@ async def get_function_models(request):
 
                 log.debug(f"get_function_models: function '{pipe.id}' is a manifold of {sub_pipes}")
 
+                # Extract meta fields from pipe description/profile
+                pipe_meta = {}
+                if pipe.meta:
+                    _pm = pipe.meta if isinstance(pipe.meta, dict) else {}
+                    pipe_meta = {
+                        'meta': {
+                            k: v for k, v in _pm.items()
+                            if k in ('description', 'profile_image_url', 'capabilities')
+                        }
+                    }
+
                 for p in sub_pipes:
                     sub_pipe_id = f'{pipe.id}.{p["id"]}'
                     sub_pipe_name = p['name']
@@ -113,17 +124,20 @@ async def get_function_models(request):
 
                     pipe_flag = {'type': pipe.type}
 
-                    pipe_models.append(
-                        {
-                            'id': sub_pipe_id,
-                            'name': sub_pipe_name,
-                            'object': 'model',
-                            'created': pipe.created_at,
-                            'owned_by': 'openai',
-                            'pipe': pipe_flag,
-                            'has_user_valves': has_user_valves,
-                        }
-                    )
+                    pipe_model = {
+                        'id': sub_pipe_id,
+                        'name': sub_pipe_name,
+                        'object': 'model',
+                        'created': pipe.created_at,
+                        'owned_by': 'openai',
+                        'pipe': pipe_flag,
+                        'has_user_valves': has_user_valves,
+                    }
+                    # Add meta fields if available
+                    if pipe_meta:
+                        pipe_model.update(pipe_meta)
+
+                    pipe_models.append(pipe_model)
             else:
                 pipe_flag = {'type': 'pipe'}
 
@@ -131,17 +145,31 @@ async def get_function_models(request):
                     f"get_function_models: function '{pipe.id}' is a single pipe {{ 'id': {pipe.id}, 'name': {pipe.name} }}"
                 )
 
-                pipe_models.append(
-                    {
-                        'id': pipe.id,
-                        'name': pipe.name,
-                        'object': 'model',
-                        'created': pipe.created_at,
-                        'owned_by': 'openai',
-                        'pipe': pipe_flag,
-                        'has_user_valves': has_user_valves,
+                # Extract meta fields from pipe description/profile
+                pipe_meta = {}
+                if pipe.meta:
+                    _pm = pipe.meta if isinstance(pipe.meta, dict) else {}
+                    pipe_meta = {
+                        'meta': {
+                            k: v for k, v in _pm.items()
+                            if k in ('description', 'profile_image_url', 'capabilities')
+                        }
                     }
-                )
+
+                pipe_model = {
+                    'id': pipe.id,
+                    'name': pipe.name,
+                    'object': 'model',
+                    'created': pipe.created_at,
+                    'owned_by': 'openai',
+                    'pipe': pipe_flag,
+                    'has_user_valves': has_user_valves,
+                }
+                # Add meta fields if available
+                if pipe_meta:
+                    pipe_model.update(pipe_meta)
+
+                pipe_models.append(pipe_model)
         except Exception as e:
             log.exception(e)
             continue
