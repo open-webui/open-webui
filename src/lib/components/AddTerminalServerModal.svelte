@@ -198,7 +198,7 @@
 		// Save policy to orchestrator if applicable
 		if (serverType === 'orchestrator' && !direct && policyId) {
 			try {
-				await putOrchestratorPolicy(url, key, policyId, buildPolicyData());
+				await putOrchestratorPolicy(localStorage.token, url, key, policyId, buildPolicyData());
 			} catch (err) {
 				toast.error($i18n.t('Failed to save policy: {{error}}', { error: err }));
 				return;

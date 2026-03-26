@@ -314,6 +314,47 @@ async def verify_terminal_server_connection(
     raise HTTPException(status_code=400, detail='Failed to connect to the terminal server')
 
 
+class TerminalServerPolicyForm(BaseModel):
+    url: str
+    key: Optional[str] = ''
+    auth_type: Optional[str] = 'bearer'
+    policy_id: str
+    policy_data: dict
+
+
+@router.post('/terminal_servers/policy')
+async def put_terminal_server_policy(
+    request: Request, form_data: TerminalServerPolicyForm, user=Depends(get_admin_user)
+):
+    """
+    Proxy a policy PUT to an orchestrator terminal server.
+    """
+    base_url = (form_data.url or '').rstrip('/')
+    if not base_url:
+        raise HTTPException(status_code=400, detail='Terminal server URL is required')
+
+    headers = {'Content-Type': 'application/json'}
+    if form_data.auth_type == 'bearer' and form_data.key:
+        headers['Authorization'] = f'Bearer {form_data.key}'
+
+    try:
+        async with aiohttp.ClientSession(
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+        ) as session:
+            policy_url = f'{base_url}/api/v1/policies/{form_data.policy_id}'
+            async with session.put(policy_url, headers=headers, json=form_data.policy_data) as resp:
+                if resp.ok:
+                    return await resp.json()
+                detail = await resp.text()
+                raise HTTPException(status_code=resp.status, detail=detail)
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.debug(f'Failed to save policy to terminal server: {e}')
+        raise HTTPException(status_code=400, detail='Failed to save policy to terminal server')
+
+
 @router.post('/tool_servers/verify')
 async def verify_tool_servers_config(request: Request, form_data: ToolServerConnection, user=Depends(get_admin_user)):
     """
