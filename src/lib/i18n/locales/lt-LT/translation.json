@@ -410,7 +410,7 @@
 	"Content Extraction Engine": "",
 	"Content lengths (character counts only)": "",
 	"Continue Response": "Tęsti atsakymą",
-	"Continue with {{provider}}": "Tęsti su {{tiekėju}}",
+	"Continue with {{provider}}": "Tęsti su {{provider}}",
 	"Continue with Email": "",
 	"Continue with LDAP": "",
 	"Control how message text is split for TTS requests. 'Punctuation' splits into sentences, 'paragraphs' splits into paragraphs, and 'none' keeps the message as a single string.": "",
