@@ -968,23 +968,23 @@ async def get_terminal_tools(
     connection = next((c for c in connections if c.get('id') == terminal_id), None)
     if connection is None:
         log.warning(f'Terminal server not found: {terminal_id}')
-        return {}
+        return {}, None
 
     user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
     if not has_connection_access(user, connection, user_group_ids):
         log.warning(f'Access denied to terminal {terminal_id} for user {user.id}')
-        return {}
+        return {}, None
 
     # Find the cached spec data for this terminal
     terminal_servers = await get_terminal_servers(request)
     server_data = next((s for s in terminal_servers if s.get('id') == terminal_id), None)
     if server_data is None:
         log.warning(f'Terminal server spec not found for {terminal_id}')
-        return {}
+        return {}, None
 
     specs = server_data.get('specs', [])
     if not specs:
-        return {}
+        return {}, None
 
     # Build auth headers
     auth_type = connection.get('auth_type', 'bearer')
