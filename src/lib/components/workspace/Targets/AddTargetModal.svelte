@@ -37,7 +37,9 @@
 
 <Modal size="sm" bind:show>
 	<div>
-		<div class="flex justify-between dark:text-gray-200 px-5 pt-4 pb-2 border-b border-sky-100/80 dark:border-sky-900/45">
+		<div
+			class="flex justify-between dark:text-gray-200 px-5 pt-4 pb-2 border-b border-sky-100/80 dark:border-sky-900/45"
+		>
 			<div class="text-lg font-medium self-center">{$i18n.t('Add Target')}</div>
 			<button
 				class="self-center rounded-lg p-1 hover:bg-sky-100/80 dark:hover:bg-sky-900/45 transition"
@@ -65,7 +67,10 @@
 
 				<div>
 					<div class="mb-1 text-xs text-gray-500 dark:text-gray-400">{$i18n.t('Type')}</div>
-					<select class="w-full rounded-lg text-sm bg-white/75 dark:bg-slate-900/60 border border-sky-100/80 dark:border-sky-900/45 px-2.5 py-2 outline-hidden" bind:value={form.type}>
+					<select
+						class="w-full rounded-lg text-sm bg-white/75 dark:bg-slate-900/60 border border-sky-100/80 dark:border-sky-900/45 px-2.5 py-2 outline-hidden"
+						bind:value={form.type}
+					>
 						{#each targetTypes as type}
 							<option value={type}>{type}</option>
 						{/each}

@@ -2754,232 +2754,235 @@
 
 				<PaneGroup direction="horizontal" class="w-full h-full min-w-0">
 					<Pane defaultSize={50} minSize={30} class="h-full flex relative max-w-full flex-col">
-					<FilesOverlay show={dragged} />
-					<Navbar
-						bind:this={navbarElement}
-						showTargetToggle={true}
-						targetSidebarVisible={showTargetSidebar}
-						toggleTargetSidebar={() => {
-							showTargetSidebar = !showTargetSidebar;
-						}}
-						chat={{
-							id: $chatId,
-							chat: {
-								title: $chatTitle,
-								models: selectedModels,
-								system: $settings.system ?? undefined,
-								params: params,
-								history: history,
-								timestamp: Date.now()
-							}
-						}}
-						{history}
-						title={$chatTitle}
-						bind:selectedModels
-						shareEnabled={!!history.currentId}
-						{initNewChat}
-						{archiveChatHandler}
-						{moveChatHandler}
-						onSaveTempChat={async () => {
-							try {
-								if (!history?.currentId || !Object.keys(history.messages).length) {
-									toast.error($i18n.t('No conversation to save'));
-									return;
+						<FilesOverlay show={dragged} />
+						<Navbar
+							bind:this={navbarElement}
+							showTargetToggle={true}
+							targetSidebarVisible={showTargetSidebar}
+							toggleTargetSidebar={() => {
+								showTargetSidebar = !showTargetSidebar;
+							}}
+							chat={{
+								id: $chatId,
+								chat: {
+									title: $chatTitle,
+									models: selectedModels,
+									system: $settings.system ?? undefined,
+									params: params,
+									history: history,
+									timestamp: Date.now()
 								}
-								const messages = createMessagesList(history, history.currentId);
-								const title =
-									messages.find((m) => m.role === 'user')?.content ?? $i18n.t('New Chat');
+							}}
+							{history}
+							title={$chatTitle}
+							bind:selectedModels
+							shareEnabled={!!history.currentId}
+							{initNewChat}
+							{archiveChatHandler}
+							{moveChatHandler}
+							onSaveTempChat={async () => {
+								try {
+									if (!history?.currentId || !Object.keys(history.messages).length) {
+										toast.error($i18n.t('No conversation to save'));
+										return;
+									}
+									const messages = createMessagesList(history, history.currentId);
+									const title =
+										messages.find((m) => m.role === 'user')?.content ?? $i18n.t('New Chat');
 
-								const savedChat = await createNewChat(
-									localStorage.token,
-									{
-										id: uuidv4(),
-										title: title.length > 50 ? `${title.slice(0, 50)}...` : title,
-										models: selectedModels,
-										params: params,
-										history: history,
-										messages: messages,
-										timestamp: Date.now()
-									},
-									null
-								);
+									const savedChat = await createNewChat(
+										localStorage.token,
+										{
+											id: uuidv4(),
+											title: title.length > 50 ? `${title.slice(0, 50)}...` : title,
+											models: selectedModels,
+											params: params,
+											history: history,
+											messages: messages,
+											timestamp: Date.now()
+										},
+										null
+									);
 
-								if (savedChat) {
-									temporaryChatEnabled.set(false);
-									chatId.set(savedChat.id);
-									chats.set(await getChatList(localStorage.token, $currentChatPage));
+									if (savedChat) {
+										temporaryChatEnabled.set(false);
+										chatId.set(savedChat.id);
+										chats.set(await getChatList(localStorage.token, $currentChatPage));
 
-									await goto(`/c/${savedChat.id}`);
-									toast.success($i18n.t('Conversation saved successfully'));
+										await goto(`/c/${savedChat.id}`);
+										toast.success($i18n.t('Conversation saved successfully'));
+									}
+								} catch (error) {
+									console.error('Error saving conversation:', error);
+									toast.error($i18n.t('Failed to save conversation'));
 								}
-							} catch (error) {
-								console.error('Error saving conversation:', error);
-								toast.error($i18n.t('Failed to save conversation'));
-							}
-						}}
-					/>
+							}}
+						/>
 
-					<div id="chat-pane" class="flex flex-col flex-auto z-10 w-full @container overflow-auto">
-						{#if ($settings?.landingPageMode === 'chat' && !$selectedFolder) || createMessagesList(history, history.currentId).length > 0}
-							<div
-								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
-								id="messages-container"
-								bind:this={messagesContainerElement}
-								on:scroll={(e) => {
-									autoScroll =
-										messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
-										messagesContainerElement.clientHeight + 5;
-								}}
-							>
-								<div class=" h-full w-full flex flex-col">
-									<Messages
-										chatId={$chatId}
-										bind:history
-										bind:autoScroll
-										bind:prompt
-										setInputText={(text) => {
-											messageInput?.setText(text);
-										}}
+						<div
+							id="chat-pane"
+							class="flex flex-col flex-auto z-10 w-full @container overflow-auto"
+						>
+							{#if ($settings?.landingPageMode === 'chat' && !$selectedFolder) || createMessagesList(history, history.currentId).length > 0}
+								<div
+									class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
+									id="messages-container"
+									bind:this={messagesContainerElement}
+									on:scroll={(e) => {
+										autoScroll =
+											messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
+											messagesContainerElement.clientHeight + 5;
+									}}
+								>
+									<div class=" h-full w-full flex flex-col">
+										<Messages
+											chatId={$chatId}
+											bind:history
+											bind:autoScroll
+											bind:prompt
+											setInputText={(text) => {
+												messageInput?.setText(text);
+											}}
+											{selectedModels}
+											{atSelectedModel}
+											{sendMessage}
+											{showMessage}
+											{submitMessage}
+											{continueResponse}
+											{regenerateResponse}
+											{mergeResponses}
+											{chatActionHandler}
+											{addMessages}
+											topPadding={true}
+											bottomPadding={files.length > 0}
+											{onSelect}
+										/>
+									</div>
+								</div>
+
+								<div class=" pb-2 {dragged ? 'z-0' : 'z-10'}">
+									<MessageInput
+										bind:this={messageInput}
+										{history}
+										{taskIds}
 										{selectedModels}
-										{atSelectedModel}
-										{sendMessage}
-										{showMessage}
-										{submitMessage}
-										{continueResponse}
-										{regenerateResponse}
-										{mergeResponses}
-										{chatActionHandler}
-										{addMessages}
-										topPadding={true}
-										bottomPadding={files.length > 0}
+										bind:files
+										bind:prompt
+										bind:autoScroll
+										bind:selectedToolIds
+										bind:selectedFilterIds
+										bind:imageGenerationEnabled
+										bind:codeInterpreterEnabled
+										{pendingOAuthTools}
+										bind:webSearchEnabled
+										bind:atSelectedModel
+										bind:showCommands
+										bind:dragged
+										toolServers={$toolServers}
+										{generating}
+										{stopResponse}
+										{createMessagePair}
+										{onUpload}
+										messageQueue={$chatRequestQueues[$chatId] ?? []}
+										onQueueSendNow={async (id) => {
+											const queue = $chatRequestQueues[$chatId] ?? [];
+											const item = queue.find((m) => m.id === id);
+											if (item) {
+												// Remove from queue
+												chatRequestQueues.update((q) => ({
+													...q,
+													[$chatId]: queue.filter((m) => m.id !== id)
+												}));
+												// Stop current generation first
+												await stopResponse();
+												await tick();
+												// Set files and submit
+												files = item.files;
+												await tick();
+												await submitPrompt(item.prompt);
+											}
+										}}
+										onQueueEdit={(id) => {
+											const queue = $chatRequestQueues[$chatId] ?? [];
+											const item = queue.find((m) => m.id === id);
+											if (item) {
+												// Remove from queue
+												chatRequestQueues.update((q) => ({
+													...q,
+													[$chatId]: queue.filter((m) => m.id !== id)
+												}));
+												// Set files and restore prompt to input
+												files = item.files;
+												messageInput?.setText(item.prompt);
+											}
+										}}
+										onQueueDelete={(id) => {
+											const queue = $chatRequestQueues[$chatId] ?? [];
+											chatRequestQueues.update((q) => ({
+												...q,
+												[$chatId]: queue.filter((m) => m.id !== id)
+											}));
+										}}
+										onChange={(data) => {
+											if (!$temporaryChatEnabled) {
+												saveDraft(data, $chatId);
+											}
+										}}
+										on:submit={async (e) => {
+											clearDraft();
+											if (e.detail || files.length > 0) {
+												await tick();
+
+												submitPrompt(e.detail.replaceAll('\n\n', '\n'));
+											}
+										}}
+									/>
+
+									<div
+										class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
+									>
+										<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
+									</div>
+								</div>
+							{:else}
+								<div class="flex items-center h-full">
+									<Placeholder
+										{history}
+										{selectedModels}
+										bind:messageInput
+										bind:files
+										bind:prompt
+										bind:autoScroll
+										bind:selectedToolIds
+										bind:selectedFilterIds
+										bind:imageGenerationEnabled
+										bind:codeInterpreterEnabled
+										bind:webSearchEnabled
+										bind:atSelectedModel
+										bind:showCommands
+										bind:dragged
+										{pendingOAuthTools}
+										toolServers={$toolServers}
+										{stopResponse}
+										{createMessagePair}
 										{onSelect}
+										{onUpload}
+										onChange={(data) => {
+											if (!$temporaryChatEnabled) {
+												saveDraft(data);
+											}
+										}}
+										on:submit={async (e) => {
+											clearDraft();
+											if (e.detail || files.length > 0) {
+												await tick();
+												submitPrompt(e.detail.replaceAll('\n\n', '\n'));
+											}
+										}}
 									/>
 								</div>
-							</div>
-
-							<div class=" pb-2 {dragged ? 'z-0' : 'z-10'}">
-								<MessageInput
-									bind:this={messageInput}
-									{history}
-									{taskIds}
-									{selectedModels}
-									bind:files
-									bind:prompt
-									bind:autoScroll
-									bind:selectedToolIds
-									bind:selectedFilterIds
-									bind:imageGenerationEnabled
-									bind:codeInterpreterEnabled
-									{pendingOAuthTools}
-									bind:webSearchEnabled
-									bind:atSelectedModel
-									bind:showCommands
-									bind:dragged
-									toolServers={$toolServers}
-									{generating}
-									{stopResponse}
-									{createMessagePair}
-									{onUpload}
-									messageQueue={$chatRequestQueues[$chatId] ?? []}
-									onQueueSendNow={async (id) => {
-										const queue = $chatRequestQueues[$chatId] ?? [];
-										const item = queue.find((m) => m.id === id);
-										if (item) {
-											// Remove from queue
-											chatRequestQueues.update((q) => ({
-												...q,
-												[$chatId]: queue.filter((m) => m.id !== id)
-											}));
-											// Stop current generation first
-											await stopResponse();
-											await tick();
-											// Set files and submit
-											files = item.files;
-											await tick();
-											await submitPrompt(item.prompt);
-										}
-									}}
-									onQueueEdit={(id) => {
-										const queue = $chatRequestQueues[$chatId] ?? [];
-										const item = queue.find((m) => m.id === id);
-										if (item) {
-											// Remove from queue
-											chatRequestQueues.update((q) => ({
-												...q,
-												[$chatId]: queue.filter((m) => m.id !== id)
-											}));
-											// Set files and restore prompt to input
-											files = item.files;
-											messageInput?.setText(item.prompt);
-										}
-									}}
-									onQueueDelete={(id) => {
-										const queue = $chatRequestQueues[$chatId] ?? [];
-										chatRequestQueues.update((q) => ({
-											...q,
-											[$chatId]: queue.filter((m) => m.id !== id)
-										}));
-									}}
-									onChange={(data) => {
-										if (!$temporaryChatEnabled) {
-											saveDraft(data, $chatId);
-										}
-									}}
-									on:submit={async (e) => {
-										clearDraft();
-										if (e.detail || files.length > 0) {
-											await tick();
-
-											submitPrompt(e.detail.replaceAll('\n\n', '\n'));
-										}
-									}}
-								/>
-
-								<div
-									class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
-								>
-									<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
-								</div>
-							</div>
-						{:else}
-							<div class="flex items-center h-full">
-								<Placeholder
-									{history}
-									{selectedModels}
-									bind:messageInput
-									bind:files
-									bind:prompt
-									bind:autoScroll
-									bind:selectedToolIds
-									bind:selectedFilterIds
-									bind:imageGenerationEnabled
-									bind:codeInterpreterEnabled
-									bind:webSearchEnabled
-									bind:atSelectedModel
-									bind:showCommands
-									bind:dragged
-									{pendingOAuthTools}
-									toolServers={$toolServers}
-									{stopResponse}
-									{createMessagePair}
-									{onSelect}
-									{onUpload}
-									onChange={(data) => {
-										if (!$temporaryChatEnabled) {
-											saveDraft(data);
-										}
-									}}
-									on:submit={async (e) => {
-										clearDraft();
-										if (e.detail || files.length > 0) {
-											await tick();
-											submitPrompt(e.detail.replaceAll('\n\n', '\n'));
-										}
-									}}
-								/>
-							</div>
-						{/if}
-					</div>
+							{/if}
+						</div>
 					</Pane>
 
 					<ChatControls

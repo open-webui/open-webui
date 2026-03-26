@@ -9,13 +9,19 @@
 	export let target: Target;
 </script>
 
-<div class="rounded-2xl border border-sky-100/80 dark:border-sky-900/45 bg-white/78 dark:bg-slate-950/58 p-3.5 transition hover:bg-sky-50/35 dark:hover:bg-sky-900/22">
+<div
+	class="rounded-2xl border border-sky-100/80 dark:border-sky-900/45 bg-white/78 dark:bg-slate-950/58 p-3.5 transition hover:bg-sky-50/35 dark:hover:bg-sky-900/22"
+>
 	<div class="flex items-start justify-between gap-2">
 		<div class="min-w-0">
 			<div class="font-medium line-clamp-1">{target.name}</div>
-			<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">{target.description || $i18n.t('No description')}</div>
+			<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
+				{target.description || $i18n.t('No description')}
+			</div>
 		</div>
-		<div class="text-[11px] px-2 py-1 rounded-full font-medium {getTargetStatusClass(target.status)}">
+		<div
+			class="text-[11px] px-2 py-1 rounded-full font-medium {getTargetStatusClass(target.status)}"
+		>
 			{target.status}
 		</div>
 	</div>

@@ -629,10 +629,7 @@
 		style="scroll-margin-top: 3rem;"
 	>
 		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 hidden @lg:flex mt-1 `}>
-			<ProfileImage
-				src={'/venomx-logo.png'}
-				className={'size-8 assistant-message-profile-image'}
-			/>
+			<ProfileImage src={'/venomx-logo.png'} className={'size-8 assistant-message-profile-image'} />
 		</div>
 
 		<div class="flex-auto w-0 pl-1 relative">

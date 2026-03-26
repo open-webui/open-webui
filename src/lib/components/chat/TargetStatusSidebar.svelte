@@ -33,11 +33,16 @@
 	class="h-full w-72 max-w-[18rem] rounded-2xl border border-sky-100/80 dark:border-sky-900/55 bg-white/70 dark:bg-slate-950/55 backdrop-blur-md shadow-sm p-2.5 flex flex-col"
 	aria-label={$i18n.t('Target Status Sidebar')}
 >
-	<div class="flex items-center justify-between gap-2 px-0.5 pb-2 border-b border-sky-100/70 dark:border-sky-900/45">
+	<div
+		class="flex items-center justify-between gap-2 px-0.5 pb-2 border-b border-sky-100/70 dark:border-sky-900/45"
+	>
 		<div>
 			<div class="text-sm font-semibold">{$i18n.t('Targets')}</div>
 			<div class="text-[11px] text-gray-500 dark:text-gray-400">
-				{$activeScanCount} {$i18n.t('active')} • {$scanQueue.length} {$i18n.t('queued')} • {$targets.length} {$i18n.t('total')}
+				{$activeScanCount}
+				{$i18n.t('active')} • {$scanQueue.length}
+				{$i18n.t('queued')} • {$targets.length}
+				{$i18n.t('total')}
 			</div>
 		</div>
 		<button
@@ -71,30 +76,40 @@
 			{/each}
 		</div>
 	{:else}
-		<div class="mt-2 text-[11px] rounded-xl border border-sky-100/80 dark:border-sky-900/45 bg-sky-50/70 dark:bg-sky-900/20 px-2.5 py-2 text-gray-700 dark:text-gray-200">
+		<div
+			class="mt-2 text-[11px] rounded-xl border border-sky-100/80 dark:border-sky-900/45 bg-sky-50/70 dark:bg-sky-900/20 px-2.5 py-2 text-gray-700 dark:text-gray-200"
+		>
 			{$i18n.t('Targets list collapsed while queue is running.')}
 		</div>
 	{/if}
 
-	<div class="mt-2 rounded-xl border border-sky-100/80 dark:border-sky-900/45 bg-white/60 dark:bg-slate-900/40 p-2">
+	<div
+		class="mt-2 rounded-xl border border-sky-100/80 dark:border-sky-900/45 bg-white/60 dark:bg-slate-900/40 p-2"
+	>
 		<div class="text-xs font-medium">{$i18n.t('Scan Queue')}</div>
 		<div class="mt-1.5 space-y-1.5 max-h-28 overflow-y-auto scrollbar-hidden pr-0.5">
 			{#if queuedTargets.length > 0}
 				{#each queuedTargets as entry}
-					<div class="flex items-center justify-between gap-2 rounded-lg border border-sky-100/70 dark:border-sky-900/40 bg-white/65 dark:bg-slate-950/35 px-2 py-1.5 text-[11px]">
+					<div
+						class="flex items-center justify-between gap-2 rounded-lg border border-sky-100/70 dark:border-sky-900/40 bg-white/65 dark:bg-slate-950/35 px-2 py-1.5 text-[11px]"
+					>
 						<div class="min-w-0 line-clamp-1">
 							<span class="font-medium text-sky-700 dark:text-sky-300 mr-1">#{entry.position}</span>
 							{entry.target?.name}
 						</div>
 						{#if entry.target?.id === $activeQueueTargetId}
-							<div class="px-1.5 py-0.5 rounded-full bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-medium">
+							<div
+								class="px-1.5 py-0.5 rounded-full bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-medium"
+							>
 								{$i18n.t('Running')}
 							</div>
 						{/if}
 					</div>
 				{/each}
 			{:else}
-				<div class="text-[11px] text-gray-500 dark:text-gray-400">{$i18n.t('No targets queued yet.')}</div>
+				<div class="text-[11px] text-gray-500 dark:text-gray-400">
+					{$i18n.t('No targets queued yet.')}
+				</div>
 			{/if}
 		</div>
 	</div>

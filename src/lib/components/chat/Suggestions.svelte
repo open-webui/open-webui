@@ -82,7 +82,7 @@
 	{/if}
 </div>
 
-<div class="{chipMode ? 'w-full' : 'h-40 w-full'}">
+<div class={chipMode ? 'w-full' : 'h-40 w-full'}>
 	{#if filteredPrompts.length > 0}
 		<div
 			role="list"
@@ -101,7 +101,9 @@
 					style="animation-delay: {idx * 60}ms"
 					on:click={() => onSelect({ type: 'prompt', data: prompt.content })}
 				>
-					<div class="{chipMode ? 'text-sm text-left leading-tight min-w-0' : 'flex flex-col text-left'}">
+					<div
+						class={chipMode ? 'text-sm text-left leading-tight min-w-0' : 'flex flex-col text-left'}
+					>
 						{#if prompt.title && prompt.title[0] !== ''}
 							{#if chipMode}
 								<div
@@ -119,23 +121,21 @@
 									{prompt.title[1]}
 								</div>
 							{/if}
+						{:else if chipMode}
+							<div
+								class="font-medium chip-title transition whitespace-nowrap overflow-hidden text-ellipsis"
+							>
+								{prompt.content}
+							</div>
 						{:else}
-							{#if chipMode}
-								<div
-									class="font-medium chip-title transition whitespace-nowrap overflow-hidden text-ellipsis"
-								>
-									{prompt.content}
-								</div>
-							{:else}
-								<div
-									class="font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
-								>
-									{prompt.content}
-								</div>
-								<div class="text-xs text-gray-600 dark:text-gray-400 font-normal line-clamp-1">
-									{$i18n.t('Prompt')}
-								</div>
-							{/if}
+							<div
+								class="font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
+							>
+								{prompt.content}
+							</div>
+							<div class="text-xs text-gray-600 dark:text-gray-400 font-normal line-clamp-1">
+								{$i18n.t('Prompt')}
+							</div>
 						{/if}
 					</div>
 				</button>

@@ -219,7 +219,7 @@
 	// Svelte re-runs this block when any of them update.
 	let prevTerminalUrl = '';
 	$: {
-		($selectedTerminalId, $terminalServers, $settings);
+		$selectedTerminalId, $terminalServers, $settings;
 		const terminal = getTerminal();
 		selectedTerminal = terminal;
 

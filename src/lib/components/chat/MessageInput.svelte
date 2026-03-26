@@ -2048,7 +2048,9 @@
 	:global(.copilot-landing-active-surface #message-input-container [class*='text-gray']),
 	:global(.copilot-landing-active-surface #message-input-container [class*='dark:text-gray']),
 	:global(.copilot-landing-active-surface #message-input-container [class*='hover:text-gray']),
-	:global(.copilot-landing-active-surface #message-input-container [class*='dark:hover:text-gray']) {
+	:global(
+			.copilot-landing-active-surface #message-input-container [class*='dark:hover:text-gray']
+		) {
 		color: #0f2b48 !important;
 	}
 
