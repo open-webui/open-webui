@@ -46,13 +46,13 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Log in to the Container registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -60,7 +60,7 @@ jobs:
 
       - name: Extract metadata for Docker images (default latest tag)
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
@@ -74,7 +74,7 @@ jobs:
 
       - name: Extract metadata for Docker cache
         id: cache-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
@@ -85,7 +85,7 @@ jobs:
             latest=false
 
       - name: Build Docker image (latest)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         id: build
         with:
           context: .
@@ -149,13 +149,13 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Log in to the Container registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -163,7 +163,7 @@ jobs:
 
       - name: Extract metadata for Docker images (cuda tag)
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
@@ -179,7 +179,7 @@ jobs:
 
       - name: Extract metadata for Docker cache
         id: cache-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
@@ -190,7 +190,7 @@ jobs:
             latest=false
 
       - name: Build Docker image (cuda)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         id: build
         with:
           context: .
@@ -255,13 +255,13 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Log in to the Container registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -269,7 +269,7 @@ jobs:
 
       - name: Extract metadata for Docker images (cuda126 tag)
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
@@ -285,7 +285,7 @@ jobs:
 
       - name: Extract metadata for Docker cache
         id: cache-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
@@ -296,7 +296,7 @@ jobs:
             latest=false
 
       - name: Build Docker image (cuda126)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         id: build
         with:
           context: .
@@ -359,13 +359,13 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Log in to the Container registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -373,7 +373,7 @@ jobs:
 
       - name: Extract metadata for Docker images (ollama tag)
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
@@ -389,7 +389,7 @@ jobs:
 
       - name: Extract metadata for Docker cache
         id: cache-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
@@ -400,7 +400,7 @@ jobs:
             latest=false
 
       - name: Build Docker image (ollama)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         id: build
         with:
           context: .
@@ -462,13 +462,13 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Log in to the Container registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -476,7 +476,7 @@ jobs:
 
       - name: Extract metadata for Docker images (slim tag)
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
@@ -492,7 +492,7 @@ jobs:
 
       - name: Extract metadata for Docker cache
         id: cache-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
@@ -503,7 +503,7 @@ jobs:
             latest=false
 
       - name: Build Docker image (slim)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         id: build
         with:
           context: .
@@ -553,10 +553,10 @@ jobs:
           merge-multiple: true
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Log in to the Container registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -564,7 +564,7 @@ jobs:
 
       - name: Extract metadata for Docker images (default latest tag)
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
@@ -607,10 +607,10 @@ jobs:
           merge-multiple: true
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Log in to the Container registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -618,7 +618,7 @@ jobs:
 
       - name: Extract metadata for Docker images (default latest tag)
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
@@ -663,10 +663,10 @@ jobs:
           merge-multiple: true
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Log in to the Container registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -674,7 +674,7 @@ jobs:
 
       - name: Extract metadata for Docker images (default latest tag)
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
@@ -719,10 +719,10 @@ jobs:
           merge-multiple: true
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Log in to the Container registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -730,7 +730,7 @@ jobs:
 
       - name: Extract metadata for Docker images (default ollama tag)
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
@@ -775,10 +775,10 @@ jobs:
           merge-multiple: true
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Log in to the Container registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -786,7 +786,7 @@ jobs:
 
       - name: Extract metadata for Docker images (default slim tag)
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
@@ -839,17 +839,17 @@ jobs:
           IMAGE_NAME: '${{ github.repository }}'
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Log in to the Container registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -860,9 +860,9 @@ jobs:
           DOCKERHUB_IMAGE="openwebui/open-webui"
           SUFFIX="${{ matrix.suffix }}"
 
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          if [[ "${GIT_REF}" == refs/tags/v* ]]; then
             # For version tags: copy version tag and major.minor tag
-            VERSION="${{ github.ref_name }}"
+            VERSION="${REF_NAME}"
             VERSION="${VERSION#v}"
             MAJOR_MINOR="${VERSION%.*}"
 
@@ -886,14 +886,17 @@ jobs:
 
           echo "dockerhub_image=${DOCKERHUB_IMAGE}" >> $GITHUB_OUTPUT
 
+        env:
+          GIT_REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
       - name: Copy images from GHCR to Docker Hub
         run: |
           DOCKERHUB_IMAGE="${{ steps.tags.outputs.dockerhub_image }}"
           SUFFIX="${{ matrix.suffix }}"
 
           # Determine the source tag on GHCR
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            VERSION="${{ github.ref_name }}"
+          if [[ "${GIT_REF}" == refs/tags/v* ]]; then
+            VERSION="${REF_NAME}"
             VERSION="${VERSION#v}"
             SOURCE_TAG="${VERSION}${SUFFIX}"
           else
@@ -915,3 +918,7 @@ jobs:
             echo "  -> ${DEST}"
             docker buildx imagetools create -t "${DEST}" "${SOURCE}"
           done <<< "${{ steps.tags.outputs.tags }}"
+
+        env:
+          GIT_REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
