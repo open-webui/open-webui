@@ -108,7 +108,7 @@
 
 <div {id} class="w-full">
 	{#if allEmbeds.length > 0}
-		<!-- Embed mode: render iframes directly like ToolCallDisplay -->
+		<!-- Embeds rendered directly above the collapsed group -->
 		{#each allEmbeds as embedItem, idx}
 			<div id={`${id}-embed-${idx}`}>
 				<FullHeightIframe
@@ -121,59 +121,59 @@
 				/>
 			</div>
 		{/each}
-	{:else}
-		<!-- svelte-ignore a11y-no-static-element-interactions -->
-		<button
-			class="w-fit text-left text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition cursor-pointer"
-			aria-label={$i18n.t('Toggle details')}
-			aria-expanded={open}
-			on:click={() => {
-				open = !open;
-			}}
-		>
-			<div class="flex items-center gap-1.5">
-				<!-- Status icon -->
-				{#if hasPending}
-					<div>
-						<Spinner className="size-4" />
-					</div>
-				{:else if toolCallCount > 0}
-					<div class="text-emerald-500 dark:text-emerald-400">
-						<CheckCircle className="size-4" strokeWidth="2" />
-					</div>
-				{:else}
-					<div class="text-gray-400 dark:text-gray-500">
-						<Sparkles className="size-3.5" />
-					</div>
+	{/if}
+
+	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<button
+		class="w-fit text-left text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition cursor-pointer"
+		aria-label={$i18n.t('Toggle details')}
+		aria-expanded={open}
+		on:click={() => {
+			open = !open;
+		}}
+	>
+		<div class="flex items-center gap-1.5">
+			<!-- Status icon -->
+			{#if hasPending}
+				<div>
+					<Spinner className="size-4" />
+				</div>
+			{:else if toolCallCount > 0}
+				<div class="text-emerald-500 dark:text-emerald-400">
+					<CheckCircle className="size-4" strokeWidth="2" />
+				</div>
+			{:else}
+				<div class="text-gray-400 dark:text-gray-500">
+					<Sparkles className="size-3.5" />
+				</div>
+			{/if}
+
+			<!-- Summary text -->
+			<div class="flex-1 line-clamp-1">
+				<span class="text-gray-600 dark:text-gray-300 {hasPending ? 'shimmer' : ''}"
+					>{prefixText}</span
+				>
+				{#if summaryText}
+					<span class="text-gray-400 dark:text-gray-500">{summaryText}</span>
 				{/if}
-
-				<!-- Summary text -->
-				<div class="flex-1 line-clamp-1">
-					<span class="text-gray-600 dark:text-gray-300 {hasPending ? 'shimmer' : ''}"
-						>{prefixText}</span
-					>
-					{#if summaryText}
-						<span class="text-gray-400 dark:text-gray-500">{summaryText}</span>
-					{/if}
-				</div>
-
-				<!-- Chevron -->
-				<div class="flex shrink-0 self-center text-gray-400 dark:text-gray-500">
-					{#if open}
-						<ChevronUp strokeWidth="3.5" className="size-3" />
-					{:else}
-						<ChevronDown strokeWidth="3.5" className="size-3" />
-					{/if}
-				</div>
 			</div>
-		</button>
 
-		{#if open}
-			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
-				<div class="mb-0.5 space-y-0.5">
-					<slot name="content" />
-				</div>
+			<!-- Chevron -->
+			<div class="flex shrink-0 self-center text-gray-400 dark:text-gray-500">
+				{#if open}
+					<ChevronUp strokeWidth="3.5" className="size-3" />
+				{:else}
+					<ChevronDown strokeWidth="3.5" className="size-3" />
+				{/if}
 			</div>
-		{/if}
+		</div>
+	</button>
+
+	{#if open}
+		<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
+			<div class="mb-0.5 space-y-0.5">
+				<slot name="content" />
+			</div>
+		</div>
 	{/if}
 </div>
