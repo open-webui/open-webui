@@ -180,6 +180,15 @@ COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
 
+# ClapNClaw branding — override default OI logos
+COPY --chown=$UID:$GID ./static/favicon.png /app/backend/open_webui/static/favicon.png
+COPY --chown=$UID:$GID ./static/favicon-dark.png /app/backend/open_webui/static/favicon-dark.png
+COPY --chown=$UID:$GID ./static/favicon-96x96.png /app/backend/open_webui/static/favicon-96x96.png
+COPY --chown=$UID:$GID ./static/favicon.ico /app/backend/open_webui/static/favicon.ico
+COPY --chown=$UID:$GID ./static/splash.png /app/backend/open_webui/static/splash.png
+COPY --chown=$UID:$GID ./static/splash-dark.png /app/backend/open_webui/static/splash-dark.png
+COPY --chown=$UID:$GID ./static/custom.css /app/backend/open_webui/static/custom.css
+
 EXPOSE 8080
 
 HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq -ne 'input.status == true' || exit 1
