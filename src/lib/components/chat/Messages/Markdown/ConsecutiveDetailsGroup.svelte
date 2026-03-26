@@ -107,22 +107,6 @@
 </script>
 
 <div {id} class="w-full">
-	{#if allEmbeds.length > 0}
-		<!-- Embeds rendered directly above the collapsed group -->
-		{#each allEmbeds as embedItem, idx}
-			<div id={`${id}-embed-${idx}`}>
-				<FullHeightIframe
-					src={embedItem.embed}
-					args={embedItem.args}
-					allowScripts={true}
-					allowForms={$settings?.iframeSandboxAllowForms ?? false}
-					allowSameOrigin={$settings?.iframeSandboxAllowSameOrigin ?? false}
-					allowPopups={true}
-				/>
-			</div>
-		{/each}
-	{/if}
-
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<button
 		class="w-fit text-left text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition cursor-pointer"
@@ -175,5 +159,20 @@
 				<slot name="content" />
 			</div>
 		</div>
+	{/if}
+
+	{#if allEmbeds.length > 0}
+		{#each allEmbeds as embedItem, idx}
+			<div id={`${id}-embed-${idx}`}>
+				<FullHeightIframe
+					src={embedItem.embed}
+					args={embedItem.args}
+					allowScripts={true}
+					allowForms={$settings?.iframeSandboxAllowForms ?? false}
+					allowSameOrigin={$settings?.iframeSandboxAllowSameOrigin ?? false}
+					allowPopups={true}
+				/>
+			</div>
+		{/each}
 	{/if}
 </div>
