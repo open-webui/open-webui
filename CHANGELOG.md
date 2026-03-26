@@ -15,7 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - 📦 **Missing beautifulsoup4 dependency.** Users can now start Open WebUI using uvx without encountering the "bs4 module missing" error. [Commit](https://github.com/open-webui/open-webui/commit/1994d65306bbcc7406584e1bfef82f5d353fc91c)
-- 🔌 **API files list error.** The /api/v1/files/ endpoint no longer returns a 500 error, fixing a regression that prevented file listing via the API. [Commit](https://github.com/open-webui/open-webui/commit/16335f866ea4cedf00c4971963622fcc1fe02d82)
+- 🔌 **API files list error.** The /api/v1/files/ endpoint no longer returns a 500 error, fixing a regression that prevented file listing via the API. [Commit](https://github.com/open-webui/open-webui/commit/11f52921dc21c2dc61c03f12bcdf6f19140a350c)
+- 📜 **License data loading.** License data now loads correctly, displaying the expected color and logo in the interface. [Commit](https://github.com/open-webui/open-webui/commit/16335f866ea4cedf00c4971963622fcc1fe02d82)
 
 ### Changed
 
