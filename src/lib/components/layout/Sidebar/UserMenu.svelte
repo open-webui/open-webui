@@ -240,8 +240,13 @@
 					href="/playground"
 					draggable="false"
 					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
-					on:click={async () => {
+					on:click={async (e) => {
+						if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
+							return;
+						}
+						e.preventDefault();
 						show = false;
+						goto('/playground');
 						if ($mobile) {
 							await tick();
 							showSidebar.set(false);
@@ -257,8 +262,13 @@
 					href="/admin"
 					draggable="false"
 					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
-					on:click={async () => {
+					on:click={async (e) => {
+						if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
+							return;
+						}
+						e.preventDefault();
 						show = false;
+						goto('/admin');
 						if ($mobile) {
 							await tick();
 							showSidebar.set(false);

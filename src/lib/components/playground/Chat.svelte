@@ -373,24 +373,24 @@
 									<div class="flex items-center">{$i18n.t('Download')}</div>
 								</button>
 								<button
-										class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
-										disabled={messages.length === 0}
-										on:click={() => {
-											exportToJson();
-										}}
-									>
-										<div class="flex items-center line-clamp-1">
-											{$i18n.t('Export chat (.json)')}
-										</div>
-									</button>
-									<button
-										class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
-										disabled={messages.length === 0}
-										on:click={() => {
-											downloadTxt();
-										}}
-									>
-										<div class="flex items-center line-clamp-1">{$i18n.t('Plain text (.txt)')}</div>
+									class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
+									disabled={messages.length === 0}
+									on:click={() => {
+										exportToJson();
+									}}
+								>
+									<div class="flex items-center line-clamp-1">
+										{$i18n.t('Export chat (.json)')}
+									</div>
+								</button>
+								<button
+									class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
+									disabled={messages.length === 0}
+									on:click={() => {
+										downloadTxt();
+									}}
+								>
+									<div class="flex items-center line-clamp-1">{$i18n.t('Plain text (.txt)')}</div>
 								</button>
 							</DropdownSub>
 						</div>

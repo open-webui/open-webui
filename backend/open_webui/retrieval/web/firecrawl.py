@@ -17,9 +17,7 @@ def search_firecrawl(
         from firecrawl import FirecrawlApp
 
         firecrawl = FirecrawlApp(api_key=firecrawl_api_key, api_url=firecrawl_url)
-        response = firecrawl.search(
-            query=query, limit=count, ignore_invalid_urls=True, timeout=count * 3
-        )
+        response = firecrawl.search(query=query, limit=count, ignore_invalid_urls=True, timeout=count * 3)
         results = response.web
         if filter_list:
             results = get_filtered_results(results, filter_list)
@@ -31,8 +29,8 @@ def search_firecrawl(
             )
             for result in results[:count]
         ]
-        log.info(f"External search results: {results}")
+        log.info(f'External search results: {results}')
         return results
     except Exception as e:
-        log.error(f"Error in External search: {e}")
+        log.error(f'Error in External search: {e}')
         return []
