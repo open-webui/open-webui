@@ -12,7 +12,11 @@
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import { detectTerminalServerType, verifyTerminalServerConnection, putOrchestratorPolicy } from '$lib/apis/configs';
+	import {
+		detectTerminalServerType,
+		verifyTerminalServerConnection,
+		putOrchestratorPolicy
+	} from '$lib/apis/configs';
 	import { getTerminalConfig } from '$lib/apis/terminal';
 
 	export let show = false;
@@ -112,10 +116,11 @@
 		try {
 			if (!direct) {
 				// System connection: proxy through backend to avoid CORS / key exposure
-				const result = await verifyTerminalServerConnection(
-					localStorage.token,
-					{ url: _url, key, auth_type }
-				);
+				const result = await verifyTerminalServerConnection(localStorage.token, {
+					url: _url,
+					key,
+					auth_type
+				});
 				const type = result?.type ?? null;
 
 				if (type) {

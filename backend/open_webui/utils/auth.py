@@ -148,6 +148,7 @@ def get_license_data(app, key):
             if exp:
                 if isinstance(exp, str):
                     from datetime import date
+
                     exp = date.fromisoformat(exp)
                 if exp < datetime.now().date():
                     return False
