@@ -241,29 +241,34 @@ export const detectTerminalServerType = async (
 	url: string,
 	key: string
 ): Promise<'orchestrator' | 'terminal' | null> => {
-	const baseUrl = url.replace(/\/$/, '');
-	const headers: Record<string, string> = {};
-	if (key) {
-		headers['Authorization'] = `Bearer ${key}`;
+	// Use backend proxy to avoid API key exposure in browser network traffic
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/terminal_servers/verify`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			url: url,
+			key: key
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error || !res || !res.status) {
+		return null;
 	}
 
-	// Orchestrators expose a policies API; plain terminals don't.
-	try {
-		const res = await fetch(`${baseUrl}/api/v1/policies`, { headers });
-		if (res.ok) return 'orchestrator';
-	} catch {
-		// ignore
-	}
-
-	// Fall back to open-terminal config endpoint.
-	try {
-		const res = await fetch(`${baseUrl}/api/config`, { headers });
-		if (res.ok) return 'terminal';
-	} catch {
-		// ignore
-	}
-
-	return null;
+	return res.type as 'orchestrator' | 'terminal';
 };
 
 /**

@@ -269,6 +269,48 @@ async def set_terminal_servers_config(
     }
 
 
+@router.post('/terminal_servers/verify')
+async def verify_terminal_servers_config(
+    request: Request, form_data: TerminalServerConnection, user=Depends(get_admin_user)
+):
+    """
+    Verify the connection to the terminal server by proxying through backend.
+    This prevents API key exposure in browser network traffic.
+    """
+    import aiohttp
+
+    base_url = form_data.url.rstrip('/')
+    headers = {}
+    if form_data.key:
+        headers['Authorization'] = f'Bearer {form_data.key}'
+
+    # Orchestrators expose a policies API; plain terminals don't.
+    try:
+        async with aiohttp.ClientSession(
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+        ) as session:
+            async with session.get(f'{base_url}/api/v1/policies', headers=headers) as res:
+                if res.status == 200:
+                    return {'status': True, 'type': 'orchestrator'}
+    except Exception:
+        pass
+
+    # Fall back to open-terminal config endpoint.
+    try:
+        async with aiohttp.ClientSession(
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+        ) as session:
+            async with session.get(f'{base_url}/api/config', headers=headers) as res:
+                if res.status == 200:
+                    return {'status': True, 'type': 'terminal'}
+    except Exception:
+        pass
+
+    return {'status': False, 'type': None}
+
+
 @router.post('/tool_servers/verify')
 async def verify_tool_servers_config(request: Request, form_data: ToolServerConnection, user=Depends(get_admin_user)):
     """
