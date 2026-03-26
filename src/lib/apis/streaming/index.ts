@@ -82,9 +82,25 @@ async function* openAIStreamToIterator(
 				continue;
 			}
 
+			const delta = parsedData.choices?.[0]?.delta;
+			const finishReason = parsedData.choices?.[0]?.finish_reason;
+
+			// Handle tool_calls finish reason - stop streaming
+			if (finishReason === 'tool_calls') {
+				yield { done: true, value: '' };
+				break;
+			}
+
+			// Handle stop finish reason - stop streaming
+			if (finishReason === 'stop') {
+				yield { done: true, value: '' };
+				break;
+			}
+
+			// Handle regular content or tool_calls (tool_calls are ignored in current implementation)
 			yield {
 				done: false,
-				value: parsedData.choices?.[0]?.delta?.content ?? ''
+				value: delta?.content ?? ''
 			};
 		} catch (e) {
 			console.error('Error extracting delta from SSE event:', e);
