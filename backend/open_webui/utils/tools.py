@@ -956,7 +956,7 @@ async def get_terminal_tools(
     terminal_id: str,
     user: UserModel,
     extra_params: dict,
-) -> tuple[dict[str, dict], Optional[str]]:
+) -> dict[str, dict] | tuple[dict[str, dict], Optional[str]]:
     """Resolve tools for a terminal server identified by terminal_id.
 
     - Finds the connection in TERMINAL_SERVER_CONNECTIONS
