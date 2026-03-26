@@ -693,25 +693,6 @@
 							</div>
 						{/if}
 
-						{#if message?.embeds && message.embeds.length > 0}
-							<div
-								class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap"
-								id={`${message.id}-embeds-container`}
-							>
-								{#each message.embeds as embed, idx}
-									<div class="my-2 w-full" id={`${message.id}-embeds-${idx}`}>
-										<FullHeightIframe
-											src={embed}
-											allowScripts={true}
-											allowForms={true}
-											allowSameOrigin={$settings?.iframeSandboxAllowSameOrigin ?? false}
-											allowPopups={true}
-										/>
-									</div>
-								{/each}
-							</div>
-						{/if}
-
 						{#if edit === true}
 							<div class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 my-2">
 								<textarea
@@ -847,6 +828,25 @@
 
 							{#if message.code_executions}
 								<CodeExecutions codeExecutions={message.code_executions} />
+							{/if}
+
+							{#if message?.embeds && message.embeds.length > 0}
+								<div
+									class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap"
+									id={`${message.id}-embeds-container`}
+								>
+									{#each message.embeds as embed, idx}
+										<div class="my-2 w-full" id={`${message.id}-embeds-${idx}`}>
+											<FullHeightIframe
+												src={embed}
+												allowScripts={true}
+												allowForms={true}
+												allowSameOrigin={$settings?.iframeSandboxAllowSameOrigin ?? false}
+												allowPopups={true}
+											/>
+										</div>
+									{/each}
+								</div>
 							{/if}
 						</div>
 					</div>
