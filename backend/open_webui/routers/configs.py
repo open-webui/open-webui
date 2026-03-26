@@ -1,5 +1,7 @@
 import logging
 import copy
+import json
+from urllib.parse import quote
 from fastapi import APIRouter, Depends, Request, HTTPException
 from pydantic import BaseModel, ConfigDict
 import aiohttp
@@ -245,6 +247,77 @@ class TerminalServersConfigForm(BaseModel):
     TERMINAL_SERVER_CONNECTIONS: list[TerminalServerConnection]
 
 
+class TerminalServerPolicyForm(BaseModel):
+    url: str
+    key: Optional[str] = ''
+    auth_type: Optional[str] = 'bearer'
+    policy: dict
+
+
+def _build_terminal_request_auth(request: Request, auth_type: str, key: str):
+    headers: dict[str, str] = {}
+    cookies = {}
+
+    if auth_type == 'bearer':
+        if key:
+            headers['Authorization'] = f'Bearer {key}'
+    elif auth_type == 'session':
+        cookies = request.cookies
+        token = getattr(getattr(request.state, 'token', None), 'credentials', '')
+        if token:
+            headers['Authorization'] = f'Bearer {token}'
+    elif auth_type == 'system_oauth':
+        cookies = request.cookies
+        oauth_token = request.headers.get('x-oauth-access-token', '')
+        if oauth_token:
+            headers['Authorization'] = f'Bearer {oauth_token}'
+
+    return headers, cookies
+
+
+async def _detect_terminal_server_type(
+    request: Request,
+    form_data: TerminalServerConnection,
+) -> Optional[str]:
+    base_url = form_data.url.rstrip('/')
+    if not base_url:
+        return None
+
+    headers, cookies = _build_terminal_request_auth(
+        request,
+        form_data.auth_type or 'bearer',
+        form_data.key or '',
+    )
+
+    async with aiohttp.ClientSession(
+        trust_env=True,
+        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+    ) as session:
+        for path, server_type in (
+            ('/api/v1/policies', 'orchestrator'),
+            ('/api/config', 'terminal'),
+        ):
+            try:
+                async with session.get(f'{base_url}{path}', headers=headers, cookies=cookies) as response:
+                    if response.status == 200:
+                        return server_type
+            except Exception as e:
+                log.debug(f'Failed to probe terminal server endpoint {path}: {e}')
+
+    return None
+
+
+async def _load_json_response(response: aiohttp.ClientResponse):
+    body = await response.text()
+    if not body:
+        return None, body
+
+    try:
+        return json.loads(body), body
+    except json.JSONDecodeError:
+        return None, body
+
+
 @router.get('/terminal_servers')
 async def get_terminal_servers_config(request: Request, user=Depends(get_admin_user)):
     return {
@@ -267,6 +340,79 @@ async def set_terminal_servers_config(
     return {
         'TERMINAL_SERVER_CONNECTIONS': request.app.state.config.TERMINAL_SERVER_CONNECTIONS,
     }
+
+
+@router.post('/terminal_servers/verify')
+async def verify_terminal_servers_config(
+    request: Request,
+    form_data: TerminalServerConnection,
+    user=Depends(get_admin_user),
+):
+    """
+    Verify the connection to a terminal server without exposing credentials to the browser.
+    """
+    server_type = await _detect_terminal_server_type(request, form_data)
+
+    if server_type is None:
+        raise HTTPException(status_code=400, detail='Server connection failed')
+
+    return {
+        'status': True,
+        'server_type': server_type,
+    }
+
+
+@router.put('/terminal_servers/policies/{policy_id}')
+async def put_terminal_server_policy(
+    policy_id: str,
+    request: Request,
+    form_data: TerminalServerPolicyForm,
+    user=Depends(get_admin_user),
+):
+    """
+    Create or update an orchestrator policy through the backend so the terminal API key
+    never leaves Open WebUI.
+    """
+    base_url = form_data.url.rstrip('/')
+    if not base_url:
+        raise HTTPException(status_code=400, detail='Please enter a valid URL')
+
+    headers, cookies = _build_terminal_request_auth(
+        request,
+        form_data.auth_type or 'bearer',
+        form_data.key or '',
+    )
+    headers['Content-Type'] = 'application/json'
+
+    target_url = f'{base_url}/api/v1/policies/{quote(policy_id, safe="")}'
+
+    async with aiohttp.ClientSession(
+        trust_env=True,
+        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+    ) as session:
+        try:
+            async with session.put(
+                target_url,
+                headers=headers,
+                cookies=cookies,
+                json=form_data.policy,
+            ) as response:
+                response_json, response_text = await _load_json_response(response)
+
+                if response.status >= 400:
+                    detail = (
+                        response_json.get('detail')
+                        if isinstance(response_json, dict) and response_json.get('detail')
+                        else response_text
+                    ) or 'Failed to save policy'
+                    raise HTTPException(status_code=response.status, detail=detail)
+
+                return response_json if response_json is not None else {'status': True}
+        except HTTPException:
+            raise
+        except Exception as e:
+            log.exception(f'Failed to update terminal server policy {policy_id}: {e}')
+            raise HTTPException(status_code=502, detail='Failed to save policy')
 
 
 @router.post('/tool_servers/verify')

@@ -112,7 +112,11 @@
 		try {
 			if (admin) {
 				// Admin: detect orchestrator vs terminal
-				const type = await detectTerminalServerType(_url, key);
+				const type = await detectTerminalServerType(localStorage.token, {
+					url: _url,
+					key,
+					auth_type
+				});
 
 				if (type) {
 					serverType = type;
@@ -194,7 +198,16 @@
 		// Save policy to orchestrator if applicable
 		if (serverType === 'orchestrator' && admin && policyId) {
 			try {
-				await putOrchestratorPolicy(url, key, policyId, buildPolicyData());
+				await putOrchestratorPolicy(
+					localStorage.token,
+					{
+						url,
+						key,
+						auth_type
+					},
+					policyId,
+					buildPolicyData()
+				);
 			} catch (err) {
 				toast.error($i18n.t('Failed to save policy: {{error}}', { error: err }));
 				return;
