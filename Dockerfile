@@ -8,7 +8,7 @@ ARG USE_PERMISSION_HARDENING=false
 # Tested with cu117 for CUDA 11 and cu121 for CUDA 12 (default)
 ARG USE_CUDA_VER=cu128
 # any sentence transformer model; models to use can be found at https://huggingface.co/models?library=sentence-transformers
-# Leaderboard: https://huggingface.co/spaces/mteb/leaderboard 
+# Leaderboard: https://huggingface.co/spaces/mteb/leaderboard
 # for better performance and multilangauge support use "intfloat/multilingual-e5-large" (~2.5GB) or "intfloat/multilingual-e5-base" (~1.5GB)
 # IMPORTANT: If you change the embedding model (sentence-transformers/all-MiniLM-L6-v2) and vice versa, you aren't able to use RAG Chat with your previous documents loaded in the WebUI! You need to re-embed them.
 ARG USE_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
@@ -24,7 +24,7 @@ ARG UID=0
 ARG GID=0
 
 ######## WebUI frontend ########
-FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
+FROM --platform=$BUILDPLATFORM docker.io/library/node:22-alpine3.20 AS build
 ARG BUILD_HASH
 
 # Set Node.js options (heap limit Allocation failed - JavaScript heap out of memory)
@@ -33,6 +33,7 @@ ARG BUILD_HASH
 WORKDIR /app
 
 # to store git revision in build
+# hadolint ignore=DL3018
 RUN apk add --no-cache git
 
 COPY package.json package-lock.json ./
@@ -43,7 +44,7 @@ ENV APP_BUILD_HASH=${BUILD_HASH}
 RUN npm run build
 
 ######## WebUI backend ########
-FROM python:3.11.14-slim-bookworm AS base
+FROM docker.io/library/python:3.11.14-slim-bookworm AS base
 
 # Use args
 ARG USE_CUDA
@@ -108,22 +109,22 @@ ENV HF_HOME="/app/backend/data/cache/embedding/models"
 
 WORKDIR /app/backend
 
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 ENV HOME=/root
-# Create user and group if not root
-RUN if [ $UID -ne 0 ]; then \
-    if [ $GID -ne 0 ]; then \
-    addgroup --gid $GID app; \
+
+RUN if [ "$UID" -ne 0 ]; then \
+    if [ "$GID" -ne 0 ]; then \
+    addgroup --gid "$GID" app; \
     fi; \
-    adduser --uid $UID --gid $GID --home $HOME --disabled-password --no-create-home app; \
-    fi
-
-RUN mkdir -p $HOME/.cache/chroma
-RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry_user_id
-
-# Make sure the user has access to the app and root directory
-RUN chown -R $UID:$GID /app $HOME
+    adduser --uid "$UID" --gid "$GID" --home "$HOME" --disabled-password --no-create-home app; \
+    fi && \
+    mkdir -p "$HOME/.cache/chroma" && \
+    printf "00000000-0000-0000-0000-000000000000" > "$HOME/.cache/chroma/telemetry_user_id" && \
+    chown -R "$UID:$GID" /app "$HOME"
 
 # Install common system dependencies
+# hadolint ignore=DL3008
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     git build-essential pandoc gcc netcat-openbsd curl jq \
@@ -135,6 +136,7 @@ RUN apt-get update && \
 # install python dependencies
 COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 
+# hadolint ignore=DL3013
 RUN set -e; \
     pip3 install --no-cache-dir uv; \
     if [ "$USE_CUDA" = "true" ]; then \
@@ -164,7 +166,7 @@ RUN set -e; \
 # Install Ollama if requested
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
     date +%s > /tmp/ollama_build_hash && \
-    echo "Cache broken at timestamp: `cat /tmp/ollama_build_hash`" && \
+    echo "Cache broken at timestamp: $(cat /tmp/ollama_build_hash)" && \
     curl -fsSL https://ollama.com/install.sh | sh && \
     rm -rf /var/lib/apt/lists/*; \
     fi
