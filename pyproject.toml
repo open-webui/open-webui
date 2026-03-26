@@ -6,115 +6,114 @@ authors = [
 ]
 license = { file = "LICENSE" }
 dependencies = [
-    "fastapi==0.128.5",
-    "uvicorn[standard]==0.40.0",
+    "fastapi==0.135.1",
+    "uvicorn[standard]==0.41.0",
     "pydantic==2.12.5",
     "python-multipart==0.0.22",
     "itsdangerous==2.2.0",
 
     "python-socketio==5.16.1",
     "python-jose==3.5.0",
-    "cryptography",
+    "cryptography==46.0.5",
     "bcrypt==5.0.0",
     "argon2-cffi==25.1.0",
     "PyJWT[crypto]==2.11.0",
-    "authlib==1.6.7",
+    "authlib==1.6.9",
 
     "requests==2.32.5",
     "aiohttp==3.13.2", # do not update to 3.13.3 - broken
-    "async-timeout",
-    "aiocache",
-    "aiofiles",
+    "async-timeout==5.0.1",
+    "aiocache==0.12.3",
+    "aiofiles==25.1.0",
     "starlette-compress==1.7.0",
     "Brotli==1.1.0",
     "httpx[socks,http2,zstd,cli,brotli]==0.28.1",
     "starsessions[redis]==2.2.1",
     "python-mimeparse==2.0.0",
 
-    "sqlalchemy==2.0.46",
-    "alembic==1.18.3",
+    "sqlalchemy==2.0.48",
+    "alembic==1.18.4",
     "peewee==3.19.0",
     "peewee-migrate==1.14.3",
 
-    "pycrdt==0.12.46",
-    "redis",
+    "pycrdt==0.12.47",
+    "redis==7.4.0",
 
-    "pytz==2025.2",
+    "pytz==2026.1.post1",
     "APScheduler==3.11.2",
     "RestrictedPython==8.1",
 
     "loguru==0.7.3",
     "asgiref==3.11.1",
 
-    "tiktoken",
+    "tiktoken==0.12.0",
     "mcp==1.26.0",
 
-    "openai",
-    "anthropic",
-    "google-genai==1.62.0",
+    "openai==2.29.0",
+    "anthropic==0.86.0",
+    "google-genai==1.66.0",
 
-    "langchain==1.2.9",
+    "langchain==1.2.10",
     "langchain-community==0.4.1",
     "langchain-classic==1.0.1",
-    "langchain-text-splitters==1.1.0",
+    "langchain-text-splitters==1.1.1",
 
     "fake-useragent==2.2.0",
-    "chromadb==1.4.1",
+    "chromadb==1.5.2",
     "opensearch-py==3.1.0",
     "PyMySQL==1.1.2",
-    "boto3==1.42.44",
+    "boto3==1.42.62",
     
-    "transformers==5.1.0",
-    "sentence-transformers==5.2.2",
-    "accelerate",
+    "transformers==5.3.0",
+    "sentence-transformers==5.2.3",
+    "accelerate==1.13.0",
     "pyarrow==20.0.0", # fix: pin pyarrow version to 20 for rpi compatibility #15897
     "einops==0.8.2",
 
     "ftfy==6.3.1",
     "chardet==5.2.0",
-    "pypdf==6.7.0",
-    "fpdf2==2.8.5",
-    "pymdown-extensions==10.20.1",
+    "pypdf==6.7.5",
+    "fpdf2==2.8.7",
+    "pymdown-extensions==10.21",
     "docx2txt==0.9",
     "python-pptx==1.0.2",
-    "unstructured==0.18.31",
     "msoffcrypto-tool==6.0.0",
-    "nltk==3.9.2",
-    "Markdown==3.10.1",
+    "nltk==3.9.3",
+    "Markdown==3.10.2",
     "pypandoc==1.16.2",
-    "pandas==3.0.0",
+    "pandas==3.0.1",
     "openpyxl==3.1.5",
     "pyxlsb==1.0.10",
     "xlrd==2.0.2",
     "validators==0.35.0",
-    "psutil",
-    "sentencepiece",
+    "psutil==7.2.2",
+    "sentencepiece==0.2.1",
     "soundfile==0.13.1",
     "azure-ai-documentintelligence==1.0.2",
 
-    "pillow==12.1.0",
+    "pillow==12.1.1",
     "opencv-python-headless==4.13.0.92",
     "rapidocr-onnxruntime==1.4.4",
     "rank-bm25==0.2.2",
 
-    "onnxruntime==1.24.1",
+    "onnxruntime==1.24.3",
     "faster-whisper==1.2.1",
 
     "black==26.1.0",
     "youtube-transcript-api==1.2.4",
     "pytube==15.0.0",
 
-    "pydub",
-    "ddgs==9.10.0",
+    "pydub==0.25.1",
+    "ddgs==9.11.3",
 
-    "google-api-python-client",
-    "google-auth-httplib2",
-    "google-auth-oauthlib",
+    "google-api-python-client==2.193.0",
+    "google-auth-httplib2==0.3.0",
+    "google-auth-oauthlib==1.3.0",
 
     "googleapis-common-protos==1.72.0",
     "google-cloud-storage==3.9.0",
 
-    "azure-identity==1.25.1",
+    "azure-identity==1.25.2",
     "azure-storage-blob==12.28.0",
 
     "ldap3==2.9.1",
@@ -137,9 +136,15 @@ postgres = [
     "psycopg2-binary==2.9.11",
     "pgvector==0.4.2",
 ]
+mariadb = [
+    "mariadb==1.1.14",
+]
+unstructured = [
+    "unstructured==0.18.31",
+]
 
 all = [
-    "pymongo",
+    "pymongo==4.16.0",
     "psycopg2-binary==2.9.11",
     "pgvector==0.4.2",
     "moto[s3]>=5.0.26",
@@ -150,16 +155,17 @@ all = [
     "playwright==1.58.0", # Caution: version must match docker-compose.playwright.yaml - Update the docker-compose.yaml if necessary
     "elasticsearch==9.3.0",
 
-    "qdrant-client==1.16.2",
+    "qdrant-client==1.17.0",
     
-    "weaviate-client==4.19.2",
-    "pymilvus==2.6.8",
+    "weaviate-client==4.20.3",
+    "pymilvus==2.6.9",
     "pinecone==6.0.2",
     "oracledb==3.4.2",
     "colbert-ai==0.2.22",
 
-    "firecrawl-py==4.14.0",
+    "firecrawl-py==4.18.0",
     "azure-search-documents==11.6.0",
+    "unstructured==0.18.31",
 ]
 
 [project.scripts]
@@ -207,4 +213,35 @@ ignore-words-list = 'ans'
 [dependency-groups]
 dev = [
     "pytest-asyncio>=1.0.0",
+    "ruff>=0.15.5",
 ]
+
+[tool.black]
+line-length = 120
+skip-string-normalization = true
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.format]
+quote-style = "single"
+docstring-code-format = false
+
+[tool.ruff.lint]
+select = [
+  "E",    # pycodestyle errors
+  "F",    # pyflakes
+  "W",    # pycodestyle warnings
+  "I",    # isort
+  "UP",   # pyupgrade
+  "C90",  # mccabe
+  "Q",    # flake8-quotes
+  "ICN",  # flake8-import-conventions
+]
+
+# Plugin configs:
+flake8-import-conventions.banned-from = [ "ast", "datetime" ]
+flake8-import-conventions.aliases = { datetime = "dt" }
+flake8-quotes.inline-quotes = "single"
+mccabe.max-complexity = 10
+pydocstyle.convention = "google"

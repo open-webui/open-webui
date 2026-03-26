@@ -142,6 +142,10 @@
 				}
 			} else if (type === 'message:delete') {
 				messages = messages.filter((message) => message.id !== data.id);
+
+				if (threadId === data.id) {
+					threadId = null;
+				}
 			} else if (type === 'message:reply') {
 				const idx = messages.findIndex((message) => message.id === data.id);
 

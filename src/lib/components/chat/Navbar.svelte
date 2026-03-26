@@ -127,7 +127,9 @@
 						>
 							<button
 								class="hidden xl:flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-								aria-label={targetSidebarVisible ? $i18n.t('Hide Targets') : $i18n.t('Show Targets')}
+								aria-label={targetSidebarVisible
+									? $i18n.t('Hide Targets')
+									: $i18n.t('Show Targets')}
 								on:click={() => {
 									toggleTargetSidebar();
 								}}
@@ -252,7 +254,7 @@
 
 					{#if $user !== undefined && $user !== null}
 						<UserMenu
-							className="max-w-[240px]"
+							className="w-[240px]"
 							role={$user?.role}
 							help={true}
 							on:show={(e) => {

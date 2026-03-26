@@ -25,6 +25,8 @@
 	export let inputValue = '';
 	export let inputType = '';
 
+	let _inputValue = inputValue;
+
 	export let show = false;
 
 	$: if (show) {
@@ -37,7 +39,7 @@
 	let focusTrap: FocusTrap.FocusTrap | null = null;
 
 	const init = () => {
-		inputValue = '';
+		_inputValue = inputValue;
 	};
 
 	const handleKeyDown = (event: KeyboardEvent) => {
@@ -58,7 +60,7 @@
 		show = false;
 		await tick();
 		await onConfirm();
-		dispatch('confirm', inputValue);
+		dispatch('confirm', _inputValue);
 	};
 
 	onMount(() => {
@@ -141,13 +143,13 @@
 										placeholder={inputPlaceholder
 											? inputPlaceholder
 											: $i18n.t('Enter your message')}
-										bind:value={inputValue}
+										bind:value={_inputValue}
 										required={true}
 									/>
 								</div>
 							{:else}
 								<textarea
-									bind:value={inputValue}
+									bind:value={_inputValue}
 									placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
 									class="w-full mt-2 rounded-lg px-4 py-2 text-sm dark:text-gray-300 dark:bg-gray-900 outline-hidden resize-none"
 									rows="3"

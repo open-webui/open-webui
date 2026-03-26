@@ -2,7 +2,7 @@
 	import hljs from 'highlight.js';
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick, onDestroy } from 'svelte';
-	import { config } from '$lib/stores';
+	import { config, pyodideWorker as pyodideWorkerStore } from '$lib/stores';
 
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 	import { executeCode } from '$lib/apis/utils';
@@ -47,7 +47,7 @@
 	export let editorClassName = '';
 	export let stickyButtonsClassName = 'top-0';
 
-	let pyodideWorker = null;
+	let localPyodideWorker = null;
 
 	let _code = '';
 	$: if (code) {
@@ -237,27 +237,42 @@
 
 		console.log(packages);
 
-		pyodideWorker = new PyodideWorker();
+		// Reuse the shared Pyodide worker when code interpreter is active,
+		// so files written here are immediately visible in PyodideFileNav.
+		// Otherwise fall back to a throwaway worker.
+		const sharedWorker = $pyodideWorkerStore;
+		const isShared = !!sharedWorker;
+		const worker = sharedWorker ?? new PyodideWorker();
 
-		pyodideWorker.postMessage({
+		if (!isShared) {
+			localPyodideWorker = worker;
+		}
+
+		worker.postMessage({
 			id: id,
 			code: code,
 			packages: packages
 		});
 
-		setTimeout(() => {
+		const timeoutId = setTimeout(() => {
 			if (executing) {
 				executing = false;
 				stderr = 'Execution Time Limit Exceeded';
-				pyodideWorker.terminate();
+				if (!isShared) {
+					worker.terminate();
+					localPyodideWorker = null;
+				}
 			}
 		}, 60000);
 
-		pyodideWorker.onmessage = (event) => {
-			console.log('pyodideWorker.onmessage', event);
-			const { id, ...data } = event.data;
+		const handler = (event) => {
+			// Ignore messages from other requests on the shared worker
+			if (event.data?.id !== id) return;
 
-			console.log(id, data);
+			console.log('pyodideWorker.onmessage', event);
+			const { id: _id, ...data } = event.data;
+
+			console.log(_id, data);
 
 			if (data['stdout']) {
 				stdout = data['stdout'];
@@ -320,11 +335,20 @@
 			data['stderr'] && (stderr = data['stderr']);
 			data['result'] && (result = data['result']);
 
+			clearTimeout(timeoutId);
+			worker.removeEventListener('message', handler);
 			executing = false;
+
+			// Signal PyodideFileNav to auto-refresh after execution
+			window.dispatchEvent(new Event('pyodide:files'));
 		};
 
-		pyodideWorker.onerror = (event) => {
+		worker.addEventListener('message', handler);
+
+		worker.onerror = (event) => {
 			console.log('pyodideWorker.onerror', event);
+			clearTimeout(timeoutId);
+			worker.removeEventListener('message', handler);
 			executing = false;
 		};
 	};
@@ -412,8 +436,9 @@
 	});
 
 	onDestroy(() => {
-		if (pyodideWorker) {
-			pyodideWorker.terminate();
+		if (localPyodideWorker) {
+			localPyodideWorker.terminate();
+			localPyodideWorker = null;
 		}
 	});
 </script>
@@ -555,7 +580,7 @@
 					{/if}
 				{:else}
 					<div
-						class="bg-white dark:bg-black dark:text-white rounded-b-2xl! pt-0.5 pb-2 px-4 flex flex-col gap-2 text-xs"
+						class="bg-white dark:bg-black dark:text-white rounded-b-2xl! pt-1 pb-2 px-4 flex flex-col gap-2 text-xs"
 					>
 						<span class="text-gray-500 italic">
 							{$i18n.t('{{COUNT}} hidden lines', {

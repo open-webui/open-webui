@@ -24,6 +24,7 @@ IF NOT "%WEBUI_SECRET_KEY_FILE%" == "" (
 
 IF "%PORT%"=="" SET PORT=8080
 IF "%HOST%"=="" SET HOST=0.0.0.0
+IF "%FORWARDED_ALLOW_IPS%"=="" SET "FORWARDED_ALLOW_IPS=*"
 IF "%ENABLE_WEBSOCKET_SUPPORT%"=="" SET ENABLE_WEBSOCKET_SUPPORT=True
 SET "WEBUI_SECRET_KEY=%WEBUI_SECRET_KEY%"
 SET "WEBUI_JWT_SECRET_KEY=%WEBUI_JWT_SECRET_KEY%"
@@ -51,5 +52,6 @@ IF EXIST "%SCRIPT_DIR%.venv\Scripts\python.exe" (
     SET "PYTHON_EXEC=%SCRIPT_DIR%.venv\Scripts\python.exe"
 )
 
+"%PYTHON_EXEC%" -m uvicorn open_webui.main:app --host "%HOST%" --port "%PORT%" --forwarded-allow-ips "%FORWARDED_ALLOW_IPS%" --workers %UVICORN_WORKERS% --ws auto
 "%PYTHON_EXEC%" -m uvicorn open_webui.main:app --host "%HOST%" --port "%PORT%" --forwarded-allow-ips '*' --workers %UVICORN_WORKERS% --ws auto
 :: For ssl user uvicorn open_webui.main:app --host "%HOST%" --port "%PORT%" --forwarded-allow-ips '*' --ssl-keyfile "key.pem" --ssl-certfile "cert.pem" --ws auto

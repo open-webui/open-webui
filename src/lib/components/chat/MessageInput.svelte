@@ -55,10 +55,12 @@
 	import { uploadFile } from '$lib/apis/files';
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
+	import { getChatById } from '$lib/apis/chats';
 	import { getSessionUser } from '$lib/apis/auths';
 	import { getTools } from '$lib/apis/tools';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
+	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
 
 	import { createNoteHandler } from '../notes/utils';
 	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
@@ -82,20 +84,17 @@
 
 	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
 	import Voice from '../icons/Voice.svelte';
-	import Cloud from '../icons/Cloud.svelte';
+	import Terminal from '../icons/Terminal.svelte';
 	import IntegrationsMenu from './MessageInput/IntegrationsMenu.svelte';
 	import TerminalMenu from './MessageInput/TerminalMenu.svelte';
 	import Component from '../icons/Component.svelte';
 	import PlusAlt from '../icons/PlusAlt.svelte';
 	import Dropdown from '../common/Dropdown.svelte';
 
-	import { DropdownMenu } from 'bits-ui';
-	import { flyAndScale } from '$lib/utils/transitions';
-
 	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
 	import Knobs from '../icons/Knobs.svelte';
 	import ValvesModal from '../workspace/common/ValvesModal.svelte';
-	import PageEdit from '../icons/PageEdit.svelte';
+	import Note from '../icons/Note.svelte';
 	import { goto } from '$app/navigation';
 	import InputModal from '../common/InputModal.svelte';
 	import Expand from '../icons/Expand.svelte';
@@ -131,6 +130,8 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
+
+	export let pendingOAuthTools = [];
 
 	let showTerminalMenu = false;
 
@@ -508,10 +509,16 @@
 
 	let showCodeInterpreterButton = false;
 	$: showCodeInterpreterButton =
+		!$selectedTerminalId &&
 		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
 			codeInterpreterCapableModels.length &&
 		$config?.features?.enable_code_interpreter &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
+
+	// Disable code interpreter when terminal is active (mutually exclusive)
+	$: if ($selectedTerminalId && codeInterpreterEnabled) {
+		codeInterpreterEnabled = false;
+	}
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
@@ -801,8 +808,8 @@
 	const onDragOver = (e: DragEvent) => {
 		e.preventDefault();
 
-		// Check if a file is being dragged.
-		if (e.dataTransfer?.types?.includes('Files')) {
+		// Check if a file or a sidebar chat item is being dragged.
+		if (e.dataTransfer?.types?.includes('Files') || e.dataTransfer?.types?.includes('text/plain')) {
 			dragged = true;
 		} else {
 			dragged = false;
@@ -819,6 +826,35 @@
 	const onDrop = async (e: DragEvent) => {
 		e.preventDefault();
 		console.log(e);
+
+		// Check if the dropped data is a sidebar chat item
+		const textData = e.dataTransfer?.getData('text/plain');
+		if (textData) {
+			try {
+				const data = JSON.parse(textData);
+				if (data.type === 'chat' && data.id) {
+					// Fetch the chat to get its title, then add as a reference chat
+					const chat = await getChatById(localStorage.token, data.id);
+					if (chat) {
+						const chatItem = {
+							type: 'chat',
+							id: chat.id,
+							name: chat.title,
+							collection_name: '',
+							status: 'processed'
+						};
+						if (!files.find((f) => f.id === chatItem.id)) {
+							files = [...files, chatItem];
+						}
+					}
+					dragged = false;
+					e.stopPropagation();
+					return;
+				}
+			} catch (_) {
+				// Not valid JSON — fall through to file handling
+			}
+		}
 
 		if (e.dataTransfer?.files) {
 			const inputFiles = Array.from(e.dataTransfer?.files);
@@ -899,6 +935,9 @@
 								}
 							];
 						} else {
+							if (files.find((f) => f.url === data || f.name === data)) {
+								return;
+							}
 							onUpload(e);
 						}
 					}
@@ -934,6 +973,9 @@
 								}
 							];
 						} else {
+							if (files.find((f) => f.url === data || f.name === data)) {
+								return;
+							}
 							onUpload(e);
 						}
 					}
@@ -969,6 +1011,9 @@
 								}
 							];
 						} else {
+							if (files.find((f) => f.url === data || f.name === data)) {
+								return;
+							}
 							onUpload(e);
 						}
 					}
@@ -1008,8 +1053,8 @@
 
 			dropzoneElement = document.getElementById('chat-pane');
 			if (dropzoneElement) {
-				dropzoneElement.addEventListener('dragover', onDragOver);
-				dropzoneElement.addEventListener('drop', onDrop);
+				dropzoneElement.addEventListener('dragover', onDragOver, true);
+				dropzoneElement.addEventListener('drop', onDrop, true);
 				dropzoneElement.addEventListener('dragleave', onDragLeave);
 			}
 
@@ -1027,8 +1072,8 @@
 			window.removeEventListener('blur', onBlur);
 
 			if (dropzoneElement) {
-				dropzoneElement.removeEventListener('dragover', onDragOver);
-				dropzoneElement.removeEventListener('drop', onDrop);
+				dropzoneElement.removeEventListener('dragover', onDragOver, true);
+				dropzoneElement.removeEventListener('drop', onDrop, true);
 				dropzoneElement.removeEventListener('dragleave', onDragLeave);
 			}
 		};
@@ -1175,12 +1220,13 @@
 						<!-- Queued messages display -->
 						{#if messageQueue.length > 0}
 							<div
-								class="mb-1 mx-2 py-0.5 px-1.5 rounded-2xl bg-white dark:bg-gray-900/60 border border-gray-100 dark:border-gray-800/50 overflow-hidden"
+								class="mb-1 mx-2 py-0.5 px-1.5 rounded-2xl bg-white dark:bg-gray-900/60 border border-gray-100 dark:border-gray-800/50 overflow-x-hidden overflow-y-auto max-h-[25vh]"
 							>
 								{#each messageQueue as queuedMessage (queuedMessage.id)}
 									<QueuedMessageItem
 										id={queuedMessage.id}
 										content={queuedMessage.prompt}
+										files={queuedMessage.files}
 										onSendNow={onQueueSendNow}
 										onEdit={onQueueEdit}
 										onDelete={onQueueDelete}
@@ -1659,7 +1705,7 @@
 											</Tooltip>
 										{/if}
 
-										{#each selectedFilterIds as filterId}
+										{#each selectedFilterIds as filterId (filterId)}
 											{@const filter = toggleFilters.find((f) => f.id === filterId)}
 											{#if filter}
 												<Tooltip content={filter?.name} placement="top">
@@ -1749,7 +1795,7 @@
 														? 'm-1'
 														: 'focus:outline-hidden rounded-full'}"
 												>
-													<Cloud className="size-3.5" strokeWidth="2" />
+													<Terminal className="size-3.5" strokeWidth="2" />
 
 													<div class="hidden group-hover:block">
 														<XMark className="size-4" strokeWidth="1.75" />
@@ -1757,6 +1803,27 @@
 												</button>
 											</Tooltip>
 										{/if}
+
+										{#each pendingOAuthTools as pendingTool (pendingTool.id)}
+											<Tooltip content={$i18n.t('Click to connect')} placement="top">
+												<button
+													on:click|preventDefault={() => {
+														sessionStorage.setItem('pendingOAuthToolId', pendingTool.id);
+														const authUrl = getOAuthClientAuthorizationUrl(
+															pendingTool.serverId,
+															pendingTool.authType ?? 'mcp'
+														);
+														window.open(authUrl, '_self', 'noopener');
+													}}
+													type="button"
+													class="group px-2 py-[5px] flex gap-1.5 items-center text-xs rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden
+														text-amber-600 dark:text-amber-400 bg-amber-50 hover:bg-amber-100 dark:bg-amber-400/10 dark:hover:bg-amber-600/10 border border-amber-200/40 dark:border-amber-500/20"
+												>
+													<Wrench className="size-3.5" strokeWidth="1.75" />
+													<span class="truncate">{pendingTool.name}</span>
+												</button>
+											</Tooltip>
+										{/each}
 									</div>
 								</div>
 
@@ -1786,76 +1853,78 @@
 											</Tooltip>
 										</div>
 									{:else}
-										{#if prompt !== '' && !history?.currentId && ($config?.features?.enable_notes ?? false) && ($_user?.role === 'admin' || ($_user?.permissions?.features?.notes ?? true))}
+										{#if prompt !== '' && !history?.currentId && !$selectedTerminalId && ($config?.features?.enable_notes ?? false) && ($_user?.role === 'admin' || ($_user?.permissions?.features?.notes ?? true))}
 											<!-- {$i18n.t('Create Note')}  -->
 											<Tooltip content={$i18n.t('Create note')} className=" flex items-center">
 												<button
 													id="create-note-button"
-													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center"
+													class=" text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 -mr-1 self-center"
 													type="button"
 													disabled={prompt === '' && files.length === 0}
 													on:click={() => {
 														createNote();
 													}}
 												>
-													<PageEdit className="size-4.5 translate-y-[0.5px]" />
+													<Note className="size-4.5 translate-y-[0.5px]" />
 												</button>
 											</Tooltip>
 										{/if}
 
-										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
+										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
 											<!-- Terminal Server Selector -->
 											{#if ($terminalServers ?? []).length > 0 || ($settings?.terminalServers ?? []).some((s) => s.url)}
 												<TerminalMenu bind:show={showTerminalMenu} />
 											{/if}
 
-											<!-- {$i18n.t('Record voice')} -->
-											<Tooltip content={$i18n.t('Dictate')}>
-												<button
-													id="voice-input-button"
-													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center mr-0.5"
-													type="button"
-													on:click={async () => {
-														try {
-															let stream = await navigator.mediaDevices
-																.getUserMedia({ audio: true })
-																.catch(function (err) {
-																	toast.error(
-																		$i18n.t(
-																			`Permission denied when accessing microphone: {{error}}`,
-																			{
-																				error: err
-																			}
-																		)
-																	);
-																	return null;
-																});
+											{#if $_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true)}
+												<!-- {$i18n.t('Record voice')} -->
+												<Tooltip content={$i18n.t('Dictate')}>
+													<button
+														id="voice-input-button"
+														class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center mr-0.5"
+														type="button"
+														on:click={async () => {
+															try {
+																let stream = await navigator.mediaDevices
+																	.getUserMedia({ audio: true })
+																	.catch(function (err) {
+																		toast.error(
+																			$i18n.t(
+																				`Permission denied when accessing microphone: {{error}}`,
+																				{
+																					error: err
+																				}
+																			)
+																		);
+																		return null;
+																	});
 
-															if (stream) {
-																recording = true;
-																const tracks = stream.getTracks();
-																tracks.forEach((track) => track.stop());
+																if (stream) {
+																	recording = true;
+																	const tracks = stream.getTracks();
+																	tracks.forEach((track) => track.stop());
+																}
+																stream = null;
+															} catch {
+																toast.error($i18n.t('Permission denied when accessing microphone'));
 															}
-															stream = null;
-														} catch {
-															toast.error($i18n.t('Permission denied when accessing microphone'));
-														}
-													}}
-													aria-label="Voice Input"
-												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 20 20"
-														fill="currentColor"
-														class="size-5 translate-y-[0.5px]"
+														}}
+														aria-label="Voice Input"
 													>
-														<path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
-														<path
-															d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z"
-														/>
-													</svg>
-												</button>
-											</Tooltip>
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															viewBox="0 0 20 20"
+															fill="currentColor"
+															class="size-5 translate-y-[0.5px]"
+														>
+															<path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
+															<path
+																d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z"
+															/>
+														</svg>
+													</button>
+												</Tooltip>
+											{/if}
 										{/if}
 
 										{#if prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
@@ -1979,7 +2048,9 @@
 	:global(.copilot-landing-active-surface #message-input-container [class*='text-gray']),
 	:global(.copilot-landing-active-surface #message-input-container [class*='dark:text-gray']),
 	:global(.copilot-landing-active-surface #message-input-container [class*='hover:text-gray']),
-	:global(.copilot-landing-active-surface #message-input-container [class*='dark:hover:text-gray']) {
+	:global(
+			.copilot-landing-active-surface #message-input-container [class*='dark:hover:text-gray']
+		) {
 		color: #0f2b48 !important;
 	}
 

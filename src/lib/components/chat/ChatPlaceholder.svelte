@@ -66,6 +66,9 @@
 								class=" size-[2.7rem] rounded-full border-[1px] border-gray-100 dark:border-none"
 								alt="logo"
 								draggable="false"
+								on:error={(e) => {
+									e.currentTarget.src = '/favicon.png';
+								}}
 							/>
 						</Tooltip>
 					</button>
@@ -85,13 +88,9 @@
 			</Tooltip>
 		{/if}
 
-		<div
-			class=" mt-2 mb-4 text-3xl text-[#0f2b48] text-left flex items-center gap-4 font-primary"
-		>
+		<div class=" mt-2 mb-4 text-3xl text-[#0f2b48] text-left flex items-center gap-4 font-primary">
 			<div>
-				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>
-					VenomX
-				</div>
+				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>VenomX</div>
 
 				<div in:fade={{ duration: 200, delay: 200 }}>
 					{#if models[selectedModelIdx]?.info?.meta?.description ?? null}

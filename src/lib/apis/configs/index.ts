@@ -229,6 +229,85 @@ export const setTerminalServerConnections = async (token: string, connections: o
 	return res;
 };
 
+/**
+ * Detect whether a terminal server URL points to an Orchestrator or a direct
+ * Open Terminal instance.
+ *
+ * - GET {url}/api/v1/policies → 200 → "orchestrator"
+ * - GET {url}/api/config      → 200 → "terminal"
+ * - Neither                         → null
+ */
+export const detectTerminalServerType = async (
+	url: string,
+	key: string
+): Promise<'orchestrator' | 'terminal' | null> => {
+	const baseUrl = url.replace(/\/$/, '');
+	const headers: Record<string, string> = {};
+	if (key) {
+		headers['Authorization'] = `Bearer ${key}`;
+	}
+
+	// Orchestrators expose a policies API; plain terminals don't.
+	try {
+		const res = await fetch(`${baseUrl}/api/v1/policies`, { headers });
+		if (res.ok) return 'orchestrator';
+	} catch {
+		// ignore
+	}
+
+	// Fall back to open-terminal config endpoint.
+	try {
+		const res = await fetch(`${baseUrl}/api/config`, { headers });
+		if (res.ok) return 'terminal';
+	} catch {
+		// ignore
+	}
+
+	return null;
+};
+
+/**
+ * Create or update a policy on the orchestrator.
+ * PUT {url}/api/v1/policies/{policyId}
+ */
+export const putOrchestratorPolicy = async (
+	url: string,
+	key: string,
+	policyId: string,
+	policyData: object
+): Promise<object | null> => {
+	let error = null;
+
+	const baseUrl = url.replace(/\/$/, '');
+	const headers: Record<string, string> = {
+		'Content-Type': 'application/json'
+	};
+	if (key) {
+		headers['Authorization'] = `Bearer ${key}`;
+	}
+
+	const res = await fetch(`${baseUrl}/api/v1/policies/${encodeURIComponent(policyId)}`, {
+		method: 'PUT',
+		headers,
+		body: JSON.stringify(policyData)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const verifyToolServerConnection = async (token: string, connection: object) => {
 	let error = null;
 
@@ -263,6 +342,7 @@ type RegisterOAuthClientForm = {
 	url: string;
 	client_id: string;
 	client_name?: string;
+	client_secret?: string;
 };
 
 export const registerOAuthClient = async (
@@ -344,6 +424,33 @@ export const setCodeExecutionConfig = async (token: string, config: object) => {
 		body: JSON.stringify({
 			...config
 		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getModelsDefaults = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/models/defaults`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

@@ -13,6 +13,7 @@
 ### Task 1: Create the workflow file
 
 **Files:**
+
 - Create: `.github/workflows/image-smoke-test.yml`
 
 **Step 1: Create the file with the following exact content**
@@ -95,6 +96,7 @@ git push origin main
 **Step 4: Verify the workflow runs**
 
 Go to `https://github.com/venomx-pentester/open-webui/actions` and confirm:
+
 - The `Image Smoke Test` workflow appears and runs
 - The `smoke-test` job passes all steps
 - The "Assert /api/version" step outputs JSON with a `version` field

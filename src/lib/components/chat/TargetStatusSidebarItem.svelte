@@ -34,10 +34,16 @@
 	<div class="flex items-start justify-between gap-2">
 		<div class="min-w-0">
 			<div class="text-sm font-medium line-clamp-1">{target.name}</div>
-			<div class="mt-0.5 text-[11px] text-gray-600 dark:text-gray-300 line-clamp-1">{target.type}</div>
+			<div class="mt-0.5 text-[11px] text-gray-600 dark:text-gray-300 line-clamp-1">
+				{target.type}
+			</div>
 		</div>
 
-		<div class="text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 {getTargetStatusClass(target.status)}">
+		<div
+			class="text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 {getTargetStatusClass(
+				target.status
+			)}"
+		>
 			{target.status}
 		</div>
 	</div>

@@ -10,6 +10,7 @@
 
 	import { onDestroy, onMount, tick, getContext } from 'svelte';
 	import {
+		config,
 		terminalServers,
 		mobile,
 		showControls,
@@ -31,6 +32,7 @@
 	import Artifacts from './Artifacts.svelte';
 	import Embeds from './ChatControls/Embeds.svelte';
 	import FileNav from './FileNav.svelte';
+	import PyodideFileNav from './PyodideFileNav.svelte';
 	import Overview from './Overview.svelte';
 
 	const i18n = getContext('i18n');
@@ -50,6 +52,8 @@
 	export let files;
 	export let modelId;
 
+	export let codeInterpreterEnabled = false;
+
 	export let pane: Pane | null = null;
 
 	let largeScreen = false;
@@ -67,7 +71,9 @@
 	$: hasMessages = history?.messages && Object.keys(history.messages).length > 0;
 
 	$: showControlsTab = $user?.role === 'admin' || ($user?.permissions?.chat?.controls ?? true);
-	$: showFilesTab = !!$selectedTerminalId;
+	$: showFilesTab =
+		!!$selectedTerminalId ||
+		(codeInterpreterEnabled && $config?.code?.interpreter_engine !== 'jupyter');
 	$: showOverviewTab = hasMessages;
 
 	// Tab fallback: if active tab becomes hidden, switch to next available
@@ -89,10 +95,12 @@
 		showControls.set(true);
 	}
 
-	// Auto-open Files tab when a terminal is selected
+	// Auto-open Files tab when a terminal is selected (suppress panel open when full-screen)
 	$: if ($selectedTerminalId) {
 		activeTab = 'files';
-		showControls.set(true);
+		if (largeScreen) {
+			showControls.set(true);
+		}
 	}
 
 	// Attach a terminal file to the chat input
@@ -283,7 +291,7 @@
 					<!-- Controls + Files tabs -->
 					<div class="flex flex-col h-full min-h-0">
 						<!-- Tab bar -->
-						<div class="flex items-center justify-between px-2 pt-2.5 pb-2 shrink-0">
+						<div class="flex items-center justify-between px-2 pt-2 pb-2 shrink-0">
 							<div class="flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
 								{#if showControlsTab}
 									<button
@@ -342,7 +350,7 @@
 								? 'h-full'
 								: activeTab === 'controls'
 									? 'overflow-y-auto px-3 pt-1'
-									: 'overflow-y-auto'}"
+									: ''}"
 						>
 							{#if activeTab === 'overview'}
 								<Overview
@@ -355,6 +363,8 @@
 								/>
 							{:else if activeTab === 'files' && $selectedTerminalId}
 								<FileNav onAttach={handleTerminalAttach} />
+							{:else if activeTab === 'files' && codeInterpreterEnabled}
+								<PyodideFileNav />
 							{:else}
 								<Controls embed={true} {models} bind:chatFiles bind:params />
 							{/if}
@@ -401,7 +411,10 @@
 				<div
 					class="w-full {specialPanel && !$showCallOverlay
 						? ' '
-						: 'bg-white dark:shadow-lg dark:bg-gray-850'} z-40 pointer-events-auto overflow-y-auto scrollbar-hidden"
+						: 'bg-white dark:shadow-lg dark:bg-gray-850'} z-40 pointer-events-auto {activeTab ===
+					'files'
+						? ''
+						: 'overflow-y-auto'} scrollbar-hidden"
 					id="controls-container"
 				>
 					{#if $showCallOverlay}
@@ -424,7 +437,7 @@
 						<!-- Controls + Files tabs -->
 						<div class="flex flex-col h-full min-h-0">
 							<!-- Tab bar -->
-							<div class="flex items-center justify-between px-2 pt-2.5 pb-2 shrink-0">
+							<div class="flex items-center justify-between px-2 pt-2 pb-2 shrink-0">
 								<div class="flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
 									{#if showControlsTab}
 										<button
@@ -483,7 +496,7 @@
 									? 'h-full'
 									: activeTab === 'controls'
 										? 'overflow-y-auto px-3 pt-1'
-										: 'overflow-y-auto'}"
+										: ''}"
 							>
 								{#if activeTab === 'overview'}
 									<Overview
@@ -501,6 +514,8 @@
 									/>
 								{:else if activeTab === 'files' && $selectedTerminalId}
 									<FileNav onAttach={handleTerminalAttach} overlay={dragged} />
+								{:else if activeTab === 'files' && codeInterpreterEnabled}
+									<PyodideFileNav overlay={dragged} />
 								{:else}
 									<Controls embed={true} {models} bind:chatFiles bind:params />
 								{/if}

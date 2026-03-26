@@ -65,7 +65,9 @@
 	<div class="flex justify-between items-center gap-3 flex-wrap">
 		<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
 			<div>{$i18n.t('Targets')}</div>
-			<div class="text-lg font-medium text-gray-500 dark:text-gray-500">{filteredTargets.length}</div>
+			<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+				{filteredTargets.length}
+			</div>
 		</div>
 
 		<button
@@ -80,7 +82,9 @@
 	</div>
 
 	<div class="text-sm text-gray-600 dark:text-gray-300 px-0.5 max-w-3xl">
-		{$i18n.t('Manage scan assets for VenomX. This interface uses local mock data until backend scan orchestration is available.')}
+		{$i18n.t(
+			'Manage scan assets for VenomX. This interface uses local mock data until backend scan orchestration is available.'
+		)}
 	</div>
 </div>
 
@@ -92,7 +96,9 @@
 	</div>
 
 	<div class="px-3.5 flex flex-col gap-2 pb-2">
-		<div class="flex items-center w-full space-x-2 py-0.5 rounded-xl border border-sky-100/80 dark:border-sky-900/40 bg-white/70 dark:bg-slate-900/45 px-1.5">
+		<div
+			class="flex items-center w-full space-x-2 py-0.5 rounded-xl border border-sky-100/80 dark:border-sky-900/40 bg-white/70 dark:bg-slate-900/45 px-1.5"
+		>
 			<div class="self-center ml-1 mr-3"><Search className="size-3.5" /></div>
 			<input
 				class="w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent placeholder:text-gray-500 dark:placeholder:text-gray-400"
@@ -116,7 +122,10 @@
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-2 px-0.5">
 			<div>
 				<div class="text-xs text-gray-500 dark:text-gray-400 mb-1">{$i18n.t('Type')}</div>
-				<select class="w-full text-sm bg-white/70 dark:bg-slate-900/45 border border-sky-100/80 dark:border-sky-900/40 outline-hidden rounded-lg px-2 py-1" bind:value={typeFilter}>
+				<select
+					class="w-full text-sm bg-white/70 dark:bg-slate-900/45 border border-sky-100/80 dark:border-sky-900/40 outline-hidden rounded-lg px-2 py-1"
+					bind:value={typeFilter}
+				>
 					{#each targetTypes as option}
 						<option value={option}>{option === 'all' ? $i18n.t('All Types') : option}</option>
 					{/each}
@@ -124,7 +133,10 @@
 			</div>
 			<div>
 				<div class="text-xs text-gray-500 dark:text-gray-400 mb-1">{$i18n.t('Status')}</div>
-				<select class="w-full text-sm bg-white/70 dark:bg-slate-900/45 border border-sky-100/80 dark:border-sky-900/40 outline-hidden rounded-lg px-2 py-1" bind:value={statusFilter}>
+				<select
+					class="w-full text-sm bg-white/70 dark:bg-slate-900/45 border border-sky-100/80 dark:border-sky-900/40 outline-hidden rounded-lg px-2 py-1"
+					bind:value={statusFilter}
+				>
 					{#each statusOptions as option}
 						<option value={option}>{option === 'all' ? $i18n.t('All Statuses') : option}</option>
 					{/each}

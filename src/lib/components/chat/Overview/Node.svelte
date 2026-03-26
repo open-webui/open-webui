@@ -25,7 +25,7 @@
 			<div class="flex w-full">
 				<ProfileImage
 					src={`${WEBUI_API_BASE_URL}/users/${data.user.id}/profile/image`}
-					className={'size-5 -translate-y-[1px]'}
+					className={'size-5 -translate-y-[1px] flex-shrink-0'}
 				/>
 				<div class="ml-2">
 					<div class=" flex justify-between items-center">
@@ -43,16 +43,11 @@
 			</div>
 		{:else}
 			<div class="flex w-full">
-				<ProfileImage
-					src={'/venomx-logo.png'}
-					className={'size-5 -translate-y-[1px]'}
-				/>
+				<ProfileImage src={'/venomx-logo.png'} className={'size-5 -translate-y-[1px]'} />
 
 				<div class="ml-2">
 					<div class=" flex justify-between items-center">
-						<div class="text-xs text-black dark:text-white font-medium line-clamp-1">
-							VenomX
-						</div>
+						<div class="text-xs text-black dark:text-white font-medium line-clamp-1">VenomX</div>
 
 						<button
 							class={data?.message?.favorite ? '' : 'invisible group-hover:visible'}
