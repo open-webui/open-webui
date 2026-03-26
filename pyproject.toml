@@ -59,6 +59,7 @@ dependencies = [
     "langchain-text-splitters==1.1.1",
 
     "fake-useragent==2.2.0",
+    "beautifulsoup4==4.14.3",
     "chromadb==1.5.2",
     "opensearch-py==3.1.0",
     "PyMySQL==1.1.2",
