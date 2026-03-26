@@ -3663,12 +3663,7 @@ async def streaming_chat_response_handler(response, ctx):
                                                 )
 
                                     delta_tool_calls = delta.get('tool_calls', None)
-                                    finish_reason = choices[0].get('finish_reason') if choices else None
-
-                                    # Skip tool_calls processing if finish_reason is "stop"
-                                    # This prevents infinite loops when malformed responses
-                                    # send finish_reason: "stop" followed by tool_calls
-                                    if delta_tool_calls and finish_reason != 'stop':
+                                    if delta_tool_calls:
                                         for delta_tool_call in delta_tool_calls:
                                             tool_call_index = delta_tool_call.get('index')
 

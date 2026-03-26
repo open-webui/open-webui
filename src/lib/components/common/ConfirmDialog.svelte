@@ -24,11 +24,10 @@
 	export let inputPlaceholder = '';
 	export let inputValue = '';
 	export let inputType = '';
-	export let prefilled = false;
 
 	export let show = false;
 
-	$: if (show && !prefilled) {
+	$: if (show) {
 		init();
 	}
 
