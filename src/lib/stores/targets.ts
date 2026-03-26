@@ -62,8 +62,9 @@ export const activeTarget = derived([targets, activeTargetId], ([$targets, $acti
 	return $targets.find((target) => target.id === $activeTargetId) ?? null;
 });
 
-export const activeScanCount = derived(targets, ($targets) =>
-	$targets.filter((target) => target.status === 'Active').length
+export const activeScanCount = derived(
+	targets,
+	($targets) => $targets.filter((target) => target.status === 'Active').length
 );
 
 const formatTimestamp = (value = new Date()) => {
@@ -180,9 +181,7 @@ export const setActiveTarget = (id: string) => {
 
 export const addTarget = (payload: NewTargetInput) => {
 	const id =
-		typeof crypto !== 'undefined' && crypto.randomUUID
-			? crypto.randomUUID()
-			: `tgt-${Date.now()}`;
+		typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `tgt-${Date.now()}`;
 
 	targets.update((currentTargets) => [
 		{
@@ -207,7 +206,9 @@ export const queueTargetScan = (id: string) => {
 		return;
 	}
 
-	scanQueue.update((currentQueue) => (currentQueue.includes(id) ? currentQueue : [...currentQueue, id]));
+	scanQueue.update((currentQueue) =>
+		currentQueue.includes(id) ? currentQueue : [...currentQueue, id]
+	);
 	targets.update((currentTargets) =>
 		currentTargets.map((target) =>
 			target.id === id && target.status !== 'Active' && target.status !== 'Paused'

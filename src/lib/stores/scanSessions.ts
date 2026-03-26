@@ -65,10 +65,7 @@ const RUNNING_STAGE_IDS: ScanStageId[] = [
 ];
 
 const STAGE_MESSAGES: Record<ScanStageId, string[]> = {
-	queued: [
-		'Target added to local scan queue.',
-		'Scan worker reserved for this target.'
-	],
+	queued: ['Target added to local scan queue.', 'Scan worker reserved for this target.'],
 	asset_validation: [
 		'Validating target metadata and connectivity assumptions.',
 		'Normalizing target scope for enumeration stage.'
@@ -101,7 +98,8 @@ const randomId = () =>
 		? crypto.randomUUID()
 		: `scan-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
-const randomInRange = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+const randomInRange = (min: number, max: number) =>
+	Math.floor(Math.random() * (max - min + 1)) + min;
 
 const toStageRows = (): ScanStage[] =>
 	SCAN_STAGES.map((stage, index) => ({
@@ -125,7 +123,11 @@ const stopRuntime = (targetId: string) => {
 	runtime.delete(targetId);
 };
 
-const appendActivity = (session: ScanSession, stageId: ScanStageId, message: string): ScanSession => {
+const appendActivity = (
+	session: ScanSession,
+	stageId: ScanStageId,
+	message: string
+): ScanSession => {
 	const nextActivity: ScanActivity = {
 		id: randomId(),
 		timestamp: now(),
@@ -141,8 +143,11 @@ const appendActivity = (session: ScanSession, stageId: ScanStageId, message: str
 	};
 };
 
-const markStageStatus = (stages: ScanStage[], stageId: ScanStageId, status: ScanStageStatus): ScanStage[] =>
-	stages.map((stage) => (stage.id === stageId ? { ...stage, status } : stage));
+const markStageStatus = (
+	stages: ScanStage[],
+	stageId: ScanStageId,
+	status: ScanStageStatus
+): ScanStage[] => stages.map((stage) => (stage.id === stageId ? { ...stage, status } : stage));
 
 const weightedProgress = (stageIndex: number, stageProgress: number) => {
 	const activeStageId = RUNNING_STAGE_IDS[stageIndex];
@@ -195,9 +200,17 @@ const startTicker = (targetId: string) => {
 		let stageProgress = Math.min(1, runtimeState.stageProgress + randomInRange(7, 13) / 100);
 		runtimeState.stageProgress = stageProgress;
 
-		if (activeStageId === 'service_analysis' && stageProgress > 0.5 && Math.random() < MOCK_ERROR_PROBABILITY) {
+		if (
+			activeStageId === 'service_analysis' &&
+			stageProgress > 0.5 &&
+			Math.random() < MOCK_ERROR_PROBABILITY
+		) {
 			setSession(targetId, (session) => {
-				const failed = appendActivity(session, 'service_analysis', 'Mock signal indicates analysis instability. Escalating as demo error.');
+				const failed = appendActivity(
+					session,
+					'service_analysis',
+					'Mock signal indicates analysis instability. Escalating as demo error.'
+				);
 				return {
 					...failed,
 					lifecycle: 'error',
@@ -220,7 +233,11 @@ const startTicker = (targetId: string) => {
 			const nextStageId = RUNNING_STAGE_IDS[runtimeState.stageIndex];
 			if (!nextStageId) {
 				setSession(targetId, (session) => {
-					let nextSession = appendActivity(session, completedStageId, 'Finalizing mock scan output package.');
+					let nextSession = appendActivity(
+						session,
+						completedStageId,
+						'Finalizing mock scan output package.'
+					);
 					nextSession = appendActivity(nextSession, 'complete', STAGE_MESSAGES.complete[0]);
 					return {
 						...nextSession,
@@ -313,48 +330,51 @@ export const startMockScanSession = (target: Target) => {
 		}
 	}));
 
-	const promoteQueueTimeout = setTimeout(() => {
-		const latest = get(sessions)[target.id];
-		if (!latest || latest.id !== sessionId) {
-			return;
-		}
-
-		sessions.update((current) => {
-			const existing = current[target.id];
-			if (!existing || existing.id !== sessionId || existing.lifecycle !== 'queued') {
-				return current;
+	const promoteQueueTimeout = setTimeout(
+		() => {
+			const latest = get(sessions)[target.id];
+			if (!latest || latest.id !== sessionId) {
+				return;
 			}
 
-			const nextStageId: ScanStageId = 'asset_validation';
-			const next = appendActivity(
-				existing,
-				nextStageId,
-				STAGE_MESSAGES[nextStageId][randomInRange(0, STAGE_MESSAGES[nextStageId].length - 1)]
-			);
-
-			return {
-				...current,
-				[target.id]: {
-					...next,
-					lifecycle: 'running',
-					currentStageId: nextStageId,
-					progress: 10,
-					updatedAt: now(),
-					stages: next.stages.map((stage) => {
-						if (stage.id === 'queued') {
-							return { ...stage, status: 'complete' };
-						}
-						if (stage.id === nextStageId) {
-							return { ...stage, status: 'in_progress' };
-						}
-						return stage;
-					})
+			sessions.update((current) => {
+				const existing = current[target.id];
+				if (!existing || existing.id !== sessionId || existing.lifecycle !== 'queued') {
+					return current;
 				}
-			};
-		});
 
-		startTicker(target.id);
-	}, randomInRange(1200, 2200));
+				const nextStageId: ScanStageId = 'asset_validation';
+				const next = appendActivity(
+					existing,
+					nextStageId,
+					STAGE_MESSAGES[nextStageId][randomInRange(0, STAGE_MESSAGES[nextStageId].length - 1)]
+				);
+
+				return {
+					...current,
+					[target.id]: {
+						...next,
+						lifecycle: 'running',
+						currentStageId: nextStageId,
+						progress: 10,
+						updatedAt: now(),
+						stages: next.stages.map((stage) => {
+							if (stage.id === 'queued') {
+								return { ...stage, status: 'complete' };
+							}
+							if (stage.id === nextStageId) {
+								return { ...stage, status: 'in_progress' };
+							}
+							return stage;
+						})
+					}
+				};
+			});
+
+			startTicker(target.id);
+		},
+		randomInRange(1200, 2200)
+	);
 
 	setTimeout(() => {
 		const latest = get(sessions)[target.id];

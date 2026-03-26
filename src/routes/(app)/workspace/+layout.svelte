@@ -20,7 +20,8 @@
 	const i18n = getContext<any>('i18n');
 
 	let loaded = false;
-	$: workspaceBackgroundUrl = $settings?.backgroundImageUrl ?? $config?.license_metadata?.background_image_url;
+	$: workspaceBackgroundUrl =
+		$settings?.backgroundImageUrl ?? $config?.license_metadata?.background_image_url;
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
@@ -81,110 +82,122 @@
 				class="rounded-2xl bg-white/70 dark:bg-gray-900/70 backdrop-blur-md border border-gray-100/70 dark:border-gray-850/50 px-2 py-1.5"
 			>
 				<div class="flex items-center gap-1">
-				{#if $mobile}
-					<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
-						<Tooltip
-							content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
-							interactive={true}
+					{#if $mobile}
+						<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
+							<Tooltip
+								content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+								interactive={true}
+							>
+								<button
+									id="sidebar-toggle-button"
+									class="cursor-pointer flex rounded-xl hover:bg-gray-100/80 dark:hover:bg-gray-850/80 transition"
+									aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+									on:click={() => {
+										showSidebar.set(!$showSidebar);
+									}}
+								>
+									<div class=" self-center p-1.5">
+										<Sidebar />
+									</div>
+								</button>
+							</Tooltip>
+						</div>
+					{/if}
+
+					<div class="min-w-0">
+						<div
+							class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-gray-100/60 dark:bg-gray-850/50 p-1 touch-auto pointer-events-auto"
 						>
-							<button
-								id="sidebar-toggle-button"
-								class="cursor-pointer flex rounded-xl hover:bg-gray-100/80 dark:hover:bg-gray-850/80 transition"
-								aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
-								on:click={() => {
-									showSidebar.set(!$showSidebar);
-								}}
-							>
-								<div class=" self-center p-1.5">
-									<Sidebar />
-								</div>
-							</button>
-						</Tooltip>
+							{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
+								<a
+									draggable="false"
+									aria-current={$page.url.pathname.includes('/workspace/models') ? 'page' : null}
+									class="min-w-fit px-3 py-1.5 rounded-full {$page.url.pathname.includes(
+										'/workspace/models'
+									)
+										? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-xs'
+										: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/70 dark:hover:bg-gray-800/70'} transition select-none"
+									href="/workspace/models">{$i18n.t('Models')}</a
+								>
+							{/if}
+
+							{#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
+								<a
+									draggable="false"
+									aria-current={$page.url.pathname.includes('/workspace/knowledge') ? 'page' : null}
+									class="min-w-fit px-3 py-1.5 rounded-full {$page.url.pathname.includes(
+										'/workspace/knowledge'
+									)
+										? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-xs'
+										: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/70 dark:hover:bg-gray-800/70'} transition select-none"
+									href="/workspace/knowledge"
+								>
+									{$i18n.t('Knowledge')}
+								</a>
+							{/if}
+
+							{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts}
+								<a
+									draggable="false"
+									aria-current={$page.url.pathname.includes('/workspace/prompts') ? 'page' : null}
+									class="min-w-fit px-3 py-1.5 rounded-full {$page.url.pathname.includes(
+										'/workspace/prompts'
+									)
+										? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-xs'
+										: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/70 dark:hover:bg-gray-800/70'} transition select-none"
+									href="/workspace/prompts">{$i18n.t('Prompts')}</a
+								>
+							{/if}
+
+							{#if $user?.role === 'admin' || $user?.permissions?.workspace?.skills}
+								<a
+									draggable="false"
+									aria-current={$page.url.pathname.includes('/workspace/skills') ? 'page' : null}
+									class="min-w-fit px-3 py-1.5 rounded-full {$page.url.pathname.includes(
+										'/workspace/skills'
+									)
+										? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-xs'
+										: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/70 dark:hover:bg-gray-800/70'} transition select-none"
+									href="/workspace/skills"
+								>
+									{$i18n.t('Skills')}
+								</a>
+							{/if}
+
+							{#if $user?.role === 'admin' || $user?.permissions?.workspace?.tools}
+								<a
+									draggable="false"
+									aria-current={$page.url.pathname.includes('/workspace/tools') ? 'page' : null}
+									class="min-w-fit px-3 py-1.5 rounded-full {$page.url.pathname.includes(
+										'/workspace/tools'
+									)
+										? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-xs'
+										: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/70 dark:hover:bg-gray-800/70'} transition select-none"
+									href="/workspace/tools"
+								>
+									{$i18n.t('Tools')}
+								</a>
+							{/if}
+
+							{#if $user?.role === 'admin' || $user?.permissions?.workspace?.targets}
+								<a
+									draggable="false"
+									aria-current={$page.url.pathname.includes('/workspace/targets') ? 'page' : null}
+									class="min-w-fit px-3 py-1.5 rounded-full {$page.url.pathname.includes(
+										'/workspace/targets'
+									)
+										? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-xs'
+										: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/70 dark:hover:bg-gray-800/70'} transition select-none"
+									href="/workspace/targets"
+								>
+									{$i18n.t('Targets')}
+								</a>
+							{/if}
+						</div>
 					</div>
-				{/if}
 
-				<div class="min-w-0">
-					<div
-						class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-gray-100/60 dark:bg-gray-850/50 p-1 touch-auto pointer-events-auto"
-					>
-						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
-							<a
-								draggable="false"
-								aria-current={$page.url.pathname.includes('/workspace/models') ? 'page' : null}
-								class="min-w-fit px-3 py-1.5 rounded-full {$page.url.pathname.includes('/workspace/models')
-									? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-xs'
-									: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/70 dark:hover:bg-gray-800/70'} transition select-none"
-								href="/workspace/models">{$i18n.t('Models')}</a
-							>
-						{/if}
-
-						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
-							<a
-								draggable="false"
-								aria-current={$page.url.pathname.includes('/workspace/knowledge') ? 'page' : null}
-								class="min-w-fit px-3 py-1.5 rounded-full {$page.url.pathname.includes('/workspace/knowledge')
-									? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-xs'
-									: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/70 dark:hover:bg-gray-800/70'} transition select-none"
-								href="/workspace/knowledge"
-							>
-								{$i18n.t('Knowledge')}
-							</a>
-						{/if}
-
-						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts}
-							<a
-								draggable="false"
-								aria-current={$page.url.pathname.includes('/workspace/prompts') ? 'page' : null}
-								class="min-w-fit px-3 py-1.5 rounded-full {$page.url.pathname.includes('/workspace/prompts')
-									? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-xs'
-									: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/70 dark:hover:bg-gray-800/70'} transition select-none"
-								href="/workspace/prompts">{$i18n.t('Prompts')}</a
-							>
-						{/if}
-
-						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.skills}
-							<a
-								draggable="false"
-								aria-current={$page.url.pathname.includes('/workspace/skills') ? 'page' : null}
-								class="min-w-fit px-3 py-1.5 rounded-full {$page.url.pathname.includes('/workspace/skills')
-									? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-xs'
-									: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/70 dark:hover:bg-gray-800/70'} transition select-none"
-								href="/workspace/skills"
-							>
-								{$i18n.t('Skills')}
-							</a>
-						{/if}
-
-						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.tools}
-							<a
-								draggable="false"
-								aria-current={$page.url.pathname.includes('/workspace/tools') ? 'page' : null}
-								class="min-w-fit px-3 py-1.5 rounded-full {$page.url.pathname.includes('/workspace/tools')
-									? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-xs'
-									: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/70 dark:hover:bg-gray-800/70'} transition select-none"
-								href="/workspace/tools"
-							>
-								{$i18n.t('Tools')}
-							</a>
-						{/if}
-
-						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.targets}
-							<a
-								draggable="false"
-								aria-current={$page.url.pathname.includes('/workspace/targets') ? 'page' : null}
-								class="min-w-fit px-3 py-1.5 rounded-full {$page.url.pathname.includes('/workspace/targets')
-									? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-xs'
-									: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/70 dark:hover:bg-gray-800/70'} transition select-none"
-								href="/workspace/targets"
-							>
-								{$i18n.t('Targets')}
-							</a>
-						{/if}
-					</div>
+					<!-- <div class="flex items-center text-xl font-medium">{$i18n.t('Workspace')}</div> -->
 				</div>
-
-				<!-- <div class="flex items-center text-xl font-medium">{$i18n.t('Workspace')}</div> -->
-			</div>
 			</div>
 		</nav>
 

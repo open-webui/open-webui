@@ -147,7 +147,9 @@
 									)}
 									placement="top"
 								>
-									<div class="landing-muted mt-0.5 px-2 text-sm font-normal line-clamp-2 max-w-xl markdown">
+									<div
+										class="landing-muted mt-0.5 px-2 text-sm font-normal line-clamp-2 max-w-xl markdown"
+									>
 										{@html marked.parse(
 											sanitizeResponseContent(
 												models[selectedModelIdx]?.info?.meta?.description ?? ''
@@ -335,19 +337,23 @@
 			0 1px 0 rgba(255, 255, 255, 0.5) inset !important;
 	}
 
-	.landing-card :global(#message-input-container :is(svg, [class*='text-gray'], [class*='dark:text-gray'])) {
+	.landing-card
+		:global(#message-input-container :is(svg, [class*='text-gray'], [class*='dark:text-gray'])) {
 		color: var(--vx-text) !important;
 	}
 
-	.landing-card :global(#message-input-container :is([class*='stroke-gray'], [class*='dark:stroke-gray'])) {
+	.landing-card
+		:global(#message-input-container :is([class*='stroke-gray'], [class*='dark:stroke-gray'])) {
 		stroke: currentColor !important;
 	}
 
-	.landing-card :global(#message-input-container :is([class*='fill-gray'], [class*='dark:fill-gray'])) {
+	.landing-card
+		:global(#message-input-container :is([class*='fill-gray'], [class*='dark:fill-gray'])) {
 		fill: currentColor !important;
 	}
 
-	.landing-card :global(#message-input-container .ProseMirror p.is-editor-empty:first-child::before) {
+	.landing-card
+		:global(#message-input-container .ProseMirror p.is-editor-empty:first-child::before) {
 		color: #1f2937 !important;
 		opacity: 1 !important;
 	}
@@ -423,5 +429,4 @@
 			0 8px 22px rgba(1, 7, 16, 0.38),
 			0 1px 0 rgba(223, 238, 255, 0.08) inset !important;
 	}
-
 </style>
