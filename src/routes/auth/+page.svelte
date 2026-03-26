@@ -189,7 +189,7 @@
 		if (($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false) {
 			await signInHandler();
 		} else {
-			onboarding = $config?.onboarding ?? false;
+			onboarding = false; // ClapNClaw: skip Open WebUI onboarding wizard
 		}
 	});
 </script>
@@ -404,6 +404,15 @@
 												</div>
 											{/if}
 										{/if}
+									{/if}
+
+									<!-- ClapNClaw: forgot password link -->
+									{#if mode === 'signin'}
+										<div class="mt-3 text-center">
+											<a href="mailto:hello@clapnclaw.io?subject=Password%20Reset" class="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 underline">
+												{$i18n.t('Forgot your password?')}
+											</a>
+										</div>
 									{/if}
 								</div>
 							</form>

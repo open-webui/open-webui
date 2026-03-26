@@ -81,7 +81,8 @@ ENV OPENAI_API_KEY="" \
     WEBUI_SECRET_KEY="" \
     SCARF_NO_ANALYTICS=true \
     DO_NOT_TRACK=true \
-    ANONYMIZED_TELEMETRY=false
+    ANONYMIZED_TELEMETRY=false \
+    ENABLE_VERSION_UPDATE_CHECK=false
 
 #### Other models #########################################################
 ## whisper TTS model settings ##
