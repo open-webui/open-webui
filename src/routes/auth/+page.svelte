@@ -195,9 +195,7 @@
 </script>
 
 <svelte:head>
-	<title>
-		{`${$WEBUI_NAME}`}
-	</title>
+	<title>ClapNClaw</title>
 </svelte:head>
 
 <OnBoarding
@@ -236,17 +234,16 @@
 				{:else}
 					<div class="my-auto flex flex-col justify-center items-center">
 						<div class=" sm:max-w-md my-auto pb-10 w-full dark:text-gray-100">
-							{#if $config?.metadata?.auth_logo_position === 'center'}
-								<div class="flex justify-center mb-6">
-									<img
-										id="logo"
-										crossorigin="anonymous"
-										src="{WEBUI_BASE_URL}/static/favicon.png"
-										class="size-24 rounded-full"
-										alt="{$WEBUI_NAME} logo"
-									/>
-								</div>
-							{/if}
+							<!-- ClapNClaw: always show logo centered -->
+							<div class="flex justify-center mb-6">
+								<img
+									id="logo"
+									crossorigin="anonymous"
+									src="{WEBUI_BASE_URL}/static/splash.png"
+									class="h-16"
+									alt="ClapNClaw"
+								/>
+							</div>
 							<form
 								class=" flex flex-col justify-center"
 								on:submit={(e) => {
@@ -257,24 +254,19 @@
 								<div class="mb-1">
 									<div class=" text-2xl font-medium">
 										{#if $config?.onboarding ?? false}
-											{$i18n.t(`Get started with {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
+											{$i18n.t(`Get started`)}
 										{:else if mode === 'ldap'}
-											{$i18n.t(`Sign in to {{WEBUI_NAME}} with LDAP`, { WEBUI_NAME: $WEBUI_NAME })}
+											{$i18n.t(`Sign in with LDAP`)}
 										{:else if mode === 'signin'}
-											{$i18n.t(`Sign in to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
+											{$i18n.t(`Sign in`)}
 										{:else}
-											{$i18n.t(`Sign up to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
+											{$i18n.t(`Sign up`)}
 										{/if}
 									</div>
 
-									{#if $config?.onboarding ?? false}
-										<div class="mt-1 text-xs font-medium text-gray-600 dark:text-gray-500">
-											ⓘ {$WEBUI_NAME}
-											{$i18n.t(
-												'does not make any external connections, and your data stays securely on your locally hosted server.'
-											)}
-										</div>
-									{/if}
+									<div class="mt-1 text-xs font-medium text-gray-500">
+										🇩🇪 {$i18n.t('Hosted in Frankfurt, Germany · GDPR compliant')}
+									</div>
 								</div>
 
 								{#if $config?.features.enable_login_form || $config?.features.enable_ldap || form}

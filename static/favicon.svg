@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <style>
+    .t1 { fill: #0D5C3F; }
+    .t2 { fill: #E07020; opacity: .7; }
+    .t3 { fill: #0D5C3F; opacity: .45; }
+    @media (prefers-color-scheme: dark) {
+      .t1 { fill: #E8FF33; }
+      .t2 { fill: #FF8C00; opacity: .7; }
+      .t3 { fill: #E8FF33; opacity: .45; }
+    }
+  </style>
+  <polygon class="t1" points="120,440 210,72 300,440"/>
+  <polygon class="t2" points="215,72 305,440 395,72"/>
+  <polygon class="t3" points="310,440 400,72 490,440"/>
+</svg>

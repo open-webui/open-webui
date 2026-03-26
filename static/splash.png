@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 80" fill="none">
+  <polygon points="20,65 40,15 60,65" fill="#0D5C3F"/>
+  <polygon points="42,15 62,65 82,15" fill="#E07020" opacity=".7"/>
+  <polygon points="64,65 84,15 104,65" fill="#0D5C3F" opacity=".45"/>
+  <text x="115" y="50" font-family="Outfit,sans-serif" font-size="32" font-weight="400" fill="#1A1610">clap<tspan font-weight="500" fill="#0D5C3F">N</tspan>claw</text>
+</svg>

@@ -1,0 +1,75 @@
+/* ClapNClaw — Open WebUI Custom Branding */
+
+/* ── Primary color override (green accent) ── */
+:root {
+  --accent-color: #0D5C3F;
+}
+
+/* Override Tailwind's blue accent with ClapNClaw green */
+.bg-blue-500, .bg-blue-600 { background-color: #0D5C3F !important; }
+.hover\:bg-blue-600:hover { background-color: #094a32 !important; }
+.text-blue-500, .text-blue-600 { color: #0D5C3F !important; }
+.border-blue-500 { border-color: #0D5C3F !important; }
+.ring-blue-500 { --tw-ring-color: #0D5C3F !important; }
+.focus\:ring-blue-500:focus { --tw-ring-color: #0D5C3F !important; }
+
+/* Button primary */
+button[type="submit"],
+.bg-black.text-white,
+.dark .bg-white.text-gray-900 {
+  background-color: #0D5C3F !important;
+  color: #fff !important;
+}
+button[type="submit"]:hover {
+  background-color: #094a32 !important;
+}
+
+/* Send button */
+button[aria-label="Send"] {
+  background-color: #0D5C3F !important;
+}
+
+/* ── Hide version update notification ── */
+[class*="version"], [class*="update-available"] {
+  display: none !important;
+}
+
+/* ── Hide "Workspace" section for non-admins ── */
+/* This is handled via permissions, but as a safety net */
+
+/* ── Sidebar branding ── */
+.text-lg.font-medium {
+  font-family: 'Outfit', sans-serif !important;
+}
+
+/* ── Clean splash screen ── */
+#splash-screen {
+  background: #f5f2ec !important;
+}
+html.dark #splash-screen {
+  background: #0b0b0b !important;
+}
+
+/* ── Model selector — hide model ID, show friendly name ── */
+.text-xs.text-gray-500.truncate {
+  display: none;
+}
+
+/* ── Hide Open WebUI default logo on login page ── */
+.svelte-1kxnbnl, .svelte-lwo099 {
+  /* Svelte class selectors are fragile — use content-based hiding */
+}
+
+/* Hide the "OI" logo mark top-left */
+img[src*="favicon"], img[src="/static/favicon.png"] {
+  content: url('/static/favicon.svg') !important;
+  width: 28px !important;
+  height: 28px !important;
+}
+
+/* ── Login page — hide the "(slug)" suffix shown after WEBUI_NAME ── */
+
+/* ── Hide version update banner ── */
+div[class*="update"], .update-available, [data-testid="update-banner"] {
+  display: none !important;
+}
