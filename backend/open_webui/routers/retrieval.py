@@ -75,7 +75,7 @@ from open_webui.retrieval.web.azure import search_azure
 from open_webui.retrieval.web.exa import search_exa
 from open_webui.retrieval.web.perplexity import search_perplexity
 from open_webui.retrieval.web.sougou import search_sougou
-from open_webui.retrieval.web.firecrawl import search_firecrawl
+from open_webui.retrieval.web.firecrawl import search_firecrawl, search_firecrawl_with_scrape
 from open_webui.retrieval.web.external import search_external
 from open_webui.retrieval.web.yandex import search_yandex
 from open_webui.retrieval.web.ydc import search_youcom
@@ -557,6 +557,10 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'FIRECRAWL_API_KEY': request.app.state.config.FIRECRAWL_API_KEY,
             'FIRECRAWL_API_BASE_URL': request.app.state.config.FIRECRAWL_API_BASE_URL,
             'FIRECRAWL_TIMEOUT': request.app.state.config.FIRECRAWL_TIMEOUT,
+            'FIRECRAWL_LOADER_ONLY_MAIN_CONTENT': request.app.state.config.FIRECRAWL_LOADER_ONLY_MAIN_CONTENT,
+            'FIRECRAWL_LOADER_PARSE_PDF': request.app.state.config.FIRECRAWL_LOADER_PARSE_PDF,
+            'FIRECRAWL_LOADER_PROXY_MODE': request.app.state.config.FIRECRAWL_LOADER_PROXY_MODE,
+            'FIRECRAWL_LOADER_MAX_AGE_MS': request.app.state.config.FIRECRAWL_LOADER_MAX_AGE_MS,
             'TAVILY_EXTRACT_DEPTH': request.app.state.config.TAVILY_EXTRACT_DEPTH,
             'EXTERNAL_WEB_SEARCH_URL': request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
             'EXTERNAL_WEB_SEARCH_API_KEY': request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
@@ -625,6 +629,10 @@ class WebConfig(BaseModel):
     FIRECRAWL_API_KEY: Optional[str] = None
     FIRECRAWL_API_BASE_URL: Optional[str] = None
     FIRECRAWL_TIMEOUT: Optional[str] = None
+    FIRECRAWL_LOADER_ONLY_MAIN_CONTENT: Optional[bool] = None
+    FIRECRAWL_LOADER_PARSE_PDF: Optional[bool] = None
+    FIRECRAWL_LOADER_PROXY_MODE: Optional[str] = None
+    FIRECRAWL_LOADER_MAX_AGE_MS: Optional[int] = None
     TAVILY_EXTRACT_DEPTH: Optional[str] = None
     EXTERNAL_WEB_SEARCH_URL: Optional[str] = None
     EXTERNAL_WEB_SEARCH_API_KEY: Optional[str] = None
@@ -1090,6 +1098,12 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         request.app.state.config.FIRECRAWL_API_KEY = form_data.web.FIRECRAWL_API_KEY
         request.app.state.config.FIRECRAWL_API_BASE_URL = form_data.web.FIRECRAWL_API_BASE_URL
         request.app.state.config.FIRECRAWL_TIMEOUT = form_data.web.FIRECRAWL_TIMEOUT
+        request.app.state.config.FIRECRAWL_LOADER_ONLY_MAIN_CONTENT = (
+            form_data.web.FIRECRAWL_LOADER_ONLY_MAIN_CONTENT
+        )
+        request.app.state.config.FIRECRAWL_LOADER_PARSE_PDF = form_data.web.FIRECRAWL_LOADER_PARSE_PDF
+        request.app.state.config.FIRECRAWL_LOADER_PROXY_MODE = form_data.web.FIRECRAWL_LOADER_PROXY_MODE
+        request.app.state.config.FIRECRAWL_LOADER_MAX_AGE_MS = form_data.web.FIRECRAWL_LOADER_MAX_AGE_MS
         request.app.state.config.EXTERNAL_WEB_SEARCH_URL = form_data.web.EXTERNAL_WEB_SEARCH_URL
         request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY = form_data.web.EXTERNAL_WEB_SEARCH_API_KEY
         request.app.state.config.EXTERNAL_WEB_LOADER_URL = form_data.web.EXTERNAL_WEB_LOADER_URL
@@ -1219,6 +1233,10 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'FIRECRAWL_API_KEY': request.app.state.config.FIRECRAWL_API_KEY,
             'FIRECRAWL_API_BASE_URL': request.app.state.config.FIRECRAWL_API_BASE_URL,
             'FIRECRAWL_TIMEOUT': request.app.state.config.FIRECRAWL_TIMEOUT,
+            'FIRECRAWL_LOADER_ONLY_MAIN_CONTENT': request.app.state.config.FIRECRAWL_LOADER_ONLY_MAIN_CONTENT,
+            'FIRECRAWL_LOADER_PARSE_PDF': request.app.state.config.FIRECRAWL_LOADER_PARSE_PDF,
+            'FIRECRAWL_LOADER_PROXY_MODE': request.app.state.config.FIRECRAWL_LOADER_PROXY_MODE,
+            'FIRECRAWL_LOADER_MAX_AGE_MS': request.app.state.config.FIRECRAWL_LOADER_MAX_AGE_MS,
             'TAVILY_EXTRACT_DEPTH': request.app.state.config.TAVILY_EXTRACT_DEPTH,
             'EXTERNAL_WEB_SEARCH_URL': request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
             'EXTERNAL_WEB_SEARCH_API_KEY': request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
@@ -2134,6 +2152,7 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            request.app.state.config.FIRECRAWL_TIMEOUT,
         )
     elif engine == 'external':
         return search_external(
@@ -2185,6 +2204,7 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
 
     urls = []
     result_items = []
+    native_firecrawl_docs = None
 
     try:
         logging.debug(f'trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.queries}')
@@ -2194,11 +2214,10 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
         # Set to 1 for sequential execution (rate-limited APIs like Brave free tier)
         concurrent_limit = request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS
 
-        if concurrent_limit:
-            # Limited concurrency with semaphore
-            semaphore = asyncio.Semaphore(concurrent_limit)
+        semaphore = asyncio.Semaphore(concurrent_limit) if concurrent_limit else None
 
-            async def search_query_with_semaphore(query):
+        async def execute_standard_search(query):
+            if semaphore:
                 async with semaphore:
                     return await run_in_threadpool(
                         search_web,
@@ -2208,21 +2227,71 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
                         user,
                     )
 
-            search_tasks = [search_query_with_semaphore(query) for query in form_data.queries]
-        else:
-            # Unlimited parallel execution (previous behavior)
-            search_tasks = [
-                run_in_threadpool(
-                    search_web,
-                    request,
-                    request.app.state.config.WEB_SEARCH_ENGINE,
-                    query,
-                    user,
-                )
-                for query in form_data.queries
-            ]
+            return await run_in_threadpool(
+                search_web,
+                request,
+                request.app.state.config.WEB_SEARCH_ENGINE,
+                query,
+                user,
+            )
 
-        search_results = await asyncio.gather(*search_tasks)
+        async def execute_firecrawl_native_search(query):
+            if semaphore:
+                async with semaphore:
+                    return await search_firecrawl_with_scrape(
+                        request.app.state.config.FIRECRAWL_API_BASE_URL,
+                        request.app.state.config.FIRECRAWL_API_KEY,
+                        query,
+                        request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                        request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                        timeout=request.app.state.config.FIRECRAWL_TIMEOUT,
+                        verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
+                        only_main_content=request.app.state.config.FIRECRAWL_LOADER_ONLY_MAIN_CONTENT,
+                        parse_pdf=request.app.state.config.FIRECRAWL_LOADER_PARSE_PDF,
+                        proxy_mode=request.app.state.config.FIRECRAWL_LOADER_PROXY_MODE,
+                        max_age_ms=request.app.state.config.FIRECRAWL_LOADER_MAX_AGE_MS,
+                    )
+
+            return await search_firecrawl_with_scrape(
+                request.app.state.config.FIRECRAWL_API_BASE_URL,
+                request.app.state.config.FIRECRAWL_API_KEY,
+                query,
+                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                timeout=request.app.state.config.FIRECRAWL_TIMEOUT,
+                verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
+                only_main_content=request.app.state.config.FIRECRAWL_LOADER_ONLY_MAIN_CONTENT,
+                parse_pdf=request.app.state.config.FIRECRAWL_LOADER_PARSE_PDF,
+                proxy_mode=request.app.state.config.FIRECRAWL_LOADER_PROXY_MODE,
+                max_age_ms=request.app.state.config.FIRECRAWL_LOADER_MAX_AGE_MS,
+            )
+
+        use_native_firecrawl = (
+            request.app.state.config.WEB_SEARCH_ENGINE == 'firecrawl'
+            and not request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER
+        )
+
+        if use_native_firecrawl:
+            try:
+                firecrawl_search_results = await asyncio.gather(
+                    *[execute_firecrawl_native_search(query) for query in form_data.queries]
+                )
+                search_results = [items for items, _ in firecrawl_search_results]
+                native_firecrawl_docs = [
+                    doc for _, docs in firecrawl_search_results for doc in docs
+                ]
+            except Exception as firecrawl_error:
+                log.warning(
+                    'Falling back to legacy Firecrawl search->loader flow: %s',
+                    firecrawl_error,
+                )
+                search_results = await asyncio.gather(
+                    *[execute_standard_search(query) for query in form_data.queries]
+                )
+        else:
+            search_results = await asyncio.gather(
+                *[execute_standard_search(query) for query in form_data.queries]
+            )
 
         for result in search_results:
             if result:
@@ -2233,6 +2302,19 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
 
         urls = list(dict.fromkeys(urls))
         log.debug(f'urls: {urls}')
+
+        if native_firecrawl_docs is not None:
+            loaded_urls = {
+                doc.metadata.get('source') for doc in native_firecrawl_docs if doc.metadata.get('source')
+            }
+            if not native_firecrawl_docs or not set(urls).issubset(loaded_urls):
+                missing_urls = sorted(set(urls) - loaded_urls)
+                log.warning(
+                    'Firecrawl native search results incomplete, falling back to loader for %d URLs: %s',
+                    len(missing_urls),
+                    missing_urls[:10],
+                )
+                native_firecrawl_docs = None
 
     except Exception as e:
         log.exception(e)
@@ -2266,19 +2348,24 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
                 if hasattr(result, 'snippet') and result.snippet is not None
             ]
         else:
-            loader = get_web_loader(
-                urls,
-                verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
-                requests_per_second=request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
-                trust_env=request.app.state.config.WEB_SEARCH_TRUST_ENV,
-            )
-            docs = await loader.aload()
+            if native_firecrawl_docs is not None:
+                docs = native_firecrawl_docs
+            else:
+                loader = get_web_loader(
+                    urls,
+                    verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
+                    requests_per_second=request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
+                    trust_env=request.app.state.config.WEB_SEARCH_TRUST_ENV,
+                )
+                docs = await loader.aload()
 
         urls = [
             doc.metadata.get('source') for doc in docs if doc.metadata.get('source')
         ]  # only keep the urls returned by the loader
         result_items = [
-            dict(item) for item in result_items if item.link in urls
+            item.model_dump() if hasattr(item, 'model_dump') else dict(item)
+            for item in result_items
+            if item.link in urls
         ]  # only keep the search results that have been loaded
 
         if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:

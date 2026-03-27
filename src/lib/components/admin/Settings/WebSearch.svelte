@@ -76,6 +76,12 @@
 		if (typeof webConfig.PLAYWRIGHT_TIMEOUT === 'number') {
 			webConfig.PLAYWRIGHT_TIMEOUT = webConfig.PLAYWRIGHT_TIMEOUT.toString();
 		}
+		if (typeof webConfig.FIRECRAWL_LOADER_MAX_AGE_MS === 'string') {
+			const parsed = parseInt(webConfig.FIRECRAWL_LOADER_MAX_AGE_MS);
+			if (!isNaN(parsed)) {
+				webConfig.FIRECRAWL_LOADER_MAX_AGE_MS = parsed;
+			}
+		}
 
 		const res = await updateRAGConfig(localStorage.token, {
 			web: webConfig
@@ -121,6 +127,27 @@
 				if (!isNaN(parsed)) {
 					webConfig.PLAYWRIGHT_TIMEOUT = parsed;
 				}
+			}
+			if (
+				webConfig.FIRECRAWL_LOADER_MAX_AGE_MS &&
+				typeof webConfig.FIRECRAWL_LOADER_MAX_AGE_MS === 'string'
+			) {
+				const parsed = parseInt(webConfig.FIRECRAWL_LOADER_MAX_AGE_MS);
+				if (!isNaN(parsed)) {
+					webConfig.FIRECRAWL_LOADER_MAX_AGE_MS = parsed;
+				}
+			}
+			if (webConfig.FIRECRAWL_LOADER_ONLY_MAIN_CONTENT == null) {
+				webConfig.FIRECRAWL_LOADER_ONLY_MAIN_CONTENT = true;
+			}
+			if (webConfig.FIRECRAWL_LOADER_PARSE_PDF == null) {
+				webConfig.FIRECRAWL_LOADER_PARSE_PDF = true;
+			}
+			if (!webConfig.FIRECRAWL_LOADER_PROXY_MODE) {
+				webConfig.FIRECRAWL_LOADER_PROXY_MODE = 'basic';
+			}
+			if (webConfig.FIRECRAWL_LOADER_MAX_AGE_MS == null) {
+				webConfig.FIRECRAWL_LOADER_MAX_AGE_MS = 3600000;
 			}
 		}
 	});
@@ -1042,35 +1069,143 @@
 								</div>
 							</div>
 						</div>
-					{:else if webConfig.WEB_LOADER_ENGINE === 'firecrawl' && webConfig.WEB_SEARCH_ENGINE !== 'firecrawl'}
+					{:else if webConfig.WEB_LOADER_ENGINE === 'firecrawl'}
 						<div class="mb-2.5 flex w-full flex-col">
-							<div>
-								<div class=" self-center text-xs font-medium mb-1">
-									{$i18n.t('Firecrawl API Base URL')}
+							{#if webConfig.WEB_SEARCH_ENGINE !== 'firecrawl'}
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Firecrawl API Base URL')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="text"
+												placeholder={$i18n.t('Enter Firecrawl API Base URL')}
+												bind:value={webConfig.FIRECRAWL_API_BASE_URL}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
 								</div>
 
-								<div class="flex w-full">
-									<div class="flex-1">
-										<input
-											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-											type="text"
-											placeholder={$i18n.t('Enter Firecrawl API Base URL')}
-											bind:value={webConfig.FIRECRAWL_API_BASE_URL}
-											autocomplete="off"
-										/>
+								<div class="mt-2">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Firecrawl API Key')}
 									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter Firecrawl API Key')}
+										bind:value={webConfig.FIRECRAWL_API_KEY}
+									/>
+								</div>
+
+								<div class="mt-2">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Firecrawl Timeout (s)')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="number"
+												placeholder={$i18n.t('Enter Firecrawl Timeout')}
+												bind:value={webConfig.FIRECRAWL_TIMEOUT}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
+								</div>
+							{/if}
+
+							<div class="mt-2 text-xs font-medium mb-1">
+								{$i18n.t('Firecrawl Advanced')}
+							</div>
+
+							<div class="mb-2.5 flex w-full justify-between">
+								<div class=" self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t(
+											'Return only the main article/page body and exclude headers, navigation, and footers.'
+										)}
+										placement="top-start"
+									>
+										{$i18n.t('Only Main Content')}
+									</Tooltip>
+								</div>
+								<div class="flex items-center relative">
+									<Switch bind:state={webConfig.FIRECRAWL_LOADER_ONLY_MAIN_CONTENT} />
 								</div>
 							</div>
 
-							<div class="mt-2">
-								<div class=" self-center text-xs font-medium mb-1">
-									{$i18n.t('Firecrawl API Key')}
+							<div class="mb-2.5 flex w-full justify-between">
+								<div class=" self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t(
+											'Enable Firecrawl PDF parsing. If disabled, PDF URLs will not be extracted into markdown content.'
+										)}
+										placement="top-start"
+									>
+										{$i18n.t('Parse PDF')}
+									</Tooltip>
 								</div>
+								<div class="flex items-center relative">
+									<Switch bind:state={webConfig.FIRECRAWL_LOADER_PARSE_PDF} />
+								</div>
+							</div>
 
-								<SensitiveInput
-									placeholder={$i18n.t('Enter Firecrawl API Key')}
-									bind:value={webConfig.FIRECRAWL_API_KEY}
-								/>
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										<Tooltip
+											content={$i18n.t(
+												'basic = fastest, auto = escalates only when needed, enhanced = slowest and most expensive.'
+											)}
+											placement="top-start"
+										>
+											{$i18n.t('Firecrawl Proxy Mode')}
+										</Tooltip>
+									</div>
+
+									<select
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={webConfig.FIRECRAWL_LOADER_PROXY_MODE}
+									>
+										<option value="basic">basic</option>
+										<option value="auto">auto</option>
+										<option value="enhanced">enhanced</option>
+									</select>
+								</div>
+							</div>
+
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										<Tooltip
+											content={$i18n.t(
+												'Higher max age allows Firecrawl to reuse cached pages and respond faster.'
+											)}
+											placement="top-start"
+										>
+											{$i18n.t('Firecrawl Cache Max Age (ms)')}
+										</Tooltip>
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="number"
+												min="0"
+												placeholder="3600000"
+												bind:value={webConfig.FIRECRAWL_LOADER_MAX_AGE_MS}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
+								</div>
 							</div>
 						</div>
 					{:else if webConfig.WEB_LOADER_ENGINE === 'tavily'}

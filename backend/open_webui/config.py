@@ -3373,6 +3373,30 @@ FIRECRAWL_TIMEOUT = PersistentConfig(
     os.environ.get('FIRECRAWL_TIMEOUT', ''),
 )
 
+FIRECRAWL_LOADER_ONLY_MAIN_CONTENT = PersistentConfig(
+    'FIRECRAWL_LOADER_ONLY_MAIN_CONTENT',
+    'rag.web.loader.firecrawl_only_main_content',
+    os.environ.get('FIRECRAWL_LOADER_ONLY_MAIN_CONTENT', 'true').lower() == 'true',
+)
+
+FIRECRAWL_LOADER_PARSE_PDF = PersistentConfig(
+    'FIRECRAWL_LOADER_PARSE_PDF',
+    'rag.web.loader.firecrawl_parse_pdf',
+    os.environ.get('FIRECRAWL_LOADER_PARSE_PDF', 'true').lower() == 'true',
+)
+
+FIRECRAWL_LOADER_PROXY_MODE = PersistentConfig(
+    'FIRECRAWL_LOADER_PROXY_MODE',
+    'rag.web.loader.firecrawl_proxy_mode',
+    os.environ.get('FIRECRAWL_LOADER_PROXY_MODE', 'basic'),
+)
+
+FIRECRAWL_LOADER_MAX_AGE_MS = PersistentConfig(
+    'FIRECRAWL_LOADER_MAX_AGE_MS',
+    'rag.web.loader.firecrawl_max_age_ms',
+    int(os.environ.get('FIRECRAWL_LOADER_MAX_AGE_MS', '3600000')),
+)
+
 EXTERNAL_WEB_SEARCH_URL = PersistentConfig(
     'EXTERNAL_WEB_SEARCH_URL',
     'rag.web.search.external_web_search_url',
