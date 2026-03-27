@@ -9,7 +9,10 @@ from mcp.client.auth import OAuthClientProvider, TokenStorage
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata, OAuthToken
 import httpx
-from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
+from open_webui.env import (
+    AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
+    MCP_STREAMABLE_HTTP_CLIENT_TIMEOUT,
+)
 
 
 def create_insecure_httpx_client(headers=None, timeout=None, auth=None):
@@ -19,12 +22,15 @@ def create_insecure_httpx_client(headers=None, timeout=None, auth=None):
     configures the SSL context during __init__. Setting client.verify = False
     after construction does not affect the underlying transport's SSL context.
     """
+    # Use environment variable as default timeout if not provided
+    effective_timeout = timeout if timeout is not None else MCP_STREAMABLE_HTTP_CLIENT_TIMEOUT
+
     kwargs = {
         'follow_redirects': True,
         'verify': False,
     }
-    if timeout is not None:
-        kwargs['timeout'] = timeout
+    if effective_timeout is not None:
+        kwargs['timeout'] = effective_timeout
     if headers is not None:
         kwargs['headers'] = headers
     if auth is not None:
