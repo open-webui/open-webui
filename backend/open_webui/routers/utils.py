@@ -42,6 +42,12 @@ async def format_code(form_data: CodeForm, user=Depends(get_admin_user)):
 
 @router.post('/code/execute')
 async def execute_code(request: Request, form_data: CodeForm, user=Depends(get_verified_user)):
+    if not request.app.state.config.ENABLE_CODE_EXECUTION:
+        raise HTTPException(
+            status_code=403,
+            detail='Code execution is disabled',
+        )
+
     if request.app.state.config.CODE_EXECUTION_ENGINE == 'jupyter':
         output = await execute_code_jupyter(
             request.app.state.config.CODE_EXECUTION_JUPYTER_URL,

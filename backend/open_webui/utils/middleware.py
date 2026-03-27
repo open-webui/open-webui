@@ -2607,12 +2607,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         # so system terminals work even when no other tools are selected)
         if terminal_id:
             try:
-                terminal_tools, system_prompt = await get_terminal_tools(
+                terminal_result = await get_terminal_tools(
                     request,
                     terminal_id,
                     user,
                     extra_params,
                 )
+                if isinstance(terminal_result, tuple):
+                    terminal_tools, system_prompt = terminal_result
+                else:
+                    terminal_tools = terminal_result
+                    system_prompt = None
                 if terminal_tools:
                     tools_dict = {**tools_dict, **terminal_tools}
                 if system_prompt:

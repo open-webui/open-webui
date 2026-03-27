@@ -268,9 +268,10 @@ export const detectTerminalServerType = async (
 
 /**
  * Create or update a policy on the orchestrator.
- * PUT {url}/api/v1/policies/{policyId}
+ * Proxied through the Open WebUI backend to keep API keys server-side.
  */
 export const putOrchestratorPolicy = async (
+	token: string,
 	url: string,
 	key: string,
 	policyId: string,
@@ -278,18 +279,52 @@ export const putOrchestratorPolicy = async (
 ): Promise<object | null> => {
 	let error = null;
 
-	const baseUrl = url.replace(/\/$/, '');
-	const headers: Record<string, string> = {
-		'Content-Type': 'application/json'
-	};
-	if (key) {
-		headers['Authorization'] = `Bearer ${key}`;
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/terminal_servers/policy`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			url: url.replace(/\/$/, ''),
+			key,
+			policy_id: policyId,
+			policy_data: policyData
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
 	}
 
-	const res = await fetch(`${baseUrl}/api/v1/policies/${encodeURIComponent(policyId)}`, {
-		method: 'PUT',
-		headers,
-		body: JSON.stringify(policyData)
+	return res;
+};
+
+/**
+ * Verify a terminal server connection via the backend proxy.
+ * Used for system/admin connections to avoid CORS issues and API key exposure.
+ */
+export const verifyTerminalServerConnection = async (token: string, connection: object) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/terminal_servers/verify`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			...connection
+		})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

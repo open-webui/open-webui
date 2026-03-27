@@ -12,12 +12,16 @@
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import { detectTerminalServerType, putOrchestratorPolicy } from '$lib/apis/configs';
+	import {
+		detectTerminalServerType,
+		verifyTerminalServerConnection,
+		putOrchestratorPolicy
+	} from '$lib/apis/configs';
 	import { getTerminalConfig } from '$lib/apis/terminal';
 
 	export let show = false;
 	export let edit = false;
-	export let admin = false;
+	export let direct = false;
 	export let connection = null;
 
 	export let onSubmit: Function = () => {};
@@ -110,9 +114,14 @@
 
 		verifying = true;
 		try {
-			if (admin) {
-				// Admin: detect orchestrator vs terminal
-				const type = await detectTerminalServerType(_url, key);
+			if (!direct) {
+				// System connection: proxy through backend to avoid CORS / key exposure
+				const result = await verifyTerminalServerConnection(localStorage.token, {
+					url: _url,
+					key,
+					auth_type
+				});
+				const type = result?.type ?? null;
 
 				if (type) {
 					serverType = type;
@@ -137,7 +146,7 @@
 					toast.error($i18n.t('Server connection failed'));
 				}
 			} else {
-				// Non-admin: simple terminal verification
+				// Direct connection: verify from browser
 				const res = await getTerminalConfig(_url, key);
 				if (res) {
 					toast.success($i18n.t('Server connection verified'));
@@ -192,9 +201,9 @@
 		url = url.replace(/\/$/, '');
 
 		// Save policy to orchestrator if applicable
-		if (serverType === 'orchestrator' && admin && policyId) {
+		if (serverType === 'orchestrator' && !direct && policyId) {
 			try {
-				await putOrchestratorPolicy(url, key, policyId, buildPolicyData());
+				await putOrchestratorPolicy(localStorage.token, url, key, policyId, buildPolicyData());
 			} catch (err) {
 				toast.error($i18n.t('Failed to save policy: {{error}}', { error: err }));
 				return;
@@ -202,7 +211,7 @@
 		}
 
 		const result = {
-			...(admin && id.trim() ? { id: id.trim() } : {}),
+			...(!direct && id.trim() ? { id: id.trim() } : {}),
 			url,
 			key,
 			name,
@@ -210,7 +219,7 @@
 			auth_type,
 			enabled: enabled,
 			config: {
-				...(admin ? { access_grants: accessGrants } : {})
+				...(!direct ? { access_grants: accessGrants } : {})
 			},
 			// Policy fields
 			...(serverType ? { server_type: serverType } : {}),
@@ -270,7 +279,7 @@
 									/>
 								</div>
 							</div>
-							{#if admin}
+							{#if !direct}
 								<div class="flex flex-col flex-1">
 									<div class="flex justify-between mb-0.5">
 										<label
@@ -368,7 +377,7 @@
 						</div>
 
 						<!-- Policy section (orchestrator only, admin only) -->
-						{#if serverType === 'orchestrator' && admin}
+						{#if serverType === 'orchestrator' && !direct}
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col w-full">
 									<div class="flex justify-between mb-0.5">
@@ -580,7 +589,7 @@
 								{$i18n.t('Advanced')}
 							</button>
 
-							{#if admin}
+							{#if !direct}
 								<button
 									class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 object-cover rounded-full flex gap-1 items-center mt-2"
 									type="button"
@@ -662,7 +671,7 @@
 										>
 											<option value="none">{$i18n.t('None')}</option>
 											<option value="bearer">{$i18n.t('Bearer')}</option>
-											{#if admin}
+											{#if !direct}
 												<option value="session">{$i18n.t('Session')}</option>
 												<option value="system_oauth">{$i18n.t('OAuth')}</option>
 											{/if}

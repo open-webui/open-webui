@@ -87,7 +87,7 @@ class FileModelResponse(BaseModel):
 
     filename: str
     data: Optional[dict] = None
-    meta: FileMeta
+    meta: Optional[FileMeta] = None
 
     created_at: int  # timestamp in epoch
     updated_at: Optional[int] = None  # timestamp in epoch, optional for legacy files
@@ -246,7 +246,7 @@ class FilesTable:
             total = query.count()
 
             items = [
-                FileModel.model_validate(file)
+                FileModelResponse.model_validate(file, from_attributes=True)
                 for file in query.order_by(File.updated_at.desc(), File.id.desc()).offset(skip).limit(limit).all()
             ]
 
