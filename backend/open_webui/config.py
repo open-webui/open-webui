@@ -801,6 +801,7 @@ def load_oauth_providers():
         OAUTH_PROVIDERS['feishu'] = {
             'register': feishu_oauth_register,
             'sub_claim': 'user_id',
+            'redirect_uri': FEISHU_REDIRECT_URI.value,
         }
 
     configured_providers = []
