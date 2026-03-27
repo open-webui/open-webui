@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { models, showSettings, settings, user, mobile, config } from '$lib/stores';
-	import { onMount, tick, getContext } from 'svelte';
+	import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Selector from './ModelSelector/Selector.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 
 	import { updateUserSettings } from '$lib/apis/users';
 	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
 
 	export let selectedModels = [''];
 	export let disabled = false;
@@ -38,6 +39,23 @@
 		await updateUserSettings(localStorage.token, { ui: $settings });
 	};
 
+	function handleModelSelected(event: CustomEvent, selectedModelIdx: number) {
+		const { value, item, model } = event.detail || {};
+
+		const nextSelectedModels = [...selectedModels];
+		nextSelectedModels[selectedModelIdx] = value;
+
+		selectedModels = nextSelectedModels;
+
+		dispatch('modelSelected', {
+			index: selectedModelIdx,
+			value,
+			item,
+			model,
+			selectedModels: nextSelectedModels
+		});
+	}
+
 	$: if (selectedModels.length > 0 && $models.length > 0) {
 		const _selectedModels = selectedModels.map((model) =>
 			$models.map((m) => m.id).includes(model) ? model : ''
@@ -64,6 +82,7 @@
 						}))}
 						{pinModelHandler}
 						bind:value={selectedModel}
+						on:modelSelected={(event) => handleModelSelected(event, selectedModelIdx)}
 					/>
 				</div>
 			</div>
