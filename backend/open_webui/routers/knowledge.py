@@ -656,6 +656,17 @@ async def add_file_to_knowledge_by_id(
             detail=ERROR_MESSAGES.FILE_NOT_PROCESSED,
         )
 
+    # Idempotency: if the background task already linked this file (e.g. the
+    # browser was open long enough after all), skip the expensive re-embedding
+    # and just return the current knowledge state.
+    if Knowledges.has_file(knowledge_id=id, file_id=form_data.file_id, db=db):
+        log.debug(f'File {form_data.file_id} already in knowledge {id}, skipping re-embed')
+        if knowledge:
+            return KnowledgeFilesResponse(
+                **knowledge.model_dump(),
+                files=Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+            )
+
     # Add content to the vector database
     try:
         await process_file(

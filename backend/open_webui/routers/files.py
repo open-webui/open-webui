@@ -22,7 +22,7 @@ from fastapi import (
 
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from open_webui.internal.db import get_async_session, get_async_db_context
+from open_webui.internal.db import get_db, get_async_session, get_async_db_context
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
@@ -163,6 +163,36 @@ async def process_uploaded_file(
                 },
                 db=db_session,
             )
+            return  # Do not attempt knowledge linking after a processing failure
+
+        # After successful processing: if the file was dropped directly into a
+        # Knowledge base (metadata carries knowledge_id), link it here inside
+        # the background task.  This ensures the file lands even when the browser
+        # tab is closed before the SSE stream delivers the completed status to
+        # the frontend's addFileHandler — the true "drop-and-forget" guarantee.
+        knowledge_id = file_metadata.get('knowledge_id') if file_metadata else None
+        if knowledge_id:
+            try:
+                with get_db() as kg_session:
+                    # Skip if the frontend already linked it (idempotency).
+                    if not Knowledges.has_file(knowledge_id=knowledge_id, file_id=file_item.id, db=kg_session):
+                        process_file(
+                            request,
+                            ProcessFileForm(file_id=file_item.id, collection_name=knowledge_id),
+                            user=user,
+                            db=kg_session,
+                        )
+                        Knowledges.add_file_to_knowledge_by_id(
+                            knowledge_id=knowledge_id,
+                            file_id=file_item.id,
+                            user_id=user.id,
+                            db=kg_session,
+                        )
+                        log.info(f'Auto-linked file {file_item.id} to knowledge {knowledge_id}')
+                    else:
+                        log.debug(f'File {file_item.id} already linked to knowledge {knowledge_id}, skipping auto-link')
+            except Exception as kg_err:
+                log.error(f'Failed to auto-link file {file_item.id} to knowledge {knowledge_id}: {kg_err}')
 
     try:
         if db:
