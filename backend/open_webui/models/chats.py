@@ -445,7 +445,7 @@ class ChatTable:
         return chat.chat.get('history', {}).get('messages', {}).get(message_id, {})
 
     def upsert_message_to_chat_by_id_and_message_id(
-        self, id: str, message_id: str, message: dict
+        self, id: str, message_id: str, message: dict, skip_dual_write: bool = False
     ) -> Optional[ChatModel]:
         chat = self.get_chat_by_id(id)
         if chat is None:
@@ -472,15 +472,16 @@ class ChatTable:
         chat['history'] = history
 
         # Dual-write to chat_message table
-        try:
-            ChatMessages.upsert_message(
-                message_id=message_id,
-                chat_id=id,
-                user_id=user_id,
-                data=history['messages'][message_id],
-            )
-        except Exception as e:
-            log.warning(f'Failed to write to chat_message table: {e}')
+        if not skip_dual_write:
+            try:
+                ChatMessages.upsert_message(
+                    message_id=message_id,
+                    chat_id=id,
+                    user_id=user_id,
+                    data=history['messages'][message_id],
+                )
+            except Exception as e:
+                log.warning(f'Failed to write to chat_message table: {e}')
 
         return self.update_chat_by_id(id, chat)
 
