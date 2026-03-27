@@ -943,29 +943,94 @@ def handle_responses_streaming_event(
         return current_output, None
 
 
-def get_source_context(sources: list, source_ids: dict = None, include_content: bool = True) -> str:
+# Metadata keys whose presence indicates a provider that supplies rich per-chunk
+# metadata (page numbers, word offsets, original filename).  Add further provider
+# fingerprint keys here as new loaders are introduced.
+_RICH_METADATA_KEYS = frozenset({"chunk_mode"})
+
+
+def _enrich_source_attrs(meta: dict) -> dict:
+    """Return the extra metadata fields we want to forward to the LLM for
+    'rich' providers (those that set at least one key from _RICH_METADATA_KEYS).
+
+    Returns an empty dict for all other providers so the call site is uniform.
     """
-    Build <source> tag context string from citation sources.
+    if not (_RICH_METADATA_KEYS & meta.keys()):
+        return {}
+    extra = {}
+    if meta.get("page") is not None:
+        extra["page"] = meta["page"]
+    if meta.get("chunk_start_word") is not None:
+        extra["chunk_start"] = meta["chunk_start_word"]
+    if meta.get("chunk_end_word") is not None:
+        extra["chunk_end"] = meta["chunk_end_word"]
+    filename = meta.get("filename") or meta.get("document_name")
+    if filename:
+        extra["filename"] = filename
+    return extra
+
+
+def get_source_context(
+    sources: list, source_ids: dict = None, include_content: bool = True, format: str = "xml"
+) -> str:
+    """Build context string from citation sources.
+
+    format="xml"  (default) — current behaviour: <source id="…" …>content</source>
+                               Rich-metadata providers also get page, chunk_start,
+                               chunk_end, and filename as XML attributes.
+    format="json"            — JSON array of objects.  Use {{CONTEXT_JSON}} in the
+                               RAG_TEMPLATE to activate this path automatically.
     """
-    context_string = ''
+    context_string = ""
     if source_ids is None:
         source_ids = {}
+    if format == "json":
+        items = []
+        for source in sources:
+            for doc, meta in zip(
+                source.get("document", []), source.get("metadata", [])
+            ):
+                source_id = (
+                    meta.get("source") or source.get("source", {}).get("id") or "N/A"
+                )
+                if source_id not in source_ids:
+                    source_ids[source_id] = len(source_ids) + 1
+                entry: dict = {
+                    "id": source_ids[source_id],
+                    "content": doc if include_content else "",
+                }
+                src_name = source.get("source", {}).get("name")
+                if src_name:
+                    entry["name"] = src_name
+                entry.update(_enrich_source_attrs(meta))
+                items.append(entry)
+        return json.dumps(items, ensure_ascii=False, indent=2)
+
+    # XML format (default)
+    context_string = ""
     for source in sources:
-        for doc, meta in zip(source.get('document', []), source.get('metadata', [])):
-            source_id = meta.get('source') or source.get('source', {}).get('id') or 'N/A'
+        for doc, meta in zip(source.get("document", []), source.get("metadata", [])):
+            source_id = (
+                meta.get("source") or source.get("source", {}).get("id") or "N/A"
+            )
             if source_id not in source_ids:
                 source_ids[source_id] = len(source_ids) + 1
-            src_name = source.get('source', {}).get('name')
-            src_type = source.get('source', {}).get('type')
-            src_rid = source.get('source', {}).get('id')
-            body = doc if include_content else ''
-            context_string += (
-                f'<source id="{source_ids[source_id]}"'
-                + (f' name="{src_name}"' if src_name else '')
-                + (f' resource-type="{src_type}"' if src_type else '')
-                + (f' resource-id="{src_rid}"' if src_rid else '')
-                + f'>{body}</source>\n'
-            )
+            src_name = source.get("source", {}).get("name")
+            src_type = source.get("source", {}).get("type")
+            src_rid = source.get("source", {}).get("id")
+            body = doc if include_content else ""
+
+            tag = f'<source id="{source_ids[source_id]}"'
+            if src_name:
+                tag += f' name="{src_name}"'
+            if src_type:
+                tag += f' resource-type="{src_type}"'
+            if src_rid:
+                tag += f' resource-id="{src_rid}"'
+            for attr, val in _enrich_source_attrs(meta).items():
+                tag += f' {attr}="{val}"'
+            tag += f">{body}</source>\n"
+            context_string += tag
     return context_string
 
 
@@ -983,28 +1048,48 @@ def apply_source_context_to_messages(
     When include_content is False, emit <source> tags with id/name but no
     document body — useful when the content is already present elsewhere
     (e.g. in a tool result message) and only citation markers are needed.
+
+    Format detection
+    ----------------
+    If the configured RAG_TEMPLATE contains the token ``{{CONTEXT_JSON}}``,
+    the context is emitted as a JSON array and that token is substituted in
+    the template (instead of the usual ``{{CONTEXT}}``).  All other template
+    tokens (``{{QUERY}}``, ``[query]``, etc.) continue to work normally.
+    This lets you switch to JSON context simply by editing the RAG_TEMPLATE
+    in the Admin UI — no code change required.
     """
     if not sources or not user_message:
         return messages
 
-    context = get_source_context(sources, include_content=include_content)
+    rag_tmpl = request.app.state.config.RAG_TEMPLATE
 
-    context = context.strip()
-    if not context:
-        return messages
-
-    if RAG_SYSTEM_CONTEXT:
-        return add_or_update_system_message(
-            rag_template(request.app.state.config.RAG_TEMPLATE, context, user_message),
-            messages,
-            append=True,
+    if "{{CONTEXT_JSON}}" in rag_tmpl:
+        # JSON path: substitute {{CONTEXT_JSON}} ourselves, then hand the
+        # already-substituted template to rag_template with an empty context
+        # placeholder so it only processes {{QUERY}} / [query].
+        context = get_source_context(
+            sources, include_content=include_content, format="json"
+        ).strip()
+        if not context:
+            return messages
+        # Replace our custom token first, then let rag_template handle {{QUERY}}.
+        filled = rag_template(
+            rag_tmpl.replace("{{CONTEXT_JSON}}", context),
+            "",          # {{CONTEXT}} is not present, so this is a no-op
+            user_message,
         )
     else:
-        return add_or_update_user_message(
-            rag_template(request.app.state.config.RAG_TEMPLATE, context, user_message),
-            messages,
-            append=False,
-        )
+        context = get_source_context(
+            sources, include_content=include_content, format="xml"
+        ).strip()
+        if not context:
+            return messages
+        filled = rag_template(rag_tmpl, context, user_message)
+
+    if RAG_SYSTEM_CONTEXT:
+        return add_or_update_system_message(filled, messages, append=True)
+    else:
+        return add_or_update_user_message(filled, messages, append=False)
 
 
 async def process_tool_result(

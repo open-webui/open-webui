@@ -1,5 +1,6 @@
 import logging
 import os
+import json
 from typing import Awaitable, Optional, Union
 
 import requests
@@ -269,7 +270,13 @@ def query_doc(collection_name: str, query_embedding: list[float], k: int, user: 
         )
 
         if result:
-            log.info(f'query_doc:result {result.ids} {result.metadatas}')
+            try:
+                metas_str = json.dumps(result.metadatas, ensure_ascii=False)
+            except Exception:
+                metas_str = str(result.metadatas)
+            if len(metas_str) > 1000:
+                metas_str = metas_str[:1000] + "...(truncated)"
+            log.info(f"query_doc:result {result.ids} {metas_str}")
 
         return result
     except Exception as e:
@@ -969,9 +976,13 @@ def get_embedding_function(
 
                 # Flatten results — raise if any batch failed
                 embeddings = []
-                for i, batch_embeddings in enumerate(batch_results):
-                    if batch_embeddings is None:
-                        raise Exception(f'Embedding generation failed for batch {i + 1}/{len(batches)}')
+                for batch_embeddings in batch_results:
+                    if not isinstance(batch_embeddings, list):
+                        raise ValueError(
+                            f"Embedding API returned {type(batch_embeddings).__name__!r} for a batch "
+                            "(expected a list of vectors). An API error or timeout likely occurred "
+                            "for one or more batches — check the log lines above for details."
+                        )
                     embeddings.extend(batch_embeddings)
 
                 log.debug(
