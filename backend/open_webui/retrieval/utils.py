@@ -30,6 +30,7 @@ from open_webui.models.knowledge import Knowledges
 from open_webui.models.chats import Chats
 from open_webui.models.notes import Notes
 from open_webui.models.access_grants import AccessGrants
+from open_webui.utils.access_control.files import has_access_to_file
 
 from open_webui.retrieval.vector.main import GetResult
 from open_webui.utils.headers import include_user_info_headers
@@ -1042,7 +1043,11 @@ async def get_sources_from_items(
                     }
                 elif item.get('id'):
                     file_object = Files.get_file_by_id(item.get('id'))
-                    if file_object:
+                    if file_object and (
+                        user.role == 'admin'
+                        or file_object.user_id == user.id
+                        or has_access_to_file(item.get('id'), 'read', user)
+                    ):
                         query_result = {
                             'documents': [[file_object.data.get('content', '')]],
                             'metadatas': [
