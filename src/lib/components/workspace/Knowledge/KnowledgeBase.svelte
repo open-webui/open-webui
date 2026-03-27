@@ -32,7 +32,8 @@
 		updateFileFromKnowledgeById,
 		updateKnowledgeById,
 		updateKnowledgeAccessGrants,
-		searchKnowledgeFilesById
+		searchKnowledgeFilesById,
+		getPendingFilesByKnowledgeId
 	} from '$lib/apis/knowledge';
 	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
 
@@ -180,25 +181,38 @@
 			direction = null;
 		}
 
-		const res = await searchKnowledgeFilesById(
-			localStorage.token,
-			knowledge.id,
-			query,
-			viewOption,
-			sortKey,
-			direction,
-			currentPage
-		).catch(() => {
-			return null;
-		});
+		const [res, pendingFromServer] = await Promise.all([
+			searchKnowledgeFilesById(
+				localStorage.token,
+				knowledge.id,
+				query,
+				viewOption,
+				sortKey,
+				direction,
+				currentPage
+			).catch(() => {
+				return null
+			}),
+			getPendingFilesByKnowledgeId(
+				localStorage.token, 
+				knowledge.id
+			).catch(() => [])
+		]);
 
 		if (res) {
+			const linkedIds = new Set(res.items.map((f) => f.id).filter(Boolean));
+
+			// Pending files from the server that are not yet in the linked list.
+			const serverPending = (pendingFromServer ?? []).filter((f) => !linkedIds.has(f.id));
+
 			if (silent && fileItems !== null) {
-				// During a polling refresh, preserve any local in-flight placeholders
-				// (files still being uploaded / processed) that have not yet been
-				// committed to the knowledge base and therefore won't appear in the
-				// server response yet.  Without this they would vanish every 15 s.
-				const serverIds = new Set(res.items.map((f) => f.id).filter(Boolean));
+				// During a polling refresh, also preserve local-only in-flight
+				// placeholders (e.g. files uploading in this tab right now) that
+				// aren't reflected in the server responses yet.
+				const serverIds = new Set([
+					...linkedIds,
+					...serverPending.map((f) => f.id).filter(Boolean)
+				]);
 				const localInFlight = fileItems.filter(
 					(f) =>
 						(f.status === 'uploading' ||
@@ -206,9 +220,9 @@
 							f?.data?.status === 'processing') &&
 						!serverIds.has(f.id)
 				);
-				fileItems = [...localInFlight, ...res.items];
+				fileItems = [...localInFlight, ...serverPending, ...res.items];
 			} else {
-				fileItems = res.items;
+				fileItems = [...serverPending, ...res.items];
 			}
 			fileItemsTotal = res.total;
 		}
@@ -276,6 +290,12 @@
 							item.itemId === fileItem.itemId
 								? { ...item, data: { ...(item.data ?? {}), ...statusData } }
 								: item
+						);
+					}, (fileId) => {
+						// Set the real id immediately so polling deduplication works
+						// before the SSE stream finishes.
+						fileItems = fileItems.map((item) =>
+							item.itemId === fileItem.itemId ? { ...item, id: fileId } : item
 						);
 					}).catch((e) => {
 						toast.error(`${e}`);
@@ -375,6 +395,13 @@
 						item.itemId === fileItem.itemId
 							? { ...item, data: { ...(item.data ?? {}), ...statusData } }
 							: item
+					);
+				},
+				(fileId) => {
+					// Set the real id immediately so polling deduplication works
+					// before the SSE stream finishes.
+					fileItems = fileItems.map((item) =>
+						item.itemId === fileItem.itemId ? { ...item, id: fileId } : item
 					);
 				}
 			).catch((e) => {
