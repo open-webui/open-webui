@@ -193,7 +193,23 @@
 		});
 
 		if (res) {
-			fileItems = res.items;
+			if (silent && fileItems !== null) {
+				// During a polling refresh, preserve any local in-flight placeholders
+				// (files still being uploaded / processed) that have not yet been
+				// committed to the knowledge base and therefore won't appear in the
+				// server response yet.  Without this they would vanish every 15 s.
+				const serverIds = new Set(res.items.map((f) => f.id).filter(Boolean));
+				const localInFlight = fileItems.filter(
+					(f) =>
+						(f.status === 'uploading' ||
+							f?.data?.status === 'pending' ||
+							f?.data?.status === 'processing') &&
+						!serverIds.has(f.id)
+				);
+				fileItems = [...localInFlight, ...res.items];
+			} else {
+				fileItems = res.items;
+			}
 			fileItemsTotal = res.total;
 		}
 		return res;
