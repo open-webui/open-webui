@@ -2937,6 +2937,7 @@ async def background_tasks_handler(ctx):
                                 metadata['message_id'],
                                 {
                                     'followUps': follow_ups,
+                                    skip_dual_write=True,
                                 },
                             )
 
