@@ -60,6 +60,7 @@
 		"@codemirror/theme-one-dark": "^6.1.2",
 		"@floating-ui/dom": "^1.7.2",
 		"@huggingface/transformers": "^3.0.0",
+		"@internationalized/date": "^3.12.0",
 		"@joplin/turndown-plugin-gfm": "^1.0.62",
 		"@mediapipe/tasks-vision": "^0.10.17",
 		"@pyscript/core": "^0.4.32",
