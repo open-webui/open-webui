@@ -54,8 +54,8 @@
 	data-arrow-selected={index === selectedModelIdx}
 	data-value={item.value}
 	on:click={() => {
-		onClick();
-	}}
+	onClick();
+}}
 >
 	<div class="flex flex-col flex-1 gap-1.5">
 		<!-- {#if (item?.model?.tags ?? []).length > 0}
@@ -78,14 +78,14 @@
 			<div class="flex items-center min-w-fit">
 				<Tooltip content={$user?.role === 'admin' ? (item?.value ?? '') : ''} placement="top-start">
 					<img
-						src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${item.model.id}&lang=${$i18n.language}`}
-						alt={$i18n.t('{{modelName}} profile image', { modelName: item.label })}
-						class="rounded-full size-5 flex items-center"
-						loading="lazy"
-						on:error={(e) => {
-							e.currentTarget.src = '/favicon.png';
-						}}
-					/>
+	src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${item.model.id}&lang=${$i18n.language}`}
+	alt={$i18n.t('{{modelName}} profile image', { modelName: item.label })}
+	class="rounded-full size-5 flex items-center"
+	loading="lazy"
+	on:error={(e) => {
+		e.currentTarget.src = '/favicon.png';
+	}}
+/>
 				</Tooltip>
 			</div>
 

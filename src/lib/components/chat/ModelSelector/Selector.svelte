@@ -199,7 +199,6 @@
 	const pullModelHandler = async () => {
 		const sanitizedModelTag = searchValue.trim().replace(/^ollama\s+(run|pull)\s+/, '');
 
-		console.log($MODEL_DOWNLOAD_POOL);
 		if ($MODEL_DOWNLOAD_POOL[sanitizedModelTag]) {
 			toast.error(
 				$i18n.t(`Model '{{modelTag}}' is already in queue for downloading.`, {
@@ -469,31 +468,38 @@
 											autocomplete="off"
 											aria-label={$i18n.t('Search In Models')}
 											on:keydown={(e) => {
-												if (e.code === 'Enter' && filteredItems.length > 0) {
-													value = filteredItems[selectedModelIdx].value;
-													show = false;
-													return; // dont need to scroll on selection
-												} else if (e.code === 'ArrowDown') {
-													e.stopPropagation();
-													selectedModelIdx = Math.min(
-														selectedModelIdx + 1,
-														filteredItems.length - 1
-													);
-												} else if (e.code === 'ArrowUp') {
-													e.stopPropagation();
-													selectedModelIdx = Math.max(selectedModelIdx - 1, 0);
-												} else {
-													// if the user types something, reset to the top selection.
-													selectedModelIdx = 0;
-												}
+	if (e.code === 'Enter' && filteredItems.length > 0) {
+	const selectedItem = filteredItems[selectedModelIdx];
+	value = selectedItem.value;
 
-												const item = document.querySelector(`[data-arrow-selected="true"]`);
-												item?.scrollIntoView({
-													block: 'center',
-													inline: 'nearest',
-													behavior: 'instant'
-												});
-											}}
+
+	dispatch('modelSelected', {
+		value: selectedItem.value,
+		item: selectedItem,
+		model: selectedItem.model
+	});
+
+	show = false;
+	return; // dont need to scroll on selection
+}
+	else if (e.code === 'ArrowDown') {
+		e.stopPropagation();
+		selectedModelIdx = Math.min(selectedModelIdx + 1, filteredItems.length - 1);
+	} else if (e.code === 'ArrowUp') {
+		e.stopPropagation();
+		selectedModelIdx = Math.max(selectedModelIdx - 1, 0);
+	} else {
+		// if the user types something, reset to the top selection.
+		selectedModelIdx = 0;
+	}
+
+	const item = document.querySelector(`[data-arrow-selected="true"]`);
+	item?.scrollIntoView({
+		block: 'center',
+		inline: 'nearest',
+		behavior: 'instant'
+	});
+}}
 										/>
 									</div>
 								{/if}
@@ -647,11 +653,18 @@
 													{pinModelHandler}
 													{unloadModelHandler}
 													onClick={() => {
-														value = item.value;
-														selectedModelIdx = index;
+	value = item.value;
+	selectedModelIdx = index;
 
-														show = false;
-													}}
+
+	dispatch('modelSelected', {
+		value: item.value,
+		item,
+		model: item.model
+	});
+
+	show = false;
+}}
 												/>
 											{/each}
 											<div style="height: {(filteredItems.length - visibleEnd) * ITEM_HEIGHT}px;" />
