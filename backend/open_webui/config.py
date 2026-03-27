@@ -2104,12 +2104,81 @@ DEFAULT_CODE_INTERPRETER_PROMPT = """
 
 Ensure that the tools are effectively utilized to achieve the highest-quality analysis for the user."""
 
+CODE_INTERPRETER_PYODIDE_PROMPT = """
+#### Tools Available
+
+1. **Code Interpreter (Pyodide)**: `<code_interpreter type="code" lang="python"></code_interpreter>`
+    - You have access to a Python environment running in the browser via Pyodide, enabling fast execution of code for analysis, calculations, or problem-solving. Use it in this response.
+    - The Python code you write can incorporate a wide array of libraries supported by Pyodide, handle data manipulation or visualization, perform analysis, or tackle computational challenges.
+    - To use it, **you must enclose your code within `<code_interpreter type="code" lang="python">` XML tags** and stop right away. If you don't, the code won't execute.
+    - When writing code in the code_interpreter XML tag, Do NOT use the triple backticks code block for markdown formatting, example: ```py # python code ``` will cause an error because it is markdown formatting, it is not python code.
+    - When coding, **always aim to print meaningful outputs** (e.g., results, tables, summaries, or visuals) to better interpret and verify the findings.
+    - After obtaining the printed output, **always provide a concise analysis, interpretation, or next steps**.
+    - All responses should be communicated in the chat's primary language, ensuring seamless understanding.
+
+Ensure that the tools are effectively utilized to achieve the highest-quality analysis for the user."""
+
 
 ####################################
 # Vector Database
 ####################################
 
 VECTOR_DB = os.environ.get('VECTOR_DB', 'chroma')
+
+# MariaDB Vector (mariadb-vector)
+MARIADB_VECTOR_DB_URL = os.environ.get('MARIADB_VECTOR_DB_URL', '').strip()
+MARIADB_VECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
+    os.environ.get('MARIADB_VECTOR_INITIALIZE_MAX_VECTOR_LENGTH', '1536').strip() or '1536'
+)
+MARIADB_VECTOR_DISTANCE_STRATEGY = os.environ.get('MARIADB_VECTOR_DISTANCE_STRATEGY', 'cosine').strip().lower()
+MARIADB_VECTOR_INDEX_M = int(os.environ.get('MARIADB_VECTOR_INDEX_M', '8').strip() or '8')
+
+MARIADB_VECTOR_POOL_SIZE = os.environ.get('MARIADB_VECTOR_POOL_SIZE', None)
+if MARIADB_VECTOR_POOL_SIZE is not None:
+    try:
+        MARIADB_VECTOR_POOL_SIZE = int(MARIADB_VECTOR_POOL_SIZE)
+    except Exception:
+        MARIADB_VECTOR_POOL_SIZE = None
+
+MARIADB_VECTOR_POOL_MAX_OVERFLOW = os.environ.get('MARIADB_VECTOR_POOL_MAX_OVERFLOW', 0)
+if MARIADB_VECTOR_POOL_MAX_OVERFLOW == '':
+    MARIADB_VECTOR_POOL_MAX_OVERFLOW = 0
+else:
+    try:
+        MARIADB_VECTOR_POOL_MAX_OVERFLOW = int(MARIADB_VECTOR_POOL_MAX_OVERFLOW)
+    except Exception:
+        MARIADB_VECTOR_POOL_MAX_OVERFLOW = 0
+
+MARIADB_VECTOR_POOL_TIMEOUT = os.environ.get('MARIADB_VECTOR_POOL_TIMEOUT', 30)
+if MARIADB_VECTOR_POOL_TIMEOUT == '':
+    MARIADB_VECTOR_POOL_TIMEOUT = 30
+else:
+    try:
+        MARIADB_VECTOR_POOL_TIMEOUT = int(MARIADB_VECTOR_POOL_TIMEOUT)
+    except Exception:
+        MARIADB_VECTOR_POOL_TIMEOUT = 30
+
+MARIADB_VECTOR_POOL_RECYCLE = os.environ.get('MARIADB_VECTOR_POOL_RECYCLE', 3600)
+if MARIADB_VECTOR_POOL_RECYCLE == '':
+    MARIADB_VECTOR_POOL_RECYCLE = 3600
+else:
+    try:
+        MARIADB_VECTOR_POOL_RECYCLE = int(MARIADB_VECTOR_POOL_RECYCLE)
+    except Exception:
+        MARIADB_VECTOR_POOL_RECYCLE = 3600
+
+ENABLE_MARIADB_VECTOR = True
+if VECTOR_DB == 'mariadb-vector':
+    if not MARIADB_VECTOR_DB_URL:
+        ENABLE_MARIADB_VECTOR = False
+    else:
+        try:
+            parsed = urlparse(MARIADB_VECTOR_DB_URL)
+            scheme = (parsed.scheme or '').lower()
+            if scheme != 'mariadb+mariadbconnector':
+                ENABLE_MARIADB_VECTOR = False
+        except Exception:
+            ENABLE_MARIADB_VECTOR = False
 
 # Chroma
 CHROMA_DATA_PATH = f'{DATA_DIR}/vector_db'
