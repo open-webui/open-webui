@@ -1397,10 +1397,13 @@ export const getUsage = async (token: string = '') => {
 
 export const getBackendConfig = async () => {
 	let error = null;
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), 8000);
 
 	const res = await fetch(`${WEBUI_BASE_URL}/api/config`, {
 		method: 'GET',
 		credentials: 'include',
+		signal: controller.signal,
 		headers: {
 			'Content-Type': 'application/json'
 		}
@@ -1410,9 +1413,16 @@ export const getBackendConfig = async () => {
 			return res.json();
 		})
 		.catch((err) => {
+			if (err?.name === 'AbortError') {
+				error = 'Timed out while connecting to backend at http://localhost:8080';
+			} else {
+				error = err;
+			}
 			console.error(err);
-			error = err;
 			return null;
+		})
+		.finally(() => {
+			clearTimeout(timeoutId);
 		});
 
 	if (error) {

@@ -3,7 +3,7 @@
 	import { onMount, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
-	import { mobile, models, settings } from '$lib/stores';
+	import { mobile, settings } from '$lib/stores';
 
 	import { generateMoACompletion } from '$lib/apis';
 	import { updateChatById } from '$lib/apis/chats';
@@ -18,8 +18,8 @@
 	import Skeleton from './Skeleton.svelte';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import ProfileImage from './ProfileImage.svelte';
-	import { WEBUI_BASE_URL } from '$lib/constants';
 	const i18n = getContext('i18n');
+	const ASSISTANT_BRAND_NAME = 'VenomX';
 	dayjs.extend(localizedFormat);
 
 	export let chatId;
@@ -265,8 +265,6 @@
 									{@const _messageId =
 										groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]]}
 
-									{@const model = $models.find((m) => m.id === history.messages[_messageId]?.model)}
-
 									<button
 										class="min-w-fit {selectedModelIdx == modelIdx
 											? ' dark:border-gray-300 '
@@ -281,7 +279,7 @@
 									>
 										<div class="flex items-center gap-1.5">
 											<div class="-translate-y-[1px]">
-												{model ? `${model.name}` : history.messages[_messageId]?.model}
+												{ASSISTANT_BRAND_NAME}
 											</div>
 										</div>
 									</button>

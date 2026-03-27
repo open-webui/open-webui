@@ -107,6 +107,7 @@
 	import Sidebar from '../icons/Sidebar.svelte';
 	import Image from '../common/Image.svelte';
 	import { getBanners } from '$lib/apis/configs';
+	import TargetStatusSidebar from './TargetStatusSidebar.svelte';
 
 	export let chatIdProp = '';
 
@@ -120,6 +121,7 @@
 
 	let autoScroll = true;
 	let processing = '';
+	let showTargetSidebar = false;
 	let messagesContainerElement: HTMLDivElement;
 
 	let navbarElement;
@@ -2713,7 +2715,7 @@
 <div
 	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
 		? '  md:max-w-[calc(100%-var(--sidebar-width))]'
-		: ' '} w-full max-w-full flex flex-col"
+		: ' '} w-full max-w-full flex flex-col vx-page-bg"
 	id="chat-container"
 >
 	{#if !loading}
@@ -2739,11 +2741,27 @@
 				/>
 			{/if}
 
-			<PaneGroup direction="horizontal" class="w-full h-full">
-				<Pane defaultSize={50} minSize={30} class="h-full flex relative max-w-full flex-col">
+			<div class="w-full h-full flex flex-row-reverse gap-2 px-2 pb-2">
+				{#if showTargetSidebar}
+					<div class="hidden xl:block h-full shrink-0">
+						<TargetStatusSidebar
+							onClose={() => {
+								showTargetSidebar = false;
+							}}
+						/>
+					</div>
+				{/if}
+
+				<PaneGroup direction="horizontal" class="w-full h-full min-w-0">
+					<Pane defaultSize={50} minSize={30} class="h-full flex relative max-w-full flex-col">
 					<FilesOverlay show={dragged} />
 					<Navbar
 						bind:this={navbarElement}
+						showTargetToggle={true}
+						targetSidebarVisible={showTargetSidebar}
+						toggleTargetSidebar={() => {
+							showTargetSidebar = !showTargetSidebar;
+						}}
 						chat={{
 							id: $chatId,
 							chat: {
@@ -2962,31 +2980,32 @@
 							</div>
 						{/if}
 					</div>
-				</Pane>
+					</Pane>
 
-				<ChatControls
-					bind:this={controlPaneComponent}
-					bind:history
-					bind:chatFiles
-					bind:params
-					bind:files
-					bind:pane={controlPane}
-					chatId={$chatId}
-					modelId={selectedModelIds?.at(0) ?? null}
-					models={selectedModelIds.reduce((a, e, i, arr) => {
-						const model = $models.find((m) => m.id === e);
-						if (model) {
-							return [...a, model];
-						}
-						return a;
-					}, [])}
-					{submitPrompt}
-					{stopResponse}
-					{showMessage}
-					{eventTarget}
-					{codeInterpreterEnabled}
-				/>
-			</PaneGroup>
+					<ChatControls
+						bind:this={controlPaneComponent}
+						bind:history
+						bind:chatFiles
+						bind:params
+						bind:files
+						bind:pane={controlPane}
+						chatId={$chatId}
+						modelId={selectedModelIds?.at(0) ?? null}
+						models={selectedModelIds.reduce((a, e, i, arr) => {
+							const model = $models.find((m) => m.id === e);
+							if (model) {
+								return [...a, model];
+							}
+							return a;
+						}, [])}
+						{submitPrompt}
+						{stopResponse}
+						{showMessage}
+						{eventTarget}
+						{codeInterpreterEnabled}
+					/>
+				</PaneGroup>
+			</div>
 		</div>
 	{:else if loading}
 		<div class=" flex items-center justify-center h-full w-full">
