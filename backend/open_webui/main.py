@@ -733,6 +733,211 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             log.warning(f'Failed to initialize tool/terminal servers at startup: {e}')
 
+    # -----------------------------------------------------------------------
+    # Startup cleanup: handle files stuck in 'pending' / 'processing' state
+    # from a previous run whose background tasks did not survive the restart.
+    #
+    # If the file has a docling task_id AND docling-serve reports it as still
+    # running, we re-attach a background thread that resumes polling on the
+    # *existing* task (no re-submission) and embeds the result when done.
+    # All other stuck files are immediately marked as failed.
+    # -----------------------------------------------------------------------
+    try:
+        import threading as _threading
+        import time as _time_
+        import requests as _requests
+
+        from open_webui.models.files import File as _FileORM
+        from open_webui.models.users import Users as _Users
+        from open_webui.internal.db import get_db as _get_db
+
+        _docling_url = app.state.config.DOCLING_SERVER_URL
+        _docling_key = app.state.config.DOCLING_API_KEY
+
+        def _docling_task_status(task_id: str) -> str:
+            """Return docling task_status string, or '' on any error."""
+            if not _docling_url or not task_id:
+                return ''
+            try:
+                hdrs = {'X-Api-Key': _docling_key} if _docling_key else {}
+                r = _requests.get(
+                    f'{_docling_url}/v1/status/poll/{task_id}',
+                    params={'wait': 0},
+                    headers=hdrs,
+                    timeout=5,
+                )
+                if r.ok:
+                    return r.json().get('task_status', '')
+            except Exception as _ce:
+                log.debug('Could not reach docling for task %s: %s', task_id, _ce)
+            return ''
+
+        def _resume_docling_task(file_id: str, file_path: str, filename: str,
+                                 mime_type: str, task_id: str, knowledge_id: str,
+                                 user_id: str):
+            """Thread target: poll existing docling task, embed result, link to knowledge."""
+            try:
+                from open_webui.retrieval.loaders.main import DoclingLoaderJson, DoclingLoader
+                from open_webui.routers.retrieval import save_docs_to_vector_db
+                from open_webui.models.files import Files as _F
+                from open_webui.models.knowledge import Knowledges as _K
+                from open_webui.utils.misc import calculate_sha256_string
+                from open_webui.retrieval.vector.utils import filter_metadata
+                from open_webui.storage.provider import Storage
+                from langchain_core.documents import Document
+
+                cfg = app.state.config
+                use_json = getattr(cfg, 'DOCLING_JSON_CHUNK_MODE', None)
+
+                resolved_path = Storage.get_file(file_path)
+
+                def _cb(data):
+                    with _get_db() as _s:
+                        _F.update_file_data_by_id(file_id, data, db=_s)
+
+                LoaderCls = DoclingLoaderJson if use_json else DoclingLoader
+                loader = LoaderCls(
+                    url=cfg.DOCLING_SERVER_URL,
+                    api_key=cfg.DOCLING_API_KEY,
+                    file_path=resolved_path,
+                    mime_type=mime_type,
+                    params=cfg.DOCLING_PARAMS or {},
+                    timeout=int(cfg.DOCLING_SERVE_TIMEOUT or 0) or None,
+                    status_callback=_cb,
+                    **({
+                        'chunk_mode': use_json,
+                        'chunk_size': cfg.CHUNK_SIZE,
+                        'chunk_overlap': cfg.CHUNK_OVERLAP,
+                    } if use_json else {}),
+                )
+
+                log.info('Startup resume: polling docling task %s for file %s', task_id, file_id)
+                docs = loader.load_from_task_id(task_id)
+
+                from open_webui.retrieval.main import filter_metadata
+                user_obj = _Users.get_user_by_id(user_id)
+
+                # Wrap docs with required metadata
+                docs = [
+                    Document(
+                        page_content=d.page_content,
+                        metadata={
+                            **filter_metadata(d.metadata),
+                            'name': filename,
+                            'created_by': user_id,
+                            'file_id': file_id,
+                            'source': filename,
+                        },
+                    )
+                    for d in docs
+                ]
+
+                text_content = ' '.join(d.page_content for d in docs)
+                with _get_db() as _s:
+                    _F.update_file_data_by_id(file_id, {'content': text_content}, db=_s)
+
+                collection_name = f'file-{file_id}'
+
+                class _MockRequest:
+                    class app:
+                        state = app.state  # noqa: E741
+
+                result = save_docs_to_vector_db(
+                    _MockRequest(),
+                    docs=docs,
+                    collection_name=collection_name,
+                    metadata={'file_id': file_id, 'name': filename,
+                               'hash': calculate_sha256_string(text_content)},
+                    add=False,
+                    user=user_obj,
+                )
+
+                if result:
+                    with _get_db() as _s:
+                        _F.update_file_data_by_id(file_id, {'status': 'completed'}, db=_s)
+
+                    # Link to knowledge (same idempotent logic as process_file)
+                    if knowledge_id:
+                        from open_webui.routers.retrieval import ProcessFileForm, process_file as _pf
+                        with _get_db() as _s:
+                            if not _K.has_file(knowledge_id=knowledge_id, file_id=file_id, db=_s):
+                                _pf(_MockRequest(), ProcessFileForm(
+                                    file_id=file_id, collection_name=knowledge_id),
+                                    user=user_obj, db=_s)
+                                _K.add_file_to_knowledge_by_id(
+                                    knowledge_id=knowledge_id, file_id=file_id,
+                                    user_id=user_id, db=_s)
+
+                    log.info('Startup resume complete for file %s', file_id)
+                else:
+                    raise Exception('save_docs_to_vector_db returned no result')
+
+            except Exception as _re:
+                log.error('Startup resume failed for file %s: %s', file_id, _re)
+                with _get_db() as _s:
+                    from open_webui.models.files import Files as _F2
+                    _F2.update_file_data_by_id(
+                        file_id,
+                        {'status': 'failed', 'error': f'Resume after restart failed: {_re}'},
+                        db=_s,
+                    )
+
+        with _get_db() as _startup_db:
+            stuck_files = _startup_db.query(_FileORM).filter(
+                _FileORM.data['status'].as_string().in_(['pending', 'processing'])
+            ).all()
+            # Detach from session before we close it
+            stuck_snapshot = [
+                {
+                    'id': f.id,
+                    'path': f.path,
+                    'filename': f.filename,
+                    'user_id': f.user_id,
+                    'data': dict(f.data or {}),
+                    'meta': dict(f.meta or {}),
+                }
+                for f in stuck_files
+            ]
+
+        reattached = 0
+        failed_count = 0
+        for snap in stuck_snapshot:
+            task_id = snap['data'].get('task_id')
+            status = _docling_task_status(task_id) if task_id else ''
+            if status in ('pending', 'started'):
+                knowledge_id = (snap['meta'].get('data') or {}).get('knowledge_id', '')
+                mime = snap['meta'].get('content_type') or 'application/octet-stream'
+                _threading.Thread(
+                    target=_resume_docling_task,
+                    args=(snap['id'], snap['path'], snap['filename'],
+                          mime, task_id, knowledge_id, snap['user_id']),
+                    daemon=True,
+                ).start()
+                reattached += 1
+            else:
+                reason = (
+                    f"Processing was interrupted by a server restart"
+                    + (f" (docling status: {status!r})" if status else " (docling unreachable or task unknown)")
+                    + "."
+                )
+                with _get_db() as _s:
+                    f_orm = _s.query(_FileORM).filter_by(id=snap['id']).first()
+                    if f_orm:
+                        import time as _t
+                        f_orm.data = {**(f_orm.data or {}), 'status': 'failed', 'error': reason}
+                        f_orm.updated_at = int(_t.time())
+                        _s.commit()
+                failed_count += 1
+
+        if reattached:
+            log.info('Startup: re-attached %d file(s) still running in docling.', reattached)
+        if failed_count:
+            log.warning('Startup: marked %d stuck file(s) as failed.', failed_count)
+
+    except Exception as _startup_err:
+        log.warning('Startup file cleanup failed: %s', _startup_err)
+    # -----------------------------------------------------------------------
+
     # Mark application as ready to accept traffic from a startup perspective.
     app.state.startup_complete = True
 

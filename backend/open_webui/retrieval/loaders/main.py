@@ -320,6 +320,16 @@ class DoclingLoader:
         result_json = self._retrieve_result(task_id)
         return self.format_result(result_json)
 
+    def load_from_task_id(self, task_id: str) -> list[Document]:
+        """Resume processing from an already-submitted docling task_id.
+
+        Used on server restart when docling-serve is still running the task:
+        skips re-submission and goes straight to polling → retrieve → format.
+        """
+        self._poll_task_until_done(task_id)
+        result_json = self._retrieve_result(task_id)
+        return self.format_result(result_json)
+
 class DoclingLoaderJson(DoclingLoader):
     """Return the Docling JSON document payload split into vector-DB-friendly Documents.
 

@@ -383,8 +383,34 @@ class FilesTable:
             except Exception:
                 return None
 
+    def reset_stuck_processing_files(self, db: Optional[Session] = None) -> int:
+        """Mark all files whose status is 'pending' or 'processing' as 'failed'.
+
+        Called once at application startup to clean up orphaned background
+        tasks left behind by a previous server crash or restart.  Returns the
+        number of files updated."""
+        import time as _time
+        with get_db_context(db) as db:
+            try:
+                rows = db.query(File).filter(
+                    File.data['status'].as_string().in_(['pending', 'processing'])
+                ).all()
+                now = int(_time.time())
+                for f in rows:
+                    f.data = {
+                        **(f.data or {}),
+                        'status': 'failed',
+                        'error': 'Processing was interrupted by a server restart.',
+                    }
+                    f.updated_at = now
+                db.commit()
+                return len(rows)
+            except Exception as exc:
+                log.warning('reset_stuck_processing_files failed: %s', exc)
+                return 0
+
     async def update_file_data_by_id(
-        self, id: str, data: dict, db: Optional[AsyncSession] = None
+        self, id: str, data: dict, db: Optional[Session] = None
     ) -> Optional[FileModel]:
         async with get_async_db_context(db) as db:
             try:
