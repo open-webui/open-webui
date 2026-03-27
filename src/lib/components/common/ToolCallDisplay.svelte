@@ -12,11 +12,11 @@
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Spinner from './Spinner.svelte';
 	import Markdown from '../chat/Messages/Markdown.svelte';
-	import WrenchSolid from '../icons/WrenchSolid.svelte';
 	import CheckCircle from '../icons/CheckCircle.svelte';
 	import Image from './Image.svelte';
 	import FullHeightIframe from './FullHeightIframe.svelte';
 	import { settings } from '$lib/stores';
+	import { getToolPresentation } from '$lib/utils/toolPresentation';
 
 	export let id: string = '';
 	export let attributes: {
@@ -39,7 +39,7 @@
 
 	$: if (!open) expandedResult = false;
 	export let buttonClassName =
-		'w-fit text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
+		'w-full text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
 
 	const componentId = id || uuidv4();
 
@@ -76,6 +76,20 @@
 		}
 	}
 
+	function handleFaviconError(event: Event) {
+		const image = event.currentTarget as HTMLImageElement | null;
+		if (image) {
+			image.src = '/favicon.png';
+		}
+	}
+
+	function scrollToSources() {
+		const el = document.getElementById(id) ?? document.getElementById(componentId);
+		if (el) {
+			el.dispatchEvent(new CustomEvent('scroll-to-sources', { bubbles: true, composed: true }));
+		}
+	}
+
 	$: args = decode(attributes?.arguments ?? '');
 	$: result = decode(attributes?.result ?? '');
 	$: files = parseJSONString(decode(attributes?.files ?? ''));
@@ -85,14 +99,21 @@
 
 	$: parsedArgs = parseArguments(args);
 	$: parsedResult = parseJSONString(result);
+	$: presentation = getToolPresentation({
+		toolName: attributes?.name ?? 'tool',
+		args: parsedArgs ?? undefined,
+		result: parsedResult,
+		translate: $i18n.t.bind($i18n)
+	});
+	$: headerLabel = isDone ? presentation.doneLabel : presentation.pendingLabel;
 </script>
 
-<div {id} class={className}>
+<div {id} class="{className} overflow-hidden">
 	{#if !grouped && embeds && Array.isArray(embeds) && embeds.length > 0}
 		<!-- Embed Mode: Show iframes without collapsible behavior -->
 		<div class="py-1 w-full cursor-pointer">
-			<div class="w-full text-xs text-gray-500">
-				{attributes.name}
+			<div class="w-full text-xs text-gray-500 dark:text-gray-400">
+				{presentation.doneLabel}
 			</div>
 			{#each embeds as embed, idx}
 				<div class="my-2" id={`${componentId}-tool-call-embed-${idx}`}>
@@ -111,7 +132,7 @@
 		<!-- Tool call display -->
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div
-			class="{buttonClassName} cursor-pointer"
+			class="{buttonClassName} cursor-pointer overflow-hidden"
 			on:pointerup={() => {
 				open = !open;
 			}}
@@ -132,40 +153,77 @@
 					</div>
 				{:else}
 					<div class="text-gray-400 dark:text-gray-500">
-						<WrenchSolid className="size-3.5" />
+						<svelte:component this={presentation.icon} className="size-4" />
 					</div>
 				{/if}
 
-				<!-- Label -->
-				<div class="flex-1 line-clamp-1">
-					<!-- Short label (below md) -->
-					<span class="@md:hidden text-black dark:text-white">{attributes.name}</span>
-					<!-- Full label (md and above) -->
-					<span class="hidden @md:inline font-normal">
-						{#if isDone}
-							<Markdown
-								id={`${componentId}-tool-call-title`}
-								content={$i18n.t('View Result from **{{NAME}}**', {
-									NAME: attributes.name
-								})}
-							/>
-						{:else}
-							<Markdown
-								id={`${componentId}-tool-call-executing`}
-								content={$i18n.t('Executing **{{NAME}}**...', {
-									NAME: attributes.name
-								})}
-							/>
-						{/if}
+				<!-- Label + inline source capsule / chips -->
+				<div class="flex-1 min-w-0 flex items-center gap-1.5">
+					<span class="font-normal text-sm text-black dark:text-white truncate min-w-0">
+						{headerLabel}
 					</span>
+
+					{#if presentation.sourceGroup && presentation.sourceGroup.totalCount > 0}
+						<!-- Grouped source capsule (stacked favicons) -->
+						<button
+							class="inline-flex items-center gap-1.5 rounded-full border border-gray-100 bg-gray-50 pl-1 pr-2 py-0.5 text-[11px] font-normal text-gray-600 transition hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-850"
+							on:click|stopPropagation={scrollToSources}
+							on:pointerup|stopPropagation={() => {}}
+						>
+							<div class="flex -space-x-1 items-center">
+								{#each presentation.sourceGroup.favicons.slice(0, 3) as fav}
+									<img
+										src={fav.faviconUrl}
+										alt={`${fav.hostname} favicon`}
+										class="size-4 rounded-full shrink-0 border border-white dark:border-gray-850 bg-white dark:bg-gray-900"
+										on:error={handleFaviconError}
+									/>
+								{/each}
+								{#if presentation.sourceGroup.totalCount > 3}
+									<div
+										class="size-4 rounded-full shrink-0 border border-white dark:border-gray-850 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-[8px] font-semibold text-gray-500 dark:text-gray-400"
+									>
+										+{presentation.sourceGroup.totalCount - 3}
+									</div>
+								{/if}
+							</div>
+						</button>
+					{/if}
+
+					{#each presentation.chips as chip}
+						{#if chip.url}
+							<a
+								href={chip.url}
+								target="_blank"
+								rel="noopener noreferrer"
+								class="max-w-[160px] inline-flex items-center gap-1 rounded-full border border-gray-100 bg-gray-50 px-1.5 py-0.5 text-[11px] font-normal text-gray-600 no-underline transition hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-850"
+								on:click|stopPropagation={() => {}}
+								on:pointerup|stopPropagation={() => {}}
+							>
+								<img
+									src={chip.faviconUrl}
+									alt={`${chip.label} favicon`}
+									class="size-3 shrink-0 rounded-sm"
+									on:error={handleFaviconError}
+								/>
+								<span class="truncate">{chip.label}</span>
+							</a>
+						{:else}
+							<div
+								class="max-w-[160px] inline-flex items-center rounded-full border border-gray-100 bg-gray-50 px-1.5 py-0.5 text-[11px] font-normal text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300"
+							>
+								<span class="truncate">{chip.label}</span>
+							</div>
+						{/if}
+					{/each}
 				</div>
 
 				<!-- Chevron -->
-				<div class="flex shrink-0 self-center translate-y-[1px]">
+				<div class="flex shrink-0 self-center text-gray-400 dark:text-gray-500">
 					{#if open}
-						<ChevronUp strokeWidth="3.5" className="size-3.5" />
+						<ChevronUp strokeWidth="3.5" className="size-3" />
 					{:else}
-						<ChevronDown strokeWidth="3.5" className="size-3.5" />
+						<ChevronDown strokeWidth="3.5" className="size-3" />
 					{/if}
 				</div>
 			</div>
@@ -174,6 +232,20 @@
 		{#if open}
 			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
 				<div class="border border-gray-50 dark:border-gray-850/30 rounded-2xl my-1.5 p-3 space-y-3">
+					<div>
+						<div
+							class="text-[10px] uppercase tracking-wider font-medium text-gray-400 dark:text-gray-500 mb-1.5 px-1"
+						>
+							{$i18n.t('Tool')}
+						</div>
+						<div class="px-1">
+							<code
+								class="text-[11px] text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 rounded-md px-1.5 py-0.5"
+								>{presentation.debugName}</code
+							>
+						</div>
+					</div>
+
 					<!-- Input -->
 					{#if args}
 						<div>

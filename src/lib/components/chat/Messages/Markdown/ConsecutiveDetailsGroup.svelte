@@ -7,12 +7,12 @@
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 	import CheckCircle from '$lib/components/icons/CheckCircle.svelte';
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
 
 	import { settings } from '$lib/stores';
+	import { getToolFamilySummary } from '$lib/utils/toolPresentation';
 
 	const i18n = getContext('i18n');
 
@@ -73,37 +73,42 @@
 
 	$: summaryText = (() => {
 		const parts = [];
+		const joinSummaryParts = (items: string[]) =>
+			items
+				.map((item, index) => (index === 0 ? item : item.charAt(0).toLowerCase() + item.slice(1)))
+				.join(', ');
 
 		if (toolCallCount > 0) {
-			// Group by tool name and show counts
-			const nameCounts = {};
-			tokens
+			const toolNames = tokens
 				.filter((t) => t?.attributes?.type === 'tool_calls')
-				.forEach((t) => {
-					const name = t?.attributes?.name ?? 'tool';
-					nameCounts[name] = (nameCounts[name] || 0) + 1;
-				});
+				.map((t) => t?.attributes?.name ?? 'tool');
 
-			const toolParts = Object.entries(nameCounts).map(([name, count]) =>
-				count > 1 ? `${count} ${name}` : name
-			);
-			parts.push(...toolParts);
+			const familySummary = getToolFamilySummary(toolNames, hasPending, $i18n.t.bind($i18n));
+			if (familySummary) {
+				parts.push(familySummary);
+			}
 		}
 
 		if (codeInterpreterCount > 0) {
-			if (codeInterpreterCount === 1) {
+			if (hasPending) {
+				parts.push($i18n.t('Running analysis'));
+			} else if (codeInterpreterCount === 1) {
 				parts.push($i18n.t('Ran {{COUNT}} analysis', { COUNT: codeInterpreterCount }));
 			} else {
 				parts.push($i18n.t('Ran {{COUNT}} analyses', { COUNT: codeInterpreterCount }));
 			}
 		}
 
-		const prefix = hasPending ? $i18n.t('Exploring') : $i18n.t('Explored');
-		const detail = parts.join(', ');
-		return detail;
-	})();
+		if (reasoningCount > 0 && toolCallCount === 0 && codeInterpreterCount === 0) {
+			parts.push(hasPending ? $i18n.t('Thinking...') : $i18n.t('Thought'));
+		}
 
-	$: prefixText = hasPending ? $i18n.t('Exploring') : $i18n.t('Explored');
+		return parts.length > 0
+			? joinSummaryParts(parts)
+			: hasPending
+				? $i18n.t('Exploring')
+				: $i18n.t('Explored');
+	})();
 </script>
 
 <div {id} class="w-full">
@@ -135,11 +140,8 @@
 			<!-- Summary text -->
 			<div class="flex-1 line-clamp-1">
 				<span class="text-gray-600 dark:text-gray-300 {hasPending ? 'shimmer' : ''}"
-					>{prefixText}</span
+					>{summaryText}</span
 				>
-				{#if summaryText}
-					<span class="text-gray-400 dark:text-gray-500">{summaryText}</span>
-				{/if}
 			</div>
 
 			<!-- Chevron -->

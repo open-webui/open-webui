@@ -159,7 +159,7 @@
 	export let editCodeBlock = true;
 	export let topPadding = false;
 
-	let citationsElement: HTMLDivElement;
+	let citationsElement: any;
 
 	let contentContainerElement: HTMLDivElement;
 	let buttonsContainerElement: HTMLDivElement;
@@ -589,6 +589,18 @@
 		}
 	};
 
+	const handleScrollToSources = () => {
+		if (citationsElement) {
+			citationsElement.toggleOpen?.();
+		}
+		tick().then(() => {
+			const el = document.getElementById(`citations-${message?.id}`);
+			if (el) {
+				el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+			}
+		});
+	};
+
 	onMount(async () => {
 		// console.log('ResponseMessage mounted');
 
@@ -599,6 +611,7 @@
 
 		if (contentContainerElement) {
 			contentContainerElement.addEventListener('copy', contentCopyHandler);
+			contentContainerElement.addEventListener('scroll-to-sources', handleScrollToSources);
 		}
 	});
 
@@ -609,6 +622,7 @@
 
 		if (contentContainerElement) {
 			contentContainerElement.removeEventListener('copy', contentCopyHandler);
+			contentContainerElement.removeEventListener('scroll-to-sources', handleScrollToSources);
 		}
 	});
 </script>
@@ -782,7 +796,7 @@
 
 						<div
 							bind:this={contentContainerElement}
-							class="w-full flex flex-col relative {edit ? 'hidden' : ''}"
+							class="w-full flex flex-col relative overflow-hidden {edit ? 'hidden' : ''}"
 							id="response-content-container"
 						>
 							{#if message.content === '' && !message.done && !message.error && !hasVisibleStatus}
