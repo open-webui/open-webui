@@ -43,10 +43,7 @@
 			</div>
 		{:else}
 			<div class="flex w-full">
-				<ProfileImage
-					src={'/venomx-logo.png'}
-					className={'size-5 -translate-y-[1px] flex-shrink-0'}
-				/>
+				<ProfileImage src={'/venomx-logo.png'} className={'size-5 -translate-y-[1px]'} />
 
 				<div class="ml-2">
 					<div class=" flex justify-between items-center">

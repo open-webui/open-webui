@@ -642,12 +642,6 @@ OAUTH_AUDIENCE = PersistentConfig(
     os.environ.get('OAUTH_AUDIENCE', ''),
 )
 
-OAUTH_AUTHORIZE_PARAMS = PersistentConfig(
-    'OAUTH_AUTHORIZE_PARAMS',
-    'oauth.authorize_params',
-    json.loads(os.environ.get('OAUTH_AUTHORIZE_PARAMS', '{}')),
-)
-
 
 def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
@@ -2095,20 +2089,6 @@ DEFAULT_CODE_INTERPRETER_PROMPT = """
 
 Ensure that the tools are effectively utilized to achieve the highest-quality analysis for the user."""
 
-CODE_INTERPRETER_PYODIDE_PROMPT = """
-#### Tools Available
-
-1. **Code Interpreter (Pyodide)**: `<code_interpreter type="code" lang="python"></code_interpreter>`
-   - You have access to a Python environment running in the browser via Pyodide, enabling fast execution of code for analysis, calculations, or problem-solving. Use it in this response.
-   - The Python code you write can incorporate a wide array of libraries supported by Pyodide, handle data manipulation or visualization, perform analysis, or tackle computational challenges.
-   - To use it, **you must enclose your code within `<code_interpreter type="code" lang="python">` XML tags** and stop right away. If you don't, the code won't execute.
-   - When writing code in the code_interpreter XML tag, Do NOT use the triple backticks code block for markdown formatting, example: ```py # python code ``` will cause an error because it is markdown formatting, it is not python code.
-   - When coding, **always aim to print meaningful outputs** (e.g., results, tables, summaries, or visuals) to better interpret and verify the findings.
-   - After obtaining the printed output, **always provide a concise analysis, interpretation, or next steps**.
-   - All responses should be communicated in the chat's primary language, ensuring seamless understanding.
-
-Ensure that the tools are effectively utilized to achieve the highest-quality analysis for the user."""
-
 
 ####################################
 # Vector Database
@@ -2968,11 +2948,6 @@ WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
     int(os.getenv('WEB_SEARCH_CONCURRENT_REQUESTS', '0')),
 )
 
-WEB_FETCH_MAX_CONTENT_LENGTH = PersistentConfig(
-    'WEB_FETCH_MAX_CONTENT_LENGTH',
-    'rag.web.fetch.max_content_length',
-    int(os.getenv('WEB_FETCH_MAX_CONTENT_LENGTH', '10485760')),
-)
 
 WEB_LOADER_ENGINE = PersistentConfig(
     'WEB_LOADER_ENGINE',

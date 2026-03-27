@@ -197,7 +197,6 @@
 								bind:atSelectedModel
 								bind:showCommands
 								bind:dragged
-								{pendingOAuthTools}
 								{toolServers}
 								{stopResponse}
 								{createMessagePair}

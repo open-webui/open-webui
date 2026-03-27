@@ -35,8 +35,11 @@ html.dark {
 	position: relative;
 	isolation: isolate;
 	overflow: hidden;
-	background-image:
-		radial-gradient(85% 60% at 50% 36%, rgba(108, 156, 207, 0.12) 0%, rgba(108, 156, 207, 0) 72%),
+	background-image: radial-gradient(
+			85% 60% at 50% 36%,
+			rgba(108, 156, 207, 0.12) 0%,
+			rgba(108, 156, 207, 0) 72%
+		),
 		linear-gradient(180deg, var(--vx-bg) 0%, var(--vx-bg2) 100%);
 	background-repeat: no-repeat;
 	background-attachment: fixed;
@@ -65,8 +68,7 @@ html.dark {
 }
 
 .vx-input {
-	background:
-		linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)),
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)),
 		var(--vx-surface-3);
 	border: 1px solid var(--vx-border);
 	border-radius: var(--vx-radius-md);
