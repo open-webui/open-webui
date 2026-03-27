@@ -58,6 +58,7 @@
 	export let onChange = (e) => {};
 
 	export let toolServers = [];
+	export let pendingOAuthTools = [];
 
 	export let dragged = false;
 	let logoFailed = false;

@@ -329,6 +329,12 @@ OAUTH_MERGE_ACCOUNTS_BY_EMAIL = PersistentConfig(
     os.environ.get('OAUTH_MERGE_ACCOUNTS_BY_EMAIL', 'False').lower() == 'true',
 )
 
+OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE = PersistentConfig(
+    'OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE',
+    'oauth.refresh_token_include_scope',
+    os.environ.get('OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE', 'False').lower() == 'true',
+)
+
 OAUTH_PROVIDERS = {}
 
 GOOGLE_CLIENT_ID = PersistentConfig(
@@ -448,6 +454,12 @@ OPENID_REDIRECT_URI = PersistentConfig(
     'OPENID_REDIRECT_URI',
     'oauth.oidc.redirect_uri',
     os.environ.get('OPENID_REDIRECT_URI', ''),
+)
+
+OPENID_END_SESSION_ENDPOINT = PersistentConfig(
+    'OPENID_END_SESSION_ENDPOINT',
+    'oauth.oidc.end_session_endpoint',
+    os.environ.get('OPENID_END_SESSION_ENDPOINT', ''),
 )
 
 OAUTH_SCOPES = PersistentConfig(

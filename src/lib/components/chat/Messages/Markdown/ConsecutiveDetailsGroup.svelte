@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { decode } from 'html-entities';
 	import { getContext } from 'svelte';
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
@@ -9,6 +10,9 @@
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 	import CheckCircle from '$lib/components/icons/CheckCircle.svelte';
+	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
+
+	import { settings } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -20,12 +24,22 @@
 			name?: string;
 			done?: string;
 			duration?: string;
+			embeds?: string;
+			arguments?: string;
 		};
 	}> = [];
 
 	export let messageDone = true;
 
 	let open = false;
+
+	function parseJSONString(str: string) {
+		try {
+			return parseJSONString(JSON.parse(str));
+		} catch (e) {
+			return str;
+		}
+	}
 
 	$: toolCallCount = tokens.filter((t) => t?.attributes?.type === 'tool_calls').length;
 	$: reasoningCount = tokens.filter((t) => t?.attributes?.type === 'reasoning').length;
@@ -34,6 +48,28 @@
 		tokens.some((t) => t?.attributes?.done !== undefined && t?.attributes?.done !== 'true');
 
 	$: codeInterpreterCount = tokens.filter((t) => t?.attributes?.type === 'code_interpreter').length;
+
+	// Collect all embeds from tool_calls tokens
+	$: allEmbeds = (() => {
+		const result: Array<{ name: string; embed: string; args: string }> = [];
+		for (const t of tokens) {
+			if (t?.attributes?.type !== 'tool_calls') continue;
+			const raw = decode(t.attributes?.embeds ?? '');
+			try {
+				const parsed = parseJSONString(raw);
+				if (Array.isArray(parsed) && parsed.length > 0) {
+					for (const embed of parsed) {
+						result.push({
+							name: t.attributes?.name ?? '',
+							embed,
+							args: decode(t.attributes?.arguments ?? '')
+						});
+					}
+				}
+			} catch {}
+		}
+		return result;
+	})();
 
 	$: summaryText = (() => {
 		const parts = [];
@@ -123,5 +159,20 @@
 				<slot name="content" />
 			</div>
 		</div>
+	{/if}
+
+	{#if allEmbeds.length > 0}
+		{#each allEmbeds as embedItem, idx}
+			<div id={`${id}-embed-${idx}`}>
+				<FullHeightIframe
+					src={embedItem.embed}
+					args={embedItem.args}
+					allowScripts={true}
+					allowForms={$settings?.iframeSandboxAllowForms ?? false}
+					allowSameOrigin={$settings?.iframeSandboxAllowSameOrigin ?? false}
+					allowPopups={true}
+				/>
+			</div>
+		{/each}
 	{/if}
 </div>

@@ -380,6 +380,7 @@
 						<ToolCallDisplay
 							id={`${id}-${tokenIdx}-${detailIdx}-tc`}
 							attributes={detailToken.attributes}
+							grouped={true}
 							open={false}
 							className="w-full space-y-1"
 						/>
