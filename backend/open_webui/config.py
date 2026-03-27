@@ -642,6 +642,21 @@ OAUTH_AUDIENCE = PersistentConfig(
     os.environ.get('OAUTH_AUDIENCE', ''),
 )
 
+_oauth_authorize_params_raw = os.environ.get('OAUTH_AUTHORIZE_PARAMS', '{}')
+try:
+    _oauth_authorize_params = json.loads(_oauth_authorize_params_raw)
+    if not isinstance(_oauth_authorize_params, dict):
+        raise ValueError('OAUTH_AUTHORIZE_PARAMS must be a JSON object')
+except Exception as e:
+    log.warning(f'Invalid OAUTH_AUTHORIZE_PARAMS value; expected JSON object. Using empty object. Error: {e}')
+    _oauth_authorize_params = {}
+
+OAUTH_AUTHORIZE_PARAMS = PersistentConfig(
+    'OAUTH_AUTHORIZE_PARAMS',
+    'oauth.authorize_params',
+    _oauth_authorize_params,
+)
+
 
 def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
