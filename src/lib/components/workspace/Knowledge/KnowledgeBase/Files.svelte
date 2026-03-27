@@ -88,7 +88,34 @@
 				: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
 		>
 			<div class="flex items-center">
-				{#if file?.status !== 'uploading'}
+				{#if file?.status === 'uploading' && (!file?.data?.status || file?.data?.status === 'pending')}
+					<!-- No file ID yet — show spinner with status tooltip, no link -->
+					<Tooltip content={statusTooltip} placement="top-start">
+						<div class="p-1">
+							<Spinner className="size-3.5" />
+						</div>
+					</Tooltip>
+				{:else if isInFlight || isFailed}
+					<!-- File exists but still processing / failed — link to PDF, carry status tooltip -->
+					<Tooltip content={statusTooltip} placement="top-start">
+						<button
+							class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-850 transition {isFailed
+								? 'text-red-500 dark:text-red-400'
+								: ''}"
+							type="button"
+							on:click={() => {
+								let fileId = file?.id ?? file?.tempId;
+								if (fileId) window.open(`${WEBUI_BASE_URL}/api/v1/files/${fileId}/content`, '_blank');
+							}}
+						>
+							{#if isInFlight}
+								<Spinner className="size-3.5" />
+							{:else}
+								<DocumentPage className="size-3.5" />
+							{/if}
+						</button>
+					</Tooltip>
+				{:else}
 					<Tooltip content={$i18n.t('Open file')}>
 						<button
 							class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-850 transition"
@@ -101,8 +128,6 @@
 							<DocumentPage className="size-3.5" />
 						</button>
 					</Tooltip>
-				{:else}
-					<Spinner className="size-3.5" />
 				{/if}
 			</div>
 
@@ -130,20 +155,6 @@
 			>
 				<div class="">
 					<div class="flex gap-2 items-center line-clamp-1">
-						<div class="shrink-0">
-							{#if isInFlight || isFailed}
-								<Tooltip content={statusTooltip} placement="top-start">
-									{#if isInFlight}
-										<Spinner className="size-3.5" />
-									{:else}
-										<DocumentPage className="size-3.5" />
-									{/if}
-								</Tooltip>
-							{:else}
-								<DocumentPage className="size-3.5" />
-							{/if}
-						</div>
-
 						<div class="line-clamp-1 text-sm">
 							{file?.name ?? file?.meta?.name}
 							{#if file?.meta?.size}
