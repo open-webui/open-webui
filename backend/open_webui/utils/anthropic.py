@@ -90,6 +90,17 @@ async def get_anthropic_models(url: str, key: str, user: UserModel = None) -> di
 ##############################
 
 
+def _convert_anthropic_image_source(source: dict) -> str:
+    """Convert an Anthropic image source block to an OpenAI-compatible image URL."""
+    if source.get('type') == 'base64':
+        media_type = source.get('media_type', 'image/png')
+        data = source.get('data', '')
+        return f'data:{media_type};base64,{data}'
+    elif source.get('type') == 'url':
+        return source.get('url', '')
+    return ''
+
+
 def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
     """
     Convert an Anthropic Messages API request to OpenAI Chat Completions format.
@@ -145,23 +156,12 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
                         }
                     )
                 elif block_type == 'image':
-                    source = block.get('source', {})
-                    if source.get('type') == 'base64':
-                        media_type = source.get('media_type', 'image/png')
-                        data = source.get('data', '')
+                    url = _convert_anthropic_image_source(block.get('source', {}))
+                    if url:
                         openai_content.append(
                             {
                                 'type': 'image_url',
-                                'image_url': {
-                                    'url': f'data:{media_type};base64,{data}',
-                                },
-                            }
-                        )
-                    elif source.get('type') == 'url':
-                        openai_content.append(
-                            {
-                                'type': 'image_url',
-                                'image_url': {'url': source.get('url', '')},
+                                'image_url': {'url': url},
                             }
                         )
                 elif block_type == 'tool_use':
@@ -181,25 +181,81 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
                     )
                 elif block_type == 'tool_result':
                     # Tool results become separate tool messages in OpenAI format
+                    # https://docs.anthropic.com/en/api/messages#body-messages
                     tool_content = block.get('content', '')
                     if isinstance(tool_content, list):
                         tool_text_parts = []
+                        image_urls = []
+
                         for tc in tool_content:
-                            if isinstance(tc, dict) and tc.get('type') == 'text':
-                                tool_text_parts.append(tc.get('text', ''))
+                            if isinstance(tc, dict):
+                                tc_type = tc.get('type')
+                                if tc_type == 'text':
+                                    tool_text_parts.append(tc.get('text', ''))
+                                elif tc_type == 'image':
+                                    url = _convert_anthropic_image_source(
+                                        tc.get('source', {})
+                                    )
+                                    if url:
+                                        image_urls.append(url)
+                                elif tc_type in ('search_result', 'document'):
+                                    raise NotImplementedError(
+                                        f'Anthropic tool_result content type '
+                                        f'"{tc_type}" has no OpenAI equivalent'
+                                    )
+                                elif tc_type == 'tool_reference':
+                                    log.debug(
+                                        'Skipping tool_reference in tool_result '
+                                        '(no OpenAI equivalent)'
+                                    )
+                                else:
+                                    raise ValueError(
+                                        f'Unknown tool_result content type: '
+                                        f'{tc_type!r}'
+                                    )
+                            elif isinstance(tc, str):
+                                tool_text_parts.append(tc)
+                            else:
+                                raise ValueError(
+                                    f'Unexpected tool_result content item '
+                                    f'type: {type(tc).__name__}'
+                                )
+
                         tool_content = '\n'.join(tool_text_parts)
+                    elif not isinstance(tool_content, str):
+                        tool_content = str(tool_content) if tool_content else ''
+                        image_urls = []
+                    else:
+                        image_urls = []
 
                     # Propagate error status if present
                     if block.get('is_error'):
                         tool_content = f'Error: {tool_content}'
 
-                    messages.append(
-                        {
-                            'role': 'tool',
-                            'tool_call_id': block.get('tool_use_id', ''),
-                            'content': tool_content,
-                        }
-                    )
+                    # Build tool message, using multimodal format if images
+                    # are present (matches the pattern in utils/misc.py)
+                    if image_urls:
+                        messages.append(
+                            {
+                                'role': 'tool',
+                                'tool_call_id': block.get('tool_use_id', ''),
+                                'content': [
+                                    {'type': 'input_text', 'text': tool_content},
+                                    *[
+                                        {'type': 'input_image', 'image_url': url}
+                                        for url in image_urls
+                                    ],
+                                ],
+                            }
+                        )
+                    else:
+                        messages.append(
+                            {
+                                'role': 'tool',
+                                'tool_call_id': block.get('tool_use_id', ''),
+                                'content': tool_content,
+                            }
+                        )
 
             # Build the message
             if tool_calls:
