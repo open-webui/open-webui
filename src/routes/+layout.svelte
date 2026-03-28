@@ -970,6 +970,11 @@
 	/>
 </svelte:head>
 
+<!-- WCAG 2.4.1: Bypass Blocks - Skip to main content link -->
+<a href="#main-content" class="skip-to-content">
+	{$i18n.t('Skip to main content')}
+</a>
+
 {#if showRefresh}
 	<div class=" py-5">
 		<Spinner className="size-5" />
@@ -982,11 +987,17 @@
 			<AppSidebar />
 
 			<div class="w-full flex-1 max-w-[calc(100%-4.5rem)]">
-				<slot />
+				<!-- WCAG 2.4.1: Main landmark for screen readers -->
+				<main id="main-content" role="main" aria-label="Chat interface">
+					<slot />
+				</main>
 			</div>
 		</div>
 	{:else}
-		<slot />
+		<!-- WCAG 2.4.1: Main landmark for screen readers -->
+		<main id="main-content" role="main" aria-label="Chat interface">
+			<slot />
+		</main>
 	{/if}
 {/if}
 

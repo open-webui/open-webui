@@ -1,4 +1,5 @@
 @reference "./tailwind.css";
+@import "./accessibility.css";
 
 @font-face {
 	font-family: 'Inter';

@@ -1,0 +1,196 @@
+/**
+ * WCAG 2.1 AA Accessibility Styles
+ *
+ * This file contains global accessibility improvements for Open-WebUI
+ * to achieve WCAG 2.1 AA compliance (April 24, 2026 deadline).
+ */
+
+/* ============================================================================
+   KEYBOARD FOCUS INDICATORS (WCAG 2.4.7 Focus Visible)
+   ============================================================================
+   All interactive elements must have a visible focus indicator when
+   navigated to via keyboard. Minimum contrast ratio: 3:1 against background.
+   Focus indicator: 2px solid outline with high contrast colors.
+*/
+
+@layer base {
+	/* Global focus-visible styles for all interactive elements */
+	*:focus-visible {
+		outline: 2px solid oklch(0.55 0.25 264); /* Blue-500 equivalent */
+		outline-offset: 2px;
+		border-radius: 4px;
+	}
+
+	/* Dark mode focus indicator - higher contrast */
+	@media (prefers-color-scheme: dark) {
+		*:focus-visible {
+			outline-color: oklch(0.75 0.15 264); /* Lighter blue for dark backgrounds */
+		}
+	}
+
+	/* Button-specific focus styles */
+	button:focus-visible,
+	[role='button']:focus-visible {
+		outline: 2px solid oklch(0.55 0.25 264);
+		outline-offset: 2px;
+	}
+
+	/* Link-specific focus styles */
+	a:focus-visible {
+		outline: 2px solid oklch(0.55 0.25 264);
+		outline-offset: 2px;
+		border-radius: 2px;
+	}
+
+	/* Input field focus styles */
+	input:focus-visible,
+	textarea:focus-visible,
+	select:focus-visible {
+		outline: 2px solid oklch(0.55 0.25 264);
+		outline-offset: 1px;
+	}
+
+	/* Remove default browser focus styles to use our custom ones */
+	*:focus {
+		outline: none;
+	}
+
+	/* Re-apply our custom styles only when keyboard is used */
+	*:focus-visible {
+		outline: 2px solid oklch(0.55 0.25 264);
+		outline-offset: 2px;
+	}
+}
+
+/* ============================================================================
+   SKIP TO CONTENT LINK (WCAG 2.4.1 Bypass Blocks)
+   ============================================================================
+   Allows keyboard users to skip navigation and jump directly to main content.
+*/
+
+@layer components {
+	.skip-to-content {
+		position: absolute;
+		top: -100px;
+		left: 0;
+		background-color: oklch(0.55 0.25 264);
+		color: white;
+		padding: 0.75rem 1.5rem;
+		text-decoration: none;
+		border-radius: 0 0 4px 0;
+		font-weight: 600;
+		z-index: 10000;
+		transition: top 0.2s ease-in-out;
+	}
+
+	.skip-to-content:focus {
+		top: 0;
+		outline: 2px solid white;
+		outline-offset: 2px;
+	}
+
+	@media (prefers-color-scheme: dark) {
+		.skip-to-content {
+			background-color: oklch(0.65 0.20 264);
+		}
+	}
+}
+
+/* ============================================================================
+   HIGH CONTRAST MODE SUPPORT
+   ============================================================================
+   Ensure UI elements remain visible in high contrast modes.
+*/
+
+@media (prefers-contrast: high) {
+	*:focus-visible {
+		outline-width: 3px;
+		outline-offset: 3px;
+	}
+
+	button,
+	[role='button'],
+	a {
+		border: 1px solid currentColor;
+	}
+}
+
+/* ============================================================================
+   REDUCED MOTION SUPPORT (WCAG 2.3.3 Animation from Interactions)
+   ============================================================================
+   Respect user's reduced motion preferences.
+*/
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
+/* ============================================================================
+   MODAL AND DIALOG FOCUS MANAGEMENT
+   ============================================================================
+   Ensure modals have proper focus management and visual indicators.
+*/
+
+@layer components {
+	/* Modal backdrop for better visibility */
+	.modal[aria-modal='true'] {
+		/* Styles handled in Modal.svelte but ensure backdrop is visible */
+	}
+
+	/* Modal content should have clear boundaries */
+	.modal-content {
+		/* Ensure content area is clearly defined */
+	}
+}
+
+/* ============================================================================
+   SCREEN READER ONLY CONTENT
+   ============================================================================
+   Hide content visually but keep it available for screen readers.
+*/
+
+@layer utilities {
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border-width: 0;
+	}
+
+	.sr-only-focusable:focus {
+		position: static;
+		width: auto;
+		height: auto;
+		padding: inherit;
+		margin: inherit;
+		overflow: visible;
+		clip: auto;
+		white-space: normal;
+	}
+}
+
+/* ============================================================================
+   ARIA LIVE REGIONS
+   ============================================================================
+   Ensure dynamic content changes are announced to screen readers.
+*/
+
+@layer components {
+	[aria-live='polite'],
+	[aria-live='assertive'] {
+		/* Ensure live regions are positioned appropriately */
+		/* Usually positioned off-screen or with sr-only class */
+	}
+}

@@ -1,0 +1,14 @@
+# Exclude build artifacts and node_modules
+node_modules/
+.next/
+.nuxt/
+dist/
+build/
+out/
+target/
+.cache/
+.parcel-cache/
+
+# Exclude large dependencies
+public/static/
+static/assets/

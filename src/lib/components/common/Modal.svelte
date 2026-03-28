@@ -9,6 +9,11 @@
 	export let containerClassName = 'p-3';
 	export let className = 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm rounded-4xl';
 
+	// WCAG 2.1 AA: Accessible name and description
+	export let ariaLabelledBy = '';
+	export let ariaDescribedBy = '';
+	export let ariaLabel = 'Dialog';
+
 	let modalElement = null;
 	let mounted = false;
 	// Create focus trap to trap user tabs inside modal
@@ -40,8 +45,10 @@
 	};
 
 	const handleKeyDown = (event: KeyboardEvent) => {
+		// WCAG 2.1.1: Keyboard - All functionality must be available via keyboard
 		if (event.key === 'Escape' && isTopModal()) {
-			console.log('Escape');
+			event.preventDefault();
+			event.stopPropagation();
 			show = false;
 		}
 	};
@@ -87,22 +94,23 @@
 </script>
 
 {#if show}
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
-	<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 	<div
 		bind:this={modalElement}
 		aria-modal="true"
 		role="dialog"
-		class="modal fixed top-0 right-0 left-0 bottom-0 bg-black/30 dark:bg-black/60 w-full h-screen max-h-[100dvh] {containerClassName}  flex justify-center z-9999 overflow-y-auto overscroll-contain"
+		aria-labelledby={ariaLabelledBy || undefined}
+		aria-describedby={ariaDescribedBy || undefined}
+		aria-label={!ariaLabelledBy ? ariaLabel : undefined}
+		class="modal fixed top-0 right-0 left-0 bottom-0 bg-black/30 dark:bg-black/60 w-full h-screen max-h-[100dvh] {containerClassName} flex justify-center z-9999 overflow-y-auto overscroll-contain"
 		style="scrollbar-gutter: stable;"
 		in:fade={{ duration: 10 }}
 		on:mousedown={() => {
 			show = false;
 		}}
+		on:keydown={handleKeyDown}
 	>
 		<div
-			class="m-auto max-w-full {sizeToWidth(size)} {size !== 'full'
+			class="modal-content m-auto max-w-full {sizeToWidth(size)} {size !== 'full'
 				? 'mx-2'
 				: ''} shadow-3xl min-h-fit scrollbar-hidden {className} border border-white dark:border-gray-850"
 			in:flyAndScale
