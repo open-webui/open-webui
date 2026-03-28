@@ -1,12 +1,26 @@
-<script lang="ts">
+<script context="module" lang="ts">
+	import { marked, type Token } from 'marked';
 	import { decode } from 'html-entities';
+
+	const _detailTokensCache = new Map<string, Token[]>();
+
+	function getCachedDetailTokens(text: string, done: boolean = true): Token[] {
+		if (!done) return marked.lexer(decode(text));
+		const cached = _detailTokensCache.get(text);
+		if (cached) return cached;
+		const tokens = marked.lexer(decode(text));
+		_detailTokensCache.set(text, tokens);
+		return tokens;
+	}
+</script>
+
+<script lang="ts">
 	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { marked, type Token } from 'marked';
 	import { copyToClipboard, unescapeHtml } from '$lib/utils';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
@@ -396,7 +410,7 @@
 							<div class="mb-1.5" slot="content">
 								<svelte:self
 									id={`${id}-${tokenIdx}-${detailIdx}-d`}
-									tokens={marked.lexer(decode(detailToken.text))}
+									tokens={getCachedDetailTokens(detailToken.text, done)}
 									attributes={detailToken?.attributes}
 									{done}
 									{editCodeBlock}
@@ -443,7 +457,7 @@
 				<div class=" mb-1.5" slot="content">
 					<svelte:self
 						id={`${id}-${tokenIdx}-d`}
-						tokens={marked.lexer(decode(token.text))}
+						tokens={getCachedDetailTokens(token.text, done)}
 						attributes={token?.attributes}
 						{done}
 						{editCodeBlock}
