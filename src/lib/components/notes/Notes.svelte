@@ -341,7 +341,7 @@
 						{$i18n.t('Notes')}
 					</div>
 
-					<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+					<div class="text-lg font-medium text-gray-500 dark:text-gray-400">
 						{total}
 					</div>
 				</div>
@@ -465,7 +465,7 @@
 						<div class="">
 							{#each groupedNotes as [timeRange, notesList], idx}
 								<div
-									class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium px-2.5 pb-2.5"
+									class="w-full text-xs text-gray-500 dark:text-gray-400 font-medium px-2.5 pb-2.5"
 								>
 									{$i18n.t(timeRange)}
 								</div>
@@ -612,7 +612,7 @@
 															</div>
 
 															<div
-																class=" text-xs text-gray-500 dark:text-gray-500 mb-3 line-clamp-3 min-h-10"
+																class=" text-xs text-gray-500 dark:text-gray-400 mb-3 line-clamp-3 min-h-10"
 															>
 																{#if note.data?.content?.md}
 																	{note.data?.content?.md}

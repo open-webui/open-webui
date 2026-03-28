@@ -1013,7 +1013,7 @@
 								{/if}
 							</div>
 
-							<div class="mt-1 mb-1 text-xs text-gray-400 dark:text-gray-500">
+							<div class="mt-1 mb-1 text-xs text-gray-400 dark:text-gray-400">
 								{$i18n.t(
 									'After updating or changing the embedding model, you must reindex the knowledge base for the changes to take effect. You can do this using the "Reindex" button below.'
 								)}
@@ -1236,7 +1236,7 @@
 											/>
 										</div>
 									</div>
-									<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+									<div class="mt-1 text-xs text-gray-400 dark:text-gray-400">
 										{$i18n.t(
 											'Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.'
 										)}

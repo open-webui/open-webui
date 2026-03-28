@@ -31,7 +31,7 @@
 		<Tooltip content={$i18n.t('Send now')}>
 			<button
 				type="button"
-				class="p-1 text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+				class="p-1 text-gray-400 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
 				on:click={() => onSendNow(id)}
 				aria-label={$i18n.t('Send now')}
 			>
@@ -56,7 +56,7 @@
 		<Tooltip content={$i18n.t('Edit')}>
 			<button
 				type="button"
-				class="p-1 text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+				class="p-1 text-gray-400 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
 				on:click={() => onEdit(id)}
 				aria-label={$i18n.t('Edit')}
 			>
@@ -68,7 +68,7 @@
 		<Tooltip content={$i18n.t('Delete')}>
 			<button
 				type="button"
-				class="p-1 text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+				class="p-1 text-gray-400 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
 				on:click={() => onDelete(id)}
 				aria-label={$i18n.t('Delete')}
 			>

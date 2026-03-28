@@ -800,7 +800,7 @@
 										</div>
 										<div>
 											<button
-												class="flex items-center dark:text-gray-500"
+												class="flex items-center dark:text-gray-400"
 												on:click={() => {
 													replyToMessage = null;
 												}}

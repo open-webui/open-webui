@@ -95,32 +95,66 @@
 
 ---
 
-### ⏳ P0-2: Color Contrast Fixes (NOT STARTED)
+### 🔄 P0-2: Color Contrast Fixes (IN PROGRESS)
 
-**Estimated Time:** 2-3 days
-**Status:** Pending P0-1 completion
+**Estimated Time:** 8-12 hours implementation + 2-3 hours validation
+**Status:** Analysis complete, blocked on backend for full scan
+**Last Updated:** March 28, 2026
+
+#### Scan Results Summary
+
+**Automated Scan Status:** ✅ Partial (Static elements only)
+- **Tool:** axe-core 4.11.1 via Playwright
+- **Scan Date:** March 28, 2026
+- **Blocker:** Backend server required for dynamic UI rendering
+- **Static Scan Results:**
+  - ⚠️ 1 moderate violation: meta viewport `maximum-scale=1` prevents zoom
+  - ✅ 1 pass: Color contrast on error overlay text (8.79:1 ratio)
+  - ℹ️  0 incomplete checks
+  - ℹ️  1 inapplicable: Valid lang attribute (no lang specified to validate)
+
+**Manual Code Audit:** Required for dynamic components
+- Components analyzed: Sidebar, Navbar, MessageInput, Modal
+- Risk areas identified: Gray text shades in dark/light modes
+- See: `docs/accessibility/P0-2-color-contrast-analysis.md`
 
 #### Tasks
 
-1. **Install and Run axe DevTools**
-   - ❌ Chrome extension installation
-   - ❌ Run scan on all pages
-   - ❌ Generate violations report
+1. **Install and Run Automated Scans**
+   - ✅ axe-core CLI installed (via Homebrew)
+   - ✅ @axe-core/playwright integration added
+   - ✅ Initial scan script created (`axe-scan.js`)
+   - ✅ Scan executed on static homepage
+   - ⚠️  Full UI scan blocked (requires backend server)
+   - **Decision:** Proceed with manual code audit + post-deployment validation
 
-2. **Fix Color Contrast Violations**
-   - ❌ Use WebAIM Contrast Checker
-   - ❌ Find compliant colors (4.5:1 for normal text, 3:1 for large)
-   - ❌ Update `src/tailwind.css` color palette
-   - ❌ Update component inline styles
+2. **Fix Meta Viewport (Quick Win - 30 min)**
+   - ⏳ Remove `maximum-scale=1` from viewport meta tag
+   - ⏳ Test zoom functionality in mobile browsers
+   - **File:** `src/app.html` or root layout
+   - **Impact:** Enables pinch-to-zoom for accessibility
 
-3. **Common Violations to Fix**
-   - ❌ `.text-gray-500` and similar low-contrast utilities
-   - ❌ Placeholder text colors
-   - ❌ Disabled button text
-   - ❌ Link colors in dark mode
+3. **Manual Color Audit (2-3 hours)**
+   - ⏳ Document all Tailwind color class usage in key components
+   - ⏳ Calculate contrast ratios for top 20 combinations
+   - ⏳ Identify failing pairs (< 4.5:1 normal, < 3:1 large)
+   - ⏳ Create replacement color mapping
+   - **Tool:** WebAIM Contrast Checker
+   - **Components:** Sidebar, Navbar, MessageInput, Modal
 
-4. **Automated Validation**
-   - ❌ Setup axe-core CLI in CI/CD
+4. **Implement Color Fixes (4-6 hours)**
+   - ⏳ Update `tailwind.config.js` theme colors (if needed)
+   - ⏳ Replace failing color classes in components
+   - ⏳ Test visual impact in light/dark modes
+   - ⏳ Verify no regressions in UI hierarchy
+   - **Priority:** Critical (< 3:1) → High (< 4.5:1) → Medium
+
+5. **Post-Deployment Validation (2-3 hours)**
+   - ⏳ Start Open WebUI backend server
+   - ⏳ Run axe-core browser scan on live UI
+   - ⏳ Manual spot checks with color picker
+   - ⏳ Document remaining violations (if any)
+   - **Acceptance:** Zero critical, < 5 moderate failures
    - ❌ Create npm script: `npm run test:a11y`
    - ❌ Target: 0 color contrast violations
 

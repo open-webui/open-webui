@@ -389,7 +389,7 @@
 				<div
 					class=" flex {($settings?.chatBubble ?? true)
 						? 'justify-end'
-						: ''}  text-gray-600 dark:text-gray-500"
+						: ''}  text-gray-600 dark:text-gray-400"
 				>
 					{#if !($settings?.chatBubble ?? true)}
 						{#if siblings.length > 1}

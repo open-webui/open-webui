@@ -175,7 +175,7 @@
 								</div>
 
 								<button
-									class=" underline flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500"
+									class=" underline flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400"
 									type="button"
 									on:click={() => {
 										showChangelog.set(true);
@@ -419,7 +419,7 @@
 									bind:value={adminConfig.API_KEYS_ALLOWED_ENDPOINTS}
 								/>
 
-								<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+								<div class="mt-2 text-xs text-gray-400 dark:text-gray-400">
 									<a
 										href="https://docs.openwebui.com/reference/api-endpoints"
 										target="_blank"
@@ -446,7 +446,7 @@
 							/>
 						</div>
 
-						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+						<div class="mt-2 text-xs text-gray-400 dark:text-gray-400">
 							{$i18n.t('Valid time units:')}
 							<span class=" text-gray-300 font-medium"
 								>{$i18n.t("'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.")}</span
@@ -629,7 +629,7 @@
 											/>
 										</div>
 									</div>
-									<div class="text-xs text-gray-400 dark:text-gray-500">
+									<div class="text-xs text-gray-400 dark:text-gray-400">
 										<a
 											class=" text-gray-300 font-medium underline"
 											href="https://ldap.com/ldap-filters/"
@@ -734,7 +734,7 @@
 								/>
 							</div>
 
-							<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+							<div class="mt-2 text-xs text-gray-400 dark:text-gray-400">
 								{$i18n.t('Maximum number of files allowed per folder.')}
 							</div>
 						</div>
@@ -804,7 +804,7 @@
 							/>
 						</div>
 
-						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+						<div class="mt-2 text-xs text-gray-400 dark:text-gray-400">
 							{$i18n.t(
 								'Enter the public URL of your WebUI. This URL will be used to generate links in the notifications.'
 							)}

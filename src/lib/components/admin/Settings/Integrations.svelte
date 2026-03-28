@@ -200,7 +200,7 @@
 						</div>
 
 						{#if servers.length === 0}
-							<div class="text-xs text-gray-400 dark:text-gray-500">
+							<div class="text-xs text-gray-400 dark:text-gray-400">
 								{$i18n.t('No tool server connections configured.')}
 							</div>
 						{/if}
@@ -295,7 +295,7 @@
 						</div>
 
 						{#if terminalConnections.length === 0}
-							<div class="text-xs text-gray-400 dark:text-gray-500">
+							<div class="text-xs text-gray-400 dark:text-gray-400">
 								{$i18n.t('No terminal connections configured.')}
 							</div>
 						{/if}

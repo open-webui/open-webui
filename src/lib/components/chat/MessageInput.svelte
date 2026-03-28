@@ -1207,7 +1207,7 @@
 							{#if atSelectedModel !== undefined}
 								<div class="px-3 pt-3 text-left w-full flex flex-col z-10">
 									<div class="flex items-center justify-between w-full">
-										<div class="pl-[1px] flex items-center gap-2 text-sm dark:text-gray-500">
+										<div class="pl-[1px] flex items-center gap-2 text-sm dark:text-gray-400">
 											<img
 												alt="model profile"
 												class="size-3.5 max-w-[28px] object-cover rounded-full"
@@ -1220,7 +1220,7 @@
 										<div>
 											<button
 												aria-label="Remove selected model"
-												class="flex items-center dark:text-gray-500"
+												class="flex items-center dark:text-gray-400"
 												on:click={() => {
 													atSelectedModel = undefined;
 												}}
@@ -1860,7 +1860,6 @@
 																toast.error($i18n.t('Permission denied when accessing microphone'));
 															}
 														}}
-														aria-label="Voice Input"
 													>
 														<svg
 															xmlns="http://www.w3.org/2000/svg"
@@ -1883,7 +1882,7 @@
 												<!-- {$i18n.t('Call')} -->
 												<Tooltip content={$i18n.t('Voice mode')}>
 													<button
-														aria-label="Voice call mode"
+														aria-label={$i18n.t('Voice mode')}
 														class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-1.5 self-center"
 														type="button"
 														on:click={async () => {
@@ -1936,7 +1935,6 @@
 																);
 															}
 														}}
-														aria-label={$i18n.t('Voice mode')}
 													>
 														<Voice className="size-5" strokeWidth="2.5" />
 													</button>

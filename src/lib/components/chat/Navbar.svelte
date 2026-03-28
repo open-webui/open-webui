@@ -177,14 +177,13 @@
 					{#if $mobile && !$temporaryChatEnabled && chat && chat.id}
 						<Tooltip content={$i18n.t('New Chat')}>
 							<button
-        aria-label={$i18n.t('New Chat')}
+								aria-label={$i18n.t('New Chat')}
 								class=" flex {$showSidebar
 									? 'md:hidden'
 									: ''} cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 								on:click={() => {
 									initNewChat();
 								}}
-								aria-label="New Chat"
 							>
 								<div class=" m-auto self-center">
 									<ChatPlus className=" size-4.5" strokeWidth="1.5" />
@@ -220,12 +219,11 @@
 					{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
 						<Tooltip content={$i18n.t('Controls')}>
 							<button
-        aria-label={$i18n.t('Controls')}
+								aria-label={$i18n.t('Controls')}
 								class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 								on:click={async () => {
 									await showControls.set(!$showControls);
 								}}
-								aria-label="Controls"
 							>
 								<div class=" m-auto self-center">
 									<Knobs className=" size-5" strokeWidth="1" />

@@ -44,7 +44,7 @@
 				class="text-xs shrink-0 px-1 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition
 					{!selectedFile && i === breadcrumbs.length - 1
 					? 'text-gray-700 dark:text-gray-300'
-					: 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400'}
+					: 'text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-400'}
 					{dragOverCrumb === i
 					? 'bg-blue-50 dark:bg-blue-900/30 ring-1 ring-blue-400 dark:ring-blue-500'
 					: ''}"
@@ -83,7 +83,7 @@
 
 	<Tooltip content={$i18n.t('Refresh')}>
 		<button
-			class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+			class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-400"
 			on:click={onRefresh}
 			aria-label={$i18n.t('Refresh')}
 		>
@@ -105,7 +105,7 @@
 	{#if !selectedFile}
 		<Tooltip content={$i18n.t('New Folder')}>
 			<button
-				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-400"
 				on:click={onNewFolder}
 				aria-label={$i18n.t('New Folder')}
 			>
@@ -114,7 +114,7 @@
 		</Tooltip>
 		<Tooltip content={$i18n.t('New File')}>
 			<button
-				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-400"
 				on:click={onNewFile}
 				aria-label={$i18n.t('New File')}
 			>
@@ -123,7 +123,7 @@
 		</Tooltip>
 		<Tooltip content={$i18n.t('Upload')}>
 			<button
-				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-400"
 				on:click={() => uploadInput?.click()}
 				aria-label={$i18n.t('Upload')}
 			>

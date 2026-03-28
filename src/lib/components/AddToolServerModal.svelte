@@ -608,7 +608,7 @@
 														: $i18n.t('Register Client')}
 												>
 													<button
-														class=" text-xs underline dark:text-gray-500 dark:hover:text-gray-200 text-gray-700 hover:text-gray-900 transition"
+														class=" text-xs underline dark:text-gray-400 dark:hover:text-gray-200 text-gray-700 hover:text-gray-900 transition"
 														type="button"
 														on:click={() => {
 															registerOAuthClientHandler();

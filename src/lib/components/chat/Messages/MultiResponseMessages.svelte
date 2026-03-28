@@ -423,7 +423,7 @@
 					</div>
 
 					{#if isLastMessage}
-						<div class=" shrink-0 text-gray-600 dark:text-gray-500 mt-1">
+						<div class=" shrink-0 text-gray-600 dark:text-gray-400 mt-1">
 							<Tooltip content={$i18n.t('Merge Responses')} placement="bottom">
 								<button
 									type="button"

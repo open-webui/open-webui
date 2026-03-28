@@ -592,7 +592,7 @@
 						rows={6}
 						required
 					/>
-					<div class="text-xs text-gray-400 dark:text-gray-500">
+					<div class="text-xs text-gray-400 dark:text-gray-400">
 						ⓘ {$i18n.t('Use')}
 						<span class="font-medium text-gray-600 dark:text-gray-300"
 							>{'{{'}{$i18n.t('variable')}{'}}'}</span

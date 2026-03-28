@@ -290,7 +290,7 @@
 							{$i18n.t('Functions')}
 						</div>
 
-						<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+						<div class="text-lg font-medium text-gray-500 dark:text-gray-400">
 							{filteredItems.length}
 						</div>
 					</div>

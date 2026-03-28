@@ -123,14 +123,14 @@
 				{#if directTerminals.length > 0 && ($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))}
 					<div class="flex items-center justify-between px-3 py-1">
 						<span
-							class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider"
+							class="text-[10px] font-medium text-gray-400 dark:text-gray-400 uppercase tracking-wider"
 						>
 							{$i18n.t('Direct')}
 						</span>
 						<Tooltip content={$i18n.t('Add Terminal')} placement="top">
 							<button
 								type="button"
-								class="p-0.5 rounded-md text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition"
+								class="p-0.5 rounded-md text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300 transition"
 								on:click|stopPropagation={() => {
 									show = false;
 									showSettings.set(true);
@@ -193,7 +193,7 @@
 				{#if systemTerminals.length > 0}
 					<div class="flex items-center justify-between px-3 py-1">
 						<span
-							class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider"
+							class="text-[10px] font-medium text-gray-400 dark:text-gray-400 uppercase tracking-wider"
 						>
 							{$i18n.t('System')}
 						</span>
@@ -201,7 +201,7 @@
 							<Tooltip content={$i18n.t('Add Terminal')} placement="top">
 								<button
 									type="button"
-									class="p-0.5 rounded-md text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition"
+									class="p-0.5 rounded-md text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300 transition"
 									on:click|stopPropagation={() => {
 										show = false;
 										goto('/admin/settings/integrations');

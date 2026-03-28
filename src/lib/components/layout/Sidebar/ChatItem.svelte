@@ -465,7 +465,7 @@
 
 			<!-- Time ago indicator -->
 			{#if createdAt && !mouseOver}
-				<div class="shrink-0 self-center text-[10px] text-gray-400 dark:text-gray-500 pl-2">
+				<div class="shrink-0 self-center text-[10px] text-gray-400 dark:text-gray-400 pl-2">
 					{formatTimeAgo(createdAt)}
 				</div>
 			{/if}

@@ -76,7 +76,7 @@
 			{/if}
 			<Tooltip content={$i18n.t('Refresh')}>
 				<button
-					class="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+					class="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-400"
 					on:click|stopPropagation={loadPorts}
 					aria-label={$i18n.t('Refresh')}
 				>
@@ -100,7 +100,7 @@
 	{#if expanded}
 		<div class="mt-1 space-y-0.5 max-h-[150px] overflow-y-auto">
 			{#if ports.length === 0}
-				<div class="text-xs text-gray-400 dark:text-gray-500 px-1 py-1">
+				<div class="text-xs text-gray-400 dark:text-gray-400 px-1 py-1">
 					{$i18n.t('No servers detected')}
 				</div>
 			{:else}
@@ -116,7 +116,7 @@
 							{port.process ?? ''}
 						</span>
 						<span
-							class="text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition shrink-0"
+							class="text-gray-400 dark:text-gray-400 opacity-0 group-hover:opacity-100 transition shrink-0"
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"

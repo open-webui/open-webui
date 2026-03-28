@@ -544,7 +544,7 @@
 								</div>
 							</div>
 
-							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+							<div class="mt-1 text-xs text-gray-400 dark:text-gray-400">
 								{$i18n.t('Include `--api` flag when running stable-diffusion-webui')}
 								<a
 									class=" text-gray-300 font-medium"
@@ -576,7 +576,7 @@
 								</div>
 							</div>
 
-							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+							<div class="mt-1 text-xs text-gray-400 dark:text-gray-400">
 								{$i18n.t('Include `--api-auth` flag when running stable-diffusion-webui')}
 								<a
 									class=" text-gray-300 font-medium"
@@ -737,7 +737,7 @@
 								</div>
 							</div>
 
-							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+							<div class="mt-1 text-xs text-gray-400 dark:text-gray-400">
 								<CodeEditorModal
 									bind:show={showComfyUIWorkflowEditor}
 									value={config.COMFYUI_WORKFLOW}
@@ -775,7 +775,7 @@
 									{#each REQUIRED_WORKFLOW_NODES as node}
 										<div class="flex w-full flex-col">
 											<div class="shrink-0">
-												<div class=" capitalize line-clamp-1 w-20 text-gray-400 dark:text-gray-500">
+												<div class=" capitalize line-clamp-1 w-20 text-gray-400 dark:text-gray-400">
 													{node.type}{node.type === 'prompt' ? '*' : ''}
 												</div>
 											</div>
@@ -792,7 +792,7 @@
 													</Tooltip>
 												</div>
 
-												<div class="px-2 text-gray-400 dark:text-gray-500">:</div>
+												<div class="px-2 text-gray-400 dark:text-gray-400">:</div>
 
 												<div class="w-full">
 													<Tooltip
@@ -811,7 +811,7 @@
 									{/each}
 								</div>
 
-								<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+								<div class="mt-1 text-xs text-gray-400 dark:text-gray-400">
 									{$i18n.t('*Prompt node ID(s) are required for image generation')}
 								</div>
 							</div>
@@ -1150,7 +1150,7 @@
 								</div>
 							</div>
 
-							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+							<div class="mt-1 text-xs text-gray-400 dark:text-gray-400">
 								<CodeEditorModal
 									bind:show={showComfyUIEditWorkflowEditor}
 									value={config.IMAGES_EDIT_COMFYUI_WORKFLOW}
@@ -1180,7 +1180,7 @@
 									{#each REQUIRED_EDIT_WORKFLOW_NODES as node}
 										<div class="flex w-full flex-col">
 											<div class="shrink-0">
-												<div class=" capitalize line-clamp-1 w-20 text-gray-400 dark:text-gray-500">
+												<div class=" capitalize line-clamp-1 w-20 text-gray-400 dark:text-gray-400">
 													{node.type}{['prompt', 'image'].includes(node.type) ? '*' : ''}
 												</div>
 											</div>
@@ -1197,7 +1197,7 @@
 													</Tooltip>
 												</div>
 
-												<div class="px-2 text-gray-400 dark:text-gray-500">:</div>
+												<div class="px-2 text-gray-400 dark:text-gray-400">:</div>
 
 												<div class="w-full">
 													<Tooltip
@@ -1216,7 +1216,7 @@
 									{/each}
 								</div>
 
-								<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+								<div class="mt-1 text-xs text-gray-400 dark:text-gray-400">
 									{$i18n.t('*Prompt node ID(s) are required for image generation')}
 								</div>
 							</div>

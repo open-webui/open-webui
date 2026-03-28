@@ -341,7 +341,7 @@
 					{$i18n.t('Models')}
 				</div>
 
-				<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+				<div class="text-lg font-medium text-gray-500 dark:text-gray-400">
 					{total}
 				</div>
 			</div>

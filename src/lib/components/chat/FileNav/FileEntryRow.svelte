@@ -114,7 +114,7 @@
 		<DropdownMenu.Root>
 			<DropdownMenu.Trigger
 				class="shrink-0 p-0.5 mr-1 rounded-lg transition
-					text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400
+					text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-400
 					hover:bg-gray-100 dark:hover:bg-gray-800"
 				on:click={(e) => e.stopPropagation()}
 				aria-label={$i18n.t('More')}
