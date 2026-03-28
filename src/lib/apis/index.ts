@@ -161,9 +161,12 @@ export const getModels = async (
 
 type ChatCompletedForm = {
 	model: string;
-	messages: string[];
+	messages: Record<string, unknown>[];
 	chat_id: string;
-	session_id: string;
+	session_id: string | undefined;
+	id: string;
+	filter_ids?: string[];
+	model_item?: unknown;
 };
 
 export const chatCompleted = async (token: string, body: ChatCompletedForm) => {

@@ -1335,6 +1335,11 @@
 	};
 
 	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
+		if (!responseMessageId) {
+			console.error('chatCompleted: missing message id', { chatId: _chatId, modelId, messageCount: messages?.length ?? 0 });
+			return;
+		}
+
 		const res = await chatCompleted(localStorage.token, {
 			model: modelId,
 			messages: messages.map((m) => ({
