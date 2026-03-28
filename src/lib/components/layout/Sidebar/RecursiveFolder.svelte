@@ -464,7 +464,7 @@
 	<div class="flex items-center gap-1.5">
 		<input type="checkbox" bind:checked={deleteFolderContents} />
 
-		<div class="text-xs text-gray-500">
+		<div class="text-xs text-gray-600 dark:text-gray-400">
 			{$i18n.t('Delete all contents inside this folder')}
 		</div>
 	</div>
@@ -551,7 +551,7 @@
 				}}
 			>
 				<button
-					class="text-gray-500 dark:text-gray-400 transition-all p-1 hover:bg-gray-200 dark:hover:bg-gray-850 rounded-lg"
+					class="text-gray-600 dark:text-gray-400 dark:text-gray-400 transition-all p-1 hover:bg-gray-200 dark:hover:bg-gray-850 rounded-lg"
 					on:click={(e) => {
 						e.stopPropagation();
 						e.stopImmediatePropagation();
@@ -693,7 +693,7 @@
 
 			{#if chats === null}
 				<div class="flex justify-center items-center p-2">
-					<Spinner className="size-4 text-gray-500" />
+					<Spinner className="size-4 text-gray-600 dark:text-gray-400" />
 				</div>
 			{/if}
 		</div>

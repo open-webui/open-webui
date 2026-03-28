@@ -175,7 +175,7 @@
 								</div>
 
 								<button
-									class=" underline flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400"
+									class=" underline flex items-center space-x-1 text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400"
 									type="button"
 									on:click={() => {
 										showChangelog.set(true);
@@ -205,7 +205,7 @@
 								<div class="">
 									{$i18n.t('Help')}
 								</div>
-								<div class=" text-xs text-gray-500">
+								<div class=" text-xs text-gray-600 dark:text-gray-400">
 									{$i18n.t('Discover how to use Open WebUI and seek support from the community.')}
 								</div>
 							</div>
@@ -256,7 +256,7 @@
 									<a
 										href="https://docs.openwebui.com/enterprise"
 										target="_blank"
-										class="text-gray-500 mt-0.5"
+										class="text-gray-600 dark:text-gray-400 mt-0.5"
 									>
 										<span class=" capitalize text-black dark:text-white"
 											>{$config?.license_metadata?.type}
@@ -282,7 +282,7 @@
 										href="https://docs.openwebui.com/enterprise"
 										target="_blank"
 									>
-										<span class="text-gray-500">
+										<span class="text-gray-600 dark:text-gray-400">
 											{$i18n.t(
 												'Upgrade to a licensed plan for enhanced capabilities, including custom theming and branding, and dedicated support.'
 											)}

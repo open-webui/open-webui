@@ -177,11 +177,11 @@
 					<div class="px-1">
 						{#if tab === ''}
 							<div class="flex flex-col w-full mb-3">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Role')}</div>
+								<div class=" mb-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Role')}</div>
 
 								<div class="flex-1">
 									<select
-										class="w-full capitalize rounded-lg text-sm bg-transparent dark:disabled:text-gray-500 outline-hidden"
+										class="w-full capitalize rounded-lg text-sm bg-transparent dark:disabled:text-gray-600 dark:text-gray-400 outline-hidden"
 										bind:value={_user.role}
 										aria-label={$i18n.t('Role')}
 										placeholder={$i18n.t('Enter Your Role')}
@@ -195,11 +195,11 @@
 							</div>
 
 							<div class="flex flex-col w-full mt-1">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
+								<div class=" mb-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Name')}</div>
 
 								<div class="flex-1">
 									<input
-										class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+										class="w-full text-sm bg-transparent disabled:text-gray-600 dark:text-gray-400 dark:disabled:text-gray-600 dark:text-gray-400 outline-hidden"
 										type="text"
 										bind:value={_user.name}
 										aria-label={$i18n.t('Name')}
@@ -213,11 +213,11 @@
 							<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2.5 w-full" />
 
 							<div class="flex flex-col w-full">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Email')}</div>
+								<div class=" mb-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Email')}</div>
 
 								<div class="flex-1">
 									<input
-										class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+										class="w-full text-sm bg-transparent disabled:text-gray-600 dark:text-gray-400 dark:disabled:text-gray-600 dark:text-gray-400 outline-hidden"
 										type="email"
 										bind:value={_user.email}
 										aria-label={$i18n.t('Email')}
@@ -228,11 +228,11 @@
 							</div>
 
 							<div class="flex flex-col w-full mt-1">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Password')}</div>
+								<div class=" mb-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Password')}</div>
 
 								<div class="flex-1">
 									<SensitiveInput
-										class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+										class="w-full text-sm bg-transparent disabled:text-gray-600 dark:text-gray-400 dark:disabled:text-gray-600 dark:text-gray-400 outline-hidden"
 										type="password"
 										bind:value={_user.password}
 										aria-label={$i18n.t('Password')}
@@ -268,7 +268,7 @@
 									</button>
 								</div>
 
-								<div class=" text-xs text-gray-500">
+								<div class=" text-xs text-gray-600 dark:text-gray-400">
 									ⓘ {$i18n.t(
 										'Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.'
 									)}

@@ -259,7 +259,7 @@
 													showDefaultPromptSuggestions = !showDefaultPromptSuggestions;
 												}}
 											>
-												<div class="text-xs text-gray-500 font-medium">
+												<div class="text-xs text-gray-600 dark:text-gray-400 font-medium">
 													{$i18n.t('Prompt Suggestions')}
 												</div>
 												<div>
@@ -276,7 +276,7 @@
 													<PromptSuggestions bind:promptSuggestions />
 
 													{#if promptSuggestions.length > 0}
-														<div class="text-xs text-left w-full mt-2 text-gray-500">
+														<div class="text-xs text-left w-full mt-2 text-gray-600 dark:text-gray-400">
 															{$i18n.t(
 																'Adjusting these settings will apply changes universally to all users.'
 															)}
@@ -296,7 +296,7 @@
 													showDefaultCapabilities = !showDefaultCapabilities;
 												}}
 											>
-												<div class="text-xs text-gray-500 font-medium">
+												<div class="text-xs text-gray-600 dark:text-gray-400 font-medium">
 													{$i18n.t('Model Capabilities')}
 												</div>
 												<div>
@@ -352,7 +352,7 @@
 													showDefaultParams = !showDefaultParams;
 												}}
 											>
-												<div class="text-xs text-gray-500 font-medium">
+												<div class="text-xs text-gray-600 dark:text-gray-400 font-medium">
 													{$i18n.t('Model Parameters')}
 												</div>
 												<div>
@@ -396,7 +396,7 @@
 															});
 													}}
 												>
-													<div class="text-xs text-gray-500">{$i18n.t('Reorder Models')}</div>
+													<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Reorder Models')}</div>
 
 													{#if sortKey === 'model'}
 														<span class="font-normal self-center">
@@ -425,7 +425,7 @@
 											content={$i18n.t('This will delete all models including custom models')}
 										>
 											<button
-												class="text-sm font-normal text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition hover:underline"
+												class="text-sm font-normal text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition hover:underline"
 												type="button"
 												on:click={() => {
 													showResetModal = true;

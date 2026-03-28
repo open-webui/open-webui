@@ -57,7 +57,7 @@
 				{#if connection?.info?.name}
 					<div class=" capitalize outline-hidden w-full bg-transparent">
 						{connection?.info?.name ?? connection?.url}
-						<span class="text-gray-500">{connection?.info?.id ?? ''}</span>
+						<span class="text-gray-600 dark:text-gray-400">{connection?.info?.id ?? ''}</span>
 					</div>
 				{:else}
 					<div>

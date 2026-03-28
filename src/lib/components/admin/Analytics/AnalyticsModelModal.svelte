@@ -171,7 +171,7 @@
 				<button
 					class="py-2 text-sm font-medium border-b-2 transition-colors {selectedTab === 'overview'
 						? 'border-black dark:border-white text-gray-900 dark:text-white'
-						: 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}"
+						: 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
 					on:click={() => selectTab('overview')}
 				>
 					{$i18n.t('Overview')}
@@ -180,7 +180,7 @@
 					<button
 						class="py-2 text-sm font-medium border-b-2 transition-colors {selectedTab === 'chats'
 							? 'border-black dark:border-white text-gray-900 dark:text-white'
-							: 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}"
+							: 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
 						on:click={() => selectTab('chats')}
 					>
 						{$i18n.t('Chats')}
@@ -195,7 +195,7 @@
 				<div class="mb-4 mt-3">
 					<div class="flex items-center justify-between mb-2">
 						<Tooltip content={$i18n.t('Thumbs up/down ratings from users on model responses')}>
-							<div class="text-xs text-gray-500 font-medium uppercase tracking-wide cursor-help">
+							<div class="text-xs text-gray-600 dark:text-gray-400 font-medium uppercase tracking-wide cursor-help">
 								{$i18n.t('Feedback Activity')}
 							</div>
 						</Tooltip>
@@ -208,7 +208,7 @@
 									class="rounded-full transition-all duration-200 px-2.5 py-0.5 text-xs font-medium {selectedRange ===
 									range.key
 										? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
-										: 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}"
+										: 'text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}"
 									on:click={() => selectRange(range.key)}
 								>
 									{range.label}
@@ -225,19 +225,19 @@
 
 				<!-- Tags -->
 				<div class="mb-4">
-					<div class="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">
+					<div class="text-xs text-gray-600 dark:text-gray-400 mb-2 font-medium uppercase tracking-wide">
 						{$i18n.t('Tags')}
 					</div>
 					{#if tags.length}
 						<div class="flex flex-wrap gap-1 -mx-1">
 							{#each tags as tagInfo}
 								<span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-850 text-xs">
-									{tagInfo.tag} <span class="text-gray-500 font-medium">{tagInfo.count}</span>
+									{tagInfo.tag} <span class="text-gray-600 dark:text-gray-400 font-medium">{tagInfo.count}</span>
 								</span>
 							{/each}
 						</div>
 					{:else}
-						<span class="text-gray-500 text-sm">-</span>
+						<span class="text-gray-600 dark:text-gray-400 text-sm">-</span>
 					{/if}
 				</div>
 			{:else if selectedTab === 'chats'}

@@ -114,7 +114,7 @@
 								<div class="flex justify-between mb-0.5">
 									<label
 										for="terminal-name"
-										class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 										>{$i18n.t('Name')}</label
 									>
 								</div>
@@ -135,7 +135,7 @@
 									<div class="flex justify-between mb-0.5">
 										<label
 											for="terminal-id"
-											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 											>{$i18n.t('ID')}
 											<span class="opacity-50">({$i18n.t('optional')})</span></label
 										>
@@ -159,7 +159,7 @@
 								<div class="flex justify-between mb-0.5">
 									<label
 										for="terminal-url"
-										class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 										>{$i18n.t('URL')}</label
 									>
 								</div>
@@ -181,7 +181,7 @@
 						<div class="flex items-center justify-between">
 							<button
 								type="button"
-								class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition mt-2"
+								class="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition mt-2"
 								on:click={() => (showAdvanced = !showAdvanced)}
 							>
 								<svg
@@ -222,7 +222,7 @@
 									<div class="flex justify-between items-center mb-0.5">
 										<div class="flex gap-2 items-center">
 											<div
-												class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+												class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 											>
 												{$i18n.t('OpenAPI Spec')}
 											</div>
@@ -249,7 +249,7 @@
 									</div>
 
 									<div
-										class={`text-xs mt-1 ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										class={`text-xs mt-1 ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 									>
 										{$i18n.t(`WebUI will make requests to "{{url}}"`, {
 											url: path.includes('://')
@@ -266,7 +266,7 @@
 								<div class="flex justify-between items-center">
 									<div class="flex gap-2 items-center">
 										<div
-											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 										>
 											{$i18n.t('Auth')}
 										</div>
@@ -297,19 +297,19 @@
 											/>
 										{:else if auth_type === 'none'}
 											<div
-												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 											>
 												{$i18n.t('No authentication')}
 											</div>
 										{:else if auth_type === 'session'}
 											<div
-												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 											>
 												{$i18n.t('Forwards system user session credentials to authenticate')}
 											</div>
 										{:else if auth_type === 'system_oauth'}
 											<div
-												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 											>
 												{$i18n.t('Forwards system user OAuth access token to authenticate')}
 											</div>

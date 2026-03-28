@@ -49,14 +49,14 @@
 				<Spinner />
 			</div>
 		{:else if !chatList || chatList.length === 0}
-			<div class="text-center text-gray-500 text-sm py-8">
+			<div class="text-center text-gray-600 dark:text-gray-400 text-sm py-8">
 				{$i18n.t(emptyMessage)}
 			</div>
 		{:else}
 			{#each chatList as chat, idx (chat.id)}
 				{#if chat.time_range && (idx === 0 || chat.time_range !== chatList[idx - 1]?.time_range)}
 					<div
-						class="w-full text-xs text-gray-500 dark:text-gray-400 font-medium {idx === 0
+						class="w-full text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400 font-medium {idx === 0
 							? ''
 							: 'pt-5'} pb-2 px-2"
 					>
@@ -90,7 +90,7 @@
 					</a>
 
 					<div class="{showUserInfo ? 'w-28' : 'basis-2/5'} flex items-center justify-end">
-						<div class="hidden sm:flex text-gray-500 dark:text-gray-400 text-xs">
+						<div class="hidden sm:flex text-gray-600 dark:text-gray-400 dark:text-gray-400 text-xs">
 							{dayjs(chat.updated_at * 1000).calendar(null, {
 								sameDay: '[Today] h:mm A',
 								lastDay: '[Yesterday] h:mm A',

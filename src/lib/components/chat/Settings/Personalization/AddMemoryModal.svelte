@@ -69,7 +69,7 @@
 							placeholder={$i18n.t('Enter a detail about yourself for your LLMs to recall')}
 						/>
 
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-gray-600 dark:text-gray-400">
 							ⓘ {$i18n.t('Refer to yourself as "User" (e.g., "User is learning Spanish")')}
 						</div>
 					</div>

@@ -189,7 +189,7 @@
 					{$i18n.t('Skills')}
 				</div>
 
-				<div class="text-lg font-medium text-gray-500 dark:text-gray-400">
+				<div class="text-lg font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400">
 					{total ?? ''}
 				</div>
 			</div>
@@ -395,7 +395,7 @@
 												</div>
 											</Tooltip>
 											<div class="px-0.5">
-												<div class="text-xs text-gray-500 shrink-0">
+												<div class="text-xs text-gray-600 dark:text-gray-400 shrink-0">
 													<Tooltip
 														content={skill?.user?.email ?? $i18n.t('Deleted User')}
 														className="flex shrink-0"
@@ -430,7 +430,7 @@
 												<Badge type="muted" content={$i18n.t('Read Only')} />
 											</div>
 											<div class="px-0.5">
-												<div class="text-xs text-gray-500 shrink-0">
+												<div class="text-xs text-gray-600 dark:text-gray-400 shrink-0">
 													<Tooltip
 														content={skill?.user?.email ?? $i18n.t('Deleted User')}
 														className="flex shrink-0"
@@ -516,7 +516,7 @@
 				<div class="max-w-md text-center">
 					<div class=" text-3xl mb-3">📝</div>
 					<div class=" text-lg font-medium mb-1">{$i18n.t('No skills found')}</div>
-					<div class=" text-gray-500 text-center text-xs">
+					<div class=" text-gray-600 dark:text-gray-400 text-center text-xs">
 						{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
 					</div>
 				</div>
@@ -531,7 +531,7 @@
 			deleteHandler(selectedSkill);
 		}}
 	>
-		<div class=" text-sm text-gray-500 truncate">
+		<div class=" text-sm text-gray-600 dark:text-gray-400 truncate">
 			{$i18n.t('This will delete')} <span class="  font-medium">{selectedSkill.name}</span>.
 		</div>
 	</DeleteConfirmDialog>

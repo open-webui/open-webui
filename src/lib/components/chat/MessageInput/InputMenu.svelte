@@ -232,7 +232,7 @@
 										{$i18n.t('Attach Notes')}
 									</div>
 
-									<div class="text-gray-500">
+									<div class="text-gray-600 dark:text-gray-400">
 										<ChevronRight />
 									</div>
 								</div>
@@ -263,7 +263,7 @@
 									{$i18n.t('Attach Knowledge')}
 								</div>
 
-								<div class="text-gray-500">
+								<div class="text-gray-600 dark:text-gray-400">
 									<ChevronRight />
 								</div>
 							</div>
@@ -293,7 +293,7 @@
 									{$i18n.t('Reference Chats')}
 								</div>
 
-								<div class="text-gray-500">
+								<div class="text-gray-600 dark:text-gray-400">
 									<ChevronRight />
 								</div>
 							</div>
@@ -438,7 +438,7 @@
 										{$i18n.t('Microsoft OneDrive')}
 									</div>
 
-									<div class="text-gray-500">
+									<div class="text-gray-600 dark:text-gray-400">
 										<ChevronRight />
 									</div>
 								</div>
@@ -544,7 +544,7 @@
 								<div class="line-clamp-1">
 									{$i18n.t('Microsoft OneDrive (work/school)')}
 								</div>
-								<div class="text-xs text-gray-500">{$i18n.t('Includes SharePoint')}</div>
+								<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Includes SharePoint')}</div>
 							</div>
 						</DropdownMenu.Item>
 					{/if}

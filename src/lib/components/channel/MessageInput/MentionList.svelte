@@ -159,7 +159,7 @@
 		<div class="overflow-y-auto scrollbar-thin max-h-60">
 			{#each filteredItems as item, i}
 				{#if i === 0 || item?.type !== filteredItems[i - 1]?.type}
-					<div class="px-2 text-xs text-gray-500 py-1">
+					<div class="px-2 text-xs text-gray-600 dark:text-gray-400 py-1">
 						{#if item?.type === 'user'}
 							{$i18n.t('Users')}
 						{:else if item?.type === 'model'}
@@ -209,7 +209,7 @@
 							{item.label}
 						</div>
 
-						<div class="shrink-0 text-xs text-gray-500">
+						<div class="shrink-0 text-xs text-gray-600 dark:text-gray-400">
 							{#if item.type === 'user'}
 								{$i18n.t('User')}
 							{:else if item.type === 'model'}

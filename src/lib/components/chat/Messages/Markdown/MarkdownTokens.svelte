@@ -134,7 +134,7 @@
 		<div class="relative w-full group mb-2">
 			<div class="scrollbar-hidden relative overflow-x-auto max-w-full">
 				<table
-					class=" w-full text-sm text-start text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
+					class=" w-full text-sm text-start text-gray-600 dark:text-gray-400 dark:text-gray-400 max-w-full rounded-xl"
 					dir="auto"
 				>
 					<thead

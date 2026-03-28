@@ -68,7 +68,7 @@
 
 {#if loaded}
 	{#if items.length === 0}
-		<div class="text-center text-xs text-gray-500 py-3">{$i18n.t('No notes found')}</div>
+		<div class="text-center text-xs text-gray-600 dark:text-gray-400 py-3">{$i18n.t('No notes found')}</div>
 	{:else}
 		<div class="flex flex-col gap-0.5">
 			{#each items as item, idx}

@@ -1167,7 +1167,7 @@
 
 			{#if (params?.use_mmap ?? null) !== null}
 				<div class="flex justify-between items-center mt-1">
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-gray-600 dark:text-gray-400">
 						{params.use_mmap ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 					</div>
 					<div class=" pr-2">
@@ -1208,7 +1208,7 @@
 
 			{#if (params?.use_mlock ?? null) !== null}
 				<div class="flex justify-between items-center mt-1">
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-gray-600 dark:text-gray-400">
 						{params.use_mlock ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 					</div>
 

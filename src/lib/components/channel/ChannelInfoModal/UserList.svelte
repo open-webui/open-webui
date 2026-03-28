@@ -104,7 +104,7 @@
 				<span class="text-sm">
 					{$i18n.t('Members')}
 				</span>
-				<span class="text-sm text-gray-500">{total}</span>
+				<span class="text-sm text-gray-600 dark:text-gray-400">{total}</span>
 			</div>
 
 			{#if onAdd}
@@ -152,7 +152,7 @@
 
 		{#if users.length > 0}
 			<div class="scrollbar-hidden relative whitespace-nowrap w-full max-w-full">
-				<div class=" text-sm text-left text-gray-500 dark:text-gray-400 w-full max-w-full">
+				<div class=" text-sm text-left text-gray-600 dark:text-gray-400 dark:text-gray-400 w-full max-w-full">
 					<!-- <div
 						class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200 w-full mb-0.5"
 					>
@@ -275,7 +275,7 @@
 				<Pagination bind:page count={total} perPage={30} />
 			{/if}
 		{:else}
-			<div class="text-gray-500 text-xs text-center py-5 px-10">
+			<div class="text-gray-600 dark:text-gray-400 text-xs text-center py-5 px-10">
 				{$i18n.t('No users were found.')}
 			</div>
 		{/if}

@@ -130,7 +130,7 @@
 			<div>
 				<div class="text-base font-medium">{$i18n.t('Your Account')}</div>
 
-				<div class="text-xs text-gray-500 mt-0.5">
+				<div class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
 					{$i18n.t('Manage your account information.')}
 				</div>
 			</div>
@@ -258,7 +258,7 @@
 			<div class="flex justify-between items-center text-sm mt-2">
 				<div class="  font-medium">{$i18n.t('API keys')}</div>
 				<button
-					class=" text-xs font-medium text-gray-500"
+					class=" text-xs font-medium text-gray-600 dark:text-gray-400"
 					type="button"
 					on:click={() => {
 						showAPIKeys = !showAPIKeys;

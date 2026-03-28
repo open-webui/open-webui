@@ -341,7 +341,7 @@
 					{$i18n.t('Models')}
 				</div>
 
-				<div class="text-lg font-medium text-gray-500 dark:text-gray-400">
+				<div class="text-lg font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400">
 					{total}
 				</div>
 			</div>
@@ -509,7 +509,7 @@
 														</div>
 													{/if}
 
-													<div class="flex {model.is_active ? '' : 'text-gray-500'}">
+													<div class="flex {model.is_active ? '' : 'text-gray-600 dark:text-gray-400'}">
 														<div class="flex items-center gap-0.5">
 															{#if shiftKey && model.write_access}
 																<Tooltip
@@ -625,7 +625,7 @@
 													className="flex shrink-0"
 													placement="top-start"
 												>
-													<div class="shrink-0 text-gray-500 text-xs">
+													<div class="shrink-0 text-gray-600 dark:text-gray-400 text-xs">
 														{$i18n.t('By {{name}}', {
 															name: capitalizeFirstLetter(
 																model?.user?.name ?? model?.user?.email ?? $i18n.t('Deleted User')
@@ -668,7 +668,7 @@
 					<div class="max-w-md text-center">
 						<div class=" text-3xl mb-3">😕</div>
 						<div class=" text-lg font-medium mb-1">{$i18n.t('No models found')}</div>
-						<div class=" text-gray-500 text-center text-xs">
+						<div class=" text-gray-600 dark:text-gray-400 text-center text-xs">
 							{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
 						</div>
 					</div>

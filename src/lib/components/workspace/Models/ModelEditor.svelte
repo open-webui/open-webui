@@ -521,7 +521,7 @@
 
 								<div class="flex w-full mt-1 justify-end">
 									<button
-										class="px-2 py-1 text-gray-500 rounded-lg text-xs"
+										class="px-2 py-1 text-gray-600 dark:text-gray-400 rounded-lg text-xs"
 										on:click={() => {
 											info.meta.profile_image_url = `${WEBUI_BASE_URL}/static/favicon.png`;
 										}}
@@ -577,7 +577,7 @@
 
 							{#if preset}
 								<div class="mb-1">
-									<div class=" text-xs font-medium mb-1 text-gray-500">
+									<div class=" text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">
 										{$i18n.t('Base Model (From)')}
 									</div>
 
@@ -601,7 +601,7 @@
 
 							<div class="mb-1">
 								<div class="mb-1 flex w-full justify-between items-center">
-									<div class=" self-center text-xs font-medium text-gray-500">
+									<div class=" self-center text-xs font-medium text-gray-600 dark:text-gray-400">
 										{$i18n.t('Description')}
 									</div>
 
@@ -657,7 +657,7 @@
 
 					<div class="my-2">
 						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-medium text-gray-500">
+							<div class=" self-center text-xs font-medium text-gray-600 dark:text-gray-400">
 								{$i18n.t('Model Params')}
 							</div>
 						</div>
@@ -710,7 +710,7 @@
 					<div class="my-2">
 						<div class="flex w-full justify-between items-center">
 							<div class="flex w-full justify-between items-center">
-								<div class=" self-center text-xs font-medium text-gray-500">
+								<div class=" self-center text-xs font-medium text-gray-600 dark:text-gray-400">
 									{$i18n.t('Prompts')}
 								</div>
 
@@ -818,7 +818,7 @@
 
 					<div class="my-4">
 						<div class="flex w-full justify-between mb-1">
-							<div class="self-center text-xs font-medium text-gray-500">
+							<div class="self-center text-xs font-medium text-gray-600 dark:text-gray-400">
 								{$i18n.t('TTS Voice')}
 							</div>
 						</div>

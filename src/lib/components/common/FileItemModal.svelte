@@ -313,7 +313,7 @@
 
 			<div>
 				<div class="flex flex-col items-center md:flex-row gap-1 justify-between w-full">
-					<div class=" flex flex-wrap text-xs gap-1 text-gray-500">
+					<div class=" flex flex-wrap text-xs gap-1 text-gray-600 dark:text-gray-400">
 						{#if item?.type === 'collection'}
 							{#if item?.type}
 								<div class="capitalize shrink-0">{item.type}</div>
@@ -438,7 +438,7 @@
 						<div class="absolute top-2 right-2 z-10">
 							<Tooltip content={$i18n.t('Reset view')}>
 								<button
-									class="p-1.5 rounded-lg bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+									class="p-1.5 rounded-lg bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-400 dark:text-gray-400"
 									on:click={resetImageView}
 								>
 									<Reset className="size-4" />
@@ -473,7 +473,7 @@
 							</div>
 							{#if isTruncated}
 								<button
-									class="mt-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+									class="mt-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"
 									on:click={() => {
 										expandedContent = true;
 									}}
@@ -505,7 +505,7 @@
 							</div>
 							{#if isTruncated}
 								<button
-									class="mt-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+									class="mt-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"
 									on:click={() => {
 										expandedContent = true;
 									}}
@@ -563,7 +563,7 @@
 									{@html excelHtml}
 								</div>
 							{:else}
-								<div class="text-gray-500 text-sm p-4">No content available</div>
+								<div class="text-gray-600 dark:text-gray-400 text-sm p-4">No content available</div>
 							{/if}
 						{/if}
 					{:else if isCode}
@@ -593,7 +593,7 @@
 								{@html docxHtml}
 							</div>
 						{:else}
-							<div class="text-gray-500 text-sm p-4">No content available</div>
+							<div class="text-gray-600 dark:text-gray-400 text-sm p-4">No content available</div>
 						{/if}
 					{:else if isPptx}
 						{#if pptxError}
@@ -609,7 +609,7 @@
 									/>
 								</div>
 								{#if pptxSlides.length > 1}
-									<div class="flex items-center justify-center gap-3 pb-3 text-sm text-gray-500">
+									<div class="flex items-center justify-center gap-3 pb-3 text-sm text-gray-600 dark:text-gray-400">
 										<button
 											class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
 											disabled={pptxCurrentSlide === 0}
@@ -652,7 +652,7 @@
 								{/if}
 							</div>
 						{:else}
-							<div class="text-gray-500 text-sm p-4">No content available</div>
+							<div class="text-gray-600 dark:text-gray-400 text-sm p-4">No content available</div>
 						{/if}
 					{:else}
 						<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">

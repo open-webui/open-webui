@@ -27,7 +27,7 @@
 
 <div>
 	<div class="flex w-full justify-between mb-1">
-		<div class=" self-center text-xs font-medium text-gray-500">{$i18n.t('Skills')}</div>
+		<div class=" self-center text-xs font-medium text-gray-600 dark:text-gray-400">{$i18n.t('Skills')}</div>
 	</div>
 
 	<div class="flex flex-col mb-1">

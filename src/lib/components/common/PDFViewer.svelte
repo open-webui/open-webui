@@ -214,7 +214,7 @@
 			class="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-0.5 rounded-lg bg-white/90 dark:bg-gray-850/90 backdrop-blur-sm shadow-lg border border-gray-200/60 dark:border-gray-700/60 px-1 py-0.5"
 		>
 			<button
-				class="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+				class="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-400 dark:text-gray-400"
 				on:click={zoomOut}
 				aria-label="Zoom out"
 			>
@@ -232,14 +232,14 @@
 				</svg>
 			</button>
 			<button
-				class="px-1.5 py-1 min-w-[3rem] text-center text-[11px] font-medium text-gray-500 dark:text-gray-400 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition tabular-nums"
+				class="px-1.5 py-1 min-w-[3rem] text-center text-[11px] font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition tabular-nums"
 				on:click={resetView}
 				aria-label="Reset zoom"
 			>
 				{Math.round(zoomLevel * 100)}%
 			</button>
 			<button
-				class="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+				class="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-400 dark:text-gray-400"
 				on:click={zoomIn}
 				aria-label="Zoom in"
 			>

@@ -62,10 +62,10 @@
 					{title}
 				{/if}
 			</div>
-			<div class="text-gray-500 text-xs shrink-0">{$i18n.t('Note')}</div>
+			<div class="text-gray-600 dark:text-gray-400 text-xs shrink-0">{$i18n.t('Note')}</div>
 		</div>
 		{#if author}
-			<div class="text-gray-500 text-xs line-clamp-1 mt-0.5">
+			<div class="text-gray-600 dark:text-gray-400 text-xs line-clamp-1 mt-0.5">
 				{$i18n.t('By {{name}}', { name: author })}
 			</div>
 		{/if}

@@ -53,7 +53,7 @@
 								</div>
 
 								{#if tool?.meta?.description}
-									<div class="text-xs text-gray-500">
+									<div class="text-xs text-gray-600 dark:text-gray-400">
 										{tool?.meta?.description}
 									</div>
 								{/if}
@@ -89,11 +89,11 @@
 									{toolServer?.openapi?.info?.title} - v{toolServer?.openapi?.info?.version}
 								</div>
 
-								<div class="text-xs text-gray-500">
+								<div class="text-xs text-gray-600 dark:text-gray-400">
 									{toolServer?.openapi?.info?.description}
 								</div>
 
-								<div class="text-xs text-gray-500">
+								<div class="text-xs text-gray-600 dark:text-gray-400">
 									{toolServer?.url}
 								</div>
 							</div>

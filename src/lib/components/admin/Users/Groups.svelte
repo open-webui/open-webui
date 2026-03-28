@@ -126,7 +126,7 @@
 					{$i18n.t('Groups')}
 				</div>
 
-				<div class="text-lg font-medium text-gray-500 dark:text-gray-400">
+				<div class="text-lg font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400">
 					{groups.length}
 				</div>
 			</div>
@@ -228,7 +228,7 @@
 				<div class="max-w-md text-center">
 					<div class="text-3xl mb-3">👥</div>
 					<div class="text-lg font-medium mb-1">{$i18n.t('No groups found')}</div>
-					<div class="text-gray-500 text-center text-xs">
+					<div class="text-gray-600 dark:text-gray-400 text-center text-xs">
 						{$i18n.t('Use groups to organize your users and assign permissions.')}
 					</div>
 				</div>

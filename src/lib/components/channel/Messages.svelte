@@ -101,7 +101,7 @@
 							{/if}
 						</div>
 
-						<div class=" text-gray-500">
+						<div class=" text-gray-600 dark:text-gray-400">
 							{$i18n.t(
 								'This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.',
 								{

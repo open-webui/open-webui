@@ -103,7 +103,7 @@
 				<div class="flex w-full justify-between items-center mr-3">
 					<div class="self-center text-base flex gap-1.5 items-center">
 						<div>{$i18n.t('Webhooks')}</div>
-						<span class="text-sm text-gray-500">{webhooks.length}</span>
+						<span class="text-sm text-gray-600 dark:text-gray-400">{webhooks.length}</span>
 					</div>
 
 					<button
@@ -153,7 +153,7 @@
 							{/each}
 						</div>
 					{:else}
-						<div class="text-gray-500 text-xs text-center py-8 px-10">
+						<div class="text-gray-600 dark:text-gray-400 text-xs text-center py-8 px-10">
 							{$i18n.t('No webhooks yet')}
 						</div>
 					{/if}

@@ -119,7 +119,7 @@
 						</div>
 
 						{#if floatingActionButtons === null || floatingActionButtons.length === 0}
-							<div class="text-gray-500 dark:text-gray-400 text-xs w-full text-center py-5">
+							<div class="text-gray-600 dark:text-gray-400 dark:text-gray-400 text-xs w-full text-center py-5">
 								{$i18n.t('Default action buttons will be used.')}
 							</div>
 						{:else}

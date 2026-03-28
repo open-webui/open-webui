@@ -41,7 +41,7 @@
 				<div
 					class="{(done || status?.done) === false
 						? 'shimmer'
-						: ''} text-gray-500 dark:text-gray-400 text-base line-clamp-1 text-wrap"
+						: ''} text-gray-600 dark:text-gray-400 dark:text-gray-400 text-base line-clamp-1 text-wrap"
 				>
 					{$i18n.t(`Searching Knowledge for "{{searchQuery}}"`, {
 						searchQuery: status.query
@@ -53,7 +53,7 @@
 				<div
 					class="{(done || status?.done) === false
 						? 'shimmer'
-						: ''} text-gray-500 dark:text-gray-400 text-base line-clamp-1 text-wrap"
+						: ''} text-gray-600 dark:text-gray-400 dark:text-gray-400 text-base line-clamp-1 text-wrap"
 				>
 					{$i18n.t(`Searching`)}
 				</div>
@@ -79,7 +79,7 @@
 				<div
 					class="{(done || status?.done) === false
 						? 'shimmer'
-						: ''} text-gray-500 dark:text-gray-400 text-base line-clamp-1 text-wrap"
+						: ''} text-gray-600 dark:text-gray-400 dark:text-gray-400 text-base line-clamp-1 text-wrap"
 				>
 					{$i18n.t(`Querying`)}
 				</div>
@@ -105,7 +105,7 @@
 				<div
 					class="{(done || status?.done) === false
 						? 'shimmer'
-						: ''} text-gray-500 dark:text-gray-400 text-base line-clamp-1 text-wrap"
+						: ''} text-gray-600 dark:text-gray-400 dark:text-gray-400 text-base line-clamp-1 text-wrap"
 				>
 					{#if status.count === 0}
 						{$i18n.t('No sources found')}
@@ -127,7 +127,7 @@
 				<div
 					class="{(done || status?.done) === false
 						? 'shimmer'
-						: ''} text-gray-500 dark:text-gray-400 text-base line-clamp-1 text-wrap"
+						: ''} text-gray-600 dark:text-gray-400 dark:text-gray-400 text-base line-clamp-1 text-wrap"
 				>
 					<!-- $i18n.t(`Searching "{{searchQuery}}"`) -->
 					{#if status?.description?.includes('{{searchQuery}}')}

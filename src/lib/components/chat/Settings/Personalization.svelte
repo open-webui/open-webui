@@ -41,7 +41,7 @@
 					<div class="flex items-center gap-2 text-sm font-medium">
 						{$i18n.t('Memory')}
 						<span
-							class="text-[0.65rem] font-medium uppercase px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
+							class="text-[0.65rem] font-medium uppercase px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 dark:text-gray-400"
 							>{$i18n.t('Experimental')}</span
 						>
 					</div>

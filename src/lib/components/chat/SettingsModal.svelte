@@ -850,7 +850,7 @@
 						{/if}
 					{/each}
 				{:else}
-					<div class="text-center text-gray-500 mt-4">
+					<div class="text-center text-gray-600 dark:text-gray-400 mt-4">
 						{$i18n.t('No results found')}
 					</div>
 				{/if}

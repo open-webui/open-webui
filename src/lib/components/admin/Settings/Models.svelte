@@ -351,7 +351,7 @@
 						{$i18n.t('Models')}
 					</div>
 
-					<div class="text-lg font-medium text-gray-500 dark:text-gray-400">
+					<div class="text-lg font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400">
 						{filteredModels.length}
 					</div>
 				</div>
@@ -580,7 +580,7 @@
 								</div>
 
 								<div
-									class=" flex-1 self-center {(model?.is_active ?? true) ? '' : 'text-gray-500'}"
+									class=" flex-1 self-center {(model?.is_active ?? true) ? '' : 'text-gray-600 dark:text-gray-400'}"
 								>
 									<Tooltip
 										content={marked.parse(
@@ -617,7 +617,7 @@
 										</div>
 									</Tooltip>
 									<div
-										class=" text-xs overflow-hidden text-ellipsis line-clamp-1 flex items-center gap-1 text-gray-500"
+										class=" text-xs overflow-hidden text-ellipsis line-clamp-1 flex items-center gap-1 text-gray-600 dark:text-gray-400"
 									>
 										<span class=" line-clamp-1">
 											{!!model?.meta?.description
@@ -721,7 +721,7 @@
 						<div class="max-w-md text-center">
 							<div class=" text-3xl mb-3">😕</div>
 							<div class=" text-lg font-medium mb-1">{$i18n.t('No models found')}</div>
-							<div class=" text-gray-500 text-center text-xs">
+							<div class=" text-gray-600 dark:text-gray-400 text-center text-xs">
 								{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
 							</div>
 						</div>

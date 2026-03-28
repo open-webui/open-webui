@@ -178,7 +178,7 @@
 								</button>
 							{:else}
 								<span
-									class="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full"
+									class="text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full"
 									>{$i18n.t('Read Only')}</span
 								>
 							{/if}
@@ -187,7 +187,7 @@
 
 					<div class=" flex gap-2 px-1 items-center">
 						{#if edit}
-							<div class="text-sm text-gray-500 shrink-0">
+							<div class="text-sm text-gray-600 dark:text-gray-400 shrink-0">
 								{id}
 							</div>
 						{:else}
@@ -197,7 +197,7 @@
 								placement="top-start"
 							>
 								<input
-									class="w-full text-sm disabled:text-gray-500 bg-transparent outline-hidden"
+									class="w-full text-sm disabled:text-gray-600 dark:text-gray-400 bg-transparent outline-hidden"
 									type="text"
 									placeholder={$i18n.t('Skill ID')}
 									aria-label={$i18n.t('Skill ID')}

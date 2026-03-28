@@ -29,7 +29,7 @@
 		<div class="flex items-center gap-2">
 			<Tooltip placement="top" content={$i18n.t('Insert')}>
 				<button
-					class=" text-transparent group-hover:text-gray-500 dark:hover:text-gray-300 transition"
+					class=" text-transparent group-hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300 transition"
 					on:click={() => {
 						onInsert();
 					}}
@@ -40,7 +40,7 @@
 
 			<Tooltip placement="top" content={$i18n.t('Edit')}>
 				<button
-					class=" text-transparent group-hover:text-gray-500 dark:hover:text-gray-300 transition"
+					class=" text-transparent group-hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300 transition"
 					on:click={() => {
 						onEdit();
 					}}
@@ -51,7 +51,7 @@
 
 			<Tooltip placement="top" content={$i18n.t('Delete')}>
 				<button
-					class=" text-transparent group-hover:text-gray-500 dark:hover:text-gray-300 transition"
+					class=" text-transparent group-hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300 transition"
 					on:click={() => {
 						onDelete();
 					}}

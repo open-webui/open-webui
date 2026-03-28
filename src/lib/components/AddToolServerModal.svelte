@@ -444,7 +444,7 @@
 					<div class="px-1">
 						<div class="flex gap-2 mb-1.5">
 							<div class="flex w-full justify-between items-center">
-								<div class=" text-xs text-gray-500">{$i18n.t('Type')}</div>
+								<div class=" text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Type')}</div>
 
 								<div class="">
 									<button
@@ -458,7 +458,7 @@
 											{$i18n.t('OpenAPI')}
 										{:else if type === 'mcp'}
 											{$i18n.t('MCP')}
-											<span class="text-gray-500">{$i18n.t('Streamable HTTP')}</span>
+											<span class="text-gray-600 dark:text-gray-400">{$i18n.t('Streamable HTTP')}</span>
 										{/if}
 									</button>
 								</div>
@@ -470,7 +470,7 @@
 								<div class="flex justify-between mb-0.5">
 									<label
 										for="enter-name"
-										class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 										>{$i18n.t('Name')}</label
 									>
 								</div>
@@ -491,7 +491,7 @@
 									<div class="flex justify-between mb-0.5">
 										<label
 											for="enter-id"
-											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 											>{$i18n.t('ID')}
 											{#if type !== 'mcp'}<span class="opacity-50">({$i18n.t('optional')})</span
 												>{/if}</label
@@ -515,7 +515,7 @@
 						<div class="flex flex-col w-full mt-1 mb-1.5">
 							<label
 								for="description"
-								class={`mb-0.5 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+								class={`mb-0.5 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 								>{$i18n.t('Description')}</label
 							>
 
@@ -536,7 +536,7 @@
 								<div class="flex justify-between mb-0.5">
 									<label
 										for="api-base-url"
-										class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 										>{$i18n.t('URL')}</label
 									>
 								</div>
@@ -593,7 +593,7 @@
 									<div class="flex gap-2 items-center">
 										<div
 											for="select-bearer-or-session"
-											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 										>
 											{$i18n.t('Auth')}
 										</div>
@@ -666,25 +666,25 @@
 											/>
 										{:else if auth_type === 'none'}
 											<div
-												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 											>
 												{$i18n.t('No authentication')}
 											</div>
 										{:else if auth_type === 'session'}
 											<div
-												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 											>
 												{$i18n.t('Forwards system user session credentials to authenticate')}
 											</div>
 										{:else if auth_type === 'system_oauth'}
 											<div
-												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 											>
 												{$i18n.t('Forwards system user OAuth access token to authenticate')}
 											</div>
 										{:else if auth_type === 'oauth_2.1'}
 											<div
-												class={`flex items-center text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+												class={`flex items-center text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 											>
 												{$i18n.t('Uses OAuth 2.1 Dynamic Client Registration')}
 											</div>
@@ -697,7 +697,7 @@
 						<div class="flex items-center justify-between">
 							<button
 								type="button"
-								class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition mt-2"
+								class="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition mt-2"
 								on:click={() => (showAdvanced = !showAdvanced)}
 							>
 								<svg
@@ -740,7 +740,7 @@
 											<div class="flex gap-2 items-center">
 												<div
 													for="select-bearer-or-session"
-													class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+													class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 												>
 													{$i18n.t('OpenAPI Spec')}
 												</div>
@@ -777,7 +777,7 @@
 													</div>
 												{:else if spec_type === 'json'}
 													<div
-														class={`text-xs w-full self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+														class={`text-xs w-full self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 													>
 														<label for="url-or-path" class="sr-only">{$i18n.t('JSON Spec')}</label>
 														<textarea
@@ -795,7 +795,7 @@
 
 										{#if ['', 'url'].includes(spec_type)}
 											<div
-												class={`text-xs mt-1 ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+												class={`text-xs mt-1 ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 											>
 												{$i18n.t(`WebUI will make requests to "{{url}}"`, {
 													url: path.includes('://')
@@ -813,7 +813,7 @@
 									<div class="flex flex-col w-full">
 										<label
 											for="headers-input"
-											class={`mb-0.5 text-xs text-gray-500
+											class={`mb-0.5 text-xs text-gray-600 dark:text-gray-400
 									${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
 											>{$i18n.t('Headers')}</label
 										>
@@ -844,7 +844,7 @@
 							<div class="flex flex-col w-full mt-2">
 								<label
 									for="function-name-filter-list"
-									class={`mb-1 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100 placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 text-gray-500'}`}
+									class={`mb-1 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100 placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 text-gray-600 dark:text-gray-400'}`}
 									>{$i18n.t('Function Name Filter List')}</label
 								>
 

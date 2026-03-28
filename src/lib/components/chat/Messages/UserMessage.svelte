@@ -146,7 +146,7 @@
 				<Name>
 					{#if message.user}
 						{$i18n.t('You')}
-						<span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
+						<span class=" text-gray-600 dark:text-gray-400 text-sm font-medium">{message?.user ?? ''}</span>
 					{:else if $settings.showUsername || $_user.name !== user.name}
 						{user.name}
 					{:else}

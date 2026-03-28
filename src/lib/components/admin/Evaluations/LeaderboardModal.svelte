@@ -74,7 +74,7 @@
 			<!-- Activity Chart -->
 			<div class="mb-4">
 				<div class="flex items-center justify-between mb-2">
-					<div class="text-xs text-gray-500 font-medium uppercase tracking-wide">
+					<div class="text-xs text-gray-600 dark:text-gray-400 font-medium uppercase tracking-wide">
 						{$i18n.t('Activity')}
 					</div>
 					<div
@@ -86,7 +86,7 @@
 								class="rounded-full transition-all duration-200 px-2.5 py-0.5 text-xs font-medium {selectedRange ===
 								range.key
 									? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
-									: 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}"
+									: 'text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}"
 								on:click={() => selectRange(range.key)}
 							>
 								{range.label}
@@ -102,19 +102,19 @@
 			</div>
 
 			<div class="mb-4">
-				<div class="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">
+				<div class="text-xs text-gray-600 dark:text-gray-400 mb-2 font-medium uppercase tracking-wide">
 					{$i18n.t('Tags')}
 				</div>
 				{#if topTags.length}
 					<div class="flex flex-wrap gap-1 -mx-1">
 						{#each topTags as tagInfo}
 							<span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-850 text-xs">
-								{tagInfo.tag} <span class="text-gray-500 font-medium">{tagInfo.count}</span>
+								{tagInfo.tag} <span class="text-gray-600 dark:text-gray-400 font-medium">{tagInfo.count}</span>
 							</span>
 						{/each}
 					</div>
 				{:else}
-					<span class="text-gray-500 text-sm">-</span>
+					<span class="text-gray-600 dark:text-gray-400 text-sm">-</span>
 				{/if}
 			</div>
 

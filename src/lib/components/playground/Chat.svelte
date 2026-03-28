@@ -321,7 +321,7 @@
 						</div>
 
 						{#if !showSystem && system.trim()}
-							<div class=" flex-1 text-gray-500 line-clamp-1">
+							<div class=" flex-1 text-gray-600 dark:text-gray-400 line-clamp-1">
 								{system}
 							</div>
 						{/if}
@@ -355,7 +355,7 @@
 
 				<Dropdown>
 					<button
-						class="p-1.5 text-sm font-medium bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition rounded-lg"
+						class="p-1.5 text-sm font-medium bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 dark:text-gray-400 transition rounded-lg"
 						aria-label={$i18n.t('More options')}
 					>
 						<EllipsisHorizontal className="size-4" />

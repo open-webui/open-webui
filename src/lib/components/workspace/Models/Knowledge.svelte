@@ -158,7 +158,7 @@
 	<slot name="label">
 		<div class="mb-2">
 			<div class="flex w-full justify-between mb-1">
-				<div class=" self-center text-xs font-medium text-gray-500">
+				<div class=" self-center text-xs font-medium text-gray-600 dark:text-gray-400">
 					{$i18n.t('Knowledge')}
 				</div>
 			</div>

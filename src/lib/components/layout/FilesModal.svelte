@@ -313,7 +313,7 @@
 						<div class="text-left text-sm w-full mb-3 max-h-[32rem] overflow-y-scroll">
 							{#if files.length === 0}
 								<div
-									class="text-xs text-gray-500 dark:text-gray-400 text-center px-5 min-h-20 w-full h-full flex justify-center items-center"
+									class="text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400 text-center px-5 min-h-20 w-full h-full flex justify-center items-center"
 								>
 									{$i18n.t('No files found')}
 								</div>
@@ -326,13 +326,13 @@
 								>
 									<div class="basis-3/5 min-w-0">
 										<div class="text-ellipsis line-clamp-1">{file.filename}</div>
-										<div class="text-xs text-gray-500">
+										<div class="text-xs text-gray-600 dark:text-gray-400">
 											{formatFileSize(file.meta?.size ?? 0)}
 										</div>
 									</div>
 
 									<div class="basis-2/5 flex items-center justify-end">
-										<div class="hidden sm:flex text-gray-500 dark:text-gray-400 text-xs">
+										<div class="hidden sm:flex text-gray-600 dark:text-gray-400 dark:text-gray-400 text-xs">
 											{dayjs(file.created_at * 1000).format('MMM D, YYYY')}
 										</div>
 

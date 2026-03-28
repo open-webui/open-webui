@@ -105,7 +105,7 @@
 										{selectedUser.name}
 									</div>
 
-									<div class="text-xs text-gray-500">
+									<div class="text-xs text-gray-600 dark:text-gray-400">
 										{$i18n.t('Created at')}
 										{dayjs(selectedUser.created_at * 1000).format('LL')}
 									</div>
@@ -114,7 +114,7 @@
 								<div class=" flex flex-col space-y-1.5">
 									{#if (userGroups ?? []).length > 0}
 										<div class="flex flex-col w-full text-sm">
-											<div class="mb-1 text-xs text-gray-500">{$i18n.t('User Groups')}</div>
+											<div class="mb-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('User Groups')}</div>
 
 											<div class="flex flex-wrap gap-1 my-0.5 -mx-1">
 												{#each userGroups as userGroup}
@@ -135,11 +135,11 @@
 									{/if}
 
 									<div class="flex flex-col w-full">
-										<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Role')}</div>
+										<div class=" mb-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Role')}</div>
 
 										<div class="flex-1">
 											<select
-												class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+												class="w-full text-sm bg-transparent disabled:text-gray-600 dark:text-gray-400 dark:disabled:text-gray-600 dark:text-gray-400 outline-hidden"
 												bind:value={_user.role}
 												aria-label={$i18n.t('Role')}
 												disabled={_user.id == sessionUser.id}
@@ -153,7 +153,7 @@
 									</div>
 
 									<div class="flex flex-col w-full">
-										<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
+										<div class=" mb-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Name')}</div>
 
 										<div class="flex-1">
 											<input
@@ -169,11 +169,11 @@
 									</div>
 
 									<div class="flex flex-col w-full">
-										<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Email')}</div>
+										<div class=" mb-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Email')}</div>
 
 										<div class="flex-1">
 											<input
-												class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+												class="w-full text-sm bg-transparent disabled:text-gray-600 dark:text-gray-400 dark:disabled:text-gray-600 dark:text-gray-400 outline-hidden"
 												type="email"
 												bind:value={_user.email}
 												aria-label={$i18n.t('Email')}
@@ -186,12 +186,12 @@
 
 									{#if _user?.oauth}
 										<div class="flex flex-col w-full">
-											<div class=" mb-1 text-xs text-gray-500">{$i18n.t('OAuth ID')}</div>
+											<div class=" mb-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('OAuth ID')}</div>
 
 											<div class="flex-1 text-sm break-all mb-1 flex flex-col space-y-1">
 												{#each Object.keys(_user.oauth) as key}
 													<div>
-														<span class="text-gray-500">{key}</span>
+														<span class="text-gray-600 dark:text-gray-400">{key}</span>
 														<span class="">{_user.oauth[key]?.sub}</span>
 													</div>
 												{/each}
@@ -200,7 +200,7 @@
 									{/if}
 
 									<div class="flex flex-col w-full">
-										<div class=" mb-1 text-xs text-gray-500">{$i18n.t('New Password')}</div>
+										<div class=" mb-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('New Password')}</div>
 
 										<div class="flex-1">
 											<SensitiveInput

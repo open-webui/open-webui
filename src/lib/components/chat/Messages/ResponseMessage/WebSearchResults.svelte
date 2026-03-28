@@ -9,7 +9,7 @@
 </script>
 
 <Collapsible grow={true} className="w-full" buttonClassName="w-full" bind:open={state}>
-	<div class="flex items-center gap-2 text-gray-500 transition">
+	<div class="flex items-center gap-2 text-gray-600 dark:text-gray-400 transition">
 		<slot />
 		{#if state}
 			<ChevronUp strokeWidth="2.5" className="size-3.5 " />

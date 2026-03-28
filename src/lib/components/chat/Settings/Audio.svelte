@@ -352,7 +352,7 @@
 						</div>
 					</div>
 
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-gray-600 dark:text-gray-400">
 						{$i18n.t('Please do not close the settings page while loading the model.')}
 					</div>
 				</div>

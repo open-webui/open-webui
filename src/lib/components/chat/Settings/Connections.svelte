@@ -131,7 +131,7 @@
 						<div
 							class="text-xs {($settings?.highContrastMode ?? false)
 								? 'text-gray-800 dark:text-gray-100'
-								: 'text-gray-500'}"
+								: 'text-gray-600 dark:text-gray-400'}"
 						>
 							{$i18n.t('Connect to your own OpenAI compatible API endpoints.')}
 							<br />

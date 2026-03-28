@@ -17,7 +17,7 @@
 		{#each followUps as followUp, idx (idx)}
 			<Tooltip content={followUp} placement="top-start" className="line-clamp-1">
 				<button
-					class=" py-1.5 bg-transparent text-left text-sm flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition cursor-pointer w-full"
+					class=" py-1.5 bg-transparent text-left text-sm flex items-center gap-2 text-gray-600 dark:text-gray-400 dark:text-gray-400 hover:text-black dark:hover:text-white transition cursor-pointer w-full"
 					on:click={() => onClick(followUp)}
 					aria-label={$i18n.t('Follow up: {{question}}', { question: followUp })}
 				>

@@ -41,7 +41,7 @@
 					class="flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 {value ===
 					item.value
 						? ' '
-						: '  text-gray-500 dark:text-gray-400'}"
+						: '  text-gray-600 dark:text-gray-400 dark:text-gray-400'}"
 					type="button"
 					on:click={() => {
 						if (value === item.value) {

@@ -38,7 +38,7 @@
 
 	$: if (!open) expandedResult = false;
 	export let buttonClassName =
-		'w-fit text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
+		'w-fit text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition';
 
 	const componentId = id || uuidv4();
 
@@ -90,7 +90,7 @@
 	{#if embeds && Array.isArray(embeds) && embeds.length > 0}
 		<!-- Embed Mode: Show iframes without collapsible behavior -->
 		<div class="py-1 w-full cursor-pointer">
-			<div class="w-full text-xs text-gray-500">
+			<div class="w-full text-xs text-gray-600 dark:text-gray-400">
 				{attributes.name}
 			</div>
 			{#each embeds as embed, idx}
@@ -229,7 +229,7 @@
 											: resultStr}</pre>
 									{#if isTruncated}
 										<button
-											class="mt-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+											class="mt-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"
 											on:click|stopPropagation={() => {
 												expandedResult = true;
 											}}

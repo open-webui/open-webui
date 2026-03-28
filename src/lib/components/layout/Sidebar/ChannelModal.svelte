@@ -168,7 +168,7 @@
 				>
 					{#if !edit}
 						<div class="flex flex-col w-full mt-2 mb-1">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Channel Type')}</div>
+							<div class=" mb-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Channel Type')}</div>
 
 							<div class="flex-1">
 								<Tooltip
@@ -213,7 +213,7 @@
 					</div>
 
 					<div class="flex flex-col w-full mt-2">
-						<div class=" mb-1 text-xs text-gray-500">
+						<div class=" mb-1 text-xs text-gray-600 dark:text-gray-400">
 							{$i18n.t('Channel Name')}
 							<span class="text-xs text-gray-200 dark:text-gray-800 ml-0.5"
 								>{type === 'dm' ? `${$i18n.t('Optional')}` : ''}</span
@@ -261,7 +261,7 @@
 
 					{#if edit}
 						<div class="flex w-full mt-2 items-center justify-between">
-							<div class="text-xs text-gray-500">{$i18n.t('Webhooks')}</div>
+							<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Webhooks')}</div>
 
 							<button
 								class="text-xs bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden text-left"

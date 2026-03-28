@@ -123,7 +123,7 @@
 				</div>
 
 				<slot>
-					<div class=" text-sm text-gray-500 flex-1">
+					<div class=" text-sm text-gray-600 dark:text-gray-400 flex-1">
 						{#if message !== ''}
 							{@const html = DOMPurify.sanitize(marked.parse(message))}
 							{@html html}

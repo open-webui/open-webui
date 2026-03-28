@@ -112,7 +112,7 @@
 	</div>
 	<div class="flex flex-col w-full justify-center mt-2">
 		<button
-			class=" text-xs text-center text-gray-500 rounded-lg py-0.5 opacity-0 group-hover:opacity-100 transition-all"
+			class=" text-xs text-center text-gray-600 dark:text-gray-400 rounded-lg py-0.5 opacity-0 group-hover:opacity-100 transition-all"
 			type="button"
 			on:click={async () => {
 				profileImageUrl = `${WEBUI_BASE_URL}/user.png`;

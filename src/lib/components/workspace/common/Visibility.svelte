@@ -9,7 +9,7 @@
 
 <div class=" rounded-lg flex flex-col gap-2">
 	<div class="">
-		<div class=" text-xs font-medium mb-2.5 text-gray-500">{$i18n.t('Visibility')}</div>
+		<div class=" text-xs font-medium mb-2.5 text-gray-600 dark:text-gray-400">{$i18n.t('Visibility')}</div>
 
 		<div class="flex gap-2.5 items-center mb-1">
 			<div>

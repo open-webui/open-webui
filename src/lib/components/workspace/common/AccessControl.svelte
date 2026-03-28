@@ -494,7 +494,7 @@
 	</div>
 
 	{#if share}
-		<div class="flex items-center justify-between text-xs font-medium text-gray-500 my-1">
+		<div class="flex items-center justify-between text-xs font-medium text-gray-600 dark:text-gray-400 my-1">
 			<div>
 				{$i18n.t('Access List')}
 			</div>
@@ -612,7 +612,7 @@
 			{/if}
 
 			{#if !hasPublicReadGrant(accessGrants ?? []) && accessGroups.length === 0 && selectedUsers.length === 0}
-				<div class="text-xs text-gray-500 text-center py-4">
+				<div class="text-xs text-gray-600 dark:text-gray-400 text-center py-4">
 					{$i18n.t('No access grants. Private to you.')}
 				</div>
 			{/if}

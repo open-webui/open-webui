@@ -117,7 +117,7 @@
 
 					<div class="my-1.5">
 						<div
-							class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+							class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 						>
 							{$i18n.t('Connect to your own OpenAPI compatible external tool servers.')}
 							<br />
@@ -143,7 +143,7 @@
 
 					<div class="mt-1.5">
 						<div
-							class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+							class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 						>
 							{$i18n.t(
 								'Connect to Open Terminal instances to browse files and use them as always-on tools. Only one can be active at a time.'

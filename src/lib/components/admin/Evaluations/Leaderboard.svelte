@@ -109,7 +109,7 @@
 >
 	<div class="flex items-center text-xl font-medium px-0.5 gap-2 shrink-0">
 		{$i18n.t('Leaderboard')}
-		<span class="text-lg text-gray-500">{rankedModels.length}</span>
+		<span class="text-lg text-gray-600 dark:text-gray-400">{rankedModels.length}</span>
 	</div>
 	<Tooltip content={$i18n.t('Re-rank models by topic similarity')}>
 		<div class="flex flex-1">
@@ -135,10 +135,10 @@
 	{/if}
 
 	{#if !rankedModels.length && !loading}
-		<div class="text-center text-xs text-gray-500 py-1">{$i18n.t('No models found')}</div>
+		<div class="text-center text-xs text-gray-600 dark:text-gray-400 py-1">{$i18n.t('No models found')}</div>
 	{:else if rankedModels.length}
 		<table
-			class="w-full text-sm text-left text-gray-500 dark:text-gray-400 {loading
+			class="w-full text-sm text-left text-gray-600 dark:text-gray-400 dark:text-gray-400 {loading
 				? 'opacity-20'
 				: ''}"
 		>
@@ -218,7 +218,7 @@
 	{/if}
 </div>
 
-<div class="text-gray-500 text-xs mt-1.5 w-full flex justify-end">
+<div class="text-gray-600 dark:text-gray-400 text-xs mt-1.5 w-full flex justify-end">
 	<div class="text-right">
 		<div class="line-clamp-1">
 			ⓘ {$i18n.t(

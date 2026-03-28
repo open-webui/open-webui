@@ -223,7 +223,7 @@
 			deleteHandler(deletePrompt);
 		}}
 	>
-		<div class=" text-sm text-gray-500 truncate">
+		<div class=" text-sm text-gray-600 dark:text-gray-400 truncate">
 			{$i18n.t('This will delete')} <span class="  font-medium">{deletePrompt.command}</span>.
 		</div>
 	</DeleteConfirmDialog>
@@ -274,7 +274,7 @@
 					{$i18n.t('Prompts')}
 				</div>
 
-				<div class="text-lg font-medium text-gray-500 dark:text-gray-400">
+				<div class="text-lg font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400">
 					{total ?? ''}
 				</div>
 			</div>
@@ -398,7 +398,7 @@
 							<div class="flex items-center justify-between w-full mb-0.5">
 								<div class="flex items-center gap-2">
 									<div class="font-medium line-clamp-1 capitalize">{prompt.name}</div>
-									<div class="text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
+									<div class="text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-600 dark:text-gray-400">
 										/{prompt.command}
 									</div>
 								</div>
@@ -413,7 +413,7 @@
 									className="flex shrink-0"
 									placement="top-start"
 								>
-									<div class="shrink-0 text-gray-500">
+									<div class="shrink-0 text-gray-600 dark:text-gray-400">
 										{$i18n.t('By {{name}}', {
 											name: capitalizeFirstLetter(
 												prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
@@ -518,7 +518,7 @@
 				<div class="max-w-md text-center">
 					<div class=" text-3xl mb-3">😕</div>
 					<div class=" text-lg font-medium mb-1">{$i18n.t('No prompts found')}</div>
-					<div class=" text-gray-500 text-center text-xs">
+					<div class=" text-gray-600 dark:text-gray-400 text-center text-xs">
 						{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
 					</div>
 				</div>

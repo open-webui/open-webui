@@ -61,7 +61,7 @@
 				<div class="flex justify-between mb-0.5">
 					<label
 						for="webpage-url"
-						class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+						class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 						>{$i18n.t('Webpage URLs')}</label
 					>
 				</div>

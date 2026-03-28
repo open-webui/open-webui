@@ -98,7 +98,7 @@
 			<div class="font-medium text-gray-900 dark:text-white truncate">
 				{name}
 			</div>
-			<div class="text-gray-500 text-xs">
+			<div class="text-gray-600 dark:text-gray-400 text-xs">
 				{$i18n.t('Created on {{date}}', {
 					date: dayjs(webhook.created_at / 1000000).format('MMM D, YYYY')
 				})}
@@ -130,7 +130,7 @@
 					/>
 				</button>
 				<div class="flex-1">
-					<div class=" text-gray-500 text-xs">{$i18n.t('Name')}</div>
+					<div class=" text-gray-600 dark:text-gray-400 text-xs">{$i18n.t('Name')}</div>
 					<input
 						type="text"
 						class="w-full text-sm bg-transparent outline-none placeholder:text-gray-300 dark:placeholder:text-gray-700"
@@ -145,7 +145,7 @@
 							class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 							on:click={copyUrl}
 						>
-							<Clipboard className="size-4 text-gray-500" />
+							<Clipboard className="size-4 text-gray-600 dark:text-gray-400" />
 						</button>
 					</Tooltip>
 					<Tooltip content={$i18n.t('Delete')}>
@@ -154,7 +154,7 @@
 							class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 							on:click={onDelete}
 						>
-							<GarbageBin className="size-4 text-gray-500" />
+							<GarbageBin className="size-4 text-gray-600 dark:text-gray-400" />
 						</button>
 					</Tooltip>
 				</div>

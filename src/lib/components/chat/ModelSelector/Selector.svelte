@@ -576,7 +576,7 @@
 							<div class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
 								{$i18n.t('No models available')}
 							</div>
-							<div class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+							<div class="text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400 mb-4">
 								{$i18n.t('Connect to an AI provider to start chatting')}
 							</div>
 							<a

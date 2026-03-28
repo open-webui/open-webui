@@ -297,7 +297,7 @@
 			<div
 				class="flex flex-col overflow-y-auto h-96 md:h-[40rem] max-h-full scrollbar-hidden w-full flex-1 pr-2"
 			>
-				<div class="w-full text-xs text-gray-500 dark:text-gray-400 font-medium pb-2 px-2">
+				<div class="w-full text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400 font-medium pb-2 px-2">
 					{$i18n.t('Actions')}
 				</div>
 
@@ -331,7 +331,7 @@
 					<hr class="border-gray-50 dark:border-gray-850/30 my-3" />
 
 					{#if chatList.length === 0}
-						<div class="text-xs text-gray-500 dark:text-gray-400 text-center px-5 py-4">
+						<div class="text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400 text-center px-5 py-4">
 							{$i18n.t('No results found')}
 						</div>
 					{/if}
@@ -339,7 +339,7 @@
 					{#each chatList as chat, idx (chat.id)}
 						{#if idx === 0 || (idx > 0 && chat.time_range !== chatList[idx - 1].time_range)}
 							<div
-								class="w-full text-xs text-gray-500 dark:text-gray-400 font-medium {idx === 0
+								class="w-full text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400 font-medium {idx === 0
 									? ''
 									: 'pt-5'} pb-2 px-2"
 							>
@@ -388,7 +388,7 @@
 								</div>
 							</div>
 
-							<div class=" pl-3 shrink-0 text-gray-500 dark:text-gray-400 text-xs">
+							<div class=" pl-3 shrink-0 text-gray-600 dark:text-gray-400 dark:text-gray-400 text-xs">
 								{$i18n.t(
 									dayjs(chat?.updated_at * 1000).calendar(null, {
 										sameDay: '[Today]',
@@ -429,7 +429,7 @@
 			>
 				{#if messages === null}
 					<div
-						class="w-full h-full flex justify-center items-center text-gray-500 dark:text-gray-400 text-sm"
+						class="w-full h-full flex justify-center items-center text-gray-600 dark:text-gray-400 dark:text-gray-400 text-sm"
 					>
 						{$i18n.t('Select a conversation to preview')}
 					</div>

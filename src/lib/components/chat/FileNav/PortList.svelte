@@ -50,7 +50,7 @@
 
 <div class="px-2 py-1">
 	<button
-		class="flex items-center gap-1 w-full text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"
+		class="flex items-center gap-1 w-full text-xs font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"
 		on:click={() => (expanded = !expanded)}
 	>
 		<svg
@@ -69,7 +69,7 @@
 		<span class="ml-auto flex items-center gap-1">
 			{#if ports.length > 0}
 				<span
-					class="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
+					class="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 dark:text-gray-400"
 				>
 					{ports.length}
 				</span>
@@ -112,7 +112,7 @@
 						<span class="font-mono text-blue-500 dark:text-blue-400 shrink-0">
 							:{port.port}
 						</span>
-						<span class="text-gray-500 dark:text-gray-400 truncate flex-1 text-left">
+						<span class="text-gray-600 dark:text-gray-400 dark:text-gray-400 truncate flex-1 text-left">
 							{port.process ?? ''}
 						</span>
 						<span

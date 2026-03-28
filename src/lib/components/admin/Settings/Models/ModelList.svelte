@@ -83,7 +83,7 @@
 		{/each}
 	</div>
 {:else}
-	<div class="text-gray-500 text-xs text-center py-2">
+	<div class="text-gray-600 dark:text-gray-400 text-xs text-center py-2">
 		{$i18n.t('No models found')}
 	</div>
 {/if}

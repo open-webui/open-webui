@@ -319,7 +319,7 @@
 		{#if completed}
 			<div class="px-5.5 py-5">
 				<div class="mb-1 text-xl font-medium">{$i18n.t('Sync Complete!')}</div>
-				<div class="mb-3 text-xs text-gray-500">
+				<div class="mb-3 text-xs text-gray-600 dark:text-gray-400">
 					{$i18n.t('Your usage stats have been successfully synced.')}
 				</div>
 
@@ -337,7 +337,7 @@
 		{:else if error}
 			<div class="px-5.5 py-5">
 				<div class="mb-1 text-xl font-medium">{$i18n.t('Sync Failed')}</div>
-				<div class="mb-3 text-xs text-gray-500">
+				<div class="mb-3 text-xs text-gray-600 dark:text-gray-400">
 					{errorMessage || $i18n.t('There was an error syncing your stats. Please try again.')}
 				</div>
 
@@ -369,17 +369,17 @@
 			</div>
 
 			<div class="px-5 pt-2 pb-5">
-				<div class="text-sm text-gray-500 dark:text-gray-400">
+				<div class="text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400">
 					{$i18n.t('Do you want to sync your usage stats with Open WebUI Community?')}
 				</div>
 
-				<div class="mt-2 text-xs text-gray-500">
+				<div class="mt-2 text-xs text-gray-600 dark:text-gray-400">
 					{$i18n.t(
 						'Participate in community leaderboards and evaluations! Syncing aggregated usage stats helps drive research and improvements to Open WebUI. Your privacy is paramount: no message content is ever shared.'
 					)}
 				</div>
 
-				<div class="mt-3 text-xs text-gray-500">
+				<div class="mt-3 text-xs text-gray-600 dark:text-gray-400">
 					<div class="font-medium text-gray-900 dark:text-gray-100 mb-1">
 						{$i18n.t('What is shared:')}
 					</div>
@@ -427,7 +427,7 @@
 
 				{#if syncing}
 					<div class="mt-3 mx-1.5">
-						<div class="text-xs text-gray-500 mb-1 flex justify-between">
+						<div class="text-xs text-gray-600 dark:text-gray-400 mb-1 flex justify-between">
 							<div>
 								{downloading ? $i18n.t('Downloading stats...') : $i18n.t('Syncing stats...')}
 							</div>

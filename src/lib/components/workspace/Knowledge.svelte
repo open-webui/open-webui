@@ -168,7 +168,7 @@
 					{$i18n.t('Knowledge')}
 				</div>
 
-				<div class="text-lg font-medium text-gray-500 dark:text-gray-400">
+				<div class="text-lg font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400">
 					{total}
 				</div>
 			</div>
@@ -302,13 +302,13 @@
 
 										<div class="flex items-center gap-2 shrink-0">
 											<Tooltip content={dayjs(item.updated_at * 1000).format('LLLL')}>
-												<div class=" text-xs text-gray-500 line-clamp-1 hidden sm:block">
+												<div class=" text-xs text-gray-600 dark:text-gray-400 line-clamp-1 hidden sm:block">
 													{$i18n.t('Updated')}
 													{dayjs(item.updated_at * 1000).fromNow()}
 												</div>
 											</Tooltip>
 
-											<div class="text-xs text-gray-500 shrink-0">
+											<div class="text-xs text-gray-600 dark:text-gray-400 shrink-0">
 												<Tooltip
 													content={item?.user?.email ?? $i18n.t('Deleted User')}
 													className="flex shrink-0"
@@ -348,7 +348,7 @@
 					<div class="max-w-md text-center">
 						<div class=" text-3xl mb-3">😕</div>
 						<div class=" text-lg font-medium mb-1">{$i18n.t('No knowledge found')}</div>
-						<div class=" text-gray-500 text-center text-xs">
+						<div class=" text-gray-600 dark:text-gray-400 text-center text-xs">
 							{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
 						</div>
 					</div>
@@ -361,7 +361,7 @@
 		{/if}
 	</div>
 
-	<div class=" text-gray-500 text-xs m-2">
+	<div class=" text-gray-600 dark:text-gray-400 text-xs m-2">
 		ⓘ {$i18n.t("Use '#' in the prompt input to load and include your knowledge.")}
 	</div>
 {:else}

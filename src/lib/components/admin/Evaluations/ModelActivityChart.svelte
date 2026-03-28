@@ -184,7 +184,7 @@
 			<Spinner className="size-5" />
 		</div>
 	{:else if !history.length || history.every((h) => h.won === 0 && h.lost === 0)}
-		<div class="flex items-center justify-center h-40 text-gray-500 text-sm">
+		<div class="flex items-center justify-center h-40 text-gray-600 dark:text-gray-400 text-sm">
 			{$i18n.t('No activity data')}
 		</div>
 	{:else}

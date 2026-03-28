@@ -209,7 +209,7 @@
 			<div class="flex {showUserProfile ? 'mb-0.5' : 'mt-0.5'}">
 				<div class="ml-8.5 flex items-center gap-1 px-1 rounded-full text-xs">
 					<Pin className="size-3 text-yellow-500 dark:text-yellow-300" />
-					<span class="text-gray-500">{$i18n.t('Pinned')}</span>
+					<span class="text-gray-600 dark:text-gray-400">{$i18n.t('Pinned')}</span>
 				</div>
 			</div>
 		{/if}
@@ -259,7 +259,7 @@
 							$i18n.t('Unknown User')}
 					</div>
 
-					<div class="italic text-sm text-gray-500 dark:text-gray-400 line-clamp-1 w-full flex-1">
+					<div class="italic text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400 line-clamp-1 w-full flex-1">
 						<Markdown id={`${message.id}-reply-to`} content={message?.reply_to_message?.content} />
 					</div>
 				</button>
@@ -294,7 +294,7 @@
 
 					{#if message.created_at}
 						<div
-							class="mt-1.5 flex shrink-0 items-center text-xs self-center invisible group-hover:visible text-gray-500 font-medium first-letter:capitalize"
+							class="mt-1.5 flex shrink-0 items-center text-xs self-center invisible group-hover:visible text-gray-600 dark:text-gray-400 font-medium first-letter:capitalize"
 						>
 							<Tooltip content={dayjs(message.created_at / 1000000).format('LLLL')}>
 								{dayjs(message.created_at / 1000000).format('HH:mm')}
@@ -426,7 +426,7 @@
 								content={message.content}
 								paragraphTag="span"
 							/>{#if message.created_at !== message.updated_at && (message?.meta?.model_id ?? null) === null}<span
-									class="text-gray-500 text-[10px] pl-1 self-center">({$i18n.t('edited')})</span
+									class="text-gray-600 dark:text-gray-400 text-[10px] pl-1 self-center">({$i18n.t('edited')})</span
 								>{/if}
 						{/if}
 					</div>
@@ -484,7 +484,7 @@
 											<Emoji shortCode={reaction.name} />
 
 											{#if reaction.users.length > 0}
-												<div class="text-xs font-medium text-gray-500 dark:text-gray-400">
+												<div class="text-xs font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400">
 													{reaction.users?.length}
 												</div>
 											{/if}
@@ -500,7 +500,7 @@
 									>
 										<Tooltip content={$i18n.t('Add Reaction')}>
 											<div
-												class="flex items-center gap-1.5 bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1 transition rounded-xl px-1 py-1 cursor-pointer text-gray-500 dark:text-gray-400"
+												class="flex items-center gap-1.5 bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1 transition rounded-xl px-1 py-1 cursor-pointer text-gray-600 dark:text-gray-400 dark:text-gray-400"
 											>
 												<FaceSmile />
 											</div>
@@ -514,7 +514,7 @@
 					{#if !thread && message.reply_count > 0}
 						<div class="flex items-center gap-1.5 -mt-0.5 mb-1.5">
 							<button
-								class="flex items-center text-xs py-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"
+								class="flex items-center text-xs py-1 text-gray-600 dark:text-gray-400 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"
 								on:click={() => {
 									onThread(message.id);
 								}}

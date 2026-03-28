@@ -457,7 +457,7 @@
 				class="text-sm
         
         
-        {loading ? ' text-gray-500  dark:text-gray-400  ' : ' text-indigo-400 '} 
+        {loading ? ' text-gray-600 dark:text-gray-400  dark:text-gray-400  ' : ' text-indigo-400 '} 
        font-medium flex-1 mx-auto text-center"
 			>
 				{formatSeconds(durationSeconds)}
@@ -466,7 +466,7 @@
 
 		<div class="flex items-center">
 			{#if loading}
-				<div class=" text-gray-500 rounded-full cursor-not-allowed">
+				<div class=" text-gray-600 dark:text-gray-400 rounded-full cursor-not-allowed">
 					<svg
 						width="24"
 						height="24"

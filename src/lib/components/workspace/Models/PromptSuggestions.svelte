@@ -182,7 +182,7 @@
 			{/each}
 		</div>
 	{:else}
-		<div class="text-xs text-center w-full text-gray-500 mb-1.5">
+		<div class="text-xs text-center w-full text-gray-600 dark:text-gray-400 mb-1.5">
 			{$i18n.t('No suggestion prompts')}
 		</div>
 	{/if}

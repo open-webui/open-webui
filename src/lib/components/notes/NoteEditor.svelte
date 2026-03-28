@@ -897,7 +897,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 		showDeleteConfirm = false;
 	}}
 >
-	<div class=" text-sm text-gray-500">
+	<div class=" text-sm text-gray-600 dark:text-gray-400">
 		{$i18n.t('This will delete')} <span class="  font-semibold">{note.title}</span>.
 	</div>
 </DeleteConfirmDialog>
@@ -996,7 +996,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 										<div>
 											<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
 												<button
-													class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
+													class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-600 dark:text-gray-400 disabled:hover:text-gray-600 dark:text-gray-400"
 													on:click={() => {
 														editor.chain().focus().undo().run();
 														// versionNavigateHandler('prev');
@@ -1007,7 +1007,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 												</button>
 
 												<button
-													class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
+													class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-600 dark:text-gray-400 disabled:hover:text-gray-600 dark:text-gray-400"
 													on:click={() => {
 														editor.chain().focus().redo().run();
 														// versionNavigateHandler('next');
@@ -1106,7 +1106,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 										{$i18n.t('Access')}
 									</button>
 								{:else}
-									<div class="shrink-0 text-xs text-gray-500 px-2 py-1">
+									<div class="shrink-0 text-xs text-gray-600 dark:text-gray-400 px-2 py-1">
 										{$i18n.t('Read-Only Access')}
 									</div>
 								{/if}
@@ -1125,7 +1125,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							}}
 						>
 							<div
-								class="flex gap-0.5 items-center text-xs font-medium text-gray-500 dark:text-gray-400 w-fit"
+								class="flex gap-0.5 items-center text-xs font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400 w-fit"
 							>
 								<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg min-w-fit">
 									<!-- check for same date, yesterday, last week, and other -->

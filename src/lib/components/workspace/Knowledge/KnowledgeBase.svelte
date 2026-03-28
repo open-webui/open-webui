@@ -868,7 +868,7 @@
 
 							<div class="shrink-0 mr-2.5">
 								{#if fileItemsTotal}
-									<div class="text-xs text-gray-500">
+									<div class="text-xs text-gray-600 dark:text-gray-400">
 										<!-- {$i18n.t('{{COUNT}} files')} -->
 										{$i18n.t('{{COUNT}} files', {
 											COUNT: fileItemsTotal
@@ -895,7 +895,7 @@
 								</button>
 							</div>
 						{:else}
-							<div class="text-xs shrink-0 text-gray-500">
+							<div class="text-xs shrink-0 text-gray-600 dark:text-gray-400">
 								{$i18n.t('Read Only')}
 							</div>
 						{/if}
@@ -904,7 +904,7 @@
 					<div class="flex w-full">
 						<input
 							type="text"
-							class="text-left text-xs w-full text-gray-500 bg-transparent outline-hidden"
+							class="text-left text-xs w-full text-gray-600 dark:text-gray-400 bg-transparent outline-hidden"
 							bind:value={knowledge.description}
 							aria-label={$i18n.t('Knowledge Description')}
 							placeholder={$i18n.t('Knowledge Description')}
@@ -1051,7 +1051,7 @@
 										<Pagination bind:page={currentPage} count={fileItemsTotal} perPage={30} />
 									{/if}
 								{:else}
-									<div class="my-3 flex flex-col justify-center text-center text-gray-500 text-xs">
+									<div class="my-3 flex flex-col justify-center text-center text-gray-600 dark:text-gray-400 text-xs">
 										<div>
 											{$i18n.t('No content found')}
 										</div>

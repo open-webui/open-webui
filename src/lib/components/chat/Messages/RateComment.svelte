@@ -140,7 +140,7 @@
 						class="size-7 text-sm border border-gray-100/30 dark:border-gray-850/30 hover:bg-gray-50 dark:hover:bg-gray-850 {detailedRating ===
 						rating
 							? 'bg-gray-100 dark:bg-gray-800'
-							: ''} transition rounded-full disabled:cursor-not-allowed disabled:text-gray-500 disabled:bg-white dark:disabled:bg-gray-900"
+							: ''} transition rounded-full disabled:cursor-not-allowed disabled:text-gray-600 dark:text-gray-400 disabled:bg-white dark:disabled:bg-gray-900"
 						on:click={() => {
 							detailedRating = rating;
 						}}
@@ -264,7 +264,7 @@
 					<div class="text-sm font-medium">
 						{$i18n.t('Leave a public review for {{modelName}}', { modelName: message.model })}
 					</div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-gray-600 dark:text-gray-400">
 						{$i18n.t('Help the community discover great models')}
 					</div>
 				</div>

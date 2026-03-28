@@ -290,7 +290,7 @@
 							{$i18n.t('Functions')}
 						</div>
 
-						<div class="text-lg font-medium text-gray-500 dark:text-gray-400">
+						<div class="text-lg font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400">
 							{filteredItems.length}
 						</div>
 					</div>
@@ -438,7 +438,7 @@
 													{func.name}
 												</div>
 												{#if func?.meta?.manifest?.version}
-													<div class=" text-gray-500 text-xs font-medium shrink-0">
+													<div class=" text-gray-600 dark:text-gray-400 text-xs font-medium shrink-0">
 														v{func?.meta?.manifest?.version ?? ''}
 													</div>
 												{/if}
@@ -446,7 +446,7 @@
 										</Tooltip>
 
 										<div class="flex gap-1.5 px-1">
-											<div class="text-xs text-gray-500 shrink-0">
+											<div class="text-xs text-gray-600 dark:text-gray-400 shrink-0">
 												<Tooltip
 													content={func?.user?.email ?? $i18n.t('Deleted User')}
 													className="flex shrink-0"
@@ -588,7 +588,7 @@
 					<div class="max-w-md text-center">
 						<div class=" text-3xl mb-3">😕</div>
 						<div class=" text-lg font-medium mb-1">{$i18n.t('No functions found')}</div>
-						<div class=" text-gray-500 text-center text-xs">
+						<div class=" text-gray-600 dark:text-gray-400 text-center text-xs">
 							{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
 						</div>
 					</div>
@@ -596,7 +596,7 @@
 			{/if}
 		</div>
 
-		<!-- <div class=" text-gray-500 text-xs mt-1 mb-2">
+		<!-- <div class=" text-gray-600 dark:text-gray-400 text-xs mt-1 mb-2">
 	ⓘ {$i18n.t(
 		'Admins have access to all tools at all times; users need tools assigned per model in the workspace.'
 	)}
@@ -637,7 +637,7 @@
 			deleteHandler(selectedFunction);
 		}}
 	>
-		<div class=" text-sm text-gray-500 truncate">
+		<div class=" text-sm text-gray-600 dark:text-gray-400 truncate">
 			{$i18n.t('This will delete')} <span class="  font-semibold">{selectedFunction.name}</span>.
 		</div>
 	</DeleteConfirmDialog>
@@ -698,7 +698,7 @@
 			reader.readAsText(importFiles[0]);
 		}}
 	>
-		<div class="text-sm text-gray-500">
+		<div class="text-sm text-gray-600 dark:text-gray-400">
 			<div class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-lg px-4 py-3">
 				<div>{$i18n.t('Please carefully review the following warnings:')}</div>
 

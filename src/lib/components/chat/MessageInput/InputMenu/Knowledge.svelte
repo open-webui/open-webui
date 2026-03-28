@@ -156,7 +156,7 @@
 {#if loaded && items !== null}
 	<div class="flex flex-col gap-0.5">
 		{#if items.length === 0}
-			<div class="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+			<div class="py-4 text-center text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400">
 				{$i18n.t('No knowledge bases found.')}
 			</div>
 		{:else}
@@ -231,7 +231,7 @@
 								<Spinner className="size-3" />
 							</div>
 						{:else if selectedFileItemsTotal === 0}
-							<div class=" text-xs text-gray-500 dark:text-gray-400 italic py-0.5 px-2">
+							<div class=" text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400 italic py-0.5 px-2">
 								{$i18n.t('No files in this knowledge base.')}
 							</div>
 						{:else}

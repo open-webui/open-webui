@@ -16,7 +16,7 @@
 
 <div class="flex items-center gap-2 px-2 py-1.5">
 	<!-- Arrow forward icon -->
-	<div class="shrink-0 text-gray-500">
+	<div class="shrink-0 text-gray-600 dark:text-gray-400">
 		<ArrowForward className="size-3.5" />
 	</div>
 

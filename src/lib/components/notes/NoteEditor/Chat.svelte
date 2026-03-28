@@ -350,7 +350,7 @@ Based on the user's instruction, update and enhance the existing notes or select
 				position="top"
 				className="inline-block"
 			>
-				<span class="text-gray-500 text-sm">({$i18n.t('Experimental')})</span>
+				<span class="text-gray-600 dark:text-gray-400 text-sm">({$i18n.t('Experimental')})</span>
 			</Tooltip>
 		</div>
 	</div>

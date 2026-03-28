@@ -77,7 +77,7 @@
 
 <div>
 	<div class="flex w-full justify-between mb-1">
-		<div class=" self-center text-xs font-medium text-gray-500">{$i18n.t('Capabilities')}</div>
+		<div class=" self-center text-xs font-medium text-gray-600 dark:text-gray-400">{$i18n.t('Capabilities')}</div>
 	</div>
 	<div class="flex items-center mt-2 flex-wrap">
 		{#each visibleCapabilities as capability}

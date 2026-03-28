@@ -46,7 +46,7 @@
 	<div class="flex justify-between items-center text-sm">
 		<div class="  font-medium">{$i18n.t('Change Password')}</div>
 		<button
-			class=" text-xs font-medium text-gray-500"
+			class=" text-xs font-medium text-gray-600 dark:text-gray-400"
 			type="button"
 			on:click={() => {
 				show = !show;
@@ -57,7 +57,7 @@
 	{#if show}
 		<div class=" py-2.5 space-y-1.5">
 			<div class="flex flex-col w-full">
-				<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Current Password')}</div>
+				<div class=" mb-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Current Password')}</div>
 
 				<div class="flex-1">
 					<SensitiveInput
@@ -72,7 +72,7 @@
 			</div>
 
 			<div class="flex flex-col w-full">
-				<div class=" mb-1 text-xs text-gray-500">{$i18n.t('New Password')}</div>
+				<div class=" mb-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('New Password')}</div>
 
 				<div class="flex-1">
 					<SensitiveInput
@@ -87,7 +87,7 @@
 			</div>
 
 			<div class="flex flex-col w-full">
-				<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Confirm Password')}</div>
+				<div class=" mb-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Confirm Password')}</div>
 
 				<div class="flex-1">
 					<SensitiveInput

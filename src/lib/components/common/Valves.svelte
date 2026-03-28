@@ -19,7 +19,7 @@
 					{valvesSpec.properties[property].title}
 
 					{#if (valvesSpec?.required ?? []).includes(property)}
-						<span class=" text-gray-500">*required</span>
+						<span class=" text-gray-600 dark:text-gray-400">*required</span>
 					{/if}
 				</div>
 
@@ -78,7 +78,7 @@
 							</select>
 						{:else if (valvesSpec.properties[property]?.type ?? null) === 'boolean'}
 							<div class="flex justify-between items-center">
-								<div class="text-xs text-gray-500">
+								<div class="text-xs text-gray-600 dark:text-gray-400">
 									{valves[property] ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 								</div>
 
@@ -213,7 +213,7 @@
 			{/if}
 
 			{#if (valvesSpec.properties[property]?.description ?? null) !== null}
-				<div class="text-xs text-gray-500">
+				<div class="text-xs text-gray-600 dark:text-gray-400">
 					{valvesSpec.properties[property].description}
 				</div>
 			{/if}

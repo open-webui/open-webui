@@ -75,12 +75,12 @@
 				</div>
 
 				<div class="flex items-center gap-2 mt-0.5 line-clamp-1">
-					<div class="text-xs text-gray-500 shrink-0">
+					<div class="text-xs text-gray-600 dark:text-gray-400 shrink-0">
 						{$i18n.t('{{COUNT}} members', { COUNT: group?.member_count ?? 0 })}
 					</div>
 
 					{#if group?.description}
-						<div class="text-xs text-gray-500 line-clamp-1">
+						<div class="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">
 							{group.description}
 						</div>
 					{/if}

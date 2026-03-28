@@ -177,13 +177,13 @@
 							<span class="text-sm font-normal">{$i18n.t('available users')}</span></span
 						>
 					{:else}
-						<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
+						<span class="text-lg font-medium text-gray-600 dark:text-gray-400 dark:text-gray-300"
 							>{total} of {$config?.license_metadata?.seats}
 							<span class="text-sm font-normal">{$i18n.t('available users')}</span></span
 						>
 					{/if}
 				{:else}
-					<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{total}</span>
+					<span class="text-lg font-medium text-gray-600 dark:text-gray-400 dark:text-gray-300">{total}</span>
 				{/if}
 			</div>
 		</div>
@@ -230,7 +230,7 @@
 	</div>
 
 	<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
-		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full">
+		<table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 dark:text-gray-400 table-auto max-w-full">
 			<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
 				<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850/30">
 					<th
@@ -482,7 +482,7 @@
 		</table>
 	</div>
 
-	<div class=" text-gray-500 text-xs mt-1.5 text-right">
+	<div class=" text-gray-600 dark:text-gray-400 text-xs mt-1.5 text-right">
 		ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
 	</div>
 

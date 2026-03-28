@@ -105,7 +105,7 @@
 	{:else}
 		{#if groupIds.length > 0}
 			<div class="mx-1 mb-1.5">
-				<div class="text-xs text-gray-500 mx-0.5 mb-1">
+				<div class="text-xs text-gray-600 dark:text-gray-400 mx-0.5 mb-1">
 					{groupIds.length}
 					{$i18n.t('groups')}
 				</div>
@@ -122,7 +122,7 @@
 							>
 								<div>
 									{selectedGroup[id].name}
-									<span class="text-xs text-gray-500">{selectedGroup[id].member_count}</span>
+									<span class="text-xs text-gray-600 dark:text-gray-400">{selectedGroup[id].member_count}</span>
 								</div>
 
 								<div>
@@ -137,7 +137,7 @@
 
 		{#if userIds.length > 0}
 			<div class="mx-1 mb-1.5">
-				<div class="text-xs text-gray-500 mx-0.5 mb-1">
+				<div class="text-xs text-gray-600 dark:text-gray-400 mx-0.5 mb-1">
 					{userIds.length}
 					{$i18n.t('users')}
 				</div>
@@ -194,10 +194,10 @@
 
 		{#if users.length > 0 || filteredGroups.length > 0}
 			<div class="scrollbar-hidden relative whitespace-nowrap w-full max-w-full">
-				<div class=" text-sm text-left text-gray-500 dark:text-gray-400 w-full max-w-full">
+				<div class=" text-sm text-left text-gray-600 dark:text-gray-400 dark:text-gray-400 w-full max-w-full">
 					<div class="w-full max-h-96 overflow-y-auto rounded-lg">
 						{#if includeGroups && filteredGroups.length > 0}
-							<div class="text-xs text-gray-500 mb-1 mx-1">
+							<div class="text-xs text-gray-600 dark:text-gray-400 mb-1 mx-1">
 								{$i18n.t('Groups')}
 							</div>
 
@@ -220,7 +220,7 @@
 											<div class="flex items-center gap-2">
 												<Tooltip content={group.name} placement="top-start">
 													<div class="font-medium truncate flex items-center gap-1">
-														{group.name} <span class="text-gray-500">{group.member_count}</span>
+														{group.name} <span class="text-gray-600 dark:text-gray-400">{group.member_count}</span>
 													</div>
 												</Tooltip>
 											</div>
@@ -239,7 +239,7 @@
 						{/if}
 
 						{#if includeUsers}
-							<div class="text-xs text-gray-500 mb-1 mx-1">
+							<div class="text-xs text-gray-600 dark:text-gray-400 mb-1 mx-1">
 								{$i18n.t('Users')}
 							</div>
 
@@ -303,7 +303,7 @@
 				</div>
 			</div>
 		{:else}
-			<div class="text-gray-500 text-xs text-center py-5 px-10">
+			<div class="text-gray-600 dark:text-gray-400 text-xs text-center py-5 px-10">
 				{$i18n.t('No users were found.')}
 			</div>
 		{/if}

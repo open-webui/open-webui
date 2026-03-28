@@ -57,7 +57,7 @@
 	};
 </script>
 
-<div class="px-2 text-xs text-gray-500 py-1">
+<div class="px-2 text-xs text-gray-600 dark:text-gray-400 py-1">
 	{$i18n.t('Prompts')}
 </div>
 

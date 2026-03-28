@@ -271,7 +271,7 @@
 						{#if !direct}
 							<div class="flex gap-2">
 								<div class="flex w-full justify-between items-center">
-									<div class=" text-xs text-gray-500">{$i18n.t('Connection Type')}</div>
+									<div class=" text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Connection Type')}</div>
 
 									<div class="">
 										<button
@@ -296,7 +296,7 @@
 							<div class="flex flex-col w-full">
 								<label
 									for="url-input"
-									class={`mb-0.5 text-xs text-gray-500
+									class={`mb-0.5 text-xs text-gray-600 dark:text-gray-400
 								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
 									>{$i18n.t('URL')}</label
 								>
@@ -366,7 +366,7 @@
 							<div class="flex flex-col w-full">
 								<label
 									for="select-bearer-or-session"
-									class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+									class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 									>{$i18n.t('Auth')}</label
 								>
 
@@ -401,25 +401,25 @@
 											/>
 										{:else if auth_type === 'none'}
 											<div
-												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 											>
 												{$i18n.t('No authentication')}
 											</div>
 										{:else if auth_type === 'session'}
 											<div
-												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 											>
 												{$i18n.t('Forwards system user session credentials to authenticate')}
 											</div>
 										{:else if auth_type === 'system_oauth'}
 											<div
-												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 											>
 												{$i18n.t('Forwards system user OAuth access token to authenticate')}
 											</div>
 										{:else if ['azure_ad', 'microsoft_entra_id'].includes(auth_type)}
 											<div
-												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}
 											>
 												{$i18n.t('Uses DefaultAzureCredential to authenticate')}
 											</div>
@@ -434,7 +434,7 @@
 								<div class="flex flex-col w-full">
 									<label
 										for="headers-input"
-										class={`mb-0.5 text-xs text-gray-500
+										class={`mb-0.5 text-xs text-gray-600 dark:text-gray-400
 								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
 										>{$i18n.t('Headers')}</label
 									>
@@ -462,7 +462,7 @@
 							<div class="flex flex-col w-full">
 								<label
 									for="prefix-id-input"
-									class={`mb-0.5 text-xs text-gray-500
+									class={`mb-0.5 text-xs text-gray-600 dark:text-gray-400
 								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
 									>{$i18n.t('Prefix ID')}</label
 								>
@@ -490,7 +490,7 @@
 							<div class="flex flex-row justify-between items-center w-full mt-2">
 								<label
 									for="prefix-id-input"
-									class={`mb-0.5 text-xs text-gray-500
+									class={`mb-0.5 text-xs text-gray-600 dark:text-gray-400
 								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
 									>{$i18n.t('Provider Type')}</label
 								>
@@ -514,7 +514,7 @@
 								<div class="flex flex-col w-full">
 									<label
 										for="api-version-input"
-										class={`mb-0.5 text-xs text-gray-500
+										class={`mb-0.5 text-xs text-gray-600 dark:text-gray-400
 								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
 										>{$i18n.t('API Version')}</label
 									>
@@ -538,7 +538,7 @@
 							<div class="flex flex-row justify-between items-center w-full mt-1">
 								<label
 									for="api-type-toggle"
-									class={`mb-0.5 text-xs text-gray-500
+									class={`mb-0.5 text-xs text-gray-600 dark:text-gray-400
 							${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
 									>{$i18n.t('API Type')}</label
 								>
@@ -576,7 +576,7 @@
 						<div class="flex flex-col w-full mt-2">
 							<div class="mb-1 flex justify-between">
 								<div
-									class={`mb-0.5 text-xs text-gray-500
+									class={`mb-0.5 text-xs text-gray-600 dark:text-gray-400
 								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
 								>
 									{$i18n.t('Model IDs')}
@@ -608,7 +608,7 @@
 								</ul>
 							{:else}
 								<div
-									class={`text-gray-500 text-xs text-center py-2 px-10
+									class={`text-gray-600 dark:text-gray-400 text-xs text-center py-2 px-10
 								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
 								>
 									{#if ollama}
@@ -634,7 +634,7 @@
 							<input
 								class="w-full py-1 text-sm rounded-lg bg-transparent {modelId
 									? ''
-									: 'text-gray-500'} {($settings?.highContrastMode ?? false)
+									: 'text-gray-600 dark:text-gray-400'} {($settings?.highContrastMode ?? false)
 									? 'dark:placeholder:text-gray-100 placeholder:text-gray-700'
 									: 'placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden'}"
 								bind:value={modelId}
@@ -659,7 +659,7 @@
 					<div class="flex gap-2 mt-2">
 						<div class="flex flex-col w-full">
 							<div
-								class={`mb-0.5 text-xs text-gray-500
+								class={`mb-0.5 text-xs text-gray-600 dark:text-gray-400
 								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
 							>
 								{$i18n.t('Tags')}

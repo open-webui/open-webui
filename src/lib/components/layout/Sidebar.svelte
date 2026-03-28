@@ -1225,7 +1225,7 @@
 							<div class="flex flex-col space-y-1 rounded-xl">
 								<Folder
 									id="sidebar-pinned-chats"
-									buttonClassName=" text-gray-500"
+									buttonClassName=" text-gray-600 dark:text-gray-400"
 									on:import={(e) => {
 										importChatHandler(e.detail, true);
 									}}
@@ -1310,7 +1310,7 @@
 								{#each $chats as chat, idx (`chat-${chat?.id ?? idx}`)}
 									{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
 										<div
-											class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-400 font-medium {idx ===
+											class="w-full pl-2.5 text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400 font-medium {idx ===
 											0
 												? ''
 												: 'pt-5'} pb-1.5"

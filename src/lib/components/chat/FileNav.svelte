@@ -588,7 +588,7 @@
 {#if !selectedTerminal}
 	<div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
 		<Folder className="size-6 text-gray-300 dark:text-gray-600 mb-2" />
-		<div class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+		<div class="text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400 mb-1">
 			{$i18n.t('No Terminal connection configured.')}
 		</div>
 		<div class="text-[10px] text-gray-400 dark:text-gray-400">
@@ -925,7 +925,7 @@
 				/>
 			{:else}
 				{#if uploading}
-					<div class="flex items-center justify-center gap-2 p-4 text-xs text-gray-500">
+					<div class="flex items-center justify-center gap-2 p-4 text-xs text-gray-600 dark:text-gray-400">
 						<Spinner className="size-4" />
 						{$i18n.t('Uploading...')}
 					</div>
@@ -1028,7 +1028,7 @@
 
 				<!-- Toggle header (full-width button) -->
 				<button
-					class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
+					class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
 					on:click={toggleTerminal}
 				>
 					<svg

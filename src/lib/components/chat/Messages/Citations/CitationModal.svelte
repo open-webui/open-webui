@@ -110,7 +110,7 @@
 							tippyOptions={{ duration: [500, 0] }}
 						>
 							<a
-								class="hover:text-gray-500 dark:hover:text-gray-100 underline grow line-clamp-1"
+								class="hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-100 underline grow line-clamp-1"
 								href={document?.metadata?.file_id
 									? `${WEBUI_API_BASE_URL}/files/${document?.metadata?.file_id}/content${document?.metadata?.page !== undefined ? `#page=${document.metadata.page + 1}` : ''}`
 									: document.source?.url?.includes('http')
@@ -166,7 +166,7 @@
 										<a
 											href={snippetUrl}
 											target="_blank"
-											class="underline hover:text-gray-500 dark:hover:text-gray-100"
+											class="underline hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-100"
 											>{$i18n.t('Content')}</a
 										>
 									{:else}
@@ -195,7 +195,7 @@
 													</span>
 												{/if}
 											{:else if typeof document?.distance === 'number'}
-												<span class="text-gray-500 dark:text-gray-400">
+												<span class="text-gray-600 dark:text-gray-400 dark:text-gray-400">
 													({(document?.distance ?? 0).toFixed(4)})
 												</span>
 											{/if}
@@ -204,7 +204,7 @@
 								{/if}
 
 								{#if Number.isInteger(document?.metadata?.page)}
-									<span class="text-sm text-gray-500 dark:text-gray-400">
+									<span class="text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400">
 										({$i18n.t('page')}
 										{document.metadata.page + 1})
 									</span>
@@ -238,7 +238,7 @@
 									</div>
 									{#if isTruncated}
 										<button
-											class="mt-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+											class="mt-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"
 											on:click={() => {
 												expandedDocs.add(documentIdx);
 												expandedDocs = expandedDocs;

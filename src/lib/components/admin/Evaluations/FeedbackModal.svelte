@@ -55,7 +55,7 @@
 				{#if loaded}
 					<div class="flex flex-col w-full">
 						<div class="flex flex-col w-full mb-2">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Chat ID')}</div>
+							<div class=" mb-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Chat ID')}</div>
 
 							<div class="flex-1 text-xs">
 								<a
@@ -74,7 +74,7 @@
 
 							{#if messages[messages[messageId]?.parentId]}
 								<div class="flex flex-col w-full mb-2">
-									<div class="mb-1 text-xs text-gray-500">{$i18n.t('Prompt')}</div>
+									<div class="mb-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Prompt')}</div>
 
 									<div class="flex-1 text-xs whitespace-pre-line break-words">
 										<span>{messages[messages[messageId]?.parentId]?.content || '-'}</span>
@@ -84,7 +84,7 @@
 
 							{#if messages[messageId]}
 								<div class="flex flex-col w-full mb-2">
-									<div class="mb-1 text-xs text-gray-500">{$i18n.t('Response')}</div>
+									<div class="mb-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Response')}</div>
 									<div
 										class="flex-1 text-xs whitespace-pre-line break-words max-h-32 overflow-y-auto"
 									>
@@ -95,14 +95,14 @@
 						{/if}
 
 						<div class="flex flex-col w-full mb-2">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Rating')}</div>
+							<div class=" mb-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Rating')}</div>
 
 							<div class="flex-1 text-xs">
 								<span>{selectedFeedback?.data?.details?.rating ?? '-'}</span>
 							</div>
 						</div>
 						<div class="flex flex-col w-full mb-2">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Reason')}</div>
+							<div class=" mb-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Reason')}</div>
 
 							<div class="flex-1 text-xs">
 								<span>{selectedFeedback?.data?.reason || '-'}</span>
@@ -110,7 +110,7 @@
 						</div>
 
 						<div class="flex flex-col w-full mb-2">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Comment')}</div>
+							<div class=" mb-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Comment')}</div>
 
 							<div class="flex-1 text-xs">
 								<span>{selectedFeedback?.data?.comment || '-'}</span>

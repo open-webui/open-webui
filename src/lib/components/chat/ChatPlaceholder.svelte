@@ -70,7 +70,7 @@
 				className="w-full flex justify-start mb-0.5"
 				placement="top"
 			>
-				<div class="flex items-center gap-2 text-gray-500 text-lg mt-2 w-fit">
+				<div class="flex items-center gap-2 text-gray-600 dark:text-gray-400 text-lg mt-2 w-fit">
 					<EyeSlash strokeWidth="2.5" className="size-5" />{$i18n.t('Temporary Chat')}
 				</div>
 			</Tooltip>
@@ -91,7 +91,7 @@
 				<div in:fade={{ duration: 200, delay: 200 }}>
 					{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
 						<div
-							class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400 line-clamp-3 markdown"
+							class="mt-0.5 text-base font-normal text-gray-600 dark:text-gray-400 dark:text-gray-400 line-clamp-3 markdown"
 						>
 							{@html marked.parse(
 								sanitizeResponseContent(

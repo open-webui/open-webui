@@ -140,13 +140,13 @@
 
 			<div class="max-h-56 overflow-y-scroll gap-0.5 flex flex-col">
 				{#if items.length === 0}
-					<div class="text-center text-xs text-gray-500 dark:text-gray-400 pt-4 pb-6">
+					<div class="text-center text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400 pt-4 pb-6">
 						{$i18n.t('No knowledge found')}
 					</div>
 				{:else}
 					{#each items as item, i}
 						{#if i === 0 || item?.type !== items[i - 1]?.type}
-							<div class="px-2 text-xs text-gray-500 py-1">
+							<div class="px-2 text-xs text-gray-600 dark:text-gray-400 py-1">
 								{#if item?.type === 'note'}
 									{$i18n.t('Notes')}
 								{:else if item?.type === 'collection'}

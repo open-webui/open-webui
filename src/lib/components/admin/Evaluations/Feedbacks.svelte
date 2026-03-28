@@ -151,7 +151,7 @@
 				{$i18n.t('Feedback History')}
 			</div>
 
-			<div class="text-lg font-medium text-gray-500 dark:text-gray-400">
+			<div class="text-lg font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400">
 				{total}
 			</div>
 		</div>
@@ -174,12 +174,12 @@
 
 	<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
 		{#if (items ?? []).length === 0}
-			<div class="text-center text-xs text-gray-500 dark:text-gray-400 py-1">
+			<div class="text-center text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400 py-1">
 				{$i18n.t('No feedback found')}
 			</div>
 		{:else}
 			<table
-				class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full"
+				class="w-full text-sm text-left text-gray-600 dark:text-gray-400 dark:text-gray-400 table-auto max-w-full"
 			>
 				<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
 					<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850/30">

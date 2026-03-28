@@ -156,7 +156,7 @@
 {#if filteredItems.length > 0 || query.startsWith('http')}
 	{#each filteredItems as item, idx}
 		{#if idx === 0 || item?.type !== items[idx - 1]?.type}
-			<div class="px-2 text-xs text-gray-500 py-1">
+			<div class="px-2 text-xs text-gray-600 dark:text-gray-400 py-1">
 				{#if item?.type === 'folder'}
 					{$i18n.t('Folders')}
 				{:else if item?.type === 'collection'}

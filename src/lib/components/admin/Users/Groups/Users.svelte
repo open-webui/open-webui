@@ -119,7 +119,7 @@
 		{#if users.length > 0}
 			<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
 				<table
-					class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full"
+					class="w-full text-sm text-left text-gray-600 dark:text-gray-400 dark:text-gray-400 table-auto max-w-full"
 				>
 					<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
 						<tr class=" border-b-[1.5px] border-gray-50/50 dark:border-gray-800/10">
@@ -267,7 +267,7 @@
 				</table>
 			</div>
 		{:else}
-			<div class="text-gray-500 text-xs text-center py-2 px-10">
+			<div class="text-gray-600 dark:text-gray-400 text-xs text-center py-2 px-10">
 				{$i18n.t('No users were found.')}
 			</div>
 		{/if}

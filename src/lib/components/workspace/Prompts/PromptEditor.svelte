@@ -313,7 +313,7 @@
 		<form on:submit|preventDefault={submitHandler}>
 			<div class="my-2">
 				<div class="flex w-full justify-between">
-					<div class="text-gray-500 text-xs">{$i18n.t('Prompt Content')}</div>
+					<div class="text-gray-600 dark:text-gray-400 text-xs">{$i18n.t('Prompt Content')}</div>
 				</div>
 
 				<div class="mt-1">
@@ -329,7 +329,7 @@
 			</div>
 
 			<div class="my-2">
-				<div class="text-gray-500 text-xs">{$i18n.t('Commit Message')} ({$i18n.t('optional')})</div>
+				<div class="text-gray-600 dark:text-gray-400 text-xs">{$i18n.t('Commit Message')} ({$i18n.t('optional')})</div>
 				<div class="mt-1">
 					<input
 						class="text-sm w-full bg-transparent outline-hidden"
@@ -354,7 +354,7 @@
 				<div>
 					<button
 						class="text-sm px-4 py-2 transition rounded-full {loading
-							? 'cursor-not-allowed bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+							? 'cursor-not-allowed bg-gray-200 text-gray-600 dark:text-gray-400 dark:bg-gray-700 dark:text-gray-400'
 							: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex justify-center"
 						type="submit"
 						disabled={loading}
@@ -386,7 +386,7 @@
 					{disabled}
 				/>
 
-				<div class="flex items-center gap-0.5 text-sm text-gray-500 w-full flex-1">
+				<div class="flex items-center gap-0.5 text-sm text-gray-600 dark:text-gray-400 w-full flex-1">
 					<span>/</span>
 					<input
 						class="bg-transparent outline-hidden"
@@ -416,7 +416,7 @@
 							{$i18n.t('Access')}
 						</button>
 					{:else}
-						<span class="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full"
+						<span class="text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full"
 							>{$i18n.t('Read Only')}</span
 						>
 					{/if}
@@ -425,7 +425,7 @@
 				<div class="mt-1.5">
 					<Tooltip content={$i18n.t('Click to copy ID')}>
 						<button
-							class="text-xs text-gray-500 font-mono px-2 py-1 rounded-lg cursor-pointer hover:underline transition"
+							class="text-xs text-gray-600 dark:text-gray-400 font-mono px-2 py-1 rounded-lg cursor-pointer hover:underline transition"
 							on:click={() => {
 								copyToClipboard(prompt.id);
 								toast.success($i18n.t('ID copied to clipboard'));
@@ -468,12 +468,12 @@
 			<div class="flex-1 flex flex-col min-h-0 overflow-hidden">
 				<div class="flex items-center justify-between mb-1 shrink-0">
 					<div class="flex items-center gap-2">
-						<div class="text-gray-500 text-xs">
+						<div class="text-gray-600 dark:text-gray-400 text-xs">
 							{$i18n.t('Prompt Content')}
 						</div>
 						{#if selectedHistoryEntry}
 							<span
-								class="text-xs text-gray-500 font-mono bg-gray-100 dark:bg-gray-800 px-1.5 rounded"
+								class="text-xs text-gray-600 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 px-1.5 rounded"
 							>
 								{selectedHistoryEntry.id.slice(0, 7)}
 							</span>
@@ -486,7 +486,7 @@
 								<Badge type="success" content={$i18n.t('Live')} />
 							{:else}
 								<button
-									class="text-xs text-gray-500 hover:text-gray-900 dark:hover:text-gray-300 hover:underline transition"
+									class="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 hover:underline transition"
 									on:click={() => setAsProduction(selectedHistoryEntry)}
 								>
 									{$i18n.t('Set as Production')}
@@ -512,7 +512,7 @@
 							{#if contentCopied}
 								<Check className="size-4 text-green-500" />
 							{:else}
-								<Clipboard className="size-4 text-gray-500" />
+								<Clipboard className="size-4 text-gray-600 dark:text-gray-400" />
 							{/if}
 						</button>
 					</div>
@@ -555,7 +555,7 @@
 								</button>
 							</div>
 						</div>
-						<div class="flex gap-0.5 items-center text-xs text-gray-500">
+						<div class="flex gap-0.5 items-center text-xs text-gray-600 dark:text-gray-400">
 							<div>/</div>
 							<input
 								class="w-full bg-transparent outline-hidden"
@@ -583,7 +583,7 @@
 			</div>
 
 			<div class="my-2">
-				<div class="text-gray-500 text-xs">{$i18n.t('Prompt Content')}</div>
+				<div class="text-gray-600 dark:text-gray-400 text-xs">{$i18n.t('Prompt Content')}</div>
 				<div class="mt-1">
 					<Textarea
 						className="text-sm w-full bg-transparent outline-hidden overflow-y-hidden resize-none"
@@ -623,7 +623,7 @@
 {#snippet historySection()}
 	<div class="flex flex-col h-full">
 		<div class="flex items-center justify-between mb-2 shrink-0">
-			<div class="text-gray-500 text-xs">{$i18n.t('History')}</div>
+			<div class="text-gray-600 dark:text-gray-400 text-xs">{$i18n.t('History')}</div>
 		</div>
 
 		{#if history.length > 0}
@@ -649,7 +649,7 @@
 							</div>
 
 							<!-- User + Time -->
-							<div class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+							<div class="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400">
 								{#if entry.user}
 									<img
 										src={`/api/v1/users/${entry.user.id}/profile/image`}

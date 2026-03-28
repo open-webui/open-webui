@@ -52,7 +52,7 @@
 	};
 </script>
 
-<div class="px-2 text-xs text-gray-500 py-1">
+<div class="px-2 text-xs text-gray-600 dark:text-gray-400 py-1">
 	{$i18n.t('Skills')}
 </div>
 
@@ -80,7 +80,7 @@
 					<div class="truncate">
 						{skill.name}
 					</div>
-					<div class="ml-2 text-xs text-gray-500 truncate">
+					<div class="ml-2 text-xs text-gray-600 dark:text-gray-400 truncate">
 						{skill.id}
 					</div>
 				</div>

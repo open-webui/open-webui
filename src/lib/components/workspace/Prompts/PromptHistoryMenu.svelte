@@ -42,7 +42,7 @@
 	<Tooltip content={$i18n.t('More')}>
 		<slot>
 			<button
-				class="p-1 rounded-lg text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+				class="p-1 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 				aria-label={$i18n.t('More Options')}
 			>
 				<EllipsisHorizontal className="size-5" />

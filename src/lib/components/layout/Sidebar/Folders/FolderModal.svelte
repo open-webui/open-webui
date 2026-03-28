@@ -137,7 +137,7 @@
 					}}
 				>
 					<div class="flex flex-col w-full mt-1">
-						<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Folder Name')}</div>
+						<div class=" mb-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Folder Name')}</div>
 
 						<div class="flex-1">
 							<input
@@ -183,7 +183,7 @@
 					/>
 
 					<div class="flex justify-between w-full mt-1 items-center">
-						<div class="text-xs text-gray-500">{$i18n.t('Folder Background Image')}</div>
+						<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Folder Background Image')}</div>
 
 						<div class="">
 							<button
@@ -214,7 +214,7 @@
 
 					{#if $user?.role === 'admin' || ($user?.permissions.chat?.system_prompt ?? true)}
 						<div class="my-1">
-							<div class="mb-2 text-xs text-gray-500">{$i18n.t('System Prompt')}</div>
+							<div class="mb-2 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('System Prompt')}</div>
 							<div>
 								<Textarea
 									className=" text-sm w-full bg-transparent outline-hidden "
@@ -232,7 +232,7 @@
 						<Knowledge bind:selectedItems={data.files}>
 							<div slot="label">
 								<div class="flex w-full justify-between">
-									<div class=" mb-2 text-xs text-gray-500">
+									<div class=" mb-2 text-xs text-gray-600 dark:text-gray-400">
 										{$i18n.t('Knowledge')}
 									</div>
 								</div>

@@ -91,7 +91,7 @@
 												{variable}
 
 												{#if variables[variable]?.required ?? false}
-													<span class=" text-gray-500">*{$i18n.t('required')}</span>
+													<span class=" text-gray-600 dark:text-gray-400">*{$i18n.t('required')}</span>
 												{/if}
 											</div>
 										</div>
@@ -334,7 +334,7 @@
 										</div>
 
 										<!-- {#if (valvesSpec.properties[property]?.description ?? null) !== null}
-									<div class="text-xs text-gray-500">
+									<div class="text-xs text-gray-600 dark:text-gray-400">
 										{valvesSpec.properties[property].description}
 									</div>
 								{/if} -->

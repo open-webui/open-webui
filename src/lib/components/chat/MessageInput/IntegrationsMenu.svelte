@@ -135,10 +135,10 @@
 								<div class="flex items-center w-full justify-between">
 									<div class=" line-clamp-1">
 										{$i18n.t('Tools')}
-										<span class="ml-0.5 text-gray-500">{Object.keys(tools).length}</span>
+										<span class="ml-0.5 text-gray-600 dark:text-gray-400">{Object.keys(tools).length}</span>
 									</div>
 
-									<div class="text-gray-500">
+									<div class="text-gray-600 dark:text-gray-400">
 										<ChevronRight />
 									</div>
 								</div>
@@ -331,7 +331,7 @@
 						<div class="flex items-center w-full justify-between">
 							<div>
 								{$i18n.t('Tools')}
-								<span class="ml-0.5 text-gray-500">{Object.keys(tools).length}</span>
+								<span class="ml-0.5 text-gray-600 dark:text-gray-400">{Object.keys(tools).length}</span>
 							</div>
 						</div>
 					</button>

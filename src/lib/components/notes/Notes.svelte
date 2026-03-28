@@ -329,7 +329,7 @@
 				showDeleteConfirm = false;
 			}}
 		>
-			<div class=" text-sm text-gray-500 truncate">
+			<div class=" text-sm text-gray-600 dark:text-gray-400 truncate">
 				{$i18n.t('This will delete')} <span class="  font-semibold">{selectedNote.title}</span>.
 			</div>
 		</DeleteConfirmDialog>
@@ -341,7 +341,7 @@
 						{$i18n.t('Notes')}
 					</div>
 
-					<div class="text-lg font-medium text-gray-500 dark:text-gray-400">
+					<div class="text-lg font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400">
 						{total}
 					</div>
 				</div>
@@ -465,7 +465,7 @@
 						<div class="">
 							{#each groupedNotes as [timeRange, notesList], idx}
 								<div
-									class="w-full text-xs text-gray-500 dark:text-gray-400 font-medium px-2.5 pb-2.5"
+									class="w-full text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400 font-medium px-2.5 pb-2.5"
 								>
 									{$i18n.t(timeRange)}
 								</div>
@@ -504,7 +504,7 @@
 																	className="flex shrink-0"
 																	placement="top-start"
 																>
-																	<div class="shrink-0 text-gray-500">
+																	<div class="shrink-0 text-gray-600 dark:text-gray-400">
 																		{$i18n.t('By {{name}}', {
 																			name: capitalizeFirstLetter(
 																				note?.user?.name ??
@@ -612,7 +612,7 @@
 															</div>
 
 															<div
-																class=" text-xs text-gray-500 dark:text-gray-400 mb-3 line-clamp-3 min-h-10"
+																class=" text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400 mb-3 line-clamp-3 min-h-10"
 															>
 																{#if note.data?.content?.md}
 																	{note.data?.content?.md}
@@ -631,7 +631,7 @@
 																className="flex shrink-0"
 																placement="top-start"
 															>
-																<div class="shrink-0 text-gray-500">
+																<div class="shrink-0 text-gray-600 dark:text-gray-400">
 																	{$i18n.t('By {{name}}', {
 																		name: capitalizeFirstLetter(
 																			note?.user?.name ??

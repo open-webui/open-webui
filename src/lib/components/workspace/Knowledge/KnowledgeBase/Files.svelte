@@ -52,7 +52,7 @@
 						<div class="line-clamp-1 text-sm">
 							{file?.name ?? file?.meta?.name}
 							{#if file?.meta?.size}
-								<span class="text-xs text-gray-500">{formatFileSize(file?.meta?.size)}</span>
+								<span class="text-xs text-gray-600 dark:text-gray-400">{formatFileSize(file?.meta?.size)}</span>
 							{/if}
 						</div>
 					</div>
@@ -73,7 +73,7 @@
 							className="flex shrink-0"
 							placement="top-start"
 						>
-							<div class="shrink-0 text-gray-500">
+							<div class="shrink-0 text-gray-600 dark:text-gray-400">
 								{$i18n.t('By {{name}}', {
 									name: capitalizeFirstLetter(
 										file?.user?.name ?? file?.user?.email ?? $i18n.t('Deleted User')

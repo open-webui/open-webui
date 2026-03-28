@@ -265,7 +265,7 @@
 
 	{#if $temporaryChatEnabled && ($chatId ?? '').startsWith('local:')}
 		<div class=" w-full z-30 text-center">
-			<div class="text-xs text-gray-500">{$i18n.t('Temporary Chat')}</div>
+			<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Temporary Chat')}</div>
 		</div>
 	{/if}
 
