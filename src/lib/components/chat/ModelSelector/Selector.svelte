@@ -399,9 +399,7 @@
 	closeFocus={false}
 >
 	<DropdownMenu.Trigger
-		class="relative w-full {($settings?.highContrastMode ?? false)
-			? ''
-			: 'outline-hidden focus:outline-hidden'}"
+		class="relative w-full focus:outline-2 focus:outline-offset-2 focus:outline-blue-500 dark:focus:outline-blue-400"
 		aria-label={selectedModel
 			? $i18n.t('Selected model: {{modelName}}', { modelName: selectedModel.label })
 			: placeholder}

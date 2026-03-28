@@ -80,7 +80,13 @@
 								on:click={() => {
 									selectedModels = [...selectedModels, ''];
 								}}
-								aria-label="Add Model"
+								on:keydown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.preventDefault();
+										selectedModels = [...selectedModels, ''];
+									}
+								}}
+								aria-label={$i18n.t('Add Model')}
 							>
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
@@ -89,6 +95,7 @@
 									stroke-width="2"
 									stroke="currentColor"
 									class="size-3.5"
+									aria-hidden="true"
 								>
 									<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
 								</svg>
@@ -106,7 +113,14 @@
 									selectedModels.splice(selectedModelIdx, 1);
 									selectedModels = selectedModels;
 								}}
-								aria-label="Remove Model"
+								on:keydown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.preventDefault();
+										selectedModels.splice(selectedModelIdx, 1);
+										selectedModels = selectedModels;
+									}
+								}}
+								aria-label={$i18n.t('Remove Model')}
 							>
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
@@ -115,6 +129,7 @@
 									stroke-width="2"
 									stroke="currentColor"
 									class="size-3"
+									aria-hidden="true"
 								>
 									<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15" />
 								</svg>
@@ -131,6 +146,17 @@
 	<div
 		class="relative text-left mt-[1px] ml-1 text-[0.7rem] text-gray-600 dark:text-gray-400 font-primary"
 	>
-		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
+		<button
+			on:click={saveDefaultModel}
+			on:keydown={(e) => {
+				if (e.key === 'Enter' || e.key === ' ') {
+					e.preventDefault();
+					saveDefaultModel();
+				}
+			}}
+			aria-label={$i18n.t('Set selected models as default')}
+		>
+			{$i18n.t('Set as default')}
+		</button>
 	</div>
 {/if}
