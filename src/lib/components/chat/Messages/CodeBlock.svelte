@@ -10,7 +10,8 @@
 		copyToClipboard,
 		initMermaid,
 		renderMermaidDiagram,
-		renderVegaVisualization
+		renderVegaVisualization,
+		mountInteractiveVega
 	} from '$lib/utils';
 
 	import 'highlight.js/styles/github-dark.min.css';
@@ -62,6 +63,8 @@
 
 	let renderHTML = null;
 	let renderError = null;
+	let vegaContainer: HTMLElement | null = null;
+	let vegaView: any = null;
 
 	let highlightedCode = null;
 	let executing = false;
@@ -377,7 +380,17 @@
 			(token?.raw ?? '').slice(-4).includes('```')
 		) {
 			try {
-				renderHTML = await renderVegaVisualization(code);
+				if (vegaView) {
+					vegaView.finalize();
+					vegaView = null;
+				}
+				// Use interactive renderer; mount after tick so container exists
+				renderHTML = '__vega_interactive__';
+				await tick();
+				if (vegaContainer) {
+					vegaContainer.innerHTML = '';
+					vegaView = await mountInteractiveVega(vegaContainer, code);
+				}
 			} catch (error) {
 				console.error('Failed to render Vega visualization:', error);
 				const errorMsg = error instanceof Error ? error.message : String(error);
@@ -440,6 +453,10 @@
 			localPyodideWorker.terminate();
 			localPyodideWorker = null;
 		}
+		if (vegaView) {
+			vegaView.finalize();
+			vegaView = null;
+		}
 	});
 </script>
 
@@ -449,7 +466,12 @@
 		dir="ltr"
 	>
 		{#if ['mermaid', 'vega', 'vega-lite'].includes(lang)}
-			{#if renderHTML}
+			{#if renderHTML && renderHTML === '__vega_interactive__'}
+				<div
+					bind:this={vegaContainer}
+					class="rounded-2xl max-h-fit overflow-hidden p-2"
+				/>
+			{:else if renderHTML}
 				<SvgPanZoom
 					className=" rounded-2xl max-h-fit overflow-hidden"
 					svg={renderHTML}

@@ -1722,6 +1722,17 @@ export const renderVegaVisualization = async (spec: string, i18n?: any) => {
 	return svg;
 };
 
+export const mountInteractiveVega = async (container: HTMLElement, spec: string) => {
+	const vegaEmbed = (await import('vega-embed')).default;
+	const parsedSpec = JSON.parse(spec);
+	const result = await vegaEmbed(container, parsedSpec, {
+		actions: false,
+		renderer: 'svg',
+		tooltip: true
+	});
+	return result.view;
+};
+
 export const getCodeBlockContents = (content: string): object => {
 	// Strip thinking/reasoning and other detail blocks before extracting code
 	// to prevent code inside <details type="reasoning"> from being treated as artifacts
