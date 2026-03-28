@@ -207,7 +207,9 @@
 
 			// Process any queued requests if the chat is idle
 			const lastMessage = history.currentId ? history.messages[history.currentId] : null;
-			const isIdle = !lastMessage || lastMessage.role !== 'assistant' || lastMessage.done;
+			// A chat is truly idle if there are no pending tasks (taskIds is empty) AND the last message is done
+			const hasPendingTasks = taskIds !== null && taskIds.length > 0;
+			const isIdle = !hasPendingTasks && (!lastMessage || lastMessage.role !== 'assistant' || lastMessage.done);
 			if (isIdle) {
 				// Only process queue if we are still on the same chat
 				if (chatIdProp === targetChatId) {
