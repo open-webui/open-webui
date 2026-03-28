@@ -664,6 +664,7 @@
 
 <button
 	id="sidebar-new-chat-button"
+	aria-label="New chat"
 	class="hidden"
 	on:click={() => {
 		goto('/');
@@ -742,6 +743,7 @@
 				<div>
 					<Tooltip content={$i18n.t('Search')} placement="right">
 						<button
+       aria-label={$i18n.t('Search')}
 							class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
 							on:click={(e) => {
 								e.stopImmediatePropagation();

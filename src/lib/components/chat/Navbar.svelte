@@ -93,6 +93,7 @@
 					>
 						<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
 							<button
+        aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 								class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 								on:click={() => {
 									showSidebar.set(!$showSidebar);
@@ -123,6 +124,7 @@
 						{#if !chat?.id}
 							<Tooltip content={$i18n.t(`Temporary Chat`)}>
 								<button
+         aria-label={$i18n.t(`Temporary Chat`)}
 									class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 									id="temporary-chat-button"
 									on:click={async () => {
@@ -157,6 +159,7 @@
 						{:else if $temporaryChatEnabled}
 							<Tooltip content={$i18n.t(`Save Chat`)}>
 								<button
+         aria-label={$i18n.t(`Save Chat`)}
 									class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 									id="save-temporary-chat-button"
 									on:click={async () => {
@@ -174,6 +177,7 @@
 					{#if $mobile && !$temporaryChatEnabled && chat && chat.id}
 						<Tooltip content={$i18n.t('New Chat')}>
 							<button
+        aria-label={$i18n.t('New Chat')}
 								class=" flex {$showSidebar
 									? 'md:hidden'
 									: ''} cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
@@ -202,6 +206,7 @@
 							{moveChatHandler}
 						>
 							<button
+								aria-label="Chat options"
 								class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 								id="chat-context-menu-button"
 							>
@@ -215,6 +220,7 @@
 					{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
 						<Tooltip content={$i18n.t('Controls')}>
 							<button
+        aria-label={$i18n.t('Controls')}
 								class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 								on:click={async () => {
 									await showControls.set(!$showControls);
