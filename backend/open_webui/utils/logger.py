@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from loguru import Message, Record
 
 
-def stdout_format(record: "Record") -> str:
+def stdout_format(record: 'Record') -> str:
     """
     Generates a formatted string for log records that are output to the console. This format includes a timestamp, log level, source location (module, function, and line), the log message, and any extra data (serialized as JSON).
 
@@ -32,39 +32,39 @@ def stdout_format(record: "Record") -> str:
     Returns:
     str: A formatted log string intended for stdout.
     """
-    if record["extra"]:
-        record["extra"]["extra_json"] = json.dumps(record["extra"])
-        extra_format = " - {extra[extra_json]}"
+    if record['extra']:
+        record['extra']['extra_json'] = json.dumps(record['extra'])
+        extra_format = ' - {extra[extra_json]}'
     else:
-        extra_format = ""
+        extra_format = ''
     return (
-        "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
-        "<level>{level: <8}</level> | "
-        "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
-        "<level>{message}</level>" + extra_format + "\n{exception}"
+        '<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | '
+        '<level>{level: <8}</level> | '
+        '<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - '
+        '<level>{message}</level>' + extra_format + '\n{exception}'
     )
 
 
-def _json_sink(message: "Message") -> None:
+def _json_sink(message: 'Message') -> None:
     """Write log records as single-line JSON to stdout.
 
     Used as a Loguru sink when LOG_FORMAT is set to "json".
     """
     record = message.record
     log_entry = {
-        "ts": record["time"].strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
-        "level": _LEVEL_MAP.get(record["level"].name, record["level"].name.lower()),
-        "msg": record["message"],
-        "caller": f"{record['name']}:{record['function']}:{record['line']}",
+        'ts': record['time'].strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
+        'level': _LEVEL_MAP.get(record['level'].name, record['level'].name.lower()),
+        'msg': record['message'],
+        'caller': f'{record["name"]}:{record["function"]}:{record["line"]}',
     }
 
-    if record["extra"]:
-        log_entry["extra"] = record["extra"]
+    if record['extra']:
+        log_entry['extra'] = record['extra']
 
-    if record["exception"] is not None:
-        log_entry["error"] = "".join(record["exception"].format_exception()).rstrip()
+    if record['exception'] is not None:
+        log_entry['error'] = ''.join(record['exception'].format_exception()).rstrip()
 
-    sys.stdout.write(json.dumps(log_entry, ensure_ascii=False, default=str) + "\n")
+    sys.stdout.write(json.dumps(log_entry, ensure_ascii=False, default=str) + '\n')
     sys.stdout.flush()
 
 
@@ -90,9 +90,7 @@ class InterceptHandler(logging.Handler):
             frame = frame.f_back
             depth += 1
 
-        logger.opt(depth=depth, exception=record.exc_info).bind(
-            **self._get_extras()
-        ).log(level, record.getMessage())
+        logger.opt(depth=depth, exception=record.exc_info).bind(**self._get_extras()).log(level, record.getMessage())
         if ENABLE_OTEL and ENABLE_OTEL_LOGS:
             from open_webui.utils.telemetry.logs import otel_handler
 
@@ -105,12 +103,12 @@ class InterceptHandler(logging.Handler):
         extras = {}
         context = trace.get_current_span().get_span_context()
         if context.is_valid:
-            extras["trace_id"] = trace.format_trace_id(context.trace_id)
-            extras["span_id"] = trace.format_span_id(context.span_id)
+            extras['trace_id'] = trace.format_trace_id(context.trace_id)
+            extras['span_id'] = trace.format_span_id(context.span_id)
         return extras
 
 
-def file_format(record: "Record"):
+def file_format(record: 'Record'):
     """
     Formats audit log records into a structured JSON string for file output.
 
@@ -121,22 +119,22 @@ def file_format(record: "Record"):
     """
 
     audit_data = {
-        "id": record["extra"].get("id", ""),
-        "timestamp": int(record["time"].timestamp()),
-        "user": record["extra"].get("user", dict()),
-        "audit_level": record["extra"].get("audit_level", ""),
-        "verb": record["extra"].get("verb", ""),
-        "request_uri": record["extra"].get("request_uri", ""),
-        "response_status_code": record["extra"].get("response_status_code", 0),
-        "source_ip": record["extra"].get("source_ip", ""),
-        "user_agent": record["extra"].get("user_agent", ""),
-        "request_object": record["extra"].get("request_object", b""),
-        "response_object": record["extra"].get("response_object", b""),
-        "extra": record["extra"].get("extra", {}),
+        'id': record['extra'].get('id', ''),
+        'timestamp': int(record['time'].timestamp()),
+        'user': record['extra'].get('user', dict()),
+        'audit_level': record['extra'].get('audit_level', ''),
+        'verb': record['extra'].get('verb', ''),
+        'request_uri': record['extra'].get('request_uri', ''),
+        'response_status_code': record['extra'].get('response_status_code', 0),
+        'source_ip': record['extra'].get('source_ip', ''),
+        'user_agent': record['extra'].get('user_agent', ''),
+        'request_object': record['extra'].get('request_object', b''),
+        'response_object': record['extra'].get('response_object', b''),
+        'extra': record['extra'].get('extra', {}),
     }
 
-    record["extra"]["file_extra"] = json.dumps(audit_data, default=str)
-    return "{extra[file_extra]}\n"
+    record['extra']['file_extra'] = json.dumps(audit_data, default=str)
+    return '{extra[file_extra]}\n'
 
 
 def start_logger():
@@ -152,10 +150,8 @@ def start_logger():
     """
     logger.remove()
 
-    audit_filter = lambda record: (
-        True if ENABLE_AUDIT_STDOUT else "auditable" not in record["extra"]
-    )
-    if LOG_FORMAT == "json":
+    audit_filter = lambda record: True if ENABLE_AUDIT_STDOUT else 'auditable' not in record['extra']
+    if LOG_FORMAT == 'json':
         logger.add(
             _json_sink,
             level=GLOBAL_LOG_LEVEL,
@@ -168,24 +164,22 @@ def start_logger():
             format=stdout_format,
             filter=audit_filter,
         )
-    if AUDIT_LOG_LEVEL != "NONE" and ENABLE_AUDIT_LOGS_FILE:
+    if AUDIT_LOG_LEVEL != 'NONE' and ENABLE_AUDIT_LOGS_FILE:
         try:
             logger.add(
                 AUDIT_LOGS_FILE_PATH,
-                level="INFO",
+                level='INFO',
                 rotation=AUDIT_LOG_FILE_ROTATION_SIZE,
-                compression="zip",
+                compression='zip',
                 format=file_format,
-                filter=lambda record: record["extra"].get("auditable") is True,
+                filter=lambda record: record['extra'].get('auditable') is True,
             )
         except Exception as e:
-            logger.error(f"Failed to initialize audit log file handler: {str(e)}")
+            logger.error(f'Failed to initialize audit log file handler: {str(e)}')
 
-    logging.basicConfig(
-        handlers=[InterceptHandler()], level=GLOBAL_LOG_LEVEL, force=True
-    )
+    logging.basicConfig(handlers=[InterceptHandler()], level=GLOBAL_LOG_LEVEL, force=True)
 
-    for uvicorn_logger_name in ["uvicorn", "uvicorn.error"]:
+    for uvicorn_logger_name in ['uvicorn', 'uvicorn.error']:
         uvicorn_logger = logging.getLogger(uvicorn_logger_name)
         uvicorn_logger.setLevel(GLOBAL_LOG_LEVEL)
         uvicorn_logger.handlers = []
@@ -195,4 +189,4 @@ def start_logger():
         uvicorn_logger.setLevel(GLOBAL_LOG_LEVEL)
         uvicorn_logger.handlers = [InterceptHandler()]
 
-    logger.info(f"GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}")
+    logger.info(f'GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}')

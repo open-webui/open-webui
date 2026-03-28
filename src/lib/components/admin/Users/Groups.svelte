@@ -20,7 +20,7 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
-	import { Select } from 'bits-ui';
+	import Select from '$lib/components/common/Select.svelte';
 	import { createNewGroup, getGroups } from '$lib/apis/groups';
 	import {
 		getUserDefaultPermissions,
@@ -175,46 +175,31 @@
 				{/if}
 			</div>
 
-			<Select.Root
-				selected={sortItems.find((item) => item.value === sortBy)}
+			<Select
+				bind:value={sortBy}
 				items={sortItems}
-				onSelectedChange={(selectedItem) => {
-					sortBy = selectedItem.value;
-				}}
+				placeholder={$i18n.t('Sort by')}
+				triggerClass="relative flex items-center gap-0.5 px-2.5 py-1.5 text-sm bg-gray-50 dark:bg-gray-850 rounded-xl shrink-0"
+				align="end"
 			>
-				<Select.Trigger
-					class="relative flex items-center gap-0.5 px-2.5 py-1.5 text-sm bg-gray-50 dark:bg-gray-850 rounded-xl shrink-0"
-					aria-label={$i18n.t('Sort by')}
-				>
-					<Select.Value
+				<svelte:fragment slot="trigger" let:selectedLabel>
+					<span
 						class="inline-flex h-input px-0.5 outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
-						placeholder={$i18n.t('Sort by')}
-					/>
+					>
+						{selectedLabel}
+					</span>
 					<ChevronDown className="size-3.5" strokeWidth="2.5" />
-				</Select.Trigger>
+				</svelte:fragment>
 
-				<Select.Content
-					class="rounded-2xl min-w-[170px] p-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
-					sameWidth={false}
-					align="end"
-				>
-					{#each sortItems as item}
-						<Select.Item
-							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
-							value={item.value}
-							label={item.label}
-						>
-							{item.label}
-
-							{#if sortBy === item.value}
-								<div class="ml-auto">
-									<Check />
-								</div>
-							{/if}
-						</Select.Item>
-					{/each}
-				</Select.Content>
-			</Select.Root>
+				<svelte:fragment slot="item" let:item let:selected>
+					{item.label}
+					{#if selected}
+						<div class="ml-auto">
+							<Check />
+						</div>
+					{/if}
+				</svelte:fragment>
+			</Select>
 		</div>
 
 		{#if filteredGroups.length !== 0}

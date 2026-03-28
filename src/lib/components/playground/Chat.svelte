@@ -3,7 +3,6 @@
 	const { saveAs } = fileSaver;
 
 	import { toast } from 'svelte-sonner';
-	import { DropdownMenu } from 'bits-ui';
 
 	import { goto } from '$app/navigation';
 	import { onMount, tick, getContext } from 'svelte';
@@ -15,13 +14,13 @@
 		WEBUI_BASE_URL
 	} from '$lib/constants';
 	import { WEBUI_NAME, config, user, models, settings } from '$lib/stores';
-	import { flyAndScale } from '$lib/utils/transitions';
 
 	import { chatCompletion } from '$lib/apis/openai';
 
 	import { splitStream } from '$lib/utils';
 	import Collapsible from '../common/Collapsible.svelte';
 	import Dropdown from '../common/Dropdown.svelte';
+	import DropdownSub from '../common/DropdownSub.svelte';
 
 	import Messages from '$lib/components/playground/Chat/Messages.svelte';
 	import ChevronUp from '../icons/ChevronUp.svelte';
@@ -362,48 +361,39 @@
 					</button>
 
 					<div slot="content">
-						<DropdownMenu.Content
-							class="w-full max-w-[200px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
-							sideOffset={8}
-							side="bottom"
-							align="end"
-							transition={flyAndScale}
+						<div
+							class="min-w-[200px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 						>
-							<DropdownMenu.Sub>
-								<DropdownMenu.SubTrigger
+							<DropdownSub>
+								<button
+									slot="trigger"
 									class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
 								>
 									<Download strokeWidth="1.5" />
 									<div class="flex items-center">{$i18n.t('Download')}</div>
-								</DropdownMenu.SubTrigger>
-								<DropdownMenu.SubContent
-									class="w-full rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white border border-gray-100 dark:border-gray-800 shadow-lg max-h-52 overflow-y-auto scrollbar-hidden"
-									transition={flyAndScale}
-									sideOffset={8}
+								</button>
+								<button
+									class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
+									disabled={messages.length === 0}
+									on:click={() => {
+										exportToJson();
+									}}
 								>
-									<DropdownMenu.Item
-										class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
-										disabled={messages.length === 0}
-										on:click={() => {
-											exportToJson();
-										}}
-									>
-										<div class="flex items-center line-clamp-1">
-											{$i18n.t('Export chat (.json)')}
-										</div>
-									</DropdownMenu.Item>
-									<DropdownMenu.Item
-										class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
-										disabled={messages.length === 0}
-										on:click={() => {
-											downloadTxt();
-										}}
-									>
-										<div class="flex items-center line-clamp-1">{$i18n.t('Plain text (.txt)')}</div>
-									</DropdownMenu.Item>
-								</DropdownMenu.SubContent>
-							</DropdownMenu.Sub>
-						</DropdownMenu.Content>
+									<div class="flex items-center line-clamp-1">
+										{$i18n.t('Export chat (.json)')}
+									</div>
+								</button>
+								<button
+									class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
+									disabled={messages.length === 0}
+									on:click={() => {
+										downloadTxt();
+									}}
+								>
+									<div class="flex items-center line-clamp-1">{$i18n.t('Plain text (.txt)')}</div>
+								</button>
+							</DropdownSub>
+						</div>
 					</div>
 				</Dropdown>
 			</div>

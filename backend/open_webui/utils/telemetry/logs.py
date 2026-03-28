@@ -24,12 +24,12 @@ from open_webui.env import (
 def setup_logging():
     headers = []
     if OTEL_LOGS_BASIC_AUTH_USERNAME and OTEL_LOGS_BASIC_AUTH_PASSWORD:
-        auth_string = f"{OTEL_LOGS_BASIC_AUTH_USERNAME}:{OTEL_LOGS_BASIC_AUTH_PASSWORD}"
+        auth_string = f'{OTEL_LOGS_BASIC_AUTH_USERNAME}:{OTEL_LOGS_BASIC_AUTH_PASSWORD}'
         auth_header = b64encode(auth_string.encode()).decode()
-        headers = [("authorization", f"Basic {auth_header}")]
+        headers = [('authorization', f'Basic {auth_header}')]
     resource = Resource.create(attributes={SERVICE_NAME: OTEL_SERVICE_NAME})
 
-    if OTEL_LOGS_OTLP_SPAN_EXPORTER == "http":
+    if OTEL_LOGS_OTLP_SPAN_EXPORTER == 'http':
         exporter = HttpOTLPLogExporter(
             endpoint=OTEL_LOGS_EXPORTER_OTLP_ENDPOINT,
             headers=headers,

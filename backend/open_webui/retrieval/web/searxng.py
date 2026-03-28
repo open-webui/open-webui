@@ -38,38 +38,38 @@ def search_searxng(
     """
 
     # Default values for optional parameters are provided as empty strings or None when not specified.
-    language = kwargs.get("language", "all")
-    safesearch = kwargs.get("safesearch", "1")
-    time_range = kwargs.get("time_range", "")
-    categories = "".join(kwargs.get("categories", []))
+    language = kwargs.get('language', 'all')
+    safesearch = kwargs.get('safesearch', '1')
+    time_range = kwargs.get('time_range', '')
+    categories = ''.join(kwargs.get('categories', []))
 
     params = {
-        "q": query,
-        "format": "json",
-        "pageno": 1,
-        "safesearch": safesearch,
-        "language": language,
-        "time_range": time_range,
-        "categories": categories,
-        "theme": "simple",
-        "image_proxy": 0,
+        'q': query,
+        'format': 'json',
+        'pageno': 1,
+        'safesearch': safesearch,
+        'language': language,
+        'time_range': time_range,
+        'categories': categories,
+        'theme': 'simple',
+        'image_proxy': 0,
     }
 
     # Legacy query format
-    if "<query>" in query_url:
+    if '<query>' in query_url:
         # Strip all query parameters from the URL
-        query_url = query_url.split("?")[0]
+        query_url = query_url.split('?')[0]
 
-    log.debug(f"searching {query_url}")
+    log.debug(f'searching {query_url}')
 
     response = requests.get(
         query_url,
         headers={
-            "User-Agent": "Open WebUI (https://github.com/open-webui/open-webui) RAG Bot",
-            "Accept": "text/html",
-            "Accept-Encoding": "gzip, deflate",
-            "Accept-Language": "en-US,en;q=0.5",
-            "Connection": "keep-alive",
+            'User-Agent': 'Open WebUI (https://github.com/open-webui/open-webui) RAG Bot',
+            'Accept': 'text/html',
+            'Accept-Encoding': 'gzip, deflate',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Connection': 'keep-alive',
         },
         params=params,
     )
@@ -77,13 +77,11 @@ def search_searxng(
     response.raise_for_status()  # Raise an exception for HTTP errors.
 
     json_response = response.json()
-    results = json_response.get("results", [])
-    sorted_results = sorted(results, key=lambda x: x.get("score", 0), reverse=True)
+    results = json_response.get('results', [])
+    sorted_results = sorted(results, key=lambda x: x.get('score', 0), reverse=True)
     if filter_list:
         sorted_results = get_filtered_results(sorted_results, filter_list)
     return [
-        SearchResult(
-            link=result["url"], title=result.get("title"), snippet=result.get("content")
-        )
+        SearchResult(link=result['url'], title=result.get('title'), snippet=result.get('content'))
         for result in sorted_results[:count]
     ]

@@ -1,3 +1,7 @@
+"""
+NOTE: This vector database integration is community-supported and maintained on a best-effort basis.
+"""
+
 from typing import Optional, List, Dict, Any, Union
 import logging
 import time  # for measuring elapsed time
@@ -41,7 +45,7 @@ log = logging.getLogger(__name__)
 
 class PineconeClient(VectorDBBase):
     def __init__(self):
-        self.collection_prefix = "open-webui"
+        self.collection_prefix = 'open-webui'
 
         # Validate required configuration
         self._validate_config()
@@ -63,7 +67,7 @@ class PineconeClient(VectorDBBase):
                 timeout=30,  # Reasonable timeout for operations
             )
             self.using_grpc = True
-            log.info("Using Pinecone gRPC client for optimal performance")
+            log.info('Using Pinecone gRPC client for optimal performance')
         else:
             # Fallback to HTTP client with enhanced connection pooling
             self.client = Pinecone(
@@ -72,7 +76,7 @@ class PineconeClient(VectorDBBase):
                 timeout=30,  # Reasonable timeout for operations
             )
             self.using_grpc = False
-            log.info("Using Pinecone HTTP client (gRPC not available)")
+            log.info('Using Pinecone HTTP client (gRPC not available)')
 
         # Persistent executor for batch operations
         self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
@@ -84,20 +88,18 @@ class PineconeClient(VectorDBBase):
         """Validate that all required configuration variables are set."""
         missing_vars = []
         if not PINECONE_API_KEY:
-            missing_vars.append("PINECONE_API_KEY")
+            missing_vars.append('PINECONE_API_KEY')
         if not PINECONE_ENVIRONMENT:
-            missing_vars.append("PINECONE_ENVIRONMENT")
+            missing_vars.append('PINECONE_ENVIRONMENT')
         if not PINECONE_INDEX_NAME:
-            missing_vars.append("PINECONE_INDEX_NAME")
+            missing_vars.append('PINECONE_INDEX_NAME')
         if not PINECONE_DIMENSION:
-            missing_vars.append("PINECONE_DIMENSION")
+            missing_vars.append('PINECONE_DIMENSION')
         if not PINECONE_CLOUD:
-            missing_vars.append("PINECONE_CLOUD")
+            missing_vars.append('PINECONE_CLOUD')
 
         if missing_vars:
-            raise ValueError(
-                f"Required configuration missing: {', '.join(missing_vars)}"
-            )
+            raise ValueError(f'Required configuration missing: {", ".join(missing_vars)}')
 
     def _initialize_index(self) -> None:
         """Initialize the Pinecone index."""
@@ -122,8 +124,8 @@ class PineconeClient(VectorDBBase):
             )
 
         except Exception as e:
-            log.error(f"Failed to initialize Pinecone index: {e}")
-            raise RuntimeError(f"Failed to initialize Pinecone index: {e}")
+            log.error(f'Failed to initialize Pinecone index: {e}')
+            raise RuntimeError(f'Failed to initialize Pinecone index: {e}')
 
     def _retry_pinecone_operation(self, operation_func, max_retries=3):
         """Retry Pinecone operations with exponential backoff for rate limits and network issues."""
@@ -136,18 +138,18 @@ class PineconeClient(VectorDBBase):
                 is_retryable = any(
                     keyword in error_str
                     for keyword in [
-                        "rate limit",
-                        "quota",
-                        "timeout",
-                        "network",
-                        "connection",
-                        "unavailable",
-                        "internal error",
-                        "429",
-                        "500",
-                        "502",
-                        "503",
-                        "504",
+                        'rate limit',
+                        'quota',
+                        'timeout',
+                        'network',
+                        'connection',
+                        'unavailable',
+                        'internal error',
+                        '429',
+                        '500',
+                        '502',
+                        '503',
+                        '504',
                     ]
                 )
 
@@ -158,45 +160,42 @@ class PineconeClient(VectorDBBase):
                 # Exponential backoff with jitter
                 delay = (2**attempt) + random.uniform(0, 1)
                 log.warning(
-                    f"Pinecone operation failed (attempt {attempt + 1}/{max_retries}), "
-                    f"retrying in {delay:.2f}s: {e}"
+                    f'Pinecone operation failed (attempt {attempt + 1}/{max_retries}), retrying in {delay:.2f}s: {e}'
                 )
                 time.sleep(delay)
 
-    def _create_points(
-        self, items: List[VectorItem], collection_name_with_prefix: str
-    ) -> List[Dict[str, Any]]:
+    def _create_points(self, items: List[VectorItem], collection_name_with_prefix: str) -> List[Dict[str, Any]]:
         """Convert VectorItem objects to Pinecone point format."""
         points = []
         for item in items:
             # Start with any existing metadata or an empty dict
-            metadata = item.get("metadata", {}).copy() if item.get("metadata") else {}
+            metadata = item.get('metadata', {}).copy() if item.get('metadata') else {}
 
             # Add text to metadata if available
-            if "text" in item:
-                metadata["text"] = item["text"]
+            if 'text' in item:
+                metadata['text'] = item['text']
 
             # Always add collection_name to metadata for filtering
-            metadata["collection_name"] = collection_name_with_prefix
+            metadata['collection_name'] = collection_name_with_prefix
 
             point = {
-                "id": item["id"],
-                "values": item["vector"],
-                "metadata": process_metadata(metadata),
+                'id': item['id'],
+                'values': item['vector'],
+                'metadata': process_metadata(metadata),
             }
             points.append(point)
         return points
 
     def _get_collection_name_with_prefix(self, collection_name: str) -> str:
         """Get the collection name with prefix."""
-        return f"{self.collection_prefix}_{collection_name}"
+        return f'{self.collection_prefix}_{collection_name}'
 
     def _normalize_distance(self, score: float) -> float:
         """Normalize distance score based on the metric used."""
-        if self.metric.lower() == "cosine":
+        if self.metric.lower() == 'cosine':
             # Cosine similarity ranges from -1 to 1, normalize to 0 to 1
             return (score + 1.0) / 2.0
-        elif self.metric.lower() in ["euclidean", "dotproduct"]:
+        elif self.metric.lower() in ['euclidean', 'dotproduct']:
             # These are already suitable for ranking (smaller is better for Euclidean)
             return score
         else:
@@ -210,68 +209,56 @@ class PineconeClient(VectorDBBase):
         metadatas = []
 
         for match in matches:
-            metadata = getattr(match, "metadata", {}) or {}
-            ids.append(match.id if hasattr(match, "id") else match["id"])
-            documents.append(metadata.get("text", ""))
+            metadata = getattr(match, 'metadata', {}) or {}
+            ids.append(match.id if hasattr(match, 'id') else match['id'])
+            documents.append(metadata.get('text', ''))
             metadatas.append(metadata)
 
         return GetResult(
             **{
-                "ids": [ids],
-                "documents": [documents],
-                "metadatas": [metadatas],
+                'ids': [ids],
+                'documents': [documents],
+                'metadatas': [metadatas],
             }
         )
 
     def has_collection(self, collection_name: str) -> bool:
         """Check if a collection exists by searching for at least one item."""
-        collection_name_with_prefix = self._get_collection_name_with_prefix(
-            collection_name
-        )
+        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
 
         try:
             # Search for at least 1 item with this collection name in metadata
             response = self.index.query(
                 vector=[0.0] * self.dimension,  # dummy vector
                 top_k=1,
-                filter={"collection_name": collection_name_with_prefix},
+                filter={'collection_name': collection_name_with_prefix},
                 include_metadata=False,
             )
-            matches = getattr(response, "matches", []) or []
+            matches = getattr(response, 'matches', []) or []
             return len(matches) > 0
         except Exception as e:
-            log.exception(
-                f"Error checking collection '{collection_name_with_prefix}': {e}"
-            )
+            log.exception(f"Error checking collection '{collection_name_with_prefix}': {e}")
             return False
 
     def delete_collection(self, collection_name: str) -> None:
         """Delete a collection by removing all vectors with the collection name in metadata."""
-        collection_name_with_prefix = self._get_collection_name_with_prefix(
-            collection_name
-        )
+        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
         try:
-            self.index.delete(filter={"collection_name": collection_name_with_prefix})
-            log.info(
-                f"Collection '{collection_name_with_prefix}' deleted (all vectors removed)."
-            )
+            self.index.delete(filter={'collection_name': collection_name_with_prefix})
+            log.info(f"Collection '{collection_name_with_prefix}' deleted (all vectors removed).")
         except Exception as e:
-            log.warning(
-                f"Failed to delete collection '{collection_name_with_prefix}': {e}"
-            )
+            log.warning(f"Failed to delete collection '{collection_name_with_prefix}': {e}")
             raise
 
     def insert(self, collection_name: str, items: List[VectorItem]) -> None:
         """Insert vectors into a collection."""
         if not items:
-            log.warning("No items to insert")
+            log.warning('No items to insert')
             return
 
         start_time = time.time()
 
-        collection_name_with_prefix = self._get_collection_name_with_prefix(
-            collection_name
-        )
+        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
         points = self._create_points(items, collection_name_with_prefix)
 
         # Parallelize batch inserts for performance
@@ -284,26 +271,23 @@ class PineconeClient(VectorDBBase):
             try:
                 future.result()
             except Exception as e:
-                log.error(f"Error inserting batch: {e}")
+                log.error(f'Error inserting batch: {e}')
                 raise
         elapsed = time.time() - start_time
-        log.debug(f"Insert of {len(points)} vectors took {elapsed:.2f} seconds")
+        log.debug(f'Insert of {len(points)} vectors took {elapsed:.2f} seconds')
         log.info(
-            f"Successfully inserted {len(points)} vectors in parallel batches "
-            f"into '{collection_name_with_prefix}'"
+            f"Successfully inserted {len(points)} vectors in parallel batches into '{collection_name_with_prefix}'"
         )
 
     def upsert(self, collection_name: str, items: List[VectorItem]) -> None:
         """Upsert (insert or update) vectors into a collection."""
         if not items:
-            log.warning("No items to upsert")
+            log.warning('No items to upsert')
             return
 
         start_time = time.time()
 
-        collection_name_with_prefix = self._get_collection_name_with_prefix(
-            collection_name
-        )
+        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
         points = self._create_points(items, collection_name_with_prefix)
 
         # Parallelize batch upserts for performance
@@ -316,78 +300,53 @@ class PineconeClient(VectorDBBase):
             try:
                 future.result()
             except Exception as e:
-                log.error(f"Error upserting batch: {e}")
+                log.error(f'Error upserting batch: {e}')
                 raise
         elapsed = time.time() - start_time
-        log.debug(f"Upsert of {len(points)} vectors took {elapsed:.2f} seconds")
+        log.debug(f'Upsert of {len(points)} vectors took {elapsed:.2f} seconds')
         log.info(
-            f"Successfully upserted {len(points)} vectors in parallel batches "
-            f"into '{collection_name_with_prefix}'"
+            f"Successfully upserted {len(points)} vectors in parallel batches into '{collection_name_with_prefix}'"
         )
 
     async def insert_async(self, collection_name: str, items: List[VectorItem]) -> None:
         """Async version of insert using asyncio and run_in_executor for improved performance."""
         if not items:
-            log.warning("No items to insert")
+            log.warning('No items to insert')
             return
 
-        collection_name_with_prefix = self._get_collection_name_with_prefix(
-            collection_name
-        )
+        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
         points = self._create_points(items, collection_name_with_prefix)
 
         # Create batches
-        batches = [
-            points[i : i + BATCH_SIZE] for i in range(0, len(points), BATCH_SIZE)
-        ]
+        batches = [points[i : i + BATCH_SIZE] for i in range(0, len(points), BATCH_SIZE)]
         loop = asyncio.get_event_loop()
-        tasks = [
-            loop.run_in_executor(
-                None, functools.partial(self.index.upsert, vectors=batch)
-            )
-            for batch in batches
-        ]
+        tasks = [loop.run_in_executor(None, functools.partial(self.index.upsert, vectors=batch)) for batch in batches]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         for result in results:
             if isinstance(result, Exception):
-                log.error(f"Error in async insert batch: {result}")
+                log.error(f'Error in async insert batch: {result}')
                 raise result
-        log.info(
-            f"Successfully async inserted {len(points)} vectors in batches "
-            f"into '{collection_name_with_prefix}'"
-        )
+        log.info(f"Successfully async inserted {len(points)} vectors in batches into '{collection_name_with_prefix}'")
 
     async def upsert_async(self, collection_name: str, items: List[VectorItem]) -> None:
         """Async version of upsert using asyncio and run_in_executor for improved performance."""
         if not items:
-            log.warning("No items to upsert")
+            log.warning('No items to upsert')
             return
 
-        collection_name_with_prefix = self._get_collection_name_with_prefix(
-            collection_name
-        )
+        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
         points = self._create_points(items, collection_name_with_prefix)
 
         # Create batches
-        batches = [
-            points[i : i + BATCH_SIZE] for i in range(0, len(points), BATCH_SIZE)
-        ]
+        batches = [points[i : i + BATCH_SIZE] for i in range(0, len(points), BATCH_SIZE)]
         loop = asyncio.get_event_loop()
-        tasks = [
-            loop.run_in_executor(
-                None, functools.partial(self.index.upsert, vectors=batch)
-            )
-            for batch in batches
-        ]
+        tasks = [loop.run_in_executor(None, functools.partial(self.index.upsert, vectors=batch)) for batch in batches]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         for result in results:
             if isinstance(result, Exception):
-                log.error(f"Error in async upsert batch: {result}")
+                log.error(f'Error in async upsert batch: {result}')
                 raise result
-        log.info(
-            f"Successfully async upserted {len(points)} vectors in batches "
-            f"into '{collection_name_with_prefix}'"
-        )
+        log.info(f"Successfully async upserted {len(points)} vectors in batches into '{collection_name_with_prefix}'")
 
     def search(
         self,
@@ -398,12 +357,10 @@ class PineconeClient(VectorDBBase):
     ) -> Optional[SearchResult]:
         """Search for similar vectors in a collection."""
         if not vectors or not vectors[0]:
-            log.warning("No vectors provided for search")
+            log.warning('No vectors provided for search')
             return None
 
-        collection_name_with_prefix = self._get_collection_name_with_prefix(
-            collection_name
-        )
+        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
 
         if limit is None or limit <= 0:
             limit = NO_LIMIT
@@ -417,10 +374,10 @@ class PineconeClient(VectorDBBase):
                 vector=query_vector,
                 top_k=limit,
                 include_metadata=True,
-                filter={"collection_name": collection_name_with_prefix},
+                filter={'collection_name': collection_name_with_prefix},
             )
 
-            matches = getattr(query_response, "matches", []) or []
+            matches = getattr(query_response, 'matches', []) or []
             if not matches:
                 # Return empty result if no matches
                 return SearchResult(
@@ -434,12 +391,7 @@ class PineconeClient(VectorDBBase):
             get_result = self._result_to_get_result(matches)
 
             # Calculate normalized distances based on metric
-            distances = [
-                [
-                    self._normalize_distance(getattr(match, "score", 0.0))
-                    for match in matches
-                ]
-            ]
+            distances = [[self._normalize_distance(getattr(match, 'score', 0.0)) for match in matches]]
 
             return SearchResult(
                 ids=get_result.ids,
@@ -451,13 +403,9 @@ class PineconeClient(VectorDBBase):
             log.error(f"Error searching in '{collection_name_with_prefix}': {e}")
             return None
 
-    def query(
-        self, collection_name: str, filter: Dict, limit: Optional[int] = None
-    ) -> Optional[GetResult]:
+    def query(self, collection_name: str, filter: Dict, limit: Optional[int] = None) -> Optional[GetResult]:
         """Query vectors by metadata filter."""
-        collection_name_with_prefix = self._get_collection_name_with_prefix(
-            collection_name
-        )
+        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
 
         if limit is None or limit <= 0:
             limit = NO_LIMIT
@@ -467,7 +415,7 @@ class PineconeClient(VectorDBBase):
             zero_vector = [0.0] * self.dimension
 
             # Combine user filter with collection_name
-            pinecone_filter = {"collection_name": collection_name_with_prefix}
+            pinecone_filter = {'collection_name': collection_name_with_prefix}
             if filter:
                 pinecone_filter.update(filter)
 
@@ -479,7 +427,7 @@ class PineconeClient(VectorDBBase):
                 include_metadata=True,
             )
 
-            matches = getattr(query_response, "matches", []) or []
+            matches = getattr(query_response, 'matches', []) or []
             return self._result_to_get_result(matches)
 
         except Exception as e:
@@ -488,9 +436,7 @@ class PineconeClient(VectorDBBase):
 
     def get(self, collection_name: str) -> Optional[GetResult]:
         """Get all vectors in a collection."""
-        collection_name_with_prefix = self._get_collection_name_with_prefix(
-            collection_name
-        )
+        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
 
         try:
             # Use a zero vector for fetching all entries
@@ -501,10 +447,10 @@ class PineconeClient(VectorDBBase):
                 vector=zero_vector,
                 top_k=NO_LIMIT,
                 include_metadata=True,
-                filter={"collection_name": collection_name_with_prefix},
+                filter={'collection_name': collection_name_with_prefix},
             )
 
-            matches = getattr(query_response, "matches", []) or []
+            matches = getattr(query_response, 'matches', []) or []
             return self._result_to_get_result(matches)
 
         except Exception as e:
@@ -518,9 +464,7 @@ class PineconeClient(VectorDBBase):
         filter: Optional[Dict] = None,
     ) -> None:
         """Delete vectors by IDs or filter."""
-        collection_name_with_prefix = self._get_collection_name_with_prefix(
-            collection_name
-        )
+        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
 
         try:
             if ids:
@@ -530,28 +474,20 @@ class PineconeClient(VectorDBBase):
                     # Note: When deleting by ID, we can't filter by collection_name
                     # This is a limitation of Pinecone - be careful with ID uniqueness
                     self.index.delete(ids=batch_ids)
-                    log.debug(
-                        f"Deleted batch of {len(batch_ids)} vectors by ID "
-                        f"from '{collection_name_with_prefix}'"
-                    )
-                log.info(
-                    f"Successfully deleted {len(ids)} vectors by ID "
-                    f"from '{collection_name_with_prefix}'"
-                )
+                    log.debug(f"Deleted batch of {len(batch_ids)} vectors by ID from '{collection_name_with_prefix}'")
+                log.info(f"Successfully deleted {len(ids)} vectors by ID from '{collection_name_with_prefix}'")
 
             elif filter:
                 # Combine user filter with collection_name
-                pinecone_filter = {"collection_name": collection_name_with_prefix}
+                pinecone_filter = {'collection_name': collection_name_with_prefix}
                 if filter:
                     pinecone_filter.update(filter)
                 # Delete by metadata filter
                 self.index.delete(filter=pinecone_filter)
-                log.info(
-                    f"Successfully deleted vectors by filter from '{collection_name_with_prefix}'"
-                )
+                log.info(f"Successfully deleted vectors by filter from '{collection_name_with_prefix}'")
 
             else:
-                log.warning("No ids or filter provided for delete operation")
+                log.warning('No ids or filter provided for delete operation')
 
         except Exception as e:
             log.error(f"Error deleting from collection '{collection_name}': {e}")
@@ -561,9 +497,9 @@ class PineconeClient(VectorDBBase):
         """Reset the database by deleting all collections."""
         try:
             self.index.delete(delete_all=True)
-            log.info("All vectors successfully deleted from the index.")
+            log.info('All vectors successfully deleted from the index.')
         except Exception as e:
-            log.error(f"Failed to reset Pinecone index: {e}")
+            log.error(f'Failed to reset Pinecone index: {e}')
             raise
 
     def close(self):
@@ -572,7 +508,7 @@ class PineconeClient(VectorDBBase):
             # The new Pinecone client doesn't need explicit closing
             pass
         except Exception as e:
-            log.warning(f"Failed to clean up Pinecone resources: {e}")
+            log.warning(f'Failed to clean up Pinecone resources: {e}')
         self._executor.shutdown(wait=True)
 
     def __enter__(self):
