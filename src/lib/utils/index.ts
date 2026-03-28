@@ -22,6 +22,7 @@ import { marked } from 'marked';
 import markedExtension from '$lib/utils/marked/extension';
 import markedKatexExtension from '$lib/utils/marked/katex-extension';
 import hljs from 'highlight.js';
+import { decode } from 'html-entities';
 
 //////////////////////////
 // Helper functions
@@ -166,9 +167,8 @@ function processChineseDelimiters(
 	});
 }
 
-export function unescapeHtml(html: string) {
-	const doc = new DOMParser().parseFromString(html, 'text/html');
-	return doc.documentElement.textContent;
+export function unescapeHtml(html: string): string {
+	return decode(html);
 }
 
 export const capitalizeFirstLetter = (string) => {
