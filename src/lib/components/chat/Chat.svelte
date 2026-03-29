@@ -447,7 +447,14 @@
 						message.statusHistory = [data];
 					}
 				} else if (type === 'chat:completion') {
-					await chatCompletionEventHandler(data, message, event.chat_id);
+					try {
+						await chatCompletionEventHandler(data, message, event.chat_id);
+					} catch (e) {
+						console.error(e);
+						queueSendNowPendingAssistantId = null;
+						skipQueueDrainForAssistantId = null;
+						queueDrainSuspendedForSendNow = false;
+					}
 				} else if (type === 'chat:tasks:cancel') {
 					if (event.message_id === history.currentId) {
 						taskIds = null;
