@@ -63,11 +63,21 @@
 	let pzInstance: PanZoom | null = null;
 
 	const initImagePanzoom = (node: HTMLElement) => {
-		pzInstance = panzoom(node, {
+		pzInstance?.dispose();
+		const localInstance = panzoom(node, {
 			bounds: true,
 			boundsPadding: 0.1,
 			zoomSpeed: 0.065
 		});
+		pzInstance = localInstance;
+		return {
+			destroy() {
+				localInstance.dispose();
+				if (pzInstance === localInstance) {
+					pzInstance = null;
+				}
+			}
+		};
 	};
 
 	const resetImageView = () => {

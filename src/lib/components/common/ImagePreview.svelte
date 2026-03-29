@@ -17,12 +17,13 @@
 
 	let previewElement = null;
 
-	let instance: PanZoom;
+	let instance: PanZoom | undefined;
 
 	let sceneParentElement: HTMLElement;
 	let sceneElement: HTMLElement;
 
 	$: if (sceneElement) {
+		instance?.dispose();
 		instance = panzoom(sceneElement, {
 			bounds: true,
 			boundsPadding: 0.1,
@@ -31,9 +32,8 @@
 		});
 	}
 	const resetPanZoomViewport = () => {
-		instance.moveTo(0, 0);
-		instance.zoomAbs(0, 0, 1);
-		console.log(instance.getTransform());
+		instance?.moveTo(0, 0);
+		instance?.zoomAbs(0, 0, 1);
 	};
 
 	const handleKeyDown = (event: KeyboardEvent) => {
@@ -58,11 +58,17 @@
 	}
 
 	onDestroy(() => {
+		window.removeEventListener('keydown', handleKeyDown);
+		instance?.dispose();
+		instance = undefined;
 		show = false;
 
-		if (previewElement) {
+		if (previewElement && previewElement.parentNode === document.body) {
 			document.body.removeChild(previewElement);
 		}
+		// NOTE: If multiple modals can stack in the future, direct "unset" may
+		// re-enable page scroll too early. Consider a shared body-scroll lock manager.
+		document.body.style.overflow = 'unset';
 	});
 </script>
 

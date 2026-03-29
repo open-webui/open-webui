@@ -7,12 +7,11 @@
 	import panzoom, { type PanZoom } from 'panzoom';
 	import DOMPurify from 'dompurify';
 
-	import { onMount, getContext } from 'svelte';
+	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import { copyToClipboard } from '$lib/utils';
 
-	import DocumentDuplicate from '../icons/DocumentDuplicate.svelte';
 	import Tooltip from './Tooltip.svelte';
 	import Clipboard from '../icons/Clipboard.svelte';
 	import Reset from '../icons/Reset.svelte';
@@ -22,23 +21,28 @@
 	export let svg = '';
 	export let content = '';
 
-	let instance: PanZoom;
+	let instance: PanZoom | undefined;
 
-	let sceneParentElement: HTMLElement;
-	let sceneElement: HTMLElement;
-
-	$: if (sceneElement) {
-		instance = panzoom(sceneElement, {
+	const initSvgPanzoom = (node: HTMLElement) => {
+		instance?.dispose();
+		const localInstance = panzoom(node, {
 			bounds: true,
 			boundsPadding: 0.1,
-
 			zoomSpeed: 0.065
 		});
-	}
+		instance = localInstance;
+		return {
+			destroy() {
+				localInstance.dispose();
+				if (instance === localInstance) {
+					instance = undefined;
+				}
+			}
+		};
+	};
 	const resetPanZoomViewport = () => {
-		instance.moveTo(0, 0);
-		instance.zoomAbs(0, 0, 1);
-		console.log(instance.getTransform());
+		instance?.moveTo(0, 0);
+		instance?.zoomAbs(0, 0, 1);
 	};
 
 	const downloadAsSVG = () => {
@@ -47,8 +51,8 @@
 	};
 </script>
 
-<div bind:this={sceneParentElement} class="relative {className}">
-	<div bind:this={sceneElement} class="flex h-full max-h-full justify-center items-center">
+<div class="relative {className}">
+	<div class="flex h-full max-h-full justify-center items-center" use:initSvgPanzoom>
 		{@html DOMPurify.sanitize(svg, {
 			USE_PROFILES: { svg: true, svgFilters: true }, // allow <svg>, <defs>, <filter>, etc.
 			WHOLE_DOCUMENT: false,
