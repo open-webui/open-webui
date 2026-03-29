@@ -7,7 +7,6 @@ from moto import mock_aws
 from open_webui.storage import provider
 from gcp_storage_emulator.server import create_server
 from google.cloud import storage
-from azure.storage.blob import BlobServiceClient, ContainerClient, BlobClient
 from unittest.mock import MagicMock
 
 
@@ -99,7 +98,6 @@ class TestLocalStorageProvider:
 
 @mock_aws
 class TestS3StorageProvider:
-
     def __init__(self):
         self.Storage = provider.S3StorageProvider()
         self.Storage.bucket_name = "my-bucket"
@@ -199,13 +197,20 @@ class TestS3StorageProvider:
         assert storage.bucket_name == provider.S3_BUCKET_NAME
 
 
+@pytest.mark.skipif(
+    os.getenv("GOOGLE_APPLICATION_CREDENTIALS") is None,
+    reason="GCS credentials not configured",
+)
 class TestGCSStorageProvider:
-    Storage = provider.GCSStorageProvider()
-    Storage.bucket_name = "my-bucket"
-    file_content = b"test content"
-    filename = "test.txt"
-    filename_extra = "test_exyta.txt"
-    file_bytesio_empty = io.BytesIO()
+    @classmethod
+    def setup_class(cls):
+        """Set up GCS storage provider."""
+        cls.Storage = provider.GCSStorageProvider()
+        cls.Storage.bucket_name = "my-bucket"
+        cls.file_content = b"test content"
+        cls.filename = "test.txt"
+        cls.filename_extra = "test_exyta.txt"
+        cls.file_bytesio_empty = io.BytesIO()
 
     @pytest.fixture(scope="class")
     def setup(self):
@@ -375,9 +380,7 @@ class TestAzureStorageProvider:
         # Mock upload behavior
         self.Storage.upload_file(io.BytesIO(self.file_content), self.filename)
         # Mock blob download behavior
-        self.Storage.container_client.get_blob_client().download_blob().readall.return_value = (
-            self.file_content
-        )
+        self.Storage.container_client.get_blob_client().download_blob().readall.return_value = self.file_content
 
         file_url = f"https://myaccount.blob.core.windows.net/{self.Storage.container_name}/{self.filename}"
         file_path = self.Storage.get_file(file_url)
