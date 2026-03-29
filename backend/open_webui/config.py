@@ -1438,6 +1438,28 @@ USER_PERMISSIONS_FEATURES_MEMORIES = os.environ.get('USER_PERMISSIONS_FEATURES_M
 
 USER_PERMISSIONS_SETTINGS_INTERFACE = os.environ.get('USER_PERMISSIONS_SETTINGS_INTERFACE', 'True').lower() == 'true'
 
+USER_PERMISSIONS_REALTIME_SETTINGS_VOICE = (
+    os.environ.get("USER_PERMISSIONS_REALTIME_SETTINGS_VOICE", "True").lower() == "true"
+)
+USER_PERMISSIONS_REALTIME_SETTINGS_VAD = (
+    os.environ.get("USER_PERMISSIONS_REALTIME_SETTINGS_VAD", "True").lower() == "true"
+)
+USER_PERMISSIONS_REALTIME_SETTINGS_NOISE_REDUCTION = (
+    os.environ.get("USER_PERMISSIONS_REALTIME_SETTINGS_NOISE_REDUCTION", "True").lower()
+    == "true"
+)
+USER_PERMISSIONS_REALTIME_SETTINGS_MAX_TOKENS = (
+    os.environ.get("USER_PERMISSIONS_REALTIME_SETTINGS_MAX_TOKENS", "True").lower()
+    == "true"
+)
+USER_PERMISSIONS_REALTIME_SETTINGS_CONTEXT = (
+    os.environ.get("USER_PERMISSIONS_REALTIME_SETTINGS_CONTEXT", "False").lower()
+    == "true"
+)
+USER_PERMISSIONS_REALTIME_SETTINGS_SPEED = (
+    os.environ.get("USER_PERMISSIONS_REALTIME_SETTINGS_SPEED", "True").lower() == "true"
+)
+
 
 DEFAULT_USER_PERMISSIONS = {
     'workspace': {
@@ -1507,6 +1529,16 @@ DEFAULT_USER_PERMISSIONS = {
     },
     'settings': {
         'interface': USER_PERMISSIONS_SETTINGS_INTERFACE,
+    },
+    "realtime": {
+        "settings": {
+            "voice": USER_PERMISSIONS_REALTIME_SETTINGS_VOICE,
+            "vad": USER_PERMISSIONS_REALTIME_SETTINGS_VAD,
+            "noise_reduction": USER_PERMISSIONS_REALTIME_SETTINGS_NOISE_REDUCTION,
+            "max_tokens": USER_PERMISSIONS_REALTIME_SETTINGS_MAX_TOKENS,
+            "speed": USER_PERMISSIONS_REALTIME_SETTINGS_SPEED,
+            "context": USER_PERMISSIONS_REALTIME_SETTINGS_CONTEXT,
+        },
     },
 }
 
@@ -3931,6 +3963,234 @@ AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
     'AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT',
     'audio.tts.azure.speech_output_format',
     os.getenv('AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT', 'audio-24khz-160kbitrate-mono-mp3'),
+)
+
+####################################
+# Realtime (Voice-to-Voice)
+####################################
+
+AUDIO_RT_ENGINE = PersistentConfig(
+    "AUDIO_RT_ENGINE",
+    "audio.realtime.engine",
+    os.getenv("AUDIO_RT_ENGINE", ""),
+)
+
+AUDIO_RT_API_KEY = PersistentConfig(
+    "AUDIO_RT_API_KEY",
+    "audio.realtime.api_key",
+    os.getenv("AUDIO_RT_API_KEY", ""),
+)
+
+AUDIO_RT_API_BASE_URL = PersistentConfig(
+    "AUDIO_RT_API_BASE_URL",
+    "audio.realtime.api_base_url",
+    os.getenv("AUDIO_RT_API_BASE_URL", "https://api.openai.com/v1"),
+)
+
+AUDIO_RT_MODELS = PersistentConfig(
+    "AUDIO_RT_MODELS",
+    "audio.realtime.models",
+    [m.strip() for m in os.getenv("AUDIO_RT_MODELS", "").split(",") if m.strip()],
+)
+
+AUDIO_RT_VOICE = PersistentConfig(
+    "AUDIO_RT_VOICE",
+    "audio.realtime.voice",
+    os.getenv("AUDIO_RT_VOICE", "marin"),
+)
+
+AUDIO_RT_VAD_TYPE = PersistentConfig(
+    "AUDIO_RT_VAD_TYPE",
+    "audio.realtime.vad_type",
+    os.getenv("AUDIO_RT_VAD_TYPE", "server_vad"),
+)
+
+AUDIO_RT_SERVER_VAD_THRESHOLD = PersistentConfig(
+    "AUDIO_RT_SERVER_VAD_THRESHOLD",
+    "audio.realtime.server_vad.threshold",
+    float(os.getenv("AUDIO_RT_SERVER_VAD_THRESHOLD", "0.5")),
+)
+
+AUDIO_RT_SERVER_VAD_SILENCE_DURATION_MS = PersistentConfig(
+    "AUDIO_RT_SERVER_VAD_SILENCE_DURATION_MS",
+    "audio.realtime.server_vad.silence_duration_ms",
+    int(os.getenv("AUDIO_RT_SERVER_VAD_SILENCE_DURATION_MS", "500")),
+)
+
+AUDIO_RT_SERVER_VAD_PREFIX_PADDING_MS = PersistentConfig(
+    "AUDIO_RT_SERVER_VAD_PREFIX_PADDING_MS",
+    "audio.realtime.server_vad.prefix_padding_ms",
+    int(os.getenv("AUDIO_RT_SERVER_VAD_PREFIX_PADDING_MS", "300")),
+)
+
+AUDIO_RT_SEMANTIC_VAD_EAGERNESS = PersistentConfig(
+    "AUDIO_RT_SEMANTIC_VAD_EAGERNESS",
+    "audio.realtime.semantic_vad.eagerness",
+    os.getenv("AUDIO_RT_SEMANTIC_VAD_EAGERNESS", "auto"),
+)
+
+AUDIO_RT_TRANSCRIPTION_MODEL = PersistentConfig(
+    "AUDIO_RT_TRANSCRIPTION_MODEL",
+    "audio.realtime.transcription_model",
+    os.getenv("AUDIO_RT_TRANSCRIPTION_MODEL", "gpt-4o-transcribe"),
+)
+
+AUDIO_RT_NOISE_REDUCTION = PersistentConfig(
+    "AUDIO_RT_NOISE_REDUCTION",
+    "audio.realtime.noise_reduction",
+    os.getenv("AUDIO_RT_NOISE_REDUCTION", "near_field"),
+)
+
+
+AUDIO_RT_MAX_RESPONSE_OUTPUT_TOKENS = PersistentConfig(
+    "AUDIO_RT_MAX_RESPONSE_OUTPUT_TOKENS",
+    "audio.realtime.max_response_output_tokens",
+    os.getenv("AUDIO_RT_MAX_RESPONSE_OUTPUT_TOKENS", ""),
+)
+
+AUDIO_RT_CONTEXT_ENABLED = PersistentConfig(
+    "AUDIO_RT_CONTEXT_ENABLED",
+    "audio.realtime.context.enabled",
+    os.environ.get("AUDIO_RT_CONTEXT_ENABLED", "false").lower() == "true",
+)
+
+AUDIO_RT_CONTEXT_RECENT_EXCHANGES_LIMIT = PersistentConfig(
+    "AUDIO_RT_CONTEXT_RECENT_EXCHANGES_LIMIT",
+    "audio.realtime.context.recent_exchanges_limit",
+    int(os.getenv("AUDIO_RT_CONTEXT_RECENT_EXCHANGES_LIMIT", "10")),
+)
+
+AUDIO_RT_CONTEXT_MAX_HISTORY_EXCHANGES = PersistentConfig(
+    "AUDIO_RT_CONTEXT_MAX_HISTORY_EXCHANGES",
+    "audio.realtime.context.max_history_exchanges",
+    int(os.getenv("AUDIO_RT_CONTEXT_MAX_HISTORY_EXCHANGES", "40")),
+)
+
+AUDIO_RT_CONTEXT_MAX_HISTORY_BYTES = PersistentConfig(
+    "AUDIO_RT_CONTEXT_MAX_HISTORY_BYTES",
+    "audio.realtime.context.max_history_bytes",
+    int(os.getenv("AUDIO_RT_CONTEXT_MAX_HISTORY_BYTES", "16000")),
+)
+
+AUDIO_RT_CONTEXT_SUMMARIZE = PersistentConfig(
+    "AUDIO_RT_CONTEXT_SUMMARIZE",
+    "audio.realtime.context.summarize",
+    os.environ.get("AUDIO_RT_CONTEXT_SUMMARIZE", "false").lower() == "true",
+)
+
+AUDIO_RT_DEFAULT_CONTEXT_SUMMARY_PROMPT = """### Task:
+Summarize the following chat history for a realtime voice assistant so it can continue the conversation with the right continuity context.
+
+### Guidelines:
+- Focus on important user preferences, ongoing tasks, decisions, constraints, and unresolved questions.
+- Omit greetings, filler, and repetitive back-and-forth.
+- Do not invent facts or intentions.
+- Preserve uncertainty when relevant.
+- Treat this as continuity context, not a new user request.
+- Keep the summary under {{SUMMARY_MAX_SIZE}} characters.
+- Use the chat's primary language; default to English if multilingual.
+
+### Output:
+Return only the summary text with no JSON, XML, markdown, or extra commentary.
+
+### Chat History:
+<chat_history>
+{{MESSAGES}}
+</chat_history>"""
+
+AUDIO_RT_DEFAULT_IDLE_CALL_CHECKIN_PROMPT = (
+    "System message: user is idle and needs a gentle push to talk to you, "
+    "say something friendly to engage the user."
+)
+
+AUDIO_RT_CONTEXT_UNANSWERED_LAST_USER_TURN = PersistentConfig(
+    "AUDIO_RT_CONTEXT_UNANSWERED_LAST_USER_TURN",
+    "audio.realtime.context.unanswered_last_user_turn",
+    os.getenv("AUDIO_RT_CONTEXT_UNANSWERED_LAST_USER_TURN", "discard"),
+)
+
+AUDIO_RT_CONTEXT_SUMMARY_PROMPT = PersistentConfig(
+    "AUDIO_RT_CONTEXT_SUMMARY_PROMPT",
+    "audio.realtime.context.summary_prompt",
+    os.getenv(
+        "AUDIO_RT_CONTEXT_SUMMARY_PROMPT",
+        "",
+    ),
+)
+
+AUDIO_RT_CONTEXT_SUMMARY_MAX_SIZE = PersistentConfig(
+    "AUDIO_RT_CONTEXT_SUMMARY_MAX_SIZE",
+    "audio.realtime.context.summary_max_size",
+    int(os.getenv("AUDIO_RT_CONTEXT_SUMMARY_MAX_SIZE", "2000")),
+)
+
+AUDIO_RT_SPEED = PersistentConfig(
+    "AUDIO_RT_SPEED",
+    "audio.realtime.speed",
+    float(os.getenv("AUDIO_RT_SPEED", "1.0")),
+)
+
+AUDIO_RT_TRANSCRIPTION_PROMPT = PersistentConfig(
+    "AUDIO_RT_TRANSCRIPTION_PROMPT",
+    "audio.realtime.transcription_prompt",
+    os.getenv("AUDIO_RT_TRANSCRIPTION_PROMPT", ""),
+)
+
+AUDIO_RT_VAD_IDLE_TIMEOUT_MS = PersistentConfig(
+    "AUDIO_RT_VAD_IDLE_TIMEOUT_MS",
+    "audio.realtime.vad_idle_timeout_ms",
+    os.getenv("AUDIO_RT_VAD_IDLE_TIMEOUT_MS", ""),
+)
+
+AUDIO_RT_VAD_CREATE_RESPONSE = PersistentConfig(
+    "AUDIO_RT_VAD_CREATE_RESPONSE",
+    "audio.realtime.vad_create_response",
+    os.environ.get("AUDIO_RT_VAD_CREATE_RESPONSE", "true").lower() == "true",
+)
+
+AUDIO_RT_VAD_INTERRUPT_RESPONSE = PersistentConfig(
+    "AUDIO_RT_VAD_INTERRUPT_RESPONSE",
+    "audio.realtime.vad_interrupt_response",
+    os.environ.get("AUDIO_RT_VAD_INTERRUPT_RESPONSE", "true").lower() == "true",
+)
+
+AUDIO_RT_SESSION_TIMEOUT = PersistentConfig(
+    "AUDIO_RT_SESSION_TIMEOUT",
+    "audio.realtime.session_timeout",
+    int(os.getenv("AUDIO_RT_SESSION_TIMEOUT", "180")),
+)
+
+AUDIO_RT_IDLE_CALL_CHECKIN_INTERVAL = PersistentConfig(
+    "AUDIO_RT_IDLE_CALL_CHECKIN_INTERVAL",
+    "audio.realtime.idle_call_checkin_interval",
+    int(os.getenv("AUDIO_RT_IDLE_CALL_CHECKIN_INTERVAL", "45")),
+)
+
+AUDIO_RT_IDLE_CALL_CHECKIN_PROMPT = PersistentConfig(
+    "AUDIO_RT_IDLE_CALL_CHECKIN_PROMPT",
+    "audio.realtime.idle_call_checkin_prompt",
+    os.getenv(
+        "AUDIO_RT_IDLE_CALL_CHECKIN_PROMPT",
+        AUDIO_RT_DEFAULT_IDLE_CALL_CHECKIN_PROMPT,
+    ),
+)
+
+AUDIO_RT_TRUNCATION_STRATEGY = PersistentConfig(
+    "AUDIO_RT_TRUNCATION_STRATEGY",
+    "audio.realtime.truncation_strategy",
+    os.getenv("AUDIO_RT_TRUNCATION_STRATEGY", "auto"),
+)
+
+AUDIO_RT_TRUNCATION_RETENTION_RATIO = PersistentConfig(
+    "AUDIO_RT_TRUNCATION_RETENTION_RATIO",
+    "audio.realtime.truncation_retention_ratio",
+    float(os.getenv("AUDIO_RT_TRUNCATION_RETENTION_RATIO", "0.8")),
+)
+
+AUDIO_RT_TRUNCATION_TOKEN_LIMIT = PersistentConfig(
+    "AUDIO_RT_TRUNCATION_TOKEN_LIMIT",
+    "audio.realtime.truncation_token_limit",
+    os.getenv("AUDIO_RT_TRUNCATION_TOKEN_LIMIT", ""),
 )
 
 

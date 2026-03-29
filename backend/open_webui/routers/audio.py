@@ -49,6 +49,11 @@ from open_webui.config import (
 )
 
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.realtime.config_snapshot import (
+    apply_realtime_admin_config,
+    build_realtime_admin_config,
+)
+from open_webui.realtime.contracts import RealtimeNegotiateRequest
 from open_webui.env import (
     ENV,
     AIOHTTP_CLIENT_SESSION_SSL,
@@ -188,9 +193,52 @@ class STTConfigForm(BaseModel):
     MISTRAL_USE_CHAT_COMPLETIONS: bool
 
 
+class RealtimeConfigForm(BaseModel):
+    ENGINE: str
+    API_KEY: str
+    API_BASE_URL: str
+    MODELS: list[str] = []
+    VOICE: str
+    VAD_TYPE: str
+    SERVER_VAD_THRESHOLD: float
+    SERVER_VAD_SILENCE_DURATION_MS: int
+    SERVER_VAD_PREFIX_PADDING_MS: int
+    SEMANTIC_VAD_EAGERNESS: str
+    TRANSCRIPTION_MODEL: str
+    NOISE_REDUCTION: str
+    MAX_RESPONSE_OUTPUT_TOKENS: str
+    CONTEXT_ENABLED: bool
+    CONTEXT_RECENT_EXCHANGES_LIMIT: int
+    CONTEXT_MAX_HISTORY_EXCHANGES: int
+    CONTEXT_MAX_HISTORY_BYTES: int
+    CONTEXT_SUMMARIZE: bool
+    CONTEXT_UNANSWERED_LAST_USER_TURN: str
+    CONTEXT_SUMMARY_PROMPT: str
+    CONTEXT_SUMMARY_MAX_SIZE: int
+    SPEED: float
+    TRANSCRIPTION_PROMPT: str
+    VAD_IDLE_TIMEOUT_MS: str
+    VAD_CREATE_RESPONSE: bool
+    VAD_INTERRUPT_RESPONSE: bool
+    SESSION_TIMEOUT: int
+    IDLE_CALL_CHECKIN_INTERVAL: int
+    IDLE_CALL_CHECKIN_PROMPT: str
+    TRUNCATION_STRATEGY: str
+    TRUNCATION_RETENTION_RATIO: float
+    TRUNCATION_TOKEN_LIMIT: str
+
+
 class AudioConfigUpdateForm(BaseModel):
     tts: TTSConfigForm
     stt: STTConfigForm
+    rt: Optional[RealtimeConfigForm] = None
+
+
+@router.get("/realtime/config")
+async def get_realtime_client_config(request: Request, user=Depends(get_verified_user)):
+    from open_webui.realtime.client_config import build_realtime_client_config
+
+    return build_realtime_client_config(request)
 
 
 @router.get('/config')
@@ -226,6 +274,7 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             'MISTRAL_API_BASE_URL': request.app.state.config.AUDIO_STT_MISTRAL_API_BASE_URL,
             'MISTRAL_USE_CHAT_COMPLETIONS': request.app.state.config.AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS,
         },
+        "rt": build_realtime_admin_config(request.app.state.config),
     }
 
 
@@ -259,6 +308,10 @@ async def update_audio_config(request: Request, form_data: AudioConfigUpdateForm
     request.app.state.config.AUDIO_STT_MISTRAL_API_KEY = form_data.stt.MISTRAL_API_KEY
     request.app.state.config.AUDIO_STT_MISTRAL_API_BASE_URL = form_data.stt.MISTRAL_API_BASE_URL
     request.app.state.config.AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS = form_data.stt.MISTRAL_USE_CHAT_COMPLETIONS
+
+    if form_data.rt is not None:
+        apply_realtime_admin_config(request.app.state.config, form_data.rt)
+        request.app.state.BASE_MODELS = []
 
     if request.app.state.config.STT_ENGINE == '':
         request.app.state.faster_whisper_model = set_faster_whisper_model(
@@ -298,7 +351,31 @@ async def update_audio_config(request: Request, form_data: AudioConfigUpdateForm
             'MISTRAL_API_BASE_URL': request.app.state.config.AUDIO_STT_MISTRAL_API_BASE_URL,
             'MISTRAL_USE_CHAT_COMPLETIONS': request.app.state.config.AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS,
         },
+        "rt": build_realtime_admin_config(
+            request.app.state.config,
+            include_task_model_warning=False,
+        ),
     }
+
+
+@router.post("/realtime/negotiate")
+async def negotiate_realtime_sdp(
+    request: Request,
+    form_data: RealtimeNegotiateRequest,
+    user=Depends(get_verified_user),
+):
+    """SDP exchange with full session setup — see realtime/negotiate.py."""
+    if user.role != "admin" and not has_permission(
+        user.id, "chat.call", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    from open_webui.realtime.negotiate import execute_negotiate
+
+    return await execute_negotiate(request=request, form_data=form_data, user=user)
 
 
 def load_speech_pipeline(request):

@@ -1178,6 +1178,143 @@ async def terminal_event_handler(
         )
 
 
+async def execute_tool_call(
+    tool_call_id: str,
+    tool_function_name: str,
+    tool_args: str,
+    tools: dict,
+    request,
+    user,
+    metadata: dict,
+    messages: list,
+    files: list,
+    event_emitter,
+    event_caller,
+    citations_enabled: bool = True,
+) -> dict:
+    """Execute a single tool call and return the result.
+
+    Parses arguments, invokes the tool (direct or callable),
+    processes the result, and extracts citation sources.
+    """
+    tool_function_params = {}
+    if tool_args and tool_args.strip():
+        try:
+            # json.loads cannot be used because some models do not produce valid JSON
+            tool_function_params = ast.literal_eval(tool_args)
+        except Exception as e:
+            log.debug(e)
+            # Fallback to JSON parsing
+            try:
+                tool_function_params = json.loads(tool_args)
+            except Exception as e:
+                log.error(f'Error parsing tool call arguments: {tool_args}')
+                return {
+                    'tool_call_id': tool_call_id,
+                    'content': f'Error: Tool call arguments could not be parsed. The model generated malformed or incomplete JSON for `{tool_function_name}`. Please try again.',
+                }
+
+    # Ensure arguments are valid JSON for downstream LLM integrations
+    log.debug(f'Parsed args from {tool_args} to {tool_function_params}')
+
+    tool_result = None
+    tool = None
+    tool_type = None
+    direct_tool = False
+
+    if tool_function_name in tools:
+        tool = tools[tool_function_name]
+        spec = tool.get('spec', {})
+
+        tool_type = tool.get('type', '')
+        direct_tool = tool.get('direct', False)
+
+        try:
+            allowed_params = spec.get('parameters', {}).get('properties', {}).keys()
+
+            tool_function_params = {
+                k: v for k, v in tool_function_params.items() if k in allowed_params
+            }
+
+            if direct_tool:
+                tool_result = await event_caller(
+                    {
+                        'type': 'execute:tool',
+                        'data': {
+                            'id': str(uuid4()),
+                            'name': tool_function_name,
+                            'params': tool_function_params,
+                            'server': tool.get('server', {}),
+                            'session_id': metadata.get('session_id', None),
+                        },
+                    }
+                )
+
+            else:
+                tool_function = get_updated_tool_function(
+                    function=tool['callable'],
+                    extra_params={
+                        '__messages__': messages,
+                        '__files__': files,
+                    },
+                )
+
+                tool_result = await tool_function(**tool_function_params)
+
+        except Exception as e:
+            tool_result = str(e)
+
+    tool_result, tool_result_files, tool_result_embeds = process_tool_result(
+        request,
+        tool_function_name,
+        tool_result,
+        tool_type,
+        direct_tool,
+        metadata,
+        user,
+    )
+
+    await terminal_event_handler(
+        tool_function_name,
+        tool_function_params,
+        tool_result,
+        event_emitter,
+    )
+
+    # Extract citation sources from tool results
+    sources = []
+    if (
+        citations_enabled
+        and tool_function_name
+        in [
+            'search_web',
+            'fetch_url',
+            'view_file',
+            'view_knowledge_file',
+            'query_knowledge_files',
+        ]
+        and tool_result
+    ):
+        try:
+            sources = get_citation_source_from_tool_result(
+                tool_name=tool_function_name,
+                tool_params=tool_function_params,
+                tool_result=tool_result,
+                tool_id=tool.get('tool_id', '') if tool else '',
+            )
+        except Exception as e:
+            log.exception(f'Error extracting citation source: {e}')
+
+    return {
+        'tool_call_id': tool_call_id,
+        'content': str(tool_result) if tool_result else '',
+        **({'files': tool_result_files} if tool_result_files else {}),
+        **({'embeds': tool_result_embeds} if tool_result_embeds else {}),
+        'sources': sources,
+        'params': tool_function_params,
+    }
+
+
 async def chat_completion_tools_handler(
     request: Request, body: dict, extra_params: dict, user: UserModel, models, tools
 ) -> tuple[dict, dict]:
@@ -4104,126 +4241,26 @@ async def streaming_chat_response_handler(response, ctx):
                         tool_function_name = tool_call.get('function', {}).get('name', '')
                         tool_args = tool_call.get('function', {}).get('arguments', '{}')
 
-                        tool_function_params = {}
-                        if tool_args and tool_args.strip():
-                            try:
-                                # json.loads cannot be used because some models do not produce valid JSON
-                                tool_function_params = ast.literal_eval(tool_args)
-                            except Exception as e:
-                                log.debug(e)
-                                # Fallback to JSON parsing
-                                try:
-                                    tool_function_params = json.loads(tool_args)
-                                except Exception as e:
-                                    log.error(f'Error parsing tool call arguments: {tool_args}')
-                                    results.append(
-                                        {
-                                            'tool_call_id': tool_call_id,
-                                            'content': f'Error: Tool call arguments could not be parsed. The model generated malformed or incomplete JSON for `{tool_function_name}`. Please try again.',
-                                        }
-                                    )
-                                    continue
-
-                        # Ensure arguments are valid JSON for downstream LLM integrations
-                        log.debug(f'Parsed args from {tool_args} to {tool_function_params}')
-                        tool_call.setdefault('function', {})['arguments'] = json.dumps(tool_function_params)
-
-                        tool_result = None
-                        tool = None
-                        tool_type = None
-                        direct_tool = False
-
-                        if tool_function_name in tools:
-                            tool = tools[tool_function_name]
-                            spec = tool.get('spec', {})
-
-                            tool_type = tool.get('type', '')
-                            direct_tool = tool.get('direct', False)
-
-                            try:
-                                allowed_params = spec.get('parameters', {}).get('properties', {}).keys()
-
-                                tool_function_params = {
-                                    k: v for k, v in tool_function_params.items() if k in allowed_params
-                                }
-
-                                if direct_tool:
-                                    tool_result = await event_caller(
-                                        {
-                                            'type': 'execute:tool',
-                                            'data': {
-                                                'id': str(uuid4()),
-                                                'name': tool_function_name,
-                                                'params': tool_function_params,
-                                                'server': tool.get('server', {}),
-                                                'session_id': metadata.get('session_id', None),
-                                            },
-                                        }
-                                    )
-
-                                else:
-                                    tool_function = get_updated_tool_function(
-                                        function=tool['callable'],
-                                        extra_params={
-                                            '__messages__': form_data.get('messages', []),
-                                            '__files__': metadata.get('files', []),
-                                        },
-                                    )
-
-                                    tool_result = await tool_function(**tool_function_params)
-
-                            except Exception as e:
-                                tool_result = str(e)
-
-                        tool_result, tool_result_files, tool_result_embeds = process_tool_result(
-                            request,
-                            tool_function_name,
-                            tool_result,
-                            tool_type,
-                            direct_tool,
-                            metadata,
-                            user,
+                        result = await execute_tool_call(
+                            tool_call_id=tool_call_id,
+                            tool_function_name=tool_function_name,
+                            tool_args=tool_args,
+                            tools=tools,
+                            request=request,
+                            user=user,
+                            metadata=metadata,
+                            messages=form_data.get('messages', []),
+                            files=metadata.get('files', []),
+                            event_emitter=event_emitter,
+                            event_caller=event_caller,
+                            citations_enabled=citations_enabled,
                         )
 
-                        await terminal_event_handler(
-                            tool_function_name,
-                            tool_function_params,
-                            tool_result,
-                            event_emitter,
-                        )
+                        if result.get('params') is not None:
+                            tool_call.setdefault('function', {})['arguments'] = json.dumps(result['params'])
 
-                        # Extract citation sources from tool results
-                        if (
-                            citations_enabled
-                            and tool_function_name
-                            in [
-                                'search_web',
-                                'fetch_url',
-                                'view_file',
-                                'view_knowledge_file',
-                                'query_knowledge_files',
-                            ]
-                            and tool_result
-                        ):
-                            try:
-                                citation_sources = get_citation_source_from_tool_result(
-                                    tool_name=tool_function_name,
-                                    tool_params=tool_function_params,
-                                    tool_result=tool_result,
-                                    tool_id=tool.get('tool_id', '') if tool else '',
-                                )
-                                tool_call_sources.extend(citation_sources)
-                            except Exception as e:
-                                log.exception(f'Error extracting citation source: {e}')
-
-                        results.append(
-                            {
-                                'tool_call_id': tool_call_id,
-                                'content': str(tool_result) if tool_result else '',
-                                **({'files': tool_result_files} if tool_result_files else {}),
-                                **({'embeds': tool_result_embeds} if tool_result_embeds else {}),
-                            }
-                        )
+                        tool_call_sources.extend(result.get('sources', []))
+                        results.append(result)
 
                     # Update function_call statuses and append function_call_output items
                     for tc in response_tool_calls:

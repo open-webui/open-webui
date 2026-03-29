@@ -68,6 +68,11 @@ from open_webui.socket.main import (
     get_event_emitter,
     get_models_in_use,
 )
+from open_webui.realtime.app_hooks import start_realtime_background_tasks
+from open_webui.realtime.chat_handoff import (
+    route_chat_completion_to_realtime,
+    should_route_chat_to_realtime,
+)
 from open_webui.routers import (
     analytics,
     audio,
@@ -211,6 +216,38 @@ from open_webui.config import (
     AUDIO_TTS_AZURE_SPEECH_REGION,
     AUDIO_TTS_AZURE_SPEECH_BASE_URL,
     AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+    AUDIO_RT_ENGINE,
+    AUDIO_RT_API_KEY,
+    AUDIO_RT_API_BASE_URL,
+    AUDIO_RT_MODELS,
+    AUDIO_RT_VOICE,
+    AUDIO_RT_VAD_TYPE,
+    AUDIO_RT_SERVER_VAD_THRESHOLD,
+    AUDIO_RT_SERVER_VAD_SILENCE_DURATION_MS,
+    AUDIO_RT_SERVER_VAD_PREFIX_PADDING_MS,
+    AUDIO_RT_SEMANTIC_VAD_EAGERNESS,
+    AUDIO_RT_TRANSCRIPTION_MODEL,
+    AUDIO_RT_NOISE_REDUCTION,
+    AUDIO_RT_MAX_RESPONSE_OUTPUT_TOKENS,
+    AUDIO_RT_CONTEXT_ENABLED,
+    AUDIO_RT_CONTEXT_RECENT_EXCHANGES_LIMIT,
+    AUDIO_RT_CONTEXT_MAX_HISTORY_EXCHANGES,
+    AUDIO_RT_CONTEXT_MAX_HISTORY_BYTES,
+    AUDIO_RT_CONTEXT_SUMMARIZE,
+    AUDIO_RT_CONTEXT_UNANSWERED_LAST_USER_TURN,
+    AUDIO_RT_CONTEXT_SUMMARY_PROMPT,
+    AUDIO_RT_CONTEXT_SUMMARY_MAX_SIZE,
+    AUDIO_RT_SPEED,
+    AUDIO_RT_TRANSCRIPTION_PROMPT,
+    AUDIO_RT_VAD_IDLE_TIMEOUT_MS,
+    AUDIO_RT_VAD_CREATE_RESPONSE,
+    AUDIO_RT_VAD_INTERRUPT_RESPONSE,
+    AUDIO_RT_SESSION_TIMEOUT,
+    AUDIO_RT_IDLE_CALL_CHECKIN_INTERVAL,
+    AUDIO_RT_IDLE_CALL_CHECKIN_PROMPT,
+    AUDIO_RT_TRUNCATION_STRATEGY,
+    AUDIO_RT_TRUNCATION_RETENTION_RATIO,
+    AUDIO_RT_TRUNCATION_TOKEN_LIMIT,
     PLAYWRIGHT_WS_URL,
     PLAYWRIGHT_TIMEOUT,
     FIRECRAWL_API_BASE_URL,
@@ -647,6 +684,7 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     asyncio.create_task(periodic_session_pool_cleanup())
+    start_realtime_background_tasks(app)
 
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         try:
@@ -1277,6 +1315,40 @@ app.state.config.TTS_AZURE_SPEECH_REGION = AUDIO_TTS_AZURE_SPEECH_REGION
 app.state.config.TTS_AZURE_SPEECH_BASE_URL = AUDIO_TTS_AZURE_SPEECH_BASE_URL
 app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT
 
+# Realtime (Voice-to-Voice)
+app.state.config.AUDIO_RT_ENGINE = AUDIO_RT_ENGINE
+app.state.config.AUDIO_RT_API_KEY = AUDIO_RT_API_KEY
+app.state.config.AUDIO_RT_API_BASE_URL = AUDIO_RT_API_BASE_URL
+app.state.config.AUDIO_RT_MODELS = AUDIO_RT_MODELS
+app.state.config.AUDIO_RT_VOICE = AUDIO_RT_VOICE
+app.state.config.AUDIO_RT_VAD_TYPE = AUDIO_RT_VAD_TYPE
+app.state.config.AUDIO_RT_SERVER_VAD_THRESHOLD = AUDIO_RT_SERVER_VAD_THRESHOLD
+app.state.config.AUDIO_RT_SERVER_VAD_SILENCE_DURATION_MS = AUDIO_RT_SERVER_VAD_SILENCE_DURATION_MS
+app.state.config.AUDIO_RT_SERVER_VAD_PREFIX_PADDING_MS = AUDIO_RT_SERVER_VAD_PREFIX_PADDING_MS
+app.state.config.AUDIO_RT_SEMANTIC_VAD_EAGERNESS = AUDIO_RT_SEMANTIC_VAD_EAGERNESS
+app.state.config.AUDIO_RT_TRANSCRIPTION_MODEL = AUDIO_RT_TRANSCRIPTION_MODEL
+app.state.config.AUDIO_RT_NOISE_REDUCTION = AUDIO_RT_NOISE_REDUCTION
+app.state.config.AUDIO_RT_MAX_RESPONSE_OUTPUT_TOKENS = AUDIO_RT_MAX_RESPONSE_OUTPUT_TOKENS
+app.state.config.AUDIO_RT_CONTEXT_ENABLED = AUDIO_RT_CONTEXT_ENABLED
+app.state.config.AUDIO_RT_CONTEXT_RECENT_EXCHANGES_LIMIT = AUDIO_RT_CONTEXT_RECENT_EXCHANGES_LIMIT
+app.state.config.AUDIO_RT_CONTEXT_MAX_HISTORY_EXCHANGES = AUDIO_RT_CONTEXT_MAX_HISTORY_EXCHANGES
+app.state.config.AUDIO_RT_CONTEXT_MAX_HISTORY_BYTES = AUDIO_RT_CONTEXT_MAX_HISTORY_BYTES
+app.state.config.AUDIO_RT_CONTEXT_SUMMARIZE = AUDIO_RT_CONTEXT_SUMMARIZE
+app.state.config.AUDIO_RT_CONTEXT_UNANSWERED_LAST_USER_TURN = AUDIO_RT_CONTEXT_UNANSWERED_LAST_USER_TURN
+app.state.config.AUDIO_RT_CONTEXT_SUMMARY_PROMPT = AUDIO_RT_CONTEXT_SUMMARY_PROMPT
+app.state.config.AUDIO_RT_CONTEXT_SUMMARY_MAX_SIZE = AUDIO_RT_CONTEXT_SUMMARY_MAX_SIZE
+app.state.config.AUDIO_RT_SPEED = AUDIO_RT_SPEED
+app.state.config.AUDIO_RT_TRANSCRIPTION_PROMPT = AUDIO_RT_TRANSCRIPTION_PROMPT
+app.state.config.AUDIO_RT_VAD_IDLE_TIMEOUT_MS = AUDIO_RT_VAD_IDLE_TIMEOUT_MS
+app.state.config.AUDIO_RT_VAD_CREATE_RESPONSE = AUDIO_RT_VAD_CREATE_RESPONSE
+app.state.config.AUDIO_RT_VAD_INTERRUPT_RESPONSE = AUDIO_RT_VAD_INTERRUPT_RESPONSE
+app.state.config.AUDIO_RT_SESSION_TIMEOUT = AUDIO_RT_SESSION_TIMEOUT
+app.state.config.AUDIO_RT_IDLE_CALL_CHECKIN_INTERVAL = AUDIO_RT_IDLE_CALL_CHECKIN_INTERVAL
+app.state.config.AUDIO_RT_IDLE_CALL_CHECKIN_PROMPT = AUDIO_RT_IDLE_CALL_CHECKIN_PROMPT
+app.state.config.AUDIO_RT_TRUNCATION_STRATEGY = AUDIO_RT_TRUNCATION_STRATEGY
+app.state.config.AUDIO_RT_TRUNCATION_RETENTION_RATIO = AUDIO_RT_TRUNCATION_RETENTION_RATIO
+app.state.config.AUDIO_RT_TRUNCATION_TOKEN_LIMIT = AUDIO_RT_TRUNCATION_TOKEN_LIMIT
+
 
 app.state.faster_whisper_model = None
 app.state.speech_synthesiser = None
@@ -1781,6 +1853,9 @@ async def chat_completion(
         try:
             form_data, metadata, events = await process_chat_payload(request, form_data, user, metadata, model)
 
+            if should_route_chat_to_realtime(request, model):
+                return await route_chat_completion_to_realtime(request, form_data, user)
+
             response = await chat_completion_handler(request, form_data, user)
             if metadata.get('chat_id') and metadata.get('message_id'):
                 try:
@@ -2109,6 +2184,10 @@ async def get_app_config(request: Request):
                     },
                     'stt': {
                         'engine': app.state.config.STT_ENGINE,
+                    },
+                    'realtime': {
+                        'enabled': app.state.config.AUDIO_RT_ENGINE == 'openai'
+                        and bool(app.state.config.AUDIO_RT_API_KEY),
                     },
                 },
                 'file': {

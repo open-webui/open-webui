@@ -32,6 +32,7 @@ from open_webui.config import (
 
 from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, GLOBAL_LOG_LEVEL
 from open_webui.models.users import UserModel
+from open_webui.realtime.catalog import merge_realtime_models
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -74,7 +75,8 @@ async def get_all_base_models(request: Request, user: UserModel = None):
 
     openai_models, ollama_models, function_models = await asyncio.gather(openai_task, ollama_task, function_task)
 
-    return function_models + openai_models + ollama_models
+    base_models = function_models + openai_models + ollama_models
+    return await merge_realtime_models(request, base_models, user=user)
 
 
 async def get_all_models(request, refresh: bool = False, user: UserModel = None):

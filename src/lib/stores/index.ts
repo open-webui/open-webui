@@ -1,6 +1,7 @@
 import { APP_NAME } from '$lib/constants';
 import { type Writable, writable } from 'svelte/store';
 import type { ModelConfig } from '$lib/apis';
+import type { RealtimeClientConfig } from '$lib/apis/audio';
 import type { Banner } from '$lib/types';
 import type { Socket } from 'socket.io-client';
 import type { AudioQueue } from '$lib/utils/audio';
@@ -80,6 +81,7 @@ export const pyodideWorker: Writable<Worker | null> = writable(null);
 export const banners: Writable<Banner[]> = writable([]);
 
 export const settings: Writable<Settings> = writable({});
+export const realtimeClientConfig: Writable<RealtimeClientConfig | null> = writable(null);
 
 export const audioQueue = writable<AudioQueue | null>(null);
 export const chatRequestQueues: Writable<
@@ -240,11 +242,26 @@ type ModelOptions = {
 type AudioSettings = {
 	stt: any;
 	tts: any;
+	realtime?: RealtimeAudioSettings;
 	STTEngine?: string;
 	TTSEngine?: string;
 	speaker?: string;
 	model?: string;
 	nonLocalVoices?: boolean;
+};
+
+type RealtimeAudioSettings = {
+	autoUnmuteWhenReady?: boolean;
+	voice?: string;
+	speed?: number;
+	vadType?: 'semantic_vad' | 'server_vad' | 'push_to_talk';
+	semanticVadEagerness?: 'low' | 'medium' | 'high' | 'auto';
+	serverVadThreshold?: number;
+	serverVadSilenceDurationMs?: number;
+	serverVadPrefixPaddingMs?: number;
+	noiseReduction?: 'near_field' | 'far_field' | '';
+	vadCreateResponse?: boolean;
+	vadInterruptResponse?: boolean;
 };
 
 type TitleSettings = {
@@ -297,6 +314,19 @@ type Config = {
 	ui?: {
 		pending_user_overlay_title?: string;
 		pending_user_overlay_content?: string;
+	};
+	audio?: {
+		tts?: {
+			engine?: string;
+			voice?: string;
+			split_on?: string;
+		};
+		stt?: {
+			engine?: string;
+		};
+		realtime?: {
+			enabled?: boolean;
+		};
 	};
 };
 

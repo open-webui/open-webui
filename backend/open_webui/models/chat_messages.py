@@ -284,6 +284,12 @@ class ChatMessageTable:
             )
             return [chat_id for chat_id, _ in chat_ids]
 
+    def delete_message_by_id(self, id: str, db: Optional[Session] = None) -> bool:
+        with get_db_context(db) as db:
+            db.query(ChatMessage).filter_by(id=id).delete()
+            db.commit()
+            return True
+
     def delete_messages_by_chat_id(self, chat_id: str, db: Optional[Session] = None) -> bool:
         with get_db_context(db) as db:
             db.query(ChatMessage).filter_by(chat_id=chat_id).delete()

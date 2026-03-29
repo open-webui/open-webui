@@ -13,6 +13,11 @@
 	import { get, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import {
+		modelHasRealtimeCapability,
+		modelLooksRealtimeCapable
+	} from './MessageInput/realtime/model-capabilities';
+	import { getRealtimeToolTargets } from './MessageInput/realtime/tool-targets';
 
 	import {
 		chatId,
@@ -46,7 +51,8 @@
 		selectedTerminalId,
 		showFileNavPath,
 		showFileNavDir,
-		chatRequestQueues
+		chatRequestQueues,
+		realtimeClientConfig
 	} from '$lib/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -77,6 +83,7 @@
 		updateChatFolderIdById
 	} from '$lib/apis/chats';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
+	import { getRealtimeClientConfig, type RealtimeClientConfig } from '$lib/apis/audio';
 	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
 	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
 	import {
@@ -98,6 +105,7 @@
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/chat/Navbar.svelte';
 	import ChatControls from './ChatControls.svelte';
+	import VoiceOverlayHost from './VoiceOverlayHost.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
@@ -168,6 +176,271 @@
 
 	let taskIds = null;
 
+	let realtimeClientConfigEnabledState: boolean | null = null;
+	let realtimeClientConfigLoadStatus: 'idle' | 'loading' | 'loaded' | 'failed' = 'idle';
+	let realtimeClientConfigLoadPromise: Promise<RealtimeClientConfig | null> | null = null;
+	let realtimeClientConfigLoadVersion = 0;
+
+	const resetRealtimeClientConfigState = () => {
+		realtimeClientConfigLoadVersion += 1;
+		realtimeClientConfig.set(null);
+		realtimeClientConfigLoadStatus = 'idle';
+		realtimeClientConfigLoadPromise = null;
+	};
+
+	const loadRealtimeClientConfig = async ({
+		retryFailed = false
+	}: {
+		retryFailed?: boolean;
+	} = {}): Promise<RealtimeClientConfig | null> => {
+		if (typeof window === 'undefined') {
+			return null;
+		}
+
+		const realtimeEnabled = $config?.audio?.realtime?.enabled === true;
+		if (realtimeClientConfigEnabledState !== realtimeEnabled) {
+			realtimeClientConfigEnabledState = realtimeEnabled;
+			resetRealtimeClientConfigState();
+		}
+
+		if (!realtimeEnabled) {
+			return null;
+		}
+
+		if (realtimeClientConfigLoadPromise) {
+			return await realtimeClientConfigLoadPromise;
+		}
+
+		if (realtimeClientConfigLoadStatus === 'loaded') {
+			return $realtimeClientConfig;
+		}
+
+		if (realtimeClientConfigLoadStatus === 'failed' && !retryFailed) {
+			return null;
+		}
+
+		realtimeClientConfigLoadStatus = 'loading';
+		const loadVersion = realtimeClientConfigLoadVersion;
+		realtimeClientConfigLoadPromise = (async () => {
+			try {
+				const nextRealtimeClientConfig = await getRealtimeClientConfig(localStorage.token);
+				if (loadVersion !== realtimeClientConfigLoadVersion) {
+					return null;
+				}
+				realtimeClientConfig.set(nextRealtimeClientConfig ?? null);
+				realtimeClientConfigLoadStatus = nextRealtimeClientConfig ? 'loaded' : 'failed';
+				return nextRealtimeClientConfig ?? null;
+			} catch (error) {
+				if (loadVersion !== realtimeClientConfigLoadVersion) {
+					return null;
+				}
+				console.warn('Failed to load realtime client config for chat UI', error);
+				realtimeClientConfig.set(null);
+				realtimeClientConfigLoadStatus = 'failed';
+				return null;
+			} finally {
+				if (loadVersion === realtimeClientConfigLoadVersion) {
+					realtimeClientConfigLoadPromise = null;
+				}
+			}
+		})();
+
+		return await realtimeClientConfigLoadPromise;
+	};
+
+	$: if ($config !== undefined) {
+		void loadRealtimeClientConfig();
+	}
+
+	const getRealtimeSendModelIds = (modelId: string | null = null) =>
+		modelId
+			? [modelId]
+			: atSelectedModel !== undefined
+				? [atSelectedModel.id]
+				: selectedModels.filter(Boolean);
+
+	const isSelectedRealtimeModel = (modelId: string | null = null) =>
+		getRealtimeSendModelIds(modelId).some((candidateModelId) =>
+			modelHasRealtimeCapability($models, candidateModelId, $realtimeClientConfig)
+		);
+
+	const isPotentialRealtimeModel = (modelId: string | null = null) =>
+		getRealtimeSendModelIds(modelId).some((candidateModelId) => {
+			const candidateModel = $models.find((candidate) => candidate.id === candidateModelId) ?? null;
+			return modelLooksRealtimeCapable(candidateModel, candidateModelId);
+		});
+
+	const useRealtimeOverlay = () => $showCallOverlay && isSelectedRealtimeModel();
+
+	const closeVoiceOverlay = async ({ clearRoute = true } = {}) => {
+		if ($showCallOverlay) {
+			showCallOverlay.set(false);
+			await tick();
+		}
+
+		if (clearRoute) {
+			clearVoiceOverlayRouteFlag();
+		}
+	};
+
+	const clearVoiceOverlayRouteFlag = () => {
+		if (typeof window === 'undefined' || !$page.url.searchParams.has('call')) {
+			return;
+		}
+
+		const nextUrl = new URL(window.location.href);
+		nextUrl.searchParams.delete('call');
+		window.history.replaceState(
+			window.history.state,
+			'',
+			`${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`
+		);
+	};
+
+	const maybeOpenVoiceOverlayFromRoute = async () => {
+		if (loading || $page.url.searchParams.get('call') !== 'true') {
+			return;
+		}
+
+		try {
+			if ($showCallOverlay) {
+				await closeVoiceOverlay({ clearRoute: false });
+			}
+			if (!messageInput) {
+				await tick();
+			}
+			await messageInput?.requestVoiceOverlayOpen();
+		} finally {
+			clearVoiceOverlayRouteFlag();
+		}
+	};
+
+	const resolveVoiceOverlayMode = async (
+		modelId: string | null = null
+	): Promise<'call' | 'realtime' | null> => {
+		if ($config?.audio?.realtime?.enabled !== true) {
+			return 'call';
+		}
+
+		if (!isPotentialRealtimeModel(modelId)) {
+			return 'call';
+		}
+
+		let realtimeConfig = $realtimeClientConfig;
+		if (!realtimeConfig || realtimeClientConfigLoadStatus === 'failed') {
+			realtimeConfig = await loadRealtimeClientConfig({ retryFailed: true });
+			if (!realtimeConfig) {
+				toast.error($i18n.t('Voice session availability could not be confirmed. Please try again.'));
+				return null;
+			}
+		}
+
+		if (!getRealtimeSendModelIds(modelId).some((candidateModelId) =>
+			modelHasRealtimeCapability($models, candidateModelId, realtimeConfig)
+		)) {
+			return 'call';
+		}
+
+		return 'realtime';
+	};
+
+	const ensureRealtimeSendReady = async (modelId: string | null = null): Promise<boolean> => {
+		const voiceOverlayMode = await resolveVoiceOverlayMode(modelId);
+		if (voiceOverlayMode === null) {
+			return false;
+		}
+		if (voiceOverlayMode !== 'realtime') {
+			return true;
+		}
+
+		if (!messageInput) {
+			await tick();
+		}
+		if (!messageInput) {
+			toast.error($i18n.t('Voice session could not start. Please try again.'));
+			return false;
+		}
+		const opened = await messageInput.requestVoiceOverlayOpen(modelId);
+		return opened !== false;
+	};
+
+	const ensureRealtimeChildId = (message, childId) => {
+		if (!message || !childId) {
+			return;
+		}
+
+		message.childrenIds = message.childrenIds ?? [];
+		if (!message.childrenIds.includes(childId)) {
+			message.childrenIds = [...message.childrenIds, childId];
+		}
+	};
+
+	const preferRealtimeCreateContent = (existingContent, incomingContent) => {
+		const placeholderContent = ['', '*Transcribing...*', '*Listening...*'];
+		const safeExistingContent = existingContent ?? '';
+		const safeIncomingContent = incomingContent ?? '';
+
+		if (
+			safeExistingContent &&
+			!placeholderContent.includes(safeExistingContent) &&
+			placeholderContent.includes(safeIncomingContent)
+		) {
+			return safeExistingContent;
+		}
+
+		return safeIncomingContent || safeExistingContent;
+	};
+
+	const mergeRealtimeCreateMessage = ({
+		existingMessage,
+		incomingMessage,
+		parentId = null,
+		childrenIds = [],
+		done = false
+	}) => {
+		const timestamp = existingMessage?.timestamp ?? Math.floor(Date.now() / 1000);
+
+		return {
+			...(existingMessage ?? {}),
+			...(incomingMessage ?? {}),
+			parentId: parentId ?? existingMessage?.parentId ?? null,
+			childrenIds:
+				existingMessage?.childrenIds !== undefined ? existingMessage.childrenIds : childrenIds,
+			content: preferRealtimeCreateContent(existingMessage?.content, incomingMessage?.content),
+			done: existingMessage?.done ?? done,
+			timestamp
+		};
+	};
+
+	const clearRealtimePlaceholder = (message, placeholder) => {
+		if (useRealtimeOverlay() && message?.content === placeholder) {
+			message.content = '';
+		}
+	};
+
+	const pruneRealtimeTurnMessages = (messageId) => {
+		const userMessage = history.messages[messageId];
+		if (!userMessage) return;
+
+		const assistantMessageId = userMessage.childrenIds?.[0];
+		const parentId = userMessage.parentId || null;
+
+		if (parentId && history.messages[parentId]) {
+			history.messages[parentId].childrenIds = (
+				history.messages[parentId].childrenIds ?? []
+			).filter((id) => id !== messageId);
+		}
+
+		delete history.messages[messageId];
+		if (assistantMessageId) {
+			delete history.messages[assistantMessageId];
+		}
+
+		if ([messageId, assistantMessageId].includes(history.currentId)) {
+			history.currentId = parentId;
+		}
+	};
+
 	// Chat Input
 	let prompt = '';
 	let chatFiles = [];
@@ -180,6 +453,7 @@
 
 	const navigateHandler = async () => {
 		loading = true;
+		await closeVoiceOverlay();
 
 		prompt = '';
 		messageInput?.setText('');
@@ -228,6 +502,7 @@
 
 			const chatInput = document.getElementById('chat-input');
 			chatInput?.focus();
+			await maybeOpenVoiceOverlayFromRoute();
 		} else {
 			await goto('/');
 		}
@@ -417,15 +692,76 @@
 
 	const chatEventHandler = async (event, cb) => {
 		console.log(event);
-
-		if (event.chat_id === $chatId) {
+		// Match events by chat_id: normal chats match $chatId directly;
+		// new realtime chats use "local:<socketId>" before backend creates the real chat
+		const matches =
+			event.chat_id === $chatId || (!$chatId && event.chat_id === `local:${$socket?.id}`);
+		if (matches) {
 			await tick();
+
+			const type = event?.data?.type ?? null;
+			const data = event?.data?.data ?? null;
+
+			if (type === 'chat:message:create' && data) {
+				const parentMessage = data.parentId ? history.messages[data.parentId] : null;
+
+				if (data.userMessage && data.assistantMessage) {
+					if (parentMessage) {
+						ensureRealtimeChildId(parentMessage, data.userMessage.id);
+						history.messages[parentMessage.id] = parentMessage;
+					}
+
+					const existingUserMessage = history.messages[data.userMessage.id];
+					const nextUserMessage = mergeRealtimeCreateMessage({
+						existingMessage: existingUserMessage,
+						incomingMessage: data.userMessage,
+						parentId: data.parentId || null,
+						childrenIds: existingUserMessage?.childrenIds ?? []
+					});
+					ensureRealtimeChildId(nextUserMessage, data.assistantMessage.id);
+					history.messages[data.userMessage.id] = nextUserMessage;
+
+					history.messages[data.assistantMessage.id] = mergeRealtimeCreateMessage({
+						existingMessage: history.messages[data.assistantMessage.id],
+						incomingMessage: data.assistantMessage,
+						parentId: data.userMessage.id,
+						childrenIds: history.messages[data.assistantMessage.id]?.childrenIds ?? [],
+						done: false
+					});
+
+					history.currentId = data.currentId || data.assistantMessage.id;
+					await tick();
+
+					if (autoScroll) {
+						scrollToBottom();
+					}
+				} else if (data.assistantMessage && parentMessage) {
+					ensureRealtimeChildId(parentMessage, data.assistantMessage.id);
+					history.messages[parentMessage.id] = parentMessage;
+
+					history.messages[data.assistantMessage.id] = mergeRealtimeCreateMessage({
+						existingMessage: history.messages[data.assistantMessage.id],
+						incomingMessage: data.assistantMessage,
+						parentId: data.parentId,
+						childrenIds: history.messages[data.assistantMessage.id]?.childrenIds ?? [],
+						done: false
+					});
+
+					history.currentId = data.currentId || data.assistantMessage.id;
+					await tick();
+
+					if (autoScroll) {
+						scrollToBottom();
+					}
+				}
+			} else if (type === 'chat:message:prune') {
+				pruneRealtimeTurnMessages(event.message_id);
+				return;
+			}
+
 			let message = history.messages[event.message_id];
 
 			if (message) {
-				const type = event?.data?.type ?? null;
-				const data = event?.data?.data ?? null;
-
 				if (type === 'status') {
 					if (message?.statusHistory) {
 						message.statusHistory.push(data);
@@ -446,6 +782,7 @@
 						message.done = true;
 					}
 				} else if (type === 'chat:message:delta' || type === 'message') {
+					clearRealtimePlaceholder(message, '*Transcribing...*');
 					message.content += data.content;
 				} else if (type === 'chat:message' || type === 'replace') {
 					message.content = data.content;
@@ -465,7 +802,7 @@
 						}
 					}, 100);
 				} else if (type === 'chat:message:error') {
-					message.error = data.error;
+					message.error = typeof data.error === 'string' ? { content: data.error } : data.error;
 				} else if (type === 'chat:message:follow_ups') {
 					message.followUps = data.follow_ups;
 
@@ -660,6 +997,22 @@
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('events', chatEventHandler);
 
+		// When backend creates a real chat for a realtime voice session,
+		// update the frontend chatId, URL, and sidebar
+		$socket?.on('rt:chat_id_update', async (data) => {
+			if (
+				data?.new_id &&
+				(!$chatId || $chatId === data.old_id) &&
+				(!data.old_id || data.old_id.startsWith('local:') || $chatId === data.old_id)
+			) {
+				await chatId.set(data.new_id);
+				window.history.replaceState(window.history.state, '', `/c/${data.new_id}`);
+				await getChatList(localStorage.token, $currentChatPage)
+					.then((list) => chats.set(list))
+					.catch(() => {});
+			}
+		});
+
 		$audioQueue?.destroy();
 
 		const audioQueueInstance = new AudioQueue(document.getElementById('audioElement'));
@@ -707,7 +1060,6 @@
 			}
 
 			if (!value) {
-				showCallOverlay.set(false);
 				showArtifacts.set(false);
 				showEmbeds.set(false);
 			}
@@ -773,6 +1125,7 @@
 				selectedFolderSubscribe();
 				window.removeEventListener('message', onMessageHandler);
 				$socket?.off('events', chatEventHandler);
+				$socket?.off('rt:chat_id_update');
 				audioQueueInstance?.destroy();
 				audioQueue.set(null);
 			} catch (e) {
@@ -1052,6 +1405,11 @@
 			await temporaryChatEnabled.set(false);
 		}
 
+		// Block temp-chat mode for realtime models — they require persisted chats
+		if (isSelectedRealtimeModel() && $temporaryChatEnabled) {
+			await temporaryChatEnabled.set(false);
+		}
+
 		const availableModels = $models
 			.filter((m) => !(m?.info?.meta?.hidden ?? false))
 			.map((m) => m.id);
@@ -1139,7 +1497,7 @@
 		if ($mobile) {
 			await showControls.set(false);
 		}
-		await showCallOverlay.set(false);
+		await closeVoiceOverlay();
 		await showArtifacts.set(false);
 
 		if ($page.url.pathname.includes('/c/')) {
@@ -1204,12 +1562,6 @@
 				selectedToolIds = [...selectedToolIds, pendingToolId];
 			}
 		}
-
-		if ($page.url.searchParams.get('call') === 'true') {
-			showCallOverlay.set(true);
-			showControls.set(true);
-		}
-
 		if ($page.url.searchParams.get('q')) {
 			const q = $page.url.searchParams.get('q') ?? '';
 			messageInput?.setText(q);
@@ -1228,6 +1580,7 @@
 
 		const chatInput = document.getElementById('chat-input');
 		setTimeout(() => chatInput?.focus(), 0);
+		await maybeOpenVoiceOverlayFromRoute();
 	};
 
 	const loadChat = async () => {
@@ -1385,7 +1738,7 @@
 		await tick();
 
 		if ($chatId == _chatId) {
-			if (!$temporaryChatEnabled) {
+			if (!$temporaryChatEnabled && !useRealtimeOverlay()) {
 				chat = await updateChatById(localStorage.token, _chatId, {
 					models: selectedModels,
 					messages: messages,
@@ -1440,7 +1793,7 @@
 		}
 
 		if ($chatId == _chatId) {
-			if (!$temporaryChatEnabled) {
+			if (!$temporaryChatEnabled && !useRealtimeOverlay()) {
 				chat = await updateChatById(localStorage.token, _chatId, {
 					models: selectedModels,
 					messages: messages,
@@ -1466,7 +1819,6 @@
 	};
 
 	const createMessagePair = async (userPrompt) => {
-		messageInput?.setText('');
 		if (selectedModels.length === 0) {
 			toast.error($i18n.t('Model not selected'));
 		} else {
@@ -1477,6 +1829,12 @@
 				toast.error($i18n.t('Model not found'));
 				return;
 			}
+
+			if (!(await ensureRealtimeSendReady(modelId))) {
+				return;
+			}
+
+			messageInput?.setText('');
 
 			const messages = createMessagesList(history, history.currentId);
 			const parentMessage = messages.length !== 0 ? messages.at(-1) : null;
@@ -1529,6 +1887,25 @@
 			}
 		}
 	};
+
+	const getSelectedToolTargets = () =>
+		getRealtimeToolTargets(selectedToolIds, $toolServers ?? [], $terminalServers ?? []);
+
+	let realtimeToolTargets = {
+		toolIds: [],
+		toolServers: []
+	};
+	$: {
+		selectedToolIds;
+		$toolServers;
+		$terminalServers;
+		realtimeToolTargets = getSelectedToolTargets();
+	}
+
+	// Block temp-chat when switching to a realtime model (requires persisted chat)
+	$: if (isSelectedRealtimeModel() && $temporaryChatEnabled) {
+		temporaryChatEnabled.set(false);
+	}
 
 	const addMessages = async ({ modelId, parentId, messages }) => {
 		const model = $models.filter((m) => m.id === modelId).at(0);
@@ -1612,6 +1989,7 @@
 		if (choices) {
 			if (choices[0]?.message?.content) {
 				// Non-stream response
+				clearRealtimePlaceholder(message, '*Listening...*');
 				message.content += choices[0]?.message?.content;
 			} else {
 				// Stream response
@@ -1619,6 +1997,7 @@
 				if (message.content == '' && value == '\n') {
 					console.log('Empty response');
 				} else {
+					clearRealtimePlaceholder(message, '*Listening...*');
 					message.content += value;
 
 					if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
@@ -1848,6 +2227,12 @@
 			}
 		}
 
+		if (!(await ensureRealtimeSendReady())) {
+			messageInput?.setText(userPrompt);
+			prompt = userPrompt;
+			return;
+		}
+
 		messageInput?.setText('');
 		prompt = '';
 
@@ -1898,7 +2283,7 @@
 
 		saveSessionSelectedModels();
 
-		await sendMessage(history, userMessageId, { newChat: true });
+		await sendMessage(history, userMessageId, { newChat: true, skipRealtimePreflight: true });
 	};
 
 	const sendMessage = async (
@@ -1908,14 +2293,23 @@
 			messages = null,
 			modelId = null,
 			modelIdx = null,
-			newChat = false
+			newChat = false,
+			skipRealtimePreflight = false
 		}: {
 			messages?: any[] | null;
 			modelId?: string | null;
 			modelIdx?: number | null;
 			newChat?: boolean;
+			skipRealtimePreflight?: boolean;
 		} = {}
 	) => {
+		if (!skipRealtimePreflight) {
+			const realtimeOk = await ensureRealtimeSendReady(modelId);
+			if (!realtimeOk) {
+				return;
+			}
+		}
+
 		if (autoScroll) {
 			scrollToBottom();
 		}
@@ -2178,22 +2572,7 @@
 			})
 			.filter((message) => message?.role === 'user' || message?.content?.trim());
 
-		const toolIds = [];
-		const toolServerIds = [];
-
-		for (const toolId of selectedToolIds) {
-			if (toolId.startsWith('direct_server:')) {
-				let serverId = toolId.replace('direct_server:', '');
-				// Check if serverId is a number
-				if (!isNaN(parseInt(serverId))) {
-					toolServerIds.push(parseInt(serverId));
-				} else {
-					toolServerIds.push(serverId);
-				}
-			} else {
-				toolIds.push(toolId);
-			}
-		}
+		const { toolIds, toolServers } = getSelectedToolTargets();
 
 		// Parse skill mentions (<$skillId|label>) from user messages
 		const skillMentionRegex = /<\$([^|>]+)\|?[^>]*>/g;
@@ -2251,13 +2630,7 @@
 				tool_ids: toolIds.length > 0 ? toolIds : undefined,
 				skill_ids: skillIds.length > 0 ? skillIds : undefined,
 				terminal_id: activeTerminalId ?? undefined,
-				tool_servers: [
-					...($toolServers ?? []).filter(
-						(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
-					),
-					// Direct terminal servers — always included when enabled (not routed through selectedToolIds)
-					...($terminalServers ?? []).filter((t) => !t.id)
-				],
+				tool_servers: toolServers,
 				features: getFeatures(),
 				variables: {
 					...getPromptVariables(
@@ -2386,6 +2759,12 @@
 	};
 
 	const stopResponse = async () => {
+		if (isSelectedRealtimeModel()) {
+			if ($showCallOverlay) {
+				await closeVoiceOverlay();
+			}
+		}
+
 		if (taskIds) {
 			for (const taskId of taskIds) {
 				const res = await stopTask(localStorage.token, taskId).catch((error) => {
@@ -2420,7 +2799,18 @@
 		await processNextInQueue($chatId);
 	};
 
-	const submitMessage = async (parentId, prompt) => {
+	const submitMessage = async (parentId, prompt, files = undefined) => {
+		const parentMessage =
+			parentId !== null && parentId !== undefined ? history.messages[parentId] : null;
+		if (parentId !== null && parentId !== undefined && !parentMessage) {
+			toast.error($i18n.t('Parent message not found'));
+			return;
+		}
+
+		if (!(await ensureRealtimeSendReady())) {
+			return;
+		}
+
 		let userPrompt = prompt;
 		let userMessageId = uuidv4();
 
@@ -2430,15 +2820,14 @@
 			childrenIds: [],
 			role: 'user',
 			content: userPrompt,
+			...(files !== undefined ? { files } : {}),
 			models: selectedModels,
 			timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 		};
 
-		if (parentId !== null) {
-			history.messages[parentId].childrenIds = [
-				...history.messages[parentId].childrenIds,
-				userMessageId
-			];
+		if (parentMessage) {
+			parentMessage.childrenIds = [...(parentMessage.childrenIds ?? []), userMessageId];
+			history.messages[parentId] = parentMessage;
 		}
 
 		history.messages[userMessageId] = userMessage;
@@ -2450,7 +2839,7 @@
 			scrollToBottom();
 		}
 
-		await sendMessage(history, userMessageId);
+		await sendMessage(history, userMessageId, { skipRealtimePreflight: true });
 	};
 
 	const regenerateResponse = async (message, suggestionPrompt = null) => {
@@ -2461,6 +2850,12 @@
 
 			if (!userMessage) {
 				toast.error($i18n.t('Parent message not found'));
+				return;
+			}
+
+			const targetModelId =
+				(userMessage?.models ?? [...selectedModels]).length > 1 ? message.model : null;
+			if (!(await ensureRealtimeSendReady(targetModelId))) {
 				return;
 			}
 
@@ -2480,14 +2875,15 @@
 							]
 						}
 					: {}),
-				...((userMessage?.models ?? [...selectedModels]).length > 1
-					? {
-							// If multiple models are selected, use the model from the message
-							modelId: message.model,
-							modelIdx: message.modelIdx
-						}
-					: {})
-			});
+					...((userMessage?.models ?? [...selectedModels]).length > 1
+						? {
+								// If multiple models are selected, use the model from the message
+								modelId: message.model,
+								modelIdx: message.modelIdx
+							}
+						: {}),
+					skipRealtimePreflight: true
+				});
 		}
 	};
 
@@ -2611,6 +3007,7 @@
 	};
 
 	const saveChatHandler = async (_chatId, history) => {
+		if (useRealtimeOverlay()) return; // Sideband owns DB writes during realtime
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
 				chat = await updateChatById(localStorage.token, _chatId, {
@@ -2853,6 +3250,7 @@
 									{history}
 									{taskIds}
 									{selectedModels}
+									{resolveVoiceOverlayMode}
 									bind:files
 									bind:prompt
 									bind:autoScroll
@@ -2932,17 +3330,18 @@
 									<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
 								</div>
 							</div>
-						{:else}
-							<div class="flex items-center h-full">
-								<Placeholder
-									{history}
-									{selectedModels}
-									bind:messageInput
-									bind:files
-									bind:prompt
-									bind:autoScroll
-									bind:selectedToolIds
-									bind:selectedFilterIds
+							{:else}
+								<div class="flex items-center h-full">
+									<Placeholder
+										{history}
+										{selectedModels}
+										{resolveVoiceOverlayMode}
+										bind:messageInput
+										bind:files
+										bind:prompt
+										bind:autoScroll
+										bind:selectedToolIds
+										bind:selectedFilterIds
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
@@ -2973,6 +3372,28 @@
 					</div>
 				</Pane>
 
+				<VoiceOverlayHost
+					bind:files
+					modelId={selectedModelIds?.at(0) ?? null}
+					models={selectedModelIds.reduce((a, e) => {
+						const model = $models.find((m) => m.id === e);
+						if (model) {
+							return [...a, model];
+						}
+						return a;
+					}, [])}
+					chatId={$chatId}
+					selectedToolIds={realtimeToolTargets.toolIds}
+					toolServers={realtimeToolTargets.toolServers}
+					features={getFeatures()}
+					sessionId={$socket?.id}
+					terminalId={$selectedTerminalId}
+					systemPrompt={params?.system || $settings?.system || ''}
+					{submitPrompt}
+					{stopResponse}
+					{eventTarget}
+				/>
+
 				<ChatControls
 					bind:this={controlPaneComponent}
 					bind:history
@@ -2980,8 +3401,6 @@
 					bind:params
 					bind:files
 					bind:pane={controlPane}
-					chatId={$chatId}
-					modelId={selectedModelIds?.at(0) ?? null}
 					models={selectedModelIds.reduce((a, e, i, arr) => {
 						const model = $models.find((m) => m.id === e);
 						if (model) {
@@ -2989,10 +3408,7 @@
 						}
 						return a;
 					}, [])}
-					{submitPrompt}
-					{stopResponse}
 					{showMessage}
-					{eventTarget}
 					{codeInterpreterEnabled}
 				/>
 			</PaneGroup>

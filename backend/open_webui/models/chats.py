@@ -454,7 +454,7 @@ class ChatTable:
         return chat.chat.get('history', {}).get('messages', {}).get(message_id, {})
 
     def upsert_message_to_chat_by_id_and_message_id(
-        self, id: str, message_id: str, message: dict
+        self, id: str, message_id: str, message: dict, advance_current: bool = True
     ) -> Optional[ChatModel]:
         chat = self.get_chat_by_id(id)
         if chat is None:
@@ -476,7 +476,8 @@ class ChatTable:
         else:
             history['messages'][message_id] = message
 
-        history['currentId'] = message_id
+        if advance_current:
+            history["currentId"] = message_id
 
         chat['history'] = history
 

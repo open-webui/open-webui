@@ -45,6 +45,54 @@
 		keywords: string[];
 	}
 
+	type AudioSearchTarget =
+		| 'realtime-voice'
+		| 'realtime-auto-unmute'
+		| 'realtime-voice-choice'
+		| 'realtime-speech-speed'
+		| 'realtime-vad'
+		| 'realtime-response-eagerness'
+		| 'realtime-noise-reduction';
+
+	const normalizeSearch = (value: string) => value.toLowerCase().trim().replace(/\s+/g, ' ');
+
+	const audioSearchTargets: { id: AudioSearchTarget; keywords: string[] }[] = [
+		{
+			id: 'realtime-voice',
+			keywords: ['realtime voice', 'realtime audio']
+		},
+		{
+			id: 'realtime-auto-unmute',
+			keywords: ['auto unmute', 'auto-unmute', 'auto unmute microphone when call is ready']
+		},
+		{
+			id: 'realtime-voice-choice',
+			keywords: ['realtime voice choice', 'realtime call voice', 'assistant voice']
+		},
+		{
+			id: 'realtime-speech-speed',
+			keywords: ['speech speed', 'realtime speech speed', 'voice speed']
+		},
+		{
+			id: 'realtime-vad',
+			keywords: [
+				'voice activity detection',
+				'vad',
+				'smart ai powered',
+				'standard volume based',
+				'push to talk'
+			]
+		},
+		{
+			id: 'realtime-response-eagerness',
+			keywords: ['response eagerness']
+		},
+		{
+			id: 'realtime-noise-reduction',
+			keywords: ['noise reduction']
+		}
+	];
+
 	const allSettings: SettingsTab[] = [
 		{
 			id: 'general',
@@ -286,6 +334,13 @@
 				'language',
 				'non local voices',
 				'nonlocalvoices',
+				'realtime audio',
+				'realtime voice',
+				'auto unmute',
+				'voice activity detection',
+				'response eagerness',
+				'noise reduction',
+				'push to talk',
 				'save settings',
 				'savesettings',
 				'set voice',
@@ -474,6 +529,7 @@
 
 	let availableSettings = [];
 	let filteredSettings = [];
+	let audioSearchTarget: AudioSearchTarget | null = null;
 
 	let search = '';
 	let searchDebounceTimeout;
@@ -507,17 +563,33 @@
 	};
 
 	const setFilteredSettings = () => {
+		const normalizedSearch = normalizeSearch(search);
+		audioSearchTarget =
+			normalizedSearch === ''
+				? null
+				: (audioSearchTargets.find((target) =>
+						target.keywords.some((keyword) => {
+							const normalizedKeyword = normalizeSearch(keyword);
+							return (
+								normalizedKeyword.includes(normalizedSearch) ||
+								normalizedSearch.includes(normalizedKeyword)
+							);
+						})
+					)?.id ?? null);
+
 		filteredSettings = availableSettings
 			.filter((tab) => {
 				return (
 					search === '' ||
-					tab.title.toLowerCase().includes(search.toLowerCase().trim()) ||
-					tab.keywords.some((keyword) => keyword.includes(search.toLowerCase().trim()))
+					tab.title.toLowerCase().includes(normalizedSearch) ||
+					tab.keywords.some((keyword) => normalizeSearch(keyword).includes(normalizedSearch))
 				);
 			})
 			.map((tab) => tab.id);
 
-		if (filteredSettings.length > 0 && !filteredSettings.includes(selectedTab)) {
+		if (audioSearchTarget && filteredSettings.includes('audio')) {
+			selectedTab = 'audio';
+		} else if (filteredSettings.length > 0 && !filteredSettings.includes(selectedTab)) {
 			selectedTab = filteredSettings[0];
 		}
 	};
@@ -914,6 +986,7 @@
 				{:else if selectedTab === 'audio'}
 					<Audio
 						{saveSettings}
+						searchTarget={selectedTab === 'audio' ? audioSearchTarget : null}
 						on:save={() => {
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}

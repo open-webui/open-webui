@@ -24,6 +24,7 @@
 		mobile,
 		settings,
 		models,
+		realtimeClientConfig,
 		config,
 		showCallOverlay,
 		tools,
@@ -96,10 +97,12 @@
 	import ValvesModal from '../workspace/common/ValvesModal.svelte';
 	import Note from '../icons/Note.svelte';
 	import { goto } from '$app/navigation';
+	import { navigating } from '$app/stores';
 	import InputModal from '../common/InputModal.svelte';
 	import Expand from '../icons/Expand.svelte';
 	import QueuedMessageItem from './MessageInput/QueuedMessageItem.svelte';
 	import TaskList from './Messages/ResponseMessage/TaskList.svelte';
+	import { modelUsesRealtime } from './MessageInput/realtime/model-capabilities';
 
 	const i18n = getContext('i18n');
 
@@ -115,9 +118,101 @@
 
 	export let atSelectedModel: Model | undefined = undefined;
 	export let selectedModels: [''];
+	export let resolveVoiceOverlayMode:
+		| ((modelId?: string | null) => Promise<'call' | 'realtime' | null>)
+		| null = null;
 
 	let selectedModelIds = [];
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
+
+	$: voiceOverlayMode = (() => {
+		const modelId = atSelectedModel?.id ?? selectedModels?.[0];
+		const model = modelId ? $models.find((m) => m.id === modelId) : null;
+		const mode = modelUsesRealtime(model, modelId, $realtimeClientConfig) ? 'realtime' : 'call';
+		return mode;
+	})() as 'call' | 'realtime';
+
+	const requestVoiceMediaAccess = async () => {
+		try {
+			let stream = await navigator.mediaDevices.getUserMedia({
+				audio: true
+			});
+
+			if (stream) {
+				const tracks = stream.getTracks();
+				tracks.forEach((track) => track.stop());
+			}
+
+			stream = null;
+			return true;
+		} catch {
+			toast.error($i18n.t('Permission denied when accessing media devices'));
+			return false;
+		}
+	};
+
+	export async function openVoiceOverlay(mode = voiceOverlayMode) {
+		if ($showCallOverlay) {
+			return true;
+		}
+
+		if (selectedModels.length > 1) {
+			toast.error($i18n.t('Select only one model to call'));
+			return false;
+		}
+
+		if (mode === 'call' && $config.audio.stt.engine === 'web') {
+			toast.error($i18n.t('Call feature is not supported when using Web STT engine'));
+			return false;
+		}
+
+		const hasMediaAccess = await requestVoiceMediaAccess();
+		if (!hasMediaAccess) {
+			return false;
+		}
+
+		if (mode === 'call' && $settings.audio?.tts?.engine === 'browser-kokoro') {
+			if (!$TTSWorker) {
+				await TTSWorker.set(
+					new KokoroWorker({
+						dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
+					})
+				);
+				await $TTSWorker.init();
+			}
+		}
+
+		showControls.set(false);
+		showCallOverlay.set(true);
+		return true;
+	}
+
+	export async function requestVoiceOverlayOpen(modelId: string | null = null): Promise<boolean> {
+		if ($navigating?.to?.url) {
+			const target = new URL($navigating.to.url);
+			target.searchParams.set('call', 'true');
+			await goto(`${target.pathname}${target.search}${target.hash}`, {
+				replaceState: true,
+				noScroll: true,
+				keepFocus: true
+			});
+			return true;
+		}
+
+		const mode = resolveVoiceOverlayMode
+			? await resolveVoiceOverlayMode(modelId)
+			: voiceOverlayMode;
+		if (!mode) {
+			return false;
+		}
+
+		if ($showCallOverlay) {
+			await tick();
+			return true;
+		}
+
+		return await openVoiceOverlay(mode);
+	}
 
 	export let history;
 	export let taskIds = null;
@@ -1915,29 +2010,8 @@
 														class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center mr-0.5"
 														type="button"
 														on:click={async () => {
-															try {
-																let stream = await navigator.mediaDevices
-																	.getUserMedia({ audio: true })
-																	.catch(function (err) {
-																		toast.error(
-																			$i18n.t(
-																				`Permission denied when accessing microphone: {{error}}`,
-																				{
-																					error: err
-																				}
-																			)
-																		);
-																		return null;
-																	});
-
-																if (stream) {
-																	recording = true;
-																	const tracks = stream.getTracks();
-																	tracks.forEach((track) => track.stop());
-																}
-																stream = null;
-															} catch {
-																toast.error($i18n.t('Permission denied when accessing microphone'));
+															if (await requestVoiceMediaAccess()) {
+																recording = true;
 															}
 														}}
 														aria-label="Voice Input"
@@ -1966,54 +2040,7 @@
 														class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-1.5 self-center"
 														type="button"
 														on:click={async () => {
-															if (selectedModels.length > 1) {
-																toast.error($i18n.t('Select only one model to call'));
-
-																return;
-															}
-
-															if ($config.audio.stt.engine === 'web') {
-																toast.error(
-																	$i18n.t('Call feature is not supported when using Web STT engine')
-																);
-
-																return;
-															}
-															// check if user has access to getUserMedia
-															try {
-																let stream = await navigator.mediaDevices.getUserMedia({
-																	audio: true
-																});
-																// If the user grants the permission, proceed to show the call overlay
-
-																if (stream) {
-																	const tracks = stream.getTracks();
-																	tracks.forEach((track) => track.stop());
-																}
-
-																stream = null;
-
-																if ($settings.audio?.tts?.engine === 'browser-kokoro') {
-																	// If the user has not initialized the TTS worker, initialize it
-																	if (!$TTSWorker) {
-																		await TTSWorker.set(
-																			new KokoroWorker({
-																				dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
-																			})
-																		);
-
-																		await $TTSWorker.init();
-																	}
-																}
-
-																showCallOverlay.set(true);
-																showControls.set(true);
-															} catch (err) {
-																// If the user denies the permission or an error occurs, show an error message
-																toast.error(
-																	$i18n.t('Permission denied when accessing media devices')
-																);
-															}
+															await requestVoiceOverlayOpen();
 														}}
 														aria-label={$i18n.t('Voice mode')}
 													>

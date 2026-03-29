@@ -8,11 +8,21 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import RealtimeVoiceSettings from './RealtimeVoiceSettings.svelte';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
 
 	export let saveSettings: Function;
+	export let searchTarget:
+		| 'realtime-voice'
+		| 'realtime-auto-unmute'
+		| 'realtime-voice-choice'
+		| 'realtime-speech-speed'
+		| 'realtime-vad'
+		| 'realtime-response-eagerness'
+		| 'realtime-noise-reduction'
+		| null = null;
 
 	// Audio
 	let conversationMode = false;
@@ -35,6 +45,7 @@
 
 	// Audio speed control
 	let playbackRate = 1;
+	let realtimeRef: RealtimeVoiceSettings;
 
 	const getVoices = async () => {
 		if (TTSEngine === 'browser-kokoro') {
@@ -156,21 +167,29 @@
 	id="tab-audio"
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={async () => {
-		saveSettings({
-			audio: {
-				stt: {
-					engine: STTEngine !== '' ? STTEngine : undefined,
-					language: STTLanguage !== '' ? STTLanguage : undefined
-				},
-				tts: {
-					engine: TTSEngine !== '' ? TTSEngine : undefined,
-					engineConfig: TTSEngineConfig,
-					playbackRate: playbackRate,
-					voice: voice !== '' ? voice : undefined,
-					defaultVoice: $config?.audio?.tts?.voice ?? '',
-					nonLocalVoices: $config.audio.tts.engine === '' ? nonLocalVoices : undefined
-				}
+		const nextAudioSettings: Record<string, any> = {
+			stt: {
+				engine: STTEngine !== '' ? STTEngine : undefined,
+				language: STTLanguage !== '' ? STTLanguage : undefined
+			},
+			tts: {
+				engine: TTSEngine !== '' ? TTSEngine : undefined,
+				engineConfig: TTSEngineConfig,
+				playbackRate: playbackRate,
+				voice: voice !== '' ? voice : undefined,
+				defaultVoice: $config?.audio?.tts?.voice ?? '',
+				nonLocalVoices: $config.audio.tts.engine === '' ? nonLocalVoices : undefined
 			}
+		};
+
+		if ($config?.audio?.realtime?.enabled) {
+			nextAudioSettings.realtime = realtimeRef?.getRealtimeSettings() ?? ($settings?.audio?.realtime || {});
+		} else if ($settings?.audio?.realtime) {
+			nextAudioSettings.realtime = $settings.audio.realtime;
+		}
+
+		saveSettings({
+			audio: nextAudioSettings
 		});
 		dispatch('save');
 	}}
@@ -409,6 +428,10 @@
 					</div>
 				</div>
 			</div>
+		{/if}
+
+		{#if $config?.audio?.realtime?.enabled}
+			<RealtimeVoiceSettings bind:this={realtimeRef} {searchTarget} />
 		{/if}
 	</div>
 

@@ -2,7 +2,7 @@
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { marked } from 'marked';
 
-	import { config, user, models as _models, temporaryChatEnabled } from '$lib/stores';
+	import { config, user, models as _models, realtimeClientConfig, temporaryChatEnabled } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 
 	import { blur, fade } from 'svelte/transition';
@@ -11,6 +11,7 @@
 	import { sanitizeResponseContent } from '$lib/utils';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
+	import { modelUsesRealtime } from './MessageInput/realtime/model-capabilities';
 
 	const i18n = getContext('i18n');
 
@@ -118,9 +119,17 @@
 								{/if}
 							</div>
 						{/if}
-					{:else}
-						<div class=" text-gray-400 dark:text-gray-500 line-clamp-1 font-p">
-							{$i18n.t('How can I help you today?')}
+						{:else}
+							<div class=" text-gray-400 dark:text-gray-500 line-clamp-1 font-p">
+								{#if modelUsesRealtime(
+									atSelectedModel ?? models[selectedModelIdx],
+									null,
+									$realtimeClientConfig
+								)}
+									{$i18n.t('Press the voice button or type to start a realtime session')}
+								{:else}
+									{$i18n.t('How can I help you today?')}
+							{/if}
 						</div>
 					{/if}
 				</div>
