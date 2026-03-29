@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { getContext, onDestroy, tick } from 'svelte';
 	import panzoom, { type PanZoom } from 'panzoom';
-	import { marked } from 'marked';
-	import DOMPurify from 'dompurify';
+	import { renderMarkdownToHTMLSanitized } from '$lib/utils/marked';
 	import { settings } from '$lib/stores';
 	import { isCodeFile } from '$lib/utils/codeHighlight';
 	import { initMermaid, renderMermaidDiagram } from '$lib/utils';
@@ -105,7 +104,7 @@
 	$: csvDelimiter = getExt(selectedFile) === 'tsv' ? '\t' : ',';
 	$: renderedHtml =
 		isMarkdown && fileContent
-			? DOMPurify.sanitize(marked.parse(fileContent, { async: false }) as string)
+			? renderMarkdownToHTMLSanitized(fileContent)
 			: '';
 
 	let markdownEl: HTMLDivElement;
