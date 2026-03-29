@@ -136,6 +136,9 @@ colbert-ai==0.2.22
 docker~=7.1.0
 pytest~=8.4.1
 pytest-docker~=3.2.5
+moto[s3]>=5.0.26
+gcp-storage-emulator>=2024.8.3
+pytest-asyncio>=1.0.0
 
 ## LDAP
 ldap3==2.9.1

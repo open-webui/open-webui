@@ -1,5 +1,5 @@
-from test.util.abstract_integration_test import AbstractPostgresTest
-from test.util.mock_user import mock_webui_user
+from open_webui.test.util.abstract_integration_test import AbstractPostgresTest
+from open_webui.test.util.mock_user import mock_webui_user
 
 
 class TestModels(AbstractPostgresTest):
