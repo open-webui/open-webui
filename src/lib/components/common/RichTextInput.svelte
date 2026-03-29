@@ -437,32 +437,35 @@
 		if (!editor || !editor.view) return;
 		text = text.replaceAll('\n\n', '\n');
 
-		// reset the editor content
-		editor.commands.clearContent();
-
-		const { state, view } = editor;
-		const { schema, tr } = state;
-
-		if (text.includes('\n')) {
-			// Multiple lines: make paragraphs
-			const lines = text.split('\n');
-			// Map each line to a paragraph node (empty lines -> empty paragraph)
-			const nodes = lines.map((line) =>
-				schema.nodes.paragraph.create({}, line ? schema.text(line) : undefined)
-			);
-			// Create a document fragment containing all parsed paragraphs
-			const fragment = Fragment.fromArray(nodes);
-			// Replace current selection with these paragraphs
-			tr.replaceSelectionWith(fragment, false /* don't select new */);
-			view.dispatch(tr);
-		} else if (text === '') {
-			// Empty: replace with empty paragraph using tr
+		if (text === '') {
 			editor.commands.clearContent();
 		} else {
-			// Single line: create paragraph with text
-			const paragraph = schema.nodes.paragraph.create({}, schema.text(text));
-			tr.replaceSelectionWith(paragraph, false);
-			view.dispatch(tr);
+			// Regex to find serialized mention tags: <@id>, <#id>, <$id|label>
+			const mentionReG = /<([@#$])([\w.\-:/]+)(?:\|([^>]*))?>/g;
+
+			// Convert each line to a <p>, replacing mention tags with proper
+			// TipTap mention spans that the editor's DOMParser will recognise.
+			const lines = text.split('\n');
+			const htmlContent = lines
+				.map((line) => {
+					if (!line) return '<p></p>';
+					// Escape HTML entities in the line FIRST so we don't corrupt
+					// user text that happens to contain < or >, then re-inject
+					// the mention spans.
+					const escaped = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+					// Now replace the escaped mention patterns back into real spans
+					const withMentions = escaped.replace(
+						/&lt;([@#$])([\w.\-:/]+)(?:\|([^&]*?))?&gt;/g,
+						(_, ch, id, label) => {
+							const display = label?.length ? label : id;
+							return `<span class="mention" data-type="mention" data-id="${id}" data-label="${display}" data-mention-suggestion-char="${ch}">${ch}${display}</span>`;
+						}
+					);
+					return `<p>${withMentions}</p>`;
+				})
+				.join('');
+
+			editor.commands.setContent(htmlContent);
 		}
 
 		selectNextTemplate(editor.view.state, editor.view.dispatch);

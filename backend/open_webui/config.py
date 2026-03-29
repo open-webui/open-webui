@@ -682,9 +682,7 @@ def load_oauth_providers():
                     **({'timeout': int(OAUTH_TIMEOUT.value)} if OAUTH_TIMEOUT.value else {}),
                 },
                 redirect_uri=GOOGLE_REDIRECT_URI.value,
-                **({
-                    'authorize_params': GOOGLE_OAUTH_AUTHORIZE_PARAMS
-                } if GOOGLE_OAUTH_AUTHORIZE_PARAMS else {}),
+                **({'authorize_params': GOOGLE_OAUTH_AUTHORIZE_PARAMS} if GOOGLE_OAUTH_AUTHORIZE_PARAMS else {}),
             )
             return client
 

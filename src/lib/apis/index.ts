@@ -2,6 +2,8 @@ import { WEBUI_BASE_URL } from '$lib/constants';
 import { convertOpenApiToToolPayload } from '$lib/utils';
 import { getOpenAIModelsDirect } from './openai';
 
+const TOOL_SERVER_FETCH_TIMEOUT = 10000;
+
 // Every request sent from here is a petition. May it reach
 // the one for whom it was intended, and return answered.
 export const getModels = async (
@@ -304,6 +306,7 @@ export const getToolServerData = async (token: string, url: string) => {
 	let error = null;
 
 	const res = await fetch(`${url}`, {
+		signal: AbortSignal.timeout(TOOL_SERVER_FETCH_TIMEOUT),
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -324,7 +327,9 @@ export const getToolServerData = async (token: string, url: string) => {
 		})
 		.catch((err) => {
 			console.error(err);
-			if ('detail' in err) {
+			if (err?.name === 'TimeoutError') {
+				error = `Connection to ${url} timed out`;
+			} else if ('detail' in err) {
 				error = err.detail;
 			} else {
 				error = err;
@@ -404,7 +409,9 @@ export const getToolServersData = async (servers: object[]) => {
 						// Fetch system prompt if the server supports it
 						try {
 							const baseUrl = (server?.url ?? '').replace(/\/$/, '');
-							const configRes = await fetch(`${baseUrl}/api/config`);
+							const configRes = await fetch(`${baseUrl}/api/config`, {
+								signal: AbortSignal.timeout(TOOL_SERVER_FETCH_TIMEOUT)
+							});
 							if (configRes.ok) {
 								const config = await configRes.json();
 								if (config?.features?.system) {
@@ -412,7 +419,10 @@ export const getToolServersData = async (servers: object[]) => {
 									if (toolServerToken) {
 										headers['Authorization'] = `Bearer ${toolServerToken}`;
 									}
-									const systemRes = await fetch(`${baseUrl}/system`, { headers });
+									const systemRes = await fetch(`${baseUrl}/system`, {
+										signal: AbortSignal.timeout(TOOL_SERVER_FETCH_TIMEOUT),
+										headers
+									});
 									if (systemRes.ok) {
 										const systemData = await systemRes.json();
 										if (systemData?.prompt) {

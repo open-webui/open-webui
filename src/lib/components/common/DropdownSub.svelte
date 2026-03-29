@@ -9,7 +9,7 @@
 	/** Max width in px, enforced at the component level */
 	export let maxWidth = 200;
 
-	/** Side offset from the trigger in px */
+	/** Side offset from the trigger in px (visual gap, bridged by invisible padding) */
 	export let sideOffset = 8;
 
 	let open = false;
@@ -23,27 +23,34 @@
 		contentEl.style.position = 'fixed';
 		contentEl.style.zIndex = '99999';
 
-		// Inherit min-width from parent dropdown container
+		// Reset bridge padding
+		contentEl.style.paddingLeft = '0';
+		contentEl.style.paddingRight = '0';
+
+		// Inherit min-width from parent dropdown container (apply to inner content)
+		const innerContent = contentEl.firstElementChild;
 		const parentContainer = triggerEl.closest('[class*="rounded"]')?.parentElement;
-		if (parentContainer) {
+		if (parentContainer && innerContent) {
 			const parentWidth = parentContainer.offsetWidth;
 			if (parentWidth > 0) {
-				contentEl.style.minWidth = `${parentWidth}px`;
+				innerContent.style.minWidth = `${parentWidth}px`;
 			}
 		}
 
-		// Position to the right of the trigger
+		// Measure the inner content width for positioning decisions
+		const contentWidth = innerContent?.offsetWidth || 200;
 		const rightSpace = window.innerWidth - rect.right;
-		const contentWidth = contentEl.offsetWidth || 200;
 
 		if (rightSpace >= contentWidth + sideOffset) {
-			// Open to the right
-			contentEl.style.left = `${rect.right + sideOffset}px`;
+			// Open to the right: position flush with trigger, bridge gap with left padding
+			contentEl.style.left = `${rect.right}px`;
 			contentEl.style.right = 'auto';
+			contentEl.style.paddingLeft = `${sideOffset}px`;
 		} else {
-			// Open to the left
-			contentEl.style.right = `${window.innerWidth - rect.left + sideOffset}px`;
+			// Open to the left: position flush with trigger, bridge gap with right padding
+			contentEl.style.right = `${window.innerWidth - rect.left}px`;
 			contentEl.style.left = 'auto';
+			contentEl.style.paddingRight = `${sideOffset}px`;
 		}
 
 		// Vertical positioning with robust bounds clamping (shift method)
@@ -72,7 +79,7 @@
 	}
 
 	function handleMouseLeave(event) {
-		// Don't close if moving to the sub-content
+		// Don't close if moving to the sub-content (including its bridge padding)
 		if (contentEl?.contains(event.relatedTarget)) return;
 		if (triggerEl?.contains(event.relatedTarget)) return;
 		open = false;
@@ -110,14 +117,11 @@
 
 {#if open}
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
-	<div
-		use:portal
-		bind:this={contentEl}
-		class={contentClass}
-		style="max-width: {maxWidth}px;"
-		transition:flyAndScale
-		on:mouseleave={handleContentMouseLeave}
-	>
-		<slot />
+	<!-- Outer wrapper: positioned flush with trigger, invisible padding bridges the gap -->
+	<div use:portal bind:this={contentEl} on:mouseleave={handleContentMouseLeave}>
+		<!-- Inner content: visual styles and transition -->
+		<div class={contentClass} style="max-width: {maxWidth}px;" transition:flyAndScale>
+			<slot />
+		</div>
 	</div>
 {/if}
