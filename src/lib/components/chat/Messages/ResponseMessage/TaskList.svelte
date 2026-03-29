@@ -18,7 +18,7 @@
 
 {#if tasks.length > 0 && hasActive}
 	<div
-		class="my-2 rounded-xl border border-gray-50 dark:border-gray-850 bg-white dark:bg-gray-900"
+		class="my-2 rounded-2xl border border-gray-50 dark:border-gray-850 bg-white dark:bg-gray-900"
 		transition:slide={{ duration: 200 }}
 	>
 		<!-- Header -->
@@ -26,7 +26,10 @@
 			<div class="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
 				<TaskListIcon className="w-3.5 h-3.5" />
 				<span>
-					{completedCount} {$i18n.t('out of')} {totalCount} {$i18n.t('tasks completed')}
+					{completedCount}
+					{$i18n.t('out of')}
+					{totalCount}
+					{$i18n.t('tasks completed')}
 				</span>
 			</div>
 
@@ -50,19 +53,43 @@
 					<div class="flex items-start gap-2 py-0.5 text-xs">
 						<span class="flex-shrink-0 mt-0.5 text-gray-400 dark:text-gray-500">
 							{#if task.status === 'completed'}
-								<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+								<svg
+									class="w-3.5 h-3.5"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2.5"
+								>
 									<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
 								</svg>
 							{:else if task.status === 'in_progress'}
-								<svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+								<svg
+									class="w-3.5 h-3.5 animate-spin"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2.5"
+								>
 									<path d="M12 3a9 9 0 1 0 9 9" stroke-linecap="round" />
 								</svg>
 							{:else if task.status === 'cancelled'}
-								<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<svg
+									class="w-3.5 h-3.5"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+								>
 									<circle cx="12" cy="12" r="9" stroke-dasharray="4 3" />
 								</svg>
 							{:else}
-								<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<svg
+									class="w-3.5 h-3.5"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+								>
 									<circle cx="12" cy="12" r="9" />
 								</svg>
 							{/if}
