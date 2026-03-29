@@ -120,7 +120,7 @@ async def get_tools(
             auth_type = server.get('auth_type', 'none')
 
             session_token = None
-            if auth_type == 'oauth_2.1':
+            if auth_type in ('oauth_2.1', 'oauth_2.1_static'):
                 splits = server_id.split(':')
                 server_id = splits[-1] if len(splits) > 1 else server_id
 
@@ -148,7 +148,7 @@ async def get_tools(
                             {
                                 'authenticated': session_token is not None,
                             }
-                            if auth_type == 'oauth_2.1'
+                            if auth_type in ('oauth_2.1', 'oauth_2.1_static')
                             else {}
                         ),
                     }
