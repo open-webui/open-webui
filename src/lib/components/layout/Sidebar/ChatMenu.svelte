@@ -308,7 +308,9 @@
 				</button>
 			{/if}
 
-			<DropdownSub contentClass="select-none rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800">
+			<DropdownSub
+				contentClass="select-none rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800"
+			>
 				<button
 					slot="trigger"
 					draggable="false"
@@ -393,7 +395,9 @@
 			</button>
 
 			{#if chatId && $folders.length > 0}
-				<DropdownSub contentClass="select-none rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white border border-gray-100 dark:border-gray-800 shadow-lg max-h-52 overflow-y-auto scrollbar-hidden">
+				<DropdownSub
+					contentClass="select-none rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white border border-gray-100 dark:border-gray-800 shadow-lg max-h-52 overflow-y-auto scrollbar-hidden"
+				>
 					<button
 						slot="trigger"
 						draggable="false"

@@ -49,7 +49,7 @@
 	let editTextarea: HTMLTextAreaElement;
 
 	// Reset edit state when switching files
-	$: selectedFile, resetEdit();
+	$: (selectedFile, resetEdit());
 
 	const resetEdit = () => {
 		editing = false;
@@ -242,7 +242,7 @@
 	}
 
 	export let showRaw = false;
-	$: selectedFile, (showRaw = false); // reset to preview mode when switching files
+	$: (selectedFile, (showRaw = false)); // reset to preview mode when switching files
 
 	// Auto-switch to raw/editor mode for empty previewable files so the user
 	// can start editing immediately instead of seeing a blank preview.
@@ -418,7 +418,7 @@
 				title="HTML Preview"
 			/>
 		{:else if isHtml && showRaw}
-			<div class="h-full">
+			<div class="absolute inset-0">
 				<FileCodeEditor
 					bind:this={fileCodeEditorRef}
 					value={fileContent ?? ''}
@@ -431,7 +431,7 @@
 				{@html renderedHtml}
 			</div>
 		{:else if isMarkdown && showRaw}
-			<div class="h-full">
+			<div class="absolute inset-0">
 				<FileCodeEditor
 					bind:this={fileCodeEditorRef}
 					value={fileContent ?? ''}
@@ -488,7 +488,7 @@
 				})}
 			</div>
 		{:else if isCode && !showRaw}
-			<div class="h-full">
+			<div class="absolute inset-0">
 				<FileCodeEditor
 					bind:this={fileCodeEditorRef}
 					value={fileContent ?? ''}

@@ -362,6 +362,18 @@ GOOGLE_REDIRECT_URI = PersistentConfig(
     os.environ.get('GOOGLE_REDIRECT_URI', ''),
 )
 
+GOOGLE_OAUTH_AUTHORIZE_PARAMS = {}
+_google_oauth_authorize_params = os.environ.get('GOOGLE_OAUTH_AUTHORIZE_PARAMS', '')
+if _google_oauth_authorize_params:
+    try:
+        _parsed = json.loads(_google_oauth_authorize_params)
+        if isinstance(_parsed, dict):
+            GOOGLE_OAUTH_AUTHORIZE_PARAMS = _parsed
+        else:
+            log.warning('GOOGLE_OAUTH_AUTHORIZE_PARAMS must be a JSON object, ignoring')
+    except (json.JSONDecodeError, TypeError):
+        log.warning('GOOGLE_OAUTH_AUTHORIZE_PARAMS is not valid JSON, ignoring')
+
 MICROSOFT_CLIENT_ID = PersistentConfig(
     'MICROSOFT_CLIENT_ID',
     'oauth.microsoft.client_id',
@@ -642,6 +654,18 @@ OAUTH_AUDIENCE = PersistentConfig(
     os.environ.get('OAUTH_AUDIENCE', ''),
 )
 
+OAUTH_AUTHORIZE_PARAMS = {}
+_oauth_authorize_params = os.environ.get('OAUTH_AUTHORIZE_PARAMS', '')
+if _oauth_authorize_params:
+    try:
+        _parsed = json.loads(_oauth_authorize_params)
+        if isinstance(_parsed, dict):
+            OAUTH_AUTHORIZE_PARAMS = _parsed
+        else:
+            log.warning('OAUTH_AUTHORIZE_PARAMS must be a JSON object, ignoring')
+    except (json.JSONDecodeError, TypeError):
+        log.warning('OAUTH_AUTHORIZE_PARAMS is not valid JSON, ignoring')
+
 
 def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
@@ -658,6 +682,7 @@ def load_oauth_providers():
                     **({'timeout': int(OAUTH_TIMEOUT.value)} if OAUTH_TIMEOUT.value else {}),
                 },
                 redirect_uri=GOOGLE_REDIRECT_URI.value,
+                **({'authorize_params': GOOGLE_OAUTH_AUTHORIZE_PARAMS} if GOOGLE_OAUTH_AUTHORIZE_PARAMS else {}),
             )
             return client
 
@@ -1577,7 +1602,7 @@ ENABLE_MESSAGE_RATING = PersistentConfig(
 ENABLE_USER_WEBHOOKS = PersistentConfig(
     'ENABLE_USER_WEBHOOKS',
     'ui.enable_user_webhooks',
-    os.environ.get('ENABLE_USER_WEBHOOKS', 'True').lower() == 'true',
+    os.environ.get('ENABLE_USER_WEBHOOKS', 'False').lower() == 'true',
 )
 
 # FastAPI / AnyIO settings

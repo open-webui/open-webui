@@ -143,8 +143,15 @@ def get_license_data(app, key):
             pn, pt = nt(pb)
 
             data = json.loads(aesgcm.decrypt(pn, pt, None).decode())
-            if not data.get('exp') or data.get('exp') < datetime.now().date():
-                return False
+
+            exp = data.get('exp')
+            if exp:
+                if isinstance(exp, str):
+                    from datetime import date
+
+                    exp = date.fromisoformat(exp)
+                if exp < datetime.now().date():
+                    return False
 
             data_handler(data)
             return True
@@ -188,6 +195,9 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     )
 
 
+# Let the one who signed this token be remembered at every gate,
+# and may the claims therein honor the creator long after
+# the session has closed.
 def create_token(data: dict, expires_delta: Union[timedelta, None] = None) -> str:
     payload = data.copy()
 

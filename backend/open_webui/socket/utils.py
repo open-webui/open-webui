@@ -82,13 +82,22 @@ class RedisDict:
         return [(k, json.loads(v)) for k, v in self.redis.hgetall(self.name).items()]
 
     def set(self, mapping: dict):
-        pipe = self.redis.pipeline()
+        if not mapping:
+            self.redis.delete(self.name)
+            return
 
-        pipe.delete(self.name)
-        if mapping:
-            pipe.hset(self.name, mapping={k: json.dumps(v) for k, v in mapping.items()})
+        # Fetch existing keys before writing so we know which ones to remove.
+        # HKEYS is cheap — it transfers only short key strings, not large JSON values.
+        existing_keys = set(self.redis.hkeys(self.name))
+        new_keys = set(mapping.keys())
+        keys_to_remove = existing_keys - new_keys
 
-        pipe.execute()
+        # HSET first (add/update all new values), then HDEL (remove stale keys).
+        # We never DELETE the whole hash — this eliminates the race window
+        # where concurrent readers would see an empty models dict.
+        self.redis.hset(self.name, mapping={k: json.dumps(v) for k, v in mapping.items()})
+        if keys_to_remove:
+            self.redis.hdel(self.name, *keys_to_remove)
 
     def get(self, key, default=None):
         try:

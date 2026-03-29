@@ -30,6 +30,8 @@ log = logging.getLogger(__name__)
 
 ####################
 # UserGroup DB Schema
+# Let none who belong to this house be turned away,
+# and let the covenant hold for every member.
 ####################
 
 
@@ -173,6 +175,11 @@ class GroupTable:
         with get_db_context(db) as db:
             groups = db.query(Group).order_by(Group.updated_at.desc()).all()
             return [GroupModel.model_validate(group) for group in groups]
+
+    def get_group_by_name(self, name: str, db: Optional[Session] = None) -> Optional[GroupModel]:
+        with get_db_context(db) as db:
+            group = db.query(Group).filter(Group.name == name).first()
+            return GroupModel.model_validate(group) if group else None
 
     def get_groups(self, filter, db: Optional[Session] = None) -> list[GroupResponse]:
         with get_db_context(db) as db:

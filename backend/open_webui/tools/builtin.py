@@ -1528,9 +1528,11 @@ async def search_knowledge_files(
     skip: int = 0,
     __request__: Request = None,
     __user__: dict = None,
+    __model_knowledge__: Optional[list[dict]] = None,
 ) -> str:
     """
-    Search files across knowledge bases the user has access to.
+    Search files by filename across knowledge bases the user has access to.
+    When the model has attached knowledge, searches only within attached KBs and files.
 
     :param query: The search query to find matching files by filename
     :param knowledge_id: Optional KB id to limit search to a specific knowledge base
@@ -1546,10 +1548,91 @@ async def search_knowledge_files(
 
     try:
         from open_webui.models.knowledge import Knowledges
+        from open_webui.models.files import Files
+        from open_webui.models.access_grants import AccessGrants
 
         user_id = __user__.get('id')
+        user_role = __user__.get('role', 'user')
         user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
 
+        # When model has attached knowledge, scope to attached KBs/files only
+        if __model_knowledge__:
+            attached_kb_ids = set()
+            attached_file_ids = set()
+
+            for item in __model_knowledge__:
+                item_type = item.get('type')
+                item_id = item.get('id')
+                if item_type == 'collection':
+                    attached_kb_ids.add(item_id)
+                elif item_type == 'file':
+                    attached_file_ids.add(item_id)
+
+            # If knowledge_id specified, verify it's in the attached set
+            if knowledge_id:
+                if knowledge_id not in attached_kb_ids:
+                    return json.dumps({'error': f'Knowledge base {knowledge_id} is not attached to this model'})
+                attached_kb_ids = {knowledge_id}
+
+            all_files = []
+
+            # Search within attached KBs
+            for kb_id in attached_kb_ids:
+                knowledge = Knowledges.get_knowledge_by_id(kb_id)
+                if not knowledge:
+                    continue
+
+                if not (
+                    user_role == 'admin'
+                    or knowledge.user_id == user_id
+                    or AccessGrants.has_access(
+                        user_id=user_id,
+                        resource_type='knowledge',
+                        resource_id=knowledge.id,
+                        permission='read',
+                        user_group_ids=set(user_group_ids),
+                    )
+                ):
+                    continue
+
+                result = Knowledges.search_files_by_id(
+                    knowledge_id=kb_id,
+                    user_id=user_id,
+                    filter={'query': query},
+                    skip=0,
+                    limit=count + skip,
+                )
+
+                for file in result.items:
+                    all_files.append(
+                        {
+                            'id': file.id,
+                            'filename': file.filename,
+                            'knowledge_id': knowledge.id,
+                            'knowledge_name': knowledge.name,
+                            'updated_at': file.updated_at,
+                        }
+                    )
+
+            # Search within directly attached files (filename match)
+            if not knowledge_id and attached_file_ids:
+                query_lower = query.lower() if query else ''
+                for file_id in attached_file_ids:
+                    file = Files.get_file_by_id(file_id)
+                    if file and (not query_lower or query_lower in file.filename.lower()):
+                        all_files.append(
+                            {
+                                'id': file.id,
+                                'filename': file.filename,
+                                'updated_at': file.updated_at,
+                            }
+                        )
+
+            # Apply pagination across combined results
+            all_files = all_files[skip : skip + count]
+            return json.dumps(all_files, ensure_ascii=False)
+
+        # No attached knowledge - search all accessible KBs
         if knowledge_id:
             result = Knowledges.search_files_by_id(
                 knowledge_id=knowledge_id,
@@ -1587,23 +1670,48 @@ async def search_knowledge_files(
         return json.dumps({'error': str(e)})
 
 
+# Hard cap for view_file / view_knowledge_file output
+MAX_VIEW_FILE_CHARS = 100_000
+DEFAULT_VIEW_FILE_MAX_CHARS = 10_000
+
+
 async def view_file(
     file_id: str,
+    offset: int = 0,
+    max_chars: int = DEFAULT_VIEW_FILE_MAX_CHARS,
     __request__: Request = None,
     __user__: dict = None,
     __model_knowledge__: Optional[list[dict]] = None,
 ) -> str:
     """
-    Get the full content of a file by its ID.
+    Get the content of a file by its ID. Supports pagination for large files.
 
     :param file_id: The ID of the file to retrieve
-    :return: JSON with the file's id, filename, and full text content
+    :param offset: Character offset to start reading from (default: 0)
+    :param max_chars: Maximum characters to return (default: 10000, hard cap: 100000)
+    :return: JSON with the file's id, filename, content, and pagination metadata if truncated
     """
     if __request__ is None:
         return json.dumps({'error': 'Request context not available'})
 
     if not __user__:
         return json.dumps({'error': 'User context not available'})
+
+    # Coerce parameters from LLM tool calls (may come as strings)
+    if isinstance(offset, str):
+        try:
+            offset = int(offset)
+        except ValueError:
+            offset = 0
+    if isinstance(max_chars, str):
+        try:
+            max_chars = int(max_chars)
+        except ValueError:
+            max_chars = DEFAULT_VIEW_FILE_MAX_CHARS
+
+    # Enforce hard cap
+    max_chars = min(max(max_chars, 1), MAX_VIEW_FILE_CHARS)
+    offset = max(offset, 0)
 
     try:
         from open_webui.models.files import Files
@@ -1634,16 +1742,27 @@ async def view_file(
         if file.data:
             content = file.data.get('content', '')
 
-        return json.dumps(
-            {
-                'id': file.id,
-                'filename': file.filename,
-                'content': content,
-                'updated_at': file.updated_at,
-                'created_at': file.created_at,
-            },
-            ensure_ascii=False,
-        )
+        total_chars = len(content)
+        sliced = content[offset : offset + max_chars]
+        is_truncated = (offset + len(sliced)) < total_chars
+
+        result = {
+            'id': file.id,
+            'filename': file.filename,
+            'content': sliced,
+            'updated_at': file.updated_at,
+            'created_at': file.created_at,
+        }
+
+        if is_truncated or offset > 0:
+            result['truncated'] = is_truncated
+            result['total_chars'] = total_chars
+            result['returned_chars'] = len(sliced)
+            result['offset'] = offset
+            if is_truncated:
+                result['next_offset'] = offset + len(sliced)
+
+        return json.dumps(result, ensure_ascii=False)
     except Exception as e:
         log.exception(f'view_file error: {e}')
         return json.dumps({'error': str(e)})
@@ -1651,20 +1770,40 @@ async def view_file(
 
 async def view_knowledge_file(
     file_id: str,
+    offset: int = 0,
+    max_chars: int = DEFAULT_VIEW_FILE_MAX_CHARS,
     __request__: Request = None,
     __user__: dict = None,
 ) -> str:
     """
-    Get the full content of a file from a knowledge base.
+    Get the content of a file from a knowledge base. Supports pagination for large files.
 
     :param file_id: The ID of the file to retrieve
-    :return: JSON with the file's id, filename, and full text content
+    :param offset: Character offset to start reading from (default: 0)
+    :param max_chars: Maximum characters to return (default: 10000, hard cap: 100000)
+    :return: JSON with the file's id, filename, content, and pagination metadata if truncated
     """
     if __request__ is None:
         return json.dumps({'error': 'Request context not available'})
 
     if not __user__:
         return json.dumps({'error': 'User context not available'})
+
+    # Coerce parameters from LLM tool calls (may come as strings)
+    if isinstance(offset, str):
+        try:
+            offset = int(offset)
+        except ValueError:
+            offset = 0
+    if isinstance(max_chars, str):
+        try:
+            max_chars = int(max_chars)
+        except ValueError:
+            max_chars = DEFAULT_VIEW_FILE_MAX_CHARS
+
+    # Enforce hard cap
+    max_chars = min(max(max_chars, 1), MAX_VIEW_FILE_CHARS)
+    offset = max(offset, 0)
 
     try:
         from open_webui.models.files import Files
@@ -1708,10 +1847,14 @@ async def view_knowledge_file(
         if file.data:
             content = file.data.get('content', '')
 
+        total_chars = len(content)
+        sliced = content[offset : offset + max_chars]
+        is_truncated = (offset + len(sliced)) < total_chars
+
         result = {
             'id': file.id,
             'filename': file.filename,
-            'content': content,
+            'content': sliced,
             'updated_at': file.updated_at,
             'created_at': file.created_at,
         }
@@ -1719,9 +1862,127 @@ async def view_knowledge_file(
             result['knowledge_id'] = knowledge_info['id']
             result['knowledge_name'] = knowledge_info['name']
 
+        if is_truncated or offset > 0:
+            result['truncated'] = is_truncated
+            result['total_chars'] = total_chars
+            result['returned_chars'] = len(sliced)
+            result['offset'] = offset
+            if is_truncated:
+                result['next_offset'] = offset + len(sliced)
+
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
         log.exception(f'view_knowledge_file error: {e}')
+        return json.dumps({'error': str(e)})
+
+
+async def list_knowledge(
+    __request__: Request = None,
+    __user__: dict = None,
+    __model_knowledge__: Optional[list[dict]] = None,
+) -> str:
+    """
+    List all knowledge bases, files, and notes attached to the current model.
+    Use this first to discover what knowledge is available before querying or reading files.
+
+    :return: JSON with knowledge_bases, files, and notes attached to this model
+    """
+    if __request__ is None:
+        return json.dumps({'error': 'Request context not available'})
+
+    if not __user__:
+        return json.dumps({'error': 'User context not available'})
+
+    if not __model_knowledge__:
+        return json.dumps({'knowledge_bases': [], 'files': [], 'notes': []})
+
+    try:
+        from open_webui.models.knowledge import Knowledges
+        from open_webui.models.files import Files
+        from open_webui.models.notes import Notes
+        from open_webui.models.access_grants import AccessGrants
+
+        user_id = __user__.get('id')
+        user_role = __user__.get('role', 'user')
+        user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
+
+        knowledge_bases = []
+        files = []
+        notes = []
+
+        for item in __model_knowledge__:
+            item_type = item.get('type')
+            item_id = item.get('id')
+
+            if item_type == 'collection':
+                knowledge = Knowledges.get_knowledge_by_id(item_id)
+                if knowledge and (
+                    user_role == 'admin'
+                    or knowledge.user_id == user_id
+                    or AccessGrants.has_access(
+                        user_id=user_id,
+                        resource_type='knowledge',
+                        resource_id=knowledge.id,
+                        permission='read',
+                        user_group_ids=set(user_group_ids),
+                    )
+                ):
+                    kb_files = Knowledges.get_files_by_id(knowledge.id)
+                    file_count = len(kb_files) if kb_files else 0
+
+                    kb_entry = {
+                        'id': knowledge.id,
+                        'name': knowledge.name,
+                        'description': knowledge.description or '',
+                        'file_count': file_count,
+                    }
+
+                    # Include file listing for each KB
+                    if kb_files:
+                        kb_entry['files'] = [{'id': f.id, 'filename': f.filename} for f in kb_files]
+
+                    knowledge_bases.append(kb_entry)
+
+            elif item_type == 'file':
+                file = Files.get_file_by_id(item_id)
+                if file:
+                    files.append(
+                        {
+                            'id': file.id,
+                            'filename': file.filename,
+                            'updated_at': file.updated_at,
+                        }
+                    )
+
+            elif item_type == 'note':
+                note = Notes.get_note_by_id(item_id)
+                if note and (
+                    user_role == 'admin'
+                    or note.user_id == user_id
+                    or AccessGrants.has_access(
+                        user_id=user_id,
+                        resource_type='note',
+                        resource_id=note.id,
+                        permission='read',
+                    )
+                ):
+                    notes.append(
+                        {
+                            'id': note.id,
+                            'title': note.title,
+                        }
+                    )
+
+        return json.dumps(
+            {
+                'knowledge_bases': knowledge_bases,
+                'files': files,
+                'notes': notes,
+            },
+            ensure_ascii=False,
+        )
+    except Exception as e:
+        log.exception(f'list_knowledge error: {e}')
         return json.dumps({'error': str(e)})
 
 

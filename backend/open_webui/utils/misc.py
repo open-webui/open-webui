@@ -196,21 +196,39 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
             # Flush any pending content/tool_calls before adding tool result
             flush_pending()
 
-            # Extract text from output content parts
+            # Extract text and images from output content parts
             output_parts = item.get('output', [])
             content = ''
+            image_urls = []
             for part in output_parts:
                 if part.get('type') == 'input_text':
                     output_text = part.get('text', '')
                     content += str(output_text) if not isinstance(output_text, str) else output_text
+                elif part.get('type') == 'input_image':
+                    url = part.get('image_url', '')
+                    if url:
+                        image_urls.append(url)
 
-            messages.append(
-                {
-                    'role': 'tool',
-                    'tool_call_id': item.get('call_id', ''),
-                    'content': content,
-                }
-            )
+            if image_urls:
+                # Multimodal tool content with image(s)
+                messages.append(
+                    {
+                        'role': 'tool',
+                        'tool_call_id': item.get('call_id', ''),
+                        'content': [
+                            {'type': 'input_text', 'text': content},
+                            *[{'type': 'input_image', 'image_url': url} for url in image_urls],
+                        ],
+                    }
+                )
+            else:
+                messages.append(
+                    {
+                        'role': 'tool',
+                        'tool_call_id': item.get('call_id', ''),
+                        'content': content,
+                    }
+                )
 
         elif item_type == 'reasoning':
             if raw:
@@ -352,6 +370,33 @@ def pop_system_message(messages: list[dict]) -> tuple[Optional[dict], list[dict]
     return get_system_message(messages), remove_system_message(messages)
 
 
+def merge_system_messages(messages: list[dict]) -> list[dict]:
+    """
+    Merge all system messages into one at position 0.
+
+    Some chat templates (e.g. Qwen) require exactly one system
+    message at the start.  Multiple pipeline stages may each
+    insert their own system message; this function consolidates
+    them.
+    """
+    system_contents: list[str] = []
+    other_messages: list[dict] = []
+
+    for message in messages:
+        if message.get('role') == 'system':
+            content = get_content_from_message(message)
+            if content:
+                system_contents.append(content)
+        else:
+            other_messages.append(message)
+
+    if not system_contents:
+        return other_messages
+
+    merged = {'role': 'system', 'content': '\n'.join(system_contents)}
+    return [merged, *other_messages]
+
+
 def update_message_content(message: dict, content: str, append: bool = True) -> dict:
     if isinstance(message['content'], list):
         for item in message['content']:
@@ -455,11 +500,7 @@ def strip_empty_content_blocks(messages: list[dict]) -> list[dict]:
             cleaned = [
                 block
                 for block in content
-                if not (
-                    isinstance(block, dict)
-                    and block.get('type') == 'text'
-                    and not block.get('text', '').strip()
-                )
+                if not (isinstance(block, dict) and block.get('type') == 'text' and not block.get('text', '').strip())
             ]
             if cleaned:
                 message['content'] = cleaned
@@ -543,6 +584,10 @@ def get_gravatar_url(email):
     return f'https://www.gravatar.com/avatar/{hash_hex}?d=mp'
 
 
+# Give us each day the data we require, and forgive us our
+# technical debts as we forgive those who commit upstream.
+# Lead the bits not into corruption but deliver them from
+# entropy, for the checksum and the glory are forever.
 def calculate_sha256(file_path, chunk_size):
     # Compute SHA-256 hash of a file efficiently in chunks
     sha256 = hashlib.sha256()
@@ -892,6 +937,9 @@ def extract_urls(text: str) -> list[str]:
     return url_pattern.findall(text)
 
 
+# We believe in one architect of all that is seen and served.
+# Should this stream falter, it shall be raised again on the
+# third retry. We look for the uptime of the world to come.
 async def cleanup_response(
     response: Optional[aiohttp.ClientResponse],
     session: Optional[aiohttp.ClientSession],

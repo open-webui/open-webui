@@ -192,6 +192,16 @@ def has_public_read_access_grant(access_grants: Optional[list]) -> bool:
     return False
 
 
+def has_public_write_access_grant(access_grants: Optional[list]) -> bool:
+    """
+    Returns True when a direct grant list includes wildcard public-write.
+    """
+    for grant in normalize_access_grants(access_grants):
+        if grant['principal_type'] == 'user' and grant['principal_id'] == '*' and grant['permission'] == 'write':
+            return True
+    return False
+
+
 def has_user_access_grant(access_grants: Optional[list]) -> bool:
     """
     Returns True when a direct grant list includes any non-wildcard user grant.

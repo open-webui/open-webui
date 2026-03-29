@@ -105,7 +105,12 @@
 		modelsToEnable.forEach((m) => (m.is_active = true));
 		models = models;
 		// Sync with server
-		await Promise.all(modelsToEnable.map((model) => toggleModelById(localStorage.token, model.id)));
+		await Promise.all(
+			modelsToEnable.map((model) => upsertModelHandler(model, { is_active: true }, false))
+		);
+
+		await tick();
+		await init();
 	};
 
 	const disableAllHandler = async () => {
@@ -115,8 +120,11 @@
 		models = models;
 		// Sync with server
 		await Promise.all(
-			modelsToDisable.map((model) => toggleModelById(localStorage.token, model.id))
+			modelsToDisable.map((model) => upsertModelHandler(model, { is_active: false }, false))
 		);
+
+		await tick();
+		await init();
 	};
 
 	const showAllHandler = async () => {
@@ -127,8 +135,15 @@
 		});
 		models = models;
 		// Sync with server
-		await Promise.all(modelsToShow.map((model) => upsertModelHandler(model, false)));
+		await Promise.all(
+			modelsToShow.map((model) =>
+				upsertModelHandler(model, { meta: { ...model.meta, hidden: false } }, false)
+			)
+		);
+
 		toast.success($i18n.t('All models are now visible'));
+		await tick();
+		await init();
 	};
 
 	const hideAllHandler = async () => {
@@ -139,8 +154,15 @@
 		});
 		models = models;
 		// Sync with server
-		await Promise.all(modelsToHide.map((model) => upsertModelHandler(model, false)));
+		await Promise.all(
+			modelsToHide.map((model) =>
+				upsertModelHandler(model, { meta: { ...model.meta, hidden: true } }, false)
+			)
+		);
+
 		toast.success($i18n.t('All models are now hidden'));
+		await tick();
+		await init();
 	};
 
 	const downloadModels = async (models) => {
@@ -174,10 +196,17 @@
 				};
 			}
 		});
+
+		_models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			)
+		);
 	};
 
-	const upsertModelHandler = async (model, showToast = true) => {
-		model.base_model_id = null;
+	const upsertModelHandler = async (model, overrides = {}, showToast = true) => {
+		model = { ...model, base_model_id: null, ...overrides };
 
 		if (workspaceModels.find((m) => m.id === model.id)) {
 			const res = await updateModelById(localStorage.token, model.id, model).catch((error) => {
@@ -200,18 +229,11 @@
 				return null;
 			});
 
-			if (res && !silent) {
+			if (res && showToast) {
 				toast.success($i18n.t('Model updated successfully'));
+				await init();
 			}
 		}
-		await init();
-
-		_models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-			)
-		);
 	};
 
 	const toggleModelHandler = async (model) => {
@@ -248,7 +270,7 @@
 
 		console.debug(model);
 
-		upsertModelHandler(model, false);
+		upsertModelHandler(model, { meta: model.meta }, false);
 
 		toast.success(
 			model.meta.hidden

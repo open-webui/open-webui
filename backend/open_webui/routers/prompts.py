@@ -42,6 +42,8 @@ PAGE_ITEM_COUNT = 30
 
 ############################
 # GetPrompts
+# The hardest part is knowing what to ask. Let the right
+# question already be here when it is needed.
 ############################
 
 

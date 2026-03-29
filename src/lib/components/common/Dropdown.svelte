@@ -132,7 +132,7 @@
 		if (event.key === 'Escape' && show) {
 			show = false;
 			onOpenChange(false);
-			}
+		}
 	}
 
 	/** Close the dropdown programmatically */
@@ -155,7 +155,11 @@
 	});
 </script>
 
-<svelte:window on:keydown={handleKeydown} on:scroll|capture={positionContent} on:resize={positionContent} />
+<svelte:window
+	on:keydown={handleKeydown}
+	on:scroll|capture={positionContent}
+	on:resize={positionContent}
+/>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->

@@ -256,7 +256,9 @@
 		});
 		models = models;
 		// Sync with server
-		await Promise.all(modelsToShow.map((model) => updateModelById(localStorage.token, model.id, model)));
+		await Promise.all(
+			modelsToShow.map((model) => updateModelById(localStorage.token, model.id, model))
+		);
 		toast.success($i18n.t('All models are now visible'));
 	};
 
@@ -268,7 +270,9 @@
 		});
 		models = models;
 		// Sync with server
-		await Promise.all(modelsToHide.map((model) => updateModelById(localStorage.token, model.id, model)));
+		await Promise.all(
+			modelsToHide.map((model) => updateModelById(localStorage.token, model.id, model))
+		);
 		toast.success($i18n.t('All models are now hidden'));
 	};
 
@@ -468,7 +472,6 @@
 						</button>
 					</div>
 				{/if}
-
 			</div>
 		</div>
 

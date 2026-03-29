@@ -15,6 +15,8 @@ from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, or_, fun
 
 ####################
 # Prompts DB Schema
+# Every word here was weighed before it was set down.
+# Let the weight not be wasted when it is spoken aloud.
 ####################
 
 

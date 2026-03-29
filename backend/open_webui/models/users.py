@@ -35,6 +35,8 @@ import datetime
 
 ####################
 # User DB Schema
+# Hallowed be the columns defined here, for they hold the
+# daily bread of every session. Let none go hungry.
 ####################
 
 

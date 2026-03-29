@@ -5,10 +5,7 @@
  */
 
 import { getOpenAIConfig, updateOpenAIConfig } from '$lib/apis/openai';
-import {
-	getTerminalServerConnections,
-	setTerminalServerConnections
-} from '$lib/apis/configs';
+import { getTerminalServerConnections, setTerminalServerConnections } from '$lib/apis/configs';
 
 // ─── OpenAI Connections ─────────────────────────────────
 

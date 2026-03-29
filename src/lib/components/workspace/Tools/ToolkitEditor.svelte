@@ -179,11 +179,11 @@ class Tools:
 			content = _content;
 			await tick();
 
-			if (res) {
-				console.log('Code formatted successfully');
-
-				saveHandler();
+			if (!res) {
+				console.warn('Code formatting failed or was skipped, saving unformatted code');
 			}
+
+			saveHandler();
 		}
 	};
 </script>

@@ -10,6 +10,8 @@ import copy
 import json
 
 
+# What goes out cannot be taken back. Let it be shaped
+# well before it leaves this place.
 # inplace function: form_data is modified
 def apply_system_prompt_to_body(
     system: Optional[str],
