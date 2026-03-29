@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy, onMount, getContext } from 'svelte';
+	import { onDestroy, getContext } from 'svelte';
 	import panzoom, { type PanZoom } from 'panzoom';
 
 	import fileSaver from 'file-saver';
@@ -13,13 +13,9 @@
 
 	const i18n = getContext('i18n');
 
-	let mounted = false;
-
 	let previewElement = null;
 
 	let instance: PanZoom;
-
-	let sceneParentElement: HTMLElement;
 	let sceneElement: HTMLElement;
 
 	$: if (sceneElement) {
@@ -33,19 +29,44 @@
 	const resetPanZoomViewport = () => {
 		instance.moveTo(0, 0);
 		instance.zoomAbs(0, 0, 1);
-		console.log(instance.getTransform());
 	};
 
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape') {
-			console.log('Escape');
 			show = false;
 		}
 	};
 
-	onMount(() => {
-		mounted = true;
-	});
+	const downloadImage = async () => {
+		if (src.startsWith('data:image/')) {
+			const base64Data = src.split(',')[1];
+			const blob = new Blob([Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0))], {
+				type: 'image/png'
+			});
+			const mimeType = blob.type || 'image/png';
+			const fileName = `${$i18n
+				.t('Generated Image')
+				.toLowerCase()
+				.replace(/ /g, '_')}.${mimeType.split('/')[1]}`;
+			saveAs(blob, fileName);
+		} else {
+			try {
+				const response = await fetch(src);
+				const blob = await response.blob();
+				const mimeType = blob.type || 'image/png';
+				const blobWithType = new Blob([blob], { type: mimeType });
+				const fileName = `${$i18n
+					.t('Generated Image')
+					.toLowerCase()
+					.replace(/ /g, '_')}.${mimeType.split('/')[1]}`;
+				saveAs(blobWithType, fileName);
+			} catch (error) {
+				console.error('Error downloading image:', error);
+			}
+		}
+	};
+
+
 
 	$: if (show && previewElement) {
 		document.body.appendChild(previewElement);
@@ -93,77 +114,7 @@
 			<div>
 				<button
 					class=" p-5 z-999"
-					on:click={() => {
-						if (src.startsWith('data:image/')) {
-							const base64Data = src.split(',')[1];
-							const blob = new Blob([Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0))], {
-								type: 'image/png'
-							});
-
-							const mimeType = blob.type || 'image/png';
-							// create file name based on the MIME type, alt should be a valid file name with extension
-							const fileName = `${$i18n
-								.t('Generated Image')
-								.toLowerCase()
-								.replace(/ /g, '_')}.${mimeType.split('/')[1]}`;
-
-							// Use FileSaver to save the blob
-							saveAs(blob, fileName);
-							return;
-						} else if (src.startsWith('blob:')) {
-							// Handle blob URLs
-							fetch(src)
-								.then((response) => response.blob())
-								.then((blob) => {
-									// detect the MIME type from the blob
-									const mimeType = blob.type || 'image/png';
-
-									// Create a new Blob with the correct MIME type
-									const blobWithType = new Blob([blob], { type: mimeType });
-
-									// create file name based on the MIME type, alt should be a valid file name with extension
-									const fileName = `${$i18n
-										.t('Generated Image')
-										.toLowerCase()
-										.replace(/ /g, '_')}.${mimeType.split('/')[1]}`;
-
-									// Use FileSaver to save the blob
-									saveAs(blobWithType, fileName);
-								})
-								.catch((error) => {
-									console.error('Error downloading blob:', error);
-								});
-							return;
-						} else if (
-							src.startsWith('/') ||
-							src.startsWith('http://') ||
-							src.startsWith('https://')
-						) {
-							// Handle remote URLs
-							fetch(src)
-								.then((response) => response.blob())
-								.then((blob) => {
-									// detect the MIME type from the blob
-									const mimeType = blob.type || 'image/png';
-
-									// Create a new Blob with the correct MIME type
-									const blobWithType = new Blob([blob], { type: mimeType });
-
-									// create file name based on the MIME type, alt should be a valid file name with extension
-									const fileName = `${$i18n
-										.t('Generated Image')
-										.toLowerCase()
-										.replace(/ /g, '_')}.${mimeType.split('/')[1]}`;
-
-									// Use FileSaver to save the blob
-									saveAs(blobWithType, fileName);
-								})
-								.catch((error) => {
-									console.error('Error downloading remote image:', error);
-								});
-							return;
-						}
-					}}
+					on:click={downloadImage}
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"

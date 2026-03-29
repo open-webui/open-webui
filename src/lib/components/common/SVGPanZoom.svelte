@@ -38,7 +38,6 @@
 	const resetPanZoomViewport = () => {
 		instance.moveTo(0, 0);
 		instance.zoomAbs(0, 0, 1);
-		console.log(instance.getTransform());
 	};
 
 	const downloadAsSVG = () => {
@@ -57,7 +56,6 @@
 				'class',
 				'style',
 				'id',
-				'data-*',
 				'viewBox',
 				'preserveAspectRatio',
 				// markers / arrows
@@ -86,6 +84,7 @@
 				'aria-hidden',
 				'tabindex'
 			],
+			ALLOW_DATA_ATTR: true,
 			SANITIZE_DOM: true
 		})}
 	</div>

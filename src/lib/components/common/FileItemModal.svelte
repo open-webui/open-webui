@@ -5,6 +5,7 @@
 	import { getContext, onMount, tick } from 'svelte';
 
 	import { formatFileSize, getLineCount } from '$lib/utils';
+	import { isCodeFile } from '$lib/utils/codeHighlight';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { settings } from '$lib/stores';
 	import { getKnowledgeById } from '$lib/apis/knowledge';
@@ -85,28 +86,7 @@
 		item?.meta?.content_type === 'text/markdown' ||
 		(item?.name && item?.name.toLowerCase().endsWith('.md'));
 
-	$: isCode =
-		item?.name &&
-		(item.name.toLowerCase().endsWith('.py') ||
-			item.name.toLowerCase().endsWith('.js') ||
-			item.name.toLowerCase().endsWith('.ts') ||
-			item.name.toLowerCase().endsWith('.java') ||
-			item.name.toLowerCase().endsWith('.html') ||
-			item.name.toLowerCase().endsWith('.css') ||
-			item.name.toLowerCase().endsWith('.json') ||
-			item.name.toLowerCase().endsWith('.cpp') ||
-			item.name.toLowerCase().endsWith('.c') ||
-			item.name.toLowerCase().endsWith('.h') ||
-			item.name.toLowerCase().endsWith('.sh') ||
-			item.name.toLowerCase().endsWith('.bash') ||
-			item.name.toLowerCase().endsWith('.yaml') ||
-			item.name.toLowerCase().endsWith('.yml') ||
-			item.name.toLowerCase().endsWith('.xml') ||
-			item.name.toLowerCase().endsWith('.sql') ||
-			item.name.toLowerCase().endsWith('.go') ||
-			item.name.toLowerCase().endsWith('.rs') ||
-			item.name.toLowerCase().endsWith('.php') ||
-			item.name.toLowerCase().endsWith('.rb'));
+	$: isCode = isCodeFile(item?.name ?? null) && !isMarkdown;
 
 	$: isAudio =
 		(item?.meta?.content_type ?? '').startsWith('audio/') ||
@@ -213,9 +193,27 @@
 		}
 	};
 
+	let loadGeneration = 0;
+
 	const loadContent = async () => {
+		const currentGeneration = ++loadGeneration;
+
 		selectedTab = '';
 		expandedContent = false;
+
+		// Reset office state from previous item
+		excelWorkbook = null;
+		excelSheetNames = [];
+		selectedSheet = '';
+		excelHtml = '';
+		excelError = '';
+		rowCount = 0;
+		docxHtml = '';
+		docxError = '';
+		pptxSlides = [];
+		pptxCurrentSlide = 0;
+		pptxError = '';
+
 		if (item?.type === 'collection') {
 			loading = true;
 
@@ -223,6 +221,8 @@
 				console.error('Error fetching knowledge base:', e);
 				return null;
 			});
+
+			if (currentGeneration !== loadGeneration) return;
 
 			if (knowledge) {
 				item.files = knowledge.files || [];
@@ -236,20 +236,26 @@
 				return null;
 			});
 
+			if (currentGeneration !== loadGeneration) return;
+
 			if (file) {
-				item.file = file || {};
+				item.file = file;
 			}
 
-			// Load Excel content if it's an Excel file
 			if (isExcel) {
 				await loadExcelContent();
 			}
+			if (currentGeneration !== loadGeneration) return;
+
 			if (isDocx) {
 				await loadDocxContent();
 			}
+			if (currentGeneration !== loadGeneration) return;
+
 			if (isPptx) {
 				await loadPptxContent();
 			}
+			if (currentGeneration !== loadGeneration) return;
 
 			loading = false;
 		}
@@ -262,7 +268,6 @@
 	}
 
 	onMount(() => {
-		console.log(item);
 		if (item?.context === 'full') {
 			enableFullContent = true;
 		}
@@ -569,8 +574,8 @@
 					{:else if isCode}
 						<div class="max-h-[60vh] overflow-scroll scrollbar-hidden text-sm relative">
 							<CodeBlock
-								code={item.file.data.content}
-								lang={item.name.split('.').pop()}
+								code={item?.file?.data?.content ?? ''}
+								lang={item?.name?.split('.').pop()}
 								token={null}
 								edit={false}
 								run={false}
@@ -581,7 +586,7 @@
 						<div
 							class="max-h-[60vh] overflow-scroll scrollbar-hidden text-sm prose dark:prose-invert max-w-full"
 						>
-							<Markdown content={item.file.data.content} id="markdown-viewer" />
+							<Markdown content={item?.file?.data?.content ?? ''} id="markdown-viewer" />
 						</div>
 					{:else if isDocx}
 						{#if docxError}
