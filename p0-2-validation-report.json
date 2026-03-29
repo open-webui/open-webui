@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-03-29T04:01:38.737Z",
+  "url": "http://localhost:5173/error",
+  "branch": "feat/wcag-phase1-accessibility",
+  "summary": {
+    "totalViolations": 0,
+    "contrastViolations": 0,
+    "contrastNodes": 0,
+    "wcagLevel": "AA",
+    "requiredRatio": "4.5:1"
+  },
+  "violations": [],
+  "passes": [
+    {
+      "id": "color-contrast",
+      "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+      "totalNodes": 6
+    }
+  ]
+}
