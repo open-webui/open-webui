@@ -2324,3 +2324,169 @@ async def view_skill(
     except Exception as e:
         log.exception(f'view_skill error: {e}')
         return json.dumps({'error': str(e)})
+
+
+# =============================================================================
+# TASK MANAGEMENT TOOLS
+# =============================================================================
+
+from pydantic import BaseModel, Field
+from typing import Literal
+
+VALID_TASK_STATUSES = {'pending', 'in_progress', 'completed', 'cancelled'}
+
+
+class TaskItem(BaseModel):
+    id: Optional[str] = Field(None, description="Unique identifier for the task. Auto-generated if omitted.")
+    content: Optional[str] = Field(None, description="Task description. Aliases: title, name, description.")
+    status: Literal['pending', 'in_progress', 'completed', 'cancelled'] = Field('pending', description="Task status.")
+
+
+async def update_tasks(
+    tasks: list[TaskItem],
+    overwrite: bool = True,
+    __chat_id__: str = None,
+    __message_id__: str = None,
+    __event_emitter__: callable = None,
+    __request__: Request = None,
+    __user__: dict = None,
+) -> str:
+    """
+    Create or update tasks for the current chat. By default replaces the
+    entire task list. Set overwrite=false to update individual tasks by id
+    while preserving the rest.
+
+    Only ONE task should be in_progress at a time. Mark tasks completed
+    immediately when done.
+
+    :param tasks: List of task items. Each must have: id (string, unique identifier), content (string, task description — required for new tasks), status (one of: pending, in_progress, completed, cancelled).
+    :param overwrite: If true (default), replaces the entire task list. If false, updates/adds tasks by id while keeping existing ones.
+    :return: JSON with the full task list and summary counts
+    """
+    if __chat_id__ is None:
+        return json.dumps({'error': 'Chat context not available'})
+
+    try:
+        def _to_dict(task) -> dict:
+            """Convert TaskItem or dict to plain dict."""
+            if hasattr(task, 'model_dump'):
+                d = task.model_dump(exclude_none=True)
+                # Include any extra fields the model sent
+                if hasattr(task, 'model_extra') and task.model_extra:
+                    d.update(task.model_extra)
+                return d
+            return dict(task) if not isinstance(task, dict) else task
+
+        def _resolve_content(d: dict) -> str:
+            """Accept content, title, name, or description as the task text."""
+            for key in ('content', 'title', 'name', 'description'):
+                val = str(d.get(key, '')).strip()
+                if val:
+                    return val
+            return ''
+
+        def _resolve_id(d: dict, idx: int) -> str:
+            """Use provided id, or auto-generate from index."""
+            item_id = str(d.get('id', '') or '').strip()
+            return item_id if item_id else str(idx + 1)
+
+        if overwrite:
+            # Full replacement — validate and write
+            all_tasks = []
+            for idx, task in enumerate(tasks):
+                d = _to_dict(task)
+                item_id = _resolve_id(d, idx)
+                content = _resolve_content(d)
+                if not content:
+                    continue
+
+                status = str(d.get('status', 'pending')).strip().lower()
+                if status not in VALID_TASK_STATUSES:
+                    status = 'pending'
+
+                all_tasks.append({
+                    'id': item_id,
+                    'content': content,
+                    'status': status,
+                })
+        else:
+            # Partial update — merge by id
+            existing_tasks = Chats.get_chat_tasks_by_id(__chat_id__)
+            existing_by_id = {t['id']: t for t in existing_tasks}
+
+            seen_ids = set()
+            for idx, task in enumerate(tasks):
+                d = _to_dict(task)
+                item_id = _resolve_id(d, len(existing_tasks) + idx)
+
+                seen_ids.add(item_id)
+
+                if item_id in existing_by_id:
+                    resolved = _resolve_content(d)
+                    if resolved:
+                        existing_by_id[item_id]['content'] = resolved
+                    status = str(d.get('status', '')).strip().lower()
+                    if status and status in VALID_TASK_STATUSES:
+                        existing_by_id[item_id]['status'] = status
+                else:
+                    content = _resolve_content(d)
+                    if not content:
+                        continue
+
+                    status = str(d.get('status', 'pending')).strip().lower()
+                    if status not in VALID_TASK_STATUSES:
+                        status = 'pending'
+
+                    existing_by_id[item_id] = {
+                        'id': item_id,
+                        'content': content,
+                        'status': status,
+                    }
+
+            # Preserve order of existing, append new
+            all_tasks = []
+            for t in existing_tasks:
+                if t['id'] in existing_by_id:
+                    all_tasks.append(existing_by_id[t['id']])
+            for item_id in seen_ids:
+                if not any(t['id'] == item_id for t in existing_tasks):
+                    all_tasks.append(existing_by_id[item_id])
+
+        # Persist to DB
+        Chats.update_chat_tasks_by_id(__chat_id__, all_tasks)
+
+        # Emit to frontend for real-time UI update
+        if __event_emitter__:
+            await __event_emitter__(
+                {
+                    'type': 'chat:message:tasks',
+                    'data': {
+                        'tasks': all_tasks,
+                    },
+                }
+            )
+
+        # Build summary counts
+        pending = sum(1 for t in all_tasks if t['status'] == 'pending')
+        in_progress = sum(1 for t in all_tasks if t['status'] == 'in_progress')
+        completed = sum(1 for t in all_tasks if t['status'] == 'completed')
+        cancelled = sum(1 for t in all_tasks if t['status'] == 'cancelled')
+
+        return json.dumps(
+            {
+                'tasks': all_tasks,
+                'summary': {
+                    'total': len(all_tasks),
+                    'pending': pending,
+                    'in_progress': in_progress,
+                    'completed': completed,
+                    'cancelled': cancelled,
+                },
+            },
+            ensure_ascii=False,
+        )
+    except Exception as e:
+        log.exception(f'update_tasks error: {e}')
+        return json.dumps({'error': str(e)})
+
+

@@ -85,6 +85,7 @@ from open_webui.tools.builtin import (
     view_file,
     view_knowledge_file,
     view_skill,
+    update_tasks,
 )
 
 import copy
@@ -502,6 +503,10 @@ def get_builtin_tools(
     # Skills tools - view_skill allows model to load full skill instructions on demand
     if extra_params.get('__skill_ids__'):
         builtin_functions.append(view_skill)
+
+    # Task management - break down complex work into trackable steps
+    if is_builtin_tool_enabled('tasks'):
+        builtin_functions.append(update_tasks)
 
     for func in builtin_functions:
         callable = get_async_tool_function_and_apply_extra_params(
