@@ -31,17 +31,10 @@ def mock_webui_user(user: Optional[Dict[str, Any]] = None):
     if user is None:
         user = DEFAULT_USER.copy()
 
-    # Mock the get_current_user dependency
-    with patch(
-        "open_webui.apps.webui.routers.auths.get_verified_user", return_value=user
-    ):
-        with patch(
-            "open_webui.apps.webui.routers.models.get_verified_user", return_value=user
-        ):
-            with patch(
-                "open_webui.apps.webui.routers.users.get_admin_user", return_value=user
-            ):
-                yield user
+    # Mock the authentication dependencies
+    with patch("open_webui.utils.auth.get_verified_user", return_value=user):
+        with patch("open_webui.utils.auth.get_admin_user", return_value=user):
+            yield user
 
 
 @contextmanager
