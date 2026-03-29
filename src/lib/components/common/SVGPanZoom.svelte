@@ -4,12 +4,12 @@
 
 	import { toast } from 'svelte-sonner';
 
-	import panzoom, { type PanZoom } from 'panzoom';
 	import DOMPurify from 'dompurify';
 
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
+	import { createPanzoomAction } from '$lib/actions/panzoom';
 	import { copyToClipboard } from '$lib/utils';
 
 	import Tooltip from './Tooltip.svelte';
@@ -21,29 +21,7 @@
 	export let svg = '';
 	export let content = '';
 
-	let instance: PanZoom | undefined;
-
-	const initSvgPanzoom = (node: HTMLElement) => {
-		instance?.dispose();
-		const localInstance = panzoom(node, {
-			bounds: true,
-			boundsPadding: 0.1,
-			zoomSpeed: 0.065
-		});
-		instance = localInstance;
-		return {
-			destroy() {
-				localInstance.dispose();
-				if (instance === localInstance) {
-					instance = undefined;
-				}
-			}
-		};
-	};
-	const resetPanZoomViewport = () => {
-		instance?.moveTo(0, 0);
-		instance?.zoomAbs(0, 0, 1);
-	};
+	const { action: initSvgPanzoom, reset: resetPanZoomViewport } = createPanzoomAction();
 
 	const downloadAsSVG = () => {
 		const svgBlob = new Blob([svg], { type: 'image/svg+xml' });

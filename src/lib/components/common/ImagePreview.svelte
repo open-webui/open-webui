@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { onDestroy, onMount, getContext } from 'svelte';
-	import panzoom, { type PanZoom } from 'panzoom';
+	import { onDestroy, getContext } from 'svelte';
 
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import { createPanzoomAction } from '$lib/actions/panzoom';
 
 	export let show = false;
 	export let src = '';
@@ -13,28 +13,9 @@
 
 	const i18n = getContext('i18n');
 
-	let mounted = false;
-
 	let previewElement = null;
 
-	let instance: PanZoom | undefined;
-
-	let sceneParentElement: HTMLElement;
-	let sceneElement: HTMLElement;
-
-	$: if (sceneElement) {
-		instance?.dispose();
-		instance = panzoom(sceneElement, {
-			bounds: true,
-			boundsPadding: 0.1,
-
-			zoomSpeed: 0.065
-		});
-	}
-	const resetPanZoomViewport = () => {
-		instance?.moveTo(0, 0);
-		instance?.zoomAbs(0, 0, 1);
-	};
+	const { action: initImagePanzoom } = createPanzoomAction();
 
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape') {
@@ -42,10 +23,6 @@
 			show = false;
 		}
 	};
-
-	onMount(() => {
-		mounted = true;
-	});
 
 	$: if (show && previewElement) {
 		document.body.appendChild(previewElement);
@@ -59,8 +36,6 @@
 
 	onDestroy(() => {
 		window.removeEventListener('keydown', handleKeyDown);
-		instance?.dispose();
-		instance = undefined;
 		show = false;
 
 		if (previewElement && previewElement.parentNode === document.body) {
@@ -189,7 +164,7 @@
 		</div>
 		<div class="flex h-full max-h-full justify-center items-center z-0">
 			<img
-				bind:this={sceneElement}
+				use:initImagePanzoom
 				{src}
 				{alt}
 				class=" mx-auto h-full object-scale-down select-none"

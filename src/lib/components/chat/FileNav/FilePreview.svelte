@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { getContext, onDestroy, tick } from 'svelte';
-	import panzoom, { type PanZoom } from 'panzoom';
+	import { getContext, tick } from 'svelte';
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
 	import { settings } from '$lib/stores';
@@ -12,6 +11,7 @@
 	import NotebookView from './NotebookView.svelte';
 	import SqliteView from './SqliteView.svelte';
 	import FileCodeEditor from './FileCodeEditor.svelte';
+	import { createPanzoomAction } from '$lib/actions/panzoom';
 
 	let pdfViewerRef: PDFViewer;
 	let fileCodeEditorRef: FileCodeEditor;
@@ -250,48 +250,14 @@
 		showRaw = true;
 	}
 
-	let pzInstance: PanZoom | null = null;
-
-	const initImagePanzoom = (node: HTMLElement) => {
-		pzInstance?.dispose();
-		const localInstance = panzoom(node, {
-			bounds: true,
-			boundsPadding: 0.1,
-			zoomSpeed: 0.065,
-			zoomDoubleClickSpeed: 1
-		});
-		pzInstance = localInstance;
-		return {
-			destroy() {
-				localInstance.dispose();
-				if (pzInstance === localInstance) {
-					pzInstance = null;
-				}
-			}
-		};
-	};
-
-	export const resetImageView = () => {
-		if (pzInstance) {
-			pzInstance.moveTo(0, 0);
-			pzInstance.zoomAbs(0, 0, 1);
-		}
-	};
-
-	export const disposePanzoom = () => {
-		if (pzInstance) {
-			pzInstance.dispose();
-			pzInstance = null;
-		}
-	};
+	const panzoomPreview = createPanzoomAction({ zoomDoubleClickSpeed: 1 });
+	const initImagePanzoom = panzoomPreview.action;
+	export const resetImageView = panzoomPreview.reset;
+	export const disposePanzoom = panzoomPreview.dispose;
 
 	export const resetPdfView = () => {
 		pdfViewerRef?.resetView();
 	};
-
-	onDestroy(() => {
-		disposePanzoom();
-	});
 </script>
 
 <div

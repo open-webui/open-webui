@@ -27,7 +27,7 @@
 	import PDFViewer from './PDFViewer.svelte';
 	import Reset from '../icons/Reset.svelte';
 
-	import panzoom, { type PanZoom } from 'panzoom';
+	import { createPanzoomAction } from '$lib/actions/panzoom';
 
 	export let item;
 	export let show = false;
@@ -60,32 +60,7 @@
 	let pptxCurrentSlide = 0;
 	let pptxError = '';
 
-	let pzInstance: PanZoom | null = null;
-
-	const initImagePanzoom = (node: HTMLElement) => {
-		pzInstance?.dispose();
-		const localInstance = panzoom(node, {
-			bounds: true,
-			boundsPadding: 0.1,
-			zoomSpeed: 0.065
-		});
-		pzInstance = localInstance;
-		return {
-			destroy() {
-				localInstance.dispose();
-				if (pzInstance === localInstance) {
-					pzInstance = null;
-				}
-			}
-		};
-	};
-
-	const resetImageView = () => {
-		if (pzInstance) {
-			pzInstance.moveTo(0, 0);
-			pzInstance.zoomAbs(0, 0, 1);
-		}
-	};
+	const { action: initImagePanzoom, reset: resetImageView } = createPanzoomAction();
 
 	$: isPDF =
 		item?.meta?.content_type === 'application/pdf' ||
@@ -276,10 +251,6 @@
 		if (item?.context === 'full') {
 			enableFullContent = true;
 		}
-
-		return () => {
-			pzInstance?.dispose();
-		};
 	});
 </script>
 
