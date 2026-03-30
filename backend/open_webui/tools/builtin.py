@@ -2354,20 +2354,12 @@ async def tasks(
     __user__: dict = None,
 ) -> str:
     """
-    Create or update a checklist of tasks tied to this chat.
-    Useful whenever a request involves multiple pieces of work that
-    should be tracked individually. Call without arguments to retrieve
-    the existing list.
-
-    By default the entire list is replaced (overwrite=true). Set
-    overwrite=false to patch specific items by id without discarding
-    the rest.
-
-    Each item carries an id, content string, and a status field
-    (pending, in_progress, completed, or cancelled). Order reflects
-    priority. Only one item should be in_progress at a time; mark
-    it completed before moving on, or cancel and replace it if the
-    approach changes.
+    Track progress on multi-step work by maintaining a task checklist.
+    Use this whenever a request involves multiple steps or could take
+    significant effort. Call to set the full list, then call again
+    with overwrite=false after completing each task to mark it
+    completed. Each task has an id, content, and status (pending,
+    in_progress, completed, cancelled).
 
     :param tasks: Optional list of task items. Each item: id (string), content (string, required for new tasks), status (pending|in_progress|completed|cancelled). Leave empty to fetch without modifying.
     :param overwrite: If true (default), replaces the entire task list. If false, updates/adds tasks by id while keeping existing ones.
