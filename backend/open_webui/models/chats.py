@@ -398,14 +398,20 @@ class ChatTable:
             return None
 
     def update_chat_title_by_id(self, id: str, title: str) -> Optional[ChatModel]:
-        chat = self.get_chat_by_id(id)
-        if chat is None:
+        try:
+            with get_db_context() as db:
+                chat_item = db.get(Chat, id)
+                if chat_item is None:
+                    return None
+                clean_title = self._clean_null_bytes(title)
+                chat_item.title = clean_title
+                chat_item.chat = {**(chat_item.chat or {}), 'title': clean_title}
+                chat_item.updated_at = int(time.time())
+                db.commit()
+                db.refresh(chat_item)
+                return ChatModel.model_validate(chat_item)
+        except Exception:
             return None
-
-        chat = chat.chat
-        chat['title'] = title
-
-        return self.update_chat_by_id(id, chat)
 
     def update_chat_tags_by_id(self, id: str, tags: list[str], user) -> Optional[ChatModel]:
         with get_db_context() as db:
