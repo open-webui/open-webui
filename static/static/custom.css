@@ -1,0 +1,298 @@
+/*
+ * Kořenovky AI — Custom Branding
+ * Brand colors from https://www.korenova-cisticka.cz
+ *   Primary green:  #467234
+ *   Dark green:     #46643A
+ *   Cream accent:   #f6f6d0
+ */
+
+/* Bebas font for VITRIX sticker */
+@font-face {
+  font-family: 'Bebas';
+  src: url('data:application/font-woff;base64,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') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* VITRIX demo sticker */
+#vitrix-sticker {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 9999;
+  padding: 0.4rem 0.8rem;
+  background: rgba(0, 0, 0, 0.6);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-radius: 0.5rem;
+  color: #fff;
+  font-size: 0.75rem;
+  font-family: sans-serif;
+  text-decoration: none;
+  letter-spacing: 0.05em;
+  transition: background 0.2s;
+}
+
+#vitrix-sticker:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+#vitrix-sticker span {
+  font-family: 'Bebas', sans-serif;
+  color: #ebe546;
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+}
+
+/* ===========================
+   CSS Custom Properties
+   =========================== */
+:root {
+  --k-green:        #467234;
+  --k-green-light:  #5a8f44;
+  --k-green-dark:   #3a5f2b;
+  --k-green-darker: #2d4a22;
+  --k-cream:        #f6f6d0;
+  --k-green-10:     rgba(70, 114, 52, 0.10);
+  --k-green-15:     rgba(70, 114, 52, 0.15);
+  --k-green-25:     rgba(70, 114, 52, 0.25);
+}
+
+/* ===========================
+   LIGHT MODE
+   =========================== */
+
+/* Main content area */
+.light body {
+  background: #f9fdf7 !important;
+}
+
+/* Translucent nature background */
+.light #chat-container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(249,253,247,1) 100%),
+    url('/static/korenovky/bg-nature-main.jpg') center/cover no-repeat;
+  pointer-events: none;
+}
+
+/* Sidebar & nav - frosted glass with green tint */
+.light #sidebar,
+.light nav {
+  background: rgba(249, 253, 247, 0.6) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  backdrop-filter: blur(16px) saturate(1.4);
+}
+
+/* Primary buttons - green instead of default */
+.light .bg-black,
+.light button.bg-black {
+  background-color: var(--k-green) !important;
+}
+
+.light .bg-black:hover,
+.light button.bg-black:hover {
+  background-color: var(--k-green-dark) !important;
+}
+
+/* Emerald/green action buttons */
+.light .bg-emerald-600,
+.light .bg-emerald-700 {
+  background-color: var(--k-green) !important;
+}
+
+.light .bg-emerald-600:hover,
+.light .bg-emerald-700:hover {
+  background-color: var(--k-green-dark) !important;
+}
+
+/* Blue accent overrides -> green */
+.light .bg-blue-600 {
+  background-color: var(--k-green) !important;
+}
+
+.light .border-blue-600 {
+  border-color: var(--k-green) !important;
+}
+
+.light .text-blue-600 {
+  color: var(--k-green) !important;
+}
+
+/* Links */
+.light a.underline {
+  color: var(--k-green);
+}
+
+/* Scrollbar thumb - green tint */
+.light ::-webkit-scrollbar-thumb {
+  background-color: rgba(70, 114, 52, 0.35) !important;
+}
+
+/* ===========================
+   DARK MODE
+   =========================== */
+
+/* Dark mode body */
+.dark body {
+  background: #111a0e !important;
+}
+
+/* Translucent nature background in dark mode */
+.dark #chat-container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    linear-gradient(180deg, rgba(17,26,14,0.1) 0%, rgba(20,30,16,1) 100%),
+    url('/static/korenovky/bg-nature-main.jpg') center/cover no-repeat;
+  pointer-events: none;
+}
+
+/* Dark sidebar & nav - frosted glass with dark green tint */
+.dark #sidebar,
+.dark nav {
+  background: rgba(17, 26, 14, 0.6) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  backdrop-filter: blur(16px) saturate(1.4);
+}
+
+/* Dark mode primary buttons */
+.dark .bg-white.text-black,
+.dark button.bg-white {
+  background-color: var(--k-green-light) !important;
+  color: white !important;
+}
+
+.dark .bg-white.text-black:hover,
+.dark button.bg-white:hover {
+  background-color: var(--k-green) !important;
+}
+
+/* Emerald/action buttons in dark mode */
+.dark .bg-emerald-600,
+.dark .bg-emerald-700 {
+  background-color: var(--k-green-light) !important;
+}
+
+/* Blue accent overrides -> green in dark mode */
+.dark .bg-blue-600 {
+  background-color: var(--k-green-light) !important;
+}
+
+.dark .border-blue-600 {
+  border-color: var(--k-green-light) !important;
+}
+
+.dark .text-blue-600 {
+  color: var(--k-green-light) !important;
+}
+
+/* Dark scrollbar - green tint */
+.dark ::-webkit-scrollbar-thumb {
+  background-color: rgba(90, 143, 68, 0.35) !important;
+}
+
+/* ===========================
+   SHARED / BOTH MODES
+   =========================== */
+
+/* Message bubbles - frosted glass cards */
+[id^="message-"] {
+  padding: 1rem !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  border-radius: 1rem !important;
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  backdrop-filter: blur(16px) saturate(1.4);
+}
+
+/* Chat input - no focus box */
+#chat-input:focus-within {
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Send button */
+button[aria-label="Send message"],
+button[type="submit"].bg-black,
+button[type="submit"].bg-white {
+  background-color: var(--k-green) !important;
+  color: white !important;
+}
+
+button[aria-label="Send message"]:hover,
+button[type="submit"].bg-black:hover,
+button[type="submit"].bg-white:hover {
+  background-color: var(--k-green-dark) !important;
+}
+
+/* Hover states in sidebar */
+#sidebar .hover\:bg-gray-100:hover {
+  background-color: var(--k-green-10) !important;
+}
+
+.dark #sidebar .hover\:bg-gray-900:hover,
+.dark #sidebar .dark\:hover\:bg-gray-900:hover {
+  background-color: rgba(90, 143, 68, 0.12) !important;
+}
+
+/* Checkbox checked state -> green */
+input[type='checkbox']:checked {
+  background-color: var(--k-green) !important;
+  border-color: var(--k-green) !important;
+}
+
+/* Focus ring -> green */
+input:focus,
+textarea:focus,
+select:focus {
+  outline-color: var(--k-green);
+}
+
+/* Toast / notification accents */
+.bg-green-500,
+.bg-green-600 {
+  background-color: var(--k-green) !important;
+}
+
+.bg-green-100 {
+  background-color: rgba(70, 114, 52, 0.15) !important;
+}
+
+.text-green-800 {
+  color: var(--k-green-dark) !important;
+}
+
+/* Sidebar brand name styling */
+#sidebar-webui-name {
+  color: var(--k-green) !important;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.dark #sidebar-webui-name {
+  color: var(--k-green-light) !important;
+}
+
+/* Progress bar on splash screen */
+#progress-bar {
+  background-color: var(--k-green) !important;
+}
+
+/* Splash screen subtle green bg */
+.light #splash-screen {
+  background: #f9fdf7 !important;
+}
+
+.dark #splash-screen {
+  background: #111a0e !important;
+}
