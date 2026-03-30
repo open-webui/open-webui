@@ -2358,8 +2358,9 @@ async def tasks(
     Use this whenever a request involves multiple steps or could take
     significant effort. Call to set the full list, then call again
     with overwrite=false after completing each task to mark it
-    completed. Each task has an id, content, and status (pending,
-    in_progress, completed, cancelled).
+    completed. Do not leave tasks in_progress when the work is done.
+    Each task has an id, content, and status (pending, in_progress,
+    completed, cancelled).
 
     :param tasks: Optional list of task items. Each item: id (string), content (string, required for new tasks), status (pending|in_progress|completed|cancelled). Leave empty to fetch without modifying.
     :param overwrite: If true (default), replaces the entire task list. If false, updates/adds tasks by id while keeping existing ones.
