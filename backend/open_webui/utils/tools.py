@@ -703,7 +703,7 @@ def resolve_schema(schema, components):
     if not schema:
         return {}
 
-    if '$ref' in schema:
+    if '$ref' in schema.keys():
         ref_path = schema['$ref']
         ref_parts = ref_path.strip('#/').split('/')
         resolved = components
@@ -720,6 +720,10 @@ def resolve_schema(schema, components):
 
     if 'items' in resolved_schema:
         resolved_schema['items'] = resolve_schema(resolved_schema['items'], components)
+
+    if 'oneOf' in resolved_schema:
+        for i, inner_schema in enumerate(resolved_schema['oneOf']):
+            resolved_schema['oneOf'][i] = resolve_schema(inner_schema, components)
 
     return resolved_schema
 
