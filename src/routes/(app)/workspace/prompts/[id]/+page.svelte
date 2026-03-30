@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import { onMount, getContext } from 'svelte';
@@ -58,10 +59,10 @@
 					access_grants: _prompt?.access_grants === undefined ? [] : _prompt?.access_grants
 				};
 			} else {
-				goto('/workspace/prompts');
+				goto(`${base}/workspace/prompts`);
 			}
 		} else {
-			goto('/workspace/prompts');
+			goto(`${base}/workspace/prompts`);
 		}
 	});
 </script>

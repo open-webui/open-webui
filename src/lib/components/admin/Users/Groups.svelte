@@ -1,4 +1,5 @@
 <script>
+	import { base } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
@@ -100,7 +101,7 @@
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
-			await goto('/');
+			await goto(`${base}/`);
 			return;
 		}
 

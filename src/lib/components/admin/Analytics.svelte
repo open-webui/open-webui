@@ -1,4 +1,5 @@
 <script>
+	import { base } from '$app/paths';
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { user } from '$lib/stores';
@@ -11,7 +12,7 @@
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
-			await goto('/');
+			await goto(`${base}/`);
 		}
 		loaded = true;
 	});

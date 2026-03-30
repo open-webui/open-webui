@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import type { Token } from 'marked';
 	import { LinkPreview } from 'bits-ui';
 
@@ -95,13 +96,13 @@
 						console.log('Clicked user mention', id);
 					} else if (idType === 'M') {
 						console.log('Clicked model mention', id);
-						await goto(`/?model=${id}`);
+						await goto(`${base}/?model=${id}`);
 					}
 				} else if (triggerChar === '#') {
 					if (idType === 'C') {
 						// Open channel
 						if ($channels.find((c) => c.id === id)) {
-							await goto(`/channels/${id}`);
+							await goto(`${base}/channels/${id}`);
 						}
 					} else if (idType === 'T') {
 						// Open thread

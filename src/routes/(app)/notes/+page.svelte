@@ -1,4 +1,5 @@
 <script>
+	import { base } from '$app/paths';
 	import { getContext, onMount } from 'svelte';
 
 	const i18n = getContext('i18n');
@@ -29,7 +30,7 @@
 			const res = await createNoteHandler(title, content);
 
 			if (res) {
-				goto(`/notes/${res.id}`);
+				goto(`${base}/notes/${res.id}`);
 			}
 			return;
 		}
@@ -72,7 +73,7 @@
 						<div
 							class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium bg-transparent py-1 touch-auto pointer-events-auto"
 						>
-							<a class="min-w-fit transition" href="/notes">
+							<a class="min-w-fit transition" href="{base}/notes">
 								{$i18n.t('Notes')}
 							</a>
 						</div>

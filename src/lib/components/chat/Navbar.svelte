@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
@@ -134,7 +135,7 @@
 										}
 
 										if ($page.url.pathname !== '/') {
-											await goto('/');
+											await goto(`${base}/`);
 										}
 
 										// add 'temporary-chat=true' to the URL

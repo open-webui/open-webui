@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { getContext, createEventDispatcher, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -122,7 +123,7 @@
 			onUpdate();
 
 			if ($page.url.pathname === `/channels/${channelId}`) {
-				goto('/');
+				goto(`${base}/`);
 			}
 		}
 

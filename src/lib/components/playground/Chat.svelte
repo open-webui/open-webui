@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
@@ -290,7 +291,7 @@
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
-			await goto('/');
+			await goto(`${base}/`);
 		}
 
 		if ($settings?.models) {

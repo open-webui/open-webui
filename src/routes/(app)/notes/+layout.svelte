@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { onMount, getContext } from 'svelte';
 	import { WEBUI_NAME, showSidebar, functions, config, user, showArchivedChats } from '$lib/stores';
 	import { goto } from '$app/navigation';
@@ -15,7 +16,7 @@
 			)
 		) {
 			// If the feature is not enabled, redirect to the home page
-			goto('/');
+			goto(`${base}/`);
 		}
 
 		loaded = true;

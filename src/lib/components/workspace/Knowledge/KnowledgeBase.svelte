@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import Fuse from 'fuse.js';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
@@ -753,7 +754,7 @@
 			}
 			knowledgeId = knowledge?.id;
 		} else {
-			goto('/workspace/knowledge');
+			goto(`${base}/workspace/knowledge`);
 		}
 
 		const dropZone = document.querySelector('body');

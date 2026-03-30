@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import { skills } from '$lib/stores';
@@ -56,10 +57,10 @@
 					access_grants: _skill?.access_grants === undefined ? [] : _skill?.access_grants
 				};
 			} else {
-				goto('/workspace/skills');
+				goto(`${base}/workspace/skills`);
 			}
 		} else {
-			goto('/workspace/skills');
+			goto(`${base}/workspace/skills`);
 		}
 	});
 </script>

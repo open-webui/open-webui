@@ -1,4 +1,5 @@
 <script>
+	import { base } from '$app/paths';
 	import { getContext, tick, onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -56,7 +57,7 @@
 		>
 			<a
 				id="leaderboard"
-				href="/admin/evaluations/leaderboard"
+				href="{base}/admin/evaluations/leaderboard"
 				draggable="false"
 				class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition select-none {selectedTab ===
 				'leaderboard'
@@ -82,7 +83,7 @@
 
 			<a
 				id="feedback"
-				href="/admin/evaluations/feedback"
+				href="{base}/admin/evaluations/feedback"
 				draggable="false"
 				class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition select-none {selectedTab ===
 				'feedback'

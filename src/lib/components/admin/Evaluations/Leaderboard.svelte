@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { onMount, getContext } from 'svelte';
 	import { models } from '$lib/stores';
 	import { getLeaderboard } from '$lib/apis/evaluations';
@@ -182,7 +183,7 @@
 									alt={model.name}
 									class="size-5 rounded-full object-cover shrink-0"
 									on:error={(e) => {
-										e.target.src = '/favicon.png';
+										e.target.src = `${base}/static/favicon.png`;
 									}}
 								/>
 								<Tooltip content={`${model.name} (${model.id})`} placement="top-start">

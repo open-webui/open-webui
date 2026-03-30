@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import DOMPurify from 'dompurify';
 	import { toast } from 'svelte-sonner';
 
@@ -806,7 +807,7 @@
 		if (res) {
 			// Clear the input content saved in session storage.
 			sessionStorage.removeItem('chat-input');
-			goto(`/notes/${res.id}`);
+			goto(`${base}/notes/${res.id}`);
 		}
 	};
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { DropdownMenu } from 'bits-ui';
 	import { marked } from 'marked';
 	import Fuse from 'fuse.js';
@@ -654,7 +655,7 @@
 													{$i18n.t('Connect to an AI provider to start chatting')}
 												</div>
 												<a
-													href="/admin/settings/connections"
+													href="{base}/admin/settings/connections"
 													class="px-4 py-1.5 rounded-xl text-xs font-medium bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 transition"
 													on:click={() => {
 														show = false;

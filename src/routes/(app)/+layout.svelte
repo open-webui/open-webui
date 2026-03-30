@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { onMount, tick, getContext } from 'svelte';
 	import { openDB, deleteDB } from 'idb';
@@ -194,7 +195,7 @@
 
 	onMount(async () => {
 		if ($user === undefined || $user === null) {
-			await goto('/auth');
+			await goto(`${base}/auth`);
 			return;
 		}
 		if (!['user', 'admin'].includes($user?.role)) {
@@ -296,7 +297,7 @@
 					} else {
 						temporaryChatEnabled.set(!$temporaryChatEnabled);
 					}
-					await goto('/');
+					await goto(`${base}/`);
 					setTimeout(() => {
 						document.getElementById('new-chat-button')?.click();
 					}, 0);

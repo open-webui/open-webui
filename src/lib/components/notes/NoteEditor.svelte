@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	import { v4 as uuidv4 } from 'uuid';
 	import fileSaver from 'file-saver';
@@ -191,7 +192,7 @@
 				$socket?.on('note-events', noteEventHandler);
 			}
 		} else {
-			goto('/');
+			goto(`${base}/`);
 			return;
 		}
 
@@ -615,7 +616,7 @@ ${content}
 
 		if (res) {
 			toast.success($i18n.t('Note deleted successfully'));
-			goto('/notes');
+			goto(`${base}/notes`);
 		} else {
 			toast.error($i18n.t('Failed to delete note'));
 		}

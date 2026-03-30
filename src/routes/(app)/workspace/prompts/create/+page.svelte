@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import { onMount, tick, getContext } from 'svelte';
@@ -26,7 +27,7 @@
 
 		if (res) {
 			toast.success($i18n.t('Prompt created successfully'));
-			await goto('/workspace/prompts');
+			await goto(`${base}/workspace/prompts`);
 		}
 	};
 

@@ -1,4 +1,5 @@
 <script>
+	import { base } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
 
@@ -66,7 +67,7 @@
 		if (id) {
 			func = await getFunctionById(localStorage.token, id).catch((error) => {
 				toast.error(`${error}`);
-				goto('/admin/functions');
+				goto(`${base}/admin/functions`);
 				return null;
 			});
 

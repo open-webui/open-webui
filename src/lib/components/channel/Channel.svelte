@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { Pane, PaneGroup, PaneResizer } from 'paneforge';
 
@@ -108,7 +109,7 @@
 				}
 			}
 		} else {
-			goto('/');
+			goto(`${base}/`);
 		}
 	};
 

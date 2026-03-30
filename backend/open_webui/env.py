@@ -254,6 +254,15 @@ ENABLE_EASTER_EGGS = os.environ.get('ENABLE_EASTER_EGGS', 'True').lower() == 'tr
 WEBUI_BUILD_HASH = os.environ.get('WEBUI_BUILD_HASH', 'dev-build')
 
 ####################################
+# WEBUI_SUBPATH
+####################################
+
+# Optional URL subpath prefix for reverse-proxy deployments (e.g. "/openwebui").
+# Must start with a leading slash and must not end with a trailing slash.
+# Leave empty to serve at the root path.
+WEBUI_SUBPATH = os.environ.get('WEBUI_SUBPATH', '')
+
+####################################
 # DATA/FRONTEND BUILD DIR
 ####################################
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { getContext, onMount } from 'svelte';
 
 	const i18n = getContext('i18n');
@@ -27,7 +28,7 @@
 		});
 
 		if (res) {
-			goto(`/channels/${res.id}`);
+			goto(`${base}/channels/${res.id}`);
 		}
 	};
 </script>

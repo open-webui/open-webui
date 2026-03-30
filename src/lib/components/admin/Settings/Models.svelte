@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { marked } from 'marked';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
@@ -301,7 +302,7 @@
 			id: `${model.id}-clone`,
 			name: `${model.name} (Clone)`
 		});
-		goto('/workspace/models/create');
+		goto(`${base}/workspace/models/create`);
 	};
 
 	const exportModelHandler = async (model) => {
@@ -597,7 +598,7 @@
 											alt="modelfile profile"
 											class=" rounded-full w-full h-auto object-cover"
 											on:error={(e) => {
-												e.target.src = '/favicon.png';
+												e.target.src = `${base}/static/favicon.png`;
 											}}
 										/>
 									</div>

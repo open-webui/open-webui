@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
@@ -83,7 +84,7 @@
 >
 	<a
 		class=" w-full flex justify-between"
-		href="/channels/{channel.id}"
+		href="{base}/channels/{channel.id}"
 		on:click={() => {
 			console.log(channel);
 

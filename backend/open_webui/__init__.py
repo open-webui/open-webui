@@ -66,7 +66,7 @@ def serve(
             os.environ['LD_LIBRARY_PATH'] = ':'.join(LD_LIBRARY_PATH)
 
     import open_webui.main  # noqa: F401
-    from open_webui.env import UVICORN_WORKERS  # Import the workers setting
+    from open_webui.env import UVICORN_WORKERS, WEBUI_SUBPATH  # Import the workers setting and web subpath
 
     uvicorn.run(
         'open_webui.main:app',
@@ -74,6 +74,7 @@ def serve(
         port=port,
         forwarded_allow_ips='*',
         workers=UVICORN_WORKERS,
+        root_path=WEBUI_SUBPATH,
     )
 
 
@@ -83,12 +84,15 @@ def dev(
     port: int = 8080,
     reload: bool = True,
 ):
+    from open_webui.env import WEBUI_SUBPATH
+
     uvicorn.run(
         'open_webui.main:app',
         host=host,
         port=port,
         reload=reload,
         forwarded_allow_ips='*',
+        root_path=WEBUI_SUBPATH,
     )
 
 

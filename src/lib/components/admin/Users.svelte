@@ -1,4 +1,5 @@
 <script>
+	import { base } from '$app/paths';
 	import { getContext, tick, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
@@ -34,7 +35,7 @@
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
-			await goto('/');
+			await goto(`${base}/`);
 		}
 
 		loaded = true;
@@ -62,7 +63,7 @@
 	>
 		<a
 			id="overview"
-			href="/admin/users/overview"
+			href="{base}/admin/users/overview"
 			draggable="false"
 			class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition select-none {selectedTab ===
 			'overview'
@@ -86,7 +87,7 @@
 
 		<a
 			id="groups"
-			href="/admin/users/groups"
+			href="{base}/admin/users/groups"
 			draggable="false"
 			class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition select-none {selectedTab ===
 			'groups'

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { onMount, getContext } from 'svelte';
 	import { models } from '$lib/stores';
 	import {
@@ -394,7 +395,7 @@
 											alt={model.name}
 											class="size-5 rounded-full object-cover shrink-0"
 											on:error={(e) => {
-												e.target.src = '/favicon.png';
+												e.target.src = `${base}/static/favicon.png`;
 											}}
 										/>
 										<span class="truncate max-w-[150px]">{model.name}</span>
@@ -500,7 +501,7 @@
 											alt={user.name || 'User'}
 											class="size-5 rounded-full object-cover shrink-0"
 											on:error={(e) => {
-												e.target.src = '/user.png';
+												e.target.src = `${base}/static/user.png`;
 											}}
 										/>
 										<span class="truncate max-w-[150px]"

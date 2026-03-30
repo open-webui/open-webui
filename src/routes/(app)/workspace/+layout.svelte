@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { onMount, getContext } from 'svelte';
 	import {
 		WEBUI_NAME,
@@ -22,21 +23,21 @@
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
 			if ($page.url.pathname.includes('/models') && !$user?.permissions?.workspace?.models) {
-				goto('/');
+				goto(`${base}/`);
 			} else if (
 				$page.url.pathname.includes('/knowledge') &&
 				!$user?.permissions?.workspace?.knowledge
 			) {
-				goto('/');
+				goto(`${base}/`);
 			} else if (
 				$page.url.pathname.includes('/prompts') &&
 				!$user?.permissions?.workspace?.prompts
 			) {
-				goto('/');
+				goto(`${base}/`);
 			} else if ($page.url.pathname.includes('/tools') && !$user?.permissions?.workspace?.tools) {
-				goto('/');
+				goto(`${base}/`);
 			} else if ($page.url.pathname.includes('/skills') && !$user?.permissions?.workspace?.skills) {
-				goto('/');
+				goto(`${base}/`);
 			}
 		}
 
@@ -91,7 +92,7 @@
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/models')
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
-								href="/workspace/models">{$i18n.t('Models')}</a
+								href="{base}/workspace/models">{$i18n.t('Models')}</a
 							>
 						{/if}
 
@@ -102,7 +103,7 @@
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/knowledge')
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
-								href="/workspace/knowledge"
+								href="{base}/workspace/knowledge"
 							>
 								{$i18n.t('Knowledge')}
 							</a>
@@ -115,7 +116,7 @@
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/prompts')
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
-								href="/workspace/prompts">{$i18n.t('Prompts')}</a
+								href="{base}/workspace/prompts">{$i18n.t('Prompts')}</a
 							>
 						{/if}
 
@@ -126,7 +127,7 @@
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/skills')
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
-								href="/workspace/skills"
+								href="{base}/workspace/skills"
 							>
 								{$i18n.t('Skills')}
 							</a>
@@ -139,7 +140,7 @@
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/tools')
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
-								href="/workspace/tools"
+								href="{base}/workspace/tools"
 							>
 								{$i18n.t('Tools')}
 							</a>

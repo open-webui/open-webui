@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { onMount } from 'svelte';
 
 	import { goto } from '$app/navigation';
@@ -14,7 +15,7 @@
 		const res = await createNoteHandler(title, content);
 
 		if (res) {
-			goto(`/notes/${res.id}`);
+			goto(`${base}/notes/${res.id}`);
 		}
 	});
 </script>

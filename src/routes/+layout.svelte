@@ -61,6 +61,7 @@
 	} from '$lib/utils/connections';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
+	import { base } from '$app/paths';
 	import { bestMatchingLanguage, displayFileHandler } from '$lib/utils';
 	import { setTextScale } from '$lib/utils/text-scale';
 
@@ -116,7 +117,7 @@
 			reconnectionDelay: 1000,
 			reconnectionDelayMax: 5000,
 			randomizationFactor: 0.5,
-			path: '/ws/socket.io',
+			path: `${base}/ws/socket.io`,
 			transports: enableWebsocket ? ['websocket'] : ['polling', 'websocket'],
 			auth: { token: localStorage.token }
 		});
@@ -465,7 +466,7 @@
 					toast.custom(NotificationToast, {
 						componentProps: {
 							onClick: () => {
-								goto(`/c/${event.chat_id}`);
+								goto(`${base}/c/${event.chat_id}`);
 							},
 							content: content,
 							title: displayTitle
@@ -668,7 +669,7 @@
 				toast.custom(NotificationToast, {
 					componentProps: {
 						onClick: () => {
-							goto(`/channels/${event.channel_id}`);
+							goto(`${base}/channels/${event.channel_id}`);
 						},
 						content: data?.content,
 						title: `${title}`
@@ -910,7 +911,7 @@
 			if (error?.authRedirect) {
 				// Forward-auth proxy is redirecting to an external login page.
 				// Full-page navigation lets the browser follow the redirect natively.
-				window.location.href = '/';
+				window.location.href = `${base}/`;
 				return;
 			}
 			console.error('Error loading backend config:', error);
@@ -959,19 +960,19 @@
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');
-						await goto(`/auth?redirect=${encodedUrl}`);
+						await goto(`${base}/auth?redirect=${encodedUrl}`);
 					}
 				} else {
 					// Don't redirect if we're already on the auth page
 					// Needed because we pass in tokens from OAuth logins via URL fragments
 					if ($page.url.pathname !== '/auth') {
-						await goto(`/auth?redirect=${encodedUrl}`);
+						await goto(`${base}/auth?redirect=${encodedUrl}`);
 					}
 				}
 			}
 		} else {
 			// Redirect to /error when Backend Not Detected
-			await goto(`/error`);
+			await goto(`${base}/error`);
 		}
 
 		await tick();
@@ -1040,7 +1041,7 @@
 		rel="search"
 		type="application/opensearchdescription+xml"
 		title={$WEBUI_NAME}
-		href="/opensearch.xml"
+		href="{base}/opensearch.xml"
 		crossorigin="use-credentials"
 	/>
 </svelte:head>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
@@ -126,7 +127,7 @@
 				id: `${_tool.id}_clone`,
 				name: `${_tool.name} (Clone)`
 			});
-			goto('/workspace/tools/create');
+			goto(`${base}/workspace/tools/create`);
 		}
 	};
 
@@ -211,7 +212,7 @@
 		sessionStorage.tool = JSON.stringify({
 			...tool
 		});
-		goto('/workspace/tools/create');
+		goto(`${base}/workspace/tools/create`);
 	}}
 	loadUrlHandler={async (url) => {
 		return await loadToolByUrl(localStorage.token, url);
@@ -285,7 +286,7 @@
 				{#if $user?.role === 'admin'}
 					<AddToolMenu
 						createHandler={() => {
-							goto('/workspace/tools/create');
+							goto(`${base}/workspace/tools/create`);
 						}}
 						importFromLinkHandler={() => {
 							showImportModal = true;
@@ -302,7 +303,7 @@
 				{:else}
 					<a
 						class=" px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
-						href="/workspace/tools/create"
+						href="{base}/workspace/tools/create"
 					>
 						<Plus className="size-3" strokeWidth="2.5" />
 
@@ -518,7 +519,7 @@
 
 										<ToolMenu
 											editHandler={() => {
-												goto(`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);
+												goto(`${base}/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);
 											}}
 											shareHandler={() => {
 												shareHandler(tool);

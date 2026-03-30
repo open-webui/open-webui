@@ -1,4 +1,5 @@
 <script>
+	import { base } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 
@@ -13,10 +14,10 @@
 
 			// Redirect to root with 'youtube' parameter
 
-			goto(`/?youtube=${encodeURIComponent(videoId)}`);
+			goto(`${base}/?youtube=${encodeURIComponent(videoId)}`);
 		} else {
 			// Redirect to root if 'v' parameter doesn't exist
-			goto('/');
+			goto(`${base}/`);
 		}
 	});
 </script>

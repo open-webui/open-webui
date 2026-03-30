@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { getContext } from 'svelte';
 	import { embed, showControls, showEmbeds } from '$lib/stores';
 
@@ -179,7 +180,7 @@
 							alt="favicon"
 							class="size-4 rounded-full shrink-0 border border-white dark:border-gray-850 bg-white dark:bg-gray-900"
 							on:error={(e) => {
-								e.target.src = '/favicon.png';
+								e.target.src = `${base}/static/favicon.png`;
 							}}
 						/>
 					{/each}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import { skills } from '$lib/stores';
@@ -29,7 +30,7 @@
 		if (res) {
 			toast.success($i18n.t('Skill created successfully'));
 			await skills.set(await getSkills(localStorage.token));
-			await goto('/workspace/skills');
+			await goto(`${base}/workspace/skills`);
 		}
 	};
 

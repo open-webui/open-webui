@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	const i18n = getContext('i18n');
@@ -235,7 +236,7 @@
 						{
 							label: $i18n.t('Create a new note'),
 							onClick: async () => {
-								await goto(`/notes?content=${query}`);
+								await goto(`${base}/notes?content=${query}`);
 								show = false;
 								onClose();
 							},
@@ -372,14 +373,14 @@
 							idx + actions.length
 								? 'bg-gray-50 dark:bg-gray-850'
 								: ''}"
-							href="/c/{chat.id}"
+							href="{base}/c/{chat.id}"
 							draggable="false"
 							data-arrow-selected={selectedIdx === idx + actions.length ? 'true' : undefined}
 							on:mouseenter={() => {
 								selectedIdx = idx + actions.length;
 							}}
 							on:click={async () => {
-								await goto(`/c/${chat.id}`);
+								await goto(`${base}/c/${chat.id}`);
 								show = false;
 								onClose();
 							}}

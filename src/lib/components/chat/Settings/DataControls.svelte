@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
@@ -110,7 +111,7 @@
 	};
 
 	const archiveAllChatsHandler = async () => {
-		await goto('/');
+		await goto(`${base}/`);
 		await archiveAllChats(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
 		});
@@ -122,7 +123,7 @@
 	};
 
 	const deleteAllChatsHandler = async () => {
-		await goto('/');
+		await goto(`${base}/`);
 		await deleteAllChats(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
 		});
@@ -145,7 +146,7 @@
 	onUpdate={handleArchivedChatsChange}
 	onDelete={(id) => {
 		if ($chatId === id) {
-			goto('/');
+			goto(`${base}/`);
 			chatId.set('');
 		}
 	}}

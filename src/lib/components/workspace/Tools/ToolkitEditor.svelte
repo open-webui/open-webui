@@ -1,4 +1,5 @@
 <script>
+	import { base } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick } from 'svelte';
 
@@ -229,7 +230,7 @@ class Tools:
 									class="w-full text-left text-sm py-1.5 px-1 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
 									aria-label={$i18n.t('Back')}
 									on:click={() => {
-										goto('/workspace/tools');
+										goto(`${base}/workspace/tools`);
 									}}
 									type="button"
 								>

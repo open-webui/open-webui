@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import Fuse from 'fuse.js';
 
 	import { createEventDispatcher, onDestroy, onMount } from 'svelte';
@@ -87,7 +88,7 @@
 						alt={model?.name ?? model.id}
 						class="rounded-full size-5 items-center mr-2"
 						on:error={(e) => {
-							e.currentTarget.src = '/favicon.png';
+							e.currentTarget.src = `${base}/static/favicon.png`;
 						}}
 					/>
 					<div class="truncate">

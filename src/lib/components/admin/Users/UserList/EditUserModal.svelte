@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 	import { createEventDispatcher } from 'svelte';
@@ -124,7 +125,7 @@
 														<a
 															href={'/admin/users/groups?id=' + userGroup.id}
 															on:click|preventDefault={() =>
-																goto('/admin/users/groups?id=' + userGroup.id)}
+																goto(`${base}/admin/users/groups?id=` + userGroup.id)}
 														>
 															{userGroup.name}
 														</a>

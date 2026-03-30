@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { onMount, tick, getContext } from 'svelte';
 
 	import Textarea from '$lib/components/common/Textarea.svelte';
@@ -655,7 +656,7 @@
 										src={`/api/v1/users/${entry.user.id}/profile/image`}
 										alt={entry.user.name}
 										class="size-3 rounded-full mr-0.5"
-										on:error={(e) => (e.target.src = '/user.png')}
+										on:error={(e) => (e.target.src = `${base}/static/user.png`)}
 									/>
 									<span class="truncate">{entry.user.name}</span>
 									<span>•</span>

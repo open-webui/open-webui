@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { marked } from 'marked';
 
 	import { getContext, tick } from 'svelte';
@@ -84,7 +85,7 @@
 						class="rounded-full size-5 flex items-center"
 						loading="lazy"
 						on:error={(e) => {
-							e.currentTarget.src = '/favicon.png';
+							e.currentTarget.src = `${base}/static/favicon.png`;
 						}}
 					/>
 				</Tooltip>

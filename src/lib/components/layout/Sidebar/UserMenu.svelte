@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { createEventDispatcher, getContext, onMount, tick } from 'svelte';
 
 	import { goto } from '$app/navigation';
@@ -237,7 +238,7 @@
 
 			{#if role === 'admin'}
 				<a
-					href="/playground"
+					href="{base}/playground"
 					draggable="false"
 					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
 					on:click={async (e) => {
@@ -246,7 +247,7 @@
 						}
 						e.preventDefault();
 						show = false;
-						goto('/playground');
+						goto(`${base}/playground`);
 						if ($mobile) {
 							await tick();
 							showSidebar.set(false);
@@ -259,7 +260,7 @@
 					<div class=" self-center truncate">{$i18n.t('Playground')}</div>
 				</a>
 				<a
-					href="/admin"
+					href="{base}/admin"
 					draggable="false"
 					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
 					on:click={async (e) => {
@@ -268,7 +269,7 @@
 						}
 						e.preventDefault();
 						show = false;
-						goto('/admin');
+						goto(`${base}/admin`);
 						if ($mobile) {
 							await tick();
 							showSidebar.set(false);
@@ -353,7 +354,7 @@
 					user.set(null);
 					localStorage.removeItem('token');
 
-					location.href = res?.redirect_url ?? '/auth';
+					location.href = res?.redirect_url ?? `${base}/auth`;
 					show = false;
 				}}
 			>

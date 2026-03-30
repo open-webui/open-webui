@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { onMount, tick, getContext } from 'svelte';
 
 	import Textarea from '$lib/components/common/Textarea.svelte';
@@ -139,7 +140,7 @@
 									class="w-full text-left text-sm py-1.5 px-1 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
 									aria-label={$i18n.t('Back')}
 									on:click={() => {
-										goto('/workspace/skills');
+										goto(`${base}/workspace/skills`);
 									}}
 									type="button"
 								>

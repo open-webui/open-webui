@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
@@ -105,7 +106,7 @@
 				id: `${_skill.id}_clone`,
 				name: `${_skill.name} (Clone)`
 			});
-			goto('/workspace/skills/create');
+			goto(`${base}/workspace/skills/create`);
 		}
 	};
 
@@ -250,7 +251,7 @@
 											is_active: true,
 											access_grants: []
 										});
-										goto('/workspace/skills/create');
+										goto(`${base}/workspace/skills/create`);
 									}
 								};
 								reader.readAsText(file);
@@ -299,7 +300,7 @@
 				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.skills}
 					<a
 						class=" px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
-						href="/workspace/skills/create"
+						href="{base}/workspace/skills/create"
 					>
 						<Plus className="size-3" strokeWidth="2.5" />
 
@@ -466,7 +467,7 @@
 									{:else}
 										<SkillMenu
 											editHandler={() => {
-												goto(`/workspace/skills/edit?id=${encodeURIComponent(skill.id)}`);
+												goto(`${base}/workspace/skills/edit?id=${encodeURIComponent(skill.id)}`);
 											}}
 											cloneHandler={() => {
 												cloneHandler(skill);

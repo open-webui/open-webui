@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { getContext, onDestroy, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -201,7 +202,7 @@
 								alt={item?.data?.name ?? item.id}
 								class="rounded-full size-5 items-center mr-2"
 								on:error={(e) => {
-									e.currentTarget.src = '/favicon.png';
+									e.currentTarget.src = `${base}/static/favicon.png`;
 								}}
 							/>
 						{:else if item.type === 'user'}
@@ -210,7 +211,7 @@
 								alt={item?.label ?? item.id}
 								class="rounded-full size-5 items-center mr-2"
 								on:error={(e) => {
-									e.currentTarget.src = '/favicon.png';
+									e.currentTarget.src = `${base}/static/favicon.png`;
 								}}
 							/>
 						{/if}

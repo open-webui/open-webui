@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
 	import { onMount, getContext, createEventDispatcher, tick, onDestroy } from 'svelte';
@@ -125,7 +126,7 @@
 		});
 
 		if (res) {
-			goto(`/c/${res.id}`);
+			goto(`${base}/c/${res.id}`);
 
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
@@ -142,7 +143,7 @@
 		if (res) {
 			tags.set(await getAllTags(localStorage.token));
 			if ($chatId === id) {
-				await goto('/');
+				await goto(`${base}/`);
 
 				await chatId.set('');
 				await tick();
@@ -157,7 +158,7 @@
 			await archiveChatById(localStorage.token, id);
 
 			if ($chatId === id) {
-				await goto('/');
+				await goto(`${base}/`);
 				chatId.set('');
 			}
 
@@ -424,7 +425,7 @@
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950 selected'
 					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
-			href="/c/{id}"
+			href="{base}/c/{id}"
 			on:click={() => {
 				dispatch('select');
 
