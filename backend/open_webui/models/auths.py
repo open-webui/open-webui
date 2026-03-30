@@ -1,13 +1,14 @@
 import logging
 import uuid
+from typing import Optional
 
-from open_webui.internal.db import Base, get_db_context
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 from open_webui.models.users import User, UserModel, UserProfileImageResponse, Users
 from open_webui.utils.validate import validate_profile_image_url
 from pydantic import BaseModel, field_validator
 from sqlalchemy import Boolean, Column, String, Text
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +44,7 @@ class Token(BaseModel):
 
 
 class ApiKey(BaseModel):
-    api_key: str | None = None
+    api_key: Optional[str] = None
 
 
 class SigninResponse(Token, UserProfileImageResponse):
@@ -73,18 +74,18 @@ class SignupForm(BaseModel):
     name: str
     email: str
     password: str
-    profile_image_url: str | None = '/user.png'
+    profile_image_url: Optional[str] = '/user.png'
 
     @field_validator('profile_image_url')
     @classmethod
-    def check_profile_image_url(cls, v: str | None) -> str | None:
+    def check_profile_image_url(cls, v: Optional[str]) -> Optional[str]:
         if v is not None:
             return validate_profile_image_url(v)
         return v
 
 
 class AddUserForm(SignupForm):
-    role: str | None = 'pending'
+    role: Optional[str] = 'pending'
 
 
 class AuthsTable:
@@ -95,10 +96,10 @@ class AuthsTable:
         name: str,
         profile_image_url: str = '/user.png',
         role: str = 'pending',
-        oauth: dict | None = None,
-        db: Session | None = None,
-        id: str | None = None,
-    ) -> UserModel | None:
+        oauth: Optional[dict] = None,
+        db: Optional[Session] = None,
+        id: Optional[str] = None,
+    ) -> Optional[UserModel]:
         with get_db_context(db) as db:
             log.info('insert_new_auth')
 
@@ -156,7 +157,9 @@ class AuthsTable:
                     log.error(f'Failed to insert auth: {str(e)}')
                     return None
 
-    def authenticate_user(self, email: str, verify_password: callable, db: Session | None = None) -> UserModel | None:
+    def authenticate_user(
+        self, email: str, verify_password: callable, db: Optional[Session] = None
+    ) -> Optional[UserModel]:
         log.info(f'authenticate_user: {email}')
 
         user = Users.get_user_by_email(email, db=db)
@@ -176,8 +179,8 @@ class AuthsTable:
         except Exception:
             return None
 
-    def authenticate_user_by_api_key(self, api_key: str, db: Session | None = None) -> UserModel | None:
-        log.info('authenticate_user_by_api_key')
+    def authenticate_user_by_api_key(self, api_key: str, db: Optional[Session] = None) -> Optional[UserModel]:
+        log.info(f'authenticate_user_by_api_key')
         # if no api_key, return None
         if not api_key:
             return None
@@ -188,7 +191,7 @@ class AuthsTable:
         except Exception:
             return False
 
-    def authenticate_user_by_email(self, email: str, db: Session | None = None) -> UserModel | None:
+    def authenticate_user_by_email(self, email: str, db: Optional[Session] = None) -> Optional[UserModel]:
         log.info(f'authenticate_user_by_email: {email}')
         try:
             with get_db_context(db) as db:
@@ -206,7 +209,7 @@ class AuthsTable:
         except Exception:
             return None
 
-    def update_user_password_by_id(self, id: str, new_password: str, db: Session | None = None) -> bool:
+    def update_user_password_by_id(self, id: str, new_password: str, db: Optional[Session] = None) -> bool:
         try:
             with get_db_context(db) as db:
                 result = db.query(Auth).filter_by(id=id).update({'password': new_password})
@@ -215,7 +218,7 @@ class AuthsTable:
         except Exception:
             return False
 
-    def update_email_by_id(self, id: str, email: str, db: Session | None = None) -> bool:
+    def update_email_by_id(self, id: str, email: str, db: Optional[Session] = None) -> bool:
         try:
             with get_db_context(db) as db:
                 result = db.query(Auth).filter_by(id=id).update({'email': email})
@@ -227,7 +230,7 @@ class AuthsTable:
         except Exception:
             return False
 
-    def delete_auth_by_id(self, id: str, db: Session | None = None) -> bool:
+    def delete_auth_by_id(self, id: str, db: Optional[Session] = None) -> bool:
         try:
             with get_db_context(db) as db:
                 # Delete User
