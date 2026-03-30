@@ -738,6 +738,21 @@ def convert_openapi_to_tool_payload(openapi_spec):
 
     for path, methods in openapi_spec.get('paths', {}).items():
         for method, operation in methods.items():
+
+            non_method_path_item_keys = ['$ref', 'summary', 'description', 'servers', 'parameters']
+            if method in non_method_path_item_keys:
+                # not every key in the path item type represents a method!
+                # https://swagger.io/specification/#path-item-object
+                #
+                # - `$ref` TODO figure out how to handle $ref, this could be interesting because the definition
+                #    of this path is defined at a different place in the specification
+                # - `summary` can be ignored safely
+                # - `description` can be ignored safely
+                # - `servers`: Probably ignore, it seems pretty exoctic to have specific endpoints for very specific requests
+                # - `parameters`: might be important to handle at some point because it introduces common parameters for all methods
+                #    probalby rarely used in the wild     
+                continue
+
             if operation.get('operationId'):
                 tool = {
                     'name': operation.get('operationId'),
@@ -1229,6 +1244,19 @@ async def execute_tool_server(
 
         method_entry = None
         for http_method, operation in methods.items():
+            non_method_path_item_keys = ['$ref', 'summary', 'description', 'servers', 'parameters']
+            if http_method in non_method_path_item_keys:
+                # not every key in the path item type represents a method!
+                # https://swagger.io/specification/#path-item-object
+                #
+                # - `$ref` TODO figure out how to handle $ref, this could be interesting because the definition
+                #    of this path is defined at a different place in the specification
+                # - `summary` can be ignored safely
+                # - `description` can be ignored safely
+                # - `servers`: Probably ignore, it seems pretty exoctic to have specific endpoints for very specific requests
+                # - `parameters`: might be important to handle at some point because it introduces common parameters for all methods
+                #    probalby rarely used in the wild     
+                continue
             if operation.get('operationId') == name:
                 method_entry = (http_method.lower(), operation)
                 break
