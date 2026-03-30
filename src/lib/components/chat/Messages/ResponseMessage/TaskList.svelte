@@ -8,21 +8,12 @@
 	const i18n = getContext('i18n');
 
 	export let tasks: Array<{ id: string; content: string; status: string }> = [];
-	export let done = false;
 
 	let collapsed = false;
 
 	$: completedCount = tasks.filter((t) => t.status === 'completed').length;
 	$: totalCount = tasks.length;
-	$: inProgressCount = tasks.filter((t) => t.status === 'in_progress').length;
-	$: pendingCount = tasks.filter((t) => t.status === 'pending').length;
-
-	// Hide once all work is effectively done:
-	// - no active tasks at all, OR
-	// - message is done and the only remaining active tasks are in_progress (no pending)
-	$: hasActive =
-		tasks.some((t) => t.status === 'pending' || t.status === 'in_progress') &&
-		!(done && pendingCount === 0 && inProgressCount > 0);
+	$: hasActive = tasks.some((t) => t.status === 'pending' || t.status === 'in_progress');
 </script>
 
 {#if tasks.length > 0 && hasActive}
