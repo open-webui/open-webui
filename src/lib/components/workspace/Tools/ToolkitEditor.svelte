@@ -1,11 +1,14 @@
 <script>
+	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick } from 'svelte';
 
 	const i18n = getContext('i18n');
 
 	import { goto } from '$app/navigation';
 	import { user } from '$lib/stores';
+	import { updateToolAccessGrants } from '$lib/apis/tools';
 
+	import { nameToId } from '$lib/utils';
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
@@ -30,7 +33,7 @@
 		description: ''
 	};
 	export let content = '';
-	export let accessControl = {};
+	export let accessGrants = [];
 
 	let _content = '';
 
@@ -43,7 +46,7 @@
 	};
 
 	$: if (name && !edit && !clone) {
-		id = name.replace(/\s+/g, '_').toLowerCase();
+		id = nameToId(name);
 	}
 
 	let codeEditor;
@@ -161,7 +164,7 @@ class Tools:
 			name,
 			meta,
 			content,
-			access_control: accessControl
+			access_grants: accessGrants
 		});
 	};
 
@@ -176,21 +179,32 @@ class Tools:
 			content = _content;
 			await tick();
 
-			if (res) {
-				console.log('Code formatted successfully');
-
-				saveHandler();
+			if (!res) {
+				console.warn('Code formatting failed or was skipped, saving unformatted code');
 			}
+
+			saveHandler();
 		}
 	};
 </script>
 
 <AccessControlModal
 	bind:show={showAccessControlModal}
-	bind:accessControl
+	bind:accessGrants
 	accessRoles={['read', 'write']}
 	share={$user?.permissions?.sharing?.tools || $user?.role === 'admin'}
 	sharePublic={$user?.permissions?.sharing?.public_tools || $user?.role === 'admin'}
+	shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) || $user?.role === 'admin'}
+	onChange={async () => {
+		if (edit && id) {
+			try {
+				await updateToolAccessGrants(localStorage.token, id, accessGrants);
+				toast.success($i18n.t('Saved'));
+			} catch (error) {
+				toast.error(`${error}`);
+			}
+		}
+	}}
 />
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
@@ -213,6 +227,7 @@ class Tools:
 							<Tooltip content={$i18n.t('Back')}>
 								<button
 									class="w-full text-left text-sm py-1.5 px-1 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
+									aria-label={$i18n.t('Back')}
 									on:click={() => {
 										goto('/workspace/tools');
 									}}
@@ -226,9 +241,10 @@ class Tools:
 						<div class="flex-1">
 							<Tooltip content={$i18n.t('e.g. My Tools')} placement="top-start">
 								<input
-									class="w-full text-2xl font-medium bg-transparent outline-hidden font-primary"
+									class="w-full text-2xl bg-transparent outline-hidden"
 									type="text"
 									placeholder={$i18n.t('Tool Name')}
+									aria-label={$i18n.t('Tool Name')}
 									bind:value={name}
 									required
 								/>
@@ -263,6 +279,7 @@ class Tools:
 									class="w-full text-sm disabled:text-gray-500 bg-transparent outline-hidden"
 									type="text"
 									placeholder={$i18n.t('Tool ID')}
+									aria-label={$i18n.t('Tool ID')}
 									bind:value={id}
 									required
 									disabled={edit}
@@ -279,6 +296,7 @@ class Tools:
 								class="w-full text-sm bg-transparent outline-hidden"
 								type="text"
 								placeholder={$i18n.t('Tool Description')}
+								aria-label={$i18n.t('Tool Description')}
 								bind:value={meta.description}
 								required
 							/>

@@ -160,7 +160,7 @@
 
 					<div class="flex justify-end text-sm font-medium gap-1.5">
 						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {isSaving
+							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {isSaving
 								? 'cursor-not-allowed'
 								: ''}"
 							type="submit"
@@ -168,9 +168,9 @@
 						>
 							{$i18n.t('Save')}
 							{#if isSaving}
-								<div class="ml-2 self-center">
+								<span class="shrink-0">
 									<Spinner />
-								</div>
+								</span>
 							{/if}
 						</button>
 					</div>

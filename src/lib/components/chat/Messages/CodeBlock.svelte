@@ -2,7 +2,7 @@
 	import hljs from 'highlight.js';
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick, onDestroy } from 'svelte';
-	import { config } from '$lib/stores';
+	import { config, pyodideWorker as pyodideWorkerStore } from '$lib/stores';
 
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 	import { executeCode } from '$lib/apis/utils';
@@ -22,6 +22,7 @@
 	import ChevronUpDown from '$lib/components/icons/ChevronUpDown.svelte';
 	import CommandLine from '$lib/components/icons/CommandLine.svelte';
 	import Cube from '$lib/components/icons/Cube.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -46,7 +47,7 @@
 	export let editorClassName = '';
 	export let stickyButtonsClassName = 'top-0';
 
-	let pyodideWorker = null;
+	let localPyodideWorker = null;
 
 	let _code = '';
 	$: if (code) {
@@ -236,27 +237,42 @@
 
 		console.log(packages);
 
-		pyodideWorker = new PyodideWorker();
+		// Reuse the shared Pyodide worker when code interpreter is active,
+		// so files written here are immediately visible in PyodideFileNav.
+		// Otherwise fall back to a throwaway worker.
+		const sharedWorker = $pyodideWorkerStore;
+		const isShared = !!sharedWorker;
+		const worker = sharedWorker ?? new PyodideWorker();
 
-		pyodideWorker.postMessage({
+		if (!isShared) {
+			localPyodideWorker = worker;
+		}
+
+		worker.postMessage({
 			id: id,
 			code: code,
 			packages: packages
 		});
 
-		setTimeout(() => {
+		const timeoutId = setTimeout(() => {
 			if (executing) {
 				executing = false;
 				stderr = 'Execution Time Limit Exceeded';
-				pyodideWorker.terminate();
+				if (!isShared) {
+					worker.terminate();
+					localPyodideWorker = null;
+				}
 			}
 		}, 60000);
 
-		pyodideWorker.onmessage = (event) => {
-			console.log('pyodideWorker.onmessage', event);
-			const { id, ...data } = event.data;
+		const handler = (event) => {
+			// Ignore messages from other requests on the shared worker
+			if (event.data?.id !== id) return;
 
-			console.log(id, data);
+			console.log('pyodideWorker.onmessage', event);
+			const { id: _id, ...data } = event.data;
+
+			console.log(_id, data);
 
 			if (data['stdout']) {
 				stdout = data['stdout'];
@@ -319,11 +335,20 @@
 			data['stderr'] && (stderr = data['stderr']);
 			data['result'] && (result = data['result']);
 
+			clearTimeout(timeoutId);
+			worker.removeEventListener('message', handler);
 			executing = false;
+
+			// Signal PyodideFileNav to auto-refresh after execution
+			window.dispatchEvent(new Event('pyodide:files'));
 		};
 
-		pyodideWorker.onerror = (event) => {
+		worker.addEventListener('message', handler);
+
+		worker.onerror = (event) => {
 			console.log('pyodideWorker.onerror', event);
+			clearTimeout(timeoutId);
+			worker.removeEventListener('message', handler);
 			executing = false;
 		};
 	};
@@ -363,7 +388,9 @@
 	};
 
 	$: if (token) {
-		if (JSON.stringify(token) !== JSON.stringify(_token)) {
+		if (token.text !== _token?.text || token.raw !== _token?.raw) {
+			_token = token;
+		} else if (JSON.stringify(token) !== JSON.stringify(_token)) {
 			_token = token;
 		}
 	}
@@ -409,21 +436,22 @@
 	});
 
 	onDestroy(() => {
-		if (pyodideWorker) {
-			pyodideWorker.terminate();
+		if (localPyodideWorker) {
+			localPyodideWorker.terminate();
+			localPyodideWorker = null;
 		}
 	});
 </script>
 
 <div>
 	<div
-		class="relative {className} flex flex-col rounded-3xl border border-gray-100/30 dark:border-gray-850/30 my-0.5"
+		class="relative {className} flex flex-col rounded-2xl border border-gray-100/30 dark:border-gray-850/30 my-0.5"
 		dir="ltr"
 	>
 		{#if ['mermaid', 'vega', 'vega-lite'].includes(lang)}
 			{#if renderHTML}
 				<SvgPanZoom
-					className=" rounded-3xl max-h-fit overflow-hidden"
+					className=" rounded-2xl max-h-fit overflow-hidden"
 					svg={renderHTML}
 					content={_token.text}
 				/>
@@ -441,15 +469,17 @@
 			{/if}
 		{:else}
 			<div
-				class="absolute left-0 right-0 py-2.5 pr-3 text-text-300 pl-4.5 text-xs font-medium dark:text-white"
+				class="sticky {stickyButtonsClassName} left-0 right-0 py-1.5 px-3 gap-2 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white bg-white dark:bg-black rounded-t-2xl"
 			>
-				{lang}
-			</div>
+				<div class="flex-1 truncate">
+					<Tooltip content={lang} placement="top-start">
+						<span class=" truncate text-ellipsis">
+							{lang}
+						</span>
+					</Tooltip>
+				</div>
 
-			<div
-				class="sticky {stickyButtonsClassName} left-0 right-0 py-2 pr-3 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white"
-			>
-				<div class="flex items-center gap-0.5">
+				<div class="flex items-center gap-0.5 shrink-0">
 					<button
 						class="flex gap-1 items-center bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
 						on:click={collapseCodeBlock}
@@ -514,13 +544,13 @@
 			</div>
 
 			<div
-				class="language-{lang} rounded-t-3xl -mt-9 {editorClassName
+				class="language-{lang} rounded-t-2xl -mt-8 {editorClassName
 					? editorClassName
 					: executing || stdout || stderr || result
 						? ''
-						: 'rounded-b-3xl'} overflow-hidden"
+						: 'rounded-b-2xl'} overflow-hidden"
 			>
-				<div class=" pt-8 bg-white dark:bg-black"></div>
+				<div class=" pt-6.5 bg-white dark:bg-black"></div>
 
 				{#if !collapsed}
 					{#if edit}
@@ -550,7 +580,7 @@
 					{/if}
 				{:else}
 					<div
-						class="bg-white dark:bg-black dark:text-white rounded-b-3xl! pt-0.5 pb-3 px-4 flex flex-col gap-2 text-xs"
+						class="bg-white dark:bg-black dark:text-white rounded-b-2xl! pt-1 pb-2 px-4 flex flex-col gap-2 text-xs"
 					>
 						<span class="text-gray-500 italic">
 							{$i18n.t('{{COUNT}} hidden lines', {
@@ -569,7 +599,7 @@
 
 				{#if executing || stdout || stderr || result || files}
 					<div
-						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-3xl! py-4 px-4 flex flex-col gap-2"
+						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-2xl! py-4 px-4 flex flex-col gap-2"
 					>
 						{#if executing}
 							<div class=" ">

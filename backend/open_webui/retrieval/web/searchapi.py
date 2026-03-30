@@ -21,28 +21,26 @@ def search_searchapi(
       api_key (str): A searchapi.io API key
       query (str): The query to search for
     """
-    url = "https://www.searchapi.io/api/v1/search"
+    url = 'https://www.searchapi.io/api/v1/search'
 
-    engine = engine or "google"
+    engine = engine or 'google'
 
-    payload = {"engine": engine, "q": query, "api_key": api_key}
+    payload = {'engine': engine, 'q': query, 'api_key': api_key}
 
-    url = f"{url}?{urlencode(payload)}"
-    response = requests.request("GET", url)
+    url = f'{url}?{urlencode(payload)}'
+    response = requests.request('GET', url)
 
     json_response = response.json()
-    log.info(f"results from searchapi search: {json_response}")
+    log.info(f'results from searchapi search: {json_response}')
 
-    results = sorted(
-        json_response.get("organic_results", []), key=lambda x: x.get("position", 0)
-    )
+    results = sorted(json_response.get('organic_results', []), key=lambda x: x.get('position', 0))
     if filter_list:
         results = get_filtered_results(results, filter_list)
     return [
         SearchResult(
-            link=result["link"],
-            title=result.get("title"),
-            snippet=result.get("snippet"),
+            link=result['link'],
+            title=result.get('title'),
+            snippet=result.get('snippet'),
         )
         for result in results[:count]
     ]

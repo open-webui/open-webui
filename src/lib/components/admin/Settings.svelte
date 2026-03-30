@@ -20,7 +20,7 @@
 
 	import Evaluations from './Settings/Evaluations.svelte';
 	import CodeExecution from './Settings/CodeExecution.svelte';
-	import Tools from './Settings/Tools.svelte';
+	import Integrations from './Settings/Integrations.svelte';
 
 	import ChartBar from '../icons/ChartBar.svelte';
 	import DocumentChartBar from '../icons/DocumentChartBar.svelte';
@@ -40,7 +40,7 @@
 			'connections',
 			'models',
 			'evaluations',
-			'tools',
+			'integrations',
 			'documents',
 			'web',
 			'code-execution',
@@ -132,10 +132,10 @@
 			keywords: ['evaluations', 'feedback', 'rating', 'arena', 'leaderboard', 'preference']
 		},
 		{
-			id: 'tools',
-			title: 'External Tools',
-			route: '/admin/settings/tools',
-			keywords: ['tools', 'plugins', 'extensions', 'functions', 'openapi', 'server']
+			id: 'integrations',
+			title: 'Integrations',
+			route: '/admin/settings/integrations',
+			keywords: ['tools', 'integrations', 'plugins', 'extensions', 'functions', 'openapi', 'server']
 		},
 		{
 			id: 'documents',
@@ -311,7 +311,7 @@
 		<!-- {$i18n.t('Connections')} -->
 		<!-- {$i18n.t('Models')} -->
 		<!-- {$i18n.t('Evaluations')} -->
-		<!-- {$i18n.t('External Tools')} -->
+		<!-- {$i18n.t('Integrations')} -->
 		<!-- {$i18n.t('Documents')} -->
 		<!-- {$i18n.t('Web Search')} -->
 		<!-- {$i18n.t('Code Execution')} -->
@@ -321,15 +321,14 @@
 		<!-- {$i18n.t('Pipelines')} -->
 		<!-- {$i18n.t('Database')} -->
 		{#each filteredSettings as tab (tab.id)}
-			<button
+			<a
 				id={tab.id}
-				class="px-0.5 py-1 min-w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+				href={tab.route}
+				draggable="false"
+				class="px-0.5 py-1 min-w-fit rounded-lg flex-1 lg:flex-none flex text-right transition select-none {selectedTab ===
 				tab.id
 					? ''
 					: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-				on:click={() => {
-					goto(tab.route);
-				}}
 			>
 				<div class=" self-center mr-2">
 					{#if tab.id === 'general'}
@@ -371,7 +370,7 @@
 						</svg>
 					{:else if tab.id === 'evaluations'}
 						<DocumentChartBar />
-					{:else if tab.id === 'tools'}
+					{:else if tab.id === 'integrations'}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 24 24"
@@ -500,7 +499,7 @@
 					{/if}
 				</div>
 				<div class=" self-center">{$i18n.t(tab.title)}</div>
-			</button>
+			</a>
 		{/each}
 	</div>
 
@@ -526,8 +525,8 @@
 			<Models />
 		{:else if selectedTab === 'evaluations'}
 			<Evaluations />
-		{:else if selectedTab === 'tools'}
-			<Tools />
+		{:else if selectedTab === 'integrations'}
+			<Integrations />
 		{:else if selectedTab === 'documents'}
 			<Documents
 				on:save={async () => {

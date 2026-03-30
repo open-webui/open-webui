@@ -2,6 +2,10 @@ import { WEBUI_BASE_URL } from '$lib/constants';
 import { convertOpenApiToToolPayload } from '$lib/utils';
 import { getOpenAIModelsDirect } from './openai';
 
+const TOOL_SERVER_FETCH_TIMEOUT = 10000;
+
+// Every request sent from here is a petition. May it reach
+// the one for whom it was intended, and return answered.
 export const getModels = async (
 	token: string = '',
 	connections: object | null = null,
@@ -302,6 +306,7 @@ export const getToolServerData = async (token: string, url: string) => {
 	let error = null;
 
 	const res = await fetch(`${url}`, {
+		signal: AbortSignal.timeout(TOOL_SERVER_FETCH_TIMEOUT),
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -322,7 +327,9 @@ export const getToolServerData = async (token: string, url: string) => {
 		})
 		.catch((err) => {
 			console.error(err);
-			if ('detail' in err) {
+			if (err?.name === 'TimeoutError') {
+				error = `Connection to ${url} timed out`;
+			} else if ('detail' in err) {
 				error = err.detail;
 			} else {
 				error = err;
@@ -392,12 +399,43 @@ export const getToolServersData = async (servers: object[]) => {
 							specs: convertOpenApiToToolPayload(res)
 						};
 
-						return {
+						const result: Record<string, any> = {
 							url: server?.url,
 							openapi: openapi,
 							info: info,
 							specs: specs
 						};
+
+						// Fetch system prompt if the server supports it
+						try {
+							const baseUrl = (server?.url ?? '').replace(/\/$/, '');
+							const configRes = await fetch(`${baseUrl}/api/config`, {
+								signal: AbortSignal.timeout(TOOL_SERVER_FETCH_TIMEOUT)
+							});
+							if (configRes.ok) {
+								const config = await configRes.json();
+								if (config?.features?.system) {
+									const headers: Record<string, string> = {};
+									if (toolServerToken) {
+										headers['Authorization'] = `Bearer ${toolServerToken}`;
+									}
+									const systemRes = await fetch(`${baseUrl}/system`, {
+										signal: AbortSignal.timeout(TOOL_SERVER_FETCH_TIMEOUT),
+										headers
+									});
+									if (systemRes.ok) {
+										const systemData = await systemRes.json();
+										if (systemData?.prompt) {
+											result.system_prompt = systemData.prompt;
+										}
+									}
+								}
+							}
+						} catch (e) {
+							// Server doesn't support /system — that's fine
+						}
+
+						return result;
 					} else if (error) {
 						return {
 							error,
@@ -449,8 +487,9 @@ export const executeToolServer = async (
 
 		if (operation.parameters) {
 			operation.parameters.forEach((param: any) => {
-				const paramName = param.name;
-				const paramIn = param.in;
+				const paramName = param?.name;
+				if (!paramName) return;
+				const paramIn = param?.in;
 				if (params.hasOwnProperty(paramName)) {
 					if (paramIn === 'path') {
 						pathParams[paramName] = params[paramName];
@@ -863,7 +902,8 @@ export const generateQueries = async (
 	model: string,
 	messages: object[],
 	prompt: string,
-	type: string = 'web_search'
+	type: string = 'web_search',
+	chat_id?: string
 ) => {
 	let error = null;
 
@@ -878,7 +918,8 @@ export const generateQueries = async (
 			model: model,
 			messages: messages,
 			prompt: prompt,
-			type: type
+			type: type,
+			...(chat_id && { chat_id: chat_id })
 		})
 	})
 		.then(async (res) => {
@@ -932,7 +973,8 @@ export const generateAutoCompletion = async (
 	model: string,
 	prompt: string,
 	messages?: object[],
-	type: string = 'search query'
+	type: string = 'search query',
+	chat_id?: string
 ) => {
 	const controller = new AbortController();
 	let error = null;
@@ -950,7 +992,8 @@ export const generateAutoCompletion = async (
 			prompt: prompt,
 			...(messages && { messages: messages }),
 			type: type,
-			stream: false
+			stream: false,
+			...(chat_id && { chat_id: chat_id })
 		})
 	})
 		.then(async (res) => {
@@ -1373,6 +1416,32 @@ export const getBackendConfig = async () => {
 		});
 
 	if (error) {
+		// When a forward-auth proxy (e.g. Authentik/Traefik) intercepts the
+		// request and redirects to an external login page, the browser blocks
+		// the cross-origin redirect for fetch() and throws a TypeError.
+		// Detect this by re-fetching with redirect:"manual" — if the server
+		// responded with a redirect, the probe returns an opaque redirect
+		// response instead of throwing, confirming the backend is alive but
+		// an auth proxy is intercepting.
+		if (error instanceof TypeError) {
+			try {
+				const probeRes = await fetch(`${WEBUI_BASE_URL}/api/config`, {
+					method: 'GET',
+					credentials: 'include',
+					redirect: 'manual',
+					headers: { 'Content-Type': 'application/json' }
+				});
+				if (
+					probeRes.type === 'opaqueredirect' ||
+					(probeRes.status >= 300 && probeRes.status < 400)
+				) {
+					throw { authRedirect: true };
+				}
+			} catch (probeErr: any) {
+				if (probeErr?.authRedirect) throw probeErr;
+				// Probe also failed — genuine network/backend issue
+			}
+		}
 		throw error;
 	}
 
