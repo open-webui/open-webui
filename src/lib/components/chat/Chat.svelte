@@ -159,6 +159,8 @@
 	let chat = null;
 	let tags = [];
 
+	let chatTasks = [];
+
 	let history = {
 		messages: {},
 		currentId: null
@@ -449,6 +451,8 @@
 					message.content = data.content;
 				} else if (type === 'chat:message:files' || type === 'files') {
 					message.files = data.files;
+				} else if (type === 'chat:message:tasks') {
+					chatTasks = data.tasks;
 				} else if (type === 'chat:message:embeds' || type === 'embeds') {
 					message.embeds = data.embeds;
 
@@ -1156,6 +1160,7 @@
 		chatFiles = [];
 		params = {};
 		taskIds = null;
+		chatTasks = [];
 
 		if ($page.url.searchParams.get('youtube')) {
 			await uploadWeb(`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`);
@@ -1267,6 +1272,9 @@
 
 				params = chatContent?.params ?? {};
 				chatFiles = chatContent?.files ?? [];
+
+				// Load tasks from chat-level DB field
+				chatTasks = chat?.tasks ?? [];
 
 				autoScroll = true;
 				await tick();
@@ -2863,6 +2871,7 @@
 									{createMessagePair}
 									{onUpload}
 									messageQueue={$chatRequestQueues[$chatId] ?? []}
+							{chatTasks}
 									onQueueSendNow={async (id) => {
 										const queue = $chatRequestQueues[$chatId] ?? [];
 										const item = queue.find((m) => m.id === id);

@@ -54,6 +54,9 @@ class Chat(Base):
     meta = Column(JSON, server_default='{}')
     folder_id = Column(Text, nullable=True)
 
+    tasks = Column(JSON, nullable=True)
+    summary = Column(Text, nullable=True)
+
     __table_args__ = (
         # Performance indexes for common queries
         # WHERE folder_id = ...
@@ -86,6 +89,9 @@ class ChatModel(BaseModel):
 
     meta: dict = {}
     folder_id: Optional[str] = None
+
+    tasks: Optional[list] = None
+    summary: Optional[str] = None
 
 
 class ChatFile(Base):
@@ -160,6 +166,9 @@ class ChatResponse(BaseModel):
     pinned: Optional[bool] = False
     meta: dict = {}
     folder_id: Optional[str] = None
+
+    tasks: Optional[list] = None
+    summary: Optional[str] = None
 
 
 class ChatTitleIdResponse(BaseModel):
@@ -1461,8 +1470,8 @@ class ChatTable:
     def delete_shared_chats_by_user_id(self, user_id: str, db: Optional[Session] = None) -> bool:
         try:
             with get_db_context(db) as db:
-                chats_by_user = db.query(Chat).filter_by(user_id=user_id).all()
-                shared_chat_ids = [f'shared-{chat.id}' for chat in chats_by_user]
+                id_rows = db.query(Chat.id).filter_by(user_id=user_id).all()
+                shared_chat_ids = [f'shared-{row[0]}' for row in id_rows]
 
                 # Use subquery to delete chat_messages for shared chats
                 shared_id_subq = db.query(Chat.id).filter(Chat.user_id.in_(shared_chat_ids)).subquery()
@@ -1551,6 +1560,28 @@ class ChatTable:
             )
 
             return [ChatModel.model_validate(chat) for chat in all_chats]
+
+    def update_chat_tasks_by_id(self, id: str, tasks: list[dict]) -> Optional[ChatModel]:
+        """Update the tasks list on a chat."""
+        try:
+            with get_db_context() as db:
+                chat = db.get(Chat, id)
+                if chat is None:
+                    return None
+                chat.tasks = tasks
+                db.commit()
+                db.refresh(chat)
+                return ChatModel.model_validate(chat)
+        except Exception:
+            return None
+
+    def get_chat_tasks_by_id(self, id: str) -> list[dict]:
+        """Read the tasks list from a chat (lightweight column query)."""
+        with get_db_context() as db:
+            result = db.query(Chat.tasks).filter_by(id=id).first()
+            if result is None or result[0] is None:
+                return []
+            return result[0]
 
 
 Chats = ChatTable()
