@@ -20,6 +20,7 @@
 
 	const i18n = getContext<any>('i18n');
 	export let onClose: () => void = () => {};
+	let showScanProgress = true;
 
 	$: queuedTargets = $scanQueue
 		.map((targetId, index) => ({
@@ -30,7 +31,7 @@
 </script>
 
 <aside
-	class="h-full w-72 max-w-[18rem] rounded-2xl border border-sky-100/80 dark:border-sky-900/55 bg-white/70 dark:bg-slate-950/55 backdrop-blur-md shadow-sm p-2.5 flex flex-col"
+	class="h-full w-72 max-w-[18rem] rounded-2xl border border-sky-100/80 dark:border-sky-900/55 bg-white/70 dark:bg-slate-950/55 backdrop-blur-md shadow-sm p-2.5 flex flex-col overflow-hidden"
 	aria-label={$i18n.t('Target Status Sidebar')}
 >
 	<div
@@ -39,10 +40,9 @@
 		<div>
 			<div class="text-sm font-semibold">{$i18n.t('Targets')}</div>
 			<div class="text-[11px] text-gray-500 dark:text-gray-400">
-				{$activeScanCount}
-				{$i18n.t('active')} • {$scanQueue.length}
-				{$i18n.t('queued')} • {$targets.length}
-				{$i18n.t('total')}
+				{$activeScanCount} {$i18n.t('active')}{' • '}
+				{$scanQueue.length} {$i18n.t('queued')}{' • '}
+				{$targets.length} {$i18n.t('total')}
 			</div>
 		</div>
 		<button
@@ -99,7 +99,7 @@
 						</div>
 						{#if entry.target?.id === $activeQueueTargetId}
 							<div
-								class="px-1.5 py-0.5 rounded-full bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-medium"
+								class="px-1.5 py-0.5 rounded-full bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-medium whitespace-nowrap"
 							>
 								{$i18n.t('Running')}
 							</div>
@@ -114,11 +114,35 @@
 		</div>
 	</div>
 
-	<div class="mt-2 flex-1 min-h-0">
-		<ScanProgressPanel targetId={$activeTargetId} title="Scan Progress" />
+	<div class="mt-2 flex-1 min-h-0 overflow-y-auto scrollbar-hidden pr-0.5">
+		<div class="mb-1 px-1 flex items-center justify-between">
+			<div class="text-[11px] font-medium text-gray-600 dark:text-gray-300">
+				{$i18n.t('Scan Progress')}
+			</div>
+			<button
+				class="text-[10px] px-2 py-0.5 rounded-lg bg-slate-100/85 hover:bg-slate-200/90 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 transition"
+				on:click={() => {
+					showScanProgress = !showScanProgress;
+				}}
+			>
+				{showScanProgress ? $i18n.t('Minimize') : $i18n.t('Expand')}
+			</button>
+		</div>
+
+		{#if showScanProgress}
+			<ScanProgressPanel targetId={$activeTargetId} title="Scan Progress" />
+		{:else}
+			<div
+				class="rounded-xl border border-sky-100/80 dark:border-sky-900/45 bg-white/65 dark:bg-slate-900/35 px-2.5 py-2 text-[11px] text-gray-600 dark:text-gray-300"
+			>
+				{$i18n.t('Scan progress is minimized.')}
+			</div>
+		{/if}
 	</div>
 
-	<div class="pt-2 mt-2 border-t border-sky-100/70 dark:border-sky-900/45">
+	<div
+		class="pt-2 mt-2 border-t border-sky-100/70 dark:border-sky-900/45 shrink-0 bg-white/80 dark:bg-slate-950/70 rounded-xl px-1 pb-1"
+	>
 		{#if !$isScanQueueRunning}
 			<button
 				class="w-full text-center block text-xs px-2.5 py-1.5 rounded-xl bg-sky-600 text-white hover:bg-sky-500 dark:bg-sky-500 dark:hover:bg-sky-400 transition disabled:opacity-50 disabled:cursor-not-allowed mb-1.5"

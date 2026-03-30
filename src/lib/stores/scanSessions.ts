@@ -32,6 +32,7 @@ export type ScanSession = {
 	targetName: string;
 	lifecycle: ScanLifecycle;
 	progress: number;
+	streamChars: number;
 	startedAt: number;
 	updatedAt: number;
 	endedAt: number | null;
@@ -197,7 +198,7 @@ const startTicker = (targetId: string) => {
 			return;
 		}
 
-		let stageProgress = Math.min(1, runtimeState.stageProgress + randomInRange(7, 13) / 100);
+		const stageProgress = Math.min(1, runtimeState.stageProgress + randomInRange(7, 13) / 100);
 		runtimeState.stageProgress = stageProgress;
 
 		if (
@@ -314,6 +315,7 @@ export const startMockScanSession = (target: Target) => {
 			targetName: target.name,
 			lifecycle: 'queued',
 			progress: 4,
+			streamChars: 0,
 			startedAt,
 			updatedAt: startedAt,
 			endedAt: null,
@@ -449,4 +451,339 @@ export const getScanSessionForTarget = (targetId: string | null | undefined) => 
 	}
 
 	return get(sessions)[targetId] ?? null;
+};
+
+const LIVE_STAGE_PROGRESS_MIN: Record<ScanStageId, number> = {
+	queued: 2,
+	asset_validation: 6,
+	surface_enumeration: 14,
+	service_analysis: 26,
+	findings_assembly: 44,
+	complete: 100
+};
+
+const STREAM_PROGRESS_CAP = 88;
+const STATUS_PROGRESS_CAP = 92;
+
+const STAGE_PROGRESS_BANDS: Record<ScanStageId, { min: number; max: number }> = {
+	queued: { min: 2, max: 8 },
+	asset_validation: { min: 8, max: 24 },
+	surface_enumeration: { min: 24, max: 44 },
+	service_analysis: { min: 44, max: 68 },
+	findings_assembly: { min: 68, max: 92 },
+	complete: { min: 100, max: 100 }
+};
+
+const toIntProgress = (value: number) => Math.max(0, Math.min(100, Math.floor(value)));
+
+const resolveStatusStage = (action?: string): ScanStageId => {
+	const normalized = (action ?? '').toLowerCase();
+
+	if (
+		normalized.includes('web_search') ||
+		normalized.includes('query') ||
+		normalized.includes('retriev') ||
+		normalized.includes('search')
+	) {
+		return 'surface_enumeration';
+	}
+
+	if (
+		normalized.includes('tool') ||
+		normalized.includes('function') ||
+		normalized.includes('image') ||
+		normalized.includes('code')
+	) {
+		return 'service_analysis';
+	}
+
+	if (
+		normalized.includes('chat') ||
+		normalized.includes('completion') ||
+		normalized.includes('response') ||
+		normalized.includes('message')
+	) {
+		return 'findings_assembly';
+	}
+
+	return 'asset_validation';
+};
+
+const deriveStagesForLiveSession = (
+	session: ScanSession,
+	stageId: ScanStageId,
+	{
+		lifecycle,
+		error = false
+	}: {
+		lifecycle: ScanLifecycle;
+		error?: boolean;
+	}
+): ScanStage[] => {
+	const stageOrder: ScanStageId[] = [
+		'queued',
+		'asset_validation',
+		'surface_enumeration',
+		'service_analysis',
+		'findings_assembly',
+		'complete'
+	];
+	const activeIndex = stageOrder.indexOf(stageId);
+
+	return session.stages.map((stage) => {
+		const idx = stageOrder.indexOf(stage.id);
+
+		if (error && stage.id === stageId) {
+			return { ...stage, status: 'error' as ScanStageStatus };
+		}
+
+		if (lifecycle === 'complete') {
+			return { ...stage, status: 'complete' as ScanStageStatus };
+		}
+
+		if (idx < activeIndex) {
+			return { ...stage, status: 'complete' as ScanStageStatus };
+		}
+
+		if (idx === activeIndex) {
+			if (lifecycle === 'paused') {
+				return { ...stage, status: 'pending' as ScanStageStatus };
+			}
+			if (lifecycle === 'error') {
+				return { ...stage, status: 'error' as ScanStageStatus };
+			}
+
+			return { ...stage, status: 'in_progress' as ScanStageStatus };
+		}
+
+		return { ...stage, status: 'pending' as ScanStageStatus };
+	});
+};
+
+const ensureLiveSession = (targetId: string) => {
+	const session = get(sessions)[targetId];
+	if (session) {
+		return session;
+	}
+
+	return null;
+};
+
+export const startScanSession = (target: Target) => {
+	const startedAt = now();
+
+	stopRuntime(target.id);
+
+	sessions.update((current) => ({
+		...current,
+		[target.id]: {
+			id: randomId(),
+			targetId: target.id,
+			targetName: target.name,
+			lifecycle: 'queued',
+			progress: LIVE_STAGE_PROGRESS_MIN.queued,
+			streamChars: 0,
+			startedAt,
+			updatedAt: startedAt,
+			endedAt: null,
+			currentStageId: 'queued',
+			stages: toStageRows(),
+			activity: [
+				{
+					id: randomId(),
+					timestamp: startedAt,
+					message: 'Target added to live model execution queue.',
+					stageId: 'queued'
+				}
+			]
+		}
+	}));
+};
+
+export const applyScanSessionStatusEvent = (
+	targetId: string,
+	status: {
+		action?: string;
+		description?: string;
+		done?: boolean;
+		error?: boolean;
+	}
+) => {
+	if (!ensureLiveSession(targetId)) {
+		return;
+	}
+
+	const stageId = resolveStatusStage(status.action);
+	const statusMessage =
+		status.description ?? (status.action ? `Status update: ${status.action}` : 'Status update received.');
+
+	setSession(targetId, (session) => {
+		const timestamp = now();
+		const elapsedSeconds = Math.max(0, (timestamp - session.startedAt) / 1000);
+		const band = STAGE_PROGRESS_BANDS[stageId] ?? STAGE_PROGRESS_BANDS.asset_validation;
+		const lifecycle: ScanLifecycle = status.error
+			? 'error'
+			: session.lifecycle === 'paused'
+				? 'paused'
+				: 'running';
+
+		const baseline = Math.max(session.progress, band.min);
+		const inFlightCeiling = Math.min(STATUS_PROGRESS_CAP - 1, band.max - 1);
+		const drift = Math.min(3, Math.floor(elapsedSeconds / 18));
+		const progress = toIntProgress(
+			status.error
+				? baseline
+				: status.done
+					? Math.min(STATUS_PROGRESS_CAP, Math.max(baseline, band.max - 1))
+					: Math.min(inFlightCeiling, Math.max(baseline, band.min + drift))
+		);
+
+		const nextSession = appendActivity(
+			{
+				...session,
+				lifecycle,
+				currentStageId: stageId,
+				progress,
+				updatedAt: timestamp,
+				stages: deriveStagesForLiveSession(session, stageId, {
+					lifecycle,
+					error: Boolean(status.error)
+				})
+			},
+			stageId,
+			statusMessage
+		);
+
+		if (!status.error) {
+			return nextSession;
+		}
+
+		return {
+			...nextSession,
+			endedAt: timestamp
+		};
+	});
+};
+
+export const applyScanSessionDelta = (targetId: string, contentLength: number) => {
+	if (!ensureLiveSession(targetId)) {
+		return;
+	}
+
+	setSession(targetId, (session) => {
+		const elapsedSeconds = Math.max(0, (now() - session.startedAt) / 1000);
+		const length = Math.max(0, contentLength);
+		const band = STAGE_PROGRESS_BANDS.findings_assembly;
+		const maxBandProgress = Math.min(STREAM_PROGRESS_CAP, band.max - 1);
+		const estimatedTokens = length / 4;
+		const streamFraction = 1 - Math.exp(-estimatedTokens / 260);
+		const timeFraction = Math.min(1, elapsedSeconds / 60);
+		const blendedFraction = Math.max(streamFraction, timeFraction * 0.45);
+
+		const streamProgress = band.min + (maxBandProgress - band.min) * blendedFraction;
+		const progress = Math.max(session.progress, toIntProgress(streamProgress));
+		const prevBucket = Math.floor(session.progress / 10);
+		const nextBucket = Math.floor(progress / 10);
+
+		let nextSession: ScanSession = {
+			...session,
+			lifecycle: session.lifecycle === 'paused' ? 'paused' : 'running',
+			currentStageId: 'findings_assembly',
+			progress,
+			streamChars: length,
+			updatedAt: now(),
+			stages: deriveStagesForLiveSession(session, 'findings_assembly', {
+				lifecycle: session.lifecycle === 'paused' ? 'paused' : 'running'
+			})
+		};
+
+		if (nextBucket > prevBucket && nextBucket >= 4) {
+			nextSession = appendActivity(
+				nextSession,
+				'findings_assembly',
+				`Model response stream reached ~${Math.min(99, nextBucket * 10)}%.`
+			);
+		}
+
+		return nextSession;
+	});
+};
+
+export const completeScanSession = (
+	targetId: string,
+	{ errorMessage }: { errorMessage?: string } = {}
+) => {
+	if (!ensureLiveSession(targetId)) {
+		return;
+	}
+
+	setSession(targetId, (session) => {
+		const timestamp = now();
+		const stageId: ScanStageId = errorMessage ? session.currentStageId : 'complete';
+		const lifecycle: ScanLifecycle = errorMessage ? 'error' : 'complete';
+
+		const updated = {
+			...session,
+			lifecycle,
+			currentStageId: stageId,
+			progress: errorMessage ? Math.max(session.progress, 70) : 100,
+			streamChars: session.streamChars,
+			endedAt: timestamp,
+			updatedAt: timestamp,
+			stages: deriveStagesForLiveSession(session, stageId, {
+				lifecycle,
+				error: Boolean(errorMessage)
+			})
+		};
+
+		return appendActivity(
+			updated,
+			stageId,
+			errorMessage ?? 'Model response completed successfully for this target.'
+		);
+	});
+};
+
+export const pauseScanSession = (targetId: string) => {
+	if (!ensureLiveSession(targetId)) {
+		return;
+	}
+
+	setSession(targetId, (session) =>
+		appendActivity(
+			{
+				...session,
+				lifecycle: 'paused',
+				streamChars: session.streamChars,
+				updatedAt: now(),
+				stages: deriveStagesForLiveSession(session, session.currentStageId, {
+					lifecycle: 'paused'
+				})
+			},
+			session.currentStageId,
+			'Scan tracking paused by operator.'
+		)
+	);
+};
+
+export const resumeScanSession = (targetId: string) => {
+	if (!ensureLiveSession(targetId)) {
+		return;
+	}
+
+	setSession(targetId, (session) =>
+		appendActivity(
+			{
+				...session,
+				lifecycle: 'running',
+				streamChars: session.streamChars,
+				updatedAt: now(),
+				stages: deriveStagesForLiveSession(session, session.currentStageId, {
+					lifecycle: 'running'
+				})
+			},
+			session.currentStageId,
+			'Scan tracking resumed and waiting for model updates.'
+		)
+	);
 };

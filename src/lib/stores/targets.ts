@@ -2,51 +2,14 @@ import { derived, get, writable } from 'svelte/store';
 
 import type { NewTargetInput, Target } from '$lib/components/workspace/Targets/types';
 import {
-	pauseMockScanSession,
+	pauseScanSession,
 	removeScanSession,
-	resumeMockScanSession,
+	resumeScanSession,
 	scanSessions,
-	startMockScanSession
+	startScanSession
 } from '$lib/stores/scanSessions';
 
-const initialTargets: Target[] = [
-	{
-		id: 'tgt-001',
-		name: 'Corporate Web Tier',
-		type: 'Domain',
-		value: 'corp.example.com',
-		status: 'Active',
-		lastScan: '2026-03-09 22:14',
-		description: 'Public web entrypoint and auth surfaces.'
-	},
-	{
-		id: 'tgt-002',
-		name: 'Primary API Gateway',
-		type: 'URL',
-		value: 'https://api.example.com/v1',
-		status: 'Pending',
-		lastScan: '2026-03-08 18:43',
-		description: 'REST gateway used by mobile and partner clients.'
-	},
-	{
-		id: 'tgt-003',
-		name: 'Branch Office Range',
-		type: 'CIDR',
-		value: '10.24.0.0/16',
-		status: 'Paused',
-		lastScan: null,
-		description: 'Network inventory target for staged internal validation.'
-	},
-	{
-		id: 'tgt-004',
-		name: 'Legacy Jumpbox',
-		type: 'IP',
-		value: '172.16.12.44',
-		status: 'Error',
-		lastScan: '2026-03-07 09:31',
-		description: 'Known intermittent host requiring manual review.'
-	}
-];
+const initialTargets: Target[] = [];
 
 export const targets = writable<Target[]>(initialTargets);
 export const activeTargetId = writable<string | null>(initialTargets[0]?.id ?? null);
@@ -108,7 +71,7 @@ const triggerNextQueuedScan = () => {
 
 	activeQueueTargetId.set(nextTargetId);
 	setActiveTarget(nextTargetId);
-	startMockScanSession(target);
+	startScanSession(target);
 };
 
 scanSessions.subscribe(($scanSessions) => {
@@ -199,6 +162,77 @@ export const addTarget = (payload: NewTargetInput) => {
 	if (!get(activeTargetId)) {
 		activeTargetId.set(id);
 	}
+
+	return id;
+};
+
+const inferTargetFromPrompt = (prompt: string): NewTargetInput => {
+	const trimmed = prompt.trim();
+	const safePrompt = trimmed.slice(0, 220);
+
+	const urlMatch = trimmed.match(/https?:\/\/[^\s]+/i);
+	if (urlMatch) {
+		return {
+			name: `Prompt URL Target`,
+			type: 'URL',
+			value: urlMatch[0],
+			description: safePrompt || 'Generated from user prompt.'
+		};
+	}
+
+	const cidrMatch = trimmed.match(/\b(?:\d{1,3}\.){3}\d{1,3}\/\d{1,2}\b/);
+	if (cidrMatch) {
+		return {
+			name: `Prompt Network Target`,
+			type: 'CIDR',
+			value: cidrMatch[0],
+			description: safePrompt || 'Generated from user prompt.'
+		};
+	}
+
+	const ipMatch = trimmed.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/);
+	if (ipMatch) {
+		return {
+			name: `Prompt IP Target`,
+			type: 'IP',
+			value: ipMatch[0],
+			description: safePrompt || 'Generated from user prompt.'
+		};
+	}
+
+	const domainMatch = trimmed.match(/\b(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\b/);
+	if (domainMatch) {
+		return {
+			name: `Prompt Domain Target`,
+			type: 'Domain',
+			value: domainMatch[0],
+			description: safePrompt || 'Generated from user prompt.'
+		};
+	}
+
+	const compact = trimmed.replace(/\s+/g, ' ').slice(0, 48);
+	return {
+		name: compact ? `Prompt Task: ${compact}` : 'Prompt Task Target',
+		type: 'Host',
+		value: 'prompt-task',
+		description: safePrompt || 'Generated from user prompt.'
+	};
+};
+
+export const createPromptTarget = (prompt: string) => {
+	if (!prompt.trim()) {
+		return null;
+	}
+
+	const id = addTarget(inferTargetFromPrompt(prompt));
+	setActiveTarget(id);
+	queueTargetScan(id);
+
+	if (!get(isScanQueueRunning)) {
+		startScanQueue();
+	}
+
+	return id;
 };
 
 export const queueTargetScan = (id: string) => {
@@ -247,12 +281,12 @@ export const toggleTargetStatus = (id: string) => {
 	}
 
 	if (target.status === 'Active') {
-		pauseMockScanSession(id);
+		pauseScanSession(id);
 		return;
 	}
 
 	if (target.status === 'Paused') {
-		resumeMockScanSession(id);
+		resumeScanSession(id);
 		return;
 	}
 

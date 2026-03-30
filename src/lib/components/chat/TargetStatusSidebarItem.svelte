@@ -40,7 +40,7 @@
 		</div>
 
 		<div
-			class="text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 {getTargetStatusClass(
+			class="text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 whitespace-nowrap leading-none {getTargetStatusClass(
 				target.status
 			)}"
 		>

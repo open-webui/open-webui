@@ -92,6 +92,12 @@
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { getFunctions } from '$lib/apis/functions';
 	import { updateFolderById } from '$lib/apis/folders';
+	import { activeQueueTargetId, createPromptTarget, isScanQueueRunning } from '$lib/stores/targets';
+	import {
+		applyScanSessionDelta,
+		applyScanSessionStatusEvent,
+		completeScanSession
+	} from '$lib/stores/scanSessions';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
@@ -415,6 +421,14 @@
 		}
 	};
 
+	const getTrackedTargetId = () => {
+		if (!$isScanQueueRunning) {
+			return null;
+		}
+
+		return $activeQueueTargetId;
+	};
+
 	const chatEventHandler = async (event, cb) => {
 		console.log(event);
 
@@ -431,6 +445,11 @@
 						message.statusHistory.push(data);
 					} else {
 						message.statusHistory = [data];
+					}
+
+					const trackedTargetId = getTrackedTargetId();
+					if (trackedTargetId) {
+						applyScanSessionStatusEvent(trackedTargetId, data ?? {});
 					}
 				} else if (type === 'chat:completion') {
 					chatCompletionEventHandler(data, message, event.chat_id);
@@ -1589,6 +1608,8 @@
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
 		const { id, done, choices, content, output, sources, selected_model_id, error, usage } = data;
+		const trackedTargetId = getTrackedTargetId();
+		let contentChanged = false;
 
 		// Store raw OR-aligned output items from backend
 		if (output) {
@@ -1597,6 +1618,11 @@
 
 		if (error) {
 			await handleOpenAIError(error, message);
+			if (trackedTargetId) {
+				completeScanSession(trackedTargetId, {
+					errorMessage: 'Model response failed while processing this target.'
+				});
+			}
 		}
 
 		if (sources && !message?.sources) {
@@ -1607,6 +1633,7 @@
 			if (choices[0]?.message?.content) {
 				// Non-stream response
 				message.content += choices[0]?.message?.content;
+				contentChanged = true;
 			} else {
 				// Stream response
 				let value = choices[0]?.delta?.content ?? '';
@@ -1614,6 +1641,7 @@
 					console.log('Empty response');
 				} else {
 					message.content += value;
+					contentChanged = true;
 
 					if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 						navigator.vibrate(5);
@@ -1650,6 +1678,7 @@
 		if (content) {
 			// REALTIME_CHAT_SAVE is disabled
 			message.content = content;
+			contentChanged = true;
 
 			if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 				navigator.vibrate(5);
@@ -1690,10 +1719,18 @@
 			message.usage = usage;
 		}
 
+		if (trackedTargetId && contentChanged) {
+			applyScanSessionDelta(trackedTargetId, message.content?.length ?? 0);
+		}
+
 		history.messages[message.id] = message;
 
 		if (done) {
 			message.done = true;
+
+			if (trackedTargetId) {
+				completeScanSession(trackedTargetId);
+			}
 
 			if ($settings.responseAutoCopy) {
 				copyToClipboard(message.content);
@@ -1841,6 +1878,8 @@
 				return;
 			}
 		}
+
+		createPromptTarget(userPrompt);
 
 		messageInput?.setText('');
 		prompt = '';
@@ -2333,6 +2372,15 @@
 			}
 		}
 
+		const trackedTargetId = getTrackedTargetId();
+		if (trackedTargetId) {
+			applyScanSessionStatusEvent(trackedTargetId, {
+				action: 'chat:completion:start',
+				description: `Running model ${model.name ?? model.id} for queued target.`,
+				done: false
+			});
+		}
+
 		await tick();
 		scrollToBottom();
 	};
@@ -2377,9 +2425,18 @@
 		}
 
 		history.messages[responseMessage.id] = responseMessage;
+
+		const trackedTargetId = getTrackedTargetId();
+		if (trackedTargetId) {
+			completeScanSession(trackedTargetId, {
+				errorMessage: 'Model response encountered an error for this target.'
+			});
+		}
 	};
 
 	const stopResponse = async () => {
+		const trackedTargetId = getTrackedTargetId();
+
 		if (taskIds) {
 			for (const taskId of taskIds) {
 				const res = await stopTask(localStorage.token, taskId).catch((error) => {
@@ -2403,6 +2460,12 @@
 			if (autoScroll) {
 				scrollToBottom();
 			}
+		}
+
+		if (trackedTargetId) {
+			completeScanSession(trackedTargetId, {
+				errorMessage: 'Model response was stopped before completion.'
+			});
 		}
 
 		if (generating) {

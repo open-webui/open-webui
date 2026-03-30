@@ -83,7 +83,7 @@
 
 	<div class="text-sm text-gray-600 dark:text-gray-300 px-0.5 max-w-3xl">
 		{$i18n.t(
-			'Manage scan assets for VenomX. This interface uses local mock data until backend scan orchestration is available.'
+			'Manage scan assets for VenomX. Queue execution now tracks live model response progress from chat in real time.'
 		)}
 	</div>
 </div>

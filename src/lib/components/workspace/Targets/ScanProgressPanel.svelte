@@ -33,6 +33,7 @@
 	$: recentActivity = activeSession?.activity
 		? [...activeSession.activity].reverse().slice(0, 6)
 		: [];
+	$: progressPercent = Math.max(0, Math.min(100, Math.floor(activeSession?.progress ?? 0)));
 
 	const statusBadgeClass = (status: ScanStageStatus) => {
 		if (status === 'complete') {
@@ -99,7 +100,7 @@
 		</div>
 		{#if activeSession}
 			<div
-				class="text-[10px] px-2 py-1 rounded-full font-medium {statusBadgeClass(
+				class="text-[10px] px-2 py-1 rounded-full font-medium whitespace-nowrap leading-none {statusBadgeClass(
 					activeSession.lifecycle === 'queued'
 						? 'pending'
 						: activeSession.lifecycle === 'running'
@@ -123,12 +124,12 @@
 					class="flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-300 mb-1"
 				>
 					<span>{$i18n.t('Overall Progress')}</span>
-					<span>{activeSession.progress}%</span>
+					<span>{progressPercent}%</span>
 				</div>
 				<div class="h-2 rounded-full bg-sky-100/90 dark:bg-sky-900/35 overflow-hidden">
 					<div
 						class="h-full bg-sky-600 dark:bg-sky-500 transition-all duration-500"
-						style={`width: ${Math.max(0, Math.min(100, activeSession.progress))}%`}
+						style={`width: ${progressPercent}%`}
 					></div>
 				</div>
 			</div>
