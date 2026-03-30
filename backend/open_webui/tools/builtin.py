@@ -393,7 +393,8 @@ async def execute_code(
         if CODE_INTERPRETER_BLOCKED_MODULES:
             import textwrap
 
-            blocking_code = textwrap.dedent(f"""
+            blocking_code = textwrap.dedent(
+                f"""
                 import builtins
 
                 BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
@@ -409,7 +410,8 @@ async def execute_code(
                     return _real_import(name, globals, locals, fromlist, level)
 
                 builtins.__import__ = restricted_import
-                """)
+                """
+            )
             code = blocking_code + '\n' + code
 
         engine = getattr(__request__.app.state.config, 'CODE_INTERPRETER_ENGINE', 'pyodide')
@@ -2342,7 +2344,7 @@ class TaskItem(BaseModel):
     status: Literal['pending', 'in_progress', 'completed', 'cancelled'] = Field('pending', description="Task status.")
 
 
-async def update_tasks(
+async def tasks(
     tasks: list[TaskItem],
     overwrite: bool = True,
     __chat_id__: str = None,
@@ -2352,14 +2354,21 @@ async def update_tasks(
     __user__: dict = None,
 ) -> str:
     """
-    Create or update tasks for the current chat. By default replaces the
-    entire task list. Set overwrite=false to update individual tasks by id
-    while preserving the rest.
+    Create or update a checklist of tasks tied to this chat.
+    Useful whenever a request involves multiple pieces of work that
+    should be tracked individually.
 
-    Only ONE task should be in_progress at a time. Mark tasks completed
-    immediately when done.
+    By default the entire list is replaced (overwrite=true). Set
+    overwrite=false to patch specific items by id without discarding
+    the rest.
 
-    :param tasks: List of task items. Each must have: id (string, unique identifier), content (string, task description — required for new tasks), status (one of: pending, in_progress, completed, cancelled).
+    Each item carries an id, content string, and a status field
+    (pending, in_progress, completed, or cancelled). Order reflects
+    priority. Only one item should be in_progress at a time; mark
+    it completed before moving on, or cancel and replace it if the
+    approach changes.
+
+    :param tasks: List of task items. Each must have: id (string, unique identifier), content (string, task description, required for new tasks), status (one of: pending, in_progress, completed, cancelled).
     :param overwrite: If true (default), replaces the entire task list. If false, updates/adds tasks by id while keeping existing ones.
     :return: JSON with the full task list and summary counts
     """
@@ -2367,6 +2376,7 @@ async def update_tasks(
         return json.dumps({'error': 'Chat context not available'})
 
     try:
+
         def _to_dict(task) -> dict:
             """Convert TaskItem or dict to plain dict."""
             if hasattr(task, 'model_dump'):
@@ -2391,7 +2401,7 @@ async def update_tasks(
             return item_id if item_id else str(idx + 1)
 
         if overwrite:
-            # Full replacement — validate and write
+            # Full replacement - validate and write
             all_tasks = []
             for idx, task in enumerate(tasks):
                 d = _to_dict(task)
@@ -2404,13 +2414,15 @@ async def update_tasks(
                 if status not in VALID_TASK_STATUSES:
                     status = 'pending'
 
-                all_tasks.append({
-                    'id': item_id,
-                    'content': content,
-                    'status': status,
-                })
+                all_tasks.append(
+                    {
+                        'id': item_id,
+                        'content': content,
+                        'status': status,
+                    }
+                )
         else:
-            # Partial update — merge by id
+            # Partial update - merge by id
             existing_tasks = Chats.get_chat_tasks_by_id(__chat_id__)
             existing_by_id = {t['id']: t for t in existing_tasks}
 
@@ -2486,7 +2498,5 @@ async def update_tasks(
             ensure_ascii=False,
         )
     except Exception as e:
-        log.exception(f'update_tasks error: {e}')
+        log.exception(f'tasks error: {e}')
         return json.dumps({'error': str(e)})
-
-

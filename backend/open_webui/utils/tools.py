@@ -85,7 +85,7 @@ from open_webui.tools.builtin import (
     view_file,
     view_knowledge_file,
     view_skill,
-    update_tasks,
+    tasks,
 )
 
 import copy
@@ -506,7 +506,7 @@ def get_builtin_tools(
 
     # Task management - break down complex work into trackable steps
     if is_builtin_tool_enabled('tasks'):
-        builtin_functions.append(update_tasks)
+        builtin_functions.append(tasks)
 
     for func in builtin_functions:
         callable = get_async_tool_function_and_apply_extra_params(
