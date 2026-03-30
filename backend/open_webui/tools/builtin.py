@@ -2345,7 +2345,7 @@ class TaskItem(BaseModel):
 
 
 async def tasks(
-    tasks: list[TaskItem],
+    tasks: Optional[list[TaskItem]] = None,
     overwrite: bool = True,
     __chat_id__: str = None,
     __message_id__: str = None,
@@ -2356,7 +2356,8 @@ async def tasks(
     """
     Create or update a checklist of tasks tied to this chat.
     Useful whenever a request involves multiple pieces of work that
-    should be tracked individually.
+    should be tracked individually. Call without arguments to retrieve
+    the existing list.
 
     By default the entire list is replaced (overwrite=true). Set
     overwrite=false to patch specific items by id without discarding
@@ -2368,7 +2369,7 @@ async def tasks(
     it completed before moving on, or cancel and replace it if the
     approach changes.
 
-    :param tasks: List of task items. Each must have: id (string, unique identifier), content (string, task description, required for new tasks), status (one of: pending, in_progress, completed, cancelled).
+    :param tasks: Optional list of task items. Each item: id (string), content (string, required for new tasks), status (pending|in_progress|completed|cancelled). Leave empty to fetch without modifying.
     :param overwrite: If true (default), replaces the entire task list. If false, updates/adds tasks by id while keeping existing ones.
     :return: JSON with the full task list and summary counts
     """
@@ -2400,7 +2401,10 @@ async def tasks(
             item_id = str(d.get('id', '') or '').strip()
             return item_id if item_id else str(idx + 1)
 
-        if overwrite:
+        if tasks is None:
+            # Read-only - return current list
+            all_tasks = Chats.get_chat_tasks_by_id(__chat_id__)
+        elif overwrite:
             # Full replacement - validate and write
             all_tasks = []
             for idx, task in enumerate(tasks):
@@ -2464,19 +2468,19 @@ async def tasks(
                 if not any(t['id'] == item_id for t in existing_tasks):
                     all_tasks.append(existing_by_id[item_id])
 
-        # Persist to DB
-        Chats.update_chat_tasks_by_id(__chat_id__, all_tasks)
+        # Persist to DB and emit (skip for read-only)
+        if tasks is not None:
+            Chats.update_chat_tasks_by_id(__chat_id__, all_tasks)
 
-        # Emit to frontend for real-time UI update
-        if __event_emitter__:
-            await __event_emitter__(
-                {
-                    'type': 'chat:message:tasks',
-                    'data': {
-                        'tasks': all_tasks,
-                    },
-                }
-            )
+            if __event_emitter__:
+                await __event_emitter__(
+                    {
+                        'type': 'chat:message:tasks',
+                        'data': {
+                            'tasks': all_tasks,
+                        },
+                    }
+                )
 
         # Build summary counts
         pending = sum(1 for t in all_tasks if t['status'] == 'pending')
