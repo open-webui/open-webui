@@ -331,7 +331,7 @@
 		savedPath = path;
 		pushNavHistory(path);
 
-		const result = await listFiles(terminal.url, terminal.key, path);
+		const result = await listFiles(terminal.url, terminal.key, path, chatId ?? undefined);
 		loading = false;
 
 		// Set working directory on the terminal server (fire-and-forget)
@@ -366,22 +366,22 @@
 		clearFilePreview();
 
 		if (isImage(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			const result = await downloadFileBlob(terminal.url, terminal.key, filePath, chatId ?? undefined);
 			if (result) fileImageUrl = URL.createObjectURL(result.blob);
 		} else if (isVideo(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			const result = await downloadFileBlob(terminal.url, terminal.key, filePath, chatId ?? undefined);
 			if (result) fileVideoUrl = URL.createObjectURL(result.blob);
 		} else if (isAudio(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			const result = await downloadFileBlob(terminal.url, terminal.key, filePath, chatId ?? undefined);
 			if (result) fileAudioUrl = URL.createObjectURL(result.blob);
 		} else if (isPdf(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			const result = await downloadFileBlob(terminal.url, terminal.key, filePath, chatId ?? undefined);
 			if (result) filePdfData = await result.blob.arrayBuffer();
 		} else if (isSqlite(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			const result = await downloadFileBlob(terminal.url, terminal.key, filePath, chatId ?? undefined);
 			if (result) fileSqliteData = await result.blob.arrayBuffer();
 		} else if (isOffice(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			const result = await downloadFileBlob(terminal.url, terminal.key, filePath, chatId ?? undefined);
 			if (result) {
 				const ext = getFileExt(filePath);
 				const arrayBuffer = await result.blob.arrayBuffer();
@@ -414,7 +414,7 @@
 				}
 			}
 		} else {
-			fileContent = await readFile(terminal.url, terminal.key, filePath);
+			fileContent = await readFile(terminal.url, terminal.key, filePath, chatId ?? undefined);
 		}
 		fileLoading = false;
 	};
@@ -427,7 +427,7 @@
 		const isDir = path.endsWith('/');
 		const result = isDir
 			? await archiveFromTerminal(terminal.url, terminal.key, [path.replace(/\/$/, '')])
-			: await downloadFileBlob(terminal.url, terminal.key, path);
+			: await downloadFileBlob(terminal.url, terminal.key, path, chatId ?? undefined);
 		if (!result) return;
 		const url = URL.createObjectURL(result.blob);
 		const a = document.createElement('a');
@@ -459,7 +459,7 @@
 
 		uploading = true;
 		for (const file of droppedFiles) {
-			await uploadToTerminal(terminal.url, terminal.key, currentPath, file);
+			await uploadToTerminal(terminal.url, terminal.key, currentPath, file, chatId ?? undefined);
 		}
 		uploading = false;
 		await loadDir(currentPath);
@@ -471,7 +471,7 @@
 
 		uploading = true;
 		for (const file of files) {
-			await uploadToTerminal(terminal.url, terminal.key, currentPath, file);
+			await uploadToTerminal(terminal.url, terminal.key, currentPath, file, chatId ?? undefined);
 		}
 		uploading = false;
 		await loadDir(currentPath);
@@ -494,7 +494,7 @@
 		const terminal = selectedTerminal;
 		if (!terminal) return;
 
-		const result = await createDirectory(terminal.url, terminal.key, `${currentPath}${name}`);
+		const result = await createDirectory(terminal.url, terminal.key, `${currentPath}${name}`, chatId ?? undefined);
 		toast[result ? 'success' : 'error'](
 			$i18n.t(result ? 'Folder created' : 'Failed to create folder')
 		);
@@ -529,7 +529,7 @@
 		const terminal = selectedTerminal;
 		if (!terminal) return;
 
-		const result = await deleteEntry(terminal.url, terminal.key, path);
+		const result = await deleteEntry(terminal.url, terminal.key, path, chatId ?? undefined);
 		toast[result ? 'success' : 'error'](
 			$i18n.t(result ? '{{name}} deleted' : 'Failed to delete {{name}}', { name })
 		);
@@ -555,7 +555,7 @@
 		const sourceDir = source.endsWith('/') ? source : source + '/';
 		if (destFolder.startsWith(sourceDir)) return;
 
-		const result = await moveEntry(terminal.url, terminal.key, source, destination);
+		const result = await moveEntry(terminal.url, terminal.key, source, destination, chatId ?? undefined);
 		if ('error' in result) {
 			toast.error(result.error);
 		} else {
@@ -574,7 +574,7 @@
 
 		if (oldPath === destination) return;
 
-		const result = await moveEntry(terminal.url, terminal.key, oldPath, destination);
+		const result = await moveEntry(terminal.url, terminal.key, oldPath, destination, chatId ?? undefined);
 		if ('error' in result) {
 			toast.error(result.error);
 		} else {
