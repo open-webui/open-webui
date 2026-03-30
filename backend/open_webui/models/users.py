@@ -588,18 +588,13 @@ class UsersTable:
             return None
 
     @throttle(DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL)
-    def update_last_active_by_id(self, id: str, db: Optional[Session] = None) -> Optional[UserModel]:
+    def update_last_active_by_id(self, id: str, db: Optional[Session] = None) -> None:
         try:
             with get_db_context(db) as db:
-                user = db.query(User).filter_by(id=id).first()
-                if not user:
-                    return None
-                user.last_active_at = int(time.time())
+                db.query(User).filter_by(id=id).update({'last_active_at': int(time.time())})
                 db.commit()
-                db.refresh(user)
-                return UserModel.model_validate(user)
         except Exception:
-            return None
+            pass
 
     def update_user_oauth_by_id(
         self, id: str, provider: str, sub: str, db: Optional[Session] = None
