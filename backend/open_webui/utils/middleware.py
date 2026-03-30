@@ -2603,6 +2603,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             if mcp_tools_dict:
                 tools_dict = {**tools_dict, **mcp_tools_dict}
 
+            # Inject MCP server instructions into the system prompt
+            for server_id, client in mcp_clients.items():
+                if client.instructions:
+                    form_data['messages'] = add_or_update_system_message(
+                        client.instructions,
+                        form_data['messages'],
+                        append=True,
+                    )
+
         # Resolve terminal tools if terminal_id is set (outside tool_ids check
         # so system terminals work even when no other tools are selected)
         if terminal_id:
