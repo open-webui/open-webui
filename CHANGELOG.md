@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🖥️ **Terminal session tracking.** Open Terminal now tracks the current working directory per chat session, so relative paths and navigation work correctly across multiple interactions. [Commit](https://github.com/open-webui/open-webui/commit/a06685a47b89fb19dd6124fbe391ff78b54f451d), [Commit](https://github.com/open-webui/open-webui/commit/6512e085c4e56897dd49e56aff5d616820a962f3)
 - ⚡ **Optimized user activity tracking.** User activity updates now use a single database query instead of multiple operations, improving response times across all authenticated requests. [PR #23215](https://github.com/open-webui/open-webui/pull/23215)
 - 💨 **Optimized shared chat deletion.** Deleting shared chats by user is now faster and more memory-efficient by only loading necessary data. [PR #23216](https://github.com/open-webui/open-webui/pull/23216)
+- 🌐 **Translation updates.** Translations for Russian were enhanced and expanded.
 
 ### Fixed
 
