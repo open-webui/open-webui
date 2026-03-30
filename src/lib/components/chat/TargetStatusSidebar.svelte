@@ -40,9 +40,12 @@
 		<div>
 			<div class="text-sm font-semibold">{$i18n.t('Targets')}</div>
 			<div class="text-[11px] text-gray-500 dark:text-gray-400">
-				{$activeScanCount} {$i18n.t('active')}{' • '}
-				{$scanQueue.length} {$i18n.t('queued')}{' • '}
-				{$targets.length} {$i18n.t('total')}
+				{$activeScanCount}
+				{$i18n.t('active')}{' • '}
+				{$scanQueue.length}
+				{$i18n.t('queued')}{' • '}
+				{$targets.length}
+				{$i18n.t('total')}
 			</div>
 		</div>
 		<button

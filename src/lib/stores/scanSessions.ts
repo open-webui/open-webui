@@ -615,7 +615,8 @@ export const applyScanSessionStatusEvent = (
 
 	const stageId = resolveStatusStage(status.action);
 	const statusMessage =
-		status.description ?? (status.action ? `Status update: ${status.action}` : 'Status update received.');
+		status.description ??
+		(status.action ? `Status update: ${status.action}` : 'Status update received.');
 
 	setSession(targetId, (session) => {
 		const timestamp = now();
