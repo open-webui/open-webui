@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
--
+- 📋 **Task management tool.** AI models can now create, update, and track tasks within a chat conversation, breaking down complex requests into manageable steps with real-time status updates. [Commit](https://github.com/open-webui/open-webui/commit/bcb71bb5206ac01d97a39fde8ecf0e0541dde636)
+- 🗑️ **Admin model deletion.** Administrators can now delete Ollama models directly from the model selector menu, making it easier to clean up unused or unwanted models. [Commit](https://github.com/open-webui/open-webui/commit/2388dd7dc3530b5dd5419c5d0bb1bcdcb7544099)
 
 ### Fixed
 
@@ -17,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
--
+- ⚠️ **Database Migrations**: This release includes database schema changes; we strongly recommend backing up your database and all associated data before upgrading in production environments. If you are running a multi-worker, multi-server, or load-balanced deployment, all instances must be updated simultaneously, rolling updates are not supported and will cause application failures due to schema incompatibility.
 
 ## [0.8.12] - 2026-03-26
 
