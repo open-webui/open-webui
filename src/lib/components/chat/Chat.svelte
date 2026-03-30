@@ -153,6 +153,7 @@
 	let showCommands = false;
 
 	let generating = false;
+	let submittingPrompt = false;
 	let dragged = false;
 	let generationController = null;
 
@@ -177,6 +178,7 @@
 	}
 
 	const navigateHandler = async () => {
+		const targetChatId = chatIdProp;
 		loading = true;
 
 		prompt = '';
@@ -188,22 +190,26 @@
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
 
+		if (chatIdProp !== targetChatId) return;
+
 		const storageChatInput = sessionStorage.getItem(
-			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
+			`chat-input${targetChatId ? `-${targetChatId}` : ''}`
 		);
 
-		if (chatIdProp && (await loadChat())) {
+		if (targetChatId && (await loadChat(targetChatId))) {
+			if (chatIdProp !== targetChatId) return;
 			await tick();
 			loading = false;
 			window.setTimeout(() => scrollToBottom(), 0);
 
 			await tick();
+			if (chatIdProp !== targetChatId) return;
 
 			// Process any queued requests if the chat is idle
 			const lastMessage = history.currentId ? history.messages[history.currentId] : null;
 			const isIdle = !lastMessage || lastMessage.role !== 'assistant' || lastMessage.done;
 			if (isIdle) {
-				await processNextInQueue(chatIdProp);
+				await processNextInQueue(targetChatId);
 			}
 
 			if (storageChatInput) {
@@ -223,10 +229,12 @@
 			} else {
 				await setDefaults();
 			}
+			if (chatIdProp !== targetChatId) return;
 
 			const chatInput = document.getElementById('chat-input');
 			chatInput?.focus();
 		} else {
+			if (chatIdProp !== targetChatId) return;
 			await goto('/');
 		}
 	};
@@ -416,8 +424,10 @@
 	const chatEventHandler = async (event, cb) => {
 		console.log(event);
 
-		if (event.chat_id === $chatId) {
+		const eventChatId = event.chat_id;
+		if (eventChatId === $chatId) {
 			await tick();
+			if (get(chatId) !== eventChatId) return;
 			let message = history.messages[event.message_id];
 
 			if (message) {
@@ -439,7 +449,7 @@
 						for (const messageId of history.messages[message.parentId].childrenIds) {
 							history.messages[messageId].done = true;
 						}
-						await processNextInQueue($chatId);
+						await processNextInQueue(eventChatId);
 					} else {
 						message.done = true;
 					}
@@ -476,7 +486,9 @@
 					currentChatPage.set(1);
 					await chats.set(await getChatList(localStorage.token, $currentChatPage));
 				} else if (type === 'chat:tags') {
-					chat = await getChatById(localStorage.token, $chatId);
+					const refreshedChat = await getChatById(localStorage.token, eventChatId);
+					if (get(chatId) !== eventChatId) return;
+					chat = refreshedChat;
 					allTags.set(await getAllTags(localStorage.token));
 				} else if (type === 'source' || type === 'citation') {
 					if (data?.type === 'code_execution') {
@@ -1225,22 +1237,27 @@
 		setTimeout(() => chatInput?.focus(), 0);
 	};
 
-	const loadChat = async () => {
-		chatId.set(chatIdProp);
+	const loadChat = async (expectedChatId: string = chatIdProp) => {
+		chatId.set(expectedChatId);
 
 		if ($temporaryChatEnabled) {
 			temporaryChatEnabled.set(false);
 		}
 
-		chat = await getChatById(localStorage.token, $chatId).catch(async (error) => {
+		const chatResult = await getChatById(localStorage.token, expectedChatId).catch(async (error) => {
 			await goto('/');
 			return null;
 		});
 
+		if (get(chatId) !== expectedChatId) return null;
+
+		chat = chatResult;
 		if (chat) {
-			tags = await getTagsById(localStorage.token, $chatId).catch(async (error) => {
+			tags = await getTagsById(localStorage.token, expectedChatId).catch(async (error) => {
 				return [];
 			});
+
+			if (get(chatId) !== expectedChatId) return null;
 
 			const chatContent = chat.chat;
 
@@ -1271,6 +1288,8 @@
 				autoScroll = true;
 				await tick();
 
+				if (get(chatId) !== expectedChatId) return null;
+
 				if (history.currentId) {
 					for (const message of Object.values(history.messages)) {
 						if (message && message.role === 'assistant' && message.done !== false) {
@@ -1279,9 +1298,11 @@
 					}
 				}
 
-				const taskRes = await getTaskIdsByChatId(localStorage.token, $chatId).catch((error) => {
+				const taskRes = await getTaskIdsByChatId(localStorage.token, expectedChatId).catch((error) => {
 					return null;
 				});
+
+				if (get(chatId) !== expectedChatId) return null;
 
 				if (taskRes) {
 					taskIds = taskRes.task_ids;
@@ -1289,11 +1310,12 @@
 
 				await tick();
 
-				return true;
+				return get(chatId) === expectedChatId ? true : null;
 			} else {
 				return null;
 			}
 		}
+		return null;
 	};
 
 	const scrollToBottom = async (behavior = 'auto') => {
@@ -1318,6 +1340,9 @@
 	};
 
 	const processNextInQueue = async (targetChatId: string) => {
+		// If the user navigated away, don't consume/submit queued requests into the wrong chat.
+		if (get(chatId) !== targetChatId) return;
+
 		const queue = $chatRequestQueues[targetChatId];
 		if (!queue || queue.length === 0) return;
 
@@ -1331,6 +1356,7 @@
 
 		files = combinedFiles;
 		await tick();
+		if (get(chatId) !== targetChatId) return;
 		await submitPrompt(combinedPrompt);
 	};
 
@@ -1358,6 +1384,9 @@
 			return null;
 		});
 
+		// Stale: user switched chat while API was in flight — don't apply completion to current view
+		if (get(chatId) !== _chatId) return;
+
 		if (res !== null && res.messages) {
 			// Update chat history with the new messages
 			for (const message of res.messages) {
@@ -1376,9 +1405,11 @@
 
 		await tick();
 
+		if (get(chatId) !== _chatId) return;
+
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, _chatId, {
+				const updatedChat = await updateChatById(localStorage.token, _chatId, {
 					models: selectedModels,
 					messages: messages,
 					history: history,
@@ -1386,10 +1417,17 @@
 					files: chatFiles
 				});
 
+				// Stale: user switched chat while updateChatById was in flight — don't overwrite current chat state
+				if (get(chatId) !== _chatId) return;
+
+				chat = updatedChat;
+
 				currentChatPage.set(1);
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			}
 		}
+
+		if (get(chatId) !== _chatId) return;
 
 		taskIds = null;
 	};
@@ -1418,6 +1456,9 @@
 			return null;
 		});
 
+		// Stale: user switched chat while API was in flight
+		if (get(chatId) !== _chatId) return;
+
 		if (res !== null && res.messages) {
 			// Update chat history with the new messages
 			for (const message of res.messages) {
@@ -1433,13 +1474,17 @@
 
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, _chatId, {
+				const updatedChat = await updateChatById(localStorage.token, _chatId, {
 					models: selectedModels,
 					messages: messages,
 					history: history,
 					params: params,
 					files: chatFiles
 				});
+
+				// Stale: user switched chat while updateChatById was in flight — don't overwrite current chat state
+				if (get(chatId) !== _chatId) return;
+				chat = updatedChat;
 
 				currentChatPage.set(1);
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
@@ -1762,6 +1807,10 @@
 	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
 		console.log('submitPrompt', userPrompt, $chatId);
 
+		if (submittingPrompt) return;
+		submittingPrompt = true;
+
+		try {
 		const _selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
@@ -1774,6 +1823,7 @@
 			toast.warning($i18n.t('Please connect all required integrations before sending a message'));
 			return;
 		}
+
 		if (userPrompt === '' && files.length === 0) {
 			toast.error($i18n.t('Please enter a prompt'));
 			return;
@@ -1891,6 +1941,9 @@
 		saveSessionSelectedModels();
 
 		await sendMessage(history, userMessageId, { newChat: true });
+		} finally {
+			submittingPrompt = false;
+		}
 	};
 
 	const sendMessage = async (
@@ -1914,6 +1967,14 @@
 
 		let _chatId = JSON.parse(JSON.stringify($chatId));
 		_history = structuredClone(_history);
+
+		// IMPORTANT: determine "new chat" based on the user message (parentId),
+		// not _history.currentId (which will be updated to assistant placeholder IDs below).
+		const parentMessage = _history.messages?.[parentId];
+		if (newChat && (!parentMessage || parentMessage.role !== 'user')) {
+			console.error('sendMessage(newChat): invalid parentId; expected user message');
+		}
+		const shouldInitNewChat = newChat && (parentMessage?.role === 'user' ? parentMessage.parentId === null : _history.messages?.[_history.currentId]?.parentId === null);
 
 		const responseMessageIds: Record<PropertyKey, string> = {};
 		// If modelId is provided, use it, else use selected model
@@ -1944,6 +2005,8 @@
 				// Add message to history and Set currentId to messageId
 				history.messages[responseMessageId] = responseMessage;
 				history.currentId = responseMessageId;
+				_history.messages[responseMessageId] = structuredClone(responseMessage);
+				_history.currentId = responseMessageId;
 
 				// Append messageId to childrenIds of parent message
 				if (parentId !== null && history.messages[parentId]) {
@@ -1952,6 +2015,12 @@
 						...history.messages[parentId].childrenIds,
 						responseMessageId
 					];
+					if (_history.messages[parentId]) {
+						_history.messages[parentId].childrenIds = [
+							..._history.messages[parentId].childrenIds,
+							responseMessageId
+						];
+					}
 				}
 
 				responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`] = responseMessageId;
@@ -1960,13 +2029,12 @@
 		history = history;
 
 		// Create new chat if newChat is true and first user message
-		if (newChat && _history.messages[_history.currentId].parentId === null) {
+		if (shouldInitNewChat) {
 			_chatId = await initChatHandler(_history);
 		}
 
 		await tick();
 
-		_history = structuredClone(history);
 		// Save chat after all messages have been created
 		await saveChatHandler(_chatId, _history);
 
@@ -2261,7 +2329,7 @@
 				model_item: $models.find((m) => m.id === model.id),
 
 				session_id: $socket?.id,
-				chat_id: $chatId,
+				chat_id: _chatId,
 				folder_id: $selectedFolder?.id ?? undefined,
 
 				id: responseMessageId,
@@ -2413,6 +2481,7 @@
 	};
 
 	const submitMessage = async (parentId, prompt) => {
+		const _chatId = get(chatId);
 		let userPrompt = prompt;
 		let userMessageId = uuidv4();
 
@@ -2437,6 +2506,10 @@
 		history.currentId = userMessageId;
 
 		await tick();
+
+		// Stale: user switched chat before we could send — don't submit into a different chat
+		if (get(chatId) !== _chatId) return;
+
 
 		if (autoScroll) {
 			scrollToBottom();
@@ -2605,13 +2678,17 @@
 	const saveChatHandler = async (_chatId, history) => {
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, _chatId, {
+				const updatedChat = await updateChatById(localStorage.token, _chatId, {
 					models: selectedModels,
 					history: history,
 					messages: createMessagesList(history, history.currentId),
 					params: params,
 					files: chatFiles
 				});
+
+				// Stale: user switched chat while updateChatById was in flight — don't overwrite current chat state
+				if (get(chatId) !== _chatId) return;
+				chat = updatedChat;
 			}
 		}
 	};
@@ -2864,6 +2941,7 @@
 									{onUpload}
 									messageQueue={$chatRequestQueues[$chatId] ?? []}
 									onQueueSendNow={async (id) => {
+										const targetChatId = $chatId;
 										const queue = $chatRequestQueues[$chatId] ?? [];
 										const item = queue.find((m) => m.id === id);
 										if (item) {
@@ -2875,9 +2953,11 @@
 											// Stop current generation first
 											await stopResponse();
 											await tick();
+											if (get(chatId) !== targetChatId) return;
 											// Set files and submit
 											files = item.files;
 											await tick();
+											if (get(chatId) !== targetChatId) return;
 											await submitPrompt(item.prompt);
 										}
 									}}
