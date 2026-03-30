@@ -454,7 +454,8 @@ export const executeToolServer = async (
 	url: string,
 	name: string,
 	params: Record<string, any>,
-	serverData: { openapi: any; info: any; specs: any }
+	serverData: { openapi: any; info: any; specs: any },
+	sessionId?: string
 ) => {
 	let error = null;
 
@@ -531,6 +532,7 @@ export const executeToolServer = async (
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
 		};
+		if (sessionId) headers['X-Session-Id'] = sessionId;
 
 		const requestOptions: RequestInit = {
 			method: httpMethod.toUpperCase(),

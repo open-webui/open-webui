@@ -1009,6 +1009,13 @@ async def get_terminal_tools(
     # auth_type == "none": no Authorization header
 
     system_prompt = server_data.get('system_prompt')
+
+    # Use chat_id as the per-session key for cwd tracking
+    metadata = extra_params.get('__metadata__', {})
+    session_id = metadata.get('chat_id')
+    if session_id:
+        headers['X-Session-Id'] = session_id
+
     terminal_cwd = await get_terminal_cwd(connection.get('url', ''), headers, cookies)
 
     tools_dict = {}

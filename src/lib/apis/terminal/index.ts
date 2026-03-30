@@ -45,11 +45,11 @@ export const getTerminalConfig = async (
 	return res.json().catch(() => null);
 };
 
-export const getCwd = async (baseUrl: string, apiKey: string): Promise<string | null> => {
+export const getCwd = async (baseUrl: string, apiKey: string, sessionId?: string): Promise<string | null> => {
 	const url = `${baseUrl.replace(/\/$/, '')}/files/cwd`;
-	const res = await fetch(url, {
-		headers: { Authorization: `Bearer ${apiKey}` }
-	}).catch(() => null);
+	const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}` };
+	if (sessionId) headers['X-Session-Id'] = sessionId;
+	const res = await fetch(url, { headers }).catch(() => null);
 	if (!res || !res.ok) return null;
 	const json = await res.json().catch(() => null);
 	return json?.cwd ?? null;
@@ -218,15 +218,18 @@ export const deleteEntry = async (
 export const setCwd = async (
 	baseUrl: string,
 	apiKey: string,
-	path: string
+	path: string,
+	sessionId?: string
 ): Promise<{ cwd: string } | null> => {
 	const url = `${baseUrl.replace(/\/$/, '')}/files/cwd`;
+	const headers: Record<string, string> = {
+		Authorization: `Bearer ${apiKey}`,
+		'Content-Type': 'application/json'
+	};
+	if (sessionId) headers['X-Session-Id'] = sessionId;
 	const res = await fetch(url, {
 		method: 'POST',
-		headers: {
-			Authorization: `Bearer ${apiKey}`,
-			'Content-Type': 'application/json'
-		},
+		headers,
 		body: JSON.stringify({ path })
 	})
 		.then(async (res) => {
