@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📋 **Task management tool.** AI models can now create, update, and track tasks within a chat conversation, breaking down complex requests into manageable steps with real-time status updates. [Commit](https://github.com/open-webui/open-webui/commit/bcb71bb5206ac01d97a39fde8ecf0e0541dde636)
 - 🗑️ **Admin model deletion.** Administrators can now delete Ollama models directly from the model selector menu, making it easier to clean up unused or unwanted models. [Commit](https://github.com/open-webui/open-webui/commit/2388dd7dc3530b5dd5419c5d0bb1bcdcb7544099)
 - 🎨 **Emoji shortcode support.** Typing a colon in the chat input now opens an emoji suggestion menu, making it easier to insert emojis using shortcodes like :wave:. [Commit](https://github.com/open-webui/open-webui/commit/2040095050056d01c61aa597c5010445449a42c7)
+- 👆 **Swipe to reply on mobile.** Swiping right on a message now triggers a reply, making it easier to respond on touch devices with a natural gesture. [Commit](https://github.com/open-webui/open-webui/commit/012ce95f27d57bea8911bd63bfb923443c5797ae)
 
 ### Fixed
 
