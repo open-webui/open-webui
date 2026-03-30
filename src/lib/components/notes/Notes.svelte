@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { marked } from 'marked';
+	import { renderMarkdownToHTML } from '$lib/utils/marked';
 	import { toast } from 'svelte-sonner';
 	import fileSaver from 'file-saver';
 
@@ -138,7 +138,7 @@
 					data: {
 						content: {
 							json: null,
-							html: marked.parse(content ?? ''),
+							html: renderMarkdownToHTML(content ?? '') as string,
 							md: content
 						}
 					},

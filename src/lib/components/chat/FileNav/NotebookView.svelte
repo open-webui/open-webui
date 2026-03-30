@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, onMount, onDestroy } from 'svelte';
-	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
+	import { renderMarkdownToHTMLSanitized } from '$lib/utils/marked';
 	import { highlightCode } from '$lib/utils/codeHighlight';
 	import {
 		createNotebookSession,
@@ -73,8 +73,7 @@
 	}
 
 	// ── Markdown / output helpers ────────────────────────────────────────
-	const renderMarkdown = (src: string): string =>
-		DOMPurify.sanitize(marked.parse(src, { async: false }) as string);
+	const renderMarkdown = (src: string): string => renderMarkdownToHTMLSanitized(src);
 
 	const stripAnsi = (s: string): string => s.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '');
 
