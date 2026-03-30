@@ -219,6 +219,7 @@ type Settings = {
 	chatDirection?: 'LTR' | 'RTL' | 'auto';
 	ctrlEnterToSend?: boolean;
 	renderMarkdownInPreviews?: boolean;
+	recentEmojis?: string[];
 
 	system?: string;
 	seed?: number;
