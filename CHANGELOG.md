@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📌 **Recently used emojis.** The emoji picker now shows your most recently used emojis at the top, making it faster to find emojis you use often. [Commit](https://github.com/open-webui/open-webui/commit/64da99a32218171d41b3af5acc14783de8dbdf49)
 - 👆 **Swipe to reply on mobile.** Swiping right on a message now triggers a reply, making it easier to respond on touch devices with a natural gesture. [Commit](https://github.com/open-webui/open-webui/commit/012ce95f27d57bea8911bd63bfb923443c5797ae)
 - 📎 **Attach previously uploaded files.** The chat input menu now includes a Files tab for browsing and attaching previously uploaded files, eliminating the need to re-upload files you have already shared. [Commit](https://github.com/open-webui/open-webui/commit/edb8971c7dbd974322c3207c4655ff66479c3ee2)
+- ✨ **Improved task list visibility.** The task list automatically hides once all tasks are complete and generation is finished, keeping the chat interface cleaner. [Commit](https://github.com/open-webui/open-webui/commit/0ad397c0482004173d4a8bf4722100acc43db454), [Commit](https://github.com/open-webui/open-webui/commit/4b35d70078a2d7a322566699a43594b3c10b2dda)
 
 ### Fixed
 
@@ -23,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - ⚠️ **Database Migrations**: This release includes database schema changes; we strongly recommend backing up your database and all associated data before upgrading in production environments. If you are running a multi-worker, multi-server, or load-balanced deployment, all instances must be updated simultaneously, rolling updates are not supported and will cause application failures due to schema incompatibility.
+- 🖥️ **Terminal session tracking.** Open Terminal now tracks the current working directory per chat session, so relative paths and navigation work correctly across multiple interactions. [Commit](https://github.com/open-webui/open-webui/commit/a06685a47b89fb19dd6124fbe391ff78b54f451d), [Commit](https://github.com/open-webui/open-webui/commit/6512e085c4e56897dd49e56aff5d616820a962f3)
 
 ## [0.8.12] - 2026-03-26
 
