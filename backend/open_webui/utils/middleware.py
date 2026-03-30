@@ -3545,6 +3545,26 @@ async def streaming_chat_response_handler(response, ctx):
 
                         # "data:" is the prefix for each event
                         if not data.startswith('data:'):
+                            # Some upstreams return plain JSON error lines in a streaming response
+                            # (without SSE `data:` prefix). Try to normalize these into standard
+                            # error events so frontend and DB paths still receive them.
+                            try:
+                                raw_obj = json.loads(data)
+                                raw_error = raw_obj.get("error") if isinstance(raw_obj, dict) else None
+                                if raw_error:
+                                    try:
+                                        Chats.upsert_message_to_chat_by_id_and_message_id(
+                                            metadata["chat_id"],
+                                            metadata["message_id"],
+                                            {
+                                                "error": {"content": raw_error},
+                                            },
+                                        )
+                                    except Exception:
+                                        pass
+                                    await event_emitter({ "type": "chat:completion", "data": { "error": raw_error } })
+                            except Exception:
+                                pass
                             continue
 
                         # Remove the prefix
