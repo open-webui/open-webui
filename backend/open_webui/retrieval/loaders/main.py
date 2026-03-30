@@ -182,7 +182,18 @@ class DoclingLoader:
         self.file_path = file_path
         self.mime_type = mime_type
 
-        self.params = params or {}
+        self.params = {}
+        if params is not None:
+            for k, v in params.items():
+                if k in [
+                    "vlm_pipeline_model_api",
+                    "vlm_pipeline_model_local",
+                    "picture_description_api",
+                    "picture_description_local",
+                ]:
+                    self.params[k] = json.dumps(v)
+                else:
+                    self.params[k] = v
 
     def load(self) -> list[Document]:
         with open(self.file_path, 'rb') as f:
