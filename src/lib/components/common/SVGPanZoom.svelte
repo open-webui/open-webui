@@ -9,9 +9,9 @@
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { createPanzoomAction } from '$lib/actions/panzoom';
 	import { copyToClipboard } from '$lib/utils';
 
+	import PanzoomContainer from './PanzoomContainer.svelte';
 	import Tooltip from './Tooltip.svelte';
 	import Clipboard from '../icons/Clipboard.svelte';
 	import Reset from '../icons/Reset.svelte';
@@ -21,7 +21,10 @@
 	export let svg = '';
 	export let content = '';
 
-	const { action: initSvgPanzoom, reset: resetPanZoomViewport } = createPanzoomAction();
+	let panzoomRef: PanzoomContainer;
+	const resetPanZoomViewport = () => {
+		panzoomRef?.reset();
+	};
 
 	const downloadAsSVG = () => {
 		const svgBlob = new Blob([svg], { type: 'image/svg+xml' });
@@ -30,7 +33,10 @@
 </script>
 
 <div class="relative {className}">
-	<div class="flex h-full max-h-full justify-center items-center" use:initSvgPanzoom>
+	<PanzoomContainer
+		bind:this={panzoomRef}
+		className="flex h-full max-h-full justify-center items-center"
+	>
 		{@html DOMPurify.sanitize(svg, {
 			USE_PROFILES: { svg: true, svgFilters: true }, // allow <svg>, <defs>, <filter>, etc.
 			WHOLE_DOCUMENT: false,
@@ -70,7 +76,7 @@
 			],
 			SANITIZE_DOM: true
 		})}
-	</div>
+	</PanzoomContainer>
 
 	{#if content}
 		<div class=" absolute top-2.5 right-2.5">

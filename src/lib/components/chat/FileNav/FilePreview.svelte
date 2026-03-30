@@ -7,11 +7,11 @@
 	import { initMermaid, renderMermaidDiagram } from '$lib/utils';
 	import Spinner from '../../common/Spinner.svelte';
 	import PDFViewer from '../../common/PDFViewer.svelte';
+	import PanzoomContainer from '../../common/PanzoomContainer.svelte';
 	import JsonTreeView from './JsonTreeView.svelte';
 	import NotebookView from './NotebookView.svelte';
 	import SqliteView from './SqliteView.svelte';
 	import FileCodeEditor from './FileCodeEditor.svelte';
-	import { createPanzoomAction } from '$lib/actions/panzoom';
 
 	let pdfViewerRef: PDFViewer;
 	let fileCodeEditorRef: FileCodeEditor;
@@ -250,10 +250,10 @@
 		showRaw = true;
 	}
 
-	const panzoomPreview = createPanzoomAction({ zoomDoubleClickSpeed: 1 });
-	const initImagePanzoom = panzoomPreview.action;
-	export const resetImageView = panzoomPreview.reset;
-	export const disposePanzoom = panzoomPreview.dispose;
+	let panzoomRef: PanzoomContainer;
+	export const resetImageView = () => {
+		panzoomRef?.reset();
+	};
 
 	export const resetPdfView = () => {
 		pdfViewerRef?.resetView();
@@ -269,14 +269,18 @@
 	{#if fileLoading}
 		<div class="flex items-center justify-center h-full"><Spinner className="size-4" /></div>
 	{:else if fileImageUrl !== null}
-		<div class="w-full h-full flex items-center justify-center" use:initImagePanzoom>
+		<PanzoomContainer
+			bind:this={panzoomRef}
+			className="w-full h-full flex items-center justify-center"
+			options={{ zoomDoubleClickSpeed: 1 }}
+		>
 			<img
 				src={fileImageUrl}
 				alt={selectedFile?.split('/').pop()}
 				class="max-w-full max-h-full object-contain p-3"
 				draggable="false"
 			/>
-		</div>
+		</PanzoomContainer>
 	{:else if fileVideoUrl !== null}
 		<div class="w-full h-full flex items-center justify-center bg-black">
 			<!-- svelte-ignore a11y-media-has-caption -->
@@ -319,9 +323,10 @@
 		</div>
 	{:else if fileOfficeSlides !== null && fileOfficeSlides.length > 0}
 		<div class="flex flex-col h-full">
-			<div
-				class="w-full flex-1 min-h-0 flex items-center justify-center overflow-hidden"
-				use:initImagePanzoom
+			<PanzoomContainer
+				bind:this={panzoomRef}
+				className="w-full flex-1 min-h-0 flex items-center justify-center overflow-hidden"
+				options={{ zoomDoubleClickSpeed: 1 }}
 			>
 				<img
 					src={fileOfficeSlides[currentSlide]}
@@ -329,7 +334,7 @@
 					class="max-w-full max-h-full object-contain p-3"
 					draggable="false"
 				/>
-			</div>
+			</PanzoomContainer>
 			{#if fileOfficeSlides.length > 1}
 				<div
 					class="flex items-center justify-center gap-3 py-2 px-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500"

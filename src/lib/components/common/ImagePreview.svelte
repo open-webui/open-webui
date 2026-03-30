@@ -4,8 +4,8 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
+	import PanzoomContainer from '$lib/components/common/PanzoomContainer.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import { createPanzoomAction } from '$lib/actions/panzoom';
 
 	export let show = false;
 	export let src = '';
@@ -14,8 +14,6 @@
 	const i18n = getContext('i18n');
 
 	let previewElement = null;
-
-	const { action: initImagePanzoom } = createPanzoomAction();
 
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape') {
@@ -162,14 +160,13 @@
 				</button>
 			</div>
 		</div>
-		<div class="flex h-full max-h-full justify-center items-center z-0">
+		<PanzoomContainer className="flex h-full max-h-full justify-center items-center z-0">
 			<img
-				use:initImagePanzoom
 				{src}
 				{alt}
 				class=" mx-auto h-full object-scale-down select-none"
 				draggable="false"
 			/>
-		</div>
+		</PanzoomContainer>
 	</div>
 {/if}
