@@ -1242,7 +1242,7 @@
 						<!-- Task list display -->
 						{#if chatTasks.length > 0}
 							<div class="mx-1">
-								<TaskList tasks={chatTasks} />
+								<TaskList tasks={chatTasks} done={!generating} />
 							</div>
 						{/if}
 
