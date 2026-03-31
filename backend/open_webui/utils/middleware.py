@@ -3025,6 +3025,7 @@ async def non_streaming_chat_response_handler(response, ctx):
         try:
             if 'error' in response_data:
                 error = response_data.get('error')
+                log.error(f'Chat completion error from provider: {error}')
 
                 if isinstance(error, dict):
                     error = error.get('detail', error)
@@ -3598,6 +3599,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     if not choices:
                                         error = data.get('error', {})
                                         if error:
+                                            log.error(f'Chat completion stream error from provider: {error}')
                                             await event_emitter(
                                                 {
                                                     'type': 'chat:completion',
