@@ -1,0 +1,152 @@
+/*
+ * Ruimtemeesters Brand Theme
+ *
+ * Overrides OpenWebUI's default colors with RM brand palette.
+ * Imported at the end of app.css to take precedence.
+ *
+ * Brand palette:
+ *   Raisin Black: #161620  (dark surfaces, sidebar)
+ *   Klein Blue:   #002EA3  (primary actions, accents)
+ *   Smart White:  #F7F4EF  (light backgrounds)
+ *   Violet:       #7F00FF  (secondary accents)
+ *   Pumpkin:      #F37021  (warnings, CTAs)
+ *   Lion:         #9C885C  (tertiary)
+ *   Mystified:    #C3D7C1  (success states)
+ *
+ * Approach: Override body/sidebar backgrounds and inject brand accent
+ * colors via CSS. Avoids editing individual Svelte components to
+ * minimize merge conflicts with upstream OpenWebUI.
+ */
+
+/* ============================================
+   LIGHT MODE
+   ============================================ */
+
+/* Main background — warm RM smart white instead of pure white */
+body {
+	background: #F7F4EF;
+}
+
+/* ============================================
+   DARK MODE
+   ============================================ */
+
+/* Dark body — deep raisin-tinted dark */
+.dark body {
+	background: #12121a;
+}
+
+/* ============================================
+   PRIMARY ACCENT — Klein Blue
+   Used for: primary buttons, active states, links
+   ============================================ */
+
+/* Override blue accent utilities used throughout OpenWebUI */
+:root {
+	--rm-primary: #002EA3;
+	--rm-primary-hover: #0038c7;
+	--rm-primary-light: rgba(0, 46, 163, 0.1);
+	--rm-violet: #7F00FF;
+	--rm-pumpkin: #F37021;
+	--rm-mystified: #C3D7C1;
+}
+
+/* Primary buttons — any element using bg-blue-600 or similar */
+.bg-blue-600 {
+	background-color: var(--rm-primary) !important;
+}
+
+.bg-blue-600:hover,
+.hover\:bg-blue-700:hover {
+	background-color: var(--rm-primary-hover) !important;
+}
+
+.border-blue-600 {
+	border-color: var(--rm-primary) !important;
+}
+
+/* Text accent colors */
+.text-blue-600,
+.text-blue-500 {
+	color: var(--rm-primary) !important;
+}
+
+.dark .text-blue-400,
+.dark .text-blue-300 {
+	color: #5b8dee !important;
+}
+
+/* Focus rings */
+.focus\:ring-blue-500:focus,
+.focus\:ring-blue-600:focus {
+	--tw-ring-color: var(--rm-primary) !important;
+}
+
+/* Checkboxes */
+input[type='checkbox']:checked {
+	background-color: var(--rm-primary) !important;
+	border-color: var(--rm-primary) !important;
+}
+
+/* ============================================
+   SIDEBAR
+   In dark mode, push toward raisin black.
+   The sidebar uses inherited dark bg from body/parent.
+   ============================================ */
+
+/* Selection highlight */
+::selection {
+	background-color: rgba(0, 46, 163, 0.25);
+}
+
+.dark ::selection {
+	background-color: rgba(0, 46, 163, 0.4);
+}
+
+/* ============================================
+   SCROLLBAR — brand-tinted
+   ============================================ */
+
+::-webkit-scrollbar-thumb {
+	background-color: rgba(0, 46, 163, 0.25) !important;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+	background-color: rgba(0, 46, 163, 0.35) !important;
+}
+
+/* ============================================
+   SHIMMER — brand-colored loading animation
+   ============================================ */
+
+.shimmer {
+	background: linear-gradient(
+		110deg,
+		#9C885C 0%,
+		#9C885C 43%,
+		#F7F4EF 50%,
+		#9C885C 57%,
+		#9C885C 100%
+	) !important;
+	background-size: 200% 100% !important;
+	background-clip: text !important;
+	-webkit-background-clip: text !important;
+	-webkit-text-fill-color: transparent !important;
+	color: #9C885C !important;
+}
+
+:global(.dark) .shimmer {
+	background: linear-gradient(
+		110deg,
+		#7F00FF 0%,
+		#7F00FF 43%,
+		#002EA3 50%,
+		#7F00FF 57%,
+		#7F00FF 100%
+	) !important;
+	background-size: 200% 100% !important;
+	background-clip: text !important;
+	-webkit-background-clip: text !important;
+	-webkit-text-fill-color: transparent !important;
+	color: #7F00FF !important;
+}

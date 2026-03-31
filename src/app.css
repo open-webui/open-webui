@@ -1,4 +1,5 @@
 @reference "./tailwind.css";
+@import './lib/themes/ruimtemeesters.css';
 
 @font-face {
 	font-family: 'Inter';
