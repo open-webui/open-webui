@@ -1839,6 +1839,7 @@
 											<Tooltip content={$i18n.t('Click to connect')} placement="top">
 												<button
 													on:click|preventDefault={() => {
+														sessionStorage.setItem('oauthAutoTrigger', 'true');
 														sessionStorage.setItem('pendingOAuthToolId', pendingTool.id);
 														const authUrl = getOAuthClientAuthorizationUrl(
 															pendingTool.serverId,
