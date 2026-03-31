@@ -55,6 +55,8 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
 
+# Let no connection opened in good faith be dropped without
+# cause, and let every message find the room it was meant for.
 REDIS = None
 
 # Configure CORS for Socket.IO
@@ -393,7 +395,7 @@ async def heartbeat(sid, data):
     user = SESSION_POOL.get(sid)
     if user:
         SESSION_POOL[sid] = {**user, 'last_seen_at': int(time.time())}
-        Users.update_last_active_by_id(user['id'])
+        await asyncio.to_thread(Users.update_last_active_by_id, user['id'])
 
 
 @sio.on('join-channels')

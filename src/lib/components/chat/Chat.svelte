@@ -144,6 +144,7 @@
 
 	let selectedToolIds = [];
 	let selectedFilterIds = [];
+	let pendingOAuthTools = [];
 
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
@@ -158,6 +159,8 @@
 	let chat = null;
 	let tags = [];
 
+	let chatTasks = [];
+
 	let history = {
 		messages: {},
 		currentId: null
@@ -170,8 +173,6 @@
 	let chatFiles = [];
 	let files = [];
 	let params = {};
-
-
 
 	$: if (chatIdProp) {
 		navigateHandler();
@@ -276,6 +277,7 @@
 	const resetInput = () => {
 		selectedToolIds = [];
 		selectedFilterIds = [];
+		pendingOAuthTools = [];
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
@@ -300,11 +302,29 @@
 		if (model) {
 			// Set Default Tools
 			if (model?.info?.meta?.toolIds) {
-				selectedToolIds = [
+				const defaultIds = [
 					...new Set(
 						[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
 					)
 				];
+
+				// Separate unauthenticated OAuth tools
+				const unauthed = [];
+				const authed = [];
+				for (const id of defaultIds) {
+					const tool = $tools.find((t) => t.id === id);
+					if (tool && tool.authenticated === false) {
+						const parts = id.split(':');
+						const serverId = parts.at(-1) ?? id;
+						const authType =
+							parts.length > 1 ? (parts[0] === 'server' ? parts[1] : parts[0]) : null;
+						unauthed.push({ id, name: tool.name ?? id, serverId, authType });
+					} else {
+						authed.push(id);
+					}
+				}
+				selectedToolIds = authed;
+				pendingOAuthTools = unauthed;
 			} else if ($settings?.tools) {
 				selectedToolIds = $settings.tools;
 			} else {
@@ -431,6 +451,8 @@
 					message.content = data.content;
 				} else if (type === 'chat:message:files' || type === 'files') {
 					message.files = data.files;
+				} else if (type === 'chat:message:tasks') {
+					chatTasks = data.tasks;
 				} else if (type === 'chat:message:embeds' || type === 'embeds') {
 					message.embeds = data.embeds;
 
@@ -962,10 +984,9 @@
 		let contents = [];
 		messages.forEach((message) => {
 			if (message?.role !== 'user' && message?.content) {
-				const {
-					codeBlocks: codeBlocks,
-					htmlGroups: htmlGroups
-				} = getCodeBlockContents(message.content);
+				const { codeBlocks: codeBlocks, htmlGroups: htmlGroups } = getCodeBlockContents(
+					message.content
+				);
 
 				if (htmlGroups && htmlGroups.length > 0) {
 					htmlGroups.forEach((group) => {
@@ -1139,6 +1160,7 @@
 		chatFiles = [];
 		params = {};
 		taskIds = null;
+		chatTasks = [];
 
 		if ($page.url.searchParams.get('youtube')) {
 			await uploadWeb(`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`);
@@ -1172,6 +1194,15 @@
 				?.split(',')
 				.map((id) => id.trim())
 				.filter((id) => id);
+		}
+
+		// Restore tool selection after OAuth redirect
+		const pendingToolId = sessionStorage.getItem('pendingOAuthToolId');
+		if (pendingToolId) {
+			sessionStorage.removeItem('pendingOAuthToolId');
+			if (!selectedToolIds.includes(pendingToolId)) {
+				selectedToolIds = [...selectedToolIds, pendingToolId];
+			}
 		}
 
 		if ($page.url.searchParams.get('call') === 'true') {
@@ -1241,6 +1272,9 @@
 
 				params = chatContent?.params ?? {};
 				chatFiles = chatContent?.files ?? [];
+
+				// Load tasks from chat-level DB field
+				chatTasks = chat?.tasks ?? [];
 
 				autoScroll = true;
 				await tick();
@@ -1744,6 +1778,10 @@
 			selectedModels = _selectedModels;
 		}
 
+		if (pendingOAuthTools.length > 0) {
+			toast.warning($i18n.t('Please connect all required integrations before sending a message'));
+			return;
+		}
 		if (userPrompt === '' && files.length === 0) {
 			toast.error($i18n.t('Please enter a prompt'));
 			return;
@@ -1786,10 +1824,7 @@
 				const _files = structuredClone(files);
 				chatRequestQueues.update((q) => ({
 					...q,
-					[$chatId]: [
-						...(q[$chatId] ?? []),
-						{ id: uuidv4(), prompt: userPrompt, files: _files }
-					]
+					[$chatId]: [...(q[$chatId] ?? []), { id: uuidv4(), prompt: userPrompt, files: _files }]
 				}));
 				// Clear input
 				messageInput?.setText('');
@@ -1990,9 +2025,6 @@
 				}
 			})
 		);
-
-		currentChatPage.set(1);
-		chats.set(await getChatList(localStorage.token, $currentChatPage));
 	};
 
 	const getFeatures = () => {
@@ -2597,8 +2629,6 @@
 					params: params,
 					files: chatFiles
 				});
-				currentChatPage.set(1);
-				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			}
 		}
 	};
@@ -2839,6 +2869,7 @@
 									bind:selectedFilterIds
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
+									{pendingOAuthTools}
 									bind:webSearchEnabled
 									bind:atSelectedModel
 									bind:showCommands
@@ -2849,6 +2880,7 @@
 									{createMessagePair}
 									{onUpload}
 									messageQueue={$chatRequestQueues[$chatId] ?? []}
+							{chatTasks}
 									onQueueSendNow={async (id) => {
 										const queue = $chatRequestQueues[$chatId] ?? [];
 										const item = queue.find((m) => m.id === id);
@@ -2926,6 +2958,7 @@
 									bind:atSelectedModel
 									bind:showCommands
 									bind:dragged
+									{pendingOAuthTools}
 									toolServers={$toolServers}
 									{stopResponse}
 									{createMessagePair}

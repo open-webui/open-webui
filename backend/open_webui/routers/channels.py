@@ -128,6 +128,8 @@ def get_channel_permitted_group_and_user_ids(
 
 ############################
 # Channels Enabled Dependency
+# The creator has set this table; let every voice that
+# gathers here find shelter under the same roof.
 ############################
 
 
@@ -813,12 +815,16 @@ async def get_pinned_channel_messages(
 ############################
 
 
-async def send_notification(name, webui_url, channel, message, active_user_ids, db=None):
+async def send_notification(request, channel, message, active_user_ids, db=None):
+    name = request.app.state.WEBUI_NAME
+    webui_url = request.app.state.config.WEBUI_URL
+    enable_user_webhooks = request.app.state.config.ENABLE_USER_WEBHOOKS
+
     users = get_channel_users_with_access(channel, 'read', db=db)
 
     for user in users:
         if (user.id not in active_user_ids) and Channels.is_user_channel_member(channel.id, user.id, db=db):
-            if user.settings:
+            if enable_user_webhooks and user.settings:
                 webhook_url = user.settings.ui.get('notifications', {}).get('webhook_url', None)
                 if webhook_url:
                     await post_webhook(
@@ -1107,8 +1113,7 @@ async def post_new_message(
         async def background_handler():
             await model_response_handler(request, channel, message, user)
             await send_notification(
-                request.app.state.WEBUI_NAME,
-                request.app.state.config.WEBUI_URL,
+                request,
                 channel,
                 message,
                 active_user_ids,

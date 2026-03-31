@@ -95,10 +95,12 @@
 		showControls.set(true);
 	}
 
-	// Auto-open Files tab when a terminal is selected
+	// Auto-open Files tab when a terminal is selected (suppress panel open when full-screen)
 	$: if ($selectedTerminalId) {
 		activeTab = 'files';
-		showControls.set(true);
+		if (largeScreen) {
+			showControls.set(true);
+		}
 	}
 
 	// Attach a terminal file to the chat input
@@ -289,7 +291,7 @@
 					<!-- Controls + Files tabs -->
 					<div class="flex flex-col h-full min-h-0">
 						<!-- Tab bar -->
-						<div class="flex items-center justify-between px-2 pt-2.5 pb-2 shrink-0">
+						<div class="flex items-center justify-between px-2 pt-2 pb-2 shrink-0">
 							<div class="flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
 								{#if showControlsTab}
 									<button
@@ -360,7 +362,7 @@
 									onClose={() => showControls.set(false)}
 								/>
 							{:else if activeTab === 'files' && $selectedTerminalId}
-								<FileNav onAttach={handleTerminalAttach} />
+								<FileNav onAttach={handleTerminalAttach} {chatId} />
 							{:else if activeTab === 'files' && codeInterpreterEnabled}
 								<PyodideFileNav />
 							{:else}
@@ -435,7 +437,7 @@
 						<!-- Controls + Files tabs -->
 						<div class="flex flex-col h-full min-h-0">
 							<!-- Tab bar -->
-							<div class="flex items-center justify-between px-2 pt-2.5 pb-2 shrink-0">
+							<div class="flex items-center justify-between px-2 pt-2 pb-2 shrink-0">
 								<div class="flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
 									{#if showControlsTab}
 										<button
@@ -511,7 +513,7 @@
 										onClose={() => showControls.set(false)}
 									/>
 								{:else if activeTab === 'files' && $selectedTerminalId}
-									<FileNav onAttach={handleTerminalAttach} overlay={dragged} />
+									<FileNav onAttach={handleTerminalAttach} overlay={dragged} {chatId} />
 								{:else if activeTab === 'files' && codeInterpreterEnabled}
 									<PyodideFileNav overlay={dragged} />
 								{:else}

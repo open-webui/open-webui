@@ -790,8 +790,17 @@ async def get_groups(
     startIndex = max(1, startIndex)
     count = max(0, min(100, count))
 
-    # Get all groups
-    groups_list = Groups.get_all_groups(db=db)
+    # Get groups, applying filter if provided
+    if filter:
+        if 'displayName eq' in filter:
+            display_name = filter.split('"')[1]
+            group = Groups.get_group_by_name(display_name, db=db)
+            groups_list = [group] if group else []
+        else:
+            # Unrecognized filter — fall back to all groups
+            groups_list = Groups.get_all_groups(db=db)
+    else:
+        groups_list = Groups.get_all_groups(db=db)
 
     # Apply pagination
     total = len(groups_list)

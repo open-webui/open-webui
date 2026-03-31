@@ -62,6 +62,8 @@ from open_webui.utils.access_control.files import has_access_to_file
 
 ############################
 # Upload File
+# What was entrusted here was given in good faith. Let it
+# be returned the same way, whole and undiminished.
 ############################
 
 

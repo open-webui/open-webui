@@ -56,6 +56,8 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
 
+# When the question has been asked, let silence not be the
+# answer. But if the answer must wait, let it come honest.
 async def generate_direct_chat_completion(
     request: Request,
     form_data: dict,
@@ -201,27 +203,41 @@ async def generate_chat_completion(
             except Exception as e:
                 raise e
 
-        if model.get('owned_by') == 'arena':
+        # Arena model — sub-model was already resolved by process_chat_payload.
+        # Inject selected_model_id into the response for the frontend.
+        metadata = form_data.get('metadata', {})
+        selected_model_id = metadata.pop('selected_model_id', None)
+        # Also clear from request.state.metadata to prevent the merge at
+        # lines 177-179 from re-adding it on the recursive call.
+        if hasattr(request.state, 'metadata'):
+            request.state.metadata.pop('selected_model_id', None)
+
+        # Fallback: if generate_chat_completion is called with an arena model
+        # from a path that did NOT go through process_chat_payload (e.g.,
+        # background tasks for title/follow-up/tags generation), resolve now.
+        if not selected_model_id and model.get('owned_by') == 'arena':
             model_ids = model.get('info', {}).get('meta', {}).get('model_ids')
             filter_mode = model.get('info', {}).get('meta', {}).get('filter_mode')
             if model_ids and filter_mode == 'exclude':
                 model_ids = [
-                    model['id']
-                    for model in list(request.app.state.MODELS.values())
-                    if model.get('owned_by') != 'arena' and model['id'] not in model_ids
+                    available_model['id']
+                    for available_model in list(request.app.state.MODELS.values())
+                    if available_model.get('owned_by') != 'arena' and available_model['id'] not in model_ids
                 ]
 
-            selected_model_id = None
             if isinstance(model_ids, list) and model_ids:
                 selected_model_id = random.choice(model_ids)
             else:
                 model_ids = [
-                    model['id'] for model in list(request.app.state.MODELS.values()) if model.get('owned_by') != 'arena'
+                    available_model['id']
+                    for available_model in list(request.app.state.MODELS.values())
+                    if available_model.get('owned_by') != 'arena'
                 ]
                 selected_model_id = random.choice(model_ids)
 
             form_data['model'] = selected_model_id
 
+        if selected_model_id:
             if form_data.get('stream') == True:
 
                 async def stream_wrapper(stream):

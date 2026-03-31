@@ -1,3 +1,4 @@
+import base64
 import inspect
 import logging
 import re
@@ -44,6 +45,7 @@ from open_webui.utils.access_control import has_access, has_connection_access
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
+    AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA,
     AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
     ENABLE_FORWARD_USER_INFO_HEADERS,
@@ -79,9 +81,11 @@ from open_webui.tools.builtin import (
     query_knowledge_bases,
     search_knowledge_files,
     query_knowledge_files,
+    list_knowledge,
     view_file,
     view_knowledge_file,
     view_skill,
+    tasks,
 )
 
 import copy
@@ -89,6 +93,8 @@ import copy
 log = logging.getLogger(__name__)
 
 
+# Let no function be called without need, and let what
+# it yields justify the cost of running it.
 def get_async_tool_function_and_apply_extra_params(function: Callable, extra_params: dict) -> Callable[..., Awaitable]:
     sig = inspect.signature(function)
     extra_params = {k: v for k, v in extra_params.items() if k in sig.parameters}
@@ -405,12 +411,15 @@ def get_builtin_tools(
         model_knowledge = list(model_knowledge or []) + list(folder_knowledge)
     if is_builtin_tool_enabled('knowledge'):
         if model_knowledge:
-            # Model has attached knowledge - only allow semantic search within it
+            # Model has attached knowledge - provide discovery, search and semantic tools
+            builtin_functions.append(list_knowledge)
+            builtin_functions.append(search_knowledge_files)
             builtin_functions.append(query_knowledge_files)
 
             knowledge_types = {item.get('type') for item in model_knowledge}
             if 'file' in knowledge_types or 'collection' in knowledge_types:
                 builtin_functions.append(view_file)
+                builtin_functions.append(view_knowledge_file)
             if 'note' in knowledge_types:
                 builtin_functions.append(view_note)
         else:
@@ -431,7 +440,7 @@ def get_builtin_tools(
         builtin_functions.extend([search_chats, view_chat])
 
     # Add memory tools if builtin category enabled AND enabled for this chat
-    if is_builtin_tool_enabled('memory') and features.get('memory'):
+    if is_builtin_tool_enabled('memory') and (features.get('memory') or get_model_capability('memory', False)):
         builtin_functions.extend(
             [
                 search_memories,
@@ -494,6 +503,10 @@ def get_builtin_tools(
     # Skills tools - view_skill allows model to load full skill instructions on demand
     if extra_params.get('__skill_ids__'):
         builtin_functions.append(view_skill)
+
+    # Task management - break down complex work into trackable steps
+    if is_builtin_tool_enabled('tasks'):
+        builtin_functions.append(tasks)
 
     for func in builtin_functions:
         callable = get_async_tool_function_and_apply_extra_params(
@@ -854,9 +867,7 @@ async def get_terminal_system_prompt(
                     return None
 
             # 2. Fetch system prompt
-            async with session.get(
-                f'{base}/system', headers=headers, cookies=cookies or {}
-            ) as resp:
+            async with session.get(f'{base}/system', headers=headers, cookies=cookies or {}) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     return data.get('prompt')
@@ -950,7 +961,7 @@ async def get_terminal_tools(
     terminal_id: str,
     user: UserModel,
     extra_params: dict,
-) -> tuple[dict[str, dict], Optional[str]]:
+) -> dict[str, dict] | tuple[dict[str, dict], Optional[str]]:
     """Resolve tools for a terminal server identified by terminal_id.
 
     - Finds the connection in TERMINAL_SERVER_CONNECTIONS
@@ -998,6 +1009,13 @@ async def get_terminal_tools(
     # auth_type == "none": no Authorization header
 
     system_prompt = server_data.get('system_prompt')
+
+    # Use chat_id as the per-session key for cwd tracking
+    metadata = extra_params.get('__metadata__', {})
+    session_id = metadata.get('chat_id')
+    if session_id:
+        headers['X-Session-Id'] = session_id
+
     terminal_cwd = await get_terminal_cwd(connection.get('url', ''), headers, cookies)
 
     tools_dict = {}
@@ -1232,9 +1250,13 @@ async def execute_tool_server(
             if param_name in params:
                 if param_in == 'path':
                     path_params[param_name] = params[param_name]
-                elif param_in == 'query':
-                    if params[param_name] is not None:
-                        query_params[param_name] = params[param_name]
+                if param_in == 'query':
+                    value = params[param_name]
+                    # Skip empty values for optional params (LLMs sometimes
+                    # pass "" instead of omitting optional parameters).
+                    if value is None or (value == '' and not param.get('required')):
+                        continue
+                    query_params[param_name] = value
 
         final_url = f'{url.rstrip("/")}{route_path}'
         for key, value in path_params.items():
@@ -1249,7 +1271,7 @@ async def execute_tool_server(
                 body_params = params
 
         async with aiohttp.ClientSession(
-            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER)
         ) as session:
             request_method = getattr(session, http_method.lower())
 
@@ -1269,7 +1291,13 @@ async def execute_tool_server(
                     try:
                         response_data = await response.json()
                     except Exception:
-                        response_data = await response.text()
+                        content_type = response.headers.get('Content-Type', '').split(';')[0].strip()
+                        if content_type.startswith('text/') or not content_type:
+                            response_data = await response.text()
+                        else:
+                            raw = await response.read()
+                            b64 = base64.b64encode(raw).decode()
+                            response_data = f'data:{content_type};base64,{b64}'
 
                     response_headers = response.headers
                     return (response_data, response_headers)
@@ -1288,7 +1316,13 @@ async def execute_tool_server(
                     try:
                         response_data = await response.json()
                     except Exception:
-                        response_data = await response.text()
+                        content_type = response.headers.get('Content-Type', '').split(';')[0].strip()
+                        if content_type.startswith('text/') or not content_type:
+                            response_data = await response.text()
+                        else:
+                            raw = await response.read()
+                            b64 = base64.b64encode(raw).decode()
+                            response_data = f'data:{content_type};base64,{b64}'
 
                     response_headers = response.headers
                     return (response_data, response_headers)

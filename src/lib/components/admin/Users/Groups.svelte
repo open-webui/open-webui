@@ -183,7 +183,9 @@
 				align="end"
 			>
 				<svelte:fragment slot="trigger" let:selectedLabel>
-					<span class="inline-flex h-input px-0.5 outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden">
+					<span
+						class="inline-flex h-input px-0.5 outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
+					>
 						{selectedLabel}
 					</span>
 					<ChevronDown className="size-3.5" strokeWidth="2.5" />

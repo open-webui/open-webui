@@ -77,6 +77,8 @@ log = logging.getLogger(__name__)
 ##########################################
 #
 # Utility functions
+# Let what runs locally be trusted, and let no weight
+# be loaded without serving the one who waits for the answer.
 #
 ##########################################
 

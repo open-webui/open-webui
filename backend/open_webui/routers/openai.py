@@ -66,24 +66,37 @@ log = logging.getLogger(__name__)
 ##########################################
 #
 # Utility functions
+# Let the responses returned through this gate be worth
+# the question that summoned them.
 #
 ##########################################
 
 
-async def send_get_request(url, key=None, user: UserModel = None):
+async def send_get_request(
+    request: Request = None,
+    url=None,
+    key=None,
+    user: UserModel = None,
+    config=None,
+):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-            headers = {
-                **({'Authorization': f'Bearer {key}'} if key else {}),
-            }
+            if request and config:
+                headers, cookies = await get_headers_and_cookies(request, url, key, config, user=user)
+            else:
+                headers = {
+                    **({'Authorization': f'Bearer {key}'} if key else {}),
+                }
+                cookies = None
 
-            if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-                headers = include_user_info_headers(headers, user)
+                if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+                    headers = include_user_info_headers(headers, user)
 
             async with session.get(
                 url,
                 headers=headers,
+                cookies=cookies,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as response:
                 return await response.json()
@@ -93,10 +106,16 @@ async def send_get_request(url, key=None, user: UserModel = None):
         return None
 
 
-async def get_models_request(url, key=None, user: UserModel = None):
+async def get_models_request(
+    request: Request = None,
+    url=None,
+    key=None,
+    user: UserModel = None,
+    config=None,
+):
     if is_anthropic_url(url):
         return await get_anthropic_models(url, key, user=user)
-    return await send_get_request(f'{url}/models', key, user=user)
+    return await send_get_request(request, f'{url}/models', key, user=user, config=config)
 
 
 def openai_reasoning_model_handler(payload):
@@ -358,7 +377,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
     request_tasks = []
     for idx, url in enumerate(api_base_urls):
         if (str(idx) not in api_configs) and (url not in api_configs):  # Legacy support
-            request_tasks.append(get_models_request(url, api_keys[idx], user=user))
+            request_tasks.append(get_models_request(request, url, api_keys[idx], user=user))
         else:
             api_config = api_configs.get(
                 str(idx),
@@ -370,7 +389,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
             if enable:
                 if len(model_ids) == 0:
-                    request_tasks.append(get_models_request(url, api_keys[idx], user=user))
+                    request_tasks.append(get_models_request(request, url, api_keys[idx], user=user, config=api_config))
                 else:
                     model_list = {
                         'object': 'list',
@@ -837,32 +856,41 @@ def convert_to_responses_payload(payload: dict) -> dict:
         if role == 'assistant' and msg.get('tool_calls'):
             # Add text content as message if present
             if content:
-                text = content if isinstance(content, str) else '\n'.join(
-                    p.get('text', '') for p in content if p.get('type') == 'text'
+                text = (
+                    content
+                    if isinstance(content, str)
+                    else '\n'.join(p.get('text', '') for p in content if p.get('type') == 'text')
                 )
                 if text.strip():
-                    input_items.append({
-                        'type': 'message', 'role': 'assistant',
-                        'content': [{'type': 'output_text', 'text': text}],
-                    })
+                    input_items.append(
+                        {
+                            'type': 'message',
+                            'role': 'assistant',
+                            'content': [{'type': 'output_text', 'text': text}],
+                        }
+                    )
             # Convert each tool_call to a function_call input item
             for tool_call in msg['tool_calls']:
                 func = tool_call.get('function', {})
-                input_items.append({
-                    'type': 'function_call',
-                    'call_id': tool_call.get('id', ''),
-                    'name': func.get('name', ''),
-                    'arguments': func.get('arguments', '{}'),
-                })
+                input_items.append(
+                    {
+                        'type': 'function_call',
+                        'call_id': tool_call.get('id', ''),
+                        'name': func.get('name', ''),
+                        'arguments': func.get('arguments', '{}'),
+                    }
+                )
             continue
 
         # Handle tool result messages
         if role == 'tool':
-            input_items.append({
-                'type': 'function_call_output',
-                'call_id': msg.get('tool_call_id', ''),
-                'output': msg.get('content', ''),
-            })
+            input_items.append(
+                {
+                    'type': 'function_call_output',
+                    'call_id': msg.get('tool_call_id', ''),
+                    'output': msg.get('content', ''),
+                }
+            )
             continue
 
         # Convert content format
@@ -1124,6 +1152,14 @@ async def generate_chat_completion(
             request_url = f'{url}/responses'
         else:
             request_url = f'{url}/chat/completions'
+    # For Chat Completions, strip image parts from multimodal tool messages
+    # (Chat Completions doesn't support images in tool content).
+    if not is_responses and 'messages' in payload:
+        for message in payload['messages']:
+            if message.get('role') == 'tool' and isinstance(message.get('content'), list):
+                message['content'] = ''.join(
+                    part.get('text', '') for part in message['content'] if part.get('type') in ('input_text', 'text')
+                )
 
     payload = json.dumps(payload)
 

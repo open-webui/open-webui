@@ -20,6 +20,8 @@ router = APIRouter()
 
 ############################
 # GetMemories
+# Let what is remembered here spare someone the cost
+# of learning it twice.
 ############################
 
 

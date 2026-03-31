@@ -137,8 +137,6 @@
 
 		await tick();
 	});
-
-
 </script>
 
 {#if filteredItems.length > 0 || query.startsWith('http')}

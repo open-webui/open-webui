@@ -226,7 +226,9 @@ def filter_allowed_access_grants(
         return access_grants
 
     # Check if user can share publicly
-    if (has_public_read_access_grant(access_grants) or has_public_write_access_grant(access_grants)) and not has_permission(
+    if (
+        has_public_read_access_grant(access_grants) or has_public_write_access_grant(access_grants)
+    ) and not has_permission(
         user_id,
         public_permission_key,
         default_permissions,

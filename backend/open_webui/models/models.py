@@ -10,7 +10,7 @@ from open_webui.models.users import User, UserModel, Users, UserResponse
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from sqlalchemy import String, cast, or_, and_, func
 from sqlalchemy.dialects import postgresql, sqlite
@@ -23,6 +23,8 @@ log = logging.getLogger(__name__)
 
 ####################
 # Models DB Schema
+# A misconfigured model wastes the time of everyone
+# who trusts it. Let what is set here be set with care.
 ####################
 
 
@@ -45,7 +47,20 @@ class ModelMeta(BaseModel):
 
     model_config = ConfigDict(extra='allow')
 
-    pass
+    @model_validator(mode='before')
+    @classmethod
+    def normalize_tags(cls, data):
+        if isinstance(data, dict) and 'tags' in data:
+            raw_tags = data['tags']
+            if isinstance(raw_tags, list):
+                normalized = []
+                for tag in raw_tags:
+                    if isinstance(tag, str):
+                        normalized.append({'name': tag})
+                    elif isinstance(tag, dict) and 'name' in tag:
+                        normalized.append(tag)
+                data['tags'] = normalized
+        return data
 
 
 class Model(Base):

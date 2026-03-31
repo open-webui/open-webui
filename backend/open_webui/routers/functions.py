@@ -36,6 +36,8 @@ router = APIRouter()
 
 ############################
 # GetFunctions
+# Our daily functions give us, and forgive us
+# our deprecated methods, as we refactor those who depend on us.
 ############################
 
 

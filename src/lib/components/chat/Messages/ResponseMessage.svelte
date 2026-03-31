@@ -169,9 +169,10 @@
 	$: model = $models.find((m) => m.id === message.model);
 
 	$: statusEntries = message?.statusHistory ?? [...(message?.status ? [message?.status] : [])];
-	$: hasVisibleStatus = (model?.info?.meta?.capabilities?.status_updates ?? true)
-		&& statusEntries.length > 0
-		&& !(statusEntries.at(-1)?.hidden ?? false);
+	$: hasVisibleStatus =
+		(model?.info?.meta?.capabilities?.status_updates ?? true) &&
+		statusEntries.length > 0 &&
+		!(statusEntries.at(-1)?.hidden ?? false);
 
 	let edit = false;
 	let editedContent = '';

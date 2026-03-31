@@ -65,6 +65,67 @@
 	let editedContent = null;
 	let showDeleteConfirmDialog = false;
 
+	// Swipe-to-reply state
+	let swipeStartX = 0;
+	let swipeStartY = 0;
+	let swipeOffsetX = 0;
+	let isSwiping = false;
+	let swipeLocked = false; // locked to horizontal once determined
+	let swipeMessageEl: HTMLElement | null = null;
+
+	const SWIPE_THRESHOLD = 60;
+	const SWIPE_MAX = 100;
+	const SWIPE_DEAD_ZONE = 10;
+
+	const handleTouchStart = (e: TouchEvent) => {
+		if (disabled || edit || !onReply) return;
+		const touch = e.touches[0];
+		swipeStartX = touch.clientX;
+		swipeStartY = touch.clientY;
+		swipeOffsetX = 0;
+		isSwiping = false;
+		swipeLocked = false;
+	};
+
+	const handleTouchMove = (e: TouchEvent) => {
+		if (disabled || edit || !onReply) return;
+		const touch = e.touches[0];
+		const deltaX = touch.clientX - swipeStartX;
+		const deltaY = touch.clientY - swipeStartY;
+
+		// Determine swipe direction from dead zone
+		if (!swipeLocked && (Math.abs(deltaX) > SWIPE_DEAD_ZONE || Math.abs(deltaY) > SWIPE_DEAD_ZONE)) {
+			if (Math.abs(deltaY) > Math.abs(deltaX)) {
+				// Vertical scroll — abort swipe tracking
+				isSwiping = false;
+				swipeLocked = true;
+				return;
+			}
+			// Horizontal swipe — lock in
+			swipeLocked = true;
+			isSwiping = true;
+		}
+
+		if (!isSwiping) return;
+
+		// Only allow right swipe
+		const clampedX = Math.max(0, deltaX);
+		// Dampen the motion beyond threshold for a rubber-band feel
+		swipeOffsetX = clampedX <= SWIPE_THRESHOLD
+			? clampedX
+			: SWIPE_THRESHOLD + (clampedX - SWIPE_THRESHOLD) * 0.3;
+		swipeOffsetX = Math.min(swipeOffsetX, SWIPE_MAX);
+	};
+
+	const handleTouchEnd = () => {
+		if (isSwiping && swipeOffsetX >= SWIPE_THRESHOLD && onReply) {
+			onReply(message);
+		}
+		swipeOffsetX = 0;
+		isSwiping = false;
+		swipeLocked = false;
+	};
+
 	const loadMessageData = async () => {
 		if (message && message?.data === true) {
 			const res = await getMessageData(localStorage.token, channel?.id, message.id);
@@ -92,20 +153,39 @@
 
 {#if message}
 	<div
-		id="message-{message.id}"
-		class="flex flex-col justify-between w-full max-w-full mx-auto group hover:bg-gray-300/5 dark:hover:bg-gray-700/5 transition relative {className
-			? className
-			: `px-5 ${
-					replyToMessage ? 'border-l-4 border-blue-500 bg-blue-100/10 dark:bg-blue-100/5 pl-4' : ''
-				} ${
-					(message?.reply_to_message?.meta?.model_id ?? message?.reply_to_message?.user_id) ===
-					$user?.id
-						? 'border-l-4 border-orange-500 bg-orange-100/10 dark:bg-orange-100/5 pl-4'
-						: ''
-				} ${message?.is_pinned ? 'bg-yellow-100/20 dark:bg-yellow-100/5' : ''}`} {showUserProfile
-			? 'pt-1.5 pb-0.5'
-			: ''}"
+		class="swipe-reply-wrapper relative"
+		on:touchstart={handleTouchStart}
+		on:touchmove={handleTouchMove}
+		on:touchend={handleTouchEnd}
 	>
+		<!-- Swipe reply indicator -->
+		{#if swipeOffsetX > 0}
+			<div
+				class="swipe-reply-indicator"
+				style="opacity: {Math.min(swipeOffsetX / SWIPE_THRESHOLD, 1)}; transform: scale({0.5 + Math.min(swipeOffsetX / SWIPE_THRESHOLD, 1) * 0.5});"
+			>
+				<div class="swipe-reply-icon" class:swipe-reply-icon--active={swipeOffsetX >= SWIPE_THRESHOLD}>
+					<ArrowUpLeftAlt className="size-5" />
+				</div>
+			</div>
+		{/if}
+
+		<div
+			id="message-{message.id}"
+			class="flex flex-col justify-between w-full max-w-full mx-auto group hover:bg-gray-300/5 dark:hover:bg-gray-700/5 relative {className
+				? className
+				: `px-5 ${
+						replyToMessage ? 'border-l-4 border-blue-500 bg-blue-100/10 dark:bg-blue-100/5 pl-4' : ''
+					} ${
+						(message?.reply_to_message?.meta?.model_id ?? message?.reply_to_message?.user_id) ===
+						$user?.id
+							? 'border-l-4 border-orange-500 bg-orange-100/10 dark:bg-orange-100/5 pl-4'
+							: ''
+					} ${message?.is_pinned ? 'bg-yellow-100/20 dark:bg-yellow-100/5' : ''}`} {showUserProfile
+				? 'pt-1.5 pb-0.5'
+				: ''}"
+			style="transform: translateX({swipeOffsetX}px); {swipeOffsetX > 0 ? '' : 'transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);'}"
+		>
 		{#if !edit && !disabled}
 			<div
 				class=" absolute {showButtons ? '' : 'invisible group-hover:visible'} right-1 -top-2 z-10"
@@ -545,6 +625,7 @@
 				{/if}
 			</div>
 		</div>
+		</div>
 	</div>
 {/if}
 
@@ -560,5 +641,49 @@
 		100% {
 			background-color: transparent;
 		}
+	}
+
+	/* Swipe-to-reply styles */
+	.swipe-reply-wrapper {
+		touch-action: pan-y;
+	}
+
+	.swipe-reply-indicator {
+		position: absolute;
+		left: 8px;
+		top: 0;
+		bottom: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 5;
+		pointer-events: none;
+	}
+
+	.swipe-reply-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 32px;
+		height: 32px;
+		border-radius: 50%;
+		background-color: rgba(128, 128, 128, 0.15);
+		color: rgba(128, 128, 128, 0.8);
+		transition: background-color 0.15s, color 0.15s;
+	}
+
+	.swipe-reply-icon--active {
+		background-color: rgba(59, 130, 246, 0.2);
+		color: rgb(59, 130, 246);
+	}
+
+	:global(.dark) .swipe-reply-icon {
+		background-color: rgba(200, 200, 200, 0.1);
+		color: rgba(200, 200, 200, 0.6);
+	}
+
+	:global(.dark) .swipe-reply-icon--active {
+		background-color: rgba(96, 165, 250, 0.2);
+		color: rgb(96, 165, 250);
 	}
 </style>

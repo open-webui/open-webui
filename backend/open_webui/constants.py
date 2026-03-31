@@ -9,7 +9,7 @@ class MESSAGES(str, Enum):
 
 class WEBHOOK_MESSAGES(str, Enum):
     DEFAULT = lambda msg='': f'{msg if msg else ""}'
-    USER_SIGNUP = lambda username='': (f'New user signed up: {username}' if username else 'New user signed up')
+    USER_SIGNUP = lambda username='': f'New user signed up: {username}' if username else 'New user signed up'
 
 
 class ERROR_MESSAGES(str, Enum):
@@ -80,8 +80,8 @@ class ERROR_MESSAGES(str, Enum):
 
     OLLAMA_API_DISABLED = 'The Ollama API is disabled. Please enable it to use this feature.'
 
-    FILE_TOO_LARGE = (
-        lambda size='': f"Oops! The file you're trying to upload is too large. Please upload a file that is less than {size}."
+    FILE_TOO_LARGE = lambda size='': (
+        f"Oops! The file you're trying to upload is too large. Please upload a file that is less than {size}."
     )
 
     DUPLICATE_CONTENT = 'Duplicate content detected. Please provide unique content to proceed.'
@@ -89,7 +89,7 @@ class ERROR_MESSAGES(str, Enum):
         'Extracted content is not available for this file. Please ensure that the file is processed before proceeding.'
     )
 
-    INVALID_PASSWORD = lambda err='': (err if err else 'The password does not meet the required validation criteria.')
+    INVALID_PASSWORD = lambda err='': err if err else 'The password does not meet the required validation criteria.'
 
 
 class TASKS(str, Enum):

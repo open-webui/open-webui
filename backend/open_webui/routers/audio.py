@@ -75,6 +75,8 @@ SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 ##########################################
 #
 # Utility functions
+# Let what is spoken here be heard clearly, and let
+# no voice be reduced to noise along the way.
 #
 ##########################################
 

@@ -6,6 +6,8 @@ from open_webui.utils.misc import (
 )
 
 
+# An honest ledger is worth more than a flattering one.
+# Let every cost here be counted true.
 def normalize_usage(usage: dict) -> dict:
     """
     Normalize usage statistics to standard format.

@@ -127,6 +127,8 @@ log = logging.getLogger(__name__)
 ##########################################
 #
 # Utility functions
+# Give us this day our relevant chunks, and lead us
+# not into hallucination, but deliver us from noise.
 #
 ##########################################
 
