@@ -1,5 +1,8 @@
 x.py
 yarn.lock
+
+# Ruimtemeesters
+.superpowers/
 .DS_Store
 node_modules
 /build
