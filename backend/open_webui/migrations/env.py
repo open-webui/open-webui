@@ -2,7 +2,7 @@ import logging
 from logging.config import fileConfig
 
 from alembic import context
-from open_webui.models.auths import Auth
+from open_webui.internal.db import Base
 from open_webui.env import DATABASE_URL, DATABASE_PASSWORD, LOG_FORMAT
 from sqlalchemy import engine_from_config, pool, create_engine
 
@@ -22,11 +22,9 @@ if LOG_FORMAT == 'json':
     for handler in logging.root.handlers:
         handler.setFormatter(JSONFormatter())
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-target_metadata = Auth.metadata
+# Use the shared declarative Base only — do not import model classes (e.g. Auth) here:
+# that pulls auths → users → chats/… and circular-imports while db is still loading.
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
