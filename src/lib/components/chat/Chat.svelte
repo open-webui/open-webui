@@ -1279,20 +1279,24 @@
 				autoScroll = true;
 				await tick();
 
+				const taskRes = await getTaskIdsByChatId(localStorage.token, $chatId).catch((error) => {
+					return null;
+				});
+
+				// Don't block input for background tasks (follow-ups, title) when the response is done
+				const lastMsg = history.currentId ? history.messages[history.currentId] : null;
+				if (taskRes && taskRes.task_ids.length > 0 && !(lastMsg?.role === 'assistant' && lastMsg?.done)) {
+					taskIds = taskRes.task_ids;
+				} else {
+					taskIds = null;
+				}
+
 				if (history.currentId) {
 					for (const message of Object.values(history.messages)) {
 						if (message && message.role === 'assistant' && message.done !== false) {
 							message.done = true;
 						}
 					}
-				}
-
-				const taskRes = await getTaskIdsByChatId(localStorage.token, $chatId).catch((error) => {
-					return null;
-				});
-
-				if (taskRes) {
-					taskIds = taskRes.task_ids;
 				}
 
 				await tick();
