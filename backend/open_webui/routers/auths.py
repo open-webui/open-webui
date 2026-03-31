@@ -380,6 +380,27 @@ async def ldap_auth(
             log.info(f'LDAP Group Management enabled. Adding {LDAP_ATTRIBUTE_FOR_GROUPS} to search attributes')
         log.info(f'LDAP search attributes: {search_attributes}')
 
+        # Validate LDAP_SEARCH_FILTERS to prevent LDAP filter injection.
+        # LDAP_SEARCH_FILTERS is sourced from an environment variable and must
+        # be a syntactically valid LDAP filter fragment (balanced parentheses).
+        if LDAP_SEARCH_FILTERS:
+            paren_depth = 0
+            for ch in LDAP_SEARCH_FILTERS:
+                if ch == '(':
+                    paren_depth += 1
+                elif ch == ')':
+                    paren_depth -= 1
+                if paren_depth < 0:
+                    raise HTTPException(
+                        400,
+                        detail='Invalid LDAP_SEARCH_FILTERS configuration: unbalanced parentheses',
+                    )
+            if paren_depth != 0:
+                raise HTTPException(
+                    400,
+                    detail='Invalid LDAP_SEARCH_FILTERS configuration: unbalanced parentheses',
+                )
+
         search_success = await asyncio.to_thread(
             connection_app.search,
             search_base=LDAP_SEARCH_BASE,
