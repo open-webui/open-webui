@@ -18,6 +18,17 @@ export default {
 					}
 				}
 			},
+			colors: {
+				rm: {
+					raisin: '#161620',
+					blue: '#002EA3',
+					white: '#F7F4EF',
+					violet: '#7F00FF',
+					pumpkin: '#F37021',
+					lion: '#9C885C',
+					mystified: '#C3D7C1'
+				}
+			},
 			padding: {
 				'safe-bottom': 'env(safe-area-inset-bottom)'
 			},
