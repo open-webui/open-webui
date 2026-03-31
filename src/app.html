@@ -2,25 +2,11 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-		<link rel="icon" type="image/png" href="/static/favicon.png" crossorigin="use-credentials" />
-		<link
-			rel="icon"
-			type="image/png"
-			href="/static/favicon-96x96.png"
-			sizes="96x96"
-			crossorigin="use-credentials"
-		/>
-		<link
-			rel="icon"
-			type="image/svg+xml"
-			href="/static/favicon.svg"
-			crossorigin="use-credentials"
-		/>
-		<link rel="shortcut icon" href="/static/favicon.ico" crossorigin="use-credentials" />
+		<link rel="icon" type="image/png" href="/brand-assets/icon-blue.png" crossorigin="use-credentials" />
 		<link
 			rel="apple-touch-icon"
 			sizes="180x180"
-			href="/static/apple-touch-icon.png"
+			href="/brand-assets/icon-blue.png"
 			crossorigin="use-credentials"
 		/>
 		<link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
@@ -28,7 +14,7 @@
 			name="viewport"
 			content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
 		/>
-		<meta name="theme-color" content="#171717" />
+		<meta name="theme-color" content="#161620" />
 		<meta name="robots" content="noindex,nofollow" />
 
 		<script src="/static/loader.js" defer crossorigin="use-credentials"></script>
@@ -62,13 +48,13 @@
 					metaThemeColorTag.setAttribute('content', '#000000');
 				} else if (localStorage.theme === 'light') {
 					document.documentElement.classList.add('light');
-					metaThemeColorTag.setAttribute('content', '#ffffff');
+					metaThemeColorTag.setAttribute('content', '#F7F4EF');
 				} else if (localStorage.theme === 'her') {
 					document.documentElement.classList.add('her');
 					metaThemeColorTag.setAttribute('content', '#983724');
 				} else {
 					document.documentElement.classList.add('dark');
-					metaThemeColorTag.setAttribute('content', '#171717');
+					metaThemeColorTag.setAttribute('content', '#161620');
 				}
 
 				window.matchMedia('(prefers-color-scheme: dark)').addListener((e) => {
@@ -76,11 +62,11 @@
 						if (e.matches) {
 							document.documentElement.classList.add('dark');
 							document.documentElement.classList.remove('light');
-							metaThemeColorTag.setAttribute('content', '#171717');
+							metaThemeColorTag.setAttribute('content', '#161620');
 						} else {
 							document.documentElement.classList.add('light');
 							document.documentElement.classList.remove('dark');
-							metaThemeColorTag.setAttribute('content', '#ffffff');
+							metaThemeColorTag.setAttribute('content', '#F7F4EF');
 						}
 					}
 				});
@@ -90,7 +76,7 @@
 				logo.id = 'logo';
 				logo.style =
 					'position: absolute; width: auto; height: 6rem; top: 44%; left: 50%; transform: translateX(-50%); display:block;';
-				logo.src = isDarkMode ? '/static/splash-dark.png' : '/static/splash.png';
+				logo.src = isDarkMode ? '/brand-assets/logo-white.png' : '/brand-assets/logo-blue.png';
 
 				document.addEventListener('DOMContentLoaded', function () {
 					const splash = document.getElementById('splash-screen');
@@ -103,7 +89,7 @@
 			})();
 		</script>
 
-		<title>Open WebUI</title>
+		<title>Ruimtemeesters AI</title>
 
 		%sveltekit.head%
 	</head>
@@ -182,11 +168,11 @@
 		}
 
 		#splash-screen {
-			background: #fff;
+			background: #F7F4EF;
 		}
 
 		html.dark #splash-screen {
-			background: #000;
+			background: #161620;
 		}
 
 		html.her #splash-screen {
