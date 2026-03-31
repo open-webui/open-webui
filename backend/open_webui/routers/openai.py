@@ -771,6 +771,67 @@ def is_openai_new_model(model: str) -> bool:
     return False
 
 
+def normalize_reasoning_effort(value, default: str = 'medium') -> str:
+    valid_levels = {'low', 'medium', 'high'}
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in valid_levels:
+            return normalized
+    return default
+
+
+def apply_reasoning_effort_to_non_reasoning_model(payload: dict) -> dict:
+    raw_effort = payload.pop('reasoning_effort', None)
+    if raw_effort is None:
+        return payload
+
+    effort = normalize_reasoning_effort(raw_effort)
+    token_budgets = {
+        'low': 1024,
+        'medium': 2048,
+        'high': 4096,
+    }
+
+    budget = token_budgets[effort]
+
+    # Keep behavior deterministic by effort level regardless of prior max_tokens.
+    payload['max_tokens'] = budget
+
+    messages = payload.get('messages', [])
+    if isinstance(messages, list):
+        hint = (
+            f"[Reasoning mode: {effort}] "
+            f"Use {effort} reasoning depth for this response."
+        )
+
+        if messages and isinstance(messages[0], dict) and messages[0].get('role') == 'system':
+            current_system_content = messages[0].get('content')
+            if isinstance(current_system_content, str):
+                updated_system_content = re.sub(
+                    r'^\[Reasoning mode:\s*(low|medium|high)\][^\n]*\n*',
+                    '',
+                    current_system_content,
+                    flags=re.IGNORECASE,
+                ).strip()
+                messages[0]['content'] = (
+                    f"{hint}\n\n{updated_system_content}" if updated_system_content else hint
+                )
+            else:
+                messages.insert(0, {'role': 'system', 'content': hint})
+        else:
+            messages.insert(0, {'role': 'system', 'content': hint})
+
+        payload['messages'] = messages
+
+    log.debug(
+        'Applied non-reasoning reasoning_effort mapping: effort=%s max_tokens=%s prompt_hint=%s',
+        effort,
+        payload.get('max_tokens'),
+        True,
+    )
+    return payload
+
+
 def convert_to_azure_payload(url, payload: dict, api_version: str):
     model = payload.get('model', '')
 
@@ -1109,8 +1170,12 @@ async def generate_chat_completion(
 
     # Check if model is a reasoning model that needs special handling
     if is_openai_new_model(payload['model']):
+        payload['reasoning_effort'] = normalize_reasoning_effort(payload.get('reasoning_effort'))
         payload = openai_reasoning_model_handler(payload)
-    elif 'api.openai.com' not in url:
+    else:
+        payload = apply_reasoning_effort_to_non_reasoning_model(payload)
+
+    if not is_openai_new_model(payload['model']) and 'api.openai.com' not in url:
         # Remove "max_completion_tokens" from the payload for backward compatibility
         if 'max_completion_tokens' in payload:
             payload['max_tokens'] = payload['max_completion_tokens']

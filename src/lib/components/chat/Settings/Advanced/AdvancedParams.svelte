@@ -48,6 +48,19 @@
 	};
 
 	export let params = defaultParams;
+	const reasoningEffortLevels = ['low', 'medium', 'high'];
+
+	$: if (
+		(params?.reasoning_effort ?? null) !== null &&
+		!reasoningEffortLevels.includes((params?.reasoning_effort ?? '').toString().toLowerCase())
+	) {
+		params.reasoning_effort = 'medium';
+	}
+
+	$: if ((params?.reasoning_effort ?? null) !== null && typeof params.reasoning_effort === 'string') {
+		params.reasoning_effort = params.reasoning_effort.toLowerCase();
+	}
+
 	$: if (params) {
 		onChange(params);
 	}
@@ -416,13 +429,14 @@
 		{#if (params?.reasoning_effort ?? null) !== null}
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
-					<input
+					<select
 						class="text-sm w-full bg-transparent outline-hidden outline-none"
-						type="text"
-						placeholder={$i18n.t('Enter reasoning effort')}
 						bind:value={params.reasoning_effort}
-						autocomplete="off"
-					/>
+					>
+						{#each reasoningEffortLevels as level}
+							<option value={level}>{$i18n.t(level.charAt(0).toUpperCase() + level.slice(1))}</option>
+						{/each}
+					</select>
 				</div>
 			</div>
 		{/if}

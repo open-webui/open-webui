@@ -221,6 +221,7 @@
 					if (!$temporaryChatEnabled) {
 						messageInput?.setText(input.prompt);
 						files = input.files;
+						params = input.params ?? {};
 						selectedToolIds = input.selectedToolIds;
 						selectedFilterIds = input.selectedFilterIds;
 						webSearchEnabled = input.webSearchEnabled;
@@ -2931,6 +2932,7 @@
 										{selectedModels}
 										bind:files
 										bind:prompt
+										bind:params
 										bind:autoScroll
 										bind:selectedToolIds
 										bind:selectedFilterIds
@@ -3015,6 +3017,7 @@
 										bind:messageInput
 										bind:files
 										bind:prompt
+										bind:params
 										bind:autoScroll
 										bind:selectedToolIds
 										bind:selectedFilterIds

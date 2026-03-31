@@ -8,6 +8,46 @@ from open_webui.utils.misc import (
 from typing import Callable, Optional
 import copy
 import json
+import logging
+
+
+log = logging.getLogger(__name__)
+
+
+def normalize_reasoning_effort(value) -> Optional[str]:
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip().lower()
+    return normalized if normalized in {'low', 'medium', 'high'} else None
+
+
+def apply_reasoning_effort_to_ollama(
+    reasoning_effort,
+    ollama_options: dict,
+    ollama_root_payload: dict,
+) -> None:
+    effort = normalize_reasoning_effort(reasoning_effort)
+    if effort is None:
+        return
+
+    # Align with native reasoning effort behavior for Ollama-compatible models.
+    # Keep the effort level explicit instead of forcing boolean think toggles.
+    ollama_root_payload['think'] = effort
+    ollama_options.pop('think', None)
+
+    token_budgets = {
+        'low': 1024,
+        'medium': 2048,
+        'high': 4096,
+    }
+    ollama_options['num_predict'] = token_budgets[effort]
+
+    log.debug(
+        'Applied reasoning_effort mapping for Ollama request: effort=%s think=%s num_predict=%s',
+        effort,
+        ollama_root_payload.get('think'),
+        ollama_options.get('num_predict'),
+    )
 
 
 # What goes out cannot be taken back. Let it be shaped
@@ -119,6 +159,10 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
 
 def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
     params = remove_open_webui_params(params)
+
+    reasoning_effort = params.pop('reasoning_effort', None)
+    if reasoning_effort is not None:
+        apply_reasoning_effort_to_ollama(reasoning_effort, params, form_data)
 
     custom_params = params.pop('custom_params', {})
     if custom_params:
@@ -297,10 +341,20 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
         ollama_payload['num_predict'] = openai_payload['max_tokens']
         del openai_payload['max_tokens']
 
+    reasoning_effort = openai_payload.pop('reasoning_effort', None)
+
     # If there are advanced parameters in the payload, format them in Ollama's options field
     if openai_payload.get('options'):
         ollama_payload['options'] = openai_payload['options']
         ollama_options = openai_payload['options']
+
+        if reasoning_effort is None:
+            reasoning_effort = ollama_options.pop('reasoning_effort', None)
+        else:
+            ollama_options.pop('reasoning_effort', None)
+
+        if reasoning_effort is not None:
+            apply_reasoning_effort_to_ollama(reasoning_effort, ollama_options, ollama_payload)
 
         def parse_json(value: str) -> dict:
             """
@@ -336,6 +390,12 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
             del ollama_options['system']
 
         ollama_payload['options'] = ollama_options
+
+    elif reasoning_effort is not None:
+        ollama_options = ollama_payload.get('options', {})
+        apply_reasoning_effort_to_ollama(reasoning_effort, ollama_options, ollama_payload)
+        if ollama_options:
+            ollama_payload['options'] = ollama_options
 
     # If there is the "stop" parameter in the openai_payload, remap it to the ollama_payload.options
     if 'stop' in openai_payload:

@@ -105,7 +105,7 @@ class JSONFormatter(logging.Formatter):
 
 LOG_FORMAT = os.environ.get('LOG_FORMAT', '').lower()
 
-GLOBAL_LOG_LEVEL = os.environ.get('GLOBAL_LOG_LEVEL', '').upper()
+GLOBAL_LOG_LEVEL = os.environ.get('GLOBAL_LOG_LEVEL', 'DEBUG').upper()
 if GLOBAL_LOG_LEVEL in logging.getLevelNamesMapping():
     if LOG_FORMAT == 'json':
         _handler = logging.StreamHandler(sys.stdout)
@@ -114,7 +114,7 @@ if GLOBAL_LOG_LEVEL in logging.getLevelNamesMapping():
     else:
         logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL, force=True)
 else:
-    GLOBAL_LOG_LEVEL = 'INFO'
+    GLOBAL_LOG_LEVEL = 'DEBUG'
 
 log = logging.getLogger(__name__)
 log.info(f'GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}')
