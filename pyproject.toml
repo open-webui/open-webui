@@ -157,6 +157,7 @@ all = [
     "elasticsearch==9.3.0",
 
     "qdrant-client==1.17.0",
+    "fastembed==0.8.0",
     
     "weaviate-client==4.20.3",
     "pymilvus==2.6.9",
