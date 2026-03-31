@@ -1,4 +1,5 @@
 import logging
+import copy
 from typing import Optional
 from sqlalchemy.orm import Session
 import base64
@@ -44,6 +45,14 @@ from open_webui.utils.access_control import get_permissions, has_permission
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def normalize_user_settings_payload(settings: dict | None) -> dict:
+    normalized = copy.deepcopy(settings) if settings is not None else {}
+    ui_settings = normalized.get('ui') or {}
+    ui_settings['showChangelog'] = False
+    normalized['ui'] = ui_settings
+    return normalized
 
 
 ############################
@@ -274,7 +283,7 @@ async def update_default_user_permissions(request: Request, form_data: UserPermi
 async def get_user_settings_by_session_user(user=Depends(get_verified_user), db: Session = Depends(get_session)):
     user = Users.get_user_by_id(user.id, db=db)
     if user:
-        return user.settings
+        return normalize_user_settings_payload(user.settings)
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -294,7 +303,7 @@ async def update_user_settings_by_session_user(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    updated_user_settings = form_data.model_dump()
+    updated_user_settings = normalize_user_settings_payload(form_data.model_dump())
     ui_settings = updated_user_settings.get('ui')
     if (
         user.role != 'admin'
@@ -309,9 +318,11 @@ async def update_user_settings_by_session_user(
         # If the user is not an admin and does not have permission to use tool servers, remove the key
         updated_user_settings['ui'].pop('toolServers', None)
 
+    updated_user_settings = normalize_user_settings_payload(updated_user_settings)
+
     user = Users.update_user_settings_by_id(user.id, updated_user_settings, db=db)
     if user:
-        return user.settings
+        return normalize_user_settings_payload(user.settings)
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
