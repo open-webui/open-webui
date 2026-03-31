@@ -1770,7 +1770,7 @@ async def chat_completion(
         form_data['metadata'] = metadata
 
     except Exception as e:
-        log.debug(f'Error processing chat metadata: {e}')
+        log.error(f'Error processing chat metadata: {e}')
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -1812,7 +1812,7 @@ async def chat_completion(
             finally:
                 raise  # re-raise to ensure proper task cancellation handling
         except Exception as e:
-            log.debug(f'Error processing chat payload: {e}')
+            log.exception(f'Error processing chat payload: {e}')
             if metadata.get('chat_id') and metadata.get('message_id'):
                 # Update the chat message with the error
                 try:
