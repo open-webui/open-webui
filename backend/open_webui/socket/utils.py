@@ -5,6 +5,25 @@ from open_webui.env import REDIS_KEY_PREFIX
 from typing import Optional, List, Tuple
 import pycrdt as Y
 
+# Redis has no single command for compare-and-delete or compare-and-expire; Lua runs atomically.
+_RELEASE_LOCK_IF_OWNER_SCRIPT = """
+if redis.call("get", KEYS[1]) == ARGV[1] then
+    return redis.call("del", KEYS[1])
+else
+    return 0
+end
+"""
+
+# SET key id XX EX would only verify the key exists, not that we still own it — another
+# holder's token could be overwritten after TTL races. Only extend TTL when value matches.
+_RENEW_LOCK_IF_OWNER_SCRIPT = """
+if redis.call("get", KEYS[1]) == ARGV[1] then
+    return redis.call("expire", KEYS[1], tonumber(ARGV[2]))
+else
+    return 0
+end
+"""
+
 
 class RedisLock:
     def __init__(
@@ -25,20 +44,30 @@ class RedisLock:
             redis_cluster=redis_cluster,
             decode_responses=True,
         )
+        self._release_if_owner = self.redis.register_script(_RELEASE_LOCK_IF_OWNER_SCRIPT)
+        self._renew_if_owner = self.redis.register_script(_RENEW_LOCK_IF_OWNER_SCRIPT)
 
-    def aquire_lock(self):
+    def acquire_lock(self):
         # nx=True will only set this key if it _hasn't_ already been set
         self.lock_obtained = self.redis.set(self.lock_name, self.lock_id, nx=True, ex=self.timeout_secs)
         return self.lock_obtained
 
     def renew_lock(self):
-        # xx=True will only set this key if it _has_ already been set
-        return self.redis.set(self.lock_name, self.lock_id, xx=True, ex=self.timeout_secs)
+        # Must not use SET ... XX alone: that only checks key existence, so a stale renew
+        # could steal the lock from another holder after expiry/reacquisition.
+        result = self._renew_if_owner(
+            keys=[self.lock_name],
+            args=[self.lock_id, str(self.timeout_secs)],
+        )
+        ok = result == 1
+        self.lock_obtained = ok
+        return ok
 
     def release_lock(self):
-        lock_value = self.redis.get(self.lock_name)
-        if lock_value and lock_value == self.lock_id:
-            self.redis.delete(self.lock_name)
+        try:
+            self._release_if_owner(keys=[self.lock_name], args=[self.lock_id])
+        except Exception:
+            pass  # Best-effort; TTL will clear the key if we crash
 
 
 class RedisDict:
