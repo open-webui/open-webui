@@ -40,6 +40,7 @@ class Chat(Base):
 
     meta = Column(JSON, server_default="{}")
     folder_id = Column(Text, nullable=True)
+    search_text = Column(Text, nullable=True)
 
     __table_args__ = (
         # Performance indexes for common queries
@@ -73,6 +74,7 @@ class ChatModel(BaseModel):
 
     meta: dict = {}
     folder_id: Optional[str] = None
+    search_text: Optional[str] = None
 
 
 ####################
@@ -120,6 +122,38 @@ class ChatTitleIdResponse(BaseModel):
     title: str
     updated_at: int
     created_at: int
+
+
+def _extract_content_text(content) -> str:
+    """Extract plain text from a message content field (string or multimodal list)."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return " ".join(
+            item.get("text", "")
+            for item in content
+            if isinstance(item, dict) and item.get("type") == "text"
+        )
+    return ""
+
+
+def _build_search_text(title: str, chat_data: dict) -> str:
+    """Build a flat lowercase string of title + all message content for fast LIKE search."""
+    parts = [title or ""]
+
+    history = chat_data.get("history") or {}
+    history_messages = history.get("messages") if isinstance(history, dict) else None
+    if history_messages and isinstance(history_messages, dict):
+        for msg in history_messages.values():
+            if isinstance(msg, dict):
+                parts.append(_extract_content_text(msg.get("content", "")))
+    elif "messages" in chat_data:
+        for msg in chat_data.get("messages") or []:
+            if isinstance(msg, dict):
+                parts.append(_extract_content_text(msg.get("content", "")))
+
+    # Limit to 64KB to keep DB size reasonable
+    return " ".join(parts).lower()[:65536]
 
 
 class ChatTable:
@@ -173,19 +207,17 @@ class ChatTable:
             # Enrich chat data before storing
             enriched_chat = self._enrich_chat_data(form_data.chat)
 
+            title = enriched_chat.get("title", "New Chat")
             chat = ChatModel(
                 **{
                     "id": id,
                     "user_id": user_id,
-                    "title": (
-                        enriched_chat["title"]
-                        if "title" in enriched_chat
-                        else "New Chat"
-                    ),
+                    "title": title,
                     "chat": enriched_chat,
                     "folder_id": form_data.folder_id,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
+                    "search_text": _build_search_text(title, enriched_chat),
                 }
             )
 
@@ -200,15 +232,12 @@ class ChatTable:
     ) -> Optional[ChatModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
+            import_title = form_data.chat.get("title", "New Chat")
             chat = ChatModel(
                 **{
                     "id": id,
                     "user_id": user_id,
-                    "title": (
-                        form_data.chat["title"]
-                        if "title" in form_data.chat
-                        else "New Chat"
-                    ),
+                    "title": import_title,
                     "chat": form_data.chat,
                     "meta": form_data.meta,
                     "pinned": form_data.pinned,
@@ -223,6 +252,7 @@ class ChatTable:
                         if form_data.updated_at
                         else int(time.time())
                     ),
+                    "search_text": _build_search_text(import_title, form_data.chat),
                 }
             )
 
@@ -240,9 +270,11 @@ class ChatTable:
                 # Enrich chat data before updating
                 enriched_chat = self._enrich_chat_data(chat)
 
+                title = enriched_chat.get("title", "New Chat")
                 chat_item.chat = enriched_chat
-                chat_item.title = enriched_chat["title"] if "title" in enriched_chat else "New Chat"
+                chat_item.title = title
                 chat_item.updated_at = int(time.time())
+                chat_item.search_text = _build_search_text(title, enriched_chat)
                 db.commit()
                 db.refresh(chat_item)
 
@@ -770,36 +802,23 @@ class ChatTable:
                 Chat.updated_at.desc()
             )
 
-            # Check if the database dialect is either 'sqlite' or 'postgresql'
+            # Keyword search using pre-extracted search_text column — no JSON parsing per row.
+            # Falls back to title-only for rows not yet backfilled by migration (search_text IS NULL).
+            for word in search_text_words:
+                query = query.filter(
+                    or_(
+                        Chat.search_text.ilike(f"%{word}%"),
+                        and_(Chat.search_text.is_(None), Chat.title.ilike(f"%{word}%")),
+                    )
+                )
+
+            # Tag filtering uses json_each on meta (small JSON, cheap compared to chat messages)
             dialect_name = db.bind.dialect.name
             if dialect_name == "sqlite":
-                # Keyword search (AND logic)
-                for idx, word in enumerate(search_text_words):
-                    content_key = f"content_key_{idx}"
-                    sqlite_content_sql = (
-                        "EXISTS ("
-                        "    SELECT 1 "
-                        "    FROM json_each(Chat.chat, '$.messages') AS message "
-                        "    WHERE LOWER(message.value->>'content') LIKE '%' || :{} || '%'".format(content_key) +
-                        ")"
-                    )
-                    sqlite_content_clause = text(sqlite_content_sql)
-                    query = query.filter(
-                        or_(
-                            Chat.title.ilike(f"%{word}%"), sqlite_content_clause
-                        )
-                    ).params(**{content_key: word})
-
-                # Check if there are any tags to filter, it should have all the tags
                 if "none" in tag_ids:
                     query = query.filter(
                         text(
-                            """
-                            NOT EXISTS (
-                                SELECT 1
-                                FROM json_each(Chat.meta, '$.tags') AS tag
-                            )
-                            """
+                            "NOT EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') AS tag)"
                         )
                     )
                 elif tag_ids:
@@ -807,49 +826,18 @@ class ChatTable:
                         and_(
                             *[
                                 text(
-                                    f"""
-                                    EXISTS (
-                                        SELECT 1
-                                        FROM json_each(Chat.meta, '$.tags') AS tag
-                                        WHERE tag.value = :tag_id_{tag_idx}
-                                    )
-                                    """
+                                    f"EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') AS tag"
+                                    f" WHERE tag.value = :tag_id_{tag_idx})"
                                 ).params(**{f"tag_id_{tag_idx}": tag_id})
                                 for tag_idx, tag_id in enumerate(tag_ids)
                             ]
                         )
                     )
-
             elif dialect_name == "postgresql":
-                # Keyword search (AND logic)
-                for idx, word in enumerate(search_text_words):
-                    content_key = f"content_key_{idx}"
-                    postgres_content_sql = (
-                        "EXISTS ("
-                        "    SELECT 1 "
-                        "    FROM json_array_elements(Chat.chat->'messages') AS message "
-                        "    WHERE LOWER(message->>'content') LIKE '%' || :{} || '%'".format(content_key) +
-                        ")"
-                    )
-                    postgres_content_clause = text(postgres_content_sql)
-
-                    query = query.filter(
-                        or_(
-                            Chat.title.ilike(f"%{word}%"),
-                            postgres_content_clause,
-                        )
-                    ).params(**{content_key: word})
-
-                # Check if there are any tags to filter, it should have all the tags
                 if "none" in tag_ids:
                     query = query.filter(
                         text(
-                            """
-                            NOT EXISTS (
-                                SELECT 1
-                                FROM json_array_elements_text(Chat.meta->'tags') AS tag
-                            )
-                            """
+                            "NOT EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') AS tag)"
                         )
                     )
                 elif tag_ids:
@@ -857,13 +845,8 @@ class ChatTable:
                         and_(
                             *[
                                 text(
-                                    f"""
-                                    EXISTS (
-                                        SELECT 1
-                                        FROM json_array_elements_text(Chat.meta->'tags') AS tag
-                                        WHERE tag = :tag_id_{tag_idx}
-                                    )
-                                    """
+                                    f"EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') AS tag"
+                                    f" WHERE tag = :tag_id_{tag_idx})"
                                 ).params(**{f"tag_id_{tag_idx}": tag_id})
                                 for tag_idx, tag_id in enumerate(tag_ids)
                             ]

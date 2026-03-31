@@ -233,7 +233,7 @@
 	let reasoning = { effort: 'medium' };
 
 	// Service tier tracking
-	let serviceTier: 'default' | 'flex' | 'priority' = 'flex';
+	let serviceTier: 'default' | 'flex' | 'priority' = 'default';
 
 	const getModelReasoningConfig = (modelId: string) => {
 		const model = $models.find((m) => m.id === modelId);

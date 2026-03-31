@@ -124,7 +124,7 @@
 	// Service tier functionality
 	const SERVICE_TIERS = ['default', 'flex', 'priority'] as const;
 	type ServiceTier = (typeof SERVICE_TIERS)[number];
-	let serviceTier: ServiceTier = 'flex';
+	let serviceTier: ServiceTier = 'default';
 	let serviceTierByModel: Record<string, ServiceTier> = {};
 	let showServiceTierSelector = false;
 
@@ -168,7 +168,8 @@
 		showReasoningEffortSelector = reasoningEnabledForCurrentModel;
 
 		const _m = $models.find((m) => m.id === selectedModelIds[0]);
-		showServiceTierSelector = _m?.owned_by !== 'ollama';
+		showServiceTierSelector =
+			_m?.owned_by !== 'ollama' && _m?.info?.meta?.service_tier?.enabled !== false;
 	} else {
 		// Multi-model chat: no per-model reasoning selection (would apply to all).
 		allowedReasoningEffortsForCurrentModel = [];
@@ -216,7 +217,7 @@
 	// Update service tier when selected model changes
 	$: if (selectedModelIds.length === 1 && preferencesLoaded) {
 		const _modelId = selectedModelIds[0];
-		serviceTier = (serviceTierByModel[_modelId] as ServiceTier) ?? 'flex';
+		serviceTier = (serviceTierByModel[_modelId] as ServiceTier) ?? 'default';
 	}
 
 	// Update reasoning effort when selected model changes
@@ -2169,12 +2170,17 @@
 															>
 
 															<select
-																bind:value={serviceTier}
-																on:change={() => {
+																value={serviceTier}
+																on:change={(e) => {
+																	const tier = e.target.value as ServiceTier;
+																	serviceTier = tier;
 																	const modelId =
 																		selectedModelIds.length > 0 ? selectedModelIds[0] : null;
 																	if (modelId) {
-																		serviceTierByModel[modelId] = serviceTier;
+																		serviceTierByModel = {
+																			...serviceTierByModel,
+																			[modelId]: tier
+																		};
 																		saveServiceTierPreferences();
 																	}
 																}}

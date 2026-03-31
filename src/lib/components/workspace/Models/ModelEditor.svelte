@@ -112,6 +112,9 @@
 	let extraReasoningEfforts: string[] = [];
 	let cacheControlEphemeralEnabled = true;
 
+	// Service tier selector visibility (per-model)
+	let serviceTierEnabled = true; // default to enabled for non-ollama models
+
 	const addUsage = (base_model_id) => {
 		const baseModel = $models.find((m) => m.id === base_model_id);
 
@@ -170,6 +173,16 @@
 		}
 
 		info.meta.cache_control_ephemeral = cacheControlEphemeralEnabled;
+
+		// Persist service tier selector visibility
+		if (!serviceTierEnabled) {
+			info.meta.service_tier = { enabled: false };
+		} else {
+			// Default state (enabled): omit to avoid storing unnecessary data
+			if (info.meta.service_tier) {
+				delete info.meta.service_tier;
+			}
+		}
 
 		if (vision_preprocessor_model_id) {
 			info.meta.vision_preprocessor_model_id = vision_preprocessor_model_id;
@@ -282,6 +295,7 @@
 			reasoningModelEnabled = model?.meta?.reasoning?.enabled ?? true;
 			extraReasoningEfforts = model?.meta?.reasoning?.extra_efforts ?? [];
 			cacheControlEphemeralEnabled = model?.meta?.cache_control_ephemeral ?? true;
+			serviceTierEnabled = model?.meta?.service_tier?.enabled ?? true;
 
 			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
 			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? [];
@@ -824,6 +838,22 @@
 										</label>
 									{/each}
 								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="my-2">
+						<div class="px-4 py-3 bg-gray-50 dark:bg-gray-950 rounded-3xl">
+							<div class="flex w-full justify-between items-center">
+								<div class="self-center text-sm font-semibold">{$i18n.t('Service Tier')}</div>
+								<div class="pr-2">
+									<Switch bind:state={serviceTierEnabled} />
+								</div>
+							</div>
+							<div class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+								{$i18n.t(
+									'Controls whether the service tier selector (default/flex/priority) is shown for this model in the chat UI.'
+								)}
 							</div>
 						</div>
 					</div>
