@@ -13,7 +13,7 @@
 		showControls,
 		showSidebar,
 		temporaryChatEnabled,
-		user
+		user,
 		privacyProxy
 	} from '$lib/stores';
 
