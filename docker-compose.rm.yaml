@@ -51,6 +51,9 @@ services:
       - OAUTH_SCOPES=${OAUTH_SCOPES:-openid profile email}
       - OAUTH_USERNAME_CLAIM=${OAUTH_USERNAME_CLAIM:-email}
       - OAUTH_EMAIL_CLAIM=${OAUTH_EMAIL_CLAIM:-email}
+      # --- Auth form ---
+      - ENABLE_LOGIN_FORM=${ENABLE_LOGIN_FORM:-false}
+      - ENABLE_PASSWORD_AUTH=${ENABLE_PASSWORD_AUTH:-false}
       # --- Clerk SSO (shared cookie) ---
       - CLERK_SECRET_KEY=${CLERK_SECRET_KEY:-}
       - CLERK_JWKS_URI=${CLERK_JWKS_URI:-https://clerk.datameesters.nl/.well-known/jwks.json}
