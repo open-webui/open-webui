@@ -346,9 +346,12 @@
 		}
 		// Persist showControls: track open/close state separately from saved size
 		// chatControlsSize always retains the last width for openPane()
-		await showControls.set(!$mobile ? localStorage.showControls === 'true' : false);
+		// Use sessionStorage (per-tab) instead of localStorage to prevent
+		// cross-tab state leakage (e.g. opening Artifacts in one tab
+		// auto-expanding Advanced Settings in another tab). See #23232.
+		await showControls.set(!$mobile ? sessionStorage.getItem('showControls') === 'true' : false);
 		showControls.subscribe((value) => {
-			localStorage.showControls = value ? 'true' : 'false';
+			sessionStorage.setItem('showControls', value ? 'true' : 'false');
 		});
 
 		// Persist selectedTerminalId across page loads
