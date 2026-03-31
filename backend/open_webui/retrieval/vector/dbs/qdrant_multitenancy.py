@@ -372,6 +372,8 @@ class QdrantClient(VectorDBBase):
         """
         if not self.client or not vectors:
             return None
+        if limit is None:
+            limit = NO_LIMIT  # otherwise qdrant would set limit to 10!
         mt_collection, tenant_id = self._get_collection_and_tenant_id(collection_name)
         if not self.client.collection_exists(collection_name=mt_collection):
             log.debug(f"Collection {mt_collection} doesn't exist, search returns None")
