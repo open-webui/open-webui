@@ -1430,6 +1430,13 @@ async def commit_session_after_request(request: Request, call_next):
     return response
 
 
+# Clerk shared cookie SSO — must be registered AFTER check_url
+# so it runs BEFORE check_url (Starlette middleware is LIFO)
+from open_webui.middleware.clerk_sso import clerk_sso_middleware
+
+app.middleware('http')(clerk_sso_middleware)
+
+
 @app.middleware('http')
 async def check_url(request: Request, call_next):
     start_time = int(time.time())
