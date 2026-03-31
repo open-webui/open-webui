@@ -352,7 +352,7 @@ def convert_ad_sid_to_string(sid_bytes):
         return sid_string
 
     except Exception as e:
-        log.error(f'Failed to convert AD SID to string: {str(e)}')
+        log.warning(f'Failed to convert AD SID to string: {str(e)}')
         return None
 
 
@@ -1145,7 +1145,7 @@ class LdapServerConfig(BaseModel):
     certificate_path: Optional[str] = None
     validate_cert: bool = True
     ciphers: Optional[str] = 'ALL'
-
+    use_ad_sid: Optional[bool] = False
 
 @router.get('/admin/config/ldap/server', response_model=LdapServerConfig)
 async def get_ldap_server(request: Request, user=Depends(get_admin_user)):
@@ -1163,6 +1163,7 @@ async def get_ldap_server(request: Request, user=Depends(get_admin_user)):
         'certificate_path': request.app.state.config.LDAP_CA_CERT_FILE,
         'validate_cert': request.app.state.config.LDAP_VALIDATE_CERT,
         'ciphers': request.app.state.config.LDAP_CIPHERS,
+        'use_ad_sid' : request.app.state.config.LDAP_USE_AD_SID,
     }
 
 
@@ -1193,6 +1194,7 @@ async def update_ldap_server(request: Request, form_data: LdapServerConfig, user
     request.app.state.config.LDAP_CA_CERT_FILE = form_data.certificate_path
     request.app.state.config.LDAP_VALIDATE_CERT = form_data.validate_cert
     request.app.state.config.LDAP_CIPHERS = form_data.ciphers
+    request.app.state.config.LDAP_USE_AD_SID = form_data.use_ad_sid or False
 
     return {
         'label': request.app.state.config.LDAP_SERVER_LABEL,
@@ -1208,6 +1210,7 @@ async def update_ldap_server(request: Request, form_data: LdapServerConfig, user
         'certificate_path': request.app.state.config.LDAP_CA_CERT_FILE,
         'validate_cert': request.app.state.config.LDAP_VALIDATE_CERT,
         'ciphers': request.app.state.config.LDAP_CIPHERS,
+        'use_ad_sid' : request.app.state.config.LDAP_USE_AD_SID,
     }
 
 
