@@ -123,10 +123,15 @@
 	$: if (history.messages) {
 		const source = history.messages[messageId];
 		if (source) {
-			// Fast path: O(1) check on the fields that change most often (content during streaming, done at end)
-			// Avoids 2x O(n) JSON.stringify calls that are always true during streaming anyway
+			// Fast path: O(1) check on the fields that change most often (content during streaming, done at end).
+			// Mid-stream: spread previous snapshot, O(key count) instead of a full deep clone per token.
+			// At completion (done flips true): full clone once to capture usage, selectedModelId, etc.
 			if (message.content !== source.content || message.done !== source.done) {
-				message = structuredClone(source);
+				if (!message.done && source.done) {
+					message = structuredClone(source);
+				} else {
+					message = { ...message, content: source.content, done: source.done };
+				}
 			} else if (JSON.stringify(message) !== JSON.stringify(source)) {
 				// Slow path: full comparison for infrequent changes (sources, annotations, status, etc.)
 				message = structuredClone(source);
