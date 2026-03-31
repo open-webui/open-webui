@@ -14,6 +14,7 @@
 		showSidebar,
 		temporaryChatEnabled,
 		user
+		privacyProxy
 	} from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
@@ -49,8 +50,6 @@
 	export let chat;
 	export let history;
 	export let selectedModels;
-	export let showModelSelector = true;
-   let privacyEnabled = true;
 	export let onSaveTempChat: () => {};
 	export let archiveChatHandler: (id: string) => void;
 	export let moveChatHandler: (id: string, folderId: string) => void;
@@ -116,14 +115,14 @@
     
     <button
         class="flex items-center gap-1.5 ml-2 px-2.5 py-1 rounded-lg text-xs font-medium transition
-            {privacyEnabled 
+            {$privacyProxy
                 ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30' 
                 : 'bg-gray-500/20 text-gray-400 hover:bg-gray-500/30'}"
-        on:click={() => { privacyEnabled = !privacyEnabled; }}
+        on:click={() => { $privacyProxy = !$privacyProxy; }}
     >
         <span class="text-[11px]">private</span>
-        <span class="relative inline-flex h-4 w-7 items-center rounded-full transition-colors {privacyEnabled ? 'bg-emerald-500' : 'bg-gray-500'}">
-            <span class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform {privacyEnabled ? 'translate-x-3.5' : 'translate-x-0.5'}" />
+        <span class="relative inline-flex h-4 w-7 items-center rounded-full transition-colors {$privacyProxy ? 'bg-emerald-500' : 'bg-gray-500'}">
+            <span class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform {$privacyProxy ? 'translate-x-3.5' : 'translate-x-0.5'}" />
         </span>
     </button>
 {/if}
