@@ -1,0 +1,96 @@
+# Ruimtemeesters Browser Chatbot — Docker Compose
+#
+# Usage:
+#   docker compose -f docker-compose.rm.yaml up -d --build
+#
+# Or set COMPOSE_FILE in .env:
+#   COMPOSE_FILE=docker-compose.rm.yaml
+#
+# GPU support: add docker-compose.gpu.yaml as override:
+#   docker compose -f docker-compose.rm.yaml -f docker-compose.gpu.yaml up -d --build
+
+services:
+  ollama:
+    image: ollama/ollama:${OLLAMA_DOCKER_TAG:-latest}
+    container_name: rm-ollama
+    volumes:
+      - ollama-data:/root/.ollama
+    tty: true
+    restart: unless-stopped
+    networks:
+      - rm-internal
+
+  open-webui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rm-chatbot
+    volumes:
+      - open-webui-data:/app/backend/data
+    depends_on:
+      ollama:
+        condition: service_started
+      chatbot-db:
+        condition: service_healthy
+    ports:
+      - "${OPEN_WEBUI_PORT:-3333}:8080"
+    environment:
+      # --- Core ---
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-rmchatbot}:${POSTGRES_PASSWORD:-rmchatbot}@chatbot-db:5432/${POSTGRES_DB:-rmchatbot}
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      # --- Branding ---
+      - WEBUI_NAME=${WEBUI_NAME:-Ruimtemeesters AI}
+      - WEBUI_FAVICON_URL=/brand-assets/favicon.svg
+      # --- Auth (Clerk OIDC) ---
+      - ENABLE_OAUTH_SIGNUP=${ENABLE_OAUTH_SIGNUP:-true}
+      - OPENID_PROVIDER_URL=${CLERK_OIDC_DISCOVERY_URL:-}
+      - OAUTH_CLIENT_ID=${CLERK_OAUTH_CLIENT_ID:-}
+      - OAUTH_CLIENT_SECRET=${CLERK_OAUTH_CLIENT_SECRET:-}
+      - OAUTH_PROVIDER_NAME=${OAUTH_PROVIDER_NAME:-Clerk}
+      - OAUTH_SCOPES=${OAUTH_SCOPES:-openid profile email}
+      - OAUTH_USERNAME_CLAIM=${OAUTH_USERNAME_CLAIM:-email}
+      - OAUTH_EMAIL_CLAIM=${OAUTH_EMAIL_CLAIM:-email}
+      # --- LLM Providers ---
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      # --- Telemetry off ---
+      - SCARF_NO_ANALYTICS=true
+      - DO_NOT_TRACK=true
+      - ANONYMIZED_TELEMETRY=false
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    restart: unless-stopped
+    networks:
+      - rm-internal
+      - rm-network
+
+  chatbot-db:
+    image: postgres:16-alpine
+    container_name: rm-chatbot-db
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-rmchatbot}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-rmchatbot}
+      - POSTGRES_DB=${POSTGRES_DB:-rmchatbot}
+    volumes:
+      - chatbot-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rmchatbot}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - rm-internal
+
+volumes:
+  ollama-data:
+  open-webui-data:
+  chatbot-db-data:
+
+networks:
+  rm-internal:
+    driver: bridge
+  rm-network:
+    external: true
+    name: rm-network
