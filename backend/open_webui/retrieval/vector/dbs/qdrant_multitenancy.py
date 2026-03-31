@@ -20,7 +20,7 @@ from open_webui.config import (
     QDRANT_SPARSE_EMBEDDING_MODEL,
     QDRANT_DENSE_VECTOR_NAME,
     QDRANT_SPARSE_VECTOR_NAME,
-    QDRANT_HYBRID_SEARCH_RRF_K,
+    QDRANT_HYBRID_SEARCH_FUSION_TYPE,
     QDRANT_SPARSE_ON_DISK,
 )
 
@@ -71,7 +71,7 @@ class QdrantClient(VectorDBBase):
         self.QDRANT_SPARSE_EMBEDDING_MODEL = QDRANT_SPARSE_EMBEDDING_MODEL
         self.QDRANT_DENSE_VECTOR_NAME = QDRANT_DENSE_VECTOR_NAME
         self.QDRANT_SPARSE_VECTOR_NAME = QDRANT_SPARSE_VECTOR_NAME
-        self.QDRANT_HYBRID_SEARCH_RRF_K = QDRANT_HYBRID_SEARCH_RRF_K
+        self.QDRANT_HYBRID_SEARCH_FUSION_TYPE = QDRANT_HYBRID_SEARCH_FUSION_TYPE
         self.QDRANT_SPARSE_ON_DISK = QDRANT_SPARSE_ON_DISK
 
         if not self.QDRANT_URI:
@@ -382,12 +382,17 @@ class QdrantClient(VectorDBBase):
 
         collection_is_hybrid = self._is_hybrid_collection(mt_collection)
 
-        # Hybrid search with RRF fusion
+        # Hybrid search with server-side fusion (RRF or DBSF)
         if collection_is_hybrid and self._hybrid_enabled and query:
             sparse_query = self._encode_sparse_query(query)
+            fusion = (
+                models.Fusion.DBSF
+                if self.QDRANT_HYBRID_SEARCH_FUSION_TYPE == 'dbsf'
+                else models.Fusion.RRF
+            )
             query_response = self.client.query_points(
                 collection_name=mt_collection,
-                query=models.FusionQuery(fusion=models.Fusion.RRF),
+                query=models.FusionQuery(fusion=fusion),
                 prefetch=[
                     models.Prefetch(
                         query=vectors[0],
