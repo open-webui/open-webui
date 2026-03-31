@@ -34,17 +34,17 @@ def get_sorted_filter_ids(request, model: dict, enabled_filter_ids: list = None)
     if 'info' in model and 'meta' in model['info']:
         filter_ids.extend(model['info']['meta'].get('filterIds', []))
         filter_ids = list(set(filter_ids))
-    active_filter_ids = [function.id for function in Functions.get_functions_by_type('filter', active_only=True)]
+    active_filter_ids = {function.id for function in Functions.get_functions_by_type('filter', active_only=True)}
 
     def get_active_status(filter_id):
         function_module = get_function_module(request, filter_id)
 
         if getattr(function_module, 'toggle', None):
-            return filter_id in (enabled_filter_ids or [])
+            return filter_id in (enabled_filter_ids or set())
 
         return True
 
-    active_filter_ids = [filter_id for filter_id in active_filter_ids if get_active_status(filter_id)]
+    active_filter_ids = {filter_id for filter_id in active_filter_ids if get_active_status(filter_id)}
 
     filter_ids = [fid for fid in filter_ids if fid in active_filter_ids]
     filter_ids.sort(key=lambda fid: (get_priority(fid), fid))

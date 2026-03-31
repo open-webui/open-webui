@@ -442,6 +442,74 @@ async def get_oauth_client_info_with_dynamic_client_registration(
         raise e
 
 
+async def get_oauth_client_info_with_static_credentials(
+    request,
+    client_id: str,
+    oauth_server_url: str,
+    oauth_client_id: str,
+    oauth_client_secret: str,
+) -> OAuthClientInformationFull:
+    """
+    Build an OAuthClientInformationFull from user-provided static credentials.
+    Performs server metadata discovery to resolve authorization/token endpoints,
+    but skips dynamic client registration entirely.
+    """
+    try:
+        oauth_server_metadata = None
+        oauth_server_metadata_url = None
+
+        redirect_base_url = (str(request.app.state.config.WEBUI_URL or request.base_url)).rstrip('/')
+        redirect_uri = f'{redirect_base_url}/oauth/clients/{client_id}/callback'
+
+        # Discover server metadata (authorization endpoint, token endpoint, scopes, etc.)
+        discovery_urls = await get_discovery_urls(oauth_server_url)
+        for url in discovery_urls:
+            async with aiohttp.ClientSession(trust_env=True) as session:
+                async with session.get(url, ssl=AIOHTTP_CLIENT_SESSION_SSL) as resp:
+                    if resp.status == 200:
+                        try:
+                            oauth_server_metadata = OAuthMetadata.model_validate(await resp.json())
+                            oauth_server_metadata_url = url
+                            break
+                        except Exception as e:
+                            log.error(f'Error parsing OAuth metadata from {url}: {e}')
+                            continue
+
+        # Determine scope from server metadata if available
+        scope = None
+        if oauth_server_metadata and oauth_server_metadata.scopes_supported:
+            scope = ' '.join(oauth_server_metadata.scopes_supported)
+
+        # Determine token_endpoint_auth_method
+        token_endpoint_auth_method = 'client_secret_post'
+        if (
+            oauth_server_metadata
+            and oauth_server_metadata.token_endpoint_auth_methods_supported
+            and token_endpoint_auth_method not in oauth_server_metadata.token_endpoint_auth_methods_supported
+        ):
+            token_endpoint_auth_method = oauth_server_metadata.token_endpoint_auth_methods_supported[0]
+
+        oauth_client_info = OAuthClientInformationFull(
+            client_id=oauth_client_id,
+            client_secret=oauth_client_secret,
+            redirect_uris=[redirect_uri],
+            grant_types=['authorization_code', 'refresh_token'],
+            response_types=['code'],
+            scope=scope,
+            token_endpoint_auth_method=token_endpoint_auth_method,
+            issuer=oauth_server_metadata_url,
+            server_metadata=oauth_server_metadata,
+        )
+
+        log.info(
+            f'Static OAuth client info built for {oauth_client_id} using metadata from {oauth_server_metadata_url}'
+        )
+        return oauth_client_info
+    except Exception as e:
+        log.error(f'Exception building static OAuth client info: {e}')
+        raise e
+
+
 class OAuthClientManager:
     def __init__(self, app):
         self.oauth = OAuth()
@@ -496,7 +564,7 @@ class OAuthClientManager:
         for connection in connections or []:
             if connection.get('type', 'openapi') != 'mcp':
                 continue
-            if connection.get('auth_type', 'none') != 'oauth_2.1':
+            if connection.get('auth_type', 'none') not in ('oauth_2.1', 'oauth_2.1_static'):
                 continue
 
             server_id = connection.get('info', {}).get('id')
@@ -1329,12 +1397,21 @@ class OAuthManager:
 
             # Try to get userinfo from the token first, some providers include it there
             user_data: UserInfo = token.get('userinfo')
+            # Preserve extra claims from the ID token (e.g. roles, groups for
+            # Microsoft Entra ID) before the userinfo endpoint possibly overwrites them.
+            id_token_claims = dict(user_data) if user_data else {}
             if (
                 (not user_data)
                 or (auth_manager_config.OAUTH_EMAIL_CLAIM not in user_data)
                 or (auth_manager_config.OAUTH_USERNAME_CLAIM not in user_data)
             ):
                 user_data: UserInfo = await client.userinfo(token=token)
+                # Merge back ID token claims that the userinfo endpoint doesn't
+                # return.  Only backfill missing keys so userinfo always wins.
+                if user_data and id_token_claims:
+                    for key, value in id_token_claims.items():
+                        if key not in user_data:
+                            user_data[key] = value
             if provider == 'feishu' and isinstance(user_data, dict) and 'data' in user_data:
                 user_data = user_data['data']
             if not user_data:

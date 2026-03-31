@@ -105,6 +105,10 @@ async def proxy_terminal(
         target_url += f'?{request.query_params}'
 
     headers = {'X-User-Id': user.id}
+    # Forward per-session cwd tracking header
+    session_id = request.headers.get('x-session-id')
+    if session_id:
+        headers['X-Session-Id'] = session_id
     cookies = {}
     auth_type = connection.get('auth_type', 'bearer')
 

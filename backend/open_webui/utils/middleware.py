@@ -92,6 +92,7 @@ from open_webui.utils.misc import (
     get_last_user_message_item,
     get_last_assistant_message,
     get_system_message,
+    merge_system_messages,
     replace_system_message_content,
     prepend_to_first_user_message_content,
     convert_logit_bias_input_to_json,
@@ -1457,7 +1458,7 @@ async def chat_web_search_handler(request: Request, form_data: dict, extra_param
         response = res['choices'][0]['message']['content']
 
         try:
-            bracket_start = response.find('{')
+            bracket_start = response.rfind('{')
             bracket_end = response.rfind('}') + 1
 
             if bracket_start == -1 or bracket_end == -1:
@@ -1644,7 +1645,16 @@ def add_file_context(messages: list, chat_id: str, user) -> list:
             attrs += f' name="{file["name"]}"'
         return f'<file {attrs}/>'
 
-    for message, stored_message in zip(messages, stored_messages):
+    # Pair only user-role messages from both lists to avoid misalignment.
+    # After process_messages_with_output(), assistant messages with tool calls
+    # are expanded into multiple messages (assistant + tool results), making
+    # the payload message list longer than the stored message list. A naive
+    # positional zip() would pair user messages with wrong stored messages,
+    # causing later images to lose their file context (see #21878).
+    user_messages = [m for m in messages if m.get('role') == 'user']
+    stored_user_messages = [m for m in stored_messages if m.get('role') == 'user']
+
+    for message, stored_message in zip(user_messages, stored_user_messages):
         files_with_urls = [
             file
             for file in stored_message.get('files', [])
@@ -1779,7 +1789,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
                 response = res['choices'][0]['message']['content']
 
                 try:
-                    bracket_start = response.find('{')
+                    bracket_start = response.rfind('{')
                     bracket_end = response.rfind('}') + 1
 
                     if bracket_start == -1 or bracket_end == -1:
@@ -1883,7 +1893,7 @@ async def chat_completion_files_handler(
                 queries_response = queries_response['choices'][0]['message']['content']
 
                 try:
-                    bracket_start = queries_response.find('{')
+                    bracket_start = queries_response.rfind('{')
                     bracket_end = queries_response.rfind('}') + 1
 
                     if bracket_start == -1 or bracket_end == -1:
@@ -2100,6 +2110,35 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Pipeline Inlet -> Filter Inlet -> Chat Memory -> Chat Web Search -> Chat Image Generation
     # -> Chat Code Interpreter (Form Data Update) -> (Default) Chat Tools Function Calling
     # -> Chat Files
+
+    # Arena model resolution — pick the sub-model now so all downstream
+    # processing (knowledge, capabilities, tools, params) uses its settings
+    # instead of the empty arena wrapper.
+    if model.get('owned_by') == 'arena':
+        arena_model_ids = model.get('info', {}).get('meta', {}).get('model_ids')
+        arena_filter_mode = model.get('info', {}).get('meta', {}).get('filter_mode')
+        if arena_model_ids and arena_filter_mode == 'exclude':
+            arena_model_ids = [
+                available_model['id']
+                for available_model in request.app.state.MODELS.values()
+                if available_model.get('owned_by') != 'arena' and available_model['id'] not in arena_model_ids
+            ]
+
+        if isinstance(arena_model_ids, list) and arena_model_ids:
+            selected_model_id = random.choice(arena_model_ids)
+        else:
+            arena_model_ids = [
+                available_model['id']
+                for available_model in request.app.state.MODELS.values()
+                if available_model.get('owned_by') != 'arena'
+            ]
+            selected_model_id = random.choice(arena_model_ids)
+
+        selected_model = request.app.state.MODELS.get(selected_model_id)
+        if selected_model:
+            model = selected_model
+            form_data['model'] = selected_model_id
+            metadata['selected_model_id'] = selected_model_id
 
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f'form_data: {form_data}')
@@ -2568,12 +2607,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         # so system terminals work even when no other tools are selected)
         if terminal_id:
             try:
-                terminal_tools, system_prompt = await get_terminal_tools(
+                terminal_result = await get_terminal_tools(
                     request,
                     terminal_id,
                     user,
                     extra_params,
                 )
+                if isinstance(terminal_result, tuple):
+                    terminal_tools, system_prompt = terminal_result
+                else:
+                    terminal_tools = terminal_result
+                    system_prompt = None
                 if terminal_tools:
                     tools_dict = {**tools_dict, **terminal_tools}
                 if system_prompt:
@@ -2695,6 +2739,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Strip empty text content blocks from multimodal messages
     # to prevent errors from providers like Gemini and Claude
     form_data['messages'] = strip_empty_content_blocks(form_data.get('messages', []))
+
+    # Merge any duplicate system messages into a single message at position 0
+    # to prevent template parsing errors with strict chat templates (e.g. Qwen)
+    form_data['messages'] = merge_system_messages(form_data.get('messages', []))
 
     return form_data, metadata, events
 
@@ -3098,7 +3146,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                     )
 
                     # Send a webhook notification if the user is not active
-                    if not Users.is_user_active(user.id):
+                    if request.app.state.config.ENABLE_USER_WEBHOOKS and not Users.is_user_active(user.id):
                         webhook_url = Users.get_user_webhook_url_by_id(user.id)
                         if webhook_url:
                             await post_webhook(
@@ -3584,6 +3632,16 @@ async def streaming_chat_response_handler(response, ctx):
                                     if not choices:
                                         error = data.get('error', {})
                                         if error:
+                                            try:
+                                                Chats.upsert_message_to_chat_by_id_and_message_id(
+                                                    metadata["chat_id"],
+                                                    metadata["message_id"],
+                                                    {
+                                                        "error": {"content": error},
+                                                    },
+                                                )
+                                            except Exception:
+                                                pass
                                             await event_emitter(
                                                 {
                                                     'type': 'chat:completion',
@@ -3658,9 +3716,9 @@ async def streaming_chat_response_handler(response, ctx):
                                                         current_response_tool_call['function']['name'] = delta_name
 
                                                     if delta_arguments:
-                                                        current_response_tool_call['function'][
-                                                            'arguments'
-                                                        ] += delta_arguments
+                                                        current_response_tool_call['function']['arguments'] += (
+                                                            delta_arguments
+                                                        )
 
                                         # Emit pending tool calls in real-time
                                         if response_tool_calls:
@@ -3746,7 +3804,7 @@ async def streaming_chat_response_handler(response, ctx):
                                                 }
                                             ]
 
-                                        data = {'content': serialize_output(output)}
+                                        data = {'content': serialize_output(full_output())}
 
                                     if value:
                                         if (
@@ -4587,7 +4645,7 @@ async def streaming_chat_response_handler(response, ctx):
                     )
 
                 # Send a webhook notification if the user is not active
-                if not Users.is_user_active(user.id):
+                if request.app.state.config.ENABLE_USER_WEBHOOKS and not Users.is_user_active(user.id):
                     webhook_url = Users.get_user_webhook_url_by_id(user.id)
                     if webhook_url:
                         await post_webhook(

@@ -330,6 +330,33 @@ def pop_system_message(messages: list[dict]) -> tuple[Optional[dict], list[dict]
     return get_system_message(messages), remove_system_message(messages)
 
 
+def merge_system_messages(messages: list[dict]) -> list[dict]:
+    """
+    Merge all system messages into one at position 0.
+
+    Some chat templates (e.g. Qwen) require exactly one system
+    message at the start.  Multiple pipeline stages may each
+    insert their own system message; this function consolidates
+    them.
+    """
+    system_contents: list[str] = []
+    other_messages: list[dict] = []
+
+    for message in messages:
+        if message.get('role') == 'system':
+            content = get_content_from_message(message)
+            if content:
+                system_contents.append(content)
+        else:
+            other_messages.append(message)
+
+    if not system_contents:
+        return other_messages
+
+    merged = {'role': 'system', 'content': '\n'.join(system_contents)}
+    return [merged, *other_messages]
+
+
 def update_message_content(message: dict, content: str, append: bool = True) -> dict:
     if isinstance(message['content'], list):
         for item in message['content']:

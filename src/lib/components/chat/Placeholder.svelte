@@ -47,6 +47,7 @@
 
 	export let selectedToolIds = [];
 	export let selectedFilterIds = [];
+	export let pendingOAuthTools = [];
 
 	export let showCommands = false;
 
@@ -218,6 +219,7 @@
 					bind:atSelectedModel
 					bind:showCommands
 					bind:dragged
+					{pendingOAuthTools}
 					{toolServers}
 					{stopResponse}
 					{createMessagePair}

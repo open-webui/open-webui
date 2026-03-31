@@ -31,6 +31,7 @@
 	} = {};
 
 	export let open = false;
+	export let grouped = false;
 	export let className = '';
 
 	const RESULT_PREVIEW_LIMIT = 10000;
@@ -87,7 +88,7 @@
 </script>
 
 <div {id} class={className}>
-	{#if embeds && Array.isArray(embeds) && embeds.length > 0}
+	{#if !grouped && embeds && Array.isArray(embeds) && embeds.length > 0}
 		<!-- Embed Mode: Show iframes without collapsible behavior -->
 		<div class="py-1 w-full cursor-pointer">
 			<div class="w-full text-xs text-gray-500">
@@ -138,9 +139,9 @@
 				<!-- Label -->
 				<div class="flex-1 line-clamp-1">
 					<!-- Short label (below md) -->
-					<span class="@md:hidden font-semibold text-black dark:text-white">{attributes.name}</span>
+					<span class="@md:hidden text-black dark:text-white">{attributes.name}</span>
 					<!-- Full label (md and above) -->
-					<span class="hidden @md:inline">
+					<span class="hidden @md:inline font-normal">
 						{#if isDone}
 							<Markdown
 								id={`${componentId}-tool-call-title`}

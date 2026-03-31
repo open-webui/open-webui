@@ -60,6 +60,7 @@
 	import { getTools } from '$lib/apis/tools';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
+	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
 
 	import { createNoteHandler } from '../notes/utils';
 	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
@@ -98,6 +99,7 @@
 	import InputModal from '../common/InputModal.svelte';
 	import Expand from '../icons/Expand.svelte';
 	import QueuedMessageItem from './MessageInput/QueuedMessageItem.svelte';
+	import TaskList from './Messages/ResponseMessage/TaskList.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -120,6 +122,8 @@
 	export let history;
 	export let taskIds = null;
 
+	$: isActive = (taskIds && taskIds.length > 0) || (history.currentId && history.messages[history.currentId]?.done != true) || generating;
+
 	export let prompt = '';
 	export let files = [];
 
@@ -130,12 +134,16 @@
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
 
+	export let pendingOAuthTools = [];
+
 	let showTerminalMenu = false;
 
 	export let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
 	export let onQueueSendNow: (id: string) => void = () => {};
 	export let onQueueEdit: (id: string) => void = () => {};
 	export let onQueueDelete: (id: string) => void = () => {};
+
+	export let chatTasks = [];
 
 	let inputContent = null;
 
@@ -401,7 +409,7 @@
 	let command = '';
 	export let showCommands = false;
 	$: showCommands =
-		['/', '#', '@', '$'].includes(command?.charAt(0)) || '\\#' === command?.slice(0, 2);
+		['/', '#', '@', '$', ':'].includes(command?.charAt(0)) || '\\#' === command?.slice(0, 2);
 	let suggestions = null;
 
 	let showTools = false;
@@ -1027,6 +1035,25 @@
 					insertTextHandler: insertTextAtCursor,
 					onUpload: () => {}
 				})
+			},
+			{
+				char: ':',
+				allowSpaces: false,
+				command: ({ editor, range, props }) => {
+					// Convert the Unicode hex codepoint (e.g. "1F44B") to the actual emoji character (👋)
+					const codepoint = props.id;
+					const emoji = String.fromCodePoint(parseInt(codepoint, 16));
+					editor.chain().focus().deleteRange(range).insertContent(emoji).run();
+				},
+				render: getSuggestionRenderer(CommandSuggestionList, {
+					i18n,
+					onSelect: (e) => {
+						document.getElementById('chat-input')?.focus();
+					},
+
+					insertTextHandler: insertTextAtCursor,
+					onUpload: () => {}
+				})
 			}
 		];
 		loaded = true;
@@ -1213,6 +1240,13 @@
 							class="hidden"
 							on:click={() => createMessagePair(prompt)}
 						/>
+
+						<!-- Task list display -->
+						{#if isActive && chatTasks.length > 0}
+							<div class="mx-1">
+								<TaskList tasks={chatTasks} />
+							</div>
+						{/if}
 
 						<!-- Queued messages display -->
 						{#if messageQueue.length > 0}
@@ -1800,11 +1834,32 @@
 												</button>
 											</Tooltip>
 										{/if}
+
+										{#each pendingOAuthTools as pendingTool (pendingTool.id)}
+											<Tooltip content={$i18n.t('Click to connect')} placement="top">
+												<button
+													on:click|preventDefault={() => {
+														sessionStorage.setItem('pendingOAuthToolId', pendingTool.id);
+														const authUrl = getOAuthClientAuthorizationUrl(
+															pendingTool.serverId,
+															pendingTool.authType ?? 'mcp'
+														);
+														window.open(authUrl, '_self', 'noopener');
+													}}
+													type="button"
+													class="group px-2 py-[5px] flex gap-1.5 items-center text-xs rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden
+														text-amber-600 dark:text-amber-400 bg-amber-50 hover:bg-amber-100 dark:bg-amber-400/10 dark:hover:bg-amber-600/10 border border-amber-200/40 dark:border-amber-500/20"
+												>
+													<Wrench className="size-3.5" strokeWidth="1.75" />
+													<span class="truncate">{pendingTool.name}</span>
+												</button>
+											</Tooltip>
+										{/each}
 									</div>
 								</div>
 
 								<div class="self-end flex space-x-1 mr-1 shrink-0 gap-[0.5px]">
-									{#if (taskIds && taskIds.length > 0) || (history.currentId && history.messages[history.currentId]?.done != true) || generating}
+									{#if isActive}
 										<div class=" flex items-center">
 											<Tooltip content={$i18n.t('Stop')}>
 												<button
@@ -1834,7 +1889,7 @@
 											<Tooltip content={$i18n.t('Create note')} className=" flex items-center">
 												<button
 													id="create-note-button"
-													class=" text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition rounded-full p-1.5 -mr-1 self-center"
+													class=" text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 -mr-1 self-center"
 													type="button"
 													disabled={prompt === '' && files.length === 0}
 													on:click={() => {

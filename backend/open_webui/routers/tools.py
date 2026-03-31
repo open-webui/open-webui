@@ -762,19 +762,35 @@ async def update_tools_valves_by_id(
 @router.get('/id/{id}/valves/user', response_model=Optional[dict])
 async def get_tools_user_valves_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
     tools = Tools.get_tool_by_id(id, db=db)
-    if tools:
-        try:
-            user_valves = Tools.get_user_valves_by_id_and_user_id(id, user.id, db=db)
-            return user_valves
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(str(e)),
-            )
-    else:
+    if not tools:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        tools.user_id != user.id
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='tool',
+            resource_id=tools.id,
+            permission='read',
+            db=db,
+        )
+        and user.role != 'admin'
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    try:
+        user_valves = Tools.get_user_valves_by_id_and_user_id(id, user.id, db=db)
+        return user_valves
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(str(e)),
         )
 
 
@@ -786,25 +802,41 @@ async def get_tools_user_valves_spec_by_id(
     db: Session = Depends(get_session),
 ):
     tools = Tools.get_tool_by_id(id, db=db)
-    if tools:
-        if id in request.app.state.TOOLS:
-            tools_module = request.app.state.TOOLS[id]
-        else:
-            tools_module, _ = load_tool_module_by_id(id)
-            request.app.state.TOOLS[id] = tools_module
-
-        if hasattr(tools_module, 'UserValves'):
-            UserValves = tools_module.UserValves
-            schema = UserValves.schema()
-            # Resolve dynamic options for select dropdowns
-            schema = resolve_valves_schema_options(UserValves, schema, user)
-            return schema
-        return None
-    else:
+    if not tools:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+
+    if (
+        tools.user_id != user.id
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='tool',
+            resource_id=tools.id,
+            permission='read',
+            db=db,
+        )
+        and user.role != 'admin'
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    if id in request.app.state.TOOLS:
+        tools_module = request.app.state.TOOLS[id]
+    else:
+        tools_module, _ = load_tool_module_by_id(id)
+        request.app.state.TOOLS[id] = tools_module
+
+    if hasattr(tools_module, 'UserValves'):
+        UserValves = tools_module.UserValves
+        schema = UserValves.schema()
+        # Resolve dynamic options for select dropdowns
+        schema = resolve_valves_schema_options(UserValves, schema, user)
+        return schema
+    return None
 
 
 @router.post('/id/{id}/valves/user/update', response_model=Optional[dict])
@@ -816,33 +848,48 @@ async def update_tools_user_valves_by_id(
     db: Session = Depends(get_session),
 ):
     tools = Tools.get_tool_by_id(id, db=db)
+    if not tools:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
 
-    if tools:
-        if id in request.app.state.TOOLS:
-            tools_module = request.app.state.TOOLS[id]
-        else:
-            tools_module, _ = load_tool_module_by_id(id)
-            request.app.state.TOOLS[id] = tools_module
+    if (
+        tools.user_id != user.id
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='tool',
+            resource_id=tools.id,
+            permission='read',
+            db=db,
+        )
+        and user.role != 'admin'
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
 
-        if hasattr(tools_module, 'UserValves'):
-            UserValves = tools_module.UserValves
+    if id in request.app.state.TOOLS:
+        tools_module = request.app.state.TOOLS[id]
+    else:
+        tools_module, _ = load_tool_module_by_id(id)
+        request.app.state.TOOLS[id] = tools_module
 
-            try:
-                form_data = {k: v for k, v in form_data.items() if v is not None}
-                user_valves = UserValves(**form_data)
-                user_valves_dict = user_valves.model_dump(exclude_unset=True)
-                Tools.update_user_valves_by_id_and_user_id(id, user.id, user_valves_dict, db=db)
-                return user_valves_dict
-            except Exception as e:
-                log.exception(f'Failed to update user valves by id {id}: {e}')
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.DEFAULT(str(e)),
-                )
-        else:
+    if hasattr(tools_module, 'UserValves'):
+        UserValves = tools_module.UserValves
+
+        try:
+            form_data = {k: v for k, v in form_data.items() if v is not None}
+            user_valves = UserValves(**form_data)
+            user_valves_dict = user_valves.model_dump(exclude_unset=True)
+            Tools.update_user_valves_by_id_and_user_id(id, user.id, user_valves_dict, db=db)
+            return user_valves_dict
+        except Exception as e:
+            log.exception(f'Failed to update user valves by id {id}: {e}')
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=ERROR_MESSAGES.NOT_FOUND,
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT(str(e)),
             )
     else:
         raise HTTPException(
