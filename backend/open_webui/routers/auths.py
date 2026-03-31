@@ -329,6 +329,11 @@ def convert_ad_sid_to_string(sid_bytes):
         # Number of SubAuthorities (1 byte)
         sub_auth_count = sid_bytes[1]
 
+        # Validate buffer length before accessing sub-authority data
+        if len(sid_bytes) < 8 + (sub_auth_count * 4):
+            log.error(f'SID buffer too short: expected {8 + sub_auth_count * 4} bytes, got {len(sid_bytes)}')
+            return None
+
         # IdentifierAuthority (6 bytes, big-endian)
         identifier_authority = int.from_bytes(sid_bytes[2:8], byteorder='big')
 
