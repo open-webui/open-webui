@@ -198,10 +198,23 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
 
         elif item_type == 'function_call_output':
             call_id = item.get('call_id', '')
-            # Guard: skip orphan tool results with no corresponding tool call
-            # in the reconstructed sequence to avoid invalid provider payloads.
-            if not call_id or call_id not in seen_tool_call_ids:
+            if not call_id:
                 continue
+
+            # Rewire: if this tool result has no matching tool call,
+            # inject a synthetic function_call so the sequence stays valid.
+            if call_id not in seen_tool_call_ids:
+                seen_tool_call_ids.add(call_id)
+                pending_tool_calls.append(
+                    {
+                        'id': call_id,
+                        'type': 'function',
+                        'function': {
+                            'name': '_unknown',
+                            'arguments': '{}',
+                        },
+                    }
+                )
 
             # Flush any pending content/tool_calls before adding tool result
             flush_pending()
@@ -286,13 +299,13 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
     return messages
 
 
-def drop_orphan_tool_messages(messages: list[dict]) -> list[dict]:
+def rewire_orphan_tool_messages(messages: list[dict]) -> list[dict]:
     """
-    Drop tool messages that do not have a matching tool call in the previous
-    assistant message.
+    Rewire orphan tool messages by injecting a synthetic tool_call into the
+    preceding assistant message when no matching call exists.
 
-    This prevents invalid payloads for providers that strictly validate tool
-    message sequencing (e.g. Anthropic/Vertex).
+    This keeps conversation context intact while producing valid payloads for
+    providers that strictly validate tool message sequencing (e.g. Anthropic/Vertex).
     """
     if not messages:
         return messages
@@ -304,20 +317,43 @@ def drop_orphan_tool_messages(messages: list[dict]) -> list[dict]:
             continue
 
         tool_call_id = message.get('tool_call_id', '')
-        if not tool_call_id or not cleaned:
+        if not tool_call_id:
             continue
 
-        previous_message = cleaned[-1]
-        if previous_message.get('role') != 'assistant':
-            continue
+        # Find or create a preceding assistant message to attach the tool call
+        if not cleaned or cleaned[-1].get('role') not in ('assistant', 'tool'):
+            cleaned.append({'role': 'assistant', 'content': '', 'tool_calls': []})
 
-        tool_calls = previous_message.get('tool_calls') or []
+        # Walk back to find the nearest assistant message
+        assistant_idx = len(cleaned) - 1
+        while assistant_idx >= 0 and cleaned[assistant_idx].get('role') != 'assistant':
+            assistant_idx -= 1
+
+        if assistant_idx < 0:
+            cleaned.insert(0, {'role': 'assistant', 'content': '', 'tool_calls': []})
+            assistant_idx = 0
+
+        assistant_msg = cleaned[assistant_idx]
+        tool_calls = assistant_msg.get('tool_calls') or []
         has_matching_call = any(
-            isinstance(tool_call, dict) and tool_call.get('id') == tool_call_id for tool_call in tool_calls
+            isinstance(tc, dict) and tc.get('id') == tool_call_id for tc in tool_calls
         )
 
-        if has_matching_call:
-            cleaned.append(message)
+        if not has_matching_call:
+            # Inject a synthetic tool call so the result has a valid parent
+            tool_calls.append(
+                {
+                    'id': tool_call_id,
+                    'type': 'function',
+                    'function': {
+                        'name': '_unknown',
+                        'arguments': '{}',
+                    },
+                }
+            )
+            assistant_msg['tool_calls'] = tool_calls
+
+        cleaned.append(message)
 
     return cleaned
 

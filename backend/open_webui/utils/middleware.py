@@ -97,7 +97,7 @@ from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
     get_content_from_message,
     convert_output_to_messages,
-    drop_orphan_tool_messages,
+    rewire_orphan_tool_messages,
     strip_empty_content_blocks,
 )
 from open_webui.utils.tools import (
@@ -2090,7 +2090,7 @@ def process_messages_with_output(messages: list[dict]) -> list[dict]:
         clean_message = {k: v for k, v in message.items() if k != 'output'}
         processed.append(clean_message)
 
-    return drop_orphan_tool_messages(processed)
+    return rewire_orphan_tool_messages(processed)
 
 
 async def process_chat_payload(request, form_data, user, metadata, model):
