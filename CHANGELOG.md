@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.13] - 2026-03-31
+## [0.8.13] - 2026-04-01
 
 ### Added
 
@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 💨 **Optimized shared chat deletion.** Deleting shared chats by user is now faster and more memory-efficient by only loading necessary data. [PR #23216](https://github.com/open-webui/open-webui/pull/23216)
 - 🧠 **Image viewer memory optimization.** Viewing images and SVGs now uses significantly less memory and performs faster, keeping the application snappy and responsive even when browsing through many media files during extended sessions. [PR #23236](https://github.com/open-webui/open-webui/pull/23236)
 - ⏱️ **MCP tool server timeout configuration.** Administrators can now configure request timeouts for MCP tool server connections via the AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER environment variable. [Commit](https://github.com/open-webui/open-webui/commit/10b4b86ada93cd62d994c3179ff14dfd1a6e56f0)
+- 🚀 **Inline code rendering performance.** Inline code tokens in streaming responses now fade in with a lightweight CSS animation, making chat output feel smoother while reducing interface overhead during rapid token updates. [#23258](https://github.com/open-webui/open-webui/pull/23258)
 - 🌐 **Translation updates.** Translations for Russian were enhanced and expanded.
 
 ### Fixed
