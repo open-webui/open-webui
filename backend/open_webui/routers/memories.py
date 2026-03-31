@@ -142,6 +142,7 @@ async def query_memory(
         collection_name=f'user-memory-{user.id}',
         vectors=[vector],
         limit=form_data.k,
+        query=form_data.content,
     )
 
     return results

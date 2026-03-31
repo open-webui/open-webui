@@ -182,6 +182,7 @@ class MilvusClient(VectorDBBase):
         vectors: list[list[float | int]],
         filter: Optional[dict] = None,
         limit: int = 10,
+        query: Optional[str] = None,
     ) -> Optional[SearchResult]:
         # Search for the nearest neighbor items based on the vectors and return 'limit' number of results.
         collection_name = collection_name.replace('-', '_')

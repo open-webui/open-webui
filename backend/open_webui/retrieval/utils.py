@@ -125,6 +125,7 @@ class VectorSearchRetriever(BaseRetriever):
             collection_name=self.collection_name,
             vectors=[embedding],
             limit=self.top_k,
+            query=query,
         )
 
         ids = result.ids[0]
@@ -144,13 +145,14 @@ class VectorSearchRetriever(BaseRetriever):
         return results
 
 
-def query_doc(collection_name: str, query_embedding: list[float], k: int, user: UserModel = None):
+def query_doc(collection_name: str, query_embedding: list[float], k: int, user: UserModel = None, query_text: Optional[str] = None):
     try:
         log.debug(f'query_doc:doc {collection_name}')
         result = VECTOR_DB_CLIENT.search(
             collection_name=collection_name,
             vectors=[query_embedding],
             limit=k,
+            query=query_text,
         )
 
         if result:
@@ -436,13 +438,14 @@ async def query_collection(
     results = []
     error = False
 
-    def process_query_collection(collection_name, query_embedding):
+    def process_query_collection(collection_name, query_embedding, query_text : Optional[str] = None):
         try:
             if collection_name:
                 result = query_doc(
                     collection_name=collection_name,
                     k=k,
                     query_embedding=query_embedding,
+                    query_text=query_text,
                 )
                 if result is not None:
                     return result.model_dump(), None
@@ -457,9 +460,9 @@ async def query_collection(
 
     with ThreadPoolExecutor() as executor:
         future_results = []
-        for query_embedding in query_embeddings:
+        for query_text, query_embedding in zip(queries, query_embeddings):
             for collection_name in collection_names:
-                result = executor.submit(process_query_collection, collection_name, query_embedding)
+                result = executor.submit(process_query_collection, collection_name, query_embedding, query_text)
                 future_results.append(result)
         task_results = [future.result() for future in future_results]
 

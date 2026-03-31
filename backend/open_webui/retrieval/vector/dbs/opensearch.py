@@ -120,6 +120,7 @@ class OpenSearchClient(VectorDBBase):
         vectors: list[list[float | int]],
         filter: Optional[dict] = None,
         limit: int = 10,
+        query: Optional[str] = None,
     ) -> Optional[SearchResult]:
         try:
             if not self.has_collection(collection_name):

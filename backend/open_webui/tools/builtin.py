@@ -2221,6 +2221,7 @@ async def query_knowledge_bases(
                 vectors=[query_embedding],
                 filter={'knowledge_base_id': {'$in': accessible_ids}},
                 limit=count,
+                query=query,
             )
 
             if search_results and search_results.ids and search_results.ids[0]:
