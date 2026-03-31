@@ -84,8 +84,10 @@
 		loading = true;
 		try {
 			if (status?.running) {
-				await stopDesktop(baseUrl, apiKey);
-				status = { running: false };
+				const stopped = await stopDesktop(baseUrl, apiKey);
+				if (stopped) {
+					status = { running: false };
+				}
 			} else {
 				await ensureRunning();
 			}
