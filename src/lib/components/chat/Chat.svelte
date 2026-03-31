@@ -1398,8 +1398,6 @@
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			}
 		}
-
-		taskIds = null;
 	};
 
 	const chatActionHandler = async (_chatId, actionId, modelId, responseMessageId, event = null) => {
@@ -1739,6 +1737,14 @@
 			await tick();
 			if (autoScroll) {
 				scrollToBottom();
+			}
+
+			const siblingIds =
+				message.parentId && history.messages[message.parentId]
+					? history.messages[message.parentId].childrenIds
+					: [message.id];
+			if (siblingIds.every((id) => history.messages[id]?.done === true)) {
+				taskIds = null;
 			}
 
 			// Fire-and-forget: run chatCompletedHandler for background work
