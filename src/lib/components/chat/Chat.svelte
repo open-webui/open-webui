@@ -68,7 +68,7 @@
 	} from '$lib/apis/chats';
 	import { chatCompletion, generateOpenAIChatCompletion } from '$lib/apis/openai';
 	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
-	import { getAndUpdateUserLocation, getUserSettings, updateUserSettings } from '$lib/apis/users';
+	import { getAndUpdateUserLocation, updateUserSettings } from '$lib/apis/users';
 	import {
 		chatCompleted,
 		generateQueries,
@@ -231,6 +231,9 @@
 
 	// Reasoning effort tracking
 	let reasoning = { effort: 'medium' };
+
+	// Service tier tracking
+	let serviceTier: 'default' | 'flex' | 'priority' = 'flex';
 
 	const getModelReasoningConfig = (modelId: string) => {
 		const model = $models.find((m) => m.id === modelId);
@@ -406,9 +409,8 @@
 		messageInput?.setText('');
 
 		files = [];
-		// Load default tools from user settings
-		const userSettings = await getUserSettings(localStorage.token);
-		selectedToolIds = userSettings?.ui?.defaultToolIds || [];
+		// Load default tools from user settings (use already-loaded store)
+		selectedToolIds = $settings?.defaultToolIds || [];
 		selectedFilterIds = [];
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
@@ -1461,16 +1463,9 @@
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
 
-		const userSettings = await getUserSettings(localStorage.token);
-
-		if (userSettings) {
-			settings.set(userSettings.ui);
-			// Load persistent tool preferences
-			if (userSettings.ui?.defaultToolIds) {
-				selectedToolIds = userSettings.ui.defaultToolIds;
-			}
-		} else {
-			settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
+		// Load persistent tool preferences from already-loaded settings store
+		if ($settings?.defaultToolIds) {
+			selectedToolIds = $settings.defaultToolIds;
 		}
 
 		const chatInput = document.getElementById('chat-input');
@@ -1490,26 +1485,20 @@
 			temporaryChatEnabled.set(false);
 		}
 
-		let _chat, _tags, _userSettings, _taskRes;
+		let _chat, _taskRes;
 
 		if (preloadedData && preloadedData.chatId === currentChatId && preloadedData.chat) {
 			_chat = preloadedData.chat;
-			_tags = preloadedData.tags;
-			_userSettings = preloadedData.userSettings;
 			_taskRes = preloadedData.taskRes;
 			// Clear preloadedData so subsequent loads (like manual refresh) hit the network
 			preloadedData = null;
 		} else {
 			// Parallelize network requests for much faster chat loading
-			[_chat, _tags, _userSettings, _taskRes] = await Promise.all([
+			[_chat, _taskRes] = await Promise.all([
 				getChatById(localStorage.token, currentChatId).catch(async (error) => {
 					await goto('/');
 					return null;
 				}),
-				getTagsById(localStorage.token, currentChatId).catch(async (error) => {
-					return [];
-				}),
-				getUserSettings(localStorage.token).catch(() => null),
 				getTaskIdsByChatId(localStorage.token, currentChatId).catch((error) => {
 					return null;
 				})
@@ -1522,7 +1511,14 @@
 			return null;
 		}
 
-		tags = _tags;
+		// Load tags asynchronously — they're cosmetic and shouldn't block rendering
+		getTagsById(localStorage.token, currentChatId)
+			.then((_tags) => {
+				tags = _tags;
+			})
+			.catch(() => {
+				tags = [];
+			});
 
 		const chatContent = chat.chat;
 
@@ -1543,18 +1539,23 @@
 
 		oldSelectedModelIds = selectedModels;
 
-		history =
+		// Build history and pre-process done states BEFORE assigning to avoid multiple reactive triggers
+		const loadedHistory =
 			(chatContent?.history ?? undefined) !== undefined
 				? chatContent.history
 				: convertMessagesToHistory(chatContent.messages);
 
-		chatTitle.set(chatContent.title);
-
-		if (_userSettings) {
-			await settings.set(_userSettings.ui);
-		} else {
-			await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
+		if (loadedHistory.currentId) {
+			for (const message of Object.values(loadedHistory.messages)) {
+				if (message.role === 'assistant') {
+					message.done = true;
+				}
+			}
 		}
+
+		history = loadedHistory;
+
+		chatTitle.set(chatContent.title);
 
 		params = chatContent?.params ?? {};
 		chatFiles = chatContent?.files ?? [];
@@ -1570,15 +1571,6 @@
 		lastPersistedWebSearchEnabled = webSearchEnabled;
 
 		autoScroll = true;
-		await tick();
-
-		if (history.currentId) {
-			for (const message of Object.values(history.messages)) {
-				if (message.role === 'assistant') {
-					message.done = true;
-				}
-			}
-		}
 
 		taskIds = _taskRes?.task_ids ?? null;
 
@@ -1607,7 +1599,15 @@
 		onScroll.cancel();
 		scrollToBottom.cancel();
 	});
+	let _completedMessageIds = new Set<string>();
+
 	const chatCompletedHandler = async (chatId, modelId, responseMessageId, messages) => {
+		// Guard against duplicate completion for the same message (e.g. socket + direct stream race)
+		if (_completedMessageIds.has(responseMessageId)) {
+			return;
+		}
+		_completedMessageIds.add(responseMessageId);
+
 		try {
 			const res = await chatCompleted(localStorage.token, {
 				model: modelId,
@@ -1668,9 +1668,18 @@
 				}
 			}
 		} finally {
+			// Ensure the response message is definitively marked as done
+			if (history.messages[responseMessageId]) {
+				history.messages[responseMessageId].done = true;
+			}
+
 			taskIds = null;
 			generating = false;
 			generationController = null;
+
+			// Force a reactive history update so Svelte picks up all in-place mutations
+			// that may have occurred during the async HTTP calls above
+			history = { ...history };
 		}
 	};
 
@@ -2234,6 +2243,7 @@
 		};
 		syncHistorySnapshot();
 		generating = true;
+		_completedMessageIds.clear();
 
 		const mirrorHistoryMessage = (messageId) => {
 			const nextMessage = _history.messages[messageId];
@@ -2885,7 +2895,10 @@
 					: {}),
 
 				// Include reasoning effort parameter
-				reasoning: reasoning
+				reasoning: reasoning,
+
+				// Include service tier for OpenRouter / OpenAI-compatible APIs
+				service_tier: serviceTier
 			},
 			`${WEBUI_BASE_URL}/api`
 		).catch(async (error) => {
@@ -3778,7 +3791,7 @@
 					/>
 
 					<div class="flex flex-col flex-auto z-10 w-full @container overflow-auto">
-						{#if ($settings?.landingPageMode === 'chat' && !$selectedFolder) || createMessagesList(history, history.currentId).length > 0}
+						{#if ($settings?.landingPageMode === 'chat' && !$selectedFolder) || history.currentId !== null}
 							<div
 								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
 								id="messages-container"
@@ -3874,6 +3887,10 @@
 										// Capture reasoning effort from MessageInput (only if changed to prevent infinite loop)
 										if (data.reasoning && data.reasoning.effort !== reasoning.effort) {
 											reasoning = data.reasoning;
+										}
+										// Capture service tier from MessageInput
+										if (data.service_tier && data.service_tier !== serviceTier) {
+											serviceTier = data.service_tier;
 										}
 									}}
 									on:upload={async (e) => {

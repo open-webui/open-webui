@@ -184,17 +184,17 @@
 
 		initFolders();
 		await Promise.all([
-			await (async () => {
+			(async () => {
 				console.log('Init tags');
 				const _tags = await getAllTags(localStorage.token);
 				tags.set(_tags);
 			})(),
-			await (async () => {
+			(async () => {
 				console.log('Init pinned chats');
 				const _pinnedChats = await getPinnedChatList(localStorage.token);
 				pinnedChats.set(_pinnedChats);
 			})(),
-			await (async () => {
+			(async () => {
 				console.log('Init chat list');
 				const _chats = await getChatList(localStorage.token, $currentChatPage);
 				await chats.set(_chats);

@@ -1184,19 +1184,13 @@ export const getWeekday = () => {
 };
 
 export const createMessagesList = (history, messageId) => {
-	if (messageId === null) {
-		return [];
+	const messages = [];
+	let current = messageId ? history.messages[messageId] : undefined;
+	while (current) {
+		messages.unshift(current);
+		current = current.parentId ? history.messages[current.parentId] : undefined;
 	}
-
-	const message = history.messages[messageId];
-	if (message === undefined) {
-		return [];
-	}
-	if (message?.parentId) {
-		return [...createMessagesList(history, message.parentId), message];
-	} else {
-		return [message];
-	}
+	return messages;
 };
 
 export const formatFileSize = (size) => {

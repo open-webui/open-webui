@@ -152,13 +152,18 @@
 		}
 
 		clearChatInputStorage();
-		await Promise.all([
+
+		// Load user settings first (needed for Chat component), then render immediately
+		await setUserSettings(async () => {});
+		loaded = true;
+
+		// Load everything else in parallel — non-blocking, stores update reactively
+		Promise.all([
 			checkLocalDBChats(),
 			setBanners(),
 			setTools(),
-			setUserSettings(async () => {
-				await Promise.all([setModels(), setToolServers()]);
-			})
+			setModels(),
+			setToolServers()
 		]);
 
 		const setupKeyboardShortcuts = () => {
@@ -291,8 +296,6 @@
 			}
 		}
 		await tick();
-
-		loaded = true;
 	});
 
 	const checkForVersionUpdates = async () => {

@@ -121,6 +121,13 @@
 	let userModifiedEffortForCurrentModel = false;
 	let preferencesLoaded = false;
 
+	// Service tier functionality
+	const SERVICE_TIERS = ['default', 'flex', 'priority'] as const;
+	type ServiceTier = (typeof SERVICE_TIERS)[number];
+	let serviceTier: ServiceTier = 'flex';
+	let serviceTierByModel: Record<string, ServiceTier> = {};
+	let showServiceTierSelector = false;
+
 	const getModelReasoningConfig = (modelId: string) => {
 		const model = $models.find((m) => m.id === modelId);
 		const reasoning = model?.info?.meta?.reasoning;
@@ -159,11 +166,15 @@
 		allowedReasoningEffortsForCurrentModel = getAllowedEffortsForModel(selectedModelIds[0]);
 		reasoningEnabledForCurrentModel = allowedReasoningEffortsForCurrentModel.length > 0;
 		showReasoningEffortSelector = reasoningEnabledForCurrentModel;
+
+		const _m = $models.find((m) => m.id === selectedModelIds[0]);
+		showServiceTierSelector = _m?.owned_by !== 'ollama';
 	} else {
 		// Multi-model chat: no per-model reasoning selection (would apply to all).
 		allowedReasoningEffortsForCurrentModel = [];
 		reasoningEnabledForCurrentModel = false;
 		showReasoningEffortSelector = false;
+		showServiceTierSelector = false;
 	}
 
 	// Load reasoning effort preferences from localStorage
@@ -187,6 +198,26 @@
 			console.error('Error saving reasoning effort preferences:', e);
 		}
 	};
+
+	// Load/save service tier preferences
+	const loadServiceTierPreferences = () => {
+		try {
+			const stored = localStorage.getItem('serviceTierByModel');
+			if (stored) serviceTierByModel = JSON.parse(stored);
+		} catch (e) {}
+	};
+
+	const saveServiceTierPreferences = () => {
+		try {
+			localStorage.setItem('serviceTierByModel', JSON.stringify(serviceTierByModel));
+		} catch (e) {}
+	};
+
+	// Update service tier when selected model changes
+	$: if (selectedModelIds.length === 1 && preferencesLoaded) {
+		const _modelId = selectedModelIds[0];
+		serviceTier = (serviceTierByModel[_modelId] as ServiceTier) ?? 'flex';
+	}
 
 	// Update reasoning effort when selected model changes
 	$: if (selectedModelIds.length > 0 && preferencesLoaded) {
@@ -274,7 +305,8 @@
 		webSearchEnabled,
 		codeInterpreterEnabled,
 		// Only include reasoning when the selected model is configured as a reasoning model.
-		...(showReasoningEffortSelector ? { reasoning: { effort: reasoningEffort } } : {})
+		...(showReasoningEffortSelector ? { reasoning: { effort: reasoningEffort } } : {}),
+		service_tier: serviceTier
 	});
 
 	const inputVariableHandler = async (text: string): Promise<string> => {
@@ -1325,6 +1357,7 @@
 
 		// Load reasoning effort preferences
 		loadReasoningEffortPreferences();
+		loadServiceTierPreferences();
 	});
 
 	onDestroy(() => {
@@ -2100,6 +2133,55 @@
 															>
 																{#each allowedReasoningEffortsForCurrentModel as effort}
 																	<option value={effort}>{effort}</option>
+																{/each}
+															</select>
+														</div>
+													</div>
+												</Tooltip>
+											{/if}
+
+											{#if showServiceTierSelector}
+												<!-- Service Tier Selector -->
+												<Tooltip content={'Service Tier'} placement="top">
+													<div class="relative flex items-center">
+														<div
+															class="group p-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+														>
+															<svg
+																xmlns="http://www.w3.org/2000/svg"
+																viewBox="0 0 24 24"
+																fill="none"
+																stroke="currentColor"
+																stroke-width="2"
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																class="size-4"
+															>
+																<path d="m12 14 4-4" />
+																<path d="M3.34 19a10 10 0 1 1 17.32 0" />
+															</svg>
+															<span
+																class="text-xs font-medium {serviceTier === 'priority'
+																	? 'text-amber-500 dark:text-amber-400'
+																	: serviceTier === 'flex'
+																		? 'text-blue-500 dark:text-blue-400'
+																		: ''}">{serviceTier}</span
+															>
+
+															<select
+																bind:value={serviceTier}
+																on:change={() => {
+																	const modelId =
+																		selectedModelIds.length > 0 ? selectedModelIds[0] : null;
+																	if (modelId) {
+																		serviceTierByModel[modelId] = serviceTier;
+																		saveServiceTierPreferences();
+																	}
+																}}
+																class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+															>
+																{#each SERVICE_TIERS as tier}
+																	<option value={tier}>{tier}</option>
 																{/each}
 															</select>
 														</div>

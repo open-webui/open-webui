@@ -53,9 +53,23 @@
 
 	let chatCount: number | null = null;
 
+	// Cache fetched chat data so re-hovering doesn't re-fetch
+	let chatCache: Record<string, any> = {};
+	let previewDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
+	let previewRequestId = 0;
+
 	$: if (!chatListLoading && chatList) {
-		loadChatPreview(selectedIdx);
+		schedulePreview(selectedIdx);
 	}
+
+	const schedulePreview = (idx) => {
+		if (previewDebounceTimeout) {
+			clearTimeout(previewDebounceTimeout);
+		}
+		previewDebounceTimeout = setTimeout(() => {
+			loadChatPreview(idx);
+		}, 150);
+	};
 
 	const loadChatPreview = async (selectedIdx) => {
 		if (
@@ -78,10 +92,21 @@
 		}
 
 		const chatId = chatList[selectedChatIdx].id;
+		const requestId = ++previewRequestId;
 
-		const chat = await getChatById(localStorage.token, chatId).catch(async (error) => {
-			return null;
-		});
+		// Use cache if available
+		let chat = chatCache[chatId];
+		if (!chat) {
+			chat = await getChatById(localStorage.token, chatId).catch(() => null);
+			if (chat) {
+				chatCache[chatId] = chat;
+			}
+		}
+
+		// Stale response guard — a newer hover already fired
+		if (requestId !== previewRequestId) {
+			return;
+		}
 
 		if (chat) {
 			if (chat?.chat?.history) {
@@ -141,6 +166,7 @@
 		messages = null;
 		history = null;
 		selectedModels = [''];
+		chatCache = {};
 
 		if ((chatList ?? []).length === 0) {
 			allChatsLoaded = true;
@@ -256,6 +282,9 @@
 	onDestroy(() => {
 		if (searchDebounceTimeout) {
 			clearTimeout(searchDebounceTimeout);
+		}
+		if (previewDebounceTimeout) {
+			clearTimeout(previewDebounceTimeout);
 		}
 		document.removeEventListener('keydown', onKeyDown);
 	});
