@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.13] - 2026-03-30
+## [0.8.13] - 2026-03-31
 
 ### Added
 
@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
--
+- 💾 **Error message persistence.** LLM errors that occur during streaming are now saved to the database even if the connection drops, so users can see what went wrong when they reconnect. [#23231](https://github.com/open-webui/open-webui/pull/23231)
 
 ### Changed
 
