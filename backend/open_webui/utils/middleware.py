@@ -3632,6 +3632,16 @@ async def streaming_chat_response_handler(response, ctx):
                                     if not choices:
                                         error = data.get('error', {})
                                         if error:
+                                            try:
+                                                Chats.upsert_message_to_chat_by_id_and_message_id(
+                                                    metadata["chat_id"],
+                                                    metadata["message_id"],
+                                                    {
+                                                        "error": {"content": error},
+                                                    },
+                                                )
+                                            except Exception:
+                                                pass
                                             await event_emitter(
                                                 {
                                                     'type': 'chat:completion',
