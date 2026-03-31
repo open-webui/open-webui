@@ -223,7 +223,7 @@
 					{toolServers}
 					{stopResponse}
 					{createMessagePair}
-					placeholder={$i18n.t('How can I help you today?')}
+					placeholder={$i18n.t('Stel een vraag over beleid, data, kaarten, of prognoses...')}
 					{onChange}
 					{onUpload}
 					on:submit={(e) => {

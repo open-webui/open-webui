@@ -120,7 +120,7 @@
 						{/if}
 					{:else}
 						<div class=" text-gray-400 dark:text-gray-500 line-clamp-1 font-p">
-							{$i18n.t('How can I help you today?')}
+							{$i18n.t('Stel een vraag over beleid, data, kaarten, of prognoses...')}
 						</div>
 					{/if}
 				</div>

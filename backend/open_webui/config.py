@@ -1180,31 +1180,28 @@ except Exception as e:
 if default_prompt_suggestions == []:
     default_prompt_suggestions = [
         {
-            'title': ['Help me study', 'vocabulary for a college entrance exam'],
-            'content': "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
+            'title': ['Zoek beleidsstukken', 'over luchtkwaliteit in Den Haag'],
+            'content': 'Zoek alle beleidsstukken over luchtkwaliteit in Den Haag en geef een samenvatting van de belangrijkste maatregelen.',
         },
         {
-            'title': ['Give me ideas', "for what to do with my kids' art"],
-            'content': "What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter.",
+            'title': ['Bevolkingsprognose', 'voor Utrecht in 2030'],
+            'content': 'Wat is de bevolkingsprognose voor de gemeente Utrecht in 2030? Vergelijk met de huidige situatie.',
         },
         {
-            'title': ['Tell me a fun fact', 'about the Roman Empire'],
-            'content': 'Tell me a random fun fact about the Roman Empire',
+            'title': ['Gemeente contractstatus', 'actieve gemeenten per provincie'],
+            'content': 'Welke gemeenten hebben actieve contracten? Geef een overzicht per provincie.',
         },
         {
-            'title': ['Show me a code snippet', "of a website's sticky header"],
-            'content': "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
+            'title': ['Regels op de kaart', 'voor een specifiek adres'],
+            'content': 'Welke omgevingsregels gelden er voor het centrum van Amsterdam? Toon de relevante regels.',
         },
         {
-            'title': [
-                'Explain options trading',
-                "if I'm familiar with buying and selling stocks",
-            ],
-            'content': "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
+            'title': ['Opdrachten zoeken', 'op TenderNED'],
+            'content': 'Zoek op TenderNED naar recente DAS/inhuur opdrachten die relevant zijn voor Ruimtemeesters.',
         },
         {
-            'title': ['Overcome procrastination', 'give me tips'],
-            'content': 'Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?',
+            'title': ['CBS data vergelijken', 'demografische trends'],
+            'content': 'Vergelijk de CBS demografische data van de laatste 5 jaar voor de Randstad gemeenten.',
         },
     ]
 
