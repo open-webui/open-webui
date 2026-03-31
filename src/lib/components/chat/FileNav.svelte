@@ -834,6 +834,7 @@
 			// Discover server features on initial mount
 			const config = await getTerminalConfig(terminal.url, terminal.key);
 			terminalEnabled = config?.features?.terminal !== false;
+			desktopEnabled = config?.features?.desktop === true;
 
 			if (chatId || savedPath === '/') {
 				// Fetch session-specific cwd from the server (or global default for new chats)
