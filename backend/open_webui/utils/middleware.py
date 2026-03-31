@@ -2076,12 +2076,28 @@ def process_messages_with_output(messages: list[dict]) -> list[dict]:
     For assistant messages with 'output' field, produces properly formatted
     OpenAI-style messages (tool_calls + tool results). Strips 'output' before LLM.
     """
+    # Pre-scan: build call_id -> function name map from ALL outputs so we can
+    # recover tool names for orphan function_call_output items across branches.
+    call_id_to_name: dict[str, str] = {}
+    for message in messages:
+        if message.get('role') == 'assistant' and message.get('output'):
+            for item in message['output']:
+                if (
+                    isinstance(item, dict)
+                    and item.get('type') == 'function_call'
+                    and item.get('call_id')
+                    and item.get('name')
+                ):
+                    call_id_to_name[item['call_id']] = item['name']
+
     processed = []
 
     for message in messages:
         if message.get('role') == 'assistant' and message.get('output'):
             # Use output items for clean OpenAI-format messages
-            output_messages = convert_output_to_messages(message['output'], raw=True)
+            output_messages = convert_output_to_messages(
+                message['output'], raw=True, call_id_to_name=call_id_to_name
+            )
             if output_messages:
                 processed.extend(output_messages)
                 continue
@@ -2090,7 +2106,7 @@ def process_messages_with_output(messages: list[dict]) -> list[dict]:
         clean_message = {k: v for k, v in message.items() if k != 'output'}
         processed.append(clean_message)
 
-    return rewire_orphan_tool_messages(processed)
+    return rewire_orphan_tool_messages(processed, call_id_to_name=call_id_to_name)
 
 
 async def process_chat_payload(request, form_data, user, metadata, model):
@@ -3921,7 +3937,8 @@ async def streaming_chat_response_handler(response, ctx):
                             if done:
                                 pass
                             else:
-                                log.debug(f'Error: {e}')
+                                log.error(f'Error processing stream line: {e}')
+                                log.debug(f'Problematic line: {line}')
                                 continue
                     await flush_pending_delta_data()
 

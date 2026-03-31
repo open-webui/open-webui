@@ -129,7 +129,9 @@ def get_content_from_message(message: dict) -> Optional[str]:
     return None
 
 
-def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
+def convert_output_to_messages(
+    output: list, raw: bool = False, call_id_to_name: Optional[dict] = None
+) -> list[dict]:
     """
     Convert OR-aligned output items to OpenAI Chat Completion-format messages.
 
@@ -141,9 +143,14 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
         output: List of OR-aligned output items (Responses API format).
         raw: If True, include reasoning blocks (with original tags) and code
              interpreter blocks for LLM re-processing follow-ups.
+        call_id_to_name: Optional mapping of call_id -> function name, used to
+             recover tool names for orphan function_call_output items.
     """
     if not output or not isinstance(output, list):
         return []
+
+    if call_id_to_name is None:
+        call_id_to_name = {}
 
     messages = []
     seen_tool_call_ids = set()
@@ -204,13 +211,27 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
             # Rewire: if this tool result has no matching tool call,
             # inject a synthetic function_call so the sequence stays valid.
             if call_id not in seen_tool_call_ids:
+                tool_name = call_id_to_name.get(call_id)
+                if not tool_name:
+                    # Can't recover the tool name — fold result into text context
+                    output_parts = item.get('output', [])
+                    result_text = ''
+                    for part in (output_parts if isinstance(output_parts, list) else []):
+                        if isinstance(part, dict) and part.get('type') == 'input_text':
+                            result_text += part.get('text', '')
+                    if not result_text and isinstance(output_parts, str):
+                        result_text = output_parts
+                    if result_text:
+                        pending_content.append(f'[Tool result: {result_text}]')
+                    continue
+
                 seen_tool_call_ids.add(call_id)
                 pending_tool_calls.append(
                     {
                         'id': call_id,
                         'type': 'function',
                         'function': {
-                            'name': '_unknown',
+                            'name': tool_name,
                             'arguments': '{}',
                         },
                     }
@@ -299,16 +320,26 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
     return messages
 
 
-def rewire_orphan_tool_messages(messages: list[dict]) -> list[dict]:
+def rewire_orphan_tool_messages(
+    messages: list[dict], call_id_to_name: Optional[dict] = None
+) -> list[dict]:
     """
     Rewire orphan tool messages by injecting a synthetic tool_call into the
     preceding assistant message when no matching call exists.
 
     This keeps conversation context intact while producing valid payloads for
     providers that strictly validate tool message sequencing (e.g. Anthropic/Vertex).
+
+    Args:
+        messages: List of OpenAI-format messages.
+        call_id_to_name: Optional mapping of call_id -> function name, used to
+             recover tool names for orphan tool messages.
     """
     if not messages:
         return messages
+
+    if call_id_to_name is None:
+        call_id_to_name = {}
 
     cleaned = []
     for message in messages:
@@ -340,13 +371,28 @@ def rewire_orphan_tool_messages(messages: list[dict]) -> list[dict]:
         )
 
         if not has_matching_call:
-            # Inject a synthetic tool call so the result has a valid parent
+            tool_name = call_id_to_name.get(tool_call_id)
+            if not tool_name:
+                # Can't recover the tool name — fold result into assistant text
+                content = message.get('content', '')
+                if isinstance(content, list):
+                    content = ' '.join(
+                        p.get('text', '') for p in content
+                        if isinstance(p, dict) and p.get('type') in ('text', 'input_text')
+                    )
+                if content:
+                    existing = assistant_msg.get('content', '') or ''
+                    separator = '\n' if existing else ''
+                    assistant_msg['content'] = f'{existing}{separator}[Tool result: {content}]'
+                continue
+
+            # Inject a synthetic tool call with the real name
             tool_calls.append(
                 {
                     'id': tool_call_id,
                     'type': 'function',
                     'function': {
-                        'name': '_unknown',
+                        'name': tool_name,
                         'arguments': '{}',
                     },
                 }
