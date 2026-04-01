@@ -187,10 +187,11 @@ def _resolve_model_features(app, model_id: str) -> dict:
     config = app.state.config
     features = {}
 
+    # code_interpreter is excluded: it requires the frontend event emitter
+    # and does not work in headless backend execution.
     feature_checks = {
         "web_search": getattr(config, "ENABLE_WEB_SEARCH", False),
         "image_generation": getattr(config, "ENABLE_IMAGE_GENERATION", False),
-        "code_interpreter": getattr(config, "ENABLE_CODE_INTERPRETER", False),
     }
 
     for feature_id in default_feature_ids:
@@ -235,7 +236,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             automation.user_id,
             ChatForm(
                 chat={
-                    "title": f"[Automation] {automation.name}",
+                    "title": automation.name,
                     "models": [model_id],
                     "history": {
                         "currentId": user_msg_id,
