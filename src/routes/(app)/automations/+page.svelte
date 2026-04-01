@@ -67,15 +67,12 @@
 
 		loading = true;
 		try {
-			const res = await getAutomationItems(
-				localStorage.token,
-				query,
-				statusFilter,
-				page
-			).catch((error) => {
-				toast.error(`${error}`);
-				return null;
-			});
+			const res = await getAutomationItems(localStorage.token, query, statusFilter, page).catch(
+				(error) => {
+					toast.error(`${error}`);
+					return null;
+				}
+			);
 
 			if (res) {
 				automations = res.items;
@@ -154,7 +151,8 @@
 			const days = parts.BYDAY || '';
 			return days ? `${days} at ${time}` : `Weekly at ${time}`;
 		}
-		if (freq === 'MONTHLY') return `Monthly on the ${parts.BYMONTHDAY || '1'}${ordinal(parts.BYMONTHDAY || '1')} at ${time}`;
+		if (freq === 'MONTHLY')
+			return `Monthly on the ${parts.BYMONTHDAY || '1'}${ordinal(parts.BYMONTHDAY || '1')} at ${time}`;
 		return rrule;
 	};
 
@@ -211,7 +209,7 @@
 >
 	<div class="flex-1 max-h-full overflow-y-auto">
 		{#if loaded}
-		<div class="pb-1 px-3 md:px-[18px] pt-1.5">
+			<div class="pb-1 px-3 md:px-[18px] pt-2">
 				<div class="flex flex-col gap-1 px-1 mt-1.5 mb-3">
 					<div class="flex justify-between items-center">
 						<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
@@ -288,7 +286,9 @@
 					</div>
 
 					<div class="px-3 flex w-full bg-transparent overflow-x-auto scrollbar-none -mx-1">
-						<div class="flex gap-0.5 w-fit text-center text-sm rounded-full bg-transparent px-1.5 whitespace-nowrap">
+						<div
+							class="flex gap-0.5 w-fit text-center text-sm rounded-full bg-transparent px-1.5 whitespace-nowrap"
+						>
 							<Select
 								bind:value={statusFilter}
 								items={[
@@ -299,7 +299,9 @@
 								triggerClass="relative w-full flex items-center gap-0.5 px-2.5 py-1.5 bg-gray-50 dark:bg-gray-850 rounded-xl"
 							>
 								<svelte:fragment slot="trigger" let:selectedLabel>
-									<span class="inline-flex h-input px-0.5 w-full outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden">
+									<span
+										class="inline-flex h-input px-0.5 w-full outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
+									>
 										{selectedLabel}
 									</span>
 									<ChevronDown className="size-3.5" strokeWidth="2.5" />
@@ -328,8 +330,12 @@
 								</div>
 								<div class="text-gray-500 text-center text-xs">
 									{query
-										? $i18n.t('Try adjusting your search or filter to find what you are looking for.')
-										: $i18n.t('Create scheduled prompts that run automatically on a recurring basis.')}
+										? $i18n.t(
+												'Try adjusting your search or filter to find what you are looking for.'
+											)
+										: $i18n.t(
+												'Create scheduled prompts that run automatically on a recurring basis.'
+											)}
 								</div>
 							</div>
 						</div>
@@ -376,7 +382,12 @@
 											</button>
 										</AutomationMenu>
 
-										<button on:click={(e) => { e.stopPropagation(); e.preventDefault(); }}>
+										<button
+											on:click={(e) => {
+												e.stopPropagation();
+												e.preventDefault();
+											}}
+										>
 											<Tooltip
 												content={automation.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 											>
@@ -400,7 +411,7 @@
 						{/if}
 					{/if}
 				</div>
-		</div>
+			</div>
 		{:else}
 			<div class="w-full h-full flex justify-center items-center">
 				<Spinner className="size-5" />
