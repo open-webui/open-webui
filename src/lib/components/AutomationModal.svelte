@@ -225,12 +225,14 @@
 			if (automation) {
 				await updateAutomationById(localStorage.token, automation.id, form);
 				toast.success($i18n.t('Automation updated'));
+				show = false;
+				dispatch('save', { id: automation.id });
 			} else {
-				await createAutomation(localStorage.token, form);
+				const created = await createAutomation(localStorage.token, form);
 				toast.success($i18n.t('Automation created'));
+				show = false;
+				dispatch('save', { id: created?.id });
 			}
-			show = false;
-			dispatch('save');
 		} catch (e: any) {
 			toast.error(e?.detail ?? `${e}` ?? 'Failed to save');
 		} finally {

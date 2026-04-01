@@ -36,8 +36,7 @@
 	let total: number | null = null;
 	let loading = false;
 
-	let showEditor = false;
-	let editingAutomation: AutomationResponse | null = null;
+	let showCreateModal = false;
 
 	let showDeleteConfirm = false;
 	let deleteTarget: AutomationResponse | null = null;
@@ -203,11 +202,13 @@
 </DeleteConfirmDialog>
 
 <AutomationModal
-	bind:show={showEditor}
-	automation={editingAutomation}
-	on:save={() => {
-		editingAutomation = null;
+	bind:show={showCreateModal}
+	automation={null}
+	on:save={(e) => {
 		getAutomationList();
+		if (e.detail?.id) {
+			goto(`/automations/${e.detail.id}`);
+		}
 	}}
 />
 
@@ -249,8 +250,7 @@
 							<button
 								class="px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
 								on:click={() => {
-									editingAutomation = null;
-									showEditor = true;
+									showCreateModal = true;
 								}}
 							>
 								<Plus className="size-3" strokeWidth="2.5" />
@@ -354,18 +354,11 @@
 					{:else}
 						<div class="gap-2 grid my-2 px-3">
 							{#each automations as automation (automation.id)}
-								<div
+								<a
 									class="flex space-x-4 text-left w-full px-3 py-2.5 dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl"
+									href={`/automations/${automation.id}`}
 								>
-									<!-- svelte-ignore a11y-no-static-element-interactions -->
-									<!-- svelte-ignore a11y-click-events-have-key-events -->
-									<div
-										class="flex-1 cursor-pointer"
-										on:click={() => {
-											editingAutomation = automation;
-											showEditor = true;
-										}}
-									>
+									<div class="flex-1">
 										<div class="line-clamp-1 text-sm">{automation.name}</div>
 										<div class="text-xs text-gray-500 line-clamp-1">
 											{formatRRule(automation.data.rrule)}
@@ -375,8 +368,7 @@
 									<div class="flex flex-row gap-0.5 self-center">
 										<AutomationMenu
 											editHandler={() => {
-												editingAutomation = automation;
-												showEditor = true;
+												goto(`/automations/${automation.id}`);
 											}}
 											runHandler={() => {
 												runNowHandler(automation);
@@ -412,7 +404,7 @@
 											</Tooltip>
 										</button>
 									</div>
-								</div>
+								</a>
 							{/each}
 						</div>
 
