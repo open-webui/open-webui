@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧠 **Image viewer memory optimization.** Viewing images and SVGs now uses significantly less memory and performs faster, keeping the application snappy and responsive even when browsing through many media files during extended sessions. [PR #23236](https://github.com/open-webui/open-webui/pull/23236)
 - ⏱️ **MCP tool server timeout configuration.** Administrators can now configure request timeouts for MCP tool server connections via the AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER environment variable. [Commit](https://github.com/open-webui/open-webui/commit/10b4b86ada93cd62d994c3179ff14dfd1a6e56f0)
 - 🚀 **Inline code rendering performance.** Inline code tokens in streaming responses now fade in with a lightweight CSS animation, making chat output feel smoother while reducing interface overhead during rapid token updates. [#23258](https://github.com/open-webui/open-webui/pull/23258)
+- 🏎️ **Streaming response efficiency.** Streaming responses now process each output line in a single step instead of two separate yields, reducing async overhead and improving responsiveness during long-running generations. [#23266](https://github.com/open-webui/open-webui/pull/23266)
 - 🌐 **Translation updates.** Translations for Russian were enhanced and expanded.
 
 ### Fixed
