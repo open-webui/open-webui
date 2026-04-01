@@ -56,7 +56,9 @@ class MCPClient:
                 self._streams_context = streamablehttp_client(
                     url,
                     headers=headers,
-                    httpx_client_factory=create_httpx_client if AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL else create_insecure_httpx_client,
+                    httpx_client_factory=create_httpx_client
+                    if AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
+                    else create_insecure_httpx_client,
                 )
 
                 transport = await exit_stack.enter_async_context(self._streams_context)

@@ -155,17 +155,9 @@
 		<!-- Bottom toolbar -->
 		<div class="flex items-center justify-between px-4 pb-3.5 pt-1 gap-2">
 			<div class="flex items-center gap-0.5 flex-wrap flex-1 min-w-0">
-				<ScheduleDropdown
-					bind:this={scheduleDropdown}
-					side="top"
-					align="start"
-				/>
+				<ScheduleDropdown bind:this={scheduleDropdown} side="top" align="start" />
 
-				<ModelDropdown
-					bind:model_id
-					side="top"
-					align="start"
-				/>
+				<ModelDropdown bind:model_id side="top" align="start" />
 
 				<TerminalDropdown
 					{terminalServers}

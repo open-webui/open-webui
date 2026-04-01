@@ -30,9 +30,7 @@
 		<button
 			type="button"
 			class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs transition
-				{terminalServerId
-				? 'text-black dark:text-gray-100'
-				: 'text-gray-600 dark:text-gray-400'}
+				{terminalServerId ? 'text-black dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}
 				hover:bg-black/5 dark:hover:bg-white/5"
 		>
 			<Cloud className="size-3.5 shrink-0" strokeWidth="2" />

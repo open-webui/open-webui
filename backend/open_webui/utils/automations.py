@@ -103,15 +103,11 @@ async def automation_worker_loop(app) -> None:
     Runs on every instance. Poll interval is configurable via
     AUTOMATION_POLL_INTERVAL env var (default: 10 seconds).
     """
-    log.info(
-        f'Automation worker started (poll interval: {AUTOMATION_POLL_INTERVAL}s)'
-    )
+    log.info(f'Automation worker started (poll interval: {AUTOMATION_POLL_INTERVAL}s)')
     while True:
         try:
             with get_db() as db:
-                batch = Automations.claim_due(
-                    int(time.time_ns()), limit=10, db=db
-                )
+                batch = Automations.claim_due(int(time.time_ns()), limit=10, db=db)
             if batch:
                 log.info(f'Claimed {len(batch)} due automation(s)')
             for automation in batch:
@@ -120,9 +116,7 @@ async def automation_worker_loop(app) -> None:
             log.exception('Automation worker error')
 
         # Jitter to spread load across instances
-        await asyncio.sleep(
-            AUTOMATION_POLL_INTERVAL + random.uniform(0, 2)
-        )
+        await asyncio.sleep(AUTOMATION_POLL_INTERVAL + random.uniform(0, 2))
 
 
 ##########################
@@ -137,16 +131,16 @@ def _build_request(app) -> Request:
     (model pre-fetch, tool server init) for consistency.
     """
     scope = {
-        "type": "http",
-        "asgi": {"version": "3.0", "spec_version": "2.0"},
-        "method": "POST",
-        "path": "/api/v1/automations/internal",
-        "query_string": b"",
-        "headers": Headers({}).raw,
-        "client": ("127.0.0.1", 0),
-        "server": ("127.0.0.1", 80),
-        "scheme": "http",
-        "app": app,
+        'type': 'http',
+        'asgi': {'version': '3.0', 'spec_version': '2.0'},
+        'method': 'POST',
+        'path': '/api/v1/automations/internal',
+        'query_string': b'',
+        'headers': Headers({}).raw,
+        'client': ('127.0.0.1', 0),
+        'server': ('127.0.0.1', 80),
+        'scheme': 'http',
+        'app': app,
     }
     request = Request(scope)
     # Ensure request.state is initialized with required attributes
@@ -161,9 +155,9 @@ def _resolve_model_tool_ids(app, model_id: str) -> list[str]:
     The frontend does this in Chat.svelte (model.info.meta.toolIds).
     The backend never auto-resolves them, so we must do it explicitly.
     """
-    models = getattr(app.state, "MODELS", {})
+    models = getattr(app.state, 'MODELS', {})
     model = models.get(model_id, {})
-    tool_ids = model.get("info", {}).get("meta", {}).get("toolIds", [])
+    tool_ids = model.get('info', {}).get('meta', {}).get('toolIds', [])
     return list(tool_ids) if tool_ids else []
 
 
@@ -175,23 +169,23 @@ def _resolve_model_features(app, model_id: str) -> dict:
     code_interpreter, image_generation when the model has them as defaults
     AND the capability is enabled AND the admin has enabled the feature.
     """
-    models = getattr(app.state, "MODELS", {})
+    models = getattr(app.state, 'MODELS', {})
     model = models.get(model_id, {})
-    meta = model.get("info", {}).get("meta", {})
+    meta = model.get('info', {}).get('meta', {})
 
-    default_feature_ids = meta.get("defaultFeatureIds", [])
+    default_feature_ids = meta.get('defaultFeatureIds', [])
     if not default_feature_ids:
         return {}
 
-    capabilities = meta.get("capabilities", {})
+    capabilities = meta.get('capabilities', {})
     config = app.state.config
     features = {}
 
     # code_interpreter is excluded: it requires the frontend event emitter
     # and does not work in headless backend execution.
     feature_checks = {
-        "web_search": getattr(config, "ENABLE_WEB_SEARCH", False),
-        "image_generation": getattr(config, "ENABLE_IMAGE_GENERATION", False),
+        'web_search': getattr(config, 'ENABLE_WEB_SEARCH', False),
+        'image_generation': getattr(config, 'ENABLE_IMAGE_GENERATION', False),
     }
 
     for feature_id in default_feature_ids:
@@ -205,15 +199,13 @@ def _resolve_model_features(app, model_id: str) -> dict:
 
 def _resolve_model_filter_ids(app, model_id: str) -> list[str]:
     """Read model default filter_ids from model config."""
-    models = getattr(app.state, "MODELS", {})
+    models = getattr(app.state, 'MODELS', {})
     model = models.get(model_id, {})
-    filter_ids = model.get("info", {}).get("meta", {}).get("defaultFilterIds", [])
+    filter_ids = model.get('info', {}).get('meta', {}).get('defaultFilterIds', [])
     return list(filter_ids) if filter_ids else []
 
 
-async def _set_terminal_cwd(
-    app, server_id: str, user, cwd: str, chat_id: str
-) -> None:
+async def _set_terminal_cwd(app, server_id: str, user, cwd: str, chat_id: str) -> None:
     """Set the working directory on a terminal server via the proxy.
 
     Routes through the open-webui terminal proxy endpoint so that
@@ -222,9 +214,7 @@ async def _set_terminal_cwd(
     """
     import aiohttp
 
-    connections = getattr(
-        getattr(app, 'state', None), 'config', None
-    )
+    connections = getattr(getattr(app, 'state', None), 'config', None)
     if connections is None:
         return
     connections = getattr(connections, 'TERMINAL_SERVER_CONNECTIONS', None) or []
@@ -253,9 +243,7 @@ async def _set_terminal_cwd(
         headers['Authorization'] = f'Bearer {connection.get("key", "")}'
 
     try:
-        async with aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=10)
-        ) as session:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
             async with session.post(
                 target_url,
                 json={'path': cwd},
@@ -263,10 +251,7 @@ async def _set_terminal_cwd(
             ) as resp:
                 if resp.status != 200:
                     body = await resp.text()
-                    log.warning(
-                        f'Failed to set terminal CWD to {cwd}: '
-                        f'HTTP {resp.status} — {body[:200]}'
-                    )
+                    log.warning(f'Failed to set terminal CWD to {cwd}: HTTP {resp.status} — {body[:200]}')
     except Exception as e:
         log.warning(f'Failed to set terminal CWD: {e}')
 
@@ -281,12 +266,12 @@ async def execute_automation(app, automation: AutomationModel) -> None:
     try:
         user = Users.get_user_by_id(automation.user_id)
         if not user:
-            _record_run(automation.id, "error", error="User not found")
+            _record_run(automation.id, 'error', error='User not found')
             return
 
-        prompt = prompt_template(automation.data["prompt"], user)
-        model_id = automation.data["model_id"]
-        terminal_config = automation.data.get("terminal")
+        prompt = prompt_template(automation.data['prompt'], user)
+        model_id = automation.data['model_id']
+        terminal_config = automation.data.get('terminal')
 
         # Generate proper UUIDs for messages (same as frontend)
         user_msg_id = str(uuid4())
@@ -297,55 +282,55 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             automation.user_id,
             ChatForm(
                 chat={
-                    "title": automation.name,
-                    "models": [model_id],
-                    "history": {
-                        "currentId": assistant_msg_id,
-                        "messages": {
+                    'title': automation.name,
+                    'models': [model_id],
+                    'history': {
+                        'currentId': assistant_msg_id,
+                        'messages': {
                             user_msg_id: {
-                                "id": user_msg_id,
-                                "parentId": None,
-                                "role": "user",
-                                "content": prompt,
-                                "childrenIds": [assistant_msg_id],
-                                "timestamp": int(time.time()),
-                                "models": [model_id],
+                                'id': user_msg_id,
+                                'parentId': None,
+                                'role': 'user',
+                                'content': prompt,
+                                'childrenIds': [assistant_msg_id],
+                                'timestamp': int(time.time()),
+                                'models': [model_id],
                             },
                             assistant_msg_id: {
-                                "id": assistant_msg_id,
-                                "parentId": user_msg_id,
-                                "role": "assistant",
-                                "content": "",
-                                "done": False,
-                                "model": model_id,
-                                "childrenIds": [],
-                                "timestamp": int(time.time()),
+                                'id': assistant_msg_id,
+                                'parentId': user_msg_id,
+                                'role': 'assistant',
+                                'content': '',
+                                'done': False,
+                                'model': model_id,
+                                'childrenIds': [],
+                                'timestamp': int(time.time()),
                             },
                         },
                     },
-                    "messages": [
-                        {"role": "user", "content": prompt},
+                    'messages': [
+                        {'role': 'user', 'content': prompt},
                     ],
-                    "meta": {"automation_id": automation.id},
+                    'meta': {'automation_id': automation.id},
                 }
             ),
         )
 
         if not chat:
-            _record_run(automation.id, "error", error="Failed to create chat")
+            _record_run(automation.id, 'error', error='Failed to create chat')
             return
 
         # Notify frontend to refresh chat list
         from open_webui.socket.main import sio
 
         await sio.emit(
-            "events",
+            'events',
             {
-                "chat_id": chat.id,
-                "message_id": user_msg_id,
-                "data": {"type": "chat:list"},
+                'chat_id': chat.id,
+                'message_id': user_msg_id,
+                'data': {'type': 'chat:list'},
             },
-            room=f"user:{automation.user_id}",
+            room=f'user:{automation.user_id}',
         )
 
         # Resolve model defaults (frontend does this, backend doesn't)
@@ -355,31 +340,31 @@ async def execute_automation(app, automation: AutomationModel) -> None:
 
         # If a terminal is linked, set the CWD before building the payload
         terminal_id = None
-        if terminal_config and terminal_config.get("server_id"):
-            terminal_id = terminal_config["server_id"]
-            cwd = terminal_config.get("cwd")
+        if terminal_config and terminal_config.get('server_id'):
+            terminal_id = terminal_config['server_id']
+            cwd = terminal_config.get('cwd')
             if cwd:
                 await _set_terminal_cwd(app, terminal_id, user, cwd, chat.id)
 
         # Build the same payload the frontend sends to /api/chat/completions
         form_data = {
-            "model": model_id,
-            "messages": [{"role": "user", "content": prompt}],
-            "stream": True,
-            "chat_id": chat.id,
-            "id": assistant_msg_id,
-            "parent_id": user_msg_id,
-            "session_id": f"automation:{automation.id}",
-            "background_tasks": {},
+            'model': model_id,
+            'messages': [{'role': 'user', 'content': prompt}],
+            'stream': True,
+            'chat_id': chat.id,
+            'id': assistant_msg_id,
+            'parent_id': user_msg_id,
+            'session_id': f'automation:{automation.id}',
+            'background_tasks': {},
         }
         if tool_ids:
-            form_data["tool_ids"] = tool_ids
+            form_data['tool_ids'] = tool_ids
         if features:
-            form_data["features"] = features
+            form_data['features'] = features
         if filter_ids:
-            form_data["filter_ids"] = filter_ids
+            form_data['filter_ids'] = filter_ids
         if terminal_id:
-            form_data["terminal_id"] = terminal_id
+            form_data['terminal_id'] = terminal_id
 
         # Call the full chat completion pipeline (same as POST /api/chat/completions).
         # The handler reference is stored on app.state to avoid circular imports.
@@ -390,21 +375,21 @@ async def execute_automation(app, automation: AutomationModel) -> None:
         from open_webui.socket.main import sio
 
         await sio.emit(
-            "automation:result",
+            'automation:result',
             {
-                "automation_id": automation.id,
-                "name": automation.name,
-                "chat_id": chat.id,
-                "status": "success",
+                'automation_id': automation.id,
+                'name': automation.name,
+                'chat_id': chat.id,
+                'status': 'success',
             },
-            room=f"user:{automation.user_id}",
+            room=f'user:{automation.user_id}',
         )
 
-        _record_run(automation.id, "success", chat_id=chat.id)
+        _record_run(automation.id, 'success', chat_id=chat.id)
 
     except Exception as e:
-        log.exception(f"Automation {automation.id} failed")
-        _record_run(automation.id, "error", error=str(e)[:4000])
+        log.exception(f'Automation {automation.id} failed')
+        _record_run(automation.id, 'error', error=str(e)[:4000])
 
 
 ####################
@@ -420,6 +405,4 @@ def _record_run(
 ):
     """Insert a run record into automation_run."""
     with get_db() as db:
-        AutomationRuns.insert(
-            automation_id, status, chat_id=chat_id, error=error, db=db
-        )
+        AutomationRuns.insert(automation_id, status, chat_id=chat_id, error=error, db=db)

@@ -402,9 +402,7 @@ class ChatTable:
         except Exception:
             return None
 
-    def update_chat_last_read_at_by_id(
-        self, id: str, user_id: str, db: Optional[Session] = None
-    ) -> bool:
+    def update_chat_last_read_at_by_id(self, id: str, user_id: str, db: Optional[Session] = None) -> bool:
         try:
             with get_db_context(db) as db:
                 chat = db.get(Chat, id)

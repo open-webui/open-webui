@@ -200,7 +200,7 @@
 			window.setTimeout(() => scrollToBottom(), 0);
 
 			await tick();
-			
+
 			// Mark chat read when initially loading it
 			if (chatIdProp && !$temporaryChatEnabled) {
 				updateLastReadAt(chatIdProp);
@@ -2886,7 +2886,7 @@
 									{createMessagePair}
 									{onUpload}
 									messageQueue={$chatRequestQueues[$chatId] ?? []}
-							{chatTasks}
+									{chatTasks}
 									onQueueSendNow={async (id) => {
 										const queue = $chatRequestQueues[$chatId] ?? [];
 										const item = queue.find((m) => m.id === id);

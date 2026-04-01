@@ -365,22 +365,52 @@
 		clearFilePreview();
 
 		if (isImage(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath, chatId ?? undefined);
+			const result = await downloadFileBlob(
+				terminal.url,
+				terminal.key,
+				filePath,
+				chatId ?? undefined
+			);
 			if (result) fileImageUrl = URL.createObjectURL(result.blob);
 		} else if (isVideo(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath, chatId ?? undefined);
+			const result = await downloadFileBlob(
+				terminal.url,
+				terminal.key,
+				filePath,
+				chatId ?? undefined
+			);
 			if (result) fileVideoUrl = URL.createObjectURL(result.blob);
 		} else if (isAudio(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath, chatId ?? undefined);
+			const result = await downloadFileBlob(
+				terminal.url,
+				terminal.key,
+				filePath,
+				chatId ?? undefined
+			);
 			if (result) fileAudioUrl = URL.createObjectURL(result.blob);
 		} else if (isPdf(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath, chatId ?? undefined);
+			const result = await downloadFileBlob(
+				terminal.url,
+				terminal.key,
+				filePath,
+				chatId ?? undefined
+			);
 			if (result) filePdfData = await result.blob.arrayBuffer();
 		} else if (isSqlite(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath, chatId ?? undefined);
+			const result = await downloadFileBlob(
+				terminal.url,
+				terminal.key,
+				filePath,
+				chatId ?? undefined
+			);
 			if (result) fileSqliteData = await result.blob.arrayBuffer();
 		} else if (isOffice(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath, chatId ?? undefined);
+			const result = await downloadFileBlob(
+				terminal.url,
+				terminal.key,
+				filePath,
+				chatId ?? undefined
+			);
 			if (result) {
 				const ext = getFileExt(filePath);
 				const arrayBuffer = await result.blob.arrayBuffer();
@@ -493,7 +523,12 @@
 		const terminal = selectedTerminal;
 		if (!terminal) return;
 
-		const result = await createDirectory(terminal.url, terminal.key, `${currentPath}${name}`, chatId ?? undefined);
+		const result = await createDirectory(
+			terminal.url,
+			terminal.key,
+			`${currentPath}${name}`,
+			chatId ?? undefined
+		);
 		toast[result ? 'success' : 'error'](
 			$i18n.t(result ? 'Folder created' : 'Failed to create folder')
 		);
@@ -554,7 +589,13 @@
 		const sourceDir = source.endsWith('/') ? source : source + '/';
 		if (destFolder.startsWith(sourceDir)) return;
 
-		const result = await moveEntry(terminal.url, terminal.key, source, destination, chatId ?? undefined);
+		const result = await moveEntry(
+			terminal.url,
+			terminal.key,
+			source,
+			destination,
+			chatId ?? undefined
+		);
 		if ('error' in result) {
 			toast.error(result.error);
 		} else {
@@ -573,7 +614,13 @@
 
 		if (oldPath === destination) return;
 
-		const result = await moveEntry(terminal.url, terminal.key, oldPath, destination, chatId ?? undefined);
+		const result = await moveEntry(
+			terminal.url,
+			terminal.key,
+			oldPath,
+			destination,
+			chatId ?? undefined
+		);
 		if ('error' in result) {
 			toast.error(result.error);
 		} else {

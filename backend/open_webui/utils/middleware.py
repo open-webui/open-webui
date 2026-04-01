@@ -2759,11 +2759,7 @@ def get_event_emitter_and_caller(metadata):
 
     # event_caller needs session_id — it calls back to a specific
     # websocket session (used by direct tools, pyodide code interpreter).
-    if (
-        metadata.get('session_id')
-        and metadata.get('chat_id')
-        and metadata.get('message_id')
-    ):
+    if metadata.get('session_id') and metadata.get('chat_id') and metadata.get('message_id'):
         event_caller = get_event_call(metadata)
 
     return event_emitter, event_caller
@@ -3642,10 +3638,10 @@ async def streaming_chat_response_handler(response, ctx):
                                         if error:
                                             try:
                                                 Chats.upsert_message_to_chat_by_id_and_message_id(
-                                                    metadata["chat_id"],
-                                                    metadata["message_id"],
+                                                    metadata['chat_id'],
+                                                    metadata['message_id'],
                                                     {
-                                                        "error": {"content": error},
+                                                        'error': {'content': error},
                                                     },
                                                 )
                                             except Exception:

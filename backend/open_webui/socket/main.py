@@ -501,10 +501,7 @@ async def chat_events(sid, data):
     event_type = event_data.get('type')
 
     if event_type == 'last_read_at':
-        await asyncio.to_thread(
-            Chats.update_chat_last_read_at_by_id,
-            data['chat_id'], user['id']
-        )
+        await asyncio.to_thread(Chats.update_chat_last_read_at_by_id, data['chat_id'], user['id'])
 
 
 def normalize_document_id(document_id: str) -> str:

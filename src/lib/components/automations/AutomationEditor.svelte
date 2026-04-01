@@ -161,7 +161,7 @@
 		if (runsLoading || (!hasMoreRuns && loadMore)) return;
 
 		runsLoading = true;
-		
+
 		if (!loadMore) {
 			runsPage = 0;
 			hasMoreRuns = true;
@@ -175,7 +175,7 @@
 			} else {
 				runs = fetchedRuns;
 			}
-			
+
 			if (fetchedRuns.length < 50) {
 				hasMoreRuns = false;
 			}
@@ -414,10 +414,7 @@
 					<div class="text-gray-500 text-xs mb-2 shrink-0">
 						{$i18n.t('Execution Logs')}
 					</div>
-					<div
-						class="flex-1 overflow-y-auto scrollbar-hidden w-full"
-						on:scroll={onScroll}
-					>
+					<div class="flex-1 overflow-y-auto scrollbar-hidden w-full" on:scroll={onScroll}>
 						{#if runsLoading && runs.length === 0}
 							<div class="flex justify-center py-4">
 								<Spinner className="size-4" />

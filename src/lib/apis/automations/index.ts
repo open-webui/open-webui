@@ -49,7 +49,6 @@ export type AutomationResponse = {
 	next_runs: number[] | null;
 };
 
-
 export const getAutomationItems = async (
 	token: string,
 	query: string | null,

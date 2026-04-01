@@ -60,9 +60,7 @@ def check_automation_access(automation, user):
         )
 
 
-def enrich_automation(
-    automation: AutomationModel, db: Session, tz: str = None
-) -> AutomationResponse:
+def enrich_automation(automation: AutomationModel, db: Session, tz: str = None) -> AutomationResponse:
     last_run = AutomationRuns.get_latest(automation.id, db=db)
     return AutomationResponse(
         **automation.model_dump(),
@@ -100,10 +98,7 @@ async def get_automation_items(
     )
 
     return {
-        'items': [
-            enrich_automation(item, db, tz=user.timezone)
-            for item in result.items
-        ],
+        'items': [enrich_automation(item, db, tz=user.timezone) for item in result.items],
         'total': result.total,
     }
 
@@ -139,9 +134,7 @@ async def create_new_automation(
             )
 
     tz = user.timezone
-    automation = Automations.insert(
-        user.id, form_data, next_run_ns(form_data.data.rrule, tz=tz), db=db
-    )
+    automation = Automations.insert(user.id, form_data, next_run_ns(form_data.data.rrule, tz=tz), db=db)
     return enrich_automation(automation, db, tz=tz)
 
 
@@ -198,9 +191,7 @@ async def update_automation_by_id(
             )
 
     tz = user.timezone
-    updated = Automations.update_by_id(
-        id, form_data, next_run_ns(form_data.data.rrule, tz=tz), db=db
-    )
+    updated = Automations.update_by_id(id, form_data, next_run_ns(form_data.data.rrule, tz=tz), db=db)
     return enrich_automation(updated, db, tz=tz)
 
 
@@ -219,9 +210,7 @@ async def toggle_automation_by_id(
     check_automations_permission(request, user)
     automation = Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
-    toggled = Automations.toggle(
-        id, next_run_ns(automation.data['rrule'], tz=user.timezone), db=db
-    )
+    toggled = Automations.toggle(id, next_run_ns(automation.data['rrule'], tz=user.timezone), db=db)
     return enrich_automation(toggled, db, tz=user.timezone)
 
 
@@ -281,6 +270,3 @@ async def get_automation_runs(
     automation = Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
     return AutomationRuns.get_by_automation(id, skip=skip, limit=limit, db=db)
-
-
-

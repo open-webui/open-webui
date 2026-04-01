@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 
 class Automation(Base):
-    __tablename__ = "automation"
+    __tablename__ = 'automation'
 
     id = Column(Text, primary_key=True)
     user_id = Column(Text, nullable=False)
@@ -32,13 +32,11 @@ class Automation(Base):
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)
 
-    __table_args__ = (
-        Index("ix_automation_next_run", "next_run_at"),
-    )
+    __table_args__ = (Index('ix_automation_next_run', 'next_run_at'),)
 
 
 class AutomationRun(Base):
-    __tablename__ = "automation_run"
+    __tablename__ = 'automation_run'
 
     id = Column(Text, primary_key=True)
     automation_id = Column(Text, nullable=False)
@@ -47,9 +45,7 @@ class AutomationRun(Base):
     error = Column(Text, nullable=True)
     created_at = Column(BigInteger, nullable=False)
 
-    __table_args__ = (
-        Index("ix_automation_run_automation_id", "automation_id"),
-    )
+    __table_args__ = (Index('ix_automation_run_automation_id', 'automation_id'),)
 
 
 ####################
@@ -119,7 +115,6 @@ class AutomationListResponse(BaseModel):
 
 
 class AutomationTable:
-
     def insert(
         self,
         user_id: str,
@@ -145,9 +140,7 @@ class AutomationTable:
             db.refresh(row)
             return AutomationModel.model_validate(row)
 
-    def get_by_id(
-        self, id: str, db: Optional[Session] = None
-    ) -> Optional[AutomationModel]:
+    def get_by_id(self, id: str, db: Optional[Session] = None) -> Optional[AutomationModel]:
         with get_db_context(db) as db:
             row = db.get(Automation, id)
             return AutomationModel.model_validate(row) if row else None
@@ -242,9 +235,7 @@ class AutomationTable:
             db.commit()
             return True
 
-    def claim_due(
-        self, now_ns: int, limit: int = 10, db: Optional[Session] = None
-    ) -> list[AutomationModel]:
+    def claim_due(self, now_ns: int, limit: int = 10, db: Optional[Session] = None) -> list[AutomationModel]:
         """
         Atomically claim due automations for execution.
 
@@ -263,7 +254,7 @@ class AutomationTable:
                 .limit(limit)
             )
 
-            if db.bind.dialect.name == "postgresql":
+            if db.bind.dialect.name == 'postgresql':
                 stmt = stmt.with_for_update(skip_locked=True)
 
             rows = db.execute(stmt).scalars().all()
@@ -272,7 +263,7 @@ class AutomationTable:
 
             for row in rows:
                 row.last_run_at = now_ns
-                row.next_run_at = next_run_ns(row.data.get("rrule", ""))
+                row.next_run_at = next_run_ns(row.data.get('rrule', ''))
 
             db.commit()
 
@@ -285,7 +276,6 @@ class AutomationTable:
 
 
 class AutomationRunTable:
-
     def insert(
         self,
         automation_id: str,
@@ -308,9 +298,7 @@ class AutomationRunTable:
             db.refresh(row)
             return AutomationRunModel.model_validate(row)
 
-    def get_latest(
-        self, automation_id: str, db: Optional[Session] = None
-    ) -> Optional[AutomationRunModel]:
+    def get_latest(self, automation_id: str, db: Optional[Session] = None) -> Optional[AutomationRunModel]:
         with get_db_context(db) as db:
             row = (
                 db.query(AutomationRun)
@@ -338,15 +326,9 @@ class AutomationRunTable:
             )
             return [AutomationRunModel.model_validate(r) for r in rows]
 
-    def delete_by_automation(
-        self, automation_id: str, db: Optional[Session] = None
-    ) -> int:
+    def delete_by_automation(self, automation_id: str, db: Optional[Session] = None) -> int:
         with get_db_context(db) as db:
-            count = (
-                db.query(AutomationRun)
-                .filter_by(automation_id=automation_id)
-                .delete()
-            )
+            count = db.query(AutomationRun).filter_by(automation_id=automation_id).delete()
             db.commit()
             return count
 
