@@ -21,7 +21,10 @@ const config = {
 		version: {
 			name: (() => {
 				try {
-					return child_process.execSync('git rev-parse HEAD').toString().trim();
+					return child_process
+						.execSync('git rev-parse HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+						.toString()
+						.trim();
 				} catch {
 					// if git is not available, fallback to package.json version
 					// or current timestamp
@@ -56,10 +59,12 @@ const config = {
 			'a11y_invalid_attribute',
 			'a11y_click_events_have_key_events',
 			'a11y_interactive_supports_focus',
+			'a11y_label_has_associated_control',
 			'a11y_no_static_element_interactions',
 			'a11y_no_noninteractive_element_interactions',
 			'a11y_media_has_caption',
-			'a11y_missing_attribute'
+			'a11y_missing_attribute',
+			'node_invalid_placement_ssr'
 		]);
 		if (suppressedWarnings.has(code)) return;
 
