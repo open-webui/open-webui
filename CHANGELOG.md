@@ -57,6 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✂️ **Citation spacing cleanup.** When citations are disabled for a model, citation markers and their leftover spacing are now removed together so punctuation and copied text remain cleanly formatted. [#23141](https://github.com/open-webui/open-webui/issues/23141)
 - 📲 **Mobile model selector positioning.** The mobile model selector dropdown now applies a constrained viewport width and left offset, preventing overflow and making model selection easier on small screens. [#23310](https://github.com/open-webui/open-webui/pull/23310)
 - 🍪 **OAuth session cookie persistence.** OIDC sign-in now correctly sets the "oauth_session_id" cookie, so "system_oauth" connections can forward user OAuth tokens to upstream providers as expected. [#23251](https://github.com/open-webui/open-webui/pull/23251), [#23250](https://github.com/open-webui/open-webui/issues/23250)
+- 🧩 **Task model fallback safety.** Task routing now handles missing default model entries safely, preventing task execution failures when the previously selected model is no longer available. [#23169](https://github.com/open-webui/open-webui/pull/23169)
 
 ### Changed
 
