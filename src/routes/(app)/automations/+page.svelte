@@ -296,6 +296,9 @@
 									{ value: 'active', label: $i18n.t('Active') },
 									{ value: 'paused', label: $i18n.t('Paused') }
 								]}
+								onChange={() => {
+									page = 1;
+								}}
 								triggerClass="relative w-full flex items-center gap-0.5 px-2.5 py-1.5 bg-gray-50 dark:bg-gray-850 rounded-xl"
 							>
 								<svelte:fragment slot="trigger" let:selectedLabel>
