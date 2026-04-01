@@ -53,6 +53,7 @@ export const replaceOutsideCode = (content: string, replacer: (str: string) => s
 };
 
 export const replaceTokens = (content, char, user) => {
+	if (!content.includes('{{')) return content;
 	const tokens = [
 		{ regex: /{{char}}/gi, replacement: char },
 		{ regex: /{{user}}/gi, replacement: user },
