@@ -2908,7 +2908,7 @@
 										}
 									}}
 									on:submit={async (e) => {
-										clearDraft();
+										clearDraft($chatId);
 										if (e.detail || files.length > 0) {
 											await tick();
 
