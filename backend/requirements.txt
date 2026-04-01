@@ -6,7 +6,7 @@ itsdangerous==2.2.0
 
 python-socketio==5.16.1
 python-jose==3.5.0
-cryptography==46.0.5
+cryptography==46.0.6
 bcrypt==5.0.0
 argon2-cffi==25.1.0
 PyJWT[crypto]==2.11.0
