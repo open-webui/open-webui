@@ -614,10 +614,10 @@ async def document_save_handler(document_id, data, user):
                 user_id=user.get('id'),
                 resource_type='note',
                 resource_id=note.id,
-                permission='read',
+                permission='write',
             )
         ):
-            log.error(f'User {user.get("id")} does not have access to note {note_id}')
+            log.error(f'User {user.get("id")} does not have write access to note {note_id}')
             return
 
         Notes.update_note_by_id(note_id, NoteUpdateForm(data=data))
