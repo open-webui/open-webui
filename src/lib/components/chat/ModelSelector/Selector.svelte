@@ -422,6 +422,9 @@
 		filteredItems.length,
 		Math.ceil((listScrollTop + 256) / ITEM_HEIGHT) + OVERSCAN
 	);
+
+	let openedAt = 0;
+	const MOBILE_CLOSE_GUARD_MS = 320;
 </script>
 
 <ConfirmDialog
@@ -435,12 +438,22 @@
 
 <DropdownMenu.Root
 	bind:open={show}
-	onOpenChange={async () => {
+	onOpenChange={async (open) => {
+		// Mobile first-tap race: open is immediately followed by a close request
+		// from focus/outside handlers in the same interaction burst.
+		if ($mobile && !open && Date.now() - openedAt < MOBILE_CLOSE_GUARD_MS) {
+			show = true;
+			return;
+		}
+
 		searchValue = '';
 		listScrollTop = 0;
-		window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
 
-		resetView();
+		if (open) {
+			openedAt = Date.now();
+			window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
+			resetView();
+		}
 	}}
 	onOpenChangeComplete={(open) => {
 		if (!open) {
