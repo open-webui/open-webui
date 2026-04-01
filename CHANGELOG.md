@@ -63,6 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ➕ **Attachment menu auto-close.** The chat attachment menu now closes immediately after selecting upload actions like file upload, camera capture, web attach, Google Drive, or OneDrive, preventing the menu from lingering on screen. [Commit](https://github.com/open-webui/open-webui/commit/4764dd5d3765c22384ed38cbc97a8170daa7a75f), [#23320](https://github.com/open-webui/open-webui/issues/23320)
 - 🧹 **Per-chat draft clearing.** Sent message drafts are now cleared using the active chat key, so sent text no longer reappears in the input after a refresh. [Commit](https://github.com/open-webui/open-webui/commit/124b7e9154d7f3ca8a16f2b90621209ac8d6b8c1), [#23296](https://github.com/open-webui/open-webui/issues/23296)
 - ✉️ **Context-aware input action button.** The input now shows the send action when text or files are present during generation, while keeping stop controls for truly empty input states to avoid action confusion. [Commit](https://github.com/open-webui/open-webui/commit/86472bb4453af7ea4e5ddc8d127b14d8e67733bc), [#23306](https://github.com/open-webui/open-webui/issues/23306)
+- 🛡️ **Note edit permission enforcement.** Note saving now requires write access instead of read access, preventing unauthorized users from modifying notes while preserving expected collaboration permissions. [Commit](https://github.com/open-webui/open-webui/commit/584a9a0920d8c8c72fc89ccbac83c970b5a4bd4a)
 
 ### Changed
 
