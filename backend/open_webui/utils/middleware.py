@@ -2450,31 +2450,44 @@ async def process_chat_response(
                                                 ) + detail.get("text", "")
 
                                     if reasoning_content:
-                                        if (
-                                            not content_blocks
-                                            or content_blocks[-1]["type"] != "reasoning"
-                                        ):
-                                            reasoning_block = {
-                                                "type": "reasoning",
-                                                "start_tag": "<think>",
-                                                "end_tag": "</think>",
-                                                "attributes": {
-                                                    "type": "reasoning_content"
-                                                },
-                                                "content": "",
-                                                "started_at": time.time(),
+                                        # Discard late-arriving reasoning tokens once
+                                        # the final text response has already started.
+                                        # SSE delivery can be out-of-order: a reasoning
+                                        # chunk may arrive after text chunks have begun.
+                                        # We detect this by checking the last block type:
+                                        #   "text"       → response in progress → discard
+                                        #   "tool_calls" → between tool-call rounds,
+                                        #                  new reasoning is valid
+                                        #   "reasoning"  → still in thinking phase → append
+                                        #   (empty)      → fresh start → create block
+                                        _last_block_type = (
+                                            content_blocks[-1]["type"]
+                                            if content_blocks
+                                            else None
+                                        )
+                                        if _last_block_type != "text":
+                                            if _last_block_type != "reasoning":
+                                                reasoning_block = {
+                                                    "type": "reasoning",
+                                                    "start_tag": "<think>",
+                                                    "end_tag": "</think>",
+                                                    "attributes": {
+                                                        "type": "reasoning_content"
+                                                    },
+                                                    "content": "",
+                                                    "started_at": time.time(),
+                                                }
+                                                content_blocks.append(reasoning_block)
+                                            else:
+                                                reasoning_block = content_blocks[-1]
+
+                                            reasoning_block["content"] += reasoning_content
+
+                                            data = {
+                                                "content": serialize_content_blocks(
+                                                    content_blocks
+                                                )
                                             }
-                                            content_blocks.append(reasoning_block)
-                                        else:
-                                            reasoning_block = content_blocks[-1]
-
-                                        reasoning_block["content"] += reasoning_content
-
-                                        data = {
-                                            "content": serialize_content_blocks(
-                                                content_blocks
-                                            )
-                                        }
 
                                     # Skip processing 'value' if reasoning_content was already handled
                                     # Some APIs duplicate reasoning tokens to 'content' for backwards compatibility

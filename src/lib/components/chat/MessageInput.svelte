@@ -686,10 +686,9 @@
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
-		element.scrollTo({
-			top: element.scrollHeight,
-			behavior: 'smooth'
-		});
+		if (element) {
+			element.scrollTop = element.scrollHeight;
+		}
 	};
 
 	const screenCaptureHandler = async () => {
@@ -2172,7 +2171,7 @@
 															<select
 																value={serviceTier}
 																on:change={(e) => {
-																	const tier = e.target.value as ServiceTier;
+																	const tier = e.target.value;
 																	serviceTier = tier;
 																	const modelId =
 																		selectedModelIds.length > 0 ? selectedModelIds[0] : null;
