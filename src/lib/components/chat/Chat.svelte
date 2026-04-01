@@ -2647,7 +2647,7 @@
 	const MAX_DRAFT_LENGTH = 5000;
 	let saveDraftTimeout: ReturnType<typeof setTimeout> | null = null;
 
-	const saveDraft = async (draft, chatId = null) => {
+	const saveDraft = async (draft: any, chatId: string | null = null) => {
 		if (saveDraftTimeout) {
 			clearTimeout(saveDraftTimeout);
 		}
@@ -2664,7 +2664,7 @@
 		}
 	};
 
-	const clearDraft = async (chatId = null) => {
+	const clearDraft = async (chatId: string | null = null) => {
 		if (saveDraftTimeout) {
 			clearTimeout(saveDraftTimeout);
 		}
@@ -2937,7 +2937,7 @@
 										}
 									}}
 									on:submit={async (e) => {
-										clearDraft();
+										clearDraft($chatId);
 										if (e.detail || files.length > 0) {
 											await tick();
 
