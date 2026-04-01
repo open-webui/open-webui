@@ -191,8 +191,8 @@
 		: ''} max-w-full"
 >
 	<div class="flex-1 max-h-full overflow-y-auto">
+		{#if loaded}
 		<div class="pb-1 px-3 md:px-[18px] pt-1.5">
-			{#if loaded}
 				<div class="flex flex-col gap-1 px-1 mt-1.5 mb-3">
 					<div class="flex justify-between items-center">
 						<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
@@ -371,11 +371,11 @@
 						</div>
 					{/if}
 				</div>
-			{:else}
-				<div class="w-full h-full flex justify-center items-center my-16 mb-24">
-					<Spinner className="size-5" />
-				</div>
-			{/if}
 		</div>
+		{:else}
+			<div class="w-full h-full flex justify-center items-center">
+				<Spinner className="size-5" />
+			</div>
+		{/if}
 	</div>
 </div>
