@@ -40,7 +40,6 @@ class Chat(Base):
 
     meta = Column(JSON, server_default="{}")
     folder_id = Column(Text, nullable=True)
-    search_text = Column(Text, nullable=True)
 
     __table_args__ = (
         # Performance indexes for common queries
@@ -74,7 +73,6 @@ class ChatModel(BaseModel):
 
     meta: dict = {}
     folder_id: Optional[str] = None
-    search_text: Optional[str] = None
 
 
 ####################
@@ -156,6 +154,22 @@ def _build_search_text(title: str, chat_data: dict) -> str:
     return " ".join(parts).lower()[:65536]
 
 
+_search_col_exists_cache: Optional[bool] = None
+
+
+def _search_text_column_exists(db) -> bool:
+    """Check (with caching) whether the search_text column exists in the chat table."""
+    global _search_col_exists_cache
+    if _search_col_exists_cache is not None:
+        return _search_col_exists_cache
+    try:
+        db.execute(text("SELECT search_text FROM chat LIMIT 0"))
+        _search_col_exists_cache = True
+    except Exception:
+        _search_col_exists_cache = False
+    return _search_col_exists_cache
+
+
 class ChatTable:
     def _enrich_chat_data(self, chat_data: dict) -> dict:
         """
@@ -217,7 +231,6 @@ class ChatTable:
                     "folder_id": form_data.folder_id,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
-                    "search_text": _build_search_text(title, enriched_chat),
                 }
             )
 
@@ -225,6 +238,17 @@ class ChatTable:
             db.add(result)
             db.commit()
             db.refresh(result)
+
+            # Update search_text via raw SQL (column not in ORM to avoid breaking queries before migration)
+            try:
+                db.execute(
+                    text("UPDATE chat SET search_text = :st WHERE id = :id"),
+                    {"st": _build_search_text(title, enriched_chat), "id": id},
+                )
+                db.commit()
+            except Exception:
+                pass  # Column doesn't exist yet (migration pending)
+
             return ChatModel.model_validate(result) if result else None
 
     def import_chat(
@@ -252,7 +276,6 @@ class ChatTable:
                         if form_data.updated_at
                         else int(time.time())
                     ),
-                    "search_text": _build_search_text(import_title, form_data.chat),
                 }
             )
 
@@ -260,6 +283,16 @@ class ChatTable:
             db.add(result)
             db.commit()
             db.refresh(result)
+
+            try:
+                db.execute(
+                    text("UPDATE chat SET search_text = :st WHERE id = :id"),
+                    {"st": _build_search_text(import_title, form_data.chat), "id": id},
+                )
+                db.commit()
+            except Exception:
+                pass
+
             return ChatModel.model_validate(result) if result else None
 
     def update_chat_by_id(self, id: str, chat: dict) -> Optional[ChatModel]:
@@ -274,9 +307,17 @@ class ChatTable:
                 chat_item.chat = enriched_chat
                 chat_item.title = title
                 chat_item.updated_at = int(time.time())
-                chat_item.search_text = _build_search_text(title, enriched_chat)
                 db.commit()
                 db.refresh(chat_item)
+
+                try:
+                    db.execute(
+                        text("UPDATE chat SET search_text = :st WHERE id = :id"),
+                        {"st": _build_search_text(title, enriched_chat), "id": id},
+                    )
+                    db.commit()
+                except Exception:
+                    pass
 
                 return ChatModel.model_validate(chat_item)
         except Exception:
@@ -803,14 +844,22 @@ class ChatTable:
             )
 
             # Keyword search using pre-extracted search_text column — no JSON parsing per row.
-            # Falls back to title-only for rows not yet backfilled by migration (search_text IS NULL).
+            # Falls back to title-only for rows not yet backfilled (search_text IS NULL)
+            # or if the migration hasn't run yet.
+            _has_search_col = _search_text_column_exists(db)
             for word in search_text_words:
-                query = query.filter(
-                    or_(
-                        Chat.search_text.ilike(f"%{word}%"),
-                        and_(Chat.search_text.is_(None), Chat.title.ilike(f"%{word}%")),
+                if _has_search_col:
+                    query = query.filter(
+                        or_(
+                            text("chat.search_text LIKE :w").params(w=f"%{word}%"),
+                            and_(
+                                text("chat.search_text IS NULL"),
+                                Chat.title.ilike(f"%{word}%"),
+                            ),
+                        )
                     )
-                )
+                else:
+                    query = query.filter(Chat.title.ilike(f"%{word}%"))
 
             # Tag filtering uses json_each on meta (small JSON, cheap compared to chat messages)
             dialect_name = db.bind.dialect.name
