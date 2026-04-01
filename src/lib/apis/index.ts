@@ -561,13 +561,24 @@ export const executeToolServer = async (
 			responseHeaders[key] = value;
 		});
 
-		const text = await res.text();
 		let responseData;
+		const contentType = res.headers.get('Content-Type')?.split(';')[0]?.trim() ?? '';
 
 		try {
-			responseData = JSON.parse(text);
+			responseData = await res.clone().json();
 		} catch {
-			responseData = text;
+			if (contentType.startsWith('text/') || !contentType) {
+				responseData = await res.text();
+			} else {
+				const buf = await res.arrayBuffer();
+				const bytes = new Uint8Array(buf);
+				let binary = '';
+				for (let i = 0; i < bytes.length; i++) {
+					binary += String.fromCharCode(bytes[i]);
+				}
+				const b64 = btoa(binary);
+				responseData = `data:${contentType};base64,${b64}`;
+			}
 		}
 		return [responseData, responseHeaders];
 	} catch (err: any) {
