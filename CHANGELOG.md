@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📂 **Faster chat list queries.** Chat and folder lists now load more efficiently by fetching only the fields needed for sidebar views, improving responsiveness when browsing large conversation histories. [Commit](https://github.com/open-webui/open-webui/commit/0e5696de74cc0ba55b24cfc3d02efa83f08d7d3f)
 - 📈 **Sidebar memory optimization.** Sidebar chat items now use shared drag-preview resources and safer listener cleanup, reducing memory growth and keeping large chat lists more responsive during long sessions. [#23209](https://github.com/open-webui/open-webui/pull/23209)
 - 🎫 **Static OAuth tool authentication.** Tool server authentication now works reliably for both "oauth_2.1" and "oauth_2.1_static" connection types, so OAuth-backed tool access is correctly detected and forwarded during chat requests. [Commit](https://github.com/open-webui/open-webui/commit/60676bfdcfbce1a69b3e97f2013f0cfd63371737)
+- ⚡ **Chat title update efficiency.** Chat title updates now run in a single database operation instead of multiple round trips, improving responsiveness and reducing overhead when titles are generated or renamed. [#23214](https://github.com/open-webui/open-webui/pull/23214)
 - 🌐 **Translation updates.** Translations for Russian, German, and Tamil were enhanced and expanded.
 
 ### Fixed
