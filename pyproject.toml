@@ -111,7 +111,7 @@ dependencies = [
     "google-auth-httplib2==0.3.0",
     "google-auth-oauthlib==1.3.0",
 
-    "googleapis-common-protos==1.72.0",
+    "googleapis-common-protos==1.73.1",
     "google-cloud-storage==3.9.0",
 
     "azure-identity==1.25.2",
