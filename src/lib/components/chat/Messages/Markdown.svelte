@@ -59,11 +59,41 @@
 		]
 	});
 
+	const MAX_TOOL_IMAGES = 5;
+
+	const stripOldToolImages = (str) => {
+		const matches = [];
+		let searchPos = 0;
+		while (true) {
+			const pos = str.indexOf('files="', searchPos);
+			if (pos === -1) break;
+			const valueStart = pos + 7;
+			const valueEnd = str.indexOf('"', valueStart);
+			if (valueEnd === -1) break;
+			const value = str.substring(valueStart, valueEnd);
+			if (value.includes('data:image/')) {
+				matches.push({ valueStart, valueEnd });
+			}
+			searchPos = valueEnd + 1;
+		}
+
+		if (matches.length <= MAX_TOOL_IMAGES) return str;
+
+		const cutoff = matches.length - MAX_TOOL_IMAGES;
+		let result = str;
+		for (let i = cutoff - 1; i >= 0; i--) {
+			const m = matches[i];
+			result = result.substring(0, m.valueStart) + result.substring(m.valueEnd);
+		}
+		return result;
+	};
+
 	const parseTokens = () => {
 		if (content === lastContent) return;
 		lastContent = content;
 
-		const processed = replaceTokens(processResponseContent(content), model?.name, $user?.name);
+		let processed = replaceTokens(processResponseContent(content), model?.name, $user?.name);
+		processed = stripOldToolImages(processed);
 		if (processed === lastParsedContent) return;
 		lastParsedContent = processed;
 
