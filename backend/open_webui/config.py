@@ -687,7 +687,6 @@ def load_oauth_providers():
             return client
 
         OAUTH_PROVIDERS['google'] = {
-            'redirect_uri': GOOGLE_REDIRECT_URI.value,
             'register': google_oauth_register,
         }
 
@@ -708,7 +707,6 @@ def load_oauth_providers():
             return client
 
         OAUTH_PROVIDERS['microsoft'] = {
-            'redirect_uri': MICROSOFT_REDIRECT_URI.value,
             'picture_url': MICROSOFT_CLIENT_PICTURE_URL.value,
             'register': microsoft_oauth_register,
         }
@@ -733,7 +731,6 @@ def load_oauth_providers():
             return client
 
         OAUTH_PROVIDERS['github'] = {
-            'redirect_uri': GITHUB_CLIENT_REDIRECT_URI.value,
             'register': github_oauth_register,
             'sub_claim': 'id',
         }
@@ -775,7 +772,6 @@ def load_oauth_providers():
 
         OAUTH_PROVIDERS['oidc'] = {
             'name': OAUTH_PROVIDER_NAME.value,
-            'redirect_uri': OPENID_REDIRECT_URI.value,
             'register': oidc_oauth_register,
         }
 
