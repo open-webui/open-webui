@@ -2370,11 +2370,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
             else:
                 # Native FC: tool docstring can't be dynamic, so inject
-                # filesystem context into messages for pyodide engine
+                # filesystem context into the system message for pyodide
+                # engine.  Appending to the system prompt (instead of the
+                # user message) keeps it in the stable cached prefix so
+                # providers with prefix caching don't re-bill the full
+                # conversation on every turn.
                 if engine != 'jupyter':
-                    form_data['messages'] = add_or_update_user_message(
+                    form_data['messages'] = add_or_update_system_message(
                         CODE_INTERPRETER_PYODIDE_PROMPT,
                         form_data['messages'],
+                        append=True,
                     )
 
     tool_ids = form_data.pop('tool_ids', None)
