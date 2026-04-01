@@ -292,12 +292,10 @@ async def execute_automation(app, automation: AutomationModel) -> None:
         if filter_ids:
             form_data["filter_ids"] = filter_ids
 
-        # Call chat_completion — returns {'status': True, 'task_id': '...'}
-        # The background task handles everything: LLM, tools, DB, webhooks.
-        from open_webui.main import chat_completion as main_chat_completion
-
+        # Call the full chat completion pipeline (same as POST /api/chat/completions).
+        # The handler reference is stored on app.state to avoid circular imports.
         request = _build_request(app)
-        await main_chat_completion(request, form_data, user=user)
+        await app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
 
         # Notify user
         from open_webui.socket.main import sio

@@ -1882,6 +1882,10 @@ async def chat_completion(
 generate_chat_completions = chat_completion
 generate_chat_completion = chat_completion
 
+# Expose as app.state so internal callers (e.g. automations) can
+# use the full pipeline without importing from main.py (avoids circular deps).
+app.state.CHAT_COMPLETION_HANDLER = chat_completion
+
 
 ##################################
 #
