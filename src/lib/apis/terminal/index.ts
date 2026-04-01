@@ -45,7 +45,11 @@ export const getTerminalConfig = async (
 	return res.json().catch(() => null);
 };
 
-export const getCwd = async (baseUrl: string, apiKey: string, sessionId?: string): Promise<string | null> => {
+export const getCwd = async (
+	baseUrl: string,
+	apiKey: string,
+	sessionId?: string
+): Promise<string | null> => {
 	const url = `${baseUrl.replace(/\/$/, '')}/files/cwd`;
 	const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}` };
 	if (sessionId) headers['X-Session-Id'] = sessionId;
