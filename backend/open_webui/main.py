@@ -1853,12 +1853,18 @@ async def chat_completion(
             except Exception as e:
                 log.debug(f'Error cleaning up: {e}')
                 pass
-            # Emit chat:active=false when task completes
+            # Only emit chat:active=false when this is the last task for the chat
+            # (current task is still registered, hence <= 1)
             try:
-                if metadata.get('chat_id'):
-                    event_emitter = get_event_emitter(metadata, update_db=False)
-                    if event_emitter:
-                        await event_emitter({'type': 'chat:active', 'data': {'active': False}})
+                chat_id = metadata.get('chat_id')
+                if chat_id:
+                    remaining = await list_task_ids_by_item_id(
+                        request.app.state.redis, chat_id
+                    )
+                    if len(remaining) <= 1:
+                        event_emitter = get_event_emitter(metadata, update_db=False)
+                        if event_emitter:
+                            await event_emitter({'type': 'chat:active', 'data': {'active': False}})
             except Exception as e:
                 log.debug(f'Error emitting chat:active: {e}')
 
