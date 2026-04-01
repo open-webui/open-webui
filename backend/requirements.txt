@@ -75,7 +75,7 @@ unstructured==0.18.31
 nltk==3.9.3
 Markdown==3.10.2
 beautifulsoup4==4.14.3
-pypandoc==1.16.2
+pypandoc==1.17
 pandas==3.0.1
 openpyxl==3.1.5
 pyxlsb==1.0.10
