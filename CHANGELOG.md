@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - 💾 **Error message persistence.** LLM errors that occur during streaming are now saved to the database even if the connection drops, so users can see what went wrong when they reconnect. [#23231](https://github.com/open-webui/open-webui/pull/23231)
+- 🔧 **Web search settings save reliability.** Saving web search configuration now works without server errors, so administrators can update "WEB_FETCH_MAX_CONTENT_LENGTH" and related retrieval settings successfully from the admin interface. [Commit](https://github.com/open-webui/open-webui/commit/36d02aa1477aa1b4e7fb59d022f99693ebfa8667)
 
 ### Changed
 
