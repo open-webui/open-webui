@@ -1226,10 +1226,16 @@ DEFAULT_MODEL_METADATA = PersistentConfig(
     {},
 )
 
+try:
+    default_model_params = json.loads(os.environ.get('DEFAULT_MODEL_PARAMS', '{}'))
+except Exception as e:
+    log.exception(f'Error loading DEFAULT_MODEL_PARAMS: {e}')
+    default_model_params = {}
+
 DEFAULT_MODEL_PARAMS = PersistentConfig(
     'DEFAULT_MODEL_PARAMS',
     'models.default_params',
-    {},
+    default_model_params,
 )
 
 DEFAULT_USER_ROLE = PersistentConfig(
