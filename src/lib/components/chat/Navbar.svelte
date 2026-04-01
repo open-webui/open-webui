@@ -48,6 +48,7 @@
 	export let scrollTop = 0;
 
 	export let chat;
+	export let showModelSelector = true;
 	export let history;
 	export let selectedModels;
 	export let onSaveTempChat: () => {};
