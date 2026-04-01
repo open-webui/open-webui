@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🎯 **Template token scan optimization.** Streaming responses now skip unnecessary token-replacement processing when no template markers are present, reducing per-update overhead and keeping chat output smoother during rapid generation. [#23161](https://github.com/open-webui/open-webui/pull/23161)
 - 🔬 **Chinese text processing guard.** Streaming responses without Chinese characters now skip unnecessary Chinese-format processing checks, reducing per-update overhead and keeping output smoother during rapid generation. [#23162](https://github.com/open-webui/open-webui/pull/23162)
 - 🧩 **HTML entity decode efficiency.** Streaming text decoding now avoids repeated document parsing for HTML entity handling, reducing memory churn and improving responsiveness in token-heavy chat output. [#23165](https://github.com/open-webui/open-webui/pull/23165)
+- 📂 **Faster chat list queries.** Chat and folder lists now load more efficiently by fetching only the fields needed for sidebar views, improving responsiveness when browsing large conversation histories. [Commit](https://github.com/open-webui/open-webui/commit/0e5696de74cc0ba55b24cfc3d02efa83f08d7d3f)
 - 🌐 **Translation updates.** Translations for Russian and German were enhanced and expanded.
 
 ### Fixed
@@ -45,6 +46,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ⚙️ **Default model parameter loading.** The "DEFAULT_MODEL_PARAMS" environment variable is now parsed and applied correctly, so default generation settings are honored reliably without being ignored at startup. [#23223](https://github.com/open-webui/open-webui/pull/23223)
 - 🔧 **Web search settings save reliability.** Saving web search configuration now works without server errors, so administrators can update "WEB_FETCH_MAX_CONTENT_LENGTH" and related retrieval settings successfully from the admin interface. [Commit](https://github.com/open-webui/open-webui/commit/36d02aa1477aa1b4e7fb59d022f99693ebfa8667), [#23127](https://github.com/open-webui/open-webui/issues/23127)
 - 🪟 **Details expansion preference.** Tool call detail groups now honor the 'Always Expand Details' chat setting, so they open expanded by default when that preference is enabled. [#23262](https://github.com/open-webui/open-webui/pull/23262), [#23255](https://github.com/open-webui/open-webui/issues/23255)
+- 🛑 **Interrupted MCP cleanup stability.** Interrupted MCP tool calls no longer leave runaway cleanup behavior that can drive container CPU usage to 100%, keeping instances stable after cancellations or dropped connections. [#23143](https://github.com/open-webui/open-webui/issues/23143)
+- 🖱️ **Rapid sidebar action protection.** Archive and delete actions in the chat sidebar now ignore repeated clicks while a request is in progress, preventing duplicate requests and stacked error toasts. [#23172](https://github.com/open-webui/open-webui/issues/23172)
+- 🧠 **Active message completion accuracy.** Switching chats or refreshing during generation no longer marks the currently streaming assistant message as finished too early, so thinking blocks and action buttons appear at the correct time. [#23171](https://github.com/open-webui/open-webui/issues/23171)
+- 📊 **Usage statistic preservation.** Follow-up generation no longer overwrites existing token usage fields, so stored usage statistics remain accurate for the main response. [#23152](https://github.com/open-webui/open-webui/issues/23152)
 
 ### Changed
 
