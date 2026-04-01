@@ -388,7 +388,7 @@
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
-				'Constrains effort on reasoning for reasoning models. Only applicable to reasoning models from specific providers that support reasoning effort.'
+				'Constrains effort on reasoning for reasoning models (reasoning.effort). Only applicable to reasoning models from specific providers that support reasoning effort.'
 			)}
 			placement="top-start"
 			className="inline-tooltip"
@@ -419,7 +419,7 @@
 					<input
 						class="text-sm w-full bg-transparent outline-hidden outline-none"
 						type="text"
-						placeholder={$i18n.t('Enter reasoning effort')}
+						placeholder={$i18n.t('e.g. low, medium, high, xhigh')}
 						bind:value={params.reasoning_effort}
 						autocomplete="off"
 					/>
