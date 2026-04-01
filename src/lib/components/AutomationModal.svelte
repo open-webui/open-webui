@@ -36,6 +36,8 @@
 	let minute = 0;
 	let selectedDays: string[] = [];
 	let monthDay = 1;
+	let onceDate = '';
+	let onceTime = '09:00';
 
 	let loading = false;
 	let showScheduleDropdown = false;
@@ -56,6 +58,7 @@
 		: $models;
 
 	const FREQUENCIES = [
+		{ key: 'ONCE', label: 'Once' },
 		{ key: 'HOURLY', label: 'Hourly' },
 		{ key: 'DAILY', label: 'Daily' },
 		{ key: 'WEEKLY', label: 'Weekly' },
@@ -74,6 +77,10 @@
 	];
 
 	const buildVisualRrule = (): string => {
+		if (lastVisualFrequency === 'ONCE') {
+			const dt = onceDate.replace(/-/g, '') + 'T' + onceTime.replace(/:/g, '') + '00';
+			return `DTSTART:${dt}\nRRULE:FREQ=DAILY;COUNT=1`;
+		}
 		let parts = [`FREQ=${lastVisualFrequency}`];
 		if (interval > 1) parts.push(`INTERVAL=${interval}`);
 		if (lastVisualFrequency === 'WEEKLY' && selectedDays.length) {
@@ -96,6 +103,12 @@
 		lastVisualFrequency = frequency;
 	}
 
+	$: if (frequency === 'ONCE' && !onceDate) {
+		const soon = new Date(Date.now() + 5 * 60_000);
+		onceDate = soon.toISOString().split('T')[0];
+		onceTime = `${String(soon.getHours()).padStart(2, '0')}:${String(soon.getMinutes()).padStart(2, '0')}`;
+	}
+
 	$: {
 		if (frequency === 'CUSTOM' && prevFrequency !== 'CUSTOM') {
 			customRrule = buildVisualRrule();
@@ -105,6 +118,10 @@
 
 	const buildRrule = (): string => {
 		if (frequency === 'CUSTOM') return customRrule;
+		if (frequency === 'ONCE') {
+			const dt = onceDate.replace(/-/g, '') + 'T' + onceTime.replace(/:/g, '') + '00';
+			return `DTSTART:${dt}\nRRULE:FREQ=DAILY;COUNT=1`;
+		}
 		let parts = [`FREQ=${frequency}`];
 		if (interval > 1) parts.push(`INTERVAL=${interval}`);
 		if (frequency === 'WEEKLY' && selectedDays.length) {
@@ -121,6 +138,16 @@
 	};
 
 	const parseRrule = (s: string) => {
+		// Detect ONCE (COUNT=1 with DTSTART)
+		if (s.includes('COUNT=1')) {
+			frequency = 'ONCE';
+			const match = s.match(/DTSTART:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/);
+			if (match) {
+				onceDate = `${match[1]}-${match[2]}-${match[3]}`;
+				onceTime = `${match[4]}:${match[5]}`;
+			}
+			return;
+		}
 		const parts: Record<string, string> = {};
 		s.replace('RRULE:', '')
 			.split(';')
@@ -143,11 +170,7 @@
 	};
 
 	const scheduleLabel = (freq, intv, h, min, days, mDay) => {
-		const h12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
-		const ampm = h >= 12 ? 'PM' : 'AM';
-		const m = String(min).padStart(2, '0');
-		const time = `${h12}:${m} ${ampm}`;
-
+		if (freq === 'ONCE') return 'Once';
 		if (freq === 'HOURLY') return 'Hourly';
 		if (freq === 'DAILY') return 'Daily';
 		if (freq === 'WEEKLY') return 'Weekly';
@@ -160,6 +183,13 @@
 		if (!name.trim() || !prompt.trim() || !model_id.trim()) {
 			toast.error($i18n.t('Name, prompt, and model are required'));
 			return;
+		}
+		if (frequency === 'ONCE') {
+			const scheduled = new Date(`${onceDate}T${onceTime}`);
+			if (scheduled <= new Date()) {
+				toast.error($i18n.t('Scheduled time must be in the future'));
+				return;
+			}
 		}
 		loading = true;
 		try {
@@ -203,6 +233,8 @@
 			is_active = true;
 			frequency = 'DAILY';
 			interval = 1;
+			onceDate = '';
+			onceTime = '09:00';
 			hour = 9;
 			minute = 0;
 			selectedDays = [];
@@ -287,24 +319,22 @@
 
 					<div
 						slot="content"
-						class="rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-72 p-1"
+						class="rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-48 p-1"
 					>
 						<div class="px-2 text-xs text-gray-500 py-1">
 							{$i18n.t('Schedule')}
 						</div>
 
-						<div class="flex gap-1 px-2 mb-2 overflow-x-auto scrollbar-none">
-							{#each FREQUENCIES as f}
-								<button
-									type="button"
-									class="px-2 py-1 rounded-xl text-xs transition shrink-0 {frequency === f.key
-										? 'bg-gray-50 dark:bg-gray-800 text-black dark:text-gray-100'
-										: 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200'}"
-									on:click={() => (frequency = f.key)}
-								>
-									{f.label}
-								</button>
-							{/each}
+						<div class="px-1.5 mt-0.5 mb-2">
+							<select
+								class="w-full bg-transparent rounded-xl text-xs py-1.5 px-1.5 outline-hidden"
+								bind:value={frequency}
+								on:click={(e) => e.stopPropagation()}
+							>
+								{#each FREQUENCIES as f}
+									<option value={f.key}>{f.label}</option>
+								{/each}
+							</select>
 						</div>
 
 						{#if frequency === 'CUSTOM'}
@@ -317,31 +347,25 @@
 									on:click={(e) => e.stopPropagation()}
 								/>
 							</div>
-						{:else}
+						{:else if frequency !== 'HOURLY'}
 							<div class="flex gap-2 flex-wrap items-center px-3 pb-2 text-xs">
-								{#if frequency === 'HOURLY'}
+								{#if frequency === 'ONCE'}
 									<div class="flex items-center gap-1.5">
-										<span class="text-xs text-gray-500">{$i18n.t('Every')}</span>
 										<input
-											type="number"
-											bind:value={interval}
-											min={1}
-											max={60}
-											class="w-12 bg-gray-50 dark:bg-gray-800 rounded-lg text-center outline-hidden text-xs py-1 border border-gray-200 dark:border-gray-700"
+											type="date"
+											bind:value={onceDate}
+											min={new Date().toISOString().split('T')[0]}
+											class="bg-transparent outline-hidden text-xs dark:color-scheme-dark"
 											on:click={(e) => e.stopPropagation()}
 										/>
-										<span class="text-xs text-gray-500">hr</span>
-										<span class="text-xs text-gray-500">{$i18n.t('at')}</span>
-										<span class="text-gray-400">:</span>
+									</div>
+									<div class="flex items-center gap-1.5">
 										<input
-											type="number"
-											bind:value={minute}
-											min={0}
-											max={59}
-											class="w-12 bg-gray-50 dark:bg-gray-800 rounded-lg text-center outline-hidden text-xs py-1 border border-gray-200 dark:border-gray-700"
+											type="time"
+											bind:value={onceTime}
+											class="bg-transparent outline-hidden text-xs dark:color-scheme-dark"
 											on:click={(e) => e.stopPropagation()}
 										/>
-										<span class="text-xs text-gray-500">min</span>
 									</div>
 								{:else}
 									<div class="flex items-center gap-1.5">
@@ -354,7 +378,7 @@
 												hour = h;
 												minute = m;
 											}}
-											class="bg-gray-50 dark:bg-gray-800 rounded-lg text-center outline-hidden text-xs py-1 px-2 border border-gray-200 dark:border-gray-700 dark:color-scheme-dark"
+											class="bg-transparent text-center outline-hidden text-xs dark:color-scheme-dark"
 											on:click={(e) => e.stopPropagation()}
 										/>
 									</div>
@@ -368,7 +392,7 @@
 											bind:value={monthDay}
 											min={1}
 											max={31}
-											class="w-12 bg-gray-50 dark:bg-gray-800 rounded-lg text-center outline-hidden text-xs py-1 border border-gray-200 dark:border-gray-700"
+											class="w-8 bg-transparent text-center outline-hidden text-xs"
 											on:click={(e) => e.stopPropagation()}
 										/>
 									</div>

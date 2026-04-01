@@ -38,10 +38,26 @@ AUTOMATION_POLL_INTERVAL = int(os.getenv('AUTOMATION_POLL_INTERVAL', '10'))
 ####################
 
 
+def _parse_rule(s: str):
+    """Parse RRULE with clock-aligned DTSTART for sub-daily frequencies.
+
+    MINUTELY/HOURLY rules use a fixed epoch DTSTART (2000-01-01 00:00)
+    so intervals snap to clock boundaries (e.g. every 5min = :00, :05, :10).
+    """
+    raw = s.replace('RRULE:', '')
+    parts = dict(p.split('=', 1) for p in raw.split(';') if '=' in p)
+    freq = parts.get('FREQ', '')
+
+    if freq in ('MINUTELY', 'HOURLY'):
+        epoch = datetime(2000, 1, 1, 0, 0, 0)
+        return rrulestr(s, dtstart=epoch, ignoretz=True)
+    return rrulestr(s, ignoretz=True)
+
+
 def validate_rrule(s: str) -> None:
     """Raise ValueError if the RRULE is malformed or exhausted."""
     try:
-        rule = rrulestr(s, ignoretz=True)
+        rule = _parse_rule(s)
     except Exception as e:
         raise ValueError(f'Invalid RRULE: {e}')
     if rule.after(datetime.now()) is None:
@@ -51,7 +67,7 @@ def validate_rrule(s: str) -> None:
 def next_run_ns(s: str, tz: str = None) -> Optional[int]:
     """Next occurrence as epoch nanoseconds, respecting user timezone."""
     now = datetime.now(ZoneInfo(tz)) if tz else datetime.now()
-    dt = rrulestr(s, ignoretz=True).after(now.replace(tzinfo=None))
+    dt = _parse_rule(s).after(now.replace(tzinfo=None))
     if dt is None:
         return None
     if tz:
@@ -61,7 +77,7 @@ def next_run_ns(s: str, tz: str = None) -> Optional[int]:
 
 def next_n_runs_ns(s: str, n: int = 5, tz: str = None) -> list[int]:
     """Compute next N occurrences for UI preview."""
-    rule = rrulestr(s, ignoretz=True)
+    rule = _parse_rule(s)
     result = []
     dt = datetime.now()
     for _ in range(n):
