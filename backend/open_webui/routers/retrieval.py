@@ -44,8 +44,6 @@ from open_webui.internal.db import get_session, get_db
 from sqlalchemy.orm import Session
 
 
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
-
 # Document loaders
 from open_webui.retrieval.loaders.main import Loader
 from open_webui.retrieval.loaders.youtube import YoutubeLoader
@@ -123,6 +121,12 @@ from open_webui.env import (
 from open_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
+
+
+def _vector_db_client():
+    from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+
+    return VECTOR_DB_CLIENT
 
 ##########################################
 #
@@ -1349,7 +1353,7 @@ def save_docs_to_vector_db(
 
     # Check if entries with the same hash (metadata.hash) already exist
     if metadata and 'hash' in metadata:
-        result = VECTOR_DB_CLIENT.query(
+        result = _vector_db_client().query(
             collection_name=collection_name,
             filter={'hash': metadata['hash']},
         )
@@ -1438,11 +1442,11 @@ def save_docs_to_vector_db(
     ]
 
     try:
-        if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+        if _vector_db_client().has_collection(collection_name=collection_name):
             log.info(f'collection {collection_name} already exists')
 
             if overwrite:
-                VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+                _vector_db_client().delete_collection(collection_name=collection_name)
                 log.info(f'deleting existing collection {collection_name}')
             elif add is False:
                 log.info(f'collection {collection_name} already exists, overwrite is False and add is False')
@@ -1507,7 +1511,7 @@ def save_docs_to_vector_db(
         ]
 
         log.info(f'adding to collection {collection_name}')
-        VECTOR_DB_CLIENT.insert(
+        _vector_db_client().insert(
             collection_name=collection_name,
             items=items,
         )
@@ -1556,7 +1560,7 @@ def process_file(
 
                 try:
                     # /files/{file_id}/data/content/update
-                    VECTOR_DB_CLIENT.delete_collection(collection_name=f'file-{file.id}')
+                    _vector_db_client().delete_collection(collection_name=f'file-{file.id}')
                 except Exception:
                     # Audio file upload pipeline
                     pass
@@ -1579,7 +1583,7 @@ def process_file(
                 # Check if the file has already been processed and save the content
                 # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
 
-                result = VECTOR_DB_CLIENT.query(collection_name=f'file-{file.id}', filter={'file_id': file.id})
+                result = _vector_db_client().query(collection_name=f'file-{file.id}', filter={'file_id': file.id})
 
                 if result is not None and len(result.ids[0]) > 0:
                     docs = [
@@ -2375,7 +2379,7 @@ async def query_doc_handler(
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (form_data.hybrid is None or form_data.hybrid):
             collection_results = {}
-            collection_results[form_data.collection_name] = VECTOR_DB_CLIENT.get(
+            collection_results[form_data.collection_name] = _vector_db_client().get(
                 collection_name=form_data.collection_name
             )
             return await query_doc_with_hybrid_search(
@@ -2502,7 +2506,7 @@ def delete_entries_from_collection(
     db: Session = Depends(get_session),
 ):
     try:
-        if VECTOR_DB_CLIENT.has_collection(collection_name=form_data.collection_name):
+        if _vector_db_client().has_collection(collection_name=form_data.collection_name):
             file = Files.get_file_by_id(form_data.file_id, db=db)
             if not file:
                 raise HTTPException(
@@ -2511,7 +2515,7 @@ def delete_entries_from_collection(
                 )
             hash = file.hash
 
-            VECTOR_DB_CLIENT.delete(
+            _vector_db_client().delete(
                 collection_name=form_data.collection_name,
                 metadata={'hash': hash},
             )
@@ -2525,7 +2529,7 @@ def delete_entries_from_collection(
 
 @router.post('/reset/db')
 def reset_vector_db(user=Depends(get_admin_user), db: Session = Depends(get_session)):
-    VECTOR_DB_CLIENT.reset()
+    _vector_db_client().reset()
     Knowledges.delete_all_knowledge(db=db)
 
 

@@ -37,10 +37,15 @@ from open_webui.models.channels import Channels, ChannelMember, Channel
 from open_webui.models.messages import Messages, Message
 from open_webui.models.groups import Groups
 from open_webui.models.memories import Memories
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.utils.sanitize import sanitize_code
 
 log = logging.getLogger(__name__)
+
+
+def _vector_db_client():
+    from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+
+    return VECTOR_DB_CLIENT
 
 MAX_KNOWLEDGE_BASE_SEARCH_ITEMS = 10_000
 
@@ -654,7 +659,7 @@ async def delete_memory(
         result = Memories.delete_memory_by_id_and_user_id(memory_id, user.id)
 
         if result:
-            VECTOR_DB_CLIENT.delete(collection_name=f'user-memory-{user.id}', ids=[memory_id])
+            _vector_db_client().delete(collection_name=f'user-memory-{user.id}', ids=[memory_id])
             return json.dumps(
                 {'status': 'success', 'message': f'Memory {memory_id} deleted'},
                 ensure_ascii=False,
@@ -2191,7 +2196,6 @@ async def query_knowledge_bases(
         import heapq
         from open_webui.models.knowledge import Knowledges
         from open_webui.routers.knowledge import KNOWLEDGE_BASES_COLLECTION
-        from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
         user_id = __user__.get('id')
         user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
@@ -2216,7 +2220,7 @@ async def query_knowledge_bases(
 
             accessible_ids = [kb.id for kb in accessible_knowledge_bases.items]
 
-            search_results = VECTOR_DB_CLIENT.search(
+            search_results = _vector_db_client().search(
                 collection_name=KNOWLEDGE_BASES_COLLECTION,
                 vectors=[query_embedding],
                 filter={'knowledge_base_id': {'$in': accessible_ids}},

@@ -20,7 +20,6 @@ from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 
 from open_webui.config import VECTOR_DB
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
 
 from open_webui.models.users import UserModel
@@ -53,6 +52,12 @@ from open_webui.config import (
 )
 
 log = logging.getLogger(__name__)
+
+
+def _vector_db_client():
+    from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+
+    return VECTOR_DB_CLIENT
 
 
 from typing import Any
@@ -121,7 +126,7 @@ class VectorSearchRetriever(BaseRetriever):
         run_manager: CallbackManagerForRetrieverRun,
     ) -> list[Document]:
         embedding = await self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
-        result = VECTOR_DB_CLIENT.search(
+        result = _vector_db_client().search(
             collection_name=self.collection_name,
             vectors=[embedding],
             limit=self.top_k,
@@ -147,7 +152,7 @@ class VectorSearchRetriever(BaseRetriever):
 def query_doc(collection_name: str, query_embedding: list[float], k: int, user: UserModel = None):
     try:
         log.debug(f'query_doc:doc {collection_name}')
-        result = VECTOR_DB_CLIENT.search(
+        result = _vector_db_client().search(
             collection_name=collection_name,
             vectors=[query_embedding],
             limit=k,
@@ -165,7 +170,7 @@ def query_doc(collection_name: str, query_embedding: list[float], k: int, user: 
 def get_doc(collection_name: str, user: UserModel = None):
     try:
         log.debug(f'get_doc:doc {collection_name}')
-        result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
+        result = _vector_db_client().get(collection_name=collection_name)
 
         if result:
             log.info(f'query_doc:result {result.ids} {result.metadatas}')
@@ -494,7 +499,7 @@ async def query_collection_with_hybrid_search(
     for collection_name in collection_names:
         try:
             log.debug(f'query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:collection {collection_name}')
-            collection_results[collection_name] = VECTOR_DB_CLIENT.get(collection_name=collection_name)
+            collection_results[collection_name] = _vector_db_client().get(collection_name=collection_name)
         except Exception as e:
             log.exception(f'Failed to fetch collection {collection_name}: {e}')
             collection_results[collection_name] = None

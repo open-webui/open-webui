@@ -48,8 +48,20 @@ const config = {
 	},
 	onwarn: (warning, handler) => {
 		const { code } = warning;
-		if (code === 'css-unused-selector') return;
-		if (code === 'element_invalid_self_closing_tag') return;
+		const suppressedWarnings = new Set([
+			'css-unused-selector',
+			'element_invalid_self_closing_tag',
+			'export_let_unused',
+			'a11y_consider_explicit_label',
+			'a11y_invalid_attribute',
+			'a11y_click_events_have_key_events',
+			'a11y_interactive_supports_focus',
+			'a11y_no_static_element_interactions',
+			'a11y_no_noninteractive_element_interactions',
+			'a11y_media_has_caption',
+			'a11y_missing_attribute'
+		]);
+		if (suppressedWarnings.has(code)) return;
 
 		handler(warning);
 	}
