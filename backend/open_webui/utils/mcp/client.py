@@ -134,8 +134,9 @@ class MCPClient:
         return result_dict
 
     async def disconnect(self):
-        # Clean up and close the session
-        await self.exit_stack.aclose()
+        # Guard: exit_stack is None if connect() failed (e.g., 401 during initialize)
+        if self.exit_stack:
+            await self.exit_stack.aclose()
 
     async def __aenter__(self):
         await self.exit_stack.__aenter__()

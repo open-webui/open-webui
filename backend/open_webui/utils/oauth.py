@@ -849,7 +849,7 @@ class OAuthClientManager:
         redirect_uri_str = str(redirect_uri) if redirect_uri else None
         return await client.authorize_redirect(request, redirect_uri_str)
 
-    async def handle_callback(self, request, client_id: str, user_id: str, response):
+    async def handle_callback(self, request, client_id: str, user_id: str, response, return_url: str = None):
         client = self.get_client(client_id) or self.ensure_client_from_config(client_id)
         if client is None:
             raise HTTPException(404)
@@ -910,7 +910,14 @@ class OAuthClientManager:
                 exc_info=True,
             )
 
-        redirect_url = (str(request.app.state.config.WEBUI_URL or request.base_url)).rstrip('/')
+        # Popup flow: redirect back to the opener page, frontend detects success/error via tool store
+        if return_url:
+            base_url = (str(request.app.state.config.WEBUI_URL or request.base_url)).rstrip("/")
+            return RedirectResponse(url=f"{base_url}{return_url}", headers=response.headers)
+
+        redirect_url = (
+            str(request.app.state.config.WEBUI_URL or request.base_url)
+        ).rstrip("/")
 
         if error_message:
             log.debug(error_message)

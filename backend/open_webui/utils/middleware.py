@@ -115,6 +115,7 @@ from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.utils.payload import apply_system_prompt_to_body
 from open_webui.utils.response import normalize_usage
 from open_webui.utils.mcp.client import MCPClient
+import httpx
 
 
 from open_webui.config import (
@@ -2082,6 +2083,24 @@ def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[dict]]
     return [{k: v for k, v in msg.items() if k in ('role', 'content', 'output', 'files')} for msg in db_messages]
 
 
+async def _notify_mcp_oauth_required(
+    event_emitter, server_id, server_name,
+) -> None:
+    """Emit an oauth_reauth_toast event so the user can re-authenticate via popup."""
+    if not event_emitter:
+        return
+
+    await event_emitter(
+        {
+            "type": "oauth_reauth_toast",
+            "data": {
+                "server_id": server_id,
+                "server_name": server_name,
+            },
+        }
+    )
+
+
 def process_messages_with_output(messages: list[dict]) -> list[dict]:
     """
     Process messages with OR-aligned output items for LLM consumption.
@@ -2535,6 +2554,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             if metadata and metadata.get('message_id'):
                                 headers[FORWARD_SESSION_INFO_HEADER_MESSAGE_ID] = metadata.get('message_id')
 
+                        server_name = mcp_server_connection.get("info", {}).get("name", server_id)
                         mcp_clients[server_id] = MCPClient()
                         await mcp_clients[server_id].connect(
                             url=mcp_server_connection.get('url', ''),
@@ -2578,6 +2598,20 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 'direct': False,
                             }
                     except Exception as e:
+                        if auth_type == "oauth_2.1":
+                            # MCP OAuth 2.1 servers always wrap 401 errors in ExceptionGroup.
+                            # Check if any sub-exception is an HTTPStatusError with 401 status.
+                            is_oauth_401 = (
+                                isinstance(e, ExceptionGroup)
+                                and any(
+                                    isinstance(sub, httpx.HTTPStatusError)
+                                    and sub.response.status_code == 401
+                                    for sub in e.exceptions
+                                )
+                            )
+                            if is_oauth_401:
+                                await _notify_mcp_oauth_required(event_emitter, server_id, server_name)
+
                         log.debug(e)
                         if event_emitter:
                             await event_emitter(

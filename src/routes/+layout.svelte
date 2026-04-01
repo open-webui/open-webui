@@ -772,6 +772,16 @@
 	};
 
 	onMount(async () => {
+		// OAuth popup detection: signal parent and close
+		if (new URLSearchParams(window.location.search).has('oauth_success')) {
+			localStorage.setItem('oauth_result', JSON.stringify({ type: 'oauth:success' }));
+			localStorage.removeItem('oauth_result');
+			if (window.opener) {
+				setTimeout(() => window.close(), 300);
+				return;
+			}
+		}
+
 		window.addEventListener('message', windowMessageEventHandler);
 
 		let touchstartY = 0;

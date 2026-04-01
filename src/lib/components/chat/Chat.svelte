@@ -106,7 +106,7 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
 	import Image from '../common/Image.svelte';
-	import { getBanners } from '$lib/apis/configs';
+	import { getBanners, getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
 
 	export let chatIdProp = '';
 
@@ -145,6 +145,57 @@
 	let selectedToolIds = [];
 	let selectedFilterIds = [];
 	let pendingOAuthTools = [];
+
+	// Tools that require OAuth authentication but user hasn't authorized yet
+	let prevUnauthToolIds: string[] = [];
+	$: unauthTools = selectedToolIds
+		.map((id) => ($tools ?? []).find((t) => t.id === id))
+		.filter((t) => t && !(t.authenticated ?? true));
+
+	$: {
+		const currentIds = unauthTools.map((t) => `oauth-auth-${t.id}`);
+
+		// Dismiss toasts for tools that are no longer unauthenticated
+		for (const id of prevUnauthToolIds) {
+			if (!currentIds.includes(id)) {
+				toast.dismiss(id);
+			}
+		}
+
+		// Show toasts for newly unauthenticated tools
+		for (const tool of unauthTools) {
+			const toastId = `oauth-auth-${tool.id}`;
+			if (!prevUnauthToolIds.includes(toastId)) {
+				const serverId = tool.id.split(':').at(-1) ?? tool.id;
+				const authUrl = getOAuthClientAuthorizationUrl(serverId, 'mcp');
+				toast.warning(
+					$i18n.t('{{name}} requires authorization.', { name: tool.name }),
+					{
+						id: toastId,
+						duration: Infinity,
+						action: {
+							label: $i18n.t('Authorize'),
+							onClick: () => {
+								window.open(
+									`${authUrl}?return_url=${encodeURIComponent('/?oauth_success=true')}`,
+									'oauth_reauth',
+									'width=600,height=700'
+								);
+								// Wait for svelte-sonner dismiss animation to finish,
+								// then allow the reactive block to re-create the toast
+								// if auth wasn't completed
+								setTimeout(() => {
+									prevUnauthToolIds = prevUnauthToolIds.filter((id) => id !== toastId);
+								}, 500);
+							}
+						}
+					}
+				);
+			}
+		}
+
+		prevUnauthToolIds = currentIds;
+	}
 
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
@@ -554,6 +605,29 @@
 					eventConfirmationInputPlaceholder = data.placeholder;
 					eventConfirmationInputValue = data?.value ?? '';
 					eventConfirmationInputType = data?.type ?? '';
+				} else if (type === 'oauth_reauth_toast') {
+					const serverId = data.server_id;
+					const serverName = data.server_name;
+					const toastId = `oauth-auth-mcp_tool:${serverId}`;
+					const authUrl = getOAuthClientAuthorizationUrl(serverId, 'mcp');
+
+					toast.warning(
+						$i18n.t('{{name}} requires authorization.', { name: serverName }),
+						{
+							id: toastId,
+							duration: Infinity,
+							action: {
+								label: $i18n.t('Authorize'),
+								onClick: () => {
+									window.open(
+										`${authUrl}?return_url=${encodeURIComponent('/?oauth_success=true')}`,
+										'oauth_reauth',
+										'width=600,height=700'
+									);
+								}
+							}
+						}
+					);
 				} else if (type.startsWith('terminal:')) {
 					terminalEventHandler(type, data);
 				} else {
@@ -654,10 +728,22 @@
 		} catch {}
 	};
 
+	const onOAuthStorageHandler = async (event: StorageEvent) => {
+		if (event.key !== 'oauth_result' || !event.newValue) return;
+		try {
+			const data = JSON.parse(event.newValue);
+			if (data.type === 'oauth:success') {
+				toast.success($i18n.t('Authentication successful'));
+				tools.set(await getTools(localStorage.token));
+			}
+		} catch {}
+	};
+
 	onMount(() => {
 		loading = true;
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
+		window.addEventListener('storage', onOAuthStorageHandler);
 		$socket?.on('events', chatEventHandler);
 
 		$audioQueue?.destroy();
@@ -772,6 +858,10 @@
 				showControlsSubscribe();
 				selectedFolderSubscribe();
 				window.removeEventListener('message', onMessageHandler);
+				window.removeEventListener('storage', onOAuthStorageHandler);
+				for (const id of prevUnauthToolIds) {
+					toast.dismiss(id);
+				}
 				$socket?.off('events', chatEventHandler);
 				audioQueueInstance?.destroy();
 				audioQueue.set(null);
