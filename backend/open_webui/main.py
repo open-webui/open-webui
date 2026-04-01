@@ -1847,13 +1847,28 @@ async def chat_completion(
                 except Exception:
                     pass
         finally:
+            # Clean up MCP clients.  Shield the entire block from
+            # CancelledError so disconnect() can finish even when the
+            # task is being stopped.  Each client is isolated so one
+            # failure doesn't skip the rest.
             try:
                 if mcp_clients := metadata.get('mcp_clients'):
-                    for client in reversed(mcp_clients.values()):
-                        await client.disconnect()
+
+                    async def _cleanup_mcp():
+                        for client in reversed(list(mcp_clients.values())):
+                            try:
+                                await client.disconnect()
+                            except Exception as e:
+                                log.debug(f'Error disconnecting MCP client: {e}')
+
+                    await asyncio.wait_for(
+                        asyncio.shield(_cleanup_mcp()),
+                        timeout=10.0,
+                    )
+            except asyncio.TimeoutError:
+                log.warning('MCP client cleanup timed out after 10 s')
             except Exception as e:
-                log.debug(f'Error cleaning up: {e}')
-                pass
+                log.debug(f'Error cleaning up MCP clients: {e}')
             # Emit chat:active=false when task completes
             try:
                 if metadata.get('chat_id'):

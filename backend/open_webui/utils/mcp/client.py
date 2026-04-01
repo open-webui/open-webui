@@ -1,6 +1,9 @@
 import asyncio
+import logging
 from typing import Optional
 from contextlib import AsyncExitStack
+
+log = logging.getLogger(__name__)
 
 import anyio
 
@@ -136,8 +139,39 @@ class MCPClient:
         return result_dict
 
     async def disconnect(self):
-        # Clean up and close the session
-        await self.exit_stack.aclose()
+        """Clean up and close the session.
+
+        This method is idempotent — calling it multiple times or on a
+        client that was never connected is safe.  It shields the close
+        operation from CancelledError and adds a timeout so a hung MCP
+        server cannot block the event loop indefinitely.
+        """
+        exit_stack = self.exit_stack
+        if exit_stack is None:
+            return
+
+        # Prevent double-close from concurrent callers
+        self.exit_stack = None
+        self.session = None
+
+        try:
+            await asyncio.wait_for(
+                asyncio.shield(exit_stack.aclose()),
+                timeout=5.0,
+            )
+        except asyncio.TimeoutError:
+            log.warning('MCPClient.disconnect() timed out after 5 s')
+        except RuntimeError as exc:
+            # The MCP SDK's streamable_http transport uses anyio task
+            # groups and async generators internally.  When we close
+            # a session that was interrupted mid-flight these can
+            # raise RuntimeError ("aclose(): asynchronous generator is
+            # already running" or "Attempted to exit cancel scope in a
+            # different task").  Swallowing the error here prevents the
+            # orphaned coroutines from spinning at 100 % CPU.
+            log.debug('MCPClient.disconnect() suppressed RuntimeError: %s', exc)
+        except Exception as exc:
+            log.debug('MCPClient.disconnect() error: %s', exc)
 
     async def __aenter__(self):
         await self.exit_stack.__aenter__()
