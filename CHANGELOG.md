@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔬 **Chinese text processing guard.** Streaming responses without Chinese characters now skip unnecessary Chinese-format processing checks, reducing per-update overhead and keeping output smoother during rapid generation. [#23162](https://github.com/open-webui/open-webui/pull/23162)
 - 🧩 **HTML entity decode efficiency.** Streaming text decoding now avoids repeated document parsing for HTML entity handling, reducing memory churn and improving responsiveness in token-heavy chat output. [#23165](https://github.com/open-webui/open-webui/pull/23165)
 - 📂 **Faster chat list queries.** Chat and folder lists now load more efficiently by fetching only the fields needed for sidebar views, improving responsiveness when browsing large conversation histories. [Commit](https://github.com/open-webui/open-webui/commit/0e5696de74cc0ba55b24cfc3d02efa83f08d7d3f)
+- 📈 **Sidebar memory optimization.** Sidebar chat items now use shared drag-preview resources and safer listener cleanup, reducing memory growth and keeping large chat lists more responsive during long sessions. [#23209](https://github.com/open-webui/open-webui/pull/23209)
 - 🌐 **Translation updates.** Translations for Russian and German were enhanced and expanded.
 
 ### Fixed
@@ -50,6 +51,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🖱️ **Rapid sidebar action protection.** Archive and delete actions in the chat sidebar now ignore repeated clicks while a request is in progress, preventing duplicate requests and stacked error toasts. [#23172](https://github.com/open-webui/open-webui/issues/23172)
 - 🧠 **Active message completion accuracy.** Switching chats or refreshing during generation no longer marks the currently streaming assistant message as finished too early, so thinking blocks and action buttons appear at the correct time. [#23171](https://github.com/open-webui/open-webui/issues/23171)
 - 📊 **Usage statistic preservation.** Follow-up generation no longer overwrites existing token usage fields, so stored usage statistics remain accurate for the main response. [#23152](https://github.com/open-webui/open-webui/issues/23152)
+- 🖼️ **Open Terminal file response handling.** Open Terminal tool responses now preserve binary content types in user-side connections, so image and non-text file reads work consistently instead of being forced into plain text. [#23125](https://github.com/open-webui/open-webui/issues/23125)
+- 🚪 **OAuth redirect URI reliability.** OAuth login redirects now use provider client metadata more consistently, preventing incorrect HTTP callback URLs behind reverse proxies and improving sign-in reliability for providers such as Feishu. [#23203](https://github.com/open-webui/open-webui/pull/23203), [#23128](https://github.com/open-webui/open-webui/issues/23128)
+- ✂️ **Citation spacing cleanup.** When citations are disabled for a model, citation markers and their leftover spacing are now removed together so punctuation and copied text remain cleanly formatted. [#23141](https://github.com/open-webui/open-webui/issues/23141)
+- 📲 **Mobile model selector positioning.** The mobile model selector dropdown now applies a constrained viewport width and left offset, preventing overflow and making model selection easier on small screens. [#23310](https://github.com/open-webui/open-webui/pull/23310)
 
 ### Changed
 
