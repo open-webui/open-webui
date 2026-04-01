@@ -201,6 +201,11 @@
 
 			await tick();
 
+			// Mark chat read when initially loading it
+			if (chatIdProp && !$temporaryChatEnabled) {
+				updateLastReadAt(chatIdProp);
+			}
+
 			// Process any queued requests if the chat is idle
 			const lastMessage = history.currentId ? history.messages[history.currentId] : null;
 			const isIdle = !lastMessage || lastMessage.role !== 'assistant' || lastMessage.done;
@@ -401,6 +406,13 @@
 		await tick();
 
 		saveChatHandler(_chatId, history);
+	};
+
+	const updateLastReadAt = (id) => {
+		$socket?.emit('events:chat', {
+			chat_id: id,
+			data: { type: 'last_read_at' }
+		});
 	};
 
 	const terminalEventHandler = (type: string, data: any) => {
@@ -801,6 +813,9 @@
 
 		return () => {
 			try {
+				if (chatIdProp && !$temporaryChatEnabled) {
+					updateLastReadAt(chatIdProp);
+				}
 				pageSubscribe();
 				showControlsSubscribe();
 				selectedFolderSubscribe();
@@ -1314,8 +1329,8 @@
 
 				if (history.currentId) {
 					for (const message of Object.values(history.messages)) {
-						if (message && message.role === 'assistant' && message.done !== false) {
-						message.done = true;
+						if (message && message.role === 'assistant' && message.id !== history.currentId && message.done !== false) {
+							message.done = true;
 						}
 					}
 				}
@@ -1376,6 +1391,11 @@
 	};
 
 	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
+		if (!responseMessageId) {
+			console.error('chatCompleted: missing message id', { chatId: _chatId, modelId, messageCount: messages?.length ?? 0 });
+			return;
+		}
+
 		const res = await chatCompleted(localStorage.token, {
 			model: modelId,
 			messages: messages.map((m) => ({
@@ -2668,7 +2688,7 @@
 	const MAX_DRAFT_LENGTH = 5000;
 	let saveDraftTimeout: ReturnType<typeof setTimeout> | null = null;
 
-	const saveDraft = async (draft, chatId = null) => {
+	const saveDraft = async (draft: any, chatId: string | null = null) => {
 		if (saveDraftTimeout) {
 			clearTimeout(saveDraftTimeout);
 		}
@@ -2685,7 +2705,7 @@
 		}
 	};
 
-	const clearDraft = async (chatId = null) => {
+	const clearDraft = async (chatId: string | null = null) => {
 		if (saveDraftTimeout) {
 			clearTimeout(saveDraftTimeout);
 		}
@@ -2912,7 +2932,7 @@
 									{createMessagePair}
 									{onUpload}
 									messageQueue={$chatRequestQueues[$chatId] ?? []}
-							{chatTasks}
+									{chatTasks}
 									onQueueSendNow={async (id) => {
 										const queue = $chatRequestQueues[$chatId] ?? [];
 										const item = queue.find((m) => m.id === id);
@@ -2958,7 +2978,7 @@
 										}
 									}}
 									on:submit={async (e) => {
-										clearDraft();
+										clearDraft($chatId);
 										if (e.detail || files.length > 0) {
 											await tick();
 

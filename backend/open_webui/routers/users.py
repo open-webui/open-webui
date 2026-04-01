@@ -232,6 +232,7 @@ class FeaturesPermissions(BaseModel):
     image_generation: bool = True
     code_interpreter: bool = True
     memories: bool = True
+    automations: bool = False
 
 
 class SettingsPermissions(BaseModel):

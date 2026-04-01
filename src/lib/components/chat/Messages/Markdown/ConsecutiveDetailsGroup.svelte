@@ -31,7 +31,7 @@
 
 	export let messageDone = true;
 
-	let open = false;
+	let open = $settings?.expandDetails ?? false;
 
 	function parseJSONString(str: string) {
 		try {

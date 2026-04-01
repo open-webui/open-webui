@@ -42,6 +42,7 @@
 	let contentContainerElement;
 	let floatingButtonsElement;
 
+
 	let sourceIds = [];
 	$: getSourceIds(sources);
 
@@ -160,7 +161,9 @@
 <div bind:this={contentContainerElement}>
 	<Markdown
 		{id}
-		{content}
+		content={model?.info?.meta?.capabilities?.citations == false
+			? content.replace(/\s*(\[(?:\d+(?:#[^,\]\s]+)?(?:,\s*\d+(?:#[^,\]\s]+)?)*)\])+/g, '')
+			: content}
 		{model}
 		{save}
 		{preview}
