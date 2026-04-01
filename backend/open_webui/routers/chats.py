@@ -643,9 +643,10 @@ async def get_chat_list_by_folder_id(
         limit = 10
         skip = (page - 1) * limit
 
+        chats = Chats.get_chats_by_folder_id_and_user_id(folder_id, user.id, skip=skip, limit=limit, db=db)
         return [
             {'title': chat.title, 'id': chat.id, 'updated_at': chat.updated_at, 'last_read_at': chat.last_read_at}
-            for chat in Chats.get_chats_by_folder_id_and_user_id(folder_id, user.id, skip=skip, limit=limit, db=db)
+            for chat in chats
         ]
 
     except Exception as e:
