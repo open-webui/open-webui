@@ -94,6 +94,7 @@ from open_webui.routers import (
     utils,
     scim,
     providers,
+    langfuse,
 )
 
 from open_webui.routers.retrieval import (
@@ -1454,6 +1455,7 @@ app.include_router(
     evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
+app.include_router(langfuse.router, prefix="/api/v1/langfuse", tags=["langfuse"])
 
 # SCIM 2.0 API for identity management
 if ENABLE_SCIM:
