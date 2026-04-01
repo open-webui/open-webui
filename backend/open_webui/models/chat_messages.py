@@ -5,6 +5,7 @@ from typing import Any, Optional
 
 from sqlalchemy.orm import Session
 from open_webui.internal.db import Base, get_db_context
+from open_webui.utils.response import normalize_usage
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
@@ -169,6 +170,7 @@ class ChatMessageTable:
                     info = data.get('info', {})
                     usage = info.get('usage') if info else None
                 if usage:
+                    usage = normalize_usage(usage)
                     existing.usage = usage
                 existing.updated_at = now
                 db.commit()
@@ -181,6 +183,8 @@ class ChatMessageTable:
                 if not usage:
                     info = data.get('info', {})
                     usage = info.get('usage') if info else None
+                if usage:
+                    usage = normalize_usage(usage)
                 message = ChatMessage(
                     id=composite_id,
                     chat_id=chat_id,
