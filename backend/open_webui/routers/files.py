@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
 import asyncio
+from open_webui.utils.ocr_engine import OCREngine
+from open_webui.utils.deidentification_engine import DLPEngine
 
 from fastapi import (
     BackgroundTasks,
@@ -180,7 +182,7 @@ def process_uploaded_file(
                         db=db_session,
                     )
                 elif (not content_type.startswith(("image/", "video/"))) or (
-                    request.app.state.config.CONTENT_EXTRACTION_ENGINE == "external"
+                    request.app.state.config.CONTENT_EXTRACTION_ENGINE == ["external","google_ocr"]
                 ):
                     process_file(
                         request,

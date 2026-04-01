@@ -111,6 +111,11 @@ google-auth-oauthlib
 googleapis-common-protos==1.72.0
 google-cloud-storage==3.9.0
 
+google-cloud-vision
+google-cloud-dlp
+google-cloud-documentai
+google-api-core
+
 ## Databases
 pymongo
 psycopg2-binary==2.9.11

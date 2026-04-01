@@ -10,6 +10,9 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Iterator, List, Optional, Sequence, Union
+from open_webui.utils.ocr_engine import OCREngine
+from open_webui.utils.deidentification_engine import DLPEngine
+
 
 from fastapi import (
     Depends,
@@ -1776,6 +1779,18 @@ def process_file(
                         file.filename, file.meta.get("content_type"), file_path
                     )
 
+                    """dlp = DLPEngine()
+                    docs = [
+                    Document(
+                    page_content=dlp.deidentify(doc.page_content),
+                    metadata=doc.metadata,
+                                          )
+                    for doc in docs
+                    ]"""
+                    dlp = DLPEngine()
+                    for doc in docs:
+                           doc.page_content = dlp.deidentify(doc.page_content)
+                           
                     docs = [
                         Document(
                             page_content=doc.page_content,
