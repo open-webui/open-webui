@@ -24,7 +24,7 @@
 		instance = localInstance;
 		return () => {
 			localInstance.dispose();
-		}
+		};
 	});
 </script>
 

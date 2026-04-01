@@ -579,9 +579,9 @@ class WebConfig(BaseModel):
     WEB_SEARCH_TRUST_ENV: Optional[bool] = None
     WEB_SEARCH_RESULT_COUNT: Optional[int] = None
     WEB_SEARCH_CONCURRENT_REQUESTS: Optional[int] = None
+    WEB_SEARCH_DOMAIN_FILTER_LIST: Optional[List[str]] = []
     WEB_FETCH_MAX_CONTENT_LENGTH: Optional[int] = None
     WEB_LOADER_CONCURRENT_REQUESTS: Optional[int] = None
-    WEB_SEARCH_DOMAIN_FILTER_LIST: Optional[List[str]] = []
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
     BYPASS_WEB_SEARCH_WEB_LOADER: Optional[bool] = None
     OLLAMA_CLOUD_WEB_SEARCH_API_KEY: Optional[str] = None
@@ -1174,7 +1174,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'WEB_SEARCH_TRUST_ENV': request.app.state.config.WEB_SEARCH_TRUST_ENV,
             'WEB_SEARCH_RESULT_COUNT': request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             'WEB_SEARCH_CONCURRENT_REQUESTS': request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
-            'FETCH_URL_MAX_CONTENT_LENGTH': request.app.state.config.FETCH_URL_MAX_CONTENT_LENGTH,
+            'WEB_FETCH_MAX_CONTENT_LENGTH': request.app.state.config.WEB_FETCH_MAX_CONTENT_LENGTH,
             'WEB_LOADER_CONCURRENT_REQUESTS': request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
             'WEB_SEARCH_DOMAIN_FILTER_LIST': request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             'BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL': request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
@@ -2580,6 +2580,7 @@ async def process_files_batch(
     request: Request,
     form_data: BatchProcessFilesForm,
     user=Depends(get_verified_user),
+    db=None,
 ) -> BatchProcessFilesResponse:
     """
     Process a batch of files and save them to the vector database.
@@ -2602,7 +2603,7 @@ async def process_files_batch(
     for file in form_data.files:
         try:
             # Ownership check: verify the requesting user owns the file or is an admin
-            db_file = Files.get_file_by_id(file.id)
+            db_file = Files.get_file_by_id(file.id, db=db)
             if not db_file:
                 file_errors.append(
                     BatchProcessFilesResult(
@@ -2664,7 +2665,7 @@ async def process_files_batch(
 
             # Update all files with collection name
             for file_update, file_result in zip(file_updates, file_results):
-                Files.update_file_by_id(id=file_result.file_id, form_data=file_update)
+                Files.update_file_by_id(id=file_result.file_id, form_data=file_update, db=db)
                 file_result.status = 'completed'
 
         except Exception as e:

@@ -2370,11 +2370,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
             else:
                 # Native FC: tool docstring can't be dynamic, so inject
-                # filesystem context into messages for pyodide engine
+                # filesystem context into the system message for pyodide
+                # engine.  Appending to the system prompt (instead of the
+                # user message) keeps it in the stable cached prefix so
+                # providers with prefix caching don't re-bill the full
+                # conversation on every turn.
                 if engine != 'jupyter':
-                    form_data['messages'] = add_or_update_user_message(
+                    form_data['messages'] = add_or_update_system_message(
                         CODE_INTERPRETER_PYODIDE_PROMPT,
                         form_data['messages'],
+                        append=True,
                     )
 
     tool_ids = form_data.pop('tool_ids', None)
@@ -2507,7 +2512,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             oauth_token = extra_params.get('__oauth_token__', None)
                             if oauth_token:
                                 headers['Authorization'] = f'Bearer {oauth_token.get("access_token", "")}'
-                        elif auth_type == 'oauth_2.1':
+                        elif auth_type in ('oauth_2.1', 'oauth_2.1_static'):
                             try:
                                 splits = server_id.split(':')
                                 server_id = splits[-1] if len(splits) > 1 else server_id
@@ -2750,16 +2755,18 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 def get_event_emitter_and_caller(metadata):
     event_emitter = None
     event_caller = None
-    if (
-        'session_id' in metadata
-        and metadata['session_id']
-        and 'chat_id' in metadata
-        and metadata['chat_id']
-        and 'message_id' in metadata
-        and metadata['message_id']
-    ):
+
+    # event_emitter only needs user_id + chat_id + message_id.
+    # It broadcasts to user:{user_id} room AND persists to DB,
+    # so it works for backend-initiated calls (automations, API).
+    if metadata.get('chat_id') and metadata.get('message_id'):
         event_emitter = get_event_emitter(metadata)
+
+    # event_caller needs session_id — it calls back to a specific
+    # websocket session (used by direct tools, pyodide code interpreter).
+    if metadata.get('session_id') and metadata.get('chat_id') and metadata.get('message_id'):
         event_caller = get_event_call(metadata)
+
     return event_emitter, event_caller
 
 
@@ -3206,7 +3213,9 @@ async def streaming_chat_response_handler(response, ctx):
     ]
 
     # Standard streaming response handler
-    if event_emitter and event_caller:
+    # event_caller is optional — only needed for direct (client-side) tools
+    # and pyodide code interpreter. Server-side tools work without it.
+    if event_emitter:
         task_id = str(uuid4())  # Create a unique task ID.
         model_id = form_data.get('model', '')
 
@@ -3634,10 +3643,10 @@ async def streaming_chat_response_handler(response, ctx):
                                         if error:
                                             try:
                                                 Chats.upsert_message_to_chat_by_id_and_message_id(
-                                                    metadata["chat_id"],
-                                                    metadata["message_id"],
+                                                    metadata['chat_id'],
+                                                    metadata['message_id'],
                                                     {
-                                                        "error": {"content": error},
+                                                        'error': {'content': error},
                                                     },
                                                 )
                                             except Exception:
@@ -4617,6 +4626,7 @@ async def streaming_chat_response_handler(response, ctx):
                     'content': serialize_output(output),
                     'output': output,
                     'title': title,
+                    **({'usage': usage} if usage else {}),
                 }
 
                 if not ENABLE_REALTIME_CHAT_SAVE:

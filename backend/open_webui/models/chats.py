@@ -57,6 +57,8 @@ class Chat(Base):
     tasks = Column(JSON, nullable=True)
     summary = Column(Text, nullable=True)
 
+    last_read_at = Column(BigInteger, nullable=True)
+
     __table_args__ = (
         # Performance indexes for common queries
         # WHERE folder_id = ...
@@ -92,6 +94,8 @@ class ChatModel(BaseModel):
 
     tasks: Optional[list] = None
     summary: Optional[str] = None
+
+    last_read_at: Optional[int] = None
 
 
 class ChatFile(Base):
@@ -176,6 +180,7 @@ class ChatTitleIdResponse(BaseModel):
     title: str
     updated_at: int
     created_at: int
+    last_read_at: Optional[int] = None
 
 
 class SharedChatResponse(BaseModel):
@@ -397,15 +402,33 @@ class ChatTable:
         except Exception:
             return None
 
+    def update_chat_last_read_at_by_id(self, id: str, user_id: str, db: Optional[Session] = None) -> bool:
+        try:
+            with get_db_context(db) as db:
+                chat = db.get(Chat, id)
+                if chat and chat.user_id == user_id:
+                    chat.last_read_at = int(time.time())
+                    db.commit()
+                    return True
+                return False
+        except Exception:
+            return False
+
     def update_chat_title_by_id(self, id: str, title: str) -> Optional[ChatModel]:
-        chat = self.get_chat_by_id(id)
-        if chat is None:
+        try:
+            with get_db_context() as db:
+                chat_item = db.get(Chat, id)
+                if chat_item is None:
+                    return None
+                clean_title = self._clean_null_bytes(title)
+                chat_item.title = clean_title
+                chat_item.chat = {**(chat_item.chat or {}), 'title': clean_title}
+                chat_item.updated_at = int(time.time())
+                db.commit()
+                db.refresh(chat_item)
+                return ChatModel.model_validate(chat_item)
+        except Exception:
             return None
-
-        chat = chat.chat
-        chat['title'] = title
-
-        return self.update_chat_by_id(id, chat)
 
     def update_chat_tags_by_id(self, id: str, tags: list[str], user) -> Optional[ChatModel]:
         with get_db_context() as db:
@@ -779,7 +802,7 @@ class ChatTable:
         skip: int = 0,
         limit: int = 50,
         db: Optional[Session] = None,
-    ) -> list[ChatModel]:
+    ) -> list[ChatTitleIdResponse]:
         with get_db_context(db) as db:
             query = db.query(Chat).filter_by(user_id=user_id)
             if not include_archived:
@@ -803,13 +826,28 @@ class ChatTable:
             else:
                 query = query.order_by(Chat.updated_at.desc(), Chat.id)
 
+            query = query.with_entities(
+                Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at
+            )
+
             if skip:
                 query = query.offset(skip)
             if limit:
                 query = query.limit(limit)
 
             all_chats = query.all()
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+            return [
+                ChatTitleIdResponse.model_validate(
+                    {
+                        'id': chat[0],
+                        'title': chat[1],
+                        'updated_at': chat[2],
+                        'created_at': chat[3],
+                        'last_read_at': chat[4],
+                    }
+                )
+                for chat in all_chats
+            ]
 
     def get_chat_title_id_list_by_user_id(
         self,
@@ -834,7 +872,7 @@ class ChatTable:
                 query = query.filter_by(archived=False)
 
             query = query.order_by(Chat.updated_at.desc(), Chat.id).with_entities(
-                Chat.id, Chat.title, Chat.updated_at, Chat.created_at
+                Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at
             )
 
             if skip:
@@ -852,6 +890,7 @@ class ChatTable:
                         'title': chat[1],
                         'updated_at': chat[2],
                         'created_at': chat[3],
+                        'last_read_at': chat[4],
                     }
                 )
                 for chat in all_chats
@@ -995,7 +1034,7 @@ class ChatTable:
                 db.query(Chat)
                 .filter_by(user_id=user_id, pinned=True, archived=False)
                 .order_by(Chat.updated_at.desc())
-                .with_entities(Chat.id, Chat.title, Chat.updated_at, Chat.created_at)
+                .with_entities(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at)
             )
             return [
                 ChatTitleIdResponse.model_validate(
@@ -1004,6 +1043,7 @@ class ChatTable:
                         'title': chat[1],
                         'updated_at': chat[2],
                         'created_at': chat[3],
+                        'last_read_at': chat[4],
                     }
                 )
                 for chat in all_chats
@@ -1214,7 +1254,7 @@ class ChatTable:
         skip: int = 0,
         limit: int = 60,
         db: Optional[Session] = None,
-    ) -> list[ChatModel]:
+    ) -> list[ChatTitleIdResponse]:
         with get_db_context(db) as db:
             query = db.query(Chat).filter_by(folder_id=folder_id, user_id=user_id)
             query = query.filter(or_(Chat.pinned == False, Chat.pinned == None))
@@ -1222,13 +1262,28 @@ class ChatTable:
 
             query = query.order_by(Chat.updated_at.desc(), Chat.id)
 
+            query = query.with_entities(
+                Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at
+            )
+
             if skip:
                 query = query.offset(skip)
             if limit:
                 query = query.limit(limit)
 
             all_chats = query.all()
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+            return [
+                ChatTitleIdResponse.model_validate(
+                    {
+                        'id': chat[0],
+                        'title': chat[1],
+                        'updated_at': chat[2],
+                        'created_at': chat[3],
+                        'last_read_at': chat[4],
+                    }
+                )
+                for chat in all_chats
+            ]
 
     def get_chats_by_folder_ids_and_user_id(
         self, folder_ids: list[str], user_id: str, db: Optional[Session] = None
@@ -1271,7 +1326,7 @@ class ChatTable:
         skip: int = 0,
         limit: int = 50,
         db: Optional[Session] = None,
-    ) -> list[ChatModel]:
+    ) -> list[ChatTitleIdResponse]:
         with get_db_context(db) as db:
             query = db.query(Chat).filter_by(user_id=user_id)
             tag_id = tag_name.replace(' ', '_').lower()
@@ -1290,9 +1345,30 @@ class ChatTable:
             else:
                 raise NotImplementedError(f'Unsupported dialect: {db.bind.dialect.name}')
 
+            query = query.order_by(Chat.updated_at.desc(), Chat.id)
+
+            query = query.with_entities(
+                Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at
+            )
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
+
             all_chats = query.all()
-            log.debug(f'all_chats: {all_chats}')
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+            return [
+                ChatTitleIdResponse.model_validate(
+                    {
+                        'id': chat[0],
+                        'title': chat[1],
+                        'updated_at': chat[2],
+                        'created_at': chat[3],
+                        'last_read_at': chat[4],
+                    }
+                )
+                for chat in all_chats
+            ]
 
     def add_chat_tag_by_id_and_user_id_and_tag_name(
         self, id: str, user_id: str, tag_name: str, db: Optional[Session] = None

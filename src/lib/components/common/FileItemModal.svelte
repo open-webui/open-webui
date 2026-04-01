@@ -28,7 +28,6 @@
 	import PanzoomContainer from './PanzoomContainer.svelte';
 	import Reset from '../icons/Reset.svelte';
 
-
 	export let item;
 	export let show = false;
 	export let edit = false;

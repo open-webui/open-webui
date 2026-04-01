@@ -393,7 +393,9 @@
 		});
 
 		if (res) {
-			toast.success($i18n.t('Model {{modelName}} deleted successfully', { modelName: model.name ?? model.id }));
+			toast.success(
+				$i18n.t('Model {{modelName}} deleted successfully', { modelName: model.name ?? model.id })
+			);
 
 			// If the deleted model was selected, clear the selection
 			if (value === model.id) {
@@ -427,7 +429,9 @@
 <ConfirmDialog
 	bind:show={showDeleteConfirm}
 	title={$i18n.t('Delete Model')}
-	message={$i18n.t('Are you sure you want to delete **{{modelName}}**?', { modelName: deleteModelTarget?.name ?? deleteModelTarget?.id ?? '' })}
+	message={$i18n.t('Are you sure you want to delete **{{modelName}}**?', {
+		modelName: deleteModelTarget?.name ?? deleteModelTarget?.id ?? ''
+	})}
 	on:confirm={() => {
 		confirmDeleteModel();
 	}}
@@ -493,7 +497,7 @@
 		>
 			{#snippet child({ wrapperProps, props, open })}
 				{#if open}
-					<div {...wrapperProps}>
+					<div {...wrapperProps} style="{wrapperProps.style ?? ''}{$mobile ? '; left: 0.5rem !important; width: calc(100vw - 1rem) !important;' : ''}">
 						<div
 							{...props}
 							class="{props.class} z-40 {$mobile

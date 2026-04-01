@@ -2339,9 +2339,9 @@ VALID_TASK_STATUSES = {'pending', 'in_progress', 'completed', 'cancelled'}
 
 
 class TaskItem(BaseModel):
-    id: Optional[str] = Field(None, description="Unique identifier for the task. Auto-generated if omitted.")
-    content: Optional[str] = Field(None, description="Task description. Aliases: title, name, description.")
-    status: Literal['pending', 'in_progress', 'completed', 'cancelled'] = Field('pending', description="Task status.")
+    id: Optional[str] = Field(None, description='Unique identifier for the task. Auto-generated if omitted.')
+    content: Optional[str] = Field(None, description='Task description. Aliases: title, name, description.')
+    status: Literal['pending', 'in_progress', 'completed', 'cancelled'] = Field('pending', description='Task status.')
 
 
 async def tasks(

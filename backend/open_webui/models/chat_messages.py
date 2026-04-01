@@ -169,7 +169,10 @@ class ChatMessageTable:
                     info = data.get('info', {})
                     usage = info.get('usage') if info else None
                 if usage:
-                    existing.usage = usage
+                    # Deep-merge: preserve existing keys not present in new data
+                    # This prevents background tasks (follow-ups, title, tags)
+                    # from accidentally clearing the primary response's token counts
+                    existing.usage = {**(existing.usage or {}), **usage}
                 existing.updated_at = now
                 db.commit()
                 db.refresh(existing)

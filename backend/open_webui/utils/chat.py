@@ -316,6 +316,10 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
         models = request.app.state.MODELS
 
     data = form_data
+
+    if not data.get('id'):
+        raise Exception('Missing message id')
+
     model_id = data['model']
     if model_id not in models:
         raise Exception('Model not found')
@@ -326,6 +330,9 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
         data = await process_pipeline_outlet_filter(request, data, user, models)
     except Exception as e:
         raise Exception(f'Error: {e}')
+
+    if not data.get('id'):
+        raise Exception('Missing message id')
 
     metadata = {
         'chat_id': data['chat_id'],
