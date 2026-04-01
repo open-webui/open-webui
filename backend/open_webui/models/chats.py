@@ -57,6 +57,8 @@ class Chat(Base):
     tasks = Column(JSON, nullable=True)
     summary = Column(Text, nullable=True)
 
+    last_read_at = Column(BigInteger, nullable=True)
+
     __table_args__ = (
         # Performance indexes for common queries
         # WHERE folder_id = ...
@@ -92,6 +94,8 @@ class ChatModel(BaseModel):
 
     tasks: Optional[list] = None
     summary: Optional[str] = None
+
+    last_read_at: Optional[int] = None
 
 
 class ChatFile(Base):
@@ -176,6 +180,7 @@ class ChatTitleIdResponse(BaseModel):
     title: str
     updated_at: int
     created_at: int
+    last_read_at: Optional[int] = None
 
 
 class SharedChatResponse(BaseModel):
@@ -396,6 +401,20 @@ class ChatTable:
                 return ChatModel.model_validate(chat_item)
         except Exception:
             return None
+
+    def update_chat_last_read_at_by_id(
+        self, id: str, user_id: str, db: Optional[Session] = None
+    ) -> bool:
+        try:
+            with get_db_context(db) as db:
+                chat = db.get(Chat, id)
+                if chat and chat.user_id == user_id:
+                    chat.last_read_at = int(time.time())
+                    db.commit()
+                    return True
+                return False
+        except Exception:
+            return False
 
     def update_chat_title_by_id(self, id: str, title: str) -> Optional[ChatModel]:
         chat = self.get_chat_by_id(id)
@@ -834,7 +853,7 @@ class ChatTable:
                 query = query.filter_by(archived=False)
 
             query = query.order_by(Chat.updated_at.desc(), Chat.id).with_entities(
-                Chat.id, Chat.title, Chat.updated_at, Chat.created_at
+                Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at
             )
 
             if skip:
@@ -852,6 +871,7 @@ class ChatTable:
                         'title': chat[1],
                         'updated_at': chat[2],
                         'created_at': chat[3],
+                        'last_read_at': chat[4],
                     }
                 )
                 for chat in all_chats
@@ -995,7 +1015,7 @@ class ChatTable:
                 db.query(Chat)
                 .filter_by(user_id=user_id, pinned=True, archived=False)
                 .order_by(Chat.updated_at.desc())
-                .with_entities(Chat.id, Chat.title, Chat.updated_at, Chat.created_at)
+                .with_entities(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at)
             )
             return [
                 ChatTitleIdResponse.model_validate(
@@ -1004,6 +1024,7 @@ class ChatTable:
                         'title': chat[1],
                         'updated_at': chat[2],
                         'created_at': chat[3],
+                        'last_read_at': chat[4],
                     }
                 )
                 for chat in all_chats

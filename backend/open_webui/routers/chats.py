@@ -644,7 +644,7 @@ async def get_chat_list_by_folder_id(
         skip = (page - 1) * limit
 
         return [
-            {'title': chat.title, 'id': chat.id, 'updated_at': chat.updated_at}
+            {'title': chat.title, 'id': chat.id, 'updated_at': chat.updated_at, 'last_read_at': chat.last_read_at}
             for chat in Chats.get_chats_by_folder_id_and_user_id(folder_id, user.id, skip=skip, limit=limit, db=db)
         ]
 

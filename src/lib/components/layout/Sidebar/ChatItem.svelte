@@ -50,6 +50,8 @@
 	export let id;
 	export let title;
 	export let createdAt: number | null = null;
+	export let updatedAt: number | null = null;
+	export let lastReadAt: number | null = null;
 
 	export let selected = false;
 	export let shiftKey = false;
@@ -78,6 +80,11 @@
 	let chat = null;
 
 	let mouseOver = false;
+
+	$: unread =
+		id !== $chatId &&
+		!$activeChatIds.has(id) &&
+		(lastReadAt === null || (updatedAt !== null && updatedAt > lastReadAt));
 
 	const loadChat = async () => {
 		if (!chat) {
@@ -435,6 +442,10 @@
 				if ($mobile) {
 					showSidebar.set(false);
 				}
+
+				// Optimistically mark as read in UI when clicked
+				unread = false;
+				lastReadAt = Date.now() / 1000;
 			}}
 			on:dblclick={async (e) => {
 				e.preventDefault();
@@ -460,7 +471,17 @@
 			{/if}
 
 			<div class="flex self-center flex-1 w-full min-w-0">
-				<div dir="auto" class="text-left self-center overflow-hidden w-full h-[20px] truncate">
+				{#if unread}
+					<div class="shrink-0 self-center pr-2.5 flex transition-opacity duration-300">
+						<div class="size-1.5 bg-sky-500 rounded-full" />
+					</div>
+				{/if}
+				<div
+					dir="auto"
+					class="text-left self-center overflow-hidden w-full h-[20px] truncate {unread
+						? 'font-medium text-gray-900 dark:text-gray-100'
+						: ''}"
+				>
 					{title}
 				</div>
 			</div>

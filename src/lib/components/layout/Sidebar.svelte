@@ -1290,6 +1290,8 @@
 												id={chat.id}
 												title={chat.title}
 												createdAt={chat.created_at}
+												updatedAt={chat.updated_at}
+												lastReadAt={chat.last_read_at}
 												{shiftKey}
 												selected={selectedChatId === chat.id}
 												on:select={() => {
@@ -1351,6 +1353,8 @@
 										id={chat.id}
 										title={chat.title}
 										createdAt={chat.created_at}
+										updatedAt={chat.updated_at}
+										lastReadAt={chat.last_read_at}
 										{shiftKey}
 										selected={selectedChatId === chat.id}
 										on:select={() => {
