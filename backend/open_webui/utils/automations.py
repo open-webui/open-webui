@@ -300,7 +300,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
                     "title": automation.name,
                     "models": [model_id],
                     "history": {
-                        "currentId": user_msg_id,
+                        "currentId": assistant_msg_id,
                         "messages": {
                             user_msg_id: {
                                 "id": user_msg_id,
@@ -316,6 +316,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
                                 "parentId": user_msg_id,
                                 "role": "assistant",
                                 "content": "",
+                                "done": False,
                                 "model": model_id,
                                 "childrenIds": [],
                                 "timestamp": int(time.time()),
