@@ -12,7 +12,7 @@
 		terminalServers
 	} from '$lib/stores';
 
-	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
+	import { initiateOAuthRedirect } from '$lib/apis/configs';
 	import { getTools } from '$lib/apis/tools';
 
 	import Knobs from '$lib/components/icons/Knobs.svelte';
@@ -336,14 +336,12 @@
 								if (!(tools[toolId]?.authenticated ?? true)) {
 									e.preventDefault();
 
-									let parts = toolId.split(':');
-									let serverId = parts?.at(-1) ?? toolId;
+									const parts = toolId.split(':');
+									const serverId = parts.at(-1) ?? toolId;
+									const authType =
+										parts.length > 1 ? (parts[0] === 'server' ? parts[1] : parts[0]) : null;
 
-									// Persist the tool ID so we can re-enable it after OAuth redirect
-									sessionStorage.setItem('pendingOAuthToolId', toolId);
-
-									const authUrl = getOAuthClientAuthorizationUrl(serverId, 'mcp');
-									window.open(authUrl, '_self', 'noopener');
+									initiateOAuthRedirect({ id: toolId, serverId, authType });
 								} else {
 									tools[toolId].enabled = !tools[toolId].enabled;
 

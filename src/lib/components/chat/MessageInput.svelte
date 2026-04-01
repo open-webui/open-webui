@@ -60,7 +60,7 @@
 	import { getTools } from '$lib/apis/tools';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
-	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
+	import { initiateOAuthRedirect } from '$lib/apis/configs';
 
 	import { createNoteHandler } from '../notes/utils';
 	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
@@ -1842,13 +1842,7 @@
 											<Tooltip content={$i18n.t('Click to connect')} placement="top">
 												<button
 													on:click|preventDefault={() => {
-														sessionStorage.setItem('oauthAutoTrigger', 'true');
-														sessionStorage.setItem('pendingOAuthToolId', pendingTool.id);
-														const authUrl = getOAuthClientAuthorizationUrl(
-															pendingTool.serverId,
-															pendingTool.authType ?? 'mcp'
-														);
-														window.open(authUrl, '_self', 'noopener');
+														initiateOAuthRedirect(pendingTool);
 													}}
 													type="button"
 													class="group px-2 py-[5px] flex gap-1.5 items-center text-xs rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden

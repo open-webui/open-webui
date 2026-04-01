@@ -420,6 +420,13 @@ export const getOAuthClientAuthorizationUrl = (clientId: string, type: null | st
 	return `${WEBUI_BASE_URL}/oauth/clients/${oauthClientId}/authorize`;
 };
 
+export const initiateOAuthRedirect = (tool: { id: string; serverId: string; authType?: string | null }) => {
+	sessionStorage.setItem('pendingOAuthToolId', tool.id);
+	sessionStorage.setItem('oauthLastAttemptedToolId', tool.id);
+	const authUrl = getOAuthClientAuthorizationUrl(tool.serverId, tool.authType ?? 'mcp');
+	window.open(authUrl, '_self', 'noopener');
+};
+
 export const getCodeExecutionConfig = async (token: string) => {
 	let error = null;
 

@@ -106,7 +106,7 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
 	import Image from '../common/Image.svelte';
-	import { getBanners, getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
+	import { getBanners, initiateOAuthRedirect } from '$lib/apis/configs';
 
 	export let chatIdProp = '';
 
@@ -292,34 +292,6 @@
 		}
 	};
 
-	const triggerNextOAuthRedirect = (pendingTools: typeof pendingOAuthTools) => {
-		if (pendingTools.length === 0) {
-			sessionStorage.removeItem('oauthAutoTrigger');
-			sessionStorage.removeItem('oauthLastAttemptedToolId');
-			return;
-		}
-
-		const nextTool = pendingTools[0];
-		const lastAttempted = sessionStorage.getItem('oauthLastAttemptedToolId');
-
-		// If same tool was already attempted, user likely cancelled — stop auto-flow
-		if (lastAttempted === nextTool.id) {
-			sessionStorage.removeItem('oauthAutoTrigger');
-			sessionStorage.removeItem('oauthLastAttemptedToolId');
-			return;
-		}
-
-		sessionStorage.setItem('oauthAutoTrigger', 'true');
-		sessionStorage.setItem('oauthLastAttemptedToolId', nextTool.id);
-		sessionStorage.setItem('pendingOAuthToolId', nextTool.id);
-
-		const authUrl = getOAuthClientAuthorizationUrl(
-			nextTool.serverId,
-			nextTool.authType ?? 'mcp'
-		);
-		window.open(authUrl, '_self', 'noopener');
-	};
-
 	const setDefaults = async () => {
 		if (!$tools) {
 			tools.set(await getTools(localStorage.token));
@@ -359,16 +331,8 @@
 				selectedToolIds = authed;
 				pendingOAuthTools = unauthed;
 
-				// Auto-trigger OAuth flow for model-default tools on new chats
-				if (unauthed.length > 0 && !chatIdProp) {
-					await tick();
-					triggerNextOAuthRedirect(unauthed);
-					return;
-				}
-
-				// Clean up auto-trigger flag when all tools are authenticated
+				// Clean up chaining flag when all tools are authenticated
 				if (unauthed.length === 0) {
-					sessionStorage.removeItem('oauthAutoTrigger');
 					sessionStorage.removeItem('oauthLastAttemptedToolId');
 				}
 			} else if ($settings?.tools) {
@@ -408,6 +372,21 @@
 					($user?.role === 'admin' || $user?.permissions?.features?.code_interpreter)
 				) {
 					codeInterpreterEnabled = model.info.meta.defaultFeatureIds.includes('code_interpreter');
+				}
+			}
+
+			// Continue OAuth chaining only if user already started a flow
+			if (pendingOAuthTools.length > 0 && !chatIdProp) {
+				const lastAttempted = sessionStorage.getItem('oauthLastAttemptedToolId');
+				if (lastAttempted) {
+					const nextTool = pendingOAuthTools[0];
+					// Same tool still pending means user cancelled — stop chaining
+					if (lastAttempted === nextTool.id) {
+						sessionStorage.removeItem('oauthLastAttemptedToolId');
+					} else {
+						await tick();
+						initiateOAuthRedirect(nextTool);
+					}
 				}
 			}
 		}
