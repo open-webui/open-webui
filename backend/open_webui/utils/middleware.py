@@ -2750,16 +2750,22 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 def get_event_emitter_and_caller(metadata):
     event_emitter = None
     event_caller = None
-    if (
-        'session_id' in metadata
-        and metadata['session_id']
-        and 'chat_id' in metadata
-        and metadata['chat_id']
-        and 'message_id' in metadata
-        and metadata['message_id']
-    ):
+
+    # event_emitter only needs user_id + chat_id + message_id.
+    # It broadcasts to user:{user_id} room AND persists to DB,
+    # so it works for backend-initiated calls (automations, API).
+    if metadata.get('chat_id') and metadata.get('message_id'):
         event_emitter = get_event_emitter(metadata)
+
+    # event_caller needs session_id — it calls back to a specific
+    # websocket session (used by direct tools, pyodide code interpreter).
+    if (
+        metadata.get('session_id')
+        and metadata.get('chat_id')
+        and metadata.get('message_id')
+    ):
         event_caller = get_event_call(metadata)
+
     return event_emitter, event_caller
 
 
@@ -3206,7 +3212,9 @@ async def streaming_chat_response_handler(response, ctx):
     ]
 
     # Standard streaming response handler
-    if event_emitter and event_caller:
+    # event_caller is optional — only needed for direct (client-side) tools
+    # and pyodide code interpreter. Server-side tools work without it.
+    if event_emitter:
         task_id = str(uuid4())  # Create a unique task ID.
         model_id = form_data.get('model', '')
 

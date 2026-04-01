@@ -97,6 +97,7 @@ from open_webui.routers import (
     utils,
     scim,
     terminals,
+    automations,
 )
 
 from open_webui.routers.retrieval import (
@@ -647,6 +648,9 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     asyncio.create_task(periodic_session_pool_cleanup())
+
+    from open_webui.utils.automations import automation_worker_loop
+    asyncio.create_task(automation_worker_loop(app))
 
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         try:
@@ -1522,6 +1526,7 @@ if ENABLE_ADMIN_ANALYTICS:
     app.include_router(analytics.router, prefix='/api/v1/analytics', tags=['analytics'])
 app.include_router(utils.router, prefix='/api/v1/utils', tags=['utils'])
 app.include_router(terminals.router, prefix='/api/v1/terminals', tags=['terminals'])
+app.include_router(automations.router, prefix='/api/v1/automations', tags=['automations'])
 
 # SCIM 2.0 API for identity management
 if ENABLE_SCIM:
