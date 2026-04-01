@@ -291,7 +291,7 @@
 		class="tabs mx-[16px] lg:mx-0 lg:px-[16px] flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-50 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"
 	>
 		<div
-			class="hidden md:flex w-full rounded-full px-2.5 gap-2 bg-gray-100/80 dark:bg-gray-850/80 backdrop-blur-2xl my-1 -mx-1 mt-1.5"
+			class="hidden lg:flex w-full rounded-full px-2.5 gap-2 bg-gray-100/80 dark:bg-gray-850/80 backdrop-blur-2xl my-1 -mx-1 mt-1.5"
 			id="settings-search"
 		>
 			<div class="self-center rounded-l-xl bg-transparent">
