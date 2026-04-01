@@ -53,6 +53,8 @@
 
 	let runs: AutomationRunModel[] = [];
 	let runsLoading = false;
+	let hasMoreRuns = true;
+	let runsPage = 0;
 	let isDirty = false;
 
 	let scheduleDropdown: ScheduleDropdown;
@@ -139,7 +141,7 @@
 		});
 		if (res) {
 			toast.success($i18n.t('Automation triggered'));
-			setTimeout(loadRuns, 2000);
+			setTimeout(() => loadRuns(false), 2000);
 		}
 		loading = false;
 	};
@@ -155,18 +157,46 @@
 		}
 	};
 
-	const loadRuns = async () => {
+	const loadRuns = async (loadMore = false) => {
+		if (runsLoading || (!hasMoreRuns && loadMore)) return;
+
 		runsLoading = true;
+		
+		if (!loadMore) {
+			runsPage = 0;
+			hasMoreRuns = true;
+		}
+
 		try {
-			runs = (await getAutomationRuns(localStorage.token, automation.id, 0, 50)) ?? [];
+			const fetchedRuns =
+				(await getAutomationRuns(localStorage.token, automation.id, runsPage * 50, 50)) ?? [];
+			if (loadMore) {
+				runs = [...runs, ...fetchedRuns];
+			} else {
+				runs = fetchedRuns;
+			}
+			
+			if (fetchedRuns.length < 50) {
+				hasMoreRuns = false;
+			}
+			runsPage++;
 		} catch {
-			runs = [];
+			if (!loadMore) runs = [];
 		}
 		runsLoading = false;
 	};
 
 	const markDirty = () => {
 		isDirty = true;
+	};
+
+	const onScroll = (e: Event) => {
+		const target = e.target as HTMLElement;
+		if (target.scrollTop + target.clientHeight >= target.scrollHeight - 50) {
+			if (!runsLoading && hasMoreRuns) {
+				loadRuns(true);
+			}
+		}
 	};
 
 	onMount(async () => {
@@ -384,8 +414,11 @@
 					<div class="text-gray-500 text-xs mb-2 shrink-0">
 						{$i18n.t('Execution Logs')}
 					</div>
-					<div class="flex-1 overflow-y-auto scrollbar-hidden w-full">
-						{#if runsLoading}
+					<div
+						class="flex-1 overflow-y-auto scrollbar-hidden w-full"
+						on:scroll={onScroll}
+					>
+						{#if runsLoading && runs.length === 0}
 							<div class="flex justify-center py-4">
 								<Spinner className="size-4" />
 							</div>
@@ -452,6 +485,12 @@
 										>
 									</button>
 								{/each}
+
+								{#if runsLoading && runs.length > 0}
+									<div class="flex justify-center py-4">
+										<Spinner className="size-4" />
+									</div>
+								{/if}
 							</div>
 						{/if}
 					</div>
