@@ -60,6 +60,7 @@ from starsessions.stores.redis import RedisStore
 from open_webui.utils import logger
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
 from open_webui.utils.logger import start_logger
+from open_webui.utils.startup_dependency_validation import validate_optional_dependencies
 from open_webui.socket.main import (
     MODELS,
     app as socket_app,
@@ -70,7 +71,6 @@ from open_webui.socket.main import (
 )
 from open_webui.routers import (
     analytics,
-    audio,
     images,
     ollama,
     openai,
@@ -98,6 +98,10 @@ from open_webui.routers import (
     scim,
     terminals,
 )
+
+AUDIO_FEATURES_DISABLED = os.environ.get('DISABLE_AUDIO_FEATURES', 'False').lower() == 'true'
+if not AUDIO_FEATURES_DISABLED:
+    from open_webui.routers import audio
 
 from open_webui.routers.retrieval import (
     get_embedding_function,
@@ -613,6 +617,7 @@ async def lifespan(app: FastAPI):
 
     app.state.instance_id = INSTANCE_ID
     start_logger()
+    validate_optional_dependencies(app.state.config)
 
     if RESET_CONFIG_ON_START:
         reset_config()
@@ -1492,7 +1497,8 @@ app.include_router(pipelines.router, prefix='/api/v1/pipelines', tags=['pipeline
 app.include_router(tasks.router, prefix='/api/v1/tasks', tags=['tasks'])
 app.include_router(images.router, prefix='/api/v1/images', tags=['images'])
 
-app.include_router(audio.router, prefix='/api/v1/audio', tags=['audio'])
+if not AUDIO_FEATURES_DISABLED:
+    app.include_router(audio.router, prefix='/api/v1/audio', tags=['audio'])
 app.include_router(retrieval.router, prefix='/api/v1/retrieval', tags=['retrieval'])
 
 app.include_router(configs.router, prefix='/api/v1/configs', tags=['configs'])

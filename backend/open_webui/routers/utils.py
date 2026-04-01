@@ -1,4 +1,3 @@
-import black
 import logging
 import markdown
 
@@ -11,13 +10,28 @@ from starlette.responses import FileResponse
 
 
 from open_webui.utils.misc import get_gravatar_url
-from open_webui.utils.pdf_generator import PDFGenerator
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.code_interpreter import execute_code_jupyter
 
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _black():
+    try:
+        import black
+    except Exception as exc:
+        raise RuntimeError("Code formatting requires optional dependency 'black'.") from exc
+    return black
+
+
+def _pdf_generator():
+    try:
+        from open_webui.utils.pdf_generator import PDFGenerator
+    except Exception as exc:
+        raise RuntimeError("PDF export requires optional dependency 'fpdf'.") from exc
+    return PDFGenerator
 
 
 @router.get('/gravatar')
@@ -31,6 +45,7 @@ class CodeForm(BaseModel):
 
 @router.post('/code/format')
 async def format_code(form_data: CodeForm, user=Depends(get_admin_user)):
+    black = _black()
     try:
         formatted_code = black.format_str(form_data.code, mode=black.Mode())
         return {'code': formatted_code}
@@ -90,6 +105,7 @@ class ChatForm(BaseModel):
 @router.post('/pdf')
 async def download_chat_as_pdf(form_data: ChatTitleMessagesForm, user=Depends(get_verified_user)):
     try:
+        PDFGenerator = _pdf_generator()
         pdf_bytes = PDFGenerator(form_data).generate_chat_pdf()
 
         return Response(

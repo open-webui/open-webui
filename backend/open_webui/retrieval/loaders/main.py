@@ -3,31 +3,52 @@ import logging
 import ftfy
 import sys
 import json
-
-from azure.identity import DefaultAzureCredential
-from langchain_community.document_loaders import (
-    AzureAIDocumentIntelligenceLoader,
-    BSHTMLLoader,
-    CSVLoader,
-    Docx2txtLoader,
-    OutlookMessageLoader,
-    PyPDFLoader,
-    TextLoader,
-    YoutubeLoader,
-)
 from langchain_core.documents import Document
-
-from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
-
-from open_webui.retrieval.loaders.mistral import MistralLoader
-from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
-from open_webui.retrieval.loaders.mineru import MinerULoader
-
 
 from open_webui.env import GLOBAL_LOG_LEVEL, REQUESTS_VERIFY
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
+
+
+def _azure_default_credential():
+    try:
+        from azure.identity import DefaultAzureCredential
+    except Exception as exc:
+        raise RuntimeError(
+            "Azure document intelligence support requires optional dependency 'azure-identity'."
+        ) from exc
+    return DefaultAzureCredential
+
+
+def _langchain_loader(name: str):
+    from langchain_community import document_loaders as loaders
+
+    return getattr(loaders, name)
+
+
+def _external_document_loader():
+    from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
+
+    return ExternalDocumentLoader
+
+
+def _mistral_loader():
+    from open_webui.retrieval.loaders.mistral import MistralLoader
+
+    return MistralLoader
+
+
+def _datalab_marker_loader():
+    from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
+
+    return DatalabMarkerLoader
+
+
+def _mineru_loader():
+    from open_webui.retrieval.loaders.mineru import MinerULoader
+
+    return MinerULoader
 
 known_source_ext = [
     'go',
@@ -254,6 +275,7 @@ class Loader:
             and self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_URL')
             and self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_API_KEY')
         ):
+            ExternalDocumentLoader = _external_document_loader()
             loader = ExternalDocumentLoader(
                 file_path=file_path,
                 url=self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_URL'),
@@ -263,6 +285,7 @@ class Loader:
             )
         elif self.engine == 'tika' and self.kwargs.get('TIKA_SERVER_URL'):
             if self._is_text_file(file_ext, file_content_type):
+                TextLoader = _langchain_loader('TextLoader')
                 loader = TextLoader(file_path, autodetect_encoding=True)
             else:
                 loader = TikaLoader(
@@ -299,6 +322,7 @@ class Loader:
             if not api_base_url or api_base_url.strip() == '':
                 api_base_url = 'https://www.datalab.to/api/v1/marker'  # https://github.com/open-webui/open-webui/pull/16867#issuecomment-3218424349
 
+            DatalabMarkerLoader = _datalab_marker_loader()
             loader = DatalabMarkerLoader(
                 file_path=file_path,
                 api_key=self.kwargs['DATALAB_MARKER_API_KEY'],
@@ -315,6 +339,7 @@ class Loader:
             )
         elif self.engine == 'docling' and self.kwargs.get('DOCLING_SERVER_URL'):
             if self._is_text_file(file_ext, file_content_type):
+                TextLoader = _langchain_loader('TextLoader')
                 loader = TextLoader(file_path, autodetect_encoding=True)
             else:
                 # Build params for DoclingLoader
@@ -346,6 +371,7 @@ class Loader:
                 ]
             )
         ):
+            AzureAIDocumentIntelligenceLoader = _langchain_loader('AzureAIDocumentIntelligenceLoader')
             if self.kwargs.get('DOCUMENT_INTELLIGENCE_KEY') != '':
                 loader = AzureAIDocumentIntelligenceLoader(
                     file_path=file_path,
@@ -354,10 +380,11 @@ class Loader:
                     api_model=self.kwargs.get('DOCUMENT_INTELLIGENCE_MODEL'),
                 )
             else:
+                default_azure_credential = _azure_default_credential()
                 loader = AzureAIDocumentIntelligenceLoader(
                     file_path=file_path,
                     api_endpoint=self.kwargs.get('DOCUMENT_INTELLIGENCE_ENDPOINT'),
-                    azure_credential=DefaultAzureCredential(),
+                    azure_credential=default_azure_credential(),
                     api_model=self.kwargs.get('DOCUMENT_INTELLIGENCE_MODEL'),
                 )
         elif self.engine == 'mineru' and file_ext in ['pdf']:  # MinerU currently only supports PDF
@@ -368,6 +395,7 @@ class Loader:
                 except ValueError:
                     mineru_timeout = 300
 
+            MinerULoader = _mineru_loader()
             loader = MinerULoader(
                 file_path=file_path,
                 api_mode=self.kwargs.get('MINERU_API_MODE', 'local'),
@@ -381,6 +409,7 @@ class Loader:
             and self.kwargs.get('MISTRAL_OCR_API_KEY') != ''
             and file_ext in ['pdf']  # Mistral OCR currently only supports PDF and images
         ):
+            MistralLoader = _mistral_loader()
             loader = MistralLoader(
                 base_url=self.kwargs.get('MISTRAL_OCR_API_BASE_URL'),
                 api_key=self.kwargs.get('MISTRAL_OCR_API_KEY'),
@@ -388,12 +417,14 @@ class Loader:
             )
         else:
             if file_ext == 'pdf':
+                PyPDFLoader = _langchain_loader('PyPDFLoader')
                 loader = PyPDFLoader(
                     file_path,
                     extract_images=self.kwargs.get('PDF_EXTRACT_IMAGES'),
                     mode=self.kwargs.get('PDF_LOADER_MODE', 'page'),
                 )
             elif file_ext == 'csv':
+                CSVLoader = _langchain_loader('CSVLoader')
                 loader = CSVLoader(file_path, autodetect_encoding=True)
             elif file_ext == 'rst':
                 try:
@@ -401,6 +432,7 @@ class Loader:
 
                     loader = UnstructuredRSTLoader(file_path, mode='elements')
                 except ImportError:
+                    TextLoader = _langchain_loader('TextLoader')
                     log.warning(
                         "The 'unstructured' package is not installed. "
                         'Falling back to plain text loading for .rst file. '
@@ -413,6 +445,7 @@ class Loader:
 
                     loader = UnstructuredXMLLoader(file_path)
                 except ImportError:
+                    TextLoader = _langchain_loader('TextLoader')
                     log.warning(
                         "The 'unstructured' package is not installed. "
                         'Falling back to plain text loading for .xml file. '
@@ -420,8 +453,10 @@ class Loader:
                     )
                     loader = TextLoader(file_path, autodetect_encoding=True)
             elif file_ext in ['htm', 'html']:
+                BSHTMLLoader = _langchain_loader('BSHTMLLoader')
                 loader = BSHTMLLoader(file_path, open_encoding='unicode_escape')
             elif file_ext == 'md':
+                TextLoader = _langchain_loader('TextLoader')
                 loader = TextLoader(file_path, autodetect_encoding=True)
             elif file_content_type == 'application/epub+zip':
                 try:
@@ -437,6 +472,7 @@ class Loader:
                 file_content_type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
                 or file_ext == 'docx'
             ):
+                Docx2txtLoader = _langchain_loader('Docx2txtLoader')
                 loader = Docx2txtLoader(file_path)
             elif file_content_type in [
                 'application/vnd.ms-excel',
@@ -469,6 +505,7 @@ class Loader:
                     )
                     loader = PptxLoader(file_path)
             elif file_ext == 'msg':
+                OutlookMessageLoader = _langchain_loader('OutlookMessageLoader')
                 loader = OutlookMessageLoader(file_path)
             elif file_ext == 'odt':
                 try:
@@ -481,8 +518,10 @@ class Loader:
                         'Install it with: pip install unstructured'
                     )
             elif self._is_text_file(file_ext, file_content_type):
+                TextLoader = _langchain_loader('TextLoader')
                 loader = TextLoader(file_path, autodetect_encoding=True)
             else:
+                TextLoader = _langchain_loader('TextLoader')
                 loader = TextLoader(file_path, autodetect_encoding=True)
 
         return loader

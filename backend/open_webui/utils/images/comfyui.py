@@ -8,12 +8,21 @@ import urllib.parse
 import urllib.request
 from typing import Optional
 
-import websocket  # NOTE: websocket-client (https://github.com/websocket-client/websocket-client)
 from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 
 default_headers = {'User-Agent': 'Mozilla/5.0'}
+
+
+def _websocket_client():
+    try:
+        import websocket  # NOTE: websocket-client
+    except Exception as exc:
+        raise RuntimeError(
+            "ComfyUI image generation requires optional dependency 'websocket-client'."
+        ) from exc
+    return websocket
 
 
 def queue_prompt(prompt, client_id, base_url, api_key):
@@ -172,6 +181,7 @@ async def comfyui_create_image(model: str, payload: ComfyUICreateImageForm, clie
                 workflow[node_id]['inputs'][node.key] = node.value
 
     try:
+        websocket = _websocket_client()
         ws = websocket.WebSocket()
         headers = {'Authorization': f'Bearer {api_key}'}
         ws.connect(f'{ws_url}/ws?clientId={client_id}', header=headers)

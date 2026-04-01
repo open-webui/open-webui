@@ -19,10 +19,8 @@ import pytz
 from pytz import UTC
 from typing import Optional, Union, List, Dict
 
-from opentelemetry import trace
-
-
 from open_webui.utils.access_control import has_permission
+from open_webui.utils.otel import trace
 from open_webui.models.users import Users
 from open_webui.models.auths import Auths
 

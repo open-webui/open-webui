@@ -10,8 +10,6 @@ import aiohttp
 from aiocache import cached
 import requests
 
-from azure.identity import DefaultAzureCredential, get_bearer_token_provider
-
 from fastapi import Depends, HTTPException, Request, APIRouter
 from fastapi.responses import (
     FileResponse,
@@ -61,6 +59,16 @@ from open_webui.utils.headers import include_user_info_headers
 from open_webui.utils.anthropic import is_anthropic_url, get_anthropic_models
 
 log = logging.getLogger(__name__)
+
+
+def _azure_identity():
+    try:
+        from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+    except Exception as exc:
+        raise RuntimeError(
+            "Azure identity support requires optional dependency 'azure-identity'."
+        ) from exc
+    return DefaultAzureCredential, get_bearer_token_provider
 
 
 ##########################################
@@ -210,6 +218,7 @@ def get_microsoft_entra_id_access_token():
     Returns the token string or None if authentication fails.
     """
     try:
+        DefaultAzureCredential, get_bearer_token_provider = _azure_identity()
         token_provider = get_bearer_token_provider(
             DefaultAzureCredential(), 'https://cognitiveservices.azure.com/.default'
         )

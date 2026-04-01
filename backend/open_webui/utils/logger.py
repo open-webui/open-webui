@@ -4,7 +4,6 @@ import sys
 from typing import TYPE_CHECKING
 
 from loguru import logger
-from opentelemetry import trace
 from open_webui.env import (
     ENABLE_AUDIT_STDOUT,
     ENABLE_AUDIT_LOGS_FILE,
@@ -18,6 +17,7 @@ from open_webui.env import (
     ENABLE_OTEL_LOGS,
     _LEVEL_MAP,
 )
+from open_webui.utils.otel import trace
 
 if TYPE_CHECKING:
     from loguru import Message, Record

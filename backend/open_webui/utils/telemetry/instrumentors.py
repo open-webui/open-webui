@@ -7,7 +7,6 @@ from aiohttp import (
     TraceRequestEndParams,
     TraceRequestExceptionParams,
 )
-from chromadb.telemetry.opentelemetry.fastapi import instrument_fastapi
 from fastapi import FastAPI
 from opentelemetry.instrumentation.httpx import (
     HTTPXClientInstrumentor,
@@ -31,6 +30,15 @@ from fastapi import status
 from open_webui.utils.telemetry.constants import SPAN_REDIS_TYPE, SpanAttributes
 
 logger = logging.getLogger(__name__)
+
+
+def _instrument_chromadb_fastapi(app: FastAPI):
+    try:
+        from chromadb.telemetry.opentelemetry.fastapi import instrument_fastapi
+    except Exception:
+        logger.info("chromadb telemetry not available; skipping chromadb FastAPI instrumentation")
+        return
+    instrument_fastapi(app=app)
 
 
 def requests_hook(span: Span, request: PreparedRequest):
@@ -176,7 +184,7 @@ class Instrumentor(BaseInstrumentor):
         return []
 
     def _instrument(self, **kwargs):
-        instrument_fastapi(app=self.app)
+        _instrument_chromadb_fastapi(app=self.app)
         SQLAlchemyInstrumentor().instrument(engine=self.db_engine)
         RedisInstrumentor().instrument(request_hook=redis_request_hook)
         RequestsInstrumentor().instrument(request_hook=requests_hook, response_hook=response_hook)

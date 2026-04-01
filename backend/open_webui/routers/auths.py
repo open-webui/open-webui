@@ -84,9 +84,6 @@ from typing import Optional, List
 
 from ssl import CERT_NONE, CERT_REQUIRED, PROTOCOL_TLS
 
-from ldap3 import Server, Connection, NONE, Tls
-from ldap3.utils.conv import escape_filter_chars
-
 router = APIRouter()
 
 log = logging.getLogger(__name__)
@@ -94,6 +91,16 @@ log = logging.getLogger(__name__)
 # Forgive us our failed attempts, as we forgive those
 # who exceed their allotted rate against this gate.
 signin_rate_limiter = RateLimiter(redis_client=get_redis_client(), limit=5 * 3, window=60 * 3)
+
+
+def _ldap3():
+    try:
+        from ldap3 import Server, Connection, NONE, Tls
+        from ldap3.utils.conv import escape_filter_chars
+    except Exception as exc:
+        raise RuntimeError("LDAP auth requires optional dependency 'ldap3'.") from exc
+
+    return Server, Connection, NONE, Tls, escape_filter_chars
 
 
 def create_session_response(request: Request, user, db, response: Response = None, set_cookie: bool = False) -> dict:
@@ -336,6 +343,7 @@ async def ldap_auth(
     LDAP_CA_CERT_FILE = request.app.state.config.LDAP_CA_CERT_FILE
     LDAP_VALIDATE_CERT = CERT_REQUIRED if request.app.state.config.LDAP_VALIDATE_CERT else CERT_NONE
     LDAP_CIPHERS = request.app.state.config.LDAP_CIPHERS if request.app.state.config.LDAP_CIPHERS else 'ALL'
+    Server, Connection, NONE, Tls, escape_filter_chars = _ldap3()
 
     try:
         tls = Tls(

@@ -4,7 +4,7 @@ import json
 import logging
 import re
 from abc import ABC, abstractmethod
-from typing import BinaryIO, Tuple, Dict
+from typing import Any, BinaryIO, Tuple, Dict
 
 import boto3
 from botocore.config import Config
@@ -27,14 +27,35 @@ from open_webui.config import (
     STORAGE_PROVIDER,
     UPLOAD_DIR,
 )
-from google.cloud import storage
-from google.cloud.exceptions import GoogleCloudError, NotFound
 from open_webui.constants import ERROR_MESSAGES
-from azure.identity import DefaultAzureCredential
-from azure.storage.blob import BlobServiceClient
-from azure.core.exceptions import ResourceNotFoundError
 
 log = logging.getLogger(__name__)
+
+
+def _missing_dependency(provider: str, package: str, exc: Exception) -> RuntimeError:
+    return RuntimeError(
+        f"{provider} storage provider requires optional dependency '{package}'. "
+        f"Install it or switch STORAGE_PROVIDER=local/s3."
+    )
+
+
+def _import_gcs() -> tuple[Any, Any, Any]:
+    try:
+        from google.cloud import storage
+        from google.cloud.exceptions import GoogleCloudError, NotFound
+    except Exception as exc:
+        raise _missing_dependency('gcs', 'google-cloud-storage', exc) from exc
+    return storage, GoogleCloudError, NotFound
+
+
+def _import_azure() -> tuple[Any, Any, Any]:
+    try:
+        from azure.identity import DefaultAzureCredential
+        from azure.storage.blob import BlobServiceClient
+        from azure.core.exceptions import ResourceNotFoundError
+    except Exception as exc:
+        raise _missing_dependency('azure', 'azure-identity/azure-storage-blob', exc) from exc
+    return DefaultAzureCredential, BlobServiceClient, ResourceNotFoundError
 
 
 class StorageProvider(ABC):
@@ -207,6 +228,9 @@ class S3StorageProvider(StorageProvider):
 
 class GCSStorageProvider(StorageProvider):
     def __init__(self):
+        storage, google_cloud_error, not_found = _import_gcs()
+        self._google_cloud_error = google_cloud_error
+        self._not_found = not_found
         self.bucket_name = GCS_BUCKET_NAME
 
         if GOOGLE_APPLICATION_CREDENTIALS_JSON:
@@ -227,7 +251,7 @@ class GCSStorageProvider(StorageProvider):
             blob = self.bucket.blob(filename)
             blob.upload_from_filename(file_path)
             return contents, 'gs://' + self.bucket_name + '/' + filename
-        except GoogleCloudError as e:
+        except self._google_cloud_error as e:
             raise RuntimeError(f'Error uploading file to GCS: {e}')
 
     def get_file(self, file_path: str) -> str:
@@ -239,7 +263,7 @@ class GCSStorageProvider(StorageProvider):
             blob.download_to_filename(local_file_path)
 
             return local_file_path
-        except NotFound as e:
+        except self._not_found as e:
             raise RuntimeError(f'Error downloading file from GCS: {e}')
 
     def delete_file(self, file_path: str) -> None:
@@ -248,7 +272,7 @@ class GCSStorageProvider(StorageProvider):
             filename = file_path.removeprefix('gs://').split('/')[1]
             blob = self.bucket.get_blob(filename)
             blob.delete()
-        except NotFound as e:
+        except self._not_found as e:
             raise RuntimeError(f'Error deleting file from GCS: {e}')
 
         # Always delete from local storage
@@ -262,7 +286,7 @@ class GCSStorageProvider(StorageProvider):
             for blob in blobs:
                 blob.delete()
 
-        except NotFound as e:
+        except self._not_found as e:
             raise RuntimeError(f'Error deleting all files from GCS: {e}')
 
         # Always delete from local storage
@@ -271,17 +295,19 @@ class GCSStorageProvider(StorageProvider):
 
 class AzureStorageProvider(StorageProvider):
     def __init__(self):
+        default_credential, blob_service_client, resource_not_found_error = _import_azure()
+        self._resource_not_found_error = resource_not_found_error
         self.endpoint = AZURE_STORAGE_ENDPOINT
         self.container_name = AZURE_STORAGE_CONTAINER_NAME
         storage_key = AZURE_STORAGE_KEY
 
         if storage_key:
             # Configure using the Azure Storage Account Endpoint and Key
-            self.blob_service_client = BlobServiceClient(account_url=self.endpoint, credential=storage_key)
+            self.blob_service_client = blob_service_client(account_url=self.endpoint, credential=storage_key)
         else:
             # Configure using the Azure Storage Account Endpoint and DefaultAzureCredential
             # If the key is not configured, then the DefaultAzureCredential will be used to support Managed Identity authentication
-            self.blob_service_client = BlobServiceClient(account_url=self.endpoint, credential=DefaultAzureCredential())
+            self.blob_service_client = blob_service_client(account_url=self.endpoint, credential=default_credential())
         self.container_client = self.blob_service_client.get_container_client(self.container_name)
 
     def upload_file(self, file: BinaryIO, filename: str, tags: Dict[str, str]) -> Tuple[bytes, str]:
@@ -303,7 +329,7 @@ class AzureStorageProvider(StorageProvider):
             with open(local_file_path, 'wb') as download_file:
                 download_file.write(blob_client.download_blob().readall())
             return local_file_path
-        except ResourceNotFoundError as e:
+        except self._resource_not_found_error as e:
             raise RuntimeError(f'Error downloading file from Azure Blob Storage: {e}')
 
     def delete_file(self, file_path: str) -> None:
@@ -312,7 +338,7 @@ class AzureStorageProvider(StorageProvider):
             filename = file_path.split('/')[-1]
             blob_client = self.container_client.get_blob_client(filename)
             blob_client.delete_blob()
-        except ResourceNotFoundError as e:
+        except self._resource_not_found_error as e:
             raise RuntimeError(f'Error deleting file from Azure Blob Storage: {e}')
 
         # Always delete from local storage

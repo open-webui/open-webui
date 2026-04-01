@@ -2,10 +2,19 @@ import logging
 from typing import Optional
 
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
-from ddgs import DDGS
-from ddgs.exceptions import RatelimitException
 
 log = logging.getLogger(__name__)
+
+
+def _duckduckgo_client():
+    try:
+        from ddgs import DDGS
+        from ddgs.exceptions import RatelimitException
+    except Exception as exc:
+        raise RuntimeError(
+            "DuckDuckGo search requires optional dependency 'ddgs'."
+        ) from exc
+    return DDGS, RatelimitException
 
 
 def search_duckduckgo(
@@ -26,6 +35,7 @@ def search_duckduckgo(
         list[SearchResult]: A list of search results
     """
     # Use the DDGS context manager to create a DDGS object
+    DDGS, RatelimitException = _duckduckgo_client()
     search_results = []
     with DDGS() as ddgs:
         if concurrent_requests:

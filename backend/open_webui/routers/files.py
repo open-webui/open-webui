@@ -43,7 +43,6 @@ from open_webui.models.access_grants import AccessGrants
 
 
 from open_webui.routers.retrieval import ProcessFileForm, process_file
-from open_webui.routers.audio import transcribe
 
 from open_webui.storage.provider import Storage
 
@@ -56,6 +55,8 @@ from pydantic import BaseModel
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+AUDIO_FEATURES_DISABLED = os.environ.get('DISABLE_AUDIO_FEATURES', 'False').lower() == 'true'
 
 
 from open_webui.utils.access_control.files import has_access_to_file
@@ -109,7 +110,9 @@ def process_uploaded_file(
             if content_type:
                 stt_supported_content_types = getattr(request.app.state.config, 'STT_SUPPORTED_CONTENT_TYPES', [])
 
-                if strict_match_mime_type(stt_supported_content_types, content_type):
+                if not AUDIO_FEATURES_DISABLED and strict_match_mime_type(stt_supported_content_types, content_type):
+                    from open_webui.routers.audio import transcribe
+
                     file_path_processed = Storage.get_file(file_path)
                     result = transcribe(request, file_path_processed, file_metadata, user)
 

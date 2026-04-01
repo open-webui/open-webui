@@ -1,12 +1,25 @@
-import validators
-
 from typing import Optional
 from urllib.parse import urlparse
 
 from pydantic import BaseModel
 
-from open_webui.retrieval.web.utils import resolve_hostname
-from open_webui.utils.misc import is_string_allowed
+
+def _validators():
+    import validators
+
+    return validators
+
+
+def _resolve_hostname(hostname):
+    from open_webui.retrieval.web.utils import resolve_hostname
+
+    return resolve_hostname(hostname)
+
+
+def _is_string_allowed(string, filter_list):
+    from open_webui.utils.misc import is_string_allowed
+
+    return is_string_allowed(string, filter_list)
 
 
 def get_filtered_results(results, filter_list):
@@ -14,6 +27,7 @@ def get_filtered_results(results, filter_list):
         return results
 
     filtered_results = []
+    validators = _validators()
 
     for result in results:
         url = result.get('url') or result.get('link', '') or result.get('href', '')
@@ -27,13 +41,13 @@ def get_filtered_results(results, filter_list):
         hostnames = [domain]
 
         try:
-            ipv4_addresses, ipv6_addresses = resolve_hostname(domain)
+            ipv4_addresses, ipv6_addresses = _resolve_hostname(domain)
             hostnames.extend(ipv4_addresses)
             hostnames.extend(ipv6_addresses)
         except Exception:
             pass
 
-        if is_string_allowed(hostnames, filter_list):
+        if _is_string_allowed(hostnames, filter_list):
             filtered_results.append(result)
             continue
 
