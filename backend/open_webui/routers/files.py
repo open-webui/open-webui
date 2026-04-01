@@ -25,7 +25,6 @@ from sqlalchemy.orm import Session
 from open_webui.internal.db import get_session, SessionLocal
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
 from open_webui.models.channels import Channels
 from open_webui.models.users import Users
@@ -57,6 +56,12 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 AUDIO_FEATURES_DISABLED = os.environ.get('DISABLE_AUDIO_FEATURES', 'False').lower() == 'true'
+
+
+def _vector_db_client():
+    from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+
+    return VECTOR_DB_CLIENT
 
 
 from open_webui.utils.access_control.files import has_access_to_file
@@ -393,7 +398,7 @@ async def delete_all_files(user=Depends(get_admin_user), db: Session = Depends(g
     if result:
         try:
             Storage.delete_all_files()
-            VECTOR_DB_CLIENT.reset()
+            _vector_db_client().reset()
         except Exception as e:
             log.exception(e)
             log.error('Error deleting files')
@@ -561,7 +566,7 @@ def update_file_data_content_by_id(
         for knowledge in knowledges:
             try:
                 # Remove old embeddings for this file from the KB collection
-                VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'file_id': id})
+                _vector_db_client().delete(collection_name=knowledge.id, filter={'file_id': id})
                 # Re-add from the now-updated file-{file_id} collection
                 process_file(
                     request,
@@ -769,9 +774,9 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user), db: Sessio
             Knowledges.remove_file_from_knowledge_by_id(knowledge.id, id, db=db)
             # Clean KB embeddings (same logic as /knowledge/{id}/file/remove)
             try:
-                VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'file_id': id})
+                _vector_db_client().delete(collection_name=knowledge.id, filter={'file_id': id})
                 if file.hash:
-                    VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'hash': file.hash})
+                    _vector_db_client().delete(collection_name=knowledge.id, filter={'hash': file.hash})
             except Exception as e:
                 log.debug(f'KB embedding cleanup for {knowledge.id}: {e}')
 
@@ -779,7 +784,7 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user), db: Sessio
         if result:
             try:
                 Storage.delete_file(file.path)
-                VECTOR_DB_CLIENT.delete(collection_name=f'file-{id}')
+                _vector_db_client().delete(collection_name=f'file-{id}')
             except Exception as e:
                 log.exception(e)
                 log.error('Error deleting files')
