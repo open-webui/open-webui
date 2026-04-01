@@ -152,18 +152,6 @@ class AutomationTable:
             row = db.get(Automation, id)
             return AutomationModel.model_validate(row) if row else None
 
-    def get_by_user(
-        self, user_id: str, db: Optional[Session] = None
-    ) -> list[AutomationModel]:
-        with get_db_context(db) as db:
-            rows = (
-                db.query(Automation)
-                .filter_by(user_id=user_id)
-                .order_by(Automation.created_at.desc())
-                .all()
-            )
-            return [AutomationModel.model_validate(r) for r in rows]
-
     def search_automations(
         self,
         user_id: str,
@@ -205,15 +193,6 @@ class AutomationTable:
                 items=[AutomationModel.model_validate(r) for r in rows],
                 total=total,
             )
-
-    def get_all(self, db: Optional[Session] = None) -> list[AutomationModel]:
-        with get_db_context(db) as db:
-            rows = (
-                db.query(Automation)
-                .order_by(Automation.created_at.desc())
-                .all()
-            )
-            return [AutomationModel.model_validate(r) for r in rows]
 
     def update_by_id(
         self,

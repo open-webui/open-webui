@@ -72,22 +72,6 @@ def enrich_automation(
 
 
 ############################
-# GetAutomations
-############################
-
-
-@router.get('/', response_model=list[AutomationResponse])
-async def get_automations(
-    request: Request,
-    user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
-):
-    check_automations_permission(request, user)
-    automations = Automations.get_by_user(user.id, db=db)
-    return [enrich_automation(automation, db, tz=user.timezone) for automation in automations]
-
-
-############################
 # GetAutomationItems (paginated)
 ############################
 
@@ -299,15 +283,4 @@ async def get_automation_runs(
     return AutomationRuns.get_by_automation(id, skip=skip, limit=limit, db=db)
 
 
-############################
-# Admin Endpoints
-############################
 
-
-@router.get('/admin/all', response_model=list[AutomationModel])
-async def get_all_automations(
-    request: Request,
-    user=Depends(get_admin_user),
-    db: Session = Depends(get_session),
-):
-    return Automations.get_all(db=db)
