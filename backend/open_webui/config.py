@@ -3084,7 +3084,7 @@ WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
 
 WEB_FETCH_MAX_CONTENT_LENGTH = PersistentConfig(
     'WEB_FETCH_MAX_CONTENT_LENGTH',
-    'rag.web.search.fetch_url_max_content_length',
+    'rag.web.fetch.max_content_length',
     (int(os.environ.get('WEB_FETCH_MAX_CONTENT_LENGTH')) if os.environ.get('WEB_FETCH_MAX_CONTENT_LENGTH') else None),
 )
 
