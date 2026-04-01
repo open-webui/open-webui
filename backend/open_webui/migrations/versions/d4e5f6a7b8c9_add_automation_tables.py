@@ -24,12 +24,7 @@ def upgrade():
         sa.Column('name', sa.Text(), nullable=False),
         sa.Column('data', sa.JSON(), nullable=False),
         sa.Column('meta', sa.JSON(), nullable=True),
-        sa.Column(
-            'is_active',
-            sa.Boolean(),
-            nullable=False,
-            server_default=sa.text('1'),
-        ),
+        sa.Column('is_active', sa.Boolean(), nullable=False, default=True),
         sa.Column('last_run_at', sa.BigInteger(), nullable=True),
         sa.Column('next_run_at', sa.BigInteger(), nullable=True),
         sa.Column('created_at', sa.BigInteger(), nullable=False),
