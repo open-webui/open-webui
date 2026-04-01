@@ -1316,7 +1316,12 @@
 
 				if (history.currentId) {
 					for (const message of Object.values(history.messages)) {
-						if (message && message.role === 'assistant' && message.id !== history.currentId && message.done !== false) {
+						if (
+							message &&
+							message.role === 'assistant' &&
+							message.id !== history.currentId &&
+							message.done !== false
+						) {
 							message.done = true;
 						}
 					}
@@ -1379,7 +1384,11 @@
 
 	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
 		if (!responseMessageId) {
-			console.error('chatCompleted: missing message id', { chatId: _chatId, modelId, messageCount: messages?.length ?? 0 });
+			console.error('chatCompleted: missing message id', {
+				chatId: _chatId,
+				modelId,
+				messageCount: messages?.length ?? 0
+			});
 			return;
 		}
 

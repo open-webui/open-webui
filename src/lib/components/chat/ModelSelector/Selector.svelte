@@ -497,7 +497,12 @@
 		>
 			{#snippet child({ wrapperProps, props, open })}
 				{#if open}
-					<div {...wrapperProps} style="{wrapperProps.style ?? ''}{$mobile ? '; left: 0.5rem !important; width: calc(100vw - 1rem) !important;' : ''}">
+					<div
+						{...wrapperProps}
+						style="{wrapperProps.style ?? ''}{$mobile
+							? '; left: 0.5rem !important; width: calc(100vw - 1rem) !important;'
+							: ''}"
+					>
 						<div
 							{...props}
 							class="{props.class} z-40 {$mobile
