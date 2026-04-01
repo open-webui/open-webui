@@ -2,7 +2,8 @@
 	import { onMount, onDestroy, getContext } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
-	import { WEBUI_NAME, mobile, showSidebar } from '$lib/stores';
+	import { goto } from '$app/navigation';
+	import { WEBUI_NAME, mobile, showSidebar, user, config } from '$lib/stores';
 
 	import {
 		getAutomationItems,
@@ -165,6 +166,14 @@
 	};
 
 	onMount(async () => {
+		if (
+			$user?.role !== 'admin' &&
+			!($user?.permissions?.features?.automations ?? false)
+		) {
+			goto('/');
+			return;
+		}
+
 		loaded = true;
 
 		return () => {

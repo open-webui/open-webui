@@ -21,6 +21,7 @@ from open_webui.utils.automations import (
     execute_automation,
 )
 from open_webui.utils.auth import get_verified_user, get_admin_user
+from open_webui.utils.access_control import has_permission
 from open_webui.internal.db import get_session
 from open_webui.constants import ERROR_MESSAGES
 
@@ -34,6 +35,16 @@ PAGE_ITEM_COUNT = 30
 ############################
 # Helpers
 ############################
+
+
+def check_automations_permission(request, user):
+    if user.role != 'admin' and not has_permission(
+        user.id, 'features.automations', request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
 
 
 def check_automation_access(automation, user):
@@ -71,6 +82,7 @@ async def get_automations(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
+    check_automations_permission(request, user)
     automations = Automations.get_by_user(user.id, db=db)
     return [enrich_automation(automation, db, tz=user.timezone) for automation in automations]
 
@@ -89,6 +101,7 @@ async def get_automation_items(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
+    check_automations_permission(request, user)
     limit = PAGE_ITEM_COUNT
     page = max(1, page)
     skip = (page - 1) * limit
@@ -123,6 +136,7 @@ async def create_new_automation(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
+    check_automations_permission(request, user)
     try:
         validate_rrule(form_data.data.rrule)
     except ValueError as e:
@@ -159,6 +173,7 @@ async def get_automation_by_id(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
+    check_automations_permission(request, user)
     automation = Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
     return enrich_automation(automation, db, tz=user.timezone)
@@ -177,6 +192,7 @@ async def update_automation_by_id(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
+    check_automations_permission(request, user)
     automation = Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
 
@@ -216,6 +232,7 @@ async def toggle_automation_by_id(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
+    check_automations_permission(request, user)
     automation = Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
     toggled = Automations.toggle(
@@ -236,6 +253,7 @@ async def run_automation_by_id(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
+    check_automations_permission(request, user)
     automation = Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
     asyncio.create_task(execute_automation(request.app, automation))
@@ -254,6 +272,7 @@ async def delete_automation_by_id(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
+    check_automations_permission(request, user)
     automation = Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
     AutomationRuns.delete_by_automation(id, db=db)
@@ -274,6 +293,7 @@ async def get_automation_runs(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
+    check_automations_permission(request, user)
     automation = Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
     return AutomationRuns.get_by_automation(id, skip=skip, limit=limit, db=db)
