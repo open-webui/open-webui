@@ -346,6 +346,9 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     if 'metadata' in openai_payload:
         ollama_payload['metadata'] = openai_payload['metadata']
 
+    if 'privacy_proxy' in openai_payload:
+        ollama_payload['privacy_proxy'] = openai_payload['privacy_proxy']
+
     if 'response_format' in openai_payload:
         response_format = openai_payload['response_format']
         format_type = response_format.get('type', None)
