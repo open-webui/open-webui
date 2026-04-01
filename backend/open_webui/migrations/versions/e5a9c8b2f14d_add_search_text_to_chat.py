@@ -1,7 +1,7 @@
 """Add search_text column to chat table for fast full-text search
 
 Revision ID: e5a9c8b2f14d
-Revises: 018012973d35
+Revises: merge_analytics_001
 Create Date: 2026-03-31
 
 Replaces the expensive json_each(chat, '$.messages') approach with a
@@ -14,7 +14,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "e5a9c8b2f14d"
-down_revision = "018012973d35"
+down_revision = "merge_analytics_001"
 branch_labels = None
 depends_on = None
 
