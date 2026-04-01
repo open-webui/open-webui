@@ -2580,6 +2580,7 @@ async def process_files_batch(
     request: Request,
     form_data: BatchProcessFilesForm,
     user=Depends(get_verified_user),
+    db=None,
 ) -> BatchProcessFilesResponse:
     """
     Process a batch of files and save them to the vector database.
@@ -2602,7 +2603,7 @@ async def process_files_batch(
     for file in form_data.files:
         try:
             # Ownership check: verify the requesting user owns the file or is an admin
-            db_file = Files.get_file_by_id(file.id)
+            db_file = Files.get_file_by_id(file.id, db=db)
             if not db_file:
                 file_errors.append(
                     BatchProcessFilesResult(
@@ -2664,7 +2665,7 @@ async def process_files_batch(
 
             # Update all files with collection name
             for file_update, file_result in zip(file_updates, file_results):
-                Files.update_file_by_id(id=file_result.file_id, form_data=file_update)
+                Files.update_file_by_id(id=file_result.file_id, form_data=file_update, db=db)
                 file_result.status = 'completed'
 
         except Exception as e:
