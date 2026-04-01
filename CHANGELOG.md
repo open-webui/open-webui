@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧩 **HTML entity decode efficiency.** Streaming text decoding now avoids repeated document parsing for HTML entity handling, reducing memory churn and improving responsiveness in token-heavy chat output. [#23165](https://github.com/open-webui/open-webui/pull/23165)
 - 📂 **Faster chat list queries.** Chat and folder lists now load more efficiently by fetching only the fields needed for sidebar views, improving responsiveness when browsing large conversation histories. [Commit](https://github.com/open-webui/open-webui/commit/0e5696de74cc0ba55b24cfc3d02efa83f08d7d3f)
 - 📈 **Sidebar memory optimization.** Sidebar chat items now use shared drag-preview resources and safer listener cleanup, reducing memory growth and keeping large chat lists more responsive during long sessions. [#23209](https://github.com/open-webui/open-webui/pull/23209)
+- 🎫 **Static OAuth tool authentication.** Tool server authentication now works reliably for both "oauth_2.1" and "oauth_2.1_static" connection types, so OAuth-backed tool access is correctly detected and forwarded during chat requests. [Commit](https://github.com/open-webui/open-webui/commit/60676bfdcfbce1a69b3e97f2013f0cfd63371737)
 - 🌐 **Translation updates.** Translations for Russian and German were enhanced and expanded.
 
 ### Fixed
@@ -55,6 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🚪 **OAuth redirect URI reliability.** OAuth login redirects now use provider client metadata more consistently, preventing incorrect HTTP callback URLs behind reverse proxies and improving sign-in reliability for providers such as Feishu. [#23203](https://github.com/open-webui/open-webui/pull/23203), [#23128](https://github.com/open-webui/open-webui/issues/23128)
 - ✂️ **Citation spacing cleanup.** When citations are disabled for a model, citation markers and their leftover spacing are now removed together so punctuation and copied text remain cleanly formatted. [#23141](https://github.com/open-webui/open-webui/issues/23141)
 - 📲 **Mobile model selector positioning.** The mobile model selector dropdown now applies a constrained viewport width and left offset, preventing overflow and making model selection easier on small screens. [#23310](https://github.com/open-webui/open-webui/pull/23310)
+- 🍪 **OAuth session cookie persistence.** OIDC sign-in now correctly sets the "oauth_session_id" cookie, so "system_oauth" connections can forward user OAuth tokens to upstream providers as expected. [#23251](https://github.com/open-webui/open-webui/pull/23251), [#23250](https://github.com/open-webui/open-webui/issues/23250)
 
 ### Changed
 
