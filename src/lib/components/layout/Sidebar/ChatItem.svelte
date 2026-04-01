@@ -140,7 +140,12 @@
 		}
 	};
 
+	let deleting = false;
+
 	const deleteChatHandler = async (id) => {
+		if (deleting) return;
+		deleting = true;
+
 		const res = await deleteChatById(localStorage.token, id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -157,9 +162,16 @@
 
 			dispatch('change');
 		}
+
+		deleting = false;
 	};
 
+	let archiving = false;
+
 	const archiveChatHandler = async (id) => {
+		if (archiving) return;
+		archiving = true;
+
 		try {
 			await archiveChatById(localStorage.token, id);
 
@@ -173,6 +185,8 @@
 		} catch (error) {
 			console.error('Error archiving chat:', error);
 			toast.error($i18n.t('Failed to archive chat.'));
+		} finally {
+			archiving = false;
 		}
 	};
 
@@ -537,7 +551,8 @@
 			<div class=" flex items-center self-center space-x-1.5">
 				<Tooltip content={$i18n.t('Archive')} className="flex items-center">
 					<button
-						class=" self-center dark:hover:text-white transition"
+						class=" self-center dark:hover:text-white transition disabled:cursor-not-allowed"
+						disabled={archiving}
 						on:click={() => {
 							archiveChatHandler(id);
 						}}
@@ -549,7 +564,8 @@
 
 				<Tooltip content={$i18n.t('Delete')}>
 					<button
-						class=" self-center dark:hover:text-white transition"
+						class=" self-center dark:hover:text-white transition disabled:cursor-not-allowed"
+						disabled={deleting}
 						on:click={() => {
 							deleteChatHandler(id);
 						}}
