@@ -127,11 +127,15 @@ def openai_reasoning_model_handler(payload):
         payload['max_completion_tokens'] = payload['max_tokens']
         del payload['max_tokens']
 
+    # Convert "reasoning.effort" (dot syntax) to "reasoning_effort" for Chat API
+    if 'reasoning.effort' in payload:
+        payload['reasoning_effort'] = payload.pop('reasoning.effort')
+
     # Handle system role conversion based on model type
     if payload['messages'][0]['role'] == 'system':
         model_lower = payload['model'].lower()
         # Legacy models use "user" role instead of "system"
-        if model_lower.startswith('o1-mini') or model_lower.startswith('o1-preview'):
+        if model_lower.startswith('o1-mini') or model_lower.startswith('o1-preview') or '/o1-mini' in model_lower or '/o1-preview' in model_lower:
             payload['messages'][0]['role'] = 'user'
         else:
             payload['messages'][0]['role'] = 'developer'
@@ -762,11 +766,11 @@ def get_azure_allowed_params(api_version: str) -> set[str]:
 def is_openai_new_model(model: str) -> bool:
     model_lower = model.lower()
     # o-series models (o1, o3, o4, o5, ...)
-    if re.match(r'^o\d+', model_lower):
+    if re.search(r'(^|/)o\d+', model_lower):
         return True
     # gpt-N where N >= 5 (gpt-5, gpt-5.2, gpt-6, ...)
-    m = re.match(r'^gpt-(\d+)', model_lower)
-    if m and int(m.group(1)) >= 5:
+    m = re.search(r'(^|/)gpt-(\d+)', model_lower)
+    if m and int(m.group(2)) >= 5:
         return True
     return False
 
@@ -929,7 +933,18 @@ def convert_to_responses_payload(payload: dict) -> dict:
     if 'max_completion_tokens' in responses_payload:
         responses_payload['max_output_tokens'] = responses_payload.pop('max_completion_tokens')
 
-    # Remove Chat Completions-only parameters not supported by the Responses API
+    # Convert "reasoning_effort" or "reasoning.effort" to nested "reasoning" object
+    effort = responses_payload.pop('reasoning_effort', responses_payload.pop('reasoning.effort', None))
+    if effort:
+        if 'reasoning' not in responses_payload:
+            responses_payload['reasoning'] = {}
+
+        if isinstance(responses_payload['reasoning'], dict):
+            responses_payload['reasoning']['effort'] = effort
+        else:
+            responses_payload['reasoning'] = {'effort': effort}
+
+
     for unsupported_key in (
         'stream_options',
         'logit_bias',
