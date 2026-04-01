@@ -76,7 +76,7 @@ nltk==3.9.3
 Markdown==3.10.2
 beautifulsoup4==4.14.3
 pypandoc==1.16.2
-pandas==3.0.1
+pandas==3.0.2
 openpyxl==3.1.5
 pyxlsb==1.0.10
 xlrd==2.0.2
