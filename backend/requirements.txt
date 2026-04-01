@@ -48,7 +48,7 @@ google-genai==1.66.0
 
 langchain==1.2.10
 langchain-community==0.4.1
-langchain-classic==1.0.1
+langchain-classic==1.0.3
 langchain-text-splitters==1.1.1
 
 fake-useragent==2.2.0
