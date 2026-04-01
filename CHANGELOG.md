@@ -26,12 +26,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🎞️ **Streaming text token animation.** Streaming text tokens now use a lightweight CSS intro animation, making output feel smoother while reducing transition overhead and preventing tokens from fading out when generation completes. [#23257](https://github.com/open-webui/open-webui/pull/23257)
 - 🏎️ **Streaming response efficiency.** Streaming responses now process each output line in a single step instead of two separate yields, reducing async overhead and improving responsiveness during long-running generations. [#23266](https://github.com/open-webui/open-webui/pull/23266)
 - 🎯 **Template token scan optimization.** Streaming responses now skip unnecessary token-replacement processing when no template markers are present, reducing per-update overhead and keeping chat output smoother during rapid generation. [#23161](https://github.com/open-webui/open-webui/pull/23161)
+- 🔬 **Chinese text processing guard.** Streaming responses without Chinese characters now skip unnecessary Chinese-format processing checks, reducing per-update overhead and keeping output smoother during rapid generation. [#23162](https://github.com/open-webui/open-webui/pull/23162)
+- 🧩 **HTML entity decode efficiency.** Streaming text decoding now avoids repeated document parsing for HTML entity handling, reducing memory churn and improving responsiveness in token-heavy chat output. [#23165](https://github.com/open-webui/open-webui/pull/23165)
 - 🌐 **Translation updates.** Translations for Russian and German were enhanced and expanded.
 
 ### Fixed
 
 - 💾 **Error message persistence.** LLM errors that occur during streaming are now saved to the database even if the connection drops, so users can see what went wrong when they reconnect. [#23231](https://github.com/open-webui/open-webui/pull/23231)
 - 🚫 **Missing message completion guard.** Chat completion finalization now skips invalid requests without a message identifier, preventing unnecessary error toasts caused by rare frontend concurrency timing. [#23184](https://github.com/open-webui/open-webui/pull/23184)
+- ⚙️ **Default model parameter loading.** The "DEFAULT_MODEL_PARAMS" environment variable is now parsed and applied correctly, so default generation settings are honored reliably without being ignored at startup. [#23223](https://github.com/open-webui/open-webui/pull/23223)
 - 🔧 **Web search settings save reliability.** Saving web search configuration now works without server errors, so administrators can update "WEB_FETCH_MAX_CONTENT_LENGTH" and related retrieval settings successfully from the admin interface. [Commit](https://github.com/open-webui/open-webui/commit/36d02aa1477aa1b4e7fb59d022f99693ebfa8667)
 
 ### Changed
