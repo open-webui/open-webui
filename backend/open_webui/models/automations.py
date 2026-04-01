@@ -4,7 +4,7 @@ from typing import Optional
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import Column, Text, JSON, Boolean, BigInteger, Index, select
+from sqlalchemy import Column, Text, JSON, Boolean, BigInteger, Index, select, or_, func, cast, String
 from sqlalchemy.orm import Session
 
 from open_webui.internal.db import Base, get_db, get_db_context
@@ -108,6 +108,11 @@ class AutomationResponse(AutomationModel):
     next_runs: Optional[list[int]] = None
 
 
+class AutomationListResponse(BaseModel):
+    items: list[AutomationModel]
+    total: int
+
+
 ####################
 # AutomationTable
 ####################
@@ -158,6 +163,48 @@ class AutomationTable:
                 .all()
             )
             return [AutomationModel.model_validate(r) for r in rows]
+
+    def search_automations(
+        self,
+        user_id: str,
+        query: Optional[str] = None,
+        status: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 30,
+        db: Optional[Session] = None,
+    ) -> 'AutomationListResponse':
+        with get_db_context(db) as db:
+            q = db.query(Automation).filter_by(user_id=user_id)
+
+            if query:
+                search = f'%{query}%'
+                # Search in name and prompt inside JSON data
+                q = q.filter(
+                    or_(
+                        Automation.name.ilike(search),
+                        cast(Automation.data, String).ilike(search),
+                    )
+                )
+
+            if status == 'active':
+                q = q.filter(Automation.is_active == True)
+            elif status == 'paused':
+                q = q.filter(Automation.is_active == False)
+
+            q = q.order_by(Automation.created_at.desc())
+
+            total = q.count()
+
+            if skip:
+                q = q.offset(skip)
+            if limit:
+                q = q.limit(limit)
+
+            rows = q.all()
+            return AutomationListResponse(
+                items=[AutomationModel.model_validate(r) for r in rows],
+                total=total,
+            )
 
     def get_all(self, db: Optional[Session] = None) -> list[AutomationModel]:
         with get_db_context(db) as db:

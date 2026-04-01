@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { onMount, getContext } from 'svelte';
+	import { onMount, onDestroy, getContext } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
 	import { WEBUI_NAME, mobile, showSidebar } from '$lib/stores';
 
 	import {
-		getAutomations,
+		getAutomationItems,
 		toggleAutomationById,
 		runAutomationById,
 		deleteAutomationById,
@@ -17,6 +17,7 @@
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Pagination from '$lib/components/common/Pagination.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import SidebarIcon from '$lib/components/icons/Sidebar.svelte';
@@ -30,7 +31,9 @@
 	const i18n = getContext('i18n');
 
 	let loaded = false;
-	let automations: AutomationResponse[] = [];
+	let automations: AutomationResponse[] | null = null;
+	let total: number | null = null;
+	let loading = false;
 
 	let showEditor = false;
 	let editingAutomation: AutomationResponse | null = null;
@@ -40,31 +43,48 @@
 
 	let query = '';
 	let statusFilter = 'all';
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
-	const getFilteredAutomations = (list, q, status) => {
-		let filtered = list;
-		if (status === 'active') {
-			filtered = filtered.filter((a) => a.is_active);
-		} else if (status === 'paused') {
-			filtered = filtered.filter((a) => !a.is_active);
-		}
-		if (q) {
-			const lower = q.toLowerCase();
-			filtered = filtered.filter((a) =>
-				a.name.toLowerCase().includes(lower) ||
-				a.data.prompt.toLowerCase().includes(lower)
-			);
-		}
-		return filtered;
-	};
+	let page = 1;
+
+	// Debounce only query changes
+	$: if (query !== undefined) {
+		loading = true;
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(() => {
+			page = 1;
+			getAutomationList();
+		}, 300);
+	}
+
+	// Immediate response to page/filter changes
+	$: if (page && statusFilter !== undefined) {
+		getAutomationList();
+	}
 
 	const getAutomationList = async () => {
-		const res = await getAutomations(localStorage.token).catch((err) => {
-			toast.error(`${err}`);
-			return null;
-		});
-		if (res) {
-			automations = res;
+		if (!loaded) return;
+
+		loading = true;
+		try {
+			const res = await getAutomationItems(
+				localStorage.token,
+				query,
+				statusFilter,
+				page
+			).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			if (res) {
+				automations = res.items;
+				total = res.total;
+			}
+		} catch (err) {
+			console.error(err);
+		} finally {
+			loading = false;
 		}
 	};
 
@@ -74,7 +94,7 @@
 			return null;
 		});
 		if (res) {
-			automations = automations.map((a) => (a.id === res.id ? res : a));
+			automations = (automations ?? []).map((a) => (a.id === res.id ? res : a));
 		}
 	};
 
@@ -95,8 +115,10 @@
 		});
 		if (res) {
 			toast.success($i18n.t(`Deleted {{name}}`, { name: automation.name }));
-			automations = automations.filter((a) => a.id !== automation.id);
 		}
+
+		page = 1;
+		getAutomationList();
 	};
 
 	const formatRRule = (rrule: string): string => {
@@ -144,19 +166,16 @@
 		return 'th';
 	};
 
-	const relativeTime = (ns: number): string => {
-		const diff = Date.now() - ns / 1_000_000;
-		const mins = Math.floor(diff / 60000);
-		if (mins < 1) return 'just now';
-		if (mins < 60) return `${mins}m ago`;
-		const hours = Math.floor(mins / 60);
-		if (hours < 24) return `${hours}h ago`;
-		return `${Math.floor(hours / 24)}d ago`;
-	};
-
 	onMount(async () => {
-		await getAutomationList();
 		loaded = true;
+
+		return () => {
+			clearTimeout(searchDebounceTimer);
+		};
+	});
+
+	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
 	});
 </script>
 
@@ -215,7 +234,7 @@
 							{/if}
 							<div>{$i18n.t('Automations')}</div>
 							<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
-								{automations.length}
+								{total ?? ''}
 							</div>
 						</div>
 
@@ -296,7 +315,11 @@
 						</div>
 					</div>
 
-					{#if getFilteredAutomations(automations, query, statusFilter).length === 0}
+					{#if automations === null || loading}
+						<div class="w-full h-full flex justify-center items-center my-16 mb-24">
+							<Spinner className="size-5" />
+						</div>
+					{:else if (automations ?? []).length === 0}
 						<div class="w-full h-full flex flex-col justify-center items-center my-16 mb-24">
 							<div class="max-w-md text-center">
 								<div class="text-3xl mb-3">⚡</div>
@@ -312,7 +335,7 @@
 						</div>
 					{:else}
 						<div class="gap-2 grid my-2 px-3">
-							{#each getFilteredAutomations(automations, query, statusFilter) as automation (automation.id)}
+							{#each automations as automation (automation.id)}
 								<div
 									class="flex space-x-4 text-left w-full px-3 py-2.5 dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl"
 								>
@@ -369,6 +392,12 @@
 								</div>
 							{/each}
 						</div>
+
+						{#if total > 30}
+							<div class="flex justify-center mt-4 mb-2">
+								<Pagination bind:page count={total} perPage={30} />
+							</div>
+						{/if}
 					{/if}
 				</div>
 		</div>

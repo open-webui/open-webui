@@ -1,6 +1,7 @@
 import asyncio
 import logging
 
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
@@ -11,6 +12,7 @@ from open_webui.models.automations import (
     AutomationModel,
     AutomationResponse,
     AutomationRunModel,
+    AutomationListResponse,
 )
 from open_webui.utils.automations import (
     validate_rrule,
@@ -25,6 +27,8 @@ from open_webui.constants import ERROR_MESSAGES
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+PAGE_ITEM_COUNT = 30
 
 
 ############################
@@ -69,6 +73,42 @@ async def get_automations(
 ):
     automations = Automations.get_by_user(user.id, db=db)
     return [enrich_automation(automation, db, tz=user.timezone) for automation in automations]
+
+
+############################
+# GetAutomationItems (paginated)
+############################
+
+
+@router.get('/list')
+async def get_automation_items(
+    request: Request,
+    query: Optional[str] = None,
+    status: Optional[str] = None,
+    page: Optional[int] = 1,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    limit = PAGE_ITEM_COUNT
+    page = max(1, page)
+    skip = (page - 1) * limit
+
+    result = Automations.search_automations(
+        user_id=user.id,
+        query=query,
+        status=status,
+        skip=skip,
+        limit=limit,
+        db=db,
+    )
+
+    return {
+        'items': [
+            enrich_automation(item, db, tz=user.timezone)
+            for item in result.items
+        ],
+        'total': result.total,
+    }
 
 
 ############################
