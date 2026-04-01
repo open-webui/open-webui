@@ -211,6 +211,66 @@ def _resolve_model_filter_ids(app, model_id: str) -> list[str]:
     return list(filter_ids) if filter_ids else []
 
 
+async def _set_terminal_cwd(
+    app, server_id: str, user, cwd: str, chat_id: str
+) -> None:
+    """Set the working directory on a terminal server via the proxy.
+
+    Routes through the open-webui terminal proxy endpoint so that
+    auth headers, orchestrator policy routing, and X-User-Id are
+    handled correctly — same path the frontend uses.
+    """
+    import aiohttp
+
+    connections = getattr(
+        getattr(app, 'state', None), 'config', None
+    )
+    if connections is None:
+        return
+    connections = getattr(connections, 'TERMINAL_SERVER_CONNECTIONS', None) or []
+    connection = next((c for c in connections if c.get('id') == server_id), None)
+    if connection is None:
+        log.warning(f'Terminal server {server_id} not found for CWD set')
+        return
+
+    base_url = (connection.get('url') or '').rstrip('/')
+    if not base_url:
+        return
+
+    # Build target URL — route through orchestrator policy if configured
+    policy_id = connection.get('policy_id')
+    if connection.get('server_type') == 'orchestrator' and policy_id:
+        target_url = f'{base_url}/p/{policy_id}/files/cwd'
+    else:
+        target_url = f'{base_url}/files/cwd'
+
+    headers = {'Content-Type': 'application/json', 'X-User-Id': user.id}
+    if chat_id:
+        headers['X-Session-Id'] = chat_id
+
+    auth_type = connection.get('auth_type', 'bearer')
+    if auth_type == 'bearer':
+        headers['Authorization'] = f'Bearer {connection.get("key", "")}'
+
+    try:
+        async with aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=10)
+        ) as session:
+            async with session.post(
+                target_url,
+                json={'path': cwd},
+                headers=headers,
+            ) as resp:
+                if resp.status != 200:
+                    body = await resp.text()
+                    log.warning(
+                        f'Failed to set terminal CWD to {cwd}: '
+                        f'HTTP {resp.status} — {body[:200]}'
+                    )
+    except Exception as e:
+        log.warning(f'Failed to set terminal CWD: {e}')
+
+
 async def execute_automation(app, automation: AutomationModel) -> None:
     """Execute an automation through the full chat completion pipeline.
 
@@ -226,6 +286,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
 
         prompt = prompt_template(automation.data["prompt"], user)
         model_id = automation.data["model_id"]
+        terminal_config = automation.data.get("terminal")
 
         # Generate proper UUIDs for messages (same as frontend)
         user_msg_id = str(uuid4())
@@ -291,6 +352,14 @@ async def execute_automation(app, automation: AutomationModel) -> None:
         features = _resolve_model_features(app, model_id)
         filter_ids = _resolve_model_filter_ids(app, model_id)
 
+        # If a terminal is linked, set the CWD before building the payload
+        terminal_id = None
+        if terminal_config and terminal_config.get("server_id"):
+            terminal_id = terminal_config["server_id"]
+            cwd = terminal_config.get("cwd")
+            if cwd:
+                await _set_terminal_cwd(app, terminal_id, user, cwd, chat.id)
+
         # Build the same payload the frontend sends to /api/chat/completions
         form_data = {
             "model": model_id,
@@ -308,6 +377,8 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             form_data["features"] = features
         if filter_ids:
             form_data["filter_ids"] = filter_ids
+        if terminal_id:
+            form_data["terminal_id"] = terminal_id
 
         # Call the full chat completion pipeline (same as POST /api/chat/completions).
         # The handler reference is stored on app.state to avoid circular imports.

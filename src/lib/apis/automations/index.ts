@@ -1,9 +1,15 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
+export type AutomationTerminalConfig = {
+	server_id: string;
+	cwd?: string;
+};
+
 export type AutomationData = {
 	prompt: string;
 	model_id: string;
 	rrule: string;
+	terminal?: AutomationTerminalConfig;
 };
 
 export type AutomationForm = {
