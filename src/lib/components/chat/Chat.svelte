@@ -820,6 +820,11 @@
 			}
 		} else if (type === 'chat:completion') {
 			await chatCompletionEventHandler(data, message, event.chat_id);
+			// chatCompletionEventHandler manages history.messages updates internally via
+			// spread objects. Do NOT fall through to the store-back at the end of this
+			// function — it holds a reference to the pre-spread message object which
+			// would overwrite the done=true state set inside chatCompletionEventHandler.
+			return;
 		} else if (type === 'chat:tasks:cancel') {
 			taskIds = null;
 			generating = false;

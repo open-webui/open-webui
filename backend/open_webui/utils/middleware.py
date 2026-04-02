@@ -2191,12 +2191,21 @@ async def process_chat_response(
             response_usage = None  # Initialize response_usage at the top level
             chunk_count = 0  # Initialize chunk_count at the top level for logging
 
-            content_blocks = [
-                {
-                    "type": "text",
-                    "content": content,
-                }
-            ]
+            # Only pre-populate a text block when there is already content to carry
+            # forward (e.g. a tool-call continuation).  An empty initial text block
+            # would cause the late-arrival guard below to discard ALL reasoning
+            # tokens (because _last_block_type would be "text" from the very first
+            # chunk), breaking both reasoning display and streaming UX.
+            content_blocks = (
+                [
+                    {
+                        "type": "text",
+                        "content": content,
+                    }
+                ]
+                if content
+                else []
+            )
 
             reasoning_tags_param = metadata.get("params", {}).get("reasoning_tags")
             DETECT_REASONING_TAGS = reasoning_tags_param is not False
