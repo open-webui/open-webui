@@ -80,6 +80,7 @@ from open_webui.utils.misc import parse_duration
 from open_webui.utils.auth import get_password_hash, create_token
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.groups import apply_default_group_assignment
+from open_webui.retrieval.web.utils import validate_url
 
 from mcp.shared.auth import (
     OAuthClientMetadata as MCPOAuthClientMetadata,
@@ -1329,6 +1330,8 @@ class OAuthManager:
             return '/user.png'
 
         try:
+            validate_url(picture_url)
+
             get_kwargs = {}
             if access_token:
                 get_kwargs['headers'] = {
