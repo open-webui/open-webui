@@ -2573,6 +2573,11 @@ async def upload_file_to_terminal(
 
             terminal_url = connection.get('url', '').rstrip('/')
 
+            # Route through orchestrator policy endpoint if configured
+            policy_id = connection.get('policy_id')
+            if policy_id:
+                terminal_url = f'{terminal_url}/p/{policy_id}'
+
             # Build auth headers/cookies matching resolve_terminal_tools pattern
             auth_type = connection.get('auth_type', 'bearer')
             if auth_type == 'bearer':
