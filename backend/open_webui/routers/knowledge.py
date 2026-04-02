@@ -1,12 +1,14 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from fastapi.responses import StreamingResponse
 from fastapi.concurrency import run_in_threadpool
 import logging
+import time
 import io
 import zipfile
 from urllib.parse import quote
+import base64
 
 from sqlalchemy.orm import Session
 from open_webui.internal.db import get_session
@@ -18,7 +20,8 @@ from open_webui.models.knowledge import (
     KnowledgeResponse,
     KnowledgeUserResponse,
 )
-from open_webui.models.files import Files, FileModel, FileMetadataResponse
+from open_webui.models.files import Files, FileModel, FileMetadataResponse, FileForm
+from open_webui.models.users import UserModel
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.routers.retrieval import (
     process_file,
@@ -32,6 +35,8 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_verified_user, get_admin_user
 from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
 from open_webui.models.access_grants import AccessGrants
+from open_webui.utils.misc import calculate_sha256_string
+from open_webui.content_sources import content_source_registry, content_source_factory
 
 
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
@@ -40,6 +45,18 @@ from open_webui.models.models import Models, ModelForm
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+############################
+# Response Models
+############################
+
+
+class KnowledgeFilesResponse(KnowledgeResponse):
+    """Knowledge base response with files list."""
+    files: List[FileMetadataResponse] = []
+    warnings: Optional[Dict[str, Any]] = None
+    sync_results: Optional[Dict[str, Any]] = None
 
 ############################
 # getKnowledgeBases
@@ -267,6 +284,12 @@ async def create_new_knowledge(
         'sharing.public_knowledge',
     )
 
+# Emit before hook
+    await content_source_registry.emit_hook('before_knowledge_create', {
+        'form_data': form_data.model_dump() if hasattr(form_data, 'model_dump') else form_data.__dict__,
+        'user_id': user.id
+    })
+
     knowledge = Knowledges.insert_new_knowledge(user.id, form_data)
 
     if knowledge:
@@ -277,6 +300,13 @@ async def create_new_knowledge(
             knowledge.name,
             knowledge.description,
         )
+
+# Emit after hook
+        await content_source_registry.emit_hook('after_knowledge_create', {
+            'knowledge_base_id': knowledge.id,
+            'knowledge_base': knowledge.model_dump() if hasattr(knowledge, 'model_dump') else knowledge.__dict__,
+            'user_id': user.id
+        })
         return knowledge
     else:
         raise HTTPException(
@@ -382,6 +412,7 @@ async def reindex_knowledge_base_metadata_embeddings(
 class KnowledgeFilesResponse(KnowledgeResponse):
     files: Optional[list[FileMetadataResponse]] = None
     write_access: Optional[bool] = False
+    sync_results: Optional[Dict[str, Any]] = None
 
 
 @router.get('/{id}', response_model=Optional[KnowledgeFilesResponse])
@@ -657,6 +688,15 @@ def add_file_to_knowledge_by_id(
             detail=ERROR_MESSAGES.FILE_NOT_PROCESSED,
         )
 
+    # Emit before hook
+    await content_source_registry.emit_hook('before_file_add', {
+        'knowledge_base_id': id,
+        'file_id': form_data.file_id,
+        'user_id': user.id,
+        'file': file.model_dump() if hasattr(file, 'model_dump') else file.__dict__,
+        'knowledge_base': knowledge.model_dump() if hasattr(knowledge, 'model_dump') else knowledge.__dict__
+    })
+
     # Add content to the vector database
     try:
         process_file(
@@ -885,6 +925,13 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user), db: S
 
     log.info(f'Deleting knowledge base: {id} (name: {knowledge.name})')
 
+    # Emit before hook
+    await content_source_registry.emit_hook('before_knowledge_delete', {
+        'knowledge_base_id': id,
+        'knowledge_base': knowledge.model_dump() if hasattr(knowledge, 'model_dump') else knowledge.__dict__,
+        'user_id': user.id
+    })
+
     # Get all models
     models = Models.get_all_models(db=db)
     log.info(f'Found {len(models)} models to check for knowledge base {id}')
@@ -956,6 +1003,13 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user), db: Se
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    # Emit before hook
+    await content_source_registry.emit_hook('before_knowledge_reset', {
+        'knowledge_base_id': id,
+        'knowledge_base': knowledge.model_dump() if hasattr(knowledge, 'model_dump') else knowledge.__dict__,
+        'user_id': user.id
+    })
+
     try:
         VECTOR_DB_CLIENT.delete_collection(collection_name=id)
     except Exception as e:
@@ -1019,6 +1073,14 @@ async def add_files_to_knowledge_batch(
             detail=f'File {missing_ids[0]} not found',
         )
 
+    # Emit before hook
+    await content_source_registry.emit_hook('before_files_batch_add', {
+        'knowledge_base_id': id,
+        'file_ids': [form.file_id for form in form_data],
+        'user_id': user.id,
+        'knowledge_base': knowledge.model_dump() if hasattr(knowledge, 'model_dump') else knowledge.__dict__
+    })
+
     # Process files
     try:
         result = await process_files_batch(
@@ -1035,6 +1097,14 @@ async def add_files_to_knowledge_batch(
     successful_file_ids = [r.file_id for r in result.results if r.status == 'completed']
     for file_id in successful_file_ids:
         Knowledges.add_file_to_knowledge_by_id(knowledge_id=id, file_id=file_id, user_id=user.id, db=db)
+
+    # Emit after hook
+    await content_source_registry.emit_hook('after_files_batch_add', {
+        'knowledge_base_id': id,
+        'file_ids': successful_file_ids,
+        'user_id': user.id,
+        'knowledge_base': knowledge.model_dump() if hasattr(knowledge, 'model_dump') else knowledge.__dict__
+    })
 
     # If there were any errors, include them in the response
     if result.errors:
@@ -1103,3 +1173,127 @@ async def export_knowledge_by_id(id: str, user=Depends(get_admin_user), db: Sess
         media_type='application/zip',
         headers={'Content-Disposition': content_disposition},
     )
+
+
+############################
+# Sync Content from Provider
+############################
+
+
+# Import the sync service
+from open_webui.content_sources.syncer import content_syncer
+
+
+class ContentSourceSyncForm(BaseModel):
+    """Form for syncing content from a content source provider."""
+    provider: str
+    source_id: str
+    options: Optional[Dict[str, Any]] = None
+
+
+@router.post("/{id}/sync", response_model=Optional[KnowledgeFilesResponse])
+async def sync_content_from_provider(
+    request: Request,
+    id: str,
+    form_data: ContentSourceSyncForm,
+    user=Depends(get_verified_user),
+):
+    """
+    Sync content from a content source provider to a knowledge base.
+    
+    This endpoint now acts as a thin orchestrator, delegating the heavy
+    sync logic to the ContentSyncService.
+    """
+    # Validate knowledge base and permissions
+    knowledge = Knowledges.get_knowledge_by_id(id=id)
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+    
+    if (
+        knowledge.user_id != user.id
+        and not has_access(user.id, "write", knowledge.access_control)
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+    
+    try:
+        # Use the sync service to perform the sync
+        log.info(f"Starting sync for knowledge base {id} with provider {form_data.provider}")
+        
+        sync_result = await content_syncer.sync_provider_files(
+            provider_name=form_data.provider,
+            source_id=form_data.source_id,
+            options=form_data.options or {},
+            request=request,
+            user_id=user.id,
+            knowledge_base_id=id
+        )
+        
+        # Update knowledge base with sync results
+        data = knowledge.data or {}
+        
+        # Update file IDs with successfully synced files and remove deleted ones
+        existing_file_ids = set(data.get("file_ids", []))
+        new_file_ids = set(sync_result.successful_files)
+        removed_file_ids = set(sync_result.removed_files) if hasattr(sync_result, 'removed_files') else set()
+        
+        # Add new files and remove deleted ones
+        updated_file_ids = list((existing_file_ids | new_file_ids) - removed_file_ids)
+        data["file_ids"] = updated_file_ids
+        
+        # Update sync metadata
+        data.setdefault("sync_metadata", {})[form_data.provider] = {
+            "source_id": form_data.source_id,
+            "last_sync": time.time(),
+            "options": form_data.options,
+            "results": {
+                "status": sync_result.status.value,
+                "added": len(sync_result.added_files),
+                "updated": len(sync_result.updated_files),
+                "removed": len(sync_result.removed_files) if hasattr(sync_result, 'removed_files') else 0,
+                "failed": len(sync_result.failed_files),
+                "duplicates": len(sync_result.duplicate_files),
+                "changes": sync_result.changes
+            }
+        }
+        
+        knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
+        
+        # Prepare response
+        files = Files.get_file_metadatas_by_ids(updated_file_ids)
+        
+        # Build sync results for response
+        sync_results_dict = None
+        if sync_result.changes or sync_result.errors:
+            sync_results_dict = {
+                "status": sync_result.status.value,
+                "added_files": sync_result.added_files,
+                "updated_files": sync_result.updated_files,
+                "duplicate_files": sync_result.duplicate_files,
+                "errors": sync_result.errors,
+                "warnings": sync_result.warnings,
+                "changes": sync_result.changes,
+                "total_processed": sync_result.total_processed
+            }
+        
+        return KnowledgeFilesResponse(
+            **knowledge.model_dump(),
+            files=files,
+            sync_results=sync_results_dict
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Sync failed for {form_data.provider}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Sync failed: {str(e)}"
+        )
+

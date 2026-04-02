@@ -48,6 +48,28 @@ class FileModel(BaseModel):
 
     created_at: Optional[int]  # timestamp in epoch
     updated_at: Optional[int]  # timestamp in epoch
+    
+    @property
+    def provider_info(self) -> dict:
+        """Get provider information from the data field."""
+        if self.data and isinstance(self.data, dict):
+            return self.data.get("provider_info", {})
+        return {}
+    
+    @property
+    def provider(self) -> Optional[str]:
+        """Get the provider name."""
+        return self.provider_info.get("provider")
+    
+    @property
+    def provider_file_id(self) -> Optional[str]:
+        """Get the provider's file ID."""
+        return self.provider_info.get("provider_file_id")
+    
+    @property
+    def provider_sync_enabled(self) -> bool:
+        """Check if provider sync is enabled."""
+        return self.provider_info.get("provider_sync_enabled", False)
 
 
 ####################
@@ -176,6 +198,14 @@ class FilesTable:
                     return None
             except Exception:
                 return None
+
+    def get_file_provider_info(self, id: str, db: Optional[Session] = None) -> Optional[dict]:
+        """Get provider information for a file."""
+        with get_db_context(db) as db:
+            file = db.query(File).filter_by(id=id).first()
+            if file and file.data and isinstance(file.data, dict):
+                return file.data.get("provider_info", {})
+            return None
 
     def get_file_metadata_by_id(self, id: str, db: Optional[Session] = None) -> Optional[FileMetadataResponse]:
         with get_db_context(db) as db:
@@ -315,6 +345,24 @@ class FilesTable:
         self, id: str, form_data: FileUpdateForm, db: Optional[Session] = None
     ) -> Optional[FileModel]:
         with get_db_context(db) as db:
+
+    def get_files_by_provider(
+        self, provider: str, user_id: Optional[str] = None, db: Optional[Session] = None
+    ) -> list[FileModel]:
+        """Get all files from a specific provider, optionally filtered by user."""
+        with get_db_context(db) as db:
+            query = db.query(File)
+            if user_id:
+                query = query.filter_by(user_id=user_id)
+            files = []
+            for file in query.all():
+                if file.data and isinstance(file.data, dict):
+                    provider_info = file.data.get("provider_info", {})
+                    if provider_info.get("provider") == provider:
+                        files.append(FileModel.model_validate(file))
+            return files
+
+
             try:
                 file = db.query(File).filter_by(id=id).first()
 
@@ -372,6 +420,45 @@ class FilesTable:
 
     def delete_file_by_id(self, id: str, db: Optional[Session] = None) -> bool:
         with get_db_context(db) as db:
+
+    def update_file_provider_info_by_id(
+        self, 
+        id: str, 
+        provider: Optional[str] = None,
+        provider_file_id: Optional[str] = None,
+        provider_modified_time: Optional[str] = None,
+        provider_sync_enabled: Optional[bool] = None,
+        provider_metadata: Optional[dict] = None,
+        db: Optional[Session] = None
+    ) -> Optional[FileModel]:
+        """Update provider information for a file."""
+        with get_db_context(db) as db:
+            try:
+                file = db.query(File).filter_by(id=id).first()
+                if not file:
+                    return None
+                if not file.data:
+                    file.data = {}
+                if "provider_info" not in file.data:
+                    file.data["provider_info"] = {}
+                updates = {
+                    "provider": provider,
+                    "provider_file_id": provider_file_id,
+                    "provider_modified_time": provider_modified_time,
+                    "provider_sync_enabled": provider_sync_enabled,
+                    "provider_metadata": provider_metadata,
+                }
+                for key, value in updates.items():
+                    if value is not None:
+                        file.data["provider_info"][key] = value
+                file.updated_at = int(time.time())
+                db.commit()
+                return FileModel.model_validate(file)
+            except Exception as e:
+                log.exception(f'Error updating file provider info: {e}')
+                return None
+
+
             try:
                 db.query(File).filter_by(id=id).delete()
                 db.commit()

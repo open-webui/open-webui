@@ -2,30 +2,18 @@
 	import Fuse from 'fuse.js';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
-	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
 
-	import { onMount, getContext, onDestroy, tick } from 'svelte';
+	import { getContext, onDestroy, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import {
-		mobile,
-		showSidebar,
-		knowledge as _knowledge,
-		config,
-		user,
-		settings
-	} from '$lib/stores';
+	import { knowledge as _knowledge, config, showSidebar, user, settings } from '$lib/stores';
 
-	import {
-		updateFileDataContentById,
-		uploadFile,
-		deleteFileById,
-		getFileById
-	} from '$lib/apis/files';
+	import { getFileById, updateFileDataContentById, uploadFile } from '$lib/apis/files';
 	import {
 		addFileToKnowledgeById,
+		getKnowledgeBases,
 		getKnowledgeById,
 		removeFileFromKnowledgeById,
 		resetKnowledgeById,
@@ -38,23 +26,29 @@
 
 	import { blobToFile, isYoutubeUrl } from '$lib/utils';
 
+	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Files from './KnowledgeBase/Files.svelte';
-	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
 
 	import AddContentMenu from './KnowledgeBase/AddContentMenu.svelte';
 	import AddTextContentModal from './KnowledgeBase/AddTextContentModal.svelte';
+	import ContentSourceStatus from './KnowledgeBase/ContentSourceStatus.svelte';
 
-	import SyncConfirmDialog from '../../common/ConfirmDialog.svelte';
+
 	import Drawer from '$lib/components/common/Drawer.svelte';
+	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import SyncConfirmDialog from '../../common/ConfirmDialog.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 	import FilesOverlay from '$lib/components/chat/MessageInput/FilesOverlay.svelte';
 	import DropdownOptions from '$lib/components/common/DropdownOptions.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
 	import AttachWebpageModal from '$lib/components/chat/MessageInput/AttachWebpageModal.svelte';
+	import GoogleDriveSyncModal from './KnowledgeBase/GoogleDriveSyncModal.svelte';
+	import ContentSourceSyncModal from './KnowledgeBase/ContentSourceSyncModal.svelte';
+	import { getContentSourceProviders } from '$lib/apis/knowledge';
 
 	let largeScreen = true;
 
@@ -87,6 +81,10 @@
 	let selectedFileId = null;
 	let selectedFile = null;
 	let selectedFileContent = '';
+	let showGoogleDriveSyncModal = false;
+	let showContentSourceSyncModal = false;
+	let availableProviders = [];
+	let selectedContentProvider = null;
 
 	let inputFiles = null;
 
@@ -704,6 +702,16 @@
 	};
 
 	onMount(async () => {
+		// Load available content source providers
+		try {
+			const providers = await getContentSourceProviders(localStorage.token);
+			if (providers) {
+				availableProviders = providers.filter(p => p.configured);
+			}
+		} catch (error) {
+			console.error('Failed to load content source providers:', error);
+		}
+
 		// listen to resize 1024px
 		mediaQuery = window.matchMedia('(min-width: 1024px)');
 
@@ -805,6 +813,19 @@
 		uploadFileHandler(file);
 	}}
 />
+
+{#if selectedContentProvider}
+	<ContentSourceSyncModal
+		bind:show={showContentSourceSyncModal}
+		knowledgeId={id}
+		provider={selectedContentProvider}
+		knowledgeData={knowledge}
+		on:sync={(e) => {
+			knowledge = e.detail;
+			toast.success($i18n.t(`${selectedContentProvider.display_name} synced successfully`));
+		}}
+	/>
+{/if}
 
 <input
 	id="files-input"
@@ -914,6 +935,12 @@
 							}}
 						/>
 					</div>
+
+					{#if knowledge}
+						<div class="px-1 mt-1">
+							<ContentSourceStatus knowledgeData={knowledge} />
+						</div>
+					{/if}
 				</div>
 			</div>
 		</div>
