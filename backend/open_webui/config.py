@@ -2283,6 +2283,12 @@ QDRANT_TIMEOUT = int(os.environ.get('QDRANT_TIMEOUT', '5'))
 QDRANT_HNSW_M = int(os.environ.get('QDRANT_HNSW_M', '16'))
 ENABLE_QDRANT_MULTITENANCY_MODE = os.environ.get('ENABLE_QDRANT_MULTITENANCY_MODE', 'true').lower() == 'true'
 QDRANT_COLLECTION_PREFIX = os.environ.get('QDRANT_COLLECTION_PREFIX', 'open-webui')
+QDRANT_HYBRID_SEARCH_ENABLED = os.environ.get('QDRANT_HYBRID_SEARCH_ENABLED', 'false').lower() == 'true'
+QDRANT_SPARSE_EMBEDDING_MODEL = os.environ.get('QDRANT_SPARSE_EMBEDDING_MODEL', 'Qdrant/bm25')
+QDRANT_DENSE_VECTOR_NAME = os.environ.get('QDRANT_DENSE_VECTOR_NAME', 'dense')
+QDRANT_SPARSE_VECTOR_NAME = os.environ.get('QDRANT_SPARSE_VECTOR_NAME', 'sparse')
+QDRANT_HYBRID_SEARCH_FUSION_TYPE = os.environ.get('QDRANT_HYBRID_SEARCH_FUSION_TYPE', 'rrf').lower()  # 'rrf' or 'dbsf'
+QDRANT_SPARSE_ON_DISK = os.environ.get('QDRANT_SPARSE_ON_DISK', 'false').lower() == 'true'
 
 WEAVIATE_HTTP_HOST = os.environ.get('WEAVIATE_HTTP_HOST', '')
 WEAVIATE_GRPC_HOST = os.environ.get('WEAVIATE_GRPC_HOST', '')

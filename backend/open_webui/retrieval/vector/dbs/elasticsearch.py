@@ -160,6 +160,7 @@ class ElasticsearchClient(VectorDBBase):
         vectors: list[list[float]],
         filter: Optional[dict] = None,
         limit: int = 10,
+        query: Optional[str] = None,
     ) -> Optional[SearchResult]:
         query = {
             'size': limit,

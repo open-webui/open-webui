@@ -58,6 +58,7 @@ class VectorDBBase(ABC):
         vectors: List[List[Union[float, int]]],
         filter: Optional[Dict] = None,
         limit: int = 10,
+        query: Optional[str] = None,
     ) -> Optional[SearchResult]:
         """Search for similar vectors in a collection."""
         pass

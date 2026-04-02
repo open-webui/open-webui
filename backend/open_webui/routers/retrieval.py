@@ -2409,6 +2409,7 @@ async def query_doc_handler(
                 query_embedding=query_embedding,
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 user=user,
+                query_text=form_data.query,
             )
     except Exception as e:
         log.exception(e)
