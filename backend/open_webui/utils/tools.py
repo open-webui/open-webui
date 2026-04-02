@@ -91,6 +91,7 @@ from open_webui.tools.builtin import (
     list_automations,
     toggle_automation,
     delete_automation,
+    upload_file_to_terminal,
 )
 
 import copy
@@ -545,6 +546,11 @@ async def get_builtin_tools(
     # Automation tools - create and manage scheduled automations from chat
     if is_builtin_tool_enabled('automations') and await has_user_permission('automations'):
         builtin_functions.extend([create_automation, update_automation, list_automations, toggle_automation, delete_automation])
+
+    # Terminal tools - upload files to connected terminal server
+    terminal_id = (extra_params.get('__metadata__') or {}).get('terminal_id')
+    if is_builtin_tool_enabled('terminal') and terminal_id:
+        builtin_functions.append(upload_file_to_terminal)
 
     for func in builtin_functions:
         callable = await get_async_tool_function_and_apply_extra_params(
