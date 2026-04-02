@@ -49,6 +49,7 @@
 
 	export let onAttach: ((blob: Blob, name: string, contentType: string) => void) | null = null;
 	export let overlay = false;
+	export let chatId: string | null = null;
 
 	// ── Terminal panel state ────────────────────────────────────────────
 	let terminalExpanded = false;
@@ -215,30 +216,48 @@
 		return url ? { url, key } : null;
 	};
 
-	// Detect terminal changes — the explicit store references ensure
+	// Detect terminal or chat changes — the explicit store references ensure
 	// Svelte re-runs this block when any of them update.
+	// The `mounted` flag prevents the initial run from racing with onMount.
 	let prevTerminalUrl = '';
+	let prevChatId = chatId;
+	let mounted = false;
 	$: {
 		($selectedTerminalId, $terminalServers, $settings);
 		const terminal = getTerminal();
 		selectedTerminal = terminal;
 
-		if (terminal && terminal.url !== prevTerminalUrl) {
-			prevTerminalUrl = terminal.url;
-			loading = true;
-			error = null;
-			entries = [];
-			(async () => {
-				// Discover server features (terminal enabled/disabled)
-				const config = await getTerminalConfig(terminal.url, terminal.key);
-				terminalEnabled = config?.features?.terminal !== false;
+		const chatChanged = chatId !== prevChatId;
+		const oldChatId = prevChatId;
+		if (chatChanged) prevChatId = chatId;
 
-				const rawCwd = await getCwd(terminal.url, terminal.key);
-				const cwd = rawCwd ? normalizePath(rawCwd) : null;
-				const dir = cwd ? (cwd.endsWith('/') ? cwd : cwd + '/') : '/';
-				savedPath = dir;
-				loadDir(dir);
-			})();
+		const terminalChanged = terminal && terminal.url !== prevTerminalUrl;
+		if (terminalChanged) prevTerminalUrl = terminal.url;
+
+		if (mounted && terminal) {
+			if (chatChanged && chatId && !oldChatId) {
+				// Chat just got created (null → real ID): persist the current
+				// browsed path as the new session's cwd — don't re-fetch.
+				setCwd(terminal.url, terminal.key, savedPath, chatId);
+			} else if (terminalChanged || chatChanged) {
+				// Terminal switched, new chat started, or switched between
+				// existing chats — re-fetch the session cwd.
+				loading = true;
+				error = null;
+				entries = [];
+				(async () => {
+					if (terminalChanged) {
+						const config = await getTerminalConfig(terminal.url, terminal.key);
+						terminalEnabled = config?.features?.terminal !== false;
+					}
+
+					const rawCwd = await getCwd(terminal.url, terminal.key, chatId ?? undefined);
+					const cwd = rawCwd ? normalizePath(rawCwd) : null;
+					const dir = cwd ? (cwd.endsWith('/') ? cwd : cwd + '/') : '/';
+					savedPath = dir;
+					loadDir(dir);
+				})();
+			}
 		}
 	}
 
@@ -274,7 +293,6 @@
 	// ── File preview management ──────────────────────────────────────────
 	const clearFilePreview = () => {
 		fileContent = null;
-		filePreviewRef?.disposePanzoom();
 		if (fileImageUrl) {
 			URL.revokeObjectURL(fileImageUrl);
 			fileImageUrl = null;
@@ -312,11 +330,11 @@
 		savedPath = path;
 		pushNavHistory(path);
 
-		const result = await listFiles(terminal.url, terminal.key, path);
+		const result = await listFiles(terminal.url, terminal.key, path, chatId ?? undefined);
 		loading = false;
 
 		// Set working directory on the terminal server (fire-and-forget)
-		setCwd(terminal.url, terminal.key, path);
+		setCwd(terminal.url, terminal.key, path, chatId ?? undefined);
 
 		if (result === null) {
 			error =
@@ -347,22 +365,52 @@
 		clearFilePreview();
 
 		if (isImage(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			const result = await downloadFileBlob(
+				terminal.url,
+				terminal.key,
+				filePath,
+				chatId ?? undefined
+			);
 			if (result) fileImageUrl = URL.createObjectURL(result.blob);
 		} else if (isVideo(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			const result = await downloadFileBlob(
+				terminal.url,
+				terminal.key,
+				filePath,
+				chatId ?? undefined
+			);
 			if (result) fileVideoUrl = URL.createObjectURL(result.blob);
 		} else if (isAudio(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			const result = await downloadFileBlob(
+				terminal.url,
+				terminal.key,
+				filePath,
+				chatId ?? undefined
+			);
 			if (result) fileAudioUrl = URL.createObjectURL(result.blob);
 		} else if (isPdf(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			const result = await downloadFileBlob(
+				terminal.url,
+				terminal.key,
+				filePath,
+				chatId ?? undefined
+			);
 			if (result) filePdfData = await result.blob.arrayBuffer();
 		} else if (isSqlite(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			const result = await downloadFileBlob(
+				terminal.url,
+				terminal.key,
+				filePath,
+				chatId ?? undefined
+			);
 			if (result) fileSqliteData = await result.blob.arrayBuffer();
 		} else if (isOffice(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			const result = await downloadFileBlob(
+				terminal.url,
+				terminal.key,
+				filePath,
+				chatId ?? undefined
+			);
 			if (result) {
 				const ext = getFileExt(filePath);
 				const arrayBuffer = await result.blob.arrayBuffer();
@@ -395,7 +443,7 @@
 				}
 			}
 		} else {
-			fileContent = await readFile(terminal.url, terminal.key, filePath);
+			fileContent = await readFile(terminal.url, terminal.key, filePath, chatId ?? undefined);
 		}
 		fileLoading = false;
 	};
@@ -408,7 +456,7 @@
 		const isDir = path.endsWith('/');
 		const result = isDir
 			? await archiveFromTerminal(terminal.url, terminal.key, [path.replace(/\/$/, '')])
-			: await downloadFileBlob(terminal.url, terminal.key, path);
+			: await downloadFileBlob(terminal.url, terminal.key, path, chatId ?? undefined);
 		if (!result) return;
 		const url = URL.createObjectURL(result.blob);
 		const a = document.createElement('a');
@@ -440,7 +488,7 @@
 
 		uploading = true;
 		for (const file of droppedFiles) {
-			await uploadToTerminal(terminal.url, terminal.key, currentPath, file);
+			await uploadToTerminal(terminal.url, terminal.key, currentPath, file, chatId ?? undefined);
 		}
 		uploading = false;
 		await loadDir(currentPath);
@@ -452,7 +500,7 @@
 
 		uploading = true;
 		for (const file of files) {
-			await uploadToTerminal(terminal.url, terminal.key, currentPath, file);
+			await uploadToTerminal(terminal.url, terminal.key, currentPath, file, chatId ?? undefined);
 		}
 		uploading = false;
 		await loadDir(currentPath);
@@ -475,7 +523,12 @@
 		const terminal = selectedTerminal;
 		if (!terminal) return;
 
-		const result = await createDirectory(terminal.url, terminal.key, `${currentPath}${name}`);
+		const result = await createDirectory(
+			terminal.url,
+			terminal.key,
+			`${currentPath}${name}`,
+			chatId ?? undefined
+		);
 		toast[result ? 'success' : 'error'](
 			$i18n.t(result ? 'Folder created' : 'Failed to create folder')
 		);
@@ -510,7 +563,7 @@
 		const terminal = selectedTerminal;
 		if (!terminal) return;
 
-		const result = await deleteEntry(terminal.url, terminal.key, path);
+		const result = await deleteEntry(terminal.url, terminal.key, path, chatId ?? undefined);
 		toast[result ? 'success' : 'error'](
 			$i18n.t(result ? '{{name}} deleted' : 'Failed to delete {{name}}', { name })
 		);
@@ -536,7 +589,13 @@
 		const sourceDir = source.endsWith('/') ? source : source + '/';
 		if (destFolder.startsWith(sourceDir)) return;
 
-		const result = await moveEntry(terminal.url, terminal.key, source, destination);
+		const result = await moveEntry(
+			terminal.url,
+			terminal.key,
+			source,
+			destination,
+			chatId ?? undefined
+		);
 		if ('error' in result) {
 			toast.error(result.error);
 		} else {
@@ -555,7 +614,13 @@
 
 		if (oldPath === destination) return;
 
-		const result = await moveEntry(terminal.url, terminal.key, oldPath, destination);
+		const result = await moveEntry(
+			terminal.url,
+			terminal.key,
+			oldPath,
+			destination,
+			chatId ?? undefined
+		);
 		if ('error' in result) {
 			toast.error(result.error);
 		} else {
@@ -736,13 +801,21 @@
 
 		if (!handledDisplayFile) {
 			loading = true;
-			if (savedPath === '/') {
-				const rawCwd = await getCwd(terminal.url, terminal.key);
+
+			// Discover server features on initial mount
+			const config = await getTerminalConfig(terminal.url, terminal.key);
+			terminalEnabled = config?.features?.terminal !== false;
+
+			if (chatId || savedPath === '/') {
+				// Fetch session-specific cwd from the server (or global default for new chats)
+				const rawCwd = await getCwd(terminal.url, terminal.key, chatId ?? undefined);
 				const cwd = rawCwd ? normalizePath(rawCwd) : null;
 				if (cwd) savedPath = cwd.endsWith('/') ? cwd : cwd + '/';
 			}
 			loadDir(savedPath);
 		}
+
+		mounted = true;
 
 		const onKeyDown = (e: KeyboardEvent) => {
 			if (e.key === 'Shift') shiftKey = true;
@@ -1368,6 +1441,7 @@
 							overlay={overlay || isDraggingHandle}
 							bind:connected={terminalConnected}
 							bind:connecting={terminalConnecting}
+							{chatId}
 						/>
 					</div>
 				{/if}

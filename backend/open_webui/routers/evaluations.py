@@ -291,6 +291,11 @@ async def update_config(
     }
 
 
+@router.get('/feedbacks/models', response_model=list[str])
+async def get_feedback_model_ids(user=Depends(get_admin_user), db: Session = Depends(get_session)):
+    return Feedbacks.get_distinct_model_ids(db=db)
+
+
 @router.get('/feedbacks/all', response_model=list[FeedbackResponse])
 async def get_all_feedbacks(user=Depends(get_admin_user), db: Session = Depends(get_session)):
     feedbacks = Feedbacks.get_all_feedbacks(db=db)
@@ -309,8 +314,17 @@ async def delete_all_feedbacks(user=Depends(get_admin_user), db: Session = Depen
 
 
 @router.get('/feedbacks/all/export', response_model=list[FeedbackModel])
-async def export_all_feedbacks(user=Depends(get_admin_user), db: Session = Depends(get_session)):
+async def export_all_feedbacks(
+    model_id: Optional[str] = None,
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
+):
     feedbacks = Feedbacks.get_all_feedbacks(db=db)
+    if model_id:
+        feedbacks = [
+            f for f in feedbacks
+            if f.data and f.data.get('model_id') == model_id
+        ]
     return feedbacks
 
 
@@ -334,6 +348,7 @@ async def get_feedbacks(
     order_by: Optional[str] = None,
     direction: Optional[str] = None,
     page: Optional[int] = 1,
+    model_id: Optional[str] = None,
     user=Depends(get_admin_user),
     db: Session = Depends(get_session),
 ):
@@ -347,6 +362,8 @@ async def get_feedbacks(
         filter['order_by'] = order_by
     if direction:
         filter['direction'] = direction
+    if model_id:
+        filter['model_id'] = model_id
 
     result = Feedbacks.get_feedback_items(filter=filter, skip=skip, limit=limit, db=db)
     return result

@@ -12,6 +12,7 @@
 	const i18n = getContext('i18n');
 
 	export let overlay = false;
+	export let chatId: string | null = null;
 
 	let terminalEl: HTMLDivElement;
 	let term: Terminal | null = null;
@@ -67,9 +68,11 @@
 				authToken = apiKey;
 
 				// Create session
+				const createHeaders: Record<string, string> = { Authorization: `Bearer ${apiKey}` };
+				if (chatId) createHeaders['X-Session-Id'] = chatId;
 				const res = await fetch(`${base}/api/terminals`, {
 					method: 'POST',
-					headers: { Authorization: `Bearer ${apiKey}` }
+					headers: createHeaders
 				});
 				if (!res.ok) throw new Error(`Failed to create session: ${res.status}`);
 				const session = await res.json();
@@ -83,9 +86,11 @@
 				authToken = token;
 
 				// Create session via proxy
+				const proxyHeaders: Record<string, string> = { Authorization: `Bearer ${token}` };
+				if (chatId) proxyHeaders['X-Session-Id'] = chatId;
 				const res = await fetch(`${base}/terminals/${info.serverId}/api/terminals`, {
 					method: 'POST',
-					headers: { Authorization: `Bearer ${token}` }
+					headers: proxyHeaders
 				});
 				if (!res.ok) throw new Error(`Failed to create session: ${res.status}`);
 				const session = await res.json();

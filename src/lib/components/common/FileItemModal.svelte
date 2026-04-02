@@ -25,9 +25,8 @@
 	import dayjs from 'dayjs';
 	import Spinner from './Spinner.svelte';
 	import PDFViewer from './PDFViewer.svelte';
+	import PanzoomContainer from './PanzoomContainer.svelte';
 	import Reset from '../icons/Reset.svelte';
-
-	import panzoom, { type PanZoom } from 'panzoom';
 
 	export let item;
 	export let show = false;
@@ -60,21 +59,9 @@
 	let pptxCurrentSlide = 0;
 	let pptxError = '';
 
-	let pzInstance: PanZoom | null = null;
-
-	const initImagePanzoom = (node: HTMLElement) => {
-		pzInstance = panzoom(node, {
-			bounds: true,
-			boundsPadding: 0.1,
-			zoomSpeed: 0.065
-		});
-	};
-
+	let panzoomRef: PanzoomContainer;
 	const resetImageView = () => {
-		if (pzInstance) {
-			pzInstance.moveTo(0, 0);
-			pzInstance.zoomAbs(0, 0, 1);
-		}
+		panzoomRef?.reset();
 	};
 
 	$: isPDF =
@@ -266,10 +253,6 @@
 		if (item?.context === 'full') {
 			enableFullContent = true;
 		}
-
-		return () => {
-			pzInstance?.dispose();
-		};
 	});
 </script>
 
@@ -445,7 +428,7 @@
 								</button>
 							</Tooltip>
 						</div>
-						<div use:initImagePanzoom>
+						<PanzoomContainer bind:this={panzoomRef}>
 							<img
 								src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
 								alt={item?.name ?? 'Image'}
@@ -453,7 +436,7 @@
 								loading="lazy"
 								draggable="false"
 							/>
-						</div>
+						</PanzoomContainer>
 					</div>
 				{:else if selectedTab === ''}
 					{#if item?.file?.data}

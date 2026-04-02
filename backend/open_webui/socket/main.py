@@ -491,6 +491,19 @@ async def channel_events(sid, data):
         Channels.update_member_last_read_at(data['channel_id'], user['id'])
 
 
+@sio.on('events:chat')
+async def chat_events(sid, data):
+    user = SESSION_POOL.get(sid)
+    if not user:
+        return
+
+    event_data = data.get('data', {})
+    event_type = event_data.get('type')
+
+    if event_type == 'last_read_at':
+        await asyncio.to_thread(Chats.update_chat_last_read_at_by_id, data['chat_id'], user['id'])
+
+
 def normalize_document_id(document_id: str) -> str:
     """Canonicalize document IDs to prevent auth bypass via prefix variants.
 
@@ -601,10 +614,10 @@ async def document_save_handler(document_id, data, user):
                 user_id=user.get('id'),
                 resource_type='note',
                 resource_id=note.id,
-                permission='read',
+                permission='write',
             )
         ):
-            log.error(f'User {user.get("id")} does not have access to note {note_id}')
+            log.error(f'User {user.get("id")} does not have write access to note {note_id}')
             return
 
         Notes.update_note_by_id(note_id, NoteUpdateForm(data=data))

@@ -60,7 +60,8 @@ export const DEFAULT_PERMISSIONS = {
 		web_search: true,
 		image_generation: true,
 		code_interpreter: true,
-		memories: true
+		memories: true,
+		automations: false
 	},
 	settings: {
 		interface: true

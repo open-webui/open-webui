@@ -6,6 +6,11 @@ _ALLOWED_STATIC_PATHS = (
     '/static/favicon.png',
 )
 
+# External URL prefixes that are explicitly trusted for profile images
+_ALLOWED_URL_PREFIXES = (
+    'https://www.gravatar.com/avatar/',
+)
+
 
 def validate_profile_image_url(url: str) -> str:
     """
@@ -15,6 +20,7 @@ def validate_profile_image_url(url: str) -> str:
     - Empty string (falls back to default avatar)
     - data:image/* URIs (base64-encoded uploads from the frontend)
     - Known static asset paths (/user.png, /static/favicon.png)
+    - Trusted external URLs (e.g. Gravatar)
 
     Returns the url unchanged if valid, raises ValueError otherwise.
     """
@@ -31,6 +37,9 @@ def validate_profile_image_url(url: str) -> str:
         return url
 
     if url in _ALLOWED_STATIC_PATHS:
+        return url
+
+    if any(url.startswith(prefix) for prefix in _ALLOWED_URL_PREFIXES):
         return url
 
     raise ValueError('Invalid profile image URL: only data URIs and default avatars are allowed.')

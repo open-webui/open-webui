@@ -175,7 +175,8 @@
 		bind:this={contentEl}
 		class={contentClass}
 		transition:flyAndScale
-		on:click|stopPropagation
+		on:click={(e) => e.stopPropagation()}
+		on:pointerdown={(e) => e.stopPropagation()}
 	>
 		<slot name="content" />
 	</div>

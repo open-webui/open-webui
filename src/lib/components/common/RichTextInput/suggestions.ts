@@ -109,7 +109,7 @@ export function getSuggestionRenderer(Component: any, ComponentProps = {}) {
 				popup = null;
 
 				try {
-					component.$destroy();
+					component?.$destroy();
 				} catch (e) {
 					console.error('Error unmounting component:', e);
 				}

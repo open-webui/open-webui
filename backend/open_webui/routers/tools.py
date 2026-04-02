@@ -120,7 +120,7 @@ async def get_tools(
             auth_type = server.get('auth_type', 'none')
 
             session_token = None
-            if auth_type == 'oauth_2.1':
+            if auth_type in ('oauth_2.1', 'oauth_2.1_static'):
                 splits = server_id.split(':')
                 server_id = splits[-1] if len(splits) > 1 else server_id
 
@@ -148,7 +148,7 @@ async def get_tools(
                             {
                                 'authenticated': session_token is not None,
                             }
-                            if auth_type == 'oauth_2.1'
+                            if auth_type in ('oauth_2.1', 'oauth_2.1_static')
                             else {}
                         ),
                     }
@@ -354,6 +354,14 @@ async def create_new_tools(
     tools = Tools.get_tool_by_id(form_data.id, db=db)
     if tools is None:
         try:
+            form_data.access_grants = filter_allowed_access_grants(
+                request.app.state.config.USER_PERMISSIONS,
+                user.id,
+                user.role,
+                form_data.access_grants,
+                'sharing.public_tools',
+            )
+
             form_data.content = replace_imports(form_data.content)
             tool_module, frontmatter = load_tool_module_by_id(form_data.id, content=form_data.content)
             form_data.meta.manifest = frontmatter
@@ -480,6 +488,14 @@ async def update_tools_by_id(
         TOOLS[id] = tool_module
 
         specs = get_tool_specs(TOOLS[id])
+
+        form_data.access_grants = filter_allowed_access_grants(
+            request.app.state.config.USER_PERMISSIONS,
+            user.id,
+            user.role,
+            form_data.access_grants,
+            'sharing.public_tools',
+        )
 
         updated = {
             **form_data.model_dump(exclude={'id'}),

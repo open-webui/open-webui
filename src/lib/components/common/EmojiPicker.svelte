@@ -11,6 +11,9 @@
 	import emojiGroups from '$lib/emoji-groups.json';
 	import emojiShortCodes from '$lib/emoji-shortcodes.json';
 
+	import { settings } from '$lib/stores';
+	import { updateUserSettings } from '$lib/apis/users';
+
 	const i18n = getContext('i18n');
 
 	export let onClose = () => {};
@@ -20,11 +23,36 @@
 	export let user = null;
 	export let selected = null;
 
+	const MAX_RECENT = 30;
+
 	let show = false;
 	let emojis = emojiShortCodes;
 	let search = '';
 	let flattenedEmojis = [];
 	let emojiRows = [];
+
+	let saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+	$: recentEmojiNames = ($settings?.recentEmojis ?? [])
+		.filter((name) => emojiShortCodes[name])
+		.slice(0, MAX_RECENT);
+
+	function saveRecentEmoji(emojiName: string) {
+		// Remove if already present, then prepend
+		const updated = [emojiName, ...recentEmojiNames.filter((n) => n !== emojiName)].slice(
+			0,
+			MAX_RECENT
+		);
+
+		// Update store immediately (reactive UI)
+		settings.set({ ...$settings, recentEmojis: updated });
+
+		// Debounce backend save (avoid API spam on rapid picks)
+		if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
+		saveDebounceTimer = setTimeout(async () => {
+			await updateUserSettings(localStorage.token, { ui: { ...$settings, recentEmojis: updated } });
+		}, 1000);
+	}
 
 	// Reactive statement to filter the emojis based on search query
 	$: {
@@ -55,6 +83,22 @@
 	// Flatten emoji groups and group them into rows of 8 for virtual scrolling
 	$: {
 		flattenedEmojis = [];
+
+		// Add "Recently Used" group first (only when not searching)
+		if (!search && recentEmojiNames.length > 0) {
+			flattenedEmojis.push({ type: 'group', label: $i18n.t('Recently Used') });
+			flattenedEmojis.push(
+				...recentEmojiNames.map((emoji) => ({
+					type: 'emoji',
+					name: emoji,
+					shortCodes:
+						typeof emojiShortCodes[emoji] === 'string'
+							? [emojiShortCodes[emoji]]
+							: emojiShortCodes[emoji]
+				}))
+			);
+		}
+
 		Object.keys(emojiGroups).forEach((group) => {
 			const groupEmojis = emojiGroups[group].filter((emoji) => emojis[emoji]);
 			if (groupEmojis.length > 0) {
@@ -97,6 +141,7 @@
 	// Handle emoji selection
 	function selectEmoji(emoji) {
 		const selectedCode = emoji.shortCodes[0];
+		saveRecentEmoji(emoji.name);
 		if (selected === selectedCode) {
 			onSubmit(null);
 		} else {
@@ -140,10 +185,10 @@
 				{:else}
 					<div class="w-full flex ml-0.5">
 						<VirtualList rowHeight={ROW_HEIGHT} items={emojiRows} height={384} let:item>
-							<div class="w-full">
+							<div class="w-full mb-2.5">
 								{#if item.length === 1 && item[0].type === 'group'}
 									<!-- Render group header -->
-									<div class="text-xs font-medium mb-2 text-gray-500 dark:text-gray-400">
+									<div class="text-xs font-medium -mb-1 text-gray-500 dark:text-gray-400">
 										{item[0].label}
 									</div>
 								{:else}

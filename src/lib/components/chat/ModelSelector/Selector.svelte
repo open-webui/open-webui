@@ -8,6 +8,7 @@
 	dayjs.extend(relativeTime);
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import { flyAndScale } from '$lib/utils/transitions';
 
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
@@ -375,6 +376,43 @@
 		}
 	};
 
+	let showDeleteConfirm = false;
+	let deleteModelTarget: any = null;
+
+	const deleteModelHandler = async (model: any) => {
+		deleteModelTarget = model;
+		showDeleteConfirm = true;
+	};
+
+	const confirmDeleteModel = async () => {
+		const model = deleteModelTarget;
+		if (!model) return;
+
+		const res = await deleteModel(localStorage.token, model.id).catch((error) => {
+			toast.error($i18n.t('Error deleting model: {{error}}', { error }));
+		});
+
+		if (res) {
+			toast.success(
+				$i18n.t('Model {{modelName}} deleted successfully', { modelName: model.name ?? model.id })
+			);
+
+			// If the deleted model was selected, clear the selection
+			if (value === model.id) {
+				value = '';
+			}
+
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
+		}
+
+		deleteModelTarget = null;
+	};
+
 	const ITEM_HEIGHT = 42;
 	const OVERSCAN = 10;
 
@@ -387,6 +425,17 @@
 		Math.ceil((listScrollTop + 256) / ITEM_HEIGHT) + OVERSCAN
 	);
 </script>
+
+<ConfirmDialog
+	bind:show={showDeleteConfirm}
+	title={$i18n.t('Delete Model')}
+	message={$i18n.t('Are you sure you want to delete **{{modelName}}**?', {
+		modelName: deleteModelTarget?.name ?? deleteModelTarget?.id ?? ''
+	})}
+	on:confirm={() => {
+		confirmDeleteModel();
+	}}
+/>
 
 <DropdownMenu.Root
 	bind:open={show}
@@ -448,7 +497,7 @@
 		>
 			{#snippet child({ wrapperProps, props, open })}
 				{#if open}
-					<div {...wrapperProps}>
+					<div {...wrapperProps} style="{wrapperProps.style ?? ''}{$mobile ? '; left: 0.5rem !important; width: calc(100vw - 1rem) !important;' : ''}">
 						<div
 							{...props}
 							class="{props.class} z-40 {$mobile
@@ -646,6 +695,7 @@
 													{value}
 													{pinModelHandler}
 													{unloadModelHandler}
+													{deleteModelHandler}
 													onClick={() => {
 														value = item.value;
 														selectedModelIdx = index;
