@@ -2555,6 +2555,8 @@ async def upload_file_to_terminal(
         local_path = Storage.get_file(file_record.path)
 
         # --- 2. Resolve terminal connection ---
+        from open_webui.utils.access_control import has_connection_access
+
         terminal_url = None
         headers = {}
 
@@ -2563,6 +2565,8 @@ async def upload_file_to_terminal(
             (c for c in connections if c.get('id') == terminal_id), None
         )
         if connection:
+            if not has_connection_access(UserModel(**__user__), connection):
+                return json.dumps({'error': 'Access denied to terminal server'})
             terminal_url = connection.get('url', '').rstrip('/')
             auth_type = connection.get('auth_type', 'bearer')
             if auth_type == 'bearer':
