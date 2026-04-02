@@ -9,6 +9,7 @@ import sys
 import time
 import random
 import re
+from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 
 
@@ -644,9 +645,14 @@ async def lifespan(app: FastAPI):
     if app.state.redis is not None:
         app.state.redis_task_command_listener = asyncio.create_task(redis_task_command_listener(app))
 
+    executor = None
+
     if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0:
         limiter = anyio.to_thread.current_default_thread_limiter()
         limiter.total_tokens = THREAD_POOL_SIZE
+
+        executor = ThreadPoolExecutor(max_workers=THREAD_POOL_SIZE)
+        app.state.main_loop.set_default_executor(executor)
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     asyncio.create_task(periodic_session_pool_cleanup())
@@ -710,6 +716,9 @@ async def lifespan(app: FastAPI):
     app.state.startup_complete = True
 
     yield
+
+    if executor is not None:
+        executor.shutdown()
 
     if hasattr(app.state, 'redis_task_command_listener'):
         app.state.redis_task_command_listener.cancel()
