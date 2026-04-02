@@ -223,7 +223,7 @@
 	let prevChatId = chatId;
 	let mounted = false;
 	$: {
-		($selectedTerminalId, $terminalServers, $settings);
+		$selectedTerminalId, $terminalServers, $settings;
 		const terminal = getTerminal();
 		selectedTerminal = terminal;
 

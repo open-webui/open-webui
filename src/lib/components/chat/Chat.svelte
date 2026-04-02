@@ -106,7 +106,7 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
 	import Image from '../common/Image.svelte';
-	import { getBanners } from '$lib/apis/configs';
+	import { getBanners, initiateOAuthRedirect } from '$lib/apis/configs';
 
 	export let chatIdProp = '';
 
@@ -330,6 +330,11 @@
 				}
 				selectedToolIds = authed;
 				pendingOAuthTools = unauthed;
+
+				// Clean up chaining flag when all tools are authenticated
+				if (unauthed.length === 0) {
+					sessionStorage.removeItem('oauthLastAttemptedToolId');
+				}
 			} else if ($settings?.tools) {
 				selectedToolIds = $settings.tools;
 			} else {
@@ -367,6 +372,21 @@
 					($user?.role === 'admin' || $user?.permissions?.features?.code_interpreter)
 				) {
 					codeInterpreterEnabled = model.info.meta.defaultFeatureIds.includes('code_interpreter');
+				}
+			}
+
+			// Continue OAuth chaining only if user already started a flow
+			if (pendingOAuthTools.length > 0 && !chatIdProp) {
+				const lastAttempted = sessionStorage.getItem('oauthLastAttemptedToolId');
+				if (lastAttempted) {
+					const nextTool = pendingOAuthTools[0];
+					// Same tool still pending means user cancelled — stop chaining
+					if (lastAttempted === nextTool.id) {
+						sessionStorage.removeItem('oauthLastAttemptedToolId');
+					} else {
+						await tick();
+						initiateOAuthRedirect(nextTool);
+					}
 				}
 			}
 		}
