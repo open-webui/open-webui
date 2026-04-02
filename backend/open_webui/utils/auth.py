@@ -206,7 +206,7 @@ def create_token(data: dict, expires_delta: Union[timedelta, None] = None) -> st
         payload.update({'exp': expire})
 
     jti = str(uuid.uuid4())
-    payload.update({'jti': jti})
+    payload.update({'jti': jti, 'iat': datetime.now(UTC)})
 
     encoded_jwt = jwt.encode(payload, SESSION_SECRET, algorithm=ALGORITHM)
     return encoded_jwt
@@ -221,14 +221,35 @@ def decode_token(token: str) -> Optional[dict]:
 
 
 async def is_valid_token(request, decoded) -> bool:
-    # Require Redis to check revoked tokens
+    """
+    Check whether a JWT has been revoked. Two mechanisms:
+    1. Per-token (jti) — used by user-initiated sign-out (known jti).
+    2. Per-user (revoked_at) — used by OIDC back-channel logout when
+       individual jti values are unknown; rejects tokens with iat <= revoked_at.
+    """
     if request.app.state.redis:
+        # Per-token revocation
         jti = decoded.get('jti')
-
         if jti:
             revoked = await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:auth:token:{jti}:revoked')
             if revoked:
                 return False
+
+        # Per-user revocation (OIDC back-channel logout)
+        user_id = decoded.get('id')
+        if user_id:
+            revoked_at = await request.app.state.redis.get(
+                f'{REDIS_KEY_PREFIX}:auth:user:{user_id}:revoked_at'
+            )
+            if revoked_at:
+                try:
+                    revoked_at_ts = int(revoked_at)
+                    token_iat = decoded.get('iat')
+                    # No iat means legacy token — reject since we can't verify issue time
+                    if token_iat is None or token_iat <= revoked_at_ts:
+                        return False
+                except (ValueError, TypeError):
+                    pass
 
     return True
 

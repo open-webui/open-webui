@@ -511,6 +511,8 @@ from open_webui.env import (
     WEBUI_ADMIN_NAME,
     ENABLE_EASTER_EGGS,
     LOG_FORMAT,
+    # OAuth Back-Channel Logout
+    ENABLE_OAUTH_BACKCHANNEL_LOGOUT,
 )
 
 
@@ -2475,6 +2477,21 @@ async def oauth_login_callback(
     db: Session = Depends(get_session),
 ):
     return await oauth_manager.handle_callback(request, provider, response, db=db)
+
+
+############################
+# OIDC Back-Channel Logout
+############################
+
+
+@app.post('/oauth/backchannel-logout')
+async def oauth_backchannel_logout(
+    request: Request,
+    db: Session = Depends(get_session),
+):
+    if not ENABLE_OAUTH_BACKCHANNEL_LOGOUT:
+        raise HTTPException(status_code=404)
+    return await oauth_manager.handle_backchannel_logout(request, db=db)
 
 
 @app.get('/manifest.json')
