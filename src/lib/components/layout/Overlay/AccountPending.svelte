@@ -41,8 +41,8 @@
 					style="white-space: pre-wrap;"
 				>
 					{#if ($config?.ui?.pending_user_overlay_content ?? '').trim() !== ''}
-						{@html marked.parse(
-							DOMPurify.sanitize(
+						{@html DOMPurify.sanitize(
+							marked.parse(
 								($config?.ui?.pending_user_overlay_content ?? '').replace(/\n/g, '<br>')
 							)
 						)}
