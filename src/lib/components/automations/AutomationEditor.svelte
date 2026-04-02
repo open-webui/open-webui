@@ -378,9 +378,10 @@
 					<div class="space-y-2.5">
 						<div class="flex items-center justify-between text-xs">
 							<span class="text-gray-600 dark:text-gray-400">{$i18n.t('State')}</span>
-							<span class="flex items-center gap-1.5 text-xs {is_active
-								? 'text-emerald-700 dark:text-emerald-400'
-								: 'text-gray-600 dark:text-gray-400'}"
+							<span
+								class="flex items-center gap-1.5 text-xs {is_active
+									? 'text-emerald-700 dark:text-emerald-400'
+									: 'text-gray-600 dark:text-gray-400'}"
 							>
 								<span
 									class="inline-block size-1.5 rounded-full {is_active
@@ -409,8 +410,8 @@
 					</div>
 				</div>
 
-				<div class="flex-1 flex flex-col min-h-0">
-					<div class="text-gray-500 text-xs mb-2 shrink-0">
+				<div class="flex-1 flex flex-col min-h-0 -mx-1">
+					<div class="text-gray-500 text-xs mb-2 mx-1 shrink-0">
 						{$i18n.t('Execution Logs')}
 					</div>
 					<div class="flex-1 overflow-y-auto scrollbar-hidden w-full" on:scroll={onScroll}>
@@ -426,7 +427,7 @@
 							<div class="space-y-0.5 w-full">
 								{#each runs as run (run.id)}
 									<button
-										class="w-full text-left flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-gray-100/80 dark:hover:bg-gray-850/80 transition-colors {run.chat_id
+										class="w-full text-left flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl hover:bg-gray-100/80 dark:hover:bg-gray-850/80 transition-colors {run.chat_id
 											? 'cursor-pointer'
 											: 'cursor-default'}"
 										on:click={() => {
