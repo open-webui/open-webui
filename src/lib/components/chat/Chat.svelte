@@ -246,7 +246,7 @@
 			messageInput?.setText(data, async () => {
 				if (!($settings?.insertSuggestionPrompt ?? false)) {
 					await tick();
-					submitPrompt(prompt);
+					submitHandler(prompt);
 				}
 			});
 		}
@@ -602,7 +602,7 @@
 
 			if (prompt !== '') {
 				await tick();
-				submitPrompt(prompt);
+				submitHandler(prompt);
 			}
 		}
 
@@ -623,7 +623,7 @@
 			if (event.data.text !== '') {
 				if (isSameOrigin) {
 					await tick();
-					submitPrompt(event.data.text);
+					submitHandler(event.data.text);
 				} else {
 					// Cross-origin: ask user to confirm before submitting
 					eventConfirmationInput = false;
@@ -632,7 +632,7 @@
 					eventCallback = async (confirmed: boolean) => {
 						if (confirmed) {
 							await tick();
-							submitPrompt(event.data.text);
+							submitHandler(event.data.text);
 						}
 					};
 					showEventConfirmation = true;
@@ -1232,7 +1232,7 @@
 			if (q) {
 				if (($page.url.searchParams.get('submit') ?? 'true') === 'true') {
 					await tick();
-					submitPrompt(q);
+					submitHandler(q);
 				}
 			}
 		}
@@ -1296,7 +1296,12 @@
 
 				if (history.currentId) {
 					for (const message of Object.values(history.messages)) {
-						if (message && message.role === 'assistant' && message.id !== history.currentId && message.done !== false) {
+						if (
+							message &&
+							message.role === 'assistant' &&
+							message.id !== history.currentId &&
+							message.done !== false
+						) {
 							message.done = true;
 						}
 					}
@@ -1352,14 +1357,16 @@
 			return rest;
 		});
 
-		files = combinedFiles;
-		await tick();
-		await submitPrompt(combinedPrompt);
+		await submitPrompt(combinedPrompt, combinedFiles);
 	};
 
 	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
 		if (!responseMessageId) {
-			console.error('chatCompleted: missing message id', { chatId: _chatId, modelId, messageCount: messages?.length ?? 0 });
+			console.error('chatCompleted: missing message id', {
+				chatId: _chatId,
+				modelId,
+				messageCount: messages?.length ?? 0
+			});
 			return;
 		}
 
@@ -1787,8 +1794,56 @@
 	// Chat functions
 	//////////////////////////
 
-	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
-		console.log('submitPrompt', userPrompt, $chatId);
+	const submitPrompt = async (inputContent, inputFiles) => {
+		const _files = structuredClone(inputFiles);
+
+		chatFiles.push(
+			..._files.filter(
+				(item) =>
+					['doc', 'text', 'note', 'chat', 'folder', 'collection'].includes(item.type) ||
+					(item.type === 'file' && !(item?.content_type ?? '').startsWith('image/'))
+			)
+		);
+		chatFiles = chatFiles.filter(
+			// Remove duplicates
+			(item, index, array) =>
+				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
+		);
+
+		// Create user message
+		let userMessageId = uuidv4();
+		let userMessage = {
+			id: userMessageId,
+			parentId: history.currentId ?? null,
+			childrenIds: [],
+			role: 'user',
+			content: inputContent,
+			files: _files.length > 0 ? _files : undefined,
+			timestamp: Math.floor(Date.now() / 1000), // Unix epoch
+			models: selectedModels
+		};
+
+		// Add message to history and Set currentId to messageId
+		history.messages[userMessageId] = userMessage;
+
+		// Append messageId to childrenIds of parent message
+		if (history.currentId !== null) {
+			history.messages[history.currentId].childrenIds.push(userMessageId);
+		}
+
+		history.currentId = userMessageId;
+
+		// focus on chat input
+		const chatInput = document.getElementById('chat-input');
+		chatInput?.focus();
+
+		saveSessionSelectedModels();
+
+		await sendMessage(history, userMessageId, { newChat: true });
+	};
+
+	const submitHandler = async (userPrompt, { _raw = false } = {}) => {
+		console.log('submitHandler', userPrompt, $chatId);
 
 		const _selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
@@ -1868,57 +1923,14 @@
 			}
 		}
 
+		// Clear input and submit
 		messageInput?.setText('');
 		prompt = '';
-
-		const messages = createMessagesList(history, history.currentId);
 		const _files = structuredClone(files);
-
-		chatFiles.push(
-			..._files.filter(
-				(item) =>
-					['doc', 'text', 'note', 'chat', 'folder', 'collection'].includes(item.type) ||
-					(item.type === 'file' && !(item?.content_type ?? '').startsWith('image/'))
-			)
-		);
-		chatFiles = chatFiles.filter(
-			// Remove duplicates
-			(item, index, array) =>
-				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
-		);
-
 		files = [];
 		messageInput?.setText('');
 
-		// Create user message
-		let userMessageId = uuidv4();
-		let userMessage = {
-			id: userMessageId,
-			parentId: messages.length !== 0 ? messages.at(-1).id : null,
-			childrenIds: [],
-			role: 'user',
-			content: userPrompt,
-			files: _files.length > 0 ? _files : undefined,
-			timestamp: Math.floor(Date.now() / 1000), // Unix epoch
-			models: selectedModels
-		};
-
-		// Add message to history and Set currentId to messageId
-		history.messages[userMessageId] = userMessage;
-		history.currentId = userMessageId;
-
-		// Append messageId to childrenIds of parent message
-		if (messages.length !== 0) {
-			history.messages[messages.at(-1).id].childrenIds.push(userMessageId);
-		}
-
-		// focus on chat input
-		const chatInput = document.getElementById('chat-input');
-		chatInput?.focus();
-
-		saveSessionSelectedModels();
-
-		await sendMessage(history, userMessageId, { newChat: true });
+		await submitPrompt(userPrompt, _files);
 	};
 
 	const sendMessage = async (
@@ -2904,10 +2916,8 @@
 											// Stop current generation first
 											await stopResponse();
 											await tick();
-											// Set files and submit
-											files = item.files;
-											await tick();
-											await submitPrompt(item.prompt);
+											// Submit queued message directly without clearing input
+											await submitPrompt(item.prompt, item.files);
 										}
 									}}
 									onQueueEdit={(id) => {
@@ -2941,7 +2951,7 @@
 										if (e.detail || files.length > 0) {
 											await tick();
 
-											submitPrompt(e.detail.replaceAll('\n\n', '\n'));
+											submitHandler(e.detail.replaceAll('\n\n', '\n'));
 										}
 									}}
 								/>
@@ -2984,7 +2994,7 @@
 										clearDraft();
 										if (e.detail || files.length > 0) {
 											await tick();
-											submitPrompt(e.detail.replaceAll('\n\n', '\n'));
+											submitHandler(e.detail.replaceAll('\n\n', '\n'));
 										}
 									}}
 								/>
@@ -3009,7 +3019,7 @@
 						}
 						return a;
 					}, [])}
-					{submitPrompt}
+					submitPrompt={submitHandler}
 					{stopResponse}
 					{showMessage}
 					{eventTarget}
