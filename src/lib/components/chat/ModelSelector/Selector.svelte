@@ -439,12 +439,12 @@
 
 <DropdownMenu.Root
 	bind:open={show}
-	onOpenChange={async () => {
-		searchValue = '';
-		listScrollTop = 0;
-		window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
-
-		resetView();
+	onOpenChange={(open) => {
+		if (open) {
+			searchValue = '';
+			listScrollTop = 0;
+			resetView();
+		}
 	}}
 	onOpenChangeComplete={(open) => {
 		if (!open) {
@@ -494,6 +494,10 @@
 			align={$mobile ? 'center' : 'start'}
 			sideOffset={2}
 			alignOffset={-1}
+			onOpenAutoFocus={(e) => {
+				e.preventDefault();
+				window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
+			}}
 		>
 			{#snippet child({ wrapperProps, props, open })}
 				{#if open}
