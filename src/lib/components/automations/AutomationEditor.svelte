@@ -276,7 +276,7 @@
 
 				{#if isDirty}
 					<button
-						class="px-4 py-1.5 text-sm bg-black text-white dark:bg-white dark:text-black rounded-full hover:opacity-90 transition flex items-center gap-1.5"
+						class="px-3 py-1 text-sm bg-black text-white dark:bg-white dark:text-black rounded-full hover:opacity-90 transition flex items-center gap-1.5"
 						on:click={saveHandler}
 						disabled={saving}
 						type="button"
@@ -289,7 +289,7 @@
 				{/if}
 
 				<button
-					class="px-4 py-1.5 text-sm border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-full flex items-center gap-1.5"
+					class="px-2.5 py-1 text-sm border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-full flex items-center gap-1.5"
 					on:click={runNowHandler}
 					type="button"
 					disabled={loading}
@@ -334,7 +334,7 @@
 			</div>
 
 			<!-- Sidebar Configuration Column -->
-			<div class="hidden md:flex w-full md:w-80 shrink-0 overflow-y-auto px-1 flex-col gap-5">
+			<div class="hidden md:flex w-full md:w-66 shrink-0 overflow-y-auto px-1 flex-col gap-5">
 				<div>
 					<div class="text-gray-500 text-xs mb-3">{$i18n.t('Configuration')}</div>
 					<div class="space-y-1">
