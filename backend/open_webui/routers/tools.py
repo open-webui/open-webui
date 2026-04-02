@@ -354,6 +354,14 @@ async def create_new_tools(
     tools = Tools.get_tool_by_id(form_data.id, db=db)
     if tools is None:
         try:
+            form_data.access_grants = filter_allowed_access_grants(
+                request.app.state.config.USER_PERMISSIONS,
+                user.id,
+                user.role,
+                form_data.access_grants,
+                'sharing.public_tools',
+            )
+
             form_data.content = replace_imports(form_data.content)
             tool_module, frontmatter = load_tool_module_by_id(form_data.id, content=form_data.content)
             form_data.meta.manifest = frontmatter
@@ -480,6 +488,14 @@ async def update_tools_by_id(
         TOOLS[id] = tool_module
 
         specs = get_tool_specs(TOOLS[id])
+
+        form_data.access_grants = filter_allowed_access_grants(
+            request.app.state.config.USER_PERMISSIONS,
+            user.id,
+            user.role,
+            form_data.access_grants,
+            'sharing.public_tools',
+        )
 
         updated = {
             **form_data.model_dump(exclude={'id'}),

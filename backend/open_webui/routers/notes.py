@@ -175,6 +175,15 @@ async def create_new_note(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
+    form_data.access_grants = filter_allowed_access_grants(
+        request.app.state.config.USER_PERMISSIONS,
+        user.id,
+        user.role,
+        form_data.access_grants,
+        'sharing.public_notes',
+        db=db,
+    )
+
     try:
         note = Notes.insert_new_note(user.id, form_data, db=db)
         return note
