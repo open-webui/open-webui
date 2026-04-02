@@ -580,16 +580,23 @@ log = logging.getLogger(__name__)
 class SPAStaticFiles(StaticFiles):
     async def get_response(self, path: str, scope):
         try:
-            return await super().get_response(path, scope)
+            response = await super().get_response(path, scope)
         except (HTTPException, StarletteHTTPException) as ex:
             if ex.status_code == 404:
                 if path.endswith('.js'):
                     # Return 404 for javascript files
                     raise ex
                 else:
-                    return await super().get_response('index.html', scope)
+                    response = await super().get_response('index.html', scope)
             else:
                 raise ex
+
+        # Prevent browsers from caching index.html so that users always get
+        # the latest frontend after a deployment (avoids stale JS chunk refs).
+        # Fingerprinted assets (*.js, *.css) are fine to cache indefinitely.
+        if path == '.' or path == 'index.html' or path == '':
+            response.headers['Cache-Control'] = 'no-cache'
+        return response
 
 
 if LOG_FORMAT != 'json':
