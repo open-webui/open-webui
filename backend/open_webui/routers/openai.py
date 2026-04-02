@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import os
 import re
 from typing import Optional
 from urllib.parse import urlparse
@@ -1104,7 +1105,7 @@ async def generate_chat_completion(
             'role': user.role,
         }
 
-    url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+    url = os.environ.get("FORCE_OPENAI_BASE_URL") or request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
 
     # Check if model is a reasoning model that needs special handling
