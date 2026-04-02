@@ -378,18 +378,17 @@
 					<div class="space-y-2.5">
 						<div class="flex items-center justify-between text-xs">
 							<span class="text-gray-600 dark:text-gray-400">{$i18n.t('State')}</span>
-							<div
-								class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs transition {is_active
-									? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10'
-									: 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800'}"
+							<span class="flex items-center gap-1.5 text-xs {is_active
+								? 'text-emerald-700 dark:text-emerald-400'
+								: 'text-gray-600 dark:text-gray-400'}"
 							>
 								<span
 									class="inline-block size-1.5 rounded-full {is_active
 										? 'bg-emerald-500'
 										: 'bg-gray-400'}"
 								></span>
-								<span>{is_active ? $i18n.t('Active') : $i18n.t('Paused')}</span>
-							</div>
+								{is_active ? $i18n.t('Active') : $i18n.t('Paused')}
+							</span>
 						</div>
 
 						<div class="flex items-center justify-between text-xs">
