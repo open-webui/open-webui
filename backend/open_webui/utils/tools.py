@@ -504,9 +504,9 @@ def get_builtin_tools(
     if extra_params.get('__skill_ids__'):
         builtin_functions.append(view_skill)
 
-    # Terminal tools - upload chat files to connected terminal server
-    terminal_id = (extra_params.get("__metadata__") or {}).get("terminal_id")
-    if is_builtin_tool_enabled("terminal") and terminal_id:
+    # Terminal tools - upload files to connected terminal server
+    terminal_id = (extra_params.get('__metadata__') or {}).get('terminal_id')
+    if is_builtin_tool_enabled('terminal') and terminal_id:
         builtin_functions.append(upload_file_to_terminal)
 
     for func in builtin_functions:
