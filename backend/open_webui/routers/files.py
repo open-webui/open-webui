@@ -215,7 +215,7 @@ def upload_file_handler(
                 ext for ext in request.app.state.config.ALLOWED_FILE_EXTENSIONS if ext
             ]
 
-            if file_extension not in request.app.state.config.ALLOWED_FILE_EXTENSIONS:
+            if file_extension.lower() not in request.app.state.config.ALLOWED_FILE_EXTENSIONS:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT(f'File type {file_extension} is not allowed'),
