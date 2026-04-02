@@ -845,6 +845,8 @@
 	"Export": "ཕྱིར་གཏོང་།",
 	"Export All Archived Chats": "ཡིག་མཛོད་དུ་བཞག་པའི་ཁ་བརྡ་ཡོངས་རྫོགས་ཕྱིར་གཏོང་།",
 	"Export All Chats (All Users)": "ཁ་བརྡ་ཡོངས་རྫོགས་ཕྱིར་གཏོང་། (བེད་སྤྱོད་མཁན་ཡོངས་)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "ཁ་བརྡ་ཕྱིར་གཏོང་ (.json)",
 	"Export Chats": "ཁ་བརྡ་ཕྱིར་གཏོང་།",
 	"Export Config": "",

@@ -846,6 +846,8 @@
 	"Export": "Exportálás",
 	"Export All Archived Chats": "Minden archivált csevegés exportálása",
 	"Export All Chats (All Users)": "Minden beszélgetés exportálása (minden felhasználó)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "Beszélgetés exportálása (.json)",
 	"Export Chats": "Beszélgetések exportálása",
 	"Export Config": "",

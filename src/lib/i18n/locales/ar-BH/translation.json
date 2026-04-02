@@ -850,6 +850,8 @@
 	"Export": "تصدير",
 	"Export All Archived Chats": "",
 	"Export All Chats (All Users)": "تصدير جميع الدردشات (جميع المستخدمين)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "",
 	"Export Chats": "تصدير جميع الدردشات",
 	"Export Config": "",

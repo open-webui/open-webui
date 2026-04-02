@@ -846,6 +846,8 @@
 	"Export": "خروجی گرفتن",
 	"Export All Archived Chats": "خروجی گرفتن تمام گفتگوهای بایگانی شده",
 	"Export All Chats (All Users)": "خروجی گرفتن همه گفتگو\u200cها (همه کاربران)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "خروجی گرفتن گفتگو (json)",
 	"Export Chats": "خروجی گرفتن گفتگوها",
 	"Export Config": "",

@@ -845,6 +845,8 @@
 	"Export": "Ekspor",
 	"Export All Archived Chats": "",
 	"Export All Chats (All Users)": "Ekspor Semua Obrolan (Semua Pengguna)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "Ekspor obrolan (.json)",
 	"Export Chats": "Ekspor Obrolan",
 	"Export Config": "",

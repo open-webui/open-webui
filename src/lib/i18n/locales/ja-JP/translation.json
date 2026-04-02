@@ -845,6 +845,8 @@
 	"Export": "エクスポート",
 	"Export All Archived Chats": "すべてのアーカイブチャットをエクスポート",
 	"Export All Chats (All Users)": "すべてのチャットをエクスポート (すべてのユーザー)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "チャットをエクスポート(.json)",
 	"Export Chats": "チャットをエクスポート",
 	"Export Config": "",
