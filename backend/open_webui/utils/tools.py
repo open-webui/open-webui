@@ -86,6 +86,7 @@ from open_webui.tools.builtin import (
     view_knowledge_file,
     view_skill,
     tasks,
+    upload_file_to_terminal,
 )
 
 import copy
@@ -507,6 +508,11 @@ def get_builtin_tools(
     # Task management - break down complex work into trackable steps
     if is_builtin_tool_enabled('tasks'):
         builtin_functions.append(tasks)
+
+    # Terminal tools - upload files to connected terminal server
+    terminal_id = (extra_params.get('__metadata__') or {}).get('terminal_id')
+    if is_builtin_tool_enabled('terminal') and terminal_id:
+        builtin_functions.append(upload_file_to_terminal)
 
     for func in builtin_functions:
         callable = get_async_tool_function_and_apply_extra_params(
