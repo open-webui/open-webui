@@ -198,8 +198,11 @@
 			}
 		}
 
-		if (Object.keys(builtinTools).length > 0) {
-			info.meta.builtinTools = builtinTools;
+		const disabledTools = Object.fromEntries(
+			Object.entries(builtinTools).filter(([_, v]) => v === false)
+		);
+		if (Object.keys(disabledTools).length > 0) {
+			info.meta.builtinTools = disabledTools;
 		} else {
 			if (info.meta.builtinTools) {
 				delete info.meta.builtinTools;
