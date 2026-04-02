@@ -1719,6 +1719,7 @@ async def chat_completion(
             'user_id': user.id,
             'chat_id': form_data.pop('chat_id', None),
             'message_id': form_data.pop('id', None),
+            'context_message_id': form_data.pop('context_message_id', None),
             'parent_message': form_data.pop('parent_message', None),
             'parent_message_id': form_data.pop('parent_id', None),
             'session_id': form_data.pop('session_id', None),
