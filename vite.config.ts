@@ -21,7 +21,26 @@ export default defineConfig({
 		APP_BUILD_HASH: JSON.stringify(process.env.APP_BUILD_HASH || 'dev-build')
 	},
 	build: {
-		sourcemap: true
+		sourcemap: true,
+		rollupOptions: {
+			onwarn(warning, warn) {
+				const message = warning.message ?? '';
+				const source = 'source' in warning ? warning.source : '';
+
+				if (warning.code === 'UNUSED_EXTERNAL_IMPORT') {
+					return;
+				}
+
+				if (
+					source === '@xyflow/system' &&
+					message.includes('but never used in "node_modules/@xyflow/svelte/')
+				) {
+					return;
+				}
+
+				warn(warning);
+			}
+		}
 	},
 	worker: {
 		format: 'es'

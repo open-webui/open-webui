@@ -42,6 +42,9 @@ const config = {
 		}
 	},
 	vitePlugin: {
+		experimental: {
+			disableSvelteResolveWarnings: true
+		},
 		// inspector: {
 		// 	toggleKeyCombo: 'meta-shift', // Key combination to open the inspector
 		// 	holdMode: false, // Enable or disable hold mode
@@ -53,8 +56,10 @@ const config = {
 		const { code } = warning;
 		const suppressedWarnings = new Set([
 			'css-unused-selector',
+			'css_unused_selector',
 			'element_invalid_self_closing_tag',
 			'export_let_unused',
+			'reactive_declaration_module_script_dependency',
 			'a11y_consider_explicit_label',
 			'a11y_invalid_attribute',
 			'a11y_click_events_have_key_events',
