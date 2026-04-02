@@ -1,8 +1,12 @@
 import os
 import json
 import logging
+import threading
+import time
 from contextlib import contextmanager
 from typing import Any, Optional
+
+import redis
 
 from open_webui.internal.wrappers import register_connection
 from open_webui.env import (
@@ -16,6 +20,14 @@ from open_webui.env import (
     DATABASE_ENABLE_SQLITE_WAL,
     DATABASE_ENABLE_SESSION_SHARING,
     ENABLE_DB_MIGRATIONS,
+    REDIS_URL,
+    REDIS_KEY_PREFIX,
+    REDIS_SENTINEL_HOSTS,
+    REDIS_SENTINEL_PORT,
+    REDIS_CLUSTER,
+    MIGRATION_LOCK_TIMEOUT_SECS,
+    MIGRATION_LOCK_RETRY_SLEEP_SECS,
+    MIGRATION_LOCK_MAX_WAIT_SECS,
 )
 from peewee_migrate import Router
 from sqlalchemy import Dialect, create_engine, MetaData, event, types
@@ -50,6 +62,156 @@ class JSONField(types.TypeDecorator):
             return json.loads(value)
 
 
+# Redis key used for coordinating DB migrations
+_MIGRATION_LOCK_KEY = f"{REDIS_KEY_PREFIX}:db_migration_lock"
+
+_migration_lock_holder = None
+_migration_lock_renew_stop_event = None
+_migration_lock_renew_thread = None
+
+
+class MigrationLockAcquisitionTimeout(RuntimeError):
+    """Raised when DB migration lock is not acquired before deadline."""
+
+
+def _migration_lock_renew_interval_secs() -> int:
+    # Renew before the TTL midpoint to avoid expiration during long migrations.
+    return max(1, MIGRATION_LOCK_TIMEOUT_SECS // 3)
+
+
+def _start_migration_lock_renewer(lock) -> None:
+    """Start a daemon thread that periodically renews the migration lock TTL."""
+    global _migration_lock_renew_stop_event, _migration_lock_renew_thread
+
+    _migration_lock_renew_stop_event = threading.Event()
+
+    def _renew_loop():
+        interval_secs = _migration_lock_renew_interval_secs()
+        while not _migration_lock_renew_stop_event.wait(interval_secs):
+            try:
+                if not lock.renew_lock():
+                    log.error("Failed to renew DB migration lock; lock may be lost before migrations complete.")
+                    return
+            except Exception as e:
+                log.warning("Error renewing DB migration lock: %s", e)
+
+    _migration_lock_renew_thread = threading.Thread(
+        target=_renew_loop,
+        name="db-migration-lock-renewer",
+        daemon=True,
+    )
+    _migration_lock_renew_thread.start()
+
+
+def _get_redis_client_for_migration_lock():
+    """Return a Redis client configured for migration lock coordination."""
+    from open_webui.utils.redis import get_redis_connection, get_sentinels_from_env
+
+    redis_sentinels = get_sentinels_from_env(REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT)
+    return get_redis_connection(
+        REDIS_URL,
+        redis_sentinels,
+        redis_cluster=REDIS_CLUSTER,
+        async_mode=False,
+        decode_responses=True,
+    )
+
+
+def _redis_available_for_migration_lock():
+    """Return True only if REDIS_URL is set and we can connect (ping) to Redis. Used to decide whether to use the migration lock."""
+    if not REDIS_URL:
+        return False
+    try:
+        client = _get_redis_client_for_migration_lock()
+        client.ping()
+        return True
+    except Exception as e:
+        log.warning("Redis not reachable for migration lock (REDIS_URL is set): %s", e)
+        return False
+
+
+def _try_acquire_migration_lock():
+    """Acquire Redis migration lock with retries.
+
+    Returns the lock holder, or None when Redis is not configured or not reachable
+    (unconfigured / connectivity only). After Redis has been confirmed reachable,
+    lock setup or operational errors fail startup rather than running without coordination.
+    """
+    global _migration_lock_holder
+
+    # If Redis is not configured or reachable, fall back to previous behavior:
+    # every pod runs migrations without distributed coordination.
+    if not _redis_available_for_migration_lock():
+        return None
+
+    try:
+        from open_webui.socket.utils import RedisLock
+        from open_webui.utils.redis import get_sentinels_from_env
+
+        redis_sentinels = get_sentinels_from_env(REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT)
+
+        lock = RedisLock(
+            redis_url=REDIS_URL,
+            lock_name=_MIGRATION_LOCK_KEY,
+            timeout_secs=MIGRATION_LOCK_TIMEOUT_SECS,
+            redis_sentinels=redis_sentinels,
+            redis_cluster=REDIS_CLUSTER,
+        )
+
+        deadline = time.monotonic() + MIGRATION_LOCK_MAX_WAIT_SECS
+        while time.monotonic() < deadline:
+            if lock.aquire_lock():
+                _migration_lock_holder = lock
+                try:
+                    _start_migration_lock_renewer(lock)
+                except Exception:
+                    release_migration_lock_if_held()
+                    raise
+                log.info("Acquired DB migration lock; this pod will run migrations.")
+                return lock
+
+            log.debug(
+                "Another pod is running DB migrations; waiting %ss before retry...",
+                MIGRATION_LOCK_RETRY_SLEEP_SECS,
+            )
+            time.sleep(MIGRATION_LOCK_RETRY_SLEEP_SECS)
+
+        log.error(
+            "Could not acquire DB migration lock within %s seconds. Failing startup to avoid race.",
+            MIGRATION_LOCK_MAX_WAIT_SECS,
+        )
+        raise MigrationLockAcquisitionTimeout(
+            "DB migration lock not acquired in time. Another pod may be migrating; retry later."
+        )
+    except MigrationLockAcquisitionTimeout:
+        raise
+    except (redis.exceptions.RedisError, OSError) as e:
+        # Transient Redis / transport issues only — do not mask programming errors.
+        log.warning("Redis migration lock unavailable (%s); running migrations without lock.", e)
+        return None
+
+
+def release_migration_lock_if_held() -> None:
+    """Release the Redis migration lock if this process currently holds it."""
+    global _migration_lock_holder, _migration_lock_renew_stop_event, _migration_lock_renew_thread
+    if _migration_lock_holder is None:
+        return
+
+    try:
+        if _migration_lock_renew_stop_event is not None:
+            _migration_lock_renew_stop_event.set()
+        if _migration_lock_renew_thread is not None and _migration_lock_renew_thread.is_alive():
+            _migration_lock_renew_thread.join(timeout=1)
+        _migration_lock_holder.release_lock()
+        log.info("Released DB migration lock.")
+    except Exception as e:
+        log.warning("Failed to release DB migration lock: %s", e)
+    finally:
+        _migration_lock_holder = None
+        _migration_lock_renew_stop_event = None
+        _migration_lock_renew_thread = None
+
+
 # Workaround to handle the peewee migration
 # This is required to ensure the peewee migration is handled before the alembic migration
 def handle_peewee_migration(DATABASE_URL):
@@ -75,8 +237,29 @@ def handle_peewee_migration(DATABASE_URL):
         assert db.is_closed(), 'Database connection is still open.'
 
 
-if ENABLE_DB_MIGRATIONS:
-    handle_peewee_migration(DATABASE_URL)
+def _run_alembic_upgrade() -> None:
+    """Run Alembic migrations (same behavior as legacy config.run_migrations upgrade path)."""
+    log.info('Running migrations')
+    try:
+        from alembic import command
+        from alembic.config import Config
+
+        alembic_cfg = Config(OPEN_WEBUI_DIR / 'alembic.ini')
+        migrations_path = OPEN_WEBUI_DIR / 'migrations'
+        alembic_cfg.set_main_option('script_location', str(migrations_path))
+        command.upgrade(alembic_cfg, 'head')
+    except Exception as e:
+        log.exception(f"Error running migrations: {e}")
+
+
+def run_all_migrations() -> None:
+    """Peewee then Alembic under one Redis lock acquire/release lifecycle."""
+    _try_acquire_migration_lock()
+    try:
+        handle_peewee_migration(DATABASE_URL)
+        _run_alembic_upgrade()
+    finally:
+        release_migration_lock_if_held()
 
 
 SQLALCHEMY_DATABASE_URL = DATABASE_URL
@@ -179,3 +362,7 @@ def get_db_context(db: Optional[Session] = None):
     else:
         with get_db() as session:
             yield session
+
+
+if ENABLE_DB_MIGRATIONS:
+    run_all_migrations()
