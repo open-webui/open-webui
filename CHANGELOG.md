@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.13] - 2026-04-01
+## [0.8.13] - 2026-04-02
 
 ### Added
 
@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📈 **Sidebar memory optimization.** Sidebar chat items now use shared drag-preview resources and safer listener cleanup, reducing memory growth and keeping large chat lists more responsive during long sessions. [#23209](https://github.com/open-webui/open-webui/pull/23209)
 - 🎫 **Static OAuth tool authentication.** Tool server authentication now works reliably for both "oauth_2.1" and "oauth_2.1_static" connection types, so OAuth-backed tool access is correctly detected and forwarded during chat requests. [Commit](https://github.com/open-webui/open-webui/commit/60676bfdcfbce1a69b3e97f2013f0cfd63371737)
 - ⚡ **Chat title update efficiency.** Chat title updates now run in a single database operation instead of multiple round trips, improving responsiveness and reducing overhead when titles are generated or renamed. [#23214](https://github.com/open-webui/open-webui/pull/23214)
+- 🧩 **Skill lookup by ID.** Skill instructions now include each skill’s ID, and the skill viewer now finds skills by ID in a case-insensitive way so attached skills are identified more reliably in chats. [Commit](https://github.com/open-webui/open-webui/commit/65ee771fd0d62d785ecbcf189e3f5b63858c11e6)
 - 🌐 **Translation updates.** Translations for Russian, German, and Tamil were enhanced and expanded.
 
 ### Fixed
