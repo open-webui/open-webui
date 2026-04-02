@@ -2554,53 +2554,65 @@ async def upload_file_to_terminal(
 
         local_path = Storage.get_file(file_record.path)
 
-        # --- 2. Resolve terminal connection ---
+        # --- 2. Resolve terminal connection and build auth ---
         from open_webui.utils.access_control import has_connection_access
-
-        terminal_url = None
-        headers = {}
 
         connections = __request__.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
         connection = next(
             (c for c in connections if c.get('id') == terminal_id), None
         )
-        if connection:
-            if not has_connection_access(UserModel(**__user__), connection):
-                return json.dumps({'error': 'Access denied to terminal server'})
-            terminal_url = connection.get('url', '').rstrip('/')
-            auth_type = connection.get('auth_type', 'bearer')
-            if auth_type == 'bearer':
-                key = connection.get('key', '')
-                if key:
-                    headers['Authorization'] = f'Bearer {key}'
-        else:
-            tool_servers = metadata.get('tool_servers') or []
-            for ts in tool_servers:
-                ts_url = (ts.get('url') or '').rstrip('/')
-                if ts_url and ts_url == terminal_id.rstrip('/'):
-                    terminal_url = ts_url
-                    key = ts.get('key', '')
-                    if key:
-                        headers['Authorization'] = f'Bearer {key}'
-                    break
+        if not connection:
+            return json.dumps({'error': f"Terminal connection '{terminal_id}' not found"})
 
+        if not has_connection_access(UserModel(**__user__), connection):
+            return json.dumps({'error': 'Access denied to terminal server'})
+
+        terminal_url = connection.get('url', '').rstrip('/')
         if not terminal_url:
-            return json.dumps(
-                {'error': f"Terminal connection '{terminal_id}' could not be resolved"}
-            )
+            return json.dumps({'error': 'Terminal connection has no URL configured'})
+
+        # Build auth headers/cookies matching resolve_terminal_tools pattern
+        auth_type = connection.get('auth_type', 'bearer')
+        cookies = {}
+        headers = {'X-User-Id': __user__.get('id', '')}
+
+        if auth_type == 'bearer':
+            key = connection.get('key', '')
+            if key:
+                headers['Authorization'] = f'Bearer {key}'
+        elif auth_type == 'session':
+            cookies = __request__.cookies
+            if hasattr(__request__, 'state') and hasattr(__request__.state, 'token'):
+                headers['Authorization'] = f'Bearer {__request__.state.token.credentials}'
+        elif auth_type == 'system_oauth':
+            cookies = __request__.cookies
+            oauth_token = (metadata.get('oauth_token') or {})
+            if oauth_token.get('access_token'):
+                headers['Authorization'] = f'Bearer {oauth_token["access_token"]}'
+        # auth_type == 'none': no Authorization header
+
+        chat_id = metadata.get('chat_id')
+        if chat_id:
+            headers['X-Session-Id'] = chat_id
 
         # --- 3. Upload to terminal server ---
-        import httpx
+        import aiohttp
 
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=60),
+            trust_env=True,
+        ) as session:
+            # Query the terminal's current working directory
             upload_dir = '.'
             try:
-                cwd_resp = await client.get(
+                async with session.get(
                     f'{terminal_url}/files/cwd',
                     headers=headers,
-                )
-                if cwd_resp.status_code == 200:
-                    upload_dir = cwd_resp.json().get('cwd', '.')
+                    cookies=cookies,
+                ) as cwd_resp:
+                    if cwd_resp.status == 200:
+                        data = await cwd_resp.json()
+                        upload_dir = data.get('cwd', '.')
             except Exception:
                 pass
 
@@ -2610,20 +2622,22 @@ async def upload_file_to_terminal(
             )
 
             with open(local_path, 'rb') as fh:
-                response = await client.post(
+                form_data = aiohttp.FormData()
+                form_data.add_field('file', fh, filename=file_record.filename)
+                async with session.post(
                     f'{terminal_url}/files/upload',
                     params={'directory': upload_dir},
-                    files={'file': (file_record.filename, fh)},
+                    data=form_data,
                     headers=headers,
-                )
+                    cookies=cookies,
+                ) as response:
+                    if response.status != 200:
+                        detail = (await response.text())[:500]
+                        return json.dumps(
+                            {'error': f'Upload failed (HTTP {response.status}): {detail}'}
+                        )
+                    result = await response.json()
 
-        if response.status_code != 200:
-            detail = response.text[:500]
-            return json.dumps(
-                {'error': f'Upload failed (HTTP {response.status_code}): {detail}'}
-            )
-
-        result = response.json()
         return json.dumps(
             {
                 'status': 'success',
