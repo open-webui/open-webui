@@ -151,7 +151,7 @@
 		"xlsx": "^0.18.5",
 		"y-prosemirror": "^1.3.7",
 		"y-protocols": "^1.0.7",
-		"yaml": "^2.7.1",
+		"yaml": "^2.8.3",
 		"yjs": "^13.6.27"
 	},
 	"engines": {
