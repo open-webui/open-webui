@@ -2274,15 +2274,15 @@ async def query_knowledge_bases(
 
 
 async def view_skill(
-    name: str,
+    id: str,
     __request__: Request = None,
     __user__: dict = None,
 ) -> str:
     """
-    Load the full instructions of a skill by its name from the available skills manifest.
+    Load the full instructions of a skill by its id from the available skills manifest.
     Use this when you need detailed instructions for a skill listed in <available_skills>.
 
-    :param name: The name of the skill to load (as shown in the manifest)
+    :param id: The id of the skill to load (as shown in the manifest)
     :return: The full skill instructions as markdown content
     """
     if __request__ is None:
@@ -2297,11 +2297,11 @@ async def view_skill(
 
         user_id = __user__.get('id')
 
-        # Direct DB lookup by unique name
-        skill = Skills.get_skill_by_name(name)
+        # Direct DB lookup by id (case-insensitive since IDs are stored lowercase)
+        skill = Skills.get_skill_by_id(id.lower())
 
         if not skill or not skill.is_active:
-            return json.dumps({'error': f"Skill '{name}' not found"})
+            return json.dumps({'error': f"Skill '{id}' not found"})
 
         # Check user access
         user_role = __user__.get('role', 'user')

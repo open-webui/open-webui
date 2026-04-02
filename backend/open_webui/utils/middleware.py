@@ -2417,7 +2417,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
             else:
                 # Model-attached: name+description only
-                skill_descriptions += f'<skill>\n<name>{skill.name}</name>\n<description>{skill.description or ""}</description>\n</skill>\n'
+                skill_descriptions += f'<skill>\n<id>{skill.id}</id>\n<name>{skill.name}</name>\n<description>{skill.description or ""}</description>\n</skill>\n'
 
         if skill_descriptions:
             form_data['messages'] = add_or_update_system_message(
