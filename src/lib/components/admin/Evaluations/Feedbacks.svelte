@@ -25,6 +25,7 @@
 	import FeedbackMenu from './FeedbackMenu.svelte';
 	import FeedbackModal from './FeedbackModal.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
 
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
@@ -148,7 +149,40 @@
 		window.addEventListener('message', messageHandler, false);
 	};
 
-	const exportHandler = async () => {
+	const feedbacksToCsv = (feedbacks) => {
+		const rows = feedbacks.map((f) => {
+			const { data, ...rest } = f;
+			return {
+				id: rest.id,
+				user_id: rest.user_id,
+				chat_id: data?.chat_id ?? '',
+				model_id: data?.model_id ?? '',
+				sibling_model_ids: (data?.sibling_model_ids ?? []).join(';'),
+				rating: data?.rating ?? '',
+				reason: data?.reason ?? '',
+				comment: data?.comment ?? '',
+				created_at: rest.created_at,
+				updated_at: rest.updated_at
+			};
+		});
+
+		if (rows.length === 0) return '';
+
+		const headers = Object.keys(rows[0]);
+		const escape = (val) => {
+			const s = String(val ?? '');
+			return s.includes(',') || s.includes('"') || s.includes('\n')
+				? `"${s.replace(/"/g, '""')}"`
+				: s;
+		};
+
+		return [
+			headers.join(','),
+			...rows.map((r) => headers.map((h) => escape(r[h])).join(','))
+		].join('\n');
+	};
+
+	const exportHandler = async (format: 'json' | 'csv' = 'json') => {
 		const _feedbacks = await exportAllFeedbacks(localStorage.token, selectedModelId).catch(
 			(err) => {
 				toast.error(err);
@@ -157,10 +191,16 @@
 		);
 
 		if (_feedbacks) {
-			let blob = new Blob([JSON.stringify(_feedbacks)], {
-				type: 'application/json'
-			});
-			saveAs(blob, `feedback-history-export-${Date.now()}.json`);
+			if (format === 'csv') {
+				const csv = feedbacksToCsv(_feedbacks);
+				let blob = new Blob([csv], { type: 'text/csv' });
+				saveAs(blob, `feedback-history-export-${Date.now()}.csv`);
+			} else {
+				let blob = new Blob([JSON.stringify(_feedbacks)], {
+					type: 'application/json'
+				});
+				saveAs(blob, `feedback-history-export-${Date.now()}.json`);
+			}
 		}
 	};
 
@@ -190,16 +230,38 @@
 
 			<div class="flex w-full justify-end gap-1.5">
 				{#if total > 0}
-					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
-						on:click={() => {
-							exportHandler();
-						}}
-					>
-						<div class="self-center font-medium line-clamp-1">
-							{$i18n.t('Export')}
+					<Dropdown align="end">
+						<button
+							class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+						>
+							<div class="self-center font-medium line-clamp-1">
+								{$i18n.t('Export')}
+							</div>
+							<ChevronDown className="size-3" strokeWidth="2.5" />
+						</button>
+
+						<div slot="content">
+							<div
+								class="w-[170px] rounded-2xl p-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+							>
+								<button
+									class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+									type="button"
+									on:click={() => exportHandler('json')}
+								>
+									{$i18n.t('Export as JSON')}
+								</button>
+
+								<button
+									class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+									type="button"
+									on:click={() => exportHandler('csv')}
+								>
+									{$i18n.t('Export as CSV')}
+								</button>
+							</div>
 						</div>
-					</button>
+					</Dropdown>
 				{/if}
 			</div>
 		</div>
