@@ -40,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📤 **CSV feedback export.** Feedback history can now be exported as either JSON or CSV, making it easier to analyze feedback in spreadsheet tools. [Commit](https://github.com/open-webui/open-webui/commit/342582676a5212bf196a69d11825cb407992f257)
 - 💬 **Prompt submission handling.** Chat messages now preserve attached files more reliably when prompts are sent, including queued messages and shared prompt actions. [Commit](https://github.com/open-webui/open-webui/commit/6d6dfbf02c893d72d85d4490cb41f1665b1f9f95)
 - 🧩 **Skill lookup by ID.** Skill instructions now include each skill’s ID, and the skill viewer now finds skills by ID in a case-insensitive way so attached skills are identified more reliably in chats. [Commit](https://github.com/open-webui/open-webui/commit/65ee771fd0d62d785ecbcf189e3f5b63858c11e6)
-- 🌐 **Translation updates.** Translations for Russian, German, and Tamil were enhanced and expanded.
+- 🌐 **Translation updates.** Translations for Russian, German, Tamil, and Spanish were enhanced and expanded.
 
 ### Fixed
 
