@@ -332,3 +332,149 @@ async def ws_terminal(
             await ws.close()
         except Exception:
             pass
+
+
+# ---------------------------------------------------------------------------
+# WebSocket proxy for remote desktop (noVNC / websockify)
+# ---------------------------------------------------------------------------
+
+_DESKTOP_WS_TIMEOUT = 10.0
+
+
+async def _resolve_desktop_connection(ws: WebSocket, server_id: str):
+    """Authenticate a desktop WebSocket and resolve the terminal server.
+
+    noVNC opens a raw binary WebSocket (RFB protocol) so it cannot send
+    a JSON auth message first.  Instead the JWT is passed as a ``token``
+    query parameter on the WebSocket URL.
+
+    Returns ``(user, connection)`` on success, or ``None`` after closing *ws*.
+    """
+    from open_webui.utils.auth import decode_token
+
+    token = ws.query_params.get('token', '')
+    data = decode_token(token)
+    if data is None or 'id' not in data:
+        await ws.close(code=4001, reason='Invalid or missing token')
+        return None
+    user = Users.get_user_by_id(data['id'])
+    if user is None:
+        await ws.close(code=4001, reason='User not found')
+        return None
+
+    connections = ws.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
+    connection = next((c for c in connections if c.get('id') == server_id), None)
+    if connection is None:
+        await ws.close(code=4004, reason='Terminal server not found')
+        return None
+
+    user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
+    if not has_connection_access(user, connection, user_group_ids):
+        await ws.close(code=4003, reason='Access denied')
+        return None
+
+    return user, connection
+
+
+async def _fetch_novnc_port(base_url: str, api_key: str) -> int:
+    """Query the terminal server's ``GET /desktop`` endpoint and return the
+    noVNC port.  Falls back to 6080 if the request fails.
+    """
+    try:
+        async with aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=5, connect=3),
+            trust_env=True,
+        ) as session:
+            headers = {}
+            if api_key:
+                headers['Authorization'] = f'Bearer {api_key}'
+            async with session.get(
+                f'{base_url}/desktop',
+                headers=headers,
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    return data.get('novnc_port', 6080)
+    except Exception:
+        log.warning('Could not fetch desktop status from %s, defaulting to port 6080', base_url)
+    return 6080
+
+
+@router.websocket('/{server_id}/desktop/ws')
+async def ws_desktop(ws: WebSocket, server_id: str):
+    """Proxy a noVNC WebSocket session to the terminal server's websockify.
+
+    The JWT is passed as a ``token`` query parameter because noVNC uses raw
+    binary RFB protocol and cannot send a JSON auth message.  After
+    authentication the proxy connects to the terminal server's websockify
+    port (queried from ``GET /desktop``) and performs a raw binary WebSocket
+    relay.
+    """
+    await ws.accept()
+
+    result = await _resolve_desktop_connection(ws, server_id)
+    if result is None:
+        return
+    user, connection = result
+
+    base_url = (connection.get('url') or '').rstrip('/')
+    if not base_url:
+        await ws.close(code=4003, reason='Terminal server URL not configured')
+        return
+
+    api_key = connection.get('key', '')
+    novnc_port = await _fetch_novnc_port(base_url, api_key)
+
+    from urllib.parse import urlparse
+
+    parsed = urlparse(base_url)
+    host = parsed.hostname or 'localhost'
+    ws_scheme = 'wss' if parsed.scheme == 'https' else 'ws'
+    upstream_url = f'{ws_scheme}://{host}:{novnc_port}/websockify'
+
+    session = aiohttp.ClientSession()
+    try:
+        async with session.ws_connect(upstream_url) as upstream:
+            import asyncio
+
+            async def _client_to_upstream():
+                try:
+                    while True:
+                        msg = await ws.receive()
+                        if msg['type'] == 'websocket.disconnect':
+                            break
+                        elif 'bytes' in msg and msg['bytes']:
+                            await upstream.send_bytes(msg['bytes'])
+                        elif 'text' in msg and msg['text']:
+                            await upstream.send_str(msg['text'])
+                except Exception:
+                    pass
+
+            async def _upstream_to_client():
+                try:
+                    async for msg in upstream:
+                        if msg.type == aiohttp.WSMsgType.BINARY:
+                            await ws.send_bytes(msg.data)
+                        elif msg.type == aiohttp.WSMsgType.TEXT:
+                            await ws.send_text(msg.data)
+                        elif msg.type in (
+                            aiohttp.WSMsgType.CLOSE,
+                            aiohttp.WSMsgType.ERROR,
+                        ):
+                            break
+                except Exception:
+                    pass
+
+            await asyncio.gather(
+                _client_to_upstream(),
+                _upstream_to_client(),
+                return_exceptions=True,
+            )
+    except Exception as e:
+        log.exception('Desktop WebSocket proxy error: %s', e)
+    finally:
+        await session.close()
+        try:
+            await ws.close()
+        except Exception:
+            pass

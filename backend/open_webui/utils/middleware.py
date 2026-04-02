@@ -936,6 +936,156 @@ def apply_source_context_to_messages(
         )
 
 
+async def _execute_grounding(request, metadata, params):
+    import httpx
+
+    grounding_model = metadata.get('grounding_model', '')
+    terminal_id = metadata.get('grounding_terminal_id', '')
+    description = params.get('description', '')
+
+    if not grounding_model:
+        return {'error': 'No grounding model configured'}
+
+    connections = request.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
+    connection = next((c for c in connections if c.get('id') == terminal_id), None)
+    if not connection:
+        return {'error': f'Terminal server {terminal_id} not found'}
+
+    base_url = connection.get('url', '').rstrip('/')
+    api_key = connection.get('key', '')
+    headers = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'}
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            resp = await client.post(f'{base_url}/desktop/screenshot', json={}, headers=headers)
+            resp.raise_for_status()
+            screenshot_data = resp.json()
+        except Exception as e:
+            return {'error': f'Failed to get screenshot: {e}'}
+
+    image_url = screenshot_data.get('image', '')
+    img_width = screenshot_data.get('width', 0)
+    img_height = screenshot_data.get('height', 0)
+
+    if not image_url:
+        return {'error': 'No screenshot image available'}
+
+    models = request.app.state.MODELS
+    model_info = models.get(grounding_model)
+    if not model_info:
+        return {'error': f'Grounding model {grounding_model} not available'}
+
+    url_idx = model_info.get('urlIdx', 0)
+    api_base_urls = request.app.state.config.OPENAI_API_BASE_URLS
+    api_keys = request.app.state.config.OPENAI_API_KEYS
+    api_base = api_base_urls[url_idx] if url_idx < len(api_base_urls) else api_base_urls[0]
+    api_key_val = api_keys[url_idx] if url_idx < len(api_keys) else api_keys[0]
+
+    system_prompt = (
+        'You are a UI element detection model. Analyze the screenshot and identify ALL visible UI elements. '
+        'For each element, provide a short description and its bounding box as [x1, y1, x2, y2] in pixel coordinates. '
+        'Reply with ONLY a JSON array: [{"description": "...", "bounding_box": [x1, y1, x2, y2]}, ...]. '
+        'Include buttons, links, input fields, text areas, menus, icons, images, and any other interactive or visible elements. '
+        'Be thorough — list every distinct UI element you can see.'
+    )
+
+    user_text = (
+        f'List all UI elements in this screenshot with their bounding boxes.'
+        if not description
+        else f'List all UI elements in this screenshot with their bounding boxes. The user is looking for: {description}'
+    )
+
+    image_content = {'type': 'image_url', 'image_url': {'url': image_url}}
+    if img_width and img_height:
+        image_content['resized_width'] = img_width
+        image_content['resized_height'] = img_height
+
+    messages = [
+        {'role': 'system', 'content': system_prompt},
+        {
+            'role': 'user',
+            'content': [
+                image_content,
+                {'type': 'text', 'text': user_text},
+            ],
+        },
+    ]
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                f'{api_base}/chat/completions',
+                headers={'Authorization': f'Bearer {api_key_val}', 'Content-Type': 'application/json'},
+                json={'model': grounding_model, 'messages': messages, 'max_tokens': 4096, 'temperature': 0.1},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+    except Exception as e:
+        return {'error': f'Grounding model call failed: {e}'}
+
+    content = ''
+    choices = data.get('choices', [])
+    if choices:
+        content = choices[0].get('message', {}).get('content', '')
+
+    try:
+        start = content.index('[')
+        end = content.rindex(']') + 1
+        elements = json.loads(content[start:end])
+    except (ValueError, json.JSONDecodeError):
+        try:
+            start = content.index('{')
+            end = content.rindex('}') + 1
+            elements = [json.loads(content[start:end])]
+        except (ValueError, json.JSONDecodeError):
+            return {'raw_response': content, 'error': 'Could not parse grounding response'}
+
+    gm_width = request.app.state.config.GROUNDING_MODEL_WIDTH or 1000
+    gm_height = request.app.state.config.GROUNDING_MODEL_HEIGHT or 1000
+    scale_x = img_width / gm_width if gm_width and img_width else 1.0
+    scale_y = img_height / gm_height if gm_height and img_height else 1.0
+
+    for elem in elements:
+        bbox = elem.get('bounding_box', [])
+        if len(bbox) == 4:
+            elem['bounding_box'] = [
+                int(bbox[0] * scale_x),
+                int(bbox[1] * scale_y),
+                int(bbox[2] * scale_x),
+                int(bbox[3] * scale_y),
+            ]
+
+    if description and elements:
+        desc_lower = description.lower()
+        for elem in elements:
+            elem_desc = elem.get('description', '').lower()
+            if desc_lower in elem_desc or any(w in elem_desc for w in desc_lower.split()):
+                bbox = elem.get('bounding_box', [])
+                if len(bbox) == 4:
+                    x = (bbox[0] + bbox[2]) // 2
+                    y = (bbox[1] + bbox[3]) // 2
+                    elem['best_match'] = True
+                    return {
+                        'elements': elements,
+                        'match': {'description': elem.get('description', ''), 'bounding_box': bbox, 'x': x, 'y': y},
+                        'description': description,
+                    }
+
+    if description and elements:
+        bbox = elements[0].get('bounding_box', [])
+        if len(bbox) == 4:
+            x = (bbox[0] + bbox[2]) // 2
+            y = (bbox[1] + bbox[3]) // 2
+            elements[0]['best_match'] = True
+            return {
+                'elements': elements,
+                'match': {'description': elements[0].get('description', ''), 'bounding_box': bbox, 'x': x, 'y': y},
+                'description': description,
+            }
+
+    return {'elements': elements, 'description': description}
+
+
 def process_tool_result(
     request,
     tool_function_name,
@@ -1108,7 +1258,26 @@ def process_tool_result(
     if isinstance(tool_result, list):
         tool_result = {'results': tool_result}
 
-    if isinstance(tool_result, dict) or isinstance(tool_result, list):
+    if isinstance(tool_result, dict):
+        images = tool_result.pop('images', None)
+        if images and isinstance(images, list):
+            for img_item in images:
+                if isinstance(img_item, dict):
+                    url = img_item.get('image', '')
+                    label = img_item.get('label', '')
+                else:
+                    url = str(img_item)
+                    label = ''
+                if url and url.startswith('data:image/'):
+                    file_entry = {'type': 'image', 'url': url}
+                    if label:
+                        file_entry['label'] = label
+                    tool_result_files.append(file_entry)
+        image_url = tool_result.pop('image', None)
+        if image_url and isinstance(image_url, str) and image_url.startswith('data:image/'):
+            tool_result_files.append({'type': 'image', 'url': image_url})
+        tool_result = json.dumps(tool_result, indent=2, ensure_ascii=False)
+    elif isinstance(tool_result, list):
         tool_result = json.dumps(tool_result, indent=2, ensure_ascii=False)
 
     # Safety: ensure tool_result is always a string (or None) to prevent
@@ -2386,6 +2555,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     terminal_id = form_data.pop('terminal_id', None)
     files = form_data.pop('files', None)
 
+    log.info(f'[DEBUG] terminal_id={terminal_id!r}, tool_ids={tool_ids!r}')
+
     # Caller-provided OpenAI-style tools take precedence over server-side
     # tool resolution (tool_ids, MCP servers, builtin tools).
     payload_tools = form_data.get('tools', None)
@@ -2625,6 +2796,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     system_prompt = None
                 if terminal_tools:
                     tools_dict = {**tools_dict, **terminal_tools}
+                    log.info(f'[DEBUG] terminal_tools loaded: {list(terminal_tools.keys())}')
+                else:
+                    log.info(f'[DEBUG] terminal_tools EMPTY for terminal_id={terminal_id}')
                 if system_prompt:
                     form_data['messages'] = add_or_update_system_message(
                         system_prompt,
@@ -2679,15 +2853,51 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 if name not in tools_dict:
                     tools_dict[name] = tool_dict
 
+        grounding_model = getattr(request.app.state.config, 'GROUNDING_MODEL', '')
+        if grounding_model and any(
+            k.startswith('desktop_') for k in tools_dict
+        ):
+            tools_dict['desktop_locate'] = {
+                'tool_id': 'builtin:grounding',
+                'type': 'builtin',
+                'spec': {
+                    'name': 'desktop_locate',
+                    'description': (
+                        'The ONLY way to see the desktop screen. '
+                        'REQUIRED before AND after every desktop_click, desktop_type, desktop_key, desktop_drag, desktop_mouse_move, or desktop_scroll. '
+                        'Takes a fresh screenshot, uses a vision model to detect all visible UI elements, '
+                        'and returns a list of elements with bounding boxes [x1, y1, x2, y2] in pixel coordinates. '
+                        'When a description is provided, the best matching element is highlighted with its center coordinates. '
+                        'Workflow: desktop_locate(description="...") → get x,y → desktop_click(x,y) → desktop_locate(description="...") to verify.'
+                    ),
+                    'parameters': {
+                        'type': 'object',
+                        'properties': {
+                            'description': {
+                                'type': 'string',
+                                'description': 'What to find, e.g. "Submit button", "search input field", "Chrome address bar". '
+                                'All visible elements are returned; the best match for this description is highlighted.',
+                            },
+                        },
+                        'required': ['description'],
+                    },
+                },
+            }
+            for _hidden in ('desktop_screenshot', 'desktop_status', 'desktop_start', 'desktop_stop', 'desktop_mouse_location'):
+                tools_dict.pop(_hidden, None)
+            metadata['grounding_model'] = grounding_model
+            if terminal_id:
+                metadata['grounding_terminal_id'] = terminal_id
+
         if tools_dict:
+            log.info(f'[DEBUG] tools_dict keys: {list(tools_dict.keys())}')
+            log.info(f'[DEBUG] function_calling={metadata.get("params", {}).get("function_calling")!r}')
             if metadata.get('params', {}).get('function_calling') == 'native':
-                # If the function calling is native, then call the tools function calling handler
                 metadata['tools'] = tools_dict
                 form_data['tools'] = [
                     {'type': 'function', 'function': tool.get('spec', {})} for tool in tools_dict.values()
                 ]
             else:
-                # If the function calling is not native, then call the tools function calling handler
                 try:
                     form_data, flags = await chat_completion_tools_handler(
                         request, form_data, extra_params, user, models, tools_dict
@@ -4166,7 +4376,14 @@ async def streaming_chat_response_handler(response, ctx):
                                     k: v for k, v in tool_function_params.items() if k in allowed_params
                                 }
 
-                                if direct_tool:
+                                if tool_function_name == 'desktop_locate' and tool.get('tool_id') == 'builtin:grounding':
+                                    tool_result = await _execute_grounding(
+                                        request,
+                                        metadata,
+                                        tool_function_params,
+                                    )
+
+                                elif direct_tool:
                                     tool_result = await event_caller(
                                         {
                                             'type': 'execute:tool',
@@ -4258,15 +4475,19 @@ async def streaming_chat_response_handler(response, ctx):
                     for result in results:
                         output_parts = [{'type': 'input_text', 'text': result.get('content', '')}]
 
-                        # Separate image data URIs (for LLM via input_image) from
-                        # other files (for frontend display via files attribute).
+                        # Separate image data URIs from other files.
+                        # Desktop tool images go to display_files only (UI) —
+                        # the grounding model fetches its own screenshots.
+                        # Non-desktop images are sent to the harness model via
+                        # input_image AND displayed in the UI.
                         display_files = []
+                        is_desktop_tool = tool_function_name.startswith('desktop_')
                         for file_item in result.get('files', []):
                             if file_item.get('type') == 'image' and file_item.get('url', '').startswith('data:'):
-                                # LLM-only: add as input_image part (invisible to serialize_output)
-                                output_parts.append({'type': 'input_image', 'image_url': file_item['url']})
+                                if not is_desktop_tool:
+                                    output_parts.append({'type': 'input_image', 'image_url': file_item['url']})
+                                display_files.append(file_item)
                             else:
-                                # Frontend display (MCP images, audio, etc.)
                                 display_files.append(file_item)
 
                         output.append(
