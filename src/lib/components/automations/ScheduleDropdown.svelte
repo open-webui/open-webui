@@ -193,11 +193,11 @@
 		slot="content"
 		class="rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-48 p-1"
 	>
-		<div class="px-2 text-xs text-gray-500 py-1">
+		<div class="px-2 text-xs text-gray-500 pt-1">
 			{$i18n.t('Schedule')}
 		</div>
 
-		<div class="px-1.5 mt-0.5 mb-2">
+		<div class="px-1.5 py-0.5">
 			<select
 				class="w-full bg-transparent rounded-xl text-xs py-1.5 px-1.5 outline-hidden"
 				bind:value={frequency}
