@@ -153,6 +153,10 @@
 	let showCommands = false;
 
 	let generating = false;
+	let submittingPrompt = false;
+	let queueDrainSuspendedForSendNow = false;
+	let queueSendNowPendingAssistantId = null;
+	let skipQueueDrainForAssistantId = null;
 	let dragged = false;
 	let generationController = null;
 
@@ -179,6 +183,7 @@
 	}
 
 	const navigateHandler = async () => {
+		const targetChatId = chatIdProp;
 		loading = true;
 
 		prompt = '';
@@ -190,16 +195,20 @@
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
 
+		if (chatIdProp !== targetChatId) return;
+
 		const storageChatInput = sessionStorage.getItem(
-			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
+			`chat-input${targetChatId ? `-${targetChatId}` : ''}`
 		);
 
-		if (chatIdProp && (await loadChat())) {
+		if (targetChatId && (await loadChat(targetChatId))) {
+			if (chatIdProp !== targetChatId) return;
 			await tick();
 			loading = false;
 			window.setTimeout(() => scrollToBottom(), 0);
 
 			await tick();
+			if (chatIdProp !== targetChatId) return;
 
 			// Mark chat read when initially loading it
 			if (chatIdProp && !$temporaryChatEnabled) {
@@ -208,9 +217,14 @@
 
 			// Process any queued requests if the chat is idle
 			const lastMessage = history.currentId ? history.messages[history.currentId] : null;
-			const isIdle = !lastMessage || lastMessage.role !== 'assistant' || lastMessage.done;
+			// A chat is truly idle if there are no pending tasks (taskIds is empty) AND the last message is done
+			const hasPendingTasks = taskIds !== null && taskIds.length > 0;
+			const isIdle = !hasPendingTasks && (!lastMessage || lastMessage.role !== 'assistant' || lastMessage.done);
 			if (isIdle) {
-				await processNextInQueue(chatIdProp);
+				// Only process queue if we are still on the same chat
+				if (chatIdProp === targetChatId) {
+					await processNextInQueue(targetChatId);
+				}
 			}
 
 			if (storageChatInput) {
@@ -230,10 +244,12 @@
 			} else {
 				await setDefaults();
 			}
+			if (chatIdProp !== targetChatId) return;
 
 			const chatInput = document.getElementById('chat-input');
 			chatInput?.focus();
 		} else {
+			if (chatIdProp !== targetChatId) return;
 			await goto('/');
 		}
 	};
@@ -445,7 +461,14 @@
 						message.statusHistory = [data];
 					}
 				} else if (type === 'chat:completion') {
-					chatCompletionEventHandler(data, message, event.chat_id);
+					try {
+						await chatCompletionEventHandler(data, message, event.chat_id);
+					} catch (e) {
+						console.error(e);
+						queueSendNowPendingAssistantId = null;
+						skipQueueDrainForAssistantId = null;
+						queueDrainSuspendedForSendNow = false;
+					}
 				} else if (type === 'chat:tasks:cancel') {
 					if (event.message_id === history.currentId) {
 						taskIds = null;
@@ -453,7 +476,9 @@
 						for (const messageId of history.messages[message.parentId].childrenIds) {
 							history.messages[messageId].done = true;
 						}
-						await processNextInQueue($chatId);
+						if (!queueDrainSuspendedForSendNow && !queueSendNowPendingAssistantId) {
+							await processNextInQueue($chatId);
+						}
 					} else {
 						message.done = true;
 					}
@@ -1245,22 +1270,27 @@
 		setTimeout(() => chatInput?.focus(), 0);
 	};
 
-	const loadChat = async () => {
-		chatId.set(chatIdProp);
+	const loadChat = async (expectedChatId: string = chatIdProp) => {
+		chatId.set(expectedChatId);
 
 		if ($temporaryChatEnabled) {
 			temporaryChatEnabled.set(false);
 		}
 
-		chat = await getChatById(localStorage.token, $chatId).catch(async (error) => {
+		const chatResult = await getChatById(localStorage.token, expectedChatId).catch(async (error) => {
 			await goto('/');
 			return null;
 		});
 
+		if (get(chatId) !== expectedChatId) return null;
+
+		chat = chatResult;
 		if (chat) {
-			tags = await getTagsById(localStorage.token, $chatId).catch(async (error) => {
+			tags = await getTagsById(localStorage.token, expectedChatId).catch(async (error) => {
 				return [];
 			});
+
+			if (get(chatId) !== expectedChatId) return null;
 
 			const chatContent = chat.chat;
 
@@ -1294,6 +1324,8 @@
 				autoScroll = true;
 				await tick();
 
+				if (get(chatId) !== expectedChatId) return null;
+
 				if (history.currentId) {
 					for (const message of Object.values(history.messages)) {
 						if (message && message.role === 'assistant' && message.id !== history.currentId && message.done !== false) {
@@ -1302,9 +1334,11 @@
 					}
 				}
 
-				const taskRes = await getTaskIdsByChatId(localStorage.token, $chatId).catch((error) => {
+				const taskRes = await getTaskIdsByChatId(localStorage.token, expectedChatId).catch((error) => {
 					return null;
 				});
+
+				if (get(chatId) !== expectedChatId) return null;
 
 				if (taskRes) {
 					taskIds = taskRes.task_ids;
@@ -1312,11 +1346,12 @@
 
 				await tick();
 
-				return true;
+				return get(chatId) === expectedChatId ? true : null;
 			} else {
 				return null;
 			}
 		}
+		return null;
 	};
 
 	const scrollToBottom = async (behavior = 'auto') => {
@@ -1344,6 +1379,9 @@
 		const queue = $chatRequestQueues[targetChatId];
 		if (!queue || queue.length === 0) return;
 
+		// Don't process queue if we've navigated away from this chat
+		if (get(chatId) !== targetChatId) return;
+
 		const combinedPrompt = queue.map((m) => m.prompt).join('\n\n');
 		const combinedFiles = queue.flatMap((m) => m.files);
 
@@ -1354,7 +1392,11 @@
 
 		files = combinedFiles;
 		await tick();
-		await submitPrompt(combinedPrompt);
+		
+		// Final check before submitting
+		if (get(chatId) === targetChatId) {
+			await submitPrompt(combinedPrompt);
+		}
 	};
 
 	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
@@ -1386,6 +1428,9 @@
 			return null;
 		});
 
+		// Stale: user switched chat while API was in flight — don't apply completion to current view
+		if (get(chatId) !== _chatId) return;
+
 		if (res !== null && res.messages) {
 			// Update chat history with the new messages
 			for (const message of res.messages) {
@@ -1404,6 +1449,8 @@
 
 		await tick();
 
+		if (get(chatId) !== _chatId) return;
+
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
 				chat = await updateChatById(localStorage.token, _chatId, {
@@ -1418,6 +1465,8 @@
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			}
 		}
+
+		if (get(chatId) !== _chatId) return;
 
 		taskIds = null;
 	};
@@ -1771,8 +1820,28 @@
 				createMessagesList(history, message.id)
 			);
 
-			// Process next queued request if any
-			await processNextInQueue(chatId);
+			let shouldDrainMessageQueue = true;
+
+			if (message.id === queueSendNowPendingAssistantId) {
+				// This is the completion for a "Send Now" message.
+				// We do NOT process the queue here, and we release the lock.
+				shouldDrainMessageQueue = false;
+				queueSendNowPendingAssistantId = null;
+				queueDrainSuspendedForSendNow = false;
+			} else if (message.id === skipQueueDrainForAssistantId) {
+				// This completion was manually stopped by the user.
+				// We do NOT process the queue here.
+				shouldDrainMessageQueue = false;
+				skipQueueDrainForAssistantId = null;
+			} else if (queueDrainSuspendedForSendNow) {
+				// If a Send Now action is currently in progress, don't drain the queue
+				shouldDrainMessageQueue = false;
+			}
+
+			if (shouldDrainMessageQueue) {
+				// Process next queued request if any
+				await processNextInQueue(chatId);
+			}
 		}
 
 		console.log(data);
@@ -1787,9 +1856,13 @@
 	// Chat functions
 	//////////////////////////
 
-	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
+	const submitPrompt = async (userPrompt, { _raw = false, fromQueueSendNow = false } = {}) => {
 		console.log('submitPrompt', userPrompt, $chatId);
 
+		if (submittingPrompt) return;
+		submittingPrompt = true;
+
+		try {
 		const _selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
@@ -1802,6 +1875,7 @@
 			toast.warning($i18n.t('Please connect all required integrations before sending a message'));
 			return;
 		}
+
 		if (userPrompt === '' && files.length === 0) {
 			toast.error($i18n.t('Please enter a prompt'));
 			return;
@@ -1918,7 +1992,15 @@
 
 		saveSessionSelectedModels();
 
-		await sendMessage(history, userMessageId, { newChat: true });
+		await sendMessage(history, userMessageId, { newChat: true, fromQueueSendNow });
+		} catch (e) {
+			console.error(e);
+			queueSendNowPendingAssistantId = null;
+			skipQueueDrainForAssistantId = null;
+			queueDrainSuspendedForSendNow = false;
+		} finally {
+			submittingPrompt = false;
+		}
 	};
 
 	const sendMessage = async (
@@ -1928,12 +2010,14 @@
 			messages = null,
 			modelId = null,
 			modelIdx = null,
-			newChat = false
+			newChat = false,
+			fromQueueSendNow = false
 		}: {
 			messages?: any[] | null;
 			modelId?: string | null;
 			modelIdx?: number | null;
 			newChat?: boolean;
+			fromQueueSendNow?: boolean;
 		} = {}
 	) => {
 		if (autoScroll) {
@@ -1980,6 +2064,10 @@
 						...history.messages[parentId].childrenIds,
 						responseMessageId
 					];
+				}
+
+				if (fromQueueSendNow) {
+					queueSendNowPendingAssistantId = responseMessageId;
 				}
 
 				responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`] = responseMessageId;
@@ -2417,6 +2505,10 @@
 			taskIds = null;
 
 			const responseMessage = history.messages[history.currentId];
+			if (responseMessage) {
+				skipQueueDrainForAssistantId = responseMessage.id;
+			}
+			
 			// Set all response messages to done
 			if (responseMessage.parentId && history.messages[responseMessage.parentId]) {
 				for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
@@ -2437,7 +2529,9 @@
 			generationController = null;
 		}
 
-		await processNextInQueue($chatId);
+		if (!queueDrainSuspendedForSendNow && !queueSendNowPendingAssistantId) {
+			await processNextInQueue($chatId);
+		}
 	};
 
 	const submitMessage = async (parentId, prompt) => {
@@ -2901,13 +2995,16 @@
 												...q,
 												[$chatId]: queue.filter((m) => m.id !== id)
 											}));
+											
+											queueDrainSuspendedForSendNow = true;
+
 											// Stop current generation first
 											await stopResponse();
 											await tick();
 											// Set files and submit
 											files = item.files;
 											await tick();
-											await submitPrompt(item.prompt);
+											await submitPrompt(item.prompt, { fromQueueSendNow: true });
 										}
 									}}
 									onQueueEdit={(id) => {
