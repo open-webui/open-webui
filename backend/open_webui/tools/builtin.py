@@ -2497,3 +2497,174 @@ async def tasks(
     except Exception as e:
         log.exception(f'tasks error: {e}')
         return json.dumps({'error': str(e)})
+
+
+# =============================================================================
+# TERMINAL TOOLS
+# =============================================================================
+
+
+async def upload_file_to_terminal(
+    file_id: str,
+    __request__: Request = None,
+    __user__: dict = None,
+    __metadata__: dict = None,
+) -> str:
+    """
+    Upload a file to the connected Open Terminal server's working directory.
+    The file can be a chat attachment or a file from a knowledge base.
+
+    :param file_id: The ID of the file to upload
+    :return: JSON with the upload result including the path on the terminal server
+    """
+    if __request__ is None:
+        return json.dumps({'error': 'Request context not available'})
+
+    if not __user__:
+        return json.dumps({'error': 'User context not available'})
+
+    metadata = __metadata__ or {}
+    terminal_id = metadata.get('terminal_id')
+    if not terminal_id:
+        return json.dumps({'error': 'No terminal server connected to this chat'})
+
+    try:
+        from open_webui.models.files import Files
+        from open_webui.storage.provider import Storage
+        from open_webui.utils.access_control.files import has_access_to_file
+
+        user_id = __user__.get('id')
+        user_role = __user__.get('role', 'user')
+
+        # --- 1. Retrieve file and check access ---
+        file_record = Files.get_file_by_id(file_id)
+        if not file_record:
+            return json.dumps({'error': 'File not found'})
+
+        if (
+            file_record.user_id != user_id
+            and user_role != 'admin'
+            and not has_access_to_file(
+                file_id=file_id,
+                access_type='read',
+                user=UserModel(**__user__),
+            )
+        ):
+            return json.dumps({'error': 'File not found'})
+
+        local_path = Storage.get_file(file_record.path)
+
+        # --- 2. Resolve terminal connection and build auth ---
+        from open_webui.utils.access_control import has_connection_access
+
+        terminal_url = None
+        cookies = {}
+        headers = {'X-User-Id': __user__.get('id', '')}
+
+        # Try system terminal first (terminal_id is a connection ID)
+        connections = __request__.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
+        connection = next(
+            (c for c in connections if c.get('id') == terminal_id), None
+        )
+
+        if connection:
+            if not has_connection_access(UserModel(**__user__), connection):
+                return json.dumps({'error': 'Access denied to terminal server'})
+
+            terminal_url = connection.get('url', '').rstrip('/')
+
+            # Route through orchestrator policy endpoint if configured
+            policy_id = connection.get('policy_id')
+            if policy_id:
+                terminal_url = f'{terminal_url}/p/{policy_id}'
+
+            # Build auth headers/cookies matching resolve_terminal_tools pattern
+            auth_type = connection.get('auth_type', 'bearer')
+            if auth_type == 'bearer':
+                key = connection.get('key', '')
+                if key:
+                    headers['Authorization'] = f'Bearer {key}'
+            elif auth_type == 'session':
+                cookies = __request__.cookies
+                if hasattr(__request__, 'state') and hasattr(__request__.state, 'token'):
+                    headers['Authorization'] = f'Bearer {__request__.state.token.credentials}'
+            elif auth_type == 'system_oauth':
+                cookies = __request__.cookies
+                oauth_token = (metadata.get('oauth_token') or {})
+                if oauth_token.get('access_token'):
+                    headers['Authorization'] = f'Bearer {oauth_token["access_token"]}'
+            # auth_type == 'none': no Authorization header
+        else:
+            # Try direct/user-configured terminal (terminal_id is the URL)
+            direct_tool_servers = metadata.get('tool_servers') or []
+            for ts in direct_tool_servers:
+                ts_url = (ts.get('url') or '').rstrip('/')
+                if ts_url and ts_url == terminal_id.rstrip('/'):
+                    terminal_url = ts_url
+                    key = ts.get('key', '')
+                    if key:
+                        headers['Authorization'] = f'Bearer {key}'
+                    break
+
+        if not terminal_url:
+            return json.dumps({'error': f"Terminal connection '{terminal_id}' could not be resolved"})
+
+        chat_id = metadata.get('chat_id')
+        if chat_id:
+            headers['X-Session-Id'] = chat_id
+
+        # --- 3. Upload to terminal server ---
+        import aiohttp
+
+        async with aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=60),
+            trust_env=True,
+        ) as session:
+            # Query the terminal's current working directory
+            upload_dir = '.'
+            try:
+                async with session.get(
+                    f'{terminal_url}/files/cwd',
+                    headers=headers,
+                    cookies=cookies,
+                ) as cwd_resp:
+                    if cwd_resp.status == 200:
+                        data = await cwd_resp.json()
+                        upload_dir = data.get('cwd', '.')
+            except Exception as e:
+                log.warning(f'upload_file_to_terminal: failed to fetch CWD, defaulting to ".": {e}')
+
+            log.info(
+                f"upload_file_to_terminal: uploading '{file_record.filename}' "
+                f'to {terminal_url}/files/upload?directory={upload_dir}'
+            )
+
+            with open(local_path, 'rb') as fh:
+                form_data = aiohttp.FormData()
+                form_data.add_field('file', fh, filename=file_record.filename)
+                async with session.post(
+                    f'{terminal_url}/files/upload',
+                    params={'directory': upload_dir},
+                    data=form_data,
+                    headers=headers,
+                    cookies=cookies,
+                ) as response:
+                    if response.status != 200:
+                        detail = (await response.text())[:500]
+                        return json.dumps(
+                            {'error': f'Upload failed (HTTP {response.status}): {detail}'}
+                        )
+                    result = await response.json()
+
+        return json.dumps(
+            {
+                'status': 'success',
+                'message': f"File '{file_record.filename}' uploaded to terminal server",
+                'path': result.get('path'),
+                'size': result.get('size'),
+            },
+            ensure_ascii=False,
+        )
+    except Exception as e:
+        log.exception(f'upload_file_to_terminal error: {e}')
+        return json.dumps({'error': str(e)})

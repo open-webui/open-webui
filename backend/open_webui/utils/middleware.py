@@ -2457,6 +2457,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         'files': files,
     }
     form_data['metadata'] = metadata
+    extra_params['__metadata__'] = metadata
 
     # When the caller provides an explicit OpenAI-style `tools` array in the
     # request body, skip all server-side tool resolution and pass the caller's
