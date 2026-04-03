@@ -113,10 +113,10 @@
 			"
 				>
 {#if showModelSelector}
-    <p style="display:none" id="debug-model">{JSON.stringify($models.find((m) => m.id === selectedModels[0]))}</p>
+    {#if selectedModels?.length > 0}{ console.log('[DEBUG MODEL]', $models?.find((m) => m.id === selectedModels[0])) }{/if}
     <ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
 
-    {#if true}
+    {#if $models.find((m) => m.id === selectedModels[0])?.owned_by !== 'ollama'}
     <button
         class="flex items-center gap-1.5 ml-2 px-2.5 py-1 rounded-lg text-xs font-medium transition
             {$privacyProxy
