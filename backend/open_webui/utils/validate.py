@@ -1,12 +1,12 @@
 """Validation utilities for user-supplied input."""
 
-# Raster image formats safe to accept as base64 data URIs.
+import re
+from urllib.parse import urlparse
+
+# Matches well-formed base64 data URIs for safe raster image formats.
 # SVG is intentionally excluded: it can carry embedded scripts.
-_SAFE_DATA_IMAGE_PREFIXES = (
-    'data:image/png',
-    'data:image/jpeg',
-    'data:image/gif',
-    'data:image/webp',
+_SAFE_DATA_URI_RE = re.compile(
+    r'^data:image/(png|jpeg|gif|webp);base64,', re.IGNORECASE
 )
 
 
@@ -17,8 +17,8 @@ def validate_profile_image_url(url: str) -> str:
     Allowed formats:
     - Empty string (falls back to default avatar)
     - Relative paths starting with ``/`` (internal assets and API routes)
-    - ``http://`` and ``https://`` URLs (external avatars, OAuth pictures)
-    - ``data:image/{png,jpeg,gif,webp}`` URIs (base64-encoded uploads)
+    - ``http://`` and ``https://`` URLs with a valid host
+    - ``data:image/{png,jpeg,gif,webp};base64,...`` URIs
 
     All other schemes (javascript:, file:, ftp:, etc.) are rejected.
     SVG data URIs are rejected because SVG can contain embedded scripts.
@@ -33,16 +33,27 @@ def validate_profile_image_url(url: str) -> str:
     if url.startswith('/') and not url.startswith('//'):
         return url
 
+    # urlparse normalises the scheme to lowercase, giving us
+    # case-insensitive scheme matching for free.
+    parsed = urlparse(url)
+
     # External images served over HTTP(S), e.g. OAuth provider avatars.
-    if url.startswith('https://') or url.startswith('http://'):
+    # Require a non-empty netloc so bare "https://" is rejected.
+    if parsed.scheme in ('http', 'https'):
+        if not parsed.netloc:
+            raise ValueError(
+                'Invalid profile image URL: HTTP(S) URLs must include a host.'
+            )
         return url
 
     # Base64-encoded raster images uploaded via the frontend.
-    if any(url.startswith(prefix) for prefix in _SAFE_DATA_IMAGE_PREFIXES):
+    # The regex enforces format boundaries (;base64,) and is
+    # case-insensitive per the data URI / MIME type specs.
+    if _SAFE_DATA_URI_RE.match(url):
         return url
 
     raise ValueError(
-        'Invalid profile image URL: must be a relative path, an HTTP(S) URL, '
-        'or a data:image URI (png/jpeg/gif/webp).'
+        'Invalid profile image URL: must be a relative path, an HTTP(S) URL '
+        'with a host, or a data:image URI (png/jpeg/gif/webp).'
     )
 
