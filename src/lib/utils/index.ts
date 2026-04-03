@@ -511,16 +511,24 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 	} else {
 		let result = false;
 		if (!navigator.clipboard) {
+			const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+			const scrollX = window.scrollX;
+			const scrollY = window.scrollY;
 			const textArea = document.createElement('textarea');
 			textArea.value = text;
 
-			// Avoid scrolling to bottom
+			// Keep the fallback copy target off-screen without stealing the viewport.
 			textArea.style.top = '0';
 			textArea.style.left = '0';
 			textArea.style.position = 'fixed';
+			textArea.style.opacity = '0';
 
 			document.body.appendChild(textArea);
-			textArea.focus();
+			try {
+				textArea.focus({ preventScroll: true });
+			} catch {
+				textArea.focus();
+			}
 			textArea.select();
 
 			try {
@@ -533,6 +541,14 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 			}
 
 			document.body.removeChild(textArea);
+			window.scrollTo(scrollX, scrollY);
+			if (activeElement && document.contains(activeElement)) {
+				try {
+					activeElement.focus({ preventScroll: true });
+				} catch {
+					activeElement.focus();
+				}
+			}
 			return result;
 		}
 
