@@ -11,6 +11,8 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
+	import { resetAllUsersInterfaceSettings } from '$lib/apis/users';
+
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -36,6 +38,20 @@
 
 	const updateInterfaceHandler = async () => {
 		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
+	};
+
+	const handleResetAllUsersInterfaceSettings = async () => {
+		try {
+			const result = await resetAllUsersInterfaceSettings(localStorage.token);
+			toast.success(
+				$i18n.t('Successfully reset interface settings for {{count}} users', {
+					count: result.users_reset
+				})
+			);
+		} catch (error) {
+			console.error('Error resetting interface settings:', error);
+			toast.error($i18n.t('Failed to reset interface settings'));
+		}
 	};
 
 	let workspaceModels = null;
@@ -425,6 +441,15 @@
 			</button>
 		</div>
 	</form>
+
+	<InterfaceDefaultsModal bind:show={showInterfaceDefaultsModal} />
+
+	<ConfirmDialog
+		title={$i18n.t('Reset All Users Interface Settings')}
+		message={$i18n.t('This will clear all customized interface settings for all users. This action cannot be undone.')}
+		bind:show={showResetConfirmDialog}
+		onConfirm={handleResetAllUsersInterfaceSettings}
+	/>
 {:else}
 	<div class=" h-full w-full flex justify-center items-center">
 		<Spinner className="size-5" />
