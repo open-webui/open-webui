@@ -463,7 +463,54 @@ class ChatTable:
                 return None
             return result[0] or 'New Chat'
 
+    def _messages_map_from_chat_message_rows(self, chat_id: str, rows: list) -> dict:
+        """Build the same shape as `chat.history.messages` from `chat_message` rows."""
+        prefix = f'{chat_id}-'
+        messages_map: dict = {}
+        for row in rows:
+            logical_id = row.id[len(prefix) :] if row.id.startswith(prefix) else row.id
+            msg: dict = {
+                'id': logical_id,
+                'parentId': row.parent_id,
+                'role': row.role,
+                'content': row.content,
+                'output': row.output,
+                # Avoid None: code does `for f in message.get("files", [])` which yields None if key exists
+                'files': row.files if row.files is not None else [],
+            }
+            if row.model_id is not None:
+                msg['model'] = row.model_id
+            if row.created_at is not None:
+                msg['timestamp'] = row.created_at
+            if row.sources is not None:
+                msg['sources'] = row.sources
+            if row.embeds is not None:
+                msg['embeds'] = row.embeds
+            if row.status_history is not None:
+                msg['statusHistory'] = row.status_history
+            if row.error is not None:
+                msg['error'] = row.error
+            if row.usage is not None:
+                msg['usage'] = row.usage
+            if row.done is not None:
+                msg['done'] = row.done
+            messages_map[logical_id] = msg
+        return messages_map
+
     def get_messages_map_by_chat_id(self, id: str) -> Optional[dict]:
+        """
+        Message map for walking history (see `get_message_list`). Prefer `chat_message`
+        rows to avoid loading the large `chat` JSON blob; fall back to embedded history
+        when no rows exist (legacy chats).
+        """
+        with get_db_context() as db:
+            if db.query(Chat.id).filter_by(id=id).first() is None:
+                return None
+
+            rows = db.query(ChatMessage).filter_by(chat_id=id).all()
+            if rows:
+                return self._messages_map_from_chat_message_rows(id, rows)
+
         chat = self.get_chat_by_id(id)
         if chat is None:
             return None
@@ -1159,24 +1206,28 @@ class ChatTable:
                 # Check if there are any tags to filter, it should have all the tags
                 if 'none' in tag_ids:
                     query = query.filter(
-                        text("""
+                        text(
+                            """
                             NOT EXISTS (
                                 SELECT 1
                                 FROM json_each(Chat.meta, '$.tags') AS tag
                             )
-                            """)
+                            """
+                        )
                     )
                 elif tag_ids:
                     query = query.filter(
                         and_(
                             *[
-                                text(f"""
+                                text(
+                                    f"""
                                     EXISTS (
                                         SELECT 1
                                         FROM json_each(Chat.meta, '$.tags') AS tag
                                         WHERE tag.value = :tag_id_{tag_idx}
                                     )
-                                    """).params(**{f'tag_id_{tag_idx}': tag_id})
+                                    """
+                                ).params(**{f'tag_id_{tag_idx}': tag_id})
                                 for tag_idx, tag_id in enumerate(tag_ids)
                             ]
                         )
@@ -1213,24 +1264,28 @@ class ChatTable:
                 # Check if there are any tags to filter, it should have all the tags
                 if 'none' in tag_ids:
                     query = query.filter(
-                        text("""
+                        text(
+                            """
                             NOT EXISTS (
                                 SELECT 1
                                 FROM json_array_elements_text(Chat.meta->'tags') AS tag
                             )
-                            """)
+                            """
+                        )
                     )
                 elif tag_ids:
                     query = query.filter(
                         and_(
                             *[
-                                text(f"""
+                                text(
+                                    f"""
                                     EXISTS (
                                         SELECT 1
                                         FROM json_array_elements_text(Chat.meta->'tags') AS tag
                                         WHERE tag = :tag_id_{tag_idx}
                                     )
-                                    """).params(**{f'tag_id_{tag_idx}': tag_id})
+                                    """
+                                ).params(**{f'tag_id_{tag_idx}': tag_id})
                                 for tag_idx, tag_id in enumerate(tag_ids)
                             ]
                         )
