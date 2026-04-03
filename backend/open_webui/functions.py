@@ -34,7 +34,7 @@ from open_webui.utils.plugin import (
     load_function_module_by_id,
     get_function_module_from_cache,
 )
-from open_webui.utils.tools import get_tools
+from open_webui.utils.tools import get_tools, get_builtin_tools
 
 from open_webui.env import GLOBAL_LOG_LEVEL
 
@@ -255,7 +255,9 @@ async def generate_function_chat_completion(request, form_data, user, models: di
         '__oauth_token__': oauth_token,
         '__request__': request,
     }
-    extra_params['__tools__'] = await get_tools(
+
+    # Get user-defined tools
+    user_tools = await get_tools(
         request,
         tool_ids,
         user,
@@ -263,9 +265,19 @@ async def generate_function_chat_completion(request, form_data, user, models: di
             **extra_params,
             '__model__': models.get(form_data['model'], None),
             '__messages__': form_data['messages'],
-            '__files__': files,
         },
     )
+
+    # Get built-in tools
+    builtin_tools = get_builtin_tools(
+        request,
+        extra_params,
+        metadata.get('features', {}),
+        models.get(form_data['model'], None),
+    )
+
+    # Merge tools
+    extra_params['__tools__'] = {**user_tools, **builtin_tools}
 
     if model_info:
         if model_info.base_model_id:
