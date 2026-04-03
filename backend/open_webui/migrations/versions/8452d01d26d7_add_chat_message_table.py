@@ -112,26 +112,38 @@ def _flush_batch(conn, table, batch):
 
 
 def _flush_batch_pg(conn, table, batch):
-    """Insert a batch with ON CONFLICT DO NOTHING (PostgreSQL path)."""
+    """Insert a batch with ON CONFLICT DO NOTHING (PostgreSQL path).
+
+    Uses savepoints so a failed bulk insert doesn't abort the transaction —
+    PostgreSQL puts the transaction into an error state after any statement
+    failure, making all subsequent statements fail until ROLLBACK.
+    """
     from sqlalchemy.dialects.postgresql import insert as pg_insert
 
+    savepoint = conn.begin_nested()
     try:
         stmt = pg_insert(table).values(batch).on_conflict_do_nothing(
             index_elements=['id']
         )
         result = conn.execute(stmt)
+        savepoint.commit()
         return result.rowcount, len(batch) - result.rowcount
     except Exception:
+        savepoint.rollback()
+        # Fallback to row-by-row with individual savepoints
         inserted = 0
         failed = 0
         for msg in batch:
+            sp = conn.begin_nested()
             try:
                 stmt = pg_insert(table).values(**msg).on_conflict_do_nothing(
                     index_elements=['id']
                 )
                 result = conn.execute(stmt)
+                sp.commit()
                 inserted += result.rowcount
             except Exception as e:
+                sp.rollback()
                 failed += 1
                 log.warning(f'Failed to insert message {msg["id"]}: {e}')
         return inserted, failed
@@ -326,15 +338,26 @@ def _upgrade_postgresql() -> None:
     total_failed = 0
     total_chats = 0
 
+    # Capture high-water mark so concurrent inserts with non-monotonic IDs
+    # (e.g. UUIDs) don't get skipped by keyset pagination.
+    max_id_row = conn.execute(
+        sa.select(sa.func.max(chat_table.c.id))
+        .where(~chat_table.c.user_id.like('shared-%'))
+    ).fetchone()
+    max_id = max_id_row[0] if max_id_row and max_id_row[0] else None
+
     while True:
         # Keyset pagination: fetch next page of chats ordered by PK
-        rows = conn.execute(
+        query = (
             sa.select(chat_table.c.id, chat_table.c.user_id, chat_table.c.chat)
             .where(chat_table.c.id > last_id)
             .where(~chat_table.c.user_id.like('shared-%'))
             .order_by(chat_table.c.id)
             .limit(CHAT_PAGE_SIZE)
-        ).fetchall()
+        )
+        if max_id is not None:
+            query = query.where(chat_table.c.id <= max_id)
+        rows = conn.execute(query).fetchall()
 
         if not rows:
             break
