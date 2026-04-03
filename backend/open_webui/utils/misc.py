@@ -276,6 +276,46 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
     return messages
 
 
+def filter_output_by_content(output: list, content: str) -> list:
+    """
+    Drop output items whose <details> block was removed from content.
+    Matches by id attribute. Falls back to keeping all items for types
+    that don't yet carry id= (legacy content compatibility).
+    """
+    present_ids = set(re.findall(r'<details\b[^>]*\bid="([^"]+)"', content))
+    types_present = set(re.findall(r'<details\b[^>]*\btype="([^"]+)"', content))
+
+    # Types that carry id= in content (vs legacy types without id=).
+    types_with_ids: set[str] = set()
+    for m in re.finditer(r'<details\b(?=[^>]*\btype="([^"]+)")(?=[^>]*\bid=)', content):
+        types_with_ids.add(m.group(1))
+
+    # Map output item type → <details> type attribute value
+    DETAILS_TYPE = {
+        'function_call': 'tool_calls',
+        'function_call_output': 'tool_calls',
+        'reasoning': 'reasoning',
+        'open_webui:code_interpreter': 'code_interpreter',
+    }
+
+    filtered = []
+    for item in output:
+        details_type = DETAILS_TYPE.get(item.get('type', ''))
+        if details_type is None:
+            filtered.append(item)
+        elif details_type not in types_present:
+            pass  # type removed from content
+        elif details_type not in types_with_ids:
+            filtered.append(item)
+        else:
+            item_id = item.get('call_id') or item.get('id', '')
+            if item_id in present_ids:
+                filtered.append(item)
+            # else: user removed this block
+
+    return filtered
+
+
 def get_last_user_message(messages: list[dict]) -> Optional[str]:
     message = get_last_user_message_item(messages)
     if message is None:

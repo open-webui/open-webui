@@ -98,6 +98,7 @@ from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
     get_content_from_message,
     convert_output_to_messages,
+    filter_output_by_content,
     strip_empty_content_blocks,
 )
 from open_webui.utils.tools import (
@@ -481,9 +482,9 @@ def serialize_output(output: list) -> str:
             )
 
             if status == 'completed' or duration is not None or not is_last_item:
-                content = f'{content}<details type="reasoning" done="true" duration="{duration or 0}">\n<summary>Thought for {duration or 0} seconds</summary>\n{display}\n</details>\n'
+                content = f'{content}<details type="reasoning" done="true" id="{item.get("id", "")}" duration="{duration or 0}">\n<summary>Thought for {duration or 0} seconds</summary>\n{display}\n</details>\n'
             else:
-                content = f'{content}<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n{display}\n</details>\n'
+                content = f'{content}<details type="reasoning" done="false" id="{item.get("id", "")}">\n<summary>Thinking…</summary>\n{display}\n</details>\n'
 
         elif item_type == 'open_webui:code_interpreter':
             content_stripped, original_whitespace = split_content_and_whitespace(content)
@@ -519,9 +520,9 @@ def serialize_output(output: list) -> str:
                 output_attr = f' output="{html.escape(output_json)}"'
 
             if status == 'completed' or duration is not None or not is_last_item:
-                content += f'<details type="code_interpreter" done="true" duration="{duration or 0}"{output_attr}>\n<summary>Analyzed</summary>\n{display}\n</details>\n'
+                content += f'<details type="code_interpreter" done="true" id="{item.get("id", "")}" duration="{duration or 0}"{output_attr}>\n<summary>Analyzed</summary>\n{display}\n</details>\n'
             else:
-                content += f'<details type="code_interpreter" done="false"{output_attr}>\n<summary>Analyzing…</summary>\n{display}\n</details>\n'
+                content += f'<details type="code_interpreter" done="false" id="{item.get("id", "")}"{output_attr}>\n<summary>Analyzing…</summary>\n{display}\n</details>\n'
 
     return content.strip()
 
@@ -2088,16 +2089,47 @@ def process_messages_with_output(messages: list[dict]) -> list[dict]:
 
     For assistant messages with 'output' field, produces properly formatted
     OpenAI-style messages (tool_calls + tool results). Strips 'output' before LLM.
+    Respects content edits and dropped <details> blocks by filtering output items
+    against the stored content field before conversion.
     """
     processed = []
 
     for message in messages:
         if message.get('role') == 'assistant' and message.get('output'):
-            # Use output items for clean OpenAI-format messages
-            output_messages = convert_output_to_messages(message['output'], raw=True)
+            # Drop output items for <details> blocks removed from content
+            filtered_output = filter_output_by_content(
+                message['output'], message.get('content', '')
+            )
+
+            # Use content for text (respects edits), strip <details> blocks
+            edited_text = re.sub(
+                r'<details\b[^>]*>.*?</details>', '',
+                message.get('content', ''), flags=re.S,
+            ).strip()
+
+            # Replace the first message item's text with the edited content,
+            # preserving the natural order of structured items (reasoning before
+            # text, tool calls in sequence) via convert_output_to_messages.
+            used_edited_text = False
+            modified_output = []
+            for item in filtered_output:
+                if item.get('type') == 'message' and not used_edited_text:
+                    modified_output.append({
+                        **item,
+                        'content': [{'type': 'output_text', 'text': edited_text}],
+                    })
+                    used_edited_text = True
+                else:
+                    modified_output.append(item)
+
+            output_messages = convert_output_to_messages(modified_output, raw=True)
             if output_messages:
+                if not used_edited_text and edited_text:
+                    output_messages.append({'role': 'assistant', 'content': edited_text})
                 processed.extend(output_messages)
-                continue
+            elif edited_text:
+                processed.append({'role': 'assistant', 'content': edited_text})
+            continue
 
         # Strip 'output' field before adding (LLM shouldn't see it)
         clean_message = {k: v for k, v in message.items() if k != 'output'}
