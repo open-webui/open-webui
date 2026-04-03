@@ -8,6 +8,7 @@
 		chatId,
 		config,
 		mobile,
+		models,
 		settings,
 		showArchivedChats,
 		showControls,
@@ -114,10 +115,11 @@
 {#if showModelSelector}
     <ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
     
+    {#if $models.find((m) => m.id === selectedModels[0])?.owned_by !== 'ollama'}
     <button
         class="flex items-center gap-1.5 ml-2 px-2.5 py-1 rounded-lg text-xs font-medium transition
             {$privacyProxy
-                ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30' 
+                ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
                 : 'bg-gray-500/20 text-gray-400 hover:bg-gray-500/30'}"
         on:click={() => { $privacyProxy = !$privacyProxy; console.log('[privacyProxy] toggled to:', $privacyProxy); }}
     >
@@ -127,6 +129,7 @@
             <span class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform {$privacyProxy ? 'translate-x-3.5' : 'translate-x-0.5'}" />
         </span>
     </button>
+    {/if}
 {/if}
 				</div>
 
