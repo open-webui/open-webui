@@ -21,7 +21,9 @@ down_revision: Union[str, None] = '374d2f66af06'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-BATCH_SIZE = 5000
+# PostgreSQL has a 65,535 bind parameter limit. With 17 columns per row,
+# max safe batch is floor(65535 / 17) = 3855. Use 3000 for headroom.
+BATCH_SIZE = 3000
 CHAT_PAGE_SIZE = 100
 
 
@@ -405,7 +407,7 @@ def _upgrade_postgresql() -> None:
         "CREATE INDEX IF NOT EXISTS chat_message_user_created_idx ON chat_message (user_id, created_at)",
     ]:
         conn.execute(sa.text(stmt))
-    conn.commit()
+        conn.commit()  # Commit each index to avoid WAL accumulation
     log.info("Phase 3 complete: indexes created")
 
     # Phase 4: Add FK constraint
