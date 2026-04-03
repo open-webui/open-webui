@@ -1,16 +1,5 @@
 """Validation utilities for user-supplied input."""
 
-# Known static asset paths used as default profile images
-_ALLOWED_STATIC_PATHS = (
-    '/user.png',
-    '/static/favicon.png',
-)
-
-# External URL prefixes that are explicitly trusted for profile images
-_ALLOWED_URL_PREFIXES = (
-    'https://www.gravatar.com/avatar/',
-)
-
 
 def validate_profile_image_url(url: str) -> str:
     """
@@ -18,28 +7,29 @@ def validate_profile_image_url(url: str) -> str:
 
     Allowed formats:
     - Empty string (falls back to default avatar)
-    - data:image/* URIs (base64-encoded uploads from the frontend)
-    - Known static asset paths (/user.png, /static/favicon.png)
-    - Trusted external URLs (e.g. Gravatar)
+    - Relative paths starting with ``/`` (internal assets and API routes)
+    - ``http://`` and ``https://`` URLs (external avatars, OAuth pictures)
+    - ``data:image/*`` URIs (base64-encoded uploads from the frontend)
 
-    Returns the url unchanged if valid, raises ValueError otherwise.
+    All other schemes (javascript:, file:, ftp:, etc.) are rejected.
     """
     if not url:
         return url
 
-    _ALLOWED_DATA_PREFIXES = (
-        'data:image/png',
-        'data:image/jpeg',
-        'data:image/gif',
-        'data:image/webp',
+    # Relative paths: covers /user.png, /static/favicon.png,
+    # /api/v1/users/{id}/profile/image, and any future internal routes.
+    if url.startswith('/'):
+        return url
+
+    # External images served over HTTP(S), e.g. OAuth provider avatars.
+    if url.startswith('https://') or url.startswith('http://'):
+        return url
+
+    # Base64-encoded images uploaded via the frontend.
+    if url.startswith('data:image/'):
+        return url
+
+    raise ValueError(
+        'Invalid profile image URL: must be a relative path, an HTTP(S) URL, '
+        'or a data:image URI.'
     )
-    if any(url.startswith(prefix) for prefix in _ALLOWED_DATA_PREFIXES):
-        return url
-
-    if url in _ALLOWED_STATIC_PATHS:
-        return url
-
-    if any(url.startswith(prefix) for prefix in _ALLOWED_URL_PREFIXES):
-        return url
-
-    raise ValueError('Invalid profile image URL: only data URIs and default avatars are allowed.')
