@@ -687,7 +687,6 @@ def load_oauth_providers():
             return client
 
         OAUTH_PROVIDERS['google'] = {
-            'redirect_uri': GOOGLE_REDIRECT_URI.value,
             'register': google_oauth_register,
         }
 
@@ -708,7 +707,6 @@ def load_oauth_providers():
             return client
 
         OAUTH_PROVIDERS['microsoft'] = {
-            'redirect_uri': MICROSOFT_REDIRECT_URI.value,
             'picture_url': MICROSOFT_CLIENT_PICTURE_URL.value,
             'register': microsoft_oauth_register,
         }
@@ -733,7 +731,6 @@ def load_oauth_providers():
             return client
 
         OAUTH_PROVIDERS['github'] = {
-            'redirect_uri': GITHUB_CLIENT_REDIRECT_URI.value,
             'register': github_oauth_register,
             'sub_claim': 'id',
         }
@@ -775,7 +772,6 @@ def load_oauth_providers():
 
         OAUTH_PROVIDERS['oidc'] = {
             'name': OAUTH_PROVIDER_NAME.value,
-            'redirect_uri': OPENID_REDIRECT_URI.value,
             'register': oidc_oauth_register,
         }
 
@@ -1226,10 +1222,16 @@ DEFAULT_MODEL_METADATA = PersistentConfig(
     {},
 )
 
+try:
+    default_model_params = json.loads(os.environ.get('DEFAULT_MODEL_PARAMS', '{}'))
+except Exception as e:
+    log.exception(f'Error loading DEFAULT_MODEL_PARAMS: {e}')
+    default_model_params = {}
+
 DEFAULT_MODEL_PARAMS = PersistentConfig(
     'DEFAULT_MODEL_PARAMS',
     'models.default_params',
-    {},
+    default_model_params,
 )
 
 DEFAULT_USER_ROLE = PersistentConfig(
@@ -1435,6 +1437,10 @@ USER_PERMISSIONS_FEATURES_API_KEYS = os.environ.get('USER_PERMISSIONS_FEATURES_A
 
 USER_PERMISSIONS_FEATURES_MEMORIES = os.environ.get('USER_PERMISSIONS_FEATURES_MEMORIES', 'True').lower() == 'true'
 
+USER_PERMISSIONS_FEATURES_AUTOMATIONS = (
+    os.environ.get('USER_PERMISSIONS_FEATURES_AUTOMATIONS', 'False').lower() == 'true'
+)
+
 
 USER_PERMISSIONS_SETTINGS_INTERFACE = os.environ.get('USER_PERMISSIONS_SETTINGS_INTERFACE', 'True').lower() == 'true'
 
@@ -1504,6 +1510,7 @@ DEFAULT_USER_PERMISSIONS = {
         'image_generation': USER_PERMISSIONS_FEATURES_IMAGE_GENERATION,
         'code_interpreter': USER_PERMISSIONS_FEATURES_CODE_INTERPRETER,
         'memories': USER_PERMISSIONS_FEATURES_MEMORIES,
+        'automations': USER_PERMISSIONS_FEATURES_AUTOMATIONS,
     },
     'settings': {
         'interface': USER_PERMISSIONS_SETTINGS_INTERFACE,
@@ -3084,7 +3091,7 @@ WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
 
 WEB_FETCH_MAX_CONTENT_LENGTH = PersistentConfig(
     'WEB_FETCH_MAX_CONTENT_LENGTH',
-    'rag.web.search.fetch_url_max_content_length',
+    'rag.web.fetch.max_content_length',
     (int(os.environ.get('WEB_FETCH_MAX_CONTENT_LENGTH')) if os.environ.get('WEB_FETCH_MAX_CONTENT_LENGTH') else None),
 )
 
@@ -3931,6 +3938,18 @@ AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
     'AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT',
     'audio.tts.azure.speech_output_format',
     os.getenv('AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT', 'audio-24khz-160kbitrate-mono-mp3'),
+)
+
+AUDIO_TTS_MISTRAL_API_KEY = PersistentConfig(
+    'AUDIO_TTS_MISTRAL_API_KEY',
+    'audio.tts.mistral.api_key',
+    os.getenv('AUDIO_TTS_MISTRAL_API_KEY', ''),
+)
+
+AUDIO_TTS_MISTRAL_API_BASE_URL = PersistentConfig(
+    'AUDIO_TTS_MISTRAL_API_BASE_URL',
+    'audio.tts.mistral.api_base_url',
+    os.getenv('AUDIO_TTS_MISTRAL_API_BASE_URL', 'https://api.mistral.ai/v1'),
 )
 
 

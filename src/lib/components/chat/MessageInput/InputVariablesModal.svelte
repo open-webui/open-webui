@@ -22,12 +22,16 @@
 
 	const submitHandler = async () => {
 		// Normalize Windows CRLF (\r\n) to LF (\n) for all string values
+		// Build a new object to avoid mutating the reactive variableValues proxy
+		const result = {};
 		for (const key of Object.keys(variableValues)) {
 			if (typeof variableValues[key] === 'string') {
-				variableValues[key] = variableValues[key].replace(/\r\n/g, '\n');
+				result[key] = variableValues[key].replace(/\r\n/g, '\n');
+			} else {
+				result[key] = variableValues[key];
 			}
 		}
-		onSave(variableValues);
+		onSave(result);
 		show = false;
 	};
 
@@ -102,20 +106,17 @@
 										<div class="flex mt-0.5 mb-0.5 space-x-2">
 											<div class=" flex-1">
 												{#if variables[variable]?.type === 'select'}
-													{@const options = variableAttributes?.options ?? []}
-													{@const placeholder = variableAttributes?.placeholder ?? ''}
-
 													<select
 														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 														bind:value={variableValues[variable]}
 														id="input-variable-{idx}"
 													>
-														{#if placeholder}
+														{#if variables[variable]?.placeholder}
 															<option value="" disabled selected>
-																{placeholder}
+																{variables[variable].placeholder}
 															</option>
 														{/if}
-														{#each options as option}
+														{#each variables[variable]?.options ?? [] as option}
 															<option value={option} selected={option === variableValues[variable]}>
 																{option}
 															</option>

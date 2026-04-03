@@ -215,6 +215,11 @@ class FeedbackTable:
             query = db.query(Feedback, User).join(User, Feedback.user_id == User.id)
 
             if filter:
+                # Apply model_id filter (exact match)
+                model_id = filter.get('model_id')
+                if model_id:
+                    query = query.filter(Feedback.data['model_id'].as_string() == model_id)
+
                 order_by = filter.get('order_by')
                 direction = filter.get('direction')
 
@@ -287,6 +292,17 @@ class FeedbackTable:
                 .order_by(Feedback.updated_at.desc())
                 .all()
             ]
+
+    def get_distinct_model_ids(self, db: Optional[Session] = None) -> list[str]:
+        """Get distinct model_ids from feedback data for filter dropdowns."""
+        with get_db_context(db) as db:
+            rows = (
+                db.query(Feedback.data['model_id'].as_string())
+                .filter(Feedback.data['model_id'].as_string().isnot(None))
+                .distinct()
+                .all()
+            )
+            return sorted([row[0] for row in rows if row[0]])
 
     def get_feedbacks_for_leaderboard(self, db: Optional[Session] = None) -> list[LeaderboardFeedbackData]:
         """Fetch only id and data for leaderboard computation (excludes snapshot/meta)."""

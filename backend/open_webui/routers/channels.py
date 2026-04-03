@@ -218,7 +218,7 @@ async def get_all_channels(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    check_channels_access(request)
+    check_channels_access(request, user)
     if user.role == 'admin':
         return Channels.get_channels(db=db)
     return Channels.get_channels_by_user_id(user.id, db=db)
@@ -524,7 +524,7 @@ async def update_is_active_member_by_id_and_user_id(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    check_channels_access(request)
+    check_channels_access(request, user)
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -757,7 +757,7 @@ async def get_pinned_channel_messages(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    check_channels_access(request)
+    check_channels_access(request, user)
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -1094,7 +1094,7 @@ async def post_new_message(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    check_channels_access(request)
+    check_channels_access(request, user)
 
     try:
         message, channel = await new_message_handler(request, id, form_data, user, db)
@@ -1143,7 +1143,7 @@ async def get_channel_message(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    check_channels_access(request)
+    check_channels_access(request, user)
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -1183,7 +1183,7 @@ async def get_channel_message_data(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    check_channels_access(request)
+    check_channels_access(request, user)
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -1223,7 +1223,7 @@ async def pin_channel_message(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    check_channels_access(request)
+    check_channels_access(request, user)
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -1271,7 +1271,7 @@ async def get_channel_thread_messages(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    check_channels_access(request)
+    check_channels_access(request, user)
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -1328,7 +1328,7 @@ async def update_message_by_id(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    check_channels_access(request)
+    check_channels_access(request, user)
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -1395,7 +1395,7 @@ async def add_reaction_to_message(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    check_channels_access(request)
+    check_channels_access(request, user)
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -1462,7 +1462,7 @@ async def remove_reaction_by_id_and_user_id_and_name(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    check_channels_access(request)
+    check_channels_access(request, user)
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -1529,7 +1529,7 @@ async def delete_message_by_id(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    check_channels_access(request)
+    check_channels_access(request, user)
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -1650,7 +1650,7 @@ async def get_channel_webhooks(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    check_channels_access(request)
+    check_channels_access(request, user)
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -1670,7 +1670,7 @@ async def create_channel_webhook(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    check_channels_access(request)
+    check_channels_access(request, user)
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -1695,7 +1695,7 @@ async def update_channel_webhook(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    check_channels_access(request)
+    check_channels_access(request, user)
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -1723,7 +1723,7 @@ async def delete_channel_webhook(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    check_channels_access(request)
+    check_channels_access(request, user)
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)

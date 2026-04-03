@@ -196,6 +196,14 @@ async def create_new_model(
         )
 
     else:
+        form_data.access_grants = filter_allowed_access_grants(
+            request.app.state.config.USER_PERMISSIONS,
+            user.id,
+            user.role,
+            form_data.access_grants,
+            'sharing.public_models',
+        )
+
         model = Models.insert_new_model(form_data, user.id, db=db)
         if model:
             return model
@@ -460,6 +468,7 @@ async def toggle_model_by_id(id: str, user=Depends(get_verified_user), db: Sessi
 
 @router.post('/model/update', response_model=Optional[ModelModel])
 async def update_model_by_id(
+    request: Request,
     form_data: ModelForm,
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
@@ -486,6 +495,14 @@ async def update_model_by_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
+
+    form_data.access_grants = filter_allowed_access_grants(
+        request.app.state.config.USER_PERMISSIONS,
+        user.id,
+        user.role,
+        form_data.access_grants,
+        'sharing.public_models',
+    )
 
     model = Models.update_model_by_id(form_data.id, ModelForm(**form_data.model_dump()), db=db)
     return model
@@ -560,6 +577,8 @@ async def update_model_access_by_id(
     )
 
     AccessGrants.set_access_grants('model', form_data.id, form_data.access_grants, db=db)
+
+    Models.update_model_updated_at_by_id(form_data.id, db=db)
 
     return Models.get_model_by_id(form_data.id, db=db)
 

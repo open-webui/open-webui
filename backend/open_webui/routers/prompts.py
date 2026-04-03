@@ -168,6 +168,14 @@ async def create_new_prompt(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
+    form_data.access_grants = filter_allowed_access_grants(
+        request.app.state.config.USER_PERMISSIONS,
+        user.id,
+        user.role,
+        form_data.access_grants,
+        'sharing.public_prompts',
+    )
+
     prompt = Prompts.get_prompt_by_command(form_data.command, db=db)
     if prompt is None:
         prompt = Prompts.insert_new_prompt(user.id, form_data, db=db)
@@ -275,6 +283,7 @@ async def get_prompt_by_id(prompt_id: str, user=Depends(get_verified_user), db: 
 
 @router.post('/id/{prompt_id}/update', response_model=Optional[PromptModel])
 async def update_prompt_by_id(
+    request: Request,
     prompt_id: str,
     form_data: PromptForm,
     user=Depends(get_verified_user),
@@ -313,6 +322,14 @@ async def update_prompt_by_id(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Command '/{form_data.command}' is already in use by another prompt",
             )
+
+    form_data.access_grants = filter_allowed_access_grants(
+        request.app.state.config.USER_PERMISSIONS,
+        user.id,
+        user.role,
+        form_data.access_grants,
+        'sharing.public_prompts',
+    )
 
     # Use the ID from the found prompt
     updated_prompt = Prompts.update_prompt_by_id(prompt.id, form_data, user.id, db=db)
