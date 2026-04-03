@@ -221,6 +221,8 @@ type Settings = {
 	renderMarkdownInPreviews?: boolean;
 	recentEmojis?: string[];
 
+	defaultUploadContext?: 'full' | 'focused';
+
 	system?: string;
 	seed?: number;
 	temperature?: string;
