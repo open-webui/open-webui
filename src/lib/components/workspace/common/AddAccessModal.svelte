@@ -57,6 +57,7 @@
 							bind:groupIds
 							includeGroups={true}
 							includeUsers={shareUsers}
+							includeSessionUser={true}
 						/>
 					</div>
 

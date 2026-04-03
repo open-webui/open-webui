@@ -16,6 +16,10 @@
 		"title": "Arabic (Bahrain)"
 	},
 	{
+		"code": "az-AZ",
+		"title": "Azərbaycanca"
+	},
+	{
 		"code": "eu-ES",
 		"title": "Basque (Euskara)"
 	},
@@ -186,6 +190,10 @@
 	{
 		"code": "sv-SE",
 		"title": "Swedish (Svenska)"
+	},
+	{
+		"code": "ta-IN",
+		"title": "தமிழ் (இந்தியா)"
 	},
 	{
 		"code": "th-TH",

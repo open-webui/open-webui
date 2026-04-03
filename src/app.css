@@ -187,31 +187,45 @@ select {
 
 @keyframes shimmer {
 	0% {
-		background-position: 200% 0;
+		background-position: 100% 0;
 	}
 	100% {
-		background-position: -200% 0;
+		background-position: -100% 0;
 	}
 }
 
 .shimmer {
-	background: linear-gradient(90deg, #9a9b9e 25%, #2a2929 50%, #9a9b9e 75%);
+	background: linear-gradient(
+		110deg,
+		#b4b4b4 0%,
+		#b4b4b4 43%,
+		#e8e8e8 50%,
+		#b4b4b4 57%,
+		#b4b4b4 100%
+	);
 	background-size: 200% 100%;
 	background-clip: text;
 	-webkit-background-clip: text;
 	-webkit-text-fill-color: transparent;
-	animation: shimmer 4s linear infinite;
-	color: #818286; /* Fallback color */
+	animation: shimmer 1.5s cubic-bezier(0.7, 0, 1, 0.4) infinite;
+	color: #b4b4b4;
 }
 
 :global(.dark) .shimmer {
-	background: linear-gradient(90deg, #818286 25%, #eae5e5 50%, #818286 75%);
+	background: linear-gradient(
+		110deg,
+		#9a9a9a 0%,
+		#9a9a9a 43%,
+		#5e5e5e 50%,
+		#9a9a9a 57%,
+		#9a9a9a 100%
+	);
 	background-size: 200% 100%;
 	background-clip: text;
 	-webkit-background-clip: text;
 	-webkit-text-fill-color: transparent;
-	animation: shimmer 4s linear infinite;
-	color: #a1a3a7; /* Darker fallback color for dark mode */
+	animation: shimmer 1.5s cubic-bezier(0.7, 0, 1, 0.4) infinite;
+	color: #9a9a9a;
 }
 
 @keyframes smoothFadeIn {
@@ -227,6 +241,19 @@ select {
 
 .status-description {
 	animation: smoothFadeIn 0.2s forwards;
+}
+
+@keyframes fade-in-token {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+.fade-in-token {
+	animation: fade-in-token 100ms ease-out;
 }
 
 .katex-mathml {

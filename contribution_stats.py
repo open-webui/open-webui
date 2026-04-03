@@ -2,15 +2,15 @@ import os
 import subprocess
 from collections import Counter
 
-CONFIG_FILE_EXTENSIONS = (".json", ".yml", ".yaml", ".ini", ".conf", ".toml")
+CONFIG_FILE_EXTENSIONS = ('.json', '.yml', '.yaml', '.ini', '.conf', '.toml')
 
 
 def is_text_file(filepath):
     # Check for binary file by scanning for null bytes.
     try:
-        with open(filepath, "rb") as f:
+        with open(filepath, 'rb') as f:
             chunk = f.read(4096)
-        if b"\0" in chunk:
+        if b'\0' in chunk:
             return False
         return True
     except Exception:
@@ -20,7 +20,7 @@ def is_text_file(filepath):
 def should_skip_file(path):
     base = os.path.basename(path)
     # Skip dotfiles and dotdirs
-    if base.startswith("."):
+    if base.startswith('.'):
         return True
     # Skip config files by extension
     if base.lower().endswith(CONFIG_FILE_EXTENSIONS):
@@ -30,12 +30,12 @@ def should_skip_file(path):
 
 def get_tracked_files():
     try:
-        output = subprocess.check_output(["git", "ls-files"], text=True)
-        files = output.strip().split("\n")
+        output = subprocess.check_output(['git', 'ls-files'], text=True)
+        files = output.strip().split('\n')
         files = [f for f in files if f and os.path.isfile(f)]
         return files
     except subprocess.CalledProcessError:
-        print("Error: Are you in a git repository?")
+        print('Error: Are you in a git repository?')
         return []
 
 
@@ -50,14 +50,12 @@ def main():
         if not is_text_file(file):
             continue
         try:
-            blame = subprocess.check_output(
-                ["git", "blame", "-e", file], text=True, errors="replace"
-            )
+            blame = subprocess.check_output(['git', 'blame', '-e', file], text=True, errors='replace')
             for line in blame.splitlines():
                 # The email always inside <>
-                if "<" in line and ">" in line:
+                if '<' in line and '>' in line:
                     try:
-                        email = line.split("<")[1].split(">")[0].strip()
+                        email = line.split('<')[1].split('>')[0].strip()
                     except Exception:
                         continue
                     email_counter[email] += 1
@@ -67,8 +65,8 @@ def main():
 
     for email, lines in email_counter.most_common():
         percent = (lines / total_lines * 100) if total_lines else 0
-        print(f"{email}: {lines}/{total_lines} {percent:.2f}%")
+        print(f'{email}: {lines}/{total_lines} {percent:.2f}%')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

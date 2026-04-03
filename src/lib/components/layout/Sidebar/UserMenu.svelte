@@ -1,8 +1,6 @@
 <script lang="ts">
-	import { DropdownMenu } from 'bits-ui';
 	import { createEventDispatcher, getContext, onMount, tick } from 'svelte';
 
-	import { flyAndScale } from '$lib/utils/transitions';
 	import { goto } from '$app/navigation';
 	import { fade, slide } from 'svelte/transition';
 
@@ -13,6 +11,7 @@
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 	import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
@@ -38,7 +37,7 @@
 	export let profile = false;
 	export let help = false;
 
-	export let className = 'max-w-[240px]';
+	export let className = 'w-[240px]';
 	export let align = 'end';
 
 	export let showActiveUsers = true;
@@ -60,7 +59,7 @@
 		}
 	};
 
-	const handleDropdownChange = (state: boolean) => {
+	const handleDropdownChange = (state) => {
 		dispatch('change', state);
 
 		// Fetch usage info when dropdown opens, if user has permission
@@ -79,18 +78,12 @@
 />
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<DropdownMenu.Root bind:open={show} onOpenChange={handleDropdownChange}>
-	<DropdownMenu.Trigger>
-		<slot />
-	</DropdownMenu.Trigger>
+<Dropdown bind:show onOpenChange={handleDropdownChange} {align}>
+	<slot />
 
-	<slot name="content">
-		<DropdownMenu.Content
-			class="w-full {className}  rounded-2xl px-1 py-1  border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg text-sm"
-			sideOffset={4}
-			side="top"
-			{align}
-			transition={(e) => fade(e, { duration: 100 })}
+	<div slot="content">
+		<div
+			class="{className} rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg text-sm"
 		>
 			{#if profile}
 				<div class=" flex gap-3.5 w-full p-2.5 items-center">
@@ -201,8 +194,9 @@
 				<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1.5 p-0" />
 			{/if}
 
-			<DropdownMenu.Item
+			<button
 				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+				type="button"
 				on:click={async () => {
 					show = false;
 
@@ -218,10 +212,72 @@
 					<Settings className="w-5 h-5" strokeWidth="1.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Settings')}</div>
-			</DropdownMenu.Item>
+			</button>
 
-			<DropdownMenu.Item
+			{#if $user?.role === 'admin' || $user?.permissions?.features?.automations}
+				<a
+					href="/automations"
+					draggable="false"
+					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+					on:click={async (e) => {
+						if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+						e.preventDefault();
+						show = false;
+						goto('/automations');
+						if ($mobile) {
+							await tick();
+							showSidebar.set(false);
+						}
+					}}
+				>
+					<div class="self-center mr-3">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="size-5"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+							/>
+						</svg>
+					</div>
+					<div class="self-center truncate">{$i18n.t('Automations')}</div>
+				</a>
+			{/if}
+
+			{#if role === 'admin'}
+				<a
+					href="/playground"
+					draggable="false"
+					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+					on:click={async (e) => {
+						if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
+							return;
+						}
+						e.preventDefault();
+						show = false;
+						goto('/playground');
+						if ($mobile) {
+							await tick();
+							showSidebar.set(false);
+						}
+					}}
+				>
+					<div class=" self-center mr-3">
+						<Code className="size-5" strokeWidth="1.5" />
+					</div>
+					<div class=" self-center truncate">{$i18n.t('Playground')}</div>
+				</a>
+			{/if}
+
+			<button
 				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+				type="button"
 				on:click={async () => {
 					show = false;
 
@@ -238,34 +294,20 @@
 					<ArchiveBox className="size-5" strokeWidth="1.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Archived Chats')}</div>
-			</DropdownMenu.Item>
+			</button>
 
 			{#if role === 'admin'}
-				<DropdownMenu.Item
-					as="a"
-					href="/playground"
-					draggable="false"
-					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
-					on:click={async () => {
-						show = false;
-						if ($mobile) {
-							await tick();
-							showSidebar.set(false);
-						}
-					}}
-				>
-					<div class=" self-center mr-3">
-						<Code className="size-5" strokeWidth="1.5" />
-					</div>
-					<div class=" self-center truncate">{$i18n.t('Playground')}</div>
-				</DropdownMenu.Item>
-				<DropdownMenu.Item
-					as="a"
+				<a
 					href="/admin"
 					draggable="false"
 					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
-					on:click={async () => {
+					on:click={async (e) => {
+						if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
+							return;
+						}
+						e.preventDefault();
 						show = false;
+						goto('/admin');
 						if ($mobile) {
 							await tick();
 							showSidebar.set(false);
@@ -276,7 +318,7 @@
 						<UserGroup className="w-5 h-5" strokeWidth="1.5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
-				</DropdownMenu.Item>
+				</a>
 			{/if}
 
 			{#if help}
@@ -285,8 +327,7 @@
 				<!-- {$i18n.t('Help')} -->
 
 				{#if $user?.role === 'admin'}
-					<DropdownMenu.Item
-						as="a"
+					<a
 						href="https://docs.openwebui.com"
 						target="_blank"
 						draggable="false"
@@ -300,11 +341,10 @@
 							<QuestionMarkCircle className="size-5" />
 						</div>
 						<div class=" self-center truncate">{$i18n.t('Documentation')}</div>
-					</DropdownMenu.Item>
+					</a>
 
 					<!-- Releases -->
-					<DropdownMenu.Item
-						as="a"
+					<a
 						href="https://github.com/open-webui/open-webui/releases"
 						target="_blank"
 						draggable="false"
@@ -318,11 +358,12 @@
 							<Map className="size-5" />
 						</div>
 						<div class=" self-center truncate">{$i18n.t('Releases')}</div>
-					</DropdownMenu.Item>
+					</a>
 				{/if}
 
-				<DropdownMenu.Item
+				<button
 					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+					type="button"
 					id="chat-share-button"
 					on:click={async () => {
 						show = false;
@@ -338,13 +379,14 @@
 						<Keyboard className="size-5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Keyboard shortcuts')}</div>
-				</DropdownMenu.Item>
+				</button>
 			{/if}
 
 			<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
 
-			<DropdownMenu.Item
+			<button
 				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+				type="button"
 				on:click={async () => {
 					const res = await userSignOut();
 					user.set(null);
@@ -358,7 +400,7 @@
 					<SignOut className="w-5 h-5" strokeWidth="1.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
-			</DropdownMenu.Item>
+			</button>
 
 			{#if showActiveUsers && ($config?.features?.enable_public_active_users_count || role === 'admin') && usage}
 				{#if usage?.user_count}
@@ -395,10 +437,6 @@
 					</Tooltip>
 				{/if}
 			{/if}
-
-			<!-- <DropdownMenu.Item class="flex items-center py-1.5 px-3 text-sm ">
-				<div class="flex items-center">Profile</div>
-			</DropdownMenu.Item> -->
-		</DropdownMenu.Content>
-	</slot>
-</DropdownMenu.Root>
+		</div>
+	</div>
+</Dropdown>

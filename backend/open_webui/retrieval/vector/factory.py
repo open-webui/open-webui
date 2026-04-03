@@ -8,7 +8,6 @@ from open_webui.config import (
 
 
 class Vector:
-
     @staticmethod
     def get_vector(vector_type: str) -> VectorDBBase:
         """
@@ -57,6 +56,12 @@ class Vector:
                 from open_webui.retrieval.vector.dbs.opengauss import OpenGaussClient
 
                 return OpenGaussClient()
+            case VectorType.MARIADB_VECTOR:
+                from open_webui.retrieval.vector.dbs.mariadb_vector import (
+                    MariaDBVectorClient,
+                )
+
+                return MariaDBVectorClient()
             case VectorType.ELASTICSEARCH:
                 from open_webui.retrieval.vector.dbs.elasticsearch import (
                     ElasticsearchClient,
@@ -76,7 +81,7 @@ class Vector:
 
                 return WeaviateClient()
             case _:
-                raise ValueError(f"Unsupported vector type: {vector_type}")
+                raise ValueError(f'Unsupported vector type: {vector_type}')
 
 
 VECTOR_DB_CLIENT = Vector.get_vector(VECTOR_DB)
