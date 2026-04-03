@@ -2051,17 +2051,28 @@ async def get_app_config(request: Request):
     if not token and 'token' in request.cookies:
         token = request.cookies.get('token')
 
+    invalid_token = False
     if token:
         try:
             data = decode_token(token)
         except Exception as e:
             log.debug(e)
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail='Invalid token',
-            )
-        if data is not None and 'id' in data:
+            invalid_token = True
+        if not invalid_token and data is not None and 'id' in data:
             user = Users.get_user_by_id(data['id'])
+
+    if user is None and WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
+        trusted_email = request.headers.get(
+            WEBUI_AUTH_TRUSTED_EMAIL_HEADER, ''
+        ).strip().lower()
+        if trusted_email:
+            user = Users.get_user_by_email(trusted_email)
+
+    if user is None and invalid_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Invalid token',
+        )
 
     user_count = Users.get_num_users()
     onboarding = False
