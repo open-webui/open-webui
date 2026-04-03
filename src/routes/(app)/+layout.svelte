@@ -57,6 +57,15 @@
 
 	let version;
 
+	const readSessionBoolean = (key: string, fallback = false) => {
+		const value = sessionStorage.getItem(key);
+		return value === null ? fallback : value === 'true';
+	};
+
+	const writeSessionBoolean = (key: string, value: boolean) => {
+		sessionStorage.setItem(key, value ? 'true' : 'false');
+	};
+
 	const clearChatInputStorage = () => {
 		const chatInputKeys = Object.keys(localStorage).filter((key) => key.startsWith('chat-input'));
 		if (chatInputKeys.length > 0) {
@@ -344,11 +353,11 @@
 				checkForVersionUpdates();
 			}
 		}
-		// Persist showControls: track open/close state separately from saved size
-		// chatControlsSize always retains the last width for openPane()
-		await showControls.set(!$mobile ? localStorage.showControls === 'true' : false);
+		// Keep controls visibility scoped to the current tab so opening artifacts in one
+		// tab does not auto-expand controls in another tab.
+		await showControls.set(!$mobile ? readSessionBoolean('showControls') : false);
 		showControls.subscribe((value) => {
-			localStorage.showControls = value ? 'true' : 'false';
+			writeSessionBoolean('showControls', value);
 		});
 
 		// Persist selectedTerminalId across page loads

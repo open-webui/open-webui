@@ -15,13 +15,16 @@
 	export let params = {};
 	export let embed = false;
 
-	// Persist collapsible section open/close state
+	const getControlsStorageKey = (key: string) => `chatControls.${key}`;
+
+	// Persist collapsible section open/close state per tab to avoid leaking UI
+	// state across independent chat sessions.
 	const getOpen = (key: string, fallback = true): boolean => {
-		const v = localStorage.getItem(`chatControls.${key}`);
+		const v = sessionStorage.getItem(getControlsStorageKey(key));
 		return v !== null ? v === 'true' : fallback;
 	};
 	const setOpen = (key: string) => (open: boolean) => {
-		localStorage.setItem(`chatControls.${key}`, String(open));
+		sessionStorage.setItem(getControlsStorageKey(key), String(open));
 	};
 
 	let showFiles = getOpen('files');
