@@ -848,6 +848,8 @@
 	"Export": "Экспорт",
 	"Export All Archived Chats": "Экспортировать ВСЕ Архивированные Чаты",
 	"Export All Chats (All Users)": "Экспортировать все чаты (всех пользователей)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "Экспортировать чат (.json)",
 	"Export Chats": "Экспортировать чаты",
 	"Export Config": "Экспортировать конфигурации",

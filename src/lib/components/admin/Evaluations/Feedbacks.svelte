@@ -176,10 +176,9 @@
 				: s;
 		};
 
-		return [
-			headers.join(','),
-			...rows.map((r) => headers.map((h) => escape(r[h])).join(','))
-		].join('\n');
+		return [headers.join(','), ...rows.map((r) => headers.map((h) => escape(r[h])).join(','))].join(
+			'\n'
+		);
 	};
 
 	const exportHandler = async (format: 'json' | 'csv' = 'json') => {

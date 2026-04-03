@@ -10,7 +10,7 @@
 
 	import { splitStream } from '$lib/utils';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import Selector from '$lib/components/chat/ModelSelector/Selector.svelte';
+	
 
 	const i18n = getContext('i18n');
 
@@ -123,26 +123,6 @@
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full">
 		<div class=" flex flex-col h-full px-4">
-			<div class="flex flex-col justify-between mb-1 gap-1">
-				<div class="flex flex-col gap-1 w-full">
-					<div class="flex w-full">
-						<div class="overflow-hidden w-full">
-							<div class="max-w-full">
-								<Selector
-									placeholder={$i18n.t('Select a model')}
-									items={$models.map((model) => ({
-										value: model.id,
-										label: model.name,
-										model: model
-									}))}
-									bind:value={selectedModelId}
-								/>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-
 			<div
 				class=" pt-0.5 pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
 				id="messages-container"
@@ -160,8 +140,19 @@
 				</div>
 			</div>
 
-			<div class="pb-3 flex justify-end">
-				<div class="flex gap-2 shrink-0">
+			<div class="pb-3 flex justify-between items-center">
+				<div class="flex-1">
+					<select
+						class="bg-transparent border border-gray-100/30 dark:border-gray-850/30 rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden w-full"
+						bind:value={selectedModelId}
+					>
+						{#each $models as model}
+							<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
+						{/each}
+					</select>
+				</div>
+
+				<div class="flex gap-2 shrink-0 ml-2">
 					{#if !loading}
 						<button
 							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"

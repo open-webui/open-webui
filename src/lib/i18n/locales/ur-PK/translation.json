@@ -846,6 +846,8 @@
 	"Export": "برآمد کریں",
 	"Export All Archived Chats": "",
 	"Export All Chats (All Users)": "تمام چیٹس برآمد کریں (تمام صارفین)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "چیٹ برآمد کریں (.json)",
 	"Export Chats": "چیٹس برآمد کریں",
 	"Export Config": "",

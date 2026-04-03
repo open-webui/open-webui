@@ -847,6 +847,8 @@
 	"Export": "Izvoz",
 	"Export All Archived Chats": "",
 	"Export All Chats (All Users)": "Izvoz svih razgovora (svi korisnici)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "Izvoz četa (.json)",
 	"Export Chats": "Izvoz razgovora",
 	"Export Config": "",

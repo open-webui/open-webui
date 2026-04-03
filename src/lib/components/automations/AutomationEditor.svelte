@@ -276,7 +276,7 @@
 
 				{#if isDirty}
 					<button
-						class="px-4 py-1.5 text-sm bg-black text-white dark:bg-white dark:text-black rounded-full hover:opacity-90 transition flex items-center gap-1.5"
+						class="px-3 py-1 text-sm bg-black text-white dark:bg-white dark:text-black rounded-full hover:opacity-90 transition flex items-center gap-1.5"
 						on:click={saveHandler}
 						disabled={saving}
 						type="button"
@@ -289,7 +289,7 @@
 				{/if}
 
 				<button
-					class="px-4 py-1.5 text-sm border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-full flex items-center gap-1.5"
+					class="px-2.5 py-1 text-sm border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-full flex items-center gap-1.5"
 					on:click={runNowHandler}
 					type="button"
 					disabled={loading}
@@ -334,7 +334,7 @@
 			</div>
 
 			<!-- Sidebar Configuration Column -->
-			<div class="hidden md:flex w-full md:w-80 shrink-0 overflow-y-auto px-1 flex-col gap-5">
+			<div class="hidden md:flex w-full md:w-66 shrink-0 overflow-y-auto px-1 flex-col gap-5">
 				<div>
 					<div class="text-gray-500 text-xs mb-3">{$i18n.t('Configuration')}</div>
 					<div class="space-y-1">
@@ -378,18 +378,18 @@
 					<div class="space-y-2.5">
 						<div class="flex items-center justify-between text-xs">
 							<span class="text-gray-600 dark:text-gray-400">{$i18n.t('State')}</span>
-							<div
-								class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs transition {is_active
-									? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10'
-									: 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800'}"
+							<span
+								class="flex items-center gap-1.5 text-xs {is_active
+									? 'text-emerald-700 dark:text-emerald-400'
+									: 'text-gray-600 dark:text-gray-400'}"
 							>
 								<span
 									class="inline-block size-1.5 rounded-full {is_active
 										? 'bg-emerald-500'
 										: 'bg-gray-400'}"
 								></span>
-								<span>{is_active ? $i18n.t('Active') : $i18n.t('Paused')}</span>
-							</div>
+								{is_active ? $i18n.t('Active') : $i18n.t('Paused')}
+							</span>
 						</div>
 
 						<div class="flex items-center justify-between text-xs">
@@ -410,8 +410,8 @@
 					</div>
 				</div>
 
-				<div class="flex-1 flex flex-col min-h-0">
-					<div class="text-gray-500 text-xs mb-2 shrink-0">
+				<div class="flex-1 flex flex-col min-h-0 -mx-1">
+					<div class="text-gray-500 text-xs mb-2 mx-1 shrink-0">
 						{$i18n.t('Execution Logs')}
 					</div>
 					<div class="flex-1 overflow-y-auto scrollbar-hidden w-full" on:scroll={onScroll}>
@@ -427,7 +427,7 @@
 							<div class="space-y-0.5 w-full">
 								{#each runs as run (run.id)}
 									<button
-										class="w-full text-left flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-gray-100/80 dark:hover:bg-gray-850/80 transition-colors {run.chat_id
+										class="w-full text-left flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl hover:bg-gray-100/80 dark:hover:bg-gray-850/80 transition-colors {run.chat_id
 											? 'cursor-pointer'
 											: 'cursor-default'}"
 										on:click={() => {

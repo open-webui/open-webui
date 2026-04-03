@@ -846,6 +846,8 @@
 	"Export": "Exportar",
 	"Export All Archived Chats": "Exportar todos os chats Arquivados",
 	"Export All Chats (All Users)": "Exportar todos os chats (Todos os usuarios)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "Exportar chat (.json)",
 	"Export Chats": "Exportar Chats",
 	"Export Config": "",

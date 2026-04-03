@@ -321,10 +321,7 @@ async def export_all_feedbacks(
 ):
     feedbacks = Feedbacks.get_all_feedbacks(db=db)
     if model_id:
-        feedbacks = [
-            f for f in feedbacks
-            if f.data and f.data.get('model_id') == model_id
-        ]
+        feedbacks = [f for f in feedbacks if f.data and f.data.get('model_id') == model_id]
     return feedbacks
 
 

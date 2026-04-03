@@ -42,7 +42,6 @@
 	let contentContainerElement;
 	let floatingButtonsElement;
 
-
 	let sourceIds = [];
 	$: getSourceIds(sources);
 

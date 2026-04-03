@@ -3940,6 +3940,18 @@ AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
     os.getenv('AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT', 'audio-24khz-160kbitrate-mono-mp3'),
 )
 
+AUDIO_TTS_MISTRAL_API_KEY = PersistentConfig(
+    'AUDIO_TTS_MISTRAL_API_KEY',
+    'audio.tts.mistral.api_key',
+    os.getenv('AUDIO_TTS_MISTRAL_API_KEY', ''),
+)
+
+AUDIO_TTS_MISTRAL_API_BASE_URL = PersistentConfig(
+    'AUDIO_TTS_MISTRAL_API_BASE_URL',
+    'audio.tts.mistral.api_base_url',
+    os.getenv('AUDIO_TTS_MISTRAL_API_BASE_URL', 'https://api.mistral.ai/v1'),
+)
+
 
 ####################################
 # LDAP

@@ -846,6 +846,8 @@
 	"Export": "Esportatu",
 	"Export All Archived Chats": "Esportatu Artxibatutako Txat Guztiak",
 	"Export All Chats (All Users)": "Esportatu Txat Guztiak (Erabiltzaile Guztiak)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "Esportatu txata (.json)",
 	"Export Chats": "Esportatu Txatak",
 	"Export Config": "",

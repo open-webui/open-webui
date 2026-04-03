@@ -2417,7 +2417,7 @@
 		history.messages[responseMessage.id] = responseMessage;
 	};
 
-	const stopResponse = async () => {
+	const stopResponse = async (processQueue = true) => {
 		if (taskIds) {
 			for (const taskId of taskIds) {
 				const res = await stopTask(localStorage.token, taskId).catch((error) => {
@@ -2449,7 +2449,9 @@
 			generationController = null;
 		}
 
-		await processNextInQueue($chatId);
+		if (processQueue) {
+			await processNextInQueue($chatId);
+		}
 	};
 
 	const submitMessage = async (parentId, prompt) => {
@@ -2913,10 +2915,8 @@
 												...q,
 												[$chatId]: queue.filter((m) => m.id !== id)
 											}));
-											// Stop current generation first
-											await stopResponse();
+											await stopResponse(false);
 											await tick();
-											// Submit queued message directly without clearing input
 											await submitPrompt(item.prompt, item.files);
 										}
 									}}

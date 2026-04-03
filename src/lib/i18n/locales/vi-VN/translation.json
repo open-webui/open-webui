@@ -845,6 +845,8 @@
 	"Export": "Xuất khẩu",
 	"Export All Archived Chats": "Xuất Tất cả Chat Đã Lưu trữ",
 	"Export All Chats (All Users)": "Tải về tất cả nội dung chat (tất cả mọi người)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "Tải chat (.json)",
 	"Export Chats": "Tải nội dung chat về máy",
 	"Export Config": "",

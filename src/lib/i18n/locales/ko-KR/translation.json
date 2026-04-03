@@ -845,6 +845,8 @@
 	"Export": "내보내기",
 	"Export All Archived Chats": "모든 보관된 채팅 내보내기",
 	"Export All Chats (All Users)": "모든 채팅 내보내기(모든 사용자)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "채팅 내보내기 (.json)",
 	"Export Chats": "채팅 내보내기",
 	"Export Config": "",

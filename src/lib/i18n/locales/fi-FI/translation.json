@@ -846,6 +846,8 @@
 	"Export": "Vie",
 	"Export All Archived Chats": "Vie kaikki arkistoidut keskustelut",
 	"Export All Chats (All Users)": "Vie kaikki keskustelut (kaikki käyttäjät)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "Vie keskustelu (.json)",
 	"Export Chats": "Vie keskustelut",
 	"Export Config": "Vie asetukset",

@@ -846,6 +846,8 @@
 	"Export": "রপ্তানি",
 	"Export All Archived Chats": "",
 	"Export All Chats (All Users)": "সব চ্যাট এক্সপোর্ট করুন (সব ইউজারের)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "",
 	"Export Chats": "চ্যাটগুলো এক্সপোর্ট করুন",
 	"Export Config": "",

@@ -218,9 +218,7 @@ class FeedbackTable:
                 # Apply model_id filter (exact match)
                 model_id = filter.get('model_id')
                 if model_id:
-                    query = query.filter(
-                        Feedback.data['model_id'].as_string() == model_id
-                    )
+                    query = query.filter(Feedback.data['model_id'].as_string() == model_id)
 
                 order_by = filter.get('order_by')
                 direction = filter.get('direction')
