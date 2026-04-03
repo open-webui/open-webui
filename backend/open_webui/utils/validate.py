@@ -3,10 +3,10 @@
 import re
 from urllib.parse import urlparse
 
-# Matches the OWUI-generated profile image route.  The ``[^/]+`` segment
-# accepts any user-ID without allowing path-traversal across segments,
+# Matches the OWUI-generated profile image route.  ``[^/?#]+`` accepts
+# any user-ID without allowing path-traversal or query/fragment injection,
 # and the ``$`` anchor rejects trailing path components.
-_USER_PROFILE_IMAGE_RE = re.compile(r'^/api/v1/users/[^/]+/profile/image$')
+_USER_PROFILE_IMAGE_RE = re.compile(r'^/api/v1/users/[^/?#]+/profile/image$')
 
 # Validates MIME type and structure of base64 data URIs.  Only the prefix
 # is checked — validating the full base64 payload would mean running a
