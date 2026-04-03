@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.13] - 2026-04-02
+
+### Changed
+
+- 🐍 **Python upgrade to 3.14.** Updated runtime from Python 3.11 to Python 3.14 across all environments (Docker, CI/CD, and documentation) for performance improvements and latest language features.
+- 📦 **Dependency management overhaul.** Comprehensively resolved and organized all 330+ packages with permissive version constraints (>=) to allow safer updates while maintaining stability.
+- 🔒 **Generated uv.lock file.** Created comprehensive lock file with 1,087 pinned transitive dependencies for reproducible builds and installations.
+- 🐳 **Docker base image update.** Changed from `python:3.11.14-slim-bookworm` to `python:3.14-slim-bookworm` for latest Python features and security patches.
+
+### Added
+
+- ✨ **Multiple requirements files for different use cases:**
+  - `requirements_locked.txt`: 330 exact pinned versions for production reproducibility
+  - `requirements_direct.txt`: 78 direct dependencies only for minimal installs
+  - `requirements_permissive.txt`: 330 packages with >= constraints for flexible updates
+- 📋 **Enhanced pyproject.toml configuration:**
+  - 330 main dependencies with version constraints
+  - New optional dependency groups (postgres, mariadb, unstructured, database, all)
+  - Dev dependencies (pytest, coverage, black, ruff, pip-tools)
+- 🔄 **Updated CI/CD workflows:**
+  - Release workflow now uses Python 3.14
+  - Format backend tests now run on Python 3.13.x and 3.14.x
+
+### Fixed
+
+- 🐳 **CUDA library path references.** Updated hardcoded paths from `/python3.11/` to `/python3.14/` in startup scripts for proper GPU support.
+- 📝 **Documentation consistency.** Updated issue templates and build scripts to reference Python 3.14 instead of 3.11.
+
 ## [0.8.12] - 2026-03-26
 
 ### Added
