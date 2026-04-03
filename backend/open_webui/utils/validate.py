@@ -3,7 +3,8 @@
 import re
 from urllib.parse import urlparse
 
-# Matches well-formed base64 data URIs for safe raster image formats.
+# Validates the MIME type and structure of base64 data URIs, not payload
+# integrity — corrupt base64 simply produces a broken image, same as a 404 URL.
 # SVG is intentionally excluded: it can carry embedded scripts.
 _SAFE_DATA_URI_RE = re.compile(
     r'^data:image/(png|jpeg|gif|webp);base64,', re.IGNORECASE
@@ -38,9 +39,10 @@ def validate_profile_image_url(url: str) -> str:
     parsed = urlparse(url)
 
     # External images served over HTTP(S), e.g. OAuth provider avatars.
-    # Require a non-empty netloc so bare "https://" is rejected.
+    # Require a non-empty hostname (not just netloc, which can be ":80"
+    # for a URL like http://:80/path with no actual host).
     if parsed.scheme in ('http', 'https'):
-        if not parsed.netloc:
+        if not parsed.hostname:
             raise ValueError(
                 'Invalid profile image URL: HTTP(S) URLs must include a host.'
             )
