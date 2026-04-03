@@ -289,7 +289,7 @@ def _upgrade_postgresql() -> None:
         )
     """)
     )
-    conn.execute(sa.text("COMMIT"))
+    conn.commit()
     log.info("Phase 1 complete: chat_message table created (PK only)")
 
     # Phase 2: Backfill with keyset pagination and per-chunk commits
@@ -327,8 +327,6 @@ def _upgrade_postgresql() -> None:
     total_chats = 0
 
     while True:
-        conn.execute(sa.text("BEGIN"))
-
         # Keyset pagination: fetch next page of chats ordered by PK
         rows = conn.execute(
             sa.select(chat_table.c.id, chat_table.c.user_id, chat_table.c.chat)
@@ -339,7 +337,6 @@ def _upgrade_postgresql() -> None:
         ).fetchall()
 
         if not rows:
-            conn.execute(sa.text("COMMIT"))
             break
 
         last_id = rows[-1][0]
@@ -359,7 +356,7 @@ def _upgrade_postgresql() -> None:
             total_inserted += inserted
             total_failed += failed
 
-        conn.execute(sa.text("COMMIT"))
+        conn.commit()
 
         if total_inserted % 50000 < max(len(messages_batch), 1):
             log.info(
@@ -375,7 +372,6 @@ def _upgrade_postgresql() -> None:
     # Phase 3: Create indexes (bulk construction is orders of magnitude faster
     # than per-row maintenance during the backfill)
     log.info("Phase 3: creating indexes...")
-    conn.execute(sa.text("BEGIN"))
     for stmt in [
         "CREATE INDEX IF NOT EXISTS ix_chat_message_chat_id ON chat_message (chat_id)",
         "CREATE INDEX IF NOT EXISTS ix_chat_message_user_id ON chat_message (user_id)",
@@ -386,18 +382,18 @@ def _upgrade_postgresql() -> None:
         "CREATE INDEX IF NOT EXISTS chat_message_user_created_idx ON chat_message (user_id, created_at)",
     ]:
         conn.execute(sa.text(stmt))
-    conn.execute(sa.text("COMMIT"))
+    conn.commit()
     log.info("Phase 3 complete: indexes created")
 
     # Phase 4: Add FK constraint
     # NOT VALID skips validation of existing rows during creation
     log.info("Phase 4: adding foreign key constraint...")
-    conn.execute(sa.text("BEGIN"))
     fk_exists = conn.execute(
         sa.text(
             "SELECT 1 FROM information_schema.table_constraints "
             "WHERE constraint_name = 'chat_message_chat_id_fkey' "
-            "AND table_name = 'chat_message'"
+            "AND table_name = 'chat_message' "
+            "AND table_schema = current_schema()"
         )
     ).fetchone()
 
@@ -408,17 +404,29 @@ def _upgrade_postgresql() -> None:
                 "FOREIGN KEY (chat_id) REFERENCES chat(id) ON DELETE CASCADE NOT VALID"
             )
         )
-    conn.execute(sa.text("COMMIT"))
+    conn.commit()
+
+    # Clean up orphaned rows before validation — if the app was live during
+    # backfill, a chat could have been deleted after being read but before
+    # FK validation, leaving chat_message rows that reference missing chats.
+    orphans = conn.execute(
+        sa.text(
+            "DELETE FROM chat_message cm "
+            "WHERE NOT EXISTS (SELECT 1 FROM chat c WHERE c.id = cm.chat_id)"
+        )
+    )
+    if orphans.rowcount:
+        log.info(f"Removed {orphans.rowcount} orphaned chat_message rows")
+    conn.commit()
 
     # VALIDATE CONSTRAINT checks existing rows without ACCESS EXCLUSIVE lock
-    conn.execute(sa.text("BEGIN"))
     conn.execute(
         sa.text(
             "ALTER TABLE chat_message VALIDATE CONSTRAINT chat_message_chat_id_fkey"
         )
     )
+    conn.commit()
     log.info("Phase 4 complete: foreign key constraint added and validated")
-    # Leave transaction open for Alembic to commit (updates alembic_version)
 
 
 def downgrade() -> None:
