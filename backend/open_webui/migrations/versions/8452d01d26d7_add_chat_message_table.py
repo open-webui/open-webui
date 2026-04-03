@@ -38,6 +38,9 @@ def _parse_chat_messages(chat_id, user_id, chat_data, now):
         except Exception:
             return []
 
+    if not isinstance(chat_data, dict):
+        return []
+
     history = chat_data.get('history', {})
     if not isinstance(history, dict):
         return []
@@ -367,23 +370,34 @@ def _upgrade_postgresql() -> None:
         last_id = rows[-1][0]
         total_chats += len(rows)
 
-        # Parse all messages from this page of chats
+        # Parse and flush incrementally to avoid memory spikes from
+        # message-dense chats (some chats can have thousands of messages).
         messages_batch = []
         for chat_row in rows:
             messages_batch.extend(
                 _parse_chat_messages(chat_row[0], chat_row[1], chat_row[2], now)
             )
+            # Flush when batch is full
+            while len(messages_batch) >= BATCH_SIZE:
+                batch = messages_batch[:BATCH_SIZE]
+                messages_batch = messages_batch[BATCH_SIZE:]
+                inserted, failed = _flush_batch_pg(
+                    conn, chat_message_table, batch
+                )
+                total_inserted += inserted
+                total_failed += failed
 
-        # Insert in sub-batches with ON CONFLICT DO NOTHING
-        for i in range(0, len(messages_batch), BATCH_SIZE):
-            batch = messages_batch[i : i + BATCH_SIZE]
-            inserted, failed = _flush_batch_pg(conn, chat_message_table, batch)
+        # Flush remaining messages from this page
+        if messages_batch:
+            inserted, failed = _flush_batch_pg(
+                conn, chat_message_table, messages_batch
+            )
             total_inserted += inserted
             total_failed += failed
 
         conn.commit()
 
-        if total_inserted % 50000 < max(len(messages_batch), 1):
+        if total_inserted % 50000 < BATCH_SIZE:
             log.info(
                 f'Migration progress: {total_chats} chats processed,'
                 f' {total_inserted} messages inserted...'
