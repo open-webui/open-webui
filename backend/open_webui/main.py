@@ -1826,8 +1826,14 @@ async def chat_completion(
             finally:
                 raise  # re-raise to ensure proper task cancellation handling
         except Exception as e:
-            log.debug(f'Error processing chat payload: {e}')
-            if metadata.get('chat_id') and metadata.get('message_id'):
+            log.debug(f"Error processing chat payload: {e}")
+
+            error_content = (
+                str(e.detail)
+                if isinstance(e, HTTPException) and e.detail is not None
+                else str(e)
+            )
+            if metadata.get("chat_id") and metadata.get("message_id"):
                 # Update the chat message with the error
                 try:
                     if not metadata['chat_id'].startswith('local:'):
@@ -1835,16 +1841,16 @@ async def chat_completion(
                             metadata['chat_id'],
                             metadata['message_id'],
                             {
-                                'parentId': metadata.get('parent_message_id', None),
-                                'error': {'content': str(e)},
+                                "parentId": metadata.get("parent_message_id", None),
+                                "error": {"content": error_content},
                             },
                         )
 
                     event_emitter = get_event_emitter(metadata)
                     await event_emitter(
                         {
-                            'type': 'chat:message:error',
-                            'data': {'error': {'content': str(e)}},
+                            "type": "chat:message:error",
+                            "data": {"error": {"content": error_content}},
                         }
                     )
                     await event_emitter(
@@ -1853,6 +1859,9 @@ async def chat_completion(
 
                 except Exception:
                     pass
+
+            if isinstance(e, HTTPException):
+                raise
         finally:
             # Clean up MCP clients.  Shield the entire block from
             # CancelledError so disconnect() can finish even when the
