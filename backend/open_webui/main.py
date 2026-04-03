@@ -2058,6 +2058,13 @@ async def get_app_config(request: Request):
         if data is not None and 'id' in data:
             user = Users.get_user_by_id(data['id'])
 
+    if user is None and WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
+        trusted_email = request.headers.get(
+            WEBUI_AUTH_TRUSTED_EMAIL_HEADER, ''
+        ).lower()
+        if trusted_email:
+            user = Users.get_user_by_email(trusted_email)
+
     user_count = Users.get_num_users()
     onboarding = False
 
