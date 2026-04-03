@@ -113,9 +113,10 @@
 			"
 				>
 {#if showModelSelector}
+    <p style="display:none" id="debug-model">{JSON.stringify($models.find((m) => m.id === selectedModels[0]))}</p>
     <ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
-    
-    {#if $models.find((m) => m.id === selectedModels[0])?.owned_by !== 'ollama'}
+
+    {#if true}
     <button
         class="flex items-center gap-1.5 ml-2 px-2.5 py-1 rounded-lg text-xs font-medium transition
             {$privacyProxy
