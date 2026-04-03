@@ -97,11 +97,13 @@
 						<div
 							class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400 line-clamp-3 markdown"
 						>
-							{@html DOMPurify.sanitize(marked.parse(
-								sanitizeResponseContent(
-									models[selectedModelIdx]?.info?.meta?.description
-								).replaceAll('\n', '<br>')
-							))}
+							{@html DOMPurify.sanitize(
+								marked.parse(
+									sanitizeResponseContent(
+										models[selectedModelIdx]?.info?.meta?.description
+									).replaceAll('\n', '<br>')
+								)
+							)}
 						</div>
 						{#if models[selectedModelIdx]?.info?.meta?.user}
 							<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">

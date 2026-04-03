@@ -874,7 +874,9 @@
 					</a>
 				{/if}
 			</div>
-			<div class="flex-1 px-3.5 md:pl-0 md:pr-4.5 md:min-h-[min(42rem,calc(100dvh-10rem))] max-h-[min(42rem,calc(100dvh-10rem))] overflow-y-auto">
+			<div
+				class="flex-1 px-3.5 md:pl-0 md:pr-4.5 md:min-h-[min(42rem,calc(100dvh-10rem))] max-h-[min(42rem,calc(100dvh-10rem))] overflow-y-auto"
+			>
 				{#if selectedTab === 'general'}
 					<General
 						{getModels}
