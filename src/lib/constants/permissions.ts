@@ -26,6 +26,9 @@ export const DEFAULT_PERMISSIONS = {
 		notes: false,
 		public_notes: false
 	},
+	access_grants: {
+		allow_users: true
+	},
 	chat: {
 		controls: true,
 		valves: true,
@@ -57,7 +60,8 @@ export const DEFAULT_PERMISSIONS = {
 		web_search: true,
 		image_generation: true,
 		code_interpreter: true,
-		memories: true
+		memories: true,
+		automations: false
 	},
 	settings: {
 		interface: true

@@ -39,10 +39,11 @@
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import Eye from '$lib/components/icons/Eye.svelte';
+	import CheckCircle from '$lib/components/icons/CheckCircle.svelte';
+	import Minus from '$lib/components/icons/Minus.svelte';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { goto } from '$app/navigation';
-	import { DropdownMenu } from 'bits-ui';
-	import { flyAndScale } from '$lib/utils/transitions';
+
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import AdminViewSelector from './Models/AdminViewSelector.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
@@ -69,6 +70,12 @@
 	const perPage = 30;
 	let currentPage = 1;
 
+	const isPublicModel = (model) => {
+		return (model?.access_grants ?? []).some(
+			(g) => g.principal_type === 'user' && g.principal_id === '*' && g.permission === 'read'
+		);
+	};
+
 	$: if (models) {
 		filteredModels = models
 			.filter((m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase()))
@@ -77,6 +84,8 @@
 				if (viewOption === 'disabled') return !(m?.is_active ?? true);
 				if (viewOption === 'visible') return !(m?.meta?.hidden ?? false);
 				if (viewOption === 'hidden') return m?.meta?.hidden === true;
+				if (viewOption === 'public') return isPublicModel(m);
+				if (viewOption === 'private') return !isPublicModel(m);
 				return true; // All
 			})
 			.sort((a, b) => {
@@ -96,7 +105,12 @@
 		modelsToEnable.forEach((m) => (m.is_active = true));
 		models = models;
 		// Sync with server
-		await Promise.all(modelsToEnable.map((model) => toggleModelById(localStorage.token, model.id)));
+		await Promise.all(
+			modelsToEnable.map((model) => upsertModelHandler(model, { is_active: true }, false))
+		);
+
+		await tick();
+		await init();
 	};
 
 	const disableAllHandler = async () => {
@@ -106,8 +120,49 @@
 		models = models;
 		// Sync with server
 		await Promise.all(
-			modelsToDisable.map((model) => toggleModelById(localStorage.token, model.id))
+			modelsToDisable.map((model) => upsertModelHandler(model, { is_active: false }, false))
 		);
+
+		await tick();
+		await init();
+	};
+
+	const showAllHandler = async () => {
+		const modelsToShow = filteredModels.filter((m) => m?.meta?.hidden === true);
+		// Optimistic UI update
+		modelsToShow.forEach((m) => {
+			m.meta = { ...m.meta, hidden: false };
+		});
+		models = models;
+		// Sync with server
+		await Promise.all(
+			modelsToShow.map((model) =>
+				upsertModelHandler(model, { meta: { ...model.meta, hidden: false } }, false)
+			)
+		);
+
+		toast.success($i18n.t('All models are now visible'));
+		await tick();
+		await init();
+	};
+
+	const hideAllHandler = async () => {
+		const modelsToHide = filteredModels.filter((m) => !(m?.meta?.hidden ?? false));
+		// Optimistic UI update
+		modelsToHide.forEach((m) => {
+			m.meta = { ...m.meta, hidden: true };
+		});
+		models = models;
+		// Sync with server
+		await Promise.all(
+			modelsToHide.map((model) =>
+				upsertModelHandler(model, { meta: { ...model.meta, hidden: true } }, false)
+			)
+		);
+
+		toast.success($i18n.t('All models are now hidden'));
+		await tick();
+		await init();
 	};
 
 	const downloadModels = async (models) => {
@@ -141,17 +196,24 @@
 				};
 			}
 		});
+
+		_models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			)
+		);
 	};
 
-	const upsertModelHandler = async (model) => {
-		model.base_model_id = null;
+	const upsertModelHandler = async (model, overrides = {}, showToast = true) => {
+		model = { ...model, base_model_id: null, ...overrides };
 
 		if (workspaceModels.find((m) => m.id === model.id)) {
 			const res = await updateModelById(localStorage.token, model.id, model).catch((error) => {
 				return null;
 			});
 
-			if (res) {
+			if (res && showToast) {
 				toast.success($i18n.t('Model updated successfully'));
 			}
 		} else {
@@ -167,18 +229,11 @@
 				return null;
 			});
 
-			if (res) {
+			if (res && showToast) {
 				toast.success($i18n.t('Model updated successfully'));
+				await init();
 			}
 		}
-		await init();
-
-		_models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-			)
-		);
 	};
 
 	const toggleModelHandler = async (model) => {
@@ -215,6 +270,8 @@
 
 		console.debug(model);
 
+		upsertModelHandler(model, { meta: model.meta }, false);
+
 		toast.success(
 			model.meta.hidden
 				? $i18n.t(`Model {{name}} is now hidden`, {
@@ -224,8 +281,6 @@
 						name: model.id
 					})
 		);
-
-		upsertModelHandler(model);
 	};
 
 	const copyLinkHandler = async (model) => {
@@ -461,33 +516,55 @@
 					</Tooltip>
 
 					<div slot="content">
-						<DropdownMenu.Content
-							class="w-full max-w-[170px] rounded-xl p-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
-							sideOffset={-2}
-							side="bottom"
-							align="end"
-							transition={flyAndScale}
+						<div
+							class="w-[170px] rounded-xl p-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
 						>
-							<DropdownMenu.Item
-								class="select-none flex gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+							<button
+								class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								type="button"
 								on:click={() => {
 									enableAllHandler();
 								}}
 							>
-								<Eye className="size-4" />
+								<CheckCircle className="size-4" />
 								<div class="flex items-center">{$i18n.t('Enable All')}</div>
-							</DropdownMenu.Item>
+							</button>
 
-							<DropdownMenu.Item
-								class="select-none flex gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+							<button
+								class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								type="button"
 								on:click={() => {
 									disableAllHandler();
 								}}
 							>
-								<EyeSlash className="size-4" />
+								<Minus className="size-4" />
 								<div class="flex items-center">{$i18n.t('Disable All')}</div>
-							</DropdownMenu.Item>
-						</DropdownMenu.Content>
+							</button>
+
+							<hr class="border-gray-100 dark:border-gray-800 my-1" />
+
+							<button
+								class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								type="button"
+								on:click={() => {
+									showAllHandler();
+								}}
+							>
+								<Eye className="size-4" />
+								<div class="flex items-center">{$i18n.t('Show All')}</div>
+							</button>
+
+							<button
+								class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								type="button"
+								on:click={() => {
+									hideAllHandler();
+								}}
+							>
+								<EyeSlash className="size-4" />
+								<div class="flex items-center">{$i18n.t('Hide All')}</div>
+							</button>
+						</div>
 					</div>
 				</Dropdown>
 			</div>
@@ -519,6 +596,9 @@
 											src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}`}
 											alt="modelfile profile"
 											class=" rounded-full w-full h-auto object-cover"
+											on:error={(e) => {
+												e.target.src = '/favicon.png';
+											}}
 										/>
 									</div>
 								</div>

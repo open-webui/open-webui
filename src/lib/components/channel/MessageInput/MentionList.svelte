@@ -98,16 +98,17 @@
 		return onKeyDown(event);
 	}
 
-	const keydownListener = (e) => {
-		// required to prevent the default enter behavior
-		if (e.key === 'Enter') {
-			e.preventDefault();
-			select(selectedIndex);
-		}
-	};
+	onMount(() => {
+		const keydownListener = (e: KeyboardEvent) => {
+			// required to prevent the default enter behavior
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				select(selectedIndex);
+			}
+		};
 
-	onMount(async () => {
 		window.addEventListener('keydown', keydownListener);
+
 		if (channelSuggestions) {
 			// Add a dummy channel item
 			_channels = [
@@ -117,17 +118,21 @@
 			];
 		} else {
 			if (userSuggestions) {
-				await getUserList();
+				getUserList();
 			}
 
 			if (modelSuggestions) {
-				_models = [...$models.map((m) => ({ type: 'model', id: m.id, label: m.name, data: m }))];
+				_models = [
+					...$models
+						.filter((m) => !m?.direct)
+						.map((m) => ({ type: 'model', id: m.id, label: m.name, data: m }))
+				];
 			}
 		}
-	});
 
-	onDestroy(() => {
-		window.removeEventListener('keydown', keydownListener);
+		return () => {
+			window.removeEventListener('keydown', keydownListener);
+		};
 	});
 
 	const hasPublicReadGrant = (grants: any) =>
@@ -195,12 +200,18 @@
 								src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${item.id}&lang=${$i18n.language}`}
 								alt={item?.data?.name ?? item.id}
 								class="rounded-full size-5 items-center mr-2"
+								on:error={(e) => {
+									e.currentTarget.src = '/favicon.png';
+								}}
 							/>
 						{:else if item.type === 'user'}
 							<img
 								src={`${WEBUI_API_BASE_URL}/users/${item.id}/profile/image`}
 								alt={item?.label ?? item.id}
 								class="rounded-full size-5 items-center mr-2"
+								on:error={(e) => {
+									e.currentTarget.src = '/favicon.png';
+								}}
 							/>
 						{/if}
 

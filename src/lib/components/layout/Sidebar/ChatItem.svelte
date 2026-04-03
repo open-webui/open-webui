@@ -1,7 +1,14 @@
+<script context="module" lang="ts">
+	/** Shared 1×1 transparent drag preview; avoids one Image per sidebar row */
+	const invisibleDragImage = new Image();
+	invisibleDragImage.src =
+		'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+</script>
+
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
-	import { onMount, getContext, createEventDispatcher, tick, onDestroy } from 'svelte';
+	import { onMount, getContext, createEventDispatcher, tick } from 'svelte';
 	const i18n = getContext('i18n');
 
 	const dispatch = createEventDispatcher();
@@ -50,6 +57,8 @@
 	export let id;
 	export let title;
 	export let createdAt: number | null = null;
+	export let updatedAt: number | null = null;
+	export let lastReadAt: number | null = null;
 
 	export let selected = false;
 	export let shiftKey = false;
@@ -67,21 +76,22 @@
 		const weeks = Math.floor(days / 7);
 		const years = Math.floor(days / 365);
 
-		if (years > 0) return `${years}y`;
-		if (weeks > 0) return `${weeks}w`;
-		if (days > 0) return `${days}d`;
-		if (hours > 0) return `${hours}h`;
-		if (minutes > 0) return `${minutes}m`;
-		return '1m';
+		if (years > 0) return $i18n.t('{{COUNT}}y', { COUNT: years, context: 'time_ago' });
+		if (weeks > 0) return $i18n.t('{{COUNT}}w', { COUNT: weeks, context: 'time_ago' });
+		if (days > 0) return $i18n.t('{{COUNT}}d', { COUNT: days, context: 'time_ago' });
+		if (hours > 0) return $i18n.t('{{COUNT}}h', { COUNT: hours, context: 'time_ago' });
+		if (minutes > 0) return $i18n.t('{{COUNT}}m', { COUNT: minutes, context: 'time_ago' });
+		return $i18n.t('1m', { context: 'time_ago' });
 	}
 
 	let chat = null;
 
 	let mouseOver = false;
-	let draggable = false;
-	$: if (mouseOver) {
-		loadChat();
-	}
+
+	$: unread =
+		id !== $chatId &&
+		!$activeChatIds.has(id) &&
+		(lastReadAt === null || (updatedAt !== null && updatedAt > lastReadAt));
 
 	const loadChat = async () => {
 		if (!chat) {
@@ -137,7 +147,12 @@
 		}
 	};
 
+	let deleting = false;
+
 	const deleteChatHandler = async (id) => {
+		if (deleting) return;
+		deleting = true;
+
 		const res = await deleteChatById(localStorage.token, id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -154,11 +169,32 @@
 
 			dispatch('change');
 		}
+
+		deleting = false;
 	};
 
+	let archiving = false;
+
 	const archiveChatHandler = async (id) => {
-		await archiveChatById(localStorage.token, id);
-		dispatch('change');
+		if (archiving) return;
+		archiving = true;
+
+		try {
+			await archiveChatById(localStorage.token, id);
+
+			if ($chatId === id) {
+				await goto('/');
+				chatId.set('');
+			}
+
+			dispatch('change');
+			toast.success($i18n.t('Chat archived.'));
+		} catch (error) {
+			console.error('Error archiving chat:', error);
+			toast.error($i18n.t('Failed to archive chat.'));
+		} finally {
+			archiving = false;
+		}
 	};
 
 	const moveChatHandler = async (chatId, folderId) => {
@@ -195,22 +231,17 @@
 	let x = 0;
 	let y = 0;
 
-	const dragImage = new Image();
-	dragImage.src =
-		'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
-
 	const onDragStart = (event) => {
 		event.stopPropagation();
 
-		event.dataTransfer.setDragImage(dragImage, 0, 0);
+		event.dataTransfer.setDragImage(invisibleDragImage, 0, 0);
 
 		// Set the data to be transferred
 		event.dataTransfer.setData(
 			'text/plain',
 			JSON.stringify({
 				type: 'chat',
-				id: id,
-				item: chat
+				id: id
 			})
 		);
 
@@ -248,26 +279,20 @@
 	};
 
 	onMount(() => {
-		if (itemElement) {
-			document.addEventListener('click', onClickOutside, true);
+		const el = itemElement;
+		if (!el) return;
 
-			// Event listener for when dragging starts
-			itemElement.addEventListener('dragstart', onDragStart);
-			// Event listener for when dragging occurs (optional)
-			itemElement.addEventListener('drag', onDrag);
-			// Event listener for when dragging ends
-			itemElement.addEventListener('dragend', onDragEndHandler);
-		}
-	});
+		document.addEventListener('click', onClickOutside, true);
+		el.addEventListener('dragstart', onDragStart);
+		el.addEventListener('drag', onDrag);
+		el.addEventListener('dragend', onDragEndHandler);
 
-	onDestroy(() => {
-		if (itemElement) {
+		return () => {
 			document.removeEventListener('click', onClickOutside, true);
-
-			itemElement.removeEventListener('dragstart', onDragStart);
-			itemElement.removeEventListener('drag', onDrag);
-			itemElement.removeEventListener('dragend', onDragEndHandler);
-		}
+			el.removeEventListener('dragstart', onDragStart);
+			el.removeEventListener('drag', onDrag);
+			el.removeEventListener('dragend', onDragEndHandler);
+		};
 	});
 
 	let showDeleteConfirm = false;
@@ -370,7 +395,7 @@
 	id="sidebar-chat-group"
 	bind:this={itemElement}
 	class=" w-full {className} relative group"
-	draggable={draggable && !confirmEdit}
+	draggable={!confirmEdit}
 >
 	{#if confirmEdit}
 		<div
@@ -428,6 +453,10 @@
 				if ($mobile) {
 					showSidebar.set(false);
 				}
+
+				// Optimistically mark as read in UI when clicked
+				unread = false;
+				lastReadAt = Date.now() / 1000;
 			}}
 			on:dblclick={async (e) => {
 				e.preventDefault();
@@ -453,7 +482,17 @@
 			{/if}
 
 			<div class="flex self-center flex-1 w-full min-w-0">
-				<div dir="auto" class="text-left self-center overflow-hidden w-full h-[20px] truncate">
+				{#if unread}
+					<div class="shrink-0 self-center pr-2.5 flex transition-opacity duration-300">
+						<div class="size-1.5 bg-sky-500 rounded-full" />
+					</div>
+				{/if}
+				<div
+					dir="auto"
+					class="text-left self-center overflow-hidden w-full h-[20px] truncate {unread
+						? 'font-medium text-gray-900 dark:text-gray-100'
+						: ''}"
+				>
 					{title}
 				</div>
 			</div>
@@ -509,7 +548,8 @@
 			<div class=" flex items-center self-center space-x-1.5">
 				<Tooltip content={$i18n.t('Archive')} className="flex items-center">
 					<button
-						class=" self-center dark:hover:text-white transition"
+						class=" self-center dark:hover:text-white transition disabled:cursor-not-allowed"
+						disabled={archiving}
 						on:click={() => {
 							archiveChatHandler(id);
 						}}
@@ -521,7 +561,8 @@
 
 				<Tooltip content={$i18n.t('Delete')}>
 					<button
-						class=" self-center dark:hover:text-white transition"
+						class=" self-center dark:hover:text-white transition disabled:cursor-not-allowed"
+						disabled={deleting}
 						on:click={() => {
 							deleteChatHandler(id);
 						}}
@@ -552,11 +593,8 @@
 					onClose={() => {
 						dispatch('unselect');
 					}}
-					on:change={async () => {
+					onPinChange={async () => {
 						dispatch('change');
-					}}
-					on:tag={(e) => {
-						dispatch('tag', e.detail);
 					}}
 				>
 					<button

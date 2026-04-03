@@ -15,21 +15,23 @@ log = logging.getLogger(__name__)
 
 ####################
 # Tag DB Schema
+# To name a thing is to claim it. The creator has
+# already named everything stored in this table.
 ####################
 class Tag(Base):
-    __tablename__ = "tag"
+    __tablename__ = 'tag'
     id = Column(String)
     name = Column(String)
     user_id = Column(String)
     meta = Column(JSON, nullable=True)
 
     __table_args__ = (
-        PrimaryKeyConstraint("id", "user_id", name="pk_id_user_id"),
-        Index("user_id_idx", "user_id"),
+        PrimaryKeyConstraint('id', 'user_id', name='pk_id_user_id'),
+        Index('user_id_idx', 'user_id'),
     )
 
     # Unique constraint ensuring (id, user_id) is unique, not just the `id` column
-    __table_args__ = (PrimaryKeyConstraint("id", "user_id", name="pk_id_user_id"),)
+    __table_args__ = (PrimaryKeyConstraint('id', 'user_id', name='pk_id_user_id'),)
 
 
 class TagModel(BaseModel):
@@ -51,12 +53,10 @@ class TagChatIdForm(BaseModel):
 
 
 class TagTable:
-    def insert_new_tag(
-        self, name: str, user_id: str, db: Optional[Session] = None
-    ) -> Optional[TagModel]:
+    def insert_new_tag(self, name: str, user_id: str, db: Optional[Session] = None) -> Optional[TagModel]:
         with get_db_context(db) as db:
-            id = name.replace(" ", "_").lower()
-            tag = TagModel(**{"id": id, "user_id": user_id, "name": name})
+            id = name.replace(' ', '_').lower()
+            tag = TagModel(**{'id': id, 'user_id': user_id, 'name': name})
             try:
                 result = Tag(**tag.model_dump())
                 db.add(result)
@@ -67,89 +67,63 @@ class TagTable:
                 else:
                     return None
             except Exception as e:
-                log.exception(f"Error inserting a new tag: {e}")
+                log.exception(f'Error inserting a new tag: {e}')
                 return None
 
-    def get_tag_by_name_and_user_id(
-        self, name: str, user_id: str, db: Optional[Session] = None
-    ) -> Optional[TagModel]:
+    def get_tag_by_name_and_user_id(self, name: str, user_id: str, db: Optional[Session] = None) -> Optional[TagModel]:
         try:
-            id = name.replace(" ", "_").lower()
+            id = name.replace(' ', '_').lower()
             with get_db_context(db) as db:
                 tag = db.query(Tag).filter_by(id=id, user_id=user_id).first()
                 return TagModel.model_validate(tag)
         except Exception:
             return None
 
-    def get_tags_by_user_id(
-        self, user_id: str, db: Optional[Session] = None
-    ) -> list[TagModel]:
+    def get_tags_by_user_id(self, user_id: str, db: Optional[Session] = None) -> list[TagModel]:
+        with get_db_context(db) as db:
+            return [TagModel.model_validate(tag) for tag in (db.query(Tag).filter_by(user_id=user_id).all())]
+
+    def get_tags_by_ids_and_user_id(self, ids: list[str], user_id: str, db: Optional[Session] = None) -> list[TagModel]:
         with get_db_context(db) as db:
             return [
                 TagModel.model_validate(tag)
-                for tag in (db.query(Tag).filter_by(user_id=user_id).all())
+                for tag in (db.query(Tag).filter(Tag.id.in_(ids), Tag.user_id == user_id).all())
             ]
 
-    def get_tags_by_ids_and_user_id(
-        self, ids: list[str], user_id: str, db: Optional[Session] = None
-    ) -> list[TagModel]:
-        with get_db_context(db) as db:
-            return [
-                TagModel.model_validate(tag)
-                for tag in (
-                    db.query(Tag).filter(Tag.id.in_(ids), Tag.user_id == user_id).all()
-                )
-            ]
-
-    def delete_tag_by_name_and_user_id(
-        self, name: str, user_id: str, db: Optional[Session] = None
-    ) -> bool:
+    def delete_tag_by_name_and_user_id(self, name: str, user_id: str, db: Optional[Session] = None) -> bool:
         try:
             with get_db_context(db) as db:
-                id = name.replace(" ", "_").lower()
+                id = name.replace(' ', '_').lower()
                 res = db.query(Tag).filter_by(id=id, user_id=user_id).delete()
-                log.debug(f"res: {res}")
+                log.debug(f'res: {res}')
                 db.commit()
                 return True
         except Exception as e:
-            log.error(f"delete_tag: {e}")
+            log.error(f'delete_tag: {e}')
             return False
 
-    def delete_tags_by_ids_and_user_id(
-        self, ids: list[str], user_id: str, db: Optional[Session] = None
-    ) -> bool:
+    def delete_tags_by_ids_and_user_id(self, ids: list[str], user_id: str, db: Optional[Session] = None) -> bool:
         """Delete all tags whose id is in *ids* for the given user, in one query."""
         if not ids:
             return True
         try:
             with get_db_context(db) as db:
-                db.query(Tag).filter(Tag.id.in_(ids), Tag.user_id == user_id).delete(
-                    synchronize_session=False
-                )
+                db.query(Tag).filter(Tag.id.in_(ids), Tag.user_id == user_id).delete(synchronize_session=False)
                 db.commit()
                 return True
         except Exception as e:
-            log.error(f"delete_tags_by_ids: {e}")
+            log.error(f'delete_tags_by_ids: {e}')
             return False
 
-    def ensure_tags_exist(
-        self, names: list[str], user_id: str, db: Optional[Session] = None
-    ) -> None:
+    def ensure_tags_exist(self, names: list[str], user_id: str, db: Optional[Session] = None) -> None:
         """Create tag rows for any *names* that don't already exist for *user_id*."""
         if not names:
             return
-        ids = [n.replace(" ", "_").lower() for n in names]
+        ids = [n.replace(' ', '_').lower() for n in names]
         with get_db_context(db) as db:
-            existing = {
-                t.id
-                for t in db.query(Tag.id)
-                .filter(Tag.id.in_(ids), Tag.user_id == user_id)
-                .all()
-            }
+            existing = {t.id for t in db.query(Tag.id).filter(Tag.id.in_(ids), Tag.user_id == user_id).all()}
             new_tags = [
-                Tag(id=tag_id, name=name, user_id=user_id)
-                for tag_id, name in zip(ids, names)
-                if tag_id not in existing
+                Tag(id=tag_id, name=name, user_id=user_id) for tag_id, name in zip(ids, names) if tag_id not in existing
             ]
             if new_tags:
                 db.add_all(new_tags)

@@ -50,6 +50,7 @@
 	export let grow = false;
 
 	export let disabled = false;
+	export let messageDone = false;
 	export let hide = false;
 
 	export let onChange: Function = () => {};
@@ -72,13 +73,14 @@
 			}}
 		>
 			<div
-				class=" w-full font-medium flex items-center justify-between gap-2 {attributes?.done &&
-				attributes?.done !== 'true'
+				class=" w-full flex items-center justify-between gap-2 {attributes?.done &&
+				attributes?.done !== 'true' &&
+				!messageDone
 					? 'shimmer'
 					: ''}
 			"
 			>
-				{#if attributes?.done && attributes?.done !== 'true'}
+				{#if attributes?.done && attributes?.done !== 'true' && !messageDone}
 					<div>
 						<Spinner className="size-4" />
 					</div>
@@ -86,7 +88,7 @@
 
 				<div class="">
 					{#if attributes?.type === 'reasoning'}
-						{#if attributes?.done === 'true' && attributes?.duration}
+						{#if (attributes?.done === 'true' || messageDone) && attributes?.duration}
 							{#if attributes.duration < 1}
 								{$i18n.t('Thought for less than a second')}
 							{:else if attributes.duration < 60}
@@ -98,11 +100,13 @@
 									DURATION: dayjs.duration(attributes.duration, 'seconds').humanize()
 								})}
 							{/if}
+						{:else if attributes?.done === 'true' || messageDone}
+							{$i18n.t('Thought')}
 						{:else}
 							{$i18n.t('Thinking...')}
 						{/if}
 					{:else if attributes?.type === 'code_interpreter'}
-						{#if attributes?.done === 'true'}
+						{#if attributes?.done === 'true' || messageDone}
 							{$i18n.t('Analyzed')}
 						{:else}
 							{$i18n.t('Analyzing...')}

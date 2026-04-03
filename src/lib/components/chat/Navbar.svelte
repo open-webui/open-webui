@@ -107,7 +107,7 @@
 				{/if}
 
 				<div
-					class="flex-1 overflow-hidden max-w-full py-0.5
+					class="flex-1 overflow-hidden max-w-full mt-0.5 py-0.5
 			{$showSidebar ? 'ml-1' : ''}
 			"
 				>
@@ -230,7 +230,7 @@
 
 					{#if $user !== undefined && $user !== null}
 						<UserMenu
-							className="max-w-[240px]"
+							className="w-[240px]"
 							role={$user?.role}
 							help={true}
 							on:show={(e) => {
