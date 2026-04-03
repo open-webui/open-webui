@@ -149,6 +149,9 @@ async def stop_task(redis, task_id: str):
     if redis:
         # Look up the item_id before cleanup so we can remove the set entry too
         item_id = await redis.hget(REDIS_TASKS_KEY, task_id)
+        if item_id:
+            item_id = item_id.decode('utf-8') if isinstance(item_id, bytes) else item_id
+        
         # PUBSUB: All instances check if they have this task, and stop if so.
         await redis_send_command(
             redis,
@@ -159,7 +162,17 @@ async def stop_task(redis, task_id: str):
         )
         # Always clean Redis directly — hdel/srem are idempotent, safe even
         # if the done_callback on the owning process also fires cleanup.
+        # This ensures orphaned tasks are removed even if the background task is dead.
         await redis_cleanup_task(redis, task_id, item_id or None)
+        
+        # Also clean up local in-memory state
+        tasks.pop(task_id, None)
+        if item_id and item_id in item_tasks:
+            if task_id in item_tasks[item_id]:
+                item_tasks[item_id].remove(task_id)
+            if not item_tasks[item_id]:
+                item_tasks.pop(item_id, None)
+        
         return {'status': True, 'message': f'Task {task_id} stopped.'}
 
     task = tasks.pop(task_id, None)
@@ -208,3 +221,42 @@ async def get_active_chat_ids(redis, chat_ids: List[str]) -> List[str]:
         if await has_active_tasks(redis, chat_id):
             active.append(chat_id)
     return active
+
+
+async def clear_all_tasks(redis: Optional[Redis]):
+    """
+    Clear all active tasks from memory and Redis cache.
+    This should be called on server startup to prevent orphaned task IDs
+    from bricking the UI after a restart.
+    """
+    log.info('Clearing all orphaned tasks from cache...')
+    
+    # Clear in-memory task dictionaries
+    tasks.clear()
+    item_tasks.clear()
+    
+    # Clear Redis cache if available
+    if redis:
+        try:
+            # Delete all task-related keys
+            await redis.delete(REDIS_TASKS_KEY)
+            
+            # Find and delete all item task sets
+            pattern = f'{REDIS_ITEM_TASKS_KEY}:*'
+            cursor = 0
+            deleted_count = 0
+            
+            # Use SCAN to iterate through keys matching the pattern
+            while True:
+                cursor, keys = await redis.scan(cursor, match=pattern, count=100)
+                if keys:
+                    await redis.delete(*keys)
+                    deleted_count += len(keys)
+                if cursor == 0:
+                    break
+            
+            log.info(f'Cleared {deleted_count} item task sets from Redis')
+        except Exception as e:
+            log.error(f'Error clearing tasks from Redis: {e}')
+    
+    log.info('All orphaned tasks cleared successfully')
