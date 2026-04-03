@@ -11,7 +11,7 @@ from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 
 
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, or_, func, cast
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, or_, func, cast, text
 
 ####################
 # Prompts DB Schema
@@ -284,10 +284,23 @@ class PromptsTable:
 
                 tag = filter.get('tag')
                 if tag:
-                    # Search for tag in JSON array field
-                    like_pattern = f'%"{tag.lower()}"%'
-                    tags_text = func.lower(cast(Prompt.tags, String))
-                    query = query.filter(tags_text.like(like_pattern))
+                    dialect = db.bind.dialect.name
+
+                    if dialect == 'sqlite':
+                        query = query.filter(
+                            text("EXISTS (SELECT 1 FROM json_each(prompt.tags) WHERE json_each.value = :tag)")
+                        ).params(tag=tag)
+                    elif dialect == 'postgresql':
+                        query = query.filter(
+                            text(
+                                "EXISTS (SELECT 1 FROM json_array_elements_text(prompt.tags) AS tag_elem "
+                                "WHERE tag_elem = :tag)"
+                            )
+                        ).params(tag=tag)
+                    else:
+                        like_pattern = f'%"{tag.lower()}"%'
+                        tags_text = func.lower(cast(Prompt.tags, String))
+                        query = query.filter(tags_text.like(like_pattern))
 
                 order_by = filter.get('order_by')
                 direction = filter.get('direction')
