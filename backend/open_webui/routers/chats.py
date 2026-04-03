@@ -937,7 +937,7 @@ async def update_chat_message_by_id(
 
     event_emitter = get_event_emitter(
         {
-            'user_id': user.id,
+            'user_id': chat.user_id,
             'chat_id': id,
             'message_id': message_id,
         },
