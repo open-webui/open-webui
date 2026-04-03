@@ -414,6 +414,7 @@ class ModelsTable:
             with get_db_context(db) as db:
                 # update only the fields that are present in the model
                 data = model.model_dump(exclude={'id', 'access_grants'})
+                data['updated_at'] = int(time.time())
                 result = db.query(Model).filter_by(id=id).update(data)
 
                 db.commit()
@@ -423,6 +424,20 @@ class ModelsTable:
                 return self.get_model_by_id(id, db=db)
         except Exception as e:
             log.exception(f'Failed to update the model by id {id}: {e}')
+            return None
+
+    def update_model_updated_at_by_id(self, id: str, db: Optional[Session] = None) -> Optional[ModelModel]:
+        try:
+            with get_db_context(db) as db:
+                result = db.query(Model).filter_by(id=id).first()
+                if not result:
+                    return None
+                result.updated_at = int(time.time())
+                db.commit()
+                db.refresh(result)
+                return self._to_model_model(result, db=db)
+        except Exception as e:
+            log.exception(f'Failed to update the model updated_at by id {id}: {e}')
             return None
 
     def delete_model_by_id(self, id: str, db: Optional[Session] = None) -> bool:
