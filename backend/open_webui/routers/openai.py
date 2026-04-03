@@ -1182,6 +1182,22 @@ async def generate_chat_completion(
 
         # Check if response is SSE
         if 'text/event-stream' in r.headers.get('Content-Type', ''):
+            # If the provider returned an error status with SSE content-type,
+            # read the body and return a proper error response instead of
+            # streaming the error back (which hides the error from logs).
+            if r.status >= 400:
+                error_body = await r.text()
+                log.error(
+                    'Provider returned HTTP %d with SSE content-type: %s',
+                    r.status,
+                    error_body[:1000],
+                )
+                try:
+                    error_json = json.loads(error_body)
+                    return JSONResponse(status_code=r.status, content=error_json)
+                except json.JSONDecodeError:
+                    return PlainTextResponse(status_code=r.status, content=error_body)
+
             streaming = True
             return StreamingResponse(
                 stream_wrapper(r, session, stream_chunks_handler),
