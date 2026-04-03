@@ -55,6 +55,7 @@
 	import DropdownOptions from '$lib/components/common/DropdownOptions.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
 	import AttachWebpageModal from '$lib/components/chat/MessageInput/AttachWebpageModal.svelte';
+	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
 
 	let largeScreen = true;
 
@@ -170,8 +171,18 @@
 
 	const fileSelectHandler = async (file) => {
 		try {
+			const rawContent = file?.data?.content || '';
+
+			// Strip carriage returns and normalize single newlines to paragraph
+			// breaks (double newlines) so the rich text editor's markdown parser
+			// preserves them. This is idempotent — already-doubled newlines are
+			// left unchanged, so re-opening saved content doesn't compound.
+			const normalized = rawContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+			selectedFileContent = normalized.replace(/(?<!\n)\n(?!\n)/g, '\n\n');
+
+			// Set selectedFile AFTER content so the {#key selectedFile.id} block
+			// recreates RichTextInput with the already-normalized value.
 			selectedFile = file;
-			selectedFileContent = selectedFile?.data?.content || '';
 		} catch (e) {
 			toast.error($i18n.t('Failed to load file content.'));
 		}
@@ -1110,13 +1121,14 @@
 									</div>
 
 									{#key selectedFile.id}
-										<textarea
-											class="w-full h-full text-sm outline-none resize-none px-3 py-2"
-											bind:value={selectedFileContent}
-											disabled={!knowledge?.write_access}
-											aria-label={$i18n.t('File content')}
-											placeholder={$i18n.t('Add content here')}
-										/>
+										<div class="flex-1 overflow-y-auto px-3 py-2" role="textbox" aria-label={$i18n.t('File content')}>
+											<RichTextInput
+												bind:value={selectedFileContent}
+												placeholder={$i18n.t('Add content here')}
+												preserveBreaks={true}
+												editable={knowledge?.write_access ?? false}
+											/>
+										</div>
 									{/key}
 								</div>
 							</div>
