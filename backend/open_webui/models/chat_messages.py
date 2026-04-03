@@ -459,7 +459,8 @@ class ChatMessageTable:
             from open_webui.models.groups import GroupMember
 
             query = db.query(ChatMessage.user_id, func.count(ChatMessage.id).label('count')).filter(
-                ~ChatMessage.user_id.like('shared-%')
+                ChatMessage.role == 'assistant',
+                ~ChatMessage.user_id.like('shared-%'),
             )
 
             if start_date:
