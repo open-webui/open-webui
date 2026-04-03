@@ -63,7 +63,7 @@ generate() {
     # --- Python: resolve all transitive deps without installing ---
     dim "Resolving Python transitive deps (uv pip compile)..."
     uv pip compile "$ROOT_DIR/backend/requirements.txt" \
-        --python-version 3.11 \
+        --python-version 3.14 \
         --quiet \
         > "$WORK_DIR/requirements-resolved.txt" 2>/dev/null
 
