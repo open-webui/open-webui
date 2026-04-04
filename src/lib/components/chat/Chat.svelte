@@ -1587,7 +1587,7 @@
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
-		console.log('[GARNET DEBUG]', JSON.stringify(data));
+		console.log('[GARNET ENTRY]', data);
 		const { id, done, choices, content, output, sources, selected_model_id, error, usage, pseudonymized_prompt } = data;
 
 		// Store raw OR-aligned output items from backend
