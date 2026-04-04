@@ -32,6 +32,9 @@ class CustomReconnectMixin(ReconnectMixin):
         # psycopg2
         (OperationalError, 'termin'),
         (InterfaceError, 'closed'),
+        # PyMySQL / MySQLdb (MySQL/MariaDB)
+        (OperationalError, 'server has gone away'),
+        (OperationalError, 'lost connection'),
         # peewee
         (PeeWeeInterfaceError, 'closed'),
     )
@@ -41,7 +44,30 @@ class ReconnectingPostgresqlDatabase(CustomReconnectMixin, PostgresqlDatabase):
     pass
 
 
-def register_connection(db_url):
+class ReconnectingMySQLDatabase(CustomReconnectMixin, MySQLDatabase):
+    pass
+
+
+def normalize_db_url_for_peewee(db_url: str) -> str:
+    """
+    Peewee's db_url helper uses slightly different schemes than SQLAlchemy.
+    Normalize only the URL scheme before initializing the Peewee DB.
+    """
+    scheme, sep, rest = db_url.partition('://')
+    if not sep:
+        return db_url
+
+    scheme_map = {
+        'postgresql': 'postgres',
+        'mysql+pymysql': 'mysql',
+        'mariadb+mariadbconnector': 'mysql',
+    }
+    return f'{scheme_map.get(scheme, scheme)}://{rest}'
+
+
+def register_connection(db_url: str):
+    db_url = normalize_db_url_for_peewee(db_url)
+
     # Check if using SQLCipher protocol
     if db_url.startswith('sqlite+sqlcipher://'):
         database_password = os.environ.get('DATABASE_PASSWORD')
@@ -60,7 +86,7 @@ def register_connection(db_url):
         log.info('Connected to encrypted SQLite database using SQLCipher')
 
     else:
-        # Standard database connection (existing logic)
+        # Standard database connection
         db = connect(db_url, unquote_user=True, unquote_password=True)
         if isinstance(db, PostgresqlDatabase):
             # Enable autoconnect for SQLite databases, managed by Peewee
@@ -73,6 +99,13 @@ def register_connection(db_url):
 
             # Use our custom database class that supports reconnection
             db = ReconnectingPostgresqlDatabase(**connection)
+            db.connect(reuse_if_open=True)
+        elif isinstance(db, MySQLDatabase):
+            log.info('Connected to MySQL/MariaDB database')
+            connection = parse(db_url, unquote_user=True, unquote_password=True)
+            db = ReconnectingMySQLDatabase(**connection)
+            db.autoconnect = True
+            db.reuse_if_open = True
             db.connect(reuse_if_open=True)
         elif isinstance(db, SqliteDatabase):
             # Enable autoconnect for SQLite databases, managed by Peewee

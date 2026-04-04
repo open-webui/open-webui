@@ -2,3 +2,14 @@ Generic single-database configuration.
 
 Create new migrations with
 DATABASE_URL=<replace with actual url> alembic revision --autogenerate -m "a description"
+
+Important notes for new migrations:
+
+- Keep migrations portable across SQLite, PostgreSQL, and MariaDB/MySQL-compatible backends.
+- Do not use `sa.Text()` for identifier-like columns that participate in `PRIMARY KEY`, `UNIQUE`, `INDEX`, or `FOREIGN KEY` paths.
+  Use `open_webui.migrations.util.key_text()` instead for those key-like columns.
+- Prefer explicit lengths for `sa.String(...)` in new migrations, especially for key-like columns.
+- Be careful with table-level `sa.UniqueConstraint(...)` and `op.create_index(...)`: if any participating column is identifier-like, make sure its type is MariaDB-safe.
+- If raw SQL is required, avoid hardcoding identifier quoting that only works on one dialect (for example `"user"`). Use dialect-aware quoting when needed.
+- Treat the compatibility shims in `env.py` as a safety net for historical revisions, not as the primary design pattern for new migrations.
+- Before merging a new migration, test `alembic upgrade head` on at least one fresh MariaDB database in addition to the usual SQLite/PostgreSQL path.
