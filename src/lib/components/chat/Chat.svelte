@@ -1587,7 +1587,7 @@
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
-		const { id, done, choices, content, output, sources, selected_model_id, error, usage } = data;
+		const { id, done, choices, content, output, sources, selected_model_id, error, usage, pseudonymized_prompt } = data;
 
 		// Store raw OR-aligned output items from backend
 		if (output) {
@@ -1687,6 +1687,10 @@
 
 		if (usage) {
 			message.usage = usage;
+		}
+
+		if (pseudonymized_prompt) {
+			message.pseudonymized_prompt = pseudonymized_prompt;
 		}
 
 		history.messages[message.id] = message;
