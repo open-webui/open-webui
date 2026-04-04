@@ -65,6 +65,7 @@ from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
     periodic_session_pool_cleanup,
+    channel_call_message_relayer,
     get_event_emitter,
     get_models_in_use,
 )
@@ -384,6 +385,7 @@ from open_webui.config import (
     ENABLE_FOLDERS,
     FOLDER_MAX_FILE_COUNT,
     ENABLE_CHANNELS,
+    ICE_SERVERS,
     ENABLE_NOTES,
     ENABLE_USER_STATUS,
     ENABLE_COMMUNITY_SHARING,
@@ -652,6 +654,7 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     asyncio.create_task(periodic_session_pool_cleanup())
+    asyncio.create_task(channel_call_message_relayer())
 
     from open_webui.utils.automations import automation_worker_loop
 
@@ -875,6 +878,7 @@ app.state.config.BANNERS = WEBUI_BANNERS
 app.state.config.ENABLE_FOLDERS = ENABLE_FOLDERS
 app.state.config.FOLDER_MAX_FILE_COUNT = FOLDER_MAX_FILE_COUNT
 app.state.config.ENABLE_CHANNELS = ENABLE_CHANNELS
+app.state.config.ICE_SERVERS = ICE_SERVERS
 app.state.config.ENABLE_NOTES = ENABLE_NOTES
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
 app.state.config.ENABLE_MESSAGE_RATING = ENABLE_MESSAGE_RATING
@@ -2094,6 +2098,7 @@ async def get_app_config(request: Request):
                     'enable_folders': app.state.config.ENABLE_FOLDERS,
                     'folder_max_file_count': app.state.config.FOLDER_MAX_FILE_COUNT,
                     'enable_channels': app.state.config.ENABLE_CHANNELS,
+                    'ice_servers': app.state.config.ICE_SERVERS,
                     'enable_notes': app.state.config.ENABLE_NOTES,
                     'enable_web_search': app.state.config.ENABLE_WEB_SEARCH,
                     'enable_code_execution': app.state.config.ENABLE_CODE_EXECUTION,

@@ -6,7 +6,9 @@
 
 	import { slide } from 'svelte/transition';
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 
+	import { config } from '$lib/stores';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
@@ -19,6 +21,7 @@
 	import ChannelInfoModal from './ChannelInfoModal.svelte';
 	import Users from '../icons/Users.svelte';
 	import Pin from '../icons/Pin.svelte';
+	import Phone from '../icons/Phone.svelte';
 	import PinnedMessagesModal from './PinnedMessagesModal.svelte';
 
 	const i18n = getContext('i18n');
@@ -44,6 +47,10 @@
 		}
 		return hasPublicReadGrant(channel?.access_grants);
 	};
+
+	const onCall = (channel: any) => {
+		goto(`/channels/${channel.id}/call`);
+	}
 
 	export let channel;
 
@@ -157,6 +164,21 @@
 				class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400 gap-1 shrink-0"
 			>
 				{#if channel}
+					<Tooltip content={$i18n.t('Call Channel')}>
+						<button
+							class="flex cursor-pointer py-1.5 px-1.5 border dark:border-gray-850 border-gray-50 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							aria-label="Call Channel"
+							type="button"
+							on:click={() => {
+								onCall(channel);
+							}}
+						>
+							<div class=" flex items-center gap-0.5 m-auto self-center">
+								<Phone className="size-4" strokeWidth="1.5" />
+							</div>
+						</button>
+					</Tooltip>
+				
 					<Tooltip content={$i18n.t('Pinned Messages')}>
 						<button
 							class=" flex cursor-pointer py-1.5 px-1.5 border dark:border-gray-850 border-gray-50 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"

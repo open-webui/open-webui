@@ -96,6 +96,41 @@ async def set_connections_config(
     }
 
 
+############################
+# Channels Config
+############################
+
+
+class IceServerConfig(BaseModel):
+    urls: str | list[str]
+    username: Optional[str] = None
+    credential: Optional[str] = None
+
+
+class ChannelsConfigForm(BaseModel):
+    ICE_SERVERS: list[IceServerConfig] = []
+
+
+@router.get('/channels', response_model=ChannelsConfigForm)
+async def get_channels_config(request: Request, user=Depends(get_admin_user)):
+    return {
+        'ICE_SERVERS': request.app.state.config.ICE_SERVERS,
+    }
+
+
+@router.post('/channels', response_model=ChannelsConfigForm)
+async def set_channels_config(
+    request: Request,
+    form_data: ChannelsConfigForm,
+    user=Depends(get_admin_user),
+):
+    request.app.state.config.ICE_SERVERS = [s.model_dump() for s in form_data.ICE_SERVERS]
+
+    return {
+        'ICE_SERVERS': request.app.state.config.ICE_SERVERS,
+    }
+
+
 class OAuthClientRegistrationForm(BaseModel):
     url: str
     client_id: str
