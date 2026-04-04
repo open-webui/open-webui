@@ -3126,6 +3126,11 @@ async def non_streaming_chat_response_handler(response, ctx):
                                 'content': content,
                                 'output': response_output,
                                 'title': title,
+                                **(
+                                    {'pseudonymized_prompt': response_data['pseudonymized_prompt']}
+                                    if 'pseudonymized_prompt' in response_data
+                                    else {}
+                                ),
                             },
                         }
                     )
