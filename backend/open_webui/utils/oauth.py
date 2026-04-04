@@ -106,6 +106,10 @@ class OAuthClientInformationFull(OAuthClientMetadata):
     server_metadata: Optional[OAuthMetadata] = None  # Fetched from the OAuth server
     resource: Optional[str] = None  # RFC 8707 resource indicator for token audience
 
+    def resource_params(self) -> dict[str, str]:
+        """Return ``{'resource': ...}`` if a RFC 8707 resource is set, else ``{}``."""
+        return {'resource': self.resource} if self.resource else {}
+
 
 from open_webui.env import GLOBAL_LOG_LEVEL
 
@@ -266,7 +270,7 @@ async def get_authorization_server_discovery_urls(
     """
 
     authorization_servers = []
-    resource_url = None
+    resource_url: Optional[str] = None
     try:
         async with aiohttp.ClientSession(trust_env=True) as session:
             async with session.post(
@@ -298,11 +302,10 @@ async def get_authorization_server_discovery_urls(
                                     log.debug(f'Discovered authorization servers: {servers}')
 
                                 # Step 4: Extract resource identifier (RFC 8707)
-                                resource_url = resource_metadata.get('resource')
-                                if resource_url:
-                                    log.debug(
-                                        f'Discovered resource identifier: {resource_url}'
-                                    )
+                                raw_resource = resource_metadata.get('resource')
+                                if isinstance(raw_resource, str) and raw_resource.startswith('http'):
+                                    resource_url = raw_resource
+                                    log.debug(f'Discovered resource identifier: {resource_url}')
     except Exception as e:
         log.debug(f'MCP Protected Resource discovery failed: {e}')
 
@@ -480,7 +483,7 @@ async def get_oauth_client_info_with_static_credentials(
         redirect_uri = f'{redirect_base_url}/oauth/clients/{client_id}/callback'
 
         # Discover server metadata (authorization endpoint, token endpoint, scopes, etc.)
-        discovery_urls = await get_discovery_urls(oauth_server_url)
+        discovery_urls, resource_url = await get_discovery_urls(oauth_server_url)
         for url in discovery_urls:
             async with aiohttp.ClientSession(trust_env=True) as session:
                 async with session.get(url, ssl=AIOHTTP_CLIENT_SESSION_SSL) as resp:
@@ -517,6 +520,7 @@ async def get_oauth_client_info_with_static_credentials(
             token_endpoint_auth_method=token_endpoint_auth_method,
             issuer=oauth_server_metadata_url,
             server_metadata=oauth_server_metadata,
+            **({'resource': resource_url} if resource_url else {}),
         )
 
         log.info(
@@ -819,8 +823,8 @@ class OAuthClientManager:
 
             # Add RFC 8707 resource parameter for correct JWT audience
             client_info = self.get_client_info(client_id)
-            if client_info and client_info.resource:
-                refresh_data['resource'] = client_info.resource
+            if client_info:
+                refresh_data.update(client_info.resource_params())
 
             # Make refresh request
             async with aiohttp.ClientSession(trust_env=True) as session_http:
@@ -873,10 +877,7 @@ class OAuthClientManager:
 
         # Pass RFC 8707 resource parameter so the IDP sets the correct
         # audience in the issued JWT access token.
-        extra_params = {}
-        if client_info.resource:
-            extra_params['resource'] = client_info.resource
-        return await client.authorize_redirect(request, redirect_uri_str, **extra_params)
+        return await client.authorize_redirect(request, redirect_uri_str, **client_info.resource_params())
 
     async def handle_callback(self, request, client_id: str, user_id: str, response):
         client = self.get_client(client_id) or self.ensure_client_from_config(client_id)
@@ -894,9 +895,7 @@ class OAuthClientManager:
 
             # Pass RFC 8707 resource parameter so the IDP sets the correct
             # audience in the issued JWT access token.
-            token_params = {}
-            if client_info and client_info.resource:
-                token_params['resource'] = client_info.resource
+            token_params = client_info.resource_params() if client_info else {}
             token = await client.authorize_access_token(request, **token_params)
 
             # Validate that we received a proper token response
