@@ -432,6 +432,7 @@
 						message.statusHistory = [data];
 					}
 				} else if (type === 'chat:completion') {
+					console.log('[GARNET TRIGGER] chat:completion fired, data:', data);
 					chatCompletionEventHandler(data, message, event.chat_id);
 				} else if (type === 'chat:tasks:cancel') {
 					if (event.message_id === history.currentId) {
