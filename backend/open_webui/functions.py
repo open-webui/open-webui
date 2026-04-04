@@ -276,8 +276,8 @@ async def generate_function_chat_completion(request, form_data, user, models: di
         models.get(form_data['model'], None),
     )
 
-    # Merge tools
-    extra_params['__tools__'] = {**user_tools, **builtin_tools}
+    # Merge tools. user_tools take precedence over builtin_tools
+    extra_params['__tools__'] = {**builtin_tools, **user_tools}
 
     if model_info:
         if model_info.base_model_id:
