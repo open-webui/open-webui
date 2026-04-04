@@ -104,6 +104,7 @@ class OAuthClientInformationFull(OAuthClientMetadata):
     client_secret_expires_at: int | None = None
 
     server_metadata: Optional[OAuthMetadata] = None  # Fetched from the OAuth server
+    resource: Optional[str] = None  # RFC 8707 resource indicator for token audience
 
 
 from open_webui.env import GLOBAL_LOG_LEVEL
@@ -252,12 +253,20 @@ def get_parsed_and_base_url(server_url) -> tuple[urllib.parse.ParseResult, str]:
     return parsed, base_url
 
 
-async def get_authorization_server_discovery_urls(server_url: str) -> list[str]:
+async def get_authorization_server_discovery_urls(
+    server_url: str,
+) -> tuple[list[str], Optional[str]]:
     """
     https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization
+
+    Returns (discovery_urls, resource_url) where resource_url is the RFC 9728
+    resource identifier that should be passed as the RFC 8707 ``resource``
+    parameter in authorization and token requests so that the IDP sets the
+    correct ``aud`` claim in the issued JWT.
     """
 
     authorization_servers = []
+    resource_url = None
     try:
         async with aiohttp.ClientSession(trust_env=True) as session:
             async with session.post(
@@ -287,6 +296,13 @@ async def get_authorization_server_discovery_urls(server_url: str) -> list[str]:
                                 if servers:
                                     authorization_servers = servers
                                     log.debug(f'Discovered authorization servers: {servers}')
+
+                                # Step 4: Extract resource identifier (RFC 8707)
+                                resource_url = resource_metadata.get('resource')
+                                if resource_url:
+                                    log.debug(
+                                        f'Discovered resource identifier: {resource_url}'
+                                    )
     except Exception as e:
         log.debug(f'MCP Protected Resource discovery failed: {e}')
 
@@ -300,11 +316,11 @@ async def get_authorization_server_discovery_urls(server_url: str) -> list[str]:
             ]
         )
 
-    return discovery_urls
+    return discovery_urls, resource_url
 
 
-async def get_discovery_urls(server_url) -> list[str]:
-    urls = await get_authorization_server_discovery_urls(server_url)
+async def get_discovery_urls(server_url) -> tuple[list[str], Optional[str]]:
+    urls, resource_url = await get_authorization_server_discovery_urls(server_url)
     parsed, base_url = get_parsed_and_base_url(server_url)
 
     if parsed.path and parsed.path != '/':
@@ -328,7 +344,7 @@ async def get_discovery_urls(server_url) -> list[str]:
         ]
     )
 
-    return urls
+    return urls, resource_url
 
 
 # TODO: Some OAuth providers require Initial Access Tokens (IATs) for dynamic client registration.
@@ -353,7 +369,7 @@ async def get_oauth_client_info_with_dynamic_client_registration(
         )
 
         # Attempt to fetch OAuth server metadata to get registration endpoint & scopes
-        discovery_urls = await get_discovery_urls(oauth_server_url)
+        discovery_urls, resource_url = await get_discovery_urls(oauth_server_url)
         for url in discovery_urls:
             async with aiohttp.ClientSession(trust_env=True) as session:
                 async with session.get(url, ssl=AIOHTTP_CLIENT_SESSION_SSL) as oauth_server_metadata_response:
@@ -415,6 +431,7 @@ async def get_oauth_client_info_with_dynamic_client_registration(
                             **registration_response_json,
                             **{'issuer': oauth_server_metadata_url},
                             **{'server_metadata': oauth_server_metadata},
+                            **({'resource': resource_url} if resource_url else {}),
                         }
                     )
                     log.info(
@@ -800,6 +817,11 @@ class OAuthClientManager:
             ):
                 refresh_data['scope'] = client.client_kwargs['scope']
 
+            # Add RFC 8707 resource parameter for correct JWT audience
+            client_info = self.get_client_info(client_id)
+            if client_info and client_info.resource:
+                refresh_data['resource'] = client_info.resource
+
             # Make refresh request
             async with aiohttp.ClientSession(trust_env=True) as session_http:
                 async with session_http.post(
@@ -848,7 +870,13 @@ class OAuthClientManager:
 
         redirect_uri = client_info.redirect_uris[0] if client_info.redirect_uris else None
         redirect_uri_str = str(redirect_uri) if redirect_uri else None
-        return await client.authorize_redirect(request, redirect_uri_str)
+
+        # Pass RFC 8707 resource parameter so the IDP sets the correct
+        # audience in the issued JWT access token.
+        extra_params = {}
+        if client_info.resource:
+            extra_params['resource'] = client_info.resource
+        return await client.authorize_redirect(request, redirect_uri_str, **extra_params)
 
     async def handle_callback(self, request, client_id: str, user_id: str, response):
         client = self.get_client(client_id) or self.ensure_client_from_config(client_id)
@@ -863,7 +891,13 @@ class OAuthClientManager:
             # The Authlib client already has these configured during add_client().
             # Passing them again causes Authlib to concatenate them (e.g., "ID1,ID1"),
             # which results in 401 errors from the token endpoint. (Fix for #19823)
-            token = await client.authorize_access_token(request)
+
+            # Pass RFC 8707 resource parameter so the IDP sets the correct
+            # audience in the issued JWT access token.
+            token_params = {}
+            if client_info and client_info.resource:
+                token_params['resource'] = client_info.resource
+            token = await client.authorize_access_token(request, **token_params)
 
             # Validate that we received a proper token response
             # If token exchange failed (e.g., 401), we may get an error response instead

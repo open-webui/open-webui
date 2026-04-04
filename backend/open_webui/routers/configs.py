@@ -363,7 +363,7 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
     try:
         if form_data.type == 'mcp':
             if form_data.auth_type in ('oauth_2.1', 'oauth_2.1_static'):
-                discovery_urls = await get_discovery_urls(form_data.url)
+                discovery_urls, _ = await get_discovery_urls(form_data.url)
                 for discovery_url in discovery_urls:
                     log.debug(f'Trying to fetch OAuth 2.1 discovery document from {discovery_url}')
                     async with aiohttp.ClientSession(
