@@ -115,22 +115,6 @@
 {#if showModelSelector}
     {#if selectedModels?.length > 0}{ console.log('[DEBUG MODEL]', $models?.find((m) => m.id === selectedModels[0])) }{/if}
     <ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
-
-    {#if $models.find((m) => m.id === selectedModels[0])?.owned_by !== 'ollama'}
-    <button
-        class="flex items-center gap-1.5 ml-2 px-2.5 py-1 rounded-lg text-xs font-medium transition
-            {$privacyProxy
-                ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
-                : 'bg-gray-500/20 text-gray-400 hover:bg-gray-500/30'}"
-        on:click={() => { $privacyProxy = !$privacyProxy; console.log('[privacyProxy] toggled to:', $privacyProxy); }}
-    >
-        <img src="{WEBUI_BASE_URL}/static/garnet-logo.png" class="size-3.5 rounded-sm" alt="Garnet" draggable="false" />
-        <span class="text-[11px]">private</span>
-        <span class="relative inline-flex h-4 w-7 items-center rounded-full transition-colors {$privacyProxy ? 'bg-emerald-500' : 'bg-gray-500'}">
-            <span class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform {$privacyProxy ? 'translate-x-3.5' : 'translate-x-0.5'}" />
-        </span>
-    </button>
-    {/if}
 {/if}
 				</div>
 
@@ -228,6 +212,22 @@
 								</div>
 							</button>
 						</Menu>
+					{/if}
+
+					{#if $models.find((m) => m.id === selectedModels[0])?.owned_by !== 'ollama'}
+						<button
+							class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition
+								{$privacyProxy
+									? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
+									: 'bg-gray-500/20 text-gray-400 hover:bg-gray-500/30'}"
+							on:click={() => { $privacyProxy = !$privacyProxy; console.log('[privacyProxy] toggled to:', $privacyProxy); }}
+						>
+							<img src="{WEBUI_BASE_URL}/static/garnet-logo.png" class="size-3.5 rounded-sm" alt="Garnet" draggable="false" />
+							<span class="text-[11px]">private</span>
+							<span class="relative inline-flex h-4 w-7 items-center rounded-full transition-colors {$privacyProxy ? 'bg-emerald-500' : 'bg-gray-500'}">
+								<span class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform {$privacyProxy ? 'translate-x-3.5' : 'translate-x-0.5'}" />
+							</span>
+						</button>
 					{/if}
 
 					{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
