@@ -14,7 +14,7 @@
 	import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 
 	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
-	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
+	import { pickAndDownloadFiles } from '$lib/utils/onedrive-file-picker';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
 	const dispatch = createEventDispatcher();
@@ -1627,17 +1627,47 @@
 										}}
 										uploadOneDriveHandler={async (authorityType) => {
 											try {
-												const fileData = await pickAndDownloadFile(authorityType);
-												if (fileData) {
-													const file = new File([fileData.blob], fileData.name, {
-														type: fileData.blob.type || 'application/octet-stream'
-													});
-													await uploadFileHandler(file);
+												const maxFileCount = $config?.file?.max_count;
+												const filesData = await pickAndDownloadFiles(
+													authorityType,
+													maxFileCount
+												);
+												if (filesData && filesData.length > 0) {
+													if (filesData.length > 1) {
+														toast.success(
+															$i18n.t('Uploading {{count}} files from OneDrive...', {
+																count: filesData.length
+															})
+														);
+													}
+
+													for (const fileData of filesData) {
+														const file = new File([fileData.blob], fileData.name, {
+															type: fileData.blob.type || 'application/octet-stream'
+														});
+														await uploadFileHandler(file);
+													}
 												} else {
-													console.log('No file was selected from OneDrive');
+													console.log('No files were selected from OneDrive');
 												}
 											} catch (error) {
 												console.error('OneDrive Error:', error);
+												// Handle specific max file count error
+												if (error.message?.startsWith('MAX_FILE_COUNT_EXCEEDED:')) {
+													const [, count, max] = error.message.split(':');
+													toast.error(
+														$i18n.t('Selected items contain {{count}} files, but maximum is {{max}}.', {
+															count,
+															max
+														})
+													);
+												} else {
+													toast.error(
+														$i18n.t('OneDrive Error: {{error}}', {
+															error: error.message
+														})
+													);
+												}
 											}
 										}}
 										{onUpload}
