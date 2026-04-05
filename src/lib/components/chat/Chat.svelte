@@ -424,6 +424,7 @@
 			if (message) {
 				const type = event?.data?.type ?? null;
 				const data = event?.data?.data ?? null;
+				console.log('[GARNET ALL EVENTS]', type, Object.keys(data || {}));
 
 				if (type === 'status') {
 					if (message?.statusHistory) {
