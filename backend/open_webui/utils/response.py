@@ -130,6 +130,10 @@ def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
     response = openai_chat_completion_message_template(
         model, message_content, reasoning_content, openai_tool_calls, usage
     )
+    pseudonymized_prompt = ollama_response.get('pseudonymized_prompt')
+    if pseudonymized_prompt:
+        print('[GARNET OLLAMA] non-streaming pseudonymized_prompt:', pseudonymized_prompt)
+        response['pseudonymized_prompt'] = pseudonymized_prompt
     return response
 
 
@@ -149,6 +153,7 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
             has_tool_calls = True
 
         done = data.get('done', False)
+        pseudonymized_prompt = data.get('pseudonymized_prompt')
 
         usage = None
         if done:
@@ -158,6 +163,10 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
 
         if done and has_tool_calls:
             data['choices'][0]['finish_reason'] = 'tool_calls'
+
+        if pseudonymized_prompt:
+            print('[GARNET OLLAMA] streaming pseudonymized_prompt:', pseudonymized_prompt)
+            data['pseudonymized_prompt'] = pseudonymized_prompt
 
         line = f'data: {json.dumps(data)}\n\n'
         yield line
