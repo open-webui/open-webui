@@ -291,6 +291,7 @@ async def generate_chat_completion(
                     background=response.background,
                 )
             else:
+                print('[GARNET OLLAMA PSEUDO]', response.get('pseudonymized_prompt'))
                 return convert_response_ollama_to_openai(response)
         else:
             return await generate_openai_chat_completion(
