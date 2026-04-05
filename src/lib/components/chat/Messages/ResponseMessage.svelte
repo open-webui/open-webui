@@ -1107,7 +1107,7 @@
 
 								{#if message.usage || message.pseudonymized_prompt}
 									<Tooltip
-										content={`${message.pseudonymized_prompt ? `<pre style="font-family:monospace;font-size:11px;margin-bottom:6px;color:#86efac;">${sanitizeResponseContent(message.pseudonymized_prompt)}</pre>` : ''}${message.usage ? `<pre>${sanitizeResponseContent(
+										content={`${message.pseudonymized_prompt ? `<pre style="font-family:monospace;font-size:11px;margin-bottom:6px;color:#ffffff;">${sanitizeResponseContent(message.pseudonymized_prompt)}</pre>` : ''}${message.usage ? `<pre>${sanitizeResponseContent(
 													JSON.stringify(message.usage, null, 2)
 														.replace(/"([^(")"]+)":/g, '$1:')
 														.slice(1, -1)
