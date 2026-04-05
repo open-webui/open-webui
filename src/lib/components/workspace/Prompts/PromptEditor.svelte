@@ -158,6 +158,7 @@
 		const textToCopy = selectedHistoryEntry?.snapshot?.content || content;
 		const success = await copyToClipboard(textToCopy);
 		if (success) {
+			toast.success($i18n.t('Copied to clipboard'));
 			contentCopied = true;
 			setTimeout(() => {
 				contentCopied = false;
@@ -426,9 +427,9 @@
 					<Tooltip content={$i18n.t('Click to copy ID')}>
 						<button
 							class="text-xs text-gray-500 font-mono px-2 py-1 rounded-lg cursor-pointer hover:underline transition"
-							on:click={() => {
-								copyToClipboard(prompt.id);
-								toast.success($i18n.t('ID copied to clipboard'));
+							on:click={async () => {
+								const res = await copyToClipboard(prompt.id);
+								if (res) toast.success($i18n.t('Copied to clipboard'));
 							}}
 						>
 							{prompt.id}

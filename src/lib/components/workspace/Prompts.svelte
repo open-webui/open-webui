@@ -150,6 +150,7 @@
 	const copyHandler = async (prompt) => {
 		const res = await copyToClipboard(prompt.content);
 		if (res) {
+			toast.success($i18n.t('Copied to clipboard'));
 			copiedId = prompt.command;
 			setTimeout(() => {
 				copiedId = null;
