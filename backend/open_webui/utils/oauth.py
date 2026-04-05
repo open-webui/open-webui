@@ -523,6 +523,7 @@ class OAuthClientManager:
             'client_id': oauth_client_info.client_id,
             'client_secret': oauth_client_info.client_secret,
             'client_kwargs': {
+                'follow_redirects': True,
                 **({'scope': oauth_client_info.scope} if oauth_client_info.scope else {}),
                 **(
                     {'token_endpoint_auth_method': oauth_client_info.token_endpoint_auth_method}
