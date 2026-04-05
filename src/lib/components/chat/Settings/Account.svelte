@@ -280,8 +280,9 @@
 								<button
 									class="ml-1.5 px-1.5 py-1 dark:hover:bg-gray-850 transition rounded-lg"
 									aria-label={$i18n.t('Copy Token')}
-									on:click={() => {
-										copyToClipboard(localStorage.token);
+									on:click={async () => {
+										const res = await copyToClipboard(localStorage.token);
+										if (res) toast.success($i18n.t('Copied to clipboard'));
 										JWTTokenCopied = true;
 										setTimeout(() => {
 											JWTTokenCopied = false;
@@ -339,8 +340,9 @@
 									<button
 										class="ml-1.5 px-1.5 py-1 dark:hover:bg-gray-850 transition rounded-lg"
 										aria-label={$i18n.t('Copy API Key')}
-										on:click={() => {
-											copyToClipboard(APIKey);
+										on:click={async () => {
+											const res = await copyToClipboard(APIKey);
+											if (res) toast.success($i18n.t('Copied to clipboard'));
 											APIKeyCopied = true;
 											setTimeout(() => {
 												APIKeyCopied = false;

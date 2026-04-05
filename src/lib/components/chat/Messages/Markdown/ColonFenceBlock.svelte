@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
+	import { toast } from 'svelte-sonner';
 	const i18n = getContext('i18n');
 
 	import { copyToClipboard } from '$lib/utils';
@@ -26,7 +27,10 @@
 
 	const copyText = async () => {
 		copied = true;
-		await copyToClipboard(token.text, null, $settings?.copyFormatted ?? false);
+		const res = await copyToClipboard(token.text, null, $settings?.copyFormatted ?? false);
+		if (res) {
+			toast.success($i18n.t('Copied to clipboard'));
+		}
 		setTimeout(() => {
 			copied = false;
 		}, 1000);

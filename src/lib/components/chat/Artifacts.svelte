@@ -185,8 +185,9 @@
 					<div class="flex items-center gap-1.5">
 						<button
 							class="copy-code-button bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
-							on:click={() => {
-								copyToClipboard(contents[selectedContentIdx].content);
+							on:click={async () => {
+								const res = await copyToClipboard(contents[selectedContentIdx].content);
+								if (res) toast.success($i18n.t('Copied to clipboard'));
 								copied = true;
 
 								setTimeout(() => {

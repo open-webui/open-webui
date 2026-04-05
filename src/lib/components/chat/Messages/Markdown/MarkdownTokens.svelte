@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { decode } from 'html-entities';
+	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -242,9 +243,12 @@
 				<Tooltip content={$i18n.t('Copy')}>
 					<button
 						class="p-1 rounded-lg bg-transparent transition"
-						on:click={(e) => {
+						on:click={async (e) => {
 							e.stopPropagation();
-							copyToClipboard(token.raw.trim(), null, $settings?.copyFormatted ?? false);
+							const res = await copyToClipboard(token.raw.trim(), null, $settings?.copyFormatted ?? false);
+							if (res) {
+								toast.success($i18n.t('Copied to clipboard'));
+							}
 						}}
 					>
 						<Clipboard className=" size-3.5" strokeWidth="1.5" />
