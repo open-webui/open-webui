@@ -12,8 +12,6 @@ argon2-cffi==25.1.0
 PyJWT[crypto]==2.11.0
 authlib==1.6.9
 
-requests==2.32.5
-aiohttp==3.13.2 # do not update to 3.13.3 - broken
 async-timeout==5.0.1
 aiocache==0.12.3
 aiofiles==25.1.0
@@ -56,25 +54,18 @@ chromadb==1.5.2
 weaviate-client==4.20.3
 opensearch-py==3.1.0
 
-transformers==5.3.0
-sentence-transformers==5.2.3
 accelerate==1.13.0
 pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
 einops==0.8.2 
 
 ftfy==6.3.1
 chardet==5.2.0
-pypdf==6.7.5
-fpdf2==2.8.7
 pymdown-extensions==10.21
-docx2txt==0.9
-python-pptx==1.0.2
 msoffcrypto-tool==6.0.0
 unstructured==0.18.31
 
 nltk==3.9.3
 Markdown==3.10.2
-beautifulsoup4==4.14.3
 pypandoc==1.16.2
 pandas==3.0.1
 openpyxl==3.1.5
@@ -85,7 +76,6 @@ psutil==7.2.2
 sentencepiece==0.2.1
 soundfile==0.13.1
 
-pillow==12.1.1
 opencv-python-headless==4.13.0.92
 rapidocr-onnxruntime==1.4.4
 rank-bm25==0.2.2
@@ -94,8 +84,6 @@ onnxruntime==1.24.3
 faster-whisper==1.2.1
 
 black==26.1.0
-youtube-transcript-api==1.2.4
-pytube==15.0.0
 
 pydub==0.25.1
 ddgs==9.11.3
@@ -137,7 +125,6 @@ colbert-ai==0.2.22
 ## Tests
 docker~=7.1.0
 pytest~=8.4.1
-pytest-docker~=3.2.5
 
 ## LDAP
 ldap3==2.9.1
