@@ -1016,34 +1016,6 @@
 									</button>
 								</Tooltip>
 
-								{#if message.pseudonymized_prompt}
-									<button
-										aria-label="Pseudonymized prompt"
-										class="{isLastMessage || ($settings?.highContrastMode ?? false)
-											? 'visible'
-											: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-										on:mouseenter={(e) => {
-											const t = document.getElementById('pseudo-tooltip-' + message.id);
-											const r = e.currentTarget.getBoundingClientRect();
-											t.style.display = 'block';
-											t.style.top = (r.top - t.offsetHeight - 8) + 'px';
-											t.style.left = r.left + 'px';
-										}}
-										on:mouseleave={() => {
-											document.getElementById('pseudo-tooltip-' + message.id).style.display = 'none';
-										}}
-									>
-										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
-											<circle cx="12" cy="12" r="10"/>
-											<line x1="12" y1="16" x2="12" y2="12"/>
-											<line x1="12" y1="8" x2="12.01" y2="8"/>
-										</svg>
-									</button>
-									<div
-										style="display:none; position:fixed; background:#1a1a1a; color:#fff; font-family:monospace; font-size:12px; padding:8px 12px; border-radius:6px; max-width:420px; z-index:9999; white-space:pre-wrap; pointer-events:none;"
-										id="pseudo-tooltip-{message.id}"
-									>{message.pseudonymized_prompt}</div>
-								{/if}
 
 								{#if !readOnly && ($user?.role === 'admin' || ($user?.permissions?.chat?.tts ?? true))}
 									<Tooltip content={$i18n.t('Read Aloud')} placement="bottom">
@@ -1133,10 +1105,9 @@
 									</Tooltip>
 								{/if}
 
-								{#if message.usage}
+								{#if message.usage || message.pseudonymized_prompt}
 									<Tooltip
-										content={message.usage
-											? `<pre>${sanitizeResponseContent(
+										content={`${message.pseudonymized_prompt ? `<pre style="font-family:monospace;font-size:11px;margin-bottom:6px;color:#86efac;">${sanitizeResponseContent(message.pseudonymized_prompt)}</pre>` : ''}${message.usage ? `<pre>${sanitizeResponseContent(
 													JSON.stringify(message.usage, null, 2)
 														.replace(/"([^(")"]+)":/g, '$1:')
 														.slice(1, -1)
@@ -1144,8 +1115,7 @@
 														.map((line) => line.slice(2))
 														.map((line) => (line.endsWith(',') ? line.slice(0, -1) : line))
 														.join('\n')
-												)}</pre>`
-											: ''}
+												)}</pre>` : ''}`}
 										placement="bottom"
 									>
 										<button
