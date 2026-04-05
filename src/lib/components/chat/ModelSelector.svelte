@@ -40,9 +40,9 @@
 
 <div class="flex flex-col w-full items-start">
 	{#each selectedModels as selectedModel, selectedModelIdx}
-		<div class="flex w-full max-w-fit">
-			<div class="overflow-hidden w-full">
-				<div class="mr-1 max-w-full">
+		<div class="flex items-center gap-0">
+			<div class="flex-auto overflow-hidden">
+				<div class="max-w-full">
 					<Selector
 						id={`${selectedModelIdx}`}
 						placeholder={$i18n.t('Select a model')}
@@ -64,11 +64,11 @@
 			 {#if $user?.role === 'admin'}
 				{#if selectedModelIdx === 0}
 					<div
-						class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
+						class="flex-shrink-0 self-center disabled:opacity-50 disabled:cursor-not-allowed"
 					>
 						<Tooltip content={$i18n.t('Add Model')}>
 							<button
-								class=" "
+								
 								{disabled}
 								on:click={() => {
 									selectedModels = [...selectedModels, ''];
@@ -81,7 +81,7 @@
 									viewBox="0 0 24 24"
 									stroke-width="2"
 									stroke="currentColor"
-									class="size-3.5"
+									class="w-4 h-4"
 								>
 									<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
 								</svg>
@@ -90,10 +90,11 @@
 					</div>
 				{:else}
 					<div
-						class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
+						class="self-center ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
 					>
 						<Tooltip content={$i18n.t('Remove Model')}>
 							<button
+								
 								{disabled}
 								on:click={() => {
 									selectedModels.splice(selectedModelIdx, 1);
@@ -107,7 +108,7 @@
 									viewBox="0 0 24 24"
 									stroke-width="2"
 									stroke="currentColor"
-									class="size-3"
+									class="w-4 h-4"
 								>
 									<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15" />
 								</svg>
@@ -121,8 +122,8 @@
 </div>
 
 {#if showSetDefault && $user?.role === 'admin'}
-	<div class="absolute text-left mt-[1px] ml-1 text-[0.7rem] text-gray-500 font-primary">
-		<button on:click={saveDefaultModel}>
+	<div class="text-left mt-0 mb-0 ml-2 text-[0.7rem] text-gray-500 font-primary">
+		<button class="hover:text-gray-700 dark:hover:text-gray-300 transition-colors" on:click={saveDefaultModel}>
 			{$i18n.t('Set as default')}
 		</button>
 	</div>

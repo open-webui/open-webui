@@ -532,7 +532,12 @@
 	/* Auth card (right side) */
 	.auth-card-inner {
 		width: 100%;
-		max-width: 430px;
+		max-width: 380px;
+	}
+
+	.auth-container {
+		max-width: 1100px;
+		margin: 0 auto;
 	}
 
 	/* Heading */
@@ -620,9 +625,9 @@
 	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region z-50" />
 
 	{#if loaded}
-		<div class="w-full max-w-[1180px] h-[calc(100dvh-2rem)] max-h-[760px] flex items-stretch gap-8 lg:gap-12">
+		<div class="auth-container w-full h-[calc(100dvh-2rem)] max-h-[760px] flex items-stretch gap-8">
 		<!-- ========== LEFT PANEL ========== -->
-		<div class="hidden lg:flex lg:w-[48%] left-panel p-6 text-white">
+		<div class="hidden lg:flex lg:w-[500px] left-panel p-6 text-white">
 			<div class="blob blob-1"></div>
 			<div class="blob blob-2"></div>
 			<div class="blob blob-3"></div>
@@ -672,7 +677,7 @@
 		</div>
 
 		<!-- ========== RIGHT PANEL ========== -->
-		<div class="w-full lg:w-[52%] right-panel flex items-center justify-center p-2 sm:p-6 lg:p-10">
+		<div class="flex-1 right-panel flex items-center justify-center p-2 sm:p-6 lg:p-10">
 			<div class="auth-card-inner animate-fade-up">
 
 				{#if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}

@@ -20,52 +20,43 @@
 		? 'md:max-w-[calc(100%-260px)]'
 		: ''} max-w-full"
 >
-	<nav class="   px-2.5 pt-1 backdrop-blur-xl w-full drag-region">
-		<div class=" flex items-center">
-			<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
+	<nav class="px-6 py-3 w-full drag-region border-b border-gray-200 dark:border-gray-800">
+		<div class="flex items-center justify-between">
+			<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
 				<button
 					id="sidebar-toggle-button"
-					class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+					class="cursor-pointer p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 transition-colors"
 					on:click={() => {
 						showSidebar.set(!$showSidebar);
 					}}
 					aria-label="Toggle Sidebar"
 				>
-					<div class=" m-auto self-center">
-						<MenuLines />
-					</div>
+					<MenuLines />
 				</button>
 			</div>
 
-			<div class=" flex w-full">
-				<div
-					class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent pt-1"
+			<div class="flex gap-2">
+				<a
+					class="px-4 py-2 text-sm font-medium rounded-lg transition-colors {['/playground', '/playground/'].includes(
+						$page.url.pathname
+					)
+						? 'bg-orange-500 text-white'
+						: 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+					href="/playground"
 				>
-					<a
-						class="min-w-fit rounded-full p-1.5 {['/playground', '/playground/'].includes(
-							$page.url.pathname
-						)
-							? ''
-							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-						href="/playground">{$i18n.t('Chat')}</a
-					>
+					Chat
+				</a>
 
-					<!-- <a
-						class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/playground/notes')
-							? ''
-							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-						href="/playground/notes">{$i18n.t('Notes')}</a
-					> -->
-
-					<a
-						class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
-							'/playground/completions'
-						)
-							? ''
-							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-						href="/playground/completions">{$i18n.t('Completions')}</a
-					>
-				</div>
+				<a
+					class="px-4 py-2 text-sm font-medium rounded-lg transition-colors {$page.url.pathname.includes(
+						'/playground/completions'
+					)
+						? 'bg-orange-500 text-white'
+						: 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+					href="/playground/completions"
+				>
+					Completions
+				</a>
 			</div>
 		</div>
 	</nav>

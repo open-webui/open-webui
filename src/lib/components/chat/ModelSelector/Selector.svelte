@@ -270,12 +270,12 @@
 	id="model-selector-{id}-button"
 >
 		<div
-			class="flex w-full items-center justify-between px-0.5 outline-none bg-transparent {triggerClassName} font-medium text-gray-700 dark:text-gray-100 hover:text-gray-900 dark:hover:text-white transition-colors"
+			class="flex w-full items-center justify-between px-2 py-2 outline-none bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all {triggerClassName} font-semibold text-gray-900 dark:text-white"
 		>
-			<span class="truncate">
+			<span class="truncate text-sm">
 				{selectedModel ? selectedModel.label : placeholder}
 			</span>
-			<ChevronDown className="ml-2 size-3.5 shrink-0 opacity-60" strokeWidth="2.5" />
+			<ChevronDown className="ml-2 size-4 shrink-0 opacity-60 text-orange-500" strokeWidth="2.5" />
 		</div>
 	</DropdownMenu.Trigger>
 
@@ -283,7 +283,7 @@
 		class="z-40 {$mobile ? 'w-[20rem]' : className} max-w-[calc(100vw-1rem)] rounded-xl bg-white dark:bg-gray-850 shadow-xl border border-gray-200 dark:border-gray-700/50 outline-none overflow-hidden"
 		transition={flyAndScale}
 		side={$mobile ? 'bottom' : 'bottom-start'}
-		sideOffset={4}
+		sideOffset={6}
 	>
 		<slot>
 			{#if searchEnabled}
@@ -325,9 +325,9 @@
 				<div class="px-3 py-1.5 border-b border-gray-100 dark:border-gray-800 overflow-x-auto scrollbar-thin">
 					<div class="flex gap-1 w-fit">
 						<button
-							class="px-2.5 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap {selectedTag === '' && selectedConnectionType === ''
-								? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-								: 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+							class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all whitespace-nowrap {selectedTag === '' && selectedConnectionType === ''
+								? 'bg-gradient-to-r from-orange-400 to-orange-500 text-white shadow-md'
+								: 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
 							on:click={() => {
 								selectedConnectionType = '';
 								selectedTag = '';
@@ -338,9 +338,9 @@
 
 						{#if items.find((item) => item.model?.owned_by === 'ollama') && items.find((item) => item.model?.owned_by === 'openai')}
 							<button
-								class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap {selectedConnectionType === 'ollama'
-									? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-									: 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+								class="px-3 py-1 rounded-lg text-xs font-semibold transition-all whitespace-nowrap {selectedConnectionType === 'ollama'
+									? 'bg-gradient-to-r from-orange-400 to-orange-500 text-white shadow-md'
+									: 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTag = '';
 									selectedConnectionType = 'ollama';
@@ -349,9 +349,9 @@
 								{$i18n.t('Local')}
 							</button>
 							<button
-								class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap {selectedConnectionType === 'openai'
-									? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-									: 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+								class="px-3 py-1 rounded-lg text-xs font-semibold transition-all whitespace-nowrap {selectedConnectionType === 'openai'
+									? 'bg-gradient-to-r from-orange-400 to-orange-500 text-white shadow-md'
+									: 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTag = '';
 									selectedConnectionType = 'openai';
@@ -363,9 +363,9 @@
 
 						{#if items.find((item) => item.model?.direct)}
 							<button
-								class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap {selectedConnectionType === 'direct'
-									? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-									: 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+								class="px-3 py-1 rounded-lg text-xs font-semibold transition-all whitespace-nowrap {selectedConnectionType === 'direct'
+									? 'bg-gradient-to-r from-orange-400 to-orange-500 text-white shadow-md'
+									: 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTag = '';
 									selectedConnectionType = 'direct';
@@ -377,9 +377,9 @@
 
 						{#each tags as tag}
 							<button
-								class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap capitalize {selectedTag === tag
-									? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-									: 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+								class="px-3 py-1 rounded-lg text-xs font-semibold transition-all whitespace-nowrap capitalize {selectedTag === tag
+									? 'bg-gradient-to-r from-orange-400 to-orange-500 text-white shadow-md'
+									: 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
 								on:click={() => {
 									selectedConnectionType = '';
 									selectedTag = tag;
@@ -397,7 +397,7 @@
 				{#each filteredItems as item, index}
 					<button
 						aria-label="model-item"
-						class="flex w-full items-center gap-2.5 px-3 py-2 text-xs text-gray-700 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors {index === selectedModelIdx ? 'bg-gray-50 dark:bg-gray-800/50' : ''}"
+						class="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-gray-700 dark:text-gray-100 hover:bg-orange-50 dark:hover:bg-orange-900/10 transition-colors {index === selectedModelIdx ? 'bg-orange-50 dark:bg-orange-900/10' : ''}"
 						data-arrow-selected={index === selectedModelIdx}
 						data-value={item.value}
 						on:click={() => {
@@ -466,7 +466,7 @@
 
 						<!-- Check Icon -->
 						{#if value === item.value}
-							<div class="shrink-0 text-gray-900 dark:text-white">
+							<div class="shrink-0 text-orange-500">
 								<Check />
 							</div>
 						{/if}

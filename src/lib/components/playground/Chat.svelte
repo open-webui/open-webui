@@ -233,7 +233,7 @@
 						</label>
 
 						<select
-							class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 focus:border-transparent transition-shadow"
+							class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-orange-500 dark:focus:ring-orange-400 focus:border-transparent transition-shadow"
 							bind:value={selectedModelId}
 						>
 							{#each $models as model}
@@ -245,12 +245,12 @@
 			</div>
 		</Sidebar>
 
-		<div class="flex flex-col h-full px-4 py-3">
-			<div class="flex w-full items-start gap-2 mb-3">
+		<div class="flex flex-col h-full px-6 py-4">
+			<div class="flex w-full items-start gap-2 mb-4">
 				<Collapsible
 					className="w-full flex-1"
 					bind:open={showSystem}
-					buttonClassName="w-full rounded-lg text-sm border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-850 transition-colors w-full py-2.5 px-3"
+					buttonClassName="w-full rounded-lg text-sm border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-850 transition-all duration-200 w-full py-2.5 px-3 hover:shadow-sm"
 					grow={true}
 				>
 					<div class="flex gap-2 justify-between items-center">
@@ -265,7 +265,7 @@
 						{/if}
 
 						<div class="shrink-0">
-							<div class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors rounded">
+						<div class="p-1.5 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 transition-colors rounded">
 								{#if showSystem}
 									<ChevronUp className="size-4" />
 								{:else}
@@ -292,7 +292,7 @@
 				</Collapsible>
 
 				<button
-					class="p-2.5 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-850 border border-gray-200 dark:border-gray-800 transition-colors rounded-lg"
+					class="p-2.5 bg-white dark:bg-gray-900 hover:bg-orange-50 dark:hover:bg-orange-900/20 border border-gray-200 dark:border-gray-800 hover:border-orange-300 dark:hover:border-orange-700 text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 transition-all rounded-lg"
 					on:click={() => {
 						showSettings = !showSettings;
 					}}
@@ -302,7 +302,7 @@
 			</div>
 
 			<div
-				class="pb-3 flex flex-col justify-between w-full flex-auto overflow-auto h-0 bg-gray-50/50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-800"
+				class="pb-4 flex flex-col justify-between w-full flex-auto overflow-auto h-0 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm"
 				id="messages-container"
 				bind:this={messagesContainerElement}
 			>
@@ -313,11 +313,12 @@
 				</div>
 			</div>
 
-			<div class="pt-3">
-				<div class="text-xs font-medium text-gray-500 dark:text-gray-400 px-1 pb-2">
-					{selectedModelId || 'No model selected'}
-				</div>
-				<div class="border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 w-full rounded-xl shadow-sm">
+		<div class="pt-4">
+			<div class="text-xs font-semibold text-orange-600 dark:text-orange-400 px-2 pb-3 flex items-center gap-2">
+				<div class="w-2 h-2 rounded-full bg-orange-500"></div>
+				{selectedModelId || 'No model selected'}
+			</div>
+			<div class="border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 w-full rounded-xl shadow-sm hover:shadow-md transition-shadow">
 					<div class="px-4 py-3">
 						<textarea
 							bind:value={message}
@@ -340,15 +341,15 @@
 					<div class="flex justify-between items-center px-4 pb-3 pt-2 border-t border-gray-100 dark:border-gray-800">
 						<div>
 							<button
-								class="px-4 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-100 transition-colors rounded-lg"
+								class="px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 hover:bg-orange-50 dark:hover:bg-orange-900/20 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 hover:border-orange-300 dark:hover:border-orange-700 transition-all rounded-lg"
 								on:click={() => {
 									role = role === 'user' ? 'assistant' : 'user';
 								}}
 							>
 								{#if role === 'user'}
-									{$i18n.t('User')}
+									👤 {$i18n.t('User')}
 								{:else}
-									{$i18n.t('Assistant')}
+									🤖 {$i18n.t('Assistant')}
 								{/if}
 							</button>
 						</div>
@@ -356,18 +357,18 @@
 						<div class="flex gap-2">
 							{#if !loading}
 								<button
-									disabled={message === ''}
-									class="px-4 py-2 text-sm font-medium disabled:bg-gray-100 disabled:text-gray-400 dark:disabled:bg-gray-800 dark:disabled:text-gray-600 disabled:cursor-not-allowed bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-100 transition-colors rounded-lg"
-									on:click={() => {
-										addHandler();
-										role = role === 'user' ? 'assistant' : 'user';
-									}}
-								>
-									{$i18n.t('Add')}
-								</button>
+								class="px-4 py-2 text-sm font-medium disabled:bg-gray-100 disabled:text-gray-400 dark:disabled:bg-gray-800 dark:disabled:text-gray-600 disabled:cursor-not-allowed bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-100 transition-all rounded-lg"
+								on:click={() => {
+									addHandler();
+									role = role === 'user' ? 'assistant' : 'user';
+								}}
+								disabled={message === ''}
+							>
+								{$i18n.t('Add')}
+							</button>
 
-								<button
-									class="px-4 py-2 text-sm font-medium bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200 transition-colors rounded-lg shadow-sm"
+							<button
+								class="px-5 py-2 text-sm font-semibold bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 text-white transition-all rounded-lg shadow-sm hover:shadow-md"
 									on:click={() => {
 										submitHandler();
 									}}

@@ -57,9 +57,7 @@
 		<div class=" flex max-w-full w-full mx-auto px-1 pt-0.5 bg-transparent">
 			<div class="flex items-center w-full max-w-full">
 				<div
-					class="{$showSidebar
-						? 'md:hidden'
-						: ''} mr-1 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
+					class="md:hidden mr-1 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
 				>
 					<!-- Always show menu icon on mobile, logo on desktop -->
 					{#if $mobile}
@@ -150,7 +148,7 @@
 					{/if}
 				</div>
 
-				<div class="self-start flex flex-none items-center gap-1 text-gray-600 dark:text-gray-400">
+				<div class="self-start flex flex-none items-center gap-2 text-gray-600 dark:text-gray-400">
 					
 					
 					<!-- Menu Button -->
@@ -166,7 +164,7 @@
 							}}
 						>
 							<button
-								class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+								class="flex cursor-pointer px-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 								id="chat-context-menu-button"
 							>
 								<div class=" m-auto self-center">
@@ -190,71 +188,56 @@
 					{/if}
 					
 					<!-- Theme Toggle Button -->
-					<button
-						class="hidden md:flex items-center h-6 cursor-pointer rounded-full
-							transition-all duration-300 ease-in-out
-							bg-gray-200 dark:bg-gray-600 hover:shadow-md"
-						on:click={() => {
-							const htmlElement = document.documentElement;
-							const isDark = htmlElement.classList.contains('dark');
+					<Tooltip content={$i18n.t('Toggle Theme')}>
+						<button
+							class="flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+							on:click={() => {
+								const htmlElement = document.documentElement;
+								const isDark = htmlElement.classList.contains('dark');
 
-							if (isDark) {
-								htmlElement.classList.remove('dark');
-								localStorage.setItem('theme', 'light');
-							} else {
-								htmlElement.classList.add('dark');
-								localStorage.setItem('theme', 'dark');
-							}
-						}}
-						aria-label="Toggle Theme"
-					>
-						<!-- Light Mode -->
-						<div class="flex items-center dark:hidden">
-							<span class="px-2 text-[10px] font-semibold text-gray-800"> DAY </span>
-							<div class="bg-white rounded-full p-1 mr-1 border border-gray-300">
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke-width="2"
-									stroke="currentColor"
-									class="w-3.5 h-3.5 text-gray-800"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"
-									/>
-								</svg>
-							</div>
-						</div>
+								if (isDark) {
+									htmlElement.classList.remove('dark');
+									localStorage.setItem('theme', 'light');
+								} else {
+									htmlElement.classList.add('dark');
+									localStorage.setItem('theme', 'dark');
+								}
+							}}
+							aria-label="Toggle Theme"
+						>
+							<!-- Light Mode Icon -->
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="2"
+								stroke="currentColor"
+								class="w-5 h-5 dark:hidden text-yellow-500"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"
+								/>
+							</svg>
 
-						<!-- Dark Mode -->
-						<div class="hidden dark:flex items-center">
-							<div class="bg-white rounded-full p-1 ml-1 border border-gray-700">
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke-width="2"
-									stroke="currentColor"
-									class="w-3.5 h-3.5 text-gray-800"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M21.752 15.002A9.718 9.718 0 0118 15.75
-											c-5.385 0-9.75-4.365-9.75-9.75
-											0-1.33.266-2.597.748-3.752
-											A9.753 9.753 0 003 11.25
-											C3 16.635 7.365 21 12.75 21
-											a9.753 9.753 0 009.002-5.998z"
-									/>
-								</svg>
-							</div>
-							<span class="px-2 text-[10px] font-semibold text-white"> NIGHT </span>
-						</div>
-					</button>
+							<!-- Dark Mode Icon -->
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="2"
+								stroke="currentColor"
+								class="w-5 h-5 hidden dark:block text-indigo-400"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"
+								/>
+							</svg>
+						</button>
+					</Tooltip>
 
 {#if !$chatId}
 					<Tooltip content={$i18n.t('Controls')}>

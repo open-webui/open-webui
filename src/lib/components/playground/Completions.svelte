@@ -122,9 +122,10 @@
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full">
-		<div class=" flex flex-col h-full px-4">
-			<div class="flex flex-col justify-between mb-1 gap-1">
-				<div class="flex flex-col gap-1 w-full">
+<div class="flex flex-col h-full px-6 py-4">
+		<div class="flex flex-col justify-between mb-4 gap-3">
+			<div class="flex flex-col gap-2 w-full">
+				<label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Model Selection</label>
 					<div class="flex w-full">
 						<div class="overflow-hidden w-full">
 							<div class="max-w-full">
@@ -144,42 +145,42 @@
 			</div>
 
 			<div
-				class=" pt-0.5 pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
-				id="messages-container"
-			>
-				<div class=" h-full w-full flex flex-col">
-					<div class="flex-1">
-						<textarea
-							id="text-completion-textarea"
-							bind:this={textCompletionAreaElement}
-							class="w-full h-full p-3 bg-transparent border border-gray-100 dark:border-gray-850 outline-hidden resize-none rounded-lg text-sm"
-							bind:value={text}
-							placeholder={$i18n.t("You're a helpful assistant.")}
-						/>
-					</div>
+			class="pt-0 pb-4 flex flex-col justify-between w-full flex-auto overflow-auto h-0 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm"
+			id="messages-container"
+		>
+			<div class="h-full w-full flex flex-col">
+				<div class="flex-1">
+					<textarea
+						id="text-completion-textarea"
+						bind:this={textCompletionAreaElement}
+						class="w-full h-full p-4 bg-transparent outline-none resize-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+						bind:value={text}
+						placeholder={$i18n.t("Enter your prompt here...")}
+					/>
 				</div>
 			</div>
+		</div>
 
-			<div class="pb-3 flex justify-end">
-				{#if !loading}
-					<button
-						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-						on:click={() => {
-							submitHandler();
-						}}
-					>
-						{$i18n.t('Run')}
-					</button>
-				{:else}
-					<button
-						class="px-3 py-1.5 text-sm font-medium bg-gray-300 text-black transition rounded-full"
-						on:click={() => {
-							stopResponse();
-						}}
-					>
-						{$i18n.t('Cancel')}
-					</button>
-				{/if}
+		<div class="pt-4 flex justify-end gap-2">
+			{#if !loading}
+				<button
+					class="px-6 py-2.5 text-sm font-semibold bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 text-white transition-all rounded-lg shadow-sm hover:shadow-md"
+					on:click={() => {
+						submitHandler();
+					}}
+				>
+					{$i18n.t('Run')}
+				</button>
+			{:else}
+				<button
+					class="px-6 py-2.5 text-sm font-semibold bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 transition-all rounded-lg"
+					on:click={() => {
+						stopResponse();
+					}}
+				>
+					{$i18n.t('Cancel')}
+				</button>
+			{/if}
 			</div>
 		</div>
 	</div>

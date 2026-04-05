@@ -444,24 +444,24 @@
 		{:else}
 			<!-- STICKY HEADER BAR -->
 			<div class="sticky top-0 z-20 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 rounded-t-lg shadow-sm">
-				<div class="flex items-center justify-between px-4 py-2">
+				<div class="flex flex-col md:flex-row items-start md:items-center justify-between px-3 md:px-4 py-2 gap-2 md:gap-0">
 					<!-- Language Label -->
 					<div class="text-xs font-medium text-gray-500 dark:text-gray-400">
 						{lang || 'plaintext'}
 					</div>
 
 					<!-- Action Buttons -->
-					<div class="flex items-center gap-2">
+					<div class="flex flex-wrap items-center gap-1 md:gap-2 w-full md:w-auto justify-end">
 						<!-- Collapse Button -->
 						<button
-							class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-transparent hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:focus-visible:ring-gray-600 focus-visible:ring-offset-1"
-							on:click={collapseCodeBlock}
-							aria-label={collapsed ? 'Expand code block' : 'Collapse code block'}
-							type="button"
-						>
-							<ChevronUpDown className="w-3.5 h-3.5" />
-							<span>{collapsed ? $i18n.t('Expand') : $i18n.t('Collapse')}</span>
-						</button>
+						class="inline-flex items-center gap-1.5 px-2 md:px-2.5 py-1 md:py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-transparent hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:focus-visible:ring-gray-600 focus-visible:ring-offset-1"
+						on:click={collapseCodeBlock}
+						aria-label={collapsed ? 'Expand code block' : 'Collapse code block'}
+						type="button"
+					>
+						<ChevronUpDown className="w-3.5 h-3.5" />
+						<span class="hidden md:inline">{collapsed ? $i18n.t('Expand') : $i18n.t('Collapse')}</span>
+					</button>
 
 						<!-- Python Run Button -->
 						{#if ($config?.features?.enable_code_execution ?? true) && (lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code)))}
@@ -475,7 +475,7 @@
 								</div>
 							{:else if run}
 								<button
-									class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-transparent hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:focus-visible:ring-gray-600 focus-visible:ring-offset-1"
+									class="inline-flex items-center gap-1.5 px-2 md:px-2.5 py-1 md:py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-transparent hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:focus-visible:ring-gray-600 focus-visible:ring-offset-1"
 									on:click={async () => {
 										code = _code;
 										await tick();
@@ -485,7 +485,7 @@
 									type="button"
 								>
 									<CommandLine className="w-3.5 h-3.5" />
-									<span>{$i18n.t('Run')}</span>
+									<span class="hidden md:inline">{$i18n.t('Run')}</span>
 								</button>
 							{/if}
 						{/if}
@@ -493,7 +493,7 @@
 						<!-- Save Button -->
 						{#if save}
 							<button
-								class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-transparent hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:focus-visible:ring-gray-600 focus-visible:ring-offset-1 {saved ? 'text-green-600 dark:text-green-400' : ''}"
+								class="inline-flex items-center gap-1.5 px-2 md:px-2.5 py-1 md:py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-transparent hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:focus-visible:ring-gray-600 focus-visible:ring-offset-1 {saved ? 'text-green-600 dark:text-green-400' : ''}"
 								on:click={saveCode}
 								aria-label="Save code"
 								type="button"
@@ -503,13 +503,13 @@
 										<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
 									</svg>
 								{/if}
-								<span>{saved ? $i18n.t('Saved') : $i18n.t('Save')}</span>
+								<span class="hidden md:inline">{saved ? $i18n.t('Saved') : $i18n.t('Save')}</span>
 							</button>
 						{/if}
 
 						<!-- Copy Button -->
 						<button
-							class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-transparent hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:focus-visible:ring-gray-600 focus-visible:ring-offset-1 {copied ? 'text-green-600 dark:text-green-400' : ''}"
+							class="inline-flex items-center gap-1.5 px-2 md:px-2.5 py-1 md:py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-transparent hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:focus-visible:ring-gray-600 focus-visible:ring-offset-1 {copied ? 'text-green-600 dark:text-green-400' : ''}"
 							on:click={copyCode}
 							aria-label="Copy code to clipboard"
 							type="button"
@@ -523,7 +523,7 @@
 									<path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
 								</svg>
 							{/if}
-							<span>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</span>
+							<span class="hidden md:inline">{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</span>
 						</button>
 					</div>
 				</div>
