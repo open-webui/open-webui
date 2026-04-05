@@ -788,8 +788,8 @@ async def get_pinned_channel_messages(
         webhook_info = message.meta.get('webhook') if message.meta else None
         if webhook_info:
             user_info = UserNameResponse(
-                id=webhook_info.get('id'),
-                name=webhook_info.get('name'),
+                id=webhook_info.get('id') or '',
+                name=webhook_info.get('name') or 'Webhook',
                 role='webhook',
             )
         elif message.user_id in users:
