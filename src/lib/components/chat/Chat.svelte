@@ -1694,6 +1694,8 @@
 
 		if (pseudonymized_prompt) {
 			message.pseudonymized_prompt = pseudonymized_prompt;
+			console.warn('[GARNET MESSAGE SET]', message.id, message.pseudonymized_prompt);
+			history.messages[message.id] = { ...message };
 		}
 
 		history.messages[message.id] = message;
