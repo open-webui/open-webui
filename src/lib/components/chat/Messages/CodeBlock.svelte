@@ -91,7 +91,10 @@
 
 	const copyCode = async () => {
 		copied = true;
-		await copyToClipboard(_code);
+		const res = await copyToClipboard(_code);
+		if (res) {
+			toast.success($i18n.t('Copied to clipboard'));
+		}
 
 		setTimeout(() => {
 			copied = false;
