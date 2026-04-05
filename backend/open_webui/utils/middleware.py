@@ -3477,6 +3477,7 @@ async def streaming_chat_response_handler(response, ctx):
             usage = None
             prior_output = []
             last_response_id = None
+            pseudonymized_prompt = None
 
             def full_output():
                 return prior_output + output if prior_output else output
@@ -3516,6 +3517,7 @@ async def streaming_chat_response_handler(response, ctx):
                     nonlocal output
                     nonlocal prior_output
                     nonlocal last_response_id
+                    nonlocal pseudonymized_prompt
 
                     response_tool_calls = []
 
@@ -3557,6 +3559,9 @@ async def streaming_chat_response_handler(response, ctx):
 
                         try:
                             data = json.loads(data)
+
+                            if 'pseudonymized_prompt' in data:
+                                pseudonymized_prompt = data['pseudonymized_prompt']
 
                             data, _ = await process_filter_functions(
                                 request=request,
@@ -4612,6 +4617,11 @@ async def streaming_chat_response_handler(response, ctx):
                     'content': serialize_output(output),
                     'output': output,
                     'title': title,
+                    **(
+                        {'pseudonymized_prompt': pseudonymized_prompt}
+                        if pseudonymized_prompt
+                        else {}
+                    ),
                 }
 
                 if not ENABLE_REALTIME_CHAT_SAVE:
