@@ -424,7 +424,7 @@
 			if (message) {
 				const type = event?.data?.type ?? null;
 				const data = event?.data?.data ?? null;
-				console.log('[GARNET ALL EVENTS]', type, Object.keys(data || {}));
+				console.warn('[GARNET ALL EVENTS]', type, Object.keys(data || {}));
 
 				if (type === 'status') {
 					if (message?.statusHistory) {
@@ -433,7 +433,7 @@
 						message.statusHistory = [data];
 					}
 				} else if (type === 'chat:completion') {
-					console.log('[GARNET TRIGGER] chat:completion fired, data:', data);
+					console.warn('[GARNET TRIGGER] chat:completion fired, data:', data);
 					chatCompletionEventHandler(data, message, event.chat_id);
 				} else if (type === 'chat:tasks:cancel') {
 					if (event.message_id === history.currentId) {
@@ -1589,7 +1589,7 @@
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
-		console.log('[GARNET ENTRY]', data);
+		console.warn('[GARNET ENTRY]', data);
 		const { id, done, choices, content, output, sources, selected_model_id, error, usage, pseudonymized_prompt } = data;
 
 		// Store raw OR-aligned output items from backend
