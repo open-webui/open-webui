@@ -283,7 +283,8 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     # Pre-warm the function module cache once per unique function ID.
     # This ensures each function's DB freshness check runs exactly once,
     # not once per (model × function) pair.
-    for function_id in all_function_ids:
+    valid_function_ids = [fid for fid in all_function_ids if fid in functions_by_id]
+    for function_id in valid_function_ids:
         try:
             get_function_module_from_cache(request, function_id)
         except Exception as e:
@@ -343,7 +344,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         for action_id in action_ids:
             action_function = functions_by_id.get(action_id)
             if action_function is None:
-                log.info(f'Action not found: {action_id}')
+                log.debug(f'Action not found: {action_id}')
                 continue
 
             function_module = request.app.state.FUNCTIONS.get(action_id)
@@ -356,7 +357,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         for filter_id in filter_ids:
             filter_function = functions_by_id.get(filter_id)
             if filter_function is None:
-                log.info(f'Filter not found: {filter_id}')
+                log.debug(f'Filter not found: {filter_id}')
                 continue
 
             function_module = request.app.state.FUNCTIONS.get(filter_id)
