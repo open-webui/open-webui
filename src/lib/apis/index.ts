@@ -276,7 +276,7 @@ export const stopTask = async (token: string, id: string) => {
 export const stopTasksByChatId = async (token: string, chat_id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/tasks/chat/${chat_id}/stop`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/tasks/chat/${encodeURIComponent(chat_id)}/stop`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -308,7 +308,7 @@ export const stopTasksByChatId = async (token: string, chat_id: string) => {
 export const getTaskIdsByChatId = async (token: string, chat_id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/tasks/chat/${chat_id}`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/tasks/chat/${encodeURIComponent(chat_id)}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',

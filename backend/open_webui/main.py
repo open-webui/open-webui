@@ -67,6 +67,7 @@ from open_webui.socket.main import (
     periodic_session_pool_cleanup,
     get_event_emitter,
     get_models_in_use,
+    get_user_id_from_session_pool,
 )
 from open_webui.routers import (
     analytics,
@@ -2028,7 +2029,12 @@ async def list_tasks_endpoint(request: Request, user=Depends(get_admin_user)):
 
 @app.get('/api/tasks/chat/{chat_id:path}')
 async def list_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=Depends(get_verified_user)):
-    if not chat_id.startswith('local:'):
+    if chat_id.startswith('local:'):
+        socket_id = chat_id[len('local:'):]
+        owner_id = get_user_id_from_session_pool(socket_id)
+        if owner_id != user.id and user.role != 'admin':
+            return {'task_ids': []}
+    else:
         chat = await Chats.get_chat_by_id(chat_id)
         if chat is None or (chat.user_id != user.id and user.role != 'admin'):
             return {'task_ids': []}
@@ -2042,9 +2048,10 @@ async def list_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
 @app.post('/api/tasks/chat/{chat_id:path}/stop')
 async def stop_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=Depends(get_verified_user)):
     if chat_id.startswith('local:'):
-        # Temporary chats are not persisted in DB; allow any authenticated user
-        # to stop tasks for the local session ID they provide.
-        pass
+        socket_id = chat_id[len('local:'):]
+        owner_id = get_user_id_from_session_pool(socket_id)
+        if owner_id != user.id and user.role != 'admin':
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
     else:
         chat = await Chats.get_chat_by_id(chat_id)
         if chat is None or (chat.user_id != user.id and user.role != 'admin'):
