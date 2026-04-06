@@ -77,10 +77,37 @@
 	let pendingRebuild = null;
 	let lastCurrentId = null;
 
+	const findLastValidMessageId = () => {
+		let lastValidId = null;
+		for (const [id, msg] of Object.entries(history.messages)) {
+			if (!msg.id || !msg.role) continue;
+			if (!lastValidId) {
+				lastValidId = id;
+			} else {
+				const existing = history.messages[lastValidId];
+				if ((msg.timestamp ?? 0) >= (existing.timestamp ?? 0)) {
+					lastValidId = id;
+				}
+			}
+		}
+		return lastValidId;
+	};
+
 	const buildMessages = () => {
 		let _messages = [];
 
 		let message = history.messages[history.currentId];
+
+		// If currentId points to an invalid message, fall back to a valid one
+		if (!message || !message.id || !message.role) {
+			const fallbackId = findLastValidMessageId();
+			if (fallbackId) {
+				console.warn('Invalid currentId, falling back to', fallbackId);
+				history.currentId = fallbackId;
+				message = history.messages[fallbackId];
+			}
+		}
+
 		const visitedMessageIds = new Set();
 
 		while (message && (messagesCount !== null ? _messages.length <= messagesCount : true)) {
@@ -91,7 +118,7 @@
 			visitedMessageIds.add(message.id);
 
 			_messages.push(message);
-			message = message.parentId !== null ? history.messages[message.parentId] : null;
+			message = message.parentId != null ? history.messages[message.parentId] : null;
 		}
 
 		messages = _messages.reverse();
@@ -449,7 +476,7 @@
 			{#key chatId}
 				<section class="w-full" aria-labelledby="chat-conversation">
 					<h2 class="sr-only" id="chat-conversation">{$i18n.t('Chat Conversation')}</h2>
-					{#if messages.at(0)?.parentId !== null}
+					{#if messages.at(0)?.parentId != null}
 						<Loader
 							on:visible={(e) => {
 								console.log('visible');
