@@ -124,7 +124,6 @@
                     : 'bg-gray-500/20 text-gray-400 hover:bg-gray-500/30'}"
             on:click={() => { $privacyProxy = !$privacyProxy; console.log('[privacyProxy] toggled to:', $privacyProxy); }}
         >
-            <img src="{WEBUI_BASE_URL}/static/garnet-logo.png" class="size-3.5 rounded-sm" alt="Garnet" draggable="false" />
             <span class="text-[11px]">private</span>
             <span class="relative inline-flex h-4 w-7 items-center rounded-full transition-colors {$privacyProxy ? 'bg-emerald-500' : 'bg-gray-500'}">
                 <span class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform {$privacyProxy ? 'translate-x-3.5' : 'translate-x-0.5'}" />
