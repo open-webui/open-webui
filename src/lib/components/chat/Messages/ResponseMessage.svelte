@@ -125,7 +125,7 @@
 		if (source) {
 			// Fast path: O(1) check on the fields that change most often (content during streaming, done at end)
 			// Avoids 2x O(n) JSON.stringify calls that are always true during streaming anyway
-			if (message.content !== source.content || message.done !== source.done || message.pseudonymized_prompt !== source.pseudonymized_prompt) {
+			if (message.content !== source.content || message.done !== source.done) {
 				message = structuredClone(source);
 			} else if (JSON.stringify(message) !== JSON.stringify(source)) {
 				// Slow path: full comparison for infrequent changes (sources, annotations, status, etc.)
@@ -1105,9 +1105,10 @@
 									</Tooltip>
 								{/if}
 
-								{#if message.usage || message.pseudonymized_prompt}
+								{#if message.usage}
 									<Tooltip
-										content={`${message.pseudonymized_prompt ? `<pre style="font-family:monospace;font-size:11px;margin-bottom:6px;color:#ffffff;">${sanitizeResponseContent(message.pseudonymized_prompt)}</pre>` : ''}${message.usage ? `<pre>${sanitizeResponseContent(
+										content={message.usage
+											? `<pre>${sanitizeResponseContent(
 													JSON.stringify(message.usage, null, 2)
 														.replace(/"([^(")"]+)":/g, '$1:')
 														.slice(1, -1)
@@ -1115,7 +1116,8 @@
 														.map((line) => line.slice(2))
 														.map((line) => (line.endsWith(',') ? line.slice(0, -1) : line))
 														.join('\n')
-												)}</pre>` : ''}`}
+												)}</pre>`
+											: ''}
 										placement="bottom"
 									>
 										<button

@@ -1693,9 +1693,11 @@
 		}
 
 		if (pseudonymized_prompt) {
-			message.pseudonymized_prompt = pseudonymized_prompt;
-			console.warn('[GARNET MESSAGE SET]', message.id, message.pseudonymized_prompt);
-			history.messages[message.id] = { ...message };
+			const userMsgId = message.parentId;
+			if (userMsgId && history.messages[userMsgId]) {
+				history.messages[userMsgId] = { ...history.messages[userMsgId], pseudonymized_prompt };
+				console.warn('[GARNET MESSAGE SET]', userMsgId, pseudonymized_prompt);
+			}
 		}
 
 		history.messages[message.id] = message;
