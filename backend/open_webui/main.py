@@ -565,6 +565,7 @@ from open_webui.tasks import (
     list_task_ids_by_item_id,
     create_task,
     stop_task,
+    stop_item_tasks,
     list_tasks,
 )  # Import from tasks.py
 
@@ -2012,7 +2013,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user=De
 
 
 @app.post('/api/tasks/stop/{task_id}')
-async def stop_task_endpoint(request: Request, task_id: str, user=Depends(get_verified_user)):
+async def stop_task_endpoint(request: Request, task_id: str, user=Depends(get_admin_user)):
     try:
         result = await stop_task(request.app.state.redis, task_id)
         return result
@@ -2021,20 +2022,29 @@ async def stop_task_endpoint(request: Request, task_id: str, user=Depends(get_ve
 
 
 @app.get('/api/tasks')
-async def list_tasks_endpoint(request: Request, user=Depends(get_verified_user)):
+async def list_tasks_endpoint(request: Request, user=Depends(get_admin_user)):
     return {'tasks': await list_tasks(request.app.state.redis)}
 
 
 @app.get('/api/tasks/chat/{chat_id}')
 async def list_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=Depends(get_verified_user)):
     chat = await Chats.get_chat_by_id(chat_id)
-    if chat is None or chat.user_id != user.id:
+    if chat is None or (chat.user_id != user.id and user.role != 'admin'):
         return {'task_ids': []}
 
     task_ids = await list_task_ids_by_item_id(request.app.state.redis, chat_id)
 
     log.debug(f'Task IDs for chat {chat_id}: {task_ids}')
     return {'task_ids': task_ids}
+
+
+@app.post('/api/tasks/chat/{chat_id}/stop')
+async def stop_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=Depends(get_verified_user)):
+    chat = Chats.get_chat_by_id(chat_id)
+    if chat is None or (chat.user_id != user.id and user.role != 'admin'):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    result = await stop_item_tasks(request.app.state.redis, chat_id)
+    return result
 
 
 ##################################
