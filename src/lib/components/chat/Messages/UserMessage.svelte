@@ -543,37 +543,36 @@
 						</Tooltip>
 					{/if}
 
-					{#if message.pseudonymized_prompt}
-						<button
-							class="{($settings?.highContrastMode ?? false)
-								? ''
-								: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-							aria-label="Pseudonymized prompt"
-							on:mouseenter={(e) => {
-								const t = document.getElementById('pseudo-tooltip-' + message.id);
-								const r = e.currentTarget.getBoundingClientRect();
-								t.style.display = 'block';
-								t.style.top = (r.top - t.offsetHeight - 8) + 'px';
-								t.style.left = r.left + 'px';
-							}}
-							on:mouseleave={() => {
-								document.getElementById('pseudo-tooltip-' + message.id).style.display = 'none';
-							}}
-						>
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
-								<circle cx="12" cy="12" r="10"/>
-								<line x1="12" y1="16" x2="12" y2="12"/>
-								<line x1="12" y1="8" x2="12.01" y2="8"/>
-							</svg>
-						</button>
-						<div
-							id="pseudo-tooltip-{message.id}"
-							style="display:none; position:fixed; background:#1a1a1a; color:#fff; font-family:monospace; font-size:12px; padding:8px 12px; border-radius:6px; max-width:420px; z-index:9999; white-space:pre-wrap; pointer-events:none;"
-						>{message.pseudonymized_prompt}</div>
-					{/if}
+				<!-- (i) button always visible - shows original or pseudonymized prompt based on privacy setting -->
+				<button
+					class="{($settings?.highContrastMode ?? false)
+						? 'visible'
+						: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+					aria-label={message.pseudonymized_prompt ? 'Show pseudonymized prompt' : 'Show original prompt'}
+					on:mouseenter={(e) => {
+						const t = document.getElementById('prompt-tooltip-' + message.id);
+						const r = e.currentTarget.getBoundingClientRect();
+						t.style.display = 'block';
+						t.style.top = (r.top - t.offsetHeight - 8) + 'px';
+						t.style.left = r.left + 'px';
+					}}
+					on:mouseleave={() => {
+						document.getElementById('prompt-tooltip-' + message.id).style.display = 'none';
+					}}
+				>
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+						<circle cx="12" cy="12" r="10"/>
+						<line x1="12" y1="16" x2="12" y2="12"/>
+						<line x1="12" y1="8" x2="12.01" y2="8"/>
+					</svg>
+				</button>
+				<div
+					id="prompt-tooltip-{message.id}"
+					style="display:none; position:fixed; background:#1a1a1a; color:#fff; font-family:monospace; font-size:12px; padding:8px 12px; border-radius:6px; max-width:420px; z-index:9999; white-space:pre-wrap; pointer-events:none;"
+				>{message.pseudonymized_prompt ?? message.content}</div>
 
-					{#if $_user?.role === 'admin' || ($_user?.permissions?.chat?.delete_message ?? false)}
-						{#if !readOnly && (!isFirstMessage || siblings.length > 1)}
+				{#if $_user?.role === 'admin' || ($_user?.permissions?.chat?.delete_message ?? false)}
+					{#if !readOnly && (!isFirstMessage || siblings.length > 1)}
 							<Tooltip content={$i18n.t('Delete')} placement="bottom">
 								<button
 									class="{($settings?.highContrastMode ?? false)
