@@ -2026,11 +2026,12 @@ async def list_tasks_endpoint(request: Request, user=Depends(get_admin_user)):
     return {'tasks': await list_tasks(request.app.state.redis)}
 
 
-@app.get('/api/tasks/chat/{chat_id}')
+@app.get('/api/tasks/chat/{chat_id:path}')
 async def list_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=Depends(get_verified_user)):
-    chat = await Chats.get_chat_by_id(chat_id)
-    if chat is None or (chat.user_id != user.id and user.role != 'admin'):
-        return {'task_ids': []}
+    if not chat_id.startswith('local:'):
+        chat = await Chats.get_chat_by_id(chat_id)
+        if chat is None or (chat.user_id != user.id and user.role != 'admin'):
+            return {'task_ids': []}
 
     task_ids = await list_task_ids_by_item_id(request.app.state.redis, chat_id)
 
@@ -2038,11 +2039,16 @@ async def list_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
     return {'task_ids': task_ids}
 
 
-@app.post('/api/tasks/chat/{chat_id}/stop')
+@app.post('/api/tasks/chat/{chat_id:path}/stop')
 async def stop_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=Depends(get_verified_user)):
-    chat = Chats.get_chat_by_id(chat_id)
-    if chat is None or (chat.user_id != user.id and user.role != 'admin'):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    if chat_id.startswith('local:'):
+        # Temporary chats are not persisted in DB; allow any authenticated user
+        # to stop tasks for the local session ID they provide.
+        pass
+    else:
+        chat = await Chats.get_chat_by_id(chat_id)
+        if chat is None or (chat.user_id != user.id and user.role != 'admin'):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
     result = await stop_item_tasks(request.app.state.redis, chat_id)
     return result
 
