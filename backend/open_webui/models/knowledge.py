@@ -398,6 +398,17 @@ class KnowledgeTable:
         except Exception:
             return None
 
+    async def get_knowledge_owner_map(self, ids: list[str], db: Optional[AsyncSession] = None) -> dict[str, str]:
+        """Return {knowledge_id: user_id} for IDs that exist. Single IN() query."""
+        if not ids:
+            return {}
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(Knowledge.id, Knowledge.user_id).where(Knowledge.id.in_(ids))
+            )
+            rows = result.all()
+            return {row[0]: row[1] for row in rows}
+
     async def get_knowledge_by_id_and_user_id(
         self, id: str, user_id: str, db: Optional[AsyncSession] = None
     ) -> Optional[KnowledgeModel]:

@@ -39,6 +39,7 @@ from langchain_core.documents import Document
 from open_webui.models.files import FileModel, FileUpdateForm, Files
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.models.knowledge import Knowledges
+from open_webui.models.access_grants import AccessGrants
 from open_webui.storage.provider import Storage
 from open_webui.internal.db import get_async_session, get_db
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -2330,18 +2331,28 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
 async def _validate_collection_access(collection_names: list[str], user) -> None:
     """
     Prevent users from querying collections they don't own.
-    Enforces ownership on user-memory-* and file-* collections.
+
+    Uses a default-deny approach: only explicitly recognized collection
+    name patterns are permitted for non-admin users. Everything else
+    is denied.
     Admins bypass this check.
+
+    Phase 1: validate prefix-matched names inline (no DB access needed).
+    Phase 2: batch-resolve remaining candidates against the knowledge
+             table and access grants in bulk queries.
     """
     if user.role == 'admin':
         return
 
+    # Phase 1: validate prefixed names and collect unmatched candidates
+    kb_candidates = []
     for name in collection_names:
-        if name.startswith('user-memory-') and name != f'user-memory-{user.id}':
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-            )
+        if name.startswith('user-memory-'):
+            if name != f'user-memory-{user.id}':
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                )
         elif name.startswith('file-'):
             file_id = name[len('file-') :]
             if not await has_access_to_file(
@@ -2353,6 +2364,64 @@ async def _validate_collection_access(collection_names: list[str], user) -> None
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
                 )
+        elif re.fullmatch(r'web-search-[0-9a-f]{52}', name):
+            # System-generated web search collection: web-search-{sha256}[:63]
+            pass
+        elif name == 'knowledge-bases':
+            # Internal system collection — never accessible to non-admin users
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+        else:
+            kb_candidates.append(name)
+
+    if not kb_candidates:
+        return
+
+    # Phase 2: batch-resolve candidates
+    #
+    # Names fall into three categories:
+    #   1) Knowledge base UUID — enforce ownership / read grant.
+    #   2) Hex hash — system-generated collection from process_text or
+    #      process_web (SHA256 digest, 63-64 hex chars). No ownership
+    #      metadata exists in the vector DB, so these are allowed through.
+    #   3) Anything else — denied.
+
+    # Single query: which candidates are actual knowledge bases?
+    kb_owner_map = await Knowledges.get_knowledge_owner_map(kb_candidates)
+
+    # Deny candidates that are neither a known KB nor a valid hex hash
+    for name in kb_candidates:
+        if name not in kb_owner_map and not re.fullmatch(r'[0-9a-f]{63,64}', name):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+
+    # Filter to KBs the user doesn't own — only these need access checks
+    kb_ids_to_check = [kb_id for kb_id, owner_id in kb_owner_map.items() if owner_id != user.id]
+
+    if not kb_ids_to_check:
+        return
+
+    # Single query: which of these does the user have read access to?
+    from open_webui.models.groups import Groups
+
+    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
+    accessible_ids = await AccessGrants.get_accessible_resource_ids(
+        user_id=user.id,
+        resource_type='knowledge',
+        resource_ids=kb_ids_to_check,
+        permission='read',
+        user_group_ids=user_group_ids,
+    )
+
+    if set(kb_ids_to_check) - accessible_ids:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
 
 
 class QueryDocForm(BaseModel):
