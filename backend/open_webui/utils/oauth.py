@@ -529,6 +529,7 @@ class OAuthClientManager:
                     if oauth_client_info.token_endpoint_auth_method
                     else {}
                 ),
+                "follow_redirects": True,
             },
             'server_metadata_url': (oauth_client_info.issuer if oauth_client_info.issuer else None),
         }
