@@ -582,7 +582,7 @@ def transcription_handler(request, file_path, metadata, user=None):
         data = {'text': transcript.strip()}
 
         # save the transcript to a json file
-        transcript_file = f'{file_dir}/{id}.json'
+        transcript_file = os.path.join(file_dir, f'{id}.json')
         with open(transcript_file, 'w') as f:
             json.dump(data, f)
 
@@ -620,7 +620,7 @@ def transcription_handler(request, file_path, metadata, user=None):
             data = r.json()
 
             # save the transcript to a json file
-            transcript_file = f'{file_dir}/{id}.json'
+            transcript_file = os.path.join(file_dir, f'{id}.json')
             with open(transcript_file, 'w') as f:
                 json.dump(data, f)
 
@@ -689,7 +689,7 @@ def transcription_handler(request, file_path, metadata, user=None):
             data = {'text': transcript.strip()}
 
             # Save transcript
-            transcript_file = f'{file_dir}/{id}.json'
+            transcript_file = os.path.join(file_dir, f'{id}.json')
             with open(transcript_file, 'w') as f:
                 json.dump(data, f)
 
@@ -796,7 +796,7 @@ def transcription_handler(request, file_path, metadata, user=None):
             data = {'text': transcript}
 
             # Save transcript to json file (consistent with other providers)
-            transcript_file = f'{file_dir}/{id}.json'
+            transcript_file = os.path.join(file_dir, f'{id}.json')
             with open(transcript_file, 'w') as f:
                 json.dump(data, f)
 
@@ -981,7 +981,7 @@ def transcription_handler(request, file_path, metadata, user=None):
                 data = {'text': transcript}
 
             # Save transcript to json file (consistent with other providers)
-            transcript_file = f'{file_dir}/{id}.json'
+            transcript_file = os.path.join(file_dir, f'{id}.json')
             with open(transcript_file, 'w') as f:
                 json.dump(data, f)
 
@@ -1159,9 +1159,9 @@ def transcription(
         filename = f'{id}.{ext}'
         contents = file.file.read()
 
-        file_dir = f'{CACHE_DIR}/audio/transcriptions'
+        file_dir = os.path.join(CACHE_DIR, 'audio', 'transcriptions')
         os.makedirs(file_dir, exist_ok=True)
-        file_path = f'{file_dir}/{filename}'
+        file_path = os.path.join(file_dir, filename)
 
         # Defense-in-depth: ensure resolved path stays within intended directory
         if not os.path.realpath(file_path).startswith(os.path.realpath(file_dir)):
