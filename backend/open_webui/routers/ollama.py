@@ -1596,6 +1596,84 @@ async def generate_anthropic_messages(
     )
 
 
+class ResponsesForm(BaseModel):
+    model: str
+
+    model_config = ConfigDict(extra='allow')
+
+
+@router.post('/v1/responses')
+@router.post('/v1/responses/{url_idx}')
+async def generate_responses(
+    request: Request,
+    form_data: ResponsesForm,
+    url_idx: Optional[int] = None,
+    user=Depends(get_verified_user),
+):
+    """
+    Proxy for Ollama's OpenAI-compatible /v1/responses endpoint.
+
+    Forwards the request as-is to the Ollama backend, applying the same
+    model resolution, access control, and prefix_id handling used by
+    the OpenAI-compatible /v1/chat/completions proxy.
+
+    See https://ollama.com/blog/responses-api
+    """
+    if not request.app.state.config.ENABLE_OLLAMA_API:
+        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+
+    payload = form_data.model_dump()
+    model_id = form_data.model
+
+    model_info = Models.get_model_by_id(model_id)
+    if model_info:
+        if model_info.base_model_id:
+            payload['model'] = model_info.base_model_id
+
+        # Check if user has access to the model
+        if user.role == 'user':
+            user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
+            if not (
+                user.id == model_info.user_id
+                or AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type='model',
+                    resource_id=model_info.id,
+                    permission='read',
+                    user_group_ids=user_group_ids,
+                )
+            ):
+                raise HTTPException(
+                    status_code=403,
+                    detail='Model not found',
+                )
+    else:
+        if user.role != 'admin':
+            raise HTTPException(
+                status_code=403,
+                detail='Model not found',
+            )
+
+    url, url_idx = await get_ollama_url(request, payload['model'], url_idx)
+    api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+        str(url_idx),
+        request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
+    )
+
+    prefix_id = api_config.get('prefix_id', None)
+    if prefix_id:
+        payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
+
+    return await send_post_request(
+        url=f'{url}/v1/responses',
+        payload=json.dumps(payload),
+        stream=payload.get('stream', False),
+        content_type='text/event-stream' if payload.get('stream', False) else None,
+        key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
+        user=user,
+    )
+
+
 @router.get('/v1/models')
 @router.get('/v1/models/{url_idx}')
 async def get_openai_models(
