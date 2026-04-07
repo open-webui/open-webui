@@ -2571,9 +2571,9 @@
 		// Privacy proxy: analyze and animate entity highlighting
 		if ($privacyProxy) {
 			try {
-				const analysisResult = await analyzeMessageEntities(localStorage.token, userPrompt);
+				const entities = await analyzeMessageEntities(localStorage.token, userPrompt);
 
-				if (analysisResult && analysisResult.entity_spans && analysisResult.entity_spans.length > 0) {
+				if (entities && entities.length > 0) {
 					// Find the user message element in the DOM
 					const messageElement = document.querySelector(
 						`[id="message-${userMessageId}"] [class*="markdown-prose"]`
@@ -2584,7 +2584,7 @@
 						await animateEntityHighlighting(
 							messageElement,
 							userPrompt,
-							analysisResult.entity_spans
+							entities
 						);
 					}
 				}

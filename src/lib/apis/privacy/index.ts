@@ -8,8 +8,8 @@ export interface EntitySpan {
 }
 
 export interface AnalyzeResponse {
-	entity_spans: EntitySpan[];
-	raw_text: string;
+	entities: EntitySpan[];
+	raw_text?: string;
 }
 
 /**
@@ -18,7 +18,7 @@ export interface AnalyzeResponse {
 export const analyzeMessageEntities = async (
 	token: string,
 	messageText: string
-): Promise<AnalyzeResponse | null> => {
+): Promise<EntitySpan[] | null> => {
 	try {
 		const res = await fetch(`${WEBUI_API_BASE_URL}/privacy/analyze`, {
 			method: 'POST',
@@ -37,7 +37,8 @@ export const analyzeMessageEntities = async (
 			return null;
 		}
 
-		return await res.json();
+		const response: AnalyzeResponse = await res.json();
+		return response.entities || [];
 	} catch (error) {
 		console.error('Privacy analyze request failed:', error);
 		return null;
