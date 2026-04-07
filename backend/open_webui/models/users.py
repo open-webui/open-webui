@@ -247,15 +247,17 @@ class UserRoleUpdateForm(BaseModel):
 
 
 class UserUpdateForm(BaseModel):
-    role: str
-    name: str
-    email: str
-    profile_image_url: str
+    role: Optional[str] = None
+    name: Optional[str] = None
+    email: Optional[str] = None
+    profile_image_url: Optional[str] = None
     password: Optional[str] = None
 
     @field_validator('profile_image_url')
     @classmethod
-    def check_profile_image_url(cls, v: str) -> str:
+    def check_profile_image_url(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
         return validate_profile_image_url(v)
 
 

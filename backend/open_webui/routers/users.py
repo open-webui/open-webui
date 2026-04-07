@@ -573,7 +573,7 @@ async def update_user_by_id(
                         detail=ERROR_MESSAGES.ACTION_PROHIBITED,
                     )
 
-                if form_data.role != 'admin':
+                if form_data.role is not None and form_data.role != 'admin':
                     # If the primary admin is trying to change their own role, prevent it
                     raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN,
@@ -590,7 +590,7 @@ async def update_user_by_id(
     user = Users.get_user_by_id(user_id, db=db)
 
     if user:
-        if form_data.email.lower() != user.email:
+        if form_data.email is not None and form_data.email.lower() != user.email:
             email_user = Users.get_user_by_email(form_data.email.lower(), db=db)
             if email_user:
                 raise HTTPException(
@@ -607,15 +607,22 @@ async def update_user_by_id(
             hashed = get_password_hash(form_data.password)
             Auths.update_user_password_by_id(user_id, hashed, db=db)
 
-        Auths.update_email_by_id(user_id, form_data.email.lower(), db=db)
-        updated_user = Users.update_user_by_id(
-            user_id,
-            {
+        if form_data.email is not None:
+            Auths.update_email_by_id(user_id, form_data.email.lower(), db=db)
+
+        update_data = {
+            k: v
+            for k, v in {
                 'role': form_data.role,
                 'name': form_data.name,
-                'email': form_data.email.lower(),
+                'email': form_data.email.lower() if form_data.email is not None else None,
                 'profile_image_url': form_data.profile_image_url,
-            },
+            }.items()
+            if v is not None
+        }
+        updated_user = Users.update_user_by_id(
+            user_id,
+            update_data,
             db=db,
         )
 
