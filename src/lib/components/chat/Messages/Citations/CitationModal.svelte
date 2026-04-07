@@ -228,7 +228,7 @@
 									rawContent.length > CONTENT_PREVIEW_LIMIT &&
 									!expandedDocs.has(documentIdx)}
 								{#if $settings?.renderMarkdownInPreviews ?? true}
-									<div class="text-sm prose dark:prose-invert max-w-full">
+									<div class="text-sm prose dark:prose-invert max-w-full [&_hr]:border-gray-300 [&_hr]:dark:border-gray-600 [&_hr]:my-4">
 										<Markdown
 											content={isTruncated
 												? rawContent.slice(0, CONTENT_PREVIEW_LIMIT)
