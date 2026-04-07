@@ -255,3 +255,47 @@ def filter_allowed_access_grants(
         access_grants = strip_user_access_grants(access_grants)
 
     return access_grants
+
+
+def check_model_access(
+    user: UserModel,
+    model_info,
+    bypass_filter: bool = False,
+) -> None:
+    """
+    Enforce per-model read access for the given user.
+
+    Raises HTTPException(403) if the user is not authorized.
+    Does nothing if bypass_filter is True.
+
+    Args:
+        user: The authenticated user.
+        model_info: The model record from Models.get_model_by_id(),
+                    or None if the model is not registered.
+        bypass_filter: If True, skip all access checks (used by
+                       internal callers and BYPASS_MODEL_ACCESS_CONTROL).
+    """
+    from fastapi import HTTPException
+
+    if bypass_filter:
+        return
+
+    if model_info:
+        if user.role == 'user':
+            from open_webui.models.access_grants import AccessGrants
+
+            user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
+            if not (
+                user.id == model_info.user_id
+                or AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type='model',
+                    resource_id=model_info.id,
+                    permission='read',
+                    user_group_ids=user_group_ids,
+                )
+            ):
+                raise HTTPException(status_code=403, detail='Model not found')
+    else:
+        if user.role != 'admin':
+            raise HTTPException(status_code=403, detail='Model not found')

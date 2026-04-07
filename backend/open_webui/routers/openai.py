@@ -28,6 +28,7 @@ from open_webui.internal.db import get_session
 from open_webui.models.models import Models
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.groups import Groups
+from open_webui.utils.access_control import has_connection_access, check_model_access
 from open_webui.config import (
     CACHE_DIR,
 )
@@ -1044,29 +1045,9 @@ async def generate_chat_completion(
             if not bypass_system_prompt:
                 payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
-        # Check if user has access to the model
-        if not bypass_filter and user.role == 'user':
-            user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
-            if not (
-                user.id == model_info.user_id
-                or AccessGrants.has_access(
-                    user_id=user.id,
-                    resource_type='model',
-                    resource_id=model_info.id,
-                    permission='read',
-                    user_group_ids=user_group_ids,
-                )
-            ):
-                raise HTTPException(
-                    status_code=403,
-                    detail='Model not found',
-                )
-    elif not bypass_filter:
-        if user.role != 'admin':
-            raise HTTPException(
-                status_code=403,
-                detail='Model not found',
-            )
+        check_model_access(user, model_info, bypass_filter)
+    else:
+        check_model_access(user, None, bypass_filter)
 
     # Check if model is already in app state cache to avoid expensive get_all_models() call
     models = request.app.state.OPENAI_MODELS
@@ -1330,10 +1311,15 @@ async def responses(
     Routes to the correct upstream backend based on the model field.
     """
     payload = form_data.model_dump(exclude_none=True)
-    body = json.dumps(payload)
 
     idx = 0
     model_id = form_data.model
+
+    # Enforce per-model access control
+    check_model_access(user, Models.get_model_by_id(model_id), BYPASS_MODEL_ACCESS_CONTROL)
+
+    body = json.dumps(payload)
+
     if model_id:
         models = request.app.state.OPENAI_MODELS
         if not models or model_id not in models:
