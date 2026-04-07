@@ -34,7 +34,7 @@ from open_webui.utils.plugin import (
     load_function_module_by_id,
     get_function_module_from_cache,
 )
-from open_webui.utils.tools import get_tools
+from open_webui.utils.tools import get_tools, get_builtin_tools
 
 from open_webui.env import GLOBAL_LOG_LEVEL
 
@@ -266,6 +266,17 @@ async def generate_function_chat_completion(request, form_data, user, models: di
             '__files__': files,
         },
     )
+
+    # Include built-in tools (web_search, image_generation, etc.)
+    builtin_tools = get_builtin_tools(
+        request,
+        extra_params,
+        metadata.get('features', {}),
+        model_info,
+    )
+    for name, tool_dict in builtin_tools.items():
+        if name not in extra_params['__tools__']:
+            extra_params['__tools__'][name] = tool_dict
 
     if model_info:
         if model_info.base_model_id:
