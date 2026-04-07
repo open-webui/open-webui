@@ -9,6 +9,7 @@
 	const i18n = getContext('i18n');
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { shareId } from '$lib/stores';
 	import { copyToClipboard, unescapeHtml } from '$lib/utils';
 
 	import Image from '$lib/components/common/Image.svelte';
@@ -113,7 +114,7 @@
 		{/if}
 	{:else if token.type === 'iframe'}
 		<iframe
-			src="{WEBUI_BASE_URL}/api/v1/files/{token.fileId}/content"
+			src="{WEBUI_BASE_URL}/api/v1/files/{token.fileId}/content{$shareId ? `?share_id=${encodeURIComponent($shareId)}` : ''}"
 			title={token.fileId}
 			width="100%"
 			frameborder="0"

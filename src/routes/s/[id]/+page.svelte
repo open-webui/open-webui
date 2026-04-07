@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { onMount, tick, getContext } from 'svelte';
+	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
 	import dayjs from 'dayjs';
 
-	import { settings, chatId, WEBUI_NAME, models, config } from '$lib/stores';
+	import { settings, chatId, shareId, WEBUI_NAME, models, config } from '$lib/stores';
 	import { convertMessagesToHistory, createMessagesList } from '$lib/utils';
 
 	import { getChatByShareId, cloneSharedChatById } from '$lib/apis/chats';
@@ -86,6 +86,7 @@
 			)
 		);
 		await chatId.set($page.params.id);
+		await shareId.set($page.params.id);
 		chat = await getChatByShareId(localStorage.token, $chatId).catch(async (error) => {
 			await goto('/');
 			return null;
@@ -139,6 +140,10 @@
 			goto(`/c/${res.id}`);
 		}
 	};
+
+	onDestroy(() => {
+		shareId.set(null);
+	});
 </script>
 
 <svelte:head>

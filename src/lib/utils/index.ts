@@ -2,6 +2,8 @@ import type { Writable } from 'svelte/store';
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
 import { WEBUI_BASE_URL } from '$lib/constants';
+import { shareId } from '$lib/stores';
+import { get } from 'svelte/store';
 
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -59,8 +61,11 @@ export const replaceTokens = (content, char, user) => {
 		{ regex: /{{user}}/gi, replacement: user },
 		{
 			regex: /{{VIDEO_FILE_ID_([a-f0-9-]+)}}/gi,
-			replacement: (_, fileId) =>
-				`<video src="${WEBUI_BASE_URL}/api/v1/files/${fileId}/content" controls></video>`
+			replacement: (_, fileId) => {
+				const sid = get(shareId);
+				const query = sid ? `?share_id=${encodeURIComponent(sid)}` : '';
+				return `<video src="${WEBUI_BASE_URL}/api/v1/files/${fileId}/content${query}" controls></video>`;
+			}
 		},
 		{
 			regex: /{{HTML_FILE_ID_([a-f0-9-]+)}}/gi,

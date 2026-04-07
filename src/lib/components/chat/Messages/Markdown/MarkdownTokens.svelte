@@ -10,7 +10,7 @@
 	import { copyToClipboard, unescapeHtml } from '$lib/utils';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
-	import { settings } from '$lib/stores';
+	import { settings, shareId } from '$lib/stores';
 
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
 	import MarkdownInlineTokens from '$lib/components/chat/Messages/Markdown/MarkdownInlineTokens.svelte';
@@ -468,7 +468,7 @@
 		<HtmlToken {id} {token} {onSourceClick} />
 	{:else if token.type === 'iframe'}
 		<iframe
-			src="{WEBUI_BASE_URL}/api/v1/files/{token.fileId}/content"
+			src="{WEBUI_BASE_URL}/api/v1/files/{token.fileId}/content{$shareId ? `?share_id=${encodeURIComponent($shareId)}` : ''}"
 			title={token.fileId}
 			width="100%"
 			frameborder="0"

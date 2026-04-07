@@ -18,6 +18,7 @@ def has_access_to_file(
     file_id: str | None,
     access_type: str,
     user: UserModel,
+    share_id: str | None = None,
     db: Session | None = None,
 ) -> bool:
     """
@@ -25,7 +26,7 @@ def has_access_to_file(
     - Knowledge bases (ownership or access grants)
     - Shared workspace models that attach the file directly
     - Channels the user is a member of
-    - Shared chats
+    - Shared chats (requires valid share_id or chat ownership)
 
     NOTE: This does NOT check direct file ownership — callers should check
     file.user_id == user.id separately before calling this.
@@ -65,11 +66,17 @@ def has_access_to_file(
     if access_type == 'read' and channels:
         return True
 
-    # Check if the file is associated with any chats the user has access to
-    # TODO: Granular access control for chats
+    # Check if the file is associated with any shared chats the user can access.
+    # Access is granted only when:
+    #   1. The caller provides a valid share_id that matches a shared chat
+    #      containing this file (proves they have the share link), OR
+    #   2. The caller owns the shared chat containing this file.
     chats = Chats.get_shared_chats_by_file_id(file_id, db=db)
-    if chats:
-        return True
+    for chat in chats:
+        if chat.user_id == user.id:
+            return True
+        if share_id and access_type == 'read' and chat.share_id == share_id:
+            return True
 
     # Check if the file is directly attached to a shared workspace model
     for model in Models.get_models_by_user_id(user.id, permission=access_type, db=db):

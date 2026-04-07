@@ -412,7 +412,12 @@ async def delete_all_files(user=Depends(get_admin_user), db: Session = Depends(g
 
 
 @router.get('/{id}', response_model=Optional[FileModel])
-async def get_file_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
+async def get_file_by_id(
+    id: str,
+    share_id: Optional[str] = Query(None),
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
     file = Files.get_file_by_id(id, db=db)
 
     if not file:
@@ -421,7 +426,7 @@ async def get_file_by_id(id: str, user=Depends(get_verified_user), db: Session =
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if file.user_id == user.id or user.role == 'admin' or has_access_to_file(id, 'read', user, db=db):
+    if file.user_id == user.id or user.role == 'admin' or has_access_to_file(id, 'read', user, share_id=share_id, db=db):
         return file
     else:
         raise HTTPException(
@@ -434,6 +439,7 @@ async def get_file_by_id(id: str, user=Depends(get_verified_user), db: Session =
 async def get_file_process_status(
     id: str,
     stream: bool = Query(False),
+    share_id: Optional[str] = Query(None),
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
@@ -445,7 +451,7 @@ async def get_file_process_status(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if file.user_id == user.id or user.role == 'admin' or has_access_to_file(id, 'read', user, db=db):
+    if file.user_id == user.id or user.role == 'admin' or has_access_to_file(id, 'read', user, share_id=share_id, db=db):
         if stream:
             MAX_FILE_PROCESSING_DURATION = 3600 * 2
 
@@ -495,7 +501,12 @@ async def get_file_process_status(
 
 
 @router.get('/{id}/data/content')
-async def get_file_data_content_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
+async def get_file_data_content_by_id(
+    id: str,
+    share_id: Optional[str] = Query(None),
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
     file = Files.get_file_by_id(id, db=db)
 
     if not file:
@@ -504,7 +515,7 @@ async def get_file_data_content_by_id(id: str, user=Depends(get_verified_user), 
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if file.user_id == user.id or user.role == 'admin' or has_access_to_file(id, 'read', user, db=db):
+    if file.user_id == user.id or user.role == 'admin' or has_access_to_file(id, 'read', user, share_id=share_id, db=db):
         return {'content': file.data.get('content', '')}
     else:
         raise HTTPException(
@@ -587,6 +598,7 @@ async def get_file_content_by_id(
     id: str,
     user=Depends(get_verified_user),
     attachment: bool = Query(False),
+    share_id: Optional[str] = Query(None),
     db: Session = Depends(get_session),
 ):
     file = Files.get_file_by_id(id, db=db)
@@ -597,7 +609,7 @@ async def get_file_content_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if file.user_id == user.id or user.role == 'admin' or has_access_to_file(id, 'read', user, db=db):
+    if file.user_id == user.id or user.role == 'admin' or has_access_to_file(id, 'read', user, share_id=share_id, db=db):
         try:
             file_path = Storage.get_file(file.path)
             file_path = Path(file_path)
@@ -646,7 +658,12 @@ async def get_file_content_by_id(
 
 
 @router.get('/{id}/content/html')
-async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
+async def get_html_file_content_by_id(
+    id: str,
+    share_id: Optional[str] = Query(None),
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
     file = Files.get_file_by_id(id, db=db)
 
     if not file:
@@ -662,7 +679,7 @@ async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user), 
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if file.user_id == user.id or user.role == 'admin' or has_access_to_file(id, 'read', user, db=db):
+    if file.user_id == user.id or user.role == 'admin' or has_access_to_file(id, 'read', user, share_id=share_id, db=db):
         try:
             file_path = Storage.get_file(file.path)
             file_path = Path(file_path)
@@ -693,7 +710,12 @@ async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user), 
 
 
 @router.get('/{id}/content/{file_name}')
-async def get_file_content_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
+async def get_file_content_by_id(
+    id: str,
+    share_id: Optional[str] = Query(None),
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
     file = Files.get_file_by_id(id, db=db)
 
     if not file:
@@ -702,7 +724,7 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user), db: S
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if file.user_id == user.id or user.role == 'admin' or has_access_to_file(id, 'read', user, db=db):
+    if file.user_id == user.id or user.role == 'admin' or has_access_to_file(id, 'read', user, share_id=share_id, db=db):
         file_path = file.path
 
         # Handle Unicode filenames
