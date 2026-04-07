@@ -523,6 +523,60 @@ def serialize_output(output: list) -> str:
             else:
                 content += f'<details type="code_interpreter" done="false"{output_attr}>\n<summary>Analyzing…</summary>\n{display}\n</details>\n'
 
+        elif item_type == 'web_search_call':
+            # Responses API built-in web search tool output
+            if content and not content.endswith('\n'):
+                content += '\n'
+
+            search_id = html.escape(str(item.get('id') or ''))
+            search_status = item.get('status', 'completed')
+            is_done = search_status != 'in_progress'
+
+            if is_done:
+                summary = 'Search failed' if search_status == 'failed' else 'Searched the web'
+                content += f'<details type="tool_calls" done="true" id="{search_id}" name="web_search" arguments="{{}}" result="">\n<summary>{summary}</summary>\n</details>\n'
+            else:
+                content += f'<details type="tool_calls" done="false" id="{search_id}" name="web_search" arguments="{{}}">\n<summary>Searching the web…</summary>\n</details>\n'
+
+        elif item_type == 'file_search_call':
+            # Responses API built-in file search tool output
+            if content and not content.endswith('\n'):
+                content += '\n'
+
+            search_id = html.escape(str(item.get('id') or ''))
+            search_status = item.get('status', 'completed')
+            is_done = search_status != 'in_progress'
+            queries = item.get('queries') or []
+            queries_json = json.dumps(queries if isinstance(queries, list) else [str(queries)], ensure_ascii=False)
+
+            if is_done:
+                results = item.get('results') or []
+                result_summary = json.dumps(
+                    [r.get('filename', str(r.get('text') or '')[:80]) for r in (results[:5] if isinstance(results, list) else []) if isinstance(r, dict)],
+                    ensure_ascii=False,
+                ) if results else '[]'
+                summary = 'Search failed' if search_status == 'failed' else 'Searched files'
+                content += f'<details type="tool_calls" done="true" id="{search_id}" name="file_search" arguments="{html.escape(queries_json)}" result="{html.escape(result_summary)}">\n<summary>{summary}</summary>\n</details>\n'
+            else:
+                content += f'<details type="tool_calls" done="false" id="{search_id}" name="file_search" arguments="{html.escape(queries_json)}">\n<summary>Searching files…</summary>\n</details>\n'
+
+        elif item_type == 'computer_call':
+            # Responses API built-in computer use tool output
+            if content and not content.endswith('\n'):
+                content += '\n'
+
+            call_id = html.escape(str(item.get('call_id') or item.get('id') or ''))
+            call_status = item.get('status', 'completed')
+            is_done = call_status != 'in_progress'
+            action = item.get('action', {})
+            action_json = json.dumps(action, ensure_ascii=False) if isinstance(action, dict) else json.dumps(str(action))
+
+            if is_done:
+                summary = 'Action failed' if call_status == 'failed' else 'Used computer'
+                content += f'<details type="tool_calls" done="true" id="{call_id}" name="computer_use" arguments="{html.escape(action_json)}" result="">\n<summary>{summary}</summary>\n</details>\n'
+            else:
+                content += f'<details type="tool_calls" done="false" id="{call_id}" name="computer_use" arguments="{html.escape(action_json)}">\n<summary>Using computer…</summary>\n</details>\n'
+
     return content.strip()
 
 
@@ -3481,6 +3535,7 @@ async def streaming_chat_response_handler(response, ctx):
             usage = None
             prior_output = []
             last_response_id = None
+            emitted_citation_urls = set()
 
             def full_output():
                 return prior_output + output if prior_output else output
@@ -3620,6 +3675,47 @@ async def streaming_chat_response_handler(response, ctx):
                                             'data': processed_data,
                                         }
                                     )
+
+                                    # Extract URL citations from Responses API output items
+                                    # (e.g. from OpenAI's built-in web_search tool).
+                                    # Only emit on response.completed to avoid duplicates
+                                    # (response.output_item.done fires per-item, then
+                                    # response.completed includes all items again).
+                                    if data.get('type') == 'response.completed':
+                                        for out_item in data.get('response', {}).get('output', []):
+                                            if not isinstance(out_item, dict):
+                                                continue
+                                            for part in (out_item.get('content') or []):
+                                                if not isinstance(part, dict):
+                                                    continue
+                                                for annotation in (part.get('annotations') or []):
+                                                    if not isinstance(annotation, dict):
+                                                        continue
+                                                    if annotation.get('type') == 'url_citation':
+                                                        cite_url = annotation.get('url', '')
+                                                        if not isinstance(cite_url, str) or not cite_url or cite_url in emitted_citation_urls:
+                                                            continue
+                                                        emitted_citation_urls.add(cite_url)
+                                                        cite_title = annotation.get('title', cite_url)
+                                                        await event_emitter(
+                                                            {
+                                                                'type': 'source',
+                                                                'data': {
+                                                                    'source': {
+                                                                        'name': cite_title,
+                                                                        'url': cite_url,
+                                                                    },
+                                                                    'document': [cite_title],
+                                                                    'metadata': [
+                                                                        {
+                                                                            'source': cite_url,
+                                                                            'name': cite_title,
+                                                                        }
+                                                                    ],
+                                                                },
+                                                            }
+                                                        )
+
                                     continue
                                 else:
                                     choices = data.get('choices', [])
