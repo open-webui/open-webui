@@ -13,14 +13,15 @@ export interface AnalyzeResponse {
 }
 
 /**
- * Call the privacy proxy /analyze endpoint to detect sensitive entities in the message
+ * Call the privacy proxy /analyze endpoint via the OpenWebUI passthrough.
+ * Proxies to: http://privacy-proxy:8080/analyze
  */
 export const analyzeMessageEntities = async (
 	token: string,
 	messageText: string
 ): Promise<EntitySpan[] | null> => {
 	try {
-		const res = await fetch(`${WEBUI_API_BASE_URL}/privacy/analyze`, {
+		const res = await fetch(`${WEBUI_API_BASE_URL}/openai/privacy/analyze`, {
 			method: 'POST',
 			headers: {
 				Accept: 'application/json',

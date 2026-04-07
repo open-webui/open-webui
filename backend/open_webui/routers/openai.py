@@ -279,6 +279,33 @@ async def update_config(request: Request, form_data: OpenAIConfigForm, user=Depe
     }
 
 
+# Privacy Proxy Passthrough Route
+@router.post('/privacy/analyze')
+async def analyze_privacy(request: Request, user=Depends(get_verified_user)):
+    """
+    Passthrough endpoint that forwards privacy analysis requests to the privacy proxy.
+    Proxies to: http://privacy-proxy:8080/analyze
+    """
+    try:
+        body = await request.json()
+        
+        # Forward request to privacy proxy
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                'http://privacy-proxy:8080/analyze',
+                json=body,
+                timeout=aiohttp.ClientTimeout(total=30)
+            ) as resp:
+                response_data = await resp.json()
+                return JSONResponse(status_code=resp.status, content=response_data)
+    except Exception as e:
+        logging.exception(f"Privacy proxy error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail='Privacy proxy service error',
+        )
+
+
 @router.post('/audio/speech')
 async def speech(request: Request, user=Depends(get_verified_user)):
     idx = None
