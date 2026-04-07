@@ -160,6 +160,10 @@
 	let dragged = false;
 	let generationController = null;
 
+	// Privacy highlight animation cursor
+	let cursorIndex = 0;
+	let cursorAnimationTimer: ReturnType<typeof setInterval> | null = null;
+
 	// Force Vite to keep privacy module by referencing the function at module scope
 	let _privacyAnalyzer = analyzeMessageEntities;
 
@@ -652,6 +656,36 @@
 		savedModelIds();
 	}
 
+	// Cursor animation for privacy highlight overlay
+	$: if ($highlightEntities) {
+		cursorIndex = 0;
+		const tokens = createHighlightedTokens($highlightEntities.text, $highlightEntities.entities);
+		const totalTokens = tokens.length;
+
+		// Clear any existing timer
+		if (cursorAnimationTimer) {
+			clearInterval(cursorAnimationTimer);
+		}
+
+		// Start cursor animation
+		cursorAnimationTimer = setInterval(() => {
+			cursorIndex++;
+			if (cursorIndex >= totalTokens) {
+				if (cursorAnimationTimer) {
+					clearInterval(cursorAnimationTimer);
+					cursorAnimationTimer = null;
+				}
+			}
+		}, 40);
+	} else {
+		// Clean up timer when highlight is cleared
+		if (cursorAnimationTimer) {
+			clearInterval(cursorAnimationTimer);
+			cursorAnimationTimer = null;
+		}
+		cursorIndex = 0;
+	}
+
 	const stopAudio = () => {
 		try {
 			speechSynthesis.cancel();
@@ -784,6 +818,13 @@
 				console.error(e);
 			}
 		};
+	});
+
+	// Cleanup cursor animation timer on component destroy
+	onDestroy(() => {
+		if (cursorAnimationTimer) {
+			clearInterval(cursorAnimationTimer);
+		}
 	});
 
 	// File upload functions
@@ -3109,20 +3150,26 @@
 										class="absolute inset-0 pointer-events-none px-4 py-2 text-sm whitespace-pre-wrap break-words overflow-hidden"
 										style="z-index: 9999; opacity: 0.9; line-height: inherit; font-family: inherit;"
 									>
-										{#each createHighlightedTokens($highlightEntities.text, $highlightEntities.entities) as token (token.text + token.start)}
-											{#if token.isEntity}
-												<span
-													class="font-bold"
-													style="color: {token.type === 'PERSON'
-														? '#3b82f6'
-														: token.type === 'EMAIL'
-															? '#ef4444'
-															: token.type === 'ORGANIZATION'
-																? '#10b981'
-																: '#6b7280'};"
-												>
-													{token.text}
-												</span>
+										{#each createHighlightedTokens($highlightEntities.text, $highlightEntities.entities) as token, i (token.text + token.start)}
+											{#if i < cursorIndex}
+												{#if token.isEntity}
+													<span
+														class="font-bold"
+														style="color: {token.type === 'PERSON'
+															? '#3b82f6'
+															: token.type === 'EMAIL'
+																? '#ef4444'
+																: token.type === 'ORGANIZATION'
+																	? '#10b981'
+																	: '#6b7280'};"
+													>
+														{token.text}
+													</span>
+												{:else}
+													<span>{token.text}</span>
+												{/if}
+											{:else if i === cursorIndex}
+												<span class="animate-pulse">|</span>
 											{:else}
 												<span style="color: transparent;">{token.text}</span>
 											{/if}
