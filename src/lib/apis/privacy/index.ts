@@ -21,7 +21,7 @@ export const analyzeMessageEntities = async (
 	messageText: string
 ): Promise<EntitySpan[] | null> => {
 	try {
-		const res = await fetch(`${WEBUI_API_BASE_URL}/openai/privacy/analyze`, {
+		const res = await fetch(`/openai/privacy/analyze`, {
 			method: 'POST',
 			headers: {
 				Accept: 'application/json',
