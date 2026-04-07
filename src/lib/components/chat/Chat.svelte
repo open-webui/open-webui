@@ -1877,52 +1877,52 @@
 		);
 
 		files = [];
-		// Privacy proxy: analyze and animate entity highlighting on overlay (parallel, no await)
-		console.warn('[GARNET ANIMATE] privacyProxy value:', $privacyProxy);
-		if ($privacyProxy) {
-			console.warn('[GARNET ANIMATE] starting analysis');
-			try {
-				const entities = await analyzeMessageEntities(localStorage.token, userPrompt);
-				console.warn('[GARNET ANIMATE] entities result:', entities);
+		// Fire and forget — don't block the chat request
+		(async () => {
+			console.warn('[GARNET ANIMATE] privacyProxy value:', $privacyProxy);
+			if ($privacyProxy) {
+				console.warn('[GARNET ANIMATE] starting analysis');
+				try {
+					const entities = await analyzeMessageEntities(localStorage.token, userPrompt);
+					console.warn('[GARNET ANIMATE] entities result:', entities);
 
-				if (entities && entities.length > 0) {
-					// Create temporary overlay element positioned over the input
-					const inputElement = document.querySelector('#chat-input') as HTMLElement;
-					console.warn('[GARNET ANIMATE] inputElement:', inputElement);
+					if (entities && entities.length > 0) {
+						// Create temporary overlay element positioned over the input
+						const inputElement = document.querySelector('#chat-input') as HTMLElement;
+						console.warn('[GARNET ANIMATE] inputElement:', inputElement);
 
-					if (inputElement) {
-						// Create overlay div with a copy of the text
-						const overlay = document.createElement('div');
-						overlay.textContent = userPrompt;
-						overlay.style.position = 'absolute';
-						overlay.style.top = inputElement.offsetTop + 'px';
-						overlay.style.left = inputElement.offsetLeft + 'px';
-						overlay.style.width = inputElement.offsetWidth + 'px';
-						overlay.style.height = inputElement.offsetHeight + 'px';
-						overlay.style.padding = window.getComputedStyle(inputElement).padding;
-						overlay.style.fontSize = window.getComputedStyle(inputElement).fontSize;
-						overlay.style.fontFamily = window.getComputedStyle(inputElement).fontFamily;
-						overlay.style.lineHeight = window.getComputedStyle(inputElement).lineHeight;
-						overlay.style.whiteSpace = 'pre-wrap';
-						overlay.style.wordWrap = 'break-word';
-						overlay.style.pointerEvents = 'none';
-						overlay.style.zIndex = '9999';
-						overlay.style.backgroundColor = 'transparent';
-						overlay.style.color = 'transparent';
+						if (inputElement) {
+							// Create overlay div with a copy of the text
+							const overlay = document.createElement('div');
+							overlay.textContent = userPrompt;
+							overlay.style.position = 'absolute';
+							overlay.style.top = inputElement.offsetTop + 'px';
+							overlay.style.left = inputElement.offsetLeft + 'px';
+							overlay.style.width = inputElement.offsetWidth + 'px';
+							overlay.style.height = inputElement.offsetHeight + 'px';
+							overlay.style.padding = window.getComputedStyle(inputElement).padding;
+							overlay.style.fontSize = window.getComputedStyle(inputElement).fontSize;
+							overlay.style.fontFamily = window.getComputedStyle(inputElement).fontFamily;
+							overlay.style.lineHeight = window.getComputedStyle(inputElement).lineHeight;
+							overlay.style.whiteSpace = 'pre-wrap';
+							overlay.style.wordWrap = 'break-word';
+							overlay.style.pointerEvents = 'none';
+							overlay.style.zIndex = '9999';
+							overlay.style.backgroundColor = 'transparent';
+							overlay.style.color = 'transparent';
 
-						inputElement.parentElement?.appendChild(overlay);
+							inputElement.parentElement?.appendChild(overlay);
 
-						// Fire animation without awaiting - runs in parallel
-						animateEntityHighlighting(overlay, userPrompt, entities).then(() => {
+							// Animate on the overlay
+							await animateEntityHighlighting(overlay, userPrompt, entities);
 							overlay.remove();
-						});
+						}
 					}
+				} catch (error) {
+					console.error('Privacy proxy analysis error:', error);
 				}
-			} catch (error) {
-				console.error('Privacy proxy analysis error:', error);
-				// Continue with sending message even if analysis fails
 			}
-		}
+		})();
 
 		messageInput?.setText('');
 
