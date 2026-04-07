@@ -3150,38 +3150,6 @@
 									}}
 								/>
 
-								{#if $highlightEntities}
-									<div
-										class="absolute inset-0 pointer-events-none px-4 py-2 text-sm whitespace-pre-wrap break-words overflow-hidden"
-										style="z-index: 9999; opacity: 0.9; line-height: inherit; font-family: inherit;"
-									>
-										{#each createHighlightedTokens($highlightEntities.text, $highlightEntities.entities) as token, i (token.text + token.start)}
-											{#if i < $cursorIndex}
-												{#if token.isEntity}
-													<span
-														class="font-bold"
-														style="color: {token.type === 'PERSON'
-															? '#3b82f6'
-															: token.type === 'EMAIL'
-																? '#ef4444'
-																: token.type === 'ORGANIZATION'
-																	? '#10b981'
-																	: '#6b7280'};"
-													>
-														{token.text}
-													</span>
-												{:else}
-													<span>{token.text}</span>
-												{/if}
-											{:else if i === $cursorIndex}
-												<span class="animate-pulse">|</span>
-											{:else}
-												<span style="color: transparent;">{token.text}</span>
-											{/if}
-										{/each}
-									</div>
-								{/if}
-
 								<div
 									class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
 								>
@@ -3258,6 +3226,38 @@
 			<div class="m-auto">
 				<Spinner className="size-5" />
 			</div>
+		</div>
+	{/if}
+
+	{#if $highlightEntities}
+		<div
+			class="fixed pointer-events-none text-sm whitespace-pre-wrap break-words rounded"
+			style="bottom: 80px; left: 50%; transform: translateX(-50%); width: 600px; z-index: 9999; background: rgba(0,0,0,0.8); color: white; padding: 12px; border-radius: 8px; max-height: 120px; overflow-y-auto; font-family: monospace; line-height: 1.5;"
+		>
+			{#each createHighlightedTokens($highlightEntities.text, $highlightEntities.entities) as token, i (token.text + token.start)}
+				{#if i < $cursorIndex}
+					{#if token.isEntity}
+						<span
+							class="font-bold"
+							style="color: {token.type === 'PERSON'
+								? '#3b82f6'
+								: token.type === 'EMAIL'
+									? '#ef4444'
+									: token.type === 'ORGANIZATION'
+										? '#10b981'
+										: '#6b7280'};"
+						>
+							{token.text}
+						</span>
+					{:else}
+						<span style="color: #ccc;">{token.text}</span>
+					{/if}
+				{:else if i === $cursorIndex}
+					<span class="animate-pulse text-white">|</span>
+				{:else}
+					<span style="color: #666;">{token.text}</span>
+				{/if}
+			{/each}
 		</div>
 	{/if}
 </div>
