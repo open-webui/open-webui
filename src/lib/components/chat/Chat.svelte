@@ -1923,6 +1923,7 @@
 		files = [];
 
 		// Fire and forget — analyze entities and set store without blocking chat request
+		console.warn('[GARNET] reached analyze block');
 		if ($privacyProxy) {
 			analyzeMessageEntities(localStorage.token, userPrompt).then((entities) => {
 				if (entities && entities.length > 0) {
