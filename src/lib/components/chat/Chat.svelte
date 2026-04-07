@@ -93,7 +93,8 @@
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { getFunctions } from '$lib/apis/functions';
 	import { updateFolderById } from '$lib/apis/folders';
-	import { analyzeMessageEntities, type EntitySpan } from '$lib/apis/privacy';
+	import { analyzeMessageEntities } from '$lib/apis/privacy';
+	import type { EntitySpan } from '$lib/apis/privacy';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
@@ -157,6 +158,9 @@
 	let generating = false;
 	let dragged = false;
 	let generationController = null;
+
+	// Force Vite to keep privacy module by referencing the function at module scope
+	let _privacyAnalyzer = analyzeMessageEntities;
 
 	let chat = null;
 	let tags = [];
