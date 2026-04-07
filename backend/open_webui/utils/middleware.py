@@ -1454,6 +1454,8 @@ async def chat_web_search_handler(request: Request, form_data: dict, extra_param
             },
             user,
         )
+        if not isinstance(res, dict):
+            raise Exception('Invalid query generation response')
 
         response = res['choices'][0]['message']['content']
 
@@ -1890,6 +1892,8 @@ async def chat_completion_files_handler(
                     },
                     user,
                 )
+                if not isinstance(queries_response, dict):
+                    raise Exception('Invalid query generation response')
                 queries_response = queries_response['choices'][0]['message']['content']
 
                 try:

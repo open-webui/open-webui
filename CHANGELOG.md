@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- 🛠️ **Query generation error response handling.** Added `isinstance(res, dict)` guard to `generate_queries` callers in the file retrieval and web search handlers, matching the existing pattern used by `generate_follow_ups` and `generate_title`. Prevents a `TypeError` crash when `generate_queries` returns a `JSONResponse` error instead of a dict.
+
 ## [0.8.12] - 2026-03-26
 
 ### Added
