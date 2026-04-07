@@ -47,8 +47,7 @@
 		showFileNavPath,
 		showFileNavDir,
 		chatRequestQueues,
-        privacyProxy,
-		highlightEntities
+        privacyProxy
 	} from '$lib/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -159,10 +158,6 @@
 	let generating = false;
 	let dragged = false;
 	let generationController = null;
-
-	// Privacy highlight animation cursor (writable store for reactivity)
-	const cursorIndex = writable(0);
-	let cursorAnimationTimer: ReturnType<typeof setInterval> | null = null;
 
 	// Force Vite to keep privacy module by referencing the function at module scope
 	let _privacyAnalyzer = analyzeMessageEntities;
@@ -656,37 +651,6 @@
 		savedModelIds();
 	}
 
-	// Cursor animation for privacy highlight overlay
-	$: if ($highlightEntities) {
-		cursorIndex.set(0);
-		const tokens = createHighlightedTokens($highlightEntities.text, $highlightEntities.entities);
-		const totalTokens = tokens.length;
-
-		// Clear any existing timer
-		if (cursorAnimationTimer) {
-			clearInterval(cursorAnimationTimer);
-		}
-
-		// Start cursor animation
-		cursorAnimationTimer = setInterval(() => {
-			cursorIndex.update((n) => n + 1);
-			const current = $cursorIndex;
-			if (current >= totalTokens) {
-				if (cursorAnimationTimer) {
-					clearInterval(cursorAnimationTimer);
-					cursorAnimationTimer = null;
-				}
-			}
-		}, 40);
-	} else {
-		// Clean up timer when highlight is cleared
-		if (cursorAnimationTimer) {
-			clearInterval(cursorAnimationTimer);
-			cursorAnimationTimer = null;
-		}
-		cursorIndex.set(0);
-	}
-
 	const stopAudio = () => {
 		try {
 			speechSynthesis.cancel();
@@ -819,13 +783,6 @@
 				console.error(e);
 			}
 		};
-	});
-
-	// Cleanup cursor animation timer on component destroy
-	onDestroy(() => {
-		if (cursorAnimationTimer) {
-			clearInterval(cursorAnimationTimer);
-		}
 	});
 
 	// File upload functions
@@ -1922,20 +1879,6 @@
 
 		files = [];
 
-		// Fire and forget — analyze entities and set store without blocking chat request
-		console.warn('[GARNET] reached analyze block');
-		if ($privacyProxy) {
-			analyzeMessageEntities(localStorage.token, userPrompt).then((entities) => {
-				console.warn('[GARNET] analyze resolved:', entities);
-				if (entities && entities.length > 0) {
-					console.warn('[GARNET] setting store');
-					highlightEntities.set({ text: userPrompt, entities });
-					// Auto-clear after 3 seconds
-					setTimeout(() => highlightEntities.set(null), 3000);
-				}
-			}).catch((e) => console.warn('[GARNET] analyze error:', e));
-		}
-
 		messageInput?.setText('');
 
 		// Create user message
@@ -1951,7 +1894,7 @@
 			models: selectedModels
 		};
 
-		// Add message to history and Set currentId to messageId
+		// Add message to history and render it
 		history.messages[userMessageId] = userMessage;
 		history.currentId = userMessageId;
 
@@ -1966,6 +1909,45 @@
 
 		saveSessionSelectedModels();
 
+		await tick();
+
+		// Animate on rendered bubble if private mode
+		if ($privacyProxy) {
+			const entities = await analyzeMessageEntities(localStorage.token, userPrompt);
+			if (entities && entities.length > 0) {
+				const bubble = document.getElementById(`message-${userMessageId}`);
+				if (bubble) {
+					const tokens = userPrompt.split(/(\s+)/);
+					let pos = 0;
+					const spans = tokens.map((token) => {
+						const start = pos;
+						const end = pos + token.length;
+						pos = end;
+						const entity = entities.find((e) => start < e.end && end > e.start);
+						return { token, entity };
+					});
+					bubble.innerHTML = spans
+						.map((s) => `<span style="opacity:0.2">${s.token}</span>`)
+						.join('');
+					for (let i = 0; i < spans.length; i++) {
+						bubble.children[i].style.opacity = '1';
+						if (spans[i].entity) {
+							const color =
+								spans[i].entity.entity_type === 'PERSON'
+									? '#3b82f6'
+									: spans[i].entity.entity_type === 'EMAIL'
+										? '#ef4444'
+										: '#22c55e';
+							bubble.children[i].style.color = color;
+							bubble.children[i].style.fontWeight = 'bold';
+						}
+						await new Promise((r) => setTimeout(r, 40));
+					}
+				}
+			}
+		}
+
+		// Now send to backend
 		await sendMessage(history, userMessageId, { newChat: true });
 	};
 
@@ -2564,50 +2546,6 @@
 
 			animateNextToken();
 		});
-	};
-
-	const createHighlightedTokens = (text: string, entities: any[]) => {
-		// Create an array of token objects with metadata for rendering
-		const tokens: Array<{ text: string; start: number; end: number; isEntity: boolean; type?: string }> = [];
-		let currentPos = 0;
-
-		// Sort entities by start position
-		const sortedEntities = [...entities].sort((a, b) => a.start - b.start);
-
-		for (const entity of sortedEntities) {
-			// Add text before this entity (non-highlighted)
-			if (currentPos < entity.start) {
-				tokens.push({
-					text: text.substring(currentPos, entity.start),
-					start: currentPos,
-					end: entity.start,
-					isEntity: false
-				});
-			}
-
-			// Add the entity (highlighted)
-			tokens.push({
-				text: text.substring(entity.start, entity.end),
-				start: entity.start,
-				end: entity.end,
-				isEntity: true,
-				type: entity.entity_type
-			});
-
-			currentPos = entity.end;
-		}
-
-		// Add remaining text after last entity
-		if (currentPos < text.length) {
-			tokens.push({
-				text: text.substring(currentPos),
-				start: currentPos,
-				end: text.length,
-				isEntity: false
-			});
-		}
-
-		return tokens.length > 0 ? tokens : [{ text, start: 0, end: text.length, isEntity: false }];
 	};
 
 	const stopResponse = async () => {
@@ -3226,38 +3164,6 @@
 			<div class="m-auto">
 				<Spinner className="size-5" />
 			</div>
-		</div>
-	{/if}
-
-	{#if $highlightEntities}
-		<div
-			class="fixed pointer-events-none text-sm whitespace-pre-wrap break-words rounded"
-			style="bottom: 80px; left: 50%; transform: translateX(-50%); width: 600px; z-index: 9999; background: rgba(0,0,0,0.8); color: white; padding: 12px; border-radius: 8px; max-height: 120px; overflow-y-auto; font-family: monospace; line-height: 1.5;"
-		>
-			{#each createHighlightedTokens($highlightEntities.text, $highlightEntities.entities) as token, i (token.text + token.start)}
-				{#if i < $cursorIndex}
-					{#if token.isEntity}
-						<span
-							class="font-bold"
-							style="color: {token.type === 'PERSON'
-								? '#3b82f6'
-								: token.type === 'EMAIL'
-									? '#ef4444'
-									: token.type === 'ORGANIZATION'
-										? '#10b981'
-										: '#6b7280'};"
-						>
-							{token.text}
-						</span>
-					{:else}
-						<span style="color: #ccc;">{token.text}</span>
-					{/if}
-				{:else if i === $cursorIndex}
-					<span class="animate-pulse text-white">|</span>
-				{:else}
-					<span style="color: #666;">{token.text}</span>
-				{/if}
-			{/each}
 		</div>
 	{/if}
 </div>
