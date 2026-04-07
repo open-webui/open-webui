@@ -149,7 +149,7 @@ async def calculate_timestamp(
 
 async def search_web(
     query: str,
-    count: int = 5,
+    count: Optional[int] = None,
     __request__: Request = None,
     __user__: dict = None,
 ) -> str:
@@ -158,7 +158,7 @@ async def search_web(
     or topics not covered in internal documents.
 
     :param query: The search query to look up
-    :param count: Number of results to return (default: 5)
+    :param count: Number of results to return (default: admin-configured value)
     :return: JSON with search results containing title, link, and snippet for each result
     """
     if __request__ is None:
@@ -168,12 +168,9 @@ async def search_web(
         engine = __request__.app.state.config.WEB_SEARCH_ENGINE
         user = UserModel(**__user__) if __user__ else None
 
-        # Enforce maximum result count from config to prevent abuse
-        count = (
-            count
-            if count < __request__.app.state.config.WEB_SEARCH_RESULT_COUNT
-            else __request__.app.state.config.WEB_SEARCH_RESULT_COUNT
-        )
+        configured = __request__.app.state.config.WEB_SEARCH_RESULT_COUNT
+        max_count = 5 if configured is None else configured
+        count = max(1, min(count, max_count)) if count is not None else max_count
 
         results = await asyncio.to_thread(_search_web, __request__, engine, query, user)
 
