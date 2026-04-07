@@ -1109,7 +1109,7 @@ def split_audio(file_path, max_bytes, format='mp3', bitrate='32k'):
     while start < duration_ms:
         end = min(start + approx_chunk_ms, duration_ms)
         chunk = audio[start:end]
-        chunk_path = f'{base}_chunk_{i}.{format}'
+        chunk_path = os.path.join(os.path.dirname(base), f'{os.path.basename(base)}_chunk_{i}.{format}')
         chunk.export(chunk_path, format=format, bitrate=bitrate)
 
         # Reduce chunk duration if still too large
