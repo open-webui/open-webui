@@ -1913,6 +1913,7 @@
 			console.warn('[GARNET ANIMATE] starting analysis');
 			try {
 				const entities = await analyzeMessageEntities(localStorage.token, userPrompt);
+				console.warn('[GARNET ANIMATE] entities result:', entities);
 
 				if (entities && entities.length > 0) {
 					// Find the user message element in the DOM
