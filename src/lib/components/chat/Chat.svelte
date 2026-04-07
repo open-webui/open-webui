@@ -1921,6 +1921,8 @@
 						`[id="message-${userMessageId}"] [class*="markdown-prose"]`
 					) as HTMLElement;
 
+					console.warn('[GARNET ANIMATE] messageElement:', messageElement);
+
 					if (messageElement) {
 						// Run the animation
 						await animateEntityHighlighting(
