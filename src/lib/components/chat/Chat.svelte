@@ -1877,6 +1877,34 @@
 		);
 
 		files = [];
+		// Privacy proxy: analyze and animate entity highlighting on input BEFORE clearing
+		console.warn('[GARNET ANIMATE] privacyProxy value:', $privacyProxy);
+		if ($privacyProxy) {
+			console.warn('[GARNET ANIMATE] starting analysis');
+			try {
+				const entities = await analyzeMessageEntities(localStorage.token, userPrompt);
+				console.warn('[GARNET ANIMATE] entities result:', entities);
+
+				if (entities && entities.length > 0) {
+					// Animate on the visible textarea content before it's cleared
+					const inputElement = document.querySelector('[class*="cm-editor"]') as HTMLElement;
+					console.warn('[GARNET ANIMATE] inputElement:', inputElement);
+
+					if (inputElement) {
+						// Run the animation on the input field
+						await animateEntityHighlighting(
+							inputElement,
+							userPrompt,
+							entities
+						);
+					}
+				}
+			} catch (error) {
+				console.error('Privacy proxy analysis error:', error);
+				// Continue with sending message even if analysis fails
+			}
+		}
+
 		messageInput?.setText('');
 
 		// Create user message
@@ -1906,37 +1934,6 @@
 		chatInput?.focus();
 
 		saveSessionSelectedModels();
-
-		// Privacy proxy: analyze and animate entity highlighting
-		console.warn('[GARNET ANIMATE] privacyProxy value:', $privacyProxy);
-		if ($privacyProxy) {
-			console.warn('[GARNET ANIMATE] starting analysis');
-			try {
-				const entities = await analyzeMessageEntities(localStorage.token, userPrompt);
-				console.warn('[GARNET ANIMATE] entities result:', entities);
-
-				if (entities && entities.length > 0) {
-					// Find the user message element in the DOM
-					const messageElement = document.querySelector(
-						`[id="message-${userMessageId}"] [class*="markdown-prose"]`
-					) as HTMLElement;
-
-					console.warn('[GARNET ANIMATE] messageElement:', messageElement);
-
-					if (messageElement) {
-						// Run the animation
-						await animateEntityHighlighting(
-							messageElement,
-							userPrompt,
-							entities
-						);
-					}
-				}
-			} catch (error) {
-				console.error('Privacy proxy analysis error:', error);
-				// Continue with sending message even if analysis fails
-			}
-		}
 
 		await sendMessage(history, userMessageId, { newChat: true });
 	};
