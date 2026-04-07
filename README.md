@@ -1,5 +1,7 @@
 # Open WebUI 👋
 
+[English](./README.md) | [简体中文](./README.zh-CN.md)
+
 ![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/open-webui/open-webui?style=social)
 ![GitHub watchers](https://img.shields.io/github/watchers/open-webui/open-webui?style=social)
