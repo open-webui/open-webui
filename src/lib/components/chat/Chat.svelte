@@ -1926,12 +1926,14 @@
 		console.warn('[GARNET] reached analyze block');
 		if ($privacyProxy) {
 			analyzeMessageEntities(localStorage.token, userPrompt).then((entities) => {
+				console.warn('[GARNET] analyze resolved:', entities);
 				if (entities && entities.length > 0) {
+					console.warn('[GARNET] setting store');
 					highlightEntities.set({ text: userPrompt, entities });
 					// Auto-clear after 3 seconds
 					setTimeout(() => highlightEntities.set(null), 3000);
 				}
-			});
+			}).catch((e) => console.warn('[GARNET] analyze error:', e));
 		}
 
 		messageInput?.setText('');
