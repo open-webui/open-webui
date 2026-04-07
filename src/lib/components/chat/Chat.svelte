@@ -1877,7 +1877,7 @@
 		);
 
 		files = [];
-		// Privacy proxy: analyze and animate entity highlighting on input BEFORE clearing
+		// Privacy proxy: analyze and animate entity highlighting on overlay (parallel, no await)
 		console.warn('[GARNET ANIMATE] privacyProxy value:', $privacyProxy);
 		if ($privacyProxy) {
 			console.warn('[GARNET ANIMATE] starting analysis');
@@ -1886,17 +1886,36 @@
 				console.warn('[GARNET ANIMATE] entities result:', entities);
 
 				if (entities && entities.length > 0) {
-					// Animate on the visible TipTap editor before it's cleared
+					// Create temporary overlay element positioned over the input
 					const inputElement = document.querySelector('#chat-input') as HTMLElement;
 					console.warn('[GARNET ANIMATE] inputElement:', inputElement);
 
 					if (inputElement) {
-						// Run the animation on the input field
-						await animateEntityHighlighting(
-							inputElement,
-							userPrompt,
-							entities
-						);
+						// Create overlay div with a copy of the text
+						const overlay = document.createElement('div');
+						overlay.textContent = userPrompt;
+						overlay.style.position = 'absolute';
+						overlay.style.top = inputElement.offsetTop + 'px';
+						overlay.style.left = inputElement.offsetLeft + 'px';
+						overlay.style.width = inputElement.offsetWidth + 'px';
+						overlay.style.height = inputElement.offsetHeight + 'px';
+						overlay.style.padding = window.getComputedStyle(inputElement).padding;
+						overlay.style.fontSize = window.getComputedStyle(inputElement).fontSize;
+						overlay.style.fontFamily = window.getComputedStyle(inputElement).fontFamily;
+						overlay.style.lineHeight = window.getComputedStyle(inputElement).lineHeight;
+						overlay.style.whiteSpace = 'pre-wrap';
+						overlay.style.wordWrap = 'break-word';
+						overlay.style.pointerEvents = 'none';
+						overlay.style.zIndex = '9999';
+						overlay.style.backgroundColor = 'transparent';
+						overlay.style.color = 'transparent';
+
+						inputElement.parentElement?.appendChild(overlay);
+
+						// Fire animation without awaiting - runs in parallel
+						animateEntityHighlighting(overlay, userPrompt, entities).then(() => {
+							overlay.remove();
+						});
 					}
 				}
 			} catch (error) {
