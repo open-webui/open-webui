@@ -1886,8 +1886,8 @@
 				console.warn('[GARNET ANIMATE] entities result:', entities);
 
 				if (entities && entities.length > 0) {
-					// Animate on the visible textarea content before it's cleared
-					const inputElement = document.querySelector('[class*="cm-editor"]') as HTMLElement;
+					// Animate on the visible TipTap editor before it's cleared
+					const inputElement = document.querySelector('#chat-input') as HTMLElement;
 					console.warn('[GARNET ANIMATE] inputElement:', inputElement);
 
 					if (inputElement) {
