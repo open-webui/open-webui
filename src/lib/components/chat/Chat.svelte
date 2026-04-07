@@ -10,7 +10,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
-	import { get, type Unsubscriber, type Writable } from 'svelte/store';
+	import { get, type Unsubscriber, type Writable, writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -160,8 +160,8 @@
 	let dragged = false;
 	let generationController = null;
 
-	// Privacy highlight animation cursor
-	let cursorIndex = 0;
+	// Privacy highlight animation cursor (writable store for reactivity)
+	const cursorIndex = writable(0);
 	let cursorAnimationTimer: ReturnType<typeof setInterval> | null = null;
 
 	// Force Vite to keep privacy module by referencing the function at module scope
@@ -658,7 +658,7 @@
 
 	// Cursor animation for privacy highlight overlay
 	$: if ($highlightEntities) {
-		cursorIndex = 0;
+		cursorIndex.set(0);
 		const tokens = createHighlightedTokens($highlightEntities.text, $highlightEntities.entities);
 		const totalTokens = tokens.length;
 
@@ -669,8 +669,9 @@
 
 		// Start cursor animation
 		cursorAnimationTimer = setInterval(() => {
-			cursorIndex++;
-			if (cursorIndex >= totalTokens) {
+			cursorIndex.update((n) => n + 1);
+			const current = $cursorIndex;
+			if (current >= totalTokens) {
 				if (cursorAnimationTimer) {
 					clearInterval(cursorAnimationTimer);
 					cursorAnimationTimer = null;
@@ -683,7 +684,7 @@
 			clearInterval(cursorAnimationTimer);
 			cursorAnimationTimer = null;
 		}
-		cursorIndex = 0;
+		cursorIndex.set(0);
 	}
 
 	const stopAudio = () => {
@@ -3151,7 +3152,7 @@
 										style="z-index: 9999; opacity: 0.9; line-height: inherit; font-family: inherit;"
 									>
 										{#each createHighlightedTokens($highlightEntities.text, $highlightEntities.entities) as token, i (token.text + token.start)}
-											{#if i < cursorIndex}
+											{#if i < $cursorIndex}
 												{#if token.isEntity}
 													<span
 														class="font-bold"
@@ -3168,7 +3169,7 @@
 												{:else}
 													<span>{token.text}</span>
 												{/if}
-											{:else if i === cursorIndex}
+											{:else if i === $cursorIndex}
 												<span class="animate-pulse">|</span>
 											{:else}
 												<span style="color: transparent;">{token.text}</span>
