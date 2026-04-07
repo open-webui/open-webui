@@ -93,6 +93,7 @@
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { getFunctions } from '$lib/apis/functions';
 	import { updateFolderById } from '$lib/apis/folders';
+	import { analyzeMessageEntities, type EntitySpan } from '$lib/apis/privacy';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
@@ -2390,6 +2391,118 @@
 		history.messages[responseMessage.id] = responseMessage;
 	};
 
+	/**
+	 * Tokenize message text: split by spaces and map character positions to tokens
+	 */
+	const tokenizeMessage = (text: string) => {
+		const tokens: Array<{ text: string; start: number; end: number }> = [];
+		const words = text.split(/(\s+)/); // Keep spaces
+
+		let charPos = 0;
+		for (const word of words) {
+			if (word === '') continue;
+
+			// Only add non-whitespace tokens
+			if (word.trim()) {
+				tokens.push({
+					text: word,
+					start: charPos,
+					end: charPos + word.length
+				});
+			}
+			charPos += word.length;
+		}
+
+		return tokens;
+	};
+
+	/**
+	 * Get color for entity type
+	 */
+	const getEntityColor = (entityType: string): string => {
+		switch (entityType.toUpperCase()) {
+			case 'PERSON':
+				return '#3b82f6'; // blue
+			case 'EMAIL':
+				return '#ef4444'; // red
+			case 'ORGANIZATION':
+				return '#22c55e'; // green
+			default:
+				return '#f59e0b'; // amber
+		}
+	};
+
+	/**
+	 * Run entity highlighting animation on the user message
+	 */
+	const animateEntityHighlighting = async (
+		messageElement: HTMLElement,
+		messageText: string,
+		entities: EntitySpan[]
+	): Promise<void> => {
+		const tokens = tokenizeMessage(messageText);
+		if (tokens.length === 0) return;
+
+		// Calculate animation parameters
+		const animationDuration = 2000; // 2 seconds total
+		const tokenDuration = animationDuration / tokens.length;
+		const highlightPauseDuration = 200; // how long to hold highlight
+
+		return new Promise((resolve) => {
+			let currentTokenIndex = 0;
+
+			const animateNextToken = () => {
+				if (currentTokenIndex >= tokens.length) {
+					// Animation complete - restore original content
+					messageElement.textContent = messageText;
+					resolve();
+					return;
+				}
+
+				const token = tokens[currentTokenIndex];
+
+				// Find entities that overlap with this token
+				const overlappingEntities = entities.filter(
+					(entity) => entity.start < token.end && entity.end > token.start
+				);
+
+				if (overlappingEntities.length > 0) {
+					// Highlight this token
+					const entity = overlappingEntities[0];
+					const color = getEntityColor(entity.entity_type);
+
+					// Build highlighted content
+					let content = '';
+					for (let i = 0; i < tokens.length; i++) {
+						const t = tokens[i];
+						const isHighlighted = i <= currentTokenIndex;
+						const isSensitive = overlappingEntities.filter((e) => e.start < t.end && e.end > t.start)
+							.length > 0;
+
+						if (isHighlighted && isSensitive) {
+							content += `<span style="font-weight: bold; color: ${color};">${t.text}</span> `;
+						} else {
+							content += `${t.text} `;
+						}
+					}
+
+					messageElement.innerHTML = content.trim();
+
+					// Hold highlight for a moment
+					setTimeout(() => {
+						currentTokenIndex++;
+						animateNextToken();
+					}, tokenDuration + highlightPauseDuration);
+				} else {
+					currentTokenIndex++;
+					animateNextToken();
+				}
+			};
+
+			animateNextToken();
+		});
+	};
+
 	const stopResponse = async () => {
 		if (taskIds) {
 			for (const taskId of taskIds) {
@@ -2453,6 +2566,32 @@
 
 		if (autoScroll) {
 			scrollToBottom();
+		}
+
+		// Privacy proxy: analyze and animate entity highlighting
+		if ($privacyProxy) {
+			try {
+				const analysisResult = await analyzeMessageEntities(localStorage.token, userPrompt);
+
+				if (analysisResult && analysisResult.entity_spans && analysisResult.entity_spans.length > 0) {
+					// Find the user message element in the DOM
+					const messageElement = document.querySelector(
+						`[id="message-${userMessageId}"] [class*="markdown-prose"]`
+					) as HTMLElement;
+
+					if (messageElement) {
+						// Run the animation
+						await animateEntityHighlighting(
+							messageElement,
+							userPrompt,
+							analysisResult.entity_spans
+						);
+					}
+				}
+			} catch (error) {
+				console.error('Privacy proxy analysis error:', error);
+				// Continue with sending message even if analysis fails
+			}
 		}
 
 		await sendMessage(history, userMessageId);
