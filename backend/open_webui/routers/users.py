@@ -607,9 +607,6 @@ async def update_user_by_id(
             hashed = get_password_hash(form_data.password)
             Auths.update_user_password_by_id(user_id, hashed, db=db)
 
-        if form_data.email is not None:
-            Auths.update_email_by_id(user_id, form_data.email.lower(), db=db)
-
         update_data = {
             k: v
             for k, v in {
@@ -620,6 +617,16 @@ async def update_user_by_id(
             }.items()
             if v is not None
         }
+
+        if not update_data and not form_data.password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='At least one field must be provided to update.',
+            )
+
+        if form_data.email is not None:
+            Auths.update_email_by_id(user_id, form_data.email.lower(), db=db)
+
         updated_user = Users.update_user_by_id(
             user_id,
             update_data,
