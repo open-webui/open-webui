@@ -47,7 +47,8 @@
 		showFileNavPath,
 		showFileNavDir,
 		chatRequestQueues,
-        privacyProxy
+        privacyProxy,
+		highlightEntities
 	} from '$lib/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -1877,52 +1878,17 @@
 		);
 
 		files = [];
-		// Fire and forget — don't block the chat request
-		(async () => {
-			console.warn('[GARNET ANIMATE] privacyProxy value:', $privacyProxy);
-			if ($privacyProxy) {
-				console.warn('[GARNET ANIMATE] starting analysis');
-				try {
-					const entities = await analyzeMessageEntities(localStorage.token, userPrompt);
-					console.warn('[GARNET ANIMATE] entities result:', entities);
 
-					if (entities && entities.length > 0) {
-						// Create temporary overlay element positioned over the input
-						const inputElement = document.querySelector('#chat-input') as HTMLElement;
-						console.warn('[GARNET ANIMATE] inputElement:', inputElement);
-
-						if (inputElement) {
-							// Create overlay div with a copy of the text
-							const overlay = document.createElement('div');
-							overlay.textContent = userPrompt;
-							overlay.style.position = 'absolute';
-							overlay.style.top = inputElement.offsetTop + 'px';
-							overlay.style.left = inputElement.offsetLeft + 'px';
-							overlay.style.width = inputElement.offsetWidth + 'px';
-							overlay.style.height = inputElement.offsetHeight + 'px';
-							overlay.style.padding = window.getComputedStyle(inputElement).padding;
-							overlay.style.fontSize = window.getComputedStyle(inputElement).fontSize;
-							overlay.style.fontFamily = window.getComputedStyle(inputElement).fontFamily;
-							overlay.style.lineHeight = window.getComputedStyle(inputElement).lineHeight;
-							overlay.style.whiteSpace = 'pre-wrap';
-							overlay.style.wordWrap = 'break-word';
-							overlay.style.pointerEvents = 'none';
-							overlay.style.zIndex = '9999';
-							overlay.style.backgroundColor = 'transparent';
-							overlay.style.color = 'transparent';
-
-							inputElement.parentElement?.appendChild(overlay);
-
-							// Animate on the overlay
-							await animateEntityHighlighting(overlay, userPrompt, entities);
-							overlay.remove();
-						}
-					}
-				} catch (error) {
-					console.error('Privacy proxy analysis error:', error);
+		// Fire and forget — analyze entities and set store without blocking chat request
+		if ($privacyProxy) {
+			analyzeMessageEntities(localStorage.token, userPrompt).then((entities) => {
+				if (entities && entities.length > 0) {
+					highlightEntities.set({ text: userPrompt, entities });
+					// Auto-clear after 3 seconds
+					setTimeout(() => highlightEntities.set(null), 3000);
 				}
-			}
-		})();
+			});
+		}
 
 		messageInput?.setText('');
 
@@ -2554,6 +2520,50 @@
 		});
 	};
 
+	const createHighlightedTokens = (text: string, entities: any[]) => {
+		// Create an array of token objects with metadata for rendering
+		const tokens: Array<{ text: string; start: number; end: number; isEntity: boolean; type?: string }> = [];
+		let currentPos = 0;
+
+		// Sort entities by start position
+		const sortedEntities = [...entities].sort((a, b) => a.start - b.start);
+
+		for (const entity of sortedEntities) {
+			// Add text before this entity (non-highlighted)
+			if (currentPos < entity.start) {
+				tokens.push({
+					text: text.substring(currentPos, entity.start),
+					start: currentPos,
+					end: entity.start,
+					isEntity: false
+				});
+			}
+
+			// Add the entity (highlighted)
+			tokens.push({
+				text: text.substring(entity.start, entity.end),
+				start: entity.start,
+				end: entity.end,
+				isEntity: true,
+				type: entity.entity_type
+			});
+
+			currentPos = entity.end;
+		}
+
+		// Add remaining text after last entity
+		if (currentPos < text.length) {
+			tokens.push({
+				text: text.substring(currentPos),
+				start: currentPos,
+				end: text.length,
+				isEntity: false
+			});
+		}
+
+		return tokens.length > 0 ? tokens : [{ text, start: 0, end: text.length, isEntity: false }];
+	};
+
 	const stopResponse = async () => {
 		if (taskIds) {
 			for (const taskId of taskIds) {
@@ -3093,6 +3103,32 @@
 										}
 									}}
 								/>
+
+								{#if $highlightEntities}
+									<div
+										class="absolute inset-0 pointer-events-none px-4 py-2 text-sm whitespace-pre-wrap break-words overflow-hidden"
+										style="z-index: 9999; opacity: 0.9; line-height: inherit; font-family: inherit;"
+									>
+										{#each createHighlightedTokens($highlightEntities.text, $highlightEntities.entities) as token (token.text + token.start)}
+											{#if token.isEntity}
+												<span
+													class="font-bold"
+													style="color: {token.type === 'PERSON'
+														? '#3b82f6'
+														: token.type === 'EMAIL'
+															? '#ef4444'
+															: token.type === 'ORGANIZATION'
+																? '#10b981'
+																: '#6b7280'};"
+												>
+													{token.text}
+												</span>
+											{:else}
+												<span style="color: transparent;">{token.text}</span>
+											{/if}
+										{/each}
+									</div>
+								{/if}
 
 								<div
 									class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
