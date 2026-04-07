@@ -1907,6 +1907,34 @@
 
 		saveSessionSelectedModels();
 
+		// Privacy proxy: analyze and animate entity highlighting
+		console.warn('[GARNET ANIMATE] privacyProxy value:', $privacyProxy);
+		if ($privacyProxy) {
+			console.warn('[GARNET ANIMATE] starting analysis');
+			try {
+				const entities = await analyzeMessageEntities(localStorage.token, userPrompt);
+
+				if (entities && entities.length > 0) {
+					// Find the user message element in the DOM
+					const messageElement = document.querySelector(
+						`[id="message-${userMessageId}"] [class*="markdown-prose"]`
+					) as HTMLElement;
+
+					if (messageElement) {
+						// Run the animation
+						await animateEntityHighlighting(
+							messageElement,
+							userPrompt,
+							entities
+						);
+					}
+				}
+			} catch (error) {
+				console.error('Privacy proxy analysis error:', error);
+				// Continue with sending message even if analysis fails
+			}
+		}
+
 		await sendMessage(history, userMessageId, { newChat: true });
 	};
 
@@ -2570,34 +2598,6 @@
 
 		if (autoScroll) {
 			scrollToBottom();
-		}
-
-		// Privacy proxy: analyze and animate entity highlighting
-		console.warn('[GARNET ANIMATE] privacyProxy value:', $privacyProxy);
-		if ($privacyProxy) {
-			console.warn('[GARNET ANIMATE] starting analysis');
-			try {
-				const entities = await analyzeMessageEntities(localStorage.token, userPrompt);
-
-				if (entities && entities.length > 0) {
-					// Find the user message element in the DOM
-					const messageElement = document.querySelector(
-						`[id="message-${userMessageId}"] [class*="markdown-prose"]`
-					) as HTMLElement;
-
-					if (messageElement) {
-						// Run the animation
-						await animateEntityHighlighting(
-							messageElement,
-							userPrompt,
-							entities
-						);
-					}
-				}
-			} catch (error) {
-				console.error('Privacy proxy analysis error:', error);
-				// Continue with sending message even if analysis fails
-			}
 		}
 
 		await sendMessage(history, userMessageId);
