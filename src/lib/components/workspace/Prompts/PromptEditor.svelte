@@ -81,32 +81,36 @@
 		}
 		loading = true;
 
-		if (validateCommandString(command)) {
-			await onSubmit({
-				id: prompt?.id,
-				name,
-				command,
-				content,
-				tags: tags.map((tag) => tag.name),
-				access_grants: accessGrants,
-				commit_message: commitMessage || undefined,
-				is_production: isProduction
-			});
-			showEditModal = false;
-			commitMessage = '';
-			isProduction = true;
-			await loadHistory(true); // Reset and reload
-			// Select the newest version after saving
-			if (history.length > 0) {
-				selectedHistoryEntry = history[0];
+		try {
+			if (validateCommandString(command)) {
+				await onSubmit({
+					id: prompt?.id,
+					name,
+					command,
+					content,
+					tags: tags.map((tag) => tag.name),
+					access_grants: accessGrants,
+					commit_message: commitMessage || undefined,
+					is_production: isProduction
+				});
+				showEditModal = false;
+				commitMessage = '';
+				isProduction = true;
+				await loadHistory(true); // Reset and reload
+				// Select the newest version after saving
+				if (history.length > 0) {
+					selectedHistoryEntry = history[0];
+				}
+			} else {
+				toast.error(
+					$i18n.t('Only alphanumeric characters and hyphens are allowed in the command string.')
+				);
 			}
-		} else {
-			toast.error(
-				$i18n.t('Only alphanumeric characters and hyphens are allowed in the command string.')
-			);
+		} catch (error) {
+			toast.error(`${error}`);
+		} finally {
+			loading = false;
 		}
-
-		loading = false;
 	};
 
 	const validateCommandString = (inputString) => {
