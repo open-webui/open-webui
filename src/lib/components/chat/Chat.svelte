@@ -2573,7 +2573,9 @@
 		}
 
 		// Privacy proxy: analyze and animate entity highlighting
+		console.warn('[GARNET ANIMATE] privacyProxy value:', $privacyProxy);
 		if ($privacyProxy) {
+			console.warn('[GARNET ANIMATE] starting analysis');
 			try {
 				const entities = await analyzeMessageEntities(localStorage.token, userPrompt);
 
