@@ -1,5 +1,9 @@
 from fastapi import FastAPI
 from opentelemetry import trace
+from opentelemetry.propagate import set_global_textmap
+from opentelemetry.propagators.composite import CompositePropagator
+from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
+from opentelemetry.baggage.propagation import W3CBaggagePropagator
 
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
@@ -30,6 +34,11 @@ def setup(app: FastAPI, db_engine: Engine):
     resource = Resource.create(attributes={SERVICE_NAME: OTEL_SERVICE_NAME})
     if ENABLE_OTEL_TRACES:
         trace.set_tracer_provider(TracerProvider(resource=resource))
+        set_global_textmap(
+            CompositePropagator(
+                [TraceContextTextMapPropagator(), W3CBaggagePropagator()]
+            )
+        )
 
         # Add basic auth header only if both username and password are not empty
         headers = []
