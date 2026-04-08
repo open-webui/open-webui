@@ -82,23 +82,28 @@
 		loading = true;
 
 		if (validateCommandString(command)) {
-			await onSubmit({
-				id: prompt?.id,
-				name,
-				command,
-				content,
-				tags: tags.map((tag) => tag.name),
-				access_grants: accessGrants,
-				commit_message: commitMessage || undefined,
-				is_production: isProduction
-			});
-			showEditModal = false;
-			commitMessage = '';
-			isProduction = true;
-			await loadHistory(true); // Reset and reload
-			// Select the newest version after saving
-			if (history.length > 0) {
-				selectedHistoryEntry = history[0];
+			try {
+				await onSubmit({
+					id: prompt?.id,
+					name,
+					command,
+					content,
+					tags: tags.map((tag) => tag.name),
+					access_grants: accessGrants,
+					commit_message: commitMessage || undefined,
+					is_production: isProduction
+				});
+				showEditModal = false;
+				commitMessage = '';
+				isProduction = true;
+				await loadHistory(true); // Reset and reload
+				// Select the newest version after saving
+				if (history.length > 0) {
+					selectedHistoryEntry = history[0];
+				}
+			} catch (e) {
+				console.error('Failed to save prompt:', e);
+				toast.error($i18n.t('Failed to save prompt. Please try again.'));
 			}
 		} else {
 			toast.error(
