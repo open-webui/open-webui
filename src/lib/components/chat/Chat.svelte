@@ -427,6 +427,36 @@
 		}
 	};
 
+	const MAX_TOOL_IMAGES = 3;
+	const STRIP_THRESHOLD_BYTES = 2 * 1024 * 1024;
+
+	const stripToolImageBase64 = (content, keepCount = MAX_TOOL_IMAGES) => {
+		const matches = [];
+		let searchPos = 0;
+		while (true) {
+			const pos = content.indexOf('files="', searchPos);
+			if (pos === -1) break;
+			const valueStart = pos + 7;
+			const valueEnd = content.indexOf('"', valueStart);
+			if (valueEnd === -1) break;
+			const value = content.substring(valueStart, valueEnd);
+			if (value.includes('data:image/')) {
+				matches.push({ valueStart, valueEnd });
+			}
+			searchPos = valueEnd + 1;
+		}
+
+		if (matches.length <= keepCount) return content;
+
+		const cutoff = matches.length - keepCount;
+		let result = content;
+		for (let i = cutoff - 1; i >= 0; i--) {
+			const m = matches[i];
+			result = result.substring(0, m.valueStart) + result.substring(m.valueEnd);
+		}
+		return result;
+	};
+
 	const chatEventHandler = async (event, cb) => {
 		console.log(event);
 
@@ -459,6 +489,9 @@
 					}
 				} else if (type === 'chat:message:delta' || type === 'message') {
 					message.content += data.content;
+					if (message.content.length > STRIP_THRESHOLD_BYTES) {
+						message.content = stripToolImageBase64(message.content);
+					}
 				} else if (type === 'chat:message' || type === 'replace') {
 					message.content = data.content;
 				} else if (type === 'chat:message:files' || type === 'files') {
@@ -1648,6 +1681,10 @@
 				} else {
 					message.content += value;
 
+					if (message.content.length > STRIP_THRESHOLD_BYTES) {
+						message.content = stripToolImageBase64(message.content);
+					}
+
 					if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 						navigator.vibrate(5);
 					}
@@ -1683,6 +1720,9 @@
 		if (content) {
 			// REALTIME_CHAT_SAVE is disabled
 			message.content = content;
+			if (message.content.length > STRIP_THRESHOLD_BYTES) {
+				message.content = stripToolImageBase64(message.content);
+			}
 
 			if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 				navigator.vibrate(5);
@@ -1727,6 +1767,7 @@
 
 		if (done) {
 			message.done = true;
+			message.content = stripToolImageBase64(message.content);
 
 			if ($settings.responseAutoCopy) {
 				copyToClipboard(message.content);

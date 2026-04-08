@@ -18,6 +18,9 @@
 	let taskConfig = {
 		TASK_MODEL: '',
 		TASK_MODEL_EXTERNAL: '',
+		GROUNDING_MODEL: '',
+		GROUNDING_MODEL_WIDTH: 1000,
+		GROUNDING_MODEL_HEIGHT: 1000,
 		ENABLE_TITLE_GENERATION: true,
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
 		ENABLE_FOLLOW_UP_GENERATION: true,
@@ -207,6 +210,81 @@
 						</select>
 					</div>
 				</div>
+
+				<div class=" mb-2 font-medium flex items-center">
+					<div class=" text-xs mr-1">{$i18n.t('Grounding Model')}</div>
+					<Tooltip
+						content={$i18n.t(
+							'A vision model used to locate UI elements on the desktop. Called by the harness model to find precise click targets.'
+						)}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="size-3.5"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+							/>
+						</svg>
+					</Tooltip>
+				</div>
+
+				<div class=" mb-2.5 flex w-full gap-2">
+					<div class="flex-1">
+						<select
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							bind:value={taskConfig.GROUNDING_MODEL}
+							placeholder={$i18n.t('Select a model')}
+							on:change={() => {
+								if (taskConfig.GROUNDING_MODEL) {
+									const model = models.find((m) => m.id === taskConfig.GROUNDING_MODEL);
+									if (model) {
+										taskConfig.GROUNDING_MODEL = model.id;
+									} else {
+										taskConfig.GROUNDING_MODEL = '';
+									}
+								}
+							}}
+						>
+							<option value="" selected>{$i18n.t('Disabled')}</option>
+							{#each models as model}
+								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
+									{model.name}
+									{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
+								</option>
+							{/each}
+						</select>
+					</div>
+				</div>
+
+				{#if taskConfig.GROUNDING_MODEL}
+				<div class="mb-2.5 flex w-full gap-2">
+					<div class="flex-1">
+						<div class=" mb-1 text-xs font-medium">{$i18n.t('Grounding Coordinate Width')}</div>
+						<input
+							type="number"
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							bind:value={taskConfig.GROUNDING_MODEL_WIDTH}
+							min="1"
+						/>
+					</div>
+					<div class="flex-1">
+						<div class=" mb-1 text-xs font-medium">{$i18n.t('Grounding Coordinate Height')}</div>
+						<input
+							type="number"
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							bind:value={taskConfig.GROUNDING_MODEL_HEIGHT}
+							min="1"
+						/>
+					</div>
+				</div>
+				{/if}
 
 				<div class="mb-2.5 flex w-full items-center justify-between">
 					<div class=" self-center text-xs font-medium">

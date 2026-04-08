@@ -44,6 +44,7 @@
 	import PortList from './FileNav/PortList.svelte';
 	import PortPreview from './FileNav/PortPreview.svelte';
 	import XTerminal from './XTerminal.svelte';
+	import DesktopViewer from './FileNav/DesktopViewer.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -55,10 +56,15 @@
 	let terminalExpanded = false;
 	let terminalHeight = 200; // px, default when expanded
 	let isDraggingHandle = false;
+	let isDraggingDesktopHandle = false;
 	let containerEl: HTMLElement;
 	let terminalConnected = false;
 	let terminalConnecting = false;
 	let terminalEnabled = true;
+
+	let desktopEnabled = false;
+	let desktopExpanded = false;
+	let desktopHeight = 300;
 
 	const toggleTerminal = () => {
 		terminalExpanded = !terminalExpanded;
@@ -78,6 +84,28 @@
 
 		const onMouseUp = () => {
 			isDraggingHandle = false;
+			window.removeEventListener('mousemove', onMouseMove);
+			window.removeEventListener('mouseup', onMouseUp);
+		};
+
+		window.addEventListener('mousemove', onMouseMove);
+		window.addEventListener('mouseup', onMouseUp);
+	};
+
+	const onDesktopHandleMouseDown = (e: MouseEvent) => {
+		e.preventDefault();
+		isDraggingDesktopHandle = true;
+		const startY = e.clientY;
+		const startHeight = desktopHeight;
+
+		const onMouseMove = (ev: MouseEvent) => {
+			const delta = startY - ev.clientY;
+			const maxH = containerEl ? containerEl.clientHeight - 100 : 500;
+			desktopHeight = Math.max(80, Math.min(maxH, startHeight + delta));
+		};
+
+		const onMouseUp = () => {
+			isDraggingDesktopHandle = false;
 			window.removeEventListener('mousemove', onMouseMove);
 			window.removeEventListener('mouseup', onMouseUp);
 		};
@@ -249,6 +277,7 @@
 					if (terminalChanged) {
 						const config = await getTerminalConfig(terminal.url, terminal.key);
 						terminalEnabled = config?.features?.terminal !== false;
+						desktopEnabled = config?.features?.desktop === true;
 					}
 
 					const rawCwd = await getCwd(terminal.url, terminal.key, chatId ?? undefined);
@@ -805,6 +834,7 @@
 			// Discover server features on initial mount
 			const config = await getTerminalConfig(terminal.url, terminal.key);
 			terminalEnabled = config?.features?.terminal !== false;
+			desktopEnabled = config?.features?.desktop === true;
 
 			if (chatId || savedPath === '/') {
 				// Fetch session-specific cwd from the server (or global default for new chats)
@@ -1363,6 +1393,63 @@
 			{/if}
 		</div>
 
+		<!-- Desktop bottom panel -->
+		{#if desktopEnabled}
+			<div class="shrink-0 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850">
+				{#if desktopExpanded}
+					<!-- svelte-ignore a11y-no-static-element-interactions -->
+					<div class="relative cursor-row-resize group" on:mousedown={onDesktopHandleMouseDown}>
+						<div
+							class="h-px bg-transparent group-hover:bg-black/10 dark:group-hover:bg-white/10 transition"
+						></div>
+						<div class="absolute inset-x-0 -top-1.5 -bottom-1.5"></div>
+					</div>
+				{/if}
+
+				<button
+					class="w-full flex items-center gap-2 px-3 py-1 mb-0.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
+					on:click={() => (desktopExpanded = !desktopExpanded)}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 20 20"
+						fill="currentColor"
+						class="size-3.5"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M1 4.75C1 3.784 1.784 3 2.75 3h14.5c.966 0 1.75.784 1.75 1.75v7.5A1.75 1.75 0 0 1 17.25 14H2.75A1.75 1.75 0 0 1 1 12.25v-7.5Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h14.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25H2.75ZM4 15h12a1 1 0 0 1 0 2H4a1 1 0 0 1 0-2Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+					<span class="font-medium">{$i18n.t('Desktop')}</span>
+
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 20 20"
+						fill="currentColor"
+						class="size-3 ml-auto transition-transform {desktopExpanded ? 'rotate-180' : ''}"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M9.47 6.47a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 1 1-1.06 1.06L10 8.06l-3.72 3.72a.75.75 0 0 1-1.06-1.06l4.25-4.25Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</button>
+
+				{#if desktopExpanded}
+					<div style="height: {desktopHeight}px" class="min-h-0">
+						<DesktopViewer
+							baseUrl={selectedTerminal?.url ?? ''}
+							apiKey={selectedTerminal?.key ?? ''}
+							overlay={overlay || isDraggingDesktopHandle}
+						/>
+					</div>
+				{/if}
+			</div>
+		{/if}
+
 		<!-- Port detection -->
 		{#if selectedTerminal && !selectedFile && previewPort === null}
 			<div class="shrink-0 border-t border-gray-100 dark:border-gray-800">
@@ -1387,8 +1474,8 @@
 					<div class="relative cursor-row-resize group" on:mousedown={onHandleMouseDown}>
 						<div
 							class="h-px bg-transparent group-hover:bg-black/10 dark:group-hover:bg-white/10 transition"
-						/>
-						<div class="absolute inset-x-0 -top-1.5 -bottom-1.5" />
+						></div>
+						<div class="absolute inset-x-0 -top-1.5 -bottom-1.5"></div>
 					</div>
 				{/if}
 
@@ -1418,7 +1505,7 @@
 								: terminalConnecting
 									? 'bg-yellow-500 animate-pulse'
 									: 'bg-gray-400'}"
-						/>
+						></div>
 					{/if}
 
 					<svg

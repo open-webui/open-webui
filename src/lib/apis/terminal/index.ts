@@ -13,6 +13,7 @@ export type ListeningPort = {
 
 export type TerminalFeatures = {
 	terminal?: boolean;
+	desktop?: boolean;
 };
 
 import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -306,6 +307,68 @@ export const getListeningPorts = async (
 
 export const getPortProxyUrl = (baseUrl: string, port: number, path: string = ''): string => {
 	return `${baseUrl.replace(/\/$/, '')}/proxy/${port}/${path}`;
+};
+
+// ---------------------------------------------------------------------------
+// Remote desktop (noVNC)
+// ---------------------------------------------------------------------------
+
+export type DesktopStatus = {
+	running: boolean;
+	display?: string;
+	vnc_port?: number;
+	novnc_port?: number;
+	screen_width?: number;
+	screen_height?: number;
+};
+
+export const getDesktopStatus = async (
+	baseUrl: string,
+	apiKey: string
+): Promise<DesktopStatus | null> => {
+	const url = `${baseUrl.replace(/\/$/, '')}/desktop`;
+	const res = await fetch(url, {
+		headers: { Authorization: `Bearer ${apiKey}` }
+	}).catch(() => null);
+	if (!res || !res.ok) return null;
+	return res.json().catch(() => null);
+};
+
+export const startDesktop = async (
+	baseUrl: string,
+	apiKey: string
+): Promise<DesktopStatus | null> => {
+	const url = `${baseUrl.replace(/\/$/, '')}/desktop/start`;
+	const res = await fetch(url, {
+		method: 'POST',
+		headers: { Authorization: `Bearer ${apiKey}` }
+	})
+		.then(async (res) => {
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				throw new Error(body?.detail ?? `HTTP ${res.status}`);
+			}
+			return res.json();
+		})
+		.catch((err) => {
+			console.error('open-terminal startDesktop error:', err);
+			return null;
+		});
+	return res;
+};
+
+export const stopDesktop = async (baseUrl: string, apiKey: string): Promise<boolean> => {
+	const url = `${baseUrl.replace(/\/$/, '')}/desktop/stop`;
+	const res = await fetch(url, {
+		method: 'POST',
+		headers: { Authorization: `Bearer ${apiKey}` }
+	}).catch(() => null);
+	return res?.ok ?? false;
+};
+
+export const getDesktopViewerUrl = (baseUrl: string, novncPort: number = 6080): string => {
+	const base = baseUrl.replace(/\/$/, '');
+	return `${base}/proxy/${novncPort}/vnc.html`;
 };
 
 // ---------------------------------------------------------------------------

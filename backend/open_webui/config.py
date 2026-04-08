@@ -1708,6 +1708,24 @@ TASK_MODEL_EXTERNAL = PersistentConfig(
     os.environ.get('TASK_MODEL_EXTERNAL', ''),
 )
 
+GROUNDING_MODEL = PersistentConfig(
+    'GROUNDING_MODEL',
+    'task.model.grounding',
+    os.environ.get('GROUNDING_MODEL', ''),
+)
+
+GROUNDING_MODEL_WIDTH = PersistentConfig(
+    'GROUNDING_MODEL_WIDTH',
+    'task.model.grounding_width',
+    int(os.environ.get('GROUNDING_MODEL_WIDTH', '1000')),
+)
+
+GROUNDING_MODEL_HEIGHT = PersistentConfig(
+    'GROUNDING_MODEL_HEIGHT',
+    'task.model.grounding_height',
+    int(os.environ.get('GROUNDING_MODEL_HEIGHT', '1000')),
+)
+
 TITLE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     'TITLE_GENERATION_PROMPT_TEMPLATE',
     'task.title.prompt_template',
