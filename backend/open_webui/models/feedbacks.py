@@ -89,8 +89,10 @@ class RatingData(BaseModel):
     def clamp_details_rating(cls, v: Optional[dict]) -> Optional[dict]:
         if isinstance(v, dict) and 'rating' in v:
             r = v['rating']
-            if isinstance(r, (int, float)):
+            if isinstance(r, (int, float)) and not isinstance(r, bool):
                 v['rating'] = max(1, min(10, int(r)))
+            else:
+                del v['rating']
         return v
 
 
