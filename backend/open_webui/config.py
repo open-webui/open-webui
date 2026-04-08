@@ -1535,6 +1535,12 @@ FOLDER_MAX_FILE_COUNT = PersistentConfig(
     os.environ.get('FOLDER_MAX_FILE_COUNT', ''),
 )
 
+MAX_CHAT_MODELS = PersistentConfig(
+    'MAX_CHAT_MODELS',
+    'chat.max_models',
+    os.environ.get('MAX_CHAT_MODELS', ''),
+)
+
 ENABLE_CHANNELS = PersistentConfig(
     'ENABLE_CHANNELS',
     'channels.enable',

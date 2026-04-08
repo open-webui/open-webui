@@ -740,6 +740,28 @@
 						</div>
 					{/if}
 
+					<div class="mb-2.5 w-full justify-between">
+						<div class="flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Max Chat Models')}
+							</div>
+						</div>
+
+						<div class="flex mt-2 space-x-2">
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								type="number"
+								min="1"
+								placeholder={$i18n.t('Leave empty for unlimited')}
+								bind:value={adminConfig.MAX_CHAT_MODELS}
+							/>
+						</div>
+
+						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t('Maximum number of models that can be used in a single chat.')}
+						</div>
+					</div>
+
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
 							{$i18n.t('Notes')} ({$i18n.t('Beta')})

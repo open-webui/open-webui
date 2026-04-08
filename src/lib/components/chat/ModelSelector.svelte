@@ -69,7 +69,7 @@
 			</div>
 
 			{#if $user?.role === 'admin' || ($user?.permissions?.chat?.multiple_models ?? true)}
-				{#if selectedModelIdx === 0}
+			{#if selectedModelIdx === 0 && (!$config?.features?.max_chat_models || selectedModels.length < $config.features.max_chat_models)}
 					<div
 						class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
 					>

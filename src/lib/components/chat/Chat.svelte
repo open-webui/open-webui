@@ -1276,6 +1276,11 @@
 					selectedModels = selectedModels.length > 0 ? [selectedModels[0]] : [''];
 				}
 
+				const maxModels = $config?.features?.max_chat_models;
+				if (maxModels && selectedModels.length > maxModels) {
+					selectedModels = selectedModels.slice(0, maxModels);
+				}
+
 				oldSelectedModelIds = structuredClone(selectedModels);
 
 				history =

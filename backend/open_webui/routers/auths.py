@@ -949,6 +949,7 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         'ENABLE_MESSAGE_RATING': request.app.state.config.ENABLE_MESSAGE_RATING,
         'ENABLE_FOLDERS': request.app.state.config.ENABLE_FOLDERS,
         'FOLDER_MAX_FILE_COUNT': request.app.state.config.FOLDER_MAX_FILE_COUNT,
+        'MAX_CHAT_MODELS': request.app.state.config.MAX_CHAT_MODELS,
         'ENABLE_CHANNELS': request.app.state.config.ENABLE_CHANNELS,
         'ENABLE_MEMORIES': request.app.state.config.ENABLE_MEMORIES,
         'ENABLE_NOTES': request.app.state.config.ENABLE_NOTES,
@@ -975,6 +976,7 @@ class AdminConfig(BaseModel):
     ENABLE_MESSAGE_RATING: bool
     ENABLE_FOLDERS: bool
     FOLDER_MAX_FILE_COUNT: Optional[int | str] = None
+    MAX_CHAT_MODELS: Optional[int | str] = None
     ENABLE_CHANNELS: bool
     ENABLE_MEMORIES: bool
     ENABLE_NOTES: bool
@@ -999,6 +1001,9 @@ async def update_admin_config(request: Request, form_data: AdminConfig, user=Dep
     request.app.state.config.ENABLE_FOLDERS = form_data.ENABLE_FOLDERS
     request.app.state.config.FOLDER_MAX_FILE_COUNT = (
         int(form_data.FOLDER_MAX_FILE_COUNT) if form_data.FOLDER_MAX_FILE_COUNT else ''
+    )
+    request.app.state.config.MAX_CHAT_MODELS = (
+        int(form_data.MAX_CHAT_MODELS) if form_data.MAX_CHAT_MODELS else ''
     )
     request.app.state.config.ENABLE_CHANNELS = form_data.ENABLE_CHANNELS
     request.app.state.config.ENABLE_MEMORIES = form_data.ENABLE_MEMORIES
@@ -1041,6 +1046,7 @@ async def update_admin_config(request: Request, form_data: AdminConfig, user=Dep
         'ENABLE_MESSAGE_RATING': request.app.state.config.ENABLE_MESSAGE_RATING,
         'ENABLE_FOLDERS': request.app.state.config.ENABLE_FOLDERS,
         'FOLDER_MAX_FILE_COUNT': request.app.state.config.FOLDER_MAX_FILE_COUNT,
+        'MAX_CHAT_MODELS': request.app.state.config.MAX_CHAT_MODELS,
         'ENABLE_CHANNELS': request.app.state.config.ENABLE_CHANNELS,
         'ENABLE_MEMORIES': request.app.state.config.ENABLE_MEMORIES,
         'ENABLE_NOTES': request.app.state.config.ENABLE_NOTES,
