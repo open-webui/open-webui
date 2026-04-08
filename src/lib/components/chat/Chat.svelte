@@ -1915,30 +1915,11 @@
 		if ($privacyProxy) {
 			const entities = await analyzeMessageEntities(localStorage.token, userPrompt);
 			if (entities && entities.length > 0) {
-				const bubble = document.getElementById(`message-${userMessageId}`);
-				if (bubble) {
-					// create floating overlay on top of bubble, never touch bubble HTML
-					const rect = bubble.getBoundingClientRect();
-					const overlay = document.createElement('div');
-					overlay.style.cssText = `
-						position:fixed;
-						top:${rect.top}px;
-						left:${rect.left}px;
-						width:${rect.width}px;
-						min-height:${rect.height}px;
-						background:#1e1e2e;
-						color:white;
-						font-size:14px;
-						font-family:inherit;
-						padding:12px 16px;
-						border-radius:8px;
-						z-index:9999;
-						white-space:pre-wrap;
-						word-break:break-word;
-						line-height:1.6;
-						box-shadow:0 4px 24px rgba(0,0,0,0.5);
-					`;
-					document.body.appendChild(overlay);
+				const textEl = document.querySelector(
+					`#message-${userMessageId} .prose p, #message-${userMessageId} p`
+				);
+				if (textEl) {
+					const original = textEl.innerHTML;
 
 					// tokenize
 					const tokens = userPrompt.split(/(\s+)/);
@@ -1953,7 +1934,7 @@
 
 					// animate cursor left→right
 					for (let i = 0; i <= marked.length; i++) {
-						overlay.innerHTML = marked
+						textEl.innerHTML = marked
 							.map((t, j) => {
 								if (j < i) {
 									if (t.entity) {
@@ -1978,8 +1959,8 @@
 						await new Promise((r) => setTimeout(r, delay));
 					}
 
-					// remove overlay — bubble HTML was never touched
-					document.body.removeChild(overlay);
+					// restore original
+					textEl.innerHTML = original;
 				}
 			}
 		}
