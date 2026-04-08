@@ -41,7 +41,7 @@ class ReconnectingPostgresqlDatabase(CustomReconnectMixin, PostgresqlDatabase):
     pass
 
 
-def register_connection(db_url):
+def register_connection(db_url: str, connect_args: dict | None = None):
     # Check if using SQLCipher protocol
     if db_url.startswith('sqlite+sqlcipher://'):
         database_password = os.environ.get('DATABASE_PASSWORD')
@@ -71,7 +71,14 @@ def register_connection(db_url):
             # Get the connection details
             connection = parse(db_url, unquote_user=True, unquote_password=True)
 
+            if connect_args:
+                if "sslmode" in connect_args:
+                    connection["sslmode"] = connect_args["sslmode"]
+                if "sslrootcert" in connect_args:
+                    connection["sslrootcert"] = connect_args["sslrootcert"]
+
             # Use our custom database class that supports reconnection
+            log.debug(f"Peewee connection params (password redacted): { {k: ('***' if k == 'password' else v) for k, v in connection.items()} }")
             db = ReconnectingPostgresqlDatabase(**connection)
             db.connect(reuse_if_open=True)
         elif isinstance(db, SqliteDatabase):

@@ -335,6 +335,10 @@ elif DATABASE_TYPE == 'sqlite+sqlcipher' and not os.environ.get('DATABASE_URL'):
 if 'postgres://' in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://')
 
+DATABASE_ENABLE_IAM_TOKEN_AUTH = os.environ.get('DATABASE_ENABLE_IAM_TOKEN_AUTH', 'False').lower() == 'true'
+
+DATABASE_CA_PATH = os.getenv('DATABASE_CA_PATH', None)
+
 DATABASE_SCHEMA = os.environ.get('DATABASE_SCHEMA', None)
 
 DATABASE_POOL_SIZE = os.environ.get('DATABASE_POOL_SIZE', None)

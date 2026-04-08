@@ -3,7 +3,7 @@ from logging.config import fileConfig
 
 from alembic import context
 from open_webui.models.auths import Auth
-from open_webui.env import DATABASE_URL, DATABASE_PASSWORD, LOG_FORMAT
+from open_webui.env import DATABASE_URL, DATABASE_ENABLE_IAM_TOKEN_AUTH, DATABASE_PASSWORD, LOG_FORMAT
 from sqlalchemy import engine_from_config, pool, create_engine
 
 # this is the Alembic Config object, which provides
@@ -93,6 +93,9 @@ def run_migrations_online() -> None:
             creator=create_sqlcipher_connection,
             echo=False,
         )
+    elif DATABASE_ENABLE_IAM_TOKEN_AUTH:
+        from open_webui.internal.db import rds_iam_config
+        connectable = rds_iam_config.engine
     else:
         # Standard database connection (existing logic)
         connectable = engine_from_config(
