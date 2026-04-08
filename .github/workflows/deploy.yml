@@ -1,4 +1,4 @@
-name: Build and Deploy Webui
+name: Build and Deploy Webuigarnet
 
 on:
   push:
@@ -44,3 +44,4 @@ jobs:
             docker compose pull open-webui &&
             docker compose up -d --force-recreate open-webui
           "
+
