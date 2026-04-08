@@ -1924,7 +1924,7 @@
 					// Change 5: inject garnet-blink keyframes into the bubble
 					const bubble = document.getElementById(`message-${userMessageId}`) ?? textEl.parentElement;
 					const style = document.createElement('style');
-					style.textContent = '@keyframes garnet-blink { 50% { opacity: 0; } } .garnet-entity:hover::after { content: attr(data-type); position: absolute; bottom: 100%; left: 0; background: #1a1a1a; color: white; font-size: 11px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; z-index: 50; pointer-events: none; }';
+					style.textContent = '@keyframes garnet-blink { 50% { opacity: 0; } }';
 					document.head.appendChild(style);
 
 					// tokenize
@@ -1958,7 +1958,7 @@
 								if (j < i) {
 									if (t.entity) {
 										const color = colorMap[t.entity.type] || '#f59e0b';
-										return `<span style="color:${color};transition:all 0.2s ease;position:relative;cursor:pointer" class="garnet-entity" data-type="${t.entity.type}">${t.token}</span>`;
+										return `<span style="color:${color};transition:all 0.2s ease;position:relative" title="${t.entity.type}">${t.token}</span>`;
 									}
 									return `<span style="color:#e2e8f0">${t.token}</span>`;
 								} else if (j === i) {
@@ -1974,7 +1974,7 @@
 					console.warn('[garnet] entity spans HTML:', textEl.innerHTML);
 
 					// pause so users can hover colored words and see entity type tooltips
-					await new Promise((r) => setTimeout(r, 1500));
+					await new Promise((r) => setTimeout(r, 3000));
 
 					style.remove();
 					// restore original
