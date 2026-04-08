@@ -207,8 +207,8 @@ def upload_file_handler(
         filename = os.path.basename(unsanitized_filename)
 
         file_extension = os.path.splitext(filename)[1]
-        # Remove the leading dot from the file extension
-        file_extension = file_extension[1:] if file_extension else ''
+        # Remove the leading dot from the file extension and lowercase it
+        file_extension = file_extension[1:].lower() if file_extension else ''
 
         if process and request.app.state.config.ALLOWED_FILE_EXTENSIONS:
             request.app.state.config.ALLOWED_FILE_EXTENSIONS = [

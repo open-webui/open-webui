@@ -158,6 +158,7 @@
 
 			if (version !== null) {
 				WEBUI_VERSION.set(version);
+				window.WEBUI_VERSION = version;
 			}
 
 			console.log('version', version);
@@ -707,6 +708,29 @@
 		}
 		if (event.type === 'page:navigate' && event.data?.path) {
 			await goto(event.data.path);
+			return;
+		}
+		if (event.type === 'query' && event.data?.query) {
+			await goto(`/?q=${encodeURIComponent(event.data.query)}`);
+			return;
+		}
+		if (event.type === 'theme:update' && event.data?.theme) {
+			const newTheme = event.data.theme;
+			localStorage.setItem('theme', newTheme);
+			theme.set(newTheme);
+
+			// Apply theme classes (mirrors logic from chat/Settings/General.svelte)
+			const themes = ['dark', 'light', 'oled-dark'];
+			let themeToApply = newTheme === 'oled-dark' ? 'dark' : newTheme === 'her' ? 'light' : newTheme;
+			if (newTheme === 'system') {
+				themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+			}
+			themes
+				.filter((e) => e !== themeToApply)
+				.forEach((e) => {
+					e.split(' ').forEach((cls) => document.documentElement.classList.remove(cls));
+				});
+			themeToApply.split(' ').forEach((cls) => document.documentElement.classList.add(cls));
 			return;
 		}
 		if (event.type === 'models:refresh') {

@@ -846,6 +846,8 @@
 	"Export": "გატანა",
 	"Export All Archived Chats": "",
 	"Export All Chats (All Users)": "ყველა ჩატის გატანა (ყველა მომხმარებელი)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "",
 	"Export Chats": "ჩატების გატანა",
 	"Export Config": "",

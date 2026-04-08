@@ -414,7 +414,7 @@ export const updateUserProfile = async (token: string, profile: object) => {
 			console.error(err);
 			error = err.detail;
 			if (Array.isArray(error)) {
-				error = error.map((e: { msg?: string }) => e.msg).join("; ");
+				error = error.map((e: { msg?: string }) => e.msg).join('; ');
 			}
 			return null;
 		});

@@ -846,6 +846,8 @@
 	"Export": "Ekspordi",
 	"Export All Archived Chats": "Ekspordi kõik arhiveeritud vestlused",
 	"Export All Chats (All Users)": "Ekspordi kõik vestlused (kõik kasutajad)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "Ekspordi vestlus (.json)",
 	"Export Chats": "Ekspordi vestlused",
 	"Export Config": "Ekspordi seadistus",

@@ -544,6 +544,12 @@ OAUTH_MAX_SESSIONS_PER_USER = int(os.environ.get('OAUTH_MAX_SESSIONS_PER_USER', 
 # Allows external apps to exchange OAuth tokens for OpenWebUI tokens
 ENABLE_OAUTH_TOKEN_EXCHANGE = os.environ.get('ENABLE_OAUTH_TOKEN_EXCHANGE', 'False').lower() == 'true'
 
+# Back-Channel Logout Configuration
+# When enabled, exposes POST /oauth/backchannel-logout for IdP-initiated logout
+# per OpenID Connect Back-Channel Logout 1.0 spec.
+# Requires Redis for JWT revocation.
+ENABLE_OAUTH_BACKCHANNEL_LOGOUT = os.environ.get('ENABLE_OAUTH_BACKCHANNEL_LOGOUT', 'False').lower() == 'true'
+
 ####################################
 # SCIM Configuration
 ####################################

@@ -847,6 +847,8 @@
 	"Export": "Exportar",
 	"Export All Archived Chats": "Exportar tots els xats arxivats",
 	"Export All Chats (All Users)": "Exportar tots els xats (Tots els usuaris)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "Exportar el xat (.json)",
 	"Export Chats": "Exportar els xats",
 	"Export Config": "Exportar la configuració",

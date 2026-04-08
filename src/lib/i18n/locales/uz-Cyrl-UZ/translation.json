@@ -846,6 +846,8 @@
 	"Export": "Экспорт",
 	"Export All Archived Chats": "Барча архивланган суҳбатларни экспорт қилиш",
 	"Export All Chats (All Users)": "Барча суҳбатларни экспорт қилиш (барча фойдаланувчилар)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "Чатни экспорт қилиш (.жсон)",
 	"Export Chats": "Чатларни экспорт қилиш",
 	"Export Config": "",

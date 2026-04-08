@@ -189,7 +189,13 @@ export const getFeedbackModelIds = async (token: string = '') => {
 	return res;
 };
 
-export const getFeedbackItems = async (token: string = '', orderBy, direction, page, modelId: string = '') => {
+export const getFeedbackItems = async (
+	token: string = '',
+	orderBy,
+	direction,
+	page,
+	modelId: string = ''
+) => {
 	let error = null;
 
 	const searchParams = new URLSearchParams();
@@ -235,14 +241,17 @@ export const exportAllFeedbacks = async (token: string = '', modelId: string = '
 	const searchParams = new URLSearchParams();
 	if (modelId) searchParams.append('model_id', modelId);
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/evaluations/feedbacks/all/export?${searchParams.toString()}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/evaluations/feedbacks/all/export?${searchParams.toString()}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			}
 		}
-	})
+	)
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
