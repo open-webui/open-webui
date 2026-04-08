@@ -152,8 +152,8 @@
 	let generationController = null;
 
 	// Check if the last message is still generating or tool is executing.
-	// message.done은 DB에 저장되므로 refresh 후에도 올바른 값이 유지됨.
-	// message.completed은 런타임 필드라 로드 시 undefined일 수 있어 사용하지 않음.
+	// !(done && content): 안전망 — done=true이고 content도 있는 메시지는
+	//   completed 미설정 DB 메시지여도 generating=false로 처리
 	$: {
 		if (history?.currentId && history.messages[history.currentId]?.role === 'assistant') {
 			const currentMessage = history.messages[history.currentId];
@@ -161,9 +161,11 @@
 				? Object.values(currentMessage.toolExecutions).some((t) => t.status === 'executing')
 				: false;
 
-			if (!currentMessage.done || isToolExecuting) {
+			const effectivelyDone = currentMessage.done && currentMessage.content;
+
+			if (!effectivelyDone && (!currentMessage.completed || isToolExecuting)) {
 				generating = true;
-			} else if (currentMessage.done && !isToolExecuting && generating) {
+			} else if ((effectivelyDone || currentMessage.completed) && !isToolExecuting && generating) {
 				generating = false;
 			}
 		}

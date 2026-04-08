@@ -152,11 +152,16 @@
 		: [];
 
 	// ── Loading State Card (stacked) ─────────────────────────────────────────
-	// message.done은 DB에 저장되어 refresh 후에도 올바름.
-	// message.completed은 런타임 필드라 로드 시 undefined일 수 있어 사용하지 않음.
+	// 조건 설명:
+	//   !message.completed           → 스트리밍/후처리 진행 중 (주 조건)
+	//   !(message.done && message.content) → 안전망: done=true이고 content도 있으면
+	//                                         completed 미설정 DB 메시지도 숨김
+	//                                         (done이 content보다 먼저 도착하는 케이스는
+	//                                          content가 없으므로 안전망에 걸리지 않음)
 	$: shouldShowLoadingCards =
 		!message.error &&
-		(!message.done || isToolExecuting) &&
+		!(message.done && message.content) &&
+		(!message.completed || isToolExecuting) &&
 		((model?.info?.meta?.capabilities?.status_updates ?? true)
 			? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 ||
 			  (message?.statusHistory?.at(-1)?.hidden ?? false)

@@ -33,6 +33,8 @@
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import AdjustmentsHorizontal from '$lib/components/icons/AdjustmentsHorizontal.svelte';
+	import Photo from '$lib/components/icons/Photo.svelte';
+	import Mic from '$lib/components/icons/Mic.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -50,6 +52,9 @@
 
 	export let onUpload: Function;
 	export let onClose: Function;
+
+	export let onImageUpload = (_file) => {};
+	export let onVoiceInput = () => {};
 
 	export let proficiencyLevel = '2';  // 기본값: 중급
 	export let responseStyle = 'diagnosis';  // 기본값: 학생 진단 브리핑
@@ -158,7 +163,22 @@
 
 		show = false;
 	};
+
+	let imageFileInputEl;
 </script>
+
+<!-- Hidden image-only file input for 이미지 업로드 menu item -->
+<input
+	bind:this={imageFileInputEl}
+	type="file"
+	accept="image/*"
+	style="display:none;"
+	on:change={(e) => {
+		const f = e.currentTarget.files?.[0];
+		if (f) onImageUpload(f);
+		e.currentTarget.value = '';
+	}}
+/>
 
 <AttachWebpageModal
 	bind:show={showAttachWebpageModal}
@@ -661,6 +681,30 @@
 					>
 						<ChevronLeft />
 						<span>파일 첨부</span>
+					</button>
+
+					<!-- 이미지 업로드 -->
+					<button
+						class="flex flex-row items-center py-3 px-4 gap-1 w-full m-2 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
+						on:click={() => {
+							imageFileInputEl?.click();
+							show = false;
+						}}
+					>
+						<Photo className="size-5 text-gray-500 dark:text-gray-400" />
+						<span>이미지 업로드</span>
+					</button>
+
+					<!-- 음성 입력 -->
+					<button
+						class="flex flex-row items-center py-3 px-4 gap-1 w-full m-2 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
+						on:click={() => {
+							onVoiceInput();
+							show = false;
+						}}
+					>
+						<Mic className="size-5 text-gray-500 dark:text-gray-400" />
+						<span>음성 입력</span>
 					</button>
 
 					<!-- 이 PC에서 버튼 -->
