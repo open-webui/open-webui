@@ -7,6 +7,8 @@
 	import DashboardToggleSwitch from './DashboardToggleSwitch.svelte';
 
 	const i18n = getContext('i18n');
+
+	export let activeMode: 'chat' | 'dashboard' | 'student' = 'dashboard';
 </script>
 
 <nav
@@ -30,7 +32,7 @@
 
 	<!-- Right: User Section -->
 	<div class="flex flex-row items-center gap-7">
-		<DashboardToggleSwitch activeMode="dashboard" />
+		<DashboardToggleSwitch {activeMode} />
 
 		{#if $user}
 			<UserMenu role={$user?.role}>

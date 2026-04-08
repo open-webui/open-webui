@@ -43,6 +43,28 @@
 			return str;
 		}
 	};
+
+	function getExtension(filename: string): string {
+		return filename?.split('.').pop()?.toLowerCase() ?? '';
+	}
+
+	const EXT_CONFIG: Record<string, { color: string; label: string }> = {
+		pdf:  { color: 'text-red-500',    label: 'PDF'  },
+		doc:  { color: 'text-blue-600',   label: 'DOC'  },
+		docx: { color: 'text-blue-600',   label: 'DOCX' },
+		ppt:  { color: 'text-orange-500', label: 'PPT'  },
+		pptx: { color: 'text-orange-500', label: 'PPTX' },
+		xls:  { color: 'text-green-600',  label: 'XLS'  },
+		xlsx: { color: 'text-green-600',  label: 'XLSX' },
+		txt:  { color: 'text-gray-500',   label: 'TXT'  },
+		csv:  { color: 'text-green-500',  label: 'CSV'  },
+		png:  { color: 'text-purple-500', label: 'PNG'  },
+		jpg:  { color: 'text-purple-500', label: 'JPG'  },
+		jpeg: { color: 'text-purple-500', label: 'JPEG' },
+		gif:  { color: 'text-purple-500', label: 'GIF'  },
+		webp: { color: 'text-purple-500', label: 'WEBP' },
+	};
+	const DEFAULT_EXT_CONFIG = { color: 'text-gray-500', label: 'FILE' };
 </script>
 
 {#if item}
@@ -119,7 +141,15 @@
 					{:else if type === 'folder'}
 						<Folder />
 					{:else}
-						<DocumentPage />
+						{@const extCfg = EXT_CONFIG[getExtension(name)] ?? DEFAULT_EXT_CONFIG}
+						<div class="relative">
+							<DocumentPage className="size-4 {extCfg.color}" />
+							<span
+								class="absolute -bottom-1 -right-1.5 text-[6px] font-bold leading-none
+									px-[2px] py-[1px] rounded
+									bg-white dark:bg-gray-800 border border-current {extCfg.color} uppercase"
+							>{extCfg.label}</span>
+						</div>
 					{/if}
 				</Tooltip>
 			{:else}
@@ -158,7 +188,7 @@
 	{:else}
 		<Tooltip content={decodeString(name)} className="flex flex-col w-full" placement="top-start">
 			<div class="flex flex-col justify-center -space-y-0.5 px-1 w-full">
-				<div class=" dark:text-gray-100 text-sm flex justify-between items-center">
+				<div class="text-gray-900 dark:text-gray-100 text-sm flex justify-between items-center">
 					<div class="font-medium line-clamp-1 flex-1 pr-1">{decodeString(name)}</div>
 					{#if size}
 						<div class="text-gray-500 text-xs capitalize shrink-0">{formatFileSize(size)}</div>
@@ -171,13 +201,10 @@
 	{/if}
 
 	{#if dismissible}
-		<div class=" absolute -top-1 -right-1">
+		<div class="flex items-center shrink-0 pl-1">
 			<button
 				aria-label={$i18n.t('Remove File')}
-				class=" bg-white text-black border border-gray-50 rounded-full {($settings?.highContrastMode ??
-				false)
-					? ''
-					: 'outline-hidden focus:outline-hidden group-hover:visible invisible transition'}"
+				class="bg-white text-black border border-gray-50 rounded-full outline-hidden focus:outline-hidden transition"
 				type="button"
 				on:click|stopPropagation={() => {
 					dispatch('dismiss');

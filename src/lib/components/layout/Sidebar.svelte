@@ -1286,7 +1286,7 @@
 			<!-- Dashboard Toggle Switch (Instructor/Admin only) -->
 					{#if $user && isInstructor($user)}
 						<div class="px-3 pb-2 pt-2 w-full flex items-center justify-center">
-							<DashboardToggleSwitch activeMode="chat" />
+							<DashboardToggleSwitch activeMode="chat" iconOnly={true} />
 						</div>
 					{/if}
 		</div>
