@@ -1946,18 +1946,21 @@
 													: t.entity.type === 'ORGANIZATION'
 														? '#22c55e'
 														: '#f59e0b';
-										return `<span style="color:${color};font-weight:bold">${t.token}</span>`;
+										return `<span style="color:${color};font-weight:bold" title="${t.entity.type}">${t.token}</span>`;
 									}
 									return `<span style="color:#e2e8f0">${t.token}</span>`;
 								} else if (j === i) {
-									return `<span style="border-left:2px solid white;margin-right:1px"></span>${t.token}`;
+									return `<span style="border-left:2px solid white;margin-right:1px;animation:blink 0.8s infinite"></span>${t.token}`;
 								}
 								return `<span style="opacity:0.25">${t.token}</span>`;
 							})
 							.join('');
-						const delay = i < 10 ? 20 : 50;
+						const delay = i < 10 ? 80 : 120;
 						await new Promise((r) => setTimeout(r, delay));
 					}
+
+					// keep highlighted state visible for 500ms before restoring
+					await new Promise((r) => setTimeout(r, 500));
 
 					// restore original
 					textEl.innerHTML = original;
@@ -3190,5 +3193,11 @@
 	::-webkit-scrollbar {
 		height: 0.5rem;
 		width: 0.5rem;
+	}
+
+	@keyframes blink {
+		50% {
+			opacity: 0;
+		}
 	}
 </style>
