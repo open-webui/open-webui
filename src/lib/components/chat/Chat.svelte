@@ -1970,6 +1970,9 @@
 						await new Promise((r) => setTimeout(r, delayPerToken));
 					}
 
+					// pause so users can hover colored words and see entity type tooltips
+					await new Promise((r) => setTimeout(r, 1500));
+
 					style.remove();
 					// restore original
 					textEl.innerHTML = original;
