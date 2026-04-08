@@ -1925,7 +1925,7 @@
 					const bubble = document.getElementById(`message-${userMessageId}`) ?? textEl.parentElement;
 					const style = document.createElement('style');
 					style.textContent = '@keyframes garnet-blink { 50% { opacity: 0; } } .garnet-entity:hover::after { content: attr(data-type); position: absolute; bottom: 100%; left: 0; background: #1a1a1a; color: white; font-size: 11px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; z-index: 50; pointer-events: none; }';
-					bubble.appendChild(style);
+					document.head.appendChild(style);
 
 					// tokenize
 					const tokens = userPrompt.split(/(\s+)/);
