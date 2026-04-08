@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 from open_webui.models.users import User
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
 
 log = logging.getLogger(__name__)
@@ -81,7 +81,17 @@ class RatingData(BaseModel):
     sibling_model_ids: Optional[list[str]] = None
     reason: Optional[str] = None
     comment: Optional[str] = None
+    details: Optional[dict] = None
     model_config = ConfigDict(extra='allow', protected_namespaces=())
+
+    @field_validator('details')
+    @classmethod
+    def clamp_details_rating(cls, v: Optional[dict]) -> Optional[dict]:
+        if isinstance(v, dict) and 'rating' in v:
+            r = v['rating']
+            if isinstance(r, (int, float)):
+                v['rating'] = max(1, min(10, int(r)))
+        return v
 
 
 class MetaData(BaseModel):
