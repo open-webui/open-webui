@@ -1949,68 +1949,26 @@
 						ID: '#ec4899'
 					};
 
-					// animate cursor left→right
+					// animate cursor left→right (dynamic speed: max 2s total)
+					const maxDuration = 2000;
+					const delayPerToken = Math.max(15, Math.floor(maxDuration / marked.length));
 					for (let i = 0; i <= marked.length; i++) {
 						textEl.innerHTML = marked
 							.map((t, j) => {
 								if (j < i) {
 									if (t.entity) {
-										// Change 3: glow + transition + extended types
 										const color = colorMap[t.entity.type] || '#f59e0b';
-										return `<span style="color:${color};font-weight:bold;text-shadow:0 0 6px ${color}40;transition:all 0.2s ease" title="${t.entity.type}">${t.token}</span>`;
+										return `<span style="color:${color};transition:all 0.2s ease" title="${t.entity.type}">${t.token}</span>`;
 									}
 									return `<span style="color:#e2e8f0">${t.token}</span>`;
 								} else if (j === i) {
-									// Change 2: pipe cursor with step-end blink
 									return `${t.token}<span class="garnet-cursor" style="display:inline;color:white;font-weight:bold;animation:garnet-blink 0.7s step-end infinite;margin:0 -1px">│</span>`;
 								}
-								// Change 6: less aggressive dim (0.55 instead of 0.25)
 								return `<span style="opacity:0.55">${t.token}</span>`;
 							})
 							.join('');
-						// Change 1: faster speed curve (25ms / 55ms + 5ms repaint buffer)
-						const delay = i < 10 ? 25 : 55;
-						await new Promise((r) => setTimeout(r, delay));
+						await new Promise((r) => setTimeout(r, delayPerToken));
 					}
-
-					// keep highlighted state visible for 500ms before preview
-					await new Promise((r) => setTimeout(r, 500));
-
-					// Change 4: redesigned word-level inline before→after preview
-					const entityMap = [];
-					const sortedDesc = [...entities].sort((a, b) => b.start - a.start);
-					let previewText = userPrompt;
-					for (const e of sortedDesc) {
-						const origToken = userPrompt.slice(e.start, e.end);
-						const hash = Array.from(origToken).reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0)
-							.toString(16).slice(-8).padStart(8, '0');
-						const token = `${e.type}_${hash}`;
-						entityMap.push({ original: origToken, token, type: e.type });
-						previewText = previewText.slice(0, e.start) + token + previewText.slice(e.end);
-					}
-
-					let previewHTML = previewText.replace(
-						/(PERSON|ORGANIZATION|EMAIL_ADDRESS|LOCATION|PHONE_NUMBER|IBAN_CODE|ID)_[a-f0-9]+/g,
-						(match) => {
-							const type = match.substring(0, match.lastIndexOf('_'));
-							const c = colorMap[type] || '#f59e0b';
-							return `<span style="color:${c};font-weight:bold;text-shadow:0 0 6px ${c}40">${match}</span>`;
-						}
-					);
-
-					textEl.innerHTML =
-						`<div style="font-size:0.75rem;opacity:0.6;margin-bottom:4px;display:flex;align-items:center;gap:4px">` +
-						`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>` +
-						`Pseudonymized</div>` +
-						`<div style="margin-bottom:6px">${previewHTML}</div>` +
-						`<div style="font-size:0.7rem;opacity:0.4;display:flex;flex-wrap:wrap;gap:8px">` +
-						entityMap.map(e => {
-							const c = colorMap[e.type] || '#f59e0b';
-							return `<span><span style="text-decoration:line-through;opacity:0.6">${e.original}</span> → <span style="color:${c};font-weight:600">${e.token.split('_').slice(0, -1).join('_')}_…</span></span>`;
-						}).join('') +
-						`</div>`;
-
-					await new Promise((r) => setTimeout(r, 2500));
 
 					style.remove();
 					// restore original
