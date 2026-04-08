@@ -1970,6 +1970,9 @@
 						await new Promise((r) => setTimeout(r, delayPerToken));
 					}
 
+					// DEBUG: verify title attributes are in the DOM before the pause
+					console.warn('[garnet] entity spans HTML:', textEl.innerHTML);
+
 					// pause so users can hover colored words and see entity type tooltips
 					await new Promise((r) => setTimeout(r, 1500));
 
