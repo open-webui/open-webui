@@ -1917,10 +1917,30 @@
 			if (entities && entities.length > 0) {
 				const bubble = document.getElementById(`message-${userMessageId}`);
 				if (bubble) {
-					const textEl = bubble.querySelector('p') ?? bubble;
-					const originalHTML = textEl.innerHTML;
+					// create floating overlay on top of bubble, never touch bubble HTML
+					const rect = bubble.getBoundingClientRect();
+					const overlay = document.createElement('div');
+					overlay.style.cssText = `
+						position:fixed;
+						top:${rect.top}px;
+						left:${rect.left}px;
+						width:${rect.width}px;
+						min-height:${rect.height}px;
+						background:#1e1e2e;
+						color:white;
+						font-size:14px;
+						font-family:inherit;
+						padding:12px 16px;
+						border-radius:8px;
+						z-index:9999;
+						white-space:pre-wrap;
+						word-break:break-word;
+						line-height:1.6;
+						box-shadow:0 4px 24px rgba(0,0,0,0.5);
+					`;
+					document.body.appendChild(overlay);
 
-					// build tokens
+					// tokenize
 					const tokens = userPrompt.split(/(\s+)/);
 					let pos = 0;
 					const marked = tokens.map((token) => {
@@ -1933,7 +1953,7 @@
 
 					// animate cursor left→right
 					for (let i = 0; i <= marked.length; i++) {
-						const html = marked
+						overlay.innerHTML = marked
 							.map((t, j) => {
 								if (j < i) {
 									if (t.entity) {
@@ -1942,23 +1962,24 @@
 												? '#3b82f6'
 												: t.entity.type === 'EMAIL_ADDRESS'
 													? '#ef4444'
-													: '#22c55e';
+													: t.entity.type === 'ORGANIZATION'
+														? '#22c55e'
+														: '#f59e0b';
 										return `<span style="color:${color};font-weight:bold">${t.token}</span>`;
 									}
-									return `<span>${t.token}</span>`;
+									return `<span style="color:#e2e8f0">${t.token}</span>`;
 								} else if (j === i) {
-									return `<span style="border-left:2px solid white">&ZeroWidthSpace;</span>${t.token}`;
+									return `<span style="border-left:2px solid white;margin-right:1px"></span>${t.token}`;
 								}
-								return `<span style="opacity:0.4">${t.token}</span>`;
+								return `<span style="opacity:0.25">${t.token}</span>`;
 							})
 							.join('');
-						textEl.innerHTML = html;
 						const delay = i < 10 ? 20 : 50;
 						await new Promise((r) => setTimeout(r, delay));
 					}
 
-					// restore original after animation
-					textEl.innerHTML = originalHTML;
+					// remove overlay — bubble HTML was never touched
+					document.body.removeChild(overlay);
 				}
 			}
 		}
