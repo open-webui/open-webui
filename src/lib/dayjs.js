@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 
-// Import all locales
+// Import all locales test
 import 'dayjs/locale/af';
 import 'dayjs/locale/am';
 import 'dayjs/locale/ar';
