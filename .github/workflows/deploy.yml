@@ -22,7 +22,7 @@ jobs:
       - name: Build and push webui image
         run: |
           SHA=${{ github.sha }}
-          docker build \
+          docker build --no-cache \
             -t harbor.enclaive.cloud/garnetdemo/garnet-webui:latest \
             -t harbor.enclaive.cloud/garnetdemo/garnet-webui:$SHA \
             .
