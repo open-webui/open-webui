@@ -66,7 +66,7 @@ class Tools:
         Get the user name, Email and ID from the user object.
         """
 
-        # Do not include a descrption for __user__ as it should not be shown in the tool's specification
+        # Do not include a description for __user__ as it should not be shown in the tool's specification
         # The session user object will be passed as a parameter when the function is called
 
         print(__user__)

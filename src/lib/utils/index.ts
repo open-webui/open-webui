@@ -110,7 +110,7 @@ function processChineseContent(content: string): string {
 	const processedLines = lines.map((line) => {
 		if (/[\u4e00-\u9fa5]/.test(line)) {
 			// Problems caused by Chinese parentheses
-			/* Discription:
+			/* Description:
 			 *   When `*` has Chinese delimiters on the inside, markdown parser ignore bold or italic style.
 			 *   - e.g. `**中文名（English）**中文内容` will be parsed directly,
 			 *          instead of `<strong>中文名（English）</strong>中文内容`.

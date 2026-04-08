@@ -30,7 +30,7 @@ class ElasticsearchClient(VectorDBBase):
     """
     Important:
     in order to reduce the number of indexes and since the embedding vector length is fixed, we avoid creating
-    an index for each file but store it as a text field, while seperating to different index
+    an index for each file but store it as a text field, while separating to different index
     baesd on the embedding length.
     """
 

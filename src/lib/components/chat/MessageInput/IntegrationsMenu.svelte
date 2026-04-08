@@ -359,7 +359,7 @@
 							}}
 						>
 							{#if !(tools[toolId]?.authenticated ?? true)}
-								<!-- make it slighly darker and not clickable -->
+								<!-- make it slightly darker and not clickable -->
 								<div class="absolute inset-0 opacity-50 rounded-xl cursor-pointer z-10" />
 							{/if}
 							<div class="flex-1 truncate">

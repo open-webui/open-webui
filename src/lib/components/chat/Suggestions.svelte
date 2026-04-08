@@ -30,7 +30,7 @@
 	$: getFilteredPrompts(inputValue);
 
 	// Helper function to check if arrays are the same
-	// (based on unique IDs oder content)
+	// (based on unique IDs or content)
 	function arraysEqual(a, b) {
 		if (a.length !== b.length) return false;
 		for (let i = 0; i < a.length; i++) {
