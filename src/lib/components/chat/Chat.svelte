@@ -1924,7 +1924,7 @@
 					// Change 5: inject garnet-blink keyframes into the bubble
 					const bubble = document.getElementById(`message-${userMessageId}`) ?? textEl.parentElement;
 					const style = document.createElement('style');
-					style.textContent = '@keyframes garnet-blink { 50% { opacity: 0; } }';
+					style.textContent = '@keyframes garnet-blink { 50% { opacity: 0; } } .garnet-entity:hover::after { content: attr(data-type); position: absolute; bottom: 100%; left: 0; background: #1a1a1a; color: white; font-size: 11px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; z-index: 50; pointer-events: none; }';
 					bubble.appendChild(style);
 
 					// tokenize
@@ -1958,7 +1958,7 @@
 								if (j < i) {
 									if (t.entity) {
 										const color = colorMap[t.entity.type] || '#f59e0b';
-										return `<span style="color:${color};transition:all 0.2s ease" title="${t.entity.type}">${t.token}</span>`;
+										return `<span style="color:${color};transition:all 0.2s ease;position:relative;cursor:pointer" class="garnet-entity" data-type="${t.entity.type}">${t.token}</span>`;
 									}
 									return `<span style="color:#e2e8f0">${t.token}</span>`;
 								} else if (j === i) {
