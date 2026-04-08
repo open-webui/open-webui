@@ -3822,6 +3822,12 @@ AUDIO_STT_MODEL = PersistentConfig(
     os.getenv('AUDIO_STT_MODEL', ''),
 )
 
+AUDIO_STT_SKIP_PREPROCESSING = PersistentConfig(
+    'AUDIO_STT_SKIP_PREPROCESSING',
+    'audio.stt.skip_preprocessing',
+    os.getenv('AUDIO_STT_SKIP_PREPROCESSING', 'false').lower() == 'true',
+)
+
 AUDIO_STT_SUPPORTED_CONTENT_TYPES = PersistentConfig(
     'AUDIO_STT_SUPPORTED_CONTENT_TYPES',
     'audio.stt.supported_content_types',

@@ -6,8 +6,6 @@ import uuid
 import html
 import base64
 from functools import lru_cache
-from pydub import AudioSegment
-from pydub.silence import split_on_silence
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
@@ -80,14 +78,13 @@ SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 #
 ##########################################
 
-from pydub import AudioSegment
-from pydub.utils import mediainfo
-
 
 def is_audio_conversion_required(file_path):
     """
     Check if the given audio file needs conversion to mp3.
     """
+    from pydub.utils import mediainfo
+
     SUPPORTED_FORMATS = {'flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'wav', 'webm'}
 
     if not os.path.isfile(file_path):
@@ -116,6 +113,8 @@ def is_audio_conversion_required(file_path):
 
 def convert_audio_to_mp3(file_path):
     """Convert audio file to mp3 format."""
+    from pydub import AudioSegment
+
     try:
         output_path = os.path.splitext(file_path)[0] + '.mp3'
         audio = AudioSegment.from_file(file_path)
@@ -177,6 +176,7 @@ class STTConfigForm(BaseModel):
     OPENAI_API_KEY: str
     ENGINE: str
     MODEL: str
+    SKIP_PREPROCESSING: bool = False
     SUPPORTED_CONTENT_TYPES: list[str] = []
     WHISPER_MODEL: str
     DEEPGRAM_API_KEY: str
@@ -221,6 +221,7 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             'SUPPORTED_CONTENT_TYPES': request.app.state.config.STT_SUPPORTED_CONTENT_TYPES,
             'WHISPER_MODEL': request.app.state.config.WHISPER_MODEL,
             'DEEPGRAM_API_KEY': request.app.state.config.DEEPGRAM_API_KEY,
+            'SKIP_PREPROCESSING': request.app.state.config.STT_SKIP_PREPROCESSING,
             'AZURE_API_KEY': request.app.state.config.AUDIO_STT_AZURE_API_KEY,
             'AZURE_REGION': request.app.state.config.AUDIO_STT_AZURE_REGION,
             'AZURE_LOCALES': request.app.state.config.AUDIO_STT_AZURE_LOCALES,
@@ -253,6 +254,7 @@ async def update_audio_config(request: Request, form_data: AudioConfigUpdateForm
     request.app.state.config.STT_OPENAI_API_KEY = form_data.stt.OPENAI_API_KEY
     request.app.state.config.STT_ENGINE = form_data.stt.ENGINE
     request.app.state.config.STT_MODEL = form_data.stt.MODEL
+    request.app.state.config.STT_SKIP_PREPROCESSING = form_data.stt.SKIP_PREPROCESSING
     request.app.state.config.STT_SUPPORTED_CONTENT_TYPES = form_data.stt.SUPPORTED_CONTENT_TYPES
 
     request.app.state.config.WHISPER_MODEL = form_data.stt.WHISPER_MODEL
@@ -297,6 +299,7 @@ async def update_audio_config(request: Request, form_data: AudioConfigUpdateForm
             'SUPPORTED_CONTENT_TYPES': request.app.state.config.STT_SUPPORTED_CONTENT_TYPES,
             'WHISPER_MODEL': request.app.state.config.WHISPER_MODEL,
             'DEEPGRAM_API_KEY': request.app.state.config.DEEPGRAM_API_KEY,
+            'SKIP_PREPROCESSING': request.app.state.config.STT_SKIP_PREPROCESSING,
             'AZURE_API_KEY': request.app.state.config.AUDIO_STT_AZURE_API_KEY,
             'AZURE_REGION': request.app.state.config.AUDIO_STT_AZURE_REGION,
             'AZURE_LOCALES': request.app.state.config.AUDIO_STT_AZURE_LOCALES,
@@ -1098,24 +1101,29 @@ def transcription_handler(request, file_path, metadata, user=None):
 def transcribe(request: Request, file_path: str, metadata: Optional[dict] = None, user=None):
     log.info(f'transcribe: {file_path} {metadata}')
 
-    if is_audio_conversion_required(file_path):
-        file_path = convert_audio_to_mp3(file_path)
+    if request.app.state.config.STT_SKIP_PREPROCESSING:
+        # Skip conversion/compression/splitting — send file as-is to the STT backend.
+        # Useful when the backend (e.g. vLLM Whisper) handles all formats natively
+        # and has no file size limit, avoiding OOM from pydub memory expansion.
+        log.info('STT_SKIP_PREPROCESSING is enabled, sending file as-is')
+        chunk_paths = [file_path]
+    else:
+        if is_audio_conversion_required(file_path):
+            file_path = convert_audio_to_mp3(file_path)
 
-    try:
-        file_path = compress_audio(file_path)
-    except Exception as e:
-        log.exception(e)
+        try:
+            file_path = compress_audio(file_path)
+        except Exception as e:
+            log.exception(e)
 
-    # Always produce a list of chunk paths (could be one entry if small)
-    try:
-        chunk_paths = split_audio(file_path, MAX_FILE_SIZE)
-        print(f'Chunk paths: {chunk_paths}')
-    except Exception as e:
-        log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
-        )
+        try:
+            chunk_paths = split_audio(file_path, MAX_FILE_SIZE)
+        except Exception as e:
+            log.exception(e)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT(e),
+            )
 
     results = []
     try:
@@ -1151,6 +1159,8 @@ def transcribe(request: Request, file_path: str, metadata: Optional[dict] = None
 
 
 def compress_audio(file_path):
+    from pydub import AudioSegment
+
     if os.path.getsize(file_path) > MAX_FILE_SIZE:
         id = os.path.splitext(os.path.basename(file_path))[0]  # Handles names with multiple dots
         file_dir = os.path.dirname(file_path)
@@ -1172,6 +1182,8 @@ def split_audio(file_path, max_bytes, format='mp3', bitrate='32k'):
     Splits audio into chunks not exceeding max_bytes.
     Returns a list of chunk file paths. If audio fits, returns list with original path.
     """
+    from pydub import AudioSegment
+
     file_size = os.path.getsize(file_path)
     if file_size <= max_bytes:
         return [file_path]  # Nothing to split
