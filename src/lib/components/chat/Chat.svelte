@@ -1921,6 +1921,11 @@
 				if (textEl) {
 					const original = textEl.innerHTML;
 
+					const bubble = document.getElementById(`message-${userMessageId}`) ?? textEl.parentElement;
+					const style = document.createElement('style');
+					style.textContent = '@keyframes garnet-blink { 50% { opacity: 0; } }';
+					bubble.appendChild(style);
+
 					// tokenize
 					const tokens = userPrompt.split(/(\s+)/);
 					let pos = 0;
@@ -1950,7 +1955,7 @@
 									}
 									return `<span style="color:#e2e8f0">${t.token}</span>`;
 								} else if (j === i) {
-									return `<span style="border-left:2px solid white;margin-right:1px;animation:blink 0.8s infinite"></span>${t.token}`;
+									return `<span style="border-left:2px solid white;margin-right:1px;animation:garnet-blink 0.8s infinite"></span>${t.token}`;
 								}
 								return `<span style="opacity:0.25">${t.token}</span>`;
 							})
@@ -1962,6 +1967,28 @@
 					// keep highlighted state visible for 500ms before restoring
 					await new Promise((r) => setTimeout(r, 500));
 
+					// build fake pseudonymized preview
+					let preview = userPrompt;
+					const sorted = [...entities].sort((a, b) => b.start - a.start);
+					for (const e of sorted) {
+						const original_token = userPrompt.slice(e.start, e.end);
+						const hash = Array.from(original_token).reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0)
+							.toString(16).slice(-8).padStart(8, '0');
+						preview = preview.slice(0, e.start) + `${e.type}_${hash}` + preview.slice(e.end);
+					}
+					// color the tokens in preview
+					let previewHTML = preview.replace(/(PERSON|ORGANIZATION|EMAIL_ADDRESS)_[a-f0-9]+/g, (match) => {
+						const type = match.split('_')[0];
+						const c = type === 'PERSON' ? '#3b82f6'
+							: type === 'EMAIL_ADDRESS' ? '#ef4444'
+							: type === 'ORGANIZATION' ? '#22c55e' : '#f59e0b';
+						return `<span style="color:${c};font-weight:bold">${match}</span>`;
+					});
+					textEl.innerHTML = `<span style="opacity:0.5;text-decoration:line-through">${userPrompt}</span><br/>`
+						+ `<span>${previewHTML}</span>`;
+					await new Promise((r) => setTimeout(r, 2000));
+
+					style.remove();
 					// restore original
 					textEl.innerHTML = original;
 				}
