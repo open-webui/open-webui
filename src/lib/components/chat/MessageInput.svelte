@@ -52,6 +52,8 @@
 
 	import InputMenu from './MessageInput/InputMenu.svelte';
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
+	import ImageCropModal from './MessageInput/ImageCropModal.svelte';
+	import VoiceInputModal from './MessageInput/VoiceInputModal.svelte';
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import ToolServersModal from './ToolServersModal.svelte';
 
@@ -411,6 +413,13 @@
 	let loaded = false;
 	let recording = false;
 
+	// Image crop modal state
+	let showImageCropModal = false;
+	let imageCropFile = null;
+
+	// Voice input modal state
+	let showVoiceInputModal = false;
+
 	let isComposing = false;
 	// Safari has a bug where compositionend is not triggered correctly #16615
 	// when using the virtual keyboard on iOS.
@@ -663,6 +672,25 @@
 		}
 	};
 
+	const handleImageUploadFromMenu = (file) => {
+		if (visionCapableModels.length === 0) {
+			toast.error($i18n.t('Selected model(s) do not support image inputs'));
+			return;
+		}
+		imageCropFile = file;
+		showImageCropModal = true;
+	};
+
+	const handleCroppedImage = (croppedFile) => {
+		showImageCropModal = false;
+		imageCropFile = null;
+		const reader = new FileReader();
+		reader.onload = (e) => {
+			files = [...files, { type: 'image', url: e.target.result }];
+		};
+		reader.readAsDataURL(croppedFile);
+	};
+
 	const inputFilesHandler = async (inputFiles) => {
 		console.log('Input files handler called with:', inputFiles);
 
@@ -785,9 +813,16 @@
 		console.log(e);
 
 		if (e.dataTransfer?.files) {
-			const inputFiles = Array.from(e.dataTransfer?.files);
-			if (inputFiles && inputFiles.length > 0) {
-				console.log(inputFiles);
+			const inputFiles = Array.from(e.dataTransfer.files);
+			if (inputFiles.length === 1 && inputFiles[0].type.startsWith('image/')) {
+				// 단일 이미지 드롭 → 크롭 모달
+				if (visionCapableModels.length === 0) {
+					toast.error($i18n.t('Selected model(s) do not support image inputs'));
+				} else {
+					imageCropFile = inputFiles[0];
+					showImageCropModal = true;
+				}
+			} else if (inputFiles.length > 0) {
 				inputFilesHandler(inputFiles);
 			}
 		}
@@ -970,6 +1005,33 @@
 
 <FilesOverlay show={dragged} />
 <ToolServersModal bind:show={showTools} {selectedToolIds} />
+
+<ImageCropModal
+	bind:show={showImageCropModal}
+	imageFile={imageCropFile}
+	onConfirm={handleCroppedImage}
+	onCancel={() => {
+		showImageCropModal = false;
+		imageCropFile = null;
+	}}
+/>
+
+<VoiceInputModal
+	bind:show={showVoiceInputModal}
+	onConfirm={async (data) => {
+		showVoiceInputModal = false;
+		await tick();
+		await insertTextAtCursor(`${data.text}`);
+		await tick();
+		document.getElementById('chat-input')?.focus();
+		if ($settings?.speechAutoSend ?? false) {
+			dispatch('submit', buildPromptWithContext(prompt));
+		}
+	}}
+	onCancel={() => {
+		showVoiceInputModal = false;
+	}}
+/>
 
 <InputVariablesModal
 	bind:show={showInputVariablesModal}
@@ -1232,6 +1294,10 @@
 												await tick();
 												const chatInput = document.getElementById('chat-input');
 												chatInput?.focus();
+											}}
+											onImageUpload={handleImageUploadFromMenu}
+											onVoiceInput={() => {
+												showVoiceInputModal = true;
 											}}
 										>
 											<button
