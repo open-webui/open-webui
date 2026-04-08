@@ -425,7 +425,33 @@ try:
 except ValueError:
     REDIS_SOCKET_CONNECT_TIMEOUT = None
 
-REDIS_RECONNECT_DELAY = os.environ.get('REDIS_RECONNECT_DELAY', '')
+
+# DB migration lock (prevents multiple pods from migrating at once when using Redis)
+MIGRATION_LOCK_TIMEOUT_SECS = os.environ.get("MIGRATION_LOCK_TIMEOUT_SECS", "600")
+try:
+    MIGRATION_LOCK_TIMEOUT_SECS = int(MIGRATION_LOCK_TIMEOUT_SECS)
+    if MIGRATION_LOCK_TIMEOUT_SECS <= 0:
+        MIGRATION_LOCK_TIMEOUT_SECS = 600
+except ValueError:
+    MIGRATION_LOCK_TIMEOUT_SECS = 600
+
+MIGRATION_LOCK_RETRY_SLEEP_SECS = os.environ.get("MIGRATION_LOCK_RETRY_SLEEP_SECS", "5")
+try:
+    MIGRATION_LOCK_RETRY_SLEEP_SECS = int(MIGRATION_LOCK_RETRY_SLEEP_SECS)
+    if MIGRATION_LOCK_RETRY_SLEEP_SECS <= 0:
+        MIGRATION_LOCK_RETRY_SLEEP_SECS = 5
+except ValueError:
+    MIGRATION_LOCK_RETRY_SLEEP_SECS = 5
+
+MIGRATION_LOCK_MAX_WAIT_SECS = os.environ.get("MIGRATION_LOCK_MAX_WAIT_SECS", "900")
+try:
+    MIGRATION_LOCK_MAX_WAIT_SECS = int(MIGRATION_LOCK_MAX_WAIT_SECS)
+    if MIGRATION_LOCK_MAX_WAIT_SECS <= 0:
+        MIGRATION_LOCK_MAX_WAIT_SECS = 900
+except ValueError:
+    MIGRATION_LOCK_MAX_WAIT_SECS = 900
+
+REDIS_RECONNECT_DELAY = os.environ.get("REDIS_RECONNECT_DELAY", "")
 
 if REDIS_RECONNECT_DELAY == '':
     REDIS_RECONNECT_DELAY = None
@@ -581,13 +607,11 @@ LICENSE_PUBLIC_KEY = os.environ.get('LICENSE_PUBLIC_KEY', '')
 
 pk = None
 if LICENSE_PUBLIC_KEY:
-    pk = serialization.load_pem_public_key(
-        f"""
+    pk = serialization.load_pem_public_key(f"""
 -----BEGIN PUBLIC KEY-----
 {LICENSE_PUBLIC_KEY}
 -----END PUBLIC KEY-----
-""".encode('utf-8')
-    )
+""".encode('utf-8'))
 
 
 ####################################
