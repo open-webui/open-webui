@@ -1683,7 +1683,7 @@ class OAuthManager:
                     httponly=True,
                     samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
                     secure=WEBUI_AUTH_COOKIE_SECURE,
-                    **({'max_age': cookie_max_age, 'expires': cookie_expires} if cookie_max_age is not None else {}),
+                    **({'max_age': cookie_max_age} if cookie_max_age is not None else {}),
                 )
 
                 log.info(f'Stored OAuth session server-side for user {user.id}, provider {provider}')
