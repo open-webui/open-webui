@@ -102,7 +102,7 @@
 				<Cloud className="size-3.5" strokeWidth="2" />
 
 				{#if $selectedTerminalId && selectedLabel}
-					<span class="truncate text-[13px] max-w-[100px] sm:max-w-[150px] capitalize"
+					<span class="truncate text-[13px] max-w-[100px] sm:max-w-[150px]"
 						>{selectedLabel}</span
 					>
 				{/if}
