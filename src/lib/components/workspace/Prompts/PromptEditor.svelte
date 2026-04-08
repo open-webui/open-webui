@@ -81,32 +81,36 @@
 		}
 		loading = true;
 
-		if (validateCommandString(command)) {
-			await onSubmit({
-				id: prompt?.id,
-				name,
-				command,
-				content,
-				tags: tags.map((tag) => tag.name),
-				access_grants: accessGrants,
-				commit_message: commitMessage || undefined,
-				is_production: isProduction
-			});
-			showEditModal = false;
-			commitMessage = '';
-			isProduction = true;
-			await loadHistory(true); // Reset and reload
-			// Select the newest version after saving
-			if (history.length > 0) {
-				selectedHistoryEntry = history[0];
+		try {
+			if (validateCommandString(command)) {
+				await onSubmit({
+					id: prompt?.id,
+					name,
+					command,
+					content,
+					tags: tags.map((tag) => tag.name),
+					access_grants: accessGrants,
+					commit_message: commitMessage || undefined,
+					is_production: isProduction
+				});
+				showEditModal = false;
+				commitMessage = '';
+				isProduction = true;
+				await loadHistory(true); // Reset and reload
+				// Select the newest version after saving
+				if (history.length > 0) {
+					selectedHistoryEntry = history[0];
+				}
+			} else {
+				toast.error(
+					$i18n.t('Only alphanumeric characters and hyphens are allowed in the command string.')
+				);
 			}
-		} else {
-			toast.error(
-				$i18n.t('Only alphanumeric characters and hyphens are allowed in the command string.')
-			);
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : $i18n.t('Failed to save prompt'));
+		} finally {
+			loading = false;
 		}
-
-		loading = false;
 	};
 
 	const validateCommandString = (inputString) => {
@@ -177,7 +181,7 @@
 			prompt = { ...prompt, version_id: historyEntry.id };
 			toast.success($i18n.t('Production version updated'));
 		} catch (error) {
-			toast.error(`${error}`);
+			toast.error(error instanceof Error ? error.message : $i18n.t('Failed to save prompt'));
 		}
 	};
 
@@ -194,7 +198,7 @@
 				selectedHistoryEntry = history.length > 0 ? history[0] : null;
 			}
 		} catch (error) {
-			toast.error(`${error}`);
+			toast.error(error instanceof Error ? error.message : $i18n.t('Failed to save prompt'));
 		}
 	};
 
@@ -236,7 +240,7 @@
 				originalTags = tags;
 				toast.success($i18n.t('Saved'));
 			} catch (error) {
-				toast.error(`${error}`);
+				toast.error(error instanceof Error ? error.message : $i18n.t('Failed to save prompt'));
 				// Revert on error (collision)
 				name = originalName;
 				command = originalCommand;
@@ -290,7 +294,7 @@
 				await updatePromptAccessGrants(localStorage.token, prompt.id, accessGrants);
 				toast.success($i18n.t('Saved'));
 			} catch (error) {
-				toast.error(`${error}`);
+				toast.error(error instanceof Error ? error.message : $i18n.t('Failed to save prompt'));
 			}
 		}
 	}}
