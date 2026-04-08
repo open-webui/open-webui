@@ -1917,32 +1917,48 @@
 			if (entities && entities.length > 0) {
 				const bubble = document.getElementById(`message-${userMessageId}`);
 				if (bubble) {
+					const textEl = bubble.querySelector('p') ?? bubble;
+					const originalHTML = textEl.innerHTML;
+
+					// build tokens
 					const tokens = userPrompt.split(/(\s+)/);
 					let pos = 0;
-					const spans = tokens.map((token) => {
+					const marked = tokens.map((token) => {
 						const start = pos;
 						const end = pos + token.length;
 						pos = end;
 						const entity = entities.find((e) => start < e.end && end > e.start);
 						return { token, entity };
 					});
-					bubble.innerHTML = spans
-						.map((s) => `<span style="opacity:0.2">${s.token}</span>`)
-						.join('');
-					for (let i = 0; i < spans.length; i++) {
-						bubble.children[i].style.opacity = '1';
-						if (spans[i].entity) {
-							const color =
-								spans[i].entity.entity_type === 'PERSON'
-									? '#3b82f6'
-									: spans[i].entity.entity_type === 'EMAIL'
-										? '#ef4444'
-										: '#22c55e';
-							bubble.children[i].style.color = color;
-							bubble.children[i].style.fontWeight = 'bold';
-						}
-						await new Promise((r) => setTimeout(r, 40));
+
+					// animate cursor left→right
+					for (let i = 0; i <= marked.length; i++) {
+						const html = marked
+							.map((t, j) => {
+								if (j < i) {
+									if (t.entity) {
+										const color =
+											t.entity.type === 'PERSON'
+												? '#3b82f6'
+												: t.entity.type === 'EMAIL_ADDRESS'
+													? '#ef4444'
+													: '#22c55e';
+										return `<span style="color:${color};font-weight:bold">${t.token}</span>`;
+									}
+									return `<span>${t.token}</span>`;
+								} else if (j === i) {
+									return `<span style="border-left:2px solid white">&ZeroWidthSpace;</span>${t.token}`;
+								}
+								return `<span style="opacity:0.4">${t.token}</span>`;
+							})
+							.join('');
+						textEl.innerHTML = html;
+						const delay = i < 10 ? 20 : 50;
+						await new Promise((r) => setTimeout(r, delay));
 					}
+
+					// restore original after animation
+					textEl.innerHTML = originalHTML;
 				}
 			}
 		}
