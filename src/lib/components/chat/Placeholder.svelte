@@ -80,12 +80,26 @@
 	let currentCarouselIndex = 0; // 0: 개인별 진도, 1: 전체 학생
 	let carouselInterval = null;
 	const CAROUSEL_INTERVAL_MS = 10000; // 10초
+	let carouselOpacity = 1;
+	let isCarouselTransitioning = false;
+
+	// 페이드 아웃 → 인덱스 변경 → 페이드 인
+	async function fadeAndSwitch(newIndex: number) {
+		if (isCarouselTransitioning) return;
+		isCarouselTransitioning = true;
+		carouselOpacity = 0;
+		await new Promise((r) => setTimeout(r, 180));
+		currentCarouselIndex = newIndex;
+		carouselOpacity = 1;
+		await new Promise((r) => setTimeout(r, 180));
+		isCarouselTransitioning = false;
+	}
 
 	// 캐러셀 자동 전환 시작
 	function startCarouselAutoPlay() {
 		stopCarouselAutoPlay();
 		carouselInterval = setInterval(() => {
-			currentCarouselIndex = (currentCarouselIndex + 1) % 2;
+			fadeAndSwitch((currentCarouselIndex + 1) % 2);
 		}, CAROUSEL_INTERVAL_MS);
 	}
 
@@ -104,13 +118,13 @@
 
 	// 이전 슬라이드로 이동
 	function goToPrevSlide() {
-		currentCarouselIndex = currentCarouselIndex === 0 ? 1 : 0;
+		fadeAndSwitch(currentCarouselIndex === 0 ? 1 : 0);
 		resetCarouselTimer();
 	}
 
 	// 다음 슬라이드로 이동
 	function goToNextSlide() {
-		currentCarouselIndex = (currentCarouselIndex + 1) % 2;
+		fadeAndSwitch((currentCarouselIndex + 1) % 2);
 		resetCarouselTimer();
 	}
 
@@ -354,6 +368,7 @@
 					</div>
 
 					<!-- 캐러셀 콘텐츠 -->
+					<div style:opacity={carouselOpacity} style:transition="opacity 180ms ease-in-out">
 					<Suggestions
 						suggestionPrompts={currentCarouselIndex === 0 ? personalSuggestions : allSuggestions}
 						inputValue={prompt}
@@ -361,6 +376,7 @@
 						isPersonalized={currentCarouselIndex === 0}
 						{onSelect}
 					/>
+					</div>
 				</div>
 			{/if}
 			</div>
@@ -383,7 +399,7 @@
 			<div class="h-[25vh] w-full shrink-0"></div>
 
 			<!-- Sticky header section with welcome text and input -->
-			<div class="sticky top-0 z-30 px-4 pt-6 pb-4 transition-all duration-200 w-full max-w-6xl">
+			<div class="sticky top-0 z-30 px-4 pt-6 pb-4 transition-all duration-200 w-full max-w-[920px]">
 				{#if $temporaryChatEnabled}
 					<Tooltip
 						content={$i18n.t("This chat won't appear in history and your messages will not be saved.")}
@@ -465,7 +481,7 @@
 							</div>
 						{/if}
 
-						<div class="text-base font-normal @md:max-w-4xl w-full py-3 {atSelectedModel ? 'mt-2' : ''}">
+						<div class="text-base font-normal w-full py-3 {atSelectedModel ? 'mt-2' : ''}">
 							<MessageInput
 								bind:this={messageInput}
 								{history}
@@ -509,7 +525,7 @@
 					<FolderPlaceholder folder={$selectedFolder} />
 				</div>
 			{:else}
-				<div class="w-full max-w-5xl font-primary mt-2 pb-8 px-4 overflow-x-hidden" in:fade={{ duration: 200, delay: 200 }}>
+				<div class="w-full max-w-[888px] font-primary mt-2 pb-8 px-4 overflow-x-hidden" in:fade={{ duration: 200, delay: 200 }}>
 					<!-- 제목 -->
 					<div class="text-title-3 text-gray-900 dark:text-gray-50 mt-8 text-center">
 						이번 주 자주 묻는 질문 TOP 3
@@ -545,6 +561,7 @@
 						</button>
 					</div>
 
+					<div style:opacity={carouselOpacity} style:transition="opacity 180ms ease-in-out">
 					<!-- 캐러셀 콘텐츠 -->
 					<Suggestions
 						suggestionPrompts={currentCarouselIndex === 0 ? personalSuggestions : allSuggestions}
@@ -553,6 +570,7 @@
 						isPersonalized={currentCarouselIndex === 0}
 						{onSelect}
 					/>
+					</div>
 				</div>
 			{/if}
 		</div>

@@ -1120,3 +1120,108 @@ body {
 	position: relative;
 	z-index: 0;
 }
+
+/* =========================================
+   Custom Snackbar / Toast Styles
+   ========================================= */
+
+/* 토스트 컨테이너 너비 */
+[data-sonner-toaster] {
+	--width: 380px !important;
+}
+
+/* 기본 토스트 공통 스타일 — 다크 모드 */
+[data-sonner-toaster][data-theme='dark'] [data-sonner-toast] {
+	background: #1e1e2e !important;
+	border: 1px solid rgba(255, 255, 255, 0.08) !important;
+	border-left: 4px solid #6b7280 !important;
+	border-radius: 10px !important;
+	color: #e2e8f0 !important;
+	padding: 14px 16px !important;
+	gap: 10px !important;
+	box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35) !important;
+	min-width: 300px !important;
+}
+
+/* 라이트 모드 */
+[data-sonner-toaster][data-theme='light'] [data-sonner-toast] {
+	background: #ffffff !important;
+	border: 1px solid rgba(0, 0, 0, 0.08) !important;
+	border-left: 4px solid #9ca3af !important;
+	border-radius: 10px !important;
+	color: #1e293b !important;
+	padding: 14px 16px !important;
+	gap: 10px !important;
+	box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1) !important;
+	min-width: 300px !important;
+}
+
+/* 타입별 좌측 강조 색상 — 공통 */
+[data-sonner-toast][data-type='success'] {
+	border-left-color: #22c55e !important;
+}
+[data-sonner-toast][data-type='error'] {
+	border-left-color: #ef4444 !important;
+}
+[data-sonner-toast][data-type='warning'] {
+	border-left-color: #f59e0b !important;
+}
+[data-sonner-toast][data-type='info'] {
+	border-left-color: #3b82f6 !important;
+}
+
+/* 아이콘 색상 — 공통 */
+[data-sonner-toast][data-type='success'] [data-icon] svg { color: #22c55e !important; }
+[data-sonner-toast][data-type='error']   [data-icon] svg { color: #ef4444 !important; }
+[data-sonner-toast][data-type='warning'] [data-icon] svg { color: #f59e0b !important; }
+[data-sonner-toast][data-type='info']    [data-icon] svg { color: #3b82f6 !important; }
+
+/* 메시지 텍스트 — 다크 */
+[data-sonner-toaster][data-theme='dark'] [data-sonner-toast] [data-title] {
+	color: #f1f5f9 !important;
+	font-size: 13px !important;
+	font-weight: 500 !important;
+	line-height: 1.5 !important;
+}
+
+/* 메시지 텍스트 — 라이트 */
+[data-sonner-toaster][data-theme='light'] [data-sonner-toast] [data-title] {
+	color: #1e293b !important;
+	font-size: 13px !important;
+	font-weight: 500 !important;
+	line-height: 1.5 !important;
+}
+
+/* 닫기(×) 버튼 — 다크 */
+[data-sonner-toaster][data-theme='dark'] [data-sonner-toast] [data-close-button] {
+	background: transparent !important;
+	border: 1px solid rgba(255, 255, 255, 0.18) !important;
+	color: #94a3b8 !important;
+	border-radius: 50% !important;
+	top: 50% !important;
+	transform: translateY(-50%) !important;
+	right: 12px !important;
+	left: auto !important;
+	transition: background 0.15s, color 0.15s !important;
+}
+[data-sonner-toaster][data-theme='dark'] [data-sonner-toast] [data-close-button]:hover {
+	background: rgba(255, 255, 255, 0.12) !important;
+	color: #f1f5f9 !important;
+}
+
+/* 닫기(×) 버튼 — 라이트 */
+[data-sonner-toaster][data-theme='light'] [data-sonner-toast] [data-close-button] {
+	background: transparent !important;
+	border: 1px solid rgba(0, 0, 0, 0.15) !important;
+	color: #64748b !important;
+	border-radius: 50% !important;
+	top: 50% !important;
+	transform: translateY(-50%) !important;
+	right: 12px !important;
+	left: auto !important;
+	transition: background 0.15s, color 0.15s !important;
+}
+[data-sonner-toaster][data-theme='light'] [data-sonner-toast] [data-close-button]:hover {
+	background: rgba(0, 0, 0, 0.06) !important;
+	color: #1e293b !important;
+}

@@ -23,7 +23,8 @@
 		user as _user,
 		showControls,
 		TTSWorker,
-		temporaryChatEnabled
+		temporaryChatEnabled,
+		chatInputContext
 	} from '$lib/stores';
 
 	import {
@@ -116,10 +117,17 @@
 	// Multiline detection for layout switching
 	let isMultiline = false;
 
-	// multiline 판단: 실제 줄바꿈이 있을 때만 전환
-	$: {
-		const lineBreaks = (prompt.match(/\n/g) || []).length;
-		isMultiline = lineBreaks > 0;
+	// 수준 칩 표시 여부 및 현재 라벨
+	let showProficiencyChip = false;
+	let proficiencyLabel = '';
+
+	// multiline 판단: 입력창 높이가 단일 행을 넘으면 전환 (텍스트 wrap 포함)
+	async function updateMultilineState() {
+		await tick();
+		const container = document.getElementById('chat-input-container');
+		if (container) {
+			isMultiline = container.scrollHeight > 40;
+		}
 	}
 
 	let showInputVariablesModal = false;
@@ -304,6 +312,11 @@
 		}
 	};
 
+	// 선택 텍스트 컨텍스트가 설정되면 입력창 포커스
+	$: if ($chatInputContext !== null) {
+		tick().then(() => chatInputElement?.focus());
+	}
+
 	export const setText = async (text?: string, cb?: (text: string) => void) => {
 		const chatInput = document.getElementById('chat-input');
 
@@ -322,6 +335,15 @@
 			await tick();
 			if (cb) await cb(text);
 		}
+	};
+
+	const buildPromptWithContext = (basePrompt) => {
+		if ($chatInputContext) {
+			const contextLines = $chatInputContext.split('\n').map((l) => `> ${l}`).join('\n');
+			chatInputContext.set(null);
+			return `${contextLines}\n\n${basePrompt}`;
+		}
+		return basePrompt;
 	};
 
 	const getCommand = () => {
@@ -1053,7 +1075,7 @@
 								document.getElementById('chat-input')?.focus();
 
 								if ($settings?.speechAutoSend ?? false) {
-									dispatch('submit', prompt);
+									dispatch('submit', buildPromptWithContext(prompt));
 								}
 							}}
 						/>
@@ -1062,7 +1084,7 @@
 						class="w-full flex flex-col gap-1.5 {recording ? 'hidden' : ''}"
 						on:submit|preventDefault={() => {
 							// check if selectedModels support image input
-							dispatch('submit', prompt);
+							dispatch('submit', buildPromptWithContext(prompt));
 						}}
 					>
 						<button
@@ -1105,91 +1127,40 @@
 								</div>
 							{/if}
 
-							{#if files.length > 0}
-								<div class="mx-2 mt-2.5 pb-1.5 flex items-center flex-wrap gap-2">
-									{#each files as file, fileIdx}
-										{#if file.type === 'image'}
-											<div class=" relative group">
-												<div class="relative flex items-center">
-													<Image
-														src={file.url}
-														alt=""
-														imageClassName=" size-10 rounded-xl object-cover"
-													/>
-													{#if atSelectedModel ? visionCapableModels.length === 0 : selectedModels.length !== visionCapableModels.length}
-														<Tooltip
-															className=" absolute top-1 left-1"
-															content={$i18n.t('{{ models }}', {
-																models: [...(atSelectedModel ? [atSelectedModel] : selectedModels)]
-																	.filter((id) => !visionCapableModels.includes(id))
-																	.join(', ')
-															})}
-														>
-															<svg
-																xmlns="http://www.w3.org/2000/svg"
-																viewBox="0 0 24 24"
-																fill="currentColor"
-																aria-hidden="true"
-																class="size-4 fill-yellow-300"
-															>
-																<path
-																	fill-rule="evenodd"
-																	d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
-																	clip-rule="evenodd"
-																/>
-															</svg>
-														</Tooltip>
-													{/if}
-												</div>
-												<div class=" absolute -top-1 -right-1">
-													<button
-														class=" bg-white text-black border border-white rounded-full {($settings?.highContrastMode ??
-														false)
-															? ''
-															: 'outline-hidden focus:outline-hidden group-hover:visible invisible transition'}"
-														type="button"
-														aria-label={$i18n.t('Remove file')}
-														on:click={() => {
-															files.splice(fileIdx, 1);
-															files = files;
-														}}
-													>
-														<svg
-															xmlns="http://www.w3.org/2000/svg"
-															viewBox="0 0 20 20"
-															fill="currentColor"
-															aria-hidden="true"
-															class="size-4"
-														>
-															<path
-																d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-															/>
-														</svg>
-													</button>
-												</div>
-											</div>
-										{:else}
-											<FileItem
-												item={file}
-												name={file.name}
-												type={file.type}
-												size={file?.size}
-												loading={file.status === 'uploading'}
-												dismissible={true}
-												edit={true}
-												small={true}
-												modal={['file', 'collection'].includes(file?.type)}
-												on:dismiss={async () => {
-													// Remove from UI state
-													files.splice(fileIdx, 1);
-													files = files;
-												}}
-												on:click={() => {
-													console.log(file);
-												}}
+							{#if $chatInputContext}
+								<div class="px-3 pt-3 w-full">
+									<div
+										class="flex items-start gap-2
+											bg-blue-50/80 dark:bg-blue-950/30
+											border border-blue-200/70 dark:border-blue-800/60
+											rounded-xl px-3 py-2"
+									>
+										<!-- Quote icon -->
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											class="size-3.5 text-blue-400 dark:text-blue-500 shrink-0 mt-0.5"
+										>
+											<path
+												fill-rule="evenodd"
+												d="M10 2c-2.236 0-4.43.18-6.57.524C1.993 2.755 1 4.014 1 5.426v5.148c0 1.413.993 2.67 2.43 2.902.848.137 1.705.248 2.57.331v3.443a.75.75 0 0 0 1.28.53l3.58-3.579a.78.78 0 0 1 .527-.224 41.202 41.202 0 0 0 5.183-.5c1.437-.232 2.43-1.49 2.43-2.903V5.426c0-1.413-.993-2.67-2.43-2.902A41.289 41.289 0 0 0 10 2Zm0 7a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM8 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Zm5 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
+												clip-rule="evenodd"
 											/>
-										{/if}
-									{/each}
+										</svg>
+										<p
+											class="text-xs text-gray-700 dark:text-gray-300 line-clamp-3 flex-1 break-words leading-relaxed"
+										>
+											{$chatInputContext}
+										</p>
+										<button
+											class="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition mt-0.5"
+											on:click={() => chatInputContext.set(null)}
+											aria-label="컨텍스트 제거"
+										>
+											<XMark className="size-3.5" />
+										</button>
+									</div>
 								</div>
 							{/if}
 
@@ -1198,81 +1169,96 @@
 								class="flex flex-row justify-center items-top gap-2 px-2.5 pb-2.5 mt-0.5"
 								dir="ltr"
 							>
-								<!-- Left: InputMenu (AddFile) button -->
-								<div class="flex-none">
-									<InputMenu
-										bind:files
-										bind:proficiencyLevel
-										bind:responseStyle
-										selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
-										{fileUploadCapableModels}
-										{screenCaptureHandler}
-										{inputFilesHandler}
-										uploadFilesHandler={() => {
-											filesInputElement.click();
-										}}
-										uploadGoogleDriveHandler={async () => {
-											try {
-												const fileData = await createPicker();
-												if (fileData) {
-													const file = new File([fileData.blob], fileData.name, {
-														type: fileData.blob.type
-													});
-													await uploadFileHandler(file);
-												} else {
-													console.log('No file was selected from Google Drive');
-												}
-											} catch (error) {
-												console.error('Google Drive Error:', error);
-												toast.error(
-													$i18n.t('Error accessing Google Drive: {{error}}', {
-														error: error.message
-													})
-												);
-											}
-										}}
-										uploadOneDriveHandler={async (authorityType) => {
-											try {
-												const fileData = await pickAndDownloadFile(authorityType);
-												if (fileData) {
-													const file = new File([fileData.blob], fileData.name, {
-														type: fileData.blob.type || 'application/octet-stream'
-													});
-													await uploadFileHandler(file);
-												} else {
-													console.log('No file was selected from OneDrive');
-												}
-											} catch (error) {
-												console.error('OneDrive Error:', error);
-											}
-										}}
-										onUpload={async (e) => {
-											dispatch('upload', e);
-										}}
-										onClose={async () => {
-											await tick();
-
-											const chatInput = document.getElementById('chat-input');
-											chatInput?.focus();
-										}}
-									>
-										<div
-											id="input-menu-button"
-											class="w-12 h-12 rounded-full text-gray-900 dark:text-gray-50 bg-white/50 dark:bg-[rgba(39,40,44,0.2)] shadow-[4px_4px_20px_rgba(0,0,0,0.1),inset_2px_2px_6px_rgba(206,212,229,0.2),inset_6px_6px_25px_rgba(206,212,229,0.15)] backdrop-blur-[10px] flex justify-center items-center hover:bg-[rgba(39,40,44,0.3)] transition outline-hidden focus:outline-hidden"
-										>
-											<PlusAlt className="size-10" />
-										</div>
-									</InputMenu>
-								</div>
-
 								<!-- Center: RichTextInput area -->
 								<div
 									class="flex-1 flex {isMultiline
-										? 'flex-col-reverse items-start'
-										: 'flex-row items-center'} px-7 py-1.5 min-h-12 bg-white/50 dark:bg-[rgba(39,40,44,0.2)] shadow-[4px_4px_20px_rgba(0,0,0,0.1),inset_2px_2px_6px_rgba(206,212,229,0.2),inset_6px_6px_25px_rgba(206,212,229,0.15)] backdrop-blur-[10px] rounded-4xl gap-2"
+										? 'flex-col items-start'
+										: 'flex-row items-center'} pl-2 pr-4 py-1.5 min-h-12 bg-white/50 dark:bg-[rgba(39,40,44,0.2)] shadow-[4px_4px_20px_rgba(0,0,0,0.1),inset_2px_2px_6px_rgba(206,212,229,0.2),inset_6px_6px_25px_rgba(206,212,229,0.15)] backdrop-blur-[10px] rounded-4xl gap-2"
 								>
+									<!-- Controls: + 버튼 + 수준 칩 -->
+									<div class="flex flex-row items-center gap-1.5 flex-none {isMultiline ? 'order-2 pb-1' : 'order-1'}">
+										<InputMenu
+											bind:files
+											bind:proficiencyLevel
+											bind:responseStyle
+											bind:proficiencyLabel
+											onProficiencySelect={() => (showProficiencyChip = true)}
+											selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
+											{fileUploadCapableModels}
+											{screenCaptureHandler}
+											{inputFilesHandler}
+											uploadFilesHandler={() => {
+												filesInputElement.click();
+											}}
+											uploadGoogleDriveHandler={async () => {
+												try {
+													const fileData = await createPicker();
+													if (fileData) {
+														const file = new File([fileData.blob], fileData.name, {
+															type: fileData.blob.type
+														});
+														await uploadFileHandler(file);
+													} else {
+														console.log('No file was selected from Google Drive');
+													}
+												} catch (error) {
+													console.error('Google Drive Error:', error);
+													toast.error(
+														$i18n.t('Error accessing Google Drive: {{error}}', {
+															error: error.message
+														})
+													);
+												}
+											}}
+											uploadOneDriveHandler={async (authorityType) => {
+												try {
+													const fileData = await pickAndDownloadFile(authorityType);
+													if (fileData) {
+														const file = new File([fileData.blob], fileData.name, {
+															type: fileData.blob.type || 'application/octet-stream'
+														});
+														await uploadFileHandler(file);
+													} else {
+														console.log('No file was selected from OneDrive');
+													}
+												} catch (error) {
+													console.error('OneDrive Error:', error);
+												}
+											}}
+											onUpload={async (e) => {
+												dispatch('upload', e);
+											}}
+											onClose={async () => {
+												await tick();
+												const chatInput = document.getElementById('chat-input');
+												chatInput?.focus();
+											}}
+										>
+											<button
+												id="input-menu-button"
+												class="w-8 h-8 rounded-full text-gray-900 dark:text-gray-50 flex justify-center items-center hover:bg-gray-200/30 dark:hover:bg-white/10 transition outline-hidden focus:outline-hidden"
+											>
+												<PlusAlt className="size-6" />
+											</button>
+										</InputMenu>
+
+										{#if showProficiencyChip}
+											<span class="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-[rgba(7,110,244,0.2)] text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700/50 whitespace-nowrap">
+												{proficiencyLabel}
+												<button
+													class="flex items-center justify-center w-4 h-4 rounded-full hover:bg-blue-200 dark:hover:bg-blue-700/50 transition text-blue-500 dark:text-blue-300"
+													on:click={() => (showProficiencyChip = false)}
+												>
+													<svg xmlns="http://www.w3.org/2000/svg" class="size-3" viewBox="0 0 20 20" fill="currentColor">
+														<path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+													</svg>
+												</button>
+											</span>
+										{/if}
+									</div>
+
 									<!-- Editor Section -->
-									<div class="flex-grow {isMultiline ? 'w-full' : ''}">
+									<div class="flex-grow {isMultiline ? 'w-full order-1' : 'order-2'}">
 										<div
 											class="w-full scrollbar-hidden rtl:text-right ltr:text-left bg-transparent text-gray-900 dark:text-gray-50 text-body-3 outline-hidden h-fit max-h-96 overflow-auto"
 											id="chat-input-container"
@@ -1286,6 +1272,7 @@
 														onChange={(e) => {
 															prompt = e.md;
 															command = getCommand();
+															updateMultilineState();
 														}}
 														json={true}
 														richText={$settings?.richTextInput ?? true}
@@ -1384,7 +1371,7 @@
 																	if (enterPressed) {
 																		e.preventDefault();
 																		if (prompt !== '' || files.length > 0) {
-																			dispatch('submit', prompt);
+																			dispatch('submit', buildPromptWithContext(prompt));
 																		}
 																	}
 																}
@@ -1525,6 +1512,93 @@
 									{/if}
 								</div>
 							</div>
+
+							{#if files.length > 0}
+								<div class="mx-2 mt-2 pb-1.5 flex items-center flex-wrap gap-2">
+									{#each files as file, fileIdx}
+										{#if file.type === 'image'}
+											<div class=" relative group">
+												<div class="relative flex items-center">
+													<Image
+														src={file.url}
+														alt=""
+														imageClassName=" size-10 rounded-xl object-cover"
+													/>
+													{#if atSelectedModel ? visionCapableModels.length === 0 : selectedModels.length !== visionCapableModels.length}
+														<Tooltip
+															className=" absolute top-1 left-1"
+															content={$i18n.t('{{ models }}', {
+																models: [...(atSelectedModel ? [atSelectedModel] : selectedModels)]
+																	.filter((id) => !visionCapableModels.includes(id))
+																	.join(', ')
+															})}
+														>
+															<svg
+																xmlns="http://www.w3.org/2000/svg"
+																viewBox="0 0 24 24"
+																fill="currentColor"
+																aria-hidden="true"
+																class="size-4 fill-yellow-300"
+															>
+																<path
+																	fill-rule="evenodd"
+																	d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
+																	clip-rule="evenodd"
+																/>
+															</svg>
+														</Tooltip>
+													{/if}
+												</div>
+												<div class=" absolute -top-1 -right-1">
+													<button
+														class=" bg-white text-black border border-white rounded-full {($settings?.highContrastMode ??
+														false)
+															? ''
+															: 'outline-hidden focus:outline-hidden group-hover:visible invisible transition'}"
+														type="button"
+														aria-label={$i18n.t('Remove file')}
+														on:click={() => {
+															files.splice(fileIdx, 1);
+															files = files;
+														}}
+													>
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															viewBox="0 0 20 20"
+															fill="currentColor"
+															aria-hidden="true"
+															class="size-4"
+														>
+															<path
+																d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+															/>
+														</svg>
+													</button>
+												</div>
+											</div>
+										{:else}
+											<FileItem
+												item={file}
+												name={file.name}
+												type={file.type}
+												size={file?.size}
+												loading={file.status === 'uploading'}
+												dismissible={true}
+												edit={true}
+												small={true}
+												modal={['file', 'collection'].includes(file?.type)}
+												on:dismiss={async () => {
+													files.splice(fileIdx, 1);
+													files = files;
+												}}
+												on:click={() => {
+													console.log(file);
+												}}
+											/>
+										{/if}
+									{/each}
+								</div>
+							{/if}
 
 							{#if $config?.license_metadata?.input_footer}
 								<div class=" text-xs text-gray-500 text-center line-clamp-1 marked">

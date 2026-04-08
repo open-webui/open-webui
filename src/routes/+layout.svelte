@@ -802,7 +802,7 @@
 				? 'dark'
 				: 'light'
 			: 'light'}
-	richColors
-	position="top-right"
+	position="top-left"
 	closeButton
+	duration={300000}
 />

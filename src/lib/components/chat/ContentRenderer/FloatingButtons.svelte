@@ -11,9 +11,10 @@
 
 	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
 	import LightBulb from '$lib/components/icons/LightBulb.svelte';
+	import Clipboard from '$lib/components/icons/Clipboard.svelte';
 	import Markdown from '../Messages/Markdown.svelte';
 	import Skeleton from '../Messages/Skeleton.svelte';
-	import { chatId, models, socket } from '$lib/stores';
+	import { chatId, models, socket, chatInputContext } from '$lib/stores';
 
 	export let id = '';
 	export let messageId = '';
@@ -41,16 +42,21 @@
 	const DEFAULT_ACTIONS = [
 		{
 			id: 'ask',
-			label: $i18n.t('Ask'),
+			label: '질문하기',
 			icon: ChatBubble,
-			input: true,
-			prompt: `{{SELECTED_CONTENT}}\n\n\n{{INPUT_CONTENT}}`
+			contextOnly: true
+		},
+		{
+			id: 'summarize',
+			label: '요약하기',
+			icon: Clipboard,
+			prompt: `다음 내용을 핵심만 간결하게 요약해줘:\n\n{{SELECTED_CONTENT}}`
 		},
 		{
 			id: 'explain',
-			label: $i18n.t('Explain'),
+			label: '설명하기',
 			icon: LightBulb,
-			prompt: `{{SELECTED_CONTENT}}\n\n\n${$i18n.t('Explain')}`
+			prompt: `다음 내용을 쉽게 설명해줘:\n\n{{SELECTED_CONTENT}}`
 		}
 	];
 
@@ -248,117 +254,79 @@
 	style="display: none"
 >
 	{#if responseContent === null}
-		{#if !floatingInput}
-			<div
-				class="flex flex-row shrink-0 p-0.5 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-xl shadow-xl border border-gray-100 dark:border-gray-800"
-			>
-				{#each actions as action}
-					<button
-						class="px-1.5 py-[1px] hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl flex items-center gap-1 min-w-fit transition"
-						on:click={async () => {
-							selectedText = window.getSelection().toString();
-							selectedAction = action;
+		<div
+			class="flex flex-row items-center gap-1.5 p-1.5
+				bg-white/90 dark:bg-gray-850/95
+				backdrop-blur-md
+				border border-gray-200/60 dark:border-gray-700/60
+				rounded-2xl shadow-lg"
+		>
+			{#each actions as action}
+				<button
+					class="flex items-center gap-1.5 px-3 py-1.5
+						text-sm font-medium
+						rounded-xl
+						transition-all duration-150
+						{action.id === 'ask'
+							? 'bg-blue-500 hover:bg-blue-600 text-white'
+							: 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/60'}"
+					on:click={async () => {
+						selectedText = window.getSelection().toString();
+						selectedAction = action;
 
-							if (action.prompt.includes('{{INPUT_CONTENT}}')) {
-								floatingInput = true;
-								floatingInputValue = '';
-
-								await tick();
-								setTimeout(() => {
-									const input = document.getElementById('floating-message-input');
-									if (input) {
-										input.focus();
-									}
-								}, 0);
-							} else {
-								actionHandler(action.id);
-							}
-						}}
-					>
-						{#if action.icon}
-							<svelte:component this={action.icon} className="size-3 shrink-0" />
-						{/if}
-						<div class="shrink-0">{action.label}</div>
-					</button>
-				{/each}
-			</div>
-		{:else}
-			<div
-				class="py-1 flex dark:text-gray-100 bg-white dark:bg-gray-850 border border-gray-100 dark:border-gray-800 w-72 rounded-full shadow-xl"
-			>
-				<input
-					type="text"
-					id="floating-message-input"
-					class="ml-5 bg-transparent outline-hidden w-full flex-1 text-sm"
-					placeholder={$i18n.t('Ask a question')}
-					bind:value={floatingInputValue}
-					on:keydown={(e) => {
-						if (e.key === 'Enter') {
-							actionHandler(selectedAction?.id);
+						if (action.contextOnly) {
+							// 질문하기: 선택 텍스트를 컨텍스트로 저장하고 입력창 포커스
+							chatInputContext.set(selectedText);
+							const floatingDiv = document.getElementById(`floating-buttons-${id}`);
+							if (floatingDiv) floatingDiv.style.display = 'none';
+							document.getElementById('chat-input')?.focus();
+							return;
 						}
-					}}
-				/>
 
-				<div class="ml-1 mr-1">
-					<button
-						class="{floatingInputValue !== ''
-							? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-							: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 m-0.5 self-center"
-						on:click={() => {
-							actionHandler(selectedAction?.id);
-						}}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="size-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</button>
-				</div>
-			</div>
-		{/if}
+						actionHandler(action.id);
+					}}
+				>
+					{#if action.icon}
+						<svelte:component this={action.icon} className="size-3.5 shrink-0" />
+					{/if}
+					<span class="shrink-0">{action.label}</span>
+				</button>
+			{/each}
+		</div>
 	{:else}
 		<div
-			class="bg-white dark:bg-gray-850 dark:text-gray-100 rounded-3xl shadow-xl w-80 max-w-full border border-gray-100 dark:border-gray-800"
+			class="bg-white dark:bg-gray-850 dark:text-gray-100 rounded-3xl shadow-xl w-80 max-w-full border border-gray-100 dark:border-gray-800 flex flex-col"
+			style="max-height: min(28rem, 80vh)"
 		>
-			<div
-				class="bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-3xl px-3.5 pt-3 w-full"
-			>
-				<div class="font-medium">
-					<Markdown id={`${id}-float-prompt`} {content} />
+			<!-- Header: action label + selected text preview -->
+			<div class="px-3.5 pt-3 pb-2 flex flex-col gap-1 border-b border-gray-100 dark:border-gray-700/50 flex-shrink-0">
+				<div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+					{selectedAction?.label ?? ''}
 				</div>
+				<p class="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 break-words leading-relaxed">
+					"{selectedText}"
+				</p>
 			</div>
 
-			<div class="bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-4xl w-full">
-				<div
-					class=" max-h-80 overflow-y-auto w-full markdown-prose-xs px-3.5 py-3"
-					id="response-container"
-				>
-					{#if !responseContent || responseContent?.trim() === ''}
-						<Skeleton size="sm" />
-					{:else}
-						<Markdown id={`${id}-float-response`} content={responseContent} />
-					{/if}
-
-					{#if responseDone}
-						<div class="flex justify-end pt-3 text-sm font-medium">
-							<button
-								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-								on:click={addHandler}
-							>
-								{$i18n.t('Add')}
-							</button>
-						</div>
-					{/if}
-				</div>
+			<!-- Response body -->
+			<div class="overflow-y-auto flex-1 w-full markdown-prose-xs px-3.5 py-3" id="response-container">
+				{#if !responseContent || responseContent?.trim() === ''}
+					<Skeleton size="sm" />
+				{:else}
+					<Markdown id={`${id}-float-response`} content={responseContent} />
+				{/if}
 			</div>
+
+			{#if responseDone}
+				<div class="flex justify-end px-3.5 pb-3 pt-1 flex-shrink-0">
+					<button
+						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+						on:click={addHandler}
+					>
+						{$i18n.t('Add')}
+					</button>
+				</div>
+			{/if}
 		</div>
 	{/if}
 </div>

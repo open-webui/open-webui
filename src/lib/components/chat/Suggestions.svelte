@@ -93,18 +93,17 @@
 			role="list"
 			class="{$mobile
 				? 'flex flex-col gap-4 px-4'
-				: 'flex flex-row gap-4 overflow-hidden scrollbar-none justify-start max-w-[932px] mx-auto pb-4'} {className}"
+				: 'flex flex-row gap-4 w-full pb-4'} {className}"
 		>
 			{#each topTags as tag (`${isPersonalized}-${tag.id}`)}
 				<div
 					class="box-border flex flex-col items-start p-5 gap-3
-			{$mobile ? 'w-full' : 'min-w-[18.75rem] w-[18.75rem]'}
+			{$mobile ? 'w-full' : 'flex-1 min-w-0'}
 			min-h-[8rem] h-auto
 			bg-white/70 dark:bg-gray-800/70
 			shadow-sm
 			backdrop-blur-md
 			rounded-2xl"
-					transition:fade={{ duration: 300 }}
 				>
 					<!-- Usage Count Info -->
 					<!-- <div class="flex items-center gap-1">
@@ -129,13 +128,13 @@
 					</div> -->
 
 					<!-- Content -->
-					<div class="flex flex-col gap-1">
+					<div class="flex flex-col gap-1 min-w-0 w-full">
 						<div
-							class="text-caption-medium text-gray-900 dark:text-white w-full overflow-hidden truncate max-w-[15rem]"
+							class="text-caption-medium text-gray-900 dark:text-white w-full overflow-hidden truncate whitespace-nowrap"
 						>
 							{tag.name}
 						</div>
-						<div class="text-caption text-gray-500 flex flex-row items-center gap-1">
+						<div class="text-caption text-gray-500 flex flex-row items-center gap-1 min-w-0 overflow-hidden">
 							<svg
 								width="20"
 								height="20"
@@ -161,11 +160,9 @@
 									/>
 								</g>
 							</svg>
-							<div
-								class="text-caption text-gray-500 flex flex-row items-center gap-1 overflow-hidden truncate max-w-full"
-							>
+							<span class="truncate whitespace-nowrap overflow-hidden min-w-0">
 								{tag.chapter_name}
-							</div>
+							</span>
 						</div>
 					</div>
 

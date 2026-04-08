@@ -86,6 +86,10 @@
 	import { updateFolderById } from '$lib/apis/folders';
 	import { getTextbookData, type Chapter, type Section } from '$lib/apis/textbook';
 
+	import BugReportModal from '../common/BugReportModal.svelte';
+	import NPSSurveyModal from '../common/NPSSurveyModal.svelte';
+	import FeedbackBoardModal from '../common/FeedbackBoardModal.svelte';
+
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
@@ -147,19 +151,19 @@
 	let generating = false;
 	let generationController = null;
 
-	// Check if the last message is still generating or tool is executing
+	// Check if the last message is still generating or tool is executing.
+	// message.done은 DB에 저장되므로 refresh 후에도 올바른 값이 유지됨.
+	// message.completed은 런타임 필드라 로드 시 undefined일 수 있어 사용하지 않음.
 	$: {
 		if (history?.currentId && history.messages[history.currentId]?.role === 'assistant') {
 			const currentMessage = history.messages[history.currentId];
 			const isToolExecuting = currentMessage?.toolExecutions
 				? Object.values(currentMessage.toolExecutions).some((t) => t.status === 'executing')
 				: false;
-			
-			// Update generating if message is not completed or tool is executing
-			if (!currentMessage.completed || isToolExecuting) {
+
+			if (!currentMessage.done || isToolExecuting) {
 				generating = true;
-			} else if (currentMessage.completed && !isToolExecuting && generating) {
-				// Only set to false if it was previously true and now should be false
+			} else if (currentMessage.done && !isToolExecuting && generating) {
 				generating = false;
 			}
 		}
@@ -205,6 +209,14 @@
 	let lastLoadedChatId: string | null = null;  // 마지막으로 로드한 채팅 ID 추적
 	let lastKnownChapterId: string | null = null;  // 마지막으로 알려진 chat.chat.chapter_id (백엔드 값 추적)
 	let isCreatingNewChat = false;  // 새 채팅 생성 중 플래그
+
+	// Feedback modals
+	let showBugReportModal = false;
+	let showNPSModal = false;
+	let npsShownThisSession = false;
+	let showFeedbackBoardModal = false;
+	let feedbackBoardShownThisSession = false;
+	let userMessageCount = 0;
 	let textbookChaptersCache: Chapter[] = [];  // textbook API에서 가져온 chapter 목록 캐싱
 
 	// Textbook 데이터 로드 및 캐싱
@@ -1600,6 +1612,7 @@
 					parentId: currentParentId,
 					childrenIds: [],
 					done: true,
+					completed: true,
 					model: model.id,
 					modelName: model.name ?? model.id,
 					modelIdx: 0,
@@ -1937,6 +1950,16 @@
 		chatInput?.focus();
 
 		saveSessionSelectedModels();
+
+		// Feedback modal triggers
+		userMessageCount++;
+		if (userMessageCount >= 5 && !npsShownThisSession) {
+			npsShownThisSession = true;
+			showNPSModal = true;
+		} else if (userMessageCount >= 10 && !feedbackBoardShownThisSession) {
+			feedbackBoardShownThisSession = true;
+			showFeedbackBoardModal = true;
+		}
 
 		await sendMessage(history, userMessageId, { newChat: true });
 	};
@@ -2960,7 +2983,7 @@
 							</div>
 						{:else}
 							<!-- Desktop: Full toolbar -->
-							<div class="{hasMessages ? 'shrink-0' : 'absolute top-0 left-0 right-0'} z-20 bg-white dark:bg-gray-900">
+							<div class="{hasMessages ? 'shrink-0' : 'absolute top-0 left-0 right-0'} z-20 backdrop-blur-xl dark:bg-gray-900">
 								<ChatToolbar
 									title={toolbarTitle}
 									subtitle={toolbarSubtitle}
@@ -3207,6 +3230,40 @@
 		</div>
 	{/if}
 </div>
+
+<!-- Floating feedback buttons -->
+<div class="fixed bottom-24 right-6 z-50 flex items-center gap-2">
+	<!-- Debug: NPS -->
+	<button
+		class="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500 hover:bg-blue-600 text-white shadow transition opacity-70 hover:opacity-100"
+		on:click={() => (showNPSModal = true)}
+		title="NPS 만족도 (디버그)"
+	>
+		NPS
+	</button>
+	<!-- Debug: Feedback Board -->
+	<button
+		class="px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500 hover:bg-purple-600 text-white shadow transition opacity-70 hover:opacity-100"
+		on:click={() => (showFeedbackBoardModal = true)}
+		title="피드백 보드 (디버그)"
+	>
+		💡
+	</button>
+	<!-- Bug report icon button -->
+	<button
+		class="w-10 h-10 rounded-full flex items-center justify-center bg-amber-500 hover:bg-amber-600 text-white shadow-lg transition"
+		on:click={() => (showBugReportModal = true)}
+		title="불편 신고"
+	>
+		<svg xmlns="http://www.w3.org/2000/svg" class="size-5" viewBox="0 0 20 20" fill="currentColor">
+			<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+		</svg>
+	</button>
+</div>
+
+<BugReportModal bind:show={showBugReportModal} />
+<NPSSurveyModal bind:show={showNPSModal} />
+<FeedbackBoardModal bind:show={showFeedbackBoardModal} />
 
 <style>
 	::-webkit-scrollbar {

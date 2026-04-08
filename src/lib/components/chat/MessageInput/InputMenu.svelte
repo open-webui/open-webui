@@ -53,6 +53,8 @@
 
 	export let proficiencyLevel = '2';  // 기본값: 중급
 	export let responseStyle = 'diagnosis';  // 기본값: 학생 진단 브리핑
+	export let proficiencyLabel = '';
+	export let onProficiencySelect: () => void = () => {};
 
 	// 동적 페르소나 옵션
 	let availablePersonas: AvailablePersonas | null = null;
@@ -69,6 +71,11 @@
 		const found = availablePersonas.proficiency_levels.find(p => p.value === proficiencyLevel);
 		return found ? getPersonaLabel(found) : proficiencyLevel;
 	};
+
+	// proficiencyLabel을 reactive하게 유지 (변수를 직접 참조해야 Svelte가 의존성 추적 가능)
+	$: proficiencyLabel = availablePersonas
+		? (availablePersonas.proficiency_levels.find((p) => p.value === proficiencyLevel)?.prompts[0]?.title ?? proficiencyLevel)
+		: proficiencyLevel;
 
 	const getSelectedStyleLabel = (): string => {
 		if (!availablePersonas) return responseStyle;
@@ -597,6 +604,7 @@
 								class="flex flex-row items-center justify-between py-3 px-4 gap-1 w-full m-2 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 								on:click={() => {
 									proficiencyLevel = option.value;
+									onProficiencySelect();
 									tab = '';
 								}}
 							>
@@ -655,18 +663,18 @@
 						<span>파일 첨부</span>
 					</button>
 
-					<!-- PDF 버튼 -->
+					<!-- 이 PC에서 버튼 -->
 					<DropdownMenu.Item
 						class="flex flex-row items-center py-3 px-4 gap-1 w-full m-2 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 						on:click={() => {
 							uploadFilesHandler();
 						}}
 					>
-						<!-- picture_as_pdf icon -->
+						<!-- computer/upload icon -->
 						<svg class="size-5" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-							<path d="M8.5 9H9C9.2833 9 9.5208 8.9042 9.7125 8.7125C9.9042 8.5208 10 8.2833 10 8V7.5C10 7.2167 9.9042 6.9792 9.7125 6.7875C9.5208 6.5958 9.2833 6.5 9 6.5H8C7.8667 6.5 7.75 6.55 7.65 6.65C7.55 6.75 7.5 6.8667 7.5 7V10C7.5 10.1333 7.55 10.25 7.65 10.35C7.75 10.45 7.8667 10.5 8 10.5C8.1333 10.5 8.25 10.45 8.35 10.35C8.45 10.25 8.5 10.1333 8.5 10V9ZM8.5 8V7.5H9V8H8.5ZM12 10.5C12.2833 10.5 12.5208 10.4042 12.7125 10.2125C12.9042 10.0208 13 9.7833 13 9.5V7.5C13 7.2167 12.9042 6.9792 12.7125 6.7875C12.5208 6.5958 12.2833 6.5 12 6.5H11C10.8667 6.5 10.75 6.55 10.65 6.65C10.55 6.75 10.5 6.8667 10.5 7V10C10.5 10.1333 10.55 10.25 10.65 10.35C10.75 10.45 10.8667 10.5 11 10.5H12ZM11.5 9.5V7.5H12V9.5H11.5ZM14.5 9H15.006C15.1409 9 15.2569 8.95 15.3542 8.85C15.4514 8.75 15.5 8.6333 15.5 8.5C15.5 8.3667 15.45 8.25 15.35 8.15C15.25 8.05 15.1333 8 15 8H14.5V7.5H15.006C15.1409 7.5 15.2569 7.45 15.3542 7.35C15.4514 7.25 15.5 7.1333 15.5 7C15.5 6.8667 15.4497 6.75 15.3492 6.65C15.2487 6.55 15.1315 6.5 14.9975 6.5H13.9927C13.8587 6.5 13.7431 6.55 13.6458 6.65C13.5486 6.75 13.5 6.8667 13.5 7V10C13.5 10.1333 13.55 10.25 13.65 10.35C13.75 10.45 13.8667 10.5 14 10.5C14.1333 10.5 14.25 10.45 14.35 10.35C14.45 10.25 14.5 10.1333 14.5 10V9ZM6.5 15C6.0875 15 5.73438 14.8531 5.44062 14.5594C5.14687 14.2656 5 13.9125 5 13.5V3.5C5 3.0875 5.14687 2.73438 5.44062 2.44063C5.73438 2.14688 6.0875 2 6.5 2H16.5C16.9125 2 17.2656 2.14688 17.5594 2.44063C17.8531 2.73438 18 3.0875 18 3.5V13.5C18 13.9125 17.8531 14.2656 17.5594 14.5594C17.2656 14.8531 16.9125 15 16.5 15H6.5ZM3.5 18C3.0875 18 2.73438 17.8531 2.44063 17.5594C2.14688 17.2656 2 16.9125 2 16.5V5.75C2 5.5375 2.07146 5.35937 2.21438 5.21562C2.35729 5.07187 2.53437 5 2.74562 5C2.95687 5 3.13542 5.07187 3.28125 5.21562C3.42708 5.35937 3.5 5.5375 3.5 5.75V16.5H14.25C14.4625 16.5 14.6406 16.5715 14.7844 16.7144C14.9281 16.8573 15 17.0344 15 17.2456C15 17.4569 14.9281 17.6354 14.7844 17.7812C14.6406 17.9271 14.4625 18 14.25 18H3.5Z" class="fill-gray-500 dark:fill-current"/>
+							<path d="M3 13.5V14.5C3 15.0523 3.44772 15.5 4 15.5H16C16.5523 15.5 17 15.0523 17 14.5V13.5M10 3.5V11.5M10 3.5L7 6.5M10 3.5L13 6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="stroke-gray-500 dark:stroke-current"/>
 						</svg>
-						<span>PDF</span>
+						<span>이 PC에서</span>
 					</DropdownMenu.Item>
 
 					<!-- 캡처 버튼 -->

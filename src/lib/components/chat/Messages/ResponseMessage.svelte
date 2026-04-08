@@ -1,5 +1,5 @@
-import DOMPurify from 'dompurify';
 <script lang="ts">
+	import DOMPurify from 'dompurify';
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 
@@ -47,6 +47,9 @@ import DOMPurify from 'dompurify';
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
 	import Skeleton from './Skeleton.svelte';
+	import LoadingStateCard from './LoadingStateCard.svelte';
+	import BadFeedbackModal from './BadFeedbackModal.svelte';
+	import UnderstandingModal from './UnderstandingModal.svelte';
 	import Image from '$lib/components/common/Image.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import RateComment from './RateComment.svelte';
@@ -63,7 +66,7 @@ import DOMPurify from 'dompurify';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import FollowUps from './ResponseMessage/FollowUps.svelte';
-	import { fade } from 'svelte/transition';
+	import { fade, fly } from 'svelte/transition';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import RegenerateMenu from './ResponseMessage/RegenerateMenu.svelte';
 	import StatusHistory from './ResponseMessage/StatusHistory.svelte';
@@ -147,6 +150,43 @@ import DOMPurify from 'dompurify';
 	$: executingTools = message?.toolExecutions
 		? Object.entries(message.toolExecutions).filter(([_, t]) => t.status === 'executing')
 		: [];
+
+	// ── Loading State Card (stacked) ─────────────────────────────────────────
+	// message.done은 DB에 저장되어 refresh 후에도 올바름.
+	// message.completed은 런타임 필드라 로드 시 undefined일 수 있어 사용하지 않음.
+	$: shouldShowLoadingCards =
+		!message.error &&
+		(!message.done || isToolExecuting) &&
+		((model?.info?.meta?.capabilities?.status_updates ?? true)
+			? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 ||
+			  (message?.statusHistory?.at(-1)?.hidden ?? false)
+			: true);
+
+	$: isGraphToolExecuting = executingTools.some(([toolName]) => /graph/i.test(toolName));
+
+	let loadingStateStack = [];
+	let loadingStateTimer = null;
+	let loadingStarted = false;
+
+	$: if (shouldShowLoadingCards && !loadingStarted) {
+		loadingStarted = true;
+		loadingStateStack = ['analyzing'];
+		loadingStateTimer = setTimeout(() => {
+			if (shouldShowLoadingCards && !loadingStateStack.includes('explaining')) {
+				loadingStateStack = [...loadingStateStack, 'explaining'];
+			}
+			loadingStateTimer = null;
+		}, 3000);
+	} else if (!shouldShowLoadingCards && loadingStarted) {
+		loadingStarted = false;
+		if (loadingStateTimer) { clearTimeout(loadingStateTimer); loadingStateTimer = null; }
+		loadingStateStack = [];
+	}
+
+	$: if (shouldShowLoadingCards && isGraphToolExecuting && !loadingStateStack.includes('graphing')) {
+		loadingStateStack = [...loadingStateStack, 'graphing'];
+	}
+	// ─────────────────────────────────────────────────────────────────────────
 
 	export let siblings;
 
@@ -439,6 +479,8 @@ import DOMPurify from 'dompurify';
 	// New simple message feedback handler
 	let messageFeedbackLoading = false;
 	let feedbackExpanded = false;
+	let showBadFeedbackModal = false;
+	let showUnderstandingModal = false;
 
 	// Reactive declaration - always syncs with message.feedback
 	$: currentFeedback = message?.feedback ?? null;
@@ -469,8 +511,12 @@ import DOMPurify from 'dompurify';
 			};
 			saveMessage(message.id, updatedMessage);
 
-			if (newRating) {
-				toast.success($i18n.t('Thank you for your feedback!'));
+			if (newRating === 'bad') {
+				showBadFeedbackModal = true;
+			} else if (newRating === 'good') {
+				showUnderstandingModal = true;
+			} else if (!newRating) {
+				// toggled off — no modal
 			}
 		} catch (error) {
 			console.error('Failed to submit feedback:', error);
@@ -652,8 +698,16 @@ import DOMPurify from 'dompurify';
 		}
 	};
 
+	// 에러 토스트 — 히스토리 메시지(마운트 시 이미 error)는 제외, 신규 에러만 알림
+	let _errorNotified = false;
+
 	onMount(async () => {
 		// console.log('ResponseMessage mounted');
+
+		// 마운트 시 이미 error 가 있으면 히스토리 메시지 → toast 안 띄움
+		if (message?.error) {
+			_errorNotified = true;
+		}
 
 		await tick();
 		if (buttonsContainerElement) {
@@ -665,6 +719,15 @@ import DOMPurify from 'dompurify';
 		}
 	});
 
+	$: if (message?.error && !_errorNotified) {
+		_errorNotified = true;
+		const errorContent =
+			(typeof message.error === 'object' ? message.error?.content : null) ??
+			message.content ??
+			'오류가 발생했습니다.';
+		toast.error(errorContent || '오류가 발생했습니다.', { duration: Infinity });
+	}
+
 	onDestroy(() => {
 		if (buttonsContainerElement) {
 			buttonsContainerElement.removeEventListener('wheel', buttonsWheelHandler);
@@ -672,6 +735,11 @@ import DOMPurify from 'dompurify';
 
 		if (contentContainerElement) {
 			contentContainerElement.removeEventListener('copy', contentCopyHandler);
+		}
+
+		if (loadingStateTimer) {
+			clearTimeout(loadingStateTimer);
+			loadingStateTimer = null;
 		}
 	});
 </script>
@@ -683,6 +751,9 @@ import DOMPurify from 'dompurify';
 		deleteMessageHandler();
 	}}
 />
+
+<BadFeedbackModal bind:show={showBadFeedbackModal} />
+<UnderstandingModal bind:show={showUnderstandingModal} messageContent={message?.content ?? ''} />
 
 {#key message.id}
 	<div
@@ -847,15 +918,25 @@ import DOMPurify from 'dompurify';
 								py-5 px-7"
 								id="response-content-container"
 							>
-								{#if message.content === '' && !message.error && (!message.completed || isToolExecuting) && ((model?.info?.meta?.capabilities?.status_updates ?? true) ? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false) : true)}
-									<Skeleton />
-								{:else if message.content === '' && !message.error && message.completed && message.done && !isToolExecuting}
-									<!-- Edge case: message completed but no content (model error or save issue) -->
-									<!-- Only show "no response" when streaming is actually done (message.done === true) -->
+								<!-- Stacked loading cards — appear at top while generating -->
+								{#if shouldShowLoadingCards && loadingStateStack.length > 0}
+									<div class="flex flex-col gap-2 {message.content ? 'mb-3' : ''}">
+										{#each loadingStateStack as state (state)}
+											<div in:fly={{ y: -8, duration: 250 }}>
+												<LoadingStateCard {state} />
+											</div>
+										{/each}
+									</div>
+								{/if}
+
+								{#if message.content === '' && !message.error && message.completed && message.done && !isToolExecuting}
+									<!-- Edge case: message completed but no content -->
 									<div class="text-gray-500 dark:text-gray-400 text-sm italic">
 										{$i18n.t('No response received. Please try again.')}
 									</div>
-								{:else if message.content && message.error !== true}
+								{/if}
+
+								{#if message.content && message.error !== true}
 									<!-- always show message contents even if there's an error -->
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 									<ContentRenderer
@@ -899,10 +980,6 @@ import DOMPurify from 'dompurify';
 									/>
 								{/if}
 
-								{#if message?.error}
-									<Error content={message?.error?.content ?? message.content} />
-								{/if}
-
 								{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
 									<Citations
 										bind:this={citationsElement}
@@ -916,67 +993,13 @@ import DOMPurify from 'dompurify';
 									<CodeExecutions codeExecutions={message.code_executions} />
 								{/if}
 
-								<!-- Tool Execution Status (shown at bottom of message while generating) -->
-								{#if executingTools.length > 0}
-									<div class="flex flex-col gap-1 mt-3 w-full">
-										{#each executingTools as [toolName, toolInfo]}
-											<div
-												class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-2"
-												transition:fade={{ duration: 150 }}
-											>
-												<Spinner className="size-4" />
-												<span>{toolInfo.message}</span>
-											</div>
-										{/each}
-									</div>
-								{/if}
+
 							</div>
 
 							<!-- Desktop Buttons Container (PC only) -->
 							{#if message.completed && !readOnly && !isToolExecuting}
 								<div class="hidden md:flex flex-row items-center gap-1">
-									<!-- Regenerate Button (PC) -->
-									{#if !currentFeedback && ($user?.role === 'admin' || ($user?.permissions?.chat?.regenerate_response ?? true))}
-										<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
-											<button
-												type="button"
-												aria-label={$i18n.t('Regenerate')}
-												class="p-1 text-gray-950 dark:text-gray-50 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition regenerate-response-button"
-												on:click={() => {
-													showRateComment = false;
-													regenerateResponse(message);
-
-													(model?.actions ?? []).forEach((action) => {
-														dispatch('action', {
-															id: action.id,
-															event: {
-																id: 'regenerate-response',
-																data: {
-																	messageId: message.id
-																}
-															}
-														});
-													});
-												}}
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke-width="2"
-													aria-hidden="true"
-													stroke="currentColor"
-													class="w-4 h-4"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
-													/>
-												</svg>
-											</button>
-										</Tooltip>
-									{/if}
+									
 									<!-- Feedback Status Icon (when feedback exists) -->
 									{#if currentFeedback}
 										<div class="flex items-center gap-1">
@@ -1093,57 +1116,34 @@ import DOMPurify from 'dompurify';
 							<span class="text-caption text-gray-700 dark:text-gray-300">
 								{$i18n.t('Did you understand the answer?')}
 							</span>
-							<Tooltip content={$i18n.t('No')} placement="bottom">
-								<button
-									type="button"
-									aria-label={$i18n.t('No')}
-									class="p-0.5 hover:opacity-80 transition disabled:opacity-50"
-									disabled={messageFeedbackLoading}
-									on:click={() => handleMessageFeedback('bad')}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										fill="none"
-										viewBox="0 0 24 24"
-										stroke-width="2"
-										stroke="#FF4D6A"
-										class="w-5 h-5"
-									>
-										<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-									</svg>
-								</button>
-							</Tooltip>
-							<Tooltip content={$i18n.t('Yes')} placement="bottom">
-								<button
-									type="button"
-									aria-label={$i18n.t('Yes')}
-									class="p-0.5 hover:opacity-80 transition disabled:opacity-50"
-									disabled={messageFeedbackLoading}
-									on:click={() => handleMessageFeedback('good')}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										fill="none"
-										viewBox="0 0 24 24"
-										stroke-width="2"
-										stroke="#34BE89"
-										class="w-5 h-5"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-							d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-										/>
-									</svg>
-								</button>
-							</Tooltip>
+							<button
+								type="button"
+								class="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border transition disabled:opacity-50
+									{currentFeedback === 'good'
+										? 'bg-green-100 dark:bg-green-900/30 border-green-400 text-green-700 dark:text-green-300'
+										: 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-green-400 hover:text-green-600 dark:hover:border-green-500 dark:hover:text-green-400'}"
+								disabled={messageFeedbackLoading}
+								on:click={() => handleMessageFeedback('good')}
+							>
+								👍 도움됐어요
+							</button>
+							<button
+								type="button"
+								class="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border transition disabled:opacity-50
+									{currentFeedback === 'bad'
+										? 'bg-red-100 dark:bg-red-900/30 border-red-400 text-red-600 dark:text-red-400'
+										: 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-red-400 hover:text-red-500 dark:hover:border-red-500 dark:hover:text-red-400'}"
+								disabled={messageFeedbackLoading}
+								on:click={() => handleMessageFeedback('bad')}
+							>
+								👎 별로에요
+							</button>
 							{#if messageFeedbackLoading}
 								<Spinner className="size-4" />
 							{/if}
 						</div>
 						
 						<!-- Regenerate Button (Mobile only) -->
-						<div class="md:hidden">
 							{#if $user?.role === 'admin' || ($user?.permissions?.chat?.regenerate_response ?? true)}
 								<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
 									<button
@@ -1186,7 +1186,7 @@ import DOMPurify from 'dompurify';
 								</Tooltip>
 							{/if}
 						</div>
-					</div>
+				
 				{/if}
 
 				{#if !edit}
