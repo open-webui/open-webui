@@ -10,6 +10,34 @@
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 
 	import { user, settings } from '$lib/stores';
+	import { onMount } from 'svelte';
+
+	const ENTITY_TYPES = [
+		{ key: 'PERSON',        label: 'Name / Person' },
+		{ key: 'ORGANIZATION',  label: 'Organization' },
+		{ key: 'EMAIL_ADDRESS', label: 'Email' },
+		{ key: 'IBAN_CODE',     label: 'IBAN' },
+		{ key: 'PHONE_NUMBER',  label: 'Phone Number' },
+		{ key: 'ID',            label: 'ID' },
+	];
+
+	let entityToggles: Record<string, boolean> = {};
+
+	onMount(() => {
+		const saved = localStorage.getItem('garnet_entity_toggles');
+		if (saved) {
+			entityToggles = JSON.parse(saved);
+		} else {
+			ENTITY_TYPES.forEach(e => (entityToggles[e.key] = true));
+			localStorage.setItem('garnet_entity_toggles', JSON.stringify(entityToggles));
+		}
+	});
+
+	function onEntityChange(key: string, value: string) {
+		entityToggles[key] = value === 'on';
+		localStorage.setItem('garnet_entity_toggles', JSON.stringify(entityToggles));
+		entityToggles = { ...entityToggles };
+	}
 	export let models = [];
 	export let chatFiles = [];
 	export let params = {};
@@ -28,6 +56,7 @@
 	let showValves = getOpen('valves', false);
 	let showSystemPrompt = getOpen('systemPrompt');
 	let showAdvancedParams = getOpen('advancedParams');
+	let showGarnet = getOpen('garnet', true);
 </script>
 
 <div class=" dark:text-white">
