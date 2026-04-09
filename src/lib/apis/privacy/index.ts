@@ -1,4 +1,3 @@
-import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export interface EntitySpan {
 	start: number;
@@ -21,12 +20,18 @@ export const analyzeMessageEntities = async (
 	messageText: string
 ): Promise<EntitySpan[] | null> => {
 	try {
+		const garnetToggles = JSON.parse(localStorage.getItem('garnet_entity_toggles') || '{}');
+		const enabledEntities = Object.entries(garnetToggles)
+			.filter(([_, on]) => on)
+			.map(([k]) => k)
+			.join(',');
 		const res = await fetch(`/openai/privacy/analyze`, {
 			method: 'POST',
 			headers: {
 				Accept: 'application/json',
 				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
+				authorization: `Bearer ${token}`,
+				'x-garnet-entities': enabledEntities
 			},
 			body: JSON.stringify({
 				text: messageText
