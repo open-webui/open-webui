@@ -116,6 +116,10 @@ from open_webui.utils.payload import apply_system_prompt_to_body
 from open_webui.utils.response import normalize_usage
 from open_webui.utils.mcp.client import MCPClient
 
+# StoryWeaver: context injection imports
+from open_webui.models.sw_novels import KnowledgeBases, Novels
+from open_webui.utils.sw_prompt_builder import build_system_prompt
+
 
 from open_webui.config import (
     CACHE_DIR,
@@ -2191,6 +2195,29 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             pass
 
     form_data = await convert_url_images_to_base64(form_data)
+
+    # ── StoryWeaver Context Injection ──────────────────────────────────────────
+    # Injecte le contexte narratif (roman + KB) dans le system prompt.
+    # Opération non-destructive (append=True) : n'efface pas le system prompt
+    # déjà présent (réglages modèle, instructions utilisateur, etc.).
+    # Silencieuse en cas d'erreur pour ne jamais bloquer le chat de base.
+    try:
+        sw_novel_id = getattr(user, 'current_novel_id', None)
+        if sw_novel_id:
+            sw_novel = Novels.get_novel_by_id(id=sw_novel_id)
+            if sw_novel and sw_novel.user_id == user.id:
+                sw_kb = KnowledgeBases.get_kb_by_novel_id(novel_id=sw_novel_id)
+                sw_context = build_system_prompt(novel=sw_novel, kb=sw_kb)
+                if sw_context:
+                    form_data['messages'] = add_or_update_system_message(
+                        sw_context,
+                        form_data['messages'],
+                        append=True,
+                    )
+                    log.debug(f'[StoryWeaver] Context injected for novel: {sw_novel.title}')
+    except Exception as sw_exc:
+        log.warning(f'[StoryWeaver] Context injection failed (non-blocking): {sw_exc}')
+    # ── Fin StoryWeaver ────────────────────────────────────────────────────────
 
     event_emitter = get_event_emitter(metadata)
     event_caller = get_event_call(metadata)

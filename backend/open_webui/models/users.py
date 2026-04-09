@@ -79,6 +79,9 @@ class User(Base):
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
 
+    # StoryWeaver: active novel context
+    current_novel_id = Column(String, nullable=True)
+
 
 class UserModel(BaseModel):
     id: str
@@ -111,6 +114,8 @@ class UserModel(BaseModel):
     last_active_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
+
+    current_novel_id: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

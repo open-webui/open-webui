@@ -97,6 +97,8 @@ from open_webui.routers import (
     utils,
     scim,
     terminals,
+    sw_novels,
+    sw_kb,
 )
 
 from open_webui.routers.retrieval import (
@@ -1522,6 +1524,10 @@ if ENABLE_ADMIN_ANALYTICS:
     app.include_router(analytics.router, prefix='/api/v1/analytics', tags=['analytics'])
 app.include_router(utils.router, prefix='/api/v1/utils', tags=['utils'])
 app.include_router(terminals.router, prefix='/api/v1/terminals', tags=['terminals'])
+
+# StoryWeaver — Custom Novel API
+app.include_router(sw_novels.router, prefix='/api/sw/novels', tags=['storyweaver'])
+app.include_router(sw_kb.router, prefix='/api/sw/novels/{novel_id}/kb', tags=['storyweaver'])
 
 # SCIM 2.0 API for identity management
 if ENABLE_SCIM:

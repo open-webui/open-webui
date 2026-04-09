@@ -87,7 +87,7 @@ soundfile==0.13.1
 
 pillow==12.1.1
 opencv-python-headless==4.13.0.92
-rapidocr-onnxruntime==1.4.4
+#rapidocr-onnxruntime==1.4.4
 rank-bm25==0.2.2
 
 onnxruntime==1.24.3
