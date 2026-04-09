@@ -44,12 +44,13 @@ router = APIRouter()
 
 def _normalize_chat_for_response(chat: ChatModel) -> ChatResponse:
     chat_dict = chat.model_dump()
-    chat_dict["chat"] = decrypt_content(chat_dict.get("chat"))
+    chat_dict['chat'] = decrypt_content(chat_dict.get('chat'))
     return ChatResponse(**chat_dict)
 
 
 def _normalize_chat_list_for_response(chats: list[ChatModel]) -> list[ChatResponse]:
     return [_normalize_chat_for_response(chat) for chat in chats]
+
 
 ############################
 # GetChatList
@@ -684,15 +685,14 @@ async def get_user_chats(user=Depends(get_verified_user), db: Session = Depends(
     result = Chats.get_chats_by_user_id(user.id, db=db)
     return _normalize_chat_list_for_response(result.items)
 
+
 ############################
 # GetArchivedChats
 ############################
 
 
-@router.get("/all/archived", response_model=list[ChatResponse])
-async def get_user_archived_chats(
-    user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
+@router.get('/all/archived', response_model=list[ChatResponse])
+async def get_user_archived_chats(user=Depends(get_verified_user), db: Session = Depends(get_session)):
     chats = Chats.get_archived_chats_by_user_id(user.id, db=db)
     return _normalize_chat_list_for_response(chats)
 
@@ -798,8 +798,9 @@ async def get_shared_session_user_chat_list(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    if user.role == "pending":
+    if user.role == 'pending':
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
+
 
 @router.get('/share/{share_id}', response_model=Optional[ChatResponse])
 async def get_shared_chat_by_id(share_id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
@@ -856,9 +857,9 @@ async def get_chat_by_id(id: str, user=Depends(get_verified_user), db: Session =
     if chat:
         return _normalize_chat_for_response(chat)
     else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
+
+
 ############################
 # UpdateChatById
 ############################
@@ -913,15 +914,15 @@ async def update_chat_message_by_id(
         )
 
     # def content safely
-    content_to_save = form_data.content if form_data.content else ""
+    content_to_save = form_data.content if form_data.content else ''
 
-    #Upsert to the db. 
+    # Upsert to the db.
 
     chat = Chats.upsert_message_to_chat_by_id_and_message_id(
         id,
         message_id,
         {
-            "content": content_to_save, 
+            'content': content_to_save,
         },
     )
 
@@ -937,16 +938,17 @@ async def update_chat_message_by_id(
     if event_emitter:
         await event_emitter(
             {
-                "type": "chat:message",
-                "data": {
-                    "chat_id": id,
-                    "message_id": message_id,
-                    "content": form_data.content, # Plaintext for UI!
+                'type': 'chat:message',
+                'data': {
+                    'chat_id': id,
+                    'message_id': message_id,
+                    'content': form_data.content,  # Plaintext for UI!
                 },
             }
         )
 
     return _normalize_chat_for_response(chat)
+
 
 ############################
 # SendChatMessageEventById

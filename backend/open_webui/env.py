@@ -587,8 +587,8 @@ if LICENSE_PUBLIC_KEY:
 ####################################
 # WEBUI_CHAT_ENCRYPTION_KEY
 ####################################
-WEBUI_CHAT_ENCRYPTION_KEY = os.environ.get("WEBUI_CHAT_ENCRYPTION_KEY")
-WEBUI_CHAT_ENCRYPT_OLD_CHATS = os.environ.get("WEBUI_CHAT_ENCRYPT_OLD_CHATS", "False").lower() == "true"
+WEBUI_CHAT_ENCRYPTION_KEY = os.environ.get('WEBUI_CHAT_ENCRYPTION_KEY')
+WEBUI_CHAT_ENCRYPT_OLD_CHATS = os.environ.get('WEBUI_CHAT_ENCRYPT_OLD_CHATS', 'False').lower() == 'true'
 
 
 ####################################

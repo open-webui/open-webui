@@ -630,6 +630,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 detail=detail,
             )
 
+
 def transcription_handler(request, file_path, metadata, user=None):
     filename = os.path.basename(file_path)
     file_dir = os.path.dirname(file_path)

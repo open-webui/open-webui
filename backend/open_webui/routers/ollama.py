@@ -137,7 +137,10 @@ async def send_request(
                 headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get('chat_id')
 
         r = await session.request(
-            method, url, data=payload, headers=headers,
+            method,
+            url,
+            data=payload,
+            headers=headers,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
         )
 
@@ -780,7 +783,8 @@ async def delete_model(
     key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
 
     await send_request(
-        f'{url}/api/delete', 'DELETE',
+        f'{url}/api/delete',
+        'DELETE',
         payload=json.dumps(form_data),
         key=key,
         user=user,
@@ -1715,9 +1719,7 @@ async def upload_model(
             url = f'{ollama_url}/api/blobs/sha256:{file_hash}'
             upload_timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
             async with aiohttp.ClientSession(timeout=upload_timeout, trust_env=True) as upload_session:
-                async with upload_session.post(
-                    url, data=blob_data, ssl=AIOHTTP_CLIENT_SESSION_SSL
-                ) as response:
+                async with upload_session.post(url, data=blob_data, ssl=AIOHTTP_CLIENT_SESSION_SSL) as response:
                     if not response.ok:
                         raise Exception('Ollama: Could not create blob, Please try again.')
 

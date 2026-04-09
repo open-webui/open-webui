@@ -1773,7 +1773,10 @@ class OAuthManager:
             log.warning(f'Back-channel logout: no configured provider matches issuer {token_issuer}')
             return JSONResponse(
                 status_code=400,
-                content={'error': 'invalid_request', 'error_description': 'No configured provider matches token issuer'},
+                content={
+                    'error': 'invalid_request',
+                    'error_description': 'No configured provider matches token issuer',
+                },
             )
 
         # 4. Validate the logout_token signature and claims

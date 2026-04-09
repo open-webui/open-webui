@@ -238,9 +238,7 @@ async def is_valid_token(request, decoded) -> bool:
         # Per-user revocation (OIDC back-channel logout)
         user_id = decoded.get('id')
         if user_id:
-            revoked_at = await request.app.state.redis.get(
-                f'{REDIS_KEY_PREFIX}:auth:user:{user_id}:revoked_at'
-            )
+            revoked_at = await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:auth:user:{user_id}:revoked_at')
             if revoked_at:
                 try:
                     revoked_at_ts = int(revoked_at)

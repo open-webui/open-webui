@@ -38,6 +38,7 @@ from sqlalchemy.sql.expression import bindparam
 
 log = logging.getLogger(__name__)
 
+
 class Chat(Base):
     __tablename__ = 'chat'
 
@@ -295,50 +296,46 @@ class ChatTable:
 
         return changed
 
-    def insert_new_chat(
-            self, user_id: str, form_data: ChatForm, db: Optional[Session] = None
-        ) -> Optional[ChatModel]:
-            with get_db_context(db) as db:
-                id = str(uuid.uuid4())
-                cleaned_chat_dict = self._clean_null_bytes(form_data.chat)
-                processed_chat = encrypt_content(cleaned_chat_dict)
-                
-                chat = ChatModel(
-                    **{
-                        "id": id,
-                        "user_id": user_id,
-                        "title": self._clean_null_bytes(
-                            processed_chat.get("title", "New Chat")
-                        ),
-                        "chat": processed_chat,
-                        "folder_id": form_data.folder_id,
-                        "created_at": int(time.time()),
-                        "updated_at": int(time.time()),
-                    }
-                )
+    def insert_new_chat(self, user_id: str, form_data: ChatForm, db: Optional[Session] = None) -> Optional[ChatModel]:
+        with get_db_context(db) as db:
+            id = str(uuid.uuid4())
+            cleaned_chat_dict = self._clean_null_bytes(form_data.chat)
+            processed_chat = encrypt_content(cleaned_chat_dict)
 
-                chat_item = Chat(**chat.model_dump())
-                db.add(chat_item)
-                db.commit()
-                db.refresh(chat_item)
-                return self._normalize_chat_model(ChatModel.model_validate(chat_item)) if chat_item else None
+            chat = ChatModel(
+                **{
+                    'id': id,
+                    'user_id': user_id,
+                    'title': self._clean_null_bytes(processed_chat.get('title', 'New Chat')),
+                    'chat': processed_chat,
+                    'folder_id': form_data.folder_id,
+                    'created_at': int(time.time()),
+                    'updated_at': int(time.time()),
+                }
+            )
 
-            # Dual-write initial messages to chat_message table
-            try:
-                history = form_data.chat.get('history', {})
-                messages = history.get('messages', {})
-                for message_id, message in messages.items():
-                    if isinstance(message, dict) and message.get('role'):
-                        ChatMessages.upsert_message(
-                            message_id=message_id,
-                            chat_id=id,
-                            user_id=user_id,
-                            data=message,
-                        )
-            except Exception as e:
-                log.warning(f'Failed to write initial messages to chat_message table: {e}')
-
+            chat_item = Chat(**chat.model_dump())
+            db.add(chat_item)
+            db.commit()
+            db.refresh(chat_item)
             return self._normalize_chat_model(ChatModel.model_validate(chat_item)) if chat_item else None
+
+        # Dual-write initial messages to chat_message table
+        try:
+            history = form_data.chat.get('history', {})
+            messages = history.get('messages', {})
+            for message_id, message in messages.items():
+                if isinstance(message, dict) and message.get('role'):
+                    ChatMessages.upsert_message(
+                        message_id=message_id,
+                        chat_id=id,
+                        user_id=user_id,
+                        data=message,
+                    )
+        except Exception as e:
+            log.warning(f'Failed to write initial messages to chat_message table: {e}')
+
+        return self._normalize_chat_model(ChatModel.model_validate(chat_item)) if chat_item else None
 
     def _chat_import_form_to_chat_model(self, user_id: str, form_data: ChatImportForm) -> ChatModel:
         id = str(uuid.uuid4())
@@ -346,21 +343,15 @@ class ChatTable:
         processed_chat = encrypt_content(cleaned_chat)
         chat = ChatModel(
             **{
-                "id": id,
-                "user_id": user_id,
-                "title": self._clean_null_bytes(
-                    processed_chat.get("title", "New Chat")
-                ),
-                "chat": processed_chat,
-                "meta": form_data.meta,
-                "pinned": form_data.pinned,
-                "folder_id": form_data.folder_id,
-                "created_at": (
-                    form_data.created_at if form_data.created_at else int(time.time())
-                ),
-                "updated_at": (
-                    form_data.updated_at if form_data.updated_at else int(time.time())
-                ),
+                'id': id,
+                'user_id': user_id,
+                'title': self._clean_null_bytes(processed_chat.get('title', 'New Chat')),
+                'chat': processed_chat,
+                'meta': form_data.meta,
+                'pinned': form_data.pinned,
+                'folder_id': form_data.folder_id,
+                'created_at': (form_data.created_at if form_data.created_at else int(time.time())),
+                'updated_at': (form_data.updated_at if form_data.updated_at else int(time.time())),
             }
         )
         return chat
@@ -382,23 +373,21 @@ class ChatTable:
             db.commit()
             return self._normalize_chat_models([ChatModel.model_validate(chat) for chat in chats])
 
-    def update_chat_by_id(
-            self, id: str, chat: dict, db: Optional[Session] = None
-        ) -> Optional[ChatModel]:
-            try:
-                with get_db_context(db) as db:
-                    cleaned_chat = self._clean_null_bytes(chat)
-                    processed_chat = encrypt_content(cleaned_chat)
-                    chat_item = db.get(Chat, id)
-                    chat_item.chat = processed_chat
-                    chat_item.title = self._clean_null_bytes(processed_chat.get("title", "New Chat"))
-                    chat_item.updated_at = int(time.time())
+    def update_chat_by_id(self, id: str, chat: dict, db: Optional[Session] = None) -> Optional[ChatModel]:
+        try:
+            with get_db_context(db) as db:
+                cleaned_chat = self._clean_null_bytes(chat)
+                processed_chat = encrypt_content(cleaned_chat)
+                chat_item = db.get(Chat, id)
+                chat_item.chat = processed_chat
+                chat_item.title = self._clean_null_bytes(processed_chat.get('title', 'New Chat'))
+                chat_item.updated_at = int(time.time())
 
-                    db.commit()
-                    db.refresh(chat_item)
-                    return self._normalize_chat_model(ChatModel.model_validate(chat_item))
-            except Exception:
-                return None
+                db.commit()
+                db.refresh(chat_item)
+                return self._normalize_chat_model(ChatModel.model_validate(chat_item))
+        except Exception:
+            return None
 
     def update_chat_title_by_id(self, id: str, title: str) -> Optional[ChatModel]:
         chat = self.get_chat_by_id(id)
@@ -435,8 +424,6 @@ class ChatTable:
 
             self._normalize_chat_models(ChatModel.model_validate(chat))
 
-            
-
     def get_chat_title_by_id(self, id: str) -> Optional[str]:
         with get_db_context() as db:
             result = db.query(Chat.title).filter_by(id=id).first()
@@ -459,31 +446,31 @@ class ChatTable:
         return chat.chat.get('history', {}).get('messages', {}).get(message_id, {})
 
     def upsert_message_to_chat_by_id_and_message_id(
-            self, id: str, message_id: str, message: dict
-        ) -> Optional[ChatModel]:
-            chat_obj = self.get_chat_by_id(id)
-            if chat_obj is None:
-                return None
+        self, id: str, message_id: str, message: dict
+    ) -> Optional[ChatModel]:
+        chat_obj = self.get_chat_by_id(id)
+        if chat_obj is None:
+            return None
 
-            if isinstance(message.get("content"), str):
-                sanitized = sanitize_text_for_db(message["content"])
-                message["content"] = sanitized
+        if isinstance(message.get('content'), str):
+            sanitized = sanitize_text_for_db(message['content'])
+            message['content'] = sanitized
 
-            chat = chat_obj.chat
-            history = chat.get("history", {})
+        chat = chat_obj.chat
+        history = chat.get('history', {})
 
-            if message_id in history.get("messages", {}):
-                history["messages"][message_id] = {
-                    **history["messages"][message_id],
-                    **message,
-                }
-            else:
-                history["messages"][message_id] = message
+        if message_id in history.get('messages', {}):
+            history['messages'][message_id] = {
+                **history['messages'][message_id],
+                **message,
+            }
+        else:
+            history['messages'][message_id] = message
 
-            history["currentId"] = message_id
-            chat["history"] = history
-            
-            return self.update_chat_by_id(id, chat)
+        history['currentId'] = message_id
+        chat['history'] = history
+
+        return self.update_chat_by_id(id, chat)
 
     def add_message_status_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, status: dict
@@ -795,30 +782,26 @@ class ChatTable:
             )
             return self._normalize_chat_models([ChatModel.model_validate(chat) for chat in all_chats])
 
-    def get_chat_by_id_and_user_id(
-            self, id: str, user_id: str, db: Optional[Session] = None
-        ) -> Optional[ChatModel]:
-            try:
-                with get_db_context(db) as db:
-                    # Query for a chat that matches both the Chat ID and the User ID
-                    chat_item = (
-                        db.query(Chat).filter_by(id=id, user_id=user_id).first()
-                    )
-                    
-                    if chat_item:
-                        # Sanitize row (removes null bytes)
-                        if self._sanitize_chat_row(chat_item):
-                            db.commit()
-                            db.refresh(chat_item)
+    def get_chat_by_id_and_user_id(self, id: str, user_id: str, db: Optional[Session] = None) -> Optional[ChatModel]:
+        try:
+            with get_db_context(db) as db:
+                # Query for a chat that matches both the Chat ID and the User ID
+                chat_item = db.query(Chat).filter_by(id=id, user_id=user_id).first()
 
-                        chat_model = ChatModel.model_validate(chat_item)
-                        chat_model.chat = decrypt_content(chat_model.chat)
-                        
-                        return chat_model
-                    return None
-            except Exception as e:
-                log.error(f"Error retrieving chat {id} for user {user_id}: {e}")
+                if chat_item:
+                    # Sanitize row (removes null bytes)
+                    if self._sanitize_chat_row(chat_item):
+                        db.commit()
+                        db.refresh(chat_item)
+
+                    chat_model = ChatModel.model_validate(chat_item)
+                    chat_model.chat = decrypt_content(chat_model.chat)
+
+                    return chat_model
                 return None
+        except Exception as e:
+            log.error(f'Error retrieving chat {id} for user {user_id}: {e}')
+            return None
 
     def get_chat_by_share_id(self, id: str, db: Optional[Session] = None) -> Optional[ChatModel]:
         try:
@@ -835,21 +818,21 @@ class ChatTable:
             return None
 
     def get_chat_by_id(self, id: str, db: Optional[Session] = None) -> Optional[ChatModel]:
-            try:
-                with get_db_context(db) as db:
-                    chat_item = db.get(Chat, id)
-                    if chat_item is None:
-                        return None
+        try:
+            with get_db_context(db) as db:
+                chat_item = db.get(Chat, id)
+                if chat_item is None:
+                    return None
 
-                    # Sanitize first (removes null bytes)
-                    if self._sanitize_chat_row(chat_item):
-                        db.commit()
-                        db.refresh(chat_item)
+                # Sanitize first (removes null bytes)
+                if self._sanitize_chat_row(chat_item):
+                    db.commit()
+                    db.refresh(chat_item)
 
-                    return self._normalize_chat_model(ChatModel.model_validate(chat_item))
-            except Exception as e:
-                log.error(f"Failed to get/decrypt chat {id}: {e}")
-                return None
+                return self._normalize_chat_model(ChatModel.model_validate(chat_item))
+        except Exception as e:
+            log.error(f'Failed to get/decrypt chat {id}: {e}')
+            return None
 
     def is_chat_owner(self, id: str, user_id: str, db: Optional[Session] = None) -> bool:
         """
@@ -924,8 +907,8 @@ class ChatTable:
 
             return ChatListResponse(
                 **{
-                    "items": self._normalize_chat_models([ChatModel.model_validate(chat) for chat in all_chats]),
-                    "total": total,
+                    'items': self._normalize_chat_models([ChatModel.model_validate(chat) for chat in all_chats]),
+                    'total': total,
                 }
             )
 
@@ -939,14 +922,9 @@ class ChatTable:
             )
             return self._normalize_chat_models([ChatModel.model_validate(chat) for chat in all_chats])
 
-
     def get_archived_chats_by_user_id(self, user_id: str, db: Optional[Session] = None) -> list[ChatModel]:
         with get_db_context(db) as db:
-            all_chats = (
-                db.query(Chat)
-                .filter_by(user_id=user_id, archived=True)
-                .order_by(Chat.updated_at.desc())
-            )
+            all_chats = db.query(Chat).filter_by(user_id=user_id, archived=True).order_by(Chat.updated_at.desc())
             return self._normalize_chat_models([ChatModel.model_validate(chat) for chat in all_chats])
 
     def get_chats_by_user_id_and_search_text(
@@ -1226,7 +1204,7 @@ class ChatTable:
                 raise NotImplementedError(f'Unsupported dialect: {db.bind.dialect.name}')
 
             all_chats = query.all()
-            log.debug(f"all_chats: {all_chats}")
+            log.debug(f'all_chats: {all_chats}')
             return self._normalize_chat_models([ChatModel.model_validate(chat) for chat in all_chats])
 
     def add_chat_tag_by_id_and_user_id_and_tag_name(
