@@ -1958,7 +1958,7 @@
 								if (j < i) {
 									if (t.entity) {
 										const color = colorMap[t.entity.type] || '#f59e0b';
-										return `<span style="color:${color};transition:all 0.2s ease;position:relative" title="${t.entity.type}">${t.token}</span>`;
+										return `<span style="position:relative;display:inline;cursor:pointer" onmouseenter="this.lastChild.style.display='block'" onmouseleave="this.lastChild.style.display='none'"><span style="color:${color};transition:all 0.2s ease">${t.token}</span><span style="display:none;position:absolute;bottom:100%;left:0;background:#1a1a1a;color:white;font-size:11px;padding:2px 6px;border-radius:4px;white-space:nowrap;z-index:9999;pointer-events:none">${t.entity.type}</span></span>`;
 									}
 									return `<span style="color:#e2e8f0">${t.token}</span>`;
 								} else if (j === i) {
