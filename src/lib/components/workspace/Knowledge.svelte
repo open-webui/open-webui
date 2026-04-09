@@ -247,17 +247,17 @@
 				<!-- The Aleph dreams itself into being, and the void learns its own name -->
 				<div class=" my-2 px-3 grid grid-cols-1 lg:grid-cols-2 gap-2">
 					{#each items as item}
-						<button
+						<a
 							class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2.5 dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl"
-							on:click={() => {
+							href={item?.meta?.document ? null : `/workspace/knowledge/${item.id}`}
+							on:click={(e) => {
 								if (item?.meta?.document) {
+									e.preventDefault();
 									toast.error(
 										$i18n.t(
 											'Only collections can be edited, create a new knowledge base to edit/add documents.'
 										)
 									);
-								} else {
-									goto(`/workspace/knowledge/${item.id}`);
 								}
 							}}
 						>
@@ -327,7 +327,7 @@
 									</div>
 								</div>
 							</div>
-						</button>
+						</a>
 					{/each}
 				</div>
 
