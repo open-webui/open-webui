@@ -21,7 +21,17 @@
 
 import { writable, derived } from 'svelte/store';
 import type { Writable } from 'svelte/store';
-import type { Novel, KnowledgeBase, KBSection, KBItem, NovelCreateForm, NovelUpdateForm } from '$lib/apis/sw';
+import type {
+	Novel,
+	KnowledgeBase,
+	KBSection,
+	KBItem,
+	NovelCreateForm,
+	NovelUpdateForm,
+	Chapter,
+	ChapterCreateForm,
+	ChapterUpdateForm
+} from '$lib/apis/sw';
 import * as swApi from '$lib/apis/sw';
 
 // ─── Stores primitifs ──────────────────────────────────────────────────────────
@@ -35,11 +45,26 @@ export const currentNovel: Writable<Novel | null> = writable(null);
 /** Knowledge Base du roman actif — null si non chargée */
 export const activeKB: Writable<KnowledgeBase | null> = writable(null);
 
+/** Liste des chapitres du roman actif */
+export const chapters: Writable<Chapter[]> = writable([]);
+
 /** État de chargement global */
 export const swLoading: Writable<boolean> = writable(false);
 
 /** Erreur globale StoryWeaver */
 export const swError: Writable<string | null> = writable(null);
+
+/** Mode d'affichage de l'éditeur : full | focus | research | outline */
+export const editorMode = writable<'full' | 'focus' | 'research' | 'outline'>(
+	(localStorage.getItem('swEditorMode') as any) || 'full'
+);
+
+// Persistance du mode
+editorMode.subscribe((val) => {
+	if (typeof window !== 'undefined') {
+		localStorage.setItem('swEditorMode', val);
+	}
+});
 
 // ─── Derived stores ────────────────────────────────────────────────────────────
 
@@ -268,5 +293,105 @@ export async function deleteKBItem(
 	} catch (e) {
 		swError.set((e as Error).message);
 		return false;
+	}
+}
+
+// ─── Chapters — Actions ────────────────────────────────────────────────────────
+
+/**
+ * Charge tous les chapitres d'un roman.
+ */
+export async function loadChapters(token: string, novelId: string): Promise<void> {
+	swLoading.set(true);
+	swError.set(null);
+	try {
+		const list = await swApi.getChapters(token, novelId);
+		chapters.set(list);
+	} catch (e) {
+		swError.set((e as Error).message);
+	} finally {
+		swLoading.set(false);
+	}
+}
+
+/**
+ * Ajoute un nouveau chapitre.
+ */
+export async function addChapter(
+	token: string,
+	novelId: string,
+	form: ChapterCreateForm
+): Promise<Chapter | null> {
+	swLoading.set(true);
+	swError.set(null);
+	try {
+		const created = await swApi.createChapter(token, novelId, form);
+		chapters.update((list) => [...list, created]);
+		return created;
+	} catch (e) {
+		swError.set((e as Error).message);
+		return null;
+	} finally {
+		swLoading.set(false);
+	}
+}
+
+/**
+ * Met à jour un chapitre existant.
+ */
+export async function editChapter(
+	token: string,
+	chapterId: string,
+	form: ChapterUpdateForm
+): Promise<Chapter | null> {
+	swError.set(null);
+	try {
+		const updated = await swApi.updateChapter(token, chapterId, form);
+		chapters.update((list) => list.map((c) => (c.id === chapterId ? updated : c)));
+		return updated;
+	} catch (e) {
+		swError.set((e as Error).message);
+		return null;
+	}
+}
+
+/**
+ * Supprime un chapitre.
+ */
+export async function removeChapter(token: string, chapterId: string): Promise<boolean> {
+	swError.set(null);
+	try {
+		await swApi.deleteChapter(token, chapterId);
+		chapters.update((list) => list.filter((c) => c.id !== chapterId));
+		return true;
+	} catch (e) {
+		swError.set((e as Error).message);
+		return false;
+	}
+}
+
+/**
+ * Réordonne les chapitres en local et sur le serveur.
+ */
+export async function reorderChaptersAction(
+	token: string,
+	novelId: string,
+	orderedIds: string[]
+): Promise<void> {
+	// Optimistic update : on réordonne tout de suite en local
+	chapters.update((list) => {
+		const map = new Map(list.map((c) => [c.id, c]));
+		return orderedIds.map((id, index) => {
+			const c = map.get(id);
+			return c ? { ...c, order: index } : (null as any);
+		}).filter(Boolean);
+	});
+
+	try {
+		await swApi.reorderChapters(token, novelId, orderedIds);
+	} catch (e) {
+		swError.set((e as Error).message);
+		// En cas d'erreur, on pourrait recharger pour annuler l'update optimiste
+		await loadChapters(token, novelId);
 	}
 }

@@ -81,6 +81,18 @@
 					{#if $currentNovel}
 						<a
 							draggable="false"
+							href="/storyweaver/{$currentNovel.id}/editor"
+							aria-current={$page.url.pathname.includes('/editor') ? 'page' : null}
+							class="min-w-fit p-1.5 flex items-center gap-1.5 {$page.url.pathname.includes('/editor')
+								? ''
+								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+						>
+							<span>✍️</span>
+							<span>Éditeur</span>
+						</a>
+
+						<a
+							draggable="false"
 							href="/storyweaver/{$currentNovel.id}/kb"
 							aria-current={isKB ? 'page' : null}
 							class="min-w-fit p-1.5 flex items-center gap-1.5 {isKB

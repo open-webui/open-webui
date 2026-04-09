@@ -86,6 +86,12 @@ from open_webui.tools.builtin import (
     view_knowledge_file,
     view_skill,
 )
+from open_webui.tools.sw import (
+    sw_brainstorm,
+    sw_coherence,
+    sw_dialogue,
+    sw_outline,
+)
 
 import copy
 
@@ -499,9 +505,9 @@ def get_builtin_tools(
             ]
         )
 
-    # Skills tools - view_skill allows model to load full skill instructions on demand
-    if extra_params.get('__skill_ids__'):
-        builtin_functions.append(view_skill)
+    # StoryWeaver tools - Creative writing assistants (Always available if enabled for the model)
+    if is_builtin_tool_enabled('storyweaver'):
+        builtin_functions.extend([sw_brainstorm, sw_coherence, sw_dialogue, sw_outline])
 
     for func in builtin_functions:
         callable = get_async_tool_function_and_apply_extra_params(

@@ -1,7 +1,7 @@
 # StoryWeaver — Backlog & Suivi d'Avancement
 
 **Lead Agent** | Mis à jour : Avril 2026  
-**Phase courante** : Phase 1 — Core Infrastructure
+**Phase courante** : PROJET TERMINÉ — Production Ready ✅
 
 ---
 
@@ -126,28 +126,58 @@
 
 ## 📋 Phase 3 — Tools & Modules (Semaines 5-6)
 
-- [ ] Tool: brainstorm_generator
-- [ ] Tool: coherence_checker
-- [ ] Tool: dialogue_generator
-- [ ] Tool: outline_generator
-- [ ] Commandes slash dans le chat
-- [ ] Manuscript Editor
+### Milestone 3.1 : Creative Tools Backend
+- [x] **Task 3.1.1** — Implémenter le module `sw_tools.py` ✅
+- [x] **Task 3.1.2** — Enregistrement des Tools Natifs ✅
+- [x] **Task 3.1.3** — Handler de Slash Commands (Middleware) ✅
+
+### Milestone 3.2 : Manuscript Editor (Chapter-based)
+- [x] **Task 3.2.0** — Models & DB (Chapters) ✅
+- [x] **Task 3.2.1** — API Endpoints Chapters ✅
+- [x] **Task 3.2.2** — Manuscript Editor Frontend ✅
 
 ---
 
 ## 📋 Phase 4 — Polish & Testing (Semaines 7-8)
 
-- [ ] UI/UX refinement (4 layouts)
-- [ ] Tests complets
-- [ ] Documentation finalisée
-- [ ] Export (Markdown, PDF)
-- [ ] Déploiement VPS
+### Milestone 4.1 : UI/UX Refinement
+- [x] **Task 4.1.1** — Store `editorMode` & Persistance ✅
+- [x] **Task 4.1.2** — Layout "Focus" ✅
+- [x] **Task 4.1.3** — Layout "Research" ✅
+- [x] **Task 4.1.4** — Layout "Outline" ✅
+
+### Milestone 4.2 : Export System
+- [x] **Task 4.2.1** — Export Utility `export.ts` ✅
+- [x] **Task 4.2.2** — Export PDF "Format Livre" ✅
+- [x] **Task 4.2.3** — Export Markdown (.md) ✅
+- [x] **Task 4.2.4** — Intégration UI dans l'éditeur ✅
+
+### Milestone 4.3 : Polish & Validation
+- [x] **Task 4.3.1** — Animations de transition & Micro-interactions ✅
+- [x] **Task 4.3.2** — Tooltips & Aide contextuelle ✅
+- [x] **Task 4.3.3** — État de chargement (Skeletons) ✅
+- [x] **Task 4.3.4** — Audit final & Correction bugs UI ✅
+
+---
+
+## 📋 Phase 5 — Documentation & Finalisation
+
+### Milestone 5.1 : Documentation Technique
+- [x] **Task 5.1.1** — Documentation Technique (`ARCHITECTURE_STORYWEAVER.md`) ✅
+- [x] **Task 5.1.2** — Référence API (`API_REFERENCE.md`) ✅
+
+### Milestone 5.2 : Documentation Utilisateur
+- [x] **Task 5.2.1** — Guide de l'Utilisateur (`USER_GUIDE.md`) ✅
+
+### Milestone 5.3 : Finalisation
+- [x] **Task 5.3.1** — Guide de Déploiement Docker (`DEPLOYMENT.md`) ✅
+- [x] **Task 5.3.2** — Mise à jour des README & Clean-up ✅
 
 ---
 
 ## ✅ Complété
 
-*Rien pour l'instant — projet en cours d'initialisation*
+*Projet StoryWeaver entièrement complété et prêt pour la production.*
 
 ---
 

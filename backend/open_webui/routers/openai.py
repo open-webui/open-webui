@@ -3,6 +3,7 @@ import hashlib
 import json
 import logging
 import re
+import time
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -1160,6 +1161,55 @@ async def generate_chat_completion(
                 message['content'] = ''.join(
                     part.get('text', '') for part in message['content'] if part.get('type') in ('input_text', 'text')
                 )
+
+    # StoryWeaver Slash Command Interception
+    # We intercept commands like /brainstorm, /coherence, /dialogue, /outline 
+    # to provide a direct response from the specialized StoryWeaver tools.
+    last_user_message = next((msg for msg in reversed(payload.get('messages', [])) if msg.get('role') == 'user'), None)
+    if last_user_message and isinstance(last_user_message.get('content'), str):
+        msg_content = last_user_message['content'].strip()
+        if msg_content.startswith('/'):
+            from open_webui.tools.sw import sw_brainstorm, sw_coherence, sw_dialogue, sw_outline
+            
+            command_parts = msg_content.split(' ', 1)
+            command = command_parts[0].lower()
+            args = command_parts[1] if len(command_parts) > 1 else ""
+            
+            sw_result = None
+            if command == '/brainstorm':
+                sw_result = await sw_brainstorm(args, __request__=request, __user__=user)
+            elif command == '/coherence':
+                sw_result = await sw_coherence(args, __request__=request, __user__=user)
+            elif command == '/dialogue':
+                sw_result = await sw_dialogue(args, "Suite du manuscrit", __request__=request, __user__=user)
+            elif command == '/outline':
+                sw_result = await sw_outline(key_events=args, __request__=request, __user__=user)
+                
+            if sw_result:
+                # Format the tool output for display
+                try:
+                    data = json.loads(sw_result)
+                    if data.get('status') == 'success':
+                        formatted_content = f"### 🪄 StoryWeaver : {command.replace('/', '').capitalize()}\n\n"
+                        if 'instruction' in data:
+                            formatted_content += f"> **Contexte envoyé à l'IA :** {data['instruction']}\n\n"
+                        
+                        # In regular chat mode, we might want the LLM to actually process this, 
+                        # but for a direct "Visible Command", we can just return the data or 
+                        # let the LLM see the tool output.
+                        # USER PREFERENCE: Commands should be visible and usable.
+                        # If we return here, the LLM won't process it. 
+                        # If we want the LLM to process it, we should replace the message content 
+                        # and continue.
+                        
+                        # Let's try replacing the content with the "Context Tool" output 
+                        # and allowing the LLM to generate the final response.
+                        # This ensures the LLM uses the KB data.
+                        last_user_message['content'] = f"RÉSULTAT DE L'OUTIL {command.upper()} : {sw_result}\n\nUtilise ces informations pour répondre à l'utilisateur."
+                    else:
+                        return JSONResponse(status_code=400, content=data)
+                except Exception as e:
+                    log.error(f"Error parsing SW tool result: {e}")
 
     payload = json.dumps(payload)
 

@@ -119,6 +119,33 @@ class VersionModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class Chapter(Base):
+    __tablename__ = 'sw_chapter'
+
+    id = Column(String, primary_key=True, unique=True)
+    novel_id = Column(String, nullable=False)
+    title = Column(String, nullable=False)
+    content = Column(Text, nullable=True)
+    order = Column(BigInteger, nullable=False, default=0)
+    status = Column(String, default="draft")  # draft, ready, review
+
+    created_at = Column(BigInteger, nullable=False)
+    updated_at = Column(BigInteger, nullable=False)
+
+
+class ChapterModel(BaseModel):
+    id: str
+    novel_id: str
+    title: str
+    content: Optional[str] = ""
+    order: int = 0
+    status: str = "draft"
+    created_at: int
+    updated_at: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 ####################
 # DAOs (Data Access Objects)
 ####################
@@ -354,8 +381,81 @@ class VersionsTable:
             return []
 
 
+class ChaptersTable:
+    def insert_new_chapter(
+        self,
+        id: str,
+        novel_id: str,
+        title: str,
+        order: int,
+        content: str = "",
+        status: str = "draft",
+        db: Optional[Session] = None,
+    ) -> Optional[ChapterModel]:
+        with get_db_context(db) as db:
+            now = int(time.time())
+            chapter = Chapter(
+                id=id,
+                novel_id=novel_id,
+                title=title,
+                content=content,
+                order=order,
+                status=status,
+                created_at=now,
+                updated_at=now,
+            )
+            db.add(chapter)
+            db.commit()
+            db.refresh(chapter)
+            return ChapterModel.model_validate(chapter) if chapter else None
+
+    def get_chapters_by_novel_id(self, novel_id: str, db: Optional[Session] = None) -> list[ChapterModel]:
+        try:
+            with get_db_context(db) as db:
+                chapters = db.query(Chapter).filter_by(novel_id=novel_id).order_by(Chapter.order.asc()).all()
+                return [ChapterModel.model_validate(c) for c in chapters]
+        except Exception:
+            return []
+
+    def get_chapter_by_id(self, id: str, db: Optional[Session] = None) -> Optional[ChapterModel]:
+        try:
+            with get_db_context(db) as db:
+                chapter = db.query(Chapter).filter_by(id=id).first()
+                return ChapterModel.model_validate(chapter) if chapter else None
+        except Exception:
+            return None
+
+    def update_chapter_by_id(self, id: str, updated: dict, db: Optional[Session] = None) -> Optional[ChapterModel]:
+        try:
+            with get_db_context(db) as db:
+                chapter = db.query(Chapter).filter_by(id=id).first()
+                if not chapter:
+                    return None
+                
+                updated['updated_at'] = int(time.time())
+                for key, value in updated.items():
+                    if hasattr(chapter, key):
+                        setattr(chapter, key, value)
+                
+                db.commit()
+                db.refresh(chapter)
+                return ChapterModel.model_validate(chapter)
+        except Exception:
+            return None
+
+    def delete_chapter_by_id(self, id: str, db: Optional[Session] = None) -> bool:
+        try:
+            with get_db_context(db) as db:
+                db.query(Chapter).filter_by(id=id).delete()
+                db.commit()
+                return True
+        except Exception:
+            return False
+
+
 # Global instances to mirror OpenWebUI's DAO pattern
 Novels = NovelsTable()
 KnowledgeBases = KnowledgeBasesTable()
 Manuscripts = ManuscriptsTable()
+Chapters = ChaptersTable()
 Versions = VersionsTable()

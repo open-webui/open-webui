@@ -68,6 +68,31 @@ export interface KnowledgeBase {
 	updated_at: number;
 }
 
+export interface Chapter {
+	id: string;
+	novel_id: string;
+	title: string;
+	content: string;
+	order: number;
+	status: string;
+	created_at: number;
+	updated_at: number;
+}
+
+export interface ChapterCreateForm {
+	title: string;
+	content?: string;
+	order?: number;
+	status?: string;
+}
+
+export interface ChapterUpdateForm {
+	title?: string;
+	content?: string;
+	order?: number;
+	status?: string;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const SW_BASE = `${WEBUI_API_BASE_URL}/sw`;
@@ -186,4 +211,45 @@ export const replaceKBSection = (
 	swFetch<KnowledgeBase>(token, `/novels/${novelId}/kb/${section}/replace`, {
 		method: 'PUT',
 		body: JSON.stringify({ items })
+	});
+
+// ─── Chapters — CRUD ──────────────────────────────────────────────────────────
+
+export const getChapters = (token: string, novelId: string): Promise<Chapter[]> =>
+	swFetch<Chapter[]>(token, `/${novelId}/chapters`);
+
+export const getChapter = (token: string, chapterId: string): Promise<Chapter> =>
+	swFetch<Chapter>(token, `/chapters/${chapterId}`);
+
+export const createChapter = (
+	token: string,
+	novelId: string,
+	form: ChapterCreateForm
+): Promise<Chapter> =>
+	swFetch<Chapter>(token, `/${novelId}/chapters`, {
+		method: 'POST',
+		body: JSON.stringify(form)
+	});
+
+export const updateChapter = (
+	token: string,
+	chapterId: string,
+	form: ChapterUpdateForm
+): Promise<Chapter> =>
+	swFetch<Chapter>(token, `/chapters/${chapterId}/update`, {
+		method: 'POST',
+		body: JSON.stringify(form)
+	});
+
+export const deleteChapter = (token: string, chapterId: string): Promise<boolean> =>
+	swFetch<boolean>(token, `/chapters/${chapterId}`, { method: 'DELETE' });
+
+export const reorderChapters = (
+	token: string,
+	novelId: string,
+	orderedIds: string[]
+): Promise<boolean> =>
+	swFetch<boolean>(token, `/${novelId}/chapters/reorder`, {
+		method: 'POST',
+		body: JSON.stringify({ ordered_ids: orderedIds })
 	});

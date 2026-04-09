@@ -23,6 +23,19 @@ Passionate about open-source AI? [Join our team →](https://careers.openwebui.c
 >
 > Get **enhanced capabilities**, including **custom theming and branding**, **Service Level Agreement (SLA) support**, **Long-Term Support (LTS) versions**, and **more!**
 
+---
+
+# ✍️ StoryWeaver Suite
+**StoryWeaver** est une extension majeure de cette instance, transformant Open WebUI en un cockpit complet pour auteurs.
+- 📚 **Gestion de Romans** : Organisez vos projets littéraires.
+- 📖 **Knowledge Base Contextuelle** : Univers, personnages et lieux accessibles par l'IA.
+- ✒️ **Éditeur de Manuscrit** : Modes Focus, Recherche et Outline pour une écriture augmentée.
+- 🚀 **Asistants Créatifs** : Commandes slash `/brainstorm`, `/coherence`, `/dialogue`, `/outline`.
+
+**[Consulter le Guide de l'Utilisateur →](./docs/USER_GUIDE.md)** | **[Documentation Technique →](./docs/ARCHITECTURE_STORYWEAVER.md)**
+
+---
+
 For more information, be sure to check out our [Open WebUI Documentation](https://docs.openwebui.com/).
 
 ## Key Features of Open WebUI ⭐
