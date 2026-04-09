@@ -1960,6 +1960,14 @@
 			}
 		}
 
+		// Read entity toggles before sending — used to filter proxy analysis
+		const garnetToggles = JSON.parse(localStorage.getItem('garnet_entity_toggles') || '{}');
+		const enabledEntities = Object.entries(garnetToggles)
+			.filter(([_, on]) => on)
+			.map(([k]) => k)
+			.join(',');
+		console.warn('[garnet] enabled entities:', enabledEntities);
+
 		// Now send to backend
 		await sendMessage(history, userMessageId, { newChat: true });
 	};

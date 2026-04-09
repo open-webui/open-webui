@@ -366,11 +366,18 @@ export const generateOpenAIChatCompletion = async (
 ) => {
 	let error = null;
 
+	const garnetToggles = JSON.parse(localStorage.getItem('garnet_entity_toggles') || '{}');
+	const enabledEntities = Object.entries(garnetToggles)
+		.filter(([_, on]) => on)
+		.map(([k]) => k)
+		.join(',');
+
 	const res = await fetch(`${url}/chat/completions`, {
 		method: 'POST',
 		headers: {
 			Authorization: `Bearer ${token}`,
-			'Content-Type': 'application/json'
+			'Content-Type': 'application/json',
+			'x-garnet-entities': enabledEntities
 		},
 		credentials: 'include',
 		body: JSON.stringify(body)
