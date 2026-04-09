@@ -164,6 +164,43 @@
 					</div>
 				</Collapsible>
 			{/if}
+
+			<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
+
+			<Collapsible
+				title={$i18n.t('Garnet')}
+				bind:open={showGarnet}
+				onChange={setOpen('garnet')}
+				buttonClassName="w-full"
+			>
+				<div class="text-sm mt-1.5" slot="content">
+					<div class="w-full rounded-lg overflow-hidden border border-gray-700">
+						<div class="grid grid-cols-2 bg-gray-700 px-3 py-1.5">
+							<span class="text-xs font-semibold uppercase tracking-wider text-gray-300">Entity Type</span>
+							<span class="text-xs font-semibold uppercase tracking-wider text-gray-300 text-right">Detection</span>
+						</div>
+						{#each ENTITY_TYPES as entity, i}
+							<div class="grid grid-cols-2 items-center px-3 py-2
+									{i % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}
+									border-b border-gray-700 last:border-0">
+								<span class="text-xs text-white">{entity.label}</span>
+								<div class="flex justify-end">
+									<select
+										value={entityToggles[entity.key] ? 'on' : 'off'}
+										on:change={(e) => onEntityChange(entity.key, e.currentTarget.value)}
+										class="bg-gray-700 text-white text-xs rounded px-2 py-1
+											   border border-gray-600 focus:outline-none focus:border-blue-500
+											   cursor-pointer min-w-[70px]"
+									>
+										<option value="on">On</option>
+										<option value="off">Off</option>
+									</select>
+								</div>
+							</div>
+						{/each}
+					</div>
+				</div>
+			</Collapsible>
 		</div>
 	{/if}
 </div>
