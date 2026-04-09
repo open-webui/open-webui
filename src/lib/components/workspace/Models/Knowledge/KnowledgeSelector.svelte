@@ -1,12 +1,10 @@
 <script lang="ts">
 	import dayjs from 'dayjs';
-	import { DropdownMenu } from 'bits-ui';
-	import { onMount, getContext, createEventDispatcher } from 'svelte';
 
+	import { onMount, onDestroy, getContext, createEventDispatcher } from 'svelte';
 	import { searchNotes } from '$lib/apis/notes';
 	import { searchKnowledgeBases, searchKnowledgeFiles } from '$lib/apis/knowledge';
 
-	import { flyAndScale } from '$lib/utils/transitions';
 	import { decodeString } from '$lib/utils';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -26,6 +24,7 @@
 	let show = false;
 
 	let query = '';
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
 	let noteItems = [];
 	let knowledgeItems = [];
@@ -35,9 +34,16 @@
 
 	$: items = [...noteItems, ...knowledgeItems, ...fileItems];
 
-	$: if (query !== null) {
-		getItems();
+	$: if (query !== undefined) {
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(() => {
+			getItems();
+		}, 300);
 	}
+
+	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
+	});
 
 	const getItems = () => {
 		getNoteItems();
@@ -111,12 +117,8 @@
 	<slot />
 
 	<div slot="content">
-		<DropdownMenu.Content
+		<div
 			class="z-[10000] text-black dark:text-white rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-70 p-1.5"
-			sideOffset={8}
-			side="bottom"
-			align="start"
-			transition={flyAndScale}
 		>
 			<div class=" flex w-full space-x-2 px-2 pb-0.5">
 				<div class="flex flex-1">
@@ -163,15 +165,27 @@
 							>
 								<div class="  text-black dark:text-gray-100 flex items-center gap-1 shrink-0">
 									{#if item.type === 'note'}
-										<Tooltip content={$i18n.t('Note')} placement="top">
+										<Tooltip
+											content={$i18n.t('Note')}
+											placement="top"
+											tippyOptions={{ zIndex: 100000 }}
+										>
 											<PageEdit className="size-4" />
 										</Tooltip>
 									{:else if item.type === 'collection'}
-										<Tooltip content={$i18n.t('Collection')} placement="top">
+										<Tooltip
+											content={$i18n.t('Collection')}
+											placement="top"
+											tippyOptions={{ zIndex: 100000 }}
+										>
 											<Database className="size-4" />
 										</Tooltip>
 									{:else if item.type === 'file'}
-										<Tooltip content={$i18n.t('File')} placement="top">
+										<Tooltip
+											content={$i18n.t('File')}
+											placement="top"
+											tippyOptions={{ zIndex: 100000 }}
+										>
 											<DocumentPage className="size-4" />
 										</Tooltip>
 									{/if}
@@ -179,6 +193,7 @@
 									<Tooltip
 										content={item.description || decodeString(item?.name)}
 										placement="top-start"
+										tippyOptions={{ zIndex: 100000 }}
 									>
 										<div class="line-clamp-1 flex-1 text-sm text-left">
 											{decodeString(item?.name)}
@@ -190,6 +205,6 @@
 					{/each}
 				{/if}
 			</div>
-		</DropdownMenu.Content>
+		</div>
 	</div>
 </Dropdown>

@@ -3,15 +3,17 @@
 
 	import { onMount, getContext, tick } from 'svelte';
 	import { models, tools, functions, user } from '$lib/stores';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_URL, DEFAULT_CAPABILITIES } from '$lib/constants';
 
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
+	import { getModelsDefaults } from '$lib/apis/configs';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
 	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
+	import SkillsSelector from '$lib/components/workspace/Models/SkillsSelector.svelte';
 	import FiltersSelector from '$lib/components/workspace/Models/FiltersSelector.svelte';
 	import ActionsSelector from '$lib/components/workspace/Models/ActionsSelector.svelte';
 	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
@@ -21,9 +23,11 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import DefaultFiltersSelector from './DefaultFiltersSelector.svelte';
 	import DefaultFeatures from './DefaultFeatures.svelte';
+	import BuiltinTools from './BuiltinTools.svelte';
 	import PromptSuggestions from './PromptSuggestions.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import { updateModelAccessGrants } from '$lib/apis/models';
 
 	const i18n = getContext('i18n');
 
@@ -87,26 +91,17 @@
 
 	let knowledge = [];
 	let toolIds = [];
+	let skillIds = [];
 
 	let filterIds = [];
 	let defaultFilterIds = [];
 
-	let capabilities = {
-		file_context: true,
-		vision: true,
-		file_upload: true,
-		web_search: true,
-		image_generation: true,
-		code_interpreter: true,
-		citations: true,
-		status_updates: true,
-		usage: undefined,
-		builtin_tools: true
-	};
+	let capabilities = { ...DEFAULT_CAPABILITIES };
 	let defaultFeatureIds = [];
+	let builtinTools = {};
 
 	let actionIds = [];
-	let accessControl = {};
+	let accessGrants = [];
 	let tts = { voice: '' };
 
 	const submitHandler = async () => {
@@ -138,7 +133,7 @@
 
 		info.params = { ...info.params, ...params };
 
-		info.access_control = accessControl;
+		info.access_grants = accessGrants;
 		info.meta.capabilities = capabilities;
 
 		if (enableDescription) {
@@ -160,6 +155,14 @@
 		} else {
 			if (info.meta.toolIds) {
 				delete info.meta.toolIds;
+			}
+		}
+
+		if (skillIds.length > 0) {
+			info.meta.skillIds = skillIds;
+		} else {
+			if (info.meta.skillIds) {
+				delete info.meta.skillIds;
 			}
 		}
 
@@ -195,6 +198,14 @@
 			}
 		}
 
+		if (Object.keys(builtinTools).length > 0) {
+			info.meta.builtinTools = builtinTools;
+		} else {
+			if (info.meta.builtinTools) {
+				delete info.meta.builtinTools;
+			}
+		}
+
 		if (tts.voice !== '') {
 			if (!info.meta.tts) info.meta.tts = {};
 			info.meta.tts.voice = tts.voice;
@@ -208,7 +219,11 @@
 		}
 
 		info.params.system = system.trim() === '' ? null : system;
-		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
+		info.params.stop = params.stop
+			? (typeof params.stop === 'string' ? params.stop.split(',') : params.stop).filter((s) =>
+					s.trim()
+				)
+			: null;
 		Object.keys(info.params).forEach((key) => {
 			if (info.params[key] === '' || info.params[key] === null) {
 				delete info.params[key];
@@ -224,6 +239,16 @@
 	onMount(async () => {
 		await tools.set(await getTools(localStorage.token));
 		await functions.set(await getFunctions(localStorage.token));
+
+		// Fetch admin-configured default model metadata so the editor
+		// reflects the actual defaults rather than hardcoded values
+		const modelsConfig = await getModelsDefaults(localStorage.token).catch(() => null);
+		const defaultMeta = modelsConfig?.DEFAULT_MODEL_METADATA ?? {};
+
+		// Use admin defaults as base, falling back to hardcoded defaults
+		capabilities = { ...DEFAULT_CAPABILITIES, ...(defaultMeta.capabilities ?? {}) };
+		defaultFeatureIds = defaultMeta.defaultFeatureIds ?? [];
+		builtinTools = defaultMeta.builtinTools ?? {};
 
 		// Scroll to top 'workspace-container' element
 		const workspaceContainer = document.getElementById('workspace-container');
@@ -282,22 +307,18 @@
 			});
 
 			toolIds = model?.meta?.toolIds ?? [];
+			skillIds = model?.meta?.skillIds ?? [];
 			filterIds = model?.meta?.filterIds ?? [];
 			defaultFilterIds = model?.meta?.defaultFilterIds ?? [];
 			actionIds = model?.meta?.actionIds ?? [];
 
+			// Per-model overrides take precedence over admin defaults
 			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
-			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? [];
+			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? defaultFeatureIds;
+			builtinTools = model?.meta?.builtinTools ?? builtinTools;
 			tts = { voice: model?.meta?.tts?.voice ?? '' };
 
-			if ('access_control' in model) {
-				accessControl = model.access_control;
-			} else {
-				accessControl = {};
-			}
-
-			console.log(model?.access_control);
-			console.log(accessControl);
+			accessGrants = model?.access_grants ?? [];
 
 			info = {
 				...info,
@@ -323,10 +344,26 @@
 {#if loaded}
 	<AccessControlModal
 		bind:show={showAccessControlModal}
-		bind:accessControl
-		accessRoles={['read', 'write']}
+		bind:accessGrants
+		accessRoles={preset ? ['read', 'write'] : ['read']}
 		share={$user?.permissions?.sharing?.models || $user?.role === 'admin'}
 		sharePublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
+		shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) || $user?.role === 'admin'}
+		onChange={async () => {
+			if (edit && model?.id) {
+				try {
+					await updateModelAccessGrants(
+						localStorage.token,
+						model.id,
+						model.name ?? name,
+						accessGrants
+					);
+					toast.success($i18n.t('Saved'));
+				} catch (error) {
+					toast.error(error?.detail ?? `${error}`);
+				}
+			}
+		}}
 	/>
 
 	{#if onBack}
@@ -440,15 +477,16 @@
 				}}
 			>
 				<div class="w-full px-1">
-					<div class="flex flex-col md:flex-row gap-4 w-full">
-						<div class="self-center md:self-start flex justify-center my-2 shrink-0">
+					<div class="flex flex-row gap-4 md:gap-6 w-full">
+						<div class="self-start flex justify-center my-2 shrink-0">
 							<div class="self-center">
 								<button
-									class="rounded-xl flex shrink-0 items-center {info.meta.profile_image_url !==
+									class="rounded-2xl flex shrink-0 items-center {info.meta.profile_image_url !==
 									`${WEBUI_BASE_URL}/static/favicon.png`
 										? 'bg-transparent'
 										: 'bg-white'} shadow-xl group relative"
 									type="button"
+									aria-label={$i18n.t('Upload profile image')}
 									on:click={() => {
 										filesInputElement.click();
 									}}
@@ -457,13 +495,13 @@
 										<img
 											src={info.meta.profile_image_url}
 											alt="model profile"
-											class="rounded-xl size-60 object-cover shrink-0"
+											class="rounded-xl size-20 md:size-48 object-cover shrink-0"
 										/>
 									{:else}
 										<img
 											src="{WEBUI_BASE_URL}/static/favicon.png"
 											alt="model profile"
-											class=" rounded-xl size-60 object-cover shrink-0"
+											class=" rounded-xl size-20 md:size-48 object-cover shrink-0"
 										/>
 									{/if}
 
@@ -512,7 +550,7 @@
 								<div class=" flex flex-col w-full">
 									<div class="flex-1 w-full">
 										<input
-											class="text-4xl font-medium w-full bg-transparent outline-hidden"
+											class="text-3xl w-full bg-transparent outline-hidden"
 											placeholder={$i18n.t('Model Name')}
 											bind:value={name}
 											required
@@ -557,7 +595,7 @@
 
 									<div>
 										<select
-											class="dark:bg-gray-900 text-sm w-full bg-transparent outline-hidden"
+											class="text-sm w-full bg-transparent outline-hidden"
 											placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
 											bind:value={info.base_model_id}
 											required
@@ -713,19 +751,23 @@
 						{/if}
 					</div>
 
-					<div class="my-2">
+					<div class="my-4">
 						<Knowledge bind:selectedItems={knowledge} />
 					</div>
 
-					<div class="my-2">
+					<div class="my-4">
 						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools ?? []} />
 					</div>
 
+					<div class="my-4">
+						<SkillsSelector bind:selectedSkillIds={skillIds} />
+					</div>
+
 					{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0 || ($functions ?? []).filter((func) => func.type === 'action').length > 0}
-						<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+						<hr class=" border-gray-100/30 dark:border-gray-850/30 my-4" />
 
 						{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0}
-							<div class="my-2">
+							<div class="my-4">
 								<FiltersSelector
 									bind:selectedFilterIds={filterIds}
 									filters={($functions ?? []).filter((func) => func.type === 'filter')}
@@ -740,7 +782,7 @@
 							)}
 
 							{#if toggleableFilters.length > 0}
-								<div class="my-2">
+								<div class="my-4">
 									<DefaultFiltersSelector
 										bind:selectedFilterIds={defaultFilterIds}
 										filters={toggleableFilters}
@@ -750,7 +792,7 @@
 						{/if}
 
 						{#if ($functions ?? []).filter((func) => func.type === 'action').length > 0}
-							<div class="my-2">
+							<div class="my-4">
 								<ActionsSelector
 									bind:selectedActionIds={actionIds}
 									actions={($functions ?? []).filter((func) => func.type === 'action')}
@@ -759,9 +801,9 @@
 						{/if}
 					{/if}
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-4" />
 
-					<div class="my-2">
+					<div class="my-4">
 						<Capabilities bind:capabilities />
 					</div>
 
@@ -774,13 +816,19 @@
 							.map(([key, value]) => key)}
 
 						{#if availableFeatures.length > 0}
-							<div class="my-2">
+							<div class="my-4">
 								<DefaultFeatures {availableFeatures} bind:featureIds={defaultFeatureIds} />
 							</div>
 						{/if}
 					{/if}
 
-					<div class="my-2">
+					{#if capabilities.builtin_tools}
+						<div class="my-4">
+							<BuiltinTools bind:builtinTools />
+						</div>
+					{/if}
+
+					<div class="my-4">
 						<div class="flex w-full justify-between mb-1">
 							<div class="self-center text-xs font-medium text-gray-500">
 								{$i18n.t('TTS Voice')}
@@ -794,7 +842,7 @@
 						/>
 					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-4" />
 
 					<div class="my-2 flex justify-end">
 						<button

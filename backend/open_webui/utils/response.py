@@ -6,17 +6,60 @@ from open_webui.utils.misc import (
 )
 
 
+# An honest ledger is worth more than a flattering one.
+# Let every cost here be counted true.
+def normalize_usage(usage: dict) -> dict:
+    """
+    Normalize usage statistics to standard format.
+    Handles OpenAI, Ollama, and llama.cpp formats.
+
+    Adds standardized token fields to the original data:
+    - input_tokens: Number of tokens in the prompt
+    - output_tokens: Number of tokens generated
+    - total_tokens: Sum of input and output tokens
+    """
+    if not usage:
+        return {}
+
+    # Map various field names to standard names
+    input_tokens = (
+        usage.get('input_tokens')  # Already standard
+        or usage.get('prompt_tokens')  # OpenAI
+        or usage.get('prompt_eval_count')  # Ollama
+        or usage.get('prompt_n')  # llama.cpp
+        or 0
+    )
+
+    output_tokens = (
+        usage.get('output_tokens')  # Already standard
+        or usage.get('completion_tokens')  # OpenAI
+        or usage.get('eval_count')  # Ollama
+        or usage.get('predicted_n')  # llama.cpp
+        or 0
+    )
+
+    total_tokens = usage.get('total_tokens') or (input_tokens + output_tokens)
+
+    # Add standardized fields to original data
+    result = dict(usage)
+    result['input_tokens'] = int(input_tokens)
+    result['output_tokens'] = int(output_tokens)
+    result['total_tokens'] = int(total_tokens)
+
+    return result
+
+
 def convert_ollama_tool_call_to_openai(tool_calls: list) -> list:
     openai_tool_calls = []
     for tool_call in tool_calls:
-        function = tool_call.get("function", {})
+        function = tool_call.get('function', {})
         openai_tool_call = {
-            "index": tool_call.get("index", function.get("index", 0)),
-            "id": tool_call.get("id", f"call_{str(uuid4())}"),
-            "type": "function",
-            "function": {
-                "name": function.get("name", ""),
-                "arguments": json.dumps(function.get("arguments", {})),
+            'index': tool_call.get('index', function.get('index', 0)),
+            'id': tool_call.get('id', f'call_{str(uuid4())}'),
+            'type': 'function',
+            'function': {
+                'name': function.get('name', ''),
+                'arguments': json.dumps(function.get('arguments', {})),
             },
         }
         openai_tool_calls.append(openai_tool_call)
@@ -24,66 +67,57 @@ def convert_ollama_tool_call_to_openai(tool_calls: list) -> list:
 
 
 def convert_ollama_usage_to_openai(data: dict) -> dict:
+    input_tokens = int(data.get('prompt_eval_count', 0))
+    output_tokens = int(data.get('eval_count', 0))
+    total_tokens = input_tokens + output_tokens
+
     return {
-        "response_token/s": (
+        # Standardized fields
+        'input_tokens': input_tokens,
+        'output_tokens': output_tokens,
+        'total_tokens': total_tokens,
+        # OpenAI-compatible fields (for backward compatibility)
+        'prompt_tokens': input_tokens,
+        'completion_tokens': output_tokens,
+        # Ollama-specific metrics
+        'response_token/s': (
             round(
-                (
-                    (
-                        data.get("eval_count", 0)
-                        / ((data.get("eval_duration", 0) / 10_000_000))
-                    )
-                    * 100
-                ),
+                ((data.get('eval_count', 0) / (data.get('eval_duration', 0) / 10_000_000)) * 100),
                 2,
             )
-            if data.get("eval_duration", 0) > 0
-            else "N/A"
+            if data.get('eval_duration', 0) > 0
+            else 'N/A'
         ),
-        "prompt_token/s": (
+        'prompt_token/s': (
             round(
-                (
-                    (
-                        data.get("prompt_eval_count", 0)
-                        / ((data.get("prompt_eval_duration", 0) / 10_000_000))
-                    )
-                    * 100
-                ),
+                ((data.get('prompt_eval_count', 0) / (data.get('prompt_eval_duration', 0) / 10_000_000)) * 100),
                 2,
             )
-            if data.get("prompt_eval_duration", 0) > 0
-            else "N/A"
+            if data.get('prompt_eval_duration', 0) > 0
+            else 'N/A'
         ),
-        "total_duration": data.get("total_duration", 0),
-        "load_duration": data.get("load_duration", 0),
-        "prompt_eval_count": data.get("prompt_eval_count", 0),
-        "prompt_tokens": int(
-            data.get("prompt_eval_count", 0)
-        ),  # This is the OpenAI compatible key
-        "prompt_eval_duration": data.get("prompt_eval_duration", 0),
-        "eval_count": data.get("eval_count", 0),
-        "completion_tokens": int(
-            data.get("eval_count", 0)
-        ),  # This is the OpenAI compatible key
-        "eval_duration": data.get("eval_duration", 0),
-        "approximate_total": (lambda s: f"{s // 3600}h{(s % 3600) // 60}m{s % 60}s")(
-            (data.get("total_duration", 0) or 0) // 1_000_000_000
+        'total_duration': data.get('total_duration', 0),
+        'load_duration': data.get('load_duration', 0),
+        'prompt_eval_count': data.get('prompt_eval_count', 0),
+        'prompt_eval_duration': data.get('prompt_eval_duration', 0),
+        'eval_count': data.get('eval_count', 0),
+        'eval_duration': data.get('eval_duration', 0),
+        'approximate_total': (lambda s: f'{s // 3600}h{(s % 3600) // 60}m{s % 60}s')(
+            (data.get('total_duration', 0) or 0) // 1_000_000_000
         ),
-        "total_tokens": int(  # This is the OpenAI compatible key
-            data.get("prompt_eval_count", 0) + data.get("eval_count", 0)
-        ),
-        "completion_tokens_details": {  # This is the OpenAI compatible key
-            "reasoning_tokens": 0,
-            "accepted_prediction_tokens": 0,
-            "rejected_prediction_tokens": 0,
+        'completion_tokens_details': {
+            'reasoning_tokens': 0,
+            'accepted_prediction_tokens': 0,
+            'rejected_prediction_tokens': 0,
         },
     }
 
 
 def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
-    model = ollama_response.get("model", "ollama")
-    message_content = ollama_response.get("message", {}).get("content", "")
-    reasoning_content = ollama_response.get("message", {}).get("thinking", None)
-    tool_calls = ollama_response.get("message", {}).get("tool_calls", None)
+    model = ollama_response.get('model', 'ollama')
+    message_content = ollama_response.get('message', {}).get('content', '')
+    reasoning_content = ollama_response.get('message', {}).get('thinking', None)
+    tool_calls = ollama_response.get('message', {}).get('tool_calls', None)
     openai_tool_calls = None
 
     if tool_calls:
@@ -100,32 +134,35 @@ def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
 
 
 async def convert_streaming_response_ollama_to_openai(ollama_streaming_response):
+    has_tool_calls = False
     async for data in ollama_streaming_response.body_iterator:
         data = json.loads(data)
 
-        model = data.get("model", "ollama")
-        message_content = data.get("message", {}).get("content", None)
-        reasoning_content = data.get("message", {}).get("thinking", None)
-        tool_calls = data.get("message", {}).get("tool_calls", None)
+        model = data.get('model', 'ollama')
+        message_content = data.get('message', {}).get('content', None)
+        reasoning_content = data.get('message', {}).get('thinking', None)
+        tool_calls = data.get('message', {}).get('tool_calls', None)
         openai_tool_calls = None
 
         if tool_calls:
             openai_tool_calls = convert_ollama_tool_call_to_openai(tool_calls)
+            has_tool_calls = True
 
-        done = data.get("done", False)
+        done = data.get('done', False)
 
         usage = None
         if done:
             usage = convert_ollama_usage_to_openai(data)
 
-        data = openai_chat_chunk_message_template(
-            model, message_content, reasoning_content, openai_tool_calls, usage
-        )
+        data = openai_chat_chunk_message_template(model, message_content, reasoning_content, openai_tool_calls, usage)
 
-        line = f"data: {json.dumps(data)}\n\n"
+        if done and has_tool_calls:
+            data['choices'][0]['finish_reason'] = 'tool_calls'
+
+        line = f'data: {json.dumps(data)}\n\n'
         yield line
 
-    yield "data: [DONE]\n\n"
+    yield 'data: [DONE]\n\n'
 
 
 def convert_embedding_response_ollama_to_openai(response) -> dict:
@@ -148,41 +185,49 @@ def convert_embedding_response_ollama_to_openai(response) -> dict:
                 "model": "...",
             }
     """
-    # Ollama batch-style output
-    if isinstance(response, dict) and "embeddings" in response:
+    # Ollama batch-style output from /api/embed
+    # Response format: {"embeddings": [[0.1, 0.2, ...], [0.3, 0.4, ...]], "model": "..."}
+    if isinstance(response, dict) and 'embeddings' in response:
         openai_data = []
-        for i, emb in enumerate(response["embeddings"]):
-            openai_data.append(
-                {
-                    "object": "embedding",
-                    "embedding": emb.get("embedding"),
-                    "index": emb.get("index", i),
-                }
-            )
+        for i, emb in enumerate(response['embeddings']):
+            # /api/embed returns embeddings as plain float lists
+            if isinstance(emb, list):
+                openai_data.append(
+                    {
+                        'object': 'embedding',
+                        'embedding': emb,
+                        'index': i,
+                    }
+                )
+            # Also handle dict format for robustness
+            elif isinstance(emb, dict):
+                openai_data.append(
+                    {
+                        'object': 'embedding',
+                        'embedding': emb.get('embedding'),
+                        'index': emb.get('index', i),
+                    }
+                )
         return {
-            "object": "list",
-            "data": openai_data,
-            "model": response.get("model"),
+            'object': 'list',
+            'data': openai_data,
+            'model': response.get('model'),
         }
     # Ollama single output
-    elif isinstance(response, dict) and "embedding" in response:
+    elif isinstance(response, dict) and 'embedding' in response:
         return {
-            "object": "list",
-            "data": [
+            'object': 'list',
+            'data': [
                 {
-                    "object": "embedding",
-                    "embedding": response["embedding"],
-                    "index": 0,
+                    'object': 'embedding',
+                    'embedding': response['embedding'],
+                    'index': 0,
                 }
             ],
-            "model": response.get("model"),
+            'model': response.get('model'),
         }
     # Already OpenAI-compatible?
-    elif (
-        isinstance(response, dict)
-        and "data" in response
-        and isinstance(response["data"], list)
-    ):
+    elif isinstance(response, dict) and 'data' in response and isinstance(response['data'], list):
         return response
 
     # Fallback: return as is if unrecognized

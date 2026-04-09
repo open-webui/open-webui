@@ -17,6 +17,7 @@ from open_webui.models.chats import (
     ChatModel,
     Chats,
     ChatTitleIdResponse,
+    SharedChatResponse,
     ChatStatsExport,
     AggregateChatStats,
     ChatBody,
@@ -52,11 +53,13 @@ def _normalize_chat_list_for_response(chats: list[ChatModel]) -> list[ChatRespon
 
 ############################
 # GetChatList
+# Let the record outlive the session, so that what was
+# learned here not need to be learned again.
 ############################
 
 
-@router.get("/", response_model=list[ChatTitleIdResponse])
-@router.get("/list", response_model=list[ChatTitleIdResponse])
+@router.get('/', response_model=list[ChatTitleIdResponse])
+@router.get('/list', response_model=list[ChatTitleIdResponse])
 def get_session_user_chat_list(
     user=Depends(get_verified_user),
     page: Optional[int] = None,
@@ -86,9 +89,7 @@ def get_session_user_chat_list(
             )
     except Exception as e:
         log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
 ############################
@@ -97,7 +98,7 @@ def get_session_user_chat_list(
 ############################
 
 
-@router.get("/stats/usage", response_model=ChatUsageStatsListResponse)
+@router.get('/stats/usage', response_model=ChatUsageStatsListResponse)
 def get_session_user_chat_usage_stats(
     items_per_page: Optional[int] = 50,
     page: Optional[int] = 1,
@@ -115,8 +116,8 @@ def get_session_user_chat_usage_stats(
 
         chat_stats = []
         for chat in chats:
-            messages_map = chat.chat.get("history", {}).get("messages", {})
-            message_id = chat.chat.get("history", {}).get("currentId")
+            messages_map = chat.chat.get('history', {}).get('messages', {})
+            message_id = chat.chat.get('history', {}).get('currentId')
 
             if messages_map and message_id:
                 try:
@@ -126,30 +127,24 @@ def get_session_user_chat_usage_stats(
                     history_assistant_messages = []
 
                     for message in messages_map.values():
-                        if message.get("role", "") == "user":
+                        if message.get('role', '') == 'user':
                             history_user_messages.append(message)
-                        elif message.get("role", "") == "assistant":
+                        elif message.get('role', '') == 'assistant':
                             history_assistant_messages.append(message)
-                            model = message.get("model", None)
+                            model = message.get('model', None)
                             if model:
                                 if model not in history_models:
                                     history_models[model] = 0
                                 history_models[model] += 1
 
                     average_user_message_content_length = (
-                        sum(
-                            len(message.get("content", ""))
-                            for message in history_user_messages
-                        )
+                        sum(len(message.get('content', '')) for message in history_user_messages)
                         / len(history_user_messages)
                         if len(history_user_messages) > 0
                         else 0
                     )
                     average_assistant_message_content_length = (
-                        sum(
-                            len(message.get("content", ""))
-                            for message in history_assistant_messages
-                        )
+                        sum(len(message.get('content', '')) for message in history_assistant_messages)
                         / len(history_assistant_messages)
                         if len(history_assistant_messages) > 0
                         else 0
@@ -157,53 +152,45 @@ def get_session_user_chat_usage_stats(
 
                     response_times = []
                     for message in history_assistant_messages:
-                        user_message_id = message.get("parentId", None)
+                        user_message_id = message.get('parentId', None)
                         if user_message_id and user_message_id in messages_map:
                             user_message = messages_map[user_message_id]
-                            response_time = message.get(
-                                "timestamp", 0
-                            ) - user_message.get("timestamp", 0)
+                            response_time = message.get('timestamp', 0) - user_message.get('timestamp', 0)
 
                             response_times.append(response_time)
 
-                    average_response_time = (
-                        sum(response_times) / len(response_times)
-                        if len(response_times) > 0
-                        else 0
-                    )
+                    average_response_time = sum(response_times) / len(response_times) if len(response_times) > 0 else 0
 
                     message_list = get_message_list(messages_map, message_id)
                     message_count = len(message_list)
 
                     models = {}
                     for message in reversed(message_list):
-                        if message.get("role") == "assistant":
-                            model = message.get("model", None)
+                        if message.get('role') == 'assistant':
+                            model = message.get('model', None)
                             if model:
                                 if model not in models:
                                     models[model] = 0
                                 models[model] += 1
 
-                            annotation = message.get("annotation", {})
+                            annotation = message.get('annotation', {})
 
                     chat_stats.append(
                         {
-                            "id": chat.id,
-                            "models": models,
-                            "message_count": message_count,
-                            "history_models": history_models,
-                            "history_message_count": history_message_count,
-                            "history_user_message_count": len(history_user_messages),
-                            "history_assistant_message_count": len(
-                                history_assistant_messages
-                            ),
-                            "average_response_time": average_response_time,
-                            "average_user_message_content_length": average_user_message_content_length,
-                            "average_assistant_message_content_length": average_assistant_message_content_length,
-                            "tags": chat.meta.get("tags", []),
-                            "last_message_at": message_list[-1].get("timestamp", None),
-                            "updated_at": chat.updated_at,
-                            "created_at": chat.created_at,
+                            'id': chat.id,
+                            'models': models,
+                            'message_count': message_count,
+                            'history_models': history_models,
+                            'history_message_count': history_message_count,
+                            'history_user_message_count': len(history_user_messages),
+                            'history_assistant_message_count': len(history_assistant_messages),
+                            'average_response_time': average_response_time,
+                            'average_user_message_content_length': average_user_message_content_length,
+                            'average_assistant_message_content_length': average_assistant_message_content_length,
+                            'tags': chat.meta.get('tags', []),
+                            'last_message_at': message_list[-1].get('timestamp', None),
+                            'updated_at': chat.updated_at,
+                            'created_at': chat.created_at,
                         }
                     )
                 except Exception as e:
@@ -213,9 +200,7 @@ def get_session_user_chat_usage_stats(
 
     except Exception as e:
         log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
 ############################
@@ -227,7 +212,7 @@ CHAT_EXPORT_PAGE_ITEM_COUNT = 10
 
 
 class ChatStatsExportList(BaseModel):
-    type: str = "chats"
+    type: str = 'chats'
     items: list[ChatStatsExport]
     total: int
     page: int
@@ -237,19 +222,15 @@ def _process_chat_for_export(chat) -> Optional[ChatStatsExport]:
     try:
 
         def get_message_content_length(message):
-            content = message.get("content", "")
+            content = message.get('content', '')
             if isinstance(content, str):
                 return len(content)
             elif isinstance(content, list):
-                return sum(
-                    len(item.get("text", ""))
-                    for item in content
-                    if item.get("type") == "text"
-                )
+                return sum(len(item.get('text', '')) for item in content if item.get('type') == 'text')
             return 0
 
-        messages_map = chat.chat.get("history", {}).get("messages", {})
-        message_id = chat.chat.get("history", {}).get("currentId")
+        messages_map = chat.chat.get('history', {}).get('messages', {})
+        message_id = chat.chat.get('history', {}).get('currentId')
 
         history_models = {}
         history_message_count = len(messages_map)
@@ -262,14 +243,14 @@ def _process_chat_for_export(chat) -> Optional[ChatStatsExport]:
                 content_length = get_message_content_length(message)
 
                 # Extract rating safely
-                rating = message.get("annotation", {}).get("rating")
-                tags = message.get("annotation", {}).get("tags")
+                rating = message.get('annotation', {}).get('rating')
+                tags = message.get('annotation', {}).get('tags')
 
                 message_stat = MessageStats(
-                    id=message.get("id"),
-                    role=message.get("role"),
-                    model=message.get("model"),
-                    timestamp=message.get("timestamp"),
+                    id=message.get('id'),
+                    role=message.get('role'),
+                    model=message.get('model'),
+                    timestamp=message.get('timestamp'),
                     content_length=content_length,
                     token_count=None,  # Populate if available, e.g. message.get("info", {}).get("token_count")
                     rating=rating,
@@ -279,31 +260,29 @@ def _process_chat_for_export(chat) -> Optional[ChatStatsExport]:
                 export_messages[key] = message_stat
 
                 # --- Aggregation Logic (copied/adapted from usage stats) ---
-                role = message.get("role", "")
-                if role == "user":
+                role = message.get('role', '')
+                if role == 'user':
                     history_user_messages.append(message)
-                elif role == "assistant":
+                elif role == 'assistant':
                     history_assistant_messages.append(message)
-                    model = message.get("model")
+                    model = message.get('model')
                     if model:
                         if model not in history_models:
                             history_models[model] = 0
                         history_models[model] += 1
             except Exception as e:
-                log.debug(f"Error processing message {key}: {e}")
+                log.debug(f'Error processing message {key}: {e}')
                 continue
 
         # Calculate Averages
         average_user_message_content_length = (
-            sum(get_message_content_length(m) for m in history_user_messages)
-            / len(history_user_messages)
+            sum(get_message_content_length(m) for m in history_user_messages) / len(history_user_messages)
             if history_user_messages
             else 0
         )
 
         average_assistant_message_content_length = (
-            sum(get_message_content_length(m) for m in history_assistant_messages)
-            / len(history_assistant_messages)
+            sum(get_message_content_length(m) for m in history_assistant_messages) / len(history_assistant_messages)
             if history_assistant_messages
             else 0
         )
@@ -311,26 +290,24 @@ def _process_chat_for_export(chat) -> Optional[ChatStatsExport]:
         # Response Times
         response_times = []
         for message in history_assistant_messages:
-            user_message_id = message.get("parentId", None)
+            user_message_id = message.get('parentId', None)
             if user_message_id and user_message_id in messages_map:
                 user_message = messages_map[user_message_id]
                 # Ensure timestamps exist
-                t1 = message.get("timestamp")
-                t0 = user_message.get("timestamp")
+                t1 = message.get('timestamp')
+                t0 = user_message.get('timestamp')
                 if t1 and t0:
                     response_times.append(t1 - t0)
 
-        average_response_time = (
-            sum(response_times) / len(response_times) if response_times else 0
-        )
+        average_response_time = sum(response_times) / len(response_times) if response_times else 0
 
         # Current Message List Logic (Main path)
         message_list = get_message_list(messages_map, message_id)
         message_count = len(message_list)
         models = {}
         for message in reversed(message_list):
-            if message.get("role") == "assistant":
-                model = message.get("model")
+            if message.get('role') == 'assistant':
+                model = message.get('model')
                 if model:
                     if model not in models:
                         models[model] = 0
@@ -350,27 +327,23 @@ def _process_chat_for_export(chat) -> Optional[ChatStatsExport]:
         )
 
         # Construct Chat Body
-        chat_body = ChatBody(
-            history=ChatHistoryStats(messages=export_messages, currentId=message_id)
-        )
+        chat_body = ChatBody(history=ChatHistoryStats(messages=export_messages, currentId=message_id))
 
         return ChatStatsExport(
             id=chat.id,
             user_id=chat.user_id,
             created_at=chat.created_at,
             updated_at=chat.updated_at,
-            tags=chat.meta.get("tags", []),
+            tags=chat.meta.get('tags', []),
             stats=stats,
             chat=chat_body,
         )
     except Exception as e:
-        log.exception(f"Error exporting stats for chat {chat.id}: {e}")
+        log.exception(f'Error exporting stats for chat {chat.id}: {e}')
         return None
 
 
-def calculate_chat_stats(
-    user_id, skip=0, limit=10, filter=None, db: Optional[Session] = None
-):
+def calculate_chat_stats(user_id, skip=0, limit=10, filter=None):
     if filter is None:
         filter = {}
 
@@ -379,7 +352,6 @@ def calculate_chat_stats(
         skip=skip,
         limit=limit,
         filter=filter,
-        db=db,
     )
 
     chat_stats_export_list = []
@@ -421,26 +393,23 @@ def generate_chat_stats_jsonl_generator(user_id, filter):
             try:
                 chat_stat = _process_chat_for_export(chat)
                 if chat_stat:
-                    yield chat_stat.model_dump_json() + "\n"
+                    yield chat_stat.model_dump_json() + '\n'
             except Exception as e:
-                log.exception(f"Error processing chat {chat.id}: {e}")
+                log.exception(f'Error processing chat {chat.id}: {e}')
 
         skip += limit
 
 
-@router.get("/stats/export", response_model=ChatStatsExportList)
+@router.get('/stats/export', response_model=ChatStatsExportList)
 async def export_chat_stats(
     request: Request,
     updated_at: Optional[int] = None,
     page: Optional[int] = 1,
     stream: bool = False,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
 ):
     # Check if the user has permission to share/export chats
-    if (user.role != "admin") and (
-        not request.app.state.config.ENABLE_COMMUNITY_SHARING
-    ):
+    if (user.role != 'admin') and (not request.app.state.config.ENABLE_COMMUNITY_SHARING):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -448,36 +417,28 @@ async def export_chat_stats(
 
     try:
         # Fetch chats with date filtering
-        filter = {"order_by": "updated_at", "direction": "asc"}
+        filter = {'order_by': 'updated_at', 'direction': 'asc'}
 
         if updated_at:
-            filter["updated_at"] = updated_at
+            filter['updated_at'] = updated_at
 
         if stream:
             return StreamingResponse(
                 generate_chat_stats_jsonl_generator(user.id, filter),
-                media_type="application/x-ndjson",
-                headers={
-                    "Content-Disposition": f"attachment; filename=chat-stats-export-{user.id}.jsonl"
-                },
+                media_type='application/x-ndjson',
+                headers={'Content-Disposition': f'attachment; filename=chat-stats-export-{user.id}.jsonl'},
             )
         else:
             limit = CHAT_EXPORT_PAGE_ITEM_COUNT
             skip = (page - 1) * limit
 
-            chat_stats_export_list, total = await asyncio.to_thread(
-                calculate_chat_stats, user.id, skip, limit, filter, db=db
-            )
+            chat_stats_export_list, total = await asyncio.to_thread(calculate_chat_stats, user.id, skip, limit, filter)
 
-            return ChatStatsExportList(
-                items=chat_stats_export_list, total=total, page=page
-            )
+            return ChatStatsExportList(items=chat_stats_export_list, total=total, page=page)
 
     except Exception as e:
-        log.debug(f"Error exporting chat stats: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
-        )
+        log.debug(f'Error exporting chat stats: {e}')
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
 ############################
@@ -485,7 +446,7 @@ async def export_chat_stats(
 ############################
 
 
-@router.get("/stats/export/{chat_id}", response_model=Optional[ChatStatsExport])
+@router.get('/stats/export/{chat_id}', response_model=Optional[ChatStatsExport])
 async def export_single_chat_stats(
     request: Request,
     chat_id: str,
@@ -497,9 +458,7 @@ async def export_single_chat_stats(
     Returns ChatStatsExport for the specified chat.
     """
     # Check if the user has permission to share/export chats
-    if (user.role != "admin") and (
-        not request.app.state.config.ENABLE_COMMUNITY_SHARING
-    ):
+    if (user.role != 'admin') and (not request.app.state.config.ENABLE_COMMUNITY_SHARING):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -515,7 +474,7 @@ async def export_single_chat_stats(
             )
 
         # Verify the chat belongs to the user (unless admin)
-        if chat.user_id != user.id and user.role != "admin":
+        if chat.user_id != user.id and user.role != 'admin':
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -527,7 +486,7 @@ async def export_single_chat_stats(
         if not chat_stats:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to process chat stats",
+                detail='Failed to process chat stats',
             )
 
         return chat_stats
@@ -535,22 +494,17 @@ async def export_single_chat_stats(
     except HTTPException:
         raise
     except Exception as e:
-        log.debug(f"Error exporting single chat stats: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
-        )
+        log.debug(f'Error exporting single chat stats: {e}')
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
-@router.delete("/", response_model=bool)
+@router.delete('/', response_model=bool)
 async def delete_all_user_chats(
     request: Request,
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-
-    if user.role == "user" and not has_permission(
-        user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS
-    ):
+    if user.role == 'user' and not has_permission(user.id, 'chat.delete', request.app.state.config.USER_PERMISSIONS):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -565,7 +519,7 @@ async def delete_all_user_chats(
 ############################
 
 
-@router.get("/list/user/{user_id}", response_model=list[ChatTitleIdResponse])
+@router.get('/list/user/{user_id}', response_model=list[ChatTitleIdResponse])
 async def get_user_chat_list_by_user_id(
     user_id: str,
     page: Optional[int] = None,
@@ -589,15 +543,13 @@ async def get_user_chat_list_by_user_id(
 
     filter = {}
     if query:
-        filter["query"] = query
+        filter['query'] = query
     if order_by:
-        filter["order_by"] = order_by
+        filter['order_by'] = order_by
     if direction:
-        filter["direction"] = direction
+        filter['direction'] = direction
 
-    return Chats.get_chat_list_by_user_id(
-        user_id, include_archived=True, filter=filter, skip=skip, limit=limit, db=db
-    )
+    return Chats.get_chat_list_by_user_id(user_id, include_archived=True, filter=filter, skip=skip, limit=limit, db=db)
 
 
 ############################
@@ -605,7 +557,7 @@ async def get_user_chat_list_by_user_id(
 ############################
 
 
-@router.post("/new", response_model=Optional[ChatResponse])
+@router.post('/new', response_model=Optional[ChatResponse])
 async def create_new_chat(
     form_data: ChatForm,
     user=Depends(get_verified_user),
@@ -616,9 +568,7 @@ async def create_new_chat(
         return _normalize_chat_for_response(chat)
     except Exception as e:
         log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
 ############################
@@ -626,7 +576,7 @@ async def create_new_chat(
 ############################
 
 
-@router.post("/import", response_model=list[ChatResponse])
+@router.post('/import', response_model=list[ChatResponse])
 async def import_chats(
     form_data: ChatsImportForm,
     user=Depends(get_verified_user),
@@ -637,9 +587,7 @@ async def import_chats(
         return _normalize_chat_list_for_response(chats)
     except Exception as e:
         log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
 ############################
@@ -647,7 +595,7 @@ async def import_chats(
 ############################
 
 
-@router.get("/search", response_model=list[ChatTitleIdResponse])
+@router.get('/search', response_model=list[ChatTitleIdResponse])
 def search_user_chats(
     text: str,
     page: Optional[int] = None,
@@ -662,18 +610,16 @@ def search_user_chats(
 
     chat_list = [
         ChatTitleIdResponse(**chat.model_dump())
-        for chat in Chats.get_chats_by_user_id_and_search_text(
-            user.id, text, skip=skip, limit=limit, db=db
-        )
+        for chat in Chats.get_chats_by_user_id_and_search_text(user.id, text, skip=skip, limit=limit, db=db)
     ]
 
     # Delete tag if no chat is found
-    words = text.strip().split(" ")
-    if page == 1 and len(words) == 1 and words[0].startswith("tag:"):
-        tag_id = words[0].replace("tag:", "")
+    words = text.strip().split(' ')
+    if page == 1 and len(words) == 1 and words[0].startswith('tag:'):
+        tag_id = words[0].replace('tag:', '')
         if len(chat_list) == 0:
             if Tags.get_tag_by_name_and_user_id(tag_id, user.id, db=db):
-                log.debug(f"deleting tag: {tag_id}")
+                log.debug(f'deleting tag: {tag_id}')
                 Tags.delete_tag_by_name_and_user_id(tag_id, user.id, db=db)
 
     return chat_list
@@ -684,26 +630,20 @@ def search_user_chats(
 ############################
 
 
-@router.get("/folder/{folder_id}", response_model=list[ChatResponse])
-async def get_chats_by_folder_id(
-    folder_id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
+@router.get('/folder/{folder_id}', response_model=list[ChatResponse])
+async def get_chats_by_folder_id(folder_id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
     folder_ids = [folder_id]
-    children_folders = Folders.get_children_folders_by_id_and_user_id(
-        folder_id, user.id, db=db
-    )
+    children_folders = Folders.get_children_folders_by_id_and_user_id(folder_id, user.id, db=db)
     if children_folders:
         folder_ids.extend([folder.id for folder in children_folders])
 
     return [
         ChatResponse(**chat.model_dump())
-        for chat in Chats.get_chats_by_folder_ids_and_user_id(
-            folder_ids, user.id, db=db
-        )
+        for chat in Chats.get_chats_by_folder_ids_and_user_id(folder_ids, user.id, db=db)
     ]
 
 
-@router.get("/folder/{folder_id}/list")
+@router.get('/folder/{folder_id}/list')
 async def get_chat_list_by_folder_id(
     folder_id: str,
     page: Optional[int] = 1,
@@ -715,17 +655,13 @@ async def get_chat_list_by_folder_id(
         skip = (page - 1) * limit
 
         return [
-            {"title": chat.title, "id": chat.id, "updated_at": chat.updated_at}
-            for chat in Chats.get_chats_by_folder_id_and_user_id(
-                folder_id, user.id, skip=skip, limit=limit, db=db
-            )
+            {'title': chat.title, 'id': chat.id, 'updated_at': chat.updated_at}
+            for chat in Chats.get_chats_by_folder_id_and_user_id(folder_id, user.id, skip=skip, limit=limit, db=db)
         ]
 
     except Exception as e:
         log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
 ############################
@@ -733,14 +669,9 @@ async def get_chat_list_by_folder_id(
 ############################
 
 
-@router.get("/pinned", response_model=list[ChatTitleIdResponse])
-async def get_user_pinned_chats(
-    user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
-    return [
-        ChatTitleIdResponse(**chat.model_dump())
-        for chat in Chats.get_pinned_chats_by_user_id(user.id, db=db)
-    ]
+@router.get('/pinned', response_model=list[ChatTitleIdResponse])
+async def get_user_pinned_chats(user=Depends(get_verified_user), db: Session = Depends(get_session)):
+    return Chats.get_pinned_chats_by_user_id(user.id, db=db)
 
 
 ############################
@@ -748,10 +679,8 @@ async def get_user_pinned_chats(
 ############################
 
 
-@router.get("/all", response_model=list[ChatResponse])
-async def get_user_chats(
-    user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
+@router.get('/all', response_model=list[ChatResponse])
+async def get_user_chats(user=Depends(get_verified_user), db: Session = Depends(get_session)):
     result = Chats.get_chats_by_user_id(user.id, db=db)
     return _normalize_chat_list_for_response(result.items)
 
@@ -773,18 +702,14 @@ async def get_user_archived_chats(
 ############################
 
 
-@router.get("/all/tags", response_model=list[TagModel])
-async def get_all_user_tags(
-    user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
+@router.get('/all/tags', response_model=list[TagModel])
+async def get_all_user_tags(user=Depends(get_verified_user), db: Session = Depends(get_session)):
     try:
         tags = Tags.get_tags_by_user_id(user.id, db=db)
         return tags
     except Exception as e:
         log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
 ############################
@@ -792,10 +717,8 @@ async def get_all_user_tags(
 ############################
 
 
-@router.get("/all/db", response_model=list[ChatResponse])
-async def get_all_user_chats_in_db(
-    user=Depends(get_admin_user), db: Session = Depends(get_session)
-):
+@router.get('/all/db', response_model=list[ChatResponse])
+async def get_all_user_chats_in_db(user=Depends(get_admin_user), db: Session = Depends(get_session)):
     if not ENABLE_ADMIN_EXPORT:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -809,7 +732,7 @@ async def get_all_user_chats_in_db(
 ############################
 
 
-@router.get("/archived", response_model=list[ChatTitleIdResponse])
+@router.get('/archived', response_model=list[ChatTitleIdResponse])
 async def get_archived_session_user_chat_list(
     page: Optional[int] = None,
     query: Optional[str] = None,
@@ -826,24 +749,19 @@ async def get_archived_session_user_chat_list(
 
     filter = {}
     if query:
-        filter["query"] = query
+        filter['query'] = query
     if order_by:
-        filter["order_by"] = order_by
+        filter['order_by'] = order_by
     if direction:
-        filter["direction"] = direction
+        filter['direction'] = direction
 
-    chat_list = [
-        ChatTitleIdResponse(**chat.model_dump())
-        for chat in Chats.get_archived_chat_list_by_user_id(
-            user.id,
-            filter=filter,
-            skip=skip,
-            limit=limit,
-            db=db,
-        )
-    ]
-
-    return chat_list
+    return Chats.get_archived_chat_list_by_user_id(
+        user.id,
+        filter=filter,
+        skip=skip,
+        limit=limit,
+        db=db,
+    )
 
 
 ############################
@@ -851,10 +769,8 @@ async def get_archived_session_user_chat_list(
 ############################
 
 
-@router.post("/archive/all", response_model=bool)
-async def archive_all_chats(
-    user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
+@router.post('/archive/all', response_model=bool)
+async def archive_all_chats(user=Depends(get_verified_user), db: Session = Depends(get_session)):
     return Chats.archive_all_chats_by_user_id(user.id, db=db)
 
 
@@ -863,28 +779,36 @@ async def archive_all_chats(
 ############################
 
 
-@router.post("/unarchive/all", response_model=bool)
-async def unarchive_all_chats(
-    user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
+@router.post('/unarchive/all', response_model=bool)
+async def unarchive_all_chats(user=Depends(get_verified_user), db: Session = Depends(get_session)):
     return Chats.unarchive_all_chats_by_user_id(user.id, db=db)
 
 
 ############################
-# GetSharedChatById
+# GetSharedChats
 ############################
 
 
-@router.get("/share/{share_id}", response_model=Optional[ChatResponse])
-async def get_shared_chat_by_id(
-    share_id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
+@router.get('/shared', response_model=list[SharedChatResponse])
+async def get_shared_session_user_chat_list(
+    page: Optional[int] = None,
+    query: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     if user.role == "pending":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
-    if user.role == "user" or (user.role == "admin" and not ENABLE_ADMIN_CHAT_ACCESS):
+@router.get('/share/{share_id}', response_model=Optional[ChatResponse])
+async def get_shared_chat_by_id(share_id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
+    if user.role == 'pending':
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    if user.role == 'user' or (user.role == 'admin' and not ENABLE_ADMIN_CHAT_ACCESS):
         chat = Chats.get_chat_by_share_id(share_id, db=db)
-    elif user.role == "admin" and ENABLE_ADMIN_CHAT_ACCESS:
+    elif user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS:
         chat = Chats.get_chat_by_id(share_id, db=db)
 
     if chat:
@@ -907,15 +831,13 @@ class TagFilterForm(TagForm):
     limit: Optional[int] = 50
 
 
-@router.post("/tags", response_model=list[ChatTitleIdResponse])
+@router.post('/tags', response_model=list[ChatTitleIdResponse])
 async def get_user_chat_list_by_tag_name(
     form_data: TagFilterForm,
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    chats = Chats.get_chat_list_by_user_id_and_tag_name(
-        user.id, form_data.name, form_data.skip, form_data.limit, db=db
-    )
+    chats = Chats.get_chat_list_by_user_id_and_tag_name(user.id, form_data.name, form_data.skip, form_data.limit, db=db)
     if len(chats) == 0:
         Tags.delete_tag_by_name_and_user_id(form_data.name, user.id, db=db)
 
@@ -927,10 +849,8 @@ async def get_user_chat_list_by_tag_name(
 ############################
 
 
-@router.get("/{id}", response_model=Optional[ChatResponse])
-async def get_chat_by_id(
-    id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
+@router.get('/{id}', response_model=Optional[ChatResponse])
+async def get_chat_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
 
     if chat:
@@ -944,7 +864,7 @@ async def get_chat_by_id(
 ############################
 
 
-@router.post("/{id}", response_model=Optional[ChatResponse])
+@router.post('/{id}', response_model=Optional[ChatResponse])
 async def update_chat_by_id(
     id: str,
     form_data: ChatForm,
@@ -970,7 +890,7 @@ class MessageForm(BaseModel):
     content: str
 
 
-@router.post("/{id}/messages/{message_id}", response_model=Optional[ChatResponse])
+@router.post('/{id}/messages/{message_id}', response_model=Optional[ChatResponse])
 async def update_chat_message_by_id(
     id: str,
     message_id: str,
@@ -986,7 +906,7 @@ async def update_chat_message_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    if chat.user_id != user.id and user.role != "admin":
+    if chat.user_id != user.id and user.role != 'admin':
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -1003,14 +923,13 @@ async def update_chat_message_by_id(
         {
             "content": content_to_save, 
         },
-        db=db,
     )
 
     event_emitter = get_event_emitter(
         {
-            "user_id": user.id,
-            "chat_id": id,
-            "message_id": message_id,
+            'user_id': user.id,
+            'chat_id': id,
+            'message_id': message_id,
         },
         False,
     )
@@ -1037,7 +956,7 @@ class EventForm(BaseModel):
     data: dict
 
 
-@router.post("/{id}/messages/{message_id}/event", response_model=Optional[bool])
+@router.post('/{id}/messages/{message_id}/event', response_model=Optional[bool])
 async def send_chat_message_event_by_id(
     id: str,
     message_id: str,
@@ -1053,7 +972,7 @@ async def send_chat_message_event_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    if chat.user_id != user.id and user.role != "admin":
+    if chat.user_id != user.id and user.role != 'admin':
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -1061,9 +980,9 @@ async def send_chat_message_event_by_id(
 
     event_emitter = get_event_emitter(
         {
-            "user_id": user.id,
-            "chat_id": id,
-            "message_id": message_id,
+            'user_id': user.id,
+            'chat_id': id,
+            'message_id': message_id,
         }
     )
 
@@ -1073,7 +992,7 @@ async def send_chat_message_event_by_id(
         else:
             return False
         return True
-    except:
+    except Exception:
         return False
 
 
@@ -1082,45 +1001,39 @@ async def send_chat_message_event_by_id(
 ############################
 
 
-@router.delete("/{id}", response_model=bool)
+@router.delete('/{id}', response_model=bool)
 async def delete_chat_by_id(
     request: Request,
     id: str,
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    if user.role == "admin":
+    if user.role == 'admin':
         chat = Chats.get_chat_by_id(id, db=db)
         if not chat:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=ERROR_MESSAGES.NOT_FOUND,
             )
-        for tag in chat.meta.get("tags", []):
-            if Chats.count_chats_by_tag_name_and_user_id(tag, user.id, db=db) == 1:
-                Tags.delete_tag_by_name_and_user_id(tag, user.id, db=db)
+        Chats.delete_orphan_tags_for_user(chat.meta.get('tags', []), user.id, threshold=1, db=db)
 
         result = Chats.delete_chat_by_id(id, db=db)
 
         return result
     else:
-        if not has_permission(
-            user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS
-        ):
+        if not has_permission(user.id, 'chat.delete', request.app.state.config.USER_PERMISSIONS):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
 
-        chat = Chats.get_chat_by_id(id, db=db)
+        chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
         if not chat:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=ERROR_MESSAGES.NOT_FOUND,
             )
-        for tag in chat.meta.get("tags", []):
-            if Chats.count_chats_by_tag_name_and_user_id(tag, user.id, db=db) == 1:
-                Tags.delete_tag_by_name_and_user_id(tag, user.id, db=db)
+        Chats.delete_orphan_tags_for_user(chat.meta.get('tags', []), user.id, threshold=1, db=db)
 
         result = Chats.delete_chat_by_id_and_user_id(id, user.id, db=db)
         return result
@@ -1131,17 +1044,13 @@ async def delete_chat_by_id(
 ############################
 
 
-@router.get("/{id}/pinned", response_model=Optional[bool])
-async def get_pinned_status_by_id(
-    id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
+@router.get('/{id}/pinned', response_model=Optional[bool])
+async def get_pinned_status_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
         return chat.pinned
     else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
 
 
 ############################
@@ -1149,18 +1058,14 @@ async def get_pinned_status_by_id(
 ############################
 
 
-@router.post("/{id}/pin", response_model=Optional[ChatResponse])
-async def pin_chat_by_id(
-    id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
+@router.post('/{id}/pin', response_model=Optional[ChatResponse])
+async def pin_chat_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
         chat = Chats.toggle_chat_pinned_by_id(id, db=db)
         return chat
     else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
 
 
 ############################
@@ -1172,7 +1077,7 @@ class CloneForm(BaseModel):
     title: Optional[str] = None
 
 
-@router.post("/{id}/clone", response_model=Optional[ChatResponse])
+@router.post('/{id}/clone', response_model=Optional[ChatResponse])
 async def clone_chat_by_id(
     form_data: CloneForm,
     id: str,
@@ -1183,9 +1088,9 @@ async def clone_chat_by_id(
     if chat:
         updated_chat = {
             **chat.chat,
-            "originalChatId": chat.id,
-            "branchPointMessageId": chat.chat["history"]["currentId"],
-            "title": form_data.title if form_data.title else f"Clone of {chat.title}",
+            'originalChatId': chat.id,
+            'branchPointMessageId': chat.chat['history']['currentId'],
+            'title': form_data.title if form_data.title else f'Clone of {chat.title}',
         }
 
         chats = Chats.import_chats(
@@ -1193,10 +1098,10 @@ async def clone_chat_by_id(
             [
                 ChatImportForm(
                     **{
-                        "chat": updated_chat,
-                        "meta": chat.meta,
-                        "pinned": chat.pinned,
-                        "folder_id": chat.folder_id,
+                        'chat': updated_chat,
+                        'meta': chat.meta,
+                        'pinned': chat.pinned,
+                        'folder_id': chat.folder_id,
                     }
                 )
             ],
@@ -1212,9 +1117,7 @@ async def clone_chat_by_id(
                 detail=ERROR_MESSAGES.DEFAULT(),
             )
     else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
 
 
 ############################
@@ -1222,12 +1125,9 @@ async def clone_chat_by_id(
 ############################
 
 
-@router.post("/{id}/clone/shared", response_model=Optional[ChatResponse])
-async def clone_shared_chat_by_id(
-    id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
-
-    if user.role == "admin":
+@router.post('/{id}/clone/shared', response_model=Optional[ChatResponse])
+async def clone_shared_chat_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
+    if user.role == 'admin':
         chat = Chats.get_chat_by_id(id, db=db)
     else:
         chat = Chats.get_chat_by_share_id(id, db=db)
@@ -1235,9 +1135,9 @@ async def clone_shared_chat_by_id(
     if chat:
         updated_chat = {
             **chat.chat,
-            "originalChatId": chat.id,
-            "branchPointMessageId": chat.chat["history"]["currentId"],
-            "title": f"Clone of {chat.title}",
+            'originalChatId': chat.id,
+            'branchPointMessageId': chat.chat['history']['currentId'],
+            'title': f'Clone of {chat.title}',
         }
 
         chats = Chats.import_chats(
@@ -1245,10 +1145,10 @@ async def clone_shared_chat_by_id(
             [
                 ChatImportForm(
                     **{
-                        "chat": updated_chat,
-                        "meta": chat.meta,
-                        "pinned": chat.pinned,
-                        "folder_id": chat.folder_id,
+                        'chat': updated_chat,
+                        'meta': chat.meta,
+                        'pinned': chat.pinned,
+                        'folder_id': chat.folder_id,
                     }
                 )
             ],
@@ -1264,9 +1164,7 @@ async def clone_shared_chat_by_id(
                 detail=ERROR_MESSAGES.DEFAULT(),
             )
     else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
 
 
 ############################
@@ -1274,35 +1172,23 @@ async def clone_shared_chat_by_id(
 ############################
 
 
-@router.post("/{id}/archive", response_model=Optional[ChatResponse])
-async def archive_chat_by_id(
-    id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
+@router.post('/{id}/archive', response_model=Optional[ChatResponse])
+async def archive_chat_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
         chat = Chats.toggle_chat_archive_by_id(id, db=db)
 
-        # Delete tags if chat is archived
+        tag_ids = chat.meta.get('tags', [])
         if chat.archived:
-            for tag_id in chat.meta.get("tags", []):
-                if (
-                    Chats.count_chats_by_tag_name_and_user_id(tag_id, user.id, db=db)
-                    == 0
-                ):
-                    log.debug(f"deleting tag: {tag_id}")
-                    Tags.delete_tag_by_name_and_user_id(tag_id, user.id, db=db)
+            # Archived chats are excluded from count — clean up orphans
+            Chats.delete_orphan_tags_for_user(tag_ids, user.id, db=db)
         else:
-            for tag_id in chat.meta.get("tags", []):
-                tag = Tags.get_tag_by_name_and_user_id(tag_id, user.id, db=db)
-                if tag is None:
-                    log.debug(f"inserting tag: {tag_id}")
-                    tag = Tags.insert_new_tag(tag_id, user.id, db=db)
+            # Unarchived — ensure tag rows exist
+            Tags.ensure_tags_exist(tag_ids, user.id, db=db)
 
         return ChatResponse(**chat.model_dump())
     else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
 
 
 ############################
@@ -1310,17 +1196,15 @@ async def archive_chat_by_id(
 ############################
 
 
-@router.post("/{id}/share", response_model=Optional[ChatResponse])
+@router.post('/{id}/share', response_model=Optional[ChatResponse])
 async def share_chat_by_id(
     request: Request,
     id: str,
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    if (user.role != "admin") and (
-        not has_permission(
-            user.id, "chat.share", request.app.state.config.USER_PERMISSIONS
-        )
+    if (user.role != 'admin') and (
+        not has_permission(user.id, 'chat.share', request.app.state.config.USER_PERMISSIONS)
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -1354,10 +1238,8 @@ async def share_chat_by_id(
 ############################
 
 
-@router.delete("/{id}/share", response_model=Optional[bool])
-async def delete_shared_chat_by_id(
-    id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
+@router.delete('/{id}/share', response_model=Optional[bool])
+async def delete_shared_chat_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
         if not chat.share_id:
@@ -1383,7 +1265,7 @@ class ChatFolderIdForm(BaseModel):
     folder_id: Optional[str] = None
 
 
-@router.post("/{id}/folder", response_model=Optional[ChatResponse])
+@router.post('/{id}/folder', response_model=Optional[ChatResponse])
 async def update_chat_folder_id_by_id(
     id: str,
     form_data: ChatFolderIdForm,
@@ -1392,14 +1274,10 @@ async def update_chat_folder_id_by_id(
 ):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
-        chat = Chats.update_chat_folder_id_by_id_and_user_id(
-            id, user.id, form_data.folder_id, db=db
-        )
+        chat = Chats.update_chat_folder_id_by_id_and_user_id(id, user.id, form_data.folder_id, db=db)
         return ChatResponse(**chat.model_dump())
     else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
 
 
 ############################
@@ -1407,18 +1285,14 @@ async def update_chat_folder_id_by_id(
 ############################
 
 
-@router.get("/{id}/tags", response_model=list[TagModel])
-async def get_chat_tags_by_id(
-    id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
+@router.get('/{id}/tags', response_model=list[TagModel])
+async def get_chat_tags_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
-        tags = chat.meta.get("tags", [])
+        tags = chat.meta.get('tags', [])
         return Tags.get_tags_by_ids_and_user_id(tags, user.id, db=db)
     else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
 
 ############################
@@ -1426,7 +1300,7 @@ async def get_chat_tags_by_id(
 ############################
 
 
-@router.post("/{id}/tags", response_model=list[TagModel])
+@router.post('/{id}/tags', response_model=list[TagModel])
 async def add_tag_by_id_and_tag_name(
     id: str,
     form_data: TagForm,
@@ -1435,27 +1309,23 @@ async def add_tag_by_id_and_tag_name(
 ):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
-        tags = chat.meta.get("tags", [])
-        tag_id = form_data.name.replace(" ", "_").lower()
+        tags = chat.meta.get('tags', [])
+        tag_id = form_data.name.replace(' ', '_').lower()
 
-        if tag_id == "none":
+        if tag_id == 'none':
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT("Tag name cannot be 'None'"),
             )
 
         if tag_id not in tags:
-            Chats.add_chat_tag_by_id_and_user_id_and_tag_name(
-                id, user.id, form_data.name, db=db
-            )
+            Chats.add_chat_tag_by_id_and_user_id_and_tag_name(id, user.id, form_data.name, db=db)
 
         chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
-        tags = chat.meta.get("tags", [])
+        tags = chat.meta.get('tags', [])
         return Tags.get_tags_by_ids_and_user_id(tags, user.id, db=db)
     else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
 
 
 ############################
@@ -1463,7 +1333,7 @@ async def add_tag_by_id_and_tag_name(
 ############################
 
 
-@router.delete("/{id}/tags", response_model=list[TagModel])
+@router.delete('/{id}/tags', response_model=list[TagModel])
 async def delete_tag_by_id_and_tag_name(
     id: str,
     form_data: TagForm,
@@ -1472,23 +1342,16 @@ async def delete_tag_by_id_and_tag_name(
 ):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
-        Chats.delete_tag_by_id_and_user_id_and_tag_name(
-            id, user.id, form_data.name, db=db
-        )
+        Chats.delete_tag_by_id_and_user_id_and_tag_name(id, user.id, form_data.name, db=db)
 
-        if (
-            Chats.count_chats_by_tag_name_and_user_id(form_data.name, user.id, db=db)
-            == 0
-        ):
+        if Chats.count_chats_by_tag_name_and_user_id(form_data.name, user.id, db=db) == 0:
             Tags.delete_tag_by_name_and_user_id(form_data.name, user.id, db=db)
 
         chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
-        tags = chat.meta.get("tags", [])
+        tags = chat.meta.get('tags', [])
         return Tags.get_tags_by_ids_and_user_id(tags, user.id, db=db)
     else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
 
 ############################
@@ -1496,20 +1359,14 @@ async def delete_tag_by_id_and_tag_name(
 ############################
 
 
-@router.delete("/{id}/tags/all", response_model=Optional[bool])
-async def delete_all_tags_by_id(
-    id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
+@router.delete('/{id}/tags/all', response_model=Optional[bool])
+async def delete_all_tags_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
+        old_tags = chat.meta.get('tags', [])
         Chats.delete_all_tags_by_id_and_user_id(id, user.id, db=db)
-
-        for tag in chat.meta.get("tags", []):
-            if Chats.count_chats_by_tag_name_and_user_id(tag, user.id, db=db) == 0:
-                Tags.delete_tag_by_name_and_user_id(tag, user.id, db=db)
+        Chats.delete_orphan_tags_for_user(old_tags, user.id, db=db)
 
         return True
     else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)

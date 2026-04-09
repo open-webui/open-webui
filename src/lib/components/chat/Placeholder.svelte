@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { marked } from 'marked';
+	import DOMPurify from 'dompurify';
 
 	import { onMount, getContext, tick, createEventDispatcher } from 'svelte';
 	import { blur, fade } from 'svelte/transition';
@@ -47,6 +48,7 @@
 
 	export let selectedToolIds = [];
 	export let selectedFilterIds = [];
+	export let pendingOAuthTools = [];
 
 	export let showCommands = false;
 
@@ -59,6 +61,8 @@
 	export let onChange = (e) => {};
 
 	export let toolServers = [];
+
+	export let dragged = false;
 
 	let models = [];
 	let selectedModelIdx = 0;
@@ -126,6 +130,9 @@
 											class=" size-9 @sm:size-10 rounded-full border-[1px] border-gray-100 dark:border-none"
 											aria-hidden="true"
 											draggable="false"
+											on:error={(e) => {
+												e.currentTarget.src = '/favicon.png';
+											}}
 										/>
 									</button>
 								</Tooltip>
@@ -168,10 +175,12 @@
 								<div
 									class="mt-0.5 px-2 text-sm font-normal text-gray-500 dark:text-gray-400 line-clamp-2 max-w-xl markdown"
 								>
-									{@html marked.parse(
-										sanitizeResponseContent(
-											models[selectedModelIdx]?.info?.meta?.description ?? ''
-										).replaceAll('\n', '<br>')
+									{@html DOMPurify.sanitize(
+										marked.parse(
+											sanitizeResponseContent(
+												models[selectedModelIdx]?.info?.meta?.description ?? ''
+											).replaceAll('\n', '<br>')
+										)
 									)}
 								</div>
 							</Tooltip>
@@ -212,6 +221,8 @@
 					bind:webSearchEnabled
 					bind:atSelectedModel
 					bind:showCommands
+					bind:dragged
+					{pendingOAuthTools}
 					{toolServers}
 					{stopResponse}
 					{createMessagePair}

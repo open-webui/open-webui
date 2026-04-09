@@ -76,7 +76,7 @@
 	const updateIconHandler = async (iconName) => {
 		const res = await updateFolderById(localStorage.token, folder.id, {
 			meta: {
-				icon: iconName
+				icon: iconName ?? ''
 			}
 		}).catch((error) => {
 			toast.error(`${error}`);
@@ -84,7 +84,7 @@
 		});
 
 		if (res) {
-			folder.meta = { ...folder.meta, icon: iconName };
+			folder.meta = { ...folder.meta, icon: iconName ?? '' };
 
 			toast.success($i18n.t('Folder updated successfully'));
 
@@ -167,12 +167,14 @@
 		<div class="text-center flex gap-3.5 items-center">
 			<EmojiPicker
 				onClose={() => {}}
+				selected={folder?.meta?.icon ?? null}
 				onSubmit={(name) => {
 					console.log(name);
 					updateIconHandler(name);
 				}}
 			>
 				<button
+					aria-label={$i18n.t('Change folder icon')}
 					class=" rounded-full bg-gray-50 dark:bg-gray-800 size-11 flex justify-center items-center"
 				>
 					{#if folder?.meta?.icon}
@@ -201,7 +203,11 @@
 					exportHandler();
 				}}
 			>
-				<button class="p-1.5 dark:hover:bg-gray-850 rounded-full touch-auto" on:click={(e) => {}}>
+				<button
+					class="p-1.5 dark:hover:bg-gray-850 rounded-full touch-auto"
+					aria-label={$i18n.t('Folder options')}
+					on:click={(e) => {}}
+				>
 					<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
 				</button>
 			</FolderMenu>

@@ -3,31 +3,30 @@
 
 	const i18n = getContext('i18n');
 
-	import Tooltip from '../Tooltip.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
 	export let tag;
+	export let disabled = false;
 	export let onDelete = () => {};
 </script>
 
 {#if tag}
-	<Tooltip content={tag.name}>
+	{#if disabled}
+		<span
+			class="flex items-center gap-1 px-1.5 py-[1px] rounded-full bg-gray-100/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 text-gray-600 dark:text-gray-300 text-xs font-medium"
+		>
+			<span class="line-clamp-1">{tag.name}</span>
+		</span>
+	{:else}
 		<button
-			aria-label={$i18n.t('Remove this tag from list')}
-			class="relative group/tags px-1.5 py-[0.5px] gap-0.5 flex justify-between h-fit max-h-fit w-fit items-center rounded-lg bg-gray-500/20 text-gray-700 dark:text-gray-200 transition cursor-pointer"
+			type="button"
+			class="flex items-center gap-1 px-1.5 py-[1px] rounded-full bg-gray-100/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 text-gray-600 dark:text-gray-300 text-xs font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
 			on:click={() => {
 				onDelete();
 			}}
 		>
-			<div class=" text-[0.7rem] font-medium self-center line-clamp-1 w-fit">
-				{tag.name}
-			</div>
-
-			<div class="hidden group-hover/tags:block transition">
-				<div class="rounded-full pl-[1px] backdrop-blur-sm h-full flex self-center cursor-pointer">
-					<XMark className="size-3" strokeWidth="2.5" />
-				</div>
-			</div>
+			<span class="line-clamp-1">{tag.name}</span>
+			<XMark className="size-3" strokeWidth="2.5" />
 		</button>
-	</Tooltip>
+	{/if}
 {/if}

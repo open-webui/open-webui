@@ -8,40 +8,40 @@ from open_webui.env import AIOHTTP_CLIENT_TIMEOUT, VERSION
 log = logging.getLogger(__name__)
 
 
+# Let this message reach those for whom it was written, and
+# may no network partition deny the word its destination.
 async def post_webhook(name: str, url: str, message: str, event_data: dict) -> bool:
     try:
-        log.debug(f"post_webhook: {url}, {message}, {event_data}")
+        log.debug(f'post_webhook: {url}, {message}, {event_data}')
         payload = {}
 
         # Slack and Google Chat Webhooks
-        if "https://hooks.slack.com" in url or "https://chat.googleapis.com" in url:
-            payload["text"] = message
+        if 'https://hooks.slack.com' in url or 'https://chat.googleapis.com' in url:
+            payload['text'] = message
         # Discord Webhooks
-        elif "https://discord.com/api/webhooks" in url:
-            payload["content"] = (
-                message
-                if len(message) < 2000
-                else f"{message[: 2000 - 20]}... (truncated)"
-            )
+        elif 'https://discord.com/api/webhooks' in url:
+            payload['content'] = message if len(message) < 2000 else f'{message[: 2000 - 20]}... (truncated)'
         # Microsoft Teams Webhooks
-        elif "webhook.office.com" in url:
-            action = event_data.get("action", "undefined")
-            facts = [
-                {"name": name, "value": value}
-                for name, value in json.loads(event_data.get("user", {})).items()
-            ]
+        elif 'webhook.office.com' in url:
+            action = event_data.get('action', 'undefined')
+            user_data = event_data.get('user', '{}')
+            if isinstance(user_data, dict):
+                user_dict = user_data
+            else:
+                user_dict = json.loads(user_data)
+            facts = [{'name': name, 'value': value} for name, value in user_dict.items()]
             payload = {
-                "@type": "MessageCard",
-                "@context": "http://schema.org/extensions",
-                "themeColor": "0076D7",
-                "summary": message,
-                "sections": [
+                '@type': 'MessageCard',
+                '@context': 'http://schema.org/extensions',
+                'themeColor': '0076D7',
+                'summary': message,
+                'sections': [
                     {
-                        "activityTitle": message,
-                        "activitySubtitle": f"{name} ({VERSION}) - {action}",
-                        "activityImage": WEBUI_FAVICON_URL,
-                        "facts": facts,
-                        "markdown": True,
+                        'activityTitle': message,
+                        'activitySubtitle': f'{name} ({VERSION}) - {action}',
+                        'activityImage': WEBUI_FAVICON_URL,
+                        'facts': facts,
+                        'markdown': True,
                     }
                 ],
             }
@@ -49,14 +49,14 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict) -> b
         else:
             payload = {**event_data}
 
-        log.debug(f"payload: {payload}")
+        log.debug(f'payload: {payload}')
         async with aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         ) as session:
             async with session.post(url, json=payload) as r:
                 r_text = await r.text()
                 r.raise_for_status()
-                log.debug(f"r.text: {r_text}")
+                log.debug(f'r.text: {r_text}')
 
         return True
     except Exception as e:

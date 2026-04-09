@@ -20,6 +20,4 @@ def apply_default_group_assignment(
         try:
             Groups.add_users_to_group(default_group_id, [user_id], db=db)
         except Exception as e:
-            log.error(
-                f"Failed to add user {user_id} to default group {default_group_id}: {e}"
-            )
+            log.error(f'Failed to add user {user_id} to default group {default_group_id}: {e}')

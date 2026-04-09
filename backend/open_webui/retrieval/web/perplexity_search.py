@@ -5,7 +5,6 @@ import requests
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from open_webui.utils.headers import include_user_info_headers
 
-
 log = logging.getLogger(__name__)
 
 
@@ -14,7 +13,7 @@ def search_perplexity_search(
     query: str,
     count: int,
     filter_list: Optional[list[str]] = None,
-    api_url: str = "https://api.perplexity.ai/search",
+    api_url: str = 'https://api.perplexity.ai/search',
     user=None,
 ) -> list[SearchResult]:
     """Search using Perplexity API and return the results as a list of SearchResult objects.
@@ -30,10 +29,10 @@ def search_perplexity_search(
     """
 
     # Handle PersistentConfig object
-    if hasattr(api_key, "__str__"):
+    if hasattr(api_key, '__str__'):
         api_key = str(api_key)
 
-    if hasattr(api_url, "__str__"):
+    if hasattr(api_url, '__str__'):
         api_url = str(api_url)
 
     try:
@@ -41,13 +40,13 @@ def search_perplexity_search(
 
         # Create payload for the API call
         payload = {
-            "query": query,
-            "max_results": count,
+            'query': query,
+            'max_results': count,
         }
 
         headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json',
         }
 
         # Forward user info headers if user is provided
@@ -55,20 +54,17 @@ def search_perplexity_search(
             headers = include_user_info_headers(headers, user)
 
         # Make the API request
-        response = requests.request("POST", url, json=payload, headers=headers)
+        response = requests.request('POST', url, json=payload, headers=headers)
         # Parse the JSON response
         json_response = response.json()
 
         # Extract citations from the response
-        results = json_response.get("results", [])
+        results = json_response.get('results', [])
 
         return [
-            SearchResult(
-                link=result["url"], title=result["title"], snippet=result["snippet"]
-            )
-            for result in results
+            SearchResult(link=result['url'], title=result['title'], snippet=result['snippet']) for result in results
         ]
 
     except Exception as e:
-        log.error(f"Error searching with Perplexity Search API: {e}")
+        log.error(f'Error searching with Perplexity Search API: {e}')
         return []
