@@ -1914,7 +1914,14 @@
 		// Animate on rendered bubble if private mode
 		if ($privacyProxy) {
 			const entities = await analyzeMessageEntities(localStorage.token, userPrompt);
-			if (entities && entities.length > 0) {
+			const garnetToggles = JSON.parse(localStorage.getItem('garnet_entity_toggles') || '{}');
+			const filteredEntities = entities
+				? entities.filter(e => {
+						const type = e.type ?? e.entity_type;
+						return garnetToggles[type] !== false;
+					})
+				: [];
+			if (filteredEntities.length > 0) {
 				const bubble = document.getElementById(`message-${userMessageId}`);
 				if (bubble) {
 					const textEl = bubble.querySelector('.prose p') ?? bubble.querySelector('p') ?? bubble;
@@ -1926,7 +1933,7 @@
 					let pos = 0;
 					const marked = tokens.map(token => {
 						const start = pos; const end = pos + token.length; pos = end;
-						const entity = entities.find(e => start < e.end && end > e.start);
+						const entity = filteredEntities.find(e => start < e.end && end > e.start);
 						return { token, entity };
 					});
 					const delayPerToken = Math.max(15, Math.floor(2000 / marked.length));
@@ -1934,15 +1941,16 @@
 						textEl.innerHTML = marked.map((t, j) => {
 							if (j < i) {
 								if (t.entity) {
-									const color = t.entity.type === 'PERSON' ? '#3b82f6'
-										: t.entity.type === 'EMAIL_ADDRESS' ? '#ef4444'
-										: t.entity.type === 'ORGANIZATION' ? '#22c55e'
-										: t.entity.type === 'LOCATION' ? '#a855f7'
-										: t.entity.type === 'PHONE_NUMBER' ? '#f97316'
-										: t.entity.type === 'IBAN_CODE' ? '#eab308'
-										: t.entity.type === 'ID' ? '#ec4899'
+									const entityType = t.entity.type ?? t.entity.entity_type;
+									const color = entityType === 'PERSON' ? '#3b82f6'
+										: entityType === 'EMAIL_ADDRESS' ? '#ef4444'
+										: entityType === 'ORGANIZATION' ? '#22c55e'
+										: entityType === 'LOCATION' ? '#a855f7'
+										: entityType === 'PHONE_NUMBER' ? '#f97316'
+										: entityType === 'IBAN_CODE' ? '#eab308'
+										: entityType === 'ID' ? '#ec4899'
 										: '#f59e0b';
-									return `<span style="position:relative;display:inline;cursor:pointer" onmouseenter="this.lastChild.style.display='block'" onmouseleave="this.lastChild.style.display='none'"><span style="color:${color}">${t.token}</span><span style="display:none;position:absolute;bottom:100%;left:0;background:#1a1a1a;color:white;font-size:11px;padding:2px 6px;border-radius:4px;white-space:nowrap;z-index:9999;pointer-events:none">${t.entity.type}</span></span>`;
+									return `<span style="position:relative;display:inline;cursor:pointer" onmouseenter="this.lastChild.style.display='block'" onmouseleave="this.lastChild.style.display='none'"><span style="color:${color}">${t.token}</span><span style="display:none;position:absolute;bottom:100%;left:0;background:#1a1a1a;color:white;font-size:11px;padding:2px 6px;border-radius:4px;white-space:nowrap;z-index:9999;pointer-events:none">${entityType}</span></span>`;
 								}
 								return `<span>${t.token}</span>`;
 							} else if (j === i) {
@@ -2535,7 +2543,7 @@
 				if (overlappingEntities.length > 0) {
 					// Highlight this token
 					const entity = overlappingEntities[0];
-					const color = getEntityColor(entity.entity_type);
+					const color = getEntityColor(entity.type ?? entity.entity_type);
 
 					// Build highlighted content
 					let content = '';
