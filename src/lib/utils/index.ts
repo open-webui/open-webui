@@ -677,7 +677,9 @@ export const calculateSHA256 = async (file) => {
 
 export const getImportOrigin = (_chats) => {
 	// Check what external service chat imports are from
-	if ('mapping' in _chats[0]) {
+	// Some ChatGPT exports include folder/project entries that lack 'mapping',
+	// so we check if ANY item has it rather than relying on _chats[0].
+	if (_chats.some((chat) => typeof chat === 'object' && chat !== null && 'mapping' in chat)) {
 		return 'openai';
 	}
 	return 'webui';
@@ -799,7 +801,14 @@ export const convertOpenAIChats = (_chats) => {
 	// Create a list of dictionaries with each conversation from import
 	const chats = [];
 	let failed = 0;
+	let skipped = 0;
 	for (const convo of _chats) {
+		// Skip entries that are not actual conversations (e.g. folder/project metadata)
+		if (!convo['mapping']) {
+			skipped++;
+			continue;
+		}
+
 		const chat = convertOpenAIMessages(convo);
 
 		if (validateChat(chat)) {
@@ -814,6 +823,7 @@ export const convertOpenAIChats = (_chats) => {
 			failed++;
 		}
 	}
+	if (skipped > 0) console.log(skipped, 'Non-conversation entries skipped (folders/projects)');
 	console.log(failed, 'Conversations could not be imported');
 	return chats;
 };
