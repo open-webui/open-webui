@@ -1915,70 +1915,47 @@
 		if ($privacyProxy) {
 			const entities = await analyzeMessageEntities(localStorage.token, userPrompt);
 			if (entities && entities.length > 0) {
-				const textEl = document.querySelector(
-					`#message-${userMessageId} .prose p, #message-${userMessageId} p`
-				);
-				if (textEl) {
-					const original = textEl.innerHTML;
-
-					// Change 5: inject garnet-blink keyframes into the bubble
-					const bubble = document.getElementById(`message-${userMessageId}`) ?? textEl.parentElement;
+				const bubble = document.getElementById(`message-${userMessageId}`);
+				if (bubble) {
+					const textEl = bubble.querySelector('.prose p') ?? bubble.querySelector('p') ?? bubble;
+					const originalHTML = textEl.innerHTML;
 					const style = document.createElement('style');
 					style.textContent = '@keyframes garnet-blink { 50% { opacity: 0; } }';
-					document.head.appendChild(style);
-
-					// tokenize
+					bubble.appendChild(style);
 					const tokens = userPrompt.split(/(\s+)/);
 					let pos = 0;
-					const marked = tokens.map((token) => {
-						const start = pos;
-						const end = pos + token.length;
-						pos = end;
-						const entity = entities.find((e) => start < e.end && end > e.start);
+					const marked = tokens.map(token => {
+						const start = pos; const end = pos + token.length; pos = end;
+						const entity = entities.find(e => start < e.end && end > e.start);
 						return { token, entity };
 					});
-
-					// Change 3: extended color map with glow + transition
-					const colorMap = {
-						PERSON: '#3b82f6',
-						EMAIL_ADDRESS: '#ef4444',
-						ORGANIZATION: '#22c55e',
-						LOCATION: '#a855f7',
-						PHONE_NUMBER: '#f97316',
-						IBAN_CODE: '#eab308',
-						ID: '#ec4899'
-					};
-
-					// animate cursor left→right (dynamic speed: max 2s total)
-					const maxDuration = 2000;
-					const delayPerToken = Math.max(15, Math.floor(maxDuration / marked.length));
+					const delayPerToken = Math.max(15, Math.floor(2000 / marked.length));
 					for (let i = 0; i <= marked.length; i++) {
-						textEl.innerHTML = marked
-							.map((t, j) => {
-								if (j < i) {
-									if (t.entity) {
-										const color = colorMap[t.entity.type] || '#f59e0b';
-										return `<span style="position:relative;display:inline;cursor:pointer" onmouseenter="this.lastChild.style.display='block'" onmouseleave="this.lastChild.style.display='none'"><span style="color:${color};transition:all 0.2s ease">${t.token}</span><span style="display:none;position:absolute;bottom:100%;left:0;background:#1a1a1a;color:white;font-size:11px;padding:2px 6px;border-radius:4px;white-space:nowrap;z-index:9999;pointer-events:none">${t.entity.type}</span></span>`;
-									}
-									return `<span style="color:#e2e8f0">${t.token}</span>`;
-								} else if (j === i) {
-									return `${t.token}<span class="garnet-cursor" style="display:inline;color:white;font-weight:bold;animation:garnet-blink 0.7s step-end infinite;margin:0 -1px">│</span>`;
+						textEl.innerHTML = marked.map((t, j) => {
+							if (j < i) {
+								if (t.entity) {
+									const color = t.entity.type === 'PERSON' ? '#3b82f6'
+										: t.entity.type === 'EMAIL_ADDRESS' ? '#ef4444'
+										: t.entity.type === 'ORGANIZATION' ? '#22c55e'
+										: t.entity.type === 'LOCATION' ? '#a855f7'
+										: t.entity.type === 'PHONE_NUMBER' ? '#f97316'
+										: t.entity.type === 'IBAN_CODE' ? '#eab308'
+										: t.entity.type === 'ID' ? '#ec4899'
+										: '#f59e0b';
+									return `<span style="color:${color}" title="${t.entity.type}">${t.token}</span>`;
 								}
-								return `<span style="opacity:0.55">${t.token}</span>`;
-							})
-							.join('');
-						await new Promise((r) => setTimeout(r, delayPerToken));
+								return `<span>${t.token}</span>`;
+							} else if (j === i) {
+								return `<span style="border-left:2px solid white;animation:garnet-blink 0.8s infinite"></span>${t.token}`;
+							}
+							return `<span style="opacity:0.4">${t.token}</span>`;
+						}).join('');
+						await new Promise(r => setTimeout(r, delayPerToken));
 					}
-
-					// DEBUG: verify title attributes are in the DOM before the pause
-					console.warn('[garnet] entity spans HTML:', textEl.innerHTML);
-
-					// pause so users can hover colored words and see entity type tooltips
-					await new Promise((r) => setTimeout(r, 3000));
-
+					// hold highlighted state for 2s so user can hover for tooltips
+					await new Promise(r => setTimeout(r, 2000));
 					style.remove();
-					// restore original
-					textEl.innerHTML = original;
+					textEl.innerHTML = originalHTML;
 				}
 			}
 		}
