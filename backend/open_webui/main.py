@@ -437,6 +437,7 @@ from open_webui.config import (
     CORS_ALLOW_ORIGIN,
     DEFAULT_LOCALE,
     OAUTH_PROVIDERS,
+    CUSTOM_OAUTH_PROVIDERS_CONFIG,
     WEBUI_URL,
     RESPONSE_WATERMARK,
     # Admin
@@ -899,6 +900,8 @@ app.state.config.ENABLE_OAUTH_ROLE_MANAGEMENT = ENABLE_OAUTH_ROLE_MANAGEMENT
 app.state.config.OAUTH_ROLES_CLAIM = OAUTH_ROLES_CLAIM
 app.state.config.OAUTH_ALLOWED_ROLES = OAUTH_ALLOWED_ROLES
 app.state.config.OAUTH_ADMIN_ROLES = OAUTH_ADMIN_ROLES
+
+app.state.config.CUSTOM_OAUTH_PROVIDERS_CONFIG = CUSTOM_OAUTH_PROVIDERS_CONFIG
 
 app.state.config.ENABLE_LDAP = ENABLE_LDAP
 app.state.config.LDAP_SERVER_LABEL = LDAP_SERVER_LABEL
@@ -2043,7 +2046,17 @@ async def get_app_config(request: Request):
         'name': app.state.WEBUI_NAME,
         'version': VERSION,
         'default_locale': str(DEFAULT_LOCALE),
-        'oauth': {'providers': {name: config.get('name', name) for name, config in OAUTH_PROVIDERS.items()}},
+        'oauth': {
+            'providers': {
+                name: {
+                    'name': config.get('name', name),
+                    'icon_url': config.get('icon_url', ''),
+                    'is_custom': config.get('is_custom', False),
+                    'provider_type': config.get('provider_type', name),
+                }
+                for name, config in OAUTH_PROVIDERS.items()
+            }
+        },
         'features': {
             'auth': WEBUI_AUTH,
             'auth_trusted_header': bool(app.state.AUTH_TRUSTED_EMAIL_HEADER),

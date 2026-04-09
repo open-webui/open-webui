@@ -936,6 +936,19 @@ class OAuthManager:
             client = provider_config['register'](self.oauth)
             self._clients[name] = client
 
+    def reload_providers(self):
+        """Re-initialize OAuth clients from the current OAUTH_PROVIDERS dict."""
+        self._clients.clear()
+        self.oauth = OAuth()
+        for name, provider_config in OAUTH_PROVIDERS.items():
+            if 'register' not in provider_config:
+                continue
+            try:
+                client = provider_config['register'](self.oauth)
+                self._clients[name] = client
+            except Exception as e:
+                log.error(f'Failed to reload OAuth provider {name}: {e}')
+
     def get_client(self, provider_name):
         if provider_name not in self._clients:
             self._clients[provider_name] = self.oauth.create_client(provider_name)
@@ -1400,10 +1413,14 @@ class OAuthManager:
             # Preserve extra claims from the ID token (e.g. roles, groups for
             # Microsoft Entra ID) before the userinfo endpoint possibly overwrites them.
             id_token_claims = dict(user_data) if user_data else {}
+            provider_config = OAUTH_PROVIDERS.get(provider, {})
+            provider_type = provider_config.get('provider_type', provider)
+            _effective_email_claim = provider_config.get('email_claim') or auth_manager_config.OAUTH_EMAIL_CLAIM
+            _effective_username_claim = provider_config.get('username_claim') or auth_manager_config.OAUTH_USERNAME_CLAIM
             if (
                 (not user_data)
-                or (auth_manager_config.OAUTH_EMAIL_CLAIM not in user_data)
-                or (auth_manager_config.OAUTH_USERNAME_CLAIM not in user_data)
+                or (_effective_email_claim not in user_data)
+                or (_effective_username_claim not in user_data)
             ):
                 user_data: UserInfo = await client.userinfo(token=token)
                 # Merge back ID token claims that the userinfo endpoint doesn't
@@ -1412,18 +1429,19 @@ class OAuthManager:
                     for key, value in id_token_claims.items():
                         if key not in user_data:
                             user_data[key] = value
-            if provider == 'feishu' and isinstance(user_data, dict) and 'data' in user_data:
+            if provider_type == 'feishu' and isinstance(user_data, dict) and 'data' in user_data:
                 user_data = user_data['data']
             if not user_data:
                 log.warning(f'OAuth callback failed, user data is missing: {token}')
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
-            # Extract the "sub" claim, using custom claim if configured
-            if auth_manager_config.OAUTH_SUB_CLAIM:
-                sub = user_data.get(auth_manager_config.OAUTH_SUB_CLAIM)
-            else:
-                # Fallback to the default sub claim if not configured
-                sub = user_data.get(OAUTH_PROVIDERS[provider].get('sub_claim', 'sub'))
+            # Extract the "sub" claim: per-provider override > global config > provider default > 'sub'
+            sub_claim = (
+                provider_config.get('sub_claim')
+                or auth_manager_config.OAUTH_SUB_CLAIM
+                or 'sub'
+            )
+            sub = user_data.get(sub_claim)
             if not sub:
                 log.warning(f'OAuth callback failed, sub is missing: {user_data}')
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
@@ -1433,12 +1451,14 @@ class OAuthManager:
                 'sub': sub,
             }
 
-            # Email extraction
-            email_claim = auth_manager_config.OAUTH_EMAIL_CLAIM
+            # Email extraction: per-provider override > global config
+            email_claim = provider_config.get('email_claim') or auth_manager_config.OAUTH_EMAIL_CLAIM
             email = user_data.get(email_claim, '')
             # We currently mandate that email addresses are provided
             if not email:
-                # If the provider is GitHub,and public email is not provided, we can use the access token to fetch the user's email
+                # If the provider is the built-in GitHub provider, and public email is not provided,
+                # we can use the access token to fetch the user's email from GitHub API.
+                # Only allow this for the built-in 'github' provider to avoid leaking tokens to GitHub.
                 if provider == 'github':
                     try:
                         access_token = token.get('access_token')
@@ -1467,7 +1487,7 @@ class OAuthManager:
                     except Exception as e:
                         log.warning(f'Error fetching GitHub email: {e}')
                         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
-                elif ENABLE_OAUTH_EMAIL_FALLBACK:
+                elif ENABLE_OAUTH_EMAIL_FALLBACK or provider_config.get('email_fallback'):
                     email = f'{provider}@{sub}.local'
                 else:
                     log.warning(f'OAuth callback failed, email is missing: {user_data}')
@@ -1502,7 +1522,7 @@ class OAuthManager:
                     user.role = determined_role
 
                 if auth_manager_config.OAUTH_UPDATE_NAME_ON_LOGIN:
-                    username_claim = auth_manager_config.OAUTH_USERNAME_CLAIM
+                    username_claim = provider_config.get('username_claim') or auth_manager_config.OAUTH_USERNAME_CLAIM
                     if username_claim:
                         new_name = user_data.get(username_claim)
                         if new_name and new_name != user.name:
@@ -1511,7 +1531,7 @@ class OAuthManager:
                             log.debug(f'Updated name for user {user.email}')
 
                 if auth_manager_config.OAUTH_UPDATE_EMAIL_ON_LOGIN:
-                    email_claim = auth_manager_config.OAUTH_EMAIL_CLAIM
+                    email_claim = provider_config.get('email_claim') or auth_manager_config.OAUTH_EMAIL_CLAIM
                     if email_claim:
                         new_email = user_data.get(email_claim)
                         if new_email and new_email.lower() != user.email.lower():
@@ -1527,7 +1547,7 @@ class OAuthManager:
 
                 # Update profile picture if enabled and different from current
                 if auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN:
-                    picture_claim = auth_manager_config.OAUTH_PICTURE_CLAIM
+                    picture_claim = provider_config.get('picture_claim') or auth_manager_config.OAUTH_PICTURE_CLAIM
                     if picture_claim:
                         new_picture_url = user_data.get(
                             picture_claim,
@@ -1547,16 +1567,16 @@ class OAuthManager:
                     if existing_user:
                         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
-                    picture_claim = auth_manager_config.OAUTH_PICTURE_CLAIM
+                    picture_claim = provider_config.get('picture_claim') or auth_manager_config.OAUTH_PICTURE_CLAIM
                     if picture_claim:
                         picture_url = user_data.get(
                             picture_claim,
-                            OAUTH_PROVIDERS[provider].get('picture_url', ''),
+                            provider_config.get('picture_url', ''),
                         )
                         picture_url = await self._process_picture_url(picture_url, token.get('access_token'))
                     else:
                         picture_url = '/user.png'
-                    username_claim = auth_manager_config.OAUTH_USERNAME_CLAIM
+                    username_claim = provider_config.get('username_claim') or auth_manager_config.OAUTH_USERNAME_CLAIM
 
                     name = user_data.get(username_claim)
                     if not name:

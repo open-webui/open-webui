@@ -91,7 +91,10 @@
 				'reverse proxy',
 				'webhook',
 				'community',
-				'channels'
+				'channels',
+				'sso',
+				'oauth',
+				'custom provider'
 			]
 		},
 		{

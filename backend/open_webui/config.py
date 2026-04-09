@@ -559,6 +559,28 @@ FEISHU_REDIRECT_URI = PersistentConfig(
     os.environ.get('FEISHU_REDIRECT_URI', ''),
 )
 
+####################################
+# Custom OAuth Providers
+####################################
+
+_custom_oauth_providers_env = []
+try:
+    _custom_oauth_providers_env = json.loads(
+        os.environ.get('CUSTOM_OAUTH_PROVIDERS_CONFIG', '[]')
+    )
+    if not isinstance(_custom_oauth_providers_env, list):
+        log.warning('CUSTOM_OAUTH_PROVIDERS_CONFIG must be a JSON array, ignoring')
+        _custom_oauth_providers_env = []
+except (json.JSONDecodeError, TypeError):
+    log.warning('CUSTOM_OAUTH_PROVIDERS_CONFIG is not valid JSON, ignoring')
+    _custom_oauth_providers_env = []
+
+CUSTOM_OAUTH_PROVIDERS_CONFIG = PersistentConfig(
+    'CUSTOM_OAUTH_PROVIDERS_CONFIG',
+    'oauth.custom_providers',
+    _custom_oauth_providers_env,
+)
+
 ENABLE_OAUTH_ROLE_MANAGEMENT = PersistentConfig(
     'ENABLE_OAUTH_ROLE_MANAGEMENT',
     'oauth.enable_role_mapping',
@@ -667,6 +689,52 @@ if _oauth_authorize_params:
         log.warning('OAUTH_AUTHORIZE_PARAMS is not valid JSON, ignoring')
 
 
+BUILTIN_OAUTH_PROVIDER_SLUGS = frozenset(
+    {'google', 'microsoft', 'github', 'oidc', 'feishu'}
+)
+
+
+def _build_custom_provider_register(cfg: dict):
+    """Build an Authlib OAuth register function from a custom provider config dict."""
+    slug = cfg['slug']
+
+    def _register(oauth: OAuth):
+        client_kwargs = {
+            'scope': cfg.get('scope', 'openid email profile'),
+        }
+        if cfg.get('token_endpoint_auth_method'):
+            client_kwargs['token_endpoint_auth_method'] = cfg['token_endpoint_auth_method']
+        if cfg.get('timeout'):
+            client_kwargs['timeout'] = int(cfg['timeout'])
+        if cfg.get('code_challenge_method') == 'S256':
+            client_kwargs['code_challenge_method'] = 'S256'
+
+        kwargs = {
+            'name': slug,
+            'client_id': cfg['client_id'],
+            'client_secret': cfg.get('client_secret', ''),
+            'client_kwargs': client_kwargs,
+        }
+        if cfg.get('server_metadata_url'):
+            kwargs['server_metadata_url'] = cfg['server_metadata_url']
+        if cfg.get('authorize_url'):
+            kwargs['authorize_url'] = cfg['authorize_url']
+        if cfg.get('access_token_url'):
+            kwargs['access_token_url'] = cfg['access_token_url']
+        if cfg.get('userinfo_endpoint'):
+            kwargs['userinfo_endpoint'] = cfg['userinfo_endpoint']
+        if cfg.get('api_base_url'):
+            kwargs['api_base_url'] = cfg['api_base_url']
+        if cfg.get('redirect_uri'):
+            kwargs['redirect_uri'] = cfg['redirect_uri']
+        if cfg.get('authorize_params') and isinstance(cfg['authorize_params'], dict):
+            kwargs['authorize_params'] = cfg['authorize_params']
+
+        return oauth.register(**kwargs)
+
+    return _register
+
+
 def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
     if GOOGLE_CLIENT_ID.value and GOOGLE_CLIENT_SECRET.value:
@@ -687,8 +755,10 @@ def load_oauth_providers():
             return client
 
         OAUTH_PROVIDERS['google'] = {
+            'name': 'Google',
             'redirect_uri': GOOGLE_REDIRECT_URI.value,
             'register': google_oauth_register,
+            'provider_type': 'google',
         }
 
     if MICROSOFT_CLIENT_ID.value and MICROSOFT_CLIENT_SECRET.value and MICROSOFT_CLIENT_TENANT_ID.value:
@@ -708,9 +778,11 @@ def load_oauth_providers():
             return client
 
         OAUTH_PROVIDERS['microsoft'] = {
+            'name': 'Microsoft',
             'redirect_uri': MICROSOFT_REDIRECT_URI.value,
             'picture_url': MICROSOFT_CLIENT_PICTURE_URL.value,
             'register': microsoft_oauth_register,
+            'provider_type': 'microsoft',
         }
 
     if GITHUB_CLIENT_ID.value and GITHUB_CLIENT_SECRET.value:
@@ -733,9 +805,11 @@ def load_oauth_providers():
             return client
 
         OAUTH_PROVIDERS['github'] = {
+            'name': 'GitHub',
             'redirect_uri': GITHUB_CLIENT_REDIRECT_URI.value,
             'register': github_oauth_register,
             'sub_claim': 'id',
+            'provider_type': 'github',
         }
 
     if (
@@ -777,6 +851,7 @@ def load_oauth_providers():
             'name': OAUTH_PROVIDER_NAME.value,
             'redirect_uri': OPENID_REDIRECT_URI.value,
             'register': oidc_oauth_register,
+            'provider_type': 'oidc',
         }
 
     if FEISHU_CLIENT_ID.value and FEISHU_CLIENT_SECRET.value:
@@ -799,9 +874,57 @@ def load_oauth_providers():
             return client
 
         OAUTH_PROVIDERS['feishu'] = {
+            'name': 'Feishu',
             'register': feishu_oauth_register,
             'sub_claim': 'user_id',
+            'provider_type': 'feishu',
         }
+
+    # Load custom OAuth providers
+    custom_providers = CUSTOM_OAUTH_PROVIDERS_CONFIG.value
+    if isinstance(custom_providers, list):
+        for provider_cfg in custom_providers:
+            if not isinstance(provider_cfg, dict):
+                continue
+            if not provider_cfg.get('enabled', True):
+                continue
+            slug = provider_cfg.get('slug', '')
+            if not slug:
+                log.warning('Skipping custom OAuth provider with empty slug')
+                continue
+            if slug in BUILTIN_OAUTH_PROVIDER_SLUGS:
+                log.warning(
+                    f"Skipping custom OAuth provider '{slug}': conflicts with built-in provider"
+                )
+                continue
+            if slug in OAUTH_PROVIDERS:
+                log.warning(
+                    f"Skipping custom OAuth provider '{slug}': duplicate slug"
+                )
+                continue
+            if not provider_cfg.get('client_id'):
+                log.warning(
+                    f"Skipping custom OAuth provider '{slug}': missing client_id"
+                )
+                continue
+            try:
+                register_fn = _build_custom_provider_register(provider_cfg)
+                OAUTH_PROVIDERS[slug] = {
+                    'name': provider_cfg.get('display_name', slug),
+                    'register': register_fn,
+                    'redirect_uri': provider_cfg.get('redirect_uri', ''),
+                    'sub_claim': provider_cfg.get('sub_claim'),
+                    'icon_url': provider_cfg.get('icon_url', ''),
+                    'provider_type': provider_cfg.get('provider_type', 'custom'),
+                    'is_custom': True,
+                    'email_claim': provider_cfg.get('email_claim'),
+                    'username_claim': provider_cfg.get('username_claim'),
+                    'picture_claim': provider_cfg.get('picture_claim'),
+                    'email_fallback': provider_cfg.get('email_fallback', False),
+                }
+                log.info(f"Loaded custom OAuth provider: {slug}")
+            except Exception as e:
+                log.error(f"Failed to load custom OAuth provider '{slug}': {e}")
 
     configured_providers = []
     if GOOGLE_CLIENT_ID.value:
