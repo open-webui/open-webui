@@ -46,7 +46,8 @@
 		selectedTerminalId,
 		showFileNavPath,
 		showFileNavDir,
-		chatRequestQueues
+		chatRequestQueues,
+		desktopEvent
 	} from '$lib/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -1225,7 +1226,31 @@
 			showControls.set(true);
 		}
 
-		if ($page.url.searchParams.get('q')) {
+		// Consume one-shot desktop event (e.g. Spotlight query + attachments)
+		if ($desktopEvent) {
+			const { query, files: eventFiles } = $desktopEvent;
+			desktopEvent.set(null);
+
+			// Attach screenshot images from desktop (e.g. Spotlight region capture)
+			if (eventFiles?.length) {
+				for (const ef of eventFiles) {
+					files = [
+						...files,
+						{
+							type: 'image',
+							url: ef.dataUrl,
+							name: ef.name
+						}
+					];
+				}
+			}
+
+			if (query) {
+				messageInput?.setText(query);
+				await tick();
+				submitHandler(query);
+			}
+		} else if ($page.url.searchParams.get('q')) {
 			const q = $page.url.searchParams.get('q') ?? '';
 			messageInput?.setText(q);
 

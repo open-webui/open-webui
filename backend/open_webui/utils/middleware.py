@@ -2680,9 +2680,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     tools_dict[name] = tool_dict
 
         if tools_dict:
+            # Always store resolved tools in metadata so downstream consumers
+            # (e.g. pipe functions) can access all tools including MCP and builtins.
+            metadata['tools'] = tools_dict
+
             if metadata.get('params', {}).get('function_calling') == 'native':
                 # If the function calling is native, then call the tools function calling handler
-                metadata['tools'] = tools_dict
                 form_data['tools'] = [
                     {'type': 'function', 'function': tool.get('spec', {})} for tool in tools_dict.values()
                 ]
