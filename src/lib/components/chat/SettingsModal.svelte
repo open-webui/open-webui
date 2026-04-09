@@ -18,7 +18,6 @@
 	import XMark from '../icons/XMark.svelte';
 	import Connections from './Settings/Connections.svelte';
 	import Integrations from './Settings/Integrations.svelte';
-	import Garnet from './Settings/Garnet.svelte';
 	import DatabaseSettings from '../icons/DatabaseSettings.svelte';
 	import SettingsAlt from '../icons/SettingsAlt.svelte';
 	import Link from '../icons/Link.svelte';
@@ -421,23 +420,6 @@
 				'userprofile',
 				'webhook url',
 				'webhookurl'
-			]
-		},
-		{
-			id: 'garnet',
-			title: 'Garnet',
-			keywords: [
-				'entity',
-				'entities',
-				'entity detection',
-				'garnet',
-				'person',
-				'organization',
-				'email',
-				'iban',
-				'phone',
-				'privacy',
-				'pseudonymization'
 			]
 		},
 		{
@@ -865,30 +847,6 @@
 								</div>
 								<div class=" self-center">{$i18n.t('About')}</div>
 							</button>
-						{:else if tabId === 'garnet'}
-							<button
-								role="tab"
-								aria-controls="tab-garnet"
-								aria-selected={selectedTab === 'garnet'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'garnet'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-								on:click={() => {
-									selectedTab = 'garnet';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<DatabaseSettings strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('Garnet')}</div>
-							</button>
 						{/if}
 					{/each}
 				{:else}
@@ -971,8 +929,6 @@
 					/>
 				{:else if selectedTab === 'about'}
 					<About />
-				{:else if selectedTab === 'garnet'}
-					<Garnet />
 				{/if}
 			</div>
 		</div>
