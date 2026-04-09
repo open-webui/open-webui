@@ -201,7 +201,9 @@ async def get_headers_and_cookies(
 
     if config.get('headers') and isinstance(config.get('headers'), dict):
         headers = {**headers, **config.get('headers')}
-
+    garnet_entities = request.headers.get('x-garnet-entities', '')
+    if garnet_entities:
+        headers['x-garnet-entities'] = garnet_entities
     return headers, cookies
 
 
