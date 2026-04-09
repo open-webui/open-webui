@@ -23,6 +23,7 @@
 		await updateUserSettings(localStorage.token, { ui: $settings });
 
 		toast.success($i18n.t('Default model updated'));
+		showSetDefault = false;
 	};
 
 	const pinModelHandler = async (modelId) => {
