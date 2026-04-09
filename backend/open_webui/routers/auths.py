@@ -40,10 +40,10 @@ from open_webui.env import (
     WEBUI_AUTH_COOKIE_SECURE,
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
     ENABLE_INITIAL_ADMIN_SIGNUP,
-    ENABLE_OAUTH_TOKEN_EXCHANGE,
-    AIOHTTP_CLIENT_SESSION_SSL,
+    WEBUI_CHAT_ENCRYPT_OLD_CHATS, 
+    WEBUI_CHAT_ENCRYPTION_KEY,
 )
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse, Response, JSONResponse
 from open_webui.config import (
     OPENID_PROVIDER_URL,
@@ -78,6 +78,7 @@ from open_webui.utils.groups import apply_default_group_assignment
 
 from open_webui.utils.redis import get_redis_client
 from open_webui.utils.rate_limit import RateLimiter
+from open_webui.utils.db.encrypt_old_chats import encrypt_old_chats_for_user
 
 
 from typing import Optional, List
@@ -536,6 +537,8 @@ async def signin(
     request: Request,
     response: Response,
     form_data: SigninForm,
+    background_tasks: BackgroundTasks,
+
     db: Session = Depends(get_session),
 ):
     if not ENABLE_PASSWORD_AUTH:
@@ -634,6 +637,8 @@ async def signin(
         )
 
     if user:
+        if WEBUI_CHAT_ENCRYPTION_KEY and WEBUI_CHAT_ENCRYPT_OLD_CHATS:
+            background_tasks.add_task(encrypt_old_chats_for_user, user.id)
         return create_session_response(request, user, db, response, set_cookie=True)
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)

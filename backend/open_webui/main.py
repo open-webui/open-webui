@@ -97,7 +97,6 @@ from open_webui.routers import (
     utils,
     scim,
     terminals,
-    automations,
 )
 
 from open_webui.routers.retrieval import (
@@ -212,8 +211,6 @@ from open_webui.config import (
     AUDIO_TTS_AZURE_SPEECH_REGION,
     AUDIO_TTS_AZURE_SPEECH_BASE_URL,
     AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT,
-    AUDIO_TTS_MISTRAL_API_KEY,
-    AUDIO_TTS_MISTRAL_API_BASE_URL,
     PLAYWRIGHT_WS_URL,
     PLAYWRIGHT_TIMEOUT,
     FIRECRAWL_API_BASE_URL,
@@ -511,10 +508,10 @@ from open_webui.env import (
     WEBUI_ADMIN_EMAIL,
     WEBUI_ADMIN_PASSWORD,
     WEBUI_ADMIN_NAME,
+    WEBUI_CHAT_ENCRYPTION_KEY,
+    WEBUI_CHAT_ENCRYPT_OLD_CHATS,
     ENABLE_EASTER_EGGS,
     LOG_FORMAT,
-    # OAuth Back-Channel Logout
-    ENABLE_OAUTH_BACKCHANNEL_LOGOUT,
 )
 
 
@@ -652,10 +649,6 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     asyncio.create_task(periodic_session_pool_cleanup())
-
-    from open_webui.utils.automations import automation_worker_loop
-
-    asyncio.create_task(automation_worker_loop(app))
 
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         try:
@@ -1286,9 +1279,6 @@ app.state.config.TTS_AZURE_SPEECH_REGION = AUDIO_TTS_AZURE_SPEECH_REGION
 app.state.config.TTS_AZURE_SPEECH_BASE_URL = AUDIO_TTS_AZURE_SPEECH_BASE_URL
 app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT
 
-app.state.config.TTS_MISTRAL_API_KEY = AUDIO_TTS_MISTRAL_API_KEY
-app.state.config.TTS_MISTRAL_API_BASE_URL = AUDIO_TTS_MISTRAL_API_BASE_URL
-
 
 app.state.faster_whisper_model = None
 app.state.speech_synthesiser = None
@@ -1534,7 +1524,6 @@ if ENABLE_ADMIN_ANALYTICS:
     app.include_router(analytics.router, prefix='/api/v1/analytics', tags=['analytics'])
 app.include_router(utils.router, prefix='/api/v1/utils', tags=['utils'])
 app.include_router(terminals.router, prefix='/api/v1/terminals', tags=['terminals'])
-app.include_router(automations.router, prefix='/api/v1/automations', tags=['automations'])
 
 # SCIM 2.0 API for identity management
 if ENABLE_SCIM:
@@ -1854,28 +1843,13 @@ async def chat_completion(
                 except Exception:
                     pass
         finally:
-            # Clean up MCP clients.  Shield the entire block from
-            # CancelledError so disconnect() can finish even when the
-            # task is being stopped.  Each client is isolated so one
-            # failure doesn't skip the rest.
             try:
                 if mcp_clients := metadata.get('mcp_clients'):
-
-                    async def _cleanup_mcp():
-                        for client in reversed(list(mcp_clients.values())):
-                            try:
-                                await client.disconnect()
-                            except Exception as e:
-                                log.debug(f'Error disconnecting MCP client: {e}')
-
-                    await asyncio.wait_for(
-                        asyncio.shield(_cleanup_mcp()),
-                        timeout=10.0,
-                    )
-            except asyncio.TimeoutError:
-                log.warning('MCP client cleanup timed out after 10 s')
+                    for client in reversed(mcp_clients.values()):
+                        await client.disconnect()
             except Exception as e:
-                log.debug(f'Error cleaning up MCP clients: {e}')
+                log.debug(f'Error cleaning up: {e}')
+                pass
             # Emit chat:active=false when task completes
             try:
                 if metadata.get('chat_id'):
@@ -1904,10 +1878,6 @@ async def chat_completion(
 # Alias for chat_completion (Legacy)
 generate_chat_completions = chat_completion
 generate_chat_completion = chat_completion
-
-# Expose as app.state so internal callers (e.g. automations) can
-# use the full pipeline without importing from main.py (avoids circular deps).
-app.state.CHAT_COMPLETION_HANDLER = chat_completion
 
 
 ##################################
@@ -2482,21 +2452,6 @@ async def oauth_login_callback(
     db: Session = Depends(get_session),
 ):
     return await oauth_manager.handle_callback(request, provider, response, db=db)
-
-
-############################
-# OIDC Back-Channel Logout
-############################
-
-
-@app.post('/oauth/backchannel-logout')
-async def oauth_backchannel_logout(
-    request: Request,
-    db: Session = Depends(get_session),
-):
-    if not ENABLE_OAUTH_BACKCHANNEL_LOGOUT:
-        raise HTTPException(status_code=404)
-    return await oauth_manager.handle_backchannel_logout(request, db=db)
 
 
 @app.get('/manifest.json')

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 import asyncio
 from fastapi.responses import StreamingResponse
 
-
+from open_webui.utils.db.chat_encryption import decrypt_content
 from open_webui.utils.misc import get_message_list
 from open_webui.socket.main import get_event_emitter
 from open_webui.models.chats import (
@@ -14,6 +14,7 @@ from open_webui.models.chats import (
     ChatUsageStatsListResponse,
     ChatsImportForm,
     ChatResponse,
+    ChatModel,
     Chats,
     ChatTitleIdResponse,
     SharedChatResponse,
@@ -39,6 +40,17 @@ from open_webui.utils.access_control import has_permission
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _normalize_chat_for_response(chat: ChatModel) -> ChatResponse:
+    chat_dict = chat.model_dump()
+    chat_dict["chat"] = decrypt_content(chat_dict.get("chat"))
+    return ChatResponse(**chat_dict)
+
+
+def _normalize_chat_list_for_response(chats: list[ChatModel]) -> list[ChatResponse]:
+    return [_normalize_chat_for_response(chat) for chat in chats]
+
 
 ############################
 # GetChatList
@@ -554,7 +566,7 @@ async def create_new_chat(
 ):
     try:
         chat = Chats.insert_new_chat(user.id, form_data, db=db)
-        return ChatResponse(**chat.model_dump())
+        return _normalize_chat_for_response(chat)
     except Exception as e:
         log.exception(e)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
@@ -573,7 +585,7 @@ async def import_chats(
 ):
     try:
         chats = Chats.import_chats(user.id, form_data.chats, db=db)
-        return chats
+        return _normalize_chat_list_for_response(chats)
     except Exception as e:
         log.exception(e)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
@@ -643,10 +655,9 @@ async def get_chat_list_by_folder_id(
         limit = 10
         skip = (page - 1) * limit
 
-        chats = Chats.get_chats_by_folder_id_and_user_id(folder_id, user.id, skip=skip, limit=limit, db=db)
         return [
-            {'title': chat.title, 'id': chat.id, 'updated_at': chat.updated_at, 'last_read_at': chat.last_read_at}
-            for chat in chats
+            {'title': chat.title, 'id': chat.id, 'updated_at': chat.updated_at}
+            for chat in Chats.get_chats_by_folder_id_and_user_id(folder_id, user.id, skip=skip, limit=limit, db=db)
         ]
 
     except Exception as e:
@@ -672,17 +683,19 @@ async def get_user_pinned_chats(user=Depends(get_verified_user), db: Session = D
 @router.get('/all', response_model=list[ChatResponse])
 async def get_user_chats(user=Depends(get_verified_user), db: Session = Depends(get_session)):
     result = Chats.get_chats_by_user_id(user.id, db=db)
-    return [ChatResponse(**chat.model_dump()) for chat in result.items]
-
+    return _normalize_chat_list_for_response(result.items)
 
 ############################
 # GetArchivedChats
 ############################
 
 
-@router.get('/all/archived', response_model=list[ChatResponse])
-async def get_user_archived_chats(user=Depends(get_verified_user), db: Session = Depends(get_session)):
-    return [ChatResponse(**chat.model_dump()) for chat in Chats.get_archived_chats_by_user_id(user.id, db=db)]
+@router.get("/all/archived", response_model=list[ChatResponse])
+async def get_user_archived_chats(
+    user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
+    chats = Chats.get_archived_chats_by_user_id(user.id, db=db)
+    return _normalize_chat_list_for_response(chats)
 
 
 ############################
@@ -825,8 +838,7 @@ async def get_shared_chat_by_id(share_id: str, user=Depends(get_verified_user), 
         chat = Chats.get_chat_by_id(share_id, db=db)
 
     if chat:
-        return ChatResponse(**chat.model_dump())
-
+        return _normalize_chat_for_response(chat)
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
@@ -868,8 +880,7 @@ async def get_chat_by_id(id: str, user=Depends(get_verified_user), db: Session =
     chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
 
     if chat:
-        return ChatResponse(**chat.model_dump())
-
+        return _normalize_chat_for_response(chat)
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
@@ -890,7 +901,7 @@ async def update_chat_by_id(
     if chat:
         updated_chat = {**chat.chat, **form_data.chat}
         chat = Chats.update_chat_by_id(id, updated_chat, db=db)
-        return ChatResponse(**chat.model_dump())
+        return _normalize_chat_for_response(chat)
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -956,8 +967,7 @@ async def update_chat_message_by_id(
             }
         )
 
-    return ChatResponse(**chat.model_dump())
-
+    return _normalize_chat_for_response(chat)
 
 ############################
 # SendChatMessageEventById

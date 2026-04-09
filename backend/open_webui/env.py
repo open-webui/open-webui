@@ -60,14 +60,13 @@ if USE_CUDA.lower() == 'true':
 else:
     DEVICE_TYPE = 'cpu'
 
-if sys.platform == 'darwin':
-    try:
-        import torch
+try:
+    import torch
 
-        if torch.backends.mps.is_available() and torch.backends.mps.is_built():
-            DEVICE_TYPE = 'mps'
-    except Exception:
-        pass
+    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        DEVICE_TYPE = 'mps'
+except Exception:
+    pass
 
 ####################################
 # LOGGING
@@ -545,12 +544,6 @@ OAUTH_MAX_SESSIONS_PER_USER = int(os.environ.get('OAUTH_MAX_SESSIONS_PER_USER', 
 # Allows external apps to exchange OAuth tokens for OpenWebUI tokens
 ENABLE_OAUTH_TOKEN_EXCHANGE = os.environ.get('ENABLE_OAUTH_TOKEN_EXCHANGE', 'False').lower() == 'true'
 
-# Back-Channel Logout Configuration
-# When enabled, exposes POST /oauth/backchannel-logout for IdP-initiated logout
-# per OpenID Connect Back-Channel Logout 1.0 spec.
-# Requires Redis for JWT revocation.
-ENABLE_OAUTH_BACKCHANNEL_LOGOUT = os.environ.get('ENABLE_OAUTH_BACKCHANNEL_LOGOUT', 'False').lower() == 'true'
-
 ####################################
 # SCIM Configuration
 ####################################
@@ -589,6 +582,13 @@ if LICENSE_PUBLIC_KEY:
 -----END PUBLIC KEY-----
 """.encode('utf-8')
     )
+
+
+####################################
+# WEBUI_CHAT_ENCRYPTION_KEY
+####################################
+WEBUI_CHAT_ENCRYPTION_KEY = os.environ.get("WEBUI_CHAT_ENCRYPTION_KEY")
+WEBUI_CHAT_ENCRYPT_OLD_CHATS = os.environ.get("WEBUI_CHAT_ENCRYPT_OLD_CHATS", "False").lower() == "true"
 
 
 ####################################
