@@ -9,7 +9,11 @@
 		getLdapServer,
 		updateAdminConfig,
 		updateLdapConfig,
-		updateLdapServer
+		updateLdapServer,
+		getCustomOAuthProviders,
+		createCustomOAuthProvider,
+		updateCustomOAuthProvider,
+		deleteCustomOAuthProvider
 	} from '$lib/apis/auths';
 	import { getBanners, setBanners } from '$lib/apis/configs';
 	import { getGroups } from '$lib/apis/groups';
@@ -40,6 +44,100 @@
 	let groups = [];
 
 	let banners: Banner[] = [];
+
+	// Custom OAuth Providers
+	let customOAuthProviders: any[] = [];
+	let showCustomOAuthForm = false;
+	let editingProvider: any = null;
+	let customOAuthForm = {
+		slug: '',
+		display_name: '',
+		icon_url: '',
+		provider_type: 'custom',
+		client_id: '',
+		client_secret: '',
+		server_metadata_url: '',
+		authorize_url: '',
+		access_token_url: '',
+		userinfo_endpoint: '',
+		scope: 'openid email profile',
+		redirect_uri: '',
+		sub_claim: '',
+		email_claim: '',
+		username_claim: '',
+		picture_claim: '',
+		token_endpoint_auth_method: '',
+		code_challenge_method: '',
+		email_fallback: false,
+		sort_order: 0,
+		enabled: true
+	};
+
+	const resetCustomOAuthForm = () => {
+		customOAuthForm = {
+			slug: '',
+			display_name: '',
+			icon_url: '',
+			provider_type: 'custom',
+			client_id: '',
+			client_secret: '',
+			server_metadata_url: '',
+			authorize_url: '',
+			access_token_url: '',
+			userinfo_endpoint: '',
+			scope: 'openid email profile',
+			redirect_uri: '',
+			sub_claim: '',
+			email_claim: '',
+			username_claim: '',
+			picture_claim: '',
+			token_endpoint_auth_method: '',
+			code_challenge_method: '',
+			email_fallback: false,
+			sort_order: 0,
+			enabled: true
+		};
+		editingProvider = null;
+		showCustomOAuthForm = false;
+	};
+
+	const loadCustomOAuthProviders = async () => {
+		customOAuthProviders = (await getCustomOAuthProviders(localStorage.token)) ?? [];
+	};
+
+	const saveCustomOAuthProvider = async () => {
+		try {
+			if (editingProvider) {
+				await updateCustomOAuthProvider(localStorage.token, editingProvider, customOAuthForm);
+				toast.success($i18n.t('Provider updated'));
+			} else {
+				await createCustomOAuthProvider(localStorage.token, customOAuthForm);
+				toast.success($i18n.t('Provider created'));
+			}
+			await loadCustomOAuthProviders();
+			await config.set(await getBackendConfig());
+			resetCustomOAuthForm();
+		} catch (error) {
+			toast.error(`${error}`);
+		}
+	};
+
+	const removeCustomOAuthProvider = async (slug: string) => {
+		try {
+			await deleteCustomOAuthProvider(localStorage.token, slug);
+			toast.success($i18n.t('Provider deleted'));
+			await loadCustomOAuthProviders();
+			await config.set(await getBackendConfig());
+		} catch (error) {
+			toast.error(`${error}`);
+		}
+	};
+
+	const editProvider = (provider: any) => {
+		editingProvider = provider.slug;
+		customOAuthForm = { ...provider };
+		showCustomOAuthForm = true;
+	};
 
 	// LDAP
 	let ENABLE_LDAP = false;
@@ -123,7 +221,8 @@
 			})(),
 			(async () => {
 				groups = await getGroups(localStorage.token);
-			})()
+			})(),
+			loadCustomOAuthProviders()
 		]);
 
 		const ldapConfig = await getLdapConfig(localStorage.token);
@@ -686,6 +785,269 @@
 								</div>
 							{/if}
 						</div>
+					</div>
+				</div>
+
+				<div class="mb-3">
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Custom SSO Providers')}</div>
+
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+
+					<div class="space-y-3">
+						{#if customOAuthProviders.length > 0}
+							<div class="flex flex-col gap-2">
+								{#each customOAuthProviders as provider}
+									<div
+										class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg"
+									>
+										<div class="flex items-center gap-3">
+											<div
+												class="w-2 h-2 rounded-full {provider.enabled
+													? 'bg-green-500'
+													: 'bg-gray-400'}"
+											></div>
+											<div>
+												<div class="text-sm font-medium">
+													{provider.display_name || provider.slug}
+												</div>
+												<div class="text-xs text-gray-500">
+													{provider.slug} &middot; {provider.provider_type}
+												</div>
+											</div>
+										</div>
+										<div class="flex gap-2">
+											<button
+												class="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+												type="button"
+												on:click={() => editProvider(provider)}
+											>
+												{$i18n.t('Edit')}
+											</button>
+											<button
+												class="text-xs text-red-500 hover:text-red-700"
+												type="button"
+												on:click={() => removeCustomOAuthProvider(provider.slug)}
+											>
+												{$i18n.t('Delete')}
+											</button>
+										</div>
+									</div>
+								{/each}
+							</div>
+						{/if}
+
+						{#if showCustomOAuthForm}
+							<div class="border border-gray-200 dark:border-gray-800 rounded-lg p-4 space-y-3">
+								<div class="text-sm font-medium">
+									{editingProvider
+										? $i18n.t('Edit Provider')
+										: $i18n.t('Add Provider')}
+								</div>
+
+								<div class="flex w-full gap-2">
+									<div class="w-full">
+										<div class="text-xs font-medium mb-1">{$i18n.t('Slug')}</div>
+										<input
+											class="w-full bg-transparent outline-hidden py-0.5"
+											placeholder="e.g. feishu-company-b"
+											bind:value={customOAuthForm.slug}
+											disabled={!!editingProvider}
+											required
+										/>
+									</div>
+									<div class="w-full">
+										<div class="text-xs font-medium mb-1">{$i18n.t('Display Name')}</div>
+										<input
+											class="w-full bg-transparent outline-hidden py-0.5"
+											placeholder="e.g. Feishu Enterprise B"
+											bind:value={customOAuthForm.display_name}
+											required
+										/>
+									</div>
+								</div>
+
+								<div class="flex w-full gap-2">
+									<div class="w-full">
+										<div class="text-xs font-medium mb-1">{$i18n.t('Provider Type')}</div>
+										<select
+											class="w-full bg-transparent outline-hidden py-0.5"
+											bind:value={customOAuthForm.provider_type}
+										>
+											<option value="custom">Custom</option>
+											<option value="oidc">OIDC</option>
+											<option value="feishu">Feishu</option>
+											<option value="github">GitHub</option>
+										</select>
+									</div>
+									<div class="w-full">
+										<div class="text-xs font-medium mb-1">{$i18n.t('Scope')}</div>
+										<input
+											class="w-full bg-transparent outline-hidden py-0.5"
+											placeholder="openid email profile"
+											bind:value={customOAuthForm.scope}
+										/>
+									</div>
+								</div>
+
+								<div class="flex w-full gap-2">
+									<div class="w-full">
+										<div class="text-xs font-medium mb-1">Client ID</div>
+										<input
+											class="w-full bg-transparent outline-hidden py-0.5"
+											placeholder="Client ID"
+											bind:value={customOAuthForm.client_id}
+											required
+										/>
+									</div>
+									<div class="w-full">
+										<div class="text-xs font-medium mb-1">Client Secret</div>
+										<SensitiveInput
+											placeholder="Client Secret"
+											bind:value={customOAuthForm.client_secret}
+										/>
+									</div>
+								</div>
+
+								<div class="w-full">
+									<div class="text-xs font-medium mb-1">
+										{$i18n.t('OIDC Discovery URL')}
+										<span class="text-gray-400 font-normal">({$i18n.t('or set endpoints manually below')})</span>
+									</div>
+									<input
+										class="w-full bg-transparent outline-hidden py-0.5"
+										placeholder="https://example.com/.well-known/openid-configuration"
+										bind:value={customOAuthForm.server_metadata_url}
+									/>
+								</div>
+
+								<div class="flex w-full gap-2">
+									<div class="w-full">
+										<div class="text-xs font-medium mb-1">{$i18n.t('Authorize URL')}</div>
+										<input
+											class="w-full bg-transparent outline-hidden py-0.5"
+											placeholder="https://..."
+											bind:value={customOAuthForm.authorize_url}
+										/>
+									</div>
+									<div class="w-full">
+										<div class="text-xs font-medium mb-1">{$i18n.t('Token URL')}</div>
+										<input
+											class="w-full bg-transparent outline-hidden py-0.5"
+											placeholder="https://..."
+											bind:value={customOAuthForm.access_token_url}
+										/>
+									</div>
+								</div>
+
+								<div class="flex w-full gap-2">
+									<div class="w-full">
+										<div class="text-xs font-medium mb-1">{$i18n.t('Userinfo URL')}</div>
+										<input
+											class="w-full bg-transparent outline-hidden py-0.5"
+											placeholder="https://..."
+											bind:value={customOAuthForm.userinfo_endpoint}
+										/>
+									</div>
+									<div class="w-full">
+										<div class="text-xs font-medium mb-1">{$i18n.t('Redirect URI')}</div>
+										<input
+											class="w-full bg-transparent outline-hidden py-0.5"
+											placeholder="{$i18n.t('Leave empty for auto')}"
+											bind:value={customOAuthForm.redirect_uri}
+										/>
+									</div>
+								</div>
+
+								<div class="text-xs font-medium mt-2 text-gray-500">{$i18n.t('Claim Mappings')}</div>
+								<div class="flex w-full gap-2">
+									<div class="w-full">
+										<div class="text-xs font-medium mb-1">Sub Claim</div>
+										<input
+											class="w-full bg-transparent outline-hidden py-0.5"
+											placeholder="sub"
+											bind:value={customOAuthForm.sub_claim}
+										/>
+									</div>
+									<div class="w-full">
+										<div class="text-xs font-medium mb-1">Email Claim</div>
+										<input
+											class="w-full bg-transparent outline-hidden py-0.5"
+											placeholder="email"
+											bind:value={customOAuthForm.email_claim}
+										/>
+									</div>
+								</div>
+								<div class="flex w-full gap-2">
+									<div class="w-full">
+										<div class="text-xs font-medium mb-1">Username Claim</div>
+										<input
+											class="w-full bg-transparent outline-hidden py-0.5"
+											placeholder="name"
+											bind:value={customOAuthForm.username_claim}
+										/>
+									</div>
+									<div class="w-full">
+										<div class="text-xs font-medium mb-1">Picture Claim</div>
+										<input
+											class="w-full bg-transparent outline-hidden py-0.5"
+											placeholder="picture"
+											bind:value={customOAuthForm.picture_claim}
+										/>
+									</div>
+								</div>
+
+								<div class="flex w-full gap-2">
+									<div class="w-full">
+										<div class="text-xs font-medium mb-1">Icon URL</div>
+										<input
+											class="w-full bg-transparent outline-hidden py-0.5"
+											placeholder="{$i18n.t('Optional custom icon URL')}"
+											bind:value={customOAuthForm.icon_url}
+										/>
+									</div>
+								</div>
+
+								<div class="flex items-center justify-between">
+									<div class="flex items-center gap-4">
+										<label class="flex items-center gap-2 text-xs">
+											<input type="checkbox" bind:checked={customOAuthForm.enabled} />
+											{$i18n.t('Enabled')}
+										</label>
+										<label class="flex items-center gap-2 text-xs">
+											<input type="checkbox" bind:checked={customOAuthForm.email_fallback} />
+											{$i18n.t('Email Fallback')}
+										</label>
+									</div>
+									<div class="flex gap-2">
+										<button
+											class="text-xs px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+											type="button"
+											on:click={resetCustomOAuthForm}
+										>
+											{$i18n.t('Cancel')}
+										</button>
+										<button
+											class="text-xs px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+											type="button"
+											on:click={saveCustomOAuthProvider}
+										>
+											{editingProvider ? $i18n.t('Update') : $i18n.t('Save')}
+										</button>
+									</div>
+								</div>
+							</div>
+						{:else}
+							<button
+								class="text-xs px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+								type="button"
+								on:click={() => {
+									resetCustomOAuthForm();
+									showCustomOAuthForm = true;
+								}}
+							>
+								+ {$i18n.t('Add Provider')}
+							</button>
+						{/if}
 					</div>
 				</div>
 

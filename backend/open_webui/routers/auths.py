@@ -53,6 +53,9 @@ from open_webui.config import (
     ENABLE_PASSWORD_AUTH,
     OAUTH_PROVIDERS,
     OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
+    CUSTOM_OAUTH_PROVIDERS_CONFIG,
+    _is_valid_custom_slug,
+    load_oauth_providers,
 )
 from pydantic import BaseModel
 
@@ -1145,6 +1148,136 @@ class LdapConfigForm(BaseModel):
 async def update_ldap_config(request: Request, form_data: LdapConfigForm, user=Depends(get_admin_user)):
     request.app.state.config.ENABLE_LDAP = form_data.enable_ldap
     return {'ENABLE_LDAP': request.app.state.config.ENABLE_LDAP}
+
+
+############################
+# Custom OAuth Providers
+############################
+
+class CustomOAuthProviderForm(BaseModel):
+    slug: str
+    display_name: str
+    icon_url: Optional[str] = None
+    provider_type: str = 'custom'
+    client_id: str
+    client_secret: str = ''
+    server_metadata_url: Optional[str] = None
+    authorize_url: Optional[str] = None
+    access_token_url: Optional[str] = None
+    userinfo_endpoint: Optional[str] = None
+    api_base_url: Optional[str] = None
+    scope: str = 'openid email profile'
+    redirect_uri: Optional[str] = None
+    timeout: Optional[int] = None
+    sub_claim: Optional[str] = None
+    email_claim: Optional[str] = None
+    username_claim: Optional[str] = None
+    picture_claim: Optional[str] = None
+    token_endpoint_auth_method: Optional[str] = None
+    code_challenge_method: Optional[str] = None
+    authorize_params: Optional[dict] = None
+    email_fallback: bool = False
+    sort_order: int = 0
+    enabled: bool = True
+
+
+def _validate_slug(slug: str):
+    if not _is_valid_custom_slug(slug):
+        raise HTTPException(
+            400,
+            detail='Slug must be 2-50 characters, lowercase alphanumeric and hyphens, '
+            'start/end with alphanumeric, and not conflict with built-in providers',
+        )
+
+
+def _get_providers_list() -> list:
+    """Get custom providers list, filtering out any non-dict entries."""
+    raw = CUSTOM_OAUTH_PROVIDERS_CONFIG.value or []
+    return [p for p in raw if isinstance(p, dict)]
+
+
+def _reload_oauth(request: Request):
+    """Reload OAuth providers and re-initialize the OAuth manager."""
+    load_oauth_providers()
+    if hasattr(request.app.state, 'oauth_manager') and request.app.state.oauth_manager:
+        request.app.state.oauth_manager.reload_providers()
+
+
+@router.get('/admin/config/oauth/custom')
+async def get_custom_oauth_providers(request: Request, user=Depends(get_admin_user)):
+    providers = _get_providers_list()
+    # Redact client_secret
+    return [
+        {**p, 'client_secret': '***' if p.get('client_secret') else ''}
+        for p in providers
+    ]
+
+
+@router.post('/admin/config/oauth/custom')
+async def create_custom_oauth_provider(
+    request: Request,
+    form_data: CustomOAuthProviderForm,
+    user=Depends(get_admin_user),
+):
+    _validate_slug(form_data.slug)
+    providers = _get_providers_list()
+
+    # Check for duplicate slug
+    if any(p.get('slug') == form_data.slug for p in providers):
+        raise HTTPException(400, detail=f"Provider with slug '{form_data.slug}' already exists")
+
+    providers.append(form_data.model_dump())
+    request.app.state.config.CUSTOM_OAUTH_PROVIDERS_CONFIG = providers
+    _reload_oauth(request)
+
+    return {'status': True, 'slug': form_data.slug}
+
+
+@router.post('/admin/config/oauth/custom/{slug}')
+async def update_custom_oauth_provider(
+    slug: str,
+    request: Request,
+    form_data: CustomOAuthProviderForm,
+    user=Depends(get_admin_user),
+):
+    providers = _get_providers_list()
+    idx = next((i for i, p in enumerate(providers) if p.get('slug') == slug), None)
+    if idx is None:
+        raise HTTPException(404, detail=f"Provider '{slug}' not found")
+
+    # If slug changed, validate new slug
+    if form_data.slug != slug:
+        _validate_slug(form_data.slug)
+        if any(p.get('slug') == form_data.slug for p in providers):
+            raise HTTPException(400, detail=f"Provider with slug '{form_data.slug}' already exists")
+
+    new_data = form_data.model_dump()
+    # Preserve existing client_secret if masked value submitted
+    if new_data.get('client_secret') == '***':
+        new_data['client_secret'] = providers[idx].get('client_secret', '')
+
+    providers[idx] = new_data
+    request.app.state.config.CUSTOM_OAUTH_PROVIDERS_CONFIG = providers
+    _reload_oauth(request)
+
+    return {'status': True, 'slug': form_data.slug}
+
+
+@router.delete('/admin/config/oauth/custom/{slug}')
+async def delete_custom_oauth_provider(
+    slug: str,
+    request: Request,
+    user=Depends(get_admin_user),
+):
+    providers = _get_providers_list()
+    new_providers = [p for p in providers if p.get('slug') != slug]
+    if len(new_providers) == len(providers):
+        raise HTTPException(404, detail=f"Provider '{slug}' not found")
+
+    request.app.state.config.CUSTOM_OAUTH_PROVIDERS_CONFIG = new_providers
+    _reload_oauth(request)
+
+    return {'status': True}
 
 
 ############################
