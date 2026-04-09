@@ -233,7 +233,7 @@ class GCSStorageProvider(StorageProvider):
     def get_file(self, file_path: str) -> str:
         """Handles downloading of the file from GCS storage."""
         try:
-            filename = file_path.removeprefix('gs://').split('/')[1]
+            filename = file_path.removeprefix('gs://').split('/')[-1]
             local_file_path = f'{UPLOAD_DIR}/{filename}'
             blob = self.bucket.get_blob(filename)
             blob.download_to_filename(local_file_path)
@@ -245,7 +245,7 @@ class GCSStorageProvider(StorageProvider):
     def delete_file(self, file_path: str) -> None:
         """Handles deletion of the file from GCS storage."""
         try:
-            filename = file_path.removeprefix('gs://').split('/')[1]
+            filename = file_path.removeprefix('gs://').split('/')[-1]
             blob = self.bucket.get_blob(filename)
             blob.delete()
         except NotFound as e:
