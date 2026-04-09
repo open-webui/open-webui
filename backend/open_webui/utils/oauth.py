@@ -22,6 +22,7 @@ from authlib.oidc.core import UserInfo
 from fastapi import (
     HTTPException,
     status,
+    BackgroundTasks,
 )
 from starlette.responses import RedirectResponse
 from typing import Optional
@@ -74,14 +75,14 @@ from open_webui.env import (
     ENABLE_OAUTH_ID_TOKEN_COOKIE,
     ENABLE_OAUTH_EMAIL_FALLBACK,
     OAUTH_CLIENT_INFO_ENCRYPTION_KEY,
-    OAUTH_MAX_SESSIONS_PER_USER,
-    REDIS_KEY_PREFIX,
+    WEBUI_CHAT_ENCRYPTION_KEY,
+    WEBUI_CHAT_ENCRYPT_OLD_CHATS,
 )
 from open_webui.utils.misc import parse_duration
 from open_webui.utils.auth import get_password_hash, create_token
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.groups import apply_default_group_assignment
-from open_webui.retrieval.web.utils import validate_url
+from open_webui.utils.db.encrypt_old_chats import encrypt_old_chats_for_user
 
 from mcp.shared.auth import (
     OAuthClientMetadata as MCPOAuthClientMetadata,
@@ -1373,7 +1374,7 @@ class OAuthManager:
 
         return await client.authorize_redirect(request, redirect_uri, **kwargs)
 
-    async def handle_callback(self, request, provider, response, db=None):
+    async def handle_callback(self, request, provider, response, db=None, background_tasks: BackgroundTasks = None):
         if provider not in OAUTH_PROVIDERS:
             raise HTTPException(404)
 
@@ -1803,75 +1804,8 @@ class OAuthManager:
                 content={'error': 'invalid_request', 'error_description': 'Failed to validate logout_token'},
             )
 
-        # 5. Validate events claim per spec
-        events = claims.get('events', {})
-        if 'http://schemas.openid.net/event/backchannel-logout' not in events:
-            log.warning('Back-channel logout: missing required backchannel-logout event claim')
-            return JSONResponse(
-                status_code=400,
-                content={'error': 'invalid_request', 'error_description': 'Missing backchannel-logout event claim'},
-            )
+        # Schedule encryption of old plaintext chats (runs once per user login; only if enabled with WEBUI_CHAT_ENCRYPT_OLD_CHATS)
+        if background_tasks and WEBUI_CHAT_ENCRYPTION_KEY and WEBUI_CHAT_ENCRYPT_OLD_CHATS:
+            background_tasks.add_task(encrypt_old_chats_for_user, user.id)
 
-        # 6. Per spec, back-channel logout tokens MUST NOT contain a nonce
-        if 'nonce' in claims:
-            log.warning('Back-channel logout: logout_token contains nonce (rejected per spec)')
-            return JSONResponse(
-                status_code=400,
-                content={'error': 'invalid_request', 'error_description': 'logout_token must not contain nonce'},
-            )
-
-        # 7. Extract sub and/or sid — at least one must be present
-        sub = claims.get('sub')
-        sid = claims.get('sid')
-
-        if not sub and not sid:
-            log.warning('Back-channel logout: logout_token contains neither sub nor sid')
-            return JSONResponse(
-                status_code=400,
-                content={'error': 'invalid_request', 'error_description': 'logout_token must contain sub or sid'},
-            )
-
-        # 8. Identify users to log out
-        users_to_logout = []
-        if sub:
-            user = Users.get_user_by_oauth_sub(matched_provider, sub, db=db)
-            if user:
-                users_to_logout.append(user)
-
-        if not users_to_logout and sid:
-            log.info(f'Back-channel logout: no user found by sub, sid-based lookup not yet supported (sid={sid})')
-
-        if not users_to_logout:
-            log.info(f'Back-channel logout: no matching user for provider={matched_provider}, sub={sub}, sid={sid}')
-            return JSONResponse(status_code=200, content={})
-
-        # 9. Revoke tokens and delete sessions
-        redis = request.app.state.redis
-        if not redis:
-            log.warning(
-                'Back-channel logout: Redis not configured, cannot revoke JWT tokens. '
-                'OAuth sessions will be deleted but existing JWTs will remain valid until expiry.'
-            )
-
-        revoked_count = 0
-        for user in users_to_logout:
-            sessions = OAuthSessions.get_sessions_by_user_id(user.id, db=db)
-            for oauth_session in sessions:
-                OAuthSessions.delete_session_by_id(oauth_session.id, db=db)
-
-            if redis:
-                revocation_key = f'{REDIS_KEY_PREFIX}:auth:user:{user.id}:revoked_at'
-                await redis.set(
-                    revocation_key,
-                    str(int(time.time())),
-                    ex=60 * 60 * 24 * 30,
-                )
-                revoked_count += 1
-
-            log.info(
-                f'Back-channel logout: revoked sessions for user {user.id} '
-                f'(email={user.email}, provider={matched_provider}, sessions_deleted={len(sessions)})'
-            )
-
-        log.info(f'Back-channel logout: completed for {len(users_to_logout)} user(s), {revoked_count} revocation(s) set')
-        return JSONResponse(status_code=200, content={})
+        return response

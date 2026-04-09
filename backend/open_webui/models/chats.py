@@ -29,6 +29,7 @@ from sqlalchemy import or_, func, select, and_, text
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import bindparam
 
+
 ####################
 # Chat DB Schema
 # Let no word spoken in this house be lost, and when the
@@ -36,7 +37,6 @@ from sqlalchemy.sql.expression import bindparam
 ####################
 
 log = logging.getLogger(__name__)
-
 
 class Chat(Base):
     __tablename__ = 'chat'
@@ -317,10 +317,11 @@ class ChatTable:
                     }
                 )
 
-            chat_item = Chat(**chat.model_dump())
-            db.add(chat_item)
-            db.commit()
-            db.refresh(chat_item)
+                chat_item = Chat(**chat.model_dump())
+                db.add(chat_item)
+                db.commit()
+                db.refresh(chat_item)
+                return self._normalize_chat_model(ChatModel.model_validate(chat_item)) if chat_item else None
 
             # Dual-write initial messages to chat_message table
             try:
@@ -379,24 +380,8 @@ class ChatTable:
 
             db.add_all(chats)
             db.commit()
-
-            # Dual-write messages to chat_message table
-            try:
-                for form_data, chat_obj in zip(chat_import_forms, chats):
-                    history = form_data.chat.get('history', {})
-                    messages = history.get('messages', {})
-                    for message_id, message in messages.items():
-                        if isinstance(message, dict) and message.get('role'):
-                            ChatMessages.upsert_message(
-                                message_id=message_id,
-                                chat_id=chat_obj.id,
-                                user_id=user_id,
-                                data=message,
-                            )
-            except Exception as e:
-                log.warning(f'Failed to write imported messages to chat_message table: {e}')
-
             return self._normalize_chat_models([ChatModel.model_validate(chat) for chat in chats])
+
     def update_chat_by_id(
             self, id: str, chat: dict, db: Optional[Session] = None
         ) -> Optional[ChatModel]:
@@ -474,44 +459,31 @@ class ChatTable:
         return chat.chat.get('history', {}).get('messages', {}).get(message_id, {})
 
     def upsert_message_to_chat_by_id_and_message_id(
-        self, id: str, message_id: str, message: dict
-    ) -> Optional[ChatModel]:
-        chat = self.get_chat_by_id(id)
-        if chat is None:
-            return None
+            self, id: str, message_id: str, message: dict
+        ) -> Optional[ChatModel]:
+            chat_obj = self.get_chat_by_id(id)
+            if chat_obj is None:
+                return None
 
-        # Sanitize message content for null characters before upserting
-        if isinstance(message.get('content'), str):
-            message['content'] = sanitize_text_for_db(message['content'])
+            if isinstance(message.get("content"), str):
+                sanitized = sanitize_text_for_db(message["content"])
+                message["content"] = sanitized
 
-        user_id = chat.user_id
-        chat = chat.chat
-        history = chat.get('history', {})
+            chat = chat_obj.chat
+            history = chat.get("history", {})
 
-        if message_id in history.get('messages', {}):
-            history['messages'][message_id] = {
-                **history['messages'][message_id],
-                **message,
-            }
-        else:
-            history['messages'][message_id] = message
+            if message_id in history.get("messages", {}):
+                history["messages"][message_id] = {
+                    **history["messages"][message_id],
+                    **message,
+                }
+            else:
+                history["messages"][message_id] = message
 
-        history['currentId'] = message_id
-
-        chat['history'] = history
-
-        # Dual-write to chat_message table
-        try:
-            ChatMessages.upsert_message(
-                message_id=message_id,
-                chat_id=id,
-                user_id=user_id,
-                data=history['messages'][message_id],
-            )
-        except Exception as e:
-            log.warning(f'Failed to write to chat_message table: {e}')
-
-        return self.update_chat_by_id(id, chat)
+            history["currentId"] = message_id
+            chat["history"] = history
+            
+            return self.update_chat_by_id(id, chat)
 
     def add_message_status_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, status: dict
@@ -718,78 +690,7 @@ class ChatTable:
                 query = query.limit(limit)
 
             all_chats = query.all()
-            return [
-                ChatTitleIdResponse.model_validate(
-                    {
-                        'id': chat[0],
-                        'title': chat[1],
-                        'updated_at': chat[2],
-                        'created_at': chat[3],
-                    }
-                )
-                for chat in all_chats
-            ]
-
-    def get_shared_chat_list_by_user_id(
-        self,
-        user_id: str,
-        filter: Optional[dict] = None,
-        skip: int = 0,
-        limit: int = 50,
-        db: Optional[Session] = None,
-    ) -> list[SharedChatResponse]:
-        with get_db_context(db) as db:
-            query = db.query(Chat).filter_by(user_id=user_id).filter(Chat.share_id.isnot(None))
-
-            if filter:
-                query_key = filter.get('query')
-                if query_key:
-                    query = query.filter(Chat.title.ilike(f'%{query_key}%'))
-
-                order_by = filter.get('order_by')
-                direction = filter.get('direction')
-
-                if order_by and direction:
-                    if not getattr(Chat, order_by, None):
-                        raise ValueError('Invalid order_by field')
-
-                    if direction.lower() == 'asc':
-                        query = query.order_by(getattr(Chat, order_by).asc(), Chat.id)
-                    elif direction.lower() == 'desc':
-                        query = query.order_by(getattr(Chat, order_by).desc(), Chat.id)
-                    else:
-                        raise ValueError('Invalid direction for ordering')
-            else:
-                query = query.order_by(Chat.updated_at.desc(), Chat.id)
-
-            # Select only the columns needed for SharedChatResponse
-            # to avoid loading the heavy chat JSON blob
-            query = query.with_entities(
-                Chat.id,
-                Chat.title,
-                Chat.share_id,
-                Chat.updated_at,
-                Chat.created_at,
-            )
-
-            if skip:
-                query = query.offset(skip)
-            if limit:
-                query = query.limit(limit)
-
-            all_chats = query.all()
-            return [
-                SharedChatResponse.model_validate(
-                    {
-                        'id': chat[0],
-                        'title': chat[1],
-                        'share_id': chat[2],
-                        'updated_at': chat[3],
-                        'created_at': chat[4],
-                    }
-                )
-                for chat in all_chats
-            ]
+            return self._normalize_chat_models([ChatModel.model_validate(chat) for chat in all_chats])
 
     def get_chat_list_by_user_id(
         self,
@@ -894,24 +795,30 @@ class ChatTable:
             )
             return self._normalize_chat_models([ChatModel.model_validate(chat) for chat in all_chats])
 
-    def get_chat_by_id(self, id: str, db: Optional[Session] = None) -> Optional[ChatModel]:
-        try:
-            with get_db_context(db) as db:
-                chat_item = db.get(Chat, id)
-                if chat_item is None:
+    def get_chat_by_id_and_user_id(
+            self, id: str, user_id: str, db: Optional[Session] = None
+        ) -> Optional[ChatModel]:
+            try:
+                with get_db_context(db) as db:
+                    # Query for a chat that matches both the Chat ID and the User ID
+                    chat_item = (
+                        db.query(Chat).filter_by(id=id, user_id=user_id).first()
+                    )
+                    
+                    if chat_item:
+                        # Sanitize row (removes null bytes)
+                        if self._sanitize_chat_row(chat_item):
+                            db.commit()
+                            db.refresh(chat_item)
+
+                        chat_model = ChatModel.model_validate(chat_item)
+                        chat_model.chat = decrypt_content(chat_model.chat)
+                        
+                        return chat_model
                     return None
-
-                if self._sanitize_chat_row(chat_item):
-                    db.commit()
-                    db.refresh(chat_item)
-
-                chat_model = ChatModel.model_validate(chat_item)
-                chat_model.chat = decrypt_content(chat_model.chat)
-                
-                return chat_model
-            
-        except Exception:
-            return None
+            except Exception as e:
+                log.error(f"Error retrieving chat {id} for user {user_id}: {e}")
+                return None
 
     def get_chat_by_share_id(self, id: str, db: Optional[Session] = None) -> Optional[ChatModel]:
         try:
@@ -927,13 +834,22 @@ class ChatTable:
         except Exception:
             return None
 
-    def get_chat_by_id_and_user_id(self, id: str, user_id: str, db: Optional[Session] = None) -> Optional[ChatModel]:
-        try:
-            with get_db_context(db) as db:
-                chat = db.query(Chat).filter_by(id=id, user_id=user_id).first()
-                return self._normalize_chat_model(ChatModel.model_validate(chat))
-        except Exception:
-            return None
+    def get_chat_by_id(self, id: str, db: Optional[Session] = None) -> Optional[ChatModel]:
+            try:
+                with get_db_context(db) as db:
+                    chat_item = db.get(Chat, id)
+                    if chat_item is None:
+                        return None
+
+                    # Sanitize first (removes null bytes)
+                    if self._sanitize_chat_row(chat_item):
+                        db.commit()
+                        db.refresh(chat_item)
+
+                    return self._normalize_chat_model(ChatModel.model_validate(chat_item))
+            except Exception as e:
+                log.error(f"Failed to get/decrypt chat {id}: {e}")
+                return None
 
     def is_chat_owner(self, id: str, user_id: str, db: Optional[Session] = None) -> bool:
         """
@@ -1009,7 +925,7 @@ class ChatTable:
             return ChatListResponse(
                 **{
                     "items": self._normalize_chat_models([ChatModel.model_validate(chat) for chat in all_chats]),
-                    'total': total,
+                    "total": total,
                 }
             )
 
@@ -1026,7 +942,11 @@ class ChatTable:
 
     def get_archived_chats_by_user_id(self, user_id: str, db: Optional[Session] = None) -> list[ChatModel]:
         with get_db_context(db) as db:
-            all_chats = db.query(Chat).filter_by(user_id=user_id, archived=True).order_by(Chat.updated_at.desc())
+            all_chats = (
+                db.query(Chat)
+                .filter_by(user_id=user_id, archived=True)
+                .order_by(Chat.updated_at.desc())
+            )
             return self._normalize_chat_models([ChatModel.model_validate(chat) for chat in all_chats])
 
     def get_chats_by_user_id_and_search_text(
@@ -1306,7 +1226,7 @@ class ChatTable:
                 raise NotImplementedError(f'Unsupported dialect: {db.bind.dialect.name}')
 
             all_chats = query.all()
-            log.debug(f'all_chats: {all_chats}')
+            log.debug(f"all_chats: {all_chats}")
             return self._normalize_chat_models([ChatModel.model_validate(chat) for chat in all_chats])
 
     def add_chat_tag_by_id_and_user_id_and_tag_name(

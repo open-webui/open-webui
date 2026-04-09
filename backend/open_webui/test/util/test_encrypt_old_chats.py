@@ -2,7 +2,6 @@ import importlib
 from contextlib import contextmanager
 
 from cryptography.fernet import Fernet
-import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -28,15 +27,8 @@ def _db_context(session):
     yield session
 
 
-@pytest.mark.anyio
-async def test_encrypt_old_chats_for_user(monkeypatch):
+def test_encrypt_old_chats_for_user(monkeypatch):
     _, encrypt_old_chats = _reload_encryption_modules(monkeypatch)
-
-    async def _run_inline(func, *args, **kwargs):
-        return func(*args, **kwargs)
-
-    # Keep DB work in the same thread for sqlite:///:memory: during tests.
-    monkeypatch.setattr(encrypt_old_chats.asyncio, "to_thread", _run_inline)
 
     from open_webui.internal.db import Base
     from open_webui.models.chats import Chat
@@ -69,7 +61,7 @@ async def test_encrypt_old_chats_for_user(monkeypatch):
         encrypt_old_chats, "get_db_context", lambda db=None: _db_context(session)
     )
 
-    count = await encrypt_old_chats.encrypt_old_chats_for_user("u1")
+    count = encrypt_old_chats.encrypt_old_chats_for_user("u1")
     assert count == 1
 
     stored = session.query(Chat).filter_by(id="c1").first()

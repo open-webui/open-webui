@@ -510,8 +510,6 @@ from open_webui.env import (
     WEBUI_ADMIN_NAME,
     WEBUI_CHAT_ENCRYPTION_KEY,
     WEBUI_CHAT_ENCRYPT_OLD_CHATS,
-    ENABLE_EASTER_EGGS,
-    LOG_FORMAT,
 )
 
 
@@ -2449,9 +2447,10 @@ async def oauth_login_callback(
     provider: str,
     request: Request,
     response: Response,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_session),
 ):
-    return await oauth_manager.handle_callback(request, provider, response, db=db)
+    return await oauth_manager.handle_callback(request, provider, response, db=db, background_tasks=background_tasks)
 
 
 @app.get('/manifest.json')

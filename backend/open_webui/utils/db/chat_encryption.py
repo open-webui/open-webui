@@ -54,35 +54,6 @@ def decrypt(enc_val, plain_val):
         return enc_val
 
 
-def _transform_nested_text_fields(value, transform):
-    if isinstance(value, dict):
-        for key, item in value.items():
-            if key == "text" and isinstance(item, str):
-                value[key] = transform(item)
-            else:
-                _transform_nested_text_fields(item, transform)
-    elif isinstance(value, list):
-        for item in value:
-            _transform_nested_text_fields(item, transform)
-    return value
-
-
-def _transform_content_fields(value, transform_string_content, transform_nested_text):
-    if isinstance(value, dict):
-        for key, item in value.items():
-            if key == "content":
-                if isinstance(item, str):
-                    value[key] = transform_string_content(item)
-                elif isinstance(item, (dict, list)):
-                    value[key] = _transform_nested_text_fields(item, transform_nested_text)
-            else:
-                _transform_content_fields(item, transform_string_content, transform_nested_text)
-    elif isinstance(value, list):
-        for item in value:
-            _transform_content_fields(item, transform_string_content, transform_nested_text)
-    return value
-
-
 # Encrypt chat content
 def encrypt_content(chat_data: dict) -> dict:
     if not chat_data or not WEBUI_CHAT_ENCRYPTION_CIPHER:
@@ -91,13 +62,16 @@ def encrypt_content(chat_data: dict) -> dict:
     # History
     messages_dict = chat_data.get("history", {}).get("messages", {})
     for msg_id in messages_dict:
-        _transform_content_fields(messages_dict[msg_id], encrypt, encrypt)
-            
+        content = messages_dict[msg_id].get("content")
+        if isinstance(content, str):
+            messages_dict[msg_id]["content"] = encrypt(content)
         
     # Messages
     messages_list = chat_data.get("messages", [])
     for msg in messages_list:
-        _transform_content_fields(msg, encrypt, encrypt)
+        content = msg.get("content")
+        if isinstance(content, str):
+            msg["content"] = encrypt(content)
             
     return chat_data
 
@@ -110,21 +84,15 @@ def decrypt_content(chat_data: dict) -> dict:
     # History 
     messages_dict = chat_data.get("history", {}).get("messages", {})
     for msg_id in messages_dict:
-        _transform_content_fields(
-            messages_dict[msg_id],
-            lambda s: decrypt(s, s),
-            lambda s: decrypt(s, s),
-        )
+        content = messages_dict[msg_id].get("content")
+        if isinstance(content, str):
+            messages_dict[msg_id]["content"] = decrypt(content, content)
             
     # Messages
     messages_list = chat_data.get("messages", [])
     for msg in messages_list:
-        _transform_content_fields(
-            msg,
-            lambda s: decrypt(s, s),
-            lambda s: decrypt(s, s),
-        )
+        content = msg.get("content")
+        if isinstance(content, str):
+            msg["content"] = decrypt(content, content)
             
     return chat_data
-
-

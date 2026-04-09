@@ -51,7 +51,6 @@ def _normalize_chat_for_response(chat: ChatModel) -> ChatResponse:
 def _normalize_chat_list_for_response(chats: list[ChatModel]) -> list[ChatResponse]:
     return [_normalize_chat_for_response(chat) for chat in chats]
 
-
 ############################
 # GetChatList
 # Let the record outlive the session, so that what was
@@ -799,33 +798,8 @@ async def get_shared_session_user_chat_list(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    if page is None:
-        page = 1
-
-    limit = 60
-    skip = (page - 1) * limit
-
-    filter = {}
-    if query:
-        filter['query'] = query
-    if order_by:
-        filter['order_by'] = order_by
-    if direction:
-        filter['direction'] = direction
-
-    return Chats.get_shared_chat_list_by_user_id(
-        user.id,
-        filter=filter,
-        skip=skip,
-        limit=limit,
-        db=db,
-    )
-
-
-############################
-# GetSharedChatById
-############################
-
+    if user.role == "pending":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
 @router.get('/share/{share_id}', response_model=Optional[ChatResponse])
 async def get_shared_chat_by_id(share_id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
@@ -882,9 +856,9 @@ async def get_chat_by_id(id: str, user=Depends(get_verified_user), db: Session =
     if chat:
         return _normalize_chat_for_response(chat)
     else:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
-
-
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
+        )
 ############################
 # UpdateChatById
 ############################
@@ -938,11 +912,16 @@ async def update_chat_message_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    # def content safely
+    content_to_save = form_data.content if form_data.content else ""
+
+    #Upsert to the db. 
+
     chat = Chats.upsert_message_to_chat_by_id_and_message_id(
         id,
         message_id,
         {
-            'content': form_data.content,
+            "content": content_to_save, 
         },
     )
 
@@ -958,11 +937,11 @@ async def update_chat_message_by_id(
     if event_emitter:
         await event_emitter(
             {
-                'type': 'chat:message',
-                'data': {
-                    'chat_id': id,
-                    'message_id': message_id,
-                    'content': form_data.content,
+                "type": "chat:message",
+                "data": {
+                    "chat_id": id,
+                    "message_id": message_id,
+                    "content": form_data.content, # Plaintext for UI!
                 },
             }
         )

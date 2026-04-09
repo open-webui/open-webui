@@ -21,49 +21,17 @@ def is_encrypted_string(s: str) -> bool:
     return isinstance(s, str) and s.startswith("gAAAAAB")
 
 
-def _nested_content_text_is_encrypted(value: Any) -> bool:
-    if isinstance(value, dict):
-        for key, item in value.items():
-            if key == "text" and isinstance(item, str) and not is_encrypted_string(item):
-                return False
-            if not _nested_content_text_is_encrypted(item):
-                return False
-    elif isinstance(value, list):
-        for item in value:
-            if not _nested_content_text_is_encrypted(item):
-                return False
-    return True
-
-
-def _message_content_is_encrypted(message: dict) -> bool:
-    if not isinstance(message, dict):
-        return True
-
-    for key, value in message.items():
-        if key == "content":
-            if isinstance(value, str) and not is_encrypted_string(value):
-                return False
-            if isinstance(value, (dict, list)) and not _nested_content_text_is_encrypted(value):
-                return False
-        elif isinstance(value, dict):
-            if not _message_content_is_encrypted(value):
-                return False
-        elif isinstance(value, list):
-            for item in value:
-                if isinstance(item, dict) and not _message_content_is_encrypted(item):
-                    return False
-    return True
-
-
 def chat_is_encrypted(chat_json: dict) -> bool:
     """Return True if all chat message contents are encrypted."""
     history = chat_json.get("history", {})
     messages = history.get("messages", {})
     for m in messages.values():
-        if not _message_content_is_encrypted(m):
+        content = m.get("content")
+        if isinstance(content, str) and not is_encrypted_string(content):
             return False
     for msg in chat_json.get("messages", []):
-        if not _message_content_is_encrypted(msg):
+        content = msg.get("content")
+        if isinstance(content, str) and not is_encrypted_string(content):
             return False
     return True
 

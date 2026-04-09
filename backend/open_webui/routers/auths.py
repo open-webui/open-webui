@@ -538,7 +538,6 @@ async def signin(
     response: Response,
     form_data: SigninForm,
     background_tasks: BackgroundTasks,
-
     db: Session = Depends(get_session),
 ):
     if not ENABLE_PASSWORD_AUTH:
@@ -637,9 +636,52 @@ async def signin(
         )
 
     if user:
+
+        expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
+        expires_at = None
+        if expires_delta:
+            expires_at = int(time.time()) + int(expires_delta.total_seconds())
+
+        token = create_token(
+            data={"id": user.id},
+            expires_delta=expires_delta,
+        )
+
+        datetime_expires_at = (
+            datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
+            if expires_at
+            else None
+        )
+
+        # Set the cookie token
+        response.set_cookie(
+            key="token",
+            value=token,
+            expires=datetime_expires_at,
+            httponly=True,  # Ensures the cookie is not accessible via JavaScript
+            samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+            secure=WEBUI_AUTH_COOKIE_SECURE,
+        )
+
+        user_permissions = get_permissions(
+            user.id, request.app.state.config.USER_PERMISSIONS, db=db
+        )
+
+        # Schedule encryption old plaintext chats (runs once per user login; only if enabled with WEBUI_CHAT_ENCRYPT_OLD_CHATS)
         if WEBUI_CHAT_ENCRYPTION_KEY and WEBUI_CHAT_ENCRYPT_OLD_CHATS:
             background_tasks.add_task(encrypt_old_chats_for_user, user.id)
-        return create_session_response(request, user, db, response, set_cookie=True)
+
+        return {
+            "token": token,
+            "token_type": "Bearer",
+            "expires_at": expires_at,
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "role": user.role,
+            "profile_image_url": user.profile_image_url,
+            "permissions": user_permissions,
+        }
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
