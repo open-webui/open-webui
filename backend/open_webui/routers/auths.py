@@ -4,6 +4,7 @@ import uuid
 import time
 import datetime
 import logging
+import threading
 from aiohttp import ClientSession
 import urllib
 
@@ -43,7 +44,6 @@ from open_webui.env import (
     ENABLE_OAUTH_TOKEN_EXCHANGE,
     AIOHTTP_CLIENT_SESSION_SSL,
     DATABASE_CHAT_ENCRYPT_OLD_CHATS,
-    DATABASE_CHAT_ENCRYPTION_KEY,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
 from fastapi.responses import RedirectResponse, Response, JSONResponse
@@ -80,6 +80,7 @@ from open_webui.utils.groups import apply_default_group_assignment
 
 from open_webui.utils.redis import get_redis_client
 from open_webui.utils.rate_limit import RateLimiter
+from open_webui.utils.db.chat_encryption import CHAT_ENCRYPTION_ENABLED
 from open_webui.utils.db.encrypt_old_chats import encrypt_old_chats_for_user
 
 
@@ -97,6 +98,28 @@ log = logging.getLogger(__name__)
 # Forgive us our failed attempts, as we forgive those
 # who exceed their allotted rate against this gate.
 signin_rate_limiter = RateLimiter(redis_client=get_redis_client(), limit=5 * 3, window=60 * 3)
+
+# Idempotency guard for old chat encryption backfill: only schedule one backfill task per user
+old_chat_backfill_running_users: set[str] = set()
+old_chat_backfill_lock = threading.Lock()
+
+async def queue_old_chat_encryption_backfill(request: Request, background_tasks: BackgroundTasks, user_id: str):
+    if not (DATABASE_CHAT_ENCRYPT_OLD_CHATS and CHAT_ENCRYPTION_ENABLED):
+        return
+
+    with old_chat_backfill_lock:
+        if user_id in old_chat_backfill_running_users:
+            return
+        old_chat_backfill_running_users.add(user_id)
+
+    async def _run(uid: str):
+        try:
+            await encrypt_old_chats_for_user(uid)
+        finally:
+            with old_chat_backfill_lock:
+                old_chat_backfill_running_users.discard(uid)
+
+    background_tasks.add_task(_run, user_id)
 
 
 def create_session_response(request: Request, user, db, response: Response = None, set_cookie: bool = False) -> dict:
@@ -639,8 +662,7 @@ async def signin(
         )
 
     if user:
-        if DATABASE_CHAT_ENCRYPTION_KEY and DATABASE_CHAT_ENCRYPT_OLD_CHATS:
-            background_tasks.add_task(encrypt_old_chats_for_user, user.id)
+        await queue_old_chat_encryption_backfill(request, background_tasks, user.id)
         return create_session_response(request, user, db, response, set_cookie=True)
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)

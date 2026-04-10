@@ -12,7 +12,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from open_webui.internal.db import get_db_context
 from open_webui.models.chats import Chat
 from open_webui.models.chat_messages import ChatMessage
-from open_webui.utils.db.chat_encryption import encrypt, encrypt_content
+from open_webui.utils.db.chat_encryption import CHAT_ENCRYPTION_ENABLED, encrypt, encrypt_content
 
 log = logging.getLogger(__name__)
 
@@ -107,14 +107,18 @@ def chat_is_encrypted(chat_json: dict) -> bool:
 # Old chat encryption function (encrypt all plaintext chats for a user in batches)
 async def encrypt_old_chats_for_user(user_id: Any, db: Optional[Any] = None, chunk_size: int = 100) -> int:
     """Encrypt old plaintext chats and chat_message payloads for a user asynchronously."""
-    log.info("Starting old-chat encryption for user %s", user_id)
+    if not CHAT_ENCRYPTION_ENABLED:
+        #log.warning("Chat encryption is not enabled; skipping old-chat backfill for user %s", user_id)
+        return 0
+
+    log.debug("Starting old-chat encryption for user %s", user_id)
     encrypted_count = 0
     try:
         def _encrypt_chats():
             count = 0
             with get_db_context(db) as session:
                 # Backfill chat table
-                chat_query = session.query(Chat).filter(Chat.user_id == user_id)
+                chat_query = session.query(Chat).filter(Chat.user_id == user_id).order_by(Chat.id.asc())
                 offset = 0
                 while True:
                     batch = chat_query.offset(offset).limit(chunk_size).all()
@@ -138,7 +142,11 @@ async def encrypt_old_chats_for_user(user_id: Any, db: Optional[Any] = None, chu
                     offset += chunk_size
 
                 # Backfill chat_message table
-                message_query = session.query(ChatMessage).filter(ChatMessage.user_id == user_id)
+                message_query = (
+                    session.query(ChatMessage)
+                    .filter(ChatMessage.user_id == user_id)
+                    .order_by(ChatMessage.id.asc())
+                )
                 offset = 0
                 while True:
                     batch = message_query.offset(offset).limit(chunk_size).all()
@@ -173,7 +181,7 @@ async def encrypt_old_chats_for_user(user_id: Any, db: Optional[Any] = None, chu
             return count
         
         encrypted_count = await asyncio.to_thread(_encrypt_chats)
-        log.info("Successfully encrypted %d chats for user %s", encrypted_count, user_id)
+        log.debug("Successfully encrypted %d chats for user %s", encrypted_count, user_id)
     except Exception as e:
         log.exception("Error encrypting old chats for user %s: %s", user_id, e)
     return encrypted_count

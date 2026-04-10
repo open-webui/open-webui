@@ -13,15 +13,18 @@ log = logging.getLogger(__name__)
 
 WEBUI_CHAT_ENCRYPTION_CIPHER = None
 STRUCTURED_PAYLOAD_PREFIX = '__owui_json__:'
+CHAT_ENCRYPTION_ENABLED = False
 
 
 # Initialization checks
 if DATABASE_CHAT_ENCRYPTION_KEY:
     try:
         WEBUI_CHAT_ENCRYPTION_CIPHER = Fernet(DATABASE_CHAT_ENCRYPTION_KEY.encode())
+        CHAT_ENCRYPTION_ENABLED = True
         log.info("Encryption Cipher initialized successfully")
     except Exception as e:
         log.error("Cipher initialization failed (Invalid Key): %s", e)
+        raise RuntimeError("Invalid DATABASE_CHAT_ENCRYPTION_KEY; refusing to start with encryption misconfigured") from e
 else:
     log.warning("DATABASE_CHAT_ENCRYPTION_KEY environment variable is missing: Chat encryption disabled")
 
