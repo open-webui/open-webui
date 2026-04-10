@@ -337,6 +337,24 @@ if 'postgres://' in DATABASE_URL:
 
 DATABASE_ENABLE_IAM_TOKEN_AUTH = os.environ.get('DATABASE_ENABLE_IAM_TOKEN_AUTH', 'False').lower() == 'true'
 
+if DATABASE_ENABLE_IAM_TOKEN_AUTH:
+    _iam_missing = [
+        name for name, val in [
+            ('DATABASE_TYPE', DATABASE_TYPE),
+            ('DATABASE_HOST', os.environ.get('DATABASE_HOST')),
+            ('DATABASE_PORT', os.environ.get('DATABASE_PORT')),
+            ('DATABASE_NAME', os.environ.get('DATABASE_NAME')),
+            ('DATABASE_USER', DATABASE_USER),
+        ]
+        if not val
+    ]
+    if _iam_missing:
+        raise ValueError(
+            f"DATABASE_ENABLE_IAM_TOKEN_AUTH=true requires individual database connection variables, "
+            f"but the following are not set: {', '.join(_iam_missing)}. "
+            f"Set DATABASE_TYPE, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, and DATABASE_USER."
+        )
+
 DATABASE_CA_PATH = os.getenv('DATABASE_CA_PATH', None)
 
 DATABASE_SCHEMA = os.environ.get('DATABASE_SCHEMA', None)
