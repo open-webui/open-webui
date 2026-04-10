@@ -47,6 +47,7 @@
 	export let codeInterpreterEnabled = false;
 
 	export let onShowValves: Function;
+	export let onSelectMcpPrompt: Function = async () => {};
 	export let onClose: Function;
 	export let closeOnOutsideClick = true;
 
@@ -330,6 +331,9 @@
 					</button>
 
 					{#each Object.keys(tools) as toolId}
+						{@const isMcpServer = toolId.startsWith('server:mcp:')}
+						{@const promptSelectable =
+							isMcpServer && tools[toolId].enabled && (tools[toolId]?.authenticated ?? true)}
 						<button
 							class="relative flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
 							on:click={async (e) => {
@@ -391,6 +395,31 @@
 											}}
 										>
 											<Knobs />
+										</button>
+									</Tooltip>
+								</div>
+							{/if}
+
+							{#if promptSelectable}
+								<div class=" shrink-0">
+									<Tooltip content={$i18n.t('MCP Prompt')}>
+										<button
+											class="self-center w-fit text-sm text-sky-600 dark:text-sky-300 hover:text-sky-700 dark:hover:text-sky-200 transition rounded-full"
+											type="button"
+											aria-label={$i18n.t('Select MCP Prompt')}
+											on:click={async (e) => {
+												e.stopPropagation();
+												e.preventDefault();
+												await onSelectMcpPrompt({
+													id: toolId,
+													serverId: toolId.replace('server:mcp:', ''),
+													name: tools[toolId].name
+												});
+												show = false;
+												onClose();
+											}}
+										>
+											<Sparkles className="size-4" strokeWidth="1.75" />
 										</button>
 									</Tooltip>
 								</div>

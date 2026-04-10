@@ -2180,6 +2180,49 @@ def process_messages_with_output(messages: list[dict]) -> list[dict]:
     return processed
 
 
+def normalize_mcp_prompt_messages(prompt_result: dict) -> tuple[list[dict], list[str]]:
+    messages = []
+    omitted_content_types = set()
+
+    for prompt_message in prompt_result.get('messages', []):
+        content = prompt_message.get('content') or {}
+        content_type = content.get('type', 'unknown')
+
+        if content_type != 'text':
+            omitted_content_types.add(content_type)
+            continue
+
+        messages.append(
+            {
+                'role': prompt_message.get('role'),
+                'content': content.get('text', ''),
+            }
+        )
+
+    return messages, sorted(omitted_content_types)
+
+
+def insert_messages_after_system(messages: list[dict], inserted_messages: list[dict]) -> list[dict]:
+    if not inserted_messages:
+        return messages
+
+    insert_at = 1 if messages and messages[0].get('role') == 'system' else 0
+    return [*messages[:insert_at], *inserted_messages, *messages[insert_at:]]
+
+
+async def emit_mcp_prompt_notification(event_emitter, content: str, level: str = 'warning'):
+    if event_emitter:
+        await event_emitter(
+            {
+                'type': 'notification',
+                'data': {
+                    'type': level,
+                    'content': content,
+                },
+            }
+        )
+
+
 async def process_chat_payload(request, form_data, user, metadata, model):
     # Pipeline Inlet -> Filter Inlet -> Chat Memory -> Chat Web Search -> Chat Image Generation
     # -> Chat Code Interpreter (Form Data Update) -> (Default) Chat Tools Function Calling
@@ -2460,10 +2503,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     terminal_id = form_data.pop('terminal_id', None)
     files = form_data.pop('files', None)
     form_data.pop('folder_id', None)
+    mcp_prompt_selection = metadata.get('mcp_prompt_selection') or None
 
     # Caller-provided OpenAI-style tools take precedence over server-side
     # tool resolution (tool_ids, MCP servers, builtin tools).
     payload_tools = form_data.get('tools', None)
+
+    if mcp_prompt_selection and payload_tools:
+        raise Exception('MCP prompt selection is not supported when explicit tools are supplied in the request.')
 
     # Skills
     user_skill_ids = set(form_data.pop('skill_ids', None) or [])
@@ -2551,12 +2598,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
         mcp_clients = {}
         mcp_tools_dict = {}
+        mcp_prompt_messages = []
+        mcp_prompt_omitted_content_types = []
+        mcp_prompt_resolved = False
+        mcp_prompt_error = None
 
         if tool_ids:
             for tool_id in tool_ids:
                 if tool_id.startswith('server:mcp:'):
                     try:
                         server_id = tool_id[len('server:mcp:') :]
+                        mcp_server_id = server_id
 
                         mcp_server_connection = None
                         for server_connection in request.app.state.config.TOOL_SERVER_CONNECTIONS:
@@ -2623,6 +2675,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             headers=headers if headers else None,
                         )
 
+                        if mcp_prompt_selection and mcp_prompt_selection.get('server_id') == mcp_server_id:
+                            prompt_result = await mcp_clients[server_id].get_prompt(
+                                mcp_prompt_selection.get('name', ''),
+                                mcp_prompt_selection.get('arguments') or None,
+                            )
+                            (
+                                mcp_prompt_messages,
+                                mcp_prompt_omitted_content_types,
+                            ) = normalize_mcp_prompt_messages(prompt_result)
+                            mcp_prompt_resolved = True
+
                         function_name_filter_list = mcp_server_connection.get('config', {}).get(
                             'function_name_filter_list', ''
                         )
@@ -2660,6 +2723,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 'direct': False,
                             }
                     except Exception as e:
+                        if (
+                            mcp_prompt_selection
+                            and mcp_prompt_selection.get('server_id') == tool_id[len('server:mcp:') :]
+                        ):
+                            mcp_prompt_error = str(e)
                         log.debug(e)
                         if event_emitter:
                             await event_emitter(
@@ -2669,6 +2737,35 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 }
                             )
                         continue
+
+            if mcp_prompt_selection:
+                selected_mcp_tool_id = f'server:mcp:{mcp_prompt_selection.get("server_id", "")}'
+
+                if selected_mcp_tool_id not in (tool_ids or []):
+                    raise Exception('Selected MCP prompt server is not enabled for this chat.')
+
+                if not mcp_prompt_resolved:
+                    raise Exception(
+                        mcp_prompt_error or f"Failed to resolve MCP prompt '{mcp_prompt_selection.get('name', '')}'"
+                    )
+
+                if mcp_prompt_messages:
+                    form_data['messages'] = insert_messages_after_system(
+                        form_data['messages'],
+                        mcp_prompt_messages,
+                    )
+                else:
+                    await emit_mcp_prompt_notification(
+                        event_emitter,
+                        'The selected MCP prompt returned no text content and was skipped.',
+                    )
+
+                if mcp_prompt_omitted_content_types:
+                    await emit_mcp_prompt_notification(
+                        event_emitter,
+                        'The selected MCP prompt omitted unsupported content types: '
+                        + ', '.join(mcp_prompt_omitted_content_types),
+                    )
 
             tools_dict = await get_tools(
                 request,
@@ -2684,6 +2781,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
             if mcp_tools_dict:
                 tools_dict = {**tools_dict, **mcp_tools_dict}
+
+        if mcp_prompt_selection and not tool_ids:
+            raise Exception('Selected MCP prompt server is not enabled for this chat.')
 
         # Resolve terminal tools if terminal_id is set (outside tool_ids check
         # so system terminals work even when no other tools are selected)

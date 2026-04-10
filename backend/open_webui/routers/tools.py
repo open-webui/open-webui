@@ -4,9 +4,13 @@ from typing import Optional
 import time
 import re
 import aiohttp
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT
+from open_webui.env import (
+    AIOHTTP_CLIENT_SESSION_SSL,
+    AIOHTTP_CLIENT_TIMEOUT,
+    ENABLE_FORWARD_USER_INFO_HEADERS,
+)
 from open_webui.models.groups import Groups
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import get_async_session
@@ -33,9 +37,12 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import (
     has_permission,
     has_access,
+    has_connection_access,
     filter_allowed_access_grants,
 )
 from open_webui.utils.tools import get_tool_servers
+from open_webui.utils.mcp.client import MCPClient
+from open_webui.utils.headers import include_user_info_headers
 
 from open_webui.config import CACHE_DIR, BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
@@ -52,6 +59,23 @@ async def get_tool_module(request, tool_id, load_from_db=True):
     """
     tool_module, _ = await get_tool_module_from_cache(request, tool_id, load_from_db)
     return tool_module
+
+
+class MCPPromptArgumentResponse(BaseModel):
+    name: str
+    description: Optional[str] = None
+    required: bool = False
+
+
+class MCPPromptResponse(BaseModel):
+    name: str
+    title: Optional[str] = None
+    description: Optional[str] = None
+    arguments: list[MCPPromptArgumentResponse] = Field(default_factory=list)
+
+
+class MCPPromptListResponse(BaseModel):
+    prompts: list[MCPPromptResponse]
 
 
 ############################
@@ -220,6 +244,96 @@ async def get_tool_list(user=Depends(get_verified_user), db: AsyncSession = Depe
             )
         )
     return result
+
+
+@router.get('/mcp/{server_id}/prompts', response_model=MCPPromptListResponse)
+async def get_mcp_prompt_list(request: Request, server_id: str, user=Depends(get_verified_user)):
+    mcp_server_connection = next(
+        (
+            server_connection
+            for server_connection in request.app.state.config.TOOL_SERVER_CONNECTIONS
+            if server_connection.get('type', '') == 'mcp'
+            and server_connection.get('config', {}).get('enable')
+            and server_connection.get('info', {}).get('id') == server_id
+        ),
+        None,
+    )
+
+    if not mcp_server_connection:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'MCP server with id {server_id} not found',
+        )
+
+    if not has_connection_access(user, mcp_server_connection):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    auth_type = mcp_server_connection.get('auth_type', '')
+    headers = {}
+
+    if auth_type == 'bearer':
+        headers['Authorization'] = f'Bearer {mcp_server_connection.get("key", "")}'
+    elif auth_type == 'session':
+        headers['Authorization'] = f'Bearer {request.state.token.credentials}'
+    elif auth_type == 'system_oauth':
+        oauth_token = None
+        if request.cookies.get('oauth_session_id', None):
+            oauth_token = await request.app.state.oauth_manager.get_oauth_token(
+                user.id,
+                request.cookies.get('oauth_session_id', None),
+            )
+        if oauth_token:
+            headers['Authorization'] = f'Bearer {oauth_token.get("access_token", "")}'
+    elif auth_type in ('oauth_2.1', 'oauth_2.1_static'):
+        oauth_server_id = server_id.split(':')[-1] if ':' in server_id else server_id
+        oauth_token = await request.app.state.oauth_client_manager.get_oauth_token(user.id, f'mcp:{oauth_server_id}')
+        if oauth_token:
+            headers['Authorization'] = f'Bearer {oauth_token.get("access_token", "")}'
+
+    connection_headers = mcp_server_connection.get('headers', None)
+    if connection_headers and isinstance(connection_headers, dict):
+        headers.update(connection_headers)
+
+    if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+        headers = include_user_info_headers(headers, user)
+
+    try:
+        mcp_client = MCPClient()
+        async with mcp_client.temporary_connection(
+            url=mcp_server_connection.get('url', ''),
+            headers=headers if headers else None,
+        ):
+            prompts = await mcp_client.list_prompts()
+
+        return {
+            'prompts': [
+                {
+                    'name': prompt.get('name'),
+                    'title': prompt.get('title'),
+                    'description': prompt.get('description'),
+                    'arguments': [
+                        {
+                            'name': argument.get('name'),
+                            'description': argument.get('description'),
+                            'required': argument.get('required', False),
+                        }
+                        for argument in (prompt.get('arguments') or [])
+                    ],
+                }
+                for prompt in prompts
+            ]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.exception(f'Failed to load MCP prompts for {server_id}: {e}')
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Failed to load MCP prompts: {e}',
+        )
 
 
 ############################

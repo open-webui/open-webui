@@ -49,6 +49,8 @@
 	export let selectedToolIds = [];
 	export let selectedFilterIds = [];
 	export let pendingOAuthTools = [];
+	export let pendingMcpPromptSelection = null;
+	export let activeChatMcpPromptSelection = null;
 
 	export let showCommands = false;
 
@@ -218,6 +220,8 @@
 					bind:autoScroll
 					bind:selectedToolIds
 					bind:selectedFilterIds
+					bind:pendingMcpPromptSelection
+					bind:activeChatMcpPromptSelection
 					bind:imageGenerationEnabled
 					bind:codeInterpreterEnabled
 					bind:webSearchEnabled

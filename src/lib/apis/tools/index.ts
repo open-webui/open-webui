@@ -1,5 +1,18 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
+export type MCPPromptArgument = {
+	name: string;
+	description?: string;
+	required?: boolean;
+};
+
+export type MCPPrompt = {
+	name: string;
+	title?: string;
+	description?: string;
+	arguments?: MCPPromptArgument[];
+};
+
 export const createNewTool = async (token: string, tool: object) => {
 	let error = null;
 
@@ -94,6 +107,47 @@ export const getTools = async (token: string = '') => {
 	}
 
 	return res;
+};
+
+export const getMCPPrompts = async (token: string = '', serverId: string) => {
+	let error = null;
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/tools/mcp/${encodeURIComponent(serverId)}/prompts`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			},
+			credentials: 'include'
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) {
+				const contentType = res.headers.get('content-type') ?? '';
+				if (contentType.includes('application/json')) {
+					throw await res.json();
+				}
+
+				throw {
+					detail: await res.text()
+				};
+			}
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail ?? err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res as { prompts: MCPPrompt[] };
 };
 
 export const getToolList = async (token: string = '') => {

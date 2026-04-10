@@ -147,6 +147,8 @@
 	let selectedToolIds = [];
 	let selectedFilterIds = [];
 	let pendingOAuthTools = [];
+	let pendingMcpPromptSelection = null;
+	let activeChatMcpPromptSelection = null;
 
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
@@ -176,6 +178,15 @@
 	let files = [];
 	let params = {};
 
+	const serializeMcpPromptSelection = (selection) => JSON.stringify(selection ?? null);
+	const cloneMcpPromptSelection = (selection) =>
+		selection ? structuredClone(selection) : undefined;
+	const getCurrentMcpPromptSelection = () =>
+		cloneMcpPromptSelection(pendingMcpPromptSelection ?? activeChatMcpPromptSelection);
+
+	let persistedActiveChatMcpPromptSelection = serializeMcpPromptSelection(null);
+	let persistActiveChatMcpPromptTimeout = null;
+
 	$: if (chatIdProp) {
 		navigateHandler();
 	}
@@ -195,6 +206,9 @@
 		files = [];
 		selectedToolIds = [];
 		selectedFilterIds = [];
+		pendingMcpPromptSelection = null;
+		activeChatMcpPromptSelection = null;
+		persistedActiveChatMcpPromptSelection = serializeMcpPromptSelection(null);
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
 
@@ -230,6 +244,12 @@
 						files = input.files;
 						selectedToolIds = input.selectedToolIds;
 						selectedFilterIds = input.selectedFilterIds;
+						if ('pendingMcpPromptSelection' in input) {
+							pendingMcpPromptSelection = input.pendingMcpPromptSelection;
+						}
+						if ('activeChatMcpPromptSelection' in input) {
+							activeChatMcpPromptSelection = input.activeChatMcpPromptSelection;
+						}
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
@@ -264,6 +284,31 @@
 		saveSessionSelectedModels();
 	}
 
+	$: {
+		const serializedActiveChatMcpPromptSelection = serializeMcpPromptSelection(
+			activeChatMcpPromptSelection
+		);
+
+		if (
+			!loading &&
+			$chatId &&
+			chat &&
+			!$temporaryChatEnabled &&
+			serializedActiveChatMcpPromptSelection !== persistedActiveChatMcpPromptSelection
+		) {
+			if (persistActiveChatMcpPromptTimeout) {
+				clearTimeout(persistActiveChatMcpPromptTimeout);
+			}
+
+			persistActiveChatMcpPromptTimeout = setTimeout(async () => {
+				chat = await updateChatById(localStorage.token, $chatId, {
+					activeMcpPromptSelection: activeChatMcpPromptSelection ?? null
+				});
+				persistedActiveChatMcpPromptSelection = serializedActiveChatMcpPromptSelection;
+			}, 250);
+		}
+	}
+
 	const saveSessionSelectedModels = () => {
 		const selectedModelsString = JSON.stringify(selectedModels);
 		if (
@@ -291,6 +336,7 @@
 		selectedToolIds = [];
 		selectedFilterIds = [];
 		pendingOAuthTools = [];
+		pendingMcpPromptSelection = null;
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
@@ -793,6 +839,12 @@
 						files = input.files;
 						selectedToolIds = input.selectedToolIds;
 						selectedFilterIds = input.selectedFilterIds;
+						if ('pendingMcpPromptSelection' in input) {
+							pendingMcpPromptSelection = input.pendingMcpPromptSelection;
+						}
+						if ('activeChatMcpPromptSelection' in input) {
+							activeChatMcpPromptSelection = input.activeChatMcpPromptSelection;
+						}
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
@@ -817,6 +869,9 @@
 				$socket?.off('events', chatEventHandler);
 				audioQueueInstance?.destroy();
 				audioQueue.set(null);
+				if (persistActiveChatMcpPromptTimeout) {
+					clearTimeout(persistActiveChatMcpPromptTimeout);
+				}
 			} catch (e) {
 				console.error(e);
 			}
@@ -1191,6 +1246,8 @@
 		autoScroll = true;
 
 		resetInput();
+		activeChatMcpPromptSelection = null;
+		persistedActiveChatMcpPromptSelection = serializeMcpPromptSelection(null);
 		await chatId.set('');
 		await chatTitle.set('');
 
@@ -1348,6 +1405,10 @@
 					(chatContent?.history ?? undefined) !== undefined
 						? chatContent.history
 						: convertMessagesToHistory(chatContent.messages);
+				activeChatMcpPromptSelection = chatContent?.activeMcpPromptSelection ?? null;
+				persistedActiveChatMcpPromptSelection = serializeMcpPromptSelection(
+					activeChatMcpPromptSelection
+				);
 
 				chatTitle.set(chatContent.title);
 
@@ -1500,8 +1561,12 @@
 					messages: messages,
 					history: history,
 					params: params,
-					files: chatFiles
+					files: chatFiles,
+					activeMcpPromptSelection: activeChatMcpPromptSelection ?? null
 				});
+				persistedActiveChatMcpPromptSelection = serializeMcpPromptSelection(
+					activeChatMcpPromptSelection
+				);
 
 				currentChatPage.set(1);
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
@@ -1823,6 +1888,7 @@
 
 	const submitPrompt = async (inputContent, inputFiles) => {
 		const _files = structuredClone(inputFiles);
+		const mcpPromptSelection = getCurrentMcpPromptSelection();
 
 		chatFiles.push(
 			..._files.filter(
@@ -1846,8 +1912,11 @@
 			content: inputContent,
 			files: _files.length > 0 ? _files : undefined,
 			timestamp: Math.floor(Date.now() / 1000), // Unix epoch
-			models: selectedModels
+			models: selectedModels,
+			...(mcpPromptSelection ? { mcpPromptSelection } : {})
 		};
+
+		pendingMcpPromptSelection = null;
 
 		// Add message to history and Set currentId to messageId
 		history.messages[userMessageId] = userMessage;
@@ -2152,6 +2221,13 @@
 	) => {
 		const responseMessage = _history.messages[responseMessageId];
 		const userMessage = _history.messages[responseMessage.parentId];
+		const mcpPromptSelection = userMessage?.mcpPromptSelection
+			? {
+					server_id: userMessage.mcpPromptSelection.serverId,
+					name: userMessage.mcpPromptSelection.name,
+					arguments: userMessage.mcpPromptSelection.arguments ?? {}
+				}
+			: undefined;
 
 		const chatMessageFiles = _messages
 			.filter((message) => message.files)
@@ -2263,6 +2339,13 @@
 			}
 		}
 
+		if (mcpPromptSelection) {
+			const selectedMcpToolId = `server:mcp:${mcpPromptSelection.server_id}`;
+			if (!toolIds.includes(selectedMcpToolId)) {
+				toolIds.push(selectedMcpToolId);
+			}
+		}
+
 		// Parse skill mentions (<$skillId|label>) from user messages
 		const skillMentionRegex = /<\$([^|>]+)\|?[^>]*>/g;
 		const skillIds = [];
@@ -2347,6 +2430,7 @@
 				...(messageIdsMap ? { message_ids: messageIdsMap } : {}),
 				parent_id: userMessage?.parentId ?? null,
 				user_message: userMessage,
+				mcp_prompt_selection: mcpPromptSelection,
 
 				background_tasks: {
 					...(!$temporaryChatEnabled && !_chatId && (userMessage?.parentId ?? null) === null
@@ -2514,6 +2598,7 @@
 	const submitMessage = async (parentId, prompt) => {
 		let userPrompt = prompt;
 		let userMessageId = uuidv4();
+		const mcpPromptSelection = getCurrentMcpPromptSelection();
 
 		let userMessage = {
 			id: userMessageId,
@@ -2522,8 +2607,11 @@
 			role: 'user',
 			content: userPrompt,
 			models: selectedModels,
-			timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+			timestamp: Math.floor(Date.now() / 1000), // Unix epoch
+			...(mcpPromptSelection ? { mcpPromptSelection } : {})
 		};
+
+		pendingMcpPromptSelection = null;
 
 		if (parentId !== null) {
 			history.messages[parentId].childrenIds = [
@@ -2675,10 +2763,14 @@
 					params: params,
 					history: history,
 					messages: createMessagesList(history, history.currentId),
+					activeMcpPromptSelection: activeChatMcpPromptSelection ?? null,
 					tags: [],
 					timestamp: Date.now()
 				},
 				$selectedFolder?.id
+			);
+			persistedActiveChatMcpPromptSelection = serializeMcpPromptSelection(
+				activeChatMcpPromptSelection
 			);
 
 			_chatId = chat.id;
@@ -2709,8 +2801,12 @@
 					history: history,
 					messages: createMessagesList(history, history.currentId),
 					params: params,
-					files: chatFiles
+					files: chatFiles,
+					activeMcpPromptSelection: activeChatMcpPromptSelection ?? null
 				});
+				persistedActiveChatMcpPromptSelection = serializeMcpPromptSelection(
+					activeChatMcpPromptSelection
+				);
 			}
 		}
 	};
@@ -2880,6 +2976,7 @@
 										params: params,
 										history: history,
 										messages: messages,
+										activeMcpPromptSelection: activeChatMcpPromptSelection ?? null,
 										timestamp: Date.now()
 									},
 									null
@@ -2949,6 +3046,8 @@
 									bind:autoScroll
 									bind:selectedToolIds
 									bind:selectedFilterIds
+									bind:pendingMcpPromptSelection
+									bind:activeChatMcpPromptSelection
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
 									{pendingOAuthTools}
@@ -3030,6 +3129,8 @@
 									bind:autoScroll
 									bind:selectedToolIds
 									bind:selectedFilterIds
+									bind:pendingMcpPromptSelection
+									bind:activeChatMcpPromptSelection
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled

@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from typing import Optional
-from contextlib import AsyncExitStack
+from contextlib import AsyncExitStack, asynccontextmanager
 
 log = logging.getLogger(__name__)
 
@@ -53,25 +53,49 @@ class MCPClient:
         self.session: Optional[ClientSession] = None
         self.exit_stack = None
 
+    async def _open_session(self, exit_stack: AsyncExitStack, url: str, headers: Optional[dict] = None):
+        streams_context = streamablehttp_client(
+            url,
+            headers=headers,
+            httpx_client_factory=create_httpx_client
+            if AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
+            else create_insecure_httpx_client,
+        )
+
+        transport = await exit_stack.enter_async_context(streams_context)
+        read_stream, write_stream, _ = transport
+
+        session_context = ClientSession(read_stream, write_stream)
+        session = await exit_stack.enter_async_context(session_context)
+        with anyio.fail_after(10):
+            await session.initialize()
+
+        return session
+
+    @asynccontextmanager
+    async def temporary_connection(self, url: str, headers: Optional[dict] = None):
+        """Open an MCP session and close it within the same task.
+
+        Some MCP SDK streamable HTTP cleanup paths are task-sensitive on
+        Python 3.11+/anyio. For short-lived one-shot operations such as
+        server verification and prompt discovery, keeping connect/close
+        inside the same async context avoids cross-task shutdown errors.
+        """
+        previous_session = self.session
+        previous_exit_stack = self.exit_stack
+
+        async with AsyncExitStack() as exit_stack:
+            self.session = await self._open_session(exit_stack, url, headers=headers)
+            try:
+                yield self
+            finally:
+                self.session = previous_session
+                self.exit_stack = previous_exit_stack
+
     async def connect(self, url: str, headers: Optional[dict] = None):
         async with AsyncExitStack() as exit_stack:
             try:
-                self._streams_context = streamablehttp_client(
-                    url,
-                    headers=headers,
-                    httpx_client_factory=create_httpx_client
-                    if AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
-                    else create_insecure_httpx_client,
-                )
-
-                transport = await exit_stack.enter_async_context(self._streams_context)
-                read_stream, write_stream, _ = transport
-
-                self._session_context = ClientSession(read_stream, write_stream)  # pylint: disable=W0201
-
-                self.session = await exit_stack.enter_async_context(self._session_context)
-                with anyio.fail_after(10):
-                    await self.session.initialize()
+                self.session = await self._open_session(exit_stack, url, headers=headers)
                 self.exit_stack = exit_stack.pop_all()
             except Exception as e:
                 await asyncio.shield(self.disconnect())
@@ -97,6 +121,37 @@ class MCPClient:
             tool_specs.append({'name': name, 'description': description, 'parameters': inputSchema})
 
         return tool_specs
+
+    async def list_prompts(self, cursor: Optional[str] = None) -> list[dict]:
+        if not self.session:
+            raise RuntimeError('MCP client is not connected.')
+
+        prompts = []
+        next_cursor = cursor
+
+        while True:
+            result = await self.session.list_prompts(cursor=next_cursor)
+            if not result:
+                raise Exception('No result returned from MCP list_prompts call.')
+
+            result_dict = result.model_dump(mode='json')
+            prompts.extend(result_dict.get('prompts', []))
+
+            next_cursor = result_dict.get('nextCursor')
+            if not next_cursor:
+                break
+
+        return prompts
+
+    async def get_prompt(self, name: str, arguments: Optional[dict] = None) -> dict:
+        if not self.session:
+            raise RuntimeError('MCP client is not connected.')
+
+        result = await self.session.get_prompt(name, arguments=arguments)
+        if not result:
+            raise Exception('No result returned from MCP get_prompt call.')
+
+        return result.model_dump(mode='json')
 
     async def call_tool(self, function_name: str, function_args: dict) -> Optional[dict]:
         if not self.session:
@@ -170,6 +225,12 @@ class MCPClient:
             # different task").  Swallowing the error here prevents the
             # orphaned coroutines from spinning at 100 % CPU.
             log.debug('MCPClient.disconnect() suppressed RuntimeError: %s', exc)
+        except BaseExceptionGroup as exc:
+            # Python 3.11+ may wrap the same streamable_http cleanup
+            # failures in a BaseExceptionGroup instead of a bare
+            # RuntimeError. Cleanup should stay best-effort and never
+            # convert a successful MCP request into a 500 response.
+            log.debug('MCPClient.disconnect() suppressed BaseExceptionGroup: %s', exc)
         except Exception as exc:
             log.debug('MCPClient.disconnect() error: %s', exc)
 

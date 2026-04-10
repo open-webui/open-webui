@@ -429,8 +429,8 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
                             headers = {}
                         headers.update(form_data.headers)
 
-                    await client.connect(form_data.url, headers=headers)
-                    specs = await client.list_tool_specs()
+                    async with client.temporary_connection(form_data.url, headers=headers):
+                        specs = await client.list_tool_specs()
                     return {
                         'status': True,
                         'specs': specs,
@@ -441,9 +441,6 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
                         status_code=400,
                         detail=f'Failed to create MCP client',
                     )
-                finally:
-                    if client:
-                        await client.disconnect()
         else:  # openapi
             token = None
             headers = None
