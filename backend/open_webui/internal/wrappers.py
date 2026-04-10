@@ -78,7 +78,6 @@ def register_connection(db_url: str, connect_args: dict | None = None):
                     connection["sslrootcert"] = connect_args["sslrootcert"]
 
             # Use our custom database class that supports reconnection
-            log.debug(f"Peewee connection params (password redacted): { {k: ('***' if k == 'password' else v) for k, v in connection.items()} }")
             db = ReconnectingPostgresqlDatabase(**connection)
             db.connect(reuse_if_open=True)
         elif isinstance(db, SqliteDatabase):
