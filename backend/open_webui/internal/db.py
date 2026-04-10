@@ -74,7 +74,17 @@ class RDSIAMConfig:
         else:
             log.warning("Unable to verify CA file path; using sslmode=require without certificate verification.")
 
-        self.client = boto3.client("rds", region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1"))
+        # RDS host format: {db}.{account}.{region}.rds.amazonaws.com
+        aws_region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
+        host_parts = db_host.split(".")
+        if len(host_parts) >= 4 and host_parts[-3] == "rds" and host_parts[-2] == "amazonaws":
+            if (host_region := host_parts[-4]) != aws_region:
+                raise ValueError(
+                    f"AWS_DEFAULT_REGION '{aws_region}' does not match the region inferred from "
+                    f"DATABASE_HOST '{db_host}' ('{host_region}'). "
+                    f"Set AWS_DEFAULT_REGION={host_region} to match your RDS instance."
+                )
+        self.client = boto3.client("rds", region_name=aws_region)
         self.token = self.get_token()
         self.engine = self.create_engine()
 
