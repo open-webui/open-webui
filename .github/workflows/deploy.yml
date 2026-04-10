@@ -1,0 +1,23 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, Linux, X64]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Sync source to server path
+        run: |
+          rm -rf /opt/build/open-webui/*
+          cp -a . /opt/build/open-webui/
+
+      - name: Build and restart
+        working-directory: /opt/mts
+        run: |
+          docker compose build openwebui
+          docker compose up -d openwebui
