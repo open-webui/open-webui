@@ -1084,6 +1084,8 @@ async def pin_chat_by_id(id: str, user=Depends(get_verified_user), db: Session =
     chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
         chat = Chats.toggle_chat_pinned_by_id(id, db=db)
+        if chat is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
         return _normalize_chat_for_response(chat)
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())

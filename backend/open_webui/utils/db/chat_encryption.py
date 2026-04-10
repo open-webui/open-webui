@@ -12,6 +12,7 @@ from open_webui.env import DATABASE_CHAT_ENCRYPTION_KEY
 log = logging.getLogger(__name__)
 
 WEBUI_CHAT_ENCRYPTION_CIPHER = None
+STRUCTURED_PAYLOAD_PREFIX = '__owui_json__:'
 
 
 # Initialization checks
@@ -32,7 +33,10 @@ def encrypt(data):
     if data is None:
         return None
     try:
-        val = json.dumps(data) if isinstance(data, dict) else str(data)
+        if isinstance(data, (dict, list)):
+            val = f"{STRUCTURED_PAYLOAD_PREFIX}{json.dumps(data)}"
+        else:
+            val = str(data)
         encrypted_data = WEBUI_CHAT_ENCRYPTION_CIPHER.encrypt(val.encode()).decode()
         return encrypted_data
     except Exception as e:
@@ -46,10 +50,9 @@ def decrypt(enc_val, plain_val):
         return plain_val
     try:
         decrypted = WEBUI_CHAT_ENCRYPTION_CIPHER.decrypt(enc_val.encode()).decode()
-        try:
-            return json.loads(decrypted)
-        except json.JSONDecodeError:
-            return decrypted
+        if decrypted.startswith(STRUCTURED_PAYLOAD_PREFIX):
+            return json.loads(decrypted[len(STRUCTURED_PAYLOAD_PREFIX):])
+        return decrypted
     except Exception:
         return enc_val
 
