@@ -877,7 +877,8 @@ async def add_user(
                 db=db,
             )
 
-            token = create_token(data={'id': user.id})
+            expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
+            token = create_token(data={'id': user.id}, expires_delta=expires_delta)
             return {
                 'token': token,
                 'token_type': 'Bearer',
