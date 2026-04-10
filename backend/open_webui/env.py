@@ -592,6 +592,22 @@ if LICENSE_PUBLIC_KEY:
 
 
 ####################################
+# DATABASE_CHAT_ENCRYPTION_KEY
+####################################
+DATABASE_CHAT_ENCRYPTION_KEY = os.environ.get(
+    'DATABASE_CHAT_ENCRYPTION_KEY',
+    os.environ.get('WEBUI_CHAT_ENCRYPTION_KEY'),
+)
+DATABASE_CHAT_ENCRYPT_OLD_CHATS = (
+    os.environ.get(
+        'DATABASE_CHAT_ENCRYPT_OLD_CHATS',
+        os.environ.get('WEBUI_CHAT_ENCRYPT_OLD_CHATS', 'False'),
+    ).lower()
+    == 'true'
+)
+
+
+####################################
 # MODELS
 ####################################
 

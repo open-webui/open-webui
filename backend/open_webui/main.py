@@ -515,6 +515,8 @@ from open_webui.env import (
     LOG_FORMAT,
     # OAuth Back-Channel Logout
     ENABLE_OAUTH_BACKCHANNEL_LOGOUT,
+    DATABASE_CHAT_ENCRYPTION_KEY,
+    DATABASE_CHAT_ENCRYPT_OLD_CHATS,
 )
 
 

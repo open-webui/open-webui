@@ -1,11 +1,13 @@
 import json
 import time
 import uuid
+from copy import deepcopy
 from typing import Any, Optional
 
 from sqlalchemy.orm import Session
 from open_webui.internal.db import Base, get_db_context
 from open_webui.utils.response import normalize_usage
+from open_webui.utils.db.chat_encryption import decrypt, encrypt
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
@@ -46,6 +48,41 @@ def get_usage(data: dict) -> Optional[dict]:
     """Extract and normalize usage from message data."""
     usage = data.get('usage') or (data.get('info') or {}).get('usage')
     return normalize_usage(usage) if usage else None
+
+
+def _transform_nested_text_fields(value, transform):
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key == 'text' and isinstance(item, str):
+                value[key] = transform(item)
+            else:
+                _transform_nested_text_fields(item, transform)
+    elif isinstance(value, list):
+        for item in value:
+            _transform_nested_text_fields(item, transform)
+    return value
+
+
+def _encrypt_message_field(value: Any) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return encrypt(value)
+    if isinstance(value, (dict, list)):
+        copied = deepcopy(value)
+        return _transform_nested_text_fields(copied, encrypt)
+    return value
+
+
+def _decrypt_message_field(value: Any) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return decrypt(value, value)
+    if isinstance(value, (dict, list)):
+        copied = deepcopy(value)
+        return _transform_nested_text_fields(copied, lambda s: decrypt(s, s))
+    return value
 
 
 ####################
@@ -129,6 +166,12 @@ class ChatMessageModel(BaseModel):
 
 
 class ChatMessageTable:
+    def _to_decrypted_model(self, message: ChatMessage) -> ChatMessageModel:
+        model = ChatMessageModel.model_validate(message)
+        model.content = _decrypt_message_field(model.content)
+        model.output = _decrypt_message_field(model.output)
+        return model
+
     def upsert_message(
         self,
         message_id: str,
@@ -153,9 +196,9 @@ class ChatMessageTable:
                 if 'parent_id' in data:
                     existing.parent_id = data.get('parent_id') or data.get('parentId')
                 if 'content' in data:
-                    existing.content = data.get('content')
+                    existing.content = _encrypt_message_field(data.get('content'))
                 if 'output' in data:
-                    existing.output = data.get('output')
+                    existing.output = _encrypt_message_field(data.get('output'))
                 if 'model_id' in data or 'model' in data:
                     existing.model_id = data.get('model_id') or data.get('model')
                 if 'files' in data:
@@ -180,7 +223,7 @@ class ChatMessageTable:
                 existing.updated_at = now
                 db.commit()
                 db.refresh(existing)
-                return ChatMessageModel.model_validate(existing)
+                return self._to_decrypted_model(existing)
             else:
                 # Insert new
                 # Extract and normalize usage
@@ -191,8 +234,8 @@ class ChatMessageTable:
                     user_id=user_id,
                     role=data.get('role', 'user'),
                     parent_id=data.get('parent_id') or data.get('parentId'),
-                    content=data.get('content'),
-                    output=data.get('output'),
+                    content=_encrypt_message_field(data.get('content')),
+                    output=_encrypt_message_field(data.get('output')),
                     model_id=data.get('model_id') or data.get('model'),
                     files=data.get('files'),
                     sources=data.get('sources'),
@@ -207,17 +250,17 @@ class ChatMessageTable:
                 db.add(message)
                 db.commit()
                 db.refresh(message)
-                return ChatMessageModel.model_validate(message)
+                return self._to_decrypted_model(message)
 
     def get_message_by_id(self, id: str, db: Optional[Session] = None) -> Optional[ChatMessageModel]:
         with get_db_context(db) as db:
             message = db.get(ChatMessage, id)
-            return ChatMessageModel.model_validate(message) if message else None
+            return self._to_decrypted_model(message) if message else None
 
     def get_messages_by_chat_id(self, chat_id: str, db: Optional[Session] = None) -> list[ChatMessageModel]:
         with get_db_context(db) as db:
             messages = db.query(ChatMessage).filter_by(chat_id=chat_id).order_by(ChatMessage.created_at.asc()).all()
-            return [ChatMessageModel.model_validate(message) for message in messages]
+            return [self._to_decrypted_model(message) for message in messages]
 
     def get_messages_by_user_id(
         self,
@@ -235,7 +278,7 @@ class ChatMessageTable:
                 .limit(limit)
                 .all()
             )
-            return [ChatMessageModel.model_validate(message) for message in messages]
+            return [self._to_decrypted_model(message) for message in messages]
 
     def get_messages_by_model_id(
         self,
@@ -253,7 +296,7 @@ class ChatMessageTable:
             if end_date:
                 query = query.filter(ChatMessage.created_at <= end_date)
             messages = query.order_by(ChatMessage.created_at.desc()).offset(skip).limit(limit).all()
-            return [ChatMessageModel.model_validate(message) for message in messages]
+            return [self._to_decrypted_model(message) for message in messages]
 
     def get_chat_ids_by_model_id(
         self,
