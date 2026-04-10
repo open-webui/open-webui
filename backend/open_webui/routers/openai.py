@@ -1171,6 +1171,12 @@ async def generate_chat_completion(
                     part.get('text', '') for part in message['content'] if part.get('type') in ('input_text', 'text')
                 )
 
+    # Always request usage data in streaming responses for analytics token tracking.
+    # Without this, providers like AWS Bedrock don't include token counts unless
+    # the client explicitly opts in via stream_options.
+    if payload.get('stream', False) and 'stream_options' not in payload and not is_responses:
+        payload['stream_options'] = {'include_usage': True}
+
     payload = json.dumps(payload)
 
     r = None
