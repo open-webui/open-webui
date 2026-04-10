@@ -3,21 +3,55 @@ name: Build and Deploy
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: true
 
 jobs:
   deploy:
     runs-on: [self-hosted, Linux, X64]
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v5
 
-      - name: Sync source to server path
+      - name: Validate runner prerequisites
+        shell: bash
         run: |
-          rm -rf /opt/build/open-webui/*
-          cp -a . /opt/build/open-webui/
+          command -v docker >/dev/null 2>&1 || {
+            echo "docker is required on the self-hosted runner" >&2
+            exit 1
+          }
+          test -f /opt/mts/docker-compose.yml || {
+            echo "/opt/mts/docker-compose.yml was not found on the server" >&2
+            exit 1
+          }
+          mkdir -p /opt/build/open-webui
+
+      - name: Sync source to server path
+        shell: bash
+        run: |
+          find /opt/build/open-webui -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+          tar --exclude='.git' -cf - . | tar -xf - -C /opt/build/open-webui
+
+      - name: Validate compose
+        working-directory: /opt/mts
+        shell: bash
+        run: |
+          docker compose config >/dev/null
 
       - name: Build and restart
         working-directory: /opt/mts
+        shell: bash
         run: |
-          docker compose build openwebui
+          docker compose build --pull openwebui
           docker compose up -d openwebui
+
+      - name: Show service status
+        working-directory: /opt/mts
+        shell: bash
+        run: |
+          docker compose ps openwebui
