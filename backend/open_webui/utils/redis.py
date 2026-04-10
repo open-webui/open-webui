@@ -193,7 +193,7 @@ def get_redis_connection(
 
     connect_timeout_kwargs = (
         {'socket_connect_timeout': REDIS_SOCKET_CONNECT_TIMEOUT}
-        if REDIS_SOCKET_CONNECT_TIMEOUT
+        if REDIS_SOCKET_CONNECT_TIMEOUT is not None
         else {}
     )
 
