@@ -435,6 +435,20 @@ REDIS_SOCKET_KEEPALIVE = (
     os.environ.get('REDIS_SOCKET_KEEPALIVE', 'False').lower() == 'true'
 )
 
+# How often (in seconds) redis-py should PING an idle pooled connection
+# before reusing it. Opt-in: defaults to unset (empty string) so behavior
+# is unchanged for existing deployments. When set, should be shorter than
+# the Redis server `timeout` setting and any firewall/LB idle timeout on
+# the path to Redis, so stale connections are detected before a real
+# command lands on them. Set to 0 or empty to disable.
+REDIS_HEALTH_CHECK_INTERVAL = os.environ.get('REDIS_HEALTH_CHECK_INTERVAL', '')
+try:
+    REDIS_HEALTH_CHECK_INTERVAL = int(REDIS_HEALTH_CHECK_INTERVAL)
+    if REDIS_HEALTH_CHECK_INTERVAL <= 0:
+        REDIS_HEALTH_CHECK_INTERVAL = None
+except ValueError:
+    REDIS_HEALTH_CHECK_INTERVAL = None
+
 REDIS_RECONNECT_DELAY = os.environ.get('REDIS_RECONNECT_DELAY', '')
 
 if REDIS_RECONNECT_DELAY == '':

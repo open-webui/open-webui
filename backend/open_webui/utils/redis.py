@@ -9,6 +9,7 @@ import redis
 
 from open_webui.env import (
     REDIS_CLUSTER,
+    REDIS_HEALTH_CHECK_INTERVAL,
     REDIS_SOCKET_CONNECT_TIMEOUT,
     REDIS_SOCKET_KEEPALIVE,
     REDIS_SENTINEL_HOSTS,
@@ -202,6 +203,12 @@ def get_redis_connection(
         {'socket_keepalive': True} if REDIS_SOCKET_KEEPALIVE else {}
     )
 
+    health_check_kwargs = (
+        {'health_check_interval': REDIS_HEALTH_CHECK_INTERVAL}
+        if REDIS_HEALTH_CHECK_INTERVAL
+        else {}
+    )
+
     if async_mode:
         import redis.asyncio as redis
 
@@ -217,6 +224,7 @@ def get_redis_connection(
                 decode_responses=decode_responses,
                 socket_connect_timeout=REDIS_SOCKET_CONNECT_TIMEOUT,
                 **keepalive_kwargs,
+                **health_check_kwargs,
             )
             connection = SentinelRedisProxy(
                 sentinel,
@@ -231,6 +239,7 @@ def get_redis_connection(
                 decode_responses=decode_responses,
                 **connect_timeout_kwargs,
                 **keepalive_kwargs,
+                **health_check_kwargs,
             )
         elif redis_url:
             connection = redis.from_url(
@@ -238,6 +247,7 @@ def get_redis_connection(
                 decode_responses=decode_responses,
                 **connect_timeout_kwargs,
                 **keepalive_kwargs,
+                **health_check_kwargs,
             )
     else:
         import redis
@@ -253,6 +263,7 @@ def get_redis_connection(
                 decode_responses=decode_responses,
                 socket_connect_timeout=REDIS_SOCKET_CONNECT_TIMEOUT,
                 **keepalive_kwargs,
+                **health_check_kwargs,
             )
             connection = SentinelRedisProxy(
                 sentinel,
@@ -267,6 +278,7 @@ def get_redis_connection(
                 decode_responses=decode_responses,
                 **connect_timeout_kwargs,
                 **keepalive_kwargs,
+                **health_check_kwargs,
             )
         elif redis_url:
             connection = redis.Redis.from_url(
@@ -274,6 +286,7 @@ def get_redis_connection(
                 decode_responses=decode_responses,
                 **connect_timeout_kwargs,
                 **keepalive_kwargs,
+                **health_check_kwargs,
             )
 
     _CONNECTION_CACHE[cache_key] = connection
