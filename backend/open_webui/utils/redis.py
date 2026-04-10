@@ -191,6 +191,12 @@ def get_redis_connection(
 
     connection = None
 
+    connect_timeout_kwargs = (
+        {'socket_connect_timeout': REDIS_SOCKET_CONNECT_TIMEOUT}
+        if REDIS_SOCKET_CONNECT_TIMEOUT
+        else {}
+    )
+
     if async_mode:
         import redis.asyncio as redis
 
@@ -214,9 +220,17 @@ def get_redis_connection(
         elif redis_cluster:
             if not redis_url:
                 raise ValueError('Redis URL must be provided for cluster mode.')
-            return redis.cluster.RedisCluster.from_url(redis_url, decode_responses=decode_responses)
+            return redis.cluster.RedisCluster.from_url(
+                redis_url,
+                decode_responses=decode_responses,
+                **connect_timeout_kwargs,
+            )
         elif redis_url:
-            connection = redis.from_url(redis_url, decode_responses=decode_responses)
+            connection = redis.from_url(
+                redis_url,
+                decode_responses=decode_responses,
+                **connect_timeout_kwargs,
+            )
     else:
         import redis
 
@@ -239,9 +253,17 @@ def get_redis_connection(
         elif redis_cluster:
             if not redis_url:
                 raise ValueError('Redis URL must be provided for cluster mode.')
-            return redis.cluster.RedisCluster.from_url(redis_url, decode_responses=decode_responses)
+            return redis.cluster.RedisCluster.from_url(
+                redis_url,
+                decode_responses=decode_responses,
+                **connect_timeout_kwargs,
+            )
         elif redis_url:
-            connection = redis.Redis.from_url(redis_url, decode_responses=decode_responses)
+            connection = redis.Redis.from_url(
+                redis_url,
+                decode_responses=decode_responses,
+                **connect_timeout_kwargs,
+            )
 
     _CONNECTION_CACHE[cache_key] = connection
     return connection
