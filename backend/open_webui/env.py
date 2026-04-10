@@ -426,6 +426,15 @@ try:
 except ValueError:
     REDIS_SOCKET_CONNECT_TIMEOUT = None
 
+# Whether to enable TCP SO_KEEPALIVE on Redis client sockets. Opt-in:
+# defaults to off so behavior is unchanged for existing deployments. When
+# enabled, the kernel sends TCP keepalive probes on idle connections so
+# half-closed sockets (e.g. after a silent firewall/LB reset or a NIC
+# flap) are detected before the next command lands on them.
+REDIS_SOCKET_KEEPALIVE = (
+    os.environ.get('REDIS_SOCKET_KEEPALIVE', 'False').lower() == 'true'
+)
+
 REDIS_RECONNECT_DELAY = os.environ.get('REDIS_RECONNECT_DELAY', '')
 
 if REDIS_RECONNECT_DELAY == '':

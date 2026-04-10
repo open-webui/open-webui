@@ -10,6 +10,7 @@ import redis
 from open_webui.env import (
     REDIS_CLUSTER,
     REDIS_SOCKET_CONNECT_TIMEOUT,
+    REDIS_SOCKET_KEEPALIVE,
     REDIS_SENTINEL_HOSTS,
     REDIS_SENTINEL_MAX_RETRY_COUNT,
     REDIS_SENTINEL_PORT,
@@ -197,6 +198,10 @@ def get_redis_connection(
         else {}
     )
 
+    keepalive_kwargs = (
+        {'socket_keepalive': True} if REDIS_SOCKET_KEEPALIVE else {}
+    )
+
     if async_mode:
         import redis.asyncio as redis
 
@@ -211,6 +216,7 @@ def get_redis_connection(
                 password=redis_config['password'],
                 decode_responses=decode_responses,
                 socket_connect_timeout=REDIS_SOCKET_CONNECT_TIMEOUT,
+                **keepalive_kwargs,
             )
             connection = SentinelRedisProxy(
                 sentinel,
@@ -224,12 +230,14 @@ def get_redis_connection(
                 redis_url,
                 decode_responses=decode_responses,
                 **connect_timeout_kwargs,
+                **keepalive_kwargs,
             )
         elif redis_url:
             connection = redis.from_url(
                 redis_url,
                 decode_responses=decode_responses,
                 **connect_timeout_kwargs,
+                **keepalive_kwargs,
             )
     else:
         import redis
@@ -244,6 +252,7 @@ def get_redis_connection(
                 password=redis_config['password'],
                 decode_responses=decode_responses,
                 socket_connect_timeout=REDIS_SOCKET_CONNECT_TIMEOUT,
+                **keepalive_kwargs,
             )
             connection = SentinelRedisProxy(
                 sentinel,
@@ -257,12 +266,14 @@ def get_redis_connection(
                 redis_url,
                 decode_responses=decode_responses,
                 **connect_timeout_kwargs,
+                **keepalive_kwargs,
             )
         elif redis_url:
             connection = redis.Redis.from_url(
                 redis_url,
                 decode_responses=decode_responses,
                 **connect_timeout_kwargs,
+                **keepalive_kwargs,
             )
 
     _CONNECTION_CACHE[cache_key] = connection
