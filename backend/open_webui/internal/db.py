@@ -145,7 +145,7 @@ class RDSIAMConfig:
 
     def check_token(self, dialect, connection_record, connection_args, connection_kwargs) -> None:
         now = datetime.now(tz=timezone.utc)
-        if not self.token or now >= self.token.expiration:
+        if not self.token or now >= self.token.expiration - timedelta(seconds=60):
             self.token = self.get_token()
         connection_kwargs["password"] = self.token.token.get_secret_value()
 
