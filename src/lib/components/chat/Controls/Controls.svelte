@@ -174,26 +174,24 @@
 				buttonClassName="w-full"
 			>
 				<div class="text-sm mt-1.5" slot="content">
-					<div class="w-full rounded-lg overflow-hidden border border-gray-700">
-						<div class="grid grid-cols-2 bg-gray-700 px-3 py-1.5">
-							<span class="text-xs font-semibold uppercase tracking-wider text-gray-300">Entity Type</span>
-							<span class="text-xs font-semibold uppercase tracking-wider text-gray-300 text-right">Detection</span>
-						</div>
-						{#each ENTITY_TYPES as entity, i}
-							<div class="grid grid-cols-2 items-center px-3 py-2
-									{i % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}
-									border-b border-gray-700 last:border-0">
-								<span class="text-xs text-white">{entity.label}</span>
-								<div class="flex justify-end">
+					<div class="flex flex-col gap-0.5">
+						{#each ENTITY_TYPES as entity}
+							<div class="py-0.5 flex w-full justify-between">
+								<div class="self-center text-xs">
+									{entity.label}
+								</div>
+								<div class="flex items-center">
 									<select
 										value={entityToggles[entity.key] ? 'on' : 'off'}
 										on:change={(e) => onEntityChange(entity.key, e.currentTarget.value)}
-										class="bg-gray-700 text-white text-xs rounded px-2 py-1
-											   border border-gray-600 focus:outline-none focus:border-blue-500
-											   cursor-pointer min-w-[70px]"
+										class="p-1 px-3 text-xs flex rounded-sm transition
+											   dark:bg-gray-850 dark:text-gray-200 dark:hover:bg-gray-800
+											   bg-white text-gray-700 hover:bg-gray-100
+											   border border-gray-200 dark:border-gray-700
+											   focus:outline-none cursor-pointer"
 									>
-										<option value="on">On</option>
-										<option value="off">Off</option>
+										<option value="on">{$i18n.t('On')}</option>
+										<option value="off">{$i18n.t('Off')}</option>
 									</select>
 								</div>
 							</div>
