@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- 🛡️ **Redis timeout consistency.** Redis connections now honor the "REDIS_SOCKET_CONNECT_TIMEOUT" setting across standard and cluster setups, helping workers fail faster when Redis is unreachable. [#23572](https://github.com/open-webui/open-webui/pull/23572)
 - 📋 **Task management tool.** AI models can now create, update, and track tasks within a chat conversation, breaking down complex requests into manageable steps with real-time status updates. [Commit](https://github.com/open-webui/open-webui/commit/bcb71bb5206ac01d97a39fde8ecf0e0541dde636)
+- 🛡️ **Redis timeout consistency.** Redis connections now honor the "REDIS_SOCKET_CONNECT_TIMEOUT" setting across standard and cluster setups, helping workers fail faster when Redis is unreachable. [#23572](https://github.com/open-webui/open-webui/pull/23572)
 - 🤖 **Scheduled chat automations.** Users can now create, schedule, run, and manage recurring automations that execute prompts automatically with selected models and optional terminal context, while administrators can control access through user and group permissions and users can manage each automation from a dedicated editor page with execution logs, direct run controls, and longer run-history browsing via infinite-scroll logs. [#23303](https://github.com/open-webui/open-webui/pull/23303), [Commit](https://github.com/open-webui/open-webui/commit/5a2ff8b2e5b6f55a20f7ed491f818490eb535ea7), [Commit](https://github.com/open-webui/open-webui/commit/d30a0531d4add045c21a2368d6321a9b1906865f), [Commit](https://github.com/open-webui/open-webui/commit/bae5ff938ac88a3a647cc31ca8db1101015ae18b)
 - 🗑️ **Admin model deletion.** Administrators can now delete Ollama models directly from the model selector menu, making it easier to clean up unused or unwanted models. [Commit](https://github.com/open-webui/open-webui/commit/2388dd7dc3530b5dd5419c5d0bb1bcdcb7544099)
 - 🤖 **Ollama responses support.** The Ollama proxy now supports the Responses API, letting clients use "/v1/responses" directly with Ollama-hosted models through Open WebUI. [#23483](https://github.com/open-webui/open-webui/pull/23483)
@@ -89,8 +89,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- 🔑 **User invite token expiry.** New user invite logins now respect the configured "JWT_EXPIRES_IN" setting, so signup tokens expire as expected instead of using the default lifetime. [#23576](https://github.com/open-webui/open-webui/pull/23576)
 - 🔒 **SCIM token checks.** SCIM authentication now compares tokens in a safer way, helping prevent timing-based token guessing attacks. [#23577](https://github.com/open-webui/open-webui/pull/23577)
+- 🔑 **User invite token expiry.** New user invite logins now respect the configured "JWT_EXPIRES_IN" setting, so signup tokens expire as expected instead of using the default lifetime. [#23576](https://github.com/open-webui/open-webui/pull/23576)
 - 🖼️ **ComfyUI request hangs.** Concurrent image generation and editing requests to ComfyUI now complete reliably instead of getting stuck when the same user starts multiple requests at once. [#23592](https://github.com/open-webui/open-webui/pull/23592), [#23591](https://github.com/open-webui/open-webui/issues/23591)
 - 📣 **Channel message lookups.** Channel message details and pinning now work more reliably when the sender account is missing, avoiding failures in those views. [Commit](https://github.com/open-webui/open-webui/commit/6acaaea59a50ec26da03e6144017a2fd86241ce9)
 - 🔒 **Safer file access checks.** HTML file previews now treat missing or non-admin owners as inaccessible, preventing accidental access to files that should not be shown. [Commit](https://github.com/open-webui/open-webui/commit/6acaaea59a50ec26da03e6144017a2fd86241ce9)
