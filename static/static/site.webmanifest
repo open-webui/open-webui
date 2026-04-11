@@ -1,6 +1,6 @@
 {
-  "name": "Open WebUI",
-  "short_name": "WebUI",
+  "name": "MWS GPT",
+  "short_name": "MWS GPT",
   "icons": [
     {
       "src": "/static/web-app-manifest-192x192.png",
@@ -15,7 +15,7 @@
       "purpose": "maskable"
     }
   ],
-  "theme_color": "#ffffff",
-  "background_color": "#ffffff",
+  "theme_color": "#151618",
+  "background_color": "#151618",
   "display": "standalone"
 }

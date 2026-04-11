@@ -13,6 +13,7 @@
 	import {
 		config,
 		user,
+		WEBUI_NAME,
 		models as _models,
 		temporaryChatEnabled,
 		selectedFolder,
@@ -73,7 +74,7 @@
 	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
 </script>
 
-<div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">
+<div class="mws-placeholder m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-16 text-center">
 	{#if $temporaryChatEnabled}
 		<Tooltip
 			content={$i18n.t("This chat won't appear in history and your messages will not be saved.")}
@@ -105,6 +106,21 @@
 					}}
 				/>
 			{:else}
+				<div class="mws-hero-badge mb-5" in:fade={{ duration: 100 }}>
+					<img src="{WEBUI_BASE_URL}/static/mws-logo.svg" alt="MWS GPT" class="h-6 w-auto" />
+					<span>{$WEBUI_NAME}</span>
+				</div>
+
+				<div class="mws-hero-copy mb-8" in:fade={{ duration: 120, delay: 20 }}>
+					<h1 class="mws-hero-title">
+						Единое AI-пространство для текста, файлов, изображений, аудио и web-задач
+					</h1>
+					<p class="mws-hero-subtitle">
+						Работайте в одном чате: система подбирает нужный инструмент под задачу, а вы
+						сохраняете контекст и контроль над выбором модели.
+					</p>
+				</div>
+
 				<div class="flex flex-row justify-center gap-3 @sm:gap-3.5 w-fit px-5 max-w-xl">
 					<div class="flex shrink-0 justify-center">
 						<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
@@ -130,7 +146,7 @@
 											aria-hidden="true"
 											draggable="false"
 											on:error={(e) => {
-												e.currentTarget.src = '/favicon.png';
+												e.currentTarget.src = '/static/mws-logo.svg';
 											}}
 										/>
 									</button>
@@ -203,7 +219,11 @@
 				</div>
 			{/if}
 
-			<div class="text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel ? 'mt-2' : ''}">
+			<div
+				class="mws-composer-shell text-base font-normal @md:max-w-4xl w-full py-3 {atSelectedModel
+					? 'mt-2'
+					: ''}"
+			>
 				<MessageInput
 					bind:this={messageInput}
 					{history}
@@ -242,7 +262,7 @@
 			<FolderPlaceholder folder={$selectedFolder} />
 		</div>
 	{:else}
-		<div class="mx-auto max-w-2xl font-primary mt-2" in:fade={{ duration: 200, delay: 200 }}>
+		<div class="mx-auto max-w-2xl font-primary mt-3" in:fade={{ duration: 200, delay: 200 }}>
 			<div class="mx-5">
 				<Suggestions
 					suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??

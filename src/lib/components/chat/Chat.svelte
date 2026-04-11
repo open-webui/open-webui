@@ -2713,7 +2713,7 @@
 <div
 	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
 		? '  md:max-w-[calc(100%-var(--sidebar-width))]'
-		: ' '} w-full max-w-full flex flex-col"
+		: ' '} mws-chat-container w-full max-w-full flex flex-col"
 	id="chat-container"
 >
 	{#if !loading}
@@ -2740,7 +2740,7 @@
 			{/if}
 
 			<PaneGroup direction="horizontal" class="w-full h-full">
-				<Pane defaultSize={50} minSize={30} class="h-full flex relative max-w-full flex-col">
+				<Pane defaultSize={50} minSize={30} class="mws-chat-pane-frame h-full flex relative max-w-full flex-col">
 					<FilesOverlay show={dragged} />
 					<Navbar
 						bind:this={navbarElement}
@@ -2801,7 +2801,7 @@
 						}}
 					/>
 
-					<div id="chat-pane" class="flex flex-col flex-auto z-10 w-full @container overflow-auto">
+					<div id="chat-pane" class="mws-chat-pane flex flex-col flex-auto z-10 w-full @container overflow-auto">
 						{#if ($settings?.landingPageMode === 'chat' && !$selectedFolder) || createMessagesList(history, history.currentId).length > 0}
 							<div
 								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
@@ -2839,7 +2839,7 @@
 								</div>
 							</div>
 
-							<div class=" pb-2 {dragged ? 'z-0' : 'z-10'}">
+							<div class="mws-input-dock pb-2 {dragged ? 'z-0' : 'z-10'}">
 								<MessageInput
 									bind:this={messageInput}
 									{history}
