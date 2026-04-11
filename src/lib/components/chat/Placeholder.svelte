@@ -13,7 +13,6 @@
 	import {
 		config,
 		user,
-		WEBUI_NAME,
 		models as _models,
 		temporaryChatEnabled,
 		selectedFolder,
@@ -74,7 +73,7 @@
 	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
 </script>
 
-<div class="experience-placeholder m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">
+<div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">
 	{#if $temporaryChatEnabled}
 		<Tooltip
 			content={$i18n.t("This chat won't appear in history and your messages will not be saved.")}
@@ -106,11 +105,6 @@
 					}}
 				/>
 			{:else}
-				<div class="experience-kicker mb-5" in:fade={{ duration: 120 }}>
-					<span>{$WEBUI_NAME}</span>
-					<span class="opacity-60">single AI workspace</span>
-				</div>
-
 				<div class="flex flex-row justify-center gap-3 @sm:gap-3.5 w-fit px-5 max-w-xl">
 					<div class="flex shrink-0 justify-center">
 						<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
@@ -165,14 +159,6 @@
 					</div>
 				</div>
 
-				<div class="experience-hero-copy flex mt-3 mb-4" in:fade={{ duration: 120, delay: 30 }}>
-					<div class="max-w-2xl px-4 text-sm leading-6 text-gray-500 dark:text-gray-400">
-						Bring models, web search, tools, and files into one calm workspace. The
-						interface below is tuned to feel polished and focused, with less visual noise
-						and more room for the conversation itself.
-					</div>
-				</div>
-
 				<div class="flex mt-1 mb-2">
 					<div in:fade={{ duration: 100, delay: 50 }}>
 						{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
@@ -217,11 +203,7 @@
 				</div>
 			{/if}
 
-			<div
-				class="experience-placeholder-input text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel
-					? 'mt-2'
-					: ''}"
-			>
+			<div class="text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel ? 'mt-2' : ''}">
 				<MessageInput
 					bind:this={messageInput}
 					{history}
@@ -260,10 +242,7 @@
 			<FolderPlaceholder folder={$selectedFolder} />
 		</div>
 	{:else}
-		<div
-			class="experience-suggestions mx-auto max-w-2xl font-primary mt-2"
-			in:fade={{ duration: 200, delay: 200 }}
-		>
+		<div class="mx-auto max-w-2xl font-primary mt-2" in:fade={{ duration: 200, delay: 200 }}>
 			<div class="mx-5">
 				<Suggestions
 					suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??

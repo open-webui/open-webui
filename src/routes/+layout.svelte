@@ -1052,7 +1052,7 @@
 
 {#if loaded}
 	{#if $isApp}
-		<div class="experience-shell flex flex-row h-screen">
+		<div class="flex flex-row h-screen">
 			<AppSidebar />
 
 			<div class="w-full flex-1 max-w-[calc(100%-4.5rem)]">
@@ -1060,9 +1060,7 @@
 			</div>
 		</div>
 	{:else}
-		<div class="experience-shell min-h-screen">
-			<slot />
-		</div>
+		<slot />
 	{/if}
 {/if}
 
