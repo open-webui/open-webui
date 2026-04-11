@@ -7,6 +7,7 @@
 	import { getChatList } from '$lib/apis/chats';
 
 	import {
+		config,
 		user,
 		WEBUI_NAME,
 		models as _models,
