@@ -260,6 +260,235 @@ select {
 	display: none;
 }
 
+:root {
+	--experience-bg:
+		radial-gradient(circle at top left, rgba(242, 118, 76, 0.16), transparent 30%),
+		radial-gradient(circle at top right, rgba(19, 95, 82, 0.1), transparent 28%),
+		linear-gradient(180deg, #fcfaf6 0%, #f5efe6 100%);
+	--experience-surface: rgba(255, 252, 246, 0.78);
+	--experience-surface-strong: rgba(255, 255, 255, 0.88);
+	--experience-border: rgba(105, 84, 60, 0.12);
+	--experience-shadow: 0 20px 60px rgba(78, 57, 37, 0.08);
+	--experience-accent: #d06a3c;
+	--experience-accent-soft: rgba(208, 106, 60, 0.14);
+}
+
+:global(.dark) {
+	--experience-bg:
+		radial-gradient(circle at top left, rgba(241, 127, 73, 0.14), transparent 28%),
+		radial-gradient(circle at top right, rgba(70, 166, 146, 0.1), transparent 26%),
+		linear-gradient(180deg, #141413 0%, #191816 100%);
+	--experience-surface: rgba(25, 24, 22, 0.78);
+	--experience-surface-strong: rgba(35, 33, 29, 0.88);
+	--experience-border: rgba(255, 232, 211, 0.08);
+	--experience-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+	--experience-accent: #f09a67;
+	--experience-accent-soft: rgba(240, 154, 103, 0.16);
+}
+
+body {
+	background: var(--experience-bg);
+	color: #221d18;
+}
+
+:global(.dark) body {
+	color: #f6efe7;
+}
+
+.experience-shell {
+	position: relative;
+	background: transparent;
+}
+
+.experience-shell::before {
+	content: '';
+	position: fixed;
+	inset: 0;
+	pointer-events: none;
+	background:
+		radial-gradient(circle at center, rgba(255, 255, 255, 0.22), transparent 45%),
+		linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 35%);
+	opacity: 0.9;
+}
+
+.experience-chat {
+	position: relative;
+}
+
+.experience-pane {
+	padding: 0.75rem 0.9rem 0.75rem 0.4rem;
+}
+
+.experience-chat-pane {
+	position: relative;
+	border: 1px solid var(--experience-border);
+	border-radius: 1.75rem;
+	background: linear-gradient(180deg, var(--experience-surface-strong), var(--experience-surface));
+	box-shadow: var(--experience-shadow);
+	backdrop-filter: blur(18px);
+}
+
+.experience-navbar {
+	padding-inline: 0.25rem;
+}
+
+.experience-navbar-inner {
+	position: relative;
+}
+
+.experience-navbar-inner::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: 1.35rem;
+	border: 1px solid rgba(255, 255, 255, 0.18);
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.08));
+	opacity: 0.72;
+	pointer-events: none;
+}
+
+:global(.dark) .experience-navbar-inner::before {
+	border-color: rgba(255, 255, 255, 0.06);
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+}
+
+.experience-sidebar {
+	backdrop-filter: blur(22px);
+}
+
+.experience-sidebar-header::before {
+	content: '';
+	position: absolute;
+	inset: 0.2rem 0.45rem auto 0.45rem;
+	height: 3rem;
+	border-radius: 1rem;
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.48), rgba(255, 255, 255, 0.15));
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	pointer-events: none;
+}
+
+:global(.dark) .experience-sidebar-header::before {
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+	border-color: rgba(255, 255, 255, 0.05);
+}
+
+.experience-sidebar-rail,
+.experience-sidebar {
+	background:
+		linear-gradient(180deg, rgba(255, 252, 248, 0.74), rgba(249, 243, 236, 0.64)) !important;
+	box-shadow: inset -1px 0 0 rgba(102, 84, 62, 0.08);
+}
+
+:global(.dark) .experience-sidebar-rail,
+:global(.dark) .experience-sidebar {
+	background:
+		linear-gradient(180deg, rgba(23, 22, 20, 0.78), rgba(28, 27, 25, 0.72)) !important;
+	box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.04);
+}
+
+.experience-kicker {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.6rem;
+	padding: 0.45rem 0.9rem;
+	border-radius: 999px;
+	border: 1px solid var(--experience-border);
+	background: var(--experience-surface);
+	box-shadow: 0 10px 30px rgba(71, 52, 33, 0.08);
+	font-size: 0.74rem;
+	font-weight: 700;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--experience-accent);
+}
+
+.experience-placeholder {
+	position: relative;
+}
+
+.experience-hero-copy {
+	justify-content: center;
+}
+
+.experience-placeholder-input {
+	max-width: 56rem;
+}
+
+.experience-input-dock {
+	padding-inline: 0.75rem;
+	padding-bottom: 0.9rem;
+}
+
+.experience-suggestions > div {
+	padding: 0.6rem;
+	border-radius: 1.4rem;
+	background: rgba(255, 255, 255, 0.38);
+	border: 1px solid rgba(114, 92, 71, 0.08);
+}
+
+:global(.dark) .experience-suggestions > div {
+	background: rgba(255, 255, 255, 0.03);
+	border-color: rgba(255, 255, 255, 0.05);
+}
+
+#chat-input-container {
+	border: 1px solid var(--experience-border);
+	border-radius: 1.6rem;
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(248, 240, 230, 0.78));
+	box-shadow:
+		0 16px 40px rgba(82, 55, 33, 0.08),
+		inset 0 1px 0 rgba(255, 255, 255, 0.65);
+	backdrop-filter: blur(18px);
+	padding-bottom: 0.45rem !important;
+}
+
+:global(.dark) #chat-input-container {
+	background: linear-gradient(180deg, rgba(35, 33, 29, 0.96), rgba(25, 24, 22, 0.9));
+	box-shadow:
+		0 18px 42px rgba(0, 0, 0, 0.28),
+		inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+#chat-input {
+	min-height: 3.4rem;
+}
+
+#chat-input [contenteditable='true'],
+#chat-input textarea,
+#chat-input .ProseMirror {
+	font-family: 'Archivo', 'Vazirmatn', sans-serif;
+	line-height: 1.65;
+}
+
+#sidebar-webui-name {
+	font-size: 0.95rem;
+	letter-spacing: -0.02em;
+}
+
+#sidebar-new-chat-button,
+#sidebar-search-button,
+#sidebar-notes-button,
+#sidebar-workspace-button {
+	border: 1px solid transparent;
+}
+
+#sidebar-new-chat-button:hover,
+#sidebar-search-button:hover,
+#sidebar-notes-button:hover,
+#sidebar-workspace-button:hover {
+	border-color: rgba(102, 84, 62, 0.08);
+	background: rgba(255, 255, 255, 0.55) !important;
+	transform: translateY(-1px);
+}
+
+:global(.dark) #sidebar-new-chat-button:hover,
+:global(.dark) #sidebar-search-button:hover,
+:global(.dark) #sidebar-notes-button:hover,
+:global(.dark) #sidebar-workspace-button:hover {
+	border-color: rgba(255, 255, 255, 0.05);
+	background: rgba(255, 255, 255, 0.04) !important;
+}
+
 .scrollbar-none::-webkit-scrollbar {
 	display: none; /* for Chrome, Safari and Opera */
 }
