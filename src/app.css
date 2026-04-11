@@ -890,8 +890,10 @@ body {
 	background:
 		linear-gradient(180deg, rgba(27, 30, 35, 0.96), rgba(18, 19, 22, 0.98)), var(--mws-bg) !important;
 	backdrop-filter: blur(28px);
-	border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
-	box-shadow: 4px 0 32px rgba(0, 0, 0, 0.3);
+	border: 1px solid var(--mws-border-strong) !important;
+	border-radius: var(--mws-radius-xl);
+	box-shadow: var(--mws-shadow-soft);
+	overflow: hidden;
 }
 
 .mws-app-sidebar::before,
