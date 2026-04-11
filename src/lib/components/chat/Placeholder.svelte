@@ -107,19 +107,36 @@
 					}}
 				/>
 			{:else}
-				<div class="mws-hero-badge mb-5" in:fade={{ duration: 100 }}>
-					<img src="{WEBUI_BASE_URL}/static/mws-logo.svg" alt="MWS GPT" class="h-6 w-auto" />
-					<span>{$WEBUI_NAME}</span>
-				</div>
-				
-				<div class="mws-hero-copy mb-8" in:fade={{ duration: 120, delay: 20 }}>
-					<h1 class="mws-hero-title">
-						Единое AI-пространство для текста, файлов, изображений, аудио и web-задач
-					</h1>
-					<p class="mws-hero-subtitle">
-						Работайте в одном чате: система подбирает нужный инструмент под задачу, а вы
-						сохраняете контекст и контроль над выбором модели.
-					</p>
+				<div class="mws-hero-frame mb-6" in:fade={{ duration: 120 }}>
+					<div class="mws-hero-badge mb-5" in:fade={{ duration: 100 }}>
+						<img src="{WEBUI_BASE_URL}/static/mws-logo.svg" alt="MWS GPT" class="h-6 w-auto" />
+						<span>{$WEBUI_NAME}</span>
+					</div>
+
+					<div class="mws-hero-copy" in:fade={{ duration: 120, delay: 20 }}>
+						<h1 class="mws-hero-title">
+							Единое AI-пространство для текста, файлов, изображений, аудио и web-задач
+						</h1>
+						<p class="mws-hero-subtitle">
+							Интерфейс построен как единая рабочая среда: те же акценты и те же материалы, что на
+							экране входа, но без поломанной геометрии и лишнего шума.
+						</p>
+					</div>
+
+					<div class="mws-hero-highlights" in:fade={{ duration: 140, delay: 50 }}>
+						<div class="mws-hero-highlight">
+							<span>Контекст</span>
+							<strong>История, файлы и знания остаются в одном рабочем потоке.</strong>
+						</div>
+						<div class="mws-hero-highlight">
+							<span>Инструменты</span>
+							<strong>Web, код, изображения и интеграции запускаются из того же окна.</strong>
+						</div>
+						<div class="mws-hero-highlight">
+							<span>Контроль</span>
+							<strong>Вы сохраняете выбор модели, сценария и глубины ответа под задачу.</strong>
+						</div>
+					</div>
 				</div>
 
 				<div class="flex flex-row justify-center gap-3 @sm:gap-3.5 w-fit px-5 max-w-xl">
@@ -144,6 +161,7 @@
 										<img
 											src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}`}
 											class=" size-9 @sm:size-10 rounded-full border-[1px] border-gray-100 dark:border-none"
+											alt=""
 											aria-hidden="true"
 											draggable="false"
 											on:error={(e) => {
@@ -267,6 +285,7 @@
 		<div class="mx-auto max-w-2xl font-primary mt-3" in:fade={{ duration: 200, delay: 200 }}>
 			<div class="mx-5">
 				<Suggestions
+					className="mws-suggestions-grid"
 					suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
 						models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
 						$config?.default_prompt_suggestions ??
