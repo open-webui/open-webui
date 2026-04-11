@@ -6,6 +6,7 @@
 		config,
 		user,
 		tools as _tools,
+		skills as _skills,
 		mobile,
 		settings,
 		toolServers,
@@ -14,6 +15,7 @@
 
 	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
 	import { getTools } from '$lib/apis/tools';
+	import { getSkills } from '$lib/apis/skills';
 
 	import Knobs from '$lib/components/icons/Knobs.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -21,6 +23,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Wrench from '$lib/components/icons/Wrench.svelte';
+	import Keyframes from '$lib/components/icons/Keyframes.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 	import Photo from '$lib/components/icons/Photo.svelte';
@@ -31,6 +34,7 @@
 	const i18n = getContext('i18n');
 
 	export let selectedToolIds: string[] = [];
+	export let selectedSkillIds: string[] = [];
 
 	export let selectedModels: string[] = [];
 	export let fileUploadCapableModels: string[] = [];
@@ -54,6 +58,7 @@
 	let tab = '';
 
 	let tools = null;
+	let skills = null;
 
 	$: if (show) {
 		init();
@@ -67,6 +72,9 @@
 	const init = async () => {
 		if ($_tools === null) {
 			await _tools.set(await getTools(localStorage.token));
+		}
+		if ($_skills === null) {
+			await _skills.set(await getSkills(localStorage.token));
 		}
 
 		if ($_tools) {
@@ -95,6 +103,22 @@
 		}
 
 		selectedToolIds = selectedToolIds.filter((id) => Object.keys(tools).includes(id));
+
+		if ($_skills) {
+			skills = $_skills.reduce((a, skill) => {
+				a[skill.id] = {
+					name: skill.name,
+					description: skill.description,
+					enabled: selectedSkillIds.includes(skill.id),
+					...skill
+				};
+				return a;
+			}, {});
+		}
+
+		if (skills) {
+			selectedSkillIds = selectedSkillIds.filter((id) => Object.keys(skills).includes(id));
+		}
 	};
 </script>
 
@@ -129,6 +153,34 @@
 									<div class=" line-clamp-1">
 										{$i18n.t('Tools')}
 										<span class="ml-0.5 text-gray-500">{Object.keys(tools).length}</span>
+									</div>
+
+									<div class="text-gray-500">
+										<ChevronRight />
+									</div>
+								</div>
+							</button>
+						{/if}
+					{:else}
+						<div class="py-4">
+							<Spinner />
+						</div>
+					{/if}
+
+					{#if skills}
+						{#if Object.keys(skills).length > 0}
+							<button
+								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+								on:click={() => {
+									tab = 'skills';
+								}}
+							>
+								<Keyframes />
+
+								<div class="flex items-center w-full justify-between">
+									<div class=" line-clamp-1">
+										{$i18n.t('Skills')}
+										<span class="ml-0.5 text-gray-500">{Object.keys(skills).length}</span>
 									</div>
 
 									<div class="text-gray-500">
@@ -398,6 +450,59 @@
 
 							<div class=" shrink-0">
 								<Switch state={tools[toolId].enabled} />
+							</div>
+						</button>
+					{/each}
+				</div>
+			{:else if tab === 'skills' && skills}
+				<div in:fly={{ x: 20, duration: 150 }}>
+					<button
+						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+						on:click={() => {
+							tab = '';
+						}}
+					>
+						<ChevronLeft />
+
+						<div class="flex items-center w-full justify-between">
+							<div>
+								{$i18n.t('Skills')}
+								<span class="ml-0.5 text-gray-500">{Object.keys(skills).length}</span>
+							</div>
+						</div>
+					</button>
+
+					{#each Object.keys(skills) as skillId}
+						<button
+							class="relative flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+							on:click={async () => {
+								skills[skillId].enabled = !skills[skillId].enabled;
+
+								const state = skills[skillId].enabled;
+								await tick();
+
+								if (state) {
+									selectedSkillIds = [...selectedSkillIds, skillId];
+								} else {
+									selectedSkillIds = selectedSkillIds.filter((id) => id !== skillId);
+								}
+							}}
+						>
+							<div class="flex-1 truncate">
+								<div class="flex flex-1 gap-2 items-center">
+									<Tooltip content={skills[skillId]?.name ?? ''} placement="top">
+										<div class="shrink-0">
+											<Keyframes className="size-4" />
+										</div>
+									</Tooltip>
+									<Tooltip content={skills[skillId]?.description ?? ''} placement="top-start">
+										<div class=" truncate">{skills[skillId].name}</div>
+									</Tooltip>
+								</div>
+							</div>
+
+							<div class=" shrink-0">
+								<Switch state={skills[skillId].enabled} />
 							</div>
 						</button>
 					{/each}

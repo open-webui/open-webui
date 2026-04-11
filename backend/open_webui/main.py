@@ -114,6 +114,7 @@ from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 from open_webui.models.users import UserModel, Users
 from open_webui.models.chats import Chats
+from open_webui.defaults.skills import load_default_skills
 
 from open_webui.config import (
     # Ollama
@@ -574,6 +575,60 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
 
+def seed_default_skills() -> None:
+    """Seed bundled default skills if they do not already exist."""
+    default_skills = load_default_skills()
+    if not default_skills:
+        return
+
+    # Use an existing admin/first user when available; fallback to a system owner id.
+    owner = Users.get_super_admin_user() or Users.get_first_user()
+    owner_id = owner.id if owner else 'system'
+
+    # Local import keeps startup dependency flow explicit and avoids module-load side effects.
+    from open_webui.models.skills import SkillForm, Skills
+
+    for item in default_skills:
+        try:
+            skill_id = str(item.get('id', '')).strip().lower().replace(' ', '-')
+            name = str(item.get('name', '')).strip()
+            content = str(item.get('content', '')).strip()
+
+            if not skill_id or not name or not content:
+                log.warning(f"Skipping invalid default skill config: id/name/content required ({item})")
+                continue
+
+            if Skills.get_skill_by_id(skill_id) or Skills.get_skill_by_name(name):
+                continue
+
+            access_grants = item.get(
+                'access_grants',
+                [
+                    {
+                        'principal_type': 'user',
+                        'principal_id': '*',
+                        'permission': 'read',
+                    }
+                ],
+            )
+
+            form_data = SkillForm(
+                id=skill_id,
+                name=name,
+                description=item.get('description'),
+                content=content,
+                meta=item.get('meta') or {'tags': []},
+                is_active=bool(item.get('is_active', True)),
+                access_grants=access_grants,
+            )
+
+            created = Skills.insert_new_skill(owner_id, form_data)
+            if created:
+                log.info(f"Seeded default skill: {skill_id}")
+        except Exception as e:
+            log.warning(f"Failed to seed default skill: {e}")
+
+
 class SPAStaticFiles(StaticFiles):
     async def get_response(self, path: str, scope):
         try:
@@ -625,6 +680,9 @@ async def lifespan(app: FastAPI):
         if create_admin_user(WEBUI_ADMIN_EMAIL, WEBUI_ADMIN_PASSWORD, WEBUI_ADMIN_NAME):
             # Disable signup since we now have an admin
             app.state.config.ENABLE_SIGNUP = False
+
+    # Seed bundled default skills for fresh installations of this fork.
+    seed_default_skills()
 
     # This should be blocking (sync) so functions are not deactivated on first /get_models calls
     # when the first user lands on the / route.
