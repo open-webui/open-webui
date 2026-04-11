@@ -76,7 +76,7 @@
 
 		<div class="flex items-center gap-2">
 			<div class="flex items-center min-w-fit">
-				{#if (item?.model?.id ?? '').toLowerCase() !== 'auto'}
+				{#if item.label !== $i18n.t('Auto')}
 					<Tooltip content={$user?.role === 'admin' ? (item?.value ?? '') : ''} placement="top-start">
 						<img
 							src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${item.model.id}&lang=${$i18n.language}`}
