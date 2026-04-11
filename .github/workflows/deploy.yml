@@ -36,10 +36,10 @@ jobs:
         run: |
           if [ ! -d /opt/build/open-webui/.git ]; then
             rm -rf /opt/build/open-webui
-            git clone --branch main --single-branch git@github.com:Olegg000/open-webui.git /opt/build/open-webui
+            git clone --branch main --single-branch https://github.com/Olegg000/open-webui.git /opt/build/open-webui
           fi
           cd /opt/build/open-webui
-          git remote set-url origin git@github.com:Olegg000/open-webui.git
+          git remote set-url origin https://github.com/Olegg000/open-webui.git
           git fetch origin main
           git checkout main
           git pull --ff-only origin main
