@@ -88,25 +88,23 @@
 		</Tooltip>
 	{/if}
 
-	<div
-		class="w-full text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4 font-primary"
-	>
-		<div class="w-full flex flex-col justify-center items-center">
-			{#if $selectedFolder}
-				<FolderTitle
-					folder={$selectedFolder}
-					onUpdate={async (folder) => {
-						await chats.set(await getChatList(localStorage.token, $currentChatPage));
-						currentChatPage.set(1);
-					}}
-					onDelete={async () => {
-						await chats.set(await getChatList(localStorage.token, $currentChatPage));
-						currentChatPage.set(1);
+	<div class="w-full flex flex-col items-center gap-6 font-primary">
+		{#if $selectedFolder}
+			<FolderTitle
+				folder={$selectedFolder}
+				onUpdate={async (folder) => {
+					await chats.set(await getChatList(localStorage.token, $currentChatPage));
+					currentChatPage.set(1);
+				}}
+				onDelete={async () => {
+					await chats.set(await getChatList(localStorage.token, $currentChatPage));
+					currentChatPage.set(1);
 
-						selectedFolder.set(null);
-					}}
-				/>
-			{:else}
+					selectedFolder.set(null);
+				}}
+			/>
+		{:else}
+			<div class="mws-hero-frame w-full max-w-4xl text-center" in:fade={{ duration: 120 }}>
 				<div class="mws-hero-badge mb-4" in:fade={{ duration: 100 }}>
 					<img src="{WEBUI_BASE_URL}/static/mws-logo.svg" alt="MWS GPT" class="h-16 w-auto" />
 					<span>{$WEBUI_NAME}</span>
@@ -118,7 +116,7 @@
 					</h1>
 				</div>
 
-				<div class="flex flex-row justify-center gap-3 @sm:gap-3.5 w-fit px-5 max-w-xl">
+				<div class="flex flex-row justify-center gap-3 @sm:gap-3.5 w-fit px-5 max-w-xl mx-auto">
 					<div class="flex shrink-0 justify-center">
 						<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
 							{#each models as model, modelIdx}
@@ -173,7 +171,7 @@
 					</div>
 				</div>
 
-				<div class="flex mt-1 mb-2">
+				<div class="flex mt-1 mb-2 justify-center">
 					<div in:fade={{ duration: 100, delay: 50 }}>
 						{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
 							<Tooltip
@@ -215,11 +213,11 @@
 						{/if}
 					</div>
 				</div>
-			{/if}
+			</div>
 
 			<div
 				class="mws-composer-shell text-base font-normal @md:max-w-4xl w-full py-3 {atSelectedModel
-					? 'mt-2'
+					? 'mt-0'
 					: ''}"
 			>
 				<MessageInput
@@ -250,7 +248,7 @@
 					}}
 				/>
 			</div>
-		</div>
+		{/if}
 	</div>
 
 	{#if $selectedFolder}
