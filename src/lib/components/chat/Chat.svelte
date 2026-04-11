@@ -143,6 +143,7 @@
 	}
 
 	let selectedToolIds = [];
+	let selectedSkillIds = [];
 	let selectedFilterIds = [];
 	let pendingOAuthTools = [];
 
@@ -184,6 +185,7 @@
 
 		files = [];
 		selectedToolIds = [];
+		selectedSkillIds = [];
 		selectedFilterIds = [];
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
@@ -214,6 +216,7 @@
 						messageInput?.setText(input.prompt);
 						files = input.files;
 						selectedToolIds = input.selectedToolIds;
+						selectedSkillIds = input.selectedSkillIds ?? [];
 						selectedFilterIds = input.selectedFilterIds;
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
@@ -274,6 +277,7 @@
 
 	const resetInput = () => {
 		selectedToolIds = [];
+		selectedSkillIds = [];
 		selectedFilterIds = [];
 		pendingOAuthTools = [];
 		webSearchEnabled = false;
@@ -334,6 +338,11 @@
 				selectedFilterIds = model.info.meta.defaultFilterIds.filter((id) =>
 					model?.filters?.find((f) => f.id === id)
 				);
+			}
+
+			// Set Default Skills
+			if (model?.info?.meta?.skillIds) {
+				selectedSkillIds = [...new Set(model.info.meta.skillIds)];
 			}
 
 			// Set Default Features
@@ -737,6 +746,7 @@
 
 				files = [];
 				selectedToolIds = [];
+				selectedSkillIds = [];
 				selectedFilterIds = [];
 				webSearchEnabled = false;
 				imageGenerationEnabled = false;
@@ -749,6 +759,7 @@
 						messageInput?.setText(input.prompt);
 						files = input.files;
 						selectedToolIds = input.selectedToolIds;
+						selectedSkillIds = input.selectedSkillIds ?? [];
 						selectedFilterIds = input.selectedFilterIds;
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
@@ -2189,7 +2200,7 @@
 
 		// Parse skill mentions (<$skillId|label>) from user messages
 		const skillMentionRegex = /<\$([^|>]+)\|?[^>]*>/g;
-		const skillIds = [];
+		const skillIds = [...new Set(selectedSkillIds)];
 		for (const message of messages) {
 			const content =
 				typeof message.content === 'string' ? message.content : (message.content?.[0]?.text ?? '');
@@ -2849,6 +2860,7 @@
 									bind:prompt
 									bind:autoScroll
 									bind:selectedToolIds
+									bind:selectedSkillIds
 									bind:selectedFilterIds
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
@@ -2933,6 +2945,7 @@
 									bind:prompt
 									bind:autoScroll
 									bind:selectedToolIds
+									bind:selectedSkillIds
 									bind:selectedFilterIds
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
