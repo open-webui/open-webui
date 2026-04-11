@@ -57,6 +57,8 @@ from open_webui.routers.pipelines import (
     process_pipeline_outlet_filter,
 )
 from open_webui.routers.memories import query_memory, QueryMemoryForm
+from open_webui.models.memories import Memories
+from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.files import (
@@ -1425,6 +1427,171 @@ async def chat_memory_handler(request: Request, form_data: dict, extra_params: d
     return form_data
 
 
+AUTO_MEMORY_EXTRACTION_PROMPT = """
+You are a memory extractor for a chat assistant.
+Extract up to 3 durable user-specific facts from the dialogue.
+Rules:
+- Keep only stable personal facts/preferences/goals that can help in future conversations.
+- Ignore one-off requests, temporary states, and assistant-only information.
+- Write each fact as a short declarative sentence in the same language as the dialogue.
+- Return STRICT JSON only with this shape: {"memories": ["..."]}.
+- If there are no good facts, return {"memories": []}.
+"""
+
+
+def _extract_memories_from_response(raw_content: str) -> list[str]:
+    if not isinstance(raw_content, str) or not raw_content.strip():
+        return []
+
+    payload = None
+    try:
+        payload = json.loads(raw_content)
+    except Exception:
+        start = raw_content.find('{')
+        end = raw_content.rfind('}')
+        if start != -1 and end > start:
+            try:
+                payload = json.loads(raw_content[start : end + 1])
+            except Exception:
+                payload = None
+
+    if not isinstance(payload, dict):
+        return []
+
+    candidates = payload.get('memories')
+    if not isinstance(candidates, list):
+        return []
+
+    cleaned = []
+    seen = set()
+    for item in candidates:
+        if not isinstance(item, str):
+            continue
+        text = re.sub(r'\s+', ' ', item).strip()
+        if len(text) < 8 or len(text) > 320:
+            continue
+        key = text.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        cleaned.append(text)
+
+    return cleaned
+
+
+async def auto_memory_extraction_handler(request: Request, user, model_id: str, messages: list[dict]):
+    if not messages or not model_id:
+        return
+
+    recent_messages = messages[-8:]
+    dialogue_lines = []
+    for message in recent_messages:
+        role = (message.get('role') or '').lower()
+        if role not in {'user', 'assistant'}:
+            continue
+        content = message.get('content', '')
+        if isinstance(content, list):
+            content = ' '.join(
+                [item.get('text', '') for item in content if isinstance(item, dict) and item.get('type') == 'text']
+            )
+        if not isinstance(content, str):
+            continue
+        content = content.strip()
+        if not content:
+            continue
+        dialogue_lines.append(f'{role.upper()}: {content}')
+
+    if not dialogue_lines:
+        return
+
+    dialogue = '\n'.join(dialogue_lines)
+
+    models = request.app.state.MODELS
+    if model_id not in models:
+        return
+
+    task_model_id = get_task_model_id(
+        model_id,
+        request.app.state.config.TASK_MODEL,
+        request.app.state.config.TASK_MODEL_EXTERNAL,
+        models,
+    )
+    if task_model_id not in models:
+        return
+
+    extraction_prompt = (
+        f'{AUTO_MEMORY_EXTRACTION_PROMPT}\n\n'
+        f'Dialogue:\n{dialogue}\n\n'
+        'Return JSON now.'
+    )
+
+    max_tokens = models[task_model_id].get('info', {}).get('params', {}).get('max_tokens', 500)
+    payload = {
+        'model': task_model_id,
+        'messages': [{'role': 'user', 'content': extraction_prompt}],
+        'stream': False,
+        **(
+            {'max_tokens': max_tokens}
+            if models[task_model_id].get('owned_by') == 'ollama'
+            else {'max_completion_tokens': max_tokens}
+        ),
+        'metadata': {
+            **(request.state.metadata if hasattr(request.state, 'metadata') else {}),
+            'task': 'memory_extraction',
+        },
+    }
+
+    try:
+        response = await generate_chat_completion(request, form_data=payload, user=user)
+    except Exception as e:
+        log.debug(f'Auto memory extraction completion failed: {e}')
+        return
+
+    if not isinstance(response, dict):
+        return
+
+    choices = response.get('choices', [])
+    if not choices:
+        return
+
+    response_message = choices[0].get('message', {}) if isinstance(choices[0], dict) else {}
+    content = response_message.get('content') or response_message.get('reasoning_content') or ''
+    facts = _extract_memories_from_response(content)
+    if not facts:
+        return
+
+    existing_memories = Memories.get_memories_by_user_id(user.id) or []
+    existing = {m.content.strip().lower() for m in existing_memories if isinstance(m.content, str)}
+
+    saved = 0
+    for fact in facts:
+        if fact.lower() in existing:
+            continue
+        try:
+            memory = Memories.insert_new_memory(user.id, fact)
+            if not memory:
+                continue
+
+            vector = await request.app.state.EMBEDDING_FUNCTION(memory.content, user=user)
+            VECTOR_DB_CLIENT.upsert(
+                collection_name=f'user-memory-{user.id}',
+                items=[
+                    {
+                        'id': memory.id,
+                        'text': memory.content,
+                        'vector': vector,
+                        'metadata': {'created_at': memory.created_at, 'updated_at': memory.updated_at},
+                    }
+                ],
+            )
+            existing.add(fact.lower())
+            saved += 1
+            if saved >= 3:
+                break
+        except Exception as e:
+            log.debug(f'Failed to persist extracted memory: {e}')
+
+
 async def chat_web_search_handler(request: Request, form_data: dict, extra_params: dict, user):
     event_emitter = extra_params['__event_emitter__']
     await event_emitter(
@@ -2320,6 +2487,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     features = form_data.pop('features', None) or {}
     extra_params['__features__'] = features
+    metadata['features'] = features
     if features:
         if 'voice' in features and features['voice']:
             if request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE != None:
@@ -2845,6 +3013,7 @@ async def background_tasks_handler(ctx):
     form_data = ctx['form_data']
     user = ctx['user']
     metadata = ctx['metadata']
+    features = metadata.get('features', {}) if isinstance(metadata, dict) else {}
     tasks = ctx['tasks']
     event_emitter = ctx['event_emitter']
 
@@ -3041,6 +3210,17 @@ async def background_tasks_handler(ctx):
                             )
                         except Exception as e:
                             pass
+
+        if features.get('memory'):
+            try:
+                await auto_memory_extraction_handler(
+                    request=request,
+                    user=user,
+                    model_id=message['model'],
+                    messages=messages,
+                )
+            except Exception as e:
+                log.debug(f'Auto memory extraction failed: {e}')
 
 
 async def non_streaming_chat_response_handler(response, ctx):

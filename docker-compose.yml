@@ -14,8 +14,24 @@ services:
       WEBUI_AUTH_COOKIE_SECURE: "true"
       WEBUI_SESSION_COOKIE_SAME_SITE: "lax"
       WEBUI_AUTH_COOKIE_SAME_SITE: "lax"
+      VECTOR_DB: "qdrant"
+      QDRANT_URI: "http://127.0.0.1:6333"
+      QDRANT_PREFER_GRPC: "false"
+      ENABLE_QDRANT_MULTITENANCY_MODE: "true"
     volumes:
       - open-webui:/app/backend/data
+    depends_on:
+      - qdrant
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
 
 volumes:
   open-webui:
+  qdrant_data:
