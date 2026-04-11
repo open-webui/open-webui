@@ -696,30 +696,36 @@ def get_tool_specs(tool_module: object) -> list[dict]:
     return specs
 
 
-def resolve_schema(schema, components):
+def resolve_schema(schema, components, seen_refs=None):
     """
     Recursively resolves a JSON schema using OpenAPI components.
     """
     if not schema:
         return {}
 
+    if seen_refs is None:
+        seen_refs = frozenset()
+
     if '$ref' in schema:
         ref_path = schema['$ref']
+        if ref_path in seen_refs:
+            # Stop circular expansion and preserve a generic structured value.
+            return {'type': 'object'}
         ref_parts = ref_path.strip('#/').split('/')
         resolved = components
         for part in ref_parts[1:]:  # Skip the initial 'components'
             resolved = resolved.get(part, {})
-        return resolve_schema(resolved, components)
+        return resolve_schema(resolved, components, seen_refs | {ref_path})
 
     resolved_schema = copy.deepcopy(schema)
 
     # Recursively resolve inner schemas
     if 'properties' in resolved_schema:
         for prop, prop_schema in resolved_schema['properties'].items():
-            resolved_schema['properties'][prop] = resolve_schema(prop_schema, components)
+            resolved_schema['properties'][prop] = resolve_schema(prop_schema, components, seen_refs)
 
     if 'items' in resolved_schema:
-        resolved_schema['items'] = resolve_schema(resolved_schema['items'], components)
+        resolved_schema['items'] = resolve_schema(resolved_schema['items'], components, seen_refs)
 
     return resolved_schema
 
@@ -1170,10 +1176,16 @@ async def get_tool_servers_data(servers: List[Dict[str, Any]]) -> List[Dict[str,
             log.warning(f"Invalid OpenAPI spec from {url}: missing 'paths'")
             continue
 
+        try:
+            specs = convert_openapi_to_tool_payload(response)
+        except Exception:
+            log.exception(f'Failed to convert OpenAPI spec for tool server {id}')
+            continue
+
         response = {
             'openapi': response,
             'info': response.get('info', {}),
-            'specs': convert_openapi_to_tool_payload(response),
+            'specs': specs,
         }
 
         openapi_data = response.get('openapi', {})
