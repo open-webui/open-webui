@@ -74,7 +74,7 @@
 	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
 </script>
 
-<div class="mws-placeholder m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-16 text-center">
+<div class="mws-placeholder m-auto w-full max-w-4xl px-4 @2xl:px-12 py-10 text-center">
 	{#if $temporaryChatEnabled}
 		<Tooltip
 			content={$i18n.t("This chat won't appear in history and your messages will not be saved.")}
@@ -111,10 +111,6 @@
 					<span>{$WEBUI_NAME}</span>
 				</div>
 				
-				<div class="mws-hero-car-model mb-6 flex justify-center" in:fade={{ duration: 150 }}>
-				    <img src="{WEBUI_BASE_URL}/static/mts-auto.png" alt="MWS Auto Engine" class="w-full max-w-lg object-contain rounded-2xl shadow-[0_16px_40px_rgba(255,0,50,0.25)] border-[1.5px] border-[rgba(255,0,50,0.3)] transition-all hover:scale-[1.01] hover:shadow-[0_24px_50px_rgba(255,0,50,0.35)]" draggable="false" />
-				</div>
-
 				<div class="mws-hero-copy mb-8" in:fade={{ duration: 120, delay: 20 }}>
 					<h1 class="mws-hero-title">
 						Единое AI-пространство для текста, файлов, изображений, аудио и web-задач

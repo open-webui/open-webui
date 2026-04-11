@@ -858,20 +858,21 @@ body {
 .mws-app-sidebar,
 .mws-sidebar-rail,
 .mws-sidebar {
-	background: rgba(21, 22, 24, 0.94) !important;
-	backdrop-filter: blur(20px);
-	box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.05);
+	background: rgba(18, 19, 22, 0.97) !important;
+	backdrop-filter: blur(24px);
+	border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+	box-shadow: 4px 0 32px rgba(0, 0, 0, 0.3);
 }
 
 .mws-sidebar-header::before {
 	content: '';
 	position: absolute;
-	inset: 0.25rem 0.35rem auto;
-	height: 3rem;
-	border-radius: 1.2rem;
-	background: rgba(44, 49, 53, 0.9);
-	border: 1px solid var(--mws-border);
-	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+	inset: 0.3rem 0.4rem auto;
+	height: 2.75rem;
+	border-radius: 1rem;
+	background: rgba(255, 0, 50, 0.06);
+	border: 1px solid rgba(255, 0, 50, 0.15);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 	pointer-events: none;
 }
 
@@ -889,7 +890,9 @@ body {
 #sidebar-chat-item {
 	border: 1px solid transparent;
 	background: transparent;
-	color: var(--mws-text);
+	color: rgba(255, 255, 255, 0.8);
+	border-radius: 0.75rem;
+	transition: all 150ms ease;
 }
 
 #sidebar-new-chat-button:hover,
@@ -897,8 +900,9 @@ body {
 #sidebar-notes-button:hover,
 #sidebar-workspace-button:hover,
 #sidebar-chat-item:hover {
-	background: rgba(44, 49, 53, 0.86) !important;
-	border-color: var(--mws-border);
+	background: rgba(255, 0, 50, 0.1) !important;
+	border-color: rgba(255, 0, 50, 0.2);
+	color: #fff;
 }
 
 .mws-navbar {
@@ -973,46 +977,47 @@ body {
 
 .mws-placeholder {
 	position: relative;
-	max-width: 76rem;
+	max-width: 64rem;
+	margin-inline: auto;
 }
 
 .mws-hero-badge {
 	display: inline-flex;
 	align-items: center;
-	gap: 0.8rem;
-	padding: 0.8rem 1.1rem;
+	gap: 0.6rem;
+	padding: 0.5rem 1rem;
 	border-radius: 999px;
-	border: 1px solid var(--mws-border);
-	background: rgba(44, 49, 53, 0.9);
-	color: var(--mws-text);
-	font-size: 0.85rem;
-	font-weight: 700;
-	letter-spacing: 0.06em;
+	border: 1px solid var(--mws-border-strong);
+	background: rgba(255, 0, 50, 0.08);
+	color: rgba(255,255,255,0.85);
+	font-size: 0.78rem;
+	font-weight: 600;
+	letter-spacing: 0.08em;
 	text-transform: uppercase;
 }
 
 .mws-hero-copy {
-	max-width: 58rem;
+	max-width: 50rem;
 	margin-inline: auto;
 }
 
 .mws-hero-title {
 	margin: 0;
 	font-family: 'Archivo', 'Vazirmatn', sans-serif;
-	font-size: clamp(2.4rem, 5vw, 4.5rem);
-	line-height: 0.97;
-	letter-spacing: -0.05em;
+	font-size: clamp(1.8rem, 4vw, 3rem);
+	line-height: 1.1;
+	letter-spacing: -0.03em;
 	font-weight: 700;
 	color: var(--mws-text);
 	text-wrap: balance;
 }
 
 .mws-hero-subtitle {
-	margin: 1.2rem auto 0;
-	max-width: 42rem;
-	font-size: 1rem;
-	line-height: 1.65;
-	color: var(--mws-text-muted);
+	margin: 0.75rem auto 0;
+	max-width: 38rem;
+	font-size: 0.95rem;
+	line-height: 1.6;
+	color: var(--mws-text-soft);
 }
 
 .mws-composer-shell {
@@ -1097,19 +1102,24 @@ input[type='checkbox']:checked {
 	}
 
 	.mws-hero-title {
-		font-size: clamp(2rem, 11vw, 3rem);
+		font-size: clamp(1.5rem, 8vw, 2.2rem);
 	}
 
 	.mws-hero-subtitle {
-		font-size: 0.95rem;
+		font-size: 0.88rem;
+	}
+
+	.mws-placeholder {
+		padding-top: 2rem;
+		padding-bottom: 1rem;
 	}
 }
 
 /* ─── Auth Page Styling ─── */
 #auth-page {
 	background:
-		radial-gradient(ellipse 80% 60% at 50% -20%, rgba(255, 0, 50, 0.14), transparent 60%),
-		radial-gradient(circle at 80% 80%, rgba(255, 0, 50, 0.06), transparent 40%),
+		radial-gradient(ellipse 70% 50% at 50% -10%, rgba(255, 0, 50, 0.18), transparent 55%),
+		radial-gradient(circle at 85% 85%, rgba(255, 0, 50, 0.07), transparent 35%),
 		var(--mws-bg) !important;
 }
 
@@ -1124,12 +1134,22 @@ input[type='checkbox']:checked {
 
 /* Auth form card */
 #auth-page form {
-	background: rgba(28, 30, 34, 0.80) !important;
-	border: 1px solid var(--mws-border-strong) !important;
-	border-radius: var(--mws-radius-lg, 1.75rem) !important;
-	padding: 2rem !important;
-	backdrop-filter: blur(24px) !important;
-	box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28) !important;
+	background: rgba(22, 24, 28, 0.85) !important;
+	border: 1px solid rgba(255, 255, 255, 0.10) !important;
+	border-radius: 1.5rem !important;
+	padding: 2.25rem 2rem !important;
+	backdrop-filter: blur(32px) !important;
+	box-shadow:
+		0 32px 80px rgba(0, 0, 0, 0.35),
+		inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+}
+
+/* Auth title */
+#auth-page .text-2xl.font-medium {
+	font-size: 1.5rem !important;
+	font-weight: 700 !important;
+	letter-spacing: -0.02em !important;
+	margin-bottom: 0.25rem;
 }
 
 /* Auth inputs */
@@ -1137,18 +1157,20 @@ input[type='checkbox']:checked {
 #auth-page input[type="text"],
 #auth-page input[type="password"],
 #auth-page .my-0\.5 {
-	background: rgba(44, 49, 53, 0.7) !important;
-	border: 1px solid var(--mws-border, rgba(255,255,255,0.08)) !important;
+	background: rgba(255, 255, 255, 0.05) !important;
+	border: 1px solid rgba(255, 255, 255, 0.1) !important;
 	border-radius: 0.75rem !important;
-	padding: 0.75rem 1rem !important;
+	padding: 0.7rem 1rem !important;
 	color: var(--mws-text, #fff) !important;
-	transition: border-color 200ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+	font-size: 0.9rem !important;
+	transition: border-color 200ms ease, box-shadow 200ms ease !important;
 }
 
 #auth-page input:focus {
 	border-color: var(--mws-red) !important;
 	outline: none !important;
-	box-shadow: 0 0 0 2px rgba(255, 0, 50, 0.15) !important;
+	box-shadow: 0 0 0 3px rgba(255, 0, 50, 0.12) !important;
+	background: rgba(255, 255, 255, 0.08) !important;
 }
 
 /* Auth submit button */
@@ -1157,43 +1179,67 @@ input[type='checkbox']:checked {
 	color: white !important;
 	border: none !important;
 	border-radius: 999px !important;
-	padding: 0.75rem 1.5rem !important;
+	padding: 0.8rem 1.5rem !important;
 	font-weight: 600 !important;
 	font-size: 0.95rem !important;
-	transition: all 200ms !important;
-	box-shadow: 0 6px 24px rgba(255, 0, 50, 0.25) !important;
+	transition: all 200ms ease !important;
+	box-shadow: 0 6px 24px rgba(255, 0, 50, 0.3) !important;
+	letter-spacing: 0.01em !important;
 }
 
 #auth-page button[type="submit"]:hover {
-	background: #e6002d !important;
-	box-shadow: 0 8px 32px rgba(255, 0, 50, 0.3) !important;
-	transform: translateY(-2px) !important;
+	background: #e0002a !important;
+	box-shadow: 0 10px 36px rgba(255, 0, 50, 0.4) !important;
+	transform: translateY(-1px) !important;
+}
+
+#auth-page button[type="submit"]:active {
+	transform: translateY(0) !important;
+}
+
+/* Switch mode link (Sign up / Sign in) */
+#auth-page .font-medium.underline {
+	color: var(--mws-red) !important;
+	text-decoration: none !important;
+	border-bottom: 1px solid rgba(255, 0, 50, 0.4);
+	padding-bottom: 1px;
+	transition: border-color 150ms;
+}
+
+#auth-page .font-medium.underline:hover {
+	border-color: var(--mws-red);
 }
 
 /* OAuth buttons */
 #auth-page .flex.flex-col.space-y-2 button {
-	background: rgba(44, 49, 53, 0.7) !important;
-	border: 1px solid var(--mws-border, rgba(255,255,255,0.08)) !important;
-	color: var(--mws-text) !important;
-	transition: all 200ms !important;
+	background: rgba(255, 255, 255, 0.05) !important;
+	border: 1px solid rgba(255, 255, 255, 0.1) !important;
+	color: rgba(255, 255, 255, 0.85) !important;
+	border-radius: 999px !important;
+	transition: all 200ms ease !important;
 }
 
 #auth-page .flex.flex-col.space-y-2 button:hover {
-	background: rgba(44, 49, 53, 0.95) !important;
-	border-color: rgba(255,255,255,0.14) !important;
+	background: rgba(255, 255, 255, 0.09) !important;
+	border-color: rgba(255, 255, 255, 0.18) !important;
+	color: #fff !important;
 }
 
 /* Auth divider */
 #auth-page hr {
-	border-color: rgba(255, 255, 255, 0.08) !important;
+	border-color: rgba(255, 255, 255, 0.07) !important;
 }
 
 #auth-page label {
-	color: rgba(255, 255, 255, 0.7) !important;
+	color: rgba(255, 255, 255, 0.6) !important;
+	font-size: 0.82rem !important;
+	font-weight: 500 !important;
+	letter-spacing: 0.02em !important;
 }
 
 #auth-page .inline-flex span {
-	color: rgba(255, 255, 255, 0.5) !important;
+	color: rgba(255, 255, 255, 0.4) !important;
+	font-size: 0.8rem !important;
 }
 
 /* ─── Notification Toast ─── */
