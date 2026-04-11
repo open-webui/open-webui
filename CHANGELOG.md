@@ -5,9 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.13] - 2026-04-07
+## [0.8.13] - 2026-04-11
 
 ### Added
+- ⚡ **Faster code block rendering.** Code blocks now reuse a shared HTML unescape helper, reducing extra browser work when displaying encoded output in chat. [#23553](https://github.com/open-webui/open-webui/pull/23553)
+- ⚡ **Faster mention parsing.** Chat text with HTML-like content, file paths, or tool output now parses mentions more efficiently, which helps keep typing and rendering responsive in messages that contain many '<' characters. [#23551](https://github.com/open-webui/open-webui/pull/23551)
 
 - 📋 **Task management tool.** AI models can now create, update, and track tasks within a chat conversation, breaking down complex requests into manageable steps with real-time status updates. [Commit](https://github.com/open-webui/open-webui/commit/bcb71bb5206ac01d97a39fde8ecf0e0541dde636)
 - 🤖 **Scheduled chat automations.** Users can now create, schedule, run, and manage recurring automations that execute prompts automatically with selected models and optional terminal context, while administrators can control access through user and group permissions and users can manage each automation from a dedicated editor page with execution logs, direct run controls, and longer run-history browsing via infinite-scroll logs. [#23303](https://github.com/open-webui/open-webui/pull/23303), [Commit](https://github.com/open-webui/open-webui/commit/5a2ff8b2e5b6f55a20f7ed491f818490eb535ea7), [Commit](https://github.com/open-webui/open-webui/commit/d30a0531d4add045c21a2368d6321a9b1906865f), [Commit](https://github.com/open-webui/open-webui/commit/bae5ff938ac88a3a647cc31ca8db1101015ae18b)
@@ -61,6 +63,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- 🔒 **Safer file access checks.** HTML file previews now treat missing or non-admin owners as inaccessible, preventing accidental access to files that should not be shown. [Commit](https://github.com/open-webui/open-webui/commit/6acaaea59a50ec26da03e6144017a2fd86241ce9)
+- 📣 **Channel message lookups.** Channel message details and pinning now work more reliably when the sender account is missing, avoiding failures in those views. [Commit](https://github.com/open-webui/open-webui/commit/6acaaea59a50ec26da03e6144017a2fd86241ce9)
+- 🔒 **SCIM token checks.** SCIM authentication now compares tokens in a safer way, helping prevent timing-based token guessing attacks. [#23577](https://github.com/open-webui/open-webui/pull/23577)
+- 🖼️ **ComfyUI request hangs.** Concurrent image generation and editing requests to ComfyUI now complete reliably instead of getting stuck when the same user starts multiple requests at once. [#23592](https://github.com/open-webui/open-webui/pull/23592), [#23591](https://github.com/open-webui/open-webui/issues/23591)
 - 💾 **Error message persistence.** LLM errors that occur during streaming are now saved to the database even if the connection drops, so users can see what went wrong when they reconnect. [#23231](https://github.com/open-webui/open-webui/pull/23231)
 - 🚫 **Missing message completion guard.** Chat completion finalization now skips invalid requests without a message identifier, preventing unnecessary error toasts caused by rare frontend concurrency timing. [#23184](https://github.com/open-webui/open-webui/pull/23184)
 - 🧾 **Prompt variable form saving.** Prompt variable forms now save reliably without runtime errors or an unresponsive save action, so input values and placeholders work correctly when applying prompt templates with variables. [#23225](https://github.com/open-webui/open-webui/issues/23225), [#23480](https://github.com/open-webui/open-webui/issues/23480)
