@@ -30,62 +30,103 @@
 	font-display: swap;
 }
 
-/* --app-text-scale is updated via the UI Scale slider (Interface.svelte) */
+/* ─── MWS Design Tokens ─── */
 :root {
 	--app-text-scale: 1;
+
+	/* Brand palette */
 	--mws-red: #ff0032;
+	--mws-red-hover: #e6002d;
+	--mws-red-glow: rgba(255, 0, 50, 0.25);
+	--mws-red-subtle: rgba(255, 0, 50, 0.08);
+
+	/* Backgrounds */
 	--mws-bg: #151618;
+	--mws-bg-elevated: #1a1c1f;
+
+	/* Surfaces */
 	--mws-surface: #2c3135;
 	--mws-surface-strong: #353a3f;
 	--mws-surface-muted: #1f2327;
+	--mws-surface-hover: #363c42;
+
+	/* Borders */
 	--mws-border: rgba(255, 255, 255, 0.08);
 	--mws-border-strong: rgba(255, 255, 255, 0.14);
+	--mws-border-red: rgba(255, 0, 50, 0.3);
+
+	/* Typography */
 	--mws-text: #ffffff;
 	--mws-text-muted: rgba(255, 255, 255, 0.7);
 	--mws-text-soft: rgba(255, 255, 255, 0.5);
+	--mws-text-faint: rgba(255, 255, 255, 0.3);
+
+	/* Shadows */
 	--mws-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
+	--mws-shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.2);
+	--mws-shadow-red: 0 8px 32px rgba(255, 0, 50, 0.15);
+
+	/* Radius */
+	--mws-radius-sm: 0.75rem;
+	--mws-radius-md: 1.25rem;
+	--mws-radius-lg: 1.75rem;
+	--mws-radius-xl: 2rem;
+
+	/* Transitions */
+	--mws-transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+	--mws-transition-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* ─── Base ─── */
 html {
 	word-break: break-word;
-	/* font-size scales the entire document via the same UI control */
 	font-size: calc(1rem * var(--app-text-scale, 1));
 	background: var(--mws-bg);
 }
 
 body {
 	background:
-		radial-gradient(circle at top left, rgba(255, 0, 50, 0.09), transparent 22%),
-		linear-gradient(180deg, #151618 0%, #151618 100%);
+		radial-gradient(ellipse 80% 60% at 18% -10%, rgba(255, 0, 50, 0.10), transparent 50%),
+		radial-gradient(ellipse 60% 50% at 90% 100%, rgba(255, 0, 50, 0.05), transparent 50%),
+		linear-gradient(180deg, #151618 0%, #12131a 100%);
+	color: var(--mws-text);
+	min-height: 100vh;
+}
+
+/* Force dark mode always */
+.dark body,
+body {
+	background:
+		radial-gradient(ellipse 80% 60% at 18% -10%, rgba(255, 0, 50, 0.10), transparent 50%),
+		radial-gradient(ellipse 60% 50% at 90% 100%, rgba(255, 0, 50, 0.05), transparent 50%),
+		linear-gradient(180deg, #151618 0%, #12131a 100%);
 	color: var(--mws-text);
 }
 
+/* ─── Sidebar Chat Items ─── */
 #sidebar-chat-item {
-	/* sidebar item sizing scales for the chat list entries */
 	min-height: calc(32px * var(--app-text-scale, 1));
 	padding-inline: calc(11px * var(--app-text-scale, 1));
 	padding-block: calc(6px * var(--app-text-scale, 1));
 }
 
 #sidebar-chat-item div[dir='auto'] {
-	/* chat title line height follows the text scale */
 	height: calc(20px * var(--app-text-scale, 1));
 	line-height: calc(20px * var(--app-text-scale, 1));
 }
 
 #sidebar-chat-item input {
-	/* editing state input height is kept in sync */
 	min-height: calc(20px * var(--app-text-scale, 1));
 }
 
+/* ─── Code ─── */
 code {
-	/* white-space-collapse: preserve !important; */
 	overflow-x: auto;
 	width: auto;
 }
 
 .editor-selection {
-	background: rgba(180, 213, 255, 0.5);
+	background: rgba(255, 0, 50, 0.2);
 	border-radius: 2px;
 }
 
@@ -113,6 +154,7 @@ textarea::placeholder {
 	direction: auto;
 }
 
+/* ─── Prose Styles ─── */
 .input-prose {
 	@apply prose dark:prose-invert prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 whitespace-pre-line;
 }
@@ -141,6 +183,7 @@ textarea::placeholder {
 	font-family: 'Archivo', 'Vazirmatn', sans-serif;
 }
 
+/* ─── Drag Regions ─── */
 .drag-region {
 	-webkit-app-region: drag;
 }
@@ -158,17 +201,17 @@ li p {
 	display: inline;
 }
 
+/* ─── Scrollbar ─── */
 ::-webkit-scrollbar-thumb {
 	--tw-border-opacity: 1;
-	background-color: rgba(215, 215, 215, 0.6);
-	border-color: rgba(255, 255, 255, var(--tw-border-opacity));
+	background-color: rgba(255, 255, 255, 0.12);
+	border-color: rgba(0, 0, 0, var(--tw-border-opacity));
 	border-radius: 9999px;
 	border-width: 1px;
 }
 
-/* Dark theme scrollbar styles */
 .dark ::-webkit-scrollbar-thumb {
-	background-color: rgba(67, 67, 67, 0.6); /* Darker color for dark theme */
+	background-color: rgba(255, 255, 255, 0.12);
 	border-color: rgba(0, 0, 0, var(--tw-border-opacity));
 }
 
@@ -182,6 +225,7 @@ li p {
 	border-radius: 9999px;
 }
 
+/* ─── Select ─── */
 select {
 	background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
 	background-position: right 0rem center;
@@ -189,10 +233,7 @@ select {
 	background-size: 1.5em 1.5em;
 	-webkit-print-color-adjust: exact;
 	print-color-adjust: exact;
-	/* padding-right: 2.5rem; */
-	/* for Firefox */
 	-moz-appearance: none;
-	/* for Chrome */
 	-webkit-appearance: none;
 }
 
@@ -204,6 +245,7 @@ select {
 	@apply bg-gray-850 text-white;
 }
 
+/* ─── Shimmer Animation ─── */
 @keyframes shimmer {
 	0% {
 		background-position: 100% 0;
@@ -266,6 +308,7 @@ select {
 	display: none;
 }
 
+/* ─── Scrollbar Visibility ─── */
 .scrollbar-hidden:active::-webkit-scrollbar-thumb,
 .scrollbar-hidden:focus::-webkit-scrollbar-thumb,
 .scrollbar-hidden:hover::-webkit-scrollbar-thumb {
@@ -280,7 +323,7 @@ select {
 }
 
 .scrollbar-none::-webkit-scrollbar {
-	display: none; /* for Chrome, Safari and Opera */
+	display: none;
 }
 
 .scrollbar-none::-webkit-scrollbar-corner {
@@ -288,21 +331,21 @@ select {
 }
 
 .scrollbar-none {
-	-ms-overflow-style: none; /* IE and Edge */
-	scrollbar-width: none; /* Firefox */
+	-ms-overflow-style: none;
+	scrollbar-width: none;
 }
 
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
-	/* display: none; <- Crashes Chrome on hover */
 	-webkit-appearance: none;
-	margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+	margin: 0;
 }
 
 input[type='number'] {
-	-moz-appearance: textfield; /* Firefox */
+	-moz-appearance: textfield;
 }
 
+/* ─── KaTeX Display ─── */
 .katex-display {
 	@apply overflow-y-hidden overflow-x-auto max-w-full;
 }
@@ -325,6 +368,7 @@ input[type='number'] {
 	display: none;
 }
 
+/* ─── CodeMirror ─── */
 .cm-editor {
 	height: 100%;
 	width: 100%;
@@ -356,6 +400,7 @@ input[type='number'] {
 	@apply bg-white dark:bg-black;
 }
 
+/* ─── Tippy ─── */
 .tippy-box[data-theme~='dark'] {
 	@apply rounded-lg bg-gray-950 text-xs border border-gray-900 shadow-xl;
 }
@@ -364,12 +409,14 @@ input[type='number'] {
 	-webkit-text-security: disc;
 }
 
+/* ─── Code Span ─── */
 .codespan {
 	padding: 0.15rem 0.3rem;
 	font-size: 0.85em;
 	@apply font-mono rounded-md text-gray-800 bg-gray-100 dark:text-gray-200 dark:bg-gray-800 mx-0.5;
 }
 
+/* ─── Svelte Flow ─── */
 .svelte-flow {
 	background-color: transparent !important;
 }
@@ -387,6 +434,7 @@ input[type='number'] {
 	background-color: rgba(var(--color-gray-950, #0d0d0d), 0.9);
 }
 
+/* ─── ProseMirror ─── */
 .ProseMirror {
 	@apply h-full min-h-fit max-h-full whitespace-pre-wrap;
 }
@@ -398,14 +446,12 @@ input[type='number'] {
 .ProseMirror p.is-editor-empty:first-child::before {
 	content: attr(data-placeholder);
 	float: left;
-	/* Below color is from tailwind, and has the proper contrast
-	text-gray-600 from: https://tailwindcss.com/docs/color */
-	color: #676767;
+	color: var(--mws-text-faint);
 	pointer-events: none;
-
 	@apply line-clamp-1 absolute;
 }
 
+/* ─── TipTap Task Lists ─── */
 .tiptap ul[data-type='taskList'] {
 	list-style: none;
 	margin-left: 0;
@@ -425,12 +471,9 @@ input[type='number'] {
 
 		> div {
 			flex: 1 1 auto;
-
 			align-items: center;
 		}
 	}
-
-	/* checked data-checked="true" */
 
 	li[data-checked='true'] {
 		> div {
@@ -447,7 +490,6 @@ input[type='number'] {
 		margin: 0;
 	}
 
-	/* Reset nested regular ul elements to default styling */
 	ul:not([data-type='taskList']) {
 		list-style: disc;
 		padding-left: 1rem;
@@ -472,6 +514,7 @@ input[type='number'] {
 	}
 }
 
+/* ─── Mentions ─── */
 .mention {
 	border-radius: 0.4rem;
 	box-decoration-break: clone;
@@ -518,12 +561,9 @@ input[type='number'] {
 
 		> div {
 			flex: 1 1 auto;
-
 			align-items: center;
 		}
 	}
-
-	/* checked data-checked="true" */
 
 	li[data-checked='true'] {
 		> div {
@@ -540,7 +580,6 @@ input[type='number'] {
 		margin: 0;
 	}
 
-	/* Reset nested regular ul elements to default styling */
 	ul:not([data-type='taskList']) {
 		list-style: disc;
 		padding-left: 1rem;
@@ -567,22 +606,21 @@ input[type='number'] {
 
 @media (prefers-color-scheme: dark) {
 	.ProseMirror p.is-editor-empty:first-child::before {
-		color: #757575;
+		color: var(--mws-text-faint);
 	}
 }
 
 .ai-autocompletion::after {
-	color: #a0a0a0;
-
+	color: var(--mws-text-faint);
 	content: attr(data-suggestion);
 	pointer-events: none;
 }
 
+/* ─── TipTap Code ─── */
 .tiptap pre > code {
 	border-radius: 0.4rem;
 	font-size: 0.85rem;
 	padding: 0.25em 0.3em;
-
 	@apply dark:bg-gray-800 bg-gray-50;
 }
 
@@ -591,7 +629,6 @@ input[type='number'] {
 	font-family: 'JetBrainsMono', monospace;
 	margin: 1.5rem 0;
 	padding: 0.75rem 1rem;
-
 	@apply dark:bg-gray-800 bg-gray-50;
 }
 
@@ -601,7 +638,7 @@ input[type='number'] {
 	@apply font-mono rounded-md text-gray-800 bg-gray-50 dark:text-gray-200 dark:bg-gray-800 mx-0.5;
 }
 
-/* Code styling */
+/* ─── Code Highlighting ─── */
 .hljs-comment,
 .hljs-quote {
 	color: #616161;
@@ -653,7 +690,7 @@ input[type='number'] {
 	font-weight: 700;
 }
 
-/* Table styling for tiptap editors */
+/* ─── TipTap Tables ─── */
 .tiptap table {
 	@apply w-full text-sm text-start text-gray-500 dark:text-gray-400 max-w-full;
 }
@@ -683,28 +720,28 @@ input[type='number'] {
 	@apply bg-transparent p-0 m-0;
 }
 
-/* this is a rough fix for the first cursor position when the first paragraph is empty */
+/* ─── ProseMirror yjs cursor ─── */
 .ProseMirror > .ProseMirror-yjs-cursor:first-child {
 	margin-top: 16px;
 }
-/* This gives the remote user caret. The colors are automatically overwritten*/
+
 .ProseMirror-yjs-cursor {
 	position: relative;
 	margin-left: -1px;
 	margin-right: -1px;
 	border-left: 1px solid black;
 	border-right: 1px solid black;
-	border-color: orange;
+	border-color: var(--mws-red);
 	word-break: normal;
 	pointer-events: none;
 }
-/* This renders the username above the caret */
+
 .ProseMirror-yjs-cursor > div {
 	position: absolute;
 	top: -1.05em;
 	left: -1px;
 	font-size: 13px;
-	background-color: rgb(250, 129, 0);
+	background-color: var(--mws-red);
 	user-select: none;
 	color: white;
 	padding-left: 2px;
@@ -712,30 +749,19 @@ input[type='number'] {
 	white-space: nowrap;
 }
 
-body {
-	background: var(--mws-bg);
-	color: var(--mws-text);
-}
-
-.dark body {
-	background: var(--mws-bg);
-	color: var(--mws-text);
-}
-
-/* Position the handle relative to each LI */
+/* ─── ProseMirror List Drag ─── */
 .pm-li--with-handle {
 	position: relative;
-	margin-left: 12px; /* make space for the handle */
+	margin-left: 12px;
 }
 
 .tiptap ul[data-type='taskList'] .pm-list-drag-handle {
 	margin-left: 0px;
 }
 
-/* The drag handle itself */
 .pm-list-drag-handle {
 	position: absolute;
-	left: -36px; /* pull into the left gutter */
+	left: -36px;
 	top: 1px;
 	width: 18px;
 	height: 18px;
@@ -754,7 +780,7 @@ body {
 }
 
 .tiptap ul[data-type='taskList'] .pm-list-drag-handle {
-	left: -16px; /* pull into the left gutter more to avoid the checkbox */
+	left: -16px;
 }
 
 .pm-list-drag-handle:active {
@@ -764,7 +790,7 @@ body {
 	opacity: 1;
 }
 .pm-list-drag-handle:hover {
-	background: rgba(0, 0, 0, 0.06);
+	background: rgba(255, 255, 255, 0.06);
 }
 
 :root {
@@ -780,7 +806,6 @@ body {
 	position: relative;
 }
 
-/* BEFORE/AFTER lines */
 .pm-li-drop-before::before,
 .pm-li-drop-after::after {
 	content: '';
@@ -832,35 +857,44 @@ body {
 }
 
 #note-content-container .ProseMirror {
-	padding-bottom: 2rem; /* space for the bottom toolbar */
+	padding-bottom: 2rem;
 }
 
+/* ═══════════════════════════════════════════════
+   MWS CORPORATE THEME — Red/Black Premium Design
+   Inspired by mts.ai
+   ═══════════════════════════════════════════════ */
+
+/* ─── Shell ─── */
 .mws-shell {
 	position: relative;
 	background:
-		radial-gradient(circle at 18% 0%, rgba(255, 0, 50, 0.12), transparent 20%),
-		linear-gradient(180deg, rgba(255, 255, 255, 0.015), rgba(255, 255, 255, 0)),
+		radial-gradient(ellipse 70% 50% at 15% 0%, rgba(255, 0, 50, 0.11), transparent 45%),
+		radial-gradient(ellipse 50% 40% at 85% 100%, rgba(255, 0, 50, 0.04), transparent 45%),
+		linear-gradient(180deg, rgba(255, 255, 255, 0.01), rgba(255, 255, 255, 0)),
 		var(--mws-bg);
 }
 
+/* Subtle grid overlay like mts.ai */
 .mws-shell::before {
 	content: '';
 	position: fixed;
 	inset: 0;
 	pointer-events: none;
 	background:
-		linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px),
-		linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px);
-	background-size: 48px 48px;
-	mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.38), transparent 70%);
+		linear-gradient(90deg, rgba(255, 255, 255, 0.010) 1px, transparent 1px),
+		linear-gradient(rgba(255, 255, 255, 0.010) 1px, transparent 1px);
+	background-size: 52px 52px;
+	mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.30), transparent 65%);
 }
 
+/* ─── Sidebar ─── */
 .mws-app-sidebar,
 .mws-sidebar-rail,
 .mws-sidebar {
-	background: rgba(21, 22, 24, 0.94) !important;
-	backdrop-filter: blur(20px);
-	box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.05);
+	background: rgba(17, 18, 20, 0.96) !important;
+	backdrop-filter: blur(24px);
+	box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.04);
 }
 
 .mws-sidebar-header::before {
@@ -868,10 +902,10 @@ body {
 	position: absolute;
 	inset: 0.25rem 0.35rem auto;
 	height: 3rem;
-	border-radius: 1.2rem;
-	background: rgba(44, 49, 53, 0.9);
+	border-radius: var(--mws-radius-md);
+	background: rgba(44, 49, 53, 0.85);
 	border: 1px solid var(--mws-border);
-	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 	pointer-events: none;
 }
 
@@ -882,6 +916,7 @@ body {
 	letter-spacing: -0.02em;
 }
 
+/* Sidebar items */
 #sidebar-new-chat-button,
 #sidebar-search-button,
 #sidebar-notes-button,
@@ -890,6 +925,7 @@ body {
 	border: 1px solid transparent;
 	background: transparent;
 	color: var(--mws-text);
+	transition: all var(--mws-transition);
 }
 
 #sidebar-new-chat-button:hover,
@@ -901,6 +937,14 @@ body {
 	border-color: var(--mws-border);
 }
 
+/* Active sidebar item */
+#sidebar-chat-item.active,
+#sidebar-chat-item[data-active="true"] {
+	background: rgba(255, 0, 50, 0.10) !important;
+	border-color: var(--mws-border-red);
+}
+
+/* ─── Navbar ─── */
 .mws-navbar {
 	padding-inline: 0.25rem;
 }
@@ -908,12 +952,18 @@ body {
 .mws-navbar-inner {
 	position: relative;
 	border: 1px solid var(--mws-border);
-	border-radius: 1.5rem;
-	background: rgba(21, 22, 24, 0.82);
-	backdrop-filter: blur(18px);
-	box-shadow: var(--mws-shadow);
+	border-radius: var(--mws-radius-lg);
+	background: rgba(21, 22, 24, 0.85);
+	backdrop-filter: blur(24px);
+	box-shadow: var(--mws-shadow-sm);
+	transition: border-color var(--mws-transition);
 }
 
+.mws-navbar-inner:hover {
+	border-color: var(--mws-border-strong);
+}
+
+/* ─── Chat Container ─── */
 .mws-chat-container {
 	position: relative;
 }
@@ -925,9 +975,9 @@ body {
 .mws-chat-pane {
 	position: relative;
 	border: 1px solid var(--mws-border-strong);
-	border-radius: 2rem;
+	border-radius: var(--mws-radius-xl);
 	background:
-		linear-gradient(180deg, rgba(29, 32, 35, 0.96), rgba(21, 22, 24, 0.98)),
+		linear-gradient(180deg, rgba(26, 28, 31, 0.97), rgba(21, 22, 24, 0.99)),
 		var(--mws-bg);
 	box-shadow: var(--mws-shadow);
 }
@@ -938,13 +988,15 @@ body {
 	inset: 0;
 	border-radius: inherit;
 	pointer-events: none;
-	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
+/* Navbar gradient background */
 #navbar-bg-gradient-to-b {
-	background: linear-gradient(180deg, rgba(21, 22, 24, 0.96), rgba(21, 22, 24, 0.2), transparent) !important;
+	background: linear-gradient(180deg, rgba(21, 22, 24, 0.97), rgba(21, 22, 24, 0.2), transparent) !important;
 }
 
+/* ─── Input Dock ─── */
 .mws-input-dock {
 	padding-inline: 0.9rem;
 	padding-bottom: 1rem;
@@ -952,12 +1004,21 @@ body {
 
 #chat-input-container {
 	border: 1px solid var(--mws-border-strong) !important;
-	border-radius: 1.6rem !important;
-	background: rgba(44, 49, 53, 0.94) !important;
+	border-radius: var(--mws-radius-lg) !important;
+	background: rgba(38, 42, 46, 0.95) !important;
 	box-shadow:
-		0 18px 40px rgba(0, 0, 0, 0.24),
+		0 18px 40px rgba(0, 0, 0, 0.28),
 		inset 0 1px 0 rgba(255, 255, 255, 0.03);
-	backdrop-filter: blur(16px);
+	backdrop-filter: blur(20px);
+	transition: border-color var(--mws-transition), box-shadow var(--mws-transition);
+}
+
+#chat-input-container:focus-within {
+	border-color: var(--mws-border-red) !important;
+	box-shadow:
+		0 18px 40px rgba(0, 0, 0, 0.28),
+		0 0 0 1px rgba(255, 0, 50, 0.15),
+		inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 #chat-input,
@@ -971,24 +1032,32 @@ body {
 	color: var(--mws-text-soft) !important;
 }
 
+/* ─── Placeholder / Hero ─── */
 .mws-placeholder {
 	position: relative;
 	max-width: 76rem;
 }
 
+/* MWS Hero Badge — pill with logo */
 .mws-hero-badge {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.8rem;
-	padding: 0.8rem 1.1rem;
+	padding: 0.7rem 1.2rem;
 	border-radius: 999px;
 	border: 1px solid var(--mws-border);
-	background: rgba(44, 49, 53, 0.9);
+	background: rgba(44, 49, 53, 0.85);
 	color: var(--mws-text);
 	font-size: 0.85rem;
 	font-weight: 700;
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
+	transition: all var(--mws-transition);
+}
+
+.mws-hero-badge:hover {
+	border-color: var(--mws-border-red);
+	box-shadow: var(--mws-shadow-red);
 }
 
 .mws-hero-copy {
@@ -996,6 +1065,7 @@ body {
 	margin-inline: auto;
 }
 
+/* Title — big bold Archivo */
 .mws-hero-title {
 	margin: 0;
 	font-family: 'Archivo', 'Vazirmatn', sans-serif;
@@ -1005,6 +1075,12 @@ body {
 	font-weight: 700;
 	color: var(--mws-text);
 	text-wrap: balance;
+}
+
+/* Red accent in title */
+.mws-hero-title span,
+.mws-hero-title strong {
+	color: var(--mws-red);
 }
 
 .mws-hero-subtitle {
@@ -1041,21 +1117,27 @@ body {
 	filter: saturate(0) brightness(1.2);
 }
 
+/* ─── Suggestions / Waterfall Cards ─── */
 .waterfall {
 	border: 1px solid transparent;
-	background: rgba(44, 49, 53, 0.3);
+	background: rgba(44, 49, 53, 0.25);
+	transition: all var(--mws-transition);
 }
 
 .waterfall:hover {
 	border-color: var(--mws-border);
-	background: rgba(44, 49, 53, 0.9) !important;
+	background: rgba(44, 49, 53, 0.90) !important;
+	transform: translateY(-1px);
+	box-shadow: var(--mws-shadow-sm);
 }
 
+/* ─── Action Buttons ─── */
 button[id$='-button'][aria-label='New Chat'],
 #temporary-chat-button,
 #save-temporary-chat-button,
 #chat-context-menu-button {
 	border: 1px solid transparent;
+	transition: all var(--mws-transition-fast);
 }
 
 button[id$='-button'][aria-label='New Chat']:hover,
@@ -1066,6 +1148,8 @@ button[id$='-button'][aria-label='New Chat']:hover,
 	border-color: var(--mws-border);
 }
 
+/* ─── Brand Color Overrides ─── */
+/* Replace Tailwind blue-600 with MWS red */
 .bg-blue-600,
 .hover\:bg-blue-600:hover,
 .focus\:bg-blue-600:focus {
@@ -1082,18 +1166,180 @@ button[id$='-button'][aria-label='New Chat']:hover,
 	border-color: var(--mws-red) !important;
 }
 
+/* Checkboxes */
 input[type='checkbox']:checked {
 	background-color: var(--mws-red) !important;
 	border-color: var(--mws-red) !important;
 }
 
+/* ─── Buttons — Primary (MWS Red) ─── */
+.mws-btn-primary,
+button.bg-black.dark\:bg-white {
+	background: var(--mws-red) !important;
+	color: white !important;
+	border: none;
+	border-radius: 999px;
+	font-weight: 600;
+	transition: all var(--mws-transition);
+	box-shadow: 0 4px 16px rgba(255, 0, 50, 0.2);
+}
+
+.mws-btn-primary:hover,
+button.bg-black.dark\:bg-white:hover {
+	background: var(--mws-red-hover) !important;
+	box-shadow: var(--mws-shadow-red);
+	transform: translateY(-1px);
+}
+
+/* Send button */
+button[type="submit"],
+button[aria-label="Send"] {
+	transition: all var(--mws-transition);
+}
+
+/* ─── Auth Page Styling ─── */
+#auth-page {
+	background:
+		radial-gradient(ellipse 80% 60% at 50% -20%, rgba(255, 0, 50, 0.14), transparent 60%),
+		radial-gradient(circle at 80% 80%, rgba(255, 0, 50, 0.06), transparent 40%),
+		var(--mws-bg) !important;
+}
+
+#auth-page .bg-white.dark\:bg-black,
+#auth-page > div:first-child {
+	background: transparent !important;
+}
+
+#auth-container {
+	background: transparent !important;
+}
+
+/* Auth form card */
+#auth-page form {
+	background: rgba(28, 30, 34, 0.80);
+	border: 1px solid var(--mws-border-strong);
+	border-radius: var(--mws-radius-lg);
+	padding: 2rem;
+	backdrop-filter: blur(24px);
+	box-shadow: var(--mws-shadow);
+}
+
+/* Auth inputs */
+#auth-page input[type="email"],
+#auth-page input[type="text"],
+#auth-page input[type="password"],
+#auth-page .my-0\.5 {
+	background: rgba(44, 49, 53, 0.7) !important;
+	border: 1px solid var(--mws-border) !important;
+	border-radius: var(--mws-radius-sm) !important;
+	padding: 0.75rem 1rem !important;
+	color: var(--mws-text) !important;
+	transition: border-color var(--mws-transition);
+}
+
+#auth-page input:focus {
+	border-color: var(--mws-red) !important;
+	outline: none !important;
+	box-shadow: 0 0 0 2px rgba(255, 0, 50, 0.15) !important;
+}
+
+/* Auth submit button */
+#auth-page button[type="submit"] {
+	background: var(--mws-red) !important;
+	color: white !important;
+	border: none !important;
+	border-radius: 999px !important;
+	padding: 0.75rem 1.5rem !important;
+	font-weight: 600 !important;
+	font-size: 0.95rem !important;
+	transition: all var(--mws-transition) !important;
+	box-shadow: 0 6px 24px rgba(255, 0, 50, 0.25) !important;
+}
+
+#auth-page button[type="submit"]:hover {
+	background: var(--mws-red-hover) !important;
+	box-shadow: var(--mws-shadow-red) !important;
+	transform: translateY(-2px) !important;
+}
+
+/* OAuth buttons */
+#auth-page .flex.flex-col.space-y-2 button {
+	background: rgba(44, 49, 53, 0.7) !important;
+	border: 1px solid var(--mws-border) !important;
+	color: var(--mws-text) !important;
+	transition: all var(--mws-transition);
+}
+
+#auth-page .flex.flex-col.space-y-2 button:hover {
+	background: rgba(44, 49, 53, 0.95) !important;
+	border-color: var(--mws-border-strong) !important;
+}
+
+/* Auth divider */
+#auth-page hr {
+	border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Auth labels */
+#auth-page label {
+	color: var(--mws-text-muted) !important;
+}
+
+/* Auth hr/separator */
+#auth-page .inline-flex span {
+	color: var(--mws-text-soft) !important;
+}
+
+/* ─── Notification Toast ─── */
+[data-sonner-toaster] [data-sonner-toast] {
+	background: rgba(28, 30, 34, 0.95) !important;
+	border: 1px solid var(--mws-border-strong) !important;
+	color: var(--mws-text) !important;
+	backdrop-filter: blur(16px);
+	border-radius: var(--mws-radius-sm) !important;
+}
+
+/* ─── Modal/Dialog Overlays ─── */
+[role="dialog"] > div,
+.modal-content {
+	border: 1px solid var(--mws-border-strong);
+	border-radius: var(--mws-radius-lg);
+	background: rgba(21, 22, 24, 0.97);
+	backdrop-filter: blur(24px);
+}
+
+/* ─── Red Pulse Animation ─── */
+@keyframes redPulse {
+	0%, 100% {
+		box-shadow: 0 0 0 0 rgba(255, 0, 50, 0.4);
+	}
+	50% {
+		box-shadow: 0 0 20px 4px rgba(255, 0, 50, 0.15);
+	}
+}
+
+.mws-pulse-red {
+	animation: redPulse 2s ease-in-out infinite;
+}
+
+/* ─── Glow effect for active elements ─── */
+@keyframes subtleGlow {
+	0%, 100% {
+		opacity: 0.5;
+	}
+	50% {
+		opacity: 1;
+	}
+}
+
+/* ─── Mobile Responsive ─── */
 @media (max-width: 768px) {
 	.mws-chat-pane-frame {
 		padding: 0.35rem;
 	}
 
 	.mws-chat-pane {
-		border-radius: 1.25rem;
+		border-radius: var(--mws-radius-md);
 	}
 
 	.mws-hero-title {
@@ -1103,4 +1349,34 @@ input[type='checkbox']:checked {
 	.mws-hero-subtitle {
 		font-size: 0.95rem;
 	}
+
+	#auth-page form {
+		margin: 0 0.5rem;
+		padding: 1.5rem;
+	}
+}
+
+/* ─── Focus States ─── */
+:focus-visible {
+	outline: 2px solid rgba(255, 0, 50, 0.5);
+	outline-offset: 2px;
+}
+
+/* ─── Selection ─── */
+::selection {
+	background: rgba(255, 0, 50, 0.25);
+	color: white;
+}
+
+::-moz-selection {
+	background: rgba(255, 0, 50, 0.25);
+	color: white;
+}
+
+/* ─── Smooth transitions on all interactive elements ─── */
+a, button, input, select, textarea {
+	transition: color var(--mws-transition-fast),
+	            background-color var(--mws-transition-fast),
+	            border-color var(--mws-transition-fast),
+	            box-shadow var(--mws-transition-fast);
 }

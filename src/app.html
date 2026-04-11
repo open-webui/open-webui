@@ -28,7 +28,7 @@
 			name="viewport"
 			content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
 		/>
-		<meta name="theme-color" content="#171717" />
+		<meta name="theme-color" content="#151618" />
 		<meta name="robots" content="noindex,nofollow" />
 
 		<script src="/static/loader.js" defer crossorigin="use-credentials"></script>
@@ -51,8 +51,8 @@
 				}
 
 				if (localStorage.theme === 'system') {
-					document.documentElement.classList.add(prefersDarkTheme ? 'dark' : 'light');
-					metaThemeColorTag.setAttribute('content', prefersDarkTheme ? '#171717' : '#ffffff');
+					document.documentElement.classList.add('dark');
+					metaThemeColorTag.setAttribute('content', '#151618');
 				} else if (localStorage.theme === 'oled-dark') {
 					document.documentElement.style.setProperty('--color-gray-800', '#101010');
 					document.documentElement.style.setProperty('--color-gray-850', '#050505');
@@ -61,14 +61,14 @@
 					document.documentElement.classList.add('dark');
 					metaThemeColorTag.setAttribute('content', '#000000');
 				} else if (localStorage.theme === 'light') {
-					document.documentElement.classList.add('light');
-					metaThemeColorTag.setAttribute('content', '#ffffff');
+					document.documentElement.classList.add('dark');
+					metaThemeColorTag.setAttribute('content', '#151618');
 				} else if (localStorage.theme === 'her') {
 					document.documentElement.classList.add('her');
 					metaThemeColorTag.setAttribute('content', '#983724');
 				} else {
 					document.documentElement.classList.add('dark');
-					metaThemeColorTag.setAttribute('content', '#171717');
+					metaThemeColorTag.setAttribute('content', '#151618');
 				}
 
 				window.matchMedia('(prefers-color-scheme: dark)').addListener((e) => {
@@ -151,7 +151,7 @@
 							height: 0.75rem;
 
 							border-radius: 9999px;
-							background-color: #fafafa9a;
+							background-color: rgba(44, 49, 53, 0.6);
 						"
 					></div>
 
@@ -162,7 +162,7 @@
 							width: 0%;
 							height: 0.75rem;
 							border-radius: 9999px;
-							background-color: #fff;
+							background-color: #ff0032;
 						"
 						class="bg-white"
 					></div>
@@ -182,11 +182,11 @@
 		}
 
 		#splash-screen {
-			background: #fff;
+			background: #151618;
 		}
 
 		html.dark #splash-screen {
-			background: #000;
+			background: #151618;
 		}
 
 		html.her #splash-screen {
