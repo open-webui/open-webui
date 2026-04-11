@@ -137,7 +137,7 @@
 	"Allow Text to Speech": "允许文本转语音",
 	"Allow User Location": "获取您的位置",
 	"Allow Voice Interruption in Call": "允许语音通话时打断对话",
-	"Allow Web Upload": "允许上传文件",
+	"Allow Web Upload": "允许从网络上传内容",
 	"Allowed Endpoints": "允许的接口",
 	"Allowed File Extensions": "允许的文件扩展名",
 	"Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.": "文件上传允许的扩展名。多个扩展名用逗号分隔。留空以允许所有文件类型。",
