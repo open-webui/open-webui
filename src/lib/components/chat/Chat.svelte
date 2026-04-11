@@ -123,8 +123,6 @@
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
 
-	let navbarElement;
-
 	let showEventConfirmation = false;
 	let eventConfirmationTitle = '';
 	let eventConfirmationMessage = '';
@@ -2751,11 +2749,8 @@
 				/>
 			{/if}
 
-			<PaneGroup direction="horizontal" class="w-full h-full">
-				<Pane defaultSize={50} minSize={30} class="mws-chat-pane-frame h-full flex relative max-w-full flex-col">
-					<FilesOverlay show={dragged} />
+				<div class="w-full">
 					<Navbar
-						bind:this={navbarElement}
 						chat={{
 							id: $chatId,
 							chat: {
@@ -2812,8 +2807,12 @@
 							}
 						}}
 					/>
+				</div>
 
-					<div id="chat-pane" class="mws-chat-pane flex flex-col flex-auto z-10 w-full @container overflow-auto">
+				<PaneGroup direction="horizontal" class="w-full h-full">
+					<Pane defaultSize={50} minSize={30} class="mws-chat-pane-frame h-full flex relative max-w-full flex-col">
+						<FilesOverlay show={dragged} />
+						<div id="chat-pane" class="mws-chat-pane flex flex-col flex-auto z-10 w-full @container overflow-auto">
 						{#if ($settings?.landingPageMode === 'chat' && !$selectedFolder) || createMessagesList(history, history.currentId).length > 0}
 							<div
 								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
