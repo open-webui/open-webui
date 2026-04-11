@@ -28,6 +28,10 @@ from open_webui.env import AUDIT_LOG_LEVEL, AUDIT_INCLUDED_PATHS, MAX_BODY_LOG_S
 from open_webui.utils.auth import get_current_user, get_http_authorization_cred
 from open_webui.models.users import UserModel
 
+# Toggle to enable auditing of GET requests (default: disabled)
+import os
+AUDIT_LOG_GET_REQUESTS = os.getenv("AUDIT_LOG_GET_REQUESTS", "false").lower() == "true"
+
 if TYPE_CHECKING:
     from loguru import Logger
 
@@ -202,8 +206,6 @@ class AuditLoggingMiddleware:
         return None
 
     def _should_skip_auditing(self, request: Request) -> bool:
-        if request.method not in {'POST', 'PUT', 'PATCH', 'DELETE'} or AUDIT_LOG_LEVEL == 'NONE':
-            return True
 
         ALWAYS_LOG_ENDPOINTS = {
             '/api/v1/auths/signin',
@@ -214,6 +216,12 @@ class AuditLoggingMiddleware:
         for endpoint in ALWAYS_LOG_ENDPOINTS:
             if path.startswith(endpoint):
                 return False  # Do NOT skip logging for auth endpoints
+        # Handle GET based on env flag
+        if request.method == 'GET' and not AUDIT_LOG_GET_REQUESTS:
+            return True
+        
+        if request.method not in {'GET', 'POST', 'PUT', 'PATCH', 'DELETE'} or AUDIT_LOG_LEVEL == 'NONE':
+            return True
 
         # Skip logging if the request is not authenticated
         # Check both Authorization header (API keys) and token cookie (browser sessions)
