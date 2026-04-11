@@ -51,15 +51,15 @@ jobs:
       - name: Validate compose
         shell: bash
         run: |
-          docker-compose -f /opt/build/open-webui/docker-compose.yml config >/dev/null
+          docker-compose -p mts -f /opt/build/open-webui/docker-compose.yml config >/dev/null
 
       - name: Build and restart
         shell: bash
         run: |
-          docker-compose -f /opt/build/open-webui/docker-compose.yml build --pull openwebui
-          docker-compose -f /opt/build/open-webui/docker-compose.yml up -d openwebui
+          docker-compose -p mts -f /opt/build/open-webui/docker-compose.yml build --pull openwebui
+          docker-compose -p mts -f /opt/build/open-webui/docker-compose.yml up -d openwebui
 
       - name: Show service status
         shell: bash
         run: |
-          docker-compose -f /opt/build/open-webui/docker-compose.yml ps openwebui
+          docker-compose -p mts -f /opt/build/open-webui/docker-compose.yml ps openwebui
