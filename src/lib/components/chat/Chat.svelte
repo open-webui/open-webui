@@ -97,7 +97,6 @@
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/chat/Navbar.svelte';
-	import Suggestions from '$lib/components/chat/Suggestions.svelte';
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
@@ -3049,19 +3048,6 @@
 									/>
 								</div>
 
-								<div class="mx-auto max-w-2xl font-primary">
-									<div class="mx-5">
-										<Suggestions
-											className="mws-suggestions-grid"
-											suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
-												$models.find((m) => m.id === selectedModelIds.at(-1))?.info?.meta
-													?.suggestion_prompts ??
-												$config?.default_prompt_suggestions ?? []}
-											inputValue={prompt}
-											{onSelect}
-										/>
-									</div>
-								</div>
 							</div>
 						{/if}
 					</div>

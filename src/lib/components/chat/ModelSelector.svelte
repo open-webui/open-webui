@@ -59,7 +59,7 @@
 						placeholder={$i18n.t('Select a model')}
 						items={$models.map((model) => ({
 							value: model.id,
-							label: model.name,
+							label: model.name === 'AUTO' ? $i18n.t('Auto') : model.name,
 							model: model
 						}))}
 						{pinModelHandler}
