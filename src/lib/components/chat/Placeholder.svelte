@@ -109,61 +109,26 @@
 					<span>{$WEBUI_NAME}</span>
 					</div>
 
-					<div class="mb-8" in:fade={{ duration: 120, delay: 20 }}>
-						<h1 class="text-2xl @sm:text-3xl font-semibold text-gray-800 dark:text-gray-100">
-							С чего начнем?
-						</h1>
-					</div>
+				<div class="mb-8" in:fade={{ duration: 120, delay: 20 }}>
+					<h1 class="text-2xl @sm:text-3xl font-semibold text-gray-800 dark:text-gray-100">
+						С чего начнем?
+					</h1>
+				</div>
 
-					<div class="flex flex-row justify-center gap-3 @sm:gap-3.5 w-fit px-5 max-w-xl mx-auto">
-						<div class="flex shrink-0 justify-center">
-							<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
-								{#each models as model, modelIdx}
-									{#if (model?.id ?? '').toLowerCase() !== 'auto'}
-										<Tooltip
-											content={(models[modelIdx]?.info?.meta?.tags ?? [])
-												.map((tag) => tag.name.toUpperCase())
-												.join(', ')}
-											placement="top"
-										>
-											<button
-												aria-hidden={models.length <= 1}
-												aria-label={$i18n.t('Get information on {{name}} in the UI', {
-													name: models[modelIdx]?.name
-												})}
-												on:click={() => {
-													selectedModelIdx = modelIdx;
-												}}
-											>
-												<img
-													src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}`}
-													class=" size-9 @sm:size-10 rounded-full border-[1px] border-gray-100 dark:border-none"
-													alt=""
-													aria-hidden="true"
-													draggable="false"
-													on:error={(e) => {
-														e.currentTarget.src = '/static/mws-logo.svg';
-													}}
-												/>
-											</button>
-										</Tooltip>
-									{/if}
-								{/each}
-							</div>
-						</div>
-
-						<div
-							class=" text-3xl @sm:text-3xl line-clamp-1 flex items-center"
-							in:fade={{ duration: 100 }}
-						>
+				<div class="flex flex-row justify-center gap-3 @sm:gap-3.5 w-fit px-5 max-w-xl mx-auto">
+					<div
+						class=" text-3xl @sm:text-3xl line-clamp-1 flex items-center"
+						in:fade={{ duration: 100 }}
+					>
 							{#if models[selectedModelIdx]?.name}
+								{@const modelName = models[selectedModelIdx]?.name}
 								<Tooltip
-									content={models[selectedModelIdx]?.name}
+									content={modelName.toLowerCase() === 'auto' ? $i18n.t('Auto') : modelName}
 									placement="top"
 									className=" flex items-center "
 								>
 									<span class="line-clamp-1">
-										{models[selectedModelIdx]?.name}
+										{modelName.toLowerCase() === 'auto' ? $i18n.t('Auto') : modelName}
 									</span>
 								</Tooltip>
 							{:else}
