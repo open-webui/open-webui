@@ -66,6 +66,62 @@ function generateRegexRules(delimiters) {
 
 const { inlineRule, blockRule } = generateRegexRules(DELIMITER_LIST);
 
+function hasAllowedTrailingChar(src: string, index: number) {
+	return index >= src.length || ALLOWED_SURROUNDING_CHARS_REGEX.test(src.charAt(index));
+}
+
+function hasBlockTrailingChar(src: string, index: number) {
+	return /^(?:[ \t]*\r?\n|$)/.test(src.slice(index));
+}
+
+function findDisplayMathEnd(src: string, startIndex: number) {
+	for (let i = startIndex; i < src.length - 1; i++) {
+		if (src.charAt(i) === '\\') {
+			i += 1;
+			continue;
+		}
+
+		if (src.charAt(i) === '$' && src.charAt(i + 1) === '$') {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+export function tokenizeDisplayMath(
+	src: string,
+	type: 'inlineKatex' | 'blockKatex',
+	requireBlockBoundary = false
+) {
+	if (!src.startsWith('$$')) {
+		return;
+	}
+
+	const endIndex = findDisplayMathEnd(src, 2);
+	if (endIndex === -1) {
+		return;
+	}
+
+	const raw = src.slice(0, endIndex + 2);
+	const text = raw.slice(2, -2);
+
+	if (!text.trim() || !hasAllowedTrailingChar(src, endIndex + 2)) {
+		return;
+	}
+
+	if (requireBlockBoundary && !hasBlockTrailingChar(src, endIndex + 2)) {
+		return;
+	}
+
+	return {
+		type,
+		raw,
+		text,
+		displayMode: true
+	};
+}
+
 export default function (options = {}) {
 	return {
 		extensions: [inlineKatex(options), blockKatex(options)]
@@ -102,6 +158,17 @@ function katexStart(src, displayMode: boolean) {
 }
 
 function katexTokenizer(src, tokens, displayMode: boolean) {
+	if (src.startsWith('$$')) {
+		const displayToken = tokenizeDisplayMath(
+			src,
+			displayMode ? 'blockKatex' : 'inlineKatex',
+			displayMode
+		);
+		if (displayToken) {
+			return displayToken;
+		}
+	}
+
 	const ruleReg = displayMode ? blockRule : inlineRule;
 	const type = displayMode ? 'blockKatex' : 'inlineKatex';
 
