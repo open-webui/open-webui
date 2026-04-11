@@ -681,7 +681,7 @@ async def image_generations(
             res = await comfyui_create_image(
                 model,
                 form_data,
-                user.id,
+                str(uuid.uuid4()),
                 request.app.state.config.COMFYUI_BASE_URL,
                 request.app.state.config.COMFYUI_API_KEY,
             )
@@ -1011,7 +1011,7 @@ async def image_edits(
             res = await comfyui_edit_image(
                 model,
                 form_data,
-                user.id,
+                str(uuid.uuid4()),
                 request.app.state.config.IMAGES_EDIT_COMFYUI_BASE_URL,
                 request.app.state.config.IMAGES_EDIT_COMFYUI_API_KEY,
             )
