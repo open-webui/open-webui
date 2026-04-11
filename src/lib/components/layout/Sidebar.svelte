@@ -64,7 +64,7 @@
 	import Sidebar from '../icons/Sidebar.svelte';
 	import PinnedModelList from './Sidebar/PinnedModelList.svelte';
 	import Note from '../icons/Note.svelte';
-	import { slide } from 'svelte/transition';
+	import { fly } from 'svelte/transition';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
 
 	const BREAKPOINT = 768;
@@ -691,7 +691,7 @@
 
 {#if !$mobile && !$showSidebar}
 	<div
-		class="mws-sidebar-rail m-2 pt-[7px] pb-2 px-2 flex flex-col justify-between text-black dark:text-white hover:bg-gray-50/30 dark:hover:bg-gray-950/30 h-[calc(100dvh-1rem)] z-10 transition-all border-e-[0.5px] border-gray-50 dark:border-gray-850/30"
+		class="mws-sidebar-rail m-2 pt-[7px] pb-2 px-2 flex flex-col justify-between text-black dark:text-white hover:bg-gray-50/30 dark:hover:bg-gray-950/30 h-[calc(100vh-1rem)] z-10 transition-colors border-e-[0.5px] border-gray-50 dark:border-gray-850/30"
 		id="sidebar"
 	>
 		<button
@@ -883,17 +883,17 @@
 	<div
 		bind:this={navElement}
 		id="sidebar"
-		class="top-2 left-2 bottom-2 h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] min-h-[calc(100dvh-1rem)] select-none {$showSidebar
+		class="top-2 left-2 bottom-2 select-none {$showSidebar
 			? `${$mobile ? 'bg-gray-50 dark:bg-gray-950' : 'bg-gray-50/70 dark:bg-gray-950/70'} z-50`
 			: ' bg-transparent z-0 '} {$isApp
 			? `ml-[4.5rem] md:ml-0 `
-			: ' transition-all duration-300 '} mws-sidebar shrink-0 text-gray-900 dark:text-gray-200 text-sm fixed top-2 left-2 bottom-2 overflow-x-hidden
+			: ' transition-[width,opacity,transform] duration-300 '} mws-sidebar shrink-0 text-gray-900 dark:text-gray-200 text-sm fixed top-2 left-2 bottom-2 overflow-x-hidden
         "
-		transition:slide={{ duration: 250, axis: 'x' }}
+		transition:fly={{ duration: 220, x: -24, opacity: 0.2 }}
 		data-state={$showSidebar}
 	>
 		<div
-			class=" my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[var(--sidebar-width)] overflow-x-hidden scrollbar-hidden z-50 {$showSidebar
+			class="my-auto flex flex-col justify-between h-full max-h-full w-[var(--sidebar-width)] overflow-x-hidden scrollbar-hidden z-50 {$showSidebar
 				? ''
 				: 'invisible'}"
 		>
@@ -1396,7 +1396,7 @@
 				</Folder>
 			</div>
 
-			<div class="px-1.5 pt-1.5 pb-2 sticky bottom-0 z-10 -mt-3 sidebar">
+			<div class="px-1.5 pt-1.5 pb-3 sticky bottom-0 z-10 -mt-3 sidebar">
 				<div
 					class=" sidebar-bg-gradient-to-t bg-linear-to-t from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10 -mt-6"
 				></div>
