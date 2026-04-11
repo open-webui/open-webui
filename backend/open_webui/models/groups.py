@@ -410,6 +410,26 @@ class GroupTable:
             log.exception(e)
             return None
 
+    def update_group_permissions_by_id(
+        self,
+        id: str,
+        permissions: dict,
+        db: Optional[Session] = None,
+    ) -> bool:
+        try:
+            with get_db_context(db) as db:
+                db.query(Group).filter_by(id=id).update(
+                    {
+                        'permissions': permissions,
+                        'updated_at': int(time.time()),
+                    }
+                )
+                db.commit()
+                return True
+        except Exception as e:
+            log.exception(e)
+            return False
+
     def delete_group_by_id(self, id: str, db: Optional[Session] = None) -> bool:
         try:
             with get_db_context(db) as db:

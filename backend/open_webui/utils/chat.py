@@ -10,7 +10,7 @@ import json
 import uuid
 import asyncio
 
-from fastapi import Request, status
+from fastapi import Request, HTTPException, status
 from starlette.responses import Response, StreamingResponse, JSONResponse
 
 
@@ -49,6 +49,7 @@ from open_webui.utils.filter import (
     get_sorted_filter_ids,
     process_filter_functions,
 )
+from open_webui.utils.usage_limits import check_usage_limit
 
 from open_webui.env import GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
 
@@ -202,6 +203,21 @@ async def generate_chat_completion(
                 check_model_access(user, model)
             except Exception as e:
                 raise e
+
+        # Check usage limits (skip for admins and background tasks like title/tag/follow-up gen)
+        task_type = form_data.get('metadata', {}).get('task')
+        is_background_task = bypass_filter or bool(task_type)
+        if not is_background_task and user.role != 'admin':
+            limit_check = check_usage_limit(user.id)
+            if not limit_check['allowed']:
+                raise HTTPException(
+                    status_code=429,
+                    detail=limit_check['message'],
+                )
+            if limit_check.get('warning') and limit_check.get('message'):
+                # Store warning for middleware to emit as a status event
+                if not hasattr(request.state, 'usage_warning'):
+                    request.state.usage_warning = limit_check['message']
 
         # Arena model — sub-model was already resolved by process_chat_payload.
         # Inject selected_model_id into the response for the frontend.

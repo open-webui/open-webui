@@ -3155,6 +3155,30 @@ async def non_streaming_chat_response_handler(response, ctx):
                         },
                     )
 
+                    # For temp chats and direct API calls, write usage to usage_ledger
+                    # (chat_message FK requires a chat row which these don't have)
+                    chat_id = metadata.get('chat_id') or ''
+                    if usage and (not chat_id or chat_id.startswith('local:')):
+                        from open_webui.models.usage_ledger import UsageLedger
+                        UsageLedger.log_usage(
+                            user_id=user.id,
+                            model_id=metadata.get('model_id') or ctx.get('form_data', {}).get('model'),
+                            input_tokens=usage.get('input_tokens', 0),
+                            output_tokens=usage.get('output_tokens', 0),
+                        )
+
+                    # Emit soft limit warning if approaching usage limit
+                    usage_warning = getattr(request.state, 'usage_warning', None)
+                    if usage_warning and event_emitter:
+                        await event_emitter(
+                            {
+                                'type': 'chat:completion',
+                                'data': {
+                                    'usage_warning': usage_warning,
+                                },
+                            }
+                        )
+
                     # Send a webhook notification if the user is not active
                     if request.app.state.config.ENABLE_USER_WEBHOOKS and not Users.is_user_active(user.id):
                         webhook_url = Users.get_user_webhook_url_by_id(user.id)
@@ -3182,6 +3206,18 @@ async def non_streaming_chat_response_handler(response, ctx):
 
     if isinstance(response, dict):
         response = merge_events_into_response(response_data, events)
+
+    # Track usage for direct API calls (no event_emitter, no chat_message row)
+    if response_data and not event_emitter:
+        usage = normalize_usage(response_data.get('usage', {}) or {})
+        if usage and user:
+            from open_webui.models.usage_ledger import UsageLedger
+            UsageLedger.log_usage(
+                user_id=user.id,
+                model_id=response_data.get('model') or ctx.get('form_data', {}).get('model'),
+                input_tokens=usage.get('input_tokens', 0),
+                output_tokens=usage.get('output_tokens', 0),
+            )
 
     return response
 
@@ -4655,6 +4691,30 @@ async def streaming_chat_response_handler(response, ctx):
                         metadata['chat_id'],
                         metadata['message_id'],
                         {'done': True},
+                    )
+
+                # For temp chats and direct API calls, write usage to usage_ledger
+                # (chat_message FK requires a chat row which these don't have)
+                _chat_id = metadata.get('chat_id') or ''
+                if usage and (not _chat_id or _chat_id.startswith('local:')):
+                    from open_webui.models.usage_ledger import UsageLedger
+                    UsageLedger.log_usage(
+                        user_id=user.id,
+                        model_id=model_id,
+                        input_tokens=usage.get('input_tokens', 0),
+                        output_tokens=usage.get('output_tokens', 0),
+                    )
+
+                # Emit soft limit warning if approaching usage limit
+                usage_warning = getattr(request.state, 'usage_warning', None)
+                if usage_warning and event_emitter:
+                    await event_emitter(
+                        {
+                            'type': 'chat:completion',
+                            'data': {
+                                'usage_warning': usage_warning,
+                            },
+                        }
                     )
 
                 # Send a webhook notification if the user is not active

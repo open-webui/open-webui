@@ -10,6 +10,8 @@
 	export let permissions = {};
 	export let defaultPermissions = {};
 
+	let usageLimitsEnabled = false;
+
 	// Reactive statement to ensure all fields are present in `permissions`
 	$: {
 		permissions = fillMissingProperties(permissions, DEFAULT_PERMISSIONS);
@@ -30,6 +32,7 @@
 
 	onMount(() => {
 		permissions = fillMissingProperties(permissions, DEFAULT_PERMISSIONS);
+		usageLimitsEnabled = !!permissions.usage_limits?.token_limit;
 	});
 </script>
 
@@ -938,5 +941,83 @@
 				</div>
 			{/if}
 		</div>
+	</div>
+
+	<hr class=" border-gray-100/30 dark:border-gray-850/30" />
+
+	<div>
+		<div class=" mb-2 text-sm font-medium">{$i18n.t('Usage Limits')}</div>
+
+		<div class="flex flex-col w-full">
+			<div class="flex w-full justify-between my-1">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Enable Token Limits')}
+				</div>
+				<Switch
+					state={usageLimitsEnabled}
+					on:change={() => {
+						usageLimitsEnabled = !usageLimitsEnabled;
+						if (!usageLimitsEnabled) {
+							delete permissions.usage_limits;
+						} else {
+							permissions.usage_limits = {
+								token_limit: 1000000,
+								limit_period: 'daily',
+								soft_limit: 0,
+								priority: 100
+							};
+						}
+					}}
+				/>
+			</div>
+		</div>
+
+		{#if usageLimitsEnabled && permissions.usage_limits}
+			<div class="ml-2 flex flex-col gap-3 pt-1 pb-1">
+				<div class="flex flex-col gap-1">
+					<div class="text-xs text-gray-500">{$i18n.t('Token Limit (per period)')}</div>
+					<input
+						type="number"
+						class="w-full rounded-lg py-1.5 px-3 text-sm bg-transparent border border-gray-200 dark:border-gray-700 outline-none"
+						bind:value={permissions.usage_limits.token_limit}
+						min="0"
+						placeholder="1000000"
+					/>
+				</div>
+
+				<div class="flex flex-col gap-1">
+					<div class="text-xs text-gray-500">{$i18n.t('Period')}</div>
+					<select
+						class="w-full rounded-lg py-1.5 px-3 text-sm bg-transparent border border-gray-200 dark:border-gray-700 outline-none"
+						bind:value={permissions.usage_limits.limit_period}
+					>
+						<option value="daily">{$i18n.t('Daily')}</option>
+						<option value="monthly">{$i18n.t('Monthly')}</option>
+					</select>
+				</div>
+
+				<div class="flex flex-col gap-1">
+					<div class="text-xs text-gray-500">{$i18n.t('Soft Limit (warning threshold, optional)')}</div>
+					<input
+						type="number"
+						class="w-full rounded-lg py-1.5 px-3 text-sm bg-transparent border border-gray-200 dark:border-gray-700 outline-none"
+						bind:value={permissions.usage_limits.soft_limit}
+						min="0"
+						placeholder={$i18n.t('Leave empty for no warning')}
+					/>
+				</div>
+
+				<div class="flex flex-col gap-1">
+					<div class="text-xs text-gray-500">{$i18n.t('Priority (lower = higher priority)')}</div>
+					<input
+						type="number"
+						class="w-full rounded-lg py-1.5 px-3 text-sm bg-transparent border border-gray-200 dark:border-gray-700 outline-none"
+						bind:value={permissions.usage_limits.priority}
+						min="1"
+						placeholder="100"
+					/>
+				</div>
+			</div>
+		{/if}
 	</div>
 </div>

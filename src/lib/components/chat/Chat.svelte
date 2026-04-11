@@ -1648,7 +1648,7 @@
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
-		const { id, done, choices, content, output, sources, selected_model_id, error, usage } = data;
+		const { id, done, choices, content, output, sources, selected_model_id, error, usage, usage_warning } = data;
 
 		// Store raw OR-aligned output items from backend
 		if (output) {
@@ -1657,6 +1657,10 @@
 
 		if (error) {
 			await handleOpenAIError(error, message);
+		}
+
+		if (usage_warning) {
+			toast.warning(usage_warning, { duration: 8000 });
 		}
 
 		if (sources && !message?.sources) {

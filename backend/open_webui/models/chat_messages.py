@@ -58,7 +58,7 @@ class ChatMessage(Base):
 
     # Identity
     id = Column(Text, primary_key=True)
-    chat_id = Column(Text, ForeignKey('chat.id', ondelete='CASCADE'), nullable=False, index=True)
+    chat_id = Column(Text, ForeignKey('chat.id', ondelete='SET NULL'), nullable=True, index=True)
     user_id = Column(Text, index=True)
 
     # Structure

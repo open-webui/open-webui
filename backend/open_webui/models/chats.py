@@ -1470,13 +1470,31 @@ class ChatTable:
         except Exception:
             return False
 
+    def _strip_chat_message_content(self, db, filter_kwargs=None, filter_expr=None):
+        """Strip content from chat_message rows but preserve usage data for token tracking.
+        Also nulls chat_id to detach from the chat before it's deleted (prevents CASCADE)."""
+        update_values = {
+            ChatMessage.chat_id: None,
+            ChatMessage.content: None,
+            ChatMessage.output: None,
+            ChatMessage.files: None,
+            ChatMessage.sources: None,
+            ChatMessage.embeds: None,
+            ChatMessage.status_history: None,
+            ChatMessage.error: None,
+        }
+        if filter_kwargs:
+            db.query(ChatMessage).filter_by(**filter_kwargs).update(update_values, synchronize_session=False)
+        elif filter_expr is not None:
+            db.query(ChatMessage).filter(filter_expr).update(update_values, synchronize_session=False)
+
     def delete_chat_by_id(self, id: str, db: Optional[Session] = None) -> bool:
         try:
             with get_db_context(db) as db:
                 db.query(AutomationRun).filter_by(chat_id=id).update(
                     {AutomationRun.chat_id: None}, synchronize_session=False
                 )
-                db.query(ChatMessage).filter_by(chat_id=id).delete()
+                self._strip_chat_message_content(db, filter_kwargs={'chat_id': id})
                 db.query(Chat).filter_by(id=id).delete()
                 db.commit()
 
@@ -1490,7 +1508,7 @@ class ChatTable:
                 db.query(AutomationRun).filter_by(chat_id=id).update(
                     {AutomationRun.chat_id: None}, synchronize_session=False
                 )
-                db.query(ChatMessage).filter_by(chat_id=id).delete()
+                self._strip_chat_message_content(db, filter_kwargs={'chat_id': id})
                 db.query(Chat).filter_by(id=id, user_id=user_id).delete()
                 db.commit()
 
@@ -1507,9 +1525,7 @@ class ChatTable:
                 db.query(AutomationRun).filter(AutomationRun.chat_id.in_(chat_id_subquery)).update(
                     {AutomationRun.chat_id: None}, synchronize_session=False
                 )
-                db.query(ChatMessage).filter(ChatMessage.chat_id.in_(chat_id_subquery)).delete(
-                    synchronize_session=False
-                )
+                self._strip_chat_message_content(db, filter_expr=ChatMessage.chat_id.in_(chat_id_subquery))
                 db.query(Chat).filter_by(user_id=user_id).delete()
                 db.commit()
 
@@ -1524,9 +1540,7 @@ class ChatTable:
                 db.query(AutomationRun).filter(AutomationRun.chat_id.in_(chat_id_subquery)).update(
                     {AutomationRun.chat_id: None}, synchronize_session=False
                 )
-                db.query(ChatMessage).filter(ChatMessage.chat_id.in_(chat_id_subquery)).delete(
-                    synchronize_session=False
-                )
+                self._strip_chat_message_content(db, filter_expr=ChatMessage.chat_id.in_(chat_id_subquery))
                 db.query(Chat).filter_by(user_id=user_id, folder_id=folder_id).delete()
                 db.commit()
 
