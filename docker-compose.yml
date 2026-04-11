@@ -1,0 +1,22 @@
+services:
+  openwebui:
+    build:
+      context: /opt/build/open-webui
+      dockerfile: Dockerfile
+    image: local/open-webui:prod
+    container_name: openwebui
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      WEBUI_URL: "https://crosregion.apis.alspio.com"
+      CORS_ALLOW_ORIGIN: "https://crosregion.apis.alspio.com"
+      ENABLE_WEBSOCKET_SUPPORT: "false"
+      WEBUI_SESSION_COOKIE_SECURE: "true"
+      WEBUI_AUTH_COOKIE_SECURE: "true"
+      WEBUI_SESSION_COOKIE_SAME_SITE: "lax"
+      WEBUI_AUTH_COOKIE_SAME_SITE: "lax"
+    volumes:
+      - open-webui:/app/backend/data
+
+volumes:
+  open-webui:

@@ -25,10 +25,6 @@ jobs:
             echo "docker is required on the self-hosted runner" >&2
             exit 1
           }
-          test -f /opt/mts/docker-compose.yml || {
-            echo "/opt/mts/docker-compose.yml was not found on the server" >&2
-            exit 1
-          }
           mkdir -p /opt/build/open-webui
 
       - name: Sync source to server path
@@ -36,22 +32,23 @@ jobs:
         run: |
           find /opt/build/open-webui -mindepth 1 -maxdepth 1 -exec rm -rf {} +
           tar --exclude='.git' -cf - . | tar -xf - -C /opt/build/open-webui
+          test -f /opt/build/open-webui/docker-compose.yml || {
+            echo "/opt/build/open-webui/docker-compose.yml was not found after sync" >&2
+            exit 1
+          }
 
       - name: Validate compose
-        working-directory: /opt/mts
         shell: bash
         run: |
-          docker compose config >/dev/null
+          docker compose -f /opt/build/open-webui/docker-compose.yml config >/dev/null
 
       - name: Build and restart
-        working-directory: /opt/mts
         shell: bash
         run: |
-          docker compose build --pull openwebui
-          docker compose up -d openwebui
+          docker compose -f /opt/build/open-webui/docker-compose.yml build --pull openwebui
+          docker compose -f /opt/build/open-webui/docker-compose.yml up -d openwebui
 
       - name: Show service status
-        working-directory: /opt/mts
         shell: bash
         run: |
-          docker compose ps openwebui
+          docker compose -f /opt/build/open-webui/docker-compose.yml ps openwebui
