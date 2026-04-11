@@ -107,19 +107,15 @@
 					}}
 				/>
 			{:else}
-				<div class="mws-hero-badge mb-5" in:fade={{ duration: 100 }}>
-					<img src="{WEBUI_BASE_URL}/static/mws-logo.svg" alt="MWS GPT" class="h-6 w-auto" />
+				<div class="mws-hero-badge mb-4" in:fade={{ duration: 100 }}>
+					<img src="{WEBUI_BASE_URL}/static/mws-logo.svg" alt="MWS GPT" class="h-16 w-auto" />
 					<span>{$WEBUI_NAME}</span>
 				</div>
-				
-				<div class="mws-hero-copy mb-8" in:fade={{ duration: 120, delay: 20 }}>
-					<h1 class="mws-hero-title">
-						Единое AI-пространство для текста, файлов, изображений, аудио и web-задач
+
+				<div class="mb-8" in:fade={{ duration: 120, delay: 20 }}>
+					<h1 class="text-2xl @sm:text-3xl font-semibold text-gray-800 dark:text-gray-100">
+						С чего начнем?
 					</h1>
-					<p class="mws-hero-subtitle">
-						Работайте в одном чате: система подбирает нужный инструмент под задачу, а вы
-						сохраняете контекст и контроль над выбором модели.
-					</p>
 				</div>
 
 				<div class="flex flex-row justify-center gap-3 @sm:gap-3.5 w-fit px-5 max-w-xl">

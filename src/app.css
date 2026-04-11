@@ -955,13 +955,12 @@ body {
 }
 
 #chat-input-container {
-	border: 1px solid var(--mws-border-strong) !important;
-	border-radius: 1.6rem !important;
-	background: rgba(44, 49, 53, 0.94) !important;
-	box-shadow:
-		0 18px 40px rgba(0, 0, 0, 0.24),
-		inset 0 1px 0 rgba(255, 255, 255, 0.03);
-	backdrop-filter: blur(16px);
+	background: transparent !important;
+	border: 0 !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+	backdrop-filter: none;
+	padding-top: 0.25rem;
 }
 
 #chat-input,
@@ -969,6 +968,10 @@ body {
 #chat-input [contenteditable='true'] {
 	color: var(--mws-text) !important;
 	font-family: 'Archivo', 'Vazirmatn', sans-serif;
+	background: transparent !important;
+	border: 0 !important;
+	box-shadow: none !important;
+	outline: none !important;
 }
 
 #chat-input .ProseMirror p.is-editor-empty:first-child::before {
