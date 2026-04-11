@@ -18,6 +18,7 @@ from open_webui.utils.auth import get_verified_user
 from open_webui.utils.access_control import has_connection_access
 from open_webui.models.groups import Groups
 from open_webui.models.users import Users
+from open_webui.utils.terminals import build_terminal_ws_url
 
 log = logging.getLogger(__name__)
 
@@ -255,23 +256,16 @@ async def ws_terminal(
         await ws.close(code=4003, reason='Terminal server URL not configured')
         return
 
-    # Build upstream WebSocket URL (no token in URL)
-    ws_base = base_url.replace('https://', 'wss://').replace('http://', 'ws://')
-
-    # Route through orchestrator policy endpoint if policy_id is set
-    policy_id = connection.get('policy_id')
-    upstream_params = {}
-    # For orchestrator-backed servers, pass user_id
-    upstream_params['user_id'] = user.id
-
-    import urllib.parse
-
-    if policy_id:
-        upstream_url = f'{ws_base}/p/{policy_id}/api/terminals/{session_id}'
-    else:
-        upstream_url = f'{ws_base}/api/terminals/{session_id}'
-    if upstream_params:
-        upstream_url += f'?{urllib.parse.urlencode(upstream_params)}'
+    auth_type = connection.get('auth_type', 'bearer')
+    key = connection.get('key', '')
+    upstream_url = build_terminal_ws_url(
+        base_url=base_url,
+        session_id=session_id,
+        user_id=user.id,
+        policy_id=connection.get('policy_id'),
+        auth_type=auth_type,
+        key=key,
+    )
 
     session = aiohttp.ClientSession()
     try:
@@ -279,10 +273,8 @@ async def ws_terminal(
             import asyncio
             import json as _json
 
-            # First-message auth to upstream terminal server
-            auth_type = connection.get('auth_type', 'bearer')
+            # Keep the auth frame for backends that still expect it after connect.
             if auth_type == 'bearer':
-                key = connection.get('key', '')
                 await upstream.send_str(_json.dumps({'type': 'auth', 'token': key}))
 
             async def _client_to_upstream():
