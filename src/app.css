@@ -1055,29 +1055,23 @@ body {
 }
 
 #chat-input-container {
-	border: 1px solid var(--mws-border-strong) !important;
-	border-radius: 1.5rem !important;
-	background:
-		linear-gradient(180deg, rgba(39, 43, 48, 0.96), rgba(28, 31, 35, 0.98)), var(--mws-surface) !important;
-	box-shadow:
-		0 18px 40px rgba(0, 0, 0, 0.24),
-		inset 0 1px 0 rgba(255, 255, 255, 0.03);
-	backdrop-filter: blur(16px);
-}
-
-#chat-input-container:focus-within {
-	border-color: var(--mws-border-red) !important;
-	box-shadow:
-		0 0 0 1px rgba(255, 0, 50, 0.18),
-		0 18px 40px rgba(0, 0, 0, 0.28),
-		inset 0 1px 0 rgba(255, 255, 255, 0.04);
+	background: transparent !important;
+	border: 0 !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+	backdrop-filter: none;
+	padding-top: 0.25rem;
 }
 
 #chat-input,
 #chat-input .ProseMirror,
 #chat-input [contenteditable='true'] {
 	color: var(--mws-text) !important;
-	font-family: 'Mona Sans', 'Inter', 'Vazirmatn', sans-serif;
+	font-family: 'Archivo', 'Vazirmatn', sans-serif;
+	background: transparent !important;
+	border: 0 !important;
+	box-shadow: none !important;
+	outline: none !important;
 }
 
 #chat-input .ProseMirror p.is-editor-empty:first-child::before {

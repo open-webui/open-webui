@@ -122,8 +122,8 @@
 							</div>
 						{/if}
 					{:else}
-						<div class="mws-inline-copy line-clamp-2 font-p">
-							{$i18n.t('How can I help you today?')}
+						<div class="text-gray-400 dark:text-gray-500 line-clamp-1 font-p">
+							С чего начнем?
 						</div>
 					{/if}
 				</div>

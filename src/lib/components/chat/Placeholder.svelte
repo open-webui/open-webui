@@ -107,36 +107,15 @@
 					}}
 				/>
 			{:else}
-				<div class="mws-hero-frame mb-6" in:fade={{ duration: 120 }}>
-					<div class="mws-hero-badge mb-5" in:fade={{ duration: 100 }}>
-						<img src="{WEBUI_BASE_URL}/static/mws-logo.svg" alt="MWS GPT" class="h-6 w-auto" />
-						<span>{$WEBUI_NAME}</span>
-					</div>
+				<div class="mws-hero-badge mb-4" in:fade={{ duration: 100 }}>
+					<img src="{WEBUI_BASE_URL}/static/mws-logo.svg" alt="MWS GPT" class="h-16 w-auto" />
+					<span>{$WEBUI_NAME}</span>
+				</div>
 
-					<div class="mws-hero-copy" in:fade={{ duration: 120, delay: 20 }}>
-						<h1 class="mws-hero-title">
-							Единое AI-пространство для текста, файлов, изображений, аудио и web-задач
-						</h1>
-						<p class="mws-hero-subtitle">
-							Интерфейс построен как единая рабочая среда: те же акценты и те же материалы, что на
-							экране входа, но без поломанной геометрии и лишнего шума.
-						</p>
-					</div>
-
-					<div class="mws-hero-highlights" in:fade={{ duration: 140, delay: 50 }}>
-						<div class="mws-hero-highlight">
-							<span>Контекст</span>
-							<strong>История, файлы и знания остаются в одном рабочем потоке.</strong>
-						</div>
-						<div class="mws-hero-highlight">
-							<span>Инструменты</span>
-							<strong>Web, код, изображения и интеграции запускаются из того же окна.</strong>
-						</div>
-						<div class="mws-hero-highlight">
-							<span>Контроль</span>
-							<strong>Вы сохраняете выбор модели, сценария и глубины ответа под задачу.</strong>
-						</div>
-					</div>
+				<div class="mb-8" in:fade={{ duration: 120, delay: 20 }}>
+					<h1 class="text-2xl @sm:text-3xl font-semibold text-gray-800 dark:text-gray-100">
+						С чего начнем?
+					</h1>
 				</div>
 
 				<div class="flex flex-row justify-center gap-3 @sm:gap-3.5 w-fit px-5 max-w-xl">
