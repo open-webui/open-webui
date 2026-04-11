@@ -75,7 +75,7 @@
 <nav
 	class="sticky top-0 z-30 w-full {chat?.id
 		? 'pt-0.5 pb-1'
-		: 'pt-1 pb-1'} mws-navbar -mb-12 flex flex-col items-center drag-region"
+		: 'pt-1 pb-1'} mws-navbar flex flex-col items-center drag-region"
 >
 	<div class="flex items-center w-full pl-1.5 pr-1">
 		<div
