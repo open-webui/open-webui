@@ -140,6 +140,7 @@
 										<img
 											src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}`}
 											class=" size-9 @sm:size-10 rounded-full border-[1px] border-gray-100 dark:border-none"
+											alt=""
 											aria-hidden="true"
 											draggable="false"
 											on:error={(e) => {
@@ -263,6 +264,7 @@
 		<div class="mx-auto max-w-2xl font-primary mt-3" in:fade={{ duration: 200, delay: 200 }}>
 			<div class="mx-5">
 				<Suggestions
+					className="mws-suggestions-grid"
 					suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
 						models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
 						$config?.default_prompt_suggestions ??

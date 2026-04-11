@@ -35,7 +35,12 @@
 </script>
 
 {#key mounted}
-	<div class="m-auto w-full max-w-6xl px-8 lg:px-20">
+	<div class="mws-inline-placeholder m-auto w-full max-w-6xl px-8 lg:px-20">
+		<div class="mws-inline-kicker" in:fade={{ duration: 140 }}>
+			<img src="{WEBUI_BASE_URL}/static/mws-logo.svg" alt="MWS GPT" class="h-5 w-auto" />
+			<span>{$WEBUI_NAME}</span>
+		</div>
+
 		<div class="flex justify-start">
 			<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 200 }}>
 				{#each models as model, modelIdx}
@@ -58,7 +63,7 @@
 								alt="logo"
 								draggable="false"
 								on:error={(e) => {
-									e.currentTarget.src = '/favicon.png';
+									e.currentTarget.src = '/static/mws-logo.svg';
 								}}
 							/>
 						</Tooltip>
@@ -80,10 +85,10 @@
 		{/if}
 
 		<div
-			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 text-left flex items-center gap-4 font-primary"
+			class="mt-2 mb-4 text-gray-800 dark:text-gray-100 text-left flex items-center gap-4 font-primary"
 		>
 			<div>
-				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>
+				<div class="mws-inline-title capitalize line-clamp-2" in:fade={{ duration: 200 }}>
 					{#if models[selectedModelIdx]?.name}
 						{models[selectedModelIdx]?.name}
 					{:else}
@@ -93,9 +98,7 @@
 
 				<div in:fade={{ duration: 200, delay: 200 }}>
 					{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
-						<div
-							class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400 line-clamp-3 markdown"
-						>
+						<div class="mws-inline-copy line-clamp-3 markdown">
 							{@html marked.parse(
 								sanitizeResponseContent(
 									models[selectedModelIdx]?.info?.meta?.description
@@ -129,7 +132,7 @@
 
 		<div class=" w-full font-primary" in:fade={{ duration: 200, delay: 300 }}>
 			<Suggestions
-				className="grid grid-cols-2"
+				className="mws-suggestions-grid md:grid-cols-2"
 				suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
 					models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
 					$config?.default_prompt_suggestions ??
