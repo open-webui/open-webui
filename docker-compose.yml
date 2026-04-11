@@ -4,7 +4,6 @@ services:
       context: /opt/build/open-webui
       dockerfile: Dockerfile
     image: local/open-webui:prod
-    container_name: openwebui
     restart: unless-stopped
     network_mode: host
     environment:
