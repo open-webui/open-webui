@@ -20,6 +20,9 @@
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
+	import Suggestions from './Suggestions.svelte';
+	import MessageInput from './MessageInput.svelte';
+	import FolderPlaceholder from './Placeholder/FolderPlaceholder.svelte';
 	import FolderTitle from './Placeholder/FolderTitle.svelte';
 
 	const i18n = getContext('i18n');
@@ -213,5 +216,28 @@
 
 		</div>
 	</div>
+
+	{#if $selectedFolder}
+		<div
+			class="mx-auto px-4 md:max-w-3xl md:px-6 font-primary min-h-62"
+			in:fade={{ duration: 200, delay: 200 }}
+		>
+			<FolderPlaceholder folder={$selectedFolder} />
+		</div>
+	{:else}
+		<div class="mx-auto max-w-2xl font-primary mt-3" in:fade={{ duration: 200, delay: 200 }}>
+			<div class="mx-5">
+				<Suggestions
+					className="mws-suggestions-grid"
+					suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
+						models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
+						$config?.default_prompt_suggestions ??
+						[]}
+					inputValue={prompt}
+					{onSelect}
+				/>
+			</div>
+		</div>
+	{/if}
 
 </div>
