@@ -4,7 +4,7 @@ import json
 import logging
 import re
 from typing import Optional
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 import aiohttp
 from aiocache import cached
@@ -771,6 +771,21 @@ def is_openai_new_model(model: str) -> bool:
     return False
 
 
+def _sanitize_model_for_url(model: str) -> str:
+    """Sanitize a model name before interpolating it into a URL path.
+
+    Rejects path traversal attempts (../, /, \\) and percent-encodes
+    the name so it is safe to use as a single URL path segment
+    (e.g. Azure deployment name).
+    """
+    if not model or '..' in model or '/' in model or '\\' in model:
+        raise HTTPException(
+            status_code=400,
+            detail='Invalid model name: must not be empty or contain path separators or traversal sequences',
+        )
+    return quote(model, safe='')
+
+
 def convert_to_azure_payload(url, payload: dict, api_version: str):
     model = payload.get('model', '')
 
@@ -793,6 +808,9 @@ def convert_to_azure_payload(url, payload: dict, api_version: str):
 
     # Filter out unsupported parameters
     payload = {k: v for k, v in payload.items() if k in allowed_params}
+
+    # Sanitize model name to prevent path traversal in the deployment URL
+    model = _sanitize_model_for_url(model)
 
     url = f'{url}/openai/deployments/{model}'
     return url, payload
@@ -1378,7 +1396,7 @@ async def responses(
             else:
                 api_version = api_config.get('api_version', '2023-03-15-preview')
                 headers['api-version'] = api_version
-                model = payload.get('model', '')
+                model = _sanitize_model_for_url(payload.get('model', ''))
                 request_url = f'{url}/openai/deployments/{model}/responses?api-version={api_version}'
         else:
             request_url = f'{url}/responses'
@@ -1418,6 +1436,8 @@ async def responses(
 
             return response_data
 
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -1529,6 +1549,8 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
             return response_data
 
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(e)
         raise HTTPException(
