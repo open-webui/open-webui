@@ -35,6 +35,7 @@
 	export let submitMessage;
 
 	export let regenerateResponse;
+	export let retryWithoutProviderRestrictions: Function = () => {};
 	export let regenerateWithModel: Function = () => {};
 	export let continueResponse;
 	export let mergeResponses;
@@ -95,6 +96,7 @@
 				{deleteMessage}
 				{continueResponse}
 				{regenerateResponse}
+				{retryWithoutProviderRestrictions}
 				{regenerateWithModel}
 				{addMessages}
 				{readOnly}
@@ -118,6 +120,7 @@
 				{deleteMessage}
 				{continueResponse}
 				{regenerateResponse}
+				{retryWithoutProviderRestrictions}
 				{regenerateWithModel}
 				{mergeResponses}
 				{triggerScroll}

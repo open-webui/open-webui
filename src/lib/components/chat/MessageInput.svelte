@@ -1818,7 +1818,6 @@
 																selectedToolIds = [];
 																selectedFilterIds = [];
 
-																webSearchEnabled = false;
 																imageGenerationEnabled = false;
 																codeInterpreterEnabled = false;
 															}

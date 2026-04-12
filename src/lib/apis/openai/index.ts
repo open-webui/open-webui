@@ -330,6 +330,42 @@ export const verifyOpenAIConnection = async (
 	return res;
 };
 
+export const getModelEndpoints = async (
+	token: string,
+	modelId: string
+): Promise<{ data: { endpoints: any[] } }> => {
+	let error = null;
+
+	const res = await fetch(`${OPENAI_API_BASE_URL}/models/${encodeURIComponent(modelId)}/endpoints`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = 'Server connection failed';
+			}
+			return { data: { endpoints: [] } };
+		});
+
+	if (error) {
+		console.error('getModelEndpoints error:', error);
+		return { data: { endpoints: [] } };
+	}
+
+	return res;
+};
+
 export const chatCompletion = async (
 	token: string = '',
 	body: object,

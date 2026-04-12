@@ -190,6 +190,7 @@
 
 	let generating = false;
 	let generationController = null;
+	let suppressErrorToast = false;
 
 	let chat = null;
 	let tags = [];
@@ -467,6 +468,29 @@
 
 	$: if (selectedModels && chatIdProp !== '') {
 		saveSessionSelectedModels();
+	}
+
+	// When models load after initNewChat ran with an empty $models list,
+	// apply the saved default (or first available) if nothing is selected yet.
+	$: if ($models.length > 0 && !chatIdProp && (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === ''))) {
+		const _availableModels = $models.filter((m) => !(m?.info?.meta?.hidden ?? false)).map((m) => m.id);
+		if ($settings?.models) {
+			const filtered = $settings.models.filter((id) => _availableModels.includes(id));
+			if (filtered.length > 0) {
+				selectedModels = filtered;
+			} else {
+				selectedModels = [_availableModels[0] ?? ''];
+			}
+		} else if ($config?.default_models) {
+			const filtered = $config.default_models.split(',').filter((id) => _availableModels.includes(id));
+			if (filtered.length > 0) {
+				selectedModels = filtered;
+			} else {
+				selectedModels = [_availableModels[0] ?? ''];
+			}
+		} else {
+			selectedModels = [_availableModels[0] ?? ''];
+		}
 	}
 
 	const saveSessionSelectedModels = () => {
@@ -1370,15 +1394,13 @@
 				}
 			}
 
-			selectedModels = selectedModels.filter((modelId) => availableModels.includes(modelId));
+			if (availableModels.length > 0) {
+				selectedModels = selectedModels.filter((modelId) => availableModels.includes(modelId));
+			}
 		}
 
-		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
-			if (availableModels.length > 0) {
-				selectedModels = [availableModels?.at(0) ?? ''];
-			} else {
-				selectedModels = [''];
-			}
+		if (availableModels.length > 0 && (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === ''))) {
+			selectedModels = [availableModels?.at(0) ?? ''];
 		}
 
 		await showControls.set(false);
@@ -2586,15 +2608,88 @@
 						const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 						startUsagePolling(FAST_POLL_MS);
 						scrollToBottom();
-						await sendMessageSocket(
-							model,
-							messages && messages.length > 0
-								? messages
-								: createMessagesList(_history, responseMessageId),
-							_history,
-							responseMessageId,
-							_chatId
-						);
+
+						const MAX_RETRIES = 5;
+						const BACKOFF_BASE_MS = 2000;
+
+						for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+							let responseMessage = _history.messages[responseMessageId];
+
+							if (attempt > 1) {
+								responseMessage.content = '';
+								responseMessage.error = null;
+								responseMessage.done = false;
+								responseMessage.retrying = null;
+								_history.messages[responseMessageId] = responseMessage;
+								mirrorHistoryMessage(responseMessageId);
+							}
+
+							suppressErrorToast = attempt < MAX_RETRIES;
+
+							await sendMessageSocket(
+								model,
+								messages && messages.length > 0
+									? messages
+									: createMessagesList(_history, responseMessageId),
+								_history,
+								responseMessageId,
+								_chatId
+							);
+
+							suppressErrorToast = false;
+							responseMessage = _history.messages[responseMessageId];
+
+							if (!responseMessage.error) break;
+
+							if (attempt < MAX_RETRIES && generating) {
+								const waitSeconds = attempt * 2;
+
+								responseMessage.error = null;
+								responseMessage.done = false;
+								responseMessage.content = '';
+								responseMessage.retrying = {
+									attempt,
+									maxAttempts: MAX_RETRIES,
+									countdown: waitSeconds
+								};
+								_history.messages[responseMessageId] = responseMessage;
+								mirrorHistoryMessage(responseMessageId);
+
+								await new Promise((resolve) => {
+									let remaining = waitSeconds;
+									const ticker = setInterval(() => {
+										remaining--;
+										if (!generating || remaining <= 0) {
+											clearInterval(ticker);
+											resolve();
+											return;
+										}
+										responseMessage.retrying = {
+											attempt,
+											maxAttempts: MAX_RETRIES,
+											countdown: remaining
+										};
+										_history.messages[responseMessageId] = responseMessage;
+										mirrorHistoryMessage(responseMessageId);
+									}, 1000);
+								});
+
+								if (!generating) break;
+								continue;
+							}
+
+							// All retries exhausted — check for provider restrictions
+							const hasProviderRestrictions = !!(
+								model?.info?.params?.custom_params?.provider?.only?.length ||
+								model?.info?.params?.custom_params?.provider?.order?.length
+							);
+							if (hasProviderRestrictions) {
+								responseMessage.providerFailed = true;
+								_history.messages[responseMessageId] = responseMessage;
+								mirrorHistoryMessage(responseMessageId);
+							}
+							break;
+						}
 
 						if (chatEventEmitter) clearInterval(chatEventEmitter);
 						startUsagePolling(SLOW_POLL_MS);
@@ -2653,7 +2748,7 @@
 		return features;
 	};
 
-	const sendMessageSocket = async (model, _messages, _history, responseMessageId, _chatId) => {
+	const sendMessageSocket = async (model, _messages, _history, responseMessageId, _chatId, opts = {}) => {
 		const responseMessage = _history.messages[responseMessageId];
 		const userMessage = _history.messages[responseMessage.parentId];
 
@@ -2903,7 +2998,9 @@
 				reasoning: reasoning,
 
 				// Include service tier for OpenRouter / OpenAI-compatible APIs
-				service_tier: serviceTier
+				service_tier: serviceTier,
+
+				...(opts.stripProvider ? { strip_provider: true } : {})
 			},
 			`${WEBUI_BASE_URL}/api`
 		).catch(async (error) => {
@@ -2920,7 +3017,7 @@
 				errorMessage = $i18n.t(`Uh-oh! There was an issue with the response.`);
 			}
 
-			toast.error(`${errorMessage}`);
+			if (!suppressErrorToast) toast.error(`${errorMessage}`);
 			responseMessage.error = {
 				content: error
 			};
@@ -3073,20 +3170,20 @@
 		console.error(innerError);
 		if ('detail' in innerError) {
 			// FastAPI error
-			toast.error(innerError.detail);
+			if (!suppressErrorToast) toast.error(innerError.detail);
 			errorMessage = innerError.detail;
 		} else if ('error' in innerError) {
 			// OpenAI error
 			if ('message' in innerError.error) {
-				toast.error(innerError.error.message);
+				if (!suppressErrorToast) toast.error(innerError.error.message);
 				errorMessage = innerError.error.message;
 			} else {
-				toast.error(innerError.error);
+				if (!suppressErrorToast) toast.error(innerError.error);
 				errorMessage = innerError.error;
 			}
 		} else if ('message' in innerError) {
 			// OpenAI error
-			toast.error(innerError.message);
+			if (!suppressErrorToast) toast.error(innerError.message);
 			errorMessage = innerError.message;
 		}
 
@@ -3167,6 +3264,102 @@
 		}
 
 		await sendMessage(history, userMessageId);
+	};
+
+	const retryWithoutProviderRestrictions = async (message) => {
+		if (!history.currentId) return;
+
+		const userMessage = history.messages[message.parentId];
+		if (!userMessage) return;
+
+		const model = $models.find((m) => m.id === (message.selectedModelId ?? message.model));
+		if (!model) return;
+
+		message.error = null;
+		message.providerFailed = false;
+		message.content = '';
+		message.done = false;
+		history.messages[message.id] = message;
+		history = { ...history };
+
+		generating = true;
+
+		try {
+			const MAX_RETRIES = 5;
+			const _history = structuredClone(history);
+
+			for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+				let responseMessage = _history.messages[message.id];
+
+				if (attempt > 1) {
+					responseMessage.content = '';
+					responseMessage.error = null;
+					responseMessage.done = false;
+					responseMessage.retrying = null;
+					_history.messages[message.id] = responseMessage;
+					history.messages[message.id] = structuredClone(responseMessage);
+					history = { ...history };
+				}
+
+				suppressErrorToast = attempt < MAX_RETRIES;
+
+				await sendMessageSocket(
+					model,
+					createMessagesList(_history, message.id),
+					_history,
+					message.id,
+					getVisibleChatId(),
+					{ stripProvider: true }
+				);
+
+				suppressErrorToast = false;
+				responseMessage = _history.messages[message.id];
+
+				if (!responseMessage.error) break;
+
+				if (attempt < MAX_RETRIES && generating) {
+					const waitSeconds = attempt * 2;
+					responseMessage.error = null;
+					responseMessage.done = false;
+					responseMessage.content = '';
+					responseMessage.retrying = {
+						attempt,
+						maxAttempts: MAX_RETRIES,
+						countdown: waitSeconds
+					};
+					_history.messages[message.id] = responseMessage;
+					history.messages[message.id] = structuredClone(responseMessage);
+					history = { ...history };
+
+					await new Promise((resolve) => {
+						let remaining = waitSeconds;
+						const ticker = setInterval(() => {
+							remaining--;
+							if (!generating || remaining <= 0) {
+								clearInterval(ticker);
+								resolve();
+								return;
+							}
+							responseMessage.retrying = {
+								attempt,
+								maxAttempts: MAX_RETRIES,
+								countdown: remaining
+							};
+							_history.messages[message.id] = responseMessage;
+							history.messages[message.id] = structuredClone(responseMessage);
+							history = { ...history };
+						}, 1000);
+					});
+
+					if (!generating) break;
+					continue;
+				}
+				break;
+			}
+		} finally {
+			generating = false;
+			generationController = null;
+		}
 	};
 
 	const regenerateResponse = async (message, suggestionPrompt = null) => {
@@ -3819,6 +4012,7 @@
 										{submitMessage}
 										{continueResponse}
 										{regenerateResponse}
+										{retryWithoutProviderRestrictions}
 										{regenerateWithModel}
 										{mergeResponses}
 										{chatActionHandler}

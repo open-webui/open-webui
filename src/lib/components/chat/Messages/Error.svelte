@@ -2,6 +2,7 @@
 	import Info from '$lib/components/icons/Info.svelte';
 
 	export let content = '';
+	export let onRetryWithoutProvider: (() => void) | null = null;
 	let showRaw = false;
 </script>
 
@@ -30,7 +31,15 @@
 		</div>
 	</div>
 
-	<div class="ml-auto">
+	<div class="flex items-center gap-2 ml-auto">
+		{#if onRetryWithoutProvider}
+			<button
+				class="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition font-medium text-gray-700 dark:text-gray-300"
+				on:click={onRetryWithoutProvider}
+			>
+				Retry without provider restrictions
+			</button>
+		{/if}
 		<button
 			class="text-xs text-red-700 dark:text-red-400 underline"
 			on:click={() => (showRaw = !showRaw)}

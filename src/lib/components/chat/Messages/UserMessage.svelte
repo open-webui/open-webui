@@ -3,10 +3,11 @@
 	import { toast } from 'svelte-sonner';
 	import { tick, getContext, onMount } from 'svelte';
 
-	import { models, settings } from '$lib/stores';
+	import { models, settings, config } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL } from '$lib/constants';
+	import { uploadFile } from '$lib/apis/files';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
@@ -51,6 +52,30 @@
 	let editedFiles = [];
 
 	let messageEditTextAreaElement: HTMLTextAreaElement;
+	let editFileInputElement: HTMLInputElement;
+
+	const addFilesToEdit = async (inputFiles: FileList) => {
+		for (const file of Array.from(inputFiles)) {
+			if (!file.type.startsWith('image/')) continue;
+
+			try {
+				const uploadedFile = await uploadFile(localStorage.token, file);
+				if (uploadedFile) {
+					editedFiles = [
+						...editedFiles,
+						{
+							type: 'image',
+							url: `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}/content`,
+							id: uploadedFile.id
+						}
+					];
+				}
+			} catch (err) {
+				console.error(err);
+				toast.error($i18n.t('Failed to upload image'));
+			}
+		}
+	};
 
 	let message = history.messages[messageId];
 	$: if (history.messages?.[messageId] && message !== history.messages[messageId]) {
@@ -93,7 +118,7 @@
 	const editMessageHandler = async () => {
 		edit = true;
 		editedContent = messageTextContent;
-		editedFiles = message.files;
+		editedFiles = message.files ?? [];
 
 		await tick();
 
@@ -243,66 +268,97 @@
 
 			{#if edit === true}
 				<div class=" w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 mb-2">
-					{#if (editedFiles ?? []).length > 0}
-						<div class="flex items-center flex-wrap gap-2 -mx-2 mb-1">
-							{#each editedFiles as file, fileIdx}
-								{#if file.type === 'image'}
-									<div class=" relative group">
-										<div class="relative flex items-center">
-											<Image
-												src={file.url}
-												alt="input"
-												imageClassName=" size-14 rounded-xl object-cover"
-											/>
-										</div>
-										<div class=" absolute -top-1 -right-1">
-											<button
-												class=" bg-white text-black border border-white rounded-full {($settings?.highContrastMode ??
-												false)
-													? ''
-													: 'group-hover:visible invisible transition'}"
-												type="button"
-												on:click={() => {
-													editedFiles.splice(fileIdx, 1);
+					<input
+						bind:this={editFileInputElement}
+						type="file"
+						hidden
+						accept="image/*"
+						multiple
+						on:change={async () => {
+							if (editFileInputElement?.files) {
+								await addFilesToEdit(editFileInputElement.files);
+								editFileInputElement.value = '';
+							}
+						}}
+					/>
 
-													editedFiles = editedFiles;
-												}}
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="size-4"
-												>
-													<path
-														d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-													/>
-												</svg>
-											</button>
-										</div>
+					<div class="flex items-center flex-wrap gap-2 -mx-2 mb-1">
+						{#each editedFiles ?? [] as file, fileIdx}
+							{#if file.type === 'image'}
+								<div class=" relative group">
+									<div class="relative flex items-center">
+										<Image
+											src={file.url}
+											alt="input"
+											imageClassName=" size-14 rounded-xl object-cover"
+										/>
 									</div>
-								{:else}
-									<FileItem
-										item={file}
-										name={file.name}
-										type={file.type}
-										size={file?.size}
-										loading={file.status === 'uploading'}
-										dismissible={true}
-										edit={true}
-										on:dismiss={async () => {
-											editedFiles.splice(fileIdx, 1);
+									<div class=" absolute -top-1 -right-1">
+										<button
+											class=" bg-white text-black border border-white rounded-full {($settings?.highContrastMode ??
+											false)
+												? ''
+												: 'group-hover:visible invisible transition'}"
+											type="button"
+											on:click={() => {
+												editedFiles.splice(fileIdx, 1);
 
-											editedFiles = editedFiles;
-										}}
-										on:click={() => {
-											console.log(file);
-										}}
-									/>
-								{/if}
-							{/each}
-						</div>
-					{/if}
+												editedFiles = editedFiles;
+											}}
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+												class="size-4"
+											>
+												<path
+													d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+												/>
+											</svg>
+										</button>
+									</div>
+								</div>
+							{:else}
+								<FileItem
+									item={file}
+									name={file.name}
+									type={file.type}
+									size={file?.size}
+									loading={file.status === 'uploading'}
+									dismissible={true}
+									edit={true}
+									on:dismiss={async () => {
+										editedFiles.splice(fileIdx, 1);
+
+										editedFiles = editedFiles;
+									}}
+									on:click={() => {
+										console.log(file);
+									}}
+								/>
+							{/if}
+						{/each}
+
+						<button
+							type="button"
+							class="flex items-center justify-center size-14 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-400 dark:text-gray-500"
+							on:click={() => {
+								editFileInputElement?.click();
+							}}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								class="size-5"
+							>
+								<path
+									d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
+								/>
+							</svg>
+						</button>
+					</div>
 
 					<div class="max-h-96 overflow-auto">
 						<textarea

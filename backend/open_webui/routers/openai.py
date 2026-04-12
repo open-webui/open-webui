@@ -803,6 +803,58 @@ async def get_models(
     return models
 
 
+@router.get("/models/{model_id:path}/endpoints")
+async def get_model_endpoints(
+    request: Request,
+    model_id: str,
+    user=Depends(get_verified_user),
+):
+    """
+    Proxy OpenRouter's model endpoints API to fetch available providers.
+    Returns empty endpoints list for non-OpenRouter models.
+    """
+    await get_all_models(request, user=user)
+
+    model = request.app.state.OPENAI_MODELS.get(model_id)
+    if not model:
+        return {"data": {"endpoints": []}}
+
+    idx = model["urlIdx"]
+    url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+    api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
+        str(idx),
+        request.app.state.config.OPENAI_API_CONFIGS.get(url, {}),
+    )
+
+    if "openrouter.ai" not in url:
+        return {"data": {"endpoints": []}}
+
+    # Strip prefix_id to get the bare OpenRouter model slug
+    bare_model_id = model_id
+    prefix_id = api_config.get("prefix_id", None)
+    if prefix_id and bare_model_id.startswith(f"{prefix_id}."):
+        bare_model_id = bare_model_id[len(f"{prefix_id}."):]
+
+    if "/" not in bare_model_id:
+        return {"data": {"endpoints": []}}
+
+    try:
+        async with aiohttp.ClientSession(
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
+        ) as session:
+            async with session.get(
+                f"https://openrouter.ai/api/v1/models/{bare_model_id}/endpoints",
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as r:
+                if r.status != 200:
+                    return {"data": {"endpoints": []}}
+                return await r.json()
+    except Exception as e:
+        log.exception(f"Error fetching OpenRouter endpoints: {e}")
+        return {"data": {"endpoints": []}}
+
+
 class ConnectionVerificationForm(BaseModel):
     url: str
     key: str
@@ -1211,6 +1263,11 @@ async def generate_chat_completion(
 
             payload = apply_model_params_to_body_openai(params, payload)
             payload = apply_system_prompt_to_body(system, payload, metadata, user)
+
+        # Strip provider routing if requested (used by "retry without provider restrictions")
+        strip_provider = payload.pop("strip_provider", False)
+        if strip_provider:
+            payload.pop("provider", None)
 
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":

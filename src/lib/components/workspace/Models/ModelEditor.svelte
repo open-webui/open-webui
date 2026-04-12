@@ -22,6 +22,7 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import DefaultFiltersSelector from './DefaultFiltersSelector.svelte';
 	import DefaultFeatures from './DefaultFeatures.svelte';
+	import OpenRouterProviderSelector from './OpenRouterProviderSelector.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -114,6 +115,10 @@
 
 	// Service tier selector visibility (per-model)
 	let serviceTierEnabled = true; // default to enabled for non-ollama models
+
+	// OpenRouter provider routing
+	let openrouterProviderOnly: string[] = [];
+	let openrouterProviderOrder: string[] = [];
 
 	const addUsage = (base_model_id) => {
 		const baseModel = $models.find((m) => m.id === base_model_id);
@@ -231,6 +236,22 @@
 			delete info.meta.defaultFeatureIds;
 		}
 
+		// Persist OpenRouter provider routing
+		if (openrouterProviderOnly.length > 0) {
+			info.params.custom_params = {
+				...(info.params.custom_params ?? {}),
+				provider: {
+					only: openrouterProviderOnly,
+					order: openrouterProviderOrder
+				}
+			};
+		} else if (info.params.custom_params?.provider) {
+			delete info.params.custom_params.provider;
+			if (Object.keys(info.params.custom_params).length === 0) {
+				delete info.params.custom_params;
+			}
+		}
+
 		info.params.system = system.trim() === '' ? null : system;
 		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 		Object.keys(info.params).forEach((key) => {
@@ -296,6 +317,10 @@
 			extraReasoningEfforts = model?.meta?.reasoning?.extra_efforts ?? [];
 			cacheControlEphemeralEnabled = model?.meta?.cache_control_ephemeral ?? true;
 			serviceTierEnabled = model?.meta?.service_tier?.enabled ?? true;
+
+			// Load OpenRouter provider routing config
+			openrouterProviderOnly = model?.params?.custom_params?.provider?.only ?? [];
+			openrouterProviderOrder = model?.params?.custom_params?.provider?.order ?? [];
 
 			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
 			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? [];
@@ -873,6 +898,14 @@
 							</div>
 						</div>
 					</div>
+
+					{#if info.base_model_id}
+						<OpenRouterProviderSelector
+							baseModelId={info.base_model_id}
+							bind:providerOnly={openrouterProviderOnly}
+							bind:providerOrder={openrouterProviderOrder}
+						/>
+					{/if}
 
 					{#if !capabilities.vision}
 						<div class="my-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-950">

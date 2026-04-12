@@ -41,6 +41,7 @@
 	export let sendMessage: Function;
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
+	export let retryWithoutProviderRestrictions: Function = () => {};
 	export let regenerateWithModel: Function = () => {};
 	export let mergeResponses: Function;
 
@@ -444,6 +445,7 @@
 								{saveMessage}
 								{submitMessage}
 								{regenerateResponse}
+								{retryWithoutProviderRestrictions}
 								{regenerateWithModel}
 								{continueResponse}
 								{mergeResponses}
