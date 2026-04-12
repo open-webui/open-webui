@@ -41,8 +41,9 @@ from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.models.knowledge import Knowledges, Knowledge
 from open_webui.models.access_grants import AccessGrants
 from open_webui.storage.provider import Storage
-from open_webui.internal.db import get_async_session, get_db
+from open_webui.internal.db import get_async_session, get_db, get_async_db
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
@@ -2371,12 +2372,12 @@ async def _validate_collection_access(collection_names: list[str], user) -> None
     # instead of N+1 per-collection lookups.
     if candidate_kb_ids:
         try:
-            with get_db_context() as db:
-                kb_rows = (
-                    db.query(Knowledge.id, Knowledge.user_id)
-                    .filter(Knowledge.id.in_(candidate_kb_ids))
-                    .all()
+            async with get_async_db() as db:
+                result = await db.execute(
+                    select(Knowledge.id, Knowledge.user_id)
+                    .where(Knowledge.id.in_(candidate_kb_ids))
                 )
+                kb_rows = result.all()
         except Exception:
             # Fail closed: DB errors must not silently grant access
             raise HTTPException(
@@ -2389,7 +2390,7 @@ async def _validate_collection_access(collection_names: list[str], user) -> None
 
         if foreign_kb_ids:
             # Single batch query for access grants
-            accessible_ids = AccessGrants.get_accessible_resource_ids(
+            accessible_ids = await AccessGrants.get_accessible_resource_ids(
                 user_id=user.id,
                 resource_type='knowledge',
                 resource_ids=foreign_kb_ids,
