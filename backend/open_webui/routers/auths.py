@@ -54,6 +54,7 @@ from open_webui.config import (
     OAUTH_PROVIDERS,
     OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
 )
+from open_webui.utils.oauth import auth_manager_config
 from pydantic import BaseModel
 
 from open_webui.utils.misc import parse_duration, validate_email_format
@@ -1288,6 +1289,17 @@ async def token_exchange(
             detail='Token missing required email claim',
         )
     email = email.lower()
+
+    # Enforce domain allowlist — same check as the normal OAuth callback
+    if (
+        '*' not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
+        and email.split('@')[-1] not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
+    ):
+        log.warning(f'Token exchange denied: email domain not in allowed domains list')
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
 
     # Try to find the user by OAuth sub
     user = Users.get_user_by_oauth_sub(provider, sub, db=db)
