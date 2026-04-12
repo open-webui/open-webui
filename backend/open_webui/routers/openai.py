@@ -4,7 +4,7 @@ import json
 import logging
 import re
 from typing import Optional
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 import aiohttp
 from aiocache import cached
@@ -12,7 +12,7 @@ import requests
 
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
-from fastapi import Depends, HTTPException, Request, APIRouter
+from fastapi import Depends, HTTPException, Request, APIRouter, status
 from fastapi.responses import (
     FileResponse,
     StreamingResponse,
@@ -21,13 +21,14 @@ from fastapi.responses import (
 )
 from pydantic import BaseModel, ConfigDict
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from open_webui.internal.db import get_session
+from open_webui.internal.db import get_async_session
 
 from open_webui.models.models import Models
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.groups import Groups
+from open_webui.utils.access_control import has_connection_access, check_model_access
 from open_webui.config import (
     CACHE_DIR,
 )
@@ -39,6 +40,7 @@ from open_webui.env import (
     ENABLE_FORWARD_USER_INFO_HEADERS,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     BYPASS_MODEL_ACCESS_CONTROL,
+    ENABLE_OPENAI_API_PASSTHROUGH,
 )
 from open_webui.models.users import UserModel
 
@@ -449,11 +451,11 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 async def get_filtered_models(models, user, db=None):
     # Filter models based on user access control
     model_ids = [model['id'] for model in models.get('data', [])]
-    model_infos = {model_info.id: model_info for model_info in Models.get_models_by_ids(model_ids, db=db)}
-    user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id, db=db)}
+    model_infos = {model_info.id: model_info for model_info in await Models.get_models_by_ids(model_ids, db=db)}
+    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
 
     # Batch-fetch accessible resource IDs in a single query instead of N has_access calls
-    accessible_model_ids = AccessGrants.get_accessible_resource_ids(
+    accessible_model_ids = await AccessGrants.get_accessible_resource_ids(
         user_id=user.id,
         resource_type='model',
         resource_ids=list(model_infos.keys()),
@@ -771,6 +773,21 @@ def is_openai_new_model(model: str) -> bool:
     return False
 
 
+def _sanitize_model_for_url(model: str) -> str:
+    """Sanitize a model name before interpolating it into a URL path.
+
+    Rejects path traversal attempts (../, /, \\) and percent-encodes
+    the name so it is safe to use as a single URL path segment
+    (e.g. Azure deployment name).
+    """
+    if not model or '..' in model or '/' in model or '\\' in model:
+        raise HTTPException(
+            status_code=400,
+            detail='Invalid model name: must not be empty or contain path separators or traversal sequences',
+        )
+    return quote(model, safe='')
+
+
 def convert_to_azure_payload(url, payload: dict, api_version: str):
     model = payload.get('model', '')
 
@@ -793,6 +810,9 @@ def convert_to_azure_payload(url, payload: dict, api_version: str):
 
     # Filter out unsupported parameters
     payload = {k: v for k, v in payload.items() if k in allowed_params}
+
+    # Sanitize model name to prevent path traversal in the deployment URL
+    model = _sanitize_model_for_url(model)
 
     url = f'{url}/openai/deployments/{model}'
     return url, payload
@@ -1006,7 +1026,7 @@ async def generate_chat_completion(
     user=Depends(get_verified_user),
     bypass_system_prompt: bool = False,
 ):
-    # NOTE: We intentionally do NOT use Depends(get_session) here.
+    # NOTE: We intentionally do NOT use Depends(get_async_session) here.
     # Database operations (get_model_by_id, AccessGrants.has_access) manage their own short-lived sessions.
     # This prevents holding a connection during the entire LLM call (30-60+ seconds),
     # which would exhaust the connection pool under concurrent load.
@@ -1024,7 +1044,7 @@ async def generate_chat_completion(
     metadata = payload.pop('metadata', None)
 
     model_id = form_data.get('model')
-    model_info = Models.get_model_by_id(model_id)
+    model_info = await Models.get_model_by_id(model_id)
 
     # Check model info and override the payload
     if model_info:
@@ -1044,29 +1064,9 @@ async def generate_chat_completion(
             if not bypass_system_prompt:
                 payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
-        # Check if user has access to the model
-        if not bypass_filter and user.role == 'user':
-            user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
-            if not (
-                user.id == model_info.user_id
-                or AccessGrants.has_access(
-                    user_id=user.id,
-                    resource_type='model',
-                    resource_id=model_info.id,
-                    permission='read',
-                    user_group_ids=user_group_ids,
-                )
-            ):
-                raise HTTPException(
-                    status_code=403,
-                    detail='Model not found',
-                )
-    elif not bypass_filter:
-        if user.role != 'admin':
-            raise HTTPException(
-                status_code=403,
-                detail='Model not found',
-            )
+        await check_model_access(user, model_info, bypass_filter)
+    else:
+        await check_model_access(user, None, bypass_filter)
 
     # Check if model is already in app state cache to avoid expensive get_all_models() call
     models = request.app.state.OPENAI_MODELS
@@ -1340,10 +1340,15 @@ async def responses(
     Routes to the correct upstream backend based on the model field.
     """
     payload = form_data.model_dump(exclude_none=True)
-    body = json.dumps(payload)
 
     idx = 0
     model_id = form_data.model
+
+    # Enforce per-model access control
+    await check_model_access(user, await Models.get_model_by_id(model_id), BYPASS_MODEL_ACCESS_CONTROL)
+
+    body = json.dumps(payload)
+
     if model_id:
         models = request.app.state.OPENAI_MODELS
         if not models or model_id not in models:
@@ -1378,7 +1383,7 @@ async def responses(
             else:
                 api_version = api_config.get('api_version', '2023-03-15-preview')
                 headers['api-version'] = api_version
-                model = payload.get('model', '')
+                model = _sanitize_model_for_url(payload.get('model', ''))
                 request_url = f'{url}/openai/deployments/{model}/responses?api-version={api_version}'
         else:
             request_url = f'{url}/responses'
@@ -1418,6 +1423,8 @@ async def responses(
 
             return response_data
 
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -1432,8 +1439,15 @@ async def responses(
 @router.api_route('/{path:path}', methods=['GET', 'POST', 'PUT', 'DELETE'])
 async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     """
-    Deprecated: proxy all requests to OpenAI API
+    Deprecated: proxy all requests to OpenAI API.
+    Disabled by default. Set ENABLE_OPENAI_API_PASSTHROUGH=True to enable.
     """
+
+    if not ENABLE_OPENAI_API_PASSTHROUGH:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Direct API passthrough is disabled. Set ENABLE_OPENAI_API_PASSTHROUGH=True to enable.',
+        )
 
     body = await request.body()
 
@@ -1529,6 +1543,8 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
             return response_data
 
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(e)
         raise HTTPException(

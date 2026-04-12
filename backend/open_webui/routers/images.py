@@ -28,8 +28,8 @@ from open_webui.routers.files import upload_file_handler, get_file_content_by_id
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.headers import include_user_info_headers
-from open_webui.internal.db import get_session
-from sqlalchemy.orm import Session
+from open_webui.internal.db import get_async_session
+from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.utils.images.comfyui import (
     ComfyUICreateImageForm,
     ComfyUIEditImageForm,
@@ -341,7 +341,7 @@ async def verify_url(request: Request, user=Depends(get_admin_user)):
 
 
 @router.get('/models')
-def get_models(request: Request, user=Depends(get_verified_user)):
+async def get_models(request: Request, user=Depends(get_verified_user)):
     try:
         if request.app.state.config.IMAGE_GENERATION_ENGINE == 'openai':
             return [
@@ -456,7 +456,7 @@ def get_image_data(data: str, headers=None):
         return None, None
 
 
-def upload_image(request, image_data, content_type, metadata, user, db=None):
+async def upload_image(request, image_data, content_type, metadata, user, db=None):
     image_format = mimetypes.guess_extension(content_type)
     file = UploadFile(
         file=io.BytesIO(image_data),
@@ -465,7 +465,7 @@ def upload_image(request, image_data, content_type, metadata, user, db=None):
             'content-type': content_type,
         },
     )
-    file_item = upload_file_handler(
+    file_item = await upload_file_handler(
         request,
         file=file,
         metadata=metadata,
@@ -479,7 +479,7 @@ def upload_image(request, image_data, content_type, metadata, user, db=None):
         message_id = metadata.get('message_id')
 
         if chat_id and message_id:
-            Chats.insert_chat_files(
+            await Chats.insert_chat_files(
                 chat_id=chat_id,
                 message_id=message_id,
                 file_ids=[file_item.id],
@@ -499,7 +499,7 @@ async def generate_images(request: Request, form_data: CreateImageForm, user=Dep
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    if user.role != 'admin' and not has_permission(
+    if user.role != 'admin' and not await has_permission(
         user.id, 'features.image_generation', request.app.state.config.USER_PERMISSIONS
     ):
         raise HTTPException(
@@ -590,7 +590,7 @@ async def image_generations(
                 else:
                     image_data, content_type = get_image_data(image['b64_json'])
 
-                _, url = upload_image(request, image_data, content_type, {**data, **metadata}, user)
+                _, url = await upload_image(request, image_data, content_type, {**data, **metadata}, user)
                 images.append({'url': url})
             return images
 
@@ -635,14 +635,14 @@ async def image_generations(
             if model.endswith(':predict'):
                 for image in res['predictions']:
                     image_data, content_type = get_image_data(image['bytesBase64Encoded'])
-                    _, url = upload_image(request, image_data, content_type, {**data, **metadata}, user)
+                    _, url = await upload_image(request, image_data, content_type, {**data, **metadata}, user)
                     images.append({'url': url})
             elif model.endswith(':generateContent'):
                 for image in res['candidates']:
                     for part in image['content']['parts']:
                         if part.get('inlineData', {}).get('data'):
                             image_data, content_type = get_image_data(part['inlineData']['data'])
-                            _, url = upload_image(
+                            _, url = await upload_image(
                                 request,
                                 image_data,
                                 content_type,
@@ -695,7 +695,7 @@ async def image_generations(
                     headers = {'Authorization': f'Bearer {request.app.state.config.COMFYUI_API_KEY}'}
 
                 image_data, content_type = get_image_data(image['url'], headers)
-                _, url = upload_image(
+                _, url = await upload_image(
                     request,
                     image_data,
                     content_type,
@@ -742,7 +742,7 @@ async def image_generations(
 
             for image in res['images']:
                 image_data, content_type = get_image_data(image)
-                _, url = upload_image(
+                _, url = await upload_image(
                     request,
                     image_data,
                     content_type,
@@ -832,7 +832,7 @@ async def image_edits(
     except Exception as e:
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
 
-    def get_image_file_item(base64_string, param_name='image'):
+    async def get_image_file_item(base64_string, param_name='image'):
         data = base64_string
         header, encoded = data.split(',', 1)
         mime_type = header.split(';')[0].lstrip('data:')
@@ -905,7 +905,7 @@ async def image_edits(
                 else:
                     image_data, content_type = get_image_data(image['b64_json'])
 
-                _, url = upload_image(request, image_data, content_type, {**data, **metadata}, user)
+                _, url = await upload_image(request, image_data, content_type, {**data, **metadata}, user)
                 images.append({'url': url})
             return images
 
@@ -956,7 +956,7 @@ async def image_edits(
                 for part in image['content']['parts']:
                     if part.get('inlineData', {}).get('data'):
                         image_data, content_type = get_image_data(part['inlineData']['data'])
-                        _, url = upload_image(
+                        _, url = await upload_image(
                             request,
                             image_data,
                             content_type,
@@ -1036,7 +1036,7 @@ async def image_edits(
                     headers = {'Authorization': f'Bearer {request.app.state.config.IMAGES_EDIT_COMFYUI_API_KEY}'}
 
                 image_data, content_type = get_image_data(image_url, headers)
-                _, url = upload_image(
+                _, url = await upload_image(
                     request,
                     image_data,
                     content_type,

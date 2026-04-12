@@ -44,7 +44,7 @@ def create_httpx_client(headers=None, timeout=None, auth=None):
     return _build_httpx_client(headers=headers, timeout=timeout, auth=auth, verify=True)
 
 
-def create_insecure_httpx_client(headers=None, timeout=None, auth=None):
+async def create_insecure_httpx_client(headers=None, timeout=None, auth=None):
     return _build_httpx_client(headers=headers, timeout=timeout, auth=auth, verify=False)
 
 

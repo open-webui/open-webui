@@ -3,7 +3,7 @@ import logging
 
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from open_webui.models.automations import (
     Automations,
@@ -23,7 +23,7 @@ from open_webui.utils.automations import (
 )
 from open_webui.utils.auth import get_verified_user, get_admin_user
 from open_webui.utils.access_control import has_permission
-from open_webui.internal.db import get_session
+from open_webui.internal.db import get_async_session
 from open_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
@@ -38,8 +38,8 @@ PAGE_ITEM_COUNT = 30
 ############################
 
 
-def check_automations_permission(request, user):
-    if user.role != 'admin' and not has_permission(
+async def check_automations_permission(request, user):
+    if user.role != 'admin' and not await has_permission(
         user.id, 'features.automations', request.app.state.config.USER_PERMISSIONS
     ):
         raise HTTPException(
@@ -61,7 +61,7 @@ def check_automation_access(automation, user):
         )
 
 
-def check_automation_limits(request, user, rrule_str: str, db, is_create: bool = False):
+async def check_automation_limits(request, user, rrule_str: str, db, is_create: bool = False):
     """Enforce global automation limits. Admins bypass all checks."""
     if user.role == 'admin':
         return
@@ -71,7 +71,7 @@ def check_automation_limits(request, user, rrule_str: str, db, is_create: bool =
         max_count = request.app.state.config.AUTOMATION_MAX_COUNT
         if max_count:
             max_count = int(max_count)
-            if max_count > 0 and Automations.count_by_user(user.id, db=db) >= max_count:
+            if max_count > 0 and await Automations.count_by_user(user.id, db=db) >= max_count:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=f'Automation limit reached ({max_count})',
@@ -90,9 +90,9 @@ def check_automation_limits(request, user, rrule_str: str, db, is_create: bool =
                 )
 
 
-def enrich_automation(automation: AutomationModel, db: Session, tz: str = None) -> AutomationResponse:
+async def enrich_automation(automation: AutomationModel, db: AsyncSession, tz: str = None) -> AutomationResponse:
     """Full enrichment for single-item views (includes next_runs computation)."""
-    last_run = AutomationRuns.get_latest(automation.id, db=db)
+    last_run = await AutomationRuns.get_latest(automation.id, db=db)
     return AutomationResponse(
         **automation.model_dump(),
         last_run=last_run,
@@ -112,14 +112,14 @@ async def get_automation_items(
     status: Optional[str] = None,
     page: Optional[int] = 1,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    check_automations_permission(request, user)
+    await check_automations_permission(request, user)
     limit = PAGE_ITEM_COUNT
     page = max(1, page)
     skip = (page - 1) * limit
 
-    result = Automations.search_automations(
+    result = await Automations.search_automations(
         user_id=user.id,
         query=query,
         status=status,
@@ -130,7 +130,7 @@ async def get_automation_items(
 
     # Batch-fetch latest runs in a single query instead of N+1
     ids = [item.id for item in result.items]
-    latest_runs = AutomationRuns.get_latest_batch(ids, db=db) if ids else {}
+    latest_runs = await AutomationRuns.get_latest_batch(ids, db=db) if ids else {}
 
     return {
         'items': [
@@ -154,9 +154,9 @@ async def create_new_automation(
     request: Request,
     form_data: AutomationForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    check_automations_permission(request, user)
+    await check_automations_permission(request, user)
     try:
         validate_rrule(form_data.data.rrule)
     except ValueError as e:
@@ -165,7 +165,7 @@ async def create_new_automation(
             detail=str(e),
         )
 
-    check_automation_limits(request, user, form_data.data.rrule, db, is_create=True)
+    await check_automation_limits(request, user, form_data.data.rrule, db, is_create=True)
 
     # Validate terminal server exists if linked
     if form_data.data.terminal and form_data.data.terminal.server_id:
@@ -177,8 +177,8 @@ async def create_new_automation(
             )
 
     tz = user.timezone
-    automation = Automations.insert(user.id, form_data, next_run_ns(form_data.data.rrule, tz=tz), db=db)
-    return enrich_automation(automation, db, tz=tz)
+    automation = await Automations.insert(user.id, form_data, next_run_ns(form_data.data.rrule, tz=tz), db=db)
+    return await enrich_automation(automation, db, tz=tz)
 
 
 ############################
@@ -191,12 +191,12 @@ async def get_automation_by_id(
     request: Request,
     id: str,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    check_automations_permission(request, user)
-    automation = Automations.get_by_id(id, db=db)
+    await check_automations_permission(request, user)
+    automation = await Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
-    return enrich_automation(automation, db, tz=user.timezone)
+    return await enrich_automation(automation, db, tz=user.timezone)
 
 
 ############################
@@ -210,10 +210,10 @@ async def update_automation_by_id(
     id: str,
     form_data: AutomationForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    check_automations_permission(request, user)
-    automation = Automations.get_by_id(id, db=db)
+    await check_automations_permission(request, user)
+    automation = await Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
 
     try:
@@ -224,7 +224,7 @@ async def update_automation_by_id(
             detail=str(e),
         )
 
-    check_automation_limits(request, user, form_data.data.rrule, db, is_create=False)
+    await check_automation_limits(request, user, form_data.data.rrule, db, is_create=False)
 
     # Validate terminal server exists if linked
     if form_data.data.terminal and form_data.data.terminal.server_id:
@@ -236,8 +236,8 @@ async def update_automation_by_id(
             )
 
     tz = user.timezone
-    updated = Automations.update_by_id(id, form_data, next_run_ns(form_data.data.rrule, tz=tz), db=db)
-    return enrich_automation(updated, db, tz=tz)
+    updated = await Automations.update_by_id(id, form_data, next_run_ns(form_data.data.rrule, tz=tz), db=db)
+    return await enrich_automation(updated, db, tz=tz)
 
 
 ############################
@@ -250,13 +250,13 @@ async def toggle_automation_by_id(
     request: Request,
     id: str,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    check_automations_permission(request, user)
-    automation = Automations.get_by_id(id, db=db)
+    await check_automations_permission(request, user)
+    automation = await Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
-    toggled = Automations.toggle(id, next_run_ns(automation.data['rrule'], tz=user.timezone), db=db)
-    return enrich_automation(toggled, db, tz=user.timezone)
+    toggled = await Automations.toggle(id, next_run_ns(automation.data['rrule'], tz=user.timezone), db=db)
+    return await enrich_automation(toggled, db, tz=user.timezone)
 
 
 ############################
@@ -269,13 +269,13 @@ async def run_automation_by_id(
     request: Request,
     id: str,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    check_automations_permission(request, user)
-    automation = Automations.get_by_id(id, db=db)
+    await check_automations_permission(request, user)
+    automation = await Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
     asyncio.create_task(execute_automation(request.app, automation))
-    return enrich_automation(automation, db, tz=user.timezone)
+    return await enrich_automation(automation, db, tz=user.timezone)
 
 
 ############################
@@ -288,13 +288,13 @@ async def delete_automation_by_id(
     request: Request,
     id: str,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    check_automations_permission(request, user)
-    automation = Automations.get_by_id(id, db=db)
+    await check_automations_permission(request, user)
+    automation = await Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
-    AutomationRuns.delete_by_automation(id, db=db)
-    return Automations.delete(id, db=db)
+    await AutomationRuns.delete_by_automation(id, db=db)
+    return await Automations.delete(id, db=db)
 
 
 ############################
@@ -309,9 +309,9 @@ async def get_automation_runs(
     skip: int = 0,
     limit: int = 50,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    check_automations_permission(request, user)
-    automation = Automations.get_by_id(id, db=db)
+    await check_automations_permission(request, user)
+    automation = await Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
-    return AutomationRuns.get_by_automation(id, skip=skip, limit=limit, db=db)
+    return await AutomationRuns.get_by_automation(id, skip=skip, limit=limit, db=db)

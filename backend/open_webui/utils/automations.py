@@ -126,7 +126,7 @@ async def automation_worker_loop(app) -> None:
     while True:
         try:
             with get_db() as db:
-                batch = Automations.claim_due(int(time.time_ns()), limit=10, db=db)
+                batch = await Automations.claim_due(int(time.time_ns()), limit=10, db=db)
             if batch:
                 log.info(f'Claimed {len(batch)} due automation(s)')
             for automation in batch:
@@ -283,9 +283,9 @@ async def execute_automation(app, automation: AutomationModel) -> None:
     (filters, model params, knowledge/RAG, tools, DB saves, webhooks).
     """
     try:
-        user = Users.get_user_by_id(automation.user_id)
+        user = await Users.get_user_by_id(automation.user_id)
         if not user:
-            _record_run(automation.id, 'error', error='User not found')
+            await _record_run(automation.id, 'error', error='User not found')
             return
 
         prompt = prompt_template(automation.data['prompt'], user)
@@ -297,7 +297,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
         assistant_msg_id = str(uuid4())
 
         # Create the chat with user message (same structure as frontend)
-        chat = Chats.insert_new_chat(
+        chat = await Chats.insert_new_chat(
             automation.user_id,
             ChatForm(
                 chat={
@@ -336,7 +336,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
         )
 
         if not chat:
-            _record_run(automation.id, 'error', error='Failed to create chat')
+            await _record_run(automation.id, 'error', error='Failed to create chat')
             return
 
         # Notify frontend to refresh chat list
@@ -404,11 +404,11 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             room=f'user:{automation.user_id}',
         )
 
-        _record_run(automation.id, 'success', chat_id=chat.id)
+        await _record_run(automation.id, 'success', chat_id=chat.id)
 
     except Exception as e:
         log.exception(f'Automation {automation.id} failed')
-        _record_run(automation.id, 'error', error=str(e)[:4000])
+        await _record_run(automation.id, 'error', error=str(e)[:4000])
 
 
 ####################
@@ -416,7 +416,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
 ####################
 
 
-def _record_run(
+async def _record_run(
     automation_id: str,
     status: str,
     chat_id: str = None,
@@ -424,4 +424,4 @@ def _record_run(
 ):
     """Insert a run record into automation_run."""
     with get_db() as db:
-        AutomationRuns.insert(automation_id, status, chat_id=chat_id, error=error, db=db)
+        await AutomationRuns.insert(automation_id, status, chat_id=chat_id, error=error, db=db)

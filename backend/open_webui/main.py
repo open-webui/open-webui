@@ -108,8 +108,8 @@ from open_webui.routers.retrieval import (
 )
 
 
-from sqlalchemy.orm import Session
-from open_webui.internal.db import ScopedSession, engine, get_session
+from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.internal.db import ScopedSession, engine, get_async_session
 
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
@@ -575,7 +575,7 @@ from open_webui.constants import ERROR_MESSAGES
 
 if SAFE_MODE:
     print('SAFE MODE ENABLED')
-    Functions.deactivate_all_functions()
+    # Functions.deactivate_all_functions() is awaited in lifespan below
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -629,14 +629,17 @@ async def lifespan(app: FastAPI):
 
     # Create admin account from env vars if specified and no users exist
     if WEBUI_ADMIN_EMAIL and WEBUI_ADMIN_PASSWORD:
-        if create_admin_user(WEBUI_ADMIN_EMAIL, WEBUI_ADMIN_PASSWORD, WEBUI_ADMIN_NAME):
+        if await create_admin_user(WEBUI_ADMIN_EMAIL, WEBUI_ADMIN_PASSWORD, WEBUI_ADMIN_NAME):
             # Disable signup since we now have an admin
             app.state.config.ENABLE_SIGNUP = False
+
+    if SAFE_MODE:
+        await Functions.deactivate_all_functions()
 
     # This should be blocking (sync) so functions are not deactivated on first /get_models calls
     # when the first user lands on the / route.
     log.info('Installing external dependencies of functions and tools...')
-    install_tool_and_function_dependencies()
+    await install_tool_and_function_dependencies()
 
     app.state.redis = get_redis_connection(
         redis_url=REDIS_URL,
@@ -1605,7 +1608,7 @@ async def get_models(request: Request, refresh: bool = False, user=Depends(get_v
             )
         )
 
-    models = get_filtered_models(models, user)
+    models = await get_filtered_models(models, user)
 
     log.debug(
         f'/api/models returned filtered models accessible to the user: {json.dumps([model.get("id") for model in models])}'
@@ -1671,12 +1674,12 @@ async def chat_completion(
                 raise Exception('Model not found')
 
             model = request.app.state.MODELS[model_id]
-            model_info = Models.get_model_by_id(model_id)
+            model_info = await Models.get_model_by_id(model_id)
 
             # Check if user has access to the model
             if not BYPASS_MODEL_ACCESS_CONTROL and (user.role != 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL):
                 try:
-                    check_model_access(user, model)
+                    await check_model_access(user, model)
                 except Exception as e:
                     raise e
         else:
@@ -1758,7 +1761,7 @@ async def chat_completion(
                 # Verify chat ownership — lightweight EXISTS check avoids
                 # deserializing the full chat JSON blob just to confirm the row exists
                 if (
-                    not Chats.is_chat_owner(metadata['chat_id'], user.id) and user.role != 'admin'
+                    not await Chats.is_chat_owner(metadata['chat_id'], user.id) and user.role != 'admin'
                 ):  # admins can access any chat
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
@@ -1770,7 +1773,7 @@ async def chat_completion(
                 parent_message_files = parent_message.get('files', [])
                 if parent_message_files:
                     try:
-                        Chats.insert_chat_files(
+                        await Chats.insert_chat_files(
                             metadata['chat_id'],
                             parent_message.get('id'),
                             [
@@ -1802,7 +1805,7 @@ async def chat_completion(
             if metadata.get('chat_id') and metadata.get('message_id'):
                 try:
                     if not metadata['chat_id'].startswith('local:'):
-                        Chats.upsert_message_to_chat_by_id_and_message_id(
+                        await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
                             {
@@ -1813,13 +1816,13 @@ async def chat_completion(
                 except Exception:
                     pass
 
-            ctx = build_chat_response_context(request, form_data, user, model, metadata, tasks, events)
+            ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, events)
 
             return await process_chat_response(response, ctx)
         except asyncio.CancelledError:
             log.info('Chat processing was cancelled')
             try:
-                event_emitter = get_event_emitter(metadata)
+                event_emitter = await get_event_emitter(metadata)
                 await asyncio.shield(
                     event_emitter(
                         {'type': 'chat:tasks:cancel'},
@@ -1835,7 +1838,7 @@ async def chat_completion(
                 # Update the chat message with the error
                 try:
                     if not metadata['chat_id'].startswith('local:'):
-                        Chats.upsert_message_to_chat_by_id_and_message_id(
+                        await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
                             {
@@ -1844,7 +1847,7 @@ async def chat_completion(
                             },
                         )
 
-                    event_emitter = get_event_emitter(metadata)
+                    event_emitter = await get_event_emitter(metadata)
                     await event_emitter(
                         {
                             'type': 'chat:message:error',
@@ -1883,7 +1886,7 @@ async def chat_completion(
             # Emit chat:active=false when task completes
             try:
                 if metadata.get('chat_id'):
-                    event_emitter = get_event_emitter(metadata, update_db=False)
+                    event_emitter = await get_event_emitter(metadata, update_db=False)
                     if event_emitter:
                         await event_emitter({'type': 'chat:active', 'data': {'active': False}})
             except Exception as e:
@@ -1897,7 +1900,7 @@ async def chat_completion(
             id=metadata['chat_id'],
         )
         # Emit chat:active=true when task starts
-        event_emitter = get_event_emitter(metadata, update_db=False)
+        event_emitter = await get_event_emitter(metadata, update_db=False)
         if event_emitter:
             await event_emitter({'type': 'chat:active', 'data': {'active': True}})
         return {'status': True, 'task_id': task_id}
@@ -2024,7 +2027,7 @@ async def list_tasks_endpoint(request: Request, user=Depends(get_verified_user))
 
 @app.get('/api/tasks/chat/{chat_id}')
 async def list_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=Depends(get_verified_user)):
-    chat = Chats.get_chat_by_id(chat_id)
+    chat = await Chats.get_chat_by_id(chat_id)
     if chat is None or chat.user_id != user.id:
         return {'task_ids': []}
 
@@ -2065,9 +2068,9 @@ async def get_app_config(request: Request):
                 detail='Invalid token',
             )
         if data is not None and 'id' in data:
-            user = Users.get_user_by_id(data['id'])
+            user = await Users.get_user_by_id(data['id'])
 
-    user_count = Users.get_num_users()
+    user_count = await Users.get_num_users()
     onboarding = False
 
     if user is None:
@@ -2276,7 +2279,7 @@ async def get_current_usage(user=Depends(get_verified_user)):
 
         return {
             'model_ids': get_models_in_use(),
-            'user_count': Users.get_active_user_count(),
+            'user_count': await Users.get_active_user_count(),
         }
     except HTTPException:
         raise
@@ -2483,7 +2486,7 @@ async def oauth_login_callback(
     provider: str,
     request: Request,
     response: Response,
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     return await oauth_manager.handle_callback(request, provider, response, db=db)
 
@@ -2496,7 +2499,7 @@ async def oauth_login_callback(
 @app.post('/oauth/backchannel-logout')
 async def oauth_backchannel_logout(
     request: Request,
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     if not ENABLE_OAUTH_BACKCHANNEL_LOGOUT:
         raise HTTPException(status_code=404)
