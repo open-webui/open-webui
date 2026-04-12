@@ -1976,19 +1976,14 @@ async def generate_messages(
 
 @app.post('/api/chat/completed')
 async def chat_completed(request: Request, form_data: dict, user=Depends(get_verified_user)):
-    try:
-        model_item = form_data.pop('model_item', {})
-
-        if model_item.get('direct', False):
-            request.state.direct = True
-            request.state.model = model_item
-
-        return await chat_completed_handler(request, form_data, user)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        )
+    """
+    Outlet filters already run in /chat/completion.
+    This endpoint returns the original form_data for backward compatibility.
+    Outlet filters are NOT run again (they already ran in /chat/completion).
+    """
+    # Return the original form_data as-is (no outlet processing)
+    # This matches the original response structure
+    return form_data
 
 
 @app.post('/api/chat/actions/{action_id}')

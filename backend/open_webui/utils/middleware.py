@@ -70,8 +70,12 @@ from open_webui.utils.files import (
 from open_webui.models.users import UserModel
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
+from open_webui.models.chats import Chats
 
 from open_webui.retrieval.utils import get_sources_from_items
+
+from open_webui.socket.main import get_event_emitter, get_event_call
+from open_webui.utils.filter import get_sorted_filter_ids, process_filter_functions
 
 
 from open_webui.utils.sanitize import sanitize_code
@@ -2192,6 +2196,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     form_data = await convert_url_images_to_base64(form_data)
 
+    # Generate message_id if not provided (for correlation between inlet and outlet)
+    if not metadata.get('message_id'):
+        metadata['message_id'] = str(uuid4())
+
+    # Generate local chat_id if not provided (for outlet filter correlation)
+    # Using 'local:' prefix ensures it's treated as temporary and not persisted
+    if not metadata.get('chat_id'):
+        metadata['chat_id'] = f'local:{str(uuid4())}'
+
     event_emitter = get_event_emitter(metadata)
     event_caller = get_event_call(metadata)
 
@@ -2773,6 +2786,120 @@ def get_event_emitter_and_caller(metadata):
     return event_emitter, event_caller
 
 
+async def run_outlet_filters(request, form_data, metadata, user, model, output_data):
+    """
+    Run outlet filters with the given output data.
+
+    This function replicates the behavior of /chat/completed.
+    Must be called as the last step before sending response to client.
+
+    Args:
+        request: Request object
+        form_data: Original form data (includes messages)
+        metadata: Request metadata
+        user: User object
+        model: Model dict
+        output_data: Final output from stream/response (dict with 'output', 'content', 'usage')
+
+    Returns:
+        Modified output_data (modifications are NOT persisted in Option A)
+    """
+    # Build outlet form_data in OWUI format
+    # Construct messages array with proper metadata (id, timestamp, usage, etc.)
+    messages = []
+
+    # Add user messages from form_data (exclude system messages)
+    for msg in form_data.get('messages', []):
+        if msg.get('role') != 'system':
+            messages.append({
+                'id': msg.get('id', str(uuid4())),
+                'role': msg['role'],
+                'content': msg.get('content', ''),
+                'timestamp': int(msg.get('timestamp', time.time())),
+            })
+
+    # Add assistant message from output_data (use metadata ID generated at inlet)
+    assistant_message = {
+        'id': metadata['message_id'],
+        'role': 'assistant',
+        'content': output_data.get('content', ''),
+        'timestamp': int(time.time()),
+        'usage': output_data.get('usage'),
+    }
+    messages.append(assistant_message)
+
+    outlet_form_data = {
+        'model': metadata['model']['id'] if isinstance(metadata['model'], dict) else metadata['model'],
+        'chat_id': metadata['chat_id'],
+        'id': metadata['message_id'],
+        'session_id': metadata['session_id'],
+        'filter_ids': metadata.get('filter_ids', []),
+        'messages': messages,
+        **output_data  # Includes 'output', 'content', 'usage', etc.
+    }
+
+    # Get models
+    if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
+        models = {request.state.model['id']: request.state.model}
+    else:
+        models = request.app.state.MODELS
+
+    model_id = outlet_form_data['model']
+    if model_id not in models:
+        log.warning(f'Model {model_id} not found for outlet processing')
+        return output_data  # Skip if model not found
+
+    outlet_model = models[model_id]
+
+    # Build metadata for filter functions
+    filter_metadata = {
+        'chat_id': outlet_form_data['chat_id'],
+        'message_id': outlet_form_data['id'],
+        'filter_ids': outlet_form_data.get('filter_ids', []),
+        'session_id': outlet_form_data['session_id'],
+        'user_id': user.id,
+    }
+
+    # Build extra params with event emitter
+    extra_params = {
+        '__event_emitter__': get_event_emitter(filter_metadata),
+        '__event_call__': get_event_call(filter_metadata),
+        '__user__': user.model_dump() if isinstance(user, UserModel) else {},
+        '__metadata__': filter_metadata,
+        '__request__': request,
+        '__model__': outlet_model,
+    }
+
+    # Step 1: Run pipeline outlet filters (HTTP-based external filters)
+    try:
+        from open_webui.routers.pipelines import process_pipeline_outlet_filter
+        outlet_form_data = await process_pipeline_outlet_filter(
+            request, outlet_form_data, user, models
+        )
+    except Exception as e:
+        log.error(f'Pipeline outlet filter error: {e}')
+        # Continue to filter functions even if pipeline filters fail
+
+    # Step 2: Get filter functions
+    filter_ids = get_sorted_filter_ids(request, outlet_model, filter_metadata.get('filter_ids', []))
+    filter_functions = Functions.get_functions_by_ids(filter_ids)
+
+    # Step 3: Run filter outlet functions (Python-based custom filters)
+    try:
+        result, _ = await process_filter_functions(
+            request=request,
+            filter_functions=filter_functions,
+            filter_type='outlet',
+            form_data=outlet_form_data,
+            extra_params=extra_params,
+        )
+        # Return modified result (caller decides whether to persist)
+        return result
+    except Exception as e:
+        log.error(f'Filter outlet function error: {e}')
+        return output_data  # Return original on error
+
+
 def build_chat_response_context(request, form_data, user, model, metadata, tasks, events):
     event_emitter, event_caller = get_event_emitter_and_caller(metadata)
     return {
@@ -3172,6 +3299,22 @@ async def non_streaming_chat_response_handler(response, ctx):
                             )
 
                     await background_tasks_handler(ctx)
+
+                    # === NEW: Run outlet filters (AFTER background tasks, BEFORE return) ===
+                    output_data = {
+                        'output': response_output,
+                        'content': content,
+                        'usage': usage,
+                    }
+
+                    # Run outlet filters
+                    outlet_result = await run_outlet_filters(
+                        request, form_data, metadata, user, model, output_data
+                    )
+
+                    # Option A: Discard modifications (preserve current behavior)
+                    # Outlet filters ran and emitted events, but we use original output
+                    # === END NEW ===
 
             response = build_response_object(response, merge_events_into_response(response_data, events))
         except Exception as e:
@@ -4681,6 +4824,22 @@ async def streaming_chat_response_handler(response, ctx):
                 )
 
                 await background_tasks_handler(ctx)
+
+                # === NEW: Run outlet filters (AFTER background tasks, BEFORE stream closes) ===
+                output_data = {
+                    'output': output,
+                    'content': serialize_output(output),
+                    'usage': usage,
+                }
+
+                # Run outlet filters
+                outlet_result = await run_outlet_filters(
+                    request, form_data, metadata, user, model, output_data
+                )
+
+                # Option A: Discard modifications (preserve current behavior)
+                # Outlet filters ran and emitted events, but we use original output
+                # === END NEW ===
             except asyncio.CancelledError:
                 log.warning('Task was cancelled!')
                 await event_emitter({'type': 'chat:tasks:cancel'})
@@ -4714,6 +4873,9 @@ async def streaming_chat_response_handler(response, ctx):
             def wrap_item(item):
                 return f'data: {item}\n\n'
 
+            # Accumulate stream chunks for outlet processing
+            accumulated_chunks = []
+
             for event in events:
                 event, _ = await process_filter_functions(
                     request=request,
@@ -4736,7 +4898,59 @@ async def streaming_chat_response_handler(response, ctx):
                 )
 
                 if data:
+                    accumulated_chunks.append(data)
                     yield data
+
+            # Run outlet filters after stream completes
+            # Reconstruct output from accumulated chunks (simplified for fallback path)
+            try:
+                # Combine all chunks to get final content
+                final_content = ''
+                usage_data = {}
+                for chunk_bytes in accumulated_chunks:
+                    try:
+                        # Parse JSON from bytes
+                        chunk_str = chunk_bytes.decode('utf-8') if isinstance(chunk_bytes, bytes) else chunk_bytes
+
+                        # Skip SSE prefix
+                        if chunk_str.startswith('data: '):
+                            chunk_str = chunk_str[6:]
+
+                        # Skip empty lines and [DONE]
+                        chunk_str = chunk_str.strip()
+                        if not chunk_str or chunk_str == '[DONE]':
+                            continue
+
+                        # Parse JSON
+                        chunk = json.loads(chunk_str)
+
+                        if isinstance(chunk, dict) and 'choices' in chunk:
+                            for choice in chunk['choices']:
+                                if 'delta' in choice and choice['delta'].get('content'):
+                                    final_content += choice['delta']['content']
+
+                        # Extract usage data if present (usually in final chunk)
+                        if 'usage' in chunk and chunk['usage']:
+                            usage_data = chunk['usage']
+                    except json.JSONDecodeError as e:
+                        # Skip invalid JSON chunks
+                        log.warning(f'Skipping invalid JSON chunk: {e}')
+                        continue
+
+                if final_content:
+                    output_data = {
+                        'output': [],
+                        'content': final_content,
+                        'usage': usage_data,
+                    }
+
+                    # Run outlet filters
+                    await run_outlet_filters(
+                        request, form_data, metadata, user, model, output_data
+                    )
+            except Exception as e:
+                log.error(f'Outlet filter error in fallback path: {e}')
+                # Continue without failing the response
 
         return StreamingResponse(
             stream_wrapper(response.body_iterator, events),
