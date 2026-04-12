@@ -63,6 +63,7 @@ from open_webui.utils.payload import (
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.config import (
+    BYPASS_ADMIN_ACCESS_CONTROL,
     UPLOAD_DIR,
 )
 from open_webui.env import (
@@ -1106,7 +1107,13 @@ async def generate_chat_completion(
             # Re-run the access check against the resolved base model. The check
             # on the user-facing wrapper does not authorize the chain target:
             # grants or ownership on the wrapper must not leak into the base.
-            await check_base_model_access(user, base_model_id, bypass_filter)
+            # Fold admin bypass in so admins behave consistently with the other
+            # new call sites (main.py, functions.py, models.py).
+            await check_base_model_access(
+                user,
+                base_model_id,
+                bypass_filter or (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL),
+            )
 
         params = model_info.params.model_dump()
 
@@ -1198,7 +1205,11 @@ async def generate_openai_completion(
 
     model_id = form_data.model
     model_info = await Models.get_model_by_id(model_id)
-    base_bypass_filter = getattr(request.state, 'bypass_filter', False) or BYPASS_MODEL_ACCESS_CONTROL
+    base_bypass_filter = (
+        getattr(request.state, 'bypass_filter', False)
+        or BYPASS_MODEL_ACCESS_CONTROL
+        or (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
+    )
     if model_info:
         if model_info.base_model_id:
             payload['model'] = model_info.base_model_id
@@ -1262,7 +1273,11 @@ async def generate_openai_chat_completion(
 
     model_id = completion_form.model
     model_info = await Models.get_model_by_id(model_id)
-    base_bypass_filter = getattr(request.state, 'bypass_filter', False) or BYPASS_MODEL_ACCESS_CONTROL
+    base_bypass_filter = (
+        getattr(request.state, 'bypass_filter', False)
+        or BYPASS_MODEL_ACCESS_CONTROL
+        or (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
+    )
     if model_info:
         if model_info.base_model_id:
             payload['model'] = model_info.base_model_id
@@ -1324,7 +1339,11 @@ async def generate_anthropic_messages(
     model_id = payload.get('model', '')
 
     model_info = await Models.get_model_by_id(model_id)
-    base_bypass_filter = getattr(request.state, 'bypass_filter', False) or BYPASS_MODEL_ACCESS_CONTROL
+    base_bypass_filter = (
+        getattr(request.state, 'bypass_filter', False)
+        or BYPASS_MODEL_ACCESS_CONTROL
+        or (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
+    )
     if model_info:
         if model_info.base_model_id:
             payload['model'] = model_info.base_model_id
@@ -1384,7 +1403,11 @@ async def generate_responses(
     model_id = form_data.model
 
     model_info = await Models.get_model_by_id(model_id)
-    base_bypass_filter = getattr(request.state, 'bypass_filter', False) or BYPASS_MODEL_ACCESS_CONTROL
+    base_bypass_filter = (
+        getattr(request.state, 'bypass_filter', False)
+        or BYPASS_MODEL_ACCESS_CONTROL
+        or (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
+    )
     if model_info:
         if model_info.base_model_id:
             payload['model'] = model_info.base_model_id

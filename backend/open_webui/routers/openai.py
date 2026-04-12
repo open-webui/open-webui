@@ -34,6 +34,7 @@ from open_webui.utils.access_control import (
     check_base_model_access,
 )
 from open_webui.config import (
+    BYPASS_ADMIN_ACCESS_CONTROL,
     CACHE_DIR,
 )
 from open_webui.env import (
@@ -1065,7 +1066,13 @@ async def generate_chat_completion(
             # Re-run the access check against the resolved base model. The check
             # on the user-facing wrapper does not authorize the chain target:
             # grants or ownership on the wrapper must not leak into the base.
-            await check_base_model_access(user, base_model_id, bypass_filter)
+            # Fold admin bypass into the filter so admins mirror the behaviour
+            # of the other new call sites (main.py, functions.py, models.py).
+            await check_base_model_access(
+                user,
+                base_model_id,
+                bypass_filter or (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL),
+            )
 
         params = model_info.params.model_dump()
 
