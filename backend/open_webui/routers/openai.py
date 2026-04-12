@@ -1160,6 +1160,7 @@ async def generate_chat_completion(
             payload['logit_bias'] = json.loads(logit_bias)
 
     headers, cookies = await get_headers_and_cookies(request, url, key, api_config, metadata, user=user)
+    headers['x-openai-base-url'] = url
 
     is_responses = api_config.get('api_type') == 'responses'
 
@@ -1204,6 +1205,7 @@ async def generate_chat_completion(
     try:
         session = aiohttp.ClientSession(trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT))
 
+        print(f"[GARNET URL] url={request_url} headers={headers}")
         r = await session.request(
             method='POST',
             url=request_url,
