@@ -2947,9 +2947,10 @@ async def upload_file_to_terminal(
 
         # --- 3. Upload to terminal server ---
         import aiohttp
+        from open_webui.env import AIOHTTP_CLIENT_TIMEOUT
 
         async with aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=60),
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
             trust_env=True,
         ) as session:
             # Query the terminal's current working directory
