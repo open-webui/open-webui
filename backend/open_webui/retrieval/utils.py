@@ -923,7 +923,7 @@ def get_reranking_function(reranking_engine, reranking_model, reranking_function
         )
 
 
-def _has_access_to_collection(
+async def _has_access_to_collection(
     collection_name: str,
     user: Optional[UserModel],
     access_cache: Optional[dict[str, bool]] = None,
@@ -953,19 +953,19 @@ def _has_access_to_collection(
 
     if collection_name.startswith('file-'):
         file_id = collection_name[5:]  # strip 'file-' prefix
-        file_object = Files.get_file_by_id(file_id)
+        file_object = await Files.get_file_by_id(file_id)
         if file_object:
             result = (
                 file_object.user_id == user.id
-                or has_access_to_file(file_id, 'read', user)
+                or await has_access_to_file(file_id, 'read', user)
             )
     else:
         # Knowledge base collections use the knowledge base UUID as name
-        knowledge_base = Knowledges.get_knowledge_by_id(collection_name)
+        knowledge_base = await Knowledges.get_knowledge_by_id(collection_name)
         if knowledge_base:
             result = (
                 knowledge_base.user_id == user.id
-                or AccessGrants.has_access(
+                or await AccessGrants.has_access(
                     user_id=user.id,
                     resource_type='knowledge',
                     resource_id=knowledge_base.id,
@@ -974,11 +974,11 @@ def _has_access_to_collection(
             )
         else:
             # Legacy format: bare file ID without 'file-' prefix
-            file_object = Files.get_file_by_id(collection_name)
+            file_object = await Files.get_file_by_id(collection_name)
             if file_object:
                 result = (
                     file_object.user_id == user.id
-                    or has_access_to_file(collection_name, 'read', user)
+                    or await has_access_to_file(collection_name, 'read', user)
                 )
 
     if access_cache is not None:
@@ -1029,7 +1029,7 @@ async def get_sources_from_items(
                 if item.get('collection_name'):
                     # If item has a collection name, verify access before querying
                     cn = item.get('collection_name')
-                    if _has_access_to_collection(cn, user, collection_access_cache):
+                    if await _has_access_to_collection(cn, user, collection_access_cache):
                         collection_names.append(cn)
                     else:
                         log.debug(f'User {getattr(user, "id", "anonymous")} denied access to collection {cn}')
@@ -1135,7 +1135,7 @@ async def get_sources_from_items(
                 file_id = item.get('id')
                 if file_id:
                     collection_name = f'{file_id}' if item.get('legacy') else f'file-{file_id}'
-                    if _has_access_to_collection(collection_name, user, collection_access_cache):
+                    if await _has_access_to_collection(collection_name, user, collection_access_cache):
                         collection_names.append(collection_name)
                     else:
                         log.debug(f'User {getattr(user, "id", "anonymous")} denied access to file {file_id} for RAG query')
@@ -1199,14 +1199,14 @@ async def get_sources_from_items(
         elif item.get('collection_name'):
             # Direct Collection Name — verify access before querying
             cn = item['collection_name']
-            if _has_access_to_collection(cn, user, collection_access_cache):
+            if await _has_access_to_collection(cn, user, collection_access_cache):
                 collection_names.append(cn)
             else:
                 log.debug(f'User {getattr(user, "id", "anonymous")} denied access to collection {cn}')
         elif item.get('collection_names'):
             # Collection Names List — verify access for each
             for cn in item['collection_names']:
-                if _has_access_to_collection(cn, user, collection_access_cache):
+                if await _has_access_to_collection(cn, user, collection_access_cache):
                     collection_names.append(cn)
                 else:
                     log.debug(f'User {getattr(user, "id", "anonymous")} denied access to collection {cn}')
