@@ -322,6 +322,14 @@ async def ldap_auth(
             detail=ERROR_MESSAGES.ACTION_PROHIBITED,
         )
 
+    # Reject empty passwords before attempting the LDAP bind.
+    # Per RFC 4513 §5.1.2, a Simple Bind with a non-empty DN but empty
+    # password is "unauthenticated simple authentication" — many LDAP
+    # servers (OpenLDAP default, some AD configs) return success for these,
+    # which would grant access without valid credentials.
+    if not form_data.password or not form_data.password.strip():
+        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+
     # NOW load LDAP config variables
     LDAP_SERVER_LABEL = request.app.state.config.LDAP_SERVER_LABEL
     LDAP_SERVER_HOST = request.app.state.config.LDAP_SERVER_HOST
