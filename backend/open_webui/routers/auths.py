@@ -479,18 +479,24 @@ async def ldap_auth(
             user = Users.get_user_by_email(email, db=db)
             if not user:
                 try:
-                    role = 'admin' if not Users.has_users(db=db) else request.app.state.config.DEFAULT_USER_ROLE
-
+                    # Insert with default role first to avoid TOCTOU race on
+                    # first-user registration.  Matches signup_handler pattern.
                     user = Auths.insert_new_auth(
                         email=email,
                         password=str(uuid.uuid4()),
                         name=cn,
-                        role=role,
+                        role=request.app.state.config.DEFAULT_USER_ROLE,
                         db=db,
                     )
 
                     if not user:
                         raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
+
+                    # Atomically check if this is the only user *after* the
+                    # insert.  Only the single user present should become admin.
+                    if Users.get_num_users(db=db) == 1:
+                        Users.update_user_role_by_id(user.id, 'admin', db=db)
+                        user = Users.get_user_by_id(user.id, db=db)
 
                     apply_default_group_assignment(
                         request.app.state.config.DEFAULT_GROUP_ID,

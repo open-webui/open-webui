@@ -1109,9 +1109,12 @@ class OAuthManager:
             log.debug('Assigning the only user the admin role')
             return 'admin'
         if not user and user_count == 0:
-            # If there are no users, assign the role "admin", as the first user will be an admin
-            log.debug('Assigning the first user the admin role')
-            return 'admin'
+            # First-user bootstrap: skip role management gating so the
+            # instance can be initialized.  We intentionally return the
+            # default role here (not 'admin') — admin promotion happens
+            # race-safely *after* insert via get_num_users() == 1.
+            log.debug('First user bootstrap: using default role (admin promotion deferred to post-insert)')
+            return auth_manager_config.DEFAULT_USER_ROLE
 
         if auth_manager_config.ENABLE_OAUTH_ROLE_MANAGEMENT:
             log.debug('Running OAUTH Role management')
@@ -1576,6 +1579,16 @@ class OAuthManager:
                         oauth=oauth_data,
                         db=db,
                     )
+
+                    if not user:
+                        raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
+
+                    # Atomically check if this is the only user *after* the
+                    # insert to avoid TOCTOU race on first-user registration.
+                    # Matches signup_handler pattern.
+                    if Users.get_num_users(db=db) == 1:
+                        Users.update_user_role_by_id(user.id, 'admin', db=db)
+                        user = Users.get_user_by_id(user.id, db=db)
 
                     if auth_manager_config.WEBHOOK_URL:
                         await post_webhook(
