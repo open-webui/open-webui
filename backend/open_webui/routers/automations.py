@@ -19,6 +19,7 @@ from open_webui.utils.automations import (
     next_run_ns,
     next_n_runs_ns,
     execute_automation,
+    rrule_interval_seconds,
 )
 from open_webui.utils.auth import get_verified_user, get_admin_user
 from open_webui.utils.access_control import has_permission
@@ -60,7 +61,37 @@ def check_automation_access(automation, user):
         )
 
 
+def check_automation_limits(request, user, rrule_str: str, db, is_create: bool = False):
+    """Enforce global automation limits. Admins bypass all checks."""
+    if user.role == 'admin':
+        return
+
+    # Max count (create only)
+    if is_create:
+        max_count = request.app.state.config.AUTOMATION_MAX_COUNT
+        if max_count:
+            max_count = int(max_count)
+            if max_count > 0 and Automations.count_by_user(user.id, db=db) >= max_count:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f'Automation limit reached ({max_count})',
+                )
+
+    # Min interval (create + update)
+    min_interval = request.app.state.config.AUTOMATION_MIN_INTERVAL
+    if min_interval:
+        min_interval = int(min_interval)
+        if min_interval > 0:
+            interval = rrule_interval_seconds(rrule_str)
+            if interval is not None and interval < min_interval:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f'Schedule too frequent. Minimum interval is {min_interval} seconds.',
+                )
+
+
 def enrich_automation(automation: AutomationModel, db: Session, tz: str = None) -> AutomationResponse:
+    """Full enrichment for single-item views (includes next_runs computation)."""
     last_run = AutomationRuns.get_latest(automation.id, db=db)
     return AutomationResponse(
         **automation.model_dump(),
@@ -97,8 +128,18 @@ async def get_automation_items(
         db=db,
     )
 
+    # Batch-fetch latest runs in a single query instead of N+1
+    ids = [item.id for item in result.items]
+    latest_runs = AutomationRuns.get_latest_batch(ids, db=db) if ids else {}
+
     return {
-        'items': [enrich_automation(item, db, tz=user.timezone) for item in result.items],
+        'items': [
+            AutomationResponse(
+                **item.model_dump(),
+                last_run=latest_runs.get(item.id),
+            )
+            for item in result.items
+        ],
         'total': result.total,
     }
 
@@ -123,6 +164,8 @@ async def create_new_automation(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
+
+    check_automation_limits(request, user, form_data.data.rrule, db, is_create=True)
 
     # Validate terminal server exists if linked
     if form_data.data.terminal and form_data.data.terminal.server_id:
@@ -180,6 +223,8 @@ async def update_automation_by_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
+
+    check_automation_limits(request, user, form_data.data.rrule, db, is_create=False)
 
     # Validate terminal server exists if linked
     if form_data.data.terminal and form_data.data.terminal.server_id:

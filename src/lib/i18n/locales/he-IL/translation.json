@@ -847,6 +847,8 @@
 	"Export": "ייצא",
 	"Export All Archived Chats": "",
 	"Export All Chats (All Users)": "ייצוא כל הצ'אטים (כל המשתמשים)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "",
 	"Export Chats": "ייצוא צ'אטים",
 	"Export Config": "",

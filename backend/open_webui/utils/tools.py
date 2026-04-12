@@ -86,9 +86,15 @@ from open_webui.tools.builtin import (
     view_knowledge_file,
     view_skill,
     tasks,
+    create_automation,
+    update_automation,
+    list_automations,
+    toggle_automation,
+    delete_automation,
 )
 
 import copy
+from open_webui.utils.access_control import has_permission
 
 log = logging.getLogger(__name__)
 
@@ -397,6 +403,18 @@ def get_builtin_tools(
         builtin_tools = model.get('info', {}).get('meta', {}).get('builtinTools', {})
         return builtin_tools.get(category, True)
 
+    # Helper to check user-level feature permission (admins always pass)
+    user = extra_params.get('__user__', {})
+
+    def has_user_permission(feature_key: str) -> bool:
+        if user.get('role') == 'admin':
+            return True
+        return has_permission(
+            user.get('id', ''),
+            f'features.{feature_key}',
+            request.app.state.config.USER_PERMISSIONS,
+        )
+
     # Time utilities - available for date calculations
     if is_builtin_tool_enabled('time'):
         builtin_functions.extend([get_current_timestamp, calculate_timestamp])
@@ -440,7 +458,11 @@ def get_builtin_tools(
         builtin_functions.extend([search_chats, view_chat])
 
     # Add memory tools if builtin category enabled AND enabled for this chat
-    if is_builtin_tool_enabled('memory') and (features.get('memory') or get_model_capability('memory', False)):
+    if (
+        is_builtin_tool_enabled('memory')
+        and (features.get('memory') or get_model_capability('memory', False))
+        and has_user_permission('memories')
+    ):
         builtin_functions.extend(
             [
                 search_memories,
@@ -457,6 +479,7 @@ def get_builtin_tools(
         and getattr(request.app.state.config, 'ENABLE_WEB_SEARCH', False)
         and get_model_capability('web_search')
         and features.get('web_search')
+        and has_user_permission('web_search')
     ):
         builtin_functions.extend([search_web, fetch_url])
 
@@ -466,6 +489,7 @@ def get_builtin_tools(
         and getattr(request.app.state.config, 'ENABLE_IMAGE_GENERATION', False)
         and get_model_capability('image_generation')
         and features.get('image_generation')
+        and has_user_permission('image_generation')
     ):
         builtin_functions.append(generate_image)
     if (
@@ -473,6 +497,7 @@ def get_builtin_tools(
         and getattr(request.app.state.config, 'ENABLE_IMAGE_EDIT', False)
         and get_model_capability('image_generation')
         and features.get('image_generation')
+        and has_user_permission('image_generation')
     ):
         builtin_functions.append(edit_image)
 
@@ -482,15 +507,24 @@ def get_builtin_tools(
         and getattr(request.app.state.config, 'ENABLE_CODE_INTERPRETER', True)
         and get_model_capability('code_interpreter')
         and features.get('code_interpreter')
+        and has_user_permission('code_interpreter')
     ):
         builtin_functions.append(execute_code)
 
-    # Notes tools - search, view, create, and update user's notes (if builtin category enabled AND notes enabled globally)
-    if is_builtin_tool_enabled('notes') and getattr(request.app.state.config, 'ENABLE_NOTES', False):
+    # Notes tools - search, view, create, and update user's notes
+    if (
+        is_builtin_tool_enabled('notes')
+        and getattr(request.app.state.config, 'ENABLE_NOTES', False)
+        and has_user_permission('notes')
+    ):
         builtin_functions.extend([search_notes, view_note, write_note, replace_note_content])
 
-    # Channels tools - search channels and messages (if builtin category enabled AND channels enabled globally)
-    if is_builtin_tool_enabled('channels') and getattr(request.app.state.config, 'ENABLE_CHANNELS', False):
+    # Channels tools - search channels and messages
+    if (
+        is_builtin_tool_enabled('channels')
+        and getattr(request.app.state.config, 'ENABLE_CHANNELS', False)
+        and has_user_permission('channels')
+    ):
         builtin_functions.extend(
             [
                 search_channels,
@@ -507,6 +541,10 @@ def get_builtin_tools(
     # Task management - break down complex work into trackable steps
     if is_builtin_tool_enabled('tasks'):
         builtin_functions.append(tasks)
+
+    # Automation tools - create and manage scheduled automations from chat
+    if is_builtin_tool_enabled('automations') and has_user_permission('automations'):
+        builtin_functions.extend([create_automation, update_automation, list_automations, toggle_automation, delete_automation])
 
     for func in builtin_functions:
         callable = get_async_tool_function_and_apply_extra_params(

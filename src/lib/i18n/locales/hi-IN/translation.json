@@ -846,6 +846,8 @@
 	"Export": "निर्यातित माल",
 	"Export All Archived Chats": "",
 	"Export All Chats (All Users)": "सभी चैट निर्यात करें (सभी उपयोगकर्ताओं की)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "",
 	"Export Chats": "चैट निर्यात करें",
 	"Export Config": "",

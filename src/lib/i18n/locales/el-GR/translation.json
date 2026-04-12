@@ -846,6 +846,8 @@
 	"Export": "Εξαγωγή",
 	"Export All Archived Chats": "Εξαγωγή Όλων των Αρχειοθετημένων Συνομιλιών",
 	"Export All Chats (All Users)": "Εξαγωγή Όλων των Συνομιλιών (Όλοι οι Χρήστες)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "Εξαγωγή συνομιλίας (.json)",
 	"Export Chats": "Εξαγωγή Συνομιλιών",
 	"Export Config": "",

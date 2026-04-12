@@ -847,6 +847,8 @@
 	"Export": "Exportă",
 	"Export All Archived Chats": "",
 	"Export All Chats (All Users)": "Exportă Toate Conversațiile (Toți Utilizatorii)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "Exportă conversația (.json)",
 	"Export Chats": "Exportă Conversațiile",
 	"Export Config": "",

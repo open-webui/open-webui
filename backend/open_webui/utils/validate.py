@@ -7,9 +7,7 @@ _ALLOWED_STATIC_PATHS = (
 )
 
 # External URL prefixes that are explicitly trusted for profile images
-_ALLOWED_URL_PREFIXES = (
-    'https://www.gravatar.com/avatar/',
-)
+_ALLOWED_URL_PREFIXES = ('https://www.gravatar.com/avatar/',)
 
 
 def validate_profile_image_url(url: str) -> str:

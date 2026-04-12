@@ -848,6 +848,8 @@
 	"Export": "Eksportuoti",
 	"Export All Archived Chats": "",
 	"Export All Chats (All Users)": "Eksportuoti visų naudotojų visus pokalbius",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "Eksportuoti pokalbį (.json)",
 	"Export Chats": "Eksportuoti pokalbius",
 	"Export Config": "",

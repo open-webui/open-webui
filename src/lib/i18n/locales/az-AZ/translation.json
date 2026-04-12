@@ -846,6 +846,8 @@
 	"Export": "İxrac et",
 	"Export All Archived Chats": "Bütün arxivləşdirilmiş çatları ixrac et",
 	"Export All Chats (All Users)": "Bütün çatları ixrac et (Bütün istifadəçilər)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "Çatı ixrac et (.json)",
 	"Export Chats": "Çatları İxrac Et",
 	"Export Config": "Konfiqurasiyanı İxrac Et",

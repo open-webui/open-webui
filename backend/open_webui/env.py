@@ -60,13 +60,14 @@ if USE_CUDA.lower() == 'true':
 else:
     DEVICE_TYPE = 'cpu'
 
-try:
-    import torch
+if sys.platform == 'darwin':
+    try:
+        import torch
 
-    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
-        DEVICE_TYPE = 'mps'
-except Exception:
-    pass
+        if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+            DEVICE_TYPE = 'mps'
+    except Exception:
+        pass
 
 ####################################
 # LOGGING
@@ -425,6 +426,29 @@ try:
 except ValueError:
     REDIS_SOCKET_CONNECT_TIMEOUT = None
 
+# Whether to enable TCP SO_KEEPALIVE on Redis client sockets. Opt-in:
+# defaults to off so behavior is unchanged for existing deployments. When
+# enabled, the kernel sends TCP keepalive probes on idle connections so
+# half-closed sockets (e.g. after a silent firewall/LB reset or a NIC
+# flap) are detected before the next command lands on them.
+REDIS_SOCKET_KEEPALIVE = (
+    os.environ.get('REDIS_SOCKET_KEEPALIVE', 'False').lower() == 'true'
+)
+
+# How often (in seconds) redis-py should PING an idle pooled connection
+# before reusing it. Opt-in: defaults to unset (empty string) so behavior
+# is unchanged for existing deployments. When set, should be shorter than
+# the Redis server `timeout` setting and any firewall/LB idle timeout on
+# the path to Redis, so stale connections are detected before a real
+# command lands on them. Set to 0 or empty to disable.
+REDIS_HEALTH_CHECK_INTERVAL = os.environ.get('REDIS_HEALTH_CHECK_INTERVAL', '')
+try:
+    REDIS_HEALTH_CHECK_INTERVAL = int(REDIS_HEALTH_CHECK_INTERVAL)
+    if REDIS_HEALTH_CHECK_INTERVAL <= 0:
+        REDIS_HEALTH_CHECK_INTERVAL = None
+except ValueError:
+    REDIS_HEALTH_CHECK_INTERVAL = None
+
 REDIS_RECONNECT_DELAY = os.environ.get('REDIS_RECONNECT_DELAY', '')
 
 if REDIS_RECONNECT_DELAY == '':
@@ -543,6 +567,12 @@ OAUTH_MAX_SESSIONS_PER_USER = int(os.environ.get('OAUTH_MAX_SESSIONS_PER_USER', 
 # Token Exchange Configuration
 # Allows external apps to exchange OAuth tokens for OpenWebUI tokens
 ENABLE_OAUTH_TOKEN_EXCHANGE = os.environ.get('ENABLE_OAUTH_TOKEN_EXCHANGE', 'False').lower() == 'true'
+
+# Back-Channel Logout Configuration
+# When enabled, exposes POST /oauth/backchannel-logout for IdP-initiated logout
+# per OpenID Connect Back-Channel Logout 1.0 spec.
+# Requires Redis for JWT revocation.
+ENABLE_OAUTH_BACKCHANNEL_LOGOUT = os.environ.get('ENABLE_OAUTH_BACKCHANNEL_LOGOUT', 'False').lower() == 'true'
 
 ####################################
 # SCIM Configuration

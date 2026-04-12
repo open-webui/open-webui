@@ -92,6 +92,25 @@ def next_n_runs_ns(s: str, n: int = 5, tz: str = None) -> list[int]:
     return result
 
 
+def rrule_interval_seconds(s: str) -> Optional[int]:
+    """Approximate interval between recurrences in seconds.
+
+    Returns None for one-shot (COUNT=1) schedules or rules
+    with fewer than two future occurrences.
+    """
+    if 'COUNT=1' in s:
+        return None
+    rule = _parse_rule(s)
+    now = datetime.now()
+    first = rule.after(now)
+    if first is None:
+        return None
+    second = rule.after(first)
+    if second is None:
+        return None
+    return int((second - first).total_seconds())
+
+
 ############################
 # Worker Loop
 ############################

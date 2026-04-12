@@ -46,7 +46,8 @@
 		selectedTerminalId,
 		showFileNavPath,
 		showFileNavDir,
-		chatRequestQueues
+		chatRequestQueues,
+		desktopEvent
 	} from '$lib/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -1225,7 +1226,46 @@
 			showControls.set(true);
 		}
 
-		if ($page.url.searchParams.get('q')) {
+		// Consume one-shot desktop event (e.g. Spotlight query, call shortcut)
+		if ($desktopEvent) {
+			const event = $desktopEvent;
+			desktopEvent.set(null);
+
+			if (event.type === 'call') {
+				// Defer to next macrotask so the call overlay isn't clobbered by
+				// showControlsSubscribe's initial callback (value=false → set(false))
+				// which runs as a pending microtask after this function.
+				setTimeout(() => {
+					showCallOverlay.set(true);
+					showControls.set(true);
+				}, 0);
+			} else if (event.type === 'query') {
+				const query = event.data?.query;
+				const eventFiles = event.data?.files;
+
+				// Attach screenshot images from desktop (e.g. Spotlight region capture)
+				if (eventFiles?.length) {
+					for (const ef of eventFiles) {
+						files = [
+							...files,
+							{
+								type: 'image',
+								url: ef.dataUrl,
+								name: ef.name
+							}
+						];
+					}
+				}
+
+				if (query || eventFiles?.length) {
+					if (query) {
+						messageInput?.setText(query);
+					}
+					await tick();
+					submitHandler(query || '');
+				}
+			}
+		} else if ($page.url.searchParams.get('q')) {
 			const q = $page.url.searchParams.get('q') ?? '';
 			messageInput?.setText(q);
 
@@ -2417,7 +2457,7 @@
 		history.messages[responseMessage.id] = responseMessage;
 	};
 
-	const stopResponse = async () => {
+	const stopResponse = async (processQueue = true) => {
 		if (taskIds) {
 			for (const taskId of taskIds) {
 				const res = await stopTask(localStorage.token, taskId).catch((error) => {
@@ -2449,7 +2489,9 @@
 			generationController = null;
 		}
 
-		await processNextInQueue($chatId);
+		if (processQueue) {
+			await processNextInQueue($chatId);
+		}
 	};
 
 	const submitMessage = async (parentId, prompt) => {
@@ -2913,10 +2955,8 @@
 												...q,
 												[$chatId]: queue.filter((m) => m.id !== id)
 											}));
-											// Stop current generation first
-											await stopResponse();
+											await stopResponse(false);
 											await tick();
-											// Submit queued message directly without clearing input
 											await submitPrompt(item.prompt, item.files);
 										}
 									}}

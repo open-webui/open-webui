@@ -846,6 +846,8 @@
 	"Export": "چىقىرىش",
 	"Export All Archived Chats": "بارلىق ئارخىپلانغان سۆھبەتلەرنى چىقىرىش",
 	"Export All Chats (All Users)": "بارلىق سۆھبەتلەرنى چىقىرىش (بارلىق ئىشلەتكۈچىلەر)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "سۆھبەت چىقىرىش (.json)",
 	"Export Chats": "سۆھبەتلەرنى چىقىرىش",
 	"Export Config": "",

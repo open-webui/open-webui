@@ -19,7 +19,6 @@ import pytz
 from pytz import UTC
 from typing import Optional, Union, List, Dict
 
-from opentelemetry import trace
 
 
 from open_webui.utils.access_control import has_permission
@@ -30,6 +29,7 @@ from open_webui.models.auths import Auths
 from open_webui.constants import ERROR_MESSAGES
 
 from open_webui.env import (
+    ENABLE_OTEL,
     ENABLE_PASSWORD_VALIDATION,
     OFFLINE_MODE,
     LICENSE_BLOB,
@@ -206,7 +206,7 @@ def create_token(data: dict, expires_delta: Union[timedelta, None] = None) -> st
         payload.update({'exp': expire})
 
     jti = str(uuid.uuid4())
-    payload.update({'jti': jti})
+    payload.update({'jti': jti, 'iat': datetime.now(UTC)})
 
     encoded_jwt = jwt.encode(payload, SESSION_SECRET, algorithm=ALGORITHM)
     return encoded_jwt
@@ -221,14 +221,35 @@ def decode_token(token: str) -> Optional[dict]:
 
 
 async def is_valid_token(request, decoded) -> bool:
-    # Require Redis to check revoked tokens
+    """
+    Check whether a JWT has been revoked. Two mechanisms:
+    1. Per-token (jti) — used by user-initiated sign-out (known jti).
+    2. Per-user (revoked_at) — used by OIDC back-channel logout when
+       individual jti values are unknown; rejects tokens with iat <= revoked_at.
+    """
     if request.app.state.redis:
+        # Per-token revocation
         jti = decoded.get('jti')
-
         if jti:
             revoked = await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:auth:token:{jti}:revoked')
             if revoked:
                 return False
+
+        # Per-user revocation (OIDC back-channel logout)
+        user_id = decoded.get('id')
+        if user_id:
+            revoked_at = await request.app.state.redis.get(
+                f'{REDIS_KEY_PREFIX}:auth:user:{user_id}:revoked_at'
+            )
+            if revoked_at:
+                try:
+                    revoked_at_ts = int(revoked_at)
+                    token_iat = decoded.get('iat')
+                    # No iat means legacy token — reject since we can't verify issue time
+                    if token_iat is None or token_iat <= revoked_at_ts:
+                        return False
+                except (ValueError, TypeError):
+                    pass
 
     return True
 
@@ -306,12 +327,15 @@ async def get_current_user(
         user = get_current_user_by_api_key(request, token)
 
         # Add user info to current span
-        current_span = trace.get_current_span()
-        if current_span:
-            current_span.set_attribute('client.user.id', user.id)
-            current_span.set_attribute('client.user.email', user.email)
-            current_span.set_attribute('client.user.role', user.role)
-            current_span.set_attribute('client.auth.type', 'api_key')
+        if ENABLE_OTEL:
+            from opentelemetry import trace
+
+            current_span = trace.get_current_span()
+            if current_span:
+                current_span.set_attribute('client.user.id', user.id)
+                current_span.set_attribute('client.user.email', user.email)
+                current_span.set_attribute('client.user.role', user.role)
+                current_span.set_attribute('client.auth.type', 'api_key')
 
         return user
 
@@ -348,12 +372,15 @@ async def get_current_user(
                         )
 
                 # Add user info to current span
-                current_span = trace.get_current_span()
-                if current_span:
-                    current_span.set_attribute('client.user.id', user.id)
-                    current_span.set_attribute('client.user.email', user.email)
-                    current_span.set_attribute('client.user.role', user.role)
-                    current_span.set_attribute('client.auth.type', 'jwt')
+                if ENABLE_OTEL:
+                    from opentelemetry import trace
+
+                    current_span = trace.get_current_span()
+                    if current_span:
+                        current_span.set_attribute('client.user.id', user.id)
+                        current_span.set_attribute('client.user.email', user.email)
+                        current_span.set_attribute('client.user.role', user.role)
+                        current_span.set_attribute('client.auth.type', 'jwt')
 
                 # Refresh the user's last active timestamp asynchronously
                 # to prevent blocking the request
@@ -401,12 +428,15 @@ def get_current_user_by_api_key(request, api_key: str):
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED)
 
     # Add user info to current span
-    current_span = trace.get_current_span()
-    if current_span:
-        current_span.set_attribute('client.user.id', user.id)
-        current_span.set_attribute('client.user.email', user.email)
-        current_span.set_attribute('client.user.role', user.role)
-        current_span.set_attribute('client.auth.type', 'api_key')
+    if ENABLE_OTEL:
+        from opentelemetry import trace
+
+        current_span = trace.get_current_span()
+        if current_span:
+            current_span.set_attribute('client.user.id', user.id)
+            current_span.set_attribute('client.user.email', user.email)
+            current_span.set_attribute('client.user.role', user.role)
+            current_span.set_attribute('client.auth.type', 'api_key')
 
     Users.update_last_active_by_id(user.id)
     return user

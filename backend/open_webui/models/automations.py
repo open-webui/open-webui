@@ -45,7 +45,10 @@ class AutomationRun(Base):
     error = Column(Text, nullable=True)
     created_at = Column(BigInteger, nullable=False)
 
-    __table_args__ = (Index('ix_automation_run_automation_id', 'automation_id'),)
+    __table_args__ = (
+        Index('ix_automation_run_automation_id', 'automation_id'),
+        Index('ix_automation_run_aid_created', 'automation_id', 'created_at'),
+    )
 
 
 ####################
@@ -139,6 +142,10 @@ class AutomationTable:
             db.commit()
             db.refresh(row)
             return AutomationModel.model_validate(row)
+
+    def count_by_user(self, user_id: str, db: Optional[Session] = None) -> int:
+        with get_db_context(db) as db:
+            return db.query(Automation).filter_by(user_id=user_id).count()
 
     def get_by_id(self, id: str, db: Optional[Session] = None) -> Optional[AutomationModel]:
         with get_db_context(db) as db:
@@ -307,6 +314,37 @@ class AutomationRunTable:
                 .first()
             )
             return AutomationRunModel.model_validate(row) if row else None
+
+    def get_latest_batch(
+        self, automation_ids: list[str], db: Optional[Session] = None
+    ) -> dict[str, AutomationRunModel]:
+        """Fetch the latest run for each automation in a single query."""
+        if not automation_ids:
+            return {}
+        with get_db_context(db) as db:
+            # Subquery: max created_at per automation_id
+            subq = (
+                db.query(
+                    AutomationRun.automation_id,
+                    func.max(AutomationRun.created_at).label('max_created'),
+                )
+                .filter(AutomationRun.automation_id.in_(automation_ids))
+                .group_by(AutomationRun.automation_id)
+                .subquery()
+            )
+            rows = (
+                db.query(AutomationRun)
+                .join(
+                    subq,
+                    (AutomationRun.automation_id == subq.c.automation_id)
+                    & (AutomationRun.created_at == subq.c.max_created),
+                )
+                .all()
+            )
+            return {
+                row.automation_id: AutomationRunModel.model_validate(row)
+                for row in rows
+            }
 
     def get_by_automation(
         self,

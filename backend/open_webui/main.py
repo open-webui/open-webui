@@ -212,6 +212,8 @@ from open_webui.config import (
     AUDIO_TTS_AZURE_SPEECH_REGION,
     AUDIO_TTS_AZURE_SPEECH_BASE_URL,
     AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+    AUDIO_TTS_MISTRAL_API_KEY,
+    AUDIO_TTS_MISTRAL_API_BASE_URL,
     PLAYWRIGHT_WS_URL,
     PLAYWRIGHT_TIMEOUT,
     FIRECRAWL_API_BASE_URL,
@@ -381,6 +383,8 @@ from open_webui.config import (
     API_KEYS_ALLOWED_ENDPOINTS,
     ENABLE_FOLDERS,
     FOLDER_MAX_FILE_COUNT,
+    AUTOMATION_MAX_COUNT,
+    AUTOMATION_MIN_INTERVAL,
     ENABLE_CHANNELS,
     ENABLE_NOTES,
     ENABLE_USER_STATUS,
@@ -511,6 +515,8 @@ from open_webui.env import (
     WEBUI_ADMIN_NAME,
     ENABLE_EASTER_EGGS,
     LOG_FORMAT,
+    # OAuth Back-Channel Logout
+    ENABLE_OAUTH_BACKCHANNEL_LOGOUT,
 )
 
 
@@ -870,6 +876,8 @@ app.state.config.BANNERS = WEBUI_BANNERS
 
 app.state.config.ENABLE_FOLDERS = ENABLE_FOLDERS
 app.state.config.FOLDER_MAX_FILE_COUNT = FOLDER_MAX_FILE_COUNT
+app.state.config.AUTOMATION_MAX_COUNT = AUTOMATION_MAX_COUNT
+app.state.config.AUTOMATION_MIN_INTERVAL = AUTOMATION_MIN_INTERVAL
 app.state.config.ENABLE_CHANNELS = ENABLE_CHANNELS
 app.state.config.ENABLE_NOTES = ENABLE_NOTES
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
@@ -1281,6 +1289,9 @@ app.state.config.TTS_SPLIT_ON = AUDIO_TTS_SPLIT_ON
 app.state.config.TTS_AZURE_SPEECH_REGION = AUDIO_TTS_AZURE_SPEECH_REGION
 app.state.config.TTS_AZURE_SPEECH_BASE_URL = AUDIO_TTS_AZURE_SPEECH_BASE_URL
 app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT
+
+app.state.config.TTS_MISTRAL_API_KEY = AUDIO_TTS_MISTRAL_API_KEY
+app.state.config.TTS_MISTRAL_API_BASE_URL = AUDIO_TTS_MISTRAL_API_BASE_URL
 
 
 app.state.faster_whisper_model = None
@@ -2475,6 +2486,21 @@ async def oauth_login_callback(
     db: Session = Depends(get_session),
 ):
     return await oauth_manager.handle_callback(request, provider, response, db=db)
+
+
+############################
+# OIDC Back-Channel Logout
+############################
+
+
+@app.post('/oauth/backchannel-logout')
+async def oauth_backchannel_logout(
+    request: Request,
+    db: Session = Depends(get_session),
+):
+    if not ENABLE_OAUTH_BACKCHANNEL_LOGOUT:
+        raise HTTPException(status_code=404)
+    return await oauth_manager.handle_backchannel_logout(request, db=db)
 
 
 @app.get('/manifest.json')

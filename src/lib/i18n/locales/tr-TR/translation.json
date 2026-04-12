@@ -846,6 +846,8 @@
 	"Export": "Dışa Aktar",
 	"Export All Archived Chats": "Tüm Arşivlenmiş Sohbetleri Dışa Aktar",
 	"Export All Chats (All Users)": "Tüm Sohbetleri Dışa Aktar (Tüm Kullanıcılar)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "Sohbeti dışa aktar (.json)",
 	"Export Chats": "Sohbetleri Dışa Aktar",
 	"Export Config": "Yapılandırmayı Dışa Aktar",

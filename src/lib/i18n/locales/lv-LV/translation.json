@@ -847,6 +847,8 @@
 	"Export": "Eksportēt",
 	"Export All Archived Chats": "Eksportēt visas arhivētās tērzēšanas",
 	"Export All Chats (All Users)": "Eksportēt visas tērzēšanas (visi lietotāji)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "Eksportēt tērzēšanu (.json)",
 	"Export Chats": "Eksportēt tērzēšanas",
 	"Export Config": "",

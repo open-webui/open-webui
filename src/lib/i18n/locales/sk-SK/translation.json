@@ -848,6 +848,8 @@
 	"Export": "Exportovať",
 	"Export All Archived Chats": "",
 	"Export All Chats (All Users)": "Exportovať všetky konverzácie (všetci užívatelia)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "Exportovať konverzáciu (.json)",
 	"Export Chats": "Exportovať konverzácie",
 	"Export Config": "",

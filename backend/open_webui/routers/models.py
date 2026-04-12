@@ -578,6 +578,8 @@ async def update_model_access_by_id(
 
     AccessGrants.set_access_grants('model', form_data.id, form_data.access_grants, db=db)
 
+    Models.update_model_updated_at_by_id(form_data.id, db=db)
+
     return Models.get_model_by_id(form_data.id, db=db)
 
 

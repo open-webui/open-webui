@@ -1541,6 +1541,18 @@ ENABLE_CHANNELS = PersistentConfig(
     os.environ.get('ENABLE_CHANNELS', 'False').lower() == 'true',
 )
 
+AUTOMATION_MAX_COUNT = PersistentConfig(
+    'AUTOMATION_MAX_COUNT',
+    'automations.max_count',
+    os.environ.get('AUTOMATION_MAX_COUNT', ''),
+)
+
+AUTOMATION_MIN_INTERVAL = PersistentConfig(
+    'AUTOMATION_MIN_INTERVAL',
+    'automations.min_interval',
+    os.environ.get('AUTOMATION_MIN_INTERVAL', ''),
+)
+
 ENABLE_NOTES = PersistentConfig(
     'ENABLE_NOTES',
     'notes.enable',
@@ -3938,6 +3950,18 @@ AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
     'AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT',
     'audio.tts.azure.speech_output_format',
     os.getenv('AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT', 'audio-24khz-160kbitrate-mono-mp3'),
+)
+
+AUDIO_TTS_MISTRAL_API_KEY = PersistentConfig(
+    'AUDIO_TTS_MISTRAL_API_KEY',
+    'audio.tts.mistral.api_key',
+    os.getenv('AUDIO_TTS_MISTRAL_API_KEY', ''),
+)
+
+AUDIO_TTS_MISTRAL_API_BASE_URL = PersistentConfig(
+    'AUDIO_TTS_MISTRAL_API_BASE_URL',
+    'audio.tts.mistral.api_base_url',
+    os.getenv('AUDIO_TTS_MISTRAL_API_BASE_URL', 'https://api.mistral.ai/v1'),
 )
 
 

@@ -846,6 +846,8 @@
 	"Export": "ஏற்றுமதி",
 	"Export All Archived Chats": "அனைத்து காப்பகப்படுத்தப்பட்ட அரட்டைகளையும் ஏற்றுமதி செய்யவும்",
 	"Export All Chats (All Users)": "அனைத்து அரட்டைகளையும் ஏற்றுமதி செய் (அனைத்து பயனர்களும்)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "ஏற்றுமதி அரட்டை (.json)",
 	"Export Chats": "அரட்டைகளை ஏற்றுமதி செய்யவும்",
 	"Export Config": "ஏற்றுமதி கட்டமைப்பு",

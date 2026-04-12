@@ -846,6 +846,8 @@
 	"Export": "Easpórtáil",
 	"Export All Archived Chats": "Easpórtáil Gach Comhrá Cartlainne",
 	"Export All Chats (All Users)": "Easpórtáil gach comhrá (Gach Úsáideoir)",
+	"Export as CSV": "",
+	"Export as JSON": "",
 	"Export chat (.json)": "Easpórtáil comhrá (.json)",
 	"Export Chats": "Comhráite Easpórtá",
 	"Export Config": "Cumraíocht Easpórtála",

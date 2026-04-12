@@ -5,6 +5,7 @@ Provides System for Cross-domain Identity Management endpoints for users and gro
 NOTE: This is an experimental implementation and may not fully comply with SCIM 2.0 standards, and is subject to change.
 """
 
+import hmac
 import logging
 import uuid
 import time
@@ -278,7 +279,7 @@ def get_scim_auth(request: Request, authorization: Optional[str] = Header(None))
         if hasattr(scim_token, 'value'):
             scim_token = scim_token.value
         log.debug(f'SCIM token configured: {bool(scim_token)}')
-        if not scim_token or token != scim_token:
+        if not scim_token or not hmac.compare_digest(token, scim_token):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail='Invalid SCIM token',

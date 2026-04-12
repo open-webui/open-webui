@@ -5,6 +5,7 @@ from typing import Any, Optional
 
 from sqlalchemy.orm import Session
 from open_webui.internal.db import Base, get_db_context
+from open_webui.utils.response import normalize_usage
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
@@ -39,6 +40,12 @@ def _normalize_timestamp(timestamp: int) -> float:
         return now
 
     return timestamp
+
+
+def get_usage(data: dict) -> Optional[dict]:
+    """Extract and normalize usage from message data."""
+    usage = data.get('usage') or (data.get('info') or {}).get('usage')
+    return normalize_usage(usage) if usage else None
 
 
 ####################
@@ -163,11 +170,8 @@ class ChatMessageTable:
                     existing.status_history = data.get('status_history') or data.get('statusHistory')
                 if 'error' in data:
                     existing.error = data.get('error')
-                # Extract usage - check direct field first, then info.usage
-                usage = data.get('usage')
-                if not usage:
-                    info = data.get('info', {})
-                    usage = info.get('usage') if info else None
+                # Extract and normalize usage
+                usage = get_usage(data)
                 if usage:
                     # Deep-merge: preserve existing keys not present in new data
                     # This prevents background tasks (follow-ups, title, tags)
@@ -179,11 +183,8 @@ class ChatMessageTable:
                 return ChatMessageModel.model_validate(existing)
             else:
                 # Insert new
-                # Extract usage - check direct field first, then info.usage
-                usage = data.get('usage')
-                if not usage:
-                    info = data.get('info', {})
-                    usage = info.get('usage') if info else None
+                # Extract and normalize usage
+                usage = get_usage(data)
                 message = ChatMessage(
                     id=composite_id,
                     chat_id=chat_id,
