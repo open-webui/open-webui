@@ -1956,7 +1956,7 @@ async def generate_messages(
 
     try:
         openai_payload = convert_anthropic_to_openai_payload(form_data)
-    except Exception as e:
+    except (ValueError, NotImplementedError, TypeError, KeyError, AttributeError) as e:
         log.debug('Anthropic payload conversion failed: %s', e)
         raise HTTPException(status_code=400, detail=str(e))
 

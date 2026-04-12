@@ -99,10 +99,15 @@ def _convert_anthropic_image_source(source: dict) -> str:
     source_type = source.get('type')
     if source_type == 'base64':
         media_type = source.get('media_type', 'image/png')
-        data = source.get('data', '')
+        data = source.get('data')
+        if not data:
+            raise ValueError('Image source type "base64" is missing required "data" field')
         return f'data:{media_type};base64,{data}'
     elif source_type == 'url':
-        return source.get('url', '')
+        url = source.get('url')
+        if not url:
+            raise ValueError('Image source type "url" is missing required "url" field')
+        return url
     raise ValueError(f'Unsupported image source type: {source_type!r}')
 
 
