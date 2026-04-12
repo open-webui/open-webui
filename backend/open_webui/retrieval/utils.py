@@ -923,6 +923,69 @@ def get_reranking_function(reranking_engine, reranking_model, reranking_function
         )
 
 
+def _has_access_to_collection(
+    collection_name: str,
+    user: Optional[UserModel],
+    access_cache: Optional[dict[str, bool]] = None,
+) -> bool:
+    """Check whether the user has read access to a vector store collection.
+
+    Resolves the collection name format to the underlying resource and
+    verifies ownership or an explicit access grant:
+      - 'file-<id>'  → file ownership / has_access_to_file
+      - UUID-shaped   → knowledge base ownership / AccessGrants
+    Unknown formats are denied (fail-closed).
+
+    An optional access_cache dict can be passed to memoize results within
+    a single request, avoiding redundant DB round-trips when the same
+    collection is referenced multiple times.
+    """
+    if not user or not isinstance(collection_name, str) or not collection_name:
+        return False
+
+    if access_cache is not None and collection_name in access_cache:
+        return access_cache[collection_name]
+
+    if user.role == 'admin':
+        return True
+
+    result = False
+
+    if collection_name.startswith('file-'):
+        file_id = collection_name[5:]  # strip 'file-' prefix
+        file_object = Files.get_file_by_id(file_id)
+        if file_object:
+            result = (
+                file_object.user_id == user.id
+                or has_access_to_file(file_id, 'read', user)
+            )
+    else:
+        # Knowledge base collections use the knowledge base UUID as name
+        knowledge_base = Knowledges.get_knowledge_by_id(collection_name)
+        if knowledge_base:
+            result = (
+                knowledge_base.user_id == user.id
+                or AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type='knowledge',
+                    resource_id=knowledge_base.id,
+                    permission='read',
+                )
+            )
+        else:
+            # Legacy format: bare file ID without 'file-' prefix
+            file_object = Files.get_file_by_id(collection_name)
+            if file_object:
+                result = (
+                    file_object.user_id == user.id
+                    or has_access_to_file(collection_name, 'read', user)
+                )
+
+    if access_cache is not None:
+        access_cache[collection_name] = result
+    return result
+
+
 async def get_sources_from_items(
     request,
     items,
@@ -941,6 +1004,9 @@ async def get_sources_from_items(
 
     extracted_collections = []
     query_results = []
+    # Per-request cache for _has_access_to_collection to avoid redundant
+    # DB round-trips when the same collection appears across multiple items.
+    collection_access_cache: dict[str, bool] = {}
 
     for item in items:
         query_result = None
@@ -961,8 +1027,12 @@ async def get_sources_from_items(
             if query_result is None:
                 # Fallback
                 if item.get('collection_name'):
-                    # If item has a collection name, use it
-                    collection_names.append(item.get('collection_name'))
+                    # If item has a collection name, verify access before querying
+                    cn = item.get('collection_name')
+                    if _has_access_to_collection(cn, user, collection_access_cache):
+                        collection_names.append(cn)
+                    else:
+                        log.debug(f'User {getattr(user, "id", "anonymous")} denied access to collection {cn}')
                 elif item.get('file'):
                     # If item has file data, use it
                     query_result = {
@@ -1061,11 +1131,14 @@ async def get_sources_from_items(
                             ],
                         }
             else:
-                # Fallback to collection names
-                if item.get('legacy'):
-                    collection_names.append(f'{item["id"]}')
-                else:
-                    collection_names.append(f'file-{item["id"]}')
+                # Fallback to collection names — verify file access
+                file_id = item.get('id')
+                if file_id:
+                    collection_name = f'{file_id}' if item.get('legacy') else f'file-{file_id}'
+                    if _has_access_to_collection(collection_name, user, collection_access_cache):
+                        collection_names.append(collection_name)
+                    else:
+                        log.debug(f'User {getattr(user, "id", "anonymous")} denied access to file {file_id} for RAG query')
 
         elif item.get('type') == 'collection':
             # Manual Full Mode Toggle for Collection
@@ -1124,11 +1197,19 @@ async def get_sources_from_items(
                 'metadatas': [[doc.get('metadata') for doc in item.get('docs')]],
             }
         elif item.get('collection_name'):
-            # Direct Collection Name
-            collection_names.append(item['collection_name'])
+            # Direct Collection Name — verify access before querying
+            cn = item['collection_name']
+            if _has_access_to_collection(cn, user, collection_access_cache):
+                collection_names.append(cn)
+            else:
+                log.debug(f'User {getattr(user, "id", "anonymous")} denied access to collection {cn}')
         elif item.get('collection_names'):
-            # Collection Names List
-            collection_names.extend(item['collection_names'])
+            # Collection Names List — verify access for each
+            for cn in item['collection_names']:
+                if _has_access_to_collection(cn, user, collection_access_cache):
+                    collection_names.append(cn)
+                else:
+                    log.debug(f'User {getattr(user, "id", "anonymous")} denied access to collection {cn}')
 
         # If query_result is None
         # Fallback to collection names and vector search the collections
