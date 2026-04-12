@@ -57,7 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🛡️ **Safer placeholder rendering.** Chat placeholder descriptions and the pending account notice now sanitize rendered markdown more consistently, reducing the risk of unsafe content being shown in these views. [Commit](https://github.com/open-webui/open-webui/commit/ae0316a30e01a2e5ff3f9d2f9f759c1cd6410f34)
 - 🧮 **Usage analytics accuracy.** Token usage is now normalized before chat messages are saved, so model and user usage reports stay accurate across OpenAI-compatible providers. [Commit](https://github.com/open-webui/open-webui/commit/4dea4fdf54e00ebaba8e3178128bf8709453d2a2)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 **Translation updates.** Translations for Russian, German, Tamil, Spanish, and Catalan were enhanced and expanded.
+- 🌐 **Translation updates.** Translations for Russian, German, Tamil, Spanish, Catalan, and Japanese were enhanced and expanded.
 
 ### Fixed
 
