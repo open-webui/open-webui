@@ -326,7 +326,7 @@ async def import_models(
                         # in the payload to avoid altering existing ACLs on
                         # metadata-only imports.
                         if 'access_grants' in model_data:
-                            updated_model.access_grants = filter_allowed_access_grants(
+                            updated_model.access_grants = await filter_allowed_access_grants(
                                 request.app.state.config.USER_PERMISSIONS,
                                 user.id,
                                 user.role,
@@ -339,7 +339,7 @@ async def import_models(
                         model_data['meta'] = model_data.get('meta', {})
                         model_data['params'] = model_data.get('params', {})
                         new_model = ModelForm(**model_data)
-                        new_model.access_grants = filter_allowed_access_grants(
+                        new_model.access_grants = await filter_allowed_access_grants(
                             request.app.state.config.USER_PERMISSIONS,
                             user.id,
                             user.role,
