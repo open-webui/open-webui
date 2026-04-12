@@ -51,6 +51,7 @@ from open_webui.env import (
     ENABLE_FORWARD_USER_INFO_HEADERS,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     FORWARD_SESSION_INFO_HEADER_MESSAGE_ID,
+    REDIS_KEY_PREFIX,
 )
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.tools.builtin import (
@@ -849,7 +850,9 @@ async def set_tool_servers(request: Request):
     request.app.state.TOOL_SERVERS = await get_tool_servers_data(request.app.state.config.TOOL_SERVER_CONNECTIONS)
 
     if request.app.state.redis is not None:
-        await request.app.state.redis.set('tool_servers', json.dumps(request.app.state.TOOL_SERVERS))
+        await request.app.state.redis.set(
+            f'{REDIS_KEY_PREFIX}:tool_servers', json.dumps(request.app.state.TOOL_SERVERS)
+        )
 
     return request.app.state.TOOL_SERVERS
 
@@ -858,7 +861,7 @@ async def get_tool_servers(request: Request):
     tool_servers = []
     if request.app.state.redis is not None:
         try:
-            tool_servers = json.loads(await request.app.state.redis.get('tool_servers'))
+            tool_servers = json.loads(await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:tool_servers'))
             request.app.state.TOOL_SERVERS = tool_servers
         except Exception as e:
             log.error(f'Error fetching tool_servers from Redis: {e}')
@@ -984,7 +987,9 @@ async def set_terminal_servers(request: Request):
     )
 
     if request.app.state.redis is not None:
-        await request.app.state.redis.set('terminal_servers', json.dumps(request.app.state.TERMINAL_SERVERS))
+        await request.app.state.redis.set(
+            f'{REDIS_KEY_PREFIX}:terminal_servers', json.dumps(request.app.state.TERMINAL_SERVERS)
+        )
 
     return request.app.state.TERMINAL_SERVERS
 
@@ -994,7 +999,9 @@ async def get_terminal_servers(request: Request):
     terminal_servers = []
     if request.app.state.redis is not None:
         try:
-            terminal_servers = json.loads(await request.app.state.redis.get('terminal_servers'))
+            terminal_servers = json.loads(
+                await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:terminal_servers')
+            )
             request.app.state.TERMINAL_SERVERS = terminal_servers
         except Exception as e:
             log.error(f'Error fetching terminal_servers from Redis: {e}')
