@@ -380,8 +380,18 @@ async def reindex_knowledge_base_metadata_embeddings(
 
 
 class KnowledgeFilesResponse(KnowledgeResponse):
+    """Response for knowledge base endpoints that include file lists.
+
+    file_deleted semantics (only set by the /file/remove endpoint):
+      - None:  delete_file=false was requested (unlink only, no deletion attempted)
+      - True:  file was permanently deleted (caller is the file owner or admin)
+      - False: permanent deletion was denied (caller has KB write access but
+               does not own the file); the file was unlinked from the KB only
+    """
+
     files: Optional[list[FileMetadataResponse]] = None
     write_access: Optional[bool] = False
+    file_deleted: Optional[bool] = None
 
 
 @router.get('/{id}', response_model=Optional[KnowledgeFilesResponse])
@@ -827,24 +837,37 @@ def remove_file_from_knowledge_by_id(
         log.debug(e)
         pass
 
+    file_deleted = None
     if delete_file:
-        try:
-            # Remove the file's collection from vector database
-            file_collection = f'file-{form_data.file_id}'
-            if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
-                VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
-        except Exception as e:
-            log.debug('This was most likely caused by bypassing embedding processing')
-            log.debug(e)
-            pass
+        # Only the file owner or an admin can permanently delete the file.
+        # Collaborators with KB write access can unlink files from the KB
+        # (handled above) but must not be able to destroy another user's
+        # file globally.
+        if file.user_id != user.id and user.role != 'admin':
+            log.warning(
+                f'User {user.id} attempted to delete file {form_data.file_id} '
+                f'owned by {file.user_id} via KB {id}, skipping file deletion'
+            )
+            file_deleted = False
+        else:
+            try:
+                # Remove the file's collection from vector database
+                file_collection = f'file-{form_data.file_id}'
+                if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+                    VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+            except Exception as e:
+                log.debug('This was most likely caused by bypassing embedding processing')
+                log.debug(e)
+                pass
 
-        # Delete file from database
-        Files.delete_file_by_id(form_data.file_id, db=db)
+            # Delete file from database
+            file_deleted = Files.delete_file_by_id(form_data.file_id, db=db)
 
     if knowledge:
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
             files=Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+            file_deleted=file_deleted,
         )
     else:
         raise HTTPException(
