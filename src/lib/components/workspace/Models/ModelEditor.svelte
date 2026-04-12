@@ -119,6 +119,7 @@
 	// OpenRouter provider routing
 	let openrouterProviderOnly: string[] = [];
 	let openrouterProviderOrder: string[] = [];
+	let openrouterBaseModelId: string = '';
 
 	const addUsage = (base_model_id) => {
 		const baseModel = $models.find((m) => m.id === base_model_id);
@@ -285,6 +286,9 @@
 			enableDescription = model?.meta?.description !== null;
 
 			if (model.base_model_id) {
+				// Save original before validation potentially nulls it
+				openrouterBaseModelId = model.base_model_id;
+
 				const base_model = $models
 					.filter((m) => !m?.preset && !(m?.arena ?? false))
 					.find((m) => [model.base_model_id, `${model.base_model_id}:latest`].includes(m.id));
@@ -293,8 +297,10 @@
 
 				if (base_model) {
 					model.base_model_id = base_model.id;
+					openrouterBaseModelId = base_model.id;
 				} else {
 					model.base_model_id = null;
+					// keep openrouterBaseModelId as the raw stored value for endpoint lookup
 				}
 			}
 
@@ -900,7 +906,7 @@
 					</div>
 
 					<OpenRouterProviderSelector
-						baseModelId={info.base_model_id ?? ''}
+						baseModelId={openrouterBaseModelId}
 						bind:providerOnly={openrouterProviderOnly}
 						bind:providerOrder={openrouterProviderOrder}
 					/>

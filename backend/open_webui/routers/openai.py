@@ -817,6 +817,13 @@ async def get_model_endpoints(
 
     model = request.app.state.OPENAI_MODELS.get(model_id)
     if not model:
+        # Try to find model by suffix match (in case prefix_id was prepended)
+        for key, val in request.app.state.OPENAI_MODELS.items():
+            if key.endswith(f".{model_id}") or key == model_id:
+                model = val
+                model_id = key
+                break
+    if not model:
         return {"data": {"endpoints": []}}
 
     idx = model["urlIdx"]
