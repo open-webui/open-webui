@@ -124,16 +124,16 @@ def setup_metrics(app: FastAPI, resource: Resource) -> None:
         unit='ms',
     )
 
-    def observe_active_users(
+    async def observe_active_users(
         options: metrics.CallbackOptions,
     ) -> Sequence[metrics.Observation]:
         return [
             metrics.Observation(
-                value=Users.get_active_user_count(),
+                value=await Users.get_active_user_count(),
             )
         ]
 
-    def observe_total_registered_users(
+    async def observe_total_registered_users(
         options: metrics.CallbackOptions,
     ) -> Sequence[metrics.Observation]:
         # IMPORTANT: Use get_num_users() for efficient COUNT(*) query.
@@ -141,7 +141,7 @@ def setup_metrics(app: FastAPI, resource: Resource) -> None:
         # causing connection pool exhaustion on high-latency databases (e.g., Aurora).
         return [
             metrics.Observation(
-                value=Users.get_num_users() or 0,
+                value=await Users.get_num_users() or 0,
             )
         ]
 
@@ -159,10 +159,10 @@ def setup_metrics(app: FastAPI, resource: Resource) -> None:
         callbacks=[observe_active_users],
     )
 
-    def observe_users_active_today(
+    async def observe_users_active_today(
         options: metrics.CallbackOptions,
     ) -> Sequence[metrics.Observation]:
-        return [metrics.Observation(value=Users.get_num_users_active_today())]
+        return [metrics.Observation(value=await Users.get_num_users_active_today())]
 
     meter.create_observable_gauge(
         name='webui.users.active.today',

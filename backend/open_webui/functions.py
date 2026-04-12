@@ -53,12 +53,12 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
 
-def get_function_module_by_id(request: Request, pipe_id: str):
-    function_module, _, _ = get_function_module_from_cache(request, pipe_id)
+async def get_function_module_by_id(request: Request, pipe_id: str):
+    function_module, _, _ = await get_function_module_from_cache(request, pipe_id)
 
     if hasattr(function_module, 'valves') and hasattr(function_module, 'Valves'):
         Valves = function_module.Valves
-        valves = Functions.get_function_valves_by_id(pipe_id)
+        valves = await Functions.get_function_valves_by_id(pipe_id)
 
         if valves:
             try:
@@ -73,12 +73,12 @@ def get_function_module_by_id(request: Request, pipe_id: str):
 
 
 async def get_function_models(request):
-    pipes = Functions.get_functions_by_type('pipe', active_only=True)
+    pipes = await Functions.get_functions_by_type('pipe', active_only=True)
     pipe_models = []
 
     for pipe in pipes:
         try:
-            function_module = get_function_module_by_id(request, pipe.id)
+            function_module = await get_function_module_by_id(request, pipe.id)
 
             has_user_valves = False
             if hasattr(function_module, 'UserValves'):
@@ -187,7 +187,7 @@ async def generate_function_chat_completion(request, form_data, user, models: di
             pipe_id, _ = pipe_id.split('.', 1)
         return pipe_id
 
-    def get_function_params(function_module, form_data, user, extra_params=None):
+    async def get_function_params(function_module, form_data, user, extra_params=None):
         if extra_params is None:
             extra_params = {}
 
@@ -198,7 +198,7 @@ async def generate_function_chat_completion(request, form_data, user, models: di
         params = {'body': form_data} | {k: v for k, v in extra_params.items() if k in sig.parameters}
 
         if '__user__' in params and hasattr(function_module, 'UserValves'):
-            user_valves = Functions.get_user_valves_by_id_and_user_id(pipe_id, user.id)
+            user_valves = await Functions.get_user_valves_by_id_and_user_id(pipe_id, user.id)
             try:
                 params['__user__']['valves'] = function_module.UserValves(**user_valves)
             except Exception as e:
@@ -208,7 +208,7 @@ async def generate_function_chat_completion(request, form_data, user, models: di
         return params
 
     model_id = form_data.get('model')
-    model_info = Models.get_model_by_id(model_id)
+    model_info = await Models.get_model_by_id(model_id)
 
     metadata = form_data.pop('metadata', {})
 
@@ -225,8 +225,8 @@ async def generate_function_chat_completion(request, form_data, user, models: di
 
     if metadata:
         if all(k in metadata for k in ('session_id', 'chat_id', 'message_id')):
-            __event_emitter__ = get_event_emitter(metadata)
-            __event_call__ = get_event_call(metadata)
+            __event_emitter__ = await get_event_emitter(metadata)
+            __event_call__ = await get_event_call(metadata)
         __task__ = metadata.get('task', None)
         __task_body__ = metadata.get('task_body', None)
 
@@ -268,10 +268,10 @@ async def generate_function_chat_completion(request, form_data, user, models: di
             form_data = apply_system_prompt_to_body(system, form_data, metadata, user)
 
     pipe_id = get_pipe_id(form_data)
-    function_module = get_function_module_by_id(request, pipe_id)
+    function_module = await get_function_module_by_id(request, pipe_id)
 
     pipe = function_module.pipe
-    params = get_function_params(function_module, form_data, user, extra_params)
+    params = await get_function_params(function_module, form_data, user, extra_params)
 
     if form_data.get('stream', False):
 

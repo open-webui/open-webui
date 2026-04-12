@@ -324,7 +324,7 @@ async def get_current_user(
 
     # auth by api key
     if token.startswith('sk-'):
-        user = get_current_user_by_api_key(request, token)
+        user = await get_current_user_by_api_key(request, token)
 
         # Add user info to current span
         if ENABLE_OTEL:
@@ -356,7 +356,7 @@ async def get_current_user(
                     detail='Invalid token',
                 )
 
-            user = Users.get_user_by_id(data['id'])
+            user = await Users.get_user_by_id(data['id'])
             if user is None:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -382,10 +382,10 @@ async def get_current_user(
                         current_span.set_attribute('client.user.role', user.role)
                         current_span.set_attribute('client.auth.type', 'jwt')
 
-                # Refresh the user's last active timestamp asynchronously
-                # to prevent blocking the request
-                if background_tasks:
-                    background_tasks.add_task(Users.update_last_active_by_id, user.id)
+                # Refresh the user's last active timestamp
+                # Fire-and-forget via asyncio.create_task to avoid blocking
+                import asyncio
+                asyncio.create_task(Users.update_last_active_by_id(user.id))
             return user
         else:
             raise HTTPException(
@@ -407,9 +407,9 @@ async def get_current_user(
         raise e
 
 
-def get_current_user_by_api_key(request, api_key: str):
+async def get_current_user_by_api_key(request, api_key: str):
     # Each function call manages its own short-lived session internally
-    user = Users.get_user_by_api_key(api_key)
+    user = await Users.get_user_by_api_key(api_key)
 
     if user is None:
         raise HTTPException(
@@ -419,7 +419,7 @@ def get_current_user_by_api_key(request, api_key: str):
 
     if not request.state.enable_api_keys or (
         user.role != 'admin'
-        and not has_permission(
+        and not await has_permission(
             user.id,
             'features.api_keys',
             request.app.state.config.USER_PERMISSIONS,
@@ -438,7 +438,7 @@ def get_current_user_by_api_key(request, api_key: str):
             current_span.set_attribute('client.user.role', user.role)
             current_span.set_attribute('client.auth.type', 'api_key')
 
-    Users.update_last_active_by_id(user.id)
+    await Users.update_last_active_by_id(user.id)
     return user
 
 
@@ -460,7 +460,7 @@ def get_admin_user(user=Depends(get_current_user)):
     return user
 
 
-def create_admin_user(email: str, password: str, name: str = 'Admin'):
+async def create_admin_user(email: str, password: str, name: str = 'Admin'):
     """
     Create an admin user from environment variables.
     Used for headless/automated deployments.
@@ -470,14 +470,14 @@ def create_admin_user(email: str, password: str, name: str = 'Admin'):
     if not email or not password:
         return None
 
-    if Users.has_users():
+    if await Users.has_users():
         log.debug('Users already exist, skipping admin creation')
         return None
 
     log.info(f'Creating admin account from environment variables: {email}')
     try:
         hashed = get_password_hash(password)
-        user = Auths.insert_new_auth(
+        user = await Auths.insert_new_auth(
             email=email.lower(),
             password=hashed,
             name=name,
