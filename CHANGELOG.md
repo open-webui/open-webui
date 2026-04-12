@@ -65,6 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - 🛡️ **Model description XSS protection.** Model descriptions shown in chat placeholders are now sanitized before rendering, preventing malicious links from executing scripts and helping protect user sessions from takeover. [#23621](https://github.com/open-webui/open-webui/pull/23621)
+- 🖱️ **Custom action icon drag prevention.** Custom user-added action icons in chat responses are no longer accidentally draggable, so clicks and hover interactions behave consistently with built-in action icons. [#23412](https://github.com/open-webui/open-webui/pull/23412)
 - 🚫 **LDAP empty-password rejection.** LDAP login now rejects empty or whitespace-only passwords before bind attempts, preventing unauthenticated simple-bind behavior from granting access on permissive LDAP server configurations. [#23633](https://github.com/open-webui/open-webui/pull/23633)
 - 🌐 **IPv6 SSRF address blocking.** URL validation now uses standard IP address checks for both IPv4 and IPv6, preventing private, loopback, link-local, reserved, and mapped-address SSRF bypasses through IPv6 hostname resolution. [#23453](https://github.com/open-webui/open-webui/pull/23453)
 - 🔒 **API key endpoint restriction bypass.** API key endpoint restrictions are now enforced regardless of whether the key is sent through Authorization headers, cookies, or "x-api-key", preventing bypass through alternate key transport paths. [#23637](https://github.com/open-webui/open-webui/pull/23637)
