@@ -41,8 +41,8 @@ from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.models.knowledge import Knowledges, Knowledge
 from open_webui.models.access_grants import AccessGrants
 from open_webui.storage.provider import Storage
-from open_webui.internal.db import get_session, get_db, get_db_context
-from sqlalchemy.orm import Session
+from open_webui.internal.db import get_async_session, get_db
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
@@ -1527,11 +1527,11 @@ class ProcessFileForm(BaseModel):
 
 
 @router.post('/process/file')
-def process_file(
+async def process_file(
     request: Request,
     form_data: ProcessFileForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     Process a file and save its content to the vector database.
@@ -1540,9 +1540,9 @@ def process_file(
     The session is committed before external API calls, and updates use a fresh session.
     """
     if user.role == 'admin':
-        file = Files.get_file_by_id(form_data.file_id, db=db)
+        file = await Files.get_file_by_id(form_data.file_id, db=db)
     else:
-        file = Files.get_file_by_id_and_user_id(form_data.file_id, user.id, db=db)
+        file = await Files.get_file_by_id_and_user_id(form_data.file_id, user.id, db=db)
 
     if file:
         try:
@@ -1675,7 +1675,7 @@ def process_file(
                 text_content = ' '.join([doc.page_content for doc in docs])
 
             log.debug(f'text_content: {text_content}')
-            Files.update_file_data_by_id(
+            await Files.update_file_data_by_id(
                 file.id,
                 {'content': text_content},
                 db=db,
@@ -1683,8 +1683,8 @@ def process_file(
             hash = calculate_sha256_string(text_content)
 
             if request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
-                Files.update_file_data_by_id(file.id, {'status': 'completed'}, db=db)
-                Files.update_file_hash_by_id(file.id, hash, db=db)
+                await Files.update_file_data_by_id(file.id, {'status': 'completed'}, db=db)
+                await Files.update_file_hash_by_id(file.id, hash, db=db)
                 return {
                     'status': True,
                     'collection_name': None,
@@ -1716,7 +1716,7 @@ def process_file(
                     if result:
                         # Fresh session for the final update.
                         with get_db() as session:
-                            Files.update_file_metadata_by_id(
+                            await Files.update_file_metadata_by_id(
                                 file.id,
                                 {
                                     'collection_name': collection_name,
@@ -1724,12 +1724,12 @@ def process_file(
                                 db=session,
                             )
 
-                            Files.update_file_data_by_id(
+                            await Files.update_file_data_by_id(
                                 file.id,
                                 {'status': 'completed'},
                                 db=session,
                             )
-                            Files.update_file_hash_by_id(file.id, hash, db=session)
+                            await Files.update_file_hash_by_id(file.id, hash, db=session)
 
                             return {
                                 'status': True,
@@ -1746,13 +1746,13 @@ def process_file(
             log.exception(e)
             # Fresh session for error status update.
             with get_db() as session:
-                Files.update_file_data_by_id(
+                await Files.update_file_data_by_id(
                     file.id,
                     {'status': 'failed'},
                     db=session,
                 )
                 # Clear the hash so the file can be re-uploaded after fixing the issue
-                Files.update_file_hash_by_id(file.id, None, db=session)
+                await Files.update_file_hash_by_id(file.id, None, db=session)
 
             if 'No pandoc was found' in str(e):
                 raise HTTPException(
@@ -2176,7 +2176,7 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    if user.role != 'admin' and not has_permission(
+    if user.role != 'admin' and not await has_permission(
         user.id, 'features.web_search', request.app.state.config.USER_PERMISSIONS
     ):
         raise HTTPException(
@@ -2328,7 +2328,7 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
         )
 
 
-def _validate_collection_access(collection_names: list[str], user) -> None:
+async def _validate_collection_access(collection_names: list[str], user) -> None:
     """
     Prevent users from querying collections they don't own.
     Enforces ownership on user-memory-*, file-*, and KB collections.
@@ -2354,8 +2354,8 @@ def _validate_collection_access(collection_names: list[str], user) -> None:
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
         elif name.startswith('file-'):
-            file_id = name[len('file-'):]
-            if not has_access_to_file(
+            file_id = name[len('file-') :]
+            if not await has_access_to_file(
                 file_id=file_id,
                 access_type='read',
                 user=user,
@@ -2418,7 +2418,7 @@ async def query_doc_handler(
     form_data: QueryDocForm,
     user=Depends(get_verified_user),
 ):
-    _validate_collection_access([form_data.collection_name], user)
+    await _validate_collection_access([form_data.collection_name], user)
 
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (form_data.hybrid is None or form_data.hybrid):
@@ -2483,7 +2483,7 @@ async def query_collection_handler(
     form_data: QueryCollectionsForm,
     user=Depends(get_verified_user),
 ):
-    _validate_collection_access(form_data.collection_names, user)
+    await _validate_collection_access(form_data.collection_names, user)
 
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (form_data.hybrid is None or form_data.hybrid):
@@ -2544,14 +2544,14 @@ class DeleteForm(BaseModel):
 
 
 @router.post('/delete')
-def delete_entries_from_collection(
+async def delete_entries_from_collection(
     form_data: DeleteForm,
     user=Depends(get_admin_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     try:
         if VECTOR_DB_CLIENT.has_collection(collection_name=form_data.collection_name):
-            file = Files.get_file_by_id(form_data.file_id, db=db)
+            file = await Files.get_file_by_id(form_data.file_id, db=db)
             if not file:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -2572,13 +2572,13 @@ def delete_entries_from_collection(
 
 
 @router.post('/reset/db')
-def reset_vector_db(user=Depends(get_admin_user), db: Session = Depends(get_session)):
+async def reset_vector_db(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
     VECTOR_DB_CLIENT.reset()
-    Knowledges.delete_all_knowledge(db=db)
+    await Knowledges.delete_all_knowledge(db=db)
 
 
 @router.post('/reset/uploads')
-def reset_upload_dir(user=Depends(get_admin_user)) -> bool:
+async def reset_upload_dir(user=Depends(get_admin_user)) -> bool:
     folder = f'{UPLOAD_DIR}'
     try:
         # Check if the directory exists
@@ -2633,7 +2633,7 @@ async def process_files_batch(
     """
     Process a batch of files and save them to the vector database.
 
-    NOTE: We intentionally do NOT use Depends(get_session) here.
+    NOTE: We intentionally do NOT use Depends(get_async_session) here.
     The save_docs_to_vector_db() call makes external embedding API calls which
     can take 5-60+ seconds for batch operations. Database operations after
     embedding (Files.update_file_by_id) manage their own short-lived sessions.
@@ -2651,7 +2651,7 @@ async def process_files_batch(
     for file in form_data.files:
         try:
             # Ownership check: verify the requesting user owns the file or is an admin
-            db_file = Files.get_file_by_id(file.id, db=db)
+            db_file = await Files.get_file_by_id(file.id, db=db)
             if not db_file:
                 file_errors.append(
                     BatchProcessFilesResult(
@@ -2713,7 +2713,7 @@ async def process_files_batch(
 
             # Update all files with collection name
             for file_update, file_result in zip(file_updates, file_results):
-                Files.update_file_by_id(id=file_result.file_id, form_data=file_update, db=db)
+                await Files.update_file_by_id(id=file_result.file_id, form_data=file_update, db=db)
                 file_result.status = 'completed'
 
         except Exception as e:

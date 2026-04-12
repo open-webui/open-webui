@@ -250,7 +250,7 @@ async def generate_image(
 
         # Persist files to DB if chat context is available
         if __chat_id__ and __message_id__ and images:
-            db_files = Chats.add_message_files_by_id_and_message_id(
+            db_files = await Chats.add_message_files_by_id_and_message_id(
                 __chat_id__,
                 __message_id__,
                 image_files,
@@ -317,7 +317,7 @@ async def edit_image(
 
         # Persist files to DB if chat context is available
         if __chat_id__ and __message_id__ and images:
-            db_files = Chats.add_message_files_by_id_and_message_id(
+            db_files = await Chats.add_message_files_by_id_and_message_id(
                 __chat_id__,
                 __message_id__,
                 image_files,
@@ -473,14 +473,14 @@ async def execute_code(
             from open_webui.models.users import Users
             from open_webui.utils.files import get_image_url_from_base64
 
-            user = Users.get_user_by_id(__user__['id'])
+            user = await Users.get_user_by_id(__user__['id'])
 
             # Extract and upload images from stdout
             if stdout and isinstance(stdout, str):
                 stdout_lines = stdout.split('\n')
                 for idx, line in enumerate(stdout_lines):
                     if 'data:image/png;base64' in line:
-                        image_url = get_image_url_from_base64(
+                        image_url = await get_image_url_from_base64(
                             __request__,
                             line,
                             __metadata__ or {},
@@ -495,7 +495,7 @@ async def execute_code(
                 result_lines = result.split('\n')
                 for idx, line in enumerate(result_lines):
                     if 'data:image/png;base64' in line:
-                        image_url = get_image_url_from_base64(
+                        image_url = await get_image_url_from_base64(
                             __request__,
                             line,
                             __metadata__ or {},
@@ -650,7 +650,7 @@ async def delete_memory(
     try:
         user = UserModel(**__user__) if __user__ else None
 
-        result = Memories.delete_memory_by_id_and_user_id(memory_id, user.id)
+        result = await Memories.delete_memory_by_id_and_user_id(memory_id, user.id)
 
         if result:
             VECTOR_DB_CLIENT.delete(collection_name=f'user-memory-{user.id}', ids=[memory_id])
@@ -680,7 +680,7 @@ async def list_memories(
     try:
         user = UserModel(**__user__) if __user__ else None
 
-        memories = Memories.get_memories_by_user_id(user.id)
+        memories = await Memories.get_memories_by_user_id(user.id)
 
         if memories:
             result = [
@@ -730,9 +730,9 @@ async def search_notes(
 
     try:
         user_id = __user__.get('id')
-        user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
+        user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
 
-        result = Notes.search_notes(
+        result = await Notes.search_notes(
             user_id=user_id,
             filter={
                 'query': query,
@@ -808,18 +808,18 @@ async def view_note(
         return json.dumps({'error': 'User context not available'})
 
     try:
-        note = Notes.get_note_by_id(note_id)
+        note = await Notes.get_note_by_id(note_id)
 
         if not note:
             return json.dumps({'error': 'Note not found'})
 
         # Check access permission
         user_id = __user__.get('id')
-        user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
+        user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
 
         from open_webui.models.access_grants import AccessGrants
 
-        if note.user_id != user_id and not AccessGrants.has_access(
+        if note.user_id != user_id and not await AccessGrants.has_access(
             user_id=user_id,
             resource_type='note',
             resource_id=note.id,
@@ -878,7 +878,7 @@ async def write_note(
             access_grants=[],  # Private by default - only owner can access
         )
 
-        new_note = Notes.insert_new_note(user_id, form)
+        new_note = await Notes.insert_new_note(user_id, form)
 
         if not new_note:
             return json.dumps({'error': 'Failed to create note'})
@@ -921,18 +921,18 @@ async def replace_note_content(
     try:
         from open_webui.models.notes import NoteUpdateForm
 
-        note = Notes.get_note_by_id(note_id)
+        note = await Notes.get_note_by_id(note_id)
 
         if not note:
             return json.dumps({'error': 'Note not found'})
 
         # Check write permission
         user_id = __user__.get('id')
-        user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
+        user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
 
         from open_webui.models.access_grants import AccessGrants
 
-        if note.user_id != user_id and not AccessGrants.has_access(
+        if note.user_id != user_id and not await AccessGrants.has_access(
             user_id=user_id,
             resource_type='note',
             resource_id=note.id,
@@ -947,7 +947,7 @@ async def replace_note_content(
             update_data['title'] = title
 
         form = NoteUpdateForm(**update_data)
-        updated_note = Notes.update_note_by_id(note_id, form)
+        updated_note = await Notes.update_note_by_id(note_id, form)
 
         if not updated_note:
             return json.dumps({'error': 'Failed to update note'})
@@ -998,7 +998,7 @@ async def search_chats(
     try:
         user_id = __user__.get('id')
 
-        chats = Chats.get_chats_by_user_id_and_search_text(
+        chats = await Chats.get_chats_by_user_id_and_search_text(
             user_id=user_id,
             search_text=query,
             include_archived=False,
@@ -1073,7 +1073,7 @@ async def view_chat(
     try:
         user_id = __user__.get('id')
 
-        chat = Chats.get_chat_by_id_and_user_id(chat_id, user_id)
+        chat = await Chats.get_chat_by_id_and_user_id(chat_id, user_id)
 
         if not chat:
             return json.dumps({'error': 'Chat not found or access denied'})
@@ -1145,7 +1145,7 @@ async def search_channels(
         user_id = __user__.get('id')
 
         # Get all channels the user has access to
-        all_channels = Channels.get_channels_by_user_id(user_id)
+        all_channels = await Channels.get_channels_by_user_id(user_id)
 
         # Filter by query
         lower_query = query.lower()
@@ -1201,7 +1201,7 @@ async def search_channel_messages(
         user_id = __user__.get('id')
 
         # Get all channels the user has access to
-        user_channels = Channels.get_channels_by_user_id(user_id)
+        user_channels = await Channels.get_channels_by_user_id(user_id)
         channel_ids = [c.id for c in user_channels]
         channel_map = {c.id: c for c in user_channels}
 
@@ -1280,12 +1280,12 @@ async def view_channel_message(
             return json.dumps({'error': 'Message not found'})
 
         # Verify user has access to the channel
-        channel = Channels.get_channel_by_id(message.channel_id)
+        channel = await Channels.get_channel_by_id(message.channel_id)
         if not channel:
             return json.dumps({'error': 'Channel not found'})
 
         # Check if user has access to the channel
-        user_channels = Channels.get_channels_by_user_id(user_id)
+        user_channels = await Channels.get_channels_by_user_id(user_id)
         channel_ids = [c.id for c in user_channels]
 
         if message.channel_id not in channel_ids:
@@ -1342,11 +1342,11 @@ async def view_channel_thread(
             return json.dumps({'error': 'Message not found'})
 
         # Verify user has access to the channel
-        channel = Channels.get_channel_by_id(parent_message.channel_id)
+        channel = await Channels.get_channel_by_id(parent_message.channel_id)
         if not channel:
             return json.dumps({'error': 'Channel not found'})
 
-        user_channels = Channels.get_channels_by_user_id(user_id)
+        user_channels = await Channels.get_channels_by_user_id(user_id)
         channel_ids = [c.id for c in user_channels]
 
         if parent_message.channel_id not in channel_ids:
@@ -1427,9 +1427,9 @@ async def list_knowledge_bases(
         from open_webui.models.knowledge import Knowledges
 
         user_id = __user__.get('id')
-        user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
+        user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
 
-        result = Knowledges.search_knowledge_bases(
+        result = await Knowledges.search_knowledge_bases(
             user_id,
             filter={
                 'query': '',
@@ -1442,7 +1442,7 @@ async def list_knowledge_bases(
 
         knowledge_bases = []
         for knowledge_base in result.items:
-            files = Knowledges.get_files_by_id(knowledge_base.id)
+            files = await Knowledges.get_files_by_id(knowledge_base.id)
             file_count = len(files) if files else 0
 
             knowledge_bases.append(
@@ -1486,9 +1486,9 @@ async def search_knowledge_bases(
         from open_webui.models.knowledge import Knowledges
 
         user_id = __user__.get('id')
-        user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
+        user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
 
-        result = Knowledges.search_knowledge_bases(
+        result = await Knowledges.search_knowledge_bases(
             user_id,
             filter={
                 'query': query,
@@ -1501,7 +1501,7 @@ async def search_knowledge_bases(
 
         knowledge_bases = []
         for knowledge_base in result.items:
-            files = Knowledges.get_files_by_id(knowledge_base.id)
+            files = await Knowledges.get_files_by_id(knowledge_base.id)
             file_count = len(files) if files else 0
 
             knowledge_bases.append(
@@ -1552,7 +1552,7 @@ async def search_knowledge_files(
 
         user_id = __user__.get('id')
         user_role = __user__.get('role', 'user')
-        user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
+        user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
 
         # When model has attached knowledge, scope to attached KBs/files only
         if __model_knowledge__:
@@ -1577,14 +1577,14 @@ async def search_knowledge_files(
 
             # Search within attached KBs
             for kb_id in attached_kb_ids:
-                knowledge = Knowledges.get_knowledge_by_id(kb_id)
+                knowledge = await Knowledges.get_knowledge_by_id(kb_id)
                 if not knowledge:
                     continue
 
                 if not (
                     user_role == 'admin'
                     or knowledge.user_id == user_id
-                    or AccessGrants.has_access(
+                    or await AccessGrants.has_access(
                         user_id=user_id,
                         resource_type='knowledge',
                         resource_id=knowledge.id,
@@ -1594,7 +1594,7 @@ async def search_knowledge_files(
                 ):
                     continue
 
-                result = Knowledges.search_files_by_id(
+                result = await Knowledges.search_files_by_id(
                     knowledge_id=kb_id,
                     user_id=user_id,
                     filter={'query': query},
@@ -1617,7 +1617,7 @@ async def search_knowledge_files(
             if not knowledge_id and attached_file_ids:
                 query_lower = query.lower() if query else ''
                 for file_id in attached_file_ids:
-                    file = Files.get_file_by_id(file_id)
+                    file = await Files.get_file_by_id(file_id)
                     if file and (not query_lower or query_lower in file.filename.lower()):
                         all_files.append(
                             {
@@ -1633,7 +1633,7 @@ async def search_knowledge_files(
 
         # No attached knowledge - search all accessible KBs
         if knowledge_id:
-            result = Knowledges.search_files_by_id(
+            result = await Knowledges.search_files_by_id(
                 knowledge_id=knowledge_id,
                 user_id=user_id,
                 filter={'query': query},
@@ -1641,7 +1641,7 @@ async def search_knowledge_files(
                 limit=count,
             )
         else:
-            result = Knowledges.search_knowledge_files(
+            result = await Knowledges.search_knowledge_files(
                 filter={
                     'query': query,
                     'user_id': user_id,
@@ -1719,7 +1719,7 @@ async def view_file(
         user_id = __user__.get('id')
         user_role = __user__.get('role', 'user')
 
-        file = Files.get_file_by_id(file_id)
+        file = await Files.get_file_by_id(file_id)
         if not file:
             return json.dumps({'error': 'File not found'})
 
@@ -1729,7 +1729,7 @@ async def view_file(
             and not any(
                 item.get('type') == 'file' and item.get('id') == file_id for item in (__model_knowledge__ or [])
             )
-            and not has_access_to_file(
+            and not await has_access_to_file(
                 file_id=file_id,
                 access_type='read',
                 user=UserModel(**__user__),
@@ -1811,14 +1811,14 @@ async def view_knowledge_file(
 
         user_id = __user__.get('id')
         user_role = __user__.get('role', 'user')
-        user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
+        user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
 
-        file = Files.get_file_by_id(file_id)
+        file = await Files.get_file_by_id(file_id)
         if not file:
             return json.dumps({'error': 'File not found'})
 
         # Check access via any KB containing this file
-        knowledges = Knowledges.get_knowledges_by_file_id(file_id)
+        knowledges = await Knowledges.get_knowledges_by_file_id(file_id)
         has_knowledge_access = False
         knowledge_info = None
 
@@ -1826,7 +1826,7 @@ async def view_knowledge_file(
             if (
                 user_role == 'admin'
                 or knowledge_base.user_id == user_id
-                or AccessGrants.has_access(
+                or await AccessGrants.has_access(
                     user_id=user_id,
                     resource_type='knowledge',
                     resource_id=knowledge_base.id,
@@ -1903,7 +1903,7 @@ async def list_knowledge(
 
         user_id = __user__.get('id')
         user_role = __user__.get('role', 'user')
-        user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
+        user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
 
         knowledge_bases = []
         files = []
@@ -1914,11 +1914,11 @@ async def list_knowledge(
             item_id = item.get('id')
 
             if item_type == 'collection':
-                knowledge = Knowledges.get_knowledge_by_id(item_id)
+                knowledge = await Knowledges.get_knowledge_by_id(item_id)
                 if knowledge and (
                     user_role == 'admin'
                     or knowledge.user_id == user_id
-                    or AccessGrants.has_access(
+                    or await AccessGrants.has_access(
                         user_id=user_id,
                         resource_type='knowledge',
                         resource_id=knowledge.id,
@@ -1926,7 +1926,7 @@ async def list_knowledge(
                         user_group_ids=set(user_group_ids),
                     )
                 ):
-                    kb_files = Knowledges.get_files_by_id(knowledge.id)
+                    kb_files = await Knowledges.get_files_by_id(knowledge.id)
                     file_count = len(kb_files) if kb_files else 0
 
                     kb_entry = {
@@ -1943,7 +1943,7 @@ async def list_knowledge(
                     knowledge_bases.append(kb_entry)
 
             elif item_type == 'file':
-                file = Files.get_file_by_id(item_id)
+                file = await Files.get_file_by_id(item_id)
                 if file:
                     files.append(
                         {
@@ -1954,11 +1954,11 @@ async def list_knowledge(
                     )
 
             elif item_type == 'note':
-                note = Notes.get_note_by_id(item_id)
+                note = await Notes.get_note_by_id(item_id)
                 if note and (
                     user_role == 'admin'
                     or note.user_id == user_id
-                    or AccessGrants.has_access(
+                    or await AccessGrants.has_access(
                         user_id=user_id,
                         resource_type='note',
                         resource_id=note.id,
@@ -2036,7 +2036,7 @@ async def query_knowledge_files(
 
         user_id = __user__.get('id')
         user_role = __user__.get('role', 'user')
-        user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
+        user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
 
         embedding_function = __request__.app.state.EMBEDDING_FUNCTION
         if not embedding_function:
@@ -2053,11 +2053,11 @@ async def query_knowledge_files(
 
                 if item_type == 'collection':
                     # Knowledge base - use KB ID as collection name
-                    knowledge = Knowledges.get_knowledge_by_id(item_id)
+                    knowledge = await Knowledges.get_knowledge_by_id(item_id)
                     if knowledge and (
                         user_role == 'admin'
                         or knowledge.user_id == user_id
-                        or AccessGrants.has_access(
+                        or await AccessGrants.has_access(
                             user_id=user_id,
                             resource_type='knowledge',
                             resource_id=knowledge.id,
@@ -2069,17 +2069,17 @@ async def query_knowledge_files(
 
                 elif item_type == 'file':
                     # Individual file - use file-{id} as collection name
-                    file = Files.get_file_by_id(item_id)
+                    file = await Files.get_file_by_id(item_id)
                     if file:
                         collection_names.append(f'file-{item_id}')
 
                 elif item_type == 'note':
                     # Note - always return full content as context
-                    note = Notes.get_note_by_id(item_id)
+                    note = await Notes.get_note_by_id(item_id)
                     if note and (
                         user_role == 'admin'
                         or note.user_id == user_id
-                        or AccessGrants.has_access(
+                        or await AccessGrants.has_access(
                             user_id=user_id,
                             resource_type='note',
                             resource_id=note.id,
@@ -2099,11 +2099,11 @@ async def query_knowledge_files(
         elif knowledge_ids:
             # User specified specific KBs
             for knowledge_id in knowledge_ids:
-                knowledge = Knowledges.get_knowledge_by_id(knowledge_id)
+                knowledge = await Knowledges.get_knowledge_by_id(knowledge_id)
                 if knowledge and (
                     user_role == 'admin'
                     or knowledge.user_id == user_id
-                    or AccessGrants.has_access(
+                    or await AccessGrants.has_access(
                         user_id=user_id,
                         resource_type='knowledge',
                         resource_id=knowledge.id,
@@ -2114,7 +2114,7 @@ async def query_knowledge_files(
                     collection_names.append(knowledge_id)
         else:
             # No model knowledge and no specific IDs - search all accessible KBs
-            result = Knowledges.search_knowledge_bases(
+            result = await Knowledges.search_knowledge_bases(
                 user_id,
                 filter={
                     'query': '',
@@ -2193,7 +2193,7 @@ async def query_knowledge_bases(
         from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
         user_id = __user__.get('id')
-        user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
+        user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
         query_embedding = await __request__.app.state.EMBEDDING_FUNCTION(query)
 
         # Min-heap of (distance, knowledge_base_id) - only holds top `count` results
@@ -2203,7 +2203,7 @@ async def query_knowledge_bases(
         page_size = 100
 
         while True:
-            accessible_knowledge_bases = Knowledges.search_knowledge_bases(
+            accessible_knowledge_bases = await Knowledges.search_knowledge_bases(
                 user_id,
                 filter={'user_id': user_id, 'group_ids': user_group_ids},
                 skip=page_offset,
@@ -2247,7 +2247,7 @@ async def query_knowledge_bases(
 
         matching_knowledge_bases = []
         for distance, knowledge_base_id in sorted_results:
-            knowledge_base = Knowledges.get_knowledge_by_id(knowledge_base_id)
+            knowledge_base = await Knowledges.get_knowledge_by_id(knowledge_base_id)
             if knowledge_base:
                 matching_knowledge_bases.append(
                     {
@@ -2295,7 +2295,7 @@ async def view_skill(
         user_id = __user__.get('id')
 
         # Direct DB lookup by id (case-insensitive since IDs are stored lowercase)
-        skill = Skills.get_skill_by_id(id.lower())
+        skill = await Skills.get_skill_by_id(id.lower())
 
         if not skill or not skill.is_active:
             return json.dumps({'error': f"Skill '{id}' not found"})
@@ -2303,8 +2303,8 @@ async def view_skill(
         # Check user access
         user_role = __user__.get('role', 'user')
         if user_role != 'admin' and skill.user_id != user_id:
-            user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
-            if not AccessGrants.has_access(
+            user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
+            if not await AccessGrants.has_access(
                 user_id=user_id,
                 resource_type='skill',
                 resource_id=skill.id,
@@ -2393,7 +2393,7 @@ async def tasks(
 
         if tasks is None:
             # Read-only - return current list
-            all_tasks = Chats.get_chat_tasks_by_id(__chat_id__)
+            all_tasks = await Chats.get_chat_tasks_by_id(__chat_id__)
         elif overwrite:
             # Full replacement - validate and write
             all_tasks = []
@@ -2417,7 +2417,7 @@ async def tasks(
                 )
         else:
             # Partial update - merge by id
-            existing_tasks = Chats.get_chat_tasks_by_id(__chat_id__)
+            existing_tasks = await Chats.get_chat_tasks_by_id(__chat_id__)
             existing_by_id = {t['id']: t for t in existing_tasks}
 
             seen_ids = set()
@@ -2460,7 +2460,7 @@ async def tasks(
 
         # Persist to DB and emit (skip for read-only)
         if tasks is not None:
-            Chats.update_chat_tasks_by_id(__chat_id__, all_tasks)
+            await Chats.update_chat_tasks_by_id(__chat_id__, all_tasks)
 
             if __event_emitter__:
                 await __event_emitter__(
@@ -2542,7 +2542,7 @@ async def create_automation(
         from open_webui.utils.automations import validate_rrule, next_run_ns, next_n_runs_ns
 
         user_id = __user__.get('id')
-        user = Users.get_user_by_id(user_id)
+        user = await Users.get_user_by_id(user_id)
         if not user:
             return json.dumps({'error': 'User not found'})
 
@@ -2569,7 +2569,7 @@ async def create_automation(
             is_active=True,
         )
 
-        automation = Automations.insert(user_id, form, next_run_ns(rrule, tz=tz))
+        automation = await Automations.insert(user_id, form, next_run_ns(rrule, tz=tz))
 
         return json.dumps(
             {
@@ -2618,9 +2618,9 @@ async def update_automation(
         from open_webui.utils.automations import validate_rrule, next_run_ns, next_n_runs_ns
 
         user_id = __user__.get('id')
-        user = Users.get_user_by_id(user_id)
+        user = await Users.get_user_by_id(user_id)
 
-        automation = Automations.get_by_id(automation_id)
+        automation = await Automations.get_by_id(automation_id)
         if not automation:
             return json.dumps({'error': 'Automation not found'})
         if automation.user_id != user_id:
@@ -2650,7 +2650,7 @@ async def update_automation(
             is_active=automation.is_active,
         )
 
-        updated = Automations.update(automation_id, form, next_run_ns(new_rrule, tz=tz))
+        updated = await Automations.update(automation_id, form, next_run_ns(new_rrule, tz=tz))
 
         return json.dumps(
             {
@@ -2693,9 +2693,9 @@ async def list_automations(
         from open_webui.utils.automations import next_n_runs_ns
 
         user_id = __user__.get('id')
-        user = Users.get_user_by_id(user_id)
+        user = await Users.get_user_by_id(user_id)
 
-        result = Automations.search_automations(
+        result = await Automations.search_automations(
             user_id=user_id,
             status=status,
             skip=0,
@@ -2753,16 +2753,16 @@ async def toggle_automation(
         from open_webui.utils.automations import next_run_ns
 
         user_id = __user__.get('id')
-        user = Users.get_user_by_id(user_id)
+        user = await Users.get_user_by_id(user_id)
 
-        automation = Automations.get_by_id(automation_id)
+        automation = await Automations.get_by_id(automation_id)
         if not automation:
             return json.dumps({'error': 'Automation not found'})
         if automation.user_id != user_id:
             return json.dumps({'error': 'Access denied'})
 
         rrule = automation.data.get('rrule', '')
-        toggled = Automations.toggle(
+        toggled = await Automations.toggle(
             automation_id,
             next_run_ns(rrule, tz=user.timezone if user else None),
         )
@@ -2803,15 +2803,15 @@ async def delete_automation(
 
         user_id = __user__.get('id')
 
-        automation = Automations.get_by_id(automation_id)
+        automation = await Automations.get_by_id(automation_id)
         if not automation:
             return json.dumps({'error': 'Automation not found'})
         if automation.user_id != user_id:
             return json.dumps({'error': 'Access denied'})
 
         name = automation.name
-        AutomationRuns.delete_by_automation(automation_id)
-        Automations.delete(automation_id)
+        await AutomationRuns.delete_by_automation(automation_id)
+        await Automations.delete(automation_id)
 
         return json.dumps(
             {
