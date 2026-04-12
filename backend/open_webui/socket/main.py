@@ -312,6 +312,24 @@ async def enter_room_for_users(room: str, user_ids: list[str]):
         log.debug(f'Failed to make users {user_ids} join room {room}: {e}')
 
 
+async def disconnect_user_sessions(user_id: str):
+    """Disconnect all Socket.IO sessions belonging to a user.
+
+    Call this when a user's role is changed or the user is deleted so that
+    stale role/permission data cached in SESSION_POOL is invalidated.
+    The client will automatically reconnect and re-authenticate with
+    fresh data from the database.
+    """
+    try:
+        session_ids = get_session_ids_from_room(f'user:{user_id}')
+        for sid in session_ids:
+            await sio.disconnect(sid)
+        if session_ids:
+            log.info(f'Disconnected {len(session_ids)} session(s) for user {user_id}')
+    except Exception as e:
+        log.warning(f'Failed to disconnect sessions for user {user_id}: {e}')
+
+
 @sio.on('usage')
 async def usage(sid, data):
     if sid in SESSION_POOL:

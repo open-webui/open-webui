@@ -40,6 +40,7 @@ from open_webui.utils.auth import (
     validate_password,
 )
 from open_webui.utils.access_control import get_permissions, has_permission
+from open_webui.socket.main import disconnect_user_sessions
 
 log = logging.getLogger(__name__)
 
@@ -620,6 +621,10 @@ async def update_user_by_id(
         )
 
         if updated_user:
+            # If the role changed, disconnect all socket sessions so stale
+            # privileges cached in SESSION_POOL are invalidated.
+            if updated_user.role != user.role:
+                await disconnect_user_sessions(user_id)
             return updated_user
 
         raise HTTPException(
@@ -659,6 +664,7 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user), db: Sess
         result = Auths.delete_auth_by_id(user_id, db=db)
 
         if result:
+            await disconnect_user_sessions(user_id)
             return True
 
         raise HTTPException(
