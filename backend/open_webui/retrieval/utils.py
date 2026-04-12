@@ -978,12 +978,12 @@ async def get_sources_from_items(
 
         elif item.get('type') == 'note':
             # Note Attached
-            note = Notes.get_note_by_id(item.get('id'))
+            note = await Notes.get_note_by_id(item.get('id'))
 
             if note and (
                 user.role == 'admin'
                 or note.user_id == user.id
-                or AccessGrants.has_access(
+                or await AccessGrants.has_access(
                     user_id=user.id,
                     resource_type='note',
                     resource_id=note.id,
@@ -998,7 +998,7 @@ async def get_sources_from_items(
 
         elif item.get('type') == 'chat':
             # Chat Attached
-            chat = Chats.get_chat_by_id(item.get('id'))
+            chat = await Chats.get_chat_by_id(item.get('id'))
 
             if chat and (user.role == 'admin' or chat.user_id == user.id):
                 messages_map = chat.chat.get('history', {}).get('messages', {})
@@ -1042,11 +1042,11 @@ async def get_sources_from_items(
                         ],
                     }
                 elif item.get('id'):
-                    file_object = Files.get_file_by_id(item.get('id'))
+                    file_object = await Files.get_file_by_id(item.get('id'))
                     if file_object and (
                         user.role == 'admin'
                         or file_object.user_id == user.id
-                        or has_access_to_file(item.get('id'), 'read', user)
+                        or await has_access_to_file(item.get('id'), 'read', user)
                     ):
                         query_result = {
                             'documents': [[file_object.data.get('content', '')]],
@@ -1069,12 +1069,12 @@ async def get_sources_from_items(
 
         elif item.get('type') == 'collection':
             # Manual Full Mode Toggle for Collection
-            knowledge_base = Knowledges.get_knowledge_by_id(item.get('id'))
+            knowledge_base = await Knowledges.get_knowledge_by_id(item.get('id'))
 
             if knowledge_base and (
                 user.role == 'admin'
                 or knowledge_base.user_id == user.id
-                or AccessGrants.has_access(
+                or await AccessGrants.has_access(
                     user_id=user.id,
                     resource_type='knowledge',
                     resource_id=knowledge_base.id,
@@ -1085,14 +1085,14 @@ async def get_sources_from_items(
                     if knowledge_base and (
                         user.role == 'admin'
                         or knowledge_base.user_id == user.id
-                        or AccessGrants.has_access(
+                        or await AccessGrants.has_access(
                             user_id=user.id,
                             resource_type='knowledge',
                             resource_id=knowledge_base.id,
                             permission='read',
                         )
                     ):
-                        files = Knowledges.get_files_by_id(knowledge_base.id)
+                        files = await Knowledges.get_files_by_id(knowledge_base.id)
 
                         documents = []
                         metadatas = []

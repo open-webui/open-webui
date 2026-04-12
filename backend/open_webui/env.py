@@ -519,6 +519,11 @@ PASSWORD_VALIDATION_HINT = os.environ.get('PASSWORD_VALIDATION_HINT', '')
 
 BYPASS_MODEL_ACCESS_CONTROL = os.environ.get('BYPASS_MODEL_ACCESS_CONTROL', 'False').lower() == 'true'
 
+# When disabled (default), the OpenAI catch-all proxy endpoint (/{path:path})
+# is blocked. Enable only if you need direct passthrough to upstream OpenAI-
+# compatible APIs for endpoints not natively handled by Open WebUI.
+ENABLE_OPENAI_API_PASSTHROUGH = os.environ.get('ENABLE_OPENAI_API_PASSTHROUGH', 'False').lower() == 'true'
+
 WEBUI_AUTH_SIGNOUT_REDIRECT_URL = os.environ.get('WEBUI_AUTH_SIGNOUT_REDIRECT_URL', None)
 
 ####################################
