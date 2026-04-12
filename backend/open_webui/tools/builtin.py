@@ -2830,9 +2830,17 @@ async def delete_automation(
 # =============================================================================
 
 
-def _read_file_bytes(path: str) -> bytes:
-    with open(path, 'rb') as fh:
-        return fh.read()
+async def _iter_file_chunks(path: str, chunk_size: int = 65536):
+    # Async-stream file contents so disk reads don't block the event loop
+    # and the full file is never materialized in memory for the upload.
+    import aiofiles
+
+    async with aiofiles.open(path, 'rb') as fh:
+        while True:
+            chunk = await fh.read(chunk_size)
+            if not chunk:
+                break
+            yield chunk
 
 
 async def upload_file_to_terminal(
@@ -2840,6 +2848,7 @@ async def upload_file_to_terminal(
     __request__: Request = None,
     __user__: dict = None,
     __metadata__: dict = None,
+    __oauth_token__: dict = None,
 ) -> str:
     """
     Upload a file to the connected Open Terminal server's working directory.
@@ -2902,7 +2911,11 @@ async def upload_file_to_terminal(
                 headers['Authorization'] = f'Bearer {__request__.state.token.credentials}'
         elif auth_type == 'system_oauth':
             cookies = __request__.cookies
-            oauth_token = metadata.get('oauth_token') or {}
+            # __oauth_token__ is populated by middleware/get_builtin_tools;
+            # the legacy metadata['oauth_token'] lookup was never populated for
+            # builtin tools, so system_oauth terminals silently received no
+            # bearer token and failed against protected servers.
+            oauth_token = __oauth_token__ or {}
             if oauth_token.get('access_token'):
                 headers['Authorization'] = f'Bearer {oauth_token["access_token"]}'
         # auth_type == 'none': no Authorization header
@@ -2927,11 +2940,10 @@ async def upload_file_to_terminal(
         ):
             return json.dumps({'error': 'File not found'})
 
-        # Storage.get_file and file reads can do sync network/disk I/O for
-        # remote backends (S3/GCS/Azure); offload to a worker thread to keep
-        # the event loop responsive under concurrent chat load.
+        # Storage.get_file can do sync network/disk I/O for remote backends
+        # (S3/GCS/Azure); offload to a worker thread to keep the event loop
+        # responsive. File contents are then streamed via aiofiles below.
         local_path = await asyncio.to_thread(Storage.get_file, file_record.path)
-        file_bytes = await asyncio.to_thread(_read_file_bytes, local_path)
 
         # --- 3. Upload to terminal server ---
         import aiohttp
@@ -2960,7 +2972,12 @@ async def upload_file_to_terminal(
             )
 
             form_data = aiohttp.FormData()
-            form_data.add_field('file', file_bytes, filename=file_record.filename)
+            form_data.add_field(
+                'file',
+                _iter_file_chunks(local_path),
+                filename=file_record.filename,
+                content_type='application/octet-stream',
+            )
             async with session.post(
                 f'{terminal_url}/files/upload',
                 params={'directory': upload_dir},
