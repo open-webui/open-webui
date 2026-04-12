@@ -508,6 +508,7 @@ class ChannelTable:
                 .filter(
                     ChannelMember.channel_id == channel_id,
                     ChannelMember.user_id == user_id,
+                    ChannelMember.is_active.is_(True),
                     ChannelMember.role == 'manager',
                 )
                 .first()
@@ -667,6 +668,7 @@ class ChannelTable:
                 .filter(
                     ChannelMember.channel_id == channel_id,
                     ChannelMember.user_id == user_id,
+                    ChannelMember.is_active.is_(True),
                 )
                 .first()
             )
