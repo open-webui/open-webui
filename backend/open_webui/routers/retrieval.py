@@ -38,9 +38,10 @@ from langchain_core.documents import Document
 
 from open_webui.models.files import FileModel, FileUpdateForm, Files
 from open_webui.utils.access_control.files import has_access_to_file
-from open_webui.models.knowledge import Knowledges
+from open_webui.models.knowledge import Knowledges, Knowledge
+from open_webui.models.access_grants import AccessGrants
 from open_webui.storage.provider import Storage
-from open_webui.internal.db import get_session, get_db
+from open_webui.internal.db import get_session, get_db, get_db_context
 from sqlalchemy.orm import Session
 
 
@@ -2330,25 +2331,72 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
 def _validate_collection_access(collection_names: list[str], user) -> None:
     """
     Prevent users from querying collections they don't own.
-    Enforces ownership on user-memory-* and file-* collections.
+    Enforces ownership on user-memory-*, file-*, and KB collections.
+    Blocks access to internal meta-collections.
     Admins bypass this check.
     """
     if user.role == 'admin':
         return
 
+    # Candidate KB IDs — names that don't match any known prefix
+    candidate_kb_ids = []
+
     for name in collection_names:
-        if name.startswith('user-memory-') and name != f'user-memory-{user.id}':
+        # Block internal meta-collections that contain cross-user data
+        if name == 'knowledge-bases':
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+        elif name.startswith('user-memory-') and name != f'user-memory-{user.id}':
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
         elif name.startswith('file-'):
-            file_id = name[len('file-') :]
+            file_id = name[len('file-'):]
             if not has_access_to_file(
                 file_id=file_id,
                 access_type='read',
                 user=user,
             ):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                )
+        else:
+            candidate_kb_ids.append(name)
+
+    # Batch-resolve KB ownership for all candidate IDs in two queries
+    # instead of N+1 per-collection lookups.
+    if candidate_kb_ids:
+        try:
+            with get_db_context() as db:
+                kb_rows = (
+                    db.query(Knowledge.id, Knowledge.user_id)
+                    .filter(Knowledge.id.in_(candidate_kb_ids))
+                    .all()
+                )
+        except Exception:
+            # Fail closed: DB errors must not silently grant access
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Failed to validate collection access.',
+            )
+
+        # Identify KB IDs that exist but are not owned by the user
+        foreign_kb_ids = [row.id for row in kb_rows if row.user_id != user.id]
+
+        if foreign_kb_ids:
+            # Single batch query for access grants
+            accessible_ids = AccessGrants.get_accessible_resource_ids(
+                user_id=user.id,
+                resource_type='knowledge',
+                resource_ids=foreign_kb_ids,
+                permission='read',
+            )
+            denied_ids = set(foreign_kb_ids) - accessible_ids
+            if denied_ids:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
