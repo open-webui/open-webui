@@ -12,7 +12,7 @@ import requests
 
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
-from fastapi import Depends, HTTPException, Request, APIRouter
+from fastapi import Depends, HTTPException, Request, APIRouter, status
 from fastapi.responses import (
     FileResponse,
     StreamingResponse,
@@ -40,6 +40,7 @@ from open_webui.env import (
     ENABLE_FORWARD_USER_INFO_HEADERS,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     BYPASS_MODEL_ACCESS_CONTROL,
+    ENABLE_OPENAI_API_PASSTHROUGH,
 )
 from open_webui.models.users import UserModel
 
@@ -1418,8 +1419,15 @@ async def responses(
 @router.api_route('/{path:path}', methods=['GET', 'POST', 'PUT', 'DELETE'])
 async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     """
-    Deprecated: proxy all requests to OpenAI API
+    Deprecated: proxy all requests to OpenAI API.
+    Disabled by default. Set ENABLE_OPENAI_API_PASSTHROUGH=True to enable.
     """
+
+    if not ENABLE_OPENAI_API_PASSTHROUGH:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Direct API passthrough is disabled. Set ENABLE_OPENAI_API_PASSTHROUGH=True to enable.',
+        )
 
     body = await request.body()
 
