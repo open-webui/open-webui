@@ -285,6 +285,8 @@
 
 			enableDescription = model?.meta?.description !== null;
 
+			console.log('ModelEditor: model.base_model_id =', model.base_model_id);
+
 			if (model.base_model_id) {
 				// Save original before validation potentially nulls it
 				openrouterBaseModelId = model.base_model_id;

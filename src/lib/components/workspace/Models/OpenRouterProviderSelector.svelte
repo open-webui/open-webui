@@ -22,7 +22,9 @@
 		}
 		loading = true;
 		try {
+			console.log('OpenRouterProviderSelector: fetching endpoints for', modelId);
 			const res = await getModelEndpoints(localStorage.token, modelId);
+			console.log('OpenRouterProviderSelector: got response', res);
 			endpoints = res?.data?.endpoints ?? [];
 		} catch (e) {
 			console.error('Failed to fetch endpoints:', e);
@@ -78,7 +80,7 @@
 	};
 </script>
 
-{#if loading || endpoints.length > 0}
+{#if true}
 	<div class="my-2">
 		<div class="px-4 py-3 bg-gray-50 dark:bg-gray-950 rounded-3xl">
 			<div class="flex w-full justify-between items-center">
@@ -96,7 +98,11 @@
 				{$i18n.t('Select and order which OpenRouter providers handle requests for this model.')}
 			</div>
 
-			{#if endpoints.length > 0}
+			{#if !loading && endpoints.length === 0}
+				<div class="text-xs text-gray-400 dark:text-gray-500 italic">
+					{baseModelId ? 'No providers found for this model (may not be an OpenRouter model).' : 'No base model selected.'}
+				</div>
+			{:else if endpoints.length > 0}
 				<div class="overflow-x-auto">
 					<table class="w-full text-xs">
 						<thead>
