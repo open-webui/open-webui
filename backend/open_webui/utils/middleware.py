@@ -389,14 +389,14 @@ def get_citation_source_from_tool_result(
         ]
 
 
-async def content_endswith_newline(parts):
+def content_endswith_newline(parts):
     if not parts:
         return False
     return parts[-1].endswith('\n')
 
 
-async def ensure_trailing_newline(parts):
-    if parts and not await content_endswith_newline(parts):
+def ensure_trailing_newline(parts):
+    if parts and not content_endswith_newline(parts):
         parts.append('\n')
 
 
@@ -408,7 +408,7 @@ async def serialize_output(output: list) -> str:
     content_parts = []
     fence_count = 0
 
-    async def append_part(part):
+    def append_part(part):
         nonlocal fence_count
         content_parts.append(part)
         fence_count += part.count('```')
@@ -428,12 +428,12 @@ async def serialize_output(output: list) -> str:
                 if 'text' in content_part:
                     text = content_part.get('text', '').strip()
                     if text:
-                        await append_part(text)
-                        await append_part('\n')
+                        append_part(text)
+                        append_part('\n')
 
         elif item_type == 'function_call':
             # Render tool call inline with its result (if available)
-            await ensure_trailing_newline(content_parts)
+            ensure_trailing_newline(content_parts)
 
             call_id = item.get('call_id', '')
             name = item.get('name', '')
@@ -450,9 +450,9 @@ async def serialize_output(output: list) -> str:
                 files = result_item.get('files')
                 embeds = result_item.get('embeds', '')
 
-                await append_part(f'<details type="tool_calls" done="true" id="{call_id}" name="{name}" arguments="{html.escape(json.dumps(arguments))}" result="{html.escape(json.dumps(result_text, ensure_ascii=False))}" files="{html.escape(json.dumps(files)) if files else ""}" embeds="{html.escape(json.dumps(embeds))}">\n<summary>Tool Executed</summary>\n</details>\n')
+                append_part(f'<details type="tool_calls" done="true" id="{call_id}" name="{name}" arguments="{html.escape(json.dumps(arguments))}" result="{html.escape(json.dumps(result_text, ensure_ascii=False))}" files="{html.escape(json.dumps(files)) if files else ""}" embeds="{html.escape(json.dumps(embeds))}">\n<summary>Tool Executed</summary>\n</details>\n')
             else:
-                await append_part(f'<details type="tool_calls" done="false" id="{call_id}" name="{name}" arguments="{html.escape(json.dumps(arguments))}">\n<summary>Executing...</summary>\n</details>\n')
+                append_part(f'<details type="tool_calls" done="false" id="{call_id}" name="{name}" arguments="{html.escape(json.dumps(arguments))}">\n<summary>Executing...</summary>\n</details>\n')
 
         elif item_type == 'function_call_output':
             # Already handled inline with function_call above
@@ -477,7 +477,7 @@ async def serialize_output(output: list) -> str:
             # render as done (a subsequent item means reasoning is complete)
             is_last_item = idx == len(output) - 1
 
-            await ensure_trailing_newline(content_parts)
+            ensure_trailing_newline(content_parts)
 
             display = html.escape(
                 '\n'.join(
@@ -486,9 +486,9 @@ async def serialize_output(output: list) -> str:
             )
 
             if status == 'completed' or duration is not None or not is_last_item:
-                await append_part(f'<details type="reasoning" done="true" duration="{duration or 0}">\n<summary>Thought for {duration or 0} seconds</summary>\n{display}\n</details>\n')
+                append_part(f'<details type="reasoning" done="true" duration="{duration or 0}">\n<summary>Thought for {duration or 0} seconds</summary>\n{display}\n</details>\n')
             else:
-                await append_part(f'<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n{display}\n</details>\n')
+                append_part(f'<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n{display}\n</details>\n')
 
         elif item_type == 'open_webui:code_interpreter':
             # Check if previous content ends with an opening code fence (e.g. ```python)
@@ -511,7 +511,7 @@ async def serialize_output(output: list) -> str:
                 while content_parts and not content_parts[-1].strip():
                     fence_count -= content_parts.pop().count('```')
 
-            await ensure_trailing_newline(content_parts)
+            ensure_trailing_newline(content_parts)
 
             # Render the code_interpreter item as a <details> block
             # so the frontend Collapsible renders "Analyzing..."/"Analyzed".
@@ -537,9 +537,9 @@ async def serialize_output(output: list) -> str:
                 output_attr = f' output="{html.escape(output_json)}"'
 
             if status == 'completed' or duration is not None or not is_last_item:
-                await append_part(f'<details type="code_interpreter" done="true" duration="{duration or 0}"{output_attr}>\n<summary>Analyzed</summary>\n{display}\n</details>\n')
+                append_part(f'<details type="code_interpreter" done="true" duration="{duration or 0}"{output_attr}>\n<summary>Analyzed</summary>\n{display}\n</details>\n')
             else:
-                await append_part(f'<details type="code_interpreter" done="false"{output_attr}>\n<summary>Analyzing…</summary>\n{display}\n</details>\n')
+                append_part(f'<details type="code_interpreter" done="false"{output_attr}>\n<summary>Analyzing…</summary>\n{display}\n</details>\n')
 
     return ''.join(content_parts).strip()
 
