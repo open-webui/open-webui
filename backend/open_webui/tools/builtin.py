@@ -2894,7 +2894,7 @@ async def upload_file_to_terminal(
         )
 
         if connection:
-            if not has_connection_access(UserModel(**__user__), connection):
+            if not await has_connection_access(UserModel(**__user__), connection):
                 return json.dumps({'error': 'Access denied to terminal server'})
 
             terminal_url = connection.get('url', '').rstrip('/')
@@ -2916,7 +2916,7 @@ async def upload_file_to_terminal(
                     headers['Authorization'] = f'Bearer {__request__.state.token.credentials}'
             elif auth_type == 'system_oauth':
                 cookies = __request__.cookies
-                oauth_token = (metadata.get('oauth_token') or {})
+                oauth_token = metadata.get('oauth_token') or {}
                 if oauth_token.get('access_token'):
                     headers['Authorization'] = f'Bearer {oauth_token["access_token"]}'
             # auth_type == 'none': no Authorization header
