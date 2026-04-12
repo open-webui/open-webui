@@ -92,13 +92,18 @@ async def get_anthropic_models(url: str, key: str, user: UserModel = None) -> di
 
 def _convert_anthropic_image_source(source: dict) -> str:
     """Convert an Anthropic image source block to an OpenAI-compatible image URL."""
-    if source.get('type') == 'base64':
+    if not isinstance(source, dict):
+        raise ValueError(
+            f'Expected dict for image source, got {type(source).__name__}'
+        )
+    source_type = source.get('type')
+    if source_type == 'base64':
         media_type = source.get('media_type', 'image/png')
         data = source.get('data', '')
         return f'data:{media_type};base64,{data}'
-    elif source.get('type') == 'url':
+    elif source_type == 'url':
         return source.get('url', '')
-    return ''
+    raise ValueError(f'Unsupported image source type: {source_type!r}')
 
 
 def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
@@ -157,13 +162,12 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
                     )
                 elif block_type == 'image':
                     url = _convert_anthropic_image_source(block.get('source', {}))
-                    if url:
-                        openai_content.append(
-                            {
-                                'type': 'image_url',
-                                'image_url': {'url': url},
-                            }
-                        )
+                    openai_content.append(
+                        {
+                            'type': 'image_url',
+                            'image_url': {'url': url},
+                        }
+                    )
                 elif block_type == 'tool_use':
                     tool_calls.append(
                         {
@@ -196,8 +200,7 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
                                     url = _convert_anthropic_image_source(
                                         tc.get('source', {})
                                     )
-                                    if url:
-                                        image_urls.append(url)
+                                    image_urls.append(url)
                                 elif tc_type in ('search_result', 'document'):
                                     raise NotImplementedError(
                                         f'Anthropic tool_result content type '
