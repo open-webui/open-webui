@@ -169,6 +169,16 @@ YDOC_MANAGER = YdocManager(
     redis_key_prefix=f'{REDIS_KEY_PREFIX}:ydoc:documents',
 )
 
+# Per-session cache for document write authorization.
+# Keyed by (sid, user_id, document_id) -> (allowed: bool, checked_at: float).
+# Populated on the first ydoc:document:update per session+user+document,
+# revalidated after _WRITE_CACHE_TTL seconds, invalidated on leave/disconnect.
+# Bounded by _WRITE_CACHE_MAX_SIZE to prevent unbounded memory growth.
+_DOCUMENT_WRITE_CACHE: dict[tuple[str, str, str], tuple[bool, float]] = {}
+_WRITE_CACHE_TTL: float = 5.0
+_WRITE_CACHE_MAX_SIZE: int = 10_000
+_WRITE_CACHE_EVICTION_INTERVAL: float = _WRITE_CACHE_TTL * 10  # 50s
+
 
 async def periodic_session_pool_cleanup():
     """Reap orphaned SESSION_POOL entries that missed heartbeats (e.g. crashed instance)."""
@@ -188,9 +198,36 @@ async def periodic_session_pool_cleanup():
                 if entry and now - entry.get('last_seen_at', 0) > SESSION_POOL_TIMEOUT:
                     log.warning(f'Reaping orphaned session {sid} (user {entry.get("id")})')
                     del SESSION_POOL[sid]
+                    # Purge any cached document write permissions for this session
+                    for key in [k for k in _DOCUMENT_WRITE_CACHE if k[0] == sid]:
+                        del _DOCUMENT_WRITE_CACHE[key]
+
             await asyncio.sleep(SESSION_POOL_TIMEOUT)
     finally:
         session_release_func()
+
+
+async def periodic_write_cache_cleanup():
+    """Evict stale write-permission cache entries on every node (not lock-gated).
+
+    _DOCUMENT_WRITE_CACHE is per-process, so each node must run its own
+    eviction independently of the distributed session-cleanup lock.
+    Entries past _WRITE_CACHE_TTL are already revalidated on use, so
+    keeping them longer is wasteful.  A max-size cap provides a hard
+    bound against memory growth under churn or abuse.
+    """
+    while True:
+        await asyncio.sleep(_WRITE_CACHE_EVICTION_INTERVAL)
+        stale_cutoff = time.time() - _WRITE_CACHE_TTL
+        for key in [k for k in _DOCUMENT_WRITE_CACHE if _DOCUMENT_WRITE_CACHE[k][1] < stale_cutoff]:
+            del _DOCUMENT_WRITE_CACHE[key]
+
+        # Hard size cap: if still over limit, evict oldest entries
+        if len(_DOCUMENT_WRITE_CACHE) > _WRITE_CACHE_MAX_SIZE:
+            sorted_keys = sorted(_DOCUMENT_WRITE_CACHE, key=lambda k: _DOCUMENT_WRITE_CACHE[k][1])
+            for key in sorted_keys[: len(_DOCUMENT_WRITE_CACHE) - _WRITE_CACHE_MAX_SIZE]:
+                del _DOCUMENT_WRITE_CACHE[key]
+
 
 
 async def periodic_usage_pool_cleanup():
@@ -597,29 +634,62 @@ async def ydoc_document_join(sid, data):
         await sio.emit('error', {'message': 'Failed to join document'}, room=sid)
 
 
-async def document_save_handler(document_id, data, user):
-    document_id = normalize_document_id(document_id)
+def _has_document_write_access(user: dict, document_id: str) -> bool:
+    """Check whether *user* may write to *document_id*.
 
+    This is a synchronous helper (DB calls) and should be run via
+    ``asyncio.to_thread`` when called from an async context.
+    """
     if document_id.startswith('note:'):
         note_id = document_id.split(':')[1]
         note = Notes.get_note_by_id(note_id)
         if not note:
-            log.error(f'Note {note_id} not found')
-            return
+            return False
 
-        if (
-            user.get('role') != 'admin'
-            and user.get('id') != note.user_id
-            and not AccessGrants.has_access(
-                user_id=user.get('id'),
-                resource_type='note',
-                resource_id=note.id,
-                permission='write',
-            )
-        ):
-            log.error(f'User {user.get("id")} does not have write access to note {note_id}')
-            return
+        if user.get('role') == 'admin' or user.get('id') == note.user_id:
+            return True
 
+        return AccessGrants.has_access(
+            user_id=user.get('id'),
+            resource_type='note',
+            resource_id=note.id,
+            permission='write',
+        )
+
+    # Non-note document types have no read-only membership semantics today;
+    # the join handler also imposes no permission gate for them, so room
+    # membership is the only authorization layer.  When adding a new document
+    # type with granular permissions, add an explicit branch here.
+    return True
+
+async def _check_document_write_permission(sid: str, user: dict, document_id: str) -> bool:
+    """Check and cache document write permission for a session.
+
+    Looks up the write-permission cache first, revalidating via DB if the
+    entry is missing or older than _WRITE_CACHE_TTL.  Shared by both the
+    update and save handlers to avoid logic drift.
+    """
+    user_id = user.get('id', '')
+    cache_key = (sid, user_id, document_id)
+    cached = _DOCUMENT_WRITE_CACHE.get(cache_key)
+    now = time.time()
+    if cached is None or (now - cached[1]) > _WRITE_CACHE_TTL:
+        allowed = await asyncio.to_thread(_has_document_write_access, user, document_id)
+        _DOCUMENT_WRITE_CACHE[cache_key] = (allowed, now)
+    else:
+        allowed = cached[0]
+    return allowed
+
+
+async def document_save_handler(sid, document_id, data, user):
+    document_id = normalize_document_id(document_id)
+
+    if not await _check_document_write_permission(sid, user, document_id):
+        log.debug(f'User {user.get("id")} denied write on save for {document_id}')
+        return
+
+    if document_id.startswith('note:'):
+        note_id = document_id.split(':')[1]
         Notes.update_note_by_id(note_id, NoteUpdateForm(data=data))
 
 
@@ -679,6 +749,17 @@ async def yjs_document_update(sid, data):
             log.warning(f'Session {sid} not in room {room}. Rejecting update.')
             return
 
+        user = SESSION_POOL.get(sid)
+        if not user:
+            return
+
+        # Enforce write permission on the underlying resource.
+        # Joining the document room only requires read access, so room
+        # membership alone is not sufficient to authorize mutations.
+        if not await _check_document_write_permission(sid, user, document_id):
+            log.debug(f'User {user.get("id")} denied write access to {document_id}. Rejecting update.')
+            return
+
         try:
             await stop_item_tasks(REDIS, document_id)
         except Exception:
@@ -706,13 +787,9 @@ async def yjs_document_update(sid, data):
             skip_sid=sid,
         )
 
-        user = SESSION_POOL.get(sid)
-        if not user:
-            return
-
         async def debounced_save():
             await asyncio.sleep(0.5)
-            await document_save_handler(document_id, data.get('data', {}), user)
+            await document_save_handler(sid, document_id, data.get('data', {}), user)
 
         if data.get('data'):
             await create_task(REDIS, debounced_save(), document_id)
@@ -725,13 +802,17 @@ async def yjs_document_update(sid, data):
 async def yjs_document_leave(sid, data):
     """Handle user leaving a document"""
     try:
-        document_id = data['document_id']
+        document_id = normalize_document_id(data['document_id'])
         user_id = data.get('user_id', sid)
 
         log.info(f'User {user_id} leaving document {document_id}')
 
         # Remove user from the document
         await YDOC_MANAGER.remove_user(document_id=document_id, user_id=sid)
+
+        # Invalidate cached write permissions for this session+document
+        for key in [k for k in _DOCUMENT_WRITE_CACHE if k[0] == sid and k[2] == document_id]:
+            del _DOCUMENT_WRITE_CACHE[key]
 
         # Leave Socket.IO room
         await sio.leave_room(sid, f'doc_{document_id}')
@@ -788,6 +869,10 @@ async def disconnect(sid):
                     USAGE_POOL[model_id] = connections
 
         await YDOC_MANAGER.remove_user_from_all_documents(sid)
+
+        # Invalidate all cached document write permissions for this session
+        for key in [k for k in _DOCUMENT_WRITE_CACHE if k[0] == sid]:
+            del _DOCUMENT_WRITE_CACHE[key]
     else:
         pass
         # print(f"Unknown session ID {sid} disconnected")

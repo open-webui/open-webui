@@ -65,6 +65,7 @@ from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
     periodic_session_pool_cleanup,
+    periodic_write_cache_cleanup,
     get_event_emitter,
     get_models_in_use,
 )
@@ -654,6 +655,7 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     asyncio.create_task(periodic_session_pool_cleanup())
+    asyncio.create_task(periodic_write_cache_cleanup())
 
     from open_webui.utils.automations import automation_worker_loop
 
