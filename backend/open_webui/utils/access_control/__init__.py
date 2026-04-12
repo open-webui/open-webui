@@ -316,13 +316,41 @@ async def check_base_model_access(
     access decision. Call this before any code path that resolves or dispatches
     to the base, and before persisting a base_model_id chosen by the caller.
 
+    Unlike the generic check_model_access (which only enforces grants for
+    user.role == 'user' and lets admins through unconditionally), this helper
+    enforces the grant check for every role when bypass_filter is False.
+    Callers are expected to opt admins out explicitly by passing
+    bypass_filter=True when BYPASS_ADMIN_ACCESS_CONTROL is set — otherwise an
+    admin creating a chain or dispatching through one still needs read access
+    to the base, since the wrapper's ownership does not transfer to the base.
+
     Raises HTTPException(403) if not authorized. Does nothing if bypass_filter
     is True or base_model_id is falsy.
     """
+    from fastapi import HTTPException
+
     if bypass_filter or not base_model_id:
         return
 
     from open_webui.models.models import Models
+    from open_webui.models.access_grants import AccessGrants
 
     base_model_info = await Models.get_model_by_id(base_model_id, db=db)
-    await check_model_access(user, base_model_info, bypass_filter)
+    if base_model_info is None:
+        raise HTTPException(status_code=403, detail='Model not found')
+
+    if user.id == base_model_info.user_id:
+        return
+
+    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+    if await AccessGrants.has_access(
+        user_id=user.id,
+        resource_type='model',
+        resource_id=base_model_info.id,
+        permission='read',
+        user_group_ids=user_group_ids,
+        db=db,
+    ):
+        return
+
+    raise HTTPException(status_code=403, detail='Model not found')

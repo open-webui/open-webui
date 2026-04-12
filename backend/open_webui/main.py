@@ -899,7 +899,7 @@ app.state.config.ENABLE_EVALUATION_ARENA_MODELS = ENABLE_EVALUATION_ARENA_MODELS
 app.state.config.EVALUATION_ARENA_MODELS = EVALUATION_ARENA_MODELS
 
 # Migrate legacy access_control → access_grants on boot
-from open_webui.utils.access_control import migrate_access_control
+from open_webui.utils.access_control import migrate_access_control, check_base_model_access
 
 connections = app.state.config.TOOL_SERVER_CONNECTIONS
 if any('access_control' in c.get('config', {}) for c in connections):
@@ -1682,9 +1682,16 @@ async def chat_completion(
 
             # Re-run the access check against the resolved base model. Access on
             # the user-facing wrapper does not extend to the chain target, so
-            # each link must be authorized independently.
-            if not BYPASS_MODEL_ACCESS_CONTROL and (user.role != 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL):
-                await check_model_access(user, request.app.state.MODELS[resolved_base_model_id])
+            # each link must be authorized independently. check_base_model_access
+            # raises HTTPException(403) — which the outer except HTTPException: raise
+            # preserves — rather than the bare Exception raised by the utils/models.py
+            # helper, so authorization failures reach the client as 403, not 400.
+            await check_base_model_access(
+                user,
+                resolved_base_model_id,
+                bypass_filter=BYPASS_MODEL_ACCESS_CONTROL
+                or (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL),
+            )
 
         # Chat Params
         stream_delta_chunk_size = form_data.get('params', {}).get('stream_delta_chunk_size')
@@ -1763,6 +1770,11 @@ async def chat_completion(
         request.state.metadata = metadata
         form_data['metadata'] = metadata
 
+    except HTTPException:
+        # Preserve intentional HTTP statuses — e.g. the 403 raised by the
+        # base-model access check and the 404 from the chat-ownership check —
+        # so authorization failures are not remapped to 400.
+        raise
     except Exception as e:
         log.debug(f'Error processing chat metadata: {e}')
         raise HTTPException(
