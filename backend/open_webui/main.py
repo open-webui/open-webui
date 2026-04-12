@@ -1387,50 +1387,6 @@ app.add_middleware(RedirectMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
 
-class APIKeyRestrictionMiddleware:
-    def __init__(self, app):
-        self.app = app
-
-    async def __call__(self, scope, receive, send):
-        if scope['type'] == 'http':
-            request = Request(scope)
-            auth_header = request.headers.get('Authorization')
-            token = None
-
-            if auth_header:
-                parts = auth_header.split(' ', 1)
-                if len(parts) == 2:
-                    token = parts[1]
-
-            # Only apply restrictions if an sk- API key is used
-            if token and token.startswith('sk-'):
-                # Check if restrictions are enabled
-                if app.state.config.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS:
-                    allowed_paths = [
-                        path.strip()
-                        for path in str(app.state.config.API_KEYS_ALLOWED_ENDPOINTS).split(',')
-                        if path.strip()
-                    ]
-
-                    request_path = request.url.path
-
-                    # Match exact path or prefix path
-                    is_allowed = any(
-                        request_path == allowed or request_path.startswith(allowed + '/') for allowed in allowed_paths
-                    )
-
-                    if not is_allowed:
-                        await JSONResponse(
-                            status_code=status.HTTP_403_FORBIDDEN,
-                            content={'detail': 'API key not allowed to access this endpoint.'},
-                        )(scope, receive, send)
-                        return
-
-        await self.app(scope, receive, send)
-
-
-app.add_middleware(APIKeyRestrictionMiddleware)
-
 
 @app.middleware('http')
 async def commit_session_after_request(request: Request, call_next):
