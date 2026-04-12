@@ -61,6 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- 🔐 **Responses model access control.** The OpenAI-compatible Responses endpoint now enforces per-model permissions, preventing non-admin users from accessing models they are not allowed to use. [#23481](https://github.com/open-webui/open-webui/pull/23481)
 - 🔒 **SCIM token checks.** SCIM authentication now compares tokens in a safer way, helping prevent timing-based token guessing attacks. [#23577](https://github.com/open-webui/open-webui/pull/23577)
 - 🔒 **Safer file access checks.** HTML file previews now treat missing or non-admin owners as inaccessible, preventing accidental access to files that should not be shown. [Commit](https://github.com/open-webui/open-webui/commit/6acaaea59a50ec26da03e6144017a2fd86241ce9)
 - 🖼️ **ComfyUI request hangs.** Concurrent image generation and editing requests to ComfyUI now complete reliably instead of getting stuck when the same user starts multiple requests at once. [#23592](https://github.com/open-webui/open-webui/pull/23592), [#23591](https://github.com/open-webui/open-webui/issues/23591)
