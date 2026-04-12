@@ -39,6 +39,7 @@ from langchain_core.documents import Document
 from open_webui.models.files import FileModel, FileUpdateForm, Files
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.models.knowledge import Knowledges
+from open_webui.models.access_grants import AccessGrants
 from open_webui.storage.provider import Storage
 from open_webui.internal.db import get_session, get_db
 from sqlalchemy.orm import Session
@@ -242,6 +243,48 @@ def get_rf(
 
 
 router = APIRouter()
+
+
+def _verify_collection_write_access(collection_name: Optional[str], user) -> None:
+    """Raise 403 if the user does not have write access to the collection.
+
+    Collection naming conventions:
+      - 'file-{file_id}' → checked via has_access_to_file (ownership + grants)
+      - KB UUID           → checked via ownership + AccessGrants
+      - New (non-existent) collections are always allowed
+
+    Admins bypass all checks.
+    """
+    if not collection_name or user.role == 'admin':
+        return
+
+    # File-backed collections
+    if collection_name.startswith('file-'):
+        file_id = collection_name[5:]  # strip 'file-' prefix
+        if not has_access_to_file(
+            file_id=file_id,
+            access_type='write',
+            user=user,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+        return
+
+    # Knowledge-base-backed collections (KB id used as collection name)
+    knowledge = Knowledges.get_knowledge_by_id(collection_name)
+    if knowledge and knowledge.user_id != user.id:
+        if not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='knowledge',
+            resource_id=knowledge.id,
+            permission='write',
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
 
 
 class CollectionNameForm(BaseModel):
@@ -1544,11 +1587,18 @@ def process_file(
         file = Files.get_file_by_id_and_user_id(form_data.file_id, user.id, db=db)
 
     if file:
-        try:
-            collection_name = form_data.collection_name
+        collection_name = form_data.collection_name
 
-            if collection_name is None:
-                collection_name = f'file-{file.id}'
+        if collection_name is None:
+            collection_name = f'file-{file.id}'
+
+        # Validate write access to the target collection.
+        # File ownership (checked above) only covers the source file;
+        # the target collection may belong to a different user's KB.
+        # Placed before the try block so 403 is not caught and downgraded.
+        _verify_collection_write_access(collection_name, user)
+
+        try:
 
             if form_data.content:
                 # Update the content in the file
@@ -1784,6 +1834,9 @@ async def process_text(
     if collection_name is None:
         collection_name = calculate_sha256_string(form_data.content)
 
+    # Validate write access to the target collection before processing.
+    _verify_collection_write_access(collection_name, user)
+
     docs = [
         Document(
             page_content=form_data.content,
@@ -1816,7 +1869,13 @@ async def process_web(
     overwrite: bool = Query(True, description='Whether to overwrite existing collection'),
     user=Depends(get_verified_user),
 ):
+    # Validate write access to the target collection before fetching
+    # external content — prevents overwriting/poisoning foreign KBs.
+    if process and form_data.collection_name:
+        _verify_collection_write_access(form_data.collection_name, user)
+
     try:
+
         content, docs = await run_in_threadpool(get_content_from_url, request, form_data.url)
         log.debug(f'text_content: {content}')
 
