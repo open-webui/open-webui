@@ -118,6 +118,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - ⚠️ **Database Migrations**: This release includes database schema changes; we strongly recommend backing up your database and all associated data before upgrading in production environments. If you are running a multi-worker, multi-server, or load-balanced deployment, all instances must be updated simultaneously, rolling updates are not supported and will cause application failures due to schema incompatibility.
+- 🚧 **OpenAI passthrough now opt-in.** Direct OpenAI catch-all proxy requests are now disabled by default and require enabling "ENABLE_OPENAI_API_PASSTHROUGH", so deployments relying on passthrough must explicitly turn it on after upgrading. [#23640](https://github.com/open-webui/open-webui/pull/23640)
 
 ## [0.8.12] - 2026-03-26
 
