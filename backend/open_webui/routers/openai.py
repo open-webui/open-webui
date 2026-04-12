@@ -1160,7 +1160,8 @@ async def generate_chat_completion(
             payload['logit_bias'] = json.loads(logit_bias)
 
     headers, cookies = await get_headers_and_cookies(request, url, key, api_config, metadata, user=user)
-    headers['x-openai-base-url'] = url
+    real_provider_url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+    headers['x-openai-base-url'] = real_provider_url
 
     is_responses = api_config.get('api_type') == 'responses'
 
