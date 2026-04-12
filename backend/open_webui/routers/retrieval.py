@@ -245,7 +245,7 @@ def get_rf(
 router = APIRouter()
 
 
-def _verify_collection_write_access(collection_name: Optional[str], user) -> None:
+async def _verify_collection_write_access(collection_name: Optional[str], user) -> None:
     """Raise 403 if the user does not have write access to the collection.
 
     Collection naming conventions:
@@ -261,7 +261,7 @@ def _verify_collection_write_access(collection_name: Optional[str], user) -> Non
     # File-backed collections
     if collection_name.startswith('file-'):
         file_id = collection_name[5:]  # strip 'file-' prefix
-        if not has_access_to_file(
+        if not await has_access_to_file(
             file_id=file_id,
             access_type='write',
             user=user,
@@ -273,9 +273,9 @@ def _verify_collection_write_access(collection_name: Optional[str], user) -> Non
         return
 
     # Knowledge-base-backed collections (KB id used as collection name)
-    knowledge = Knowledges.get_knowledge_by_id(collection_name)
+    knowledge = await Knowledges.get_knowledge_by_id(collection_name)
     if knowledge and knowledge.user_id != user.id:
-        if not AccessGrants.has_access(
+        if not await AccessGrants.has_access(
             user_id=user.id,
             resource_type='knowledge',
             resource_id=knowledge.id,
@@ -1596,7 +1596,7 @@ async def process_file(
         # File ownership (checked above) only covers the source file;
         # the target collection may belong to a different user's KB.
         # Placed before the try block so 403 is not caught and downgraded.
-        _verify_collection_write_access(collection_name, user)
+        await _verify_collection_write_access(collection_name, user)
 
         try:
 
@@ -1835,7 +1835,7 @@ async def process_text(
         collection_name = calculate_sha256_string(form_data.content)
 
     # Validate write access to the target collection before processing.
-    _verify_collection_write_access(collection_name, user)
+    await _verify_collection_write_access(collection_name, user)
 
     docs = [
         Document(
@@ -1872,7 +1872,7 @@ async def process_web(
     # Validate write access to the target collection before fetching
     # external content — prevents overwriting/poisoning foreign KBs.
     if process and form_data.collection_name:
-        _verify_collection_write_access(form_data.collection_name, user)
+        await _verify_collection_write_access(form_data.collection_name, user)
 
     try:
 
