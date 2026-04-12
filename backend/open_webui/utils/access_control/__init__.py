@@ -299,3 +299,30 @@ async def check_model_access(
     else:
         if user.role != 'admin':
             raise HTTPException(status_code=403, detail='Model not found')
+
+
+async def check_base_model_access(
+    user: UserModel,
+    base_model_id: "str | None",
+    bypass_filter: bool = False,
+    db: AsyncSession | None = None,
+) -> None:
+    """
+    Enforce per-model read access for a chained base model.
+
+    A custom model that declares base_model_id forwards requests to that base at
+    dispatch time. Read access on the user-facing wrapper (ownership or a grant)
+    does not extend to the base model — each link in the chain is an independent
+    access decision. Call this before any code path that resolves or dispatches
+    to the base, and before persisting a base_model_id chosen by the caller.
+
+    Raises HTTPException(403) if not authorized. Does nothing if bypass_filter
+    is True or base_model_id is falsy.
+    """
+    if bypass_filter or not base_model_id:
+        return
+
+    from open_webui.models.models import Models
+
+    base_model_info = await Models.get_model_by_id(base_model_id, db=db)
+    await check_model_access(user, base_model_info, bypass_filter)

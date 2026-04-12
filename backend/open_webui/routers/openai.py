@@ -28,7 +28,11 @@ from open_webui.internal.db import get_async_session
 from open_webui.models.models import Models
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.groups import Groups
-from open_webui.utils.access_control import has_connection_access, check_model_access
+from open_webui.utils.access_control import (
+    has_connection_access,
+    check_model_access,
+    check_base_model_access,
+)
 from open_webui.config import (
     CACHE_DIR,
 )
@@ -1057,6 +1061,11 @@ async def generate_chat_completion(
             )  # Use request's base_model_id if available
             payload['model'] = base_model_id
             model_id = base_model_id
+
+            # Re-run the access check against the resolved base model. The check
+            # on the user-facing wrapper does not authorize the chain target:
+            # grants or ownership on the wrapper must not leak into the base.
+            await check_base_model_access(user, base_model_id, bypass_filter)
 
         params = model_info.params.model_dump()
 

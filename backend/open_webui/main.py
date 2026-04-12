@@ -1672,10 +1672,19 @@ async def chat_completion(
                         # Update model and form_data so routing uses the fallback model's type
                         model = request.app.state.MODELS[fallback_model_id]
                         form_data['model'] = fallback_model_id
+                        resolved_base_model_id = fallback_model_id
                     else:
                         raise Exception('Model not found')
                 else:
                     raise Exception('Model not found')
+            else:
+                resolved_base_model_id = base_model_id
+
+            # Re-run the access check against the resolved base model. Access on
+            # the user-facing wrapper does not extend to the chain target, so
+            # each link must be authorized independently.
+            if not BYPASS_MODEL_ACCESS_CONTROL and (user.role != 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL):
+                await check_model_access(user, request.app.state.MODELS[resolved_base_model_id])
 
         # Chat Params
         stream_delta_chunk_size = form_data.get('params', {}).get('stream_delta_chunk_size')

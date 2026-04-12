@@ -33,8 +33,13 @@ from fastapi.responses import FileResponse, StreamingResponse
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
+from open_webui.utils.access_control import (
+    has_permission,
+    filter_allowed_access_grants,
+    check_base_model_access,
+)
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, STATIC_DIR
+from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL
 from open_webui.internal.db import get_async_session
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -196,6 +201,17 @@ async def create_new_model(
         )
 
     else:
+        # Reject planting a chain into a base model the caller cannot read.
+        # Ownership on the created wrapper would otherwise extend implicit
+        # read access to the base at dispatch time.
+        await check_base_model_access(
+            user,
+            form_data.base_model_id,
+            bypass_filter=BYPASS_MODEL_ACCESS_CONTROL
+            or (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL),
+            db=db,
+        )
+
         form_data.access_grants = await filter_allowed_access_grants(
             request.app.state.config.USER_PERMISSIONS,
             user.id,
@@ -281,6 +297,10 @@ async def import_models(
                 model.id: model for model in (await Models.get_models_by_ids(model_ids, db=db) if model_ids else [])
             }
 
+            bypass = BYPASS_MODEL_ACCESS_CONTROL or (
+                user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL
+            )
+
             for model_data in data:
                 # Here, you can add logic to validate model_data if needed
                 model_id = model_data.get('id')
@@ -293,12 +313,21 @@ async def import_models(
                         model_data['params'] = model_data.get('params', {})
 
                         updated_model = ModelForm(**{**existing_model.model_dump(), **model_data})
+                        # Only re-validate the base if the import actually changes it,
+                        # so imports that preserve a pre-existing chain are not broken.
+                        if updated_model.base_model_id != existing_model.base_model_id:
+                            await check_base_model_access(
+                                user, updated_model.base_model_id, bypass_filter=bypass, db=db
+                            )
                         await Models.update_model_by_id(model_id, updated_model, db=db)
                     else:
                         # Insert new model
                         model_data['meta'] = model_data.get('meta', {})
                         model_data['params'] = model_data.get('params', {})
                         new_model = ModelForm(**model_data)
+                        await check_base_model_access(
+                            user, new_model.base_model_id, bypass_filter=bypass, db=db
+                        )
                         await Models.insert_new_model(user_id=user.id, form_data=new_model, db=db)
             return True
         else:
@@ -494,6 +523,18 @@ async def update_model_by_id(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    # Re-validate the chain when the caller is changing base_model_id, so a
+    # user with write access to the wrapper cannot repoint it at a base they
+    # lack read access to.
+    if form_data.base_model_id != model.base_model_id:
+        await check_base_model_access(
+            user,
+            form_data.base_model_id,
+            bypass_filter=BYPASS_MODEL_ACCESS_CONTROL
+            or (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL),
+            db=db,
         )
 
     form_data.access_grants = await filter_allowed_access_grants(
