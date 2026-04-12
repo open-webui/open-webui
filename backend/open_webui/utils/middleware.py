@@ -400,7 +400,7 @@ def ensure_trailing_newline(parts):
         parts.append('\n')
 
 
-async def serialize_output(output: list) -> str:
+def serialize_output(output: list) -> str:
     """
     Convert OR-aligned output items to HTML for display.
     For LLM consumption, use convert_output_to_messages() instead.
@@ -3617,7 +3617,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                                     processed_data = {
                                         'output': full_output(),
-                                        'content': await serialize_output(full_output()),
+                                        'content': serialize_output(full_output()),
                                     }
 
                                     # print(data)
@@ -3776,7 +3776,7 @@ async def streaming_chat_response_handler(response, ctx):
                                                 {
                                                     'type': 'chat:completion',
                                                     'data': {
-                                                        'content': await serialize_output(full_output() + pending_fc_items),
+                                                        'content': serialize_output(full_output() + pending_fc_items),
                                                     },
                                                 }
                                             )
@@ -3835,7 +3835,7 @@ async def streaming_chat_response_handler(response, ctx):
                                                 }
                                             ]
 
-                                        data = {'content': await serialize_output(full_output())}
+                                        data = {'content': serialize_output(full_output())}
 
                                     if value:
                                         if (
@@ -3986,13 +3986,13 @@ async def streaming_chat_response_handler(response, ctx):
                                                 metadata['chat_id'],
                                                 metadata['message_id'],
                                                 {
-                                                    'content': await serialize_output(full_output()),
+                                                    'content': serialize_output(full_output()),
                                                     'output': full_output(),
                                                 },
                                             )
                                         else:
                                             data = {
-                                                'content': await serialize_output(full_output()),
+                                                'content': serialize_output(full_output()),
                                             }
 
                                 if delta:
@@ -4130,7 +4130,7 @@ async def streaming_chat_response_handler(response, ctx):
                         {
                             'type': 'chat:completion',
                             'data': {
-                                'content': await serialize_output(full_output()),
+                                'content': serialize_output(full_output()),
                                 'output': full_output(),
                             },
                         }
@@ -4382,7 +4382,7 @@ async def streaming_chat_response_handler(response, ctx):
                         {
                             'type': 'chat:completion',
                             'data': {
-                                'content': await serialize_output(output),
+                                'content': serialize_output(output),
                                 'output': frontend_output,
                             },
                         }
@@ -4481,7 +4481,7 @@ async def streaming_chat_response_handler(response, ctx):
                             {
                                 'type': 'chat:completion',
                                 'data': {
-                                    'content': await serialize_output(output),
+                                    'content': serialize_output(output),
                                     'output': output,
                                 },
                             }
@@ -4605,7 +4605,7 @@ async def streaming_chat_response_handler(response, ctx):
                             {
                                 'type': 'chat:completion',
                                 'data': {
-                                    'content': await serialize_output(output),
+                                    'content': serialize_output(output),
                                     'output': output,
                                 },
                             }
@@ -4645,7 +4645,7 @@ async def streaming_chat_response_handler(response, ctx):
                 title = await Chats.get_chat_title_by_id(metadata['chat_id'])
                 data = {
                     'done': True,
-                    'content': await serialize_output(output),
+                    'content': serialize_output(output),
                     'output': output,
                     'title': title,
                     **({'usage': usage} if usage else {}),
@@ -4658,7 +4658,7 @@ async def streaming_chat_response_handler(response, ctx):
                         metadata['message_id'],
                         {
                             'done': True,
-                            'content': await serialize_output(output),
+                            'content': serialize_output(output),
                             'output': output,
                             **({'usage': usage} if usage else {}),
                         },
@@ -4711,7 +4711,7 @@ async def streaming_chat_response_handler(response, ctx):
                         metadata['message_id'],
                         {
                             'done': True,
-                            'content': await serialize_output(output),
+                            'content': serialize_output(output),
                             'output': output,
                         },
                     )
