@@ -4,10 +4,10 @@ from typing import Optional
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import Column, Text, JSON, Boolean, BigInteger, Index, select, or_, func, cast, String
-from sqlalchemy.orm import Session
+from sqlalchemy import Column, Text, JSON, Boolean, BigInteger, Index, select, or_, func, cast, String, delete, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from open_webui.internal.db import Base, get_db, get_db_context
+from open_webui.internal.db import Base, get_async_db_context
 
 log = logging.getLogger(__name__)
 
@@ -118,14 +118,14 @@ class AutomationListResponse(BaseModel):
 
 
 class AutomationTable:
-    def insert(
+    async def insert(
         self,
         user_id: str,
         form: AutomationForm,
         next_run_at: int,
-        db: Optional[Session] = None,
+        db: Optional[AsyncSession] = None,
     ) -> AutomationModel:
-        with get_db_context(db) as db:
+        async with get_async_db_context(db) as db:
             now = int(time.time_ns())
             row = Automation(
                 id=str(uuid4()),
@@ -139,35 +139,38 @@ class AutomationTable:
                 updated_at=now,
             )
             db.add(row)
-            db.commit()
-            db.refresh(row)
+            await db.commit()
+            await db.refresh(row)
             return AutomationModel.model_validate(row)
 
-    def count_by_user(self, user_id: str, db: Optional[Session] = None) -> int:
-        with get_db_context(db) as db:
-            return db.query(Automation).filter_by(user_id=user_id).count()
+    async def count_by_user(self, user_id: str, db: Optional[AsyncSession] = None) -> int:
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(func.count()).select_from(Automation).filter_by(user_id=user_id)
+            )
+            return result.scalar()
 
-    def get_by_id(self, id: str, db: Optional[Session] = None) -> Optional[AutomationModel]:
-        with get_db_context(db) as db:
-            row = db.get(Automation, id)
+    async def get_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[AutomationModel]:
+        async with get_async_db_context(db) as db:
+            row = await db.get(Automation, id)
             return AutomationModel.model_validate(row) if row else None
 
-    def search_automations(
+    async def search_automations(
         self,
         user_id: str,
         query: Optional[str] = None,
         status: Optional[str] = None,
         skip: int = 0,
         limit: int = 30,
-        db: Optional[Session] = None,
+        db: Optional[AsyncSession] = None,
     ) -> 'AutomationListResponse':
-        with get_db_context(db) as db:
-            q = db.query(Automation).filter_by(user_id=user_id)
+        async with get_async_db_context(db) as db:
+            stmt = select(Automation).filter_by(user_id=user_id)
 
             if query:
                 search = f'%{query}%'
                 # Search in name and prompt inside JSON data
-                q = q.filter(
+                stmt = stmt.filter(
                     or_(
                         Automation.name.ilike(search),
                         cast(Automation.data, String).ilike(search),
@@ -175,34 +178,39 @@ class AutomationTable:
                 )
 
             if status == 'active':
-                q = q.filter(Automation.is_active == True)
+                stmt = stmt.filter(Automation.is_active == True)
             elif status == 'paused':
-                q = q.filter(Automation.is_active == False)
+                stmt = stmt.filter(Automation.is_active == False)
 
-            q = q.order_by(Automation.created_at.desc())
+            stmt = stmt.order_by(Automation.created_at.desc())
 
-            total = q.count()
+            # Get total count
+            count_result = await db.execute(
+                select(func.count()).select_from(stmt.subquery())
+            )
+            total = count_result.scalar()
 
             if skip:
-                q = q.offset(skip)
+                stmt = stmt.offset(skip)
             if limit:
-                q = q.limit(limit)
+                stmt = stmt.limit(limit)
 
-            rows = q.all()
+            result = await db.execute(stmt)
+            rows = result.scalars().all()
             return AutomationListResponse(
                 items=[AutomationModel.model_validate(r) for r in rows],
                 total=total,
             )
 
-    def update_by_id(
+    async def update_by_id(
         self,
         id: str,
         form: AutomationForm,
         next_run_at: int,
-        db: Optional[Session] = None,
+        db: Optional[AsyncSession] = None,
     ) -> Optional[AutomationModel]:
-        with get_db_context(db) as db:
-            row = db.get(Automation, id)
+        async with get_async_db_context(db) as db:
+            row = await db.get(Automation, id)
             if not row:
                 return None
             row.name = form.name
@@ -212,37 +220,37 @@ class AutomationTable:
                 row.is_active = form.is_active
             row.next_run_at = next_run_at
             row.updated_at = int(time.time_ns())
-            db.commit()
-            db.refresh(row)
+            await db.commit()
+            await db.refresh(row)
             return AutomationModel.model_validate(row)
 
-    def toggle(
+    async def toggle(
         self,
         id: str,
         next_run_at: Optional[int],
-        db: Optional[Session] = None,
+        db: Optional[AsyncSession] = None,
     ) -> Optional[AutomationModel]:
-        with get_db_context(db) as db:
-            row = db.get(Automation, id)
+        async with get_async_db_context(db) as db:
+            row = await db.get(Automation, id)
             if not row:
                 return None
             row.is_active = not row.is_active
             row.next_run_at = next_run_at if row.is_active else None
             row.updated_at = int(time.time_ns())
-            db.commit()
-            db.refresh(row)
+            await db.commit()
+            await db.refresh(row)
             return AutomationModel.model_validate(row)
 
-    def delete(self, id: str, db: Optional[Session] = None) -> bool:
-        with get_db_context(db) as db:
-            row = db.get(Automation, id)
+    async def delete(self, id: str, db: Optional[AsyncSession] = None) -> bool:
+        async with get_async_db_context(db) as db:
+            row = await db.get(Automation, id)
             if not row:
                 return False
-            db.delete(row)
-            db.commit()
+            await db.delete(row)
+            await db.commit()
             return True
 
-    def claim_due(self, now_ns: int, limit: int = 10, db: Optional[Session] = None) -> list[AutomationModel]:
+    async def claim_due(self, now_ns: int, limit: int = 10, db: Optional[AsyncSession] = None) -> list[AutomationModel]:
         """
         Atomically claim due automations for execution.
 
@@ -250,7 +258,7 @@ class AutomationTable:
         double-claimed. On PostgreSQL, uses FOR UPDATE SKIP LOCKED
         for zero-contention distributed work claiming.
         """
-        with get_db_context(db) as db:
+        async with get_async_db_context(db) as db:
             stmt = (
                 select(Automation)
                 .where(
@@ -264,7 +272,8 @@ class AutomationTable:
             if db.bind.dialect.name == 'postgresql':
                 stmt = stmt.with_for_update(skip_locked=True)
 
-            rows = db.execute(stmt).scalars().all()
+            result = await db.execute(stmt)
+            rows = result.scalars().all()
 
             from open_webui.utils.automations import next_run_ns
 
@@ -272,7 +281,7 @@ class AutomationTable:
                 row.last_run_at = now_ns
                 row.next_run_at = next_run_ns(row.data.get('rrule', ''))
 
-            db.commit()
+            await db.commit()
 
             return [AutomationModel.model_validate(r) for r in rows]
 
@@ -283,15 +292,15 @@ class AutomationTable:
 
 
 class AutomationRunTable:
-    def insert(
+    async def insert(
         self,
         automation_id: str,
         status: str,
         chat_id: Optional[str] = None,
         error: Optional[str] = None,
-        db: Optional[Session] = None,
+        db: Optional[AsyncSession] = None,
     ) -> AutomationRunModel:
-        with get_db_context(db) as db:
+        async with get_async_db_context(db) as db:
             row = AutomationRun(
                 id=str(uuid4()),
                 automation_id=automation_id,
@@ -301,30 +310,31 @@ class AutomationRunTable:
                 created_at=int(time.time_ns()),
             )
             db.add(row)
-            db.commit()
-            db.refresh(row)
+            await db.commit()
+            await db.refresh(row)
             return AutomationRunModel.model_validate(row)
 
-    def get_latest(self, automation_id: str, db: Optional[Session] = None) -> Optional[AutomationRunModel]:
-        with get_db_context(db) as db:
-            row = (
-                db.query(AutomationRun)
+    async def get_latest(self, automation_id: str, db: Optional[AsyncSession] = None) -> Optional[AutomationRunModel]:
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(AutomationRun)
                 .filter_by(automation_id=automation_id)
                 .order_by(AutomationRun.created_at.desc())
-                .first()
+                .limit(1)
             )
+            row = result.scalars().first()
             return AutomationRunModel.model_validate(row) if row else None
 
-    def get_latest_batch(
-        self, automation_ids: list[str], db: Optional[Session] = None
+    async def get_latest_batch(
+        self, automation_ids: list[str], db: Optional[AsyncSession] = None
     ) -> dict[str, AutomationRunModel]:
         """Fetch the latest run for each automation in a single query."""
         if not automation_ids:
             return {}
-        with get_db_context(db) as db:
+        async with get_async_db_context(db) as db:
             # Subquery: max created_at per automation_id
             subq = (
-                db.query(
+                select(
                     AutomationRun.automation_id,
                     func.max(AutomationRun.created_at).label('max_created'),
                 )
@@ -332,43 +342,43 @@ class AutomationRunTable:
                 .group_by(AutomationRun.automation_id)
                 .subquery()
             )
-            rows = (
-                db.query(AutomationRun)
+            result = await db.execute(
+                select(AutomationRun)
                 .join(
                     subq,
                     (AutomationRun.automation_id == subq.c.automation_id)
                     & (AutomationRun.created_at == subq.c.max_created),
                 )
-                .all()
             )
+            rows = result.scalars().all()
             return {
                 row.automation_id: AutomationRunModel.model_validate(row)
                 for row in rows
             }
 
-    def get_by_automation(
+    async def get_by_automation(
         self,
         automation_id: str,
         skip: int = 0,
         limit: int = 50,
-        db: Optional[Session] = None,
+        db: Optional[AsyncSession] = None,
     ) -> list[AutomationRunModel]:
-        with get_db_context(db) as db:
-            rows = (
-                db.query(AutomationRun)
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(AutomationRun)
                 .filter_by(automation_id=automation_id)
                 .order_by(AutomationRun.created_at.desc())
                 .offset(skip)
                 .limit(limit)
-                .all()
             )
+            rows = result.scalars().all()
             return [AutomationRunModel.model_validate(r) for r in rows]
 
-    def delete_by_automation(self, automation_id: str, db: Optional[Session] = None) -> int:
-        with get_db_context(db) as db:
-            count = db.query(AutomationRun).filter_by(automation_id=automation_id).delete()
-            db.commit()
-            return count
+    async def delete_by_automation(self, automation_id: str, db: Optional[AsyncSession] = None) -> int:
+        async with get_async_db_context(db) as db:
+            result = await db.execute(delete(AutomationRun).filter_by(automation_id=automation_id))
+            await db.commit()
+            return result.rowcount
 
 
 Automations = AutomationTable()

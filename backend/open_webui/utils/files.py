@@ -31,7 +31,7 @@ BASE64_IMAGE_URL_PREFIX = re.compile(r'data:image/\w+;base64,', re.IGNORECASE)
 MARKDOWN_IMAGE_URL_PATTERN = re.compile(r'!\[(.*?)\]\((.+?)\)', re.IGNORECASE)
 
 
-def get_image_base64_from_url(url: str) -> Optional[str]:
+async def get_image_base64_from_url(url: str) -> Optional[str]:
     try:
         if url.startswith('http'):
             # Validate URL to prevent SSRF attacks against local/private networks
@@ -44,7 +44,7 @@ def get_image_base64_from_url(url: str) -> Optional[str]:
             content_type = response.headers.get('Content-Type', 'image/png')
             return f'data:{content_type};base64,{encoded_string}'
         else:
-            file = Files.get_file_by_id(url)
+            file = await Files.get_file_by_id(url)
 
             if not file:
                 return None
@@ -64,13 +64,13 @@ def get_image_base64_from_url(url: str) -> Optional[str]:
         return None
 
 
-def get_image_url_from_base64(request, base64_image_string, metadata, user):
+async def get_image_url_from_base64(request, base64_image_string, metadata, user):
     if BASE64_IMAGE_URL_PREFIX.match(base64_image_string):
         image_url = ''
         # Extract base64 image data from the line
         image_data, content_type = get_image_data(base64_image_string)
         if image_data is not None:
-            _, image_url = upload_image(
+            _, image_url = await upload_image(
                 request,
                 image_data,
                 content_type,
@@ -82,17 +82,26 @@ def get_image_url_from_base64(request, base64_image_string, metadata, user):
     return None
 
 
-def convert_markdown_base64_images(request, content: str, metadata, user):
-    def replace(match):
-        base64_string = match.group(2)
-        MIN_REPLACEMENT_URL_LENGTH = 1024
-        if len(base64_string) > MIN_REPLACEMENT_URL_LENGTH:
-            url = get_image_url_from_base64(request, base64_string, metadata, user)
-            if url:
-                return f'![{match.group(1)}]({url})'
-        return match.group(0)
+async def convert_markdown_base64_images(request, content: str, metadata, user):
+    MIN_REPLACEMENT_URL_LENGTH = 1024
+    result_parts = []
+    last_end = 0
 
-    return MARKDOWN_IMAGE_URL_PATTERN.sub(replace, content)
+    for match in MARKDOWN_IMAGE_URL_PATTERN.finditer(content):
+        result_parts.append(content[last_end:match.start()])
+        base64_string = match.group(2)
+        if len(base64_string) > MIN_REPLACEMENT_URL_LENGTH:
+            url = await get_image_url_from_base64(request, base64_string, metadata, user)
+            if url:
+                result_parts.append(f'![{match.group(1)}]({url})')
+            else:
+                result_parts.append(match.group(0))
+        else:
+            result_parts.append(match.group(0))
+        last_end = match.end()
+
+    result_parts.append(content[last_end:])
+    return ''.join(result_parts)
 
 
 def load_b64_audio_data(b64_str):
@@ -110,7 +119,7 @@ def load_b64_audio_data(b64_str):
         return None, None
 
 
-def upload_audio(request, audio_data, content_type, metadata, user):
+async def upload_audio(request, audio_data, content_type, metadata, user):
     audio_format = mimetypes.guess_extension(content_type)
     file = UploadFile(
         file=io.BytesIO(audio_data),
@@ -119,7 +128,7 @@ def upload_audio(request, audio_data, content_type, metadata, user):
             'content-type': content_type,
         },
     )
-    file_item = upload_file_handler(
+    file_item = await upload_file_handler(
         request,
         file=file,
         metadata=metadata,
@@ -130,13 +139,13 @@ def upload_audio(request, audio_data, content_type, metadata, user):
     return url
 
 
-def get_audio_url_from_base64(request, base64_audio_string, metadata, user):
+async def get_audio_url_from_base64(request, base64_audio_string, metadata, user):
     if 'data:audio/wav;base64' in base64_audio_string:
         audio_url = ''
         # Extract base64 audio data from the line
         audio_data, content_type = load_b64_audio_data(base64_audio_string)
         if audio_data is not None:
-            audio_url = upload_audio(
+            audio_url = await upload_audio(
                 request,
                 audio_data,
                 content_type,
@@ -147,16 +156,16 @@ def get_audio_url_from_base64(request, base64_audio_string, metadata, user):
     return None
 
 
-def get_file_url_from_base64(request, base64_file_string, metadata, user):
+async def get_file_url_from_base64(request, base64_file_string, metadata, user):
     if BASE64_IMAGE_URL_PREFIX.match(base64_file_string):
-        return get_image_url_from_base64(request, base64_file_string, metadata, user)
+        return await get_image_url_from_base64(request, base64_file_string, metadata, user)
     elif 'data:audio/wav;base64' in base64_file_string:
-        return get_audio_url_from_base64(request, base64_file_string, metadata, user)
+        return await get_audio_url_from_base64(request, base64_file_string, metadata, user)
     return None
 
 
-def get_image_base64_from_file_id(id: str) -> Optional[str]:
-    file = Files.get_file_by_id(id)
+async def get_image_base64_from_file_id(id: str) -> Optional[str]:
+    file = await Files.get_file_by_id(id)
     if not file:
         return None
 
