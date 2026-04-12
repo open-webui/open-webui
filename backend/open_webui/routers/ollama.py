@@ -115,6 +115,7 @@ async def send_post_request(
     content_type: Optional[str] = None,
     user: UserModel = None,
     metadata: Optional[dict] = None,
+    extra_headers: Optional[dict] = None,
 ):
     r = None
     streaming = False
@@ -130,6 +131,9 @@ async def send_post_request(
             headers = include_user_info_headers(headers, user)
             if metadata and metadata.get('chat_id'):
                 headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get('chat_id')
+
+        if extra_headers:
+            headers.update(extra_headers)
 
         r = await session.post(
             url,
@@ -1319,14 +1323,26 @@ async def generate_chat_completion(
     if prefix_id:
         payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
 
+    force_url = os.environ.get('FORCE_OLLAMA_BASE_URL')
+    chat_url = f'{force_url}/api/chat' if force_url else f'{url}/api/chat'
+
+    garnet_extra_headers = None
+    if force_url:
+        garnet_entities = request.headers.get('x-garnet-entities', '')
+        garnet_extra_headers = {}
+        if garnet_entities:
+            garnet_extra_headers['x-garnet-entities'] = garnet_entities
+        garnet_extra_headers['x-openai-base-url'] = url
+
     return await send_post_request(
-        url=f'{url}/api/chat',
+        url=chat_url,
         payload=json.dumps(payload),
         stream=form_data.stream,
         key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
         content_type='application/x-ndjson',
         user=user,
         metadata=metadata,
+        extra_headers=garnet_extra_headers,
     )
 
 
