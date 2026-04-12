@@ -65,6 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - 🛡️ **Model description XSS protection.** Model descriptions shown in chat placeholders are now sanitized before rendering, preventing malicious links from executing scripts and helping protect user sessions from takeover. [#23621](https://github.com/open-webui/open-webui/pull/23621)
+- 🔒 **API key endpoint restriction bypass.** API key endpoint restrictions are now enforced regardless of whether the key is sent through Authorization headers, cookies, or "x-api-key", preventing bypass through alternate key transport paths. [#23637](https://github.com/open-webui/open-webui/pull/23637)
 - 🔐 **Channel sharing permission enforcement.** Channel creation and updates now enforce allowed access grant rules for public sharing, preventing unauthorized wildcard sharing on group channels. [#23638](https://github.com/open-webui/open-webui/pull/23638)
 - 🛑 **Socket role invalidation.** Socket sessions now disconnect automatically when a user is demoted or deleted, preventing stale admin privileges from persisting until reconnect. [#23642](https://github.com/open-webui/open-webui/pull/23642)
 - 🛂 **Tool server access checks.** Tool listing now correctly awaits server access checks, preventing users from seeing server-backed tools they do not have permission to use. [Commit](https://github.com/open-webui/open-webui/commit/d40f31982be3eed37e55e3f67b1eea9a5dc8c525)
