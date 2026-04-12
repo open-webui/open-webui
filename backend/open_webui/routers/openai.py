@@ -1159,6 +1159,8 @@ async def generate_chat_completion(
         if logit_bias:
             payload['logit_bias'] = json.loads(logit_bias)
 
+    payload['chat_id'] = (metadata or {}).get('chat_id') or form_data.get('chat_id', '')
+
     headers, cookies = await get_headers_and_cookies(request, url, key, api_config, metadata, user=user)
     real_provider_url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     headers['x-openai-base-url'] = real_provider_url

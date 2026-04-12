@@ -1323,6 +1323,8 @@ async def generate_chat_completion(
     if prefix_id:
         payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
 
+    payload['chat_id'] = (metadata or {}).get('chat_id', '')
+
     force_url = os.environ.get('FORCE_OLLAMA_BASE_URL')
     chat_url = f'{force_url}/api/chat' if force_url else f'{url}/api/chat'
 
