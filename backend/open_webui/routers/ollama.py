@@ -797,10 +797,13 @@ async def show_model_info(request: Request, form_data: ModelNameForm, user=Depen
     form_data = form_data.model_dump(exclude_none=True)
     form_data['model'] = form_data.get('model', form_data.get('name'))
 
+    model = form_data.get('model')
+
+    # Enforce per-model access control
+    check_model_access(user, Models.get_model_by_id(model), BYPASS_MODEL_ACCESS_CONTROL)
+
     await get_all_models(request, user=user)
     models = request.app.state.OLLAMA_MODELS
-
-    model = form_data.get('model')
 
     if model not in models:
         raise HTTPException(
@@ -845,6 +848,9 @@ async def embed(
         raise HTTPException(status_code=503, detail='Ollama API is disabled')
 
     log.info(f'generate_ollama_batch_embeddings {form_data}')
+
+    # Enforce per-model access control
+    check_model_access(user, Models.get_model_by_id(form_data.model), BYPASS_MODEL_ACCESS_CONTROL)
 
     if url_idx is None:
         model = form_data.model
@@ -901,6 +907,9 @@ async def embeddings(
         raise HTTPException(status_code=503, detail='Ollama API is disabled')
 
     log.info(f'generate_ollama_embeddings {form_data}')
+
+    # Enforce per-model access control
+    check_model_access(user, Models.get_model_by_id(form_data.model), BYPASS_MODEL_ACCESS_CONTROL)
 
     if url_idx is None:
         model = form_data.model
@@ -964,11 +973,15 @@ async def generate_completion(
     if not request.app.state.config.ENABLE_OLLAMA_API:
         raise HTTPException(status_code=503, detail='Ollama API is disabled')
 
+    # Enforce per-model access control
+    check_model_access(user, Models.get_model_by_id(form_data.model), BYPASS_MODEL_ACCESS_CONTROL)
+
     if url_idx is None:
         await get_all_models(request, user=user)
         models = request.app.state.OLLAMA_MODELS
 
         model = form_data.model
+
         if model in models:
             url_idx = random.choice(models[model]['urls'])
         else:
