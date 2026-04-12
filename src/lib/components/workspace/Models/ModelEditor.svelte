@@ -285,12 +285,7 @@
 
 			enableDescription = model?.meta?.description !== null;
 
-			console.log('ModelEditor: model.base_model_id =', model.base_model_id);
-
 			if (model.base_model_id) {
-				// Save original before validation potentially nulls it
-				openrouterBaseModelId = model.base_model_id;
-
 				const base_model = $models
 					.filter((m) => !m?.preset && !(m?.arena ?? false))
 					.find((m) => [model.base_model_id, `${model.base_model_id}:latest`].includes(m.id));
@@ -302,8 +297,11 @@
 					openrouterBaseModelId = base_model.id;
 				} else {
 					model.base_model_id = null;
-					// keep openrouterBaseModelId as the raw stored value for endpoint lookup
+					openrouterBaseModelId = model.base_model_id ?? model.id;
 				}
+			} else {
+				// No base_model_id means this IS the base model — use its own ID
+				openrouterBaseModelId = model.id;
 			}
 
 			system = model?.params?.system ?? '';
