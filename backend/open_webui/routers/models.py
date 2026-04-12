@@ -332,6 +332,11 @@ async def import_models(
             return True
         else:
             raise HTTPException(status_code=400, detail='Invalid JSON format')
+    except HTTPException:
+        # Preserve intentional HTTP status codes (e.g. 403 from base-model access
+        # checks, 400 from validation). The broad handler below otherwise masks
+        # them as 500, which misreports authz failures as server errors.
+        raise
     except Exception as e:
         log.exception(e)
         raise HTTPException(status_code=500, detail=str(e))

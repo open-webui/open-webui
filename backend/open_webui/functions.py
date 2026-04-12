@@ -36,7 +36,8 @@ from open_webui.utils.plugin import (
 )
 from open_webui.utils.access_control import check_base_model_access
 
-from open_webui.env import GLOBAL_LOG_LEVEL
+from open_webui.env import GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 
 from open_webui.utils.misc import (
     add_or_update_system_message,
@@ -260,7 +261,12 @@ async def generate_function_chat_completion(request, form_data, user, models: di
     if model_info:
         if model_info.base_model_id:
             form_data['model'] = model_info.base_model_id
-            await check_base_model_access(user, model_info.base_model_id)
+            await check_base_model_access(
+                user,
+                model_info.base_model_id,
+                bypass_filter=BYPASS_MODEL_ACCESS_CONTROL
+                or (isinstance(user, UserModel) and user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL),
+            )
 
         params = model_info.params.model_dump()
 
