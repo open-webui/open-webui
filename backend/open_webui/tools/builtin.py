@@ -2830,6 +2830,11 @@ async def delete_automation(
 # =============================================================================
 
 
+def _read_file_bytes(path: str) -> bytes:
+    with open(path, 'rb') as fh:
+        return fh.read()
+
+
 async def upload_file_to_terminal(
     file_id: str,
     __request__: Request = None,
@@ -2922,7 +2927,11 @@ async def upload_file_to_terminal(
         ):
             return json.dumps({'error': 'File not found'})
 
-        local_path = Storage.get_file(file_record.path)
+        # Storage.get_file and file reads can do sync network/disk I/O for
+        # remote backends (S3/GCS/Azure); offload to a worker thread to keep
+        # the event loop responsive under concurrent chat load.
+        local_path = await asyncio.to_thread(Storage.get_file, file_record.path)
+        file_bytes = await asyncio.to_thread(_read_file_bytes, local_path)
 
         # --- 3. Upload to terminal server ---
         import aiohttp
@@ -2950,25 +2959,24 @@ async def upload_file_to_terminal(
                 f'to {terminal_url}/files/upload?directory={upload_dir}'
             )
 
-            with open(local_path, 'rb') as fh:
-                form_data = aiohttp.FormData()
-                form_data.add_field('file', fh, filename=file_record.filename)
-                async with session.post(
-                    f'{terminal_url}/files/upload',
-                    params={'directory': upload_dir},
-                    data=form_data,
-                    headers=headers,
-                    cookies=cookies,
-                ) as response:
-                    if not (200 <= response.status < 300):
-                        detail = (await response.text())[:500]
-                        return json.dumps(
-                            {'error': f'Upload failed (HTTP {response.status}): {detail}'}
-                        )
-                    try:
-                        result = await response.json()
-                    except Exception:
-                        result = {}
+            form_data = aiohttp.FormData()
+            form_data.add_field('file', file_bytes, filename=file_record.filename)
+            async with session.post(
+                f'{terminal_url}/files/upload',
+                params={'directory': upload_dir},
+                data=form_data,
+                headers=headers,
+                cookies=cookies,
+            ) as response:
+                if not (200 <= response.status < 300):
+                    detail = (await response.text())[:500]
+                    return json.dumps(
+                        {'error': f'Upload failed (HTTP {response.status}): {detail}'}
+                    )
+                try:
+                    result = await response.json()
+                except Exception:
+                    result = {}
 
         return json.dumps(
             {
