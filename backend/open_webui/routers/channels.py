@@ -61,7 +61,7 @@ from open_webui.utils.chat import generate_chat_completion
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.channels import extract_mentions, replace_mentions
 from open_webui.internal.db import get_session
@@ -302,6 +302,14 @@ async def create_new_channel(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
+
+    form_data.access_grants = filter_allowed_access_grants(
+        request.app.state.config.USER_PERMISSIONS,
+        user.id,
+        user.role,
+        form_data.access_grants,
+        'sharing.public_channels',
+    )
 
     try:
         if form_data.type == 'dm':
@@ -629,6 +637,14 @@ async def update_channel_by_id(
 
     if channel.user_id != user.id and user.role != 'admin':
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+
+    form_data.access_grants = filter_allowed_access_grants(
+        request.app.state.config.USER_PERMISSIONS,
+        user.id,
+        user.role,
+        form_data.access_grants,
+        'sharing.public_channels',
+    )
 
     try:
         channel = Channels.update_channel_by_id(id, form_data, db=db)
