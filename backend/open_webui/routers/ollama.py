@@ -1198,10 +1198,11 @@ async def generate_openai_completion(
 
     model_id = form_data.model
     model_info = await Models.get_model_by_id(model_id)
+    base_bypass_filter = getattr(request.state, 'bypass_filter', False) or BYPASS_MODEL_ACCESS_CONTROL
     if model_info:
         if model_info.base_model_id:
             payload['model'] = model_info.base_model_id
-            await check_base_model_access(user, model_info.base_model_id)
+            await check_base_model_access(user, model_info.base_model_id, base_bypass_filter)
         params = model_info.params.model_dump()
 
         if params:
@@ -1261,10 +1262,11 @@ async def generate_openai_chat_completion(
 
     model_id = completion_form.model
     model_info = await Models.get_model_by_id(model_id)
+    base_bypass_filter = getattr(request.state, 'bypass_filter', False) or BYPASS_MODEL_ACCESS_CONTROL
     if model_info:
         if model_info.base_model_id:
             payload['model'] = model_info.base_model_id
-            await check_base_model_access(user, model_info.base_model_id)
+            await check_base_model_access(user, model_info.base_model_id, base_bypass_filter)
 
         params = model_info.params.model_dump()
 
@@ -1322,10 +1324,11 @@ async def generate_anthropic_messages(
     model_id = payload.get('model', '')
 
     model_info = await Models.get_model_by_id(model_id)
+    base_bypass_filter = getattr(request.state, 'bypass_filter', False) or BYPASS_MODEL_ACCESS_CONTROL
     if model_info:
         if model_info.base_model_id:
             payload['model'] = model_info.base_model_id
-            await check_base_model_access(user, model_info.base_model_id)
+            await check_base_model_access(user, model_info.base_model_id, base_bypass_filter)
 
         await check_model_access(user, model_info)
     else:
@@ -1381,10 +1384,11 @@ async def generate_responses(
     model_id = form_data.model
 
     model_info = await Models.get_model_by_id(model_id)
+    base_bypass_filter = getattr(request.state, 'bypass_filter', False) or BYPASS_MODEL_ACCESS_CONTROL
     if model_info:
         if model_info.base_model_id:
             payload['model'] = model_info.base_model_id
-            await check_base_model_access(user, model_info.base_model_id)
+            await check_base_model_access(user, model_info.base_model_id, base_bypass_filter)
 
         # Check if user has access to the model
         if user.role == 'user':
