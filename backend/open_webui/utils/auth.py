@@ -226,6 +226,10 @@ async def is_valid_token(request, decoded) -> bool:
     1. Per-token (jti) — used by user-initiated sign-out (known jti).
     2. Per-user (revoked_at) — used by OIDC back-channel logout when
        individual jti values are unknown; rejects tokens with iat <= revoked_at.
+
+    When Redis is not configured, falls back to a DB-backed token_version
+    counter: tokens whose embedded version is lower than the user's current
+    token_version are rejected.
     """
     if request.app.state.redis:
         # Per-token revocation
@@ -261,8 +265,8 @@ async def invalidate_token(request, token):
     if not decoded:
         return
 
-    # Require Redis to store revoked tokens
     if request.app.state.redis:
+        # Store the revoked token jti in Redis with an expiration time
         jti = decoded.get('jti')
         exp = decoded.get('exp')
 
@@ -270,12 +274,19 @@ async def invalidate_token(request, token):
             ttl = exp - int(datetime.now(UTC).timestamp())  # Calculate time-to-live for the token
 
             if ttl > 0:
-                # Store the revoked token in Redis with an expiration time
                 await request.app.state.redis.set(
                     f'{REDIS_KEY_PREFIX}:auth:token:{jti}:revoked',
                     '1',
                     ex=ttl,
                 )
+    else:
+        # DB-backed fallback: increment token_version to invalidate
+        # all tokens issued before this point.
+        user_id = decoded.get('id')
+        if user_id:
+            result = Users.increment_token_version_by_id(user_id)
+            if result is None:
+                log.warning(f'Failed to increment token_version for user {user_id} during sign-out')
 
 
 def extract_token_from_auth_header(auth_header: str):
@@ -363,6 +374,19 @@ async def get_current_user(
                     detail=ERROR_MESSAGES.INVALID_TOKEN,
                 )
             else:
+                # Reject tokens whose token_version is older than the
+                # user's current version (bumped on sign-out / password
+                # change).  Works with and without Redis.
+                try:
+                    token_version = int(data.get('token_version', 0))
+                except (ValueError, TypeError):
+                    token_version = 0
+                if token_version != user.token_version:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail='Invalid token',
+                    )
+
                 if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
                     trusted_email = request.headers.get(WEBUI_AUTH_TRUSTED_EMAIL_HEADER, '').lower()
                     if trusted_email and user.email != trusted_email:

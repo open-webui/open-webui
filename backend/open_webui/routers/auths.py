@@ -114,7 +114,7 @@ def create_session_response(request: Request, user, db, response: Response = Non
         expires_at = int(time.time()) + int(expires_delta.total_seconds())
 
     token = create_token(
-        data={'id': user.id},
+        data={'id': user.id, 'token_version': user.token_version},
         expires_delta=expires_delta,
     )
 
@@ -295,7 +295,16 @@ async def update_password(
             except Exception as e:
                 raise HTTPException(400, detail=str(e))
             hashed = get_password_hash(form_data.new_password)
-            return Auths.update_user_password_by_id(user.id, hashed, db=db)
+            result = Auths.update_user_password_by_id(user.id, hashed, db=db)
+
+            if result:
+                # Invalidate all existing tokens so sessions using the old
+                # password are forced to re-authenticate.
+                version = Users.increment_token_version_by_id(user.id, db=db)
+                if version is None:
+                    log.warning(f'Password changed for user {user.id} but token invalidation failed')
+
+            return result
         else:
             raise HTTPException(400, detail=ERROR_MESSAGES.INCORRECT_PASSWORD)
     else:
@@ -878,7 +887,7 @@ async def add_user(
             )
 
             expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
-            token = create_token(data={'id': user.id}, expires_delta=expires_delta)
+            token = create_token(data={'id': user.id, 'token_version': user.token_version}, expires_delta=expires_delta)
             return {
                 'token': token,
                 'token_type': 'Bearer',

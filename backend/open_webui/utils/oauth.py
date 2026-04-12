@@ -1598,7 +1598,7 @@ class OAuthManager:
                     )
 
             jwt_token = create_token(
-                data={'id': user.id},
+                data={'id': user.id, 'token_version': user.token_version},
                 expires_delta=parse_duration(auth_manager_config.JWT_EXPIRES_IN),
             )
             if auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT:
@@ -1847,11 +1847,6 @@ class OAuthManager:
 
         # 9. Revoke tokens and delete sessions
         redis = request.app.state.redis
-        if not redis:
-            log.warning(
-                'Back-channel logout: Redis not configured, cannot revoke JWT tokens. '
-                'OAuth sessions will be deleted but existing JWTs will remain valid until expiry.'
-            )
 
         revoked_count = 0
         for user in users_to_logout:
@@ -1867,6 +1862,14 @@ class OAuthManager:
                     ex=60 * 60 * 24 * 30,
                 )
                 revoked_count += 1
+            else:
+                # DB-backed fallback: increment token_version so all
+                # previously issued JWTs for this user become invalid.
+                result = Users.increment_token_version_by_id(user.id, db=db)
+                if result is not None:
+                    revoked_count += 1
+                else:
+                    log.warning(f'Back-channel logout: failed to increment token_version for user {user.id}')
 
             log.info(
                 f'Back-channel logout: revoked sessions for user {user.id} '

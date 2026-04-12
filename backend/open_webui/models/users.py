@@ -75,6 +75,8 @@ class User(Base):
     oauth = Column(JSON, nullable=True)
     scim = Column(JSON, nullable=True)
 
+    token_version = Column(BigInteger, nullable=False, server_default='0')
+
     last_active_at = Column(BigInteger)
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
@@ -107,6 +109,8 @@ class UserModel(BaseModel):
 
     oauth: Optional[dict] = None
     scim: Optional[dict] = None
+
+    token_version: int = 0
 
     last_active_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
@@ -585,6 +589,21 @@ class UsersTable:
                 db.refresh(user)
                 return UserModel.model_validate(user)
         except Exception:
+            return None
+
+    def increment_token_version_by_id(self, id: str, db: Optional[Session] = None) -> Optional[int]:
+        """Increment the user's token_version, invalidating all previously issued JWTs."""
+        try:
+            with get_db_context(db) as db:
+                db.query(User).filter_by(id=id).update(
+                    {'token_version': User.token_version + 1}
+                )
+                db.commit()
+                user = db.query(User).filter_by(id=id).first()
+                return user.token_version if user else None
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f'Failed to increment token_version for user {id}: {e}')
             return None
 
     @throttle(DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL)
