@@ -2965,7 +2965,10 @@ async def upload_file_to_terminal(
                         return json.dumps(
                             {'error': f'Upload failed (HTTP {response.status}): {detail}'}
                         )
-                    result = await response.json()
+                    try:
+                        result = await response.json()
+                    except Exception:
+                        result = {}
 
         return json.dumps(
             {
