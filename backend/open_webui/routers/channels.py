@@ -467,6 +467,9 @@ async def get_channel_members_by_id(
     if channel.type in ['group', 'dm']:
         if not Channels.is_user_channel_member(channel.id, user.id, db=db):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+    else:
+        if user.role != 'admin' and not channel_has_access(user.id, channel, permission='read', db=db):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
     if channel.type == 'dm':
         user_ids = [member.user_id for member in Channels.get_members_by_channel_id(channel.id, db=db)]
