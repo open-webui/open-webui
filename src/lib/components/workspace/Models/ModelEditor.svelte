@@ -899,13 +899,11 @@
 						</div>
 					</div>
 
-					{#if info.base_model_id}
-						<OpenRouterProviderSelector
-							baseModelId={info.base_model_id}
-							bind:providerOnly={openrouterProviderOnly}
-							bind:providerOrder={openrouterProviderOrder}
-						/>
-					{/if}
+					<OpenRouterProviderSelector
+						baseModelId={info.base_model_id ?? ''}
+						bind:providerOnly={openrouterProviderOnly}
+						bind:providerOrder={openrouterProviderOrder}
+					/>
 
 					{#if !capabilities.vision}
 						<div class="my-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-950">
