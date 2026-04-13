@@ -8,6 +8,7 @@ from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.users import Users, UserResponse
 from open_webui.models.groups import Groups
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
+from open_webui.utils.valve_encryption import decrypt_user_valves, encrypt_user_valves
 
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import BigInteger, Column, String, Text
@@ -244,7 +245,8 @@ class ToolsTable:
             if 'valves' not in user_settings['tools']:
                 user_settings['tools']['valves'] = {}
 
-            return user_settings['tools']['valves'].get(id, {})
+            stored = user_settings['tools']['valves'].get(id, {})
+            return decrypt_user_valves(stored)
         except Exception as e:
             log.exception(f'Error getting user values by id {id} and user_id {user_id}: {e}')
             return None
@@ -262,12 +264,12 @@ class ToolsTable:
             if 'valves' not in user_settings['tools']:
                 user_settings['tools']['valves'] = {}
 
-            user_settings['tools']['valves'][id] = valves
+            user_settings['tools']['valves'][id] = encrypt_user_valves(valves)
 
             # Update the user settings in the database
             await Users.update_user_by_id(user_id, {'settings': user_settings}, db=db)
 
-            return user_settings['tools']['valves'][id]
+            return valves
         except Exception as e:
             log.exception(f'Error updating user valves by id {id} and user_id {user_id}: {e}')
             return None
