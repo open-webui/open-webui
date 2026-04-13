@@ -1293,13 +1293,38 @@ def get_available_models(request: Request) -> list[dict]:
         # Use custom endpoint if not using the official OpenAI API URL
         if not request.app.state.config.TTS_OPENAI_API_BASE_URL.startswith('https://api.openai.com'):
             try:
-                response = requests.get(
-                    f'{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/models',
-                    timeout=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
-                )
-                response.raise_for_status()
+                try:
+                    response = requests.get(
+                        f'{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/models',
+                        timeout=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
+                    )
+                    response.raise_for_status()
+                except Exception:
+                    response = requests.get(
+                        f'{request.app.state.config.TTS_OPENAI_API_BASE_URL}/models',
+                        timeout=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
+                    )
+                    response.raise_for_status()
+
                 data = response.json()
-                available_models = data.get('models', [])
+                if isinstance(data, dict):
+                    models_list = data.get('models', data.get('data', []))
+                elif isinstance(data, list):
+                    models_list = data
+                else:
+                    models_list = []
+
+                if isinstance(models_list, dict):
+                    models_list = [{'id': k, 'name': str(v)} for k, v in models_list.items()]
+                elif not isinstance(models_list, list):
+                    models_list = [models_list]
+
+                available_models = []
+                for model in models_list:
+                    if isinstance(model, dict):
+                        available_models.append(model)
+                    elif isinstance(model, str) and model.strip():
+                        available_models.append({'id': model})
             except Exception as e:
                 log.error(f'Error fetching models from custom endpoint: {str(e)}')
                 available_models = [{'id': 'tts-1'}, {'id': 'tts-1-hd'}]
@@ -1344,8 +1369,29 @@ def get_available_voices(request) -> dict:
                 )
                 response.raise_for_status()
                 data = response.json()
-                voices_list = data.get('voices', [])
-                available_voices = {voice['id']: voice['name'] for voice in voices_list}
+
+                if isinstance(data, dict):
+                    voices_list = data.get('voices', data.get('data', []))
+                elif isinstance(data, list):
+                    voices_list = data
+                else:
+                    voices_list = []
+
+                if isinstance(voices_list, dict):
+                    available_voices = voices_list
+                else:
+                    if not isinstance(voices_list, list):
+                        voices_list = [voices_list]
+
+                    available_voices = {}
+                    for voice in voices_list:
+                        if isinstance(voice, dict):
+                            voice_id = voice.get('id') or voice.get('voice_id') or ''
+                            voice_name = voice.get('name') or voice_id
+                            if voice_id:
+                                available_voices[voice_id] = voice_name
+                        elif isinstance(voice, str):
+                            available_voices[voice] = voice
             except Exception as e:
                 log.error(f'Error fetching voices from custom endpoint: {str(e)}')
                 available_voices = {
