@@ -53,6 +53,18 @@
 
 	let messages = [];
 
+	// 🫧 BUBBLEAI: Плавающие подсказки
+	let showHint = true;
+	let hintText = '💡 Нажмите 🎤, чтобы надиктовать сообщение';
+	let hintDismissed = false;
+	const hints = [
+		'💡 Нажмите 🎤, чтобы надиктовать сообщение',
+		'📎 Прикрепите файл — я проанализирую его содержимое',
+		'🔄 Я сам подберу модель под вашу задачу',
+		'💾 Вся история сохраняется, контекст не теряется',
+		'🌐 Напишите "найди в интернете" для веб-поиска'
+	];
+
 	const scrollToBottom = () => {
 		const element = messagesContainerElement;
 
@@ -185,6 +197,10 @@
 			message = '';
 			await tick();
 			scrollToBottom();
+			
+			// 🫧 Скрыть подсказку после первого действия пользователя
+			hintDismissed = true;
+			showHint = false;
 		}
 	};
 
@@ -301,12 +317,27 @@
 			selectedModelId = '';
 		}
 		loaded = true;
+
+		// 🫧 BUBBLEAI: Ротация подсказок
+		let index = 0;
+		const interval = setInterval(() => {
+			if (!hintDismissed) {
+				showHint = false;
+				setTimeout(() => {
+					index = (index + 1) % hints.length;
+					hintText = hints[index];
+					showHint = true;
+				}, 300);
+			}
+		}, 6000);
+		
+		return () => clearInterval(interval);
 	});
 </script>
 
-<div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
+<div class="flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full relative">
-		<div class=" flex flex-col h-full px-3.5">
+		<div class="flex flex-col h-full px-3.5">
 			<div class="flex w-full items-center gap-1.5">
 				<Collapsible
 					className="w-full flex-1"
@@ -315,12 +346,12 @@
 					grow={true}
 				>
 					<div class="flex gap-2 justify-between items-center">
-						<div class=" shrink-0 font-medium ml-1.5">
+						<div class="shrink-0 font-medium ml-1.5">
 							{$i18n.t('System Instructions')}
 						</div>
 
 						{#if !showSystem && system.trim()}
-							<div class=" flex-1 text-gray-500 line-clamp-1">
+							<div class="flex-1 text-gray-500 line-clamp-1">
 								{system}
 							</div>
 						{/if}
@@ -399,11 +430,11 @@
 			</div>
 
 			<div
-				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
+				class="pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
 				id="messages-container"
 				bind:this={messagesContainerElement}
 			>
-				<div class=" h-full w-full flex flex-col">
+				<div class="h-full w-full flex flex-col">
 					<div class="flex-1 p-1">
 						<Messages bind:messages />
 					</div>
@@ -419,7 +450,7 @@
 						<!-- $i18n.t('an assistant') -->
 						<textarea
 							bind:value={message}
-							class=" w-full h-full bg-transparent resize-none outline-hidden text-sm"
+							class="w-full h-full bg-transparent resize-none outline-hidden text-sm"
 							placeholder={$i18n.t(`Enter {{role}} message here`, {
 								role: role === 'user' ? $i18n.t('a user') : $i18n.t('an assistant')
 							})}
@@ -464,7 +495,7 @@
 						<div class="flex items-center justify-between gap-2 w-full sm:w-auto">
 							<div class="flex-1">
 								<select
-									class=" bg-transparent border border-gray-100/30 dark:border-gray-850/30 rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden w-full"
+									class="bg-transparent border border-gray-100/30 dark:border-gray-850/30 rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden w-full"
 									bind:value={selectedModelId}
 								>
 									{#each $models as model}
@@ -513,4 +544,11 @@
 			</div>
 		</div>
 	</div>
+
+	<!-- 🫧 BUBBLEAI: Плавающая подсказка -->
+	{#if showHint && !loading && !hintDismissed}
+		<div class="bubble-hint">
+			{hintText}
+		</div>
+	{/if}
 </div>
