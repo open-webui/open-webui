@@ -91,6 +91,11 @@ class ERROR_MESSAGES(str, Enum):
 
     INVALID_PASSWORD = lambda err='': err if err else 'The password does not meet the required validation criteria.'
 
+    AUTOMATION_LIMIT_REACHED = lambda max_count='': f'Automation limit reached ({max_count})'
+    AUTOMATION_SCHEDULE_TOO_FREQUENT = (
+        lambda min_interval='': f'Schedule too frequent. Minimum interval is {min_interval} seconds.'
+    )
+
 
 class TASKS(str, Enum):
     def __str__(self) -> str:
