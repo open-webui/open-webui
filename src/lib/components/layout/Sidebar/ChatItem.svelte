@@ -406,7 +406,8 @@
 				? 'bg-gray-100 dark:bg-gray-900 selected'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950 selected'
-					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+					: 'active:bg-gray-100 dark:active:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+			style="-webkit-tap-highlight-color: transparent;"
 			href="/c/{id}"
 			on:click={() => {
 				dispatch('select');

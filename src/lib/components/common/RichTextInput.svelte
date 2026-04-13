@@ -105,6 +105,7 @@
 
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
+	import { mobile } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 	const eventDispatch = createEventDispatcher();
@@ -767,7 +768,7 @@
 				...(collaboration && provider ? [provider.getEditorExtension()] : [])
 			],
 			content: collaboration ? undefined : content,
-			autofocus: messageInput ? true : false,
+			autofocus: messageInput && !$mobile ? true : false,
 			onTransaction: () => {
 				// force re-render so `editor.isActive` works as expected
 				editor = editor;

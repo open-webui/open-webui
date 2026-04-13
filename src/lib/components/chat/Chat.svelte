@@ -106,6 +106,7 @@
 
 	export let chatIdProp = '';
 	export let preloadedData = null;
+	export let preloadedDataPromise: Promise<any> | null = null;
 
 	let loading = true;
 
@@ -445,8 +446,10 @@
 				} catch (e) {}
 			}
 
-			const chatInput = document.getElementById('chat-input');
-			chatInput?.focus();
+			if (!$mobile) {
+				const chatInput = document.getElementById('chat-input');
+				chatInput?.focus();
+			}
 		} else {
 			await goto('/');
 		}
@@ -1117,8 +1120,10 @@
 			}
 		});
 
-		const chatInput = document.getElementById('chat-input');
-		chatInput?.focus();
+		if (!$mobile) {
+			const chatInput = document.getElementById('chat-input');
+			chatInput?.focus();
+		}
 	});
 
 	onDestroy(() => {
@@ -1495,8 +1500,10 @@
 			selectedToolIds = $settings.defaultToolIds;
 		}
 
-		const chatInput = document.getElementById('chat-input');
-		setTimeout(() => chatInput?.focus(), 0);
+		if (!$mobile) {
+			const chatInput = document.getElementById('chat-input');
+			setTimeout(() => chatInput?.focus(), 0);
+		}
 	};
 
 	const loadChat = async () => {
@@ -1514,13 +1521,28 @@
 
 		let _chat, _taskRes;
 
-		if (preloadedData && preloadedData.chatId === currentChatId && preloadedData.chat) {
+		if (preloadedDataPromise) {
+			const resolved = await preloadedDataPromise;
+			preloadedDataPromise = null;
+			if (resolved && resolved.chatId === currentChatId && resolved.chat) {
+				_chat = resolved.chat;
+				_taskRes = resolved.taskRes;
+			} else {
+				[_chat, _taskRes] = await Promise.all([
+					getChatById(localStorage.token, currentChatId).catch(async (error) => {
+						await goto('/');
+						return null;
+					}),
+					getTaskIdsByChatId(localStorage.token, currentChatId).catch((error) => {
+						return null;
+					})
+				]);
+			}
+		} else if (preloadedData && preloadedData.chatId === currentChatId && preloadedData.chat) {
 			_chat = preloadedData.chat;
 			_taskRes = preloadedData.taskRes;
-			// Clear preloadedData so subsequent loads (like manual refresh) hit the network
 			preloadedData = null;
 		} else {
-			// Parallelize network requests for much faster chat loading
 			[_chat, _taskRes] = await Promise.all([
 				getChatById(localStorage.token, currentChatId).catch(async (error) => {
 					await goto('/');
@@ -2234,9 +2256,12 @@
 			history.messages[messages.at(-1).id].childrenIds.push(userMessageId);
 		}
 
-		// focus on chat input
 		const chatInput = document.getElementById('chat-input');
-		chatInput?.focus();
+		if ($mobile) {
+			chatInput?.blur();
+		} else {
+			chatInput?.focus();
+		}
 
 		saveSessionSelectedModels();
 
@@ -2636,7 +2661,21 @@
 								_chatId
 							);
 
+							// Wait for response to actually complete (handles socket-based delivery
+							// where sendMessageSocket returns before the response arrives)
+							while (generating) {
+								const msg = history.messages[responseMessageId];
+								if (msg?.done || msg?.error) break;
+								await new Promise((r) => setTimeout(r, 100));
+							}
+
 							suppressErrorToast = false;
+
+							// Sync from reactive history back to _history (socket handler writes to history, not _history)
+							const completedMsg = history.messages[responseMessageId];
+							if (completedMsg) {
+								_history.messages[responseMessageId] = structuredClone(completedMsg);
+							}
 							responseMessage = _history.messages[responseMessageId];
 
 							if (!responseMessage.error) break;
@@ -3312,7 +3351,20 @@
 					{ stripProvider: true }
 				);
 
+				// Wait for response to actually complete (socket-based delivery)
+				while (generating) {
+					const msg = history.messages[message.id];
+					if (msg?.done || msg?.error) break;
+					await new Promise((r) => setTimeout(r, 100));
+				}
+
 				suppressErrorToast = false;
+
+				// Sync from reactive history back to _history
+				const completedMsg = history.messages[message.id];
+				if (completedMsg) {
+					_history.messages[message.id] = structuredClone(completedMsg);
+				}
 				responseMessage = _history.messages[message.id];
 
 				if (!responseMessage.error) break;
@@ -4191,9 +4243,25 @@
 			</PaneGroup>
 		</div>
 	{:else if loading}
-		<div class=" flex items-center justify-center h-full w-full">
-			<div class="m-auto">
-				<Spinner className="size-5" />
+		<div class="flex flex-col h-full w-full">
+			<div class="flex items-center w-full px-4 h-12">
+				<div class="h-5 w-48 bg-gray-200 dark:bg-gray-800 rounded animate-pulse mx-auto"></div>
+			</div>
+			<div class="flex flex-col flex-1 overflow-hidden px-6 pt-4 gap-6">
+				{#each Array(3) as _, i}
+					<div class="flex gap-3 {i % 2 === 1 ? 'justify-end' : ''}">
+						{#if i % 2 === 0}
+							<div class="size-7 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse flex-shrink-0"></div>
+						{/if}
+						<div class="flex flex-col gap-1.5 {i % 2 === 1 ? 'items-end' : ''}" style="max-width: 65%;">
+							<div class="h-3.5 rounded bg-gray-200 dark:bg-gray-800 animate-pulse" style="width: {120 + i * 40}px"></div>
+							<div class="h-3.5 rounded bg-gray-200 dark:bg-gray-800 animate-pulse" style="width: {180 + i * 20}px"></div>
+						</div>
+					</div>
+				{/each}
+			</div>
+			<div class="px-4 pb-4">
+				<div class="h-12 rounded-xl bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
 			</div>
 		</div>
 	{/if}

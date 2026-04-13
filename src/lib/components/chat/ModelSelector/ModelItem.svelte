@@ -46,10 +46,11 @@
 <button
 	aria-roledescription="model-item"
 	aria-label={item.label}
-	class="flex group/item w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl cursor-pointer data-highlighted:bg-muted {index ===
+	class="flex group/item w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 rounded-xl cursor-pointer data-highlighted:bg-muted active:bg-gray-100 dark:active:bg-gray-800 {index ===
 	selectedModelIdx
-		? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
+		? 'bg-gray-100 dark:bg-gray-800'
 		: ''}"
+	style="-webkit-tap-highlight-color: transparent;"
 	data-arrow-selected={index === selectedModelIdx}
 	data-value={item.value}
 	on:click={() => {
@@ -281,3 +282,14 @@
 		{/if}
 	</div>
 </button>
+
+<style>
+	@media (hover: hover) {
+		button[aria-roledescription='model-item']:hover {
+			background-color: rgb(243 244 246); /* bg-gray-100 */
+		}
+		:global(.dark) button[aria-roledescription='model-item']:hover {
+			background-color: rgb(31 41 55); /* bg-gray-800 */
+		}
+	}
+</style>

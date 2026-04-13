@@ -83,29 +83,6 @@
 		}
 	};
 
-	const setUserSettings = async (cb: () => Promise<void>) => {
-		let userSettings = await getUserSettings(localStorage.token).catch((error) => {
-			console.error(error);
-			return null;
-		});
-
-		if (!userSettings) {
-			try {
-				userSettings = JSON.parse(localStorage.getItem('settings') ?? '{}');
-			} catch (e: unknown) {
-				console.error('Failed to parse settings from localStorage', e);
-				userSettings = {};
-			}
-		}
-
-		if (userSettings?.ui) {
-			settings.set(userSettings.ui);
-		}
-
-		if (cb) {
-			await cb();
-		}
-	};
 
 	const setModels = async () => {
 		models.set(
@@ -153,12 +130,26 @@
 
 		clearChatInputStorage();
 
-		// Load user settings first (needed for Chat component), then render immediately
-		await setUserSettings(async () => {});
+		// SWR: Apply cached settings immediately so <slot/> renders without delay
+		try {
+			const cachedSettings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+			if (cachedSettings?.ui) {
+				settings.set(cachedSettings.ui);
+			}
+		} catch (e) {}
+
 		loaded = true;
 
-		// Load everything else in parallel — non-blocking, stores update reactively
+		// Background: fetch fresh settings + everything else in parallel
 		Promise.all([
+			getUserSettings(localStorage.token)
+				.then((userSettings) => {
+					if (userSettings?.ui) {
+						settings.set(userSettings.ui);
+						localStorage.setItem('settings', JSON.stringify(userSettings));
+					}
+				})
+				.catch((e) => console.error('Failed to fetch user settings', e)),
 			checkLocalDBChats(),
 			setBanners(),
 			setTools(),

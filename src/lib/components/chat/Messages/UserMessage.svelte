@@ -360,12 +360,38 @@
 						</button>
 					</div>
 
-					<div class="max-h-96 overflow-auto">
+					<!-- svelte-ignore a11y-no-static-element-interactions -->
+					<div
+						class="max-h-96 overflow-auto"
+						on:dragover|preventDefault
+						on:drop|preventDefault={async (e) => {
+							if (e.dataTransfer?.files?.length) {
+								await addFilesToEdit(e.dataTransfer.files);
+							}
+						}}
+					>
 						<textarea
 							id="message-edit-{message.id}"
 							bind:this={messageEditTextAreaElement}
 							class=" bg-transparent outline-hidden w-full resize-none"
 							bind:value={editedContent}
+							on:paste={async (e) => {
+								const items = e.clipboardData?.items;
+								if (!items) return;
+								const imageFiles = [];
+								for (const item of items) {
+									if (item.type.startsWith('image/')) {
+										const file = item.getAsFile();
+										if (file) imageFiles.push(file);
+									}
+								}
+								if (imageFiles.length > 0) {
+									e.preventDefault();
+									const dt = new DataTransfer();
+									imageFiles.forEach((f) => dt.items.add(f));
+									await addFilesToEdit(dt.files);
+								}
+							}}
 							on:input={(e) => {
 								e.target.style.height = '';
 								e.target.style.height = `${e.target.scrollHeight}px`;
