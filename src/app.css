@@ -1,5 +1,55 @@
 @reference "./tailwind.css";
+/* this root and .dark define custom Clinica Colors*/
+:root {
+  /* Background (your requirement) */
+  --color-gray-50: #F4F1E6;   /* creamy background */
+  
+  /* Light neutrals */
+  --color-gray-100: #E8E4D6;
+  --color-gray-200: #D6D0BE;
 
+  /* Muted UI */
+  --color-gray-300: #B8B2A3;
+  --color-gray-400: #9C9688;
+
+  /* Text */
+  --color-gray-500: #7F7A6E;
+  --color-gray-600: #5F5B52;
+
+  /* Dark UI elements */
+  --color-gray-700: #3F4F6B;
+  --color-gray-800: #2C3E5A;
+
+  /* Primary dark (from logo outline) */
+  --color-gray-850: #1F3552;
+  --color-gray-900: #162B46;
+  --color-gray-950: #0F1E33;
+
+  /* Brand colors */
+  --color-primary: #1F3A5F;   /* navy from bottle */
+  --color-accent: #6EC1E4;    /* light blue sparkle */
+}
+.dark {
+  --color-gray-50: #0F1E33;
+  --color-gray-100: #162B46;
+  --color-gray-200: #1F3552;
+
+  --color-gray-300: #2C3E5A;
+  --color-gray-400: #3F4F6B;
+
+  --color-gray-500: #5F5B52;
+  --color-gray-600: #9C9688;
+
+  --color-gray-700: #B8B2A3;
+  --color-gray-800: #D6D0BE;
+
+  --color-gray-850: #E8E4D6;
+  --color-gray-900: #F4F1E6;
+  --color-gray-950: #FFFFFF;
+
+  --color-primary: #4A6FA5;  /* softened blue for dark mode */
+  --color-accent: #8ED8F8;   /* brighter accent */
+}
 @font-face {
 	font-family: 'Inter';
 	src: url('/assets/fonts/Inter-Variable.ttf');
@@ -686,13 +736,13 @@ input[type='number'] {
 }
 
 body {
-	background: #fff;
-	color: #000;
+	background: #F4F1E6;
+	color: #0F1E33;
 }
 
 .dark body {
-	background: #171717;
-	color: #eee;
+	background: #0F1E33;
+	color: #F4F1E6;
 }
 
 /* Position the handle relative to each LI */
@@ -806,4 +856,16 @@ body {
 
 #note-content-container .ProseMirror {
 	padding-bottom: 2rem; /* space for the bottom toolbar */
+}
+
+.bg_white {
+	background-color: #E8E4D6 !important;
+}
+
+.bg-gray-50 {
+  background-color: #F4F1E6 !important;
+}
+
+.bg-gray-100 {
+  background-color: #E8E4D6 !important;
 }

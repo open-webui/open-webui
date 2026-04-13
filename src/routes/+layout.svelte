@@ -898,17 +898,20 @@
 {/if}
 
 {#if loaded}
-	{#if $isApp}
-		<div class="flex flex-row h-screen">
-			<AppSidebar />
+  <div class="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-50">
+    {#if $isApp}
+      <div class="flex flex-row h-screen">
+        <AppSidebar />
 
-			<div class="w-full flex-1 max-w-[calc(100%-4.5rem)]">
-				<slot />
-			</div>
-		</div>
-	{:else}
-		<slot />
-	{/if}
+        <div class="w-full flex-1 max-w-[calc(100%-4.5rem)]">
+          <slot />
+        </div>
+      </div>
+    {:else}
+      <slot />
+    {/if}
+  </div>
+
 {/if}
 
 {#if $config?.features.enable_community_sharing}
