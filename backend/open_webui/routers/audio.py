@@ -1344,8 +1344,25 @@ def get_available_voices(request) -> dict:
                 )
                 response.raise_for_status()
                 data = response.json()
-                voices_list = data.get('voices', [])
-                available_voices = {voice['id']: voice['name'] for voice in voices_list}
+                if isinstance(data, dict):
+                    voices_list = data.get('voices', data.get('data', []))
+                elif isinstance(data, list):
+                    voices_list = data
+                else:
+                    voices_list = []
+
+                if not isinstance(voices_list, list):
+                    voices_list = [voices_list]
+
+                available_voices = {}
+                for voice in voices_list:
+                    if isinstance(voice, dict):
+                        voice_id = voice.get('id', voice.get('voice_id', ''))
+                        voice_name = voice.get('name', voice_id)
+                        if voice_id:
+                            available_voices[voice_id] = voice_name
+                    elif isinstance(voice, str):
+                        available_voices[voice] = voice
             except Exception as e:
                 log.error(f'Error fetching voices from custom endpoint: {str(e)}')
                 available_voices = {
