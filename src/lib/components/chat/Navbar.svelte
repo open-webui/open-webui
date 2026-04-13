@@ -136,6 +136,12 @@
 											await temporaryChatEnabled.set(!$temporaryChatEnabled);
 										}
 
+										// Preserve current state so initNewChat picks it up
+										if (selectedModels && selectedModels.length > 0 && selectedModels[0] !== '') {
+											sessionStorage.setItem('selectedModels', JSON.stringify(selectedModels));
+										}
+										sessionStorage.setItem('tempChatPreserveState', 'true');
+
 										await goto('/');
 
 										// add 'temporary-chat=true' to the URL

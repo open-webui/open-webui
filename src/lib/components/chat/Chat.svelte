@@ -1435,6 +1435,13 @@
 
 		autoScroll = true;
 
+		// Check if we should preserve state (from temp chat toggle)
+		const preserveState = sessionStorage.getItem('tempChatPreserveState');
+		const preservedWebSearch = preserveState ? webSearchEnabled : false;
+		if (preserveState) {
+			sessionStorage.removeItem('tempChatPreserveState');
+		}
+
 		resetInput();
 		await chatId.set('');
 		await chatTitle.set('');
@@ -1514,6 +1521,14 @@
 		// Load persistent tool preferences from already-loaded settings store
 		if ($settings?.defaultToolIds) {
 			selectedToolIds = $settings.defaultToolIds;
+		}
+
+		// Restore preserved state from temp chat toggle
+		if (preserveState && preservedWebSearch) {
+			const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
+			if (model?.info?.meta?.capabilities?.web_search ?? true) {
+				webSearchEnabled = true;
+			}
 		}
 
 		if (!$mobile) {
@@ -4094,8 +4109,9 @@
 
 							<!-- Token Usage Display -->
 							{#if relevantGroups.length > 0}
-								<div class="px-4 pb-2">
-									<div class="bg-gray-50 dark:bg-gray-850 rounded-lg p-3 text-xs">
+								<div class="mx-auto inset-x-0 flex justify-center w-full">
+									<div class="px-3 pb-2 w-full {($settings?.widescreenMode ?? null) ? 'max-w-full' : 'max-w-6xl'}">
+										<div class="bg-gray-50 dark:bg-gray-850 rounded-lg p-3 text-xs">
 										{#each relevantGroups as [groupName, groupData]}
 											{@const effectiveUsage = groupData.effectiveUsage}
 											{@const isOverLimit =
@@ -4124,6 +4140,7 @@
 										{/each}
 									</div>
 								</div>
+							</div>
 							{/if}
 
 							<div class=" pb-2">
@@ -4188,7 +4205,41 @@
 								</div>
 							</div>
 						{:else}
-							<div class="flex items-center h-full">
+							<div class="flex flex-col items-center h-full">
+								{#if relevantGroups.length > 0}
+									<div class="mx-auto inset-x-0 flex justify-center w-full flex-none">
+										<div class="px-3 pb-2 w-full {($settings?.widescreenMode ?? null) ? 'max-w-full' : 'max-w-6xl'}">
+											<div class="bg-gray-50 dark:bg-gray-850 rounded-lg p-3 text-xs">
+												{#each relevantGroups as [groupName, groupData]}
+													{@const effectiveUsage = groupData.effectiveUsage}
+													{@const isOverLimit =
+														groupData.limit && effectiveUsage.total > groupData.limit}
+													<div class="flex items-center justify-between mb-1 last:mb-0">
+														<span
+															class="font-medium {isOverLimit
+																? 'text-red-600 dark:text-red-400'
+																: 'text-gray-700 dark:text-gray-300'}">{groupName}</span
+														>
+														<div
+															class="flex items-center space-x-2 {isOverLimit
+																? 'text-red-600 dark:text-red-400'
+																: 'text-gray-600 dark:text-gray-400'}"
+														>
+															<span>{effectiveUsage.in.toLocaleString()} IN</span>
+															<span>·</span>
+															<span>{effectiveUsage.out.toLocaleString()} OUT</span>
+															<span>·</span>
+															<span>{effectiveUsage.total.toLocaleString()} TOTAL</span>
+															{#if groupData.limit}
+																<span>/ {groupData.limit.toLocaleString()}</span>
+															{/if}
+														</div>
+													</div>
+												{/each}
+											</div>
+										</div>
+									</div>
+								{/if}
 								<Placeholder
 									{history}
 									{selectedModels}
