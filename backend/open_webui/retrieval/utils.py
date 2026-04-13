@@ -11,7 +11,6 @@ import time
 import re
 
 from urllib.parse import quote
-from huggingface_hub import snapshot_download
 from langchain_classic.retrievers import (
     ContextualCompressionRetriever,
     EnsembleRetriever,
@@ -1184,6 +1183,8 @@ async def get_sources_from_items(
 
 
 def get_model_path(model: str, update_model: bool = False):
+    from huggingface_hub import snapshot_download
+
     # Construct huggingface_hub kwargs with local_files_only to return the snapshot path
     cache_dir = os.getenv('SENTENCE_TRANSFORMERS_HOME')
 

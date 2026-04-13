@@ -1,5 +1,6 @@
 fastapi==0.135.1
 uvicorn[standard]==0.41.0
+typer==0.20.0
 pydantic==2.12.5
 python-multipart==0.0.22
 itsdangerous==2.2.0
@@ -48,9 +49,6 @@ langchain-text-splitters==1.1.1
 
 fake-useragent==2.2.0
 
-transformers==5.3.0
-sentence-transformers==5.2.3
-accelerate==1.13.0
 pyarrow==20.0.0
 einops==0.8.2
 
@@ -65,13 +63,8 @@ validators==0.35.0
 psutil==7.2.2
 sentencepiece==0.2.1
 pillow==12.1.1
-opencv-python-headless==4.13.0.92
-rapidocr-onnxruntime==1.4.4
 rank-bm25==0.2.2
-onnxruntime==1.24.3
 
 psycopg2-binary==2.9.11
 pgvector==0.4.2
 boto3==1.42.62
-
-colbert-ai==0.2.22
