@@ -2054,13 +2054,16 @@ async def convert_url_images_to_base64(form_data):
                 continue
 
             try:
-                base64_data = await asyncio.to_thread(get_image_base64_from_url, image_url)
-                new_content.append(
-                    {
-                        'type': 'image_url',
-                        'image_url': {'url': base64_data},
-                    }
-                )
+                base64_data = await get_image_base64_from_url(image_url)
+                if base64_data:
+                    new_content.append(
+                        {
+                            'type': 'image_url',
+                            'image_url': {'url': base64_data},
+                        }
+                    )
+                else:
+                    new_content.append(item)
             except Exception as e:
                 log.debug(f'Error converting image URL to base64: {e}')
                 new_content.append(item)
