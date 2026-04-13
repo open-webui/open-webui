@@ -712,7 +712,12 @@
 			return;
 		}
 		if (event.type === 'query' && (event.data?.query || event.data?.files?.length)) {
-			desktopEvent.set({ query: event.data.query, files: event.data.files });
+			desktopEvent.set(event);
+			await goto('/');
+			return;
+		}
+		if (event.type === 'call') {
+			desktopEvent.set(event);
 			await goto('/');
 			return;
 		}
@@ -723,7 +728,8 @@
 
 			// Apply theme classes (mirrors logic from chat/Settings/General.svelte)
 			const themes = ['dark', 'light', 'oled-dark'];
-			let themeToApply = newTheme === 'oled-dark' ? 'dark' : newTheme === 'her' ? 'light' : newTheme;
+			let themeToApply =
+				newTheme === 'oled-dark' ? 'dark' : newTheme === 'her' ? 'light' : newTheme;
 			if (newTheme === 'system') {
 				themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 			}
@@ -981,6 +987,16 @@
 							await config.set(await getBackendConfig());
 						} catch (error) {
 							console.error('Error refreshing backend config:', error);
+						}
+
+						// Relay auth token to desktop app for API access
+						if (window.electronAPI?.send) {
+							window.electronAPI
+								.send({
+									type: 'token:update',
+									token: localStorage.token
+								})
+								.catch(() => {});
 						}
 					} else {
 						// Redirect Invalid Session User to /auth Page

@@ -116,8 +116,8 @@ export const temporaryChatEnabled = writable(false);
 // Set by +layout.svelte, consumed and cleared by Chat.svelte.
 export type DesktopEventFile = { name: string; mimeType: string; dataUrl: string };
 export type DesktopEvent = {
-	query?: string;
-	files?: DesktopEventFile[];
+	type: string;
+	data?: any;
 };
 export const desktopEvent: Writable<DesktopEvent | null> = writable(null);
 export const scrollPaginationEnabled = writable(false);

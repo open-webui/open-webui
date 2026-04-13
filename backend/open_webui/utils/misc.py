@@ -905,9 +905,11 @@ async def cleanup_response(
     session: Optional[aiohttp.ClientSession],
 ):
     if response:
-        response.close()
+        if not response.closed:
+            await response.close()
     if session:
-        await session.close()
+        if not session.closed:
+            await session.close()
 
 
 async def stream_wrapper(response, session, content_handler=None):

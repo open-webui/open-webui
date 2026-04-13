@@ -520,7 +520,7 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 			textArea.style.position = 'fixed';
 
 			document.body.appendChild(textArea);
-			textArea.focus();
+			textArea.focus({ preventScroll: true });
 			textArea.select();
 
 			try {

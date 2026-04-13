@@ -86,6 +86,7 @@
 		chatAction,
 		generateMoACompletion,
 		stopTask,
+		stopTasksByChatId,
 		getTaskIdsByChatId
 	} from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
@@ -369,6 +370,11 @@
 				) {
 					codeInterpreterEnabled = model.info.meta.defaultFeatureIds.includes('code_interpreter');
 				}
+			}
+
+			// Set Default Terminal
+			if (model?.info?.meta?.terminalId) {
+				selectedTerminalId.set(model.info.meta.terminalId);
 			}
 		}
 	};
@@ -1226,29 +1232,44 @@
 			showControls.set(true);
 		}
 
-		// Consume one-shot desktop event (e.g. Spotlight query + attachments)
+		// Consume one-shot desktop event (e.g. Spotlight query, call shortcut)
 		if ($desktopEvent) {
-			const { query, files: eventFiles } = $desktopEvent;
+			const event = $desktopEvent;
 			desktopEvent.set(null);
 
-			// Attach screenshot images from desktop (e.g. Spotlight region capture)
-			if (eventFiles?.length) {
-				for (const ef of eventFiles) {
-					files = [
-						...files,
-						{
-							type: 'image',
-							url: ef.dataUrl,
-							name: ef.name
-						}
-					];
-				}
-			}
+			if (event.type === 'call') {
+				// Defer to next macrotask so the call overlay isn't clobbered by
+				// showControlsSubscribe's initial callback (value=false → set(false))
+				// which runs as a pending microtask after this function.
+				setTimeout(() => {
+					showCallOverlay.set(true);
+					showControls.set(true);
+				}, 0);
+			} else if (event.type === 'query') {
+				const query = event.data?.query;
+				const eventFiles = event.data?.files;
 
-			if (query) {
-				messageInput?.setText(query);
-				await tick();
-				submitHandler(query);
+				// Attach screenshot images from desktop (e.g. Spotlight region capture)
+				if (eventFiles?.length) {
+					for (const ef of eventFiles) {
+						files = [
+							...files,
+							{
+								type: 'image',
+								url: ef.dataUrl,
+								name: ef.name
+							}
+						];
+					}
+				}
+
+				if (query || eventFiles?.length) {
+					if (query) {
+						messageInput?.setText(query);
+					}
+					await tick();
+					submitHandler(query || '');
+				}
 			}
 		} else if ($page.url.searchParams.get('q')) {
 			const q = $page.url.searchParams.get('q') ?? '';
@@ -1370,19 +1391,28 @@
 		}
 	};
 
+	let processingQueueChats = new Set<string>();
+
 	const processNextInQueue = async (targetChatId: string) => {
+		if (processingQueueChats.has(targetChatId)) return;
+
 		const queue = $chatRequestQueues[targetChatId];
 		if (!queue || queue.length === 0) return;
 
-		const combinedPrompt = queue.map((m) => m.prompt).join('\n\n');
-		const combinedFiles = queue.flatMap((m) => m.files);
+		processingQueueChats.add(targetChatId);
+		try {
+			const combinedPrompt = queue.map((m) => m.prompt).join('\n\n');
+			const combinedFiles = queue.flatMap((m) => m.files);
 
-		chatRequestQueues.update((q) => {
-			const { [targetChatId]: _, ...rest } = q;
-			return rest;
-		});
+			chatRequestQueues.update((q) => {
+				const { [targetChatId]: _, ...rest } = q;
+				return rest;
+			});
 
-		await submitPrompt(combinedPrompt, combinedFiles);
+			await submitPrompt(combinedPrompt, combinedFiles);
+		} finally {
+			processingQueueChats.delete(targetChatId);
+		}
 	};
 
 	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
@@ -2444,11 +2474,18 @@
 
 	const stopResponse = async (processQueue = true) => {
 		if (taskIds) {
-			for (const taskId of taskIds) {
-				const res = await stopTask(localStorage.token, taskId).catch((error) => {
+			if ($chatId) {
+				await stopTasksByChatId(localStorage.token, $chatId).catch((error) => {
 					toast.error(`${error}`);
 					return null;
 				});
+			} else {
+				for (const taskId of taskIds) {
+					const res = await stopTask(localStorage.token, taskId).catch((error) => {
+						toast.error(`${error}`);
+						return null;
+					});
+				}
 			}
 
 			taskIds = null;

@@ -137,7 +137,7 @@
 	"Allow Text to Speech": "允許文字轉語音",
 	"Allow User Location": "允許使用者位置",
 	"Allow Voice Interruption in Call": "允許在通話中打斷語音",
-	"Allow Web Upload": "允許上傳檔案",
+	"Allow Web Upload": "允許從網路上傳內容",
 	"Allowed Endpoints": "允許的端點",
 	"Allowed File Extensions": "允許的檔案副檔名",
 	"Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.": "允許上傳的檔案副檔名。多個副檔名請用逗號分隔，留空則允許所有檔案類型。",

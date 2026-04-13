@@ -46,10 +46,12 @@
 						}}
 					>
 						<Tooltip
-							content={marked.parse(
-								sanitizeResponseContent(
-									models[selectedModelIdx]?.info?.meta?.description ?? ''
-								).replaceAll('\n', '<br>')
+							content={DOMPurify.sanitize(
+								marked.parse(
+									sanitizeResponseContent(
+										models[selectedModelIdx]?.info?.meta?.description ?? ''
+									).replaceAll('\n', '<br>')
+								)
 							)}
 							placement="right"
 						>

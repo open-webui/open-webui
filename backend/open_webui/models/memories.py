@@ -2,8 +2,9 @@ import time
 import uuid
 from typing import Optional
 
-from sqlalchemy.orm import Session
-from open_webui.internal.db import Base, get_db, get_db_context
+from sqlalchemy import select, delete
+from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.internal.db import Base, get_async_db_context
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text
 
@@ -40,13 +41,13 @@ class MemoryModel(BaseModel):
 
 
 class MemoriesTable:
-    def insert_new_memory(
+    async def insert_new_memory(
         self,
         user_id: str,
         content: str,
-        db: Optional[Session] = None,
+        db: Optional[AsyncSession] = None,
     ) -> Optional[MemoryModel]:
-        with get_db_context(db) as db:
+        async with get_async_db_context(db) as db:
             id = str(uuid.uuid4())
 
             memory = MemoryModel(
@@ -60,90 +61,92 @@ class MemoriesTable:
             )
             result = Memory(**memory.model_dump())
             db.add(result)
-            db.commit()
-            db.refresh(result)
+            await db.commit()
+            await db.refresh(result)
             if result:
                 return MemoryModel.model_validate(result)
             else:
                 return None
 
-    def update_memory_by_id_and_user_id(
+    async def update_memory_by_id_and_user_id(
         self,
         id: str,
         user_id: str,
         content: str,
-        db: Optional[Session] = None,
+        db: Optional[AsyncSession] = None,
     ) -> Optional[MemoryModel]:
-        with get_db_context(db) as db:
+        async with get_async_db_context(db) as db:
             try:
-                memory = db.get(Memory, id)
+                memory = await db.get(Memory, id)
                 if not memory or memory.user_id != user_id:
                     return None
 
                 memory.content = content
                 memory.updated_at = int(time.time())
 
-                db.commit()
-                db.refresh(memory)
+                await db.commit()
+                await db.refresh(memory)
                 return MemoryModel.model_validate(memory)
             except Exception:
                 return None
 
-    def get_memories(self, db: Optional[Session] = None) -> list[MemoryModel]:
-        with get_db_context(db) as db:
+    async def get_memories(self, db: Optional[AsyncSession] = None) -> list[MemoryModel]:
+        async with get_async_db_context(db) as db:
             try:
-                memories = db.query(Memory).all()
+                result = await db.execute(select(Memory))
+                memories = result.scalars().all()
                 return [MemoryModel.model_validate(memory) for memory in memories]
             except Exception:
                 return None
 
-    def get_memories_by_user_id(self, user_id: str, db: Optional[Session] = None) -> list[MemoryModel]:
-        with get_db_context(db) as db:
+    async def get_memories_by_user_id(self, user_id: str, db: Optional[AsyncSession] = None) -> list[MemoryModel]:
+        async with get_async_db_context(db) as db:
             try:
-                memories = db.query(Memory).filter_by(user_id=user_id).all()
+                result = await db.execute(select(Memory).filter_by(user_id=user_id))
+                memories = result.scalars().all()
                 return [MemoryModel.model_validate(memory) for memory in memories]
             except Exception:
                 return None
 
-    def get_memory_by_id(self, id: str, db: Optional[Session] = None) -> Optional[MemoryModel]:
-        with get_db_context(db) as db:
+    async def get_memory_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[MemoryModel]:
+        async with get_async_db_context(db) as db:
             try:
-                memory = db.get(Memory, id)
-                return MemoryModel.model_validate(memory)
+                memory = await db.get(Memory, id)
+                return MemoryModel.model_validate(memory) if memory else None
             except Exception:
                 return None
 
-    def delete_memory_by_id(self, id: str, db: Optional[Session] = None) -> bool:
-        with get_db_context(db) as db:
+    async def delete_memory_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
+        async with get_async_db_context(db) as db:
             try:
-                db.query(Memory).filter_by(id=id).delete()
-                db.commit()
+                await db.execute(delete(Memory).filter_by(id=id))
+                await db.commit()
 
                 return True
 
             except Exception:
                 return False
 
-    def delete_memories_by_user_id(self, user_id: str, db: Optional[Session] = None) -> bool:
-        with get_db_context(db) as db:
+    async def delete_memories_by_user_id(self, user_id: str, db: Optional[AsyncSession] = None) -> bool:
+        async with get_async_db_context(db) as db:
             try:
-                db.query(Memory).filter_by(user_id=user_id).delete()
-                db.commit()
+                await db.execute(delete(Memory).filter_by(user_id=user_id))
+                await db.commit()
 
                 return True
             except Exception:
                 return False
 
-    def delete_memory_by_id_and_user_id(self, id: str, user_id: str, db: Optional[Session] = None) -> bool:
-        with get_db_context(db) as db:
+    async def delete_memory_by_id_and_user_id(self, id: str, user_id: str, db: Optional[AsyncSession] = None) -> bool:
+        async with get_async_db_context(db) as db:
             try:
-                memory = db.get(Memory, id)
+                memory = await db.get(Memory, id)
                 if not memory or memory.user_id != user_id:
                     return None
 
                 # Delete the memory
-                db.delete(memory)
-                db.commit()
+                await db.delete(memory)
+                await db.commit()
 
                 return True
             except Exception:
