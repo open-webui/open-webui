@@ -66,9 +66,12 @@
 					<div class=" flex justify-center items-center gap-3">
 						<div class="w-fit">
 							<img
-								src="https://www.google.com/s2/favicons?sz=32&domain={item.link}"
+								src="/api/v1/utils/favicon?url={encodeURIComponent(item.link)}"
 								alt="{item?.title ?? item.link} favicon"
 								class="size-3.5"
+								on:error={(e) => {
+									e.currentTarget.src = '/favicon.png';
+								}}
 							/>
 						</div>
 
@@ -106,9 +109,12 @@
 					<div class=" flex justify-center items-center gap-3">
 						<div class="w-fit">
 							<img
-								src="https://www.google.com/s2/favicons?sz=32&domain={url}"
+								src="/api/v1/utils/favicon?url={encodeURIComponent(url)}"
 								alt="{url} favicon"
 								class="size-3.5"
+								on:error={(e) => {
+									e.currentTarget.src = '/favicon.png';
+								}}
 							/>
 						</div>
 
