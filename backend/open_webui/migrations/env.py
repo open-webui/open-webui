@@ -94,8 +94,11 @@ def run_migrations_online() -> None:
             echo=False,
         )
     elif DATABASE_ENABLE_IAM_TOKEN_AUTH:
+        from sqlalchemy import event
         from open_webui.internal.db import rds_iam_config
-        connectable = rds_iam_config.engine
+
+        connectable = rds_iam_config.create_engine()
+        event.listen(connectable, 'do_connect', rds_iam_config.check_token)
     else:
         # Standard database connection (existing logic)
         connectable = engine_from_config(

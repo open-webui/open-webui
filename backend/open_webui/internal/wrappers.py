@@ -76,6 +76,8 @@ def register_connection(db_url: str, connect_args: dict | None = None):
                     connection["sslmode"] = connect_args["sslmode"]
                 if "sslrootcert" in connect_args:
                     connection["sslrootcert"] = connect_args["sslrootcert"]
+                if "ssl" in connect_args:
+                    connection["ssl"] = connect_args["ssl"]
 
             # Use our custom database class that supports reconnection
             db = ReconnectingPostgresqlDatabase(**connection)

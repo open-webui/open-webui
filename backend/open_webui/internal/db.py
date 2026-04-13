@@ -6,6 +6,7 @@ from typing import Any, Optional
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, quote_plus, urlsplit
+import ssl
 
 import boto3
 from open_webui.internal.wrappers import register_connection
@@ -30,9 +31,9 @@ from pydantic import BaseModel, SecretStr
 from sqlalchemy import Dialect, create_engine, MetaData, event, types
 from sqlalchemy.engine import Engine
 from sqlalchemy.engine.url import URL
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import scoped_session, sessionmaker, Session
+from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.pool import QueuePool, NullPool
 from sqlalchemy.sql.type_api import _T
 from typing_extensions import Self
@@ -49,31 +50,13 @@ class RDSIAMConfig:
     def __init__(
         self, db_type: str, db_name: str, db_host: str, db_port: int, db_user: str, ca_path: str | None = None
     ) -> None:
-        self.url = URL.create(
-            drivername=db_type,
-            username=db_user,
-            password=None,
-            host=db_host,
-            port=db_port,
-            database=db_name,
-        )
 
-        self.endpoint = db_host
-        self.port = db_port
+        self.db_type = db_type
+        self.db_name = db_name
+        self.db_host = db_host
+        self.db_port = db_port
         self.db_user = db_user
-
-        self.connect_args = {"sslmode": "require"}
-        if ca_path is None:
-            log.info("No CA provided; using sslmode=require without certificate verification.")
-        elif isinstance(ca_path, str):
-            _ca_path = Path(ca_path).resolve()
-            if _ca_path.exists() and _ca_path.is_file():
-                self.connect_args["sslmode"] = "verify-full"
-                self.connect_args["sslrootcert"] = str(_ca_path)
-            else:
-                log.warning(f"CA file not found at {_ca_path}; using sslmode=require without certificate verification.")
-        else:
-            log.warning("Unable to verify CA file path; using sslmode=require without certificate verification.")
+        self.ca_path = ca_path
 
         # RDS host format: {db}.{account}.{region}.rds.amazonaws.com
         aws_region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
@@ -87,7 +70,9 @@ class RDSIAMConfig:
                 )
         self.client = boto3.client("rds", region_name=aws_region)
         self.token = self.get_token()
-        self.engine = self.create_engine()
+
+        self.sync_connect_args = self._get_sync_connect_args()
+        self.async_connect_args = self._get_async_connect_args()
 
     def get_token(self) -> IAMToken:
         """Generate and return an RDS IAM authorization token.
@@ -96,9 +81,9 @@ class RDSIAMConfig:
         query string parameters.
         """
         try:
-            token = self.client.generate_db_auth_token(self.endpoint, self.port, self.db_user)
+            token = self.client.generate_db_auth_token(self.db_host, self.db_port, self.db_user)
             expiration = self.set_token_expiration(token)
-            log.info(f"AWS RDS token for {self.endpoint} expires {expiration} UTC.")
+            log.info(f"AWS RDS token for {self.db_host} expires {expiration} UTC.")
             return IAMToken(token=SecretStr(token), expiration=expiration)
         except Exception as e:
             log.error(f"AWS RDS token error: {e.__class__.__qualname__} {e}")
@@ -119,28 +104,113 @@ class RDSIAMConfig:
         expiration = generation_time + duration
         return expiration.replace(tzinfo=timezone.utc)
 
-    def create_engine(self) -> Engine:
+    def create_engine(self, is_async: bool = False) -> Engine | AsyncEngine:
+        return self._create_async_engine() if is_async else self._create_sync_engine()
+
+    def _get_sync_connect_args(self) -> dict:
+        connect_args = {"sslmode": "require"}
+        if self.ca_path is None:
+            log.info("No CA provided; using sslmode=require without certificate verification.")
+        else:
+            _ca_path = Path(self.ca_path).resolve()
+            if _ca_path.exists() and _ca_path.is_file():
+                connect_args["sslmode"] = "verify-full"
+                connect_args["sslrootcert"] = str(self.ca_path)
+            else:
+                log.warning(
+                    f"CA file not found at {self.ca_path}; using sslmode=require without certificate verification."
+                )
+        return connect_args
+
+    def _create_sync_engine(self) -> Engine:
+        url = URL.create(
+            drivername=self.db_type,
+            username=self.db_user,
+            password=None,
+            host=self.db_host,
+            port=self.db_port,
+            database=self.db_name,
+        )
+
         if isinstance(DATABASE_POOL_SIZE, int):
             if DATABASE_POOL_SIZE > 0:
                 engine = create_engine(
-                    self.url,
+                    url,
                     pool_size=DATABASE_POOL_SIZE,
                     max_overflow=DATABASE_POOL_MAX_OVERFLOW,
                     pool_timeout=DATABASE_POOL_TIMEOUT,
                     pool_recycle=DATABASE_POOL_RECYCLE,
                     pool_pre_ping=True,
                     poolclass=QueuePool,
-                    connect_args=self.connect_args,
+                    connect_args=self.sync_connect_args,
                 )
             else:
                 engine = create_engine(
-                    self.url,
+                    url,
                     pool_pre_ping=True,
                     poolclass=NullPool,
-                    connect_args=self.connect_args,
+                    connect_args=self.sync_connect_args,
                 )
         else:
-            engine = create_engine(self.url, pool_pre_ping=True, connect_args=self.connect_args)
+            engine = create_engine(url, pool_pre_ping=True, connect_args=self.sync_connect_args)
+
+        return engine
+
+    def _get_async_connect_args(self) -> dict:
+        connect_args = {"ssl": True}
+        if self.ca_path is None:
+            log.info("No CA provided; using ssl=True without certificate verification.")
+        else:
+            _ca_path = Path(self.ca_path).resolve()
+            if _ca_path.exists() and _ca_path.is_file():
+                connect_args["ssl"] = ssl.create_default_context(cafile=self.ca_path, purpose=ssl.Purpose.SERVER_AUTH)
+            else:
+                log.warning(f"CA file not found at {self.ca_path}; using ssl=True without certificate verification.")
+        return connect_args
+
+    def _create_async_engine(self) -> AsyncEngine:
+        # if dialect can't be inferred here, use default sync url to create async engine
+        # and let sqlalchemy handle it
+        if self.db_type in ["postgres", "postgresql", "postgresql+psycopg2"]:
+            url = URL.create(
+                drivername="postgresql+asyncpg",
+                username=self.db_user,
+                password=None,
+                host=self.db_host,
+                port=self.db_port,
+                database=self.db_name,
+            )
+        else:
+            url = URL.create(
+                drivername=self.db_type,
+                username=self.db_user,
+                password=None,
+                host=self.db_host,
+                port=self.db_port,
+                database=self.db_name,
+            )
+
+        if isinstance(DATABASE_POOL_SIZE, int):
+            if DATABASE_POOL_SIZE > 0:
+                engine = create_async_engine(
+                    url,
+                    pool_size=DATABASE_POOL_SIZE,
+                    max_overflow=DATABASE_POOL_MAX_OVERFLOW,
+                    pool_timeout=DATABASE_POOL_TIMEOUT,
+                    pool_recycle=DATABASE_POOL_RECYCLE,
+                    pool_pre_ping=True,
+                    poolclass=QueuePool,
+                    connect_args=self.async_connect_args,
+                )
+            else:
+                engine = create_async_engine(
+                    url,
+                    pool_pre_ping=True,
+                    poolclass=NullPool,
+                    connect_args=self.async_connect_args,
+                )
+        else:
+            engine = create_async_engine(url, pool_pre_ping=True, connect_args=self.async_connect_args)
 
         return engine
 
@@ -216,7 +286,7 @@ if ENABLE_DB_MIGRATIONS:
             f'{DB_VARS["db_type"]}://{DATABASE_USER}:{quote_plus(_token_val)}'
             f'@{DB_VARS["db_host"]}:{DB_VARS["db_port"]}/{DB_VARS["db_name"]}'
         )
-        handle_peewee_migration(_migration_url, connect_args=rds_iam_config.connect_args)
+        handle_peewee_migration(_migration_url, connect_args=rds_iam_config.sync_connect_args)
     else:
         handle_peewee_migration(DATABASE_URL)
 
@@ -306,7 +376,7 @@ elif 'sqlite' in SQLALCHEMY_DATABASE_URL:
 
     event.listen(engine, 'connect', on_connect)
 elif DATABASE_ENABLE_IAM_TOKEN_AUTH:
-    engine = rds_iam_config.engine
+    engine = rds_iam_config.create_engine()
     event.listen(engine, 'do_connect', rds_iam_config.check_token)
 else:
     if isinstance(DATABASE_POOL_SIZE, int):
@@ -364,6 +434,10 @@ if 'sqlite' in ASYNC_SQLALCHEMY_DATABASE_URL:
             cursor = dbapi_connection.cursor()
             cursor.execute('PRAGMA journal_mode=WAL')
             cursor.close()
+
+elif DATABASE_ENABLE_IAM_TOKEN_AUTH:
+    async_engine = rds_iam_config.create_engine(is_async=True)
+    event.listen(async_engine.sync_engine, 'do_connect', rds_iam_config.check_token)
 else:
     if isinstance(DATABASE_POOL_SIZE, int):
         if DATABASE_POOL_SIZE > 0:
