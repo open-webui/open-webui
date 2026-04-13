@@ -89,7 +89,7 @@
 				toast.error($i18n.t('Please enter Client ID and Client Secret'));
 				return;
 			}
-			formData.client_id = id;
+			formData.client_id = oauthClientId;
 			formData.client_secret = oauthClientSecret;
 		}
 
