@@ -22,8 +22,8 @@ from open_webui.models.knowledge import Knowledges
 
 from open_webui.config import UPLOAD_DIR
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.internal.db import get_session
-from sqlalchemy.orm import Session
+from open_webui.internal.db import get_async_session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Request
@@ -48,7 +48,7 @@ router = APIRouter()
 async def get_folders(
     request: Request,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     if request.app.state.config.ENABLE_FOLDERS is False:
         raise HTTPException(
@@ -56,7 +56,7 @@ async def get_folders(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    if user.role != 'admin' and not has_permission(
+    if user.role != 'admin' and not await has_permission(
         user.id,
         'features.folders',
         request.app.state.config.USER_PERMISSIONS,
@@ -67,29 +67,31 @@ async def get_folders(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    folders = Folders.get_folders_by_user_id(user.id, db=db)
+    folders = await Folders.get_folders_by_user_id(user.id, db=db)
 
     # Verify folder data integrity
     folder_list = []
     for folder in folders:
-        if folder.parent_id and not Folders.get_folder_by_id_and_user_id(folder.parent_id, user.id, db=db):
-            folder = Folders.update_folder_parent_id_by_id_and_user_id(folder.id, user.id, None, db=db)
+        if folder.parent_id and not await Folders.get_folder_by_id_and_user_id(folder.parent_id, user.id, db=db):
+            folder = await Folders.update_folder_parent_id_by_id_and_user_id(folder.id, user.id, None, db=db)
 
         if folder.data:
             if 'files' in folder.data:
                 valid_files = []
                 for file in folder.data['files']:
                     if file.get('type') == 'file':
-                        if Files.check_access_by_user_id(file.get('id'), user.id, 'read', db=db):
+                        if await Files.check_access_by_user_id(file.get('id'), user.id, 'read', db=db):
                             valid_files.append(file)
                     elif file.get('type') == 'collection':
-                        if Knowledges.check_access_by_user_id(file.get('id'), user.id, 'read', db=db):
+                        if await Knowledges.check_access_by_user_id(file.get('id'), user.id, 'read', db=db):
                             valid_files.append(file)
                     else:
                         valid_files.append(file)
 
                 folder.data['files'] = valid_files
-                Folders.update_folder_by_id_and_user_id(folder.id, user.id, FolderUpdateForm(data=folder.data), db=db)
+                await Folders.update_folder_by_id_and_user_id(
+                    folder.id, user.id, FolderUpdateForm(data=folder.data), db=db
+                )
 
         folder_list.append(FolderNameIdResponse(**folder.model_dump()))
 
@@ -102,12 +104,14 @@ async def get_folders(
 
 
 @router.post('/')
-def create_folder(
+async def create_folder(
     form_data: FolderForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    folder = Folders.get_folder_by_parent_id_and_user_id_and_name(form_data.parent_id, user.id, form_data.name, db=db)
+    folder = await Folders.get_folder_by_parent_id_and_user_id_and_name(
+        form_data.parent_id, user.id, form_data.name, db=db
+    )
 
     if folder:
         raise HTTPException(
@@ -116,7 +120,7 @@ def create_folder(
         )
 
     try:
-        folder = Folders.insert_new_folder(user.id, form_data, form_data.parent_id, db=db)
+        folder = await Folders.insert_new_folder(user.id, form_data, form_data.parent_id, db=db)
         return folder
     except Exception as e:
         log.exception(e)
@@ -133,8 +137,8 @@ def create_folder(
 
 
 @router.get('/{id}', response_model=Optional[FolderModel])
-async def get_folder_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
-    folder = Folders.get_folder_by_id_and_user_id(id, user.id, db=db)
+async def get_folder_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    folder = await Folders.get_folder_by_id_and_user_id(id, user.id, db=db)
     if folder:
         return folder
     else:
@@ -154,13 +158,13 @@ async def update_folder_name_by_id(
     id: str,
     form_data: FolderUpdateForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    folder = Folders.get_folder_by_id_and_user_id(id, user.id, db=db)
+    folder = await Folders.get_folder_by_id_and_user_id(id, user.id, db=db)
     if folder:
         if form_data.name is not None:
             # Check if folder with same name exists
-            existing_folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
+            existing_folder = await Folders.get_folder_by_parent_id_and_user_id_and_name(
                 folder.parent_id, user.id, form_data.name, db=db
             )
             if existing_folder and existing_folder.id != id:
@@ -170,7 +174,7 @@ async def update_folder_name_by_id(
                 )
 
         try:
-            folder = Folders.update_folder_by_id_and_user_id(id, user.id, form_data, db=db)
+            folder = await Folders.update_folder_by_id_and_user_id(id, user.id, form_data, db=db)
             return folder
         except Exception as e:
             log.exception(e)
@@ -200,11 +204,11 @@ async def update_folder_parent_id_by_id(
     id: str,
     form_data: FolderParentIdForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    folder = Folders.get_folder_by_id_and_user_id(id, user.id, db=db)
+    folder = await Folders.get_folder_by_id_and_user_id(id, user.id, db=db)
     if folder:
-        existing_folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
+        existing_folder = await Folders.get_folder_by_parent_id_and_user_id_and_name(
             form_data.parent_id, user.id, folder.name, db=db
         )
 
@@ -215,7 +219,7 @@ async def update_folder_parent_id_by_id(
             )
 
         try:
-            folder = Folders.update_folder_parent_id_by_id_and_user_id(id, user.id, form_data.parent_id, db=db)
+            folder = await Folders.update_folder_parent_id_by_id_and_user_id(id, user.id, form_data.parent_id, db=db)
             return folder
         except Exception as e:
             log.exception(e)
@@ -245,12 +249,14 @@ async def update_folder_is_expanded_by_id(
     id: str,
     form_data: FolderIsExpandedForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    folder = Folders.get_folder_by_id_and_user_id(id, user.id, db=db)
+    folder = await Folders.get_folder_by_id_and_user_id(id, user.id, db=db)
     if folder:
         try:
-            folder = Folders.update_folder_is_expanded_by_id_and_user_id(id, user.id, form_data.is_expanded, db=db)
+            folder = await Folders.update_folder_is_expanded_by_id_and_user_id(
+                id, user.id, form_data.is_expanded, db=db
+            )
             return folder
         except Exception as e:
             log.exception(e)
@@ -277,10 +283,10 @@ async def delete_folder_by_id(
     id: str,
     delete_contents: Optional[bool] = True,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    if Chats.count_chats_by_folder_id_and_user_id(id, user.id, db=db):
-        chat_delete_permission = has_permission(
+    if await Chats.count_chats_by_folder_id_and_user_id(id, user.id, db=db):
+        chat_delete_permission = await has_permission(
             user.id, 'chat.delete', request.app.state.config.USER_PERMISSIONS, db=db
         )
         if user.role != 'admin' and not chat_delete_permission:
@@ -290,18 +296,18 @@ async def delete_folder_by_id(
             )
 
     folders = []
-    folders.append(Folders.get_folder_by_id_and_user_id(id, user.id, db=db))
+    folders.append(await Folders.get_folder_by_id_and_user_id(id, user.id, db=db))
     while folders:
         folder = folders.pop()
         if folder:
             try:
-                folder_ids = Folders.delete_folder_by_id_and_user_id(folder.id, user.id, db=db)
+                folder_ids = await Folders.delete_folder_by_id_and_user_id(folder.id, user.id, db=db)
 
                 for folder_id in folder_ids:
                     if delete_contents:
-                        Chats.delete_chats_by_user_id_and_folder_id(user.id, folder_id, db=db)
+                        await Chats.delete_chats_by_user_id_and_folder_id(user.id, folder_id, db=db)
                     else:
-                        Chats.move_chats_by_user_id_and_folder_id(user.id, folder_id, None, db=db)
+                        await Chats.move_chats_by_user_id_and_folder_id(user.id, folder_id, None, db=db)
 
                 return True
             except Exception as e:
@@ -313,7 +319,7 @@ async def delete_folder_by_id(
                 )
             finally:
                 # Get all subfolders
-                subfolders = Folders.get_folders_by_parent_id_and_user_id(folder.id, user.id, db=db)
+                subfolders = await Folders.get_folders_by_parent_id_and_user_id(folder.id, user.id, db=db)
                 folders.extend(subfolders)
 
     else:

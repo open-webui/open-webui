@@ -950,9 +950,11 @@ async def cleanup_response(
     session: Optional[aiohttp.ClientSession],
 ):
     if response:
-        response.close()
+        if not response.closed:
+            await response.close()
     if session:
-        await session.close()
+        if not session.closed:
+            await session.close()
 
 
 async def stream_wrapper(response, session, content_handler=None):
@@ -1006,18 +1008,15 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
                         skip_mode = False
                         yield line
                     else:
-                        yield b'data: {}'
-                        yield b'\n'
+                        yield b'data: {}\n'
                 else:
                     # Normal mode: check if line exceeds limit
                     if len(line) > max_buffer_size:
                         skip_mode = True
-                        yield b'data: {}'
-                        yield b'\n'
+                        yield b'data: {}\n'
                         log.info(f'Skip mode triggered, line size: {len(line)}')
                     else:
-                        yield line
-                        yield b'\n'
+                        yield line + b'\n'
 
             # Save the last incomplete fragment
             buffer = lines[-1]
@@ -1031,7 +1030,6 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
 
         # Process remaining buffer data
         if buffer and not skip_mode:
-            yield buffer
-            yield b'\n'
+            yield buffer + b'\n'
 
     return yield_safe_stream_chunks()

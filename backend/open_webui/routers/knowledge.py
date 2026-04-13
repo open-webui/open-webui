@@ -2,14 +2,14 @@ from typing import List, Optional
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from fastapi.responses import StreamingResponse
-from fastapi.concurrency import run_in_threadpool
+
 import logging
 import io
 import zipfile
 from urllib.parse import quote
 
-from sqlalchemy.orm import Session
-from open_webui.internal.db import get_session
+from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.internal.db import get_async_session
 from open_webui.models.groups import Groups
 from open_webui.models.knowledge import (
     KnowledgeFileListResponse,
@@ -111,14 +111,14 @@ class KnowledgeAccessListResponse(BaseModel):
 async def get_knowledge_bases(
     page: Optional[int] = 1,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     page = max(page, 1)
     limit = PAGE_ITEM_COUNT
     skip = (page - 1) * limit
 
     filter = {}
-    groups = Groups.get_groups_by_member_id(user.id, db=db)
+    groups = await Groups.get_groups_by_member_id(user.id, db=db)
     user_group_ids = {group.id for group in groups}
 
     if not user.role == 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL:
@@ -127,11 +127,11 @@ async def get_knowledge_bases(
 
         filter['user_id'] = user.id
 
-    result = Knowledges.search_knowledge_bases(user.id, filter=filter, skip=skip, limit=limit, db=db)
+    result = await Knowledges.search_knowledge_bases(user.id, filter=filter, skip=skip, limit=limit, db=db)
 
     # Batch-fetch writable knowledge IDs in a single query instead of N has_access calls
     knowledge_base_ids = [knowledge_base.id for knowledge_base in result.items]
-    writable_knowledge_base_ids = AccessGrants.get_accessible_resource_ids(
+    writable_knowledge_base_ids = await AccessGrants.get_accessible_resource_ids(
         user_id=user.id,
         resource_type='knowledge',
         resource_ids=knowledge_base_ids,
@@ -162,7 +162,7 @@ async def search_knowledge_bases(
     view_option: Optional[str] = None,
     page: Optional[int] = 1,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     page = max(page, 1)
     limit = PAGE_ITEM_COUNT
@@ -174,7 +174,7 @@ async def search_knowledge_bases(
     if view_option:
         filter['view_option'] = view_option
 
-    groups = Groups.get_groups_by_member_id(user.id, db=db)
+    groups = await Groups.get_groups_by_member_id(user.id, db=db)
     user_group_ids = {group.id for group in groups}
 
     if not user.role == 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL:
@@ -183,11 +183,11 @@ async def search_knowledge_bases(
 
         filter['user_id'] = user.id
 
-    result = Knowledges.search_knowledge_bases(user.id, filter=filter, skip=skip, limit=limit, db=db)
+    result = await Knowledges.search_knowledge_bases(user.id, filter=filter, skip=skip, limit=limit, db=db)
 
     # Batch-fetch writable knowledge IDs in a single query instead of N has_access calls
     knowledge_base_ids = [knowledge_base.id for knowledge_base in result.items]
-    writable_knowledge_base_ids = AccessGrants.get_accessible_resource_ids(
+    writable_knowledge_base_ids = await AccessGrants.get_accessible_resource_ids(
         user_id=user.id,
         resource_type='knowledge',
         resource_ids=knowledge_base_ids,
@@ -217,7 +217,7 @@ async def search_knowledge_files(
     query: Optional[str] = None,
     page: Optional[int] = 1,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     page = max(page, 1)
     limit = PAGE_ITEM_COUNT
@@ -227,13 +227,13 @@ async def search_knowledge_files(
     if query:
         filter['query'] = query
 
-    groups = Groups.get_groups_by_member_id(user.id, db=db)
+    groups = await Groups.get_groups_by_member_id(user.id, db=db)
     if groups:
         filter['group_ids'] = [group.id for group in groups]
 
     filter['user_id'] = user.id
 
-    return Knowledges.search_knowledge_files(filter=filter, skip=skip, limit=limit, db=db)
+    return await Knowledges.search_knowledge_files(filter=filter, skip=skip, limit=limit, db=db)
 
 
 ############################
@@ -247,11 +247,11 @@ async def create_new_knowledge(
     form_data: KnowledgeForm,
     user=Depends(get_verified_user),
 ):
-    # NOTE: We intentionally do NOT use Depends(get_session) here.
+    # NOTE: We intentionally do NOT use Depends(get_async_session) here.
     # Database operations (has_permission, filter_allowed_access_grants, insert_new_knowledge) manage their own sessions.
     # This prevents holding a connection during embed_knowledge_base_metadata()
     # which makes external embedding API calls (1-5+ seconds).
-    if user.role != 'admin' and not has_permission(
+    if user.role != 'admin' and not await has_permission(
         user.id, 'workspace.knowledge', request.app.state.config.USER_PERMISSIONS
     ):
         raise HTTPException(
@@ -259,7 +259,7 @@ async def create_new_knowledge(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    form_data.access_grants = filter_allowed_access_grants(
+    form_data.access_grants = await filter_allowed_access_grants(
         request.app.state.config.USER_PERMISSIONS,
         user.id,
         user.role,
@@ -267,7 +267,7 @@ async def create_new_knowledge(
         'sharing.public_knowledge',
     )
 
-    knowledge = Knowledges.insert_new_knowledge(user.id, form_data)
+    knowledge = await Knowledges.insert_new_knowledge(user.id, form_data)
 
     if knowledge:
         # Embed knowledge base for semantic search
@@ -294,7 +294,7 @@ async def create_new_knowledge(
 async def reindex_knowledge_files(
     request: Request,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     if user.role != 'admin':
         raise HTTPException(
@@ -302,13 +302,13 @@ async def reindex_knowledge_files(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    knowledge_bases = Knowledges.get_knowledge_bases(db=db)
+    knowledge_bases = await Knowledges.get_knowledge_bases(db=db)
 
     log.info(f'Starting reindexing for {len(knowledge_bases)} knowledge bases')
 
     for knowledge_base in knowledge_bases:
         try:
-            files = Knowledges.get_files_by_id(knowledge_base.id, db=db)
+            files = await Knowledges.get_files_by_id(knowledge_base.id, db=db)
             try:
                 if VECTOR_DB_CLIENT.has_collection(collection_name=knowledge_base.id):
                     VECTOR_DB_CLIENT.delete_collection(collection_name=knowledge_base.id)
@@ -319,8 +319,7 @@ async def reindex_knowledge_files(
             failed_files = []
             for file in files:
                 try:
-                    await run_in_threadpool(
-                        process_file,
+                    await process_file(
                         request,
                         ProcessFileForm(file_id=file.id, collection_name=knowledge_base.id),
                         user=user,
@@ -357,12 +356,12 @@ async def reindex_knowledge_base_metadata_embeddings(
 ):
     """Batch embed all existing knowledge bases. Admin only.
 
-    NOTE: We intentionally do NOT use Depends(get_session) here.
+    NOTE: We intentionally do NOT use Depends(get_async_session) here.
     This endpoint loops through ALL knowledge bases and calls embed_knowledge_base_metadata()
     for each one, making N external embedding API calls. Holding a session during
     this entire operation would exhaust the connection pool.
     """
-    knowledge_bases = Knowledges.get_knowledge_bases()
+    knowledge_bases = await Knowledges.get_knowledge_bases()
     log.info(f'Reindexing embeddings for {len(knowledge_bases)} knowledge bases')
 
     success_count = 0
@@ -385,14 +384,14 @@ class KnowledgeFilesResponse(KnowledgeResponse):
 
 
 @router.get('/{id}', response_model=Optional[KnowledgeFilesResponse])
-async def get_knowledge_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
-    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+async def get_knowledge_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
 
     if knowledge:
         if (
             user.role == 'admin'
             or knowledge.user_id == user.id
-            or AccessGrants.has_access(
+            or await AccessGrants.has_access(
                 user_id=user.id,
                 resource_type='knowledge',
                 resource_id=knowledge.id,
@@ -405,7 +404,7 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user), db: Sess
                 write_access=(
                     user.id == knowledge.user_id
                     or (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
-                    or AccessGrants.has_access(
+                    or await AccessGrants.has_access(
                         user_id=user.id,
                         resource_type='knowledge',
                         resource_id=knowledge.id,
@@ -438,11 +437,11 @@ async def update_knowledge_by_id(
     form_data: KnowledgeForm,
     user=Depends(get_verified_user),
 ):
-    # NOTE: We intentionally do NOT use Depends(get_session) here.
+    # NOTE: We intentionally do NOT use Depends(get_async_session) here.
     # Database operations manage their own short-lived sessions internally.
     # This prevents holding a connection during embed_knowledge_base_metadata()
     # which makes external embedding API calls (1-5+ seconds).
-    knowledge = Knowledges.get_knowledge_by_id(id=id)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -451,7 +450,7 @@ async def update_knowledge_by_id(
     # Is the user the original creator, in a group with write access, or an admin
     if (
         knowledge.user_id != user.id
-        and not AccessGrants.has_access(
+        and not await AccessGrants.has_access(
             user_id=user.id,
             resource_type='knowledge',
             resource_id=knowledge.id,
@@ -464,7 +463,7 @@ async def update_knowledge_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    form_data.access_grants = filter_allowed_access_grants(
+    form_data.access_grants = await filter_allowed_access_grants(
         request.app.state.config.USER_PERMISSIONS,
         user.id,
         user.role,
@@ -472,7 +471,7 @@ async def update_knowledge_by_id(
         'sharing.public_knowledge',
     )
 
-    knowledge = Knowledges.update_knowledge_by_id(id=id, form_data=form_data)
+    knowledge = await Knowledges.update_knowledge_by_id(id=id, form_data=form_data)
     if knowledge:
         # Re-embed knowledge base for semantic search
         await embed_knowledge_base_metadata(
@@ -483,7 +482,7 @@ async def update_knowledge_by_id(
         )
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
-            files=Knowledges.get_file_metadatas_by_id(knowledge.id),
+            files=await Knowledges.get_file_metadatas_by_id(knowledge.id),
         )
     else:
         raise HTTPException(
@@ -507,9 +506,9 @@ async def update_knowledge_access_by_id(
     id: str,
     form_data: KnowledgeAccessGrantsForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -518,7 +517,7 @@ async def update_knowledge_access_by_id(
 
     if (
         knowledge.user_id != user.id
-        and not AccessGrants.has_access(
+        and not await AccessGrants.has_access(
             user_id=user.id,
             resource_type='knowledge',
             resource_id=knowledge.id,
@@ -532,7 +531,7 @@ async def update_knowledge_access_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    form_data.access_grants = filter_allowed_access_grants(
+    form_data.access_grants = await filter_allowed_access_grants(
         request.app.state.config.USER_PERMISSIONS,
         user.id,
         user.role,
@@ -540,11 +539,11 @@ async def update_knowledge_access_by_id(
         'sharing.public_knowledge',
     )
 
-    AccessGrants.set_access_grants('knowledge', id, form_data.access_grants, db=db)
+    await AccessGrants.set_access_grants('knowledge', id, form_data.access_grants, db=db)
 
     return KnowledgeFilesResponse(
-        **Knowledges.get_knowledge_by_id(id=id, db=db).model_dump(),
-        files=Knowledges.get_file_metadatas_by_id(id, db=db),
+        **(await Knowledges.get_knowledge_by_id(id=id, db=db)).model_dump(),
+        files=await Knowledges.get_file_metadatas_by_id(id, db=db),
     )
 
 
@@ -562,9 +561,9 @@ async def get_knowledge_files_by_id(
     direction: Optional[str] = None,
     page: Optional[int] = 1,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -574,7 +573,7 @@ async def get_knowledge_files_by_id(
     if not (
         user.role == 'admin'
         or knowledge.user_id == user.id
-        or AccessGrants.has_access(
+        or await AccessGrants.has_access(
             user_id=user.id,
             resource_type='knowledge',
             resource_id=knowledge.id,
@@ -602,7 +601,7 @@ async def get_knowledge_files_by_id(
     if direction:
         filter['direction'] = direction
 
-    return Knowledges.search_files_by_id(id, user.id, filter=filter, skip=skip, limit=limit, db=db)
+    return await Knowledges.search_files_by_id(id, user.id, filter=filter, skip=skip, limit=limit, db=db)
 
 
 ############################
@@ -615,14 +614,14 @@ class KnowledgeFileIdForm(BaseModel):
 
 
 @router.post('/{id}/file/add', response_model=Optional[KnowledgeFilesResponse])
-def add_file_to_knowledge_by_id(
+async def add_file_to_knowledge_by_id(
     request: Request,
     id: str,
     form_data: KnowledgeFileIdForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -631,7 +630,7 @@ def add_file_to_knowledge_by_id(
 
     if (
         knowledge.user_id != user.id
-        and not AccessGrants.has_access(
+        and not await AccessGrants.has_access(
             user_id=user.id,
             resource_type='knowledge',
             resource_id=knowledge.id,
@@ -645,7 +644,7 @@ def add_file_to_knowledge_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    file = Files.get_file_by_id(form_data.file_id, db=db)
+    file = await Files.get_file_by_id(form_data.file_id, db=db)
     if not file:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -659,7 +658,7 @@ def add_file_to_knowledge_by_id(
 
     # Add content to the vector database
     try:
-        process_file(
+        await process_file(
             request,
             ProcessFileForm(file_id=form_data.file_id, collection_name=id),
             user=user,
@@ -667,7 +666,7 @@ def add_file_to_knowledge_by_id(
         )
 
         # Add file to knowledge base
-        Knowledges.add_file_to_knowledge_by_id(knowledge_id=id, file_id=form_data.file_id, user_id=user.id, db=db)
+        await Knowledges.add_file_to_knowledge_by_id(knowledge_id=id, file_id=form_data.file_id, user_id=user.id, db=db)
     except Exception as e:
         log.debug(e)
         raise HTTPException(
@@ -678,7 +677,7 @@ def add_file_to_knowledge_by_id(
     if knowledge:
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
-            files=Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+            files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
         )
     else:
         raise HTTPException(
@@ -688,14 +687,14 @@ def add_file_to_knowledge_by_id(
 
 
 @router.post('/{id}/file/update', response_model=Optional[KnowledgeFilesResponse])
-def update_file_from_knowledge_by_id(
+async def update_file_from_knowledge_by_id(
     request: Request,
     id: str,
     form_data: KnowledgeFileIdForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -704,7 +703,7 @@ def update_file_from_knowledge_by_id(
 
     if (
         knowledge.user_id != user.id
-        and not AccessGrants.has_access(
+        and not await AccessGrants.has_access(
             user_id=user.id,
             resource_type='knowledge',
             resource_id=knowledge.id,
@@ -718,7 +717,7 @@ def update_file_from_knowledge_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    file = Files.get_file_by_id(form_data.file_id, db=db)
+    file = await Files.get_file_by_id(form_data.file_id, db=db)
     if not file:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -726,7 +725,7 @@ def update_file_from_knowledge_by_id(
         )
 
     # Validate the file actually belongs to this knowledge base
-    if not Knowledges.has_file(knowledge_id=id, file_id=form_data.file_id, db=db):
+    if not await Knowledges.has_file(knowledge_id=id, file_id=form_data.file_id, db=db):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.NOT_FOUND,
@@ -737,7 +736,7 @@ def update_file_from_knowledge_by_id(
 
     # Add content to the vector database
     try:
-        process_file(
+        await process_file(
             request,
             ProcessFileForm(file_id=form_data.file_id, collection_name=id),
             user=user,
@@ -752,7 +751,7 @@ def update_file_from_knowledge_by_id(
     if knowledge:
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
-            files=Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+            files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
         )
     else:
         raise HTTPException(
@@ -767,14 +766,14 @@ def update_file_from_knowledge_by_id(
 
 
 @router.post('/{id}/file/remove', response_model=Optional[KnowledgeFilesResponse])
-def remove_file_from_knowledge_by_id(
+async def remove_file_from_knowledge_by_id(
     id: str,
     form_data: KnowledgeFileIdForm,
     delete_file: bool = Query(True),
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -783,7 +782,7 @@ def remove_file_from_knowledge_by_id(
 
     if (
         knowledge.user_id != user.id
-        and not AccessGrants.has_access(
+        and not await AccessGrants.has_access(
             user_id=user.id,
             resource_type='knowledge',
             resource_id=knowledge.id,
@@ -797,7 +796,7 @@ def remove_file_from_knowledge_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    file = Files.get_file_by_id(form_data.file_id, db=db)
+    file = await Files.get_file_by_id(form_data.file_id, db=db)
     if not file:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -805,13 +804,13 @@ def remove_file_from_knowledge_by_id(
         )
 
     # Validate the file actually belongs to this knowledge base
-    if not Knowledges.has_file(knowledge_id=id, file_id=form_data.file_id, db=db):
+    if not await Knowledges.has_file(knowledge_id=id, file_id=form_data.file_id, db=db):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    Knowledges.remove_file_from_knowledge_by_id(knowledge_id=id, file_id=form_data.file_id, db=db)
+    await Knowledges.remove_file_from_knowledge_by_id(knowledge_id=id, file_id=form_data.file_id, db=db)
 
     # Remove content from the vector database
     try:
@@ -839,12 +838,12 @@ def remove_file_from_knowledge_by_id(
             pass
 
         # Delete file from database
-        Files.delete_file_by_id(form_data.file_id, db=db)
+        await Files.delete_file_by_id(form_data.file_id, db=db)
 
     if knowledge:
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
-            files=Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+            files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
         )
     else:
         raise HTTPException(
@@ -859,8 +858,10 @@ def remove_file_from_knowledge_by_id(
 
 
 @router.delete('/{id}/delete', response_model=bool)
-async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
-    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+async def delete_knowledge_by_id(
+    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
+    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -869,7 +870,7 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user), db: S
 
     if (
         knowledge.user_id != user.id
-        and not AccessGrants.has_access(
+        and not await AccessGrants.has_access(
             user_id=user.id,
             resource_type='knowledge',
             resource_id=knowledge.id,
@@ -886,7 +887,7 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user), db: S
     log.info(f'Deleting knowledge base: {id} (name: {knowledge.name})')
 
     # Get all models
-    models = Models.get_all_models(db=db)
+    models = await Models.get_all_models(db=db)
     log.info(f'Found {len(models)} models to check for knowledge base {id}')
 
     # Update models that reference this knowledge base
@@ -910,7 +911,7 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user), db: S
                     access_grants=model.access_grants,
                     is_active=model.is_active,
                 )
-                Models.update_model_by_id(model.id, model_form, db=db)
+                await Models.update_model_by_id(model.id, model_form, db=db)
 
     # Clean up vector DB
     try:
@@ -922,7 +923,7 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user), db: S
     # Remove knowledge base embedding
     remove_knowledge_base_metadata_embedding(id)
 
-    result = Knowledges.delete_knowledge_by_id(id=id, db=db)
+    result = await Knowledges.delete_knowledge_by_id(id=id, db=db)
     return result
 
 
@@ -932,8 +933,10 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user), db: S
 
 
 @router.post('/{id}/reset', response_model=Optional[KnowledgeResponse])
-async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
-    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+async def reset_knowledge_by_id(
+    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
+    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -942,7 +945,7 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user), db: Se
 
     if (
         knowledge.user_id != user.id
-        and not AccessGrants.has_access(
+        and not await AccessGrants.has_access(
             user_id=user.id,
             resource_type='knowledge',
             resource_id=knowledge.id,
@@ -962,7 +965,7 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user), db: Se
         log.debug(e)
         pass
 
-    knowledge = Knowledges.reset_knowledge_by_id(id=id, db=db)
+    knowledge = await Knowledges.reset_knowledge_by_id(id=id, db=db)
     return knowledge
 
 
@@ -977,12 +980,12 @@ async def add_files_to_knowledge_batch(
     id: str,
     form_data: list[KnowledgeFileIdForm],
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     Add multiple files to a knowledge base
     """
-    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -991,7 +994,7 @@ async def add_files_to_knowledge_batch(
 
     if (
         knowledge.user_id != user.id
-        and not AccessGrants.has_access(
+        and not await AccessGrants.has_access(
             user_id=user.id,
             resource_type='knowledge',
             resource_id=knowledge.id,
@@ -1008,7 +1011,7 @@ async def add_files_to_knowledge_batch(
     # Batch-fetch all files to avoid N+1 queries
     log.info(f'files/batch/add - {len(form_data)} files')
     file_ids = [form.file_id for form in form_data]
-    files = Files.get_files_by_ids(file_ids, db=db)
+    files = await Files.get_files_by_ids(file_ids, db=db)
 
     # Verify all requested files were found
     found_ids = {file.id for file in files}
@@ -1034,14 +1037,14 @@ async def add_files_to_knowledge_batch(
     # Only add files that were successfully processed
     successful_file_ids = [r.file_id for r in result.results if r.status == 'completed']
     for file_id in successful_file_ids:
-        Knowledges.add_file_to_knowledge_by_id(knowledge_id=id, file_id=file_id, user_id=user.id, db=db)
+        await Knowledges.add_file_to_knowledge_by_id(knowledge_id=id, file_id=file_id, user_id=user.id, db=db)
 
     # If there were any errors, include them in the response
     if result.errors:
         error_details = [f'{err.file_id}: {err.error}' for err in result.errors]
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
-            files=Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+            files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
             warnings={
                 'message': 'Some files failed to process',
                 'errors': error_details,
@@ -1050,7 +1053,7 @@ async def add_files_to_knowledge_batch(
 
     return KnowledgeFilesResponse(
         **knowledge.model_dump(),
-        files=Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+        files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
     )
 
 
@@ -1060,20 +1063,20 @@ async def add_files_to_knowledge_batch(
 
 
 @router.get('/{id}/export')
-async def export_knowledge_by_id(id: str, user=Depends(get_admin_user), db: Session = Depends(get_session)):
+async def export_knowledge_by_id(id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
     """
     Export a knowledge base as a zip file containing .txt files.
     Admin only.
     """
 
-    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    files = Knowledges.get_files_by_id(id, db=db)
+    files = await Knowledges.get_files_by_id(id, db=db)
 
     # Create zip file in memory
     zip_buffer = io.BytesIO()

@@ -46,7 +46,8 @@
 		selectedTerminalId,
 		showFileNavPath,
 		showFileNavDir,
-		chatRequestQueues
+		chatRequestQueues,
+		desktopEvent
 	} from '$lib/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -85,6 +86,7 @@
 		chatAction,
 		generateMoACompletion,
 		stopTask,
+		stopTasksByChatId,
 		getTaskIdsByChatId
 	} from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
@@ -201,6 +203,11 @@
 
 			await tick();
 
+			// Mark chat read when initially loading it
+			if (chatIdProp && !$temporaryChatEnabled) {
+				updateLastReadAt(chatIdProp);
+			}
+
 			// Process any queued requests if the chat is idle
 			const lastMessage = history.currentId ? history.messages[history.currentId] : null;
 			const isIdle = !lastMessage || lastMessage.role !== 'assistant' || lastMessage.done;
@@ -241,7 +248,7 @@
 			messageInput?.setText(data, async () => {
 				if (!($settings?.insertSuggestionPrompt ?? false)) {
 					await tick();
-					submitPrompt(prompt);
+					submitHandler(prompt);
 				}
 			});
 		}
@@ -364,6 +371,11 @@
 					codeInterpreterEnabled = model.info.meta.defaultFeatureIds.includes('code_interpreter');
 				}
 			}
+
+			// Set Default Terminal
+			if (model?.info?.meta?.terminalId) {
+				selectedTerminalId.set(model.info.meta.terminalId);
+			}
 		}
 	};
 
@@ -401,6 +413,13 @@
 		await tick();
 
 		saveChatHandler(_chatId, history);
+	};
+
+	const updateLastReadAt = (id) => {
+		$socket?.emit('events:chat', {
+			chat_id: id,
+			data: { type: 'last_read_at' }
+		});
 	};
 
 	const terminalEventHandler = (type: string, data: any) => {
@@ -590,7 +609,7 @@
 
 			if (prompt !== '') {
 				await tick();
-				submitPrompt(prompt);
+				submitHandler(prompt);
 			}
 		}
 
@@ -611,7 +630,7 @@
 			if (event.data.text !== '') {
 				if (isSameOrigin) {
 					await tick();
-					submitPrompt(event.data.text);
+					submitHandler(event.data.text);
 				} else {
 					// Cross-origin: ask user to confirm before submitting
 					eventConfirmationInput = false;
@@ -620,7 +639,7 @@
 					eventCallback = async (confirmed: boolean) => {
 						if (confirmed) {
 							await tick();
-							submitPrompt(event.data.text);
+							submitHandler(event.data.text);
 						}
 					};
 					showEventConfirmation = true;
@@ -768,6 +787,9 @@
 
 		return () => {
 			try {
+				if (chatIdProp && !$temporaryChatEnabled) {
+					updateLastReadAt(chatIdProp);
+				}
 				pageSubscribe();
 				showControlsSubscribe();
 				selectedFolderSubscribe();
@@ -1210,14 +1232,53 @@
 			showControls.set(true);
 		}
 
-		if ($page.url.searchParams.get('q')) {
+		// Consume one-shot desktop event (e.g. Spotlight query, call shortcut)
+		if ($desktopEvent) {
+			const event = $desktopEvent;
+			desktopEvent.set(null);
+
+			if (event.type === 'call') {
+				// Defer to next macrotask so the call overlay isn't clobbered by
+				// showControlsSubscribe's initial callback (value=false → set(false))
+				// which runs as a pending microtask after this function.
+				setTimeout(() => {
+					showCallOverlay.set(true);
+					showControls.set(true);
+				}, 0);
+			} else if (event.type === 'query') {
+				const query = event.data?.query;
+				const eventFiles = event.data?.files;
+
+				// Attach screenshot images from desktop (e.g. Spotlight region capture)
+				if (eventFiles?.length) {
+					for (const ef of eventFiles) {
+						files = [
+							...files,
+							{
+								type: 'image',
+								url: ef.dataUrl,
+								name: ef.name
+							}
+						];
+					}
+				}
+
+				if (query || eventFiles?.length) {
+					if (query) {
+						messageInput?.setText(query);
+					}
+					await tick();
+					submitHandler(query || '');
+				}
+			}
+		} else if ($page.url.searchParams.get('q')) {
 			const q = $page.url.searchParams.get('q') ?? '';
 			messageInput?.setText(q);
 
 			if (q) {
 				if (($page.url.searchParams.get('submit') ?? 'true') === 'true') {
 					await tick();
-					submitPrompt(q);
+					submitHandler(q);
 				}
 			}
 		}
@@ -1281,7 +1342,12 @@
 
 				if (history.currentId) {
 					for (const message of Object.values(history.messages)) {
-						if (message && message.role === 'assistant' && message.done !== false) {
+						if (
+							message &&
+							message.role === 'assistant' &&
+							message.id !== history.currentId &&
+							message.done !== false
+						) {
 							message.done = true;
 						}
 					}
@@ -1325,24 +1391,40 @@
 		}
 	};
 
+	let processingQueueChats = new Set<string>();
+
 	const processNextInQueue = async (targetChatId: string) => {
+		if (processingQueueChats.has(targetChatId)) return;
+
 		const queue = $chatRequestQueues[targetChatId];
 		if (!queue || queue.length === 0) return;
 
-		const combinedPrompt = queue.map((m) => m.prompt).join('\n\n');
-		const combinedFiles = queue.flatMap((m) => m.files);
+		processingQueueChats.add(targetChatId);
+		try {
+			const combinedPrompt = queue.map((m) => m.prompt).join('\n\n');
+			const combinedFiles = queue.flatMap((m) => m.files);
 
-		chatRequestQueues.update((q) => {
-			const { [targetChatId]: _, ...rest } = q;
-			return rest;
-		});
+			chatRequestQueues.update((q) => {
+				const { [targetChatId]: _, ...rest } = q;
+				return rest;
+			});
 
-		files = combinedFiles;
-		await tick();
-		await submitPrompt(combinedPrompt);
+			await submitPrompt(combinedPrompt, combinedFiles);
+		} finally {
+			processingQueueChats.delete(targetChatId);
+		}
 	};
 
 	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
+		if (!responseMessageId) {
+			console.error('chatCompleted: missing message id', {
+				chatId: _chatId,
+				modelId,
+				messageCount: messages?.length ?? 0
+			});
+			return;
+		}
+
 		const res = await chatCompleted(localStorage.token, {
 			model: modelId,
 			messages: messages.map((m) => ({
@@ -1767,8 +1849,56 @@
 	// Chat functions
 	//////////////////////////
 
-	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
-		console.log('submitPrompt', userPrompt, $chatId);
+	const submitPrompt = async (inputContent, inputFiles) => {
+		const _files = structuredClone(inputFiles);
+
+		chatFiles.push(
+			..._files.filter(
+				(item) =>
+					['doc', 'text', 'note', 'chat', 'folder', 'collection'].includes(item.type) ||
+					(item.type === 'file' && !(item?.content_type ?? '').startsWith('image/'))
+			)
+		);
+		chatFiles = chatFiles.filter(
+			// Remove duplicates
+			(item, index, array) =>
+				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
+		);
+
+		// Create user message
+		let userMessageId = uuidv4();
+		let userMessage = {
+			id: userMessageId,
+			parentId: history.currentId ?? null,
+			childrenIds: [],
+			role: 'user',
+			content: inputContent,
+			files: _files.length > 0 ? _files : undefined,
+			timestamp: Math.floor(Date.now() / 1000), // Unix epoch
+			models: selectedModels
+		};
+
+		// Add message to history and Set currentId to messageId
+		history.messages[userMessageId] = userMessage;
+
+		// Append messageId to childrenIds of parent message
+		if (history.currentId !== null) {
+			history.messages[history.currentId].childrenIds.push(userMessageId);
+		}
+
+		history.currentId = userMessageId;
+
+		// focus on chat input
+		const chatInput = document.getElementById('chat-input');
+		chatInput?.focus();
+
+		saveSessionSelectedModels();
+
+		await sendMessage(history, userMessageId, { newChat: true });
+	};
+
+	const submitHandler = async (userPrompt, { _raw = false } = {}) => {
+		console.log('submitHandler', userPrompt, $chatId);
 
 		const _selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
@@ -1848,57 +1978,14 @@
 			}
 		}
 
+		// Clear input and submit
 		messageInput?.setText('');
 		prompt = '';
-
-		const messages = createMessagesList(history, history.currentId);
 		const _files = structuredClone(files);
-
-		chatFiles.push(
-			..._files.filter(
-				(item) =>
-					['doc', 'text', 'note', 'chat', 'folder', 'collection'].includes(item.type) ||
-					(item.type === 'file' && !(item?.content_type ?? '').startsWith('image/'))
-			)
-		);
-		chatFiles = chatFiles.filter(
-			// Remove duplicates
-			(item, index, array) =>
-				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
-		);
-
 		files = [];
 		messageInput?.setText('');
 
-		// Create user message
-		let userMessageId = uuidv4();
-		let userMessage = {
-			id: userMessageId,
-			parentId: messages.length !== 0 ? messages.at(-1).id : null,
-			childrenIds: [],
-			role: 'user',
-			content: userPrompt,
-			files: _files.length > 0 ? _files : undefined,
-			timestamp: Math.floor(Date.now() / 1000), // Unix epoch
-			models: selectedModels
-		};
-
-		// Add message to history and Set currentId to messageId
-		history.messages[userMessageId] = userMessage;
-		history.currentId = userMessageId;
-
-		// Append messageId to childrenIds of parent message
-		if (messages.length !== 0) {
-			history.messages[messages.at(-1).id].childrenIds.push(userMessageId);
-		}
-
-		// focus on chat input
-		const chatInput = document.getElementById('chat-input');
-		chatInput?.focus();
-
-		saveSessionSelectedModels();
-
-		await sendMessage(history, userMessageId, { newChat: true });
+		await submitPrompt(userPrompt, _files);
 	};
 
 	const sendMessage = async (
@@ -2393,13 +2480,20 @@
 		history.messages[responseMessage.id] = responseMessage;
 	};
 
-	const stopResponse = async () => {
+	const stopResponse = async (processQueue = true) => {
 		if (taskIds) {
-			for (const taskId of taskIds) {
-				const res = await stopTask(localStorage.token, taskId).catch((error) => {
+			if ($chatId) {
+				await stopTasksByChatId(localStorage.token, $chatId).catch((error) => {
 					toast.error(`${error}`);
 					return null;
 				});
+			} else {
+				for (const taskId of taskIds) {
+					const res = await stopTask(localStorage.token, taskId).catch((error) => {
+						toast.error(`${error}`);
+						return null;
+					});
+				}
 			}
 
 			taskIds = null;
@@ -2425,7 +2519,9 @@
 			generationController = null;
 		}
 
-		await processNextInQueue($chatId);
+		if (processQueue) {
+			await processNextInQueue($chatId);
+		}
 	};
 
 	const submitMessage = async (parentId, prompt) => {
@@ -2636,7 +2732,7 @@
 	const MAX_DRAFT_LENGTH = 5000;
 	let saveDraftTimeout: ReturnType<typeof setTimeout> | null = null;
 
-	const saveDraft = async (draft, chatId = null) => {
+	const saveDraft = async (draft: any, chatId: string | null = null) => {
 		if (saveDraftTimeout) {
 			clearTimeout(saveDraftTimeout);
 		}
@@ -2653,7 +2749,7 @@
 		}
 	};
 
-	const clearDraft = async (chatId = null) => {
+	const clearDraft = async (chatId: string | null = null) => {
 		if (saveDraftTimeout) {
 			clearTimeout(saveDraftTimeout);
 		}
@@ -2880,7 +2976,7 @@
 									{createMessagePair}
 									{onUpload}
 									messageQueue={$chatRequestQueues[$chatId] ?? []}
-							{chatTasks}
+									{chatTasks}
 									onQueueSendNow={async (id) => {
 										const queue = $chatRequestQueues[$chatId] ?? [];
 										const item = queue.find((m) => m.id === id);
@@ -2890,13 +2986,9 @@
 												...q,
 												[$chatId]: queue.filter((m) => m.id !== id)
 											}));
-											// Stop current generation first
-											await stopResponse();
+											await stopResponse(false);
 											await tick();
-											// Set files and submit
-											files = item.files;
-											await tick();
-											await submitPrompt(item.prompt);
+											await submitPrompt(item.prompt, item.files);
 										}
 									}}
 									onQueueEdit={(id) => {
@@ -2926,11 +3018,11 @@
 										}
 									}}
 									on:submit={async (e) => {
-										clearDraft();
+										clearDraft($chatId);
 										if (e.detail || files.length > 0) {
 											await tick();
 
-											submitPrompt(e.detail.replaceAll('\n\n', '\n'));
+											submitHandler(e.detail.replaceAll('\n\n', '\n'));
 										}
 									}}
 								/>
@@ -2973,7 +3065,7 @@
 										clearDraft();
 										if (e.detail || files.length > 0) {
 											await tick();
-											submitPrompt(e.detail.replaceAll('\n\n', '\n'));
+											submitHandler(e.detail.replaceAll('\n\n', '\n'));
 										}
 									}}
 								/>
@@ -2998,7 +3090,7 @@
 						}
 						return a;
 					}, [])}
-					{submitPrompt}
+					submitPrompt={submitHandler}
 					{stopResponse}
 					{showMessage}
 					{eventTarget}

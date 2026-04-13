@@ -1,4 +1,5 @@
 import asyncio
+import ipaddress
 import logging
 import socket
 import ssl
@@ -84,11 +85,9 @@ def validate_url(url: Union[str, Sequence[str]]):
             ipv4_addresses, ipv6_addresses = resolve_hostname(parsed_url.hostname)
             # Check if any of the resolved addresses are private
             # This is technically still vulnerable to DNS rebinding attacks, as we don't control WebBaseLoader
-            for ip in ipv4_addresses:
-                if validators.ipv4(ip, private=True):
-                    raise ValueError(ERROR_MESSAGES.INVALID_URL)
-            for ip in ipv6_addresses:
-                if validators.ipv6(ip, private=True):
+            for ip in ipv4_addresses + ipv6_addresses:
+                addr = ipaddress.ip_address(ip)
+                if not addr.is_global:
                     raise ValueError(ERROR_MESSAGES.INVALID_URL)
         return True
     elif isinstance(url, Sequence):

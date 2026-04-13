@@ -67,6 +67,7 @@ from open_webui.socket.main import (
     periodic_session_pool_cleanup,
     get_event_emitter,
     get_models_in_use,
+    get_user_id_from_session_pool,
 )
 from open_webui.routers import (
     analytics,
@@ -97,6 +98,7 @@ from open_webui.routers import (
     utils,
     scim,
     terminals,
+    automations,
 )
 
 from open_webui.routers.retrieval import (
@@ -107,8 +109,8 @@ from open_webui.routers.retrieval import (
 )
 
 
-from sqlalchemy.orm import Session
-from open_webui.internal.db import ScopedSession, engine, get_session
+from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.internal.db import ScopedSession, engine, get_async_session
 
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
@@ -211,6 +213,8 @@ from open_webui.config import (
     AUDIO_TTS_AZURE_SPEECH_REGION,
     AUDIO_TTS_AZURE_SPEECH_BASE_URL,
     AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+    AUDIO_TTS_MISTRAL_API_KEY,
+    AUDIO_TTS_MISTRAL_API_BASE_URL,
     PLAYWRIGHT_WS_URL,
     PLAYWRIGHT_TIMEOUT,
     FIRECRAWL_API_BASE_URL,
@@ -380,6 +384,8 @@ from open_webui.config import (
     API_KEYS_ALLOWED_ENDPOINTS,
     ENABLE_FOLDERS,
     FOLDER_MAX_FILE_COUNT,
+    AUTOMATION_MAX_COUNT,
+    AUTOMATION_MIN_INTERVAL,
     ENABLE_CHANNELS,
     ENABLE_NOTES,
     ENABLE_USER_STATUS,
@@ -470,6 +476,7 @@ from open_webui.env import (
     LICENSE_KEY,
     AUDIT_EXCLUDED_PATHS,
     AUDIT_INCLUDED_PATHS,
+    ENABLE_AUDIT_GET_REQUESTS,
     AUDIT_LOG_LEVEL,
     CHANGELOG,
     REDIS_URL,
@@ -510,6 +517,8 @@ from open_webui.env import (
     WEBUI_ADMIN_NAME,
     ENABLE_EASTER_EGGS,
     LOG_FORMAT,
+    # OAuth Back-Channel Logout
+    ENABLE_OAUTH_BACKCHANNEL_LOGOUT,
 )
 
 
@@ -558,6 +567,7 @@ from open_webui.tasks import (
     list_task_ids_by_item_id,
     create_task,
     stop_task,
+    stop_item_tasks,
     list_tasks,
 )  # Import from tasks.py
 
@@ -568,7 +578,7 @@ from open_webui.constants import ERROR_MESSAGES
 
 if SAFE_MODE:
     print('SAFE MODE ENABLED')
-    Functions.deactivate_all_functions()
+    # Functions.deactivate_all_functions() is awaited in lifespan below
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -622,14 +632,17 @@ async def lifespan(app: FastAPI):
 
     # Create admin account from env vars if specified and no users exist
     if WEBUI_ADMIN_EMAIL and WEBUI_ADMIN_PASSWORD:
-        if create_admin_user(WEBUI_ADMIN_EMAIL, WEBUI_ADMIN_PASSWORD, WEBUI_ADMIN_NAME):
+        if await create_admin_user(WEBUI_ADMIN_EMAIL, WEBUI_ADMIN_PASSWORD, WEBUI_ADMIN_NAME):
             # Disable signup since we now have an admin
             app.state.config.ENABLE_SIGNUP = False
+
+    if SAFE_MODE:
+        await Functions.deactivate_all_functions()
 
     # This should be blocking (sync) so functions are not deactivated on first /get_models calls
     # when the first user lands on the / route.
     log.info('Installing external dependencies of functions and tools...')
-    install_tool_and_function_dependencies()
+    await install_tool_and_function_dependencies()
 
     app.state.redis = get_redis_connection(
         redis_url=REDIS_URL,
@@ -647,6 +660,10 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     asyncio.create_task(periodic_session_pool_cleanup())
+
+    from open_webui.utils.automations import automation_worker_loop
+
+    asyncio.create_task(automation_worker_loop(app))
 
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         try:
@@ -703,6 +720,11 @@ async def lifespan(app: FastAPI):
     app.state.startup_complete = True
 
     yield
+
+    # Shutdown: clean up shared resources
+    from open_webui.utils.session_pool import close_session
+
+    await close_session()
 
     if hasattr(app.state, 'redis_task_command_listener'):
         app.state.redis_task_command_listener.cancel()
@@ -865,6 +887,8 @@ app.state.config.BANNERS = WEBUI_BANNERS
 
 app.state.config.ENABLE_FOLDERS = ENABLE_FOLDERS
 app.state.config.FOLDER_MAX_FILE_COUNT = FOLDER_MAX_FILE_COUNT
+app.state.config.AUTOMATION_MAX_COUNT = AUTOMATION_MAX_COUNT
+app.state.config.AUTOMATION_MIN_INTERVAL = AUTOMATION_MIN_INTERVAL
 app.state.config.ENABLE_CHANNELS = ENABLE_CHANNELS
 app.state.config.ENABLE_NOTES = ENABLE_NOTES
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
@@ -1277,6 +1301,9 @@ app.state.config.TTS_AZURE_SPEECH_REGION = AUDIO_TTS_AZURE_SPEECH_REGION
 app.state.config.TTS_AZURE_SPEECH_BASE_URL = AUDIO_TTS_AZURE_SPEECH_BASE_URL
 app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT
 
+app.state.config.TTS_MISTRAL_API_KEY = AUDIO_TTS_MISTRAL_API_KEY
+app.state.config.TTS_MISTRAL_API_BASE_URL = AUDIO_TTS_MISTRAL_API_BASE_URL
+
 
 app.state.faster_whisper_model = None
 app.state.speech_synthesiser = None
@@ -1369,51 +1396,6 @@ class RedirectMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(RedirectMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
-
-
-class APIKeyRestrictionMiddleware:
-    def __init__(self, app):
-        self.app = app
-
-    async def __call__(self, scope, receive, send):
-        if scope['type'] == 'http':
-            request = Request(scope)
-            auth_header = request.headers.get('Authorization')
-            token = None
-
-            if auth_header:
-                parts = auth_header.split(' ', 1)
-                if len(parts) == 2:
-                    token = parts[1]
-
-            # Only apply restrictions if an sk- API key is used
-            if token and token.startswith('sk-'):
-                # Check if restrictions are enabled
-                if app.state.config.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS:
-                    allowed_paths = [
-                        path.strip()
-                        for path in str(app.state.config.API_KEYS_ALLOWED_ENDPOINTS).split(',')
-                        if path.strip()
-                    ]
-
-                    request_path = request.url.path
-
-                    # Match exact path or prefix path
-                    is_allowed = any(
-                        request_path == allowed or request_path.startswith(allowed + '/') for allowed in allowed_paths
-                    )
-
-                    if not is_allowed:
-                        await JSONResponse(
-                            status_code=status.HTTP_403_FORBIDDEN,
-                            content={'detail': 'API key not allowed to access this endpoint.'},
-                        )(scope, receive, send)
-                        return
-
-        await self.app(scope, receive, send)
-
-
-app.add_middleware(APIKeyRestrictionMiddleware)
 
 
 @app.middleware('http')
@@ -1522,6 +1504,7 @@ if ENABLE_ADMIN_ANALYTICS:
     app.include_router(analytics.router, prefix='/api/v1/analytics', tags=['analytics'])
 app.include_router(utils.router, prefix='/api/v1/utils', tags=['utils'])
 app.include_router(terminals.router, prefix='/api/v1/terminals', tags=['terminals'])
+app.include_router(automations.router, prefix='/api/v1/automations', tags=['automations'])
 
 # SCIM 2.0 API for identity management
 if ENABLE_SCIM:
@@ -1540,6 +1523,7 @@ if audit_level != AuditLevel.NONE:
         audit_level=audit_level,
         excluded_paths=AUDIT_EXCLUDED_PATHS,
         included_paths=AUDIT_INCLUDED_PATHS,
+        audit_get_requests=ENABLE_AUDIT_GET_REQUESTS,
         max_body_size=MAX_BODY_LOG_SIZE,
     )
 ##################################
@@ -1588,7 +1572,7 @@ async def get_models(request: Request, refresh: bool = False, user=Depends(get_v
             )
         )
 
-    models = get_filtered_models(models, user)
+    models = await get_filtered_models(models, user)
 
     log.debug(
         f'/api/models returned filtered models accessible to the user: {json.dumps([model.get("id") for model in models])}'
@@ -1654,12 +1638,12 @@ async def chat_completion(
                 raise Exception('Model not found')
 
             model = request.app.state.MODELS[model_id]
-            model_info = Models.get_model_by_id(model_id)
+            model_info = await Models.get_model_by_id(model_id)
 
             # Check if user has access to the model
             if not BYPASS_MODEL_ACCESS_CONTROL and (user.role != 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL):
                 try:
-                    check_model_access(user, model)
+                    await check_model_access(user, model)
                 except Exception as e:
                     raise e
         else:
@@ -1742,7 +1726,7 @@ async def chat_completion(
                 # Verify chat ownership — lightweight EXISTS check avoids
                 # deserializing the full chat JSON blob just to confirm the row exists
                 if (
-                    not Chats.is_chat_owner(metadata['chat_id'], user.id) and user.role != 'admin'
+                    not await Chats.is_chat_owner(metadata['chat_id'], user.id) and user.role != 'admin'
                 ):  # admins can access any chat
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
@@ -1754,7 +1738,7 @@ async def chat_completion(
                 parent_message_files = parent_message.get('files', [])
                 if parent_message_files:
                     try:
-                        Chats.insert_chat_files(
+                        await Chats.insert_chat_files(
                             metadata['chat_id'],
                             parent_message.get('id'),
                             [
@@ -1786,7 +1770,7 @@ async def chat_completion(
             if metadata.get('chat_id') and metadata.get('message_id'):
                 try:
                     if not metadata['chat_id'].startswith('local:'):
-                        Chats.upsert_message_to_chat_by_id_and_message_id(
+                        await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
                             {
@@ -1797,13 +1781,13 @@ async def chat_completion(
                 except Exception:
                     pass
 
-            ctx = build_chat_response_context(request, form_data, user, model, metadata, tasks, events)
+            ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, events)
 
             return await process_chat_response(response, ctx)
         except asyncio.CancelledError:
             log.info('Chat processing was cancelled')
             try:
-                event_emitter = get_event_emitter(metadata)
+                event_emitter = await get_event_emitter(metadata)
                 await asyncio.shield(
                     event_emitter(
                         {'type': 'chat:tasks:cancel'},
@@ -1814,12 +1798,12 @@ async def chat_completion(
             finally:
                 raise  # re-raise to ensure proper task cancellation handling
         except Exception as e:
-            log.debug(f'Error processing chat payload: {e}')
+            log.error('Error processing chat payload: %s', e)
             if metadata.get('chat_id') and metadata.get('message_id'):
                 # Update the chat message with the error
                 try:
                     if not metadata['chat_id'].startswith('local:'):
-                        Chats.upsert_message_to_chat_by_id_and_message_id(
+                        await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
                             {
@@ -1828,7 +1812,7 @@ async def chat_completion(
                             },
                         )
 
-                    event_emitter = get_event_emitter(metadata)
+                    event_emitter = await get_event_emitter(metadata)
                     await event_emitter(
                         {
                             'type': 'chat:message:error',
@@ -1842,17 +1826,32 @@ async def chat_completion(
                 except Exception:
                     pass
         finally:
+            # Clean up MCP clients.  Shield the entire block from
+            # CancelledError so disconnect() can finish even when the
+            # task is being stopped.  Each client is isolated so one
+            # failure doesn't skip the rest.
             try:
                 if mcp_clients := metadata.get('mcp_clients'):
-                    for client in reversed(mcp_clients.values()):
-                        await client.disconnect()
+
+                    async def _cleanup_mcp():
+                        for client in reversed(list(mcp_clients.values())):
+                            try:
+                                await client.disconnect()
+                            except Exception as e:
+                                log.debug(f'Error disconnecting MCP client: {e}')
+
+                    await asyncio.wait_for(
+                        asyncio.shield(_cleanup_mcp()),
+                        timeout=10.0,
+                    )
+            except asyncio.TimeoutError:
+                log.warning('MCP client cleanup timed out after 10 s')
             except Exception as e:
-                log.debug(f'Error cleaning up: {e}')
-                pass
+                log.debug(f'Error cleaning up MCP clients: {e}')
             # Emit chat:active=false when task completes
             try:
                 if metadata.get('chat_id'):
-                    event_emitter = get_event_emitter(metadata, update_db=False)
+                    event_emitter = await get_event_emitter(metadata, update_db=False)
                     if event_emitter:
                         await event_emitter({'type': 'chat:active', 'data': {'active': False}})
             except Exception as e:
@@ -1866,7 +1865,7 @@ async def chat_completion(
             id=metadata['chat_id'],
         )
         # Emit chat:active=true when task starts
-        event_emitter = get_event_emitter(metadata, update_db=False)
+        event_emitter = await get_event_emitter(metadata, update_db=False)
         if event_emitter:
             await event_emitter({'type': 'chat:active', 'data': {'active': True}})
         return {'status': True, 'task_id': task_id}
@@ -1877,6 +1876,10 @@ async def chat_completion(
 # Alias for chat_completion (Legacy)
 generate_chat_completions = chat_completion
 generate_chat_completion = chat_completion
+
+# Expose as app.state so internal callers (e.g. automations) can
+# use the full pipeline without importing from main.py (avoids circular deps).
+app.state.CHAT_COMPLETION_HANDLER = chat_completion
 
 
 ##################################
@@ -1974,7 +1977,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user=De
 
 
 @app.post('/api/tasks/stop/{task_id}')
-async def stop_task_endpoint(request: Request, task_id: str, user=Depends(get_verified_user)):
+async def stop_task_endpoint(request: Request, task_id: str, user=Depends(get_admin_user)):
     try:
         result = await stop_task(request.app.state.redis, task_id)
         return result
@@ -1983,20 +1986,41 @@ async def stop_task_endpoint(request: Request, task_id: str, user=Depends(get_ve
 
 
 @app.get('/api/tasks')
-async def list_tasks_endpoint(request: Request, user=Depends(get_verified_user)):
+async def list_tasks_endpoint(request: Request, user=Depends(get_admin_user)):
     return {'tasks': await list_tasks(request.app.state.redis)}
 
 
-@app.get('/api/tasks/chat/{chat_id}')
+@app.get('/api/tasks/chat/{chat_id:path}')
 async def list_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=Depends(get_verified_user)):
-    chat = Chats.get_chat_by_id(chat_id)
-    if chat is None or chat.user_id != user.id:
-        return {'task_ids': []}
+    if chat_id.startswith('local:'):
+        socket_id = chat_id[len('local:') :]
+        owner_id = get_user_id_from_session_pool(socket_id)
+        if owner_id != user.id and user.role != 'admin':
+            return {'task_ids': []}
+    else:
+        chat = await Chats.get_chat_by_id(chat_id)
+        if chat is None or (chat.user_id != user.id and user.role != 'admin'):
+            return {'task_ids': []}
 
     task_ids = await list_task_ids_by_item_id(request.app.state.redis, chat_id)
 
     log.debug(f'Task IDs for chat {chat_id}: {task_ids}')
     return {'task_ids': task_ids}
+
+
+@app.post('/api/tasks/chat/{chat_id:path}/stop')
+async def stop_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=Depends(get_verified_user)):
+    if chat_id.startswith('local:'):
+        socket_id = chat_id[len('local:') :]
+        owner_id = get_user_id_from_session_pool(socket_id)
+        if owner_id != user.id and user.role != 'admin':
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    else:
+        chat = await Chats.get_chat_by_id(chat_id)
+        if chat is None or (chat.user_id != user.id and user.role != 'admin'):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    result = await stop_item_tasks(request.app.state.redis, chat_id)
+    return result
 
 
 ##################################
@@ -2030,9 +2054,9 @@ async def get_app_config(request: Request):
                 detail='Invalid token',
             )
         if data is not None and 'id' in data:
-            user = Users.get_user_by_id(data['id'])
+            user = await Users.get_user_by_id(data['id'])
 
-    user_count = Users.get_num_users()
+    user_count = await Users.get_num_users()
     onboarding = False
 
     if user is None:
@@ -2241,7 +2265,7 @@ async def get_current_usage(user=Depends(get_verified_user)):
 
         return {
             'model_ids': get_models_in_use(),
-            'user_count': Users.get_active_user_count(),
+            'user_count': await Users.get_active_user_count(),
         }
     except HTTPException:
         raise
@@ -2448,9 +2472,24 @@ async def oauth_login_callback(
     provider: str,
     request: Request,
     response: Response,
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     return await oauth_manager.handle_callback(request, provider, response, db=db)
+
+
+############################
+# OIDC Back-Channel Logout
+############################
+
+
+@app.post('/oauth/backchannel-logout')
+async def oauth_backchannel_logout(
+    request: Request,
+    db: AsyncSession = Depends(get_async_session),
+):
+    if not ENABLE_OAUTH_BACKCHANNEL_LOGOUT:
+        raise HTTPException(status_code=404)
+    return await oauth_manager.handle_backchannel_logout(request, db=db)
 
 
 @app.get('/manifest.json')

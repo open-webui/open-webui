@@ -43,7 +43,6 @@
 	export let readOnly = false;
 	export let editCodeBlock = true;
 	export let topPadding = false;
-
 </script>
 
 <div

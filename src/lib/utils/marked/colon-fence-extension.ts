@@ -11,7 +11,7 @@
 
 function colonFenceTokenizer(this: any, src: string) {
 	// Match :::type at the start of a line, optionally followed by content, then closing :::
-	const match = /^:::([\w-]+)\n([\s\S]*?)(?:\n:::(?:\s*$|\n))/m.exec(src);
+	const match = /^:::([\w-]+)[^\n]*\n([\s\S]*?)(?:\n:::(?:\s*(?:\n|$)))/.exec(src);
 	if (match) {
 		const fenceType = match[1];
 		const text = match[2].trim();

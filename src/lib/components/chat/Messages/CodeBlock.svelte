@@ -10,7 +10,8 @@
 		copyToClipboard,
 		initMermaid,
 		renderMermaidDiagram,
-		renderVegaVisualization
+		renderVegaVisualization,
+		unescapeHtml
 	} from '$lib/utils';
 
 	import 'highlight.js/styles/github-dark.min.css';
@@ -405,21 +406,8 @@
 
 	const onAttributesUpdate = () => {
 		if (attributes?.output) {
-			// Create a helper function to unescape HTML entities
-			const unescapeHtml = (html) => {
-				const textArea = document.createElement('textarea');
-				textArea.innerHTML = html;
-				return textArea.value;
-			};
-
 			try {
-				// Unescape the HTML-encoded string
-				const unescapedOutput = unescapeHtml(attributes.output);
-
-				// Parse the unescaped string into JSON
-				const output = JSON.parse(unescapedOutput);
-
-				// Assign the parsed values to variables
+				const output = JSON.parse(unescapeHtml(attributes.output));
 				stdout = output.stdout;
 				stderr = output.stderr;
 				result = output.result;

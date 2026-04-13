@@ -536,7 +536,7 @@
 		};
 	});
 
-	// Handler for chat:active events (defined outside onMount for proper cleanup)
+	// Handler for chat events (defined outside onMount for proper cleanup)
 	const chatActiveEventHandler = (event: {
 		chat_id: string;
 		message_id: string;
@@ -553,6 +553,8 @@
 				}
 				return newSet;
 			});
+		} else if (event.data?.type === 'chat:list') {
+			initChatList();
 		}
 	};
 
@@ -1288,6 +1290,8 @@
 												id={chat.id}
 												title={chat.title}
 												createdAt={chat.created_at}
+												updatedAt={chat.updated_at}
+												lastReadAt={chat.last_read_at}
 												{shiftKey}
 												selected={selectedChatId === chat.id}
 												on:select={() => {
@@ -1349,6 +1353,8 @@
 										id={chat.id}
 										title={chat.title}
 										createdAt={chat.created_at}
+										updatedAt={chat.updated_at}
+										lastReadAt={chat.last_read_at}
 										{shiftKey}
 										selected={selectedChatId === chat.id}
 										on:select={() => {
