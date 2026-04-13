@@ -2464,18 +2464,32 @@ async def process_chat_response(
                                         # SSE delivery can be out-of-order: a reasoning
                                         # chunk may arrive after text chunks have begun.
                                         # We detect this by checking the last block type:
-                                        #   "text"       → response in progress → discard
-                                        #   "tool_calls" → between tool-call rounds,
-                                        #                  new reasoning is valid
-                                        #   "reasoning"  → still in thinking phase → append
-                                        #   (empty)      → fresh start → create block
+                                        #   "text" (non-empty) → response in progress → discard
+                                        #   "text" (empty)     → placeholder after tool call → allow reasoning
+                                        #   "tool_calls"       → between tool-call rounds → allow
+                                        #   "reasoning"        → still in thinking phase → append
+                                        #   (empty)            → fresh start → create block
                                         _last_block_type = (
                                             content_blocks[-1]["type"]
                                             if content_blocks
                                             else None
                                         )
-                                        if _last_block_type != "text":
+                                        _last_block_content = (
+                                            content_blocks[-1].get("content", "")
+                                            if content_blocks
+                                            else ""
+                                        )
+                                        if _last_block_type != "text" or (
+                                            _last_block_type == "text" and not _last_block_content
+                                        ):
                                             if _last_block_type != "reasoning":
+                                                # Remove empty text placeholder if it's the last block
+                                                if (
+                                                    _last_block_type == "text"
+                                                    and not _last_block_content
+                                                ):
+                                                    content_blocks.pop()
+
                                                 reasoning_block = {
                                                     "type": "reasoning",
                                                     "start_tag": "<think>",

@@ -424,7 +424,23 @@
 		if (chatIdProp && (await loadChat())) {
 			await tick();
 			loading = false;
-			window.setTimeout(() => scrollToBottom(), 0);
+
+			// Wait for messages DOM to render, then force scroll to bottom
+			await tick();
+			if (messagesContainerElement) {
+				messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+			}
+			// Belt-and-suspenders: also schedule a delayed scroll for late-rendering content
+			window.setTimeout(() => {
+				if (messagesContainerElement) {
+					messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+				}
+			}, 50);
+			window.setTimeout(() => {
+				if (messagesContainerElement) {
+					messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+				}
+			}, 200);
 
 			await tick();
 
