@@ -2666,12 +2666,14 @@
 						scrollToBottom();
 
 						const MAX_RETRIES = 5;
-						const BACKOFF_BASE_MS = 2000;
+						let retryCancelled = false;
 
 						for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
 							let responseMessage = _history.messages[responseMessageId];
 
 							if (attempt > 1) {
+								// Re-enable generating for retry (socket error handler sets it false)
+								generating = true;
 								responseMessage.content = '';
 								responseMessage.error = null;
 								responseMessage.done = false;
@@ -2694,10 +2696,15 @@
 
 							// Wait for response to actually complete (handles socket-based delivery
 							// where sendMessageSocket returns before the response arrives)
-							while (generating) {
+							{
 								const msg = history.messages[responseMessageId];
-								if (msg?.done || msg?.error) break;
-								await new Promise((r) => setTimeout(r, 100));
+								if (!msg?.done && !msg?.error) {
+									while (true) {
+										await new Promise((r) => setTimeout(r, 100));
+										const m = history.messages[responseMessageId];
+										if (m?.done || m?.error) break;
+									}
+								}
 							}
 
 							suppressErrorToast = false;
@@ -2711,8 +2718,11 @@
 
 							if (!responseMessage.error) break;
 
-							if (attempt < MAX_RETRIES && generating) {
+							if (attempt < MAX_RETRIES) {
 								const waitSeconds = attempt * 2;
+
+								// Re-enable generating for countdown UI
+								generating = true;
 
 								responseMessage.error = null;
 								responseMessage.done = false;
@@ -2744,7 +2754,10 @@
 									}, 1000);
 								});
 
-								if (!generating) break;
+								if (!generating) {
+									retryCancelled = true;
+									break;
+								}
 								continue;
 							}
 
@@ -3383,10 +3396,15 @@
 				);
 
 				// Wait for response to actually complete (socket-based delivery)
-				while (generating) {
+				{
 					const msg = history.messages[message.id];
-					if (msg?.done || msg?.error) break;
-					await new Promise((r) => setTimeout(r, 100));
+					if (!msg?.done && !msg?.error) {
+						while (true) {
+							await new Promise((r) => setTimeout(r, 100));
+							const m = history.messages[message.id];
+							if (m?.done || m?.error) break;
+						}
+					}
 				}
 
 				suppressErrorToast = false;
@@ -3400,7 +3418,8 @@
 
 				if (!responseMessage.error) break;
 
-				if (attempt < MAX_RETRIES && generating) {
+				if (attempt < MAX_RETRIES) {
+					generating = true;
 					const waitSeconds = attempt * 2;
 					responseMessage.error = null;
 					responseMessage.done = false;
