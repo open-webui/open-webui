@@ -37,7 +37,9 @@
 
 	const options = {
 		throwOnError: false,
-		breaks: true
+		breaks: true,
+		gfm: true,
+		tables: true
 	};
 
 	marked.use(markedKatexExtension(options));

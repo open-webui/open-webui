@@ -7,6 +7,7 @@
 
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
+	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -86,6 +87,24 @@
 		const fragment = words.length === 1 ? first : `${first},${last}`;
 
 		return fragment ? `${baseUrl}#:~:text=${fragment}` : baseUrl;
+	};
+
+	const hasMarkdownSyntax = (text: string): boolean => {
+		if (!text) return false;
+		// Check for common markdown patterns
+		const markdownPatterns = [
+			/^#{1,6}\s/m,           // Headers
+			/\|.+\|/,               // Tables
+			/^[-*+]\s/m,            // Unordered lists
+			/^\d+\.\s/m,            // Ordered lists
+			/^>\s/m,                // Blockquotes
+			/\*\*.+\*\*/,           // Bold
+			/__.+__/,               // Bold (underscore)
+			/\*.+\*/,               // Italic
+			/\[.+\]\(.+\)/,         // Links
+			/`{1,3}.+`{1,3}/        // Code
+		];
+		return markdownPatterns.some(pattern => pattern.test(text));
 	};
 </script>
 
@@ -215,6 +234,15 @@
 									srcdoc={document.document}
 									title={$i18n.t('Content')}
 								></iframe>
+							{:else if hasMarkdownSyntax(document.document)}
+								<div class="prose dark:prose-invert prose-table:border-collapse prose-table:w-full prose-th:border prose-th:border-gray-300 dark:prose-th:border-gray-600 prose-th:px-2 prose-th:py-1 prose-td:border prose-td:border-gray-300 dark:prose-td:border-gray-600 prose-td:px-2 prose-td:py-1 max-w-none text-sm break-words overflow-hidden">
+									<Markdown
+										id={`citation-${documentIdx}`}
+										content={document.document}
+										done={true}
+										editCodeBlock={false}
+									/>
+								</div>
 							{:else}
 								<pre class="text-sm dark:text-gray-400 whitespace-pre-line">{document.document
 										.trim()
