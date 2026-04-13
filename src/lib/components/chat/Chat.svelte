@@ -4205,42 +4205,9 @@
 								</div>
 							</div>
 						{:else}
-							<div class="flex flex-col items-center h-full">
-								{#if relevantGroups.length > 0}
-									<div class="mx-auto inset-x-0 flex justify-center w-full flex-none">
-										<div class="px-3 pb-2 w-full {($settings?.widescreenMode ?? null) ? 'max-w-full' : 'max-w-6xl'}">
-											<div class="bg-gray-50 dark:bg-gray-850 rounded-lg p-3 text-xs">
-												{#each relevantGroups as [groupName, groupData]}
-													{@const effectiveUsage = groupData.effectiveUsage}
-													{@const isOverLimit =
-														groupData.limit && effectiveUsage.total > groupData.limit}
-													<div class="flex items-center justify-between mb-1 last:mb-0">
-														<span
-															class="font-medium {isOverLimit
-																? 'text-red-600 dark:text-red-400'
-																: 'text-gray-700 dark:text-gray-300'}">{groupName}</span
-														>
-														<div
-															class="flex items-center space-x-2 {isOverLimit
-																? 'text-red-600 dark:text-red-400'
-																: 'text-gray-600 dark:text-gray-400'}"
-														>
-															<span>{effectiveUsage.in.toLocaleString()} IN</span>
-															<span>·</span>
-															<span>{effectiveUsage.out.toLocaleString()} OUT</span>
-															<span>·</span>
-															<span>{effectiveUsage.total.toLocaleString()} TOTAL</span>
-															{#if groupData.limit}
-																<span>/ {groupData.limit.toLocaleString()}</span>
-															{/if}
-														</div>
-													</div>
-												{/each}
-											</div>
-										</div>
-									</div>
-								{/if}
+							<div class="flex items-center h-full">
 								<Placeholder
+									{relevantGroups}
 									{history}
 									{selectedModels}
 									bind:messageInput

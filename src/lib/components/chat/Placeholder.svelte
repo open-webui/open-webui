@@ -12,6 +12,7 @@
 
 	import {
 		config,
+		settings,
 		user,
 		models as _models,
 		temporaryChatEnabled,
@@ -59,6 +60,7 @@
 	export let onChange = (e) => {};
 
 	export let toolServers = [];
+	export let relevantGroups = [];
 
 	let models = [];
 	let selectedModelIdx = 0;
@@ -197,6 +199,39 @@
 								</div>
 							{/if}
 						{/if}
+					</div>
+				</div>
+			{/if}
+
+			{#if relevantGroups.length > 0}
+				<div class="@md:max-w-3xl w-full pb-1">
+					<div class="bg-gray-50 dark:bg-gray-850 rounded-lg p-3 text-xs">
+						{#each relevantGroups as [groupName, groupData]}
+							{@const effectiveUsage = groupData.effectiveUsage}
+							{@const isOverLimit =
+								groupData.limit && effectiveUsage.total > groupData.limit}
+							<div class="flex items-center justify-between mb-1 last:mb-0">
+								<span
+									class="font-medium {isOverLimit
+										? 'text-red-600 dark:text-red-400'
+										: 'text-gray-700 dark:text-gray-300'}">{groupName}</span
+								>
+								<div
+									class="flex items-center space-x-2 {isOverLimit
+										? 'text-red-600 dark:text-red-400'
+										: 'text-gray-600 dark:text-gray-400'}"
+								>
+									<span>{effectiveUsage.in.toLocaleString()} IN</span>
+									<span>·</span>
+									<span>{effectiveUsage.out.toLocaleString()} OUT</span>
+									<span>·</span>
+									<span>{effectiveUsage.total.toLocaleString()} TOTAL</span>
+									{#if groupData.limit}
+										<span>/ {groupData.limit.toLocaleString()}</span>
+									{/if}
+								</div>
+							</div>
+						{/each}
 					</div>
 				</div>
 			{/if}
