@@ -205,18 +205,22 @@ get_db = contextmanager(get_session)
 # ASYNC ENGINE (used for ALL runtime database operations)
 # ============================================================
 
-# Patch SQLAlchemy's aiosqlite connector before any async engine is
-# created. Without this, every cancelled aiosqlite query produces a
-# multi-page `terminate_force_close() not implemented` ERROR traceback
-# because SQLAlchemy 2.0.x's shim references `Connection.stop`, which
-# aiosqlite removed in 0.20+. See `_aiosqlite_compat` for details.
-from open_webui.internal._aiosqlite_compat import install as _install_aiosqlite_compat
-
-_install_aiosqlite_compat()
-
 ASYNC_SQLALCHEMY_DATABASE_URL = _make_async_url(SQLALCHEMY_DATABASE_URL)
 
 if 'sqlite' in ASYNC_SQLALCHEMY_DATABASE_URL:
+    # Patch SQLAlchemy's aiosqlite connector before the engine — and
+    # therefore any pooled connection — is created. Without this, every
+    # cancelled aiosqlite query produces a multi-page
+    # `terminate_force_close() not implemented` ERROR traceback because
+    # SQLAlchemy 2.0.x's shim references `Connection.stop`, which
+    # aiosqlite removed in 0.20+. The install is a no-op when the
+    # affected upstream code is absent or already fixed; it is gated
+    # behind the sqlite URL check so non-sqlite deployments get no
+    # global SQLAlchemy mutation. See `_aiosqlite_compat` for details.
+    from open_webui.internal._aiosqlite_compat import install as _install_aiosqlite_compat
+
+    _install_aiosqlite_compat()
+
     async_engine = create_async_engine(
         ASYNC_SQLALCHEMY_DATABASE_URL,
         connect_args={'check_same_thread': False},
