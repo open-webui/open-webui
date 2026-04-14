@@ -2522,6 +2522,21 @@ async def delete_entries_from_collection(
                 )
             hash = file.hash
 
+            # Refuse to issue a `filter={'hash': None}` query — the
+            # match semantics of a null filter value are
+            # backend-dependent (some backends ignore the key, some
+            # match every row whose metadata lacks `hash`) and risk
+            # deleting unrelated entries. Files without a hash are
+            # typically unprocessed / failed / legacy records that
+            # can't be targeted by hash anyway.
+            if hash is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT(
+                        'File has no hash; cannot delete vector entries by hash.'
+                    ),
+                )
+
             # Pre-existing bug: this used `metadata=` which is not a
             # parameter on `VectorDBBase.delete` nor on any backend
             # implementation, so the call always raised TypeError that
@@ -2536,6 +2551,10 @@ async def delete_entries_from_collection(
             return {'status': True}
         else:
             return {'status': False}
+    except HTTPException:
+        # Caller-meaningful errors (404/400 above) must not be
+        # swallowed and re-shaped as `{'status': False}`.
+        raise
     except Exception as e:
         log.exception(e)
         return {'status': False}
