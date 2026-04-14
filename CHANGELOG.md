@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.9.0] - 2026-04-13
+## [0.9.0] - 2026-04-14
 
 ### Added
 
@@ -85,6 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🖼️ **Optional image size parameter.** Image generation no longer sends the "size" field when no size is configured, improving compatibility with providers that reject unsupported size arguments. [#23611](https://github.com/open-webui/open-webui/issues/23611), [Commit](https://github.com/open-webui/open-webui/commit/869cf9e848b741705dc058550fa1b3f70db47fe8)
 - 🔎 **FireCrawl timeout reliability.** FireCrawl web loading now uses direct scrape requests and improved timeout handling for single-URL fetches, reducing empty results and premature timeout failures with local FireCrawl setups. [#23411](https://github.com/open-webui/open-webui/issues/23411), [Commit](https://github.com/open-webui/open-webui/commit/9c64d84ad90804bf7d891e4a5097c03c4d7044c3)
 - 🖱️ **Custom action icon drag prevention.** Custom user-added action icons in chat responses are no longer accidentally draggable, so clicks and hover interactions behave consistently with built-in action icons. [#23412](https://github.com/open-webui/open-webui/pull/23412)
+- 🖼️ **Image URL conversion reliability.** Sending image URLs to AI models no longer fails with "cannot pickle 'coroutine' object" errors, so image inputs now convert to base64 reliably during request processing. [#23685](https://github.com/open-webui/open-webui/pull/23685#issuecomment-4240424635)
 - 📂 **Channel input menu dismissal.** In Workspace Channels, the message input dropdown now closes immediately after selecting "Upload Files" or "Capture", matching normal chat input behavior and preventing the menu from staying open unnecessarily. [#23684](https://github.com/open-webui/open-webui/pull/23684)
 - 📋 **Clipboard copy scroll stability.** Copying content with the fallback clipboard method no longer triggers unwanted page scrolling during focus, keeping your current reading position stable. [Commit](https://github.com/open-webui/open-webui/commit/fc98000aa8d439bbff21a70370f5e962bf23f4bc)
 - 🖼️ **Profile image URL validation.** Profile saves now accept valid Open WebUI profile-image paths, trusted external HTTP(S) avatar URLs, and safe raster data-image formats while rejecting unsafe URL patterns that could be abused. [#23389](https://github.com/open-webui/open-webui/pull/23389)
