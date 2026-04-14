@@ -205,6 +205,15 @@ get_db = contextmanager(get_session)
 # ASYNC ENGINE (used for ALL runtime database operations)
 # ============================================================
 
+# Patch SQLAlchemy's aiosqlite connector before any async engine is
+# created. Without this, every cancelled aiosqlite query produces a
+# multi-page `terminate_force_close() not implemented` ERROR traceback
+# because SQLAlchemy 2.0.x's shim references `Connection.stop`, which
+# aiosqlite removed in 0.20+. See `_aiosqlite_compat` for details.
+from open_webui.internal._aiosqlite_compat import install as _install_aiosqlite_compat
+
+_install_aiosqlite_compat()
+
 ASYNC_SQLALCHEMY_DATABASE_URL = _make_async_url(SQLALCHEMY_DATABASE_URL)
 
 if 'sqlite' in ASYNC_SQLALCHEMY_DATABASE_URL:
