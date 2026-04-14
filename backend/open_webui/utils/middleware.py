@@ -98,6 +98,7 @@ from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
     get_content_from_message,
     convert_output_to_messages,
+    filter_output_by_content,
     strip_empty_content_blocks,
 )
 from open_webui.utils.tools import (
@@ -2095,16 +2096,52 @@ def process_messages_with_output(messages: list[dict]) -> list[dict]:
 
     For assistant messages with 'output' field, produces properly formatted
     OpenAI-style messages (tool_calls + tool results). Strips 'output' before LLM.
+    Respects content edits and dropped <details> blocks by filtering output items
+    against the stored content field before conversion.
     """
     processed = []
 
     for message in messages:
         if message.get('role') == 'assistant' and message.get('output'):
-            # Use output items for clean OpenAI-format messages
-            output_messages = convert_output_to_messages(message['output'], raw=True)
-            if output_messages:
-                processed.extend(output_messages)
-                continue
+            # normalize; guard against None or list-typed content
+            content = message.get('content', '')
+            if not isinstance(content, str):
+                content = ''
+
+            # Drop output items for <details> blocks removed from content
+            filtered_output = filter_output_by_content(message['output'], content)
+
+            # Split content around <details> blocks; assign each text segment to
+            # the corresponding message item in order → preserves pre/post-tool placement
+            text_segs = [
+                s.strip()
+                for s in re.split(r'<details\b[^>]*>.*?</details>', content, flags=re.S)
+            ]
+            seg_idx = 0
+            modified_output = []
+            for item in filtered_output:
+                if item.get('type') == 'message':
+                    text = text_segs[seg_idx] if seg_idx < len(text_segs) else ''
+                    seg_idx += 1
+                    modified_output.append({
+                        **item,
+                        'content': [{'type': 'output_text', 'text': text}],
+                    })
+                else:
+                    modified_output.append(item)
+
+            output_messages = convert_output_to_messages(modified_output, raw=True)
+            # Trailing segments not consumed by message items → append as plain text
+            trailing = '\n'.join(s for s in text_segs[seg_idx:] if s).strip()
+            if trailing:
+                output_messages.append({'role': 'assistant', 'content': trailing})
+            elif not output_messages:
+                # No structured output at all; fall back to plain text from content
+                plain = '\n'.join(s for s in text_segs if s).strip()
+                if plain:
+                    output_messages = [{'role': 'assistant', 'content': plain}]
+            processed.extend(output_messages)
+            continue
 
         # Strip 'output' field before adding (LLM shouldn't see it)
         clean_message = {k: v for k, v in message.items() if k != 'output'}

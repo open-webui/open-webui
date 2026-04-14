@@ -276,6 +276,72 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
     return messages
 
 
+def filter_output_by_content(output: list, content: str) -> list:
+    """
+    Drop output items whose <details> block was removed from content.
+
+    Matches by id attribute. Items with no ID are kept for backward
+    compatibility with content serialized before id= was added.
+    Items whose type is entirely absent from content are dropped wholesale.
+    Legacy: if a type is present with no id= attrs, keep the first N items
+    of that type where N = the number of blocks of that type remaining in
+    content, so individually deleted blocks are respected even without IDs.
+    """
+    if not isinstance(output, list):
+        return []
+    if not isinstance(content, str):
+        content = ''
+
+    present_ids = set(re.findall(r'<details\b[^>]*\bid="([^"]+)"', content))
+    present_types = set(re.findall(r'<details\b[^>]*\btype="([^"]+)"', content))
+
+    # Map output item type → <details> type attribute value
+    DETAILS_TYPE = {
+        'function_call': 'tool_calls',
+        'function_call_output': 'tool_calls',
+        'reasoning': 'reasoning',
+        'open_webui:code_interpreter': 'code_interpreter',
+    }
+
+    # No <details> blocks: pass through if no structured item has an ID (pre-serialization legacy)
+    if not present_types:
+        if not any(item.get('call_id') or item.get('id')
+                   for item in output if DETAILS_TYPE.get(item.get('type', ''))):
+            return list(output)
+
+    # types with ≥1 id= in content; others treated as legacy (pre-id=)
+    types_with_ids = set(re.findall(r'<details\b[^>]*\btype="([^"]+)"[^>]*\bid="[^"]*"', content))
+    types_with_ids |= set(re.findall(r'<details\b[^>]*\bid="[^"]*"[^>]*\btype="([^"]+)"', content))
+
+    # Legacy (no id=): count remaining blocks per type for positional matching
+    type_block_counts = {}
+    for t in re.findall(r'<details\b[^>]*\btype="([^"]+)"', content):
+        type_block_counts[t] = type_block_counts.get(t, 0) + 1
+
+    filtered = []
+    seen_legacy = {}  # kept count per legacy type
+    for item in output:
+        details_type = DETAILS_TYPE.get(item.get('type', ''))
+        if details_type is None:
+            filtered.append(item)  # non-visual item (e.g. 'message'): always keep
+            continue
+        if details_type not in present_types:
+            continue  # entire type removed from content: drop
+        if details_type not in types_with_ids:
+            # Legacy (no id=): keep first N items, N = block count in content
+            n = type_block_counts.get(details_type, 0)
+            if seen_legacy.get(details_type, 0) < n:
+                filtered.append(item)
+                seen_legacy[details_type] = seen_legacy.get(details_type, 0) + 1
+            continue
+        item_id = item.get('call_id') or item.get('id', '')
+        if not item_id or item_id in present_ids:
+            filtered.append(item)  # no ID (old format) or ID still present: keep
+        # else: ID not found in content → user deleted this block: drop
+
+    return filtered
+
+
 def get_last_user_message(messages: list[dict]) -> Optional[str]:
     message = get_last_user_message_item(messages)
     if message is None:
