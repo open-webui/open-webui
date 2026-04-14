@@ -33,6 +33,7 @@
 		'jina',
 		'bing',
 		'exa',
+		'linkup',
 		'perplexity',
 		'sougou',
 		'firecrawl',
@@ -583,6 +584,39 @@
 									/>
 								</div>
 							</div>
+							{:else if webConfig.WEB_SEARCH_ENGINE === 'linkup'}
+								<div class="mb-2.5 flex w-full flex-col">
+									<div>
+										<div class=" self-center text-xs font-medium mb-1">
+											{$i18n.t('Linkup API Key')}
+										</div>
+
+										<SensitiveInput
+											placeholder={$i18n.t('Enter Linkup API Key')}
+											bind:value={webConfig.LINKUP_API_KEY}
+										/>
+									</div>
+								</div>
+								<div class="mb-2.5 flex w-full flex-col">
+									<div>
+										<div class=" self-center text-xs font-medium mb-1">
+											{$i18n.t('Linkup Search Depth')}
+										</div>
+
+										<div class="flex w-full">
+											<div class="flex-1">
+												<select
+													class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+													bind:value={webConfig.LINKUP_SEARCH_DEPTH}
+												>
+													<option value="fast">{$i18n.t('Fast')}</option>
+													<option value="standard">{$i18n.t('Standard')}</option>
+													<option value="deep">{$i18n.t('Deep')}</option>
+												</select>
+											</div>
+										</div>
+									</div>
+								</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'perplexity'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>

@@ -3295,6 +3295,18 @@ EXA_API_KEY = PersistentConfig(
     os.getenv('EXA_API_KEY', ''),
 )
 
+LINKUP_API_KEY = PersistentConfig(
+    'LINKUP_API_KEY',
+    'rag.web.search.linkup_api_key',
+    os.getenv('LINKUP_API_KEY', ''),
+)
+
+LINKUP_SEARCH_DEPTH = PersistentConfig(
+    'LINKUP_SEARCH_DEPTH',
+    'rag.web.search.linkup_search_depth',
+    os.getenv('LINKUP_SEARCH_DEPTH', 'standard'),
+)
+
 PERPLEXITY_API_KEY = PersistentConfig(
     'PERPLEXITY_API_KEY',
     'rag.web.search.perplexity_api_key',
