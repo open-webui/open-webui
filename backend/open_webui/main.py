@@ -2338,6 +2338,7 @@ async def register_client(request, client_id: str) -> bool:
                 server_url,
                 oauth_client_id=existing_data.get('client_id', ''),
                 oauth_client_secret=existing_data.get('client_secret', ''),
+                scope=existing_data.get('scope') or None,
             )
         else:
             oauth_client_info = await get_oauth_client_info_with_dynamic_client_registration(
