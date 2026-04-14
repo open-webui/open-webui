@@ -1643,7 +1643,7 @@ async def process_file(
                         MINERU_API_TIMEOUT=request.app.state.config.MINERU_API_TIMEOUT,
                         MINERU_PARAMS=request.app.state.config.MINERU_PARAMS,
                     )
-                    docs = loader.load(file.filename, file.meta.get('content_type'), file_path)
+                    docs = await loader.aload(file.filename, file.meta.get('content_type'), file_path)
 
                     docs = [
                         Document(
