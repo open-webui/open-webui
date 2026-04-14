@@ -175,7 +175,7 @@ Based on the user's instruction, update and enhance the existing notes or select
 					role: 'system',
 					content: `${system}`
 				},
-				...messages
+				...messages.filter((m) => m !== responseMessage)
 			])
 		);
 
