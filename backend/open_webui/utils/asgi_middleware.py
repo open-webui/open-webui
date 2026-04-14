@@ -33,7 +33,6 @@ from __future__ import annotations
 import logging
 import re
 import time
-from typing import Any, Awaitable, Callable, MutableMapping
 from urllib.parse import parse_qs, urlencode
 
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -54,10 +53,30 @@ class CommitSessionMiddleware:
 
     Most requests now use the async session; the sync ScopedSession is
     only touched by startup, healthchecks, and a handful of legacy
-    helpers. The middleware is still required for those paths so that
-    PostgreSQL connections do not accumulate as "idle in transaction"
-    and so that any pending sync work is flushed before the response
-    is finalised.
+    helpers (notably the pgvector / opengauss vector-DB clients). The
+    middleware exists so that PostgreSQL connections do not accumulate
+    as "idle in transaction" and so that any pending sync work made
+    inside the request is durably persisted.
+
+    Failure semantics
+    -----------------
+    * Downstream raised → roll back any pending sync work, release the
+      connection, and re-raise so the outer exception middleware can
+      turn it into an error response. We never commit work on a
+      request that did not complete successfully.
+    * Downstream returned → commit pending sync work; on commit
+      failure, log loudly, roll back, and re-raise. Note that in pure
+      ASGI the response messages have already been emitted by the
+      time `await self.app(...)` returns, so a commit failure cannot
+      retroactively change what the client sees on the wire — but
+      re-raising still surfaces the error in logs and to ASGI servers
+      that expose it. We deliberately do not buffer the response to
+      gate it on commit success, because that would defeat streaming
+      responses (chat completions, SSE) which are core to the app.
+
+    For request paths where commit-before-send is required, manage the
+    sync session explicitly inside the handler instead of relying on
+    this middleware.
     """
 
     def __init__(self, app: ASGIApp) -> None:
@@ -70,17 +89,36 @@ class CommitSessionMiddleware:
 
         try:
             await self.app(scope, receive, send)
-        finally:
-            # Always release the connection back to the pool. Commit
-            # any pending work; if commit itself fails, still remove
-            # the session so the connection is not leaked.
+        except BaseException:
+            # Downstream did not complete successfully. Roll back any
+            # pending sync writes, release the connection, and let the
+            # exception propagate.
             try:
-                ScopedSession.commit()
-            except Exception:
                 ScopedSession.rollback()
-                raise
+            except Exception:
+                log.exception('CommitSessionMiddleware: rollback failed after downstream error')
             finally:
                 ScopedSession.remove()
+            raise
+
+        # Downstream completed. Commit pending sync work.
+        try:
+            ScopedSession.commit()
+        except Exception:
+            log.exception(
+                'CommitSessionMiddleware: post-request commit failed; '
+                'response was already sent to client'
+            )
+            try:
+                ScopedSession.rollback()
+            except Exception:
+                log.exception('CommitSessionMiddleware: rollback failed after commit failure')
+            raise
+        finally:
+            # CRITICAL: remove() returns the connection to the pool.
+            # Without this, connections remain "checked out" and
+            # accumulate as "idle in transaction" in PostgreSQL.
+            ScopedSession.remove()
 
 
 class AuthTokenMiddleware:
