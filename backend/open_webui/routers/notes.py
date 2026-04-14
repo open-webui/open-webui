@@ -357,6 +357,7 @@ async def update_note_access_by_id(
         user.role,
         form_data.access_grants,
         'sharing.public_notes',
+        db=db,
     )
 
     await AccessGrants.set_access_grants('note', id, form_data.access_grants, db=db)
