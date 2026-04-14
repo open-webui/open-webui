@@ -78,19 +78,21 @@
 			return;
 		}
 
-		if (auth_type === 'oauth_2.1_static' && (!oauthClientId || !oauthClientSecret)) {
-			toast.error($i18n.t('Please enter Client ID and Client Secret'));
-			return;
-		}
-
-		// client_id is the tool server ID (used as the internal lookup key for both flows).
-		// For static, client_secret signals the backend to use the static credential path.
-		// The actual OAuth client_id/secret come from the connection info at save time.
-		const formData: { url: string; client_id: string; client_secret?: string } = {
+		const formData: { url: string; client_id: string; oauth_client_id?: string; client_secret?: string } = {
 			url: url,
-			client_id: id,
-			...(auth_type === 'oauth_2.1_static' ? { client_secret: oauthClientSecret } : {})
+			client_id: id
 		};
+
+		// For static OAuth, include client credentials
+		if (auth_type === 'oauth_2.1_static') {
+			if (!oauthClientId || !oauthClientSecret) {
+				toast.error($i18n.t('Please enter Client ID and Client Secret'));
+				return;
+			}
+			formData.client_id = id;
+			formData.oauth_client_id = oauthClientId;
+			formData.client_secret = oauthClientSecret;
+		}
 
 		const res = await registerOAuthClient(localStorage.token, formData, 'mcp').catch((err) => {
 			toast.error($i18n.t('Registration failed'));
