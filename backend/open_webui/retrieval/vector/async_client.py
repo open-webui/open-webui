@@ -18,6 +18,36 @@ in place of `VECTOR_DB_CLIENT.x(...)` and the loop stays responsive.
 The original `VECTOR_DB_CLIENT` is unchanged, so callers already running
 inside `run_in_threadpool` (e.g. `save_docs_to_vector_db`) are not
 affected.
+
+Thread-safety expectations
+--------------------------
+Every async caller now invokes `VECTOR_DB_CLIENT` from a worker thread
+rather than the event-loop thread, and many can run concurrently. The
+sync client (and its underlying backend driver) is therefore expected
+to be safe for concurrent use across threads, which is the standard
+contract for the bundled drivers (chroma, pgvector via SQLAlchemy
+pool, qdrant-client, opensearch-py, …). This is *not* a new exposure
+introduced by this facade — `save_docs_to_vector_db` already called
+the sync client from `run_in_threadpool`, so concurrent threaded
+access has always been a requirement of the codebase. Adding a global
+serialization lock here would defeat the responsiveness this facade
+exists to provide; any backend that genuinely cannot tolerate
+concurrent access should grow its own internal serialization.
+
+API surface
+-----------
+Method signatures mirror `VectorDBBase` exactly. This is deliberate:
+permissive `*args/**kwargs` forwarding hides typos at the call site
+(an earlier revision of this file shipped that, and a `metadata=`
+typo silently broke an entire endpoint until explicit signatures
+surfaced it). Callers that need a backend-specific parameter not on
+`VectorDBBase` should reach for the `.sync` escape hatch and wrap
+their own `asyncio.to_thread`, e.g. ::
+
+    await asyncio.to_thread(
+        ASYNC_VECTOR_DB_CLIENT.sync.some_backend_specific_op,
+        collection_name, special_kwarg=value,
+    )
 """
 
 from __future__ import annotations
