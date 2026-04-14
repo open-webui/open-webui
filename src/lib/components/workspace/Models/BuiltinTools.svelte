@@ -42,6 +42,14 @@
 		code_interpreter: {
 			label: $i18n.t('Code Interpreter'),
 			description: $i18n.t('Execute code')
+		},
+		tasks: {
+			label: $i18n.t('Task Management'),
+			description: $i18n.t('Break down complex requests into trackable steps')
+		},
+		automations: {
+			label: $i18n.t('Automations'),
+			description: $i18n.t('Create and manage scheduled automations')
 		}
 	};
 

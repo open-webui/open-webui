@@ -10,7 +10,8 @@
 		copyToClipboard,
 		initMermaid,
 		renderMermaidDiagram,
-		renderVegaVisualization
+		renderVegaVisualization,
+		unescapeHtml
 	} from '$lib/utils';
 
 	import 'highlight.js/styles/github-dark.min.css';
@@ -405,21 +406,8 @@
 
 	const onAttributesUpdate = () => {
 		if (attributes?.output) {
-			// Create a helper function to unescape HTML entities
-			const unescapeHtml = (html) => {
-				const textArea = document.createElement('textarea');
-				textArea.innerHTML = html;
-				return textArea.value;
-			};
-
 			try {
-				// Unescape the HTML-encoded string
-				const unescapedOutput = unescapeHtml(attributes.output);
-
-				// Parse the unescaped string into JSON
-				const output = JSON.parse(unescapedOutput);
-
-				// Assign the parsed values to variables
+				const output = JSON.parse(unescapeHtml(attributes.output));
 				stdout = output.stdout;
 				stderr = output.stderr;
 				result = output.result;
@@ -469,7 +457,7 @@
 			{/if}
 		{:else}
 			<div
-				class="sticky {stickyButtonsClassName} left-0 right-0 py-1.5 px-3 gap-2 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white bg-white dark:bg-black rounded-t-2xl"
+				class="sticky {stickyButtonsClassName} left-0 right-0 py-1.5 px-3.5 gap-2 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white bg-white dark:bg-black rounded-t-2xl"
 			>
 				<div class="flex-1 truncate">
 					<Tooltip content={lang} placement="top-start">
@@ -599,17 +587,17 @@
 
 				{#if executing || stdout || stderr || result || files}
 					<div
-						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-2xl! py-4 px-4 flex flex-col gap-2"
+						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-2xl! pt-2 pb-3 px-3.5 flex flex-col gap-2"
 					>
 						{#if executing}
 							<div class=" ">
-								<div class=" text-gray-500 text-sm mb-1">{$i18n.t('STDOUT/STDERR')}</div>
+								<div class=" text-gray-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
 								<div class="text-sm">{$i18n.t('Running...')}</div>
 							</div>
 						{:else}
 							{#if stdout || stderr}
 								<div class=" ">
-									<div class=" text-gray-500 text-sm mb-1">{$i18n.t('STDOUT/STDERR')}</div>
+									<div class=" text-gray-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
 									<div
 										class="text-sm font-mono whitespace-pre-wrap {stdout?.split('\n')?.length > 100
 											? `max-h-96`
@@ -621,7 +609,7 @@
 							{/if}
 							{#if result || files}
 								<div class=" ">
-									<div class=" text-gray-500 text-sm mb-1">{$i18n.t('RESULT')}</div>
+									<div class=" text-gray-500 text-xs mb-1">{$i18n.t('RESULT')}</div>
 									{#if result}
 										<div class="text-sm">{`${JSON.stringify(result)}`}</div>
 									{/if}

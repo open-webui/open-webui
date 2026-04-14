@@ -35,7 +35,8 @@
 		showControls,
 		showFileNavPath,
 		showFileNavDir,
-		pyodideWorker
+		pyodideWorker,
+		desktopEvent
 	} from '$lib/stores';
 	import { getFileContentById } from '$lib/apis/files';
 	import { goto } from '$app/navigation';
@@ -158,6 +159,7 @@
 
 			if (version !== null) {
 				WEBUI_VERSION.set(version);
+				window.WEBUI_VERSION = version;
 			}
 
 			console.log('version', version);
@@ -375,7 +377,7 @@
 		return { toolServer, toolServerData, token };
 	};
 
-	const executeTool = async (data, cb) => {
+	const executeTool = async (data, cb, chatId) => {
 		const { toolServer, toolServerData, token } = resolveToolServer(data.server?.url);
 
 		console.log('executeTool', data, toolServer);
@@ -386,7 +388,8 @@
 				toolServer.url,
 				data?.name,
 				data?.params,
-				toolServerData
+				toolServerData,
+				chatId
 			);
 
 			console.log('executeToolServer', res);
@@ -485,7 +488,7 @@
 				executePythonAsWorker(data.id, data.code, cb, data.files || []);
 			} else if (type === 'execute:tool') {
 				console.log('execute:tool', data);
-				executeTool(data, cb);
+				executeTool(data, cb, event.chat_id);
 			} else if (type === 'request:chat:completion') {
 				console.log(data, $socket.id);
 				const { session_id, channel, form_data, model } = data;
@@ -706,6 +709,36 @@
 		}
 		if (event.type === 'page:navigate' && event.data?.path) {
 			await goto(event.data.path);
+			return;
+		}
+		if (event.type === 'query' && (event.data?.query || event.data?.files?.length)) {
+			desktopEvent.set(event);
+			await goto('/');
+			return;
+		}
+		if (event.type === 'call') {
+			desktopEvent.set(event);
+			await goto('/');
+			return;
+		}
+		if (event.type === 'theme:update' && event.data?.theme) {
+			const newTheme = event.data.theme;
+			localStorage.setItem('theme', newTheme);
+			theme.set(newTheme);
+
+			// Apply theme classes (mirrors logic from chat/Settings/General.svelte)
+			const themes = ['dark', 'light', 'oled-dark'];
+			let themeToApply =
+				newTheme === 'oled-dark' ? 'dark' : newTheme === 'her' ? 'light' : newTheme;
+			if (newTheme === 'system') {
+				themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+			}
+			themes
+				.filter((e) => e !== themeToApply)
+				.forEach((e) => {
+					e.split(' ').forEach((cls) => document.documentElement.classList.remove(cls));
+				});
+			themeToApply.split(' ').forEach((cls) => document.documentElement.classList.add(cls));
 			return;
 		}
 		if (event.type === 'models:refresh') {
@@ -954,6 +987,16 @@
 							await config.set(await getBackendConfig());
 						} catch (error) {
 							console.error('Error refreshing backend config:', error);
+						}
+
+						// Relay auth token to desktop app for API access
+						if (window.electronAPI?.send) {
+							window.electronAPI
+								.send({
+									type: 'token:update',
+									token: localStorage.token
+								})
+								.catch(() => {});
 						}
 					} else {
 						// Redirect Invalid Session User to /auth Page

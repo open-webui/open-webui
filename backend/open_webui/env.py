@@ -60,13 +60,14 @@ if USE_CUDA.lower() == 'true':
 else:
     DEVICE_TYPE = 'cpu'
 
-try:
-    import torch
+if sys.platform == 'darwin':
+    try:
+        import torch
 
-    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
-        DEVICE_TYPE = 'mps'
-except Exception:
-    pass
+        if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+            DEVICE_TYPE = 'mps'
+    except Exception:
+        pass
 
 ####################################
 # LOGGING
@@ -425,6 +426,27 @@ try:
 except ValueError:
     REDIS_SOCKET_CONNECT_TIMEOUT = None
 
+# Whether to enable TCP SO_KEEPALIVE on Redis client sockets. Opt-in:
+# defaults to off so behavior is unchanged for existing deployments. When
+# enabled, the kernel sends TCP keepalive probes on idle connections so
+# half-closed sockets (e.g. after a silent firewall/LB reset or a NIC
+# flap) are detected before the next command lands on them.
+REDIS_SOCKET_KEEPALIVE = os.environ.get('REDIS_SOCKET_KEEPALIVE', 'False').lower() == 'true'
+
+# How often (in seconds) redis-py should PING an idle pooled connection
+# before reusing it. Opt-in: defaults to unset (empty string) so behavior
+# is unchanged for existing deployments. When set, should be shorter than
+# the Redis server `timeout` setting and any firewall/LB idle timeout on
+# the path to Redis, so stale connections are detected before a real
+# command lands on them. Set to 0 or empty to disable.
+REDIS_HEALTH_CHECK_INTERVAL = os.environ.get('REDIS_HEALTH_CHECK_INTERVAL', '')
+try:
+    REDIS_HEALTH_CHECK_INTERVAL = int(REDIS_HEALTH_CHECK_INTERVAL)
+    if REDIS_HEALTH_CHECK_INTERVAL <= 0:
+        REDIS_HEALTH_CHECK_INTERVAL = None
+except ValueError:
+    REDIS_HEALTH_CHECK_INTERVAL = None
+
 REDIS_RECONNECT_DELAY = os.environ.get('REDIS_RECONNECT_DELAY', '')
 
 if REDIS_RECONNECT_DELAY == '':
@@ -495,6 +517,16 @@ PASSWORD_VALIDATION_HINT = os.environ.get('PASSWORD_VALIDATION_HINT', '')
 
 BYPASS_MODEL_ACCESS_CONTROL = os.environ.get('BYPASS_MODEL_ACCESS_CONTROL', 'False').lower() == 'true'
 
+# When enabled, skips pydub-based preprocessing (format conversion, compression,
+# and chunked splitting) before sending files to processing engines. Useful when
+# the upstream provider handles these steps or when ffmpeg is unavailable.
+BYPASS_PYDUB_PREPROCESSING = os.environ.get('BYPASS_PYDUB_PREPROCESSING', 'False').lower() == 'true'
+
+# When disabled (default), the OpenAI catch-all proxy endpoint (/{path:path})
+# is blocked. Enable only if you need direct passthrough to upstream OpenAI-
+# compatible APIs for endpoints not natively handled by Open WebUI.
+ENABLE_OPENAI_API_PASSTHROUGH = os.environ.get('ENABLE_OPENAI_API_PASSTHROUGH', 'False').lower() == 'true'
+
 WEBUI_AUTH_SIGNOUT_REDIRECT_URL = os.environ.get('WEBUI_AUTH_SIGNOUT_REDIRECT_URL', None)
 
 ####################################
@@ -543,6 +575,12 @@ OAUTH_MAX_SESSIONS_PER_USER = int(os.environ.get('OAUTH_MAX_SESSIONS_PER_USER', 
 # Token Exchange Configuration
 # Allows external apps to exchange OAuth tokens for OpenWebUI tokens
 ENABLE_OAUTH_TOKEN_EXCHANGE = os.environ.get('ENABLE_OAUTH_TOKEN_EXCHANGE', 'False').lower() == 'true'
+
+# Back-Channel Logout Configuration
+# When enabled, exposes POST /oauth/backchannel-logout for IdP-initiated logout
+# per OpenID Connect Back-Channel Logout 1.0 spec.
+# Requires Redis for JWT revocation.
+ENABLE_OAUTH_BACKCHANNEL_LOGOUT = os.environ.get('ENABLE_OAUTH_BACKCHANNEL_LOGOUT', 'False').lower() == 'true'
 
 ####################################
 # SCIM Configuration
@@ -771,6 +809,36 @@ else:
         AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER = AIOHTTP_CLIENT_TIMEOUT
 
 
+####################################
+# AIOHTTP Connection Pool
+####################################
+
+AIOHTTP_POOL_CONNECTIONS = os.environ.get('AIOHTTP_POOL_CONNECTIONS', '')
+if AIOHTTP_POOL_CONNECTIONS == '':
+    AIOHTTP_POOL_CONNECTIONS = None
+else:
+    try:
+        AIOHTTP_POOL_CONNECTIONS = int(AIOHTTP_POOL_CONNECTIONS)
+    except ValueError:
+        AIOHTTP_POOL_CONNECTIONS = None
+
+AIOHTTP_POOL_CONNECTIONS_PER_HOST = os.environ.get('AIOHTTP_POOL_CONNECTIONS_PER_HOST', '')
+if AIOHTTP_POOL_CONNECTIONS_PER_HOST == '':
+    AIOHTTP_POOL_CONNECTIONS_PER_HOST = None
+else:
+    try:
+        AIOHTTP_POOL_CONNECTIONS_PER_HOST = int(AIOHTTP_POOL_CONNECTIONS_PER_HOST)
+    except ValueError:
+        AIOHTTP_POOL_CONNECTIONS_PER_HOST = None
+
+AIOHTTP_POOL_DNS_TTL = os.environ.get('AIOHTTP_POOL_DNS_TTL', '300')
+try:
+    AIOHTTP_POOL_DNS_TTL = int(AIOHTTP_POOL_DNS_TTL)
+    if AIOHTTP_POOL_DNS_TTL < 0:
+        AIOHTTP_POOL_DNS_TTL = 300
+except ValueError:
+    AIOHTTP_POOL_DNS_TTL = 300
+
 RAG_EMBEDDING_TIMEOUT = os.environ.get('RAG_EMBEDDING_TIMEOUT', '')
 
 if RAG_EMBEDDING_TIMEOUT == '':
@@ -873,6 +941,9 @@ AUDIT_EXCLUDED_PATHS = [path.lstrip('/') for path in AUDIT_EXCLUDED_PATHS]
 AUDIT_INCLUDED_PATHS = os.getenv('AUDIT_INCLUDED_PATHS', '').split(',')
 AUDIT_INCLUDED_PATHS = [path.strip() for path in AUDIT_INCLUDED_PATHS]
 AUDIT_INCLUDED_PATHS = [path.lstrip('/') for path in AUDIT_INCLUDED_PATHS if path]
+
+# When enabled, GET requests are also audited (disabled by default to avoid log noise)
+ENABLE_AUDIT_GET_REQUESTS = os.getenv('ENABLE_AUDIT_GET_REQUESTS', 'False').lower() == 'true'
 
 
 ####################################

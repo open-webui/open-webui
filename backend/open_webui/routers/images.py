@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 from urllib.parse import quote
+import aiohttp
 import requests
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
@@ -21,15 +22,16 @@ from open_webui.config import (
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.retrieval.web.utils import validate_url
-from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, ENABLE_FORWARD_USER_INFO_HEADERS
+from open_webui.utils.session_pool import get_session
 
 from open_webui.models.chats import Chats
 from open_webui.routers.files import upload_file_handler, get_file_content_by_id
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.headers import include_user_info_headers
-from open_webui.internal.db import get_session
-from sqlalchemy.orm import Session
+from open_webui.internal.db import get_async_session
+from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.utils.images.comfyui import (
     ComfyUICreateImageForm,
     ComfyUIEditImageForm,
@@ -313,12 +315,14 @@ def get_automatic1111_api_auth(request: Request):
 async def verify_url(request: Request, user=Depends(get_admin_user)):
     if request.app.state.config.IMAGE_GENERATION_ENGINE == 'automatic1111':
         try:
-            r = requests.get(
+            session = await get_session()
+            async with session.get(
                 url=f'{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options',
                 headers={'authorization': get_automatic1111_api_auth(request)},
-            )
-            r.raise_for_status()
-            return True
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as r:
+                r.raise_for_status()
+                return True
         except Exception:
             request.app.state.config.ENABLE_IMAGE_GENERATION = False
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
@@ -327,12 +331,14 @@ async def verify_url(request: Request, user=Depends(get_admin_user)):
         if request.app.state.config.COMFYUI_API_KEY:
             headers = {'Authorization': f'Bearer {request.app.state.config.COMFYUI_API_KEY}'}
         try:
-            r = requests.get(
+            session = await get_session()
+            async with session.get(
                 url=f'{request.app.state.config.COMFYUI_BASE_URL}/object_info',
                 headers=headers,
-            )
-            r.raise_for_status()
-            return True
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as r:
+                r.raise_for_status()
+                return True
         except Exception:
             request.app.state.config.ENABLE_IMAGE_GENERATION = False
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
@@ -341,7 +347,7 @@ async def verify_url(request: Request, user=Depends(get_admin_user)):
 
 
 @router.get('/models')
-def get_models(request: Request, user=Depends(get_verified_user)):
+async def get_models(request: Request, user=Depends(get_verified_user)):
     try:
         if request.app.state.config.IMAGE_GENERATION_ENGINE == 'openai':
             return [
@@ -357,11 +363,13 @@ def get_models(request: Request, user=Depends(get_verified_user)):
         elif request.app.state.config.IMAGE_GENERATION_ENGINE == 'comfyui':
             # TODO - get models from comfyui
             headers = {'Authorization': f'Bearer {request.app.state.config.COMFYUI_API_KEY}'}
-            r = requests.get(
+            session = await get_session()
+            async with session.get(
                 url=f'{request.app.state.config.COMFYUI_BASE_URL}/object_info',
                 headers=headers,
-            )
-            info = r.json()
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as r:
+                info = await r.json()
 
             workflow = json.loads(request.app.state.config.COMFYUI_WORKFLOW)
             model_node_id = None
@@ -399,11 +407,13 @@ def get_models(request: Request, user=Depends(get_verified_user)):
             request.app.state.config.IMAGE_GENERATION_ENGINE == 'automatic1111'
             or request.app.state.config.IMAGE_GENERATION_ENGINE == ''
         ):
-            r = requests.get(
+            session = await get_session()
+            async with session.get(
                 url=f'{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/sd-models',
                 headers={'authorization': get_automatic1111_api_auth(request)},
-            )
-            models = r.json()
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as r:
+                models = await r.json()
             return list(
                 map(
                     lambda model: {'id': model['title'], 'name': model['model_name']},
@@ -456,7 +466,7 @@ def get_image_data(data: str, headers=None):
         return None, None
 
 
-def upload_image(request, image_data, content_type, metadata, user, db=None):
+async def upload_image(request, image_data, content_type, metadata, user, db=None):
     image_format = mimetypes.guess_extension(content_type)
     file = UploadFile(
         file=io.BytesIO(image_data),
@@ -465,7 +475,7 @@ def upload_image(request, image_data, content_type, metadata, user, db=None):
             'content-type': content_type,
         },
     )
-    file_item = upload_file_handler(
+    file_item = await upload_file_handler(
         request,
         file=file,
         metadata=metadata,
@@ -479,7 +489,7 @@ def upload_image(request, image_data, content_type, metadata, user, db=None):
         message_id = metadata.get('message_id')
 
         if chat_id and message_id:
-            Chats.insert_chat_files(
+            await Chats.insert_chat_files(
                 chat_id=chat_id,
                 message_id=message_id,
                 file_ids=[file_item.id],
@@ -499,7 +509,7 @@ async def generate_images(request: Request, form_data: CreateImageForm, user=Dep
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    if user.role != 'admin' and not has_permission(
+    if user.role != 'admin' and not await has_permission(
         user.id, 'features.image_generation', request.app.state.config.USER_PERMISSIONS
     ):
         raise HTTPException(
@@ -533,7 +543,7 @@ async def image_generations(
 
     model = get_image_model(request)
 
-    r = None
+
     try:
         if request.app.state.config.IMAGE_GENERATION_ENGINE == 'openai':
             headers = {
@@ -552,7 +562,11 @@ async def image_generations(
                 'model': model,
                 'prompt': form_data.prompt,
                 'n': form_data.n,
-                'size': (form_data.size if form_data.size else request.app.state.config.IMAGE_SIZE),
+                **(
+                    {'size': form_data.size or request.app.state.config.IMAGE_SIZE}
+                    if (form_data.size or request.app.state.config.IMAGE_SIZE)
+                    else {}
+                ),
                 **(
                     {}
                     if re.match(
@@ -568,16 +582,15 @@ async def image_generations(
                 ),
             }
 
-            # Use asyncio.to_thread for the requests.post call
-            r = await asyncio.to_thread(
-                requests.post,
+            session = await get_session()
+            async with session.post(
                 url=url,
                 json=data,
                 headers=headers,
-            )
-
-            r.raise_for_status()
-            res = r.json()
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as r:
+                r.raise_for_status()
+                res = await r.json()
 
             images = []
 
@@ -590,7 +603,7 @@ async def image_generations(
                 else:
                     image_data, content_type = get_image_data(image['b64_json'])
 
-                _, url = upload_image(request, image_data, content_type, {**data, **metadata}, user)
+                _, url = await upload_image(request, image_data, content_type, {**data, **metadata}, user)
                 images.append({'url': url})
             return images
 
@@ -619,30 +632,29 @@ async def image_generations(
                 model = f'{model}:generateContent'
                 data = {'contents': [{'parts': [{'text': form_data.prompt}]}]}
 
-            # Use asyncio.to_thread for the requests.post call
-            r = await asyncio.to_thread(
-                requests.post,
+            session = await get_session()
+            async with session.post(
                 url=f'{request.app.state.config.IMAGES_GEMINI_API_BASE_URL}/models/{model}',
                 json=data,
                 headers=headers,
-            )
-
-            r.raise_for_status()
-            res = r.json()
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as r:
+                r.raise_for_status()
+                res = await r.json()
 
             images = []
 
             if model.endswith(':predict'):
                 for image in res['predictions']:
                     image_data, content_type = get_image_data(image['bytesBase64Encoded'])
-                    _, url = upload_image(request, image_data, content_type, {**data, **metadata}, user)
+                    _, url = await upload_image(request, image_data, content_type, {**data, **metadata}, user)
                     images.append({'url': url})
             elif model.endswith(':generateContent'):
                 for image in res['candidates']:
                     for part in image['content']['parts']:
                         if part.get('inlineData', {}).get('data'):
                             image_data, content_type = get_image_data(part['inlineData']['data'])
-                            _, url = upload_image(
+                            _, url = await upload_image(
                                 request,
                                 image_data,
                                 content_type,
@@ -681,7 +693,7 @@ async def image_generations(
             res = await comfyui_create_image(
                 model,
                 form_data,
-                user.id,
+                str(uuid.uuid4()),
                 request.app.state.config.COMFYUI_BASE_URL,
                 request.app.state.config.COMFYUI_API_KEY,
             )
@@ -695,7 +707,7 @@ async def image_generations(
                     headers = {'Authorization': f'Bearer {request.app.state.config.COMFYUI_API_KEY}'}
 
                 image_data, content_type = get_image_data(image['url'], headers)
-                _, url = upload_image(
+                _, url = await upload_image(
                     request,
                     image_data,
                     content_type,
@@ -727,22 +739,21 @@ async def image_generations(
             if request.app.state.config.AUTOMATIC1111_PARAMS:
                 data = {**data, **request.app.state.config.AUTOMATIC1111_PARAMS}
 
-            # Use asyncio.to_thread for the requests.post call
-            r = await asyncio.to_thread(
-                requests.post,
+            session = await get_session()
+            async with session.post(
                 url=f'{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/txt2img',
                 json=data,
                 headers={'authorization': get_automatic1111_api_auth(request)},
-            )
-
-            res = r.json()
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as r:
+                res = await r.json()
             log.debug(f'res: {res}')
 
             images = []
 
             for image in res['images']:
                 image_data, content_type = get_image_data(image)
-                _, url = upload_image(
+                _, url = await upload_image(
                     request,
                     image_data,
                     content_type,
@@ -753,10 +764,8 @@ async def image_generations(
             return images
     except Exception as e:
         error = e
-        if r != None:
-            data = r.json()
-            if 'error' in data:
-                error = data['error']['message']
+        if isinstance(e, aiohttp.ClientResponseError):
+            error = e.message
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(error))
 
 
@@ -798,11 +807,12 @@ async def image_edits(
             if data.startswith('http://') or data.startswith('https://'):
                 # Validate URL to prevent SSRF attacks against local/private networks
                 validate_url(data)
-                r = await asyncio.to_thread(requests.get, data)
-                r.raise_for_status()
+                session = await get_session()
+                async with session.get(data, ssl=AIOHTTP_CLIENT_SESSION_SSL) as r:
+                    r.raise_for_status()
 
-                image_data = base64.b64encode(r.content).decode('utf-8')
-                return f'data:{r.headers["content-type"]};base64,{image_data}'
+                    image_data = base64.b64encode(await r.read()).decode('utf-8')
+                    return f'data:{r.headers["content-type"]};base64,{image_data}'
 
             else:
                 file_id = None
@@ -846,7 +856,7 @@ async def image_edits(
             ),
         )
 
-    r = None
+
     try:
         if request.app.state.config.IMAGE_EDIT_ENGINE == 'openai':
             headers = {
@@ -883,17 +893,30 @@ async def image_edits(
             if request.app.state.config.IMAGES_EDIT_OPENAI_API_VERSION:
                 url_search_params += f'?api-version={request.app.state.config.IMAGES_EDIT_OPENAI_API_VERSION}'
 
-            # Use asyncio.to_thread for the requests.post call
-            r = await asyncio.to_thread(
-                requests.post,
+            # Build multipart form data for aiohttp
+            form = aiohttp.FormData()
+            for key, value in data.items():
+                if isinstance(value, dict):
+                    form.add_field(key, json.dumps(value))
+                else:
+                    form.add_field(key, str(value))
+            for param_name, (filename, file_obj, content_type_val) in files:
+                form.add_field(
+                    param_name,
+                    file_obj,
+                    filename=filename,
+                    content_type=content_type_val,
+                )
+
+            session = await get_session()
+            async with session.post(
                 url=f'{request.app.state.config.IMAGES_EDIT_OPENAI_API_BASE_URL}/images/edits{url_search_params}',
                 headers=headers,
-                files=files,
-                data=data,
-            )
-
-            r.raise_for_status()
-            res = r.json()
+                data=form,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as r:
+                r.raise_for_status()
+                res = await r.json()
 
             images = []
             for image in res['data']:
@@ -905,7 +928,7 @@ async def image_edits(
                 else:
                     image_data, content_type = get_image_data(image['b64_json'])
 
-                _, url = upload_image(request, image_data, content_type, {**data, **metadata}, user)
+                _, url = await upload_image(request, image_data, content_type, {**data, **metadata}, user)
                 images.append({'url': url})
             return images
 
@@ -940,23 +963,22 @@ async def image_edits(
                     ]
                 )
 
-            # Use asyncio.to_thread for the requests.post call
-            r = await asyncio.to_thread(
-                requests.post,
+            session = await get_session()
+            async with session.post(
                 url=f'{request.app.state.config.IMAGES_EDIT_GEMINI_API_BASE_URL}/models/{model}',
                 json=data,
                 headers=headers,
-            )
-
-            r.raise_for_status()
-            res = r.json()
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as r:
+                r.raise_for_status()
+                res = await r.json()
 
             images = []
             for image in res['candidates']:
                 for part in image['content']['parts']:
                     if part.get('inlineData', {}).get('data'):
                         image_data, content_type = get_image_data(part['inlineData']['data'])
-                        _, url = upload_image(
+                        _, url = await upload_image(
                             request,
                             image_data,
                             content_type,
@@ -1011,7 +1033,7 @@ async def image_edits(
             res = await comfyui_edit_image(
                 model,
                 form_data,
-                user.id,
+                str(uuid.uuid4()),
                 request.app.state.config.IMAGES_EDIT_COMFYUI_BASE_URL,
                 request.app.state.config.IMAGES_EDIT_COMFYUI_API_KEY,
             )
@@ -1036,7 +1058,7 @@ async def image_edits(
                     headers = {'Authorization': f'Bearer {request.app.state.config.IMAGES_EDIT_COMFYUI_API_KEY}'}
 
                 image_data, content_type = get_image_data(image_url, headers)
-                _, url = upload_image(
+                _, url = await upload_image(
                     request,
                     image_data,
                     content_type,
@@ -1048,13 +1070,7 @@ async def image_edits(
             return images
     except Exception as e:
         error = e
-        if r != None:
-            data = r.text
-            try:
-                data = json.loads(data)
-                if 'error' in data:
-                    error = data['error']['message']
-            except Exception:
-                error = data
+        if isinstance(e, aiohttp.ClientResponseError):
+            error = e.message
 
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(error))

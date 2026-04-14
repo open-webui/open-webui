@@ -22,6 +22,7 @@ import { marked } from 'marked';
 import markedExtension from '$lib/utils/marked/extension';
 import markedKatexExtension from '$lib/utils/marked/katex-extension';
 import hljs from 'highlight.js';
+import { decode } from 'html-entities';
 
 //////////////////////////
 // Helper functions
@@ -52,6 +53,7 @@ export const replaceOutsideCode = (content: string, replacer: (str: string) => s
 };
 
 export const replaceTokens = (content, char, user) => {
+	if (!content.includes('{{')) return content;
 	const tokens = [
 		{ regex: /{{char}}/gi, replacement: char },
 		{ regex: /{{user}}/gi, replacement: user },
@@ -103,6 +105,7 @@ function isChineseChar(char: string): boolean {
 // Tackle "Model output issue not following the standard Markdown/LaTeX format" in Chinese.
 function processChineseContent(content: string): string {
 	// This function is used to process the response content before the response content is rendered.
+	if (!/[\u4e00-\u9fa5]/.test(content)) return content;
 	const lines = content.split('\n');
 	const processedLines = lines.map((line) => {
 		if (/[\u4e00-\u9fa5]/.test(line)) {
@@ -166,9 +169,8 @@ function processChineseDelimiters(
 	});
 }
 
-export function unescapeHtml(html: string) {
-	const doc = new DOMParser().parseFromString(html, 'text/html');
-	return doc.documentElement.textContent;
+export function unescapeHtml(html: string): string {
+	return decode(html);
 }
 
 export const capitalizeFirstLetter = (string) => {
@@ -518,7 +520,7 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 			textArea.style.position = 'fixed';
 
 			document.body.appendChild(textArea);
-			textArea.focus();
+			textArea.focus({ preventScroll: true });
 			textArea.select();
 
 			try {
@@ -921,8 +923,19 @@ export const processDetails = (content) => {
 				attributes[attributeMatch[1]] = attributeMatch[2];
 			}
 
+			// New format: result in body content; Old format: result in attribute
+			let resultText = '';
 			if (attributes.result) {
-				content = content.replace(match, unescapeHtml(attributes.result));
+				resultText = unescapeHtml(attributes.result);
+			} else {
+				// Extract body content (strip <summary>...</summary>)
+				const bodyMatch = match.match(/<summary>[\s\S]*?<\/summary>\s*([\s\S]*?)\s*<\/details>/i);
+				if (bodyMatch && bodyMatch[1].trim()) {
+					resultText = unescapeHtml(bodyMatch[1].trim());
+				}
+			}
+			if (resultText) {
+				content = content.replace(match, resultText);
 			}
 		}
 	}
