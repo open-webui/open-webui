@@ -120,19 +120,38 @@ def _set_sqlite_journal_mode(dbapi_connection, want_wal: bool, *, db_label: str)
     this branch exists to fix would persist undetected.
 
     This helper executes the PRAGMA, reads the result, and logs a
-    warning on mismatch so operators can see what happened. It does
-    not fail fast: a downgrade to DELETE is degraded but functional,
-    not broken.
+    warning on mismatch so operators can see what happened. It is
+    deliberately non-failing: it runs from SQLAlchemy `connect`
+    listeners and the SQLCipher creator, where raising would abort
+    connection establishment entirely. Any DB-API failure here (read-
+    only DB, locked DB during mode switch, pragma not permitted by
+    the build) is logged and swallowed — a degraded journal_mode is
+    worse than ideal, but a hard startup outage is worse still.
     """
     requested = 'WAL' if want_wal else 'DELETE'
-    cursor = dbapi_connection.cursor()
+    actual = ''
     try:
-        cursor.execute(f'PRAGMA journal_mode={requested}')
-        row = cursor.fetchone()
-    finally:
-        cursor.close()
+        cursor = dbapi_connection.cursor()
+        try:
+            cursor.execute(f'PRAGMA journal_mode={requested}')
+            row = cursor.fetchone()
+        finally:
+            cursor.close()
+        actual = (row[0] or '').upper() if row else ''
+    except Exception as exc:
+        # Don't propagate — the caller is a SQLAlchemy connect event /
+        # connection creator, and raising here aborts the whole
+        # connection instead of just degrading journal_mode policy.
+        log.warning(
+            'SQLite (%s): failed to apply PRAGMA journal_mode=%s: %r. '
+            'Continuing with whatever mode SQLite chose; expect lock '
+            'contention if WAL was requested but not active.',
+            db_label,
+            requested,
+            exc,
+        )
+        return
 
-    actual = (row[0] if row else '').upper() if row else ''
     if not actual:
         log.warning(
             'SQLite (%s): PRAGMA journal_mode=%s returned no result; '
@@ -140,13 +159,31 @@ def _set_sqlite_journal_mode(dbapi_connection, want_wal: bool, *, db_label: str)
             db_label,
             requested,
         )
-    elif actual != requested.upper():
+        return
+
+    if actual == requested.upper():
+        return
+
+    if want_wal:
+        # Requested WAL, got something else — the failure mode this
+        # branch was created to fix.
         log.warning(
-            'SQLite (%s): requested journal_mode=%s but engine selected %s. '
-            'On network filesystems WAL is commonly rejected; expect lock '
-            'contention under concurrent load.',
+            'SQLite (%s): requested journal_mode=WAL but engine selected %s. '
+            'On network filesystems WAL is commonly rejected (no shared-memory '
+            'mapping); expect lock contention under concurrent load.',
             db_label,
-            requested,
+            actual,
+        )
+    else:
+        # Requested DELETE (operator opted out), got something else. The
+        # most common cause is that the DB file was previously opened in
+        # WAL and SQLite refuses to switch back while other connections
+        # hold WAL state — but the message stays neutral so we don't
+        # mislead operators chasing the wrong cause.
+        log.warning(
+            'SQLite (%s): requested journal_mode=DELETE but engine kept %s. '
+            'The opt-out from WAL did not take effect for this connection.',
+            db_label,
             actual,
         )
 
