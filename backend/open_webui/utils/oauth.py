@@ -448,6 +448,7 @@ async def get_oauth_client_info_with_static_credentials(
     oauth_server_url: str,
     oauth_client_id: str,
     oauth_client_secret: str,
+    scope: str | None = None,
 ) -> OAuthClientInformationFull:
     """
     Build an OAuthClientInformationFull from user-provided static credentials.
@@ -475,10 +476,12 @@ async def get_oauth_client_info_with_static_credentials(
                             log.error(f'Error parsing OAuth metadata from {url}: {e}')
                             continue
 
-        # Determine scope from server metadata if available
-        scope = None
-        if oauth_server_metadata and oauth_server_metadata.scopes_supported:
+        # Determine scope: prefer admin-provided scope; fall back to discovered scopes_supported.
+        # Unconditionally overwriting with scopes_supported would silently discard any
+        # custom scope string the admin supplied (e.g. Azure resource-specific scopes).
+        if scope is None and oauth_server_metadata and oauth_server_metadata.scopes_supported:
             scope = ' '.join(oauth_server_metadata.scopes_supported)
+            log.debug(f'No explicit scope provided; using discovered scopes: {scope}')
 
         # Determine token_endpoint_auth_method
         token_endpoint_auth_method = 'client_secret_post'
