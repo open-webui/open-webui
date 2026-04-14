@@ -124,7 +124,7 @@ async def process_uploaded_file(
                 stt_supported_content_types = getattr(request.app.state.config, 'STT_SUPPORTED_CONTENT_TYPES', [])
 
                 if strict_match_mime_type(stt_supported_content_types, content_type):
-                    file_path_processed = Storage.get_file(file_path)
+                    file_path_processed = await Storage.aget_file(file_path)
                     result = transcribe(request, file_path_processed, file_metadata, user)
 
                     await process_file(
@@ -242,7 +242,7 @@ async def upload_file_handler(
         id = str(uuid.uuid4())
         name = filename
         filename = f'{id}_{filename}'
-        contents, file_path = Storage.upload_file(
+        contents, file_path = await Storage.aupload_file(
             file.file,
             filename,
             {
@@ -406,7 +406,7 @@ async def delete_all_files(user=Depends(get_admin_user), db: AsyncSession = Depe
     result = await Files.delete_all_files(db=db)
     if result:
         try:
-            Storage.delete_all_files()
+            await Storage.adelete_all_files()
             VECTOR_DB_CLIENT.reset()
         except Exception as e:
             log.exception(e)
@@ -618,7 +618,7 @@ async def get_file_content_by_id(
 
     if file.user_id == user.id or user.role == 'admin' or await has_access_to_file(id, 'read', user, db=db):
         try:
-            file_path = Storage.get_file(file.path)
+            file_path = await Storage.aget_file(file.path)
             file_path = Path(file_path)
 
             # Check if the file already exists in the cache
@@ -685,7 +685,7 @@ async def get_html_file_content_by_id(
 
     if file.user_id == user.id or user.role == 'admin' or await has_access_to_file(id, 'read', user, db=db):
         try:
-            file_path = Storage.get_file(file.path)
+            file_path = await Storage.aget_file(file.path)
             file_path = Path(file_path)
 
             # Check if the file already exists in the cache
@@ -734,7 +734,7 @@ async def get_file_content_by_id(
         headers = {'Content-Disposition': f"attachment; filename*=UTF-8''{encoded_filename}"}
 
         if file_path:
-            file_path = Storage.get_file(file_path)
+            file_path = await Storage.aget_file(file_path)
             file_path = Path(file_path)
 
             # Check if the file already exists in the cache
@@ -798,7 +798,7 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user), db: AsyncS
         result = await Files.delete_file_by_id(id, db=db)
         if result:
             try:
-                Storage.delete_file(file.path)
+                await Storage.adelete_file(file.path)
                 VECTOR_DB_CLIENT.delete(collection_name=f'file-{id}')
             except Exception as e:
                 log.exception(e)

@@ -1609,7 +1609,7 @@ async def process_file(
                 # Usage: /files/
                 file_path = file.path
                 if file_path:
-                    file_path = Storage.get_file(file_path)
+                    file_path = await Storage.aget_file(file_path)
                     loader = Loader(
                         engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
                         user=user,

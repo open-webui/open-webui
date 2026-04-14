@@ -1,3 +1,4 @@
+import asyncio
 import os
 import shutil
 import json
@@ -53,6 +54,37 @@ class StorageProvider(ABC):
     @abstractmethod
     def delete_file(self, file_path: str) -> None:
         pass
+
+    # ------------------------------------------------------------------
+    # Async wrappers
+    #
+    # Every concrete provider performs blocking I/O — local filesystem
+    # reads/writes for `LocalStorageProvider`, network round-trips for
+    # the S3/GCS/Azure backends. Calling them directly from an async
+    # handler blocks the event loop for the entire duration of the
+    # operation, which on slow networks or large files freezes every
+    # other in-flight request.
+    #
+    # These default async implementations off-load the corresponding
+    # sync method to a worker thread via `asyncio.to_thread`, giving
+    # async callers a uniform `await Storage.aXxx(...)` API. Concrete
+    # providers that gain a native async client in the future can
+    # override these methods without breaking callers.
+    # ------------------------------------------------------------------
+
+    async def aget_file(self, file_path: str) -> str:
+        return await asyncio.to_thread(self.get_file, file_path)
+
+    async def aupload_file(
+        self, file: BinaryIO, filename: str, tags: Dict[str, str]
+    ) -> Tuple[bytes, str]:
+        return await asyncio.to_thread(self.upload_file, file, filename, tags)
+
+    async def adelete_all_files(self) -> None:
+        return await asyncio.to_thread(self.delete_all_files)
+
+    async def adelete_file(self, file_path: str) -> None:
+        return await asyncio.to_thread(self.delete_file, file_path)
 
 
 class LocalStorageProvider(StorageProvider):
