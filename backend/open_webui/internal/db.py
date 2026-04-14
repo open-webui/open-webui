@@ -108,6 +108,49 @@ def _make_async_url(url: str) -> str:
 #              Alembic, peewee migration, health checks)
 # ============================================================
 
+def _set_sqlite_journal_mode(dbapi_connection, want_wal: bool, *, db_label: str) -> None:
+    """Set SQLite/SQLCipher journal_mode and verify the engine accepted it.
+
+    SQLite's `PRAGMA journal_mode = X` returns the mode the engine
+    actually selected, which is *not* always the one requested:
+    network filesystems frequently reject WAL (because shared-memory
+    mapping is unavailable), and certain SQLCipher builds may also
+    decline. Without verification we'd silently run in rollback-journal
+    while believing WAL was active — and the lock-contention symptoms
+    this branch exists to fix would persist undetected.
+
+    This helper executes the PRAGMA, reads the result, and logs a
+    warning on mismatch so operators can see what happened. It does
+    not fail fast: a downgrade to DELETE is degraded but functional,
+    not broken.
+    """
+    requested = 'WAL' if want_wal else 'DELETE'
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute(f'PRAGMA journal_mode={requested}')
+        row = cursor.fetchone()
+    finally:
+        cursor.close()
+
+    actual = (row[0] if row else '').upper() if row else ''
+    if not actual:
+        log.warning(
+            'SQLite (%s): PRAGMA journal_mode=%s returned no result; '
+            'unable to confirm active journal mode.',
+            db_label,
+            requested,
+        )
+    elif actual != requested.upper():
+        log.warning(
+            'SQLite (%s): requested journal_mode=%s but engine selected %s. '
+            'On network filesystems WAL is commonly rejected; expect lock '
+            'contention under concurrent load.',
+            db_label,
+            requested,
+            actual,
+        )
+
+
 # Handle SQLCipher URLs
 if SQLALCHEMY_DATABASE_URL.startswith('sqlite+sqlcipher://'):
     database_password = os.environ.get('DATABASE_PASSWORD')
@@ -124,17 +167,17 @@ if SQLALCHEMY_DATABASE_URL.startswith('sqlite+sqlcipher://'):
         conn = sqlcipher3.connect(db_path, check_same_thread=False)
         conn.execute(f"PRAGMA key = '{database_password}'")
         # Match the journal_mode policy of the unencrypted sqlite path.
-        # Without WAL the encrypted sync engine and aiosqlite engine
-        # serialize on the same database-file lock, freezing the loop
-        # under concurrent requests. SQLite persists journal_mode in
-        # the database file, so we must explicitly set both branches —
-        # otherwise an operator who flips DATABASE_ENABLE_SQLITE_WAL
-        # back to False after a WAL-enabled run would silently keep
-        # WAL forever.
-        if DATABASE_ENABLE_SQLITE_WAL:
-            conn.execute('PRAGMA journal_mode=WAL')
-        else:
-            conn.execute('PRAGMA journal_mode=DELETE')
+        # SQLCipher URLs are rejected by the async engine path so there
+        # is no aiosqlite engine to coexist with — but the *sync* engine
+        # still serves requests via run_in_threadpool, and the QueuePool
+        # variant above maintains many concurrent sync connections to
+        # the same encrypted DB file. Without WAL those connections
+        # serialize on the database-file lock under load. SQLite
+        # persists journal_mode in the file, so we must explicitly set
+        # both branches — otherwise an operator who flips
+        # DATABASE_ENABLE_SQLITE_WAL back to False after a WAL-enabled
+        # run would silently keep WAL forever.
+        _set_sqlite_journal_mode(conn, DATABASE_ENABLE_SQLITE_WAL, db_label='sqlcipher')
         return conn
 
     # The dummy "sqlite://" URL would cause SQLAlchemy to auto-select
@@ -168,12 +211,9 @@ elif 'sqlite' in SQLALCHEMY_DATABASE_URL:
     engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={'check_same_thread': False})
 
     def on_connect(dbapi_connection, connection_record):
-        cursor = dbapi_connection.cursor()
-        if DATABASE_ENABLE_SQLITE_WAL:
-            cursor.execute('PRAGMA journal_mode=WAL')
-        else:
-            cursor.execute('PRAGMA journal_mode=DELETE')
-        cursor.close()
+        _set_sqlite_journal_mode(
+            dbapi_connection, DATABASE_ENABLE_SQLITE_WAL, db_label='sqlite-sync'
+        )
 
     event.listen(engine, 'connect', on_connect)
 else:
@@ -225,13 +265,11 @@ if 'sqlite' in ASYNC_SQLALCHEMY_DATABASE_URL:
         connect_args={'check_same_thread': False},
     )
 
-    if DATABASE_ENABLE_SQLITE_WAL:
-
-        @event.listens_for(async_engine.sync_engine, 'connect')
-        def _set_sqlite_wal(dbapi_connection, connection_record):
-            cursor = dbapi_connection.cursor()
-            cursor.execute('PRAGMA journal_mode=WAL')
-            cursor.close()
+    @event.listens_for(async_engine.sync_engine, 'connect')
+    def _set_sqlite_wal(dbapi_connection, connection_record):
+        _set_sqlite_journal_mode(
+            dbapi_connection, DATABASE_ENABLE_SQLITE_WAL, db_label='sqlite-async'
+        )
 else:
     if isinstance(DATABASE_POOL_SIZE, int):
         if DATABASE_POOL_SIZE > 0:
