@@ -25,7 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import get_async_session, get_async_db_context
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 
 from open_webui.models.channels import Channels
 from open_webui.models.users import Users
@@ -407,7 +407,7 @@ async def delete_all_files(user=Depends(get_admin_user), db: AsyncSession = Depe
     if result:
         try:
             Storage.delete_all_files()
-            VECTOR_DB_CLIENT.reset()
+            await ASYNC_VECTOR_DB_CLIENT.reset()
         except Exception as e:
             log.exception(e)
             log.error('Error deleting files')
@@ -577,7 +577,7 @@ async def update_file_data_content_by_id(
         for knowledge in knowledges:
             try:
                 # Remove old embeddings for this file from the KB collection
-                VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'file_id': id})
+                await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'file_id': id})
                 # Re-add from the now-updated file-{file_id} collection
                 await process_file(
                     request,
@@ -789,9 +789,9 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user), db: AsyncS
             await Knowledges.remove_file_from_knowledge_by_id(knowledge.id, id, db=db)
             # Clean KB embeddings (same logic as /knowledge/{id}/file/remove)
             try:
-                VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'file_id': id})
+                await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'file_id': id})
                 if file.hash:
-                    VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'hash': file.hash})
+                    await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'hash': file.hash})
             except Exception as e:
                 log.debug(f'KB embedding cleanup for {knowledge.id}: {e}')
 
@@ -799,7 +799,7 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user), db: AsyncS
         if result:
             try:
                 Storage.delete_file(file.path)
-                VECTOR_DB_CLIENT.delete(collection_name=f'file-{id}')
+                await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=f'file-{id}')
             except Exception as e:
                 log.exception(e)
                 log.error('Error deleting files')

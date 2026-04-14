@@ -45,6 +45,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 
 # Document loaders
 from open_webui.retrieval.loaders.main import Loader
@@ -1556,7 +1557,7 @@ async def process_file(
 
                 try:
                     # /files/{file_id}/data/content/update
-                    VECTOR_DB_CLIENT.delete_collection(collection_name=f'file-{file.id}')
+                    await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=f'file-{file.id}')
                 except Exception:
                     # Audio file upload pipeline
                     pass
@@ -1579,7 +1580,9 @@ async def process_file(
                 # Check if the file has already been processed and save the content
                 # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
 
-                result = VECTOR_DB_CLIENT.query(collection_name=f'file-{file.id}', filter={'file_id': file.id})
+                result = await ASYNC_VECTOR_DB_CLIENT.query(
+                    collection_name=f'file-{file.id}', filter={'file_id': file.id}
+                )
 
                 if result is not None and len(result.ids[0]) > 0:
                     docs = [
@@ -2380,7 +2383,7 @@ async def query_doc_handler(
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (form_data.hybrid is None or form_data.hybrid):
             collection_results = {}
-            collection_results[form_data.collection_name] = VECTOR_DB_CLIENT.get(
+            collection_results[form_data.collection_name] = await ASYNC_VECTOR_DB_CLIENT.get(
                 collection_name=form_data.collection_name
             )
             return await query_doc_with_hybrid_search(
@@ -2409,7 +2412,10 @@ async def query_doc_handler(
             query_embedding = await request.app.state.EMBEDDING_FUNCTION(
                 form_data.query, prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user
             )
-            return query_doc(
+            # query_doc wraps a blocking VECTOR_DB_CLIENT.search call;
+            # offload so the request's event loop stays responsive.
+            return await asyncio.to_thread(
+                query_doc,
                 collection_name=form_data.collection_name,
                 query_embedding=query_embedding,
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
@@ -2507,7 +2513,7 @@ async def delete_entries_from_collection(
     db: AsyncSession = Depends(get_async_session),
 ):
     try:
-        if VECTOR_DB_CLIENT.has_collection(collection_name=form_data.collection_name):
+        if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name=form_data.collection_name):
             file = await Files.get_file_by_id(form_data.file_id, db=db)
             if not file:
                 raise HTTPException(
@@ -2516,7 +2522,7 @@ async def delete_entries_from_collection(
                 )
             hash = file.hash
 
-            VECTOR_DB_CLIENT.delete(
+            await ASYNC_VECTOR_DB_CLIENT.delete(
                 collection_name=form_data.collection_name,
                 metadata={'hash': hash},
             )
@@ -2530,7 +2536,7 @@ async def delete_entries_from_collection(
 
 @router.post('/reset/db')
 async def reset_vector_db(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
-    VECTOR_DB_CLIENT.reset()
+    await ASYNC_VECTOR_DB_CLIENT.reset()
     await Knowledges.delete_all_knowledge(db=db)
 
 

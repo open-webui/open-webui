@@ -5,7 +5,7 @@ import asyncio
 from typing import Optional
 
 from open_webui.models.memories import Memories, MemoryModel
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.utils.auth import get_verified_user
 from open_webui.internal.db import get_async_session
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -85,7 +85,7 @@ async def add_memory(
 
     vector = await request.app.state.EMBEDDING_FUNCTION(memory.content, user=user)
 
-    VECTOR_DB_CLIENT.upsert(
+    await ASYNC_VECTOR_DB_CLIENT.upsert(
         collection_name=f'user-memory-{user.id}',
         items=[
             {
@@ -138,7 +138,7 @@ async def query_memory(
 
     vector = await request.app.state.EMBEDDING_FUNCTION(form_data.content, user=user)
 
-    results = VECTOR_DB_CLIENT.search(
+    results = await ASYNC_VECTOR_DB_CLIENT.search(
         collection_name=f'user-memory-{user.id}',
         vectors=[vector],
         limit=form_data.k,
@@ -175,7 +175,7 @@ async def reset_memory_from_vector_db(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    VECTOR_DB_CLIENT.delete_collection(f'user-memory-{user.id}')
+    await ASYNC_VECTOR_DB_CLIENT.delete_collection(f'user-memory-{user.id}')
 
     memories = await Memories.get_memories_by_user_id(user.id)
 
@@ -184,7 +184,7 @@ async def reset_memory_from_vector_db(
         *[request.app.state.EMBEDDING_FUNCTION(memory.content, user=user) for memory in memories]
     )
 
-    VECTOR_DB_CLIENT.upsert(
+    await ASYNC_VECTOR_DB_CLIENT.upsert(
         collection_name=f'user-memory-{user.id}',
         items=[
             {
@@ -230,7 +230,7 @@ async def delete_memory_by_user_id(
 
     if result:
         try:
-            VECTOR_DB_CLIENT.delete_collection(f'user-memory-{user.id}')
+            await ASYNC_VECTOR_DB_CLIENT.delete_collection(f'user-memory-{user.id}')
         except Exception as e:
             log.error(e)
         return True
@@ -273,7 +273,7 @@ async def update_memory_by_id(
     if form_data.content is not None:
         vector = await request.app.state.EMBEDDING_FUNCTION(memory.content, user=user)
 
-        VECTOR_DB_CLIENT.upsert(
+        await ASYNC_VECTOR_DB_CLIENT.upsert(
             collection_name=f'user-memory-{user.id}',
             items=[
                 {
@@ -318,7 +318,7 @@ async def delete_memory_by_id(
     result = await Memories.delete_memory_by_id_and_user_id(memory_id, user.id, db=db)
 
     if result:
-        VECTOR_DB_CLIENT.delete(collection_name=f'user-memory-{user.id}', ids=[memory_id])
+        await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=f'user-memory-{user.id}', ids=[memory_id])
         return True
 
     return False
