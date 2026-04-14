@@ -126,9 +126,15 @@ if SQLALCHEMY_DATABASE_URL.startswith('sqlite+sqlcipher://'):
         # Match the journal_mode policy of the unencrypted sqlite path.
         # Without WAL the encrypted sync engine and aiosqlite engine
         # serialize on the same database-file lock, freezing the loop
-        # under concurrent requests.
+        # under concurrent requests. SQLite persists journal_mode in
+        # the database file, so we must explicitly set both branches —
+        # otherwise an operator who flips DATABASE_ENABLE_SQLITE_WAL
+        # back to False after a WAL-enabled run would silently keep
+        # WAL forever.
         if DATABASE_ENABLE_SQLITE_WAL:
             conn.execute('PRAGMA journal_mode=WAL')
+        else:
+            conn.execute('PRAGMA journal_mode=DELETE')
         return conn
 
     # The dummy "sqlite://" URL would cause SQLAlchemy to auto-select
