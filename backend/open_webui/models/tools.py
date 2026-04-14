@@ -172,11 +172,13 @@ class ToolsTable:
                 tools.append(
                     ToolUserModel.model_validate(
                         {
-                            **(await self._to_tool_model(
-                                tool,
-                                access_grants=grants_map.get(tool.id, []),
-                                db=db,
-                            )).model_dump(),
+                            **(
+                                await self._to_tool_model(
+                                    tool,
+                                    access_grants=grants_map.get(tool.id, []),
+                                    db=db,
+                                )
+                            ).model_dump(),
                             'user': user.model_dump() if user else None,
                         }
                     )
@@ -218,18 +220,20 @@ class ToolsTable:
             log.exception(f'Error getting tool valves by id {id}')
             return None
 
-    async def update_tool_valves_by_id(self, id: str, valves: dict, db: Optional[AsyncSession] = None) -> Optional[ToolValves]:
+    async def update_tool_valves_by_id(
+        self, id: str, valves: dict, db: Optional[AsyncSession] = None
+    ) -> Optional[ToolValves]:
         try:
             async with get_async_db_context(db) as db:
-                await db.execute(
-                    update(Tool).filter_by(id=id).values(valves=valves, updated_at=int(time.time()))
-                )
+                await db.execute(update(Tool).filter_by(id=id).values(valves=valves, updated_at=int(time.time())))
                 await db.commit()
                 return await self.get_tool_by_id(id, db=db)
         except Exception:
             return None
 
-    async def get_user_valves_by_id_and_user_id(self, id: str, user_id: str, db: Optional[AsyncSession] = None) -> Optional[dict]:
+    async def get_user_valves_by_id_and_user_id(
+        self, id: str, user_id: str, db: Optional[AsyncSession] = None
+    ) -> Optional[dict]:
         try:
             user = await Users.get_user_by_id(user_id, db=db)
             user_settings = user.settings.model_dump() if user.settings else {}
@@ -272,9 +276,7 @@ class ToolsTable:
         try:
             async with get_async_db_context(db) as db:
                 access_grants = updated.pop('access_grants', None)
-                await db.execute(
-                    update(Tool).filter_by(id=id).values(**updated, updated_at=int(time.time()))
-                )
+                await db.execute(update(Tool).filter_by(id=id).values(**updated, updated_at=int(time.time())))
                 await db.commit()
                 if access_grants is not None:
                     await AccessGrants.set_access_grants('tool', id, access_grants, db=db)

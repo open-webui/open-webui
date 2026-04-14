@@ -18,6 +18,7 @@ from typing import Literal
 
 import aiohttp
 from authlib.integrations.starlette_client import OAuth
+from authlib.jose.errors import BadSignatureError
 from authlib.oidc.core import UserInfo
 from fastapi import (
     HTTPException,
@@ -137,6 +138,41 @@ auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN = OAUTH_UPDATE_PICTURE_ON_LOGI
 auth_manager_config.OAUTH_UPDATE_NAME_ON_LOGIN = OAUTH_UPDATE_NAME_ON_LOGIN
 auth_manager_config.OAUTH_UPDATE_EMAIL_ON_LOGIN = OAUTH_UPDATE_EMAIL_ON_LOGIN
 auth_manager_config.OAUTH_AUDIENCE = OAUTH_AUDIENCE
+
+
+# Conservative default when the provider omits both expires_in and expires_at.
+# Matches the value recommended by Authlib's compliance_fix documentation.
+DEFAULT_TOKEN_EXPIRY_SECONDS = 3600
+
+
+def _normalize_token_expiry(token: dict) -> dict:
+    """Ensure a token dict always has a numeric ``expires_at``.
+
+    Resolution order:
+    1. If *expires_at* is already present and non-None, trust it.
+    2. Else if *expires_in* is present and non-None, compute *expires_at*.
+    3. Otherwise fall back to ``DEFAULT_TOKEN_EXPIRY_SECONDS`` and log a
+       warning so operators can identify providers that omit expiration.
+
+    Also stamps *issued_at* for auditing.
+    """
+    token['issued_at'] = datetime.now().timestamp()
+
+    if token.get('expires_at') is not None:
+        token['expires_at'] = int(token['expires_at'])
+        return token
+
+    if token.get('expires_in') is not None:
+        token['expires_at'] = int(datetime.now().timestamp() + token['expires_in'])
+        return token
+
+    # Neither field present — conservative fallback
+    log.warning(
+        "OAuth token response missing both 'expires_in' and 'expires_at'; "
+        f"defaulting to {DEFAULT_TOKEN_EXPIRY_SECONDS}s from now"
+    )
+    token['expires_at'] = int(datetime.now().timestamp() + DEFAULT_TOKEN_EXPIRY_SECONDS)
+    return token
 
 
 FERNET = None
@@ -512,6 +548,25 @@ async def get_oauth_client_info_with_static_credentials(
         raise e
 
 
+
+def resolve_oauth_client_info(connection: dict) -> dict:
+    """
+    Decrypt OAuth client info from a tool server connection config.
+
+    For oauth_2.1_static, overlays admin-provided credentials from
+    info.oauth_client_id and info.oauth_client_secret onto the blob.
+    """
+    info = connection.get('info', {})
+    data = decrypt_data(info.get('oauth_client_info', ''))
+
+    if connection.get('auth_type') == 'oauth_2.1_static':
+        if info.get('oauth_client_id') and info.get('oauth_client_secret'):
+            data['client_id'] = info['oauth_client_id']
+            data['client_secret'] = info['oauth_client_secret']
+
+    return data
+
+
 class OAuthClientManager:
     def __init__(self, app):
         self.oauth = OAuth()
@@ -524,6 +579,7 @@ class OAuthClientManager:
             'client_id': oauth_client_info.client_id,
             'client_secret': oauth_client_info.client_secret,
             'client_kwargs': {
+                'follow_redirects': True,
                 **({'scope': oauth_client_info.scope} if oauth_client_info.scope else {}),
                 **(
                     {'token_endpoint_auth_method': oauth_client_info.token_endpoint_auth_method}
@@ -534,15 +590,20 @@ class OAuthClientManager:
             'server_metadata_url': (oauth_client_info.issuer if oauth_client_info.issuer else None),
         }
 
-        if oauth_client_info.server_metadata and oauth_client_info.server_metadata.code_challenge_methods_supported:
-            if (
-                isinstance(
-                    oauth_client_info.server_metadata.code_challenge_methods_supported,
-                    list,
-                )
-                and 'S256' in oauth_client_info.server_metadata.code_challenge_methods_supported
-            ):
-                kwargs['code_challenge_method'] = 'S256'
+        # Default to S256 for OAuth 2.1 (PKCE is mandatory per RFC 9700)
+        kwargs['code_challenge_method'] = 'S256'
+
+        # Only remove PKCE if metadata explicitly excludes S256
+        if (
+            oauth_client_info.server_metadata
+            and oauth_client_info.server_metadata.code_challenge_methods_supported
+            and isinstance(
+                oauth_client_info.server_metadata.code_challenge_methods_supported,
+                list,
+            )
+            and 'S256' not in oauth_client_info.server_metadata.code_challenge_methods_supported
+        ):
+            del kwargs['code_challenge_method']
 
         self.clients[client_id] = {
             'client': self.oauth.register(**kwargs),
@@ -582,7 +643,7 @@ class OAuthClientManager:
                 continue
 
             try:
-                oauth_client_info = decrypt_data(oauth_client_info)
+                oauth_client_info = resolve_oauth_client_info(connection)
                 return self.add_client(expected_client_id, OAuthClientInformationFull(**oauth_client_info))['client']
             except Exception as e:
                 log.error(f'Failed to lazily add OAuth client {expected_client_id} from config: {e}')
@@ -705,7 +766,7 @@ class OAuthClientManager:
                 log.warning(f'No OAuth session found for user {user_id}, client_id {client_id}')
                 return None
 
-            if force_refresh or datetime.now() + timedelta(minutes=5) >= datetime.fromtimestamp(session.expires_at):
+            if force_refresh or session.expires_at is None or datetime.now() + timedelta(minutes=5) >= datetime.fromtimestamp(session.expires_at):
                 log.debug(f'Token refresh needed for user {user_id}, client_id {session.provider}')
                 refreshed_token = await self._refresh_token(session)
                 if refreshed_token:
@@ -816,14 +877,7 @@ class OAuthClientManager:
                         if 'refresh_token' not in new_token_data:
                             new_token_data['refresh_token'] = token_data['refresh_token']
 
-                        # Add timestamp for tracking
-                        new_token_data['issued_at'] = datetime.now().timestamp()
-
-                        # Calculate expires_at if we have expires_in
-                        if 'expires_in' in new_token_data and 'expires_at' not in new_token_data:
-                            new_token_data['expires_at'] = int(
-                                datetime.now().timestamp() + new_token_data['expires_in']
-                            )
+                        _normalize_token_expiry(new_token_data)
 
                         log.debug(f'Token refresh successful for client_id {client_id}')
                         return new_token_data
@@ -876,12 +930,7 @@ class OAuthClientManager:
 
             if token:
                 try:
-                    # Add timestamp for tracking
-                    token['issued_at'] = datetime.now().timestamp()
-
-                    # Calculate expires_at if we have expires_in
-                    if 'expires_in' in token and 'expires_at' not in token:
-                        token['expires_at'] = datetime.now().timestamp() + token['expires_in']
+                    _normalize_token_expiry(token)
 
                     # Clean up any existing sessions for this user/client_id first
                     sessions = await OAuthSessions.get_sessions_by_user_id(user_id)
@@ -968,7 +1017,7 @@ class OAuthManager:
                 log.warning(f'No OAuth session found for user {user_id}, session {session_id}')
                 return None
 
-            if force_refresh or datetime.now() + timedelta(minutes=5) >= datetime.fromtimestamp(session.expires_at):
+            if force_refresh or session.expires_at is None or datetime.now() + timedelta(minutes=5) >= datetime.fromtimestamp(session.expires_at):
                 log.debug(f'Token refresh needed for user {user_id}, provider {session.provider}')
                 refreshed_token = await self._refresh_token(session)
                 if refreshed_token:
@@ -1082,14 +1131,7 @@ class OAuthManager:
                         if 'refresh_token' not in new_token_data:
                             new_token_data['refresh_token'] = token_data['refresh_token']
 
-                        # Add timestamp for tracking
-                        new_token_data['issued_at'] = datetime.now().timestamp()
-
-                        # Calculate expires_at if we have expires_in
-                        if 'expires_in' in new_token_data and 'expires_at' not in new_token_data:
-                            new_token_data['expires_at'] = int(
-                                datetime.now().timestamp() + new_token_data['expires_in']
-                            )
+                        _normalize_token_expiry(new_token_data)
 
                         log.debug(f'Token refresh successful for provider {provider}')
                         return new_token_data
@@ -1392,6 +1434,27 @@ class OAuthManager:
 
             try:
                 token = await client.authorize_access_token(request, **auth_params)
+            except BadSignatureError:
+                # The IdP likely rotated its signing keys and the cached JWKS
+                # is stale.  Evict the cached key set so the next attempt
+                # fetches fresh keys from the jwks_uri.
+                log.warning(
+                    'OIDC bad_signature for provider %s — evicting cached JWKS and retrying',
+                    provider,
+                )
+                if hasattr(client, 'server_metadata') and isinstance(client.server_metadata, dict):
+                    client.server_metadata.pop('jwks', None)
+                try:
+                    token = await client.authorize_access_token(request, **auth_params)
+                except Exception as retry_exc:
+                    detailed_error = _build_oauth_callback_error_message(retry_exc)
+                    log.warning(
+                        'OAuth callback error during authorize_access_token retry for provider %s: %s',
+                        provider,
+                        detailed_error,
+                        exc_info=True,
+                    )
+                    raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
             except Exception as e:
                 detailed_error = _build_oauth_callback_error_message(e)
                 log.warning(
@@ -1666,12 +1729,7 @@ class OAuthManager:
             )
 
         try:
-            # Add timestamp for tracking
-            token['issued_at'] = datetime.now().timestamp()
-
-            # Calculate expires_at if we have expires_in
-            if 'expires_in' in token and 'expires_at' not in token:
-                token['expires_at'] = datetime.now().timestamp() + token['expires_in']
+            _normalize_token_expiry(token)
 
             # Enforce max concurrent sessions per user/provider to prevent
             # unbounded growth while allowing multi-device usage
@@ -1785,7 +1843,10 @@ class OAuthManager:
             log.warning(f'Back-channel logout: no configured provider matches issuer {token_issuer}')
             return JSONResponse(
                 status_code=400,
-                content={'error': 'invalid_request', 'error_description': 'No configured provider matches token issuer'},
+                content={
+                    'error': 'invalid_request',
+                    'error_description': 'No configured provider matches token issuer',
+                },
             )
 
         # 4. Validate the logout_token signature and claims
@@ -1886,5 +1947,7 @@ class OAuthManager:
                 f'(email={user.email}, provider={matched_provider}, sessions_deleted={len(sessions)})'
             )
 
-        log.info(f'Back-channel logout: completed for {len(users_to_logout)} user(s), {revoked_count} revocation(s) set')
+        log.info(
+            f'Back-channel logout: completed for {len(users_to_logout)} user(s), {revoked_count} revocation(s) set'
+        )
         return JSONResponse(status_code=200, content={})

@@ -431,9 +431,7 @@ except ValueError:
 # enabled, the kernel sends TCP keepalive probes on idle connections so
 # half-closed sockets (e.g. after a silent firewall/LB reset or a NIC
 # flap) are detected before the next command lands on them.
-REDIS_SOCKET_KEEPALIVE = (
-    os.environ.get('REDIS_SOCKET_KEEPALIVE', 'False').lower() == 'true'
-)
+REDIS_SOCKET_KEEPALIVE = os.environ.get('REDIS_SOCKET_KEEPALIVE', 'False').lower() == 'true'
 
 # How often (in seconds) redis-py should PING an idle pooled connection
 # before reusing it. Opt-in: defaults to unset (empty string) so behavior
@@ -518,6 +516,11 @@ PASSWORD_VALIDATION_HINT = os.environ.get('PASSWORD_VALIDATION_HINT', '')
 
 
 BYPASS_MODEL_ACCESS_CONTROL = os.environ.get('BYPASS_MODEL_ACCESS_CONTROL', 'False').lower() == 'true'
+
+# When enabled, skips pydub-based preprocessing (format conversion, compression,
+# and chunked splitting) before sending files to processing engines. Useful when
+# the upstream provider handles these steps or when ffmpeg is unavailable.
+BYPASS_PYDUB_PREPROCESSING = os.environ.get('BYPASS_PYDUB_PREPROCESSING', 'False').lower() == 'true'
 
 # When disabled (default), the OpenAI catch-all proxy endpoint (/{path:path})
 # is blocked. Enable only if you need direct passthrough to upstream OpenAI-
@@ -806,6 +809,36 @@ else:
         AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER = AIOHTTP_CLIENT_TIMEOUT
 
 
+####################################
+# AIOHTTP Connection Pool
+####################################
+
+AIOHTTP_POOL_CONNECTIONS = os.environ.get('AIOHTTP_POOL_CONNECTIONS', '')
+if AIOHTTP_POOL_CONNECTIONS == '':
+    AIOHTTP_POOL_CONNECTIONS = None
+else:
+    try:
+        AIOHTTP_POOL_CONNECTIONS = int(AIOHTTP_POOL_CONNECTIONS)
+    except ValueError:
+        AIOHTTP_POOL_CONNECTIONS = None
+
+AIOHTTP_POOL_CONNECTIONS_PER_HOST = os.environ.get('AIOHTTP_POOL_CONNECTIONS_PER_HOST', '')
+if AIOHTTP_POOL_CONNECTIONS_PER_HOST == '':
+    AIOHTTP_POOL_CONNECTIONS_PER_HOST = None
+else:
+    try:
+        AIOHTTP_POOL_CONNECTIONS_PER_HOST = int(AIOHTTP_POOL_CONNECTIONS_PER_HOST)
+    except ValueError:
+        AIOHTTP_POOL_CONNECTIONS_PER_HOST = None
+
+AIOHTTP_POOL_DNS_TTL = os.environ.get('AIOHTTP_POOL_DNS_TTL', '300')
+try:
+    AIOHTTP_POOL_DNS_TTL = int(AIOHTTP_POOL_DNS_TTL)
+    if AIOHTTP_POOL_DNS_TTL < 0:
+        AIOHTTP_POOL_DNS_TTL = 300
+except ValueError:
+    AIOHTTP_POOL_DNS_TTL = 300
+
 RAG_EMBEDDING_TIMEOUT = os.environ.get('RAG_EMBEDDING_TIMEOUT', '')
 
 if RAG_EMBEDDING_TIMEOUT == '':
@@ -908,6 +941,9 @@ AUDIT_EXCLUDED_PATHS = [path.lstrip('/') for path in AUDIT_EXCLUDED_PATHS]
 AUDIT_INCLUDED_PATHS = os.getenv('AUDIT_INCLUDED_PATHS', '').split(',')
 AUDIT_INCLUDED_PATHS = [path.strip() for path in AUDIT_INCLUDED_PATHS]
 AUDIT_INCLUDED_PATHS = [path.lstrip('/') for path in AUDIT_INCLUDED_PATHS if path]
+
+# When enabled, GET requests are also audited (disabled by default to avoid log noise)
+ENABLE_AUDIT_GET_REQUESTS = os.getenv('ENABLE_AUDIT_GET_REQUESTS', 'False').lower() == 'true'
 
 
 ####################################

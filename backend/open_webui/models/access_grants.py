@@ -295,8 +295,7 @@ class AccessGrantsTable:
         async with get_async_db_context(db) as db:
             # Check for existing grant
             result = await db.execute(
-                select(AccessGrant)
-                .filter_by(
+                select(AccessGrant).filter_by(
                     resource_type=resource_type,
                     resource_id=resource_id,
                     principal_type=principal_type,
@@ -334,8 +333,7 @@ class AccessGrantsTable:
         """Remove a single access grant."""
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                delete(AccessGrant)
-                .filter_by(
+                delete(AccessGrant).filter_by(
                     resource_type=resource_type,
                     resource_id=resource_id,
                     principal_type=principal_type,
@@ -355,8 +353,7 @@ class AccessGrantsTable:
         """Remove all access grants for a resource."""
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                delete(AccessGrant)
-                .filter_by(
+                delete(AccessGrant).filter_by(
                     resource_type=resource_type,
                     resource_id=resource_id,
                 )
@@ -451,8 +448,7 @@ class AccessGrantsTable:
         """
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(AccessGrant)
-                .filter_by(
+                select(AccessGrant).filter_by(
                     resource_type=resource_type,
                     resource_id=resource_id,
                 )
@@ -470,8 +466,7 @@ class AccessGrantsTable:
         """Get all grants for a specific resource."""
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(AccessGrant)
-                .filter_by(
+                select(AccessGrant).filter_by(
                     resource_type=resource_type,
                     resource_id=resource_id,
                 )
@@ -490,8 +485,7 @@ class AccessGrantsTable:
             return {}
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(AccessGrant)
-                .filter(
+                select(AccessGrant).filter(
                     AccessGrant.resource_type == resource_type,
                     AccessGrant.resource_id.in_(resource_ids),
                 )
@@ -634,8 +628,7 @@ class AccessGrantsTable:
 
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(AccessGrant)
-                .filter_by(
+                select(AccessGrant).filter_by(
                     resource_type=resource_type,
                     resource_id=resource_id,
                     permission=permission,

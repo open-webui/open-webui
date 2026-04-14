@@ -184,11 +184,13 @@ class SkillsTable:
                 skills.append(
                     SkillUserModel.model_validate(
                         {
-                            **(await self._to_skill_model(
-                                skill,
-                                access_grants=grants_map.get(skill.id, []),
-                                db=db,
-                            )).model_dump(),
+                            **(
+                                await self._to_skill_model(
+                                    skill,
+                                    access_grants=grants_map.get(skill.id, []),
+                                    db=db,
+                                )
+                            ).model_dump(),
                             'user': user.model_dump() if user else None,
                         }
                     )
@@ -262,9 +264,7 @@ class SkillsTable:
                 stmt = stmt.order_by(Skill.updated_at.desc())
 
                 # Count BEFORE pagination
-                count_result = await db.execute(
-                    select(func.count()).select_from(stmt.subquery())
-                )
+                count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
                 total = count_result.scalar()
 
                 if skip:
@@ -282,11 +282,13 @@ class SkillsTable:
                 for skill, user in items:
                     skills.append(
                         SkillUserResponse(
-                            **(await self._to_skill_model(
-                                skill,
-                                access_grants=grants_map.get(skill.id, []),
-                                db=db,
-                            )).model_dump(),
+                            **(
+                                await self._to_skill_model(
+                                    skill,
+                                    access_grants=grants_map.get(skill.id, []),
+                                    db=db,
+                                )
+                            ).model_dump(),
                             user=(UserResponse(**UserModel.model_validate(user).model_dump()) if user else None),
                         )
                     )
@@ -296,7 +298,9 @@ class SkillsTable:
             log.exception(f'Error searching skills: {e}')
             return SkillListResponse(items=[], total=0)
 
-    async def update_skill_by_id(self, id: str, updated: dict, db: Optional[AsyncSession] = None) -> Optional[SkillModel]:
+    async def update_skill_by_id(
+        self, id: str, updated: dict, db: Optional[AsyncSession] = None
+    ) -> Optional[SkillModel]:
         try:
             async with get_async_db_context(db) as db:
                 access_grants = updated.pop('access_grants', None)

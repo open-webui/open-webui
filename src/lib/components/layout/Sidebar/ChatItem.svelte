@@ -88,10 +88,21 @@
 
 	let mouseOver = false;
 
+	// Local state: tracks the last updatedAt seen while the user was viewing
+	// this chat.  Survives prop refreshes from sidebar data re-fetches that
+	// would overwrite the `lastReadAt` prop with a stale server value.
+	let viewedAt: number | null = null;
+
+	$: if (id === $chatId) {
+		viewedAt = updatedAt ?? Date.now() / 1000;
+	}
+
+	$: effectiveReadAt = Math.max(lastReadAt ?? 0, viewedAt ?? 0) || null;
+
 	$: unread =
 		id !== $chatId &&
 		!$activeChatIds.has(id) &&
-		(lastReadAt === null || (updatedAt !== null && updatedAt > lastReadAt));
+		(effectiveReadAt === null || (updatedAt !== null && updatedAt > effectiveReadAt));
 
 	const loadChat = async () => {
 		if (!chat) {

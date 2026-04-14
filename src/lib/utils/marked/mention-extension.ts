@@ -41,7 +41,11 @@ export function mentionExtension(opts: MentionOptions = {}) {
 	// mentionStart fires on every '<' in the document, making the tokenizer a hot path.
 	const trigger = opts.triggerChar ?? '@';
 	const re = new RegExp(`^<\\${trigger}([\\w.\\-:/]+)(?:\\|([^>]*))?>`);
-	const snapshot: MentionOptions = { triggerChar: trigger, className: opts.className, extraAttrs: opts.extraAttrs };
+	const snapshot: MentionOptions = {
+		triggerChar: trigger,
+		className: opts.className,
+		extraAttrs: opts.extraAttrs
+	};
 
 	return {
 		name: 'mention',

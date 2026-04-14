@@ -160,7 +160,9 @@ class FunctionsTable:
                 for func in functions:
                     if func.id in existing_ids:
                         await db.execute(
-                            update(Function).filter_by(id=func.id).values(
+                            update(Function)
+                            .filter_by(id=func.id)
+                            .values(
                                 **func.model_dump(),
                                 user_id=user_id,
                                 updated_at=int(time.time()),
@@ -233,9 +235,7 @@ class FunctionsTable:
 
     async def get_function_list(self, db: Optional[AsyncSession] = None) -> list[FunctionUserResponse]:
         async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(Function).order_by(Function.updated_at.desc())
-            )
+            result = await db.execute(select(Function).order_by(Function.updated_at.desc()))
             functions = result.scalars().all()
             user_ids = list(set(func.user_id for func in functions))
 
@@ -261,7 +261,9 @@ class FunctionsTable:
                 for func in functions
             ]
 
-    async def get_functions_by_type(self, type: str, active_only=False, db: Optional[AsyncSession] = None) -> list[FunctionModel]:
+    async def get_functions_by_type(
+        self, type: str, active_only=False, db: Optional[AsyncSession] = None
+    ) -> list[FunctionModel]:
         async with get_async_db_context(db) as db:
             if active_only:
                 result = await db.execute(select(Function).filter_by(type=type, is_active=True))
@@ -342,7 +344,9 @@ class FunctionsTable:
                 log.exception(f'Error updating function metadata by id {id}: {e}')
                 return None
 
-    async def get_user_valves_by_id_and_user_id(self, id: str, user_id: str, db: Optional[AsyncSession] = None) -> Optional[dict]:
+    async def get_user_valves_by_id_and_user_id(
+        self, id: str, user_id: str, db: Optional[AsyncSession] = None
+    ) -> Optional[dict]:
         try:
             user = await Users.get_user_by_id(user_id, db=db)
             user_settings = user.settings.model_dump() if user.settings else {}
@@ -381,11 +385,15 @@ class FunctionsTable:
             log.exception(f'Error updating user valves by id {id} and user_id {user_id}: {e}')
             return None
 
-    async def update_function_by_id(self, id: str, updated: dict, db: Optional[AsyncSession] = None) -> Optional[FunctionModel]:
+    async def update_function_by_id(
+        self, id: str, updated: dict, db: Optional[AsyncSession] = None
+    ) -> Optional[FunctionModel]:
         async with get_async_db_context(db) as db:
             try:
                 await db.execute(
-                    update(Function).filter_by(id=id).values(
+                    update(Function)
+                    .filter_by(id=id)
+                    .values(
                         **updated,
                         updated_at=int(time.time()),
                     )

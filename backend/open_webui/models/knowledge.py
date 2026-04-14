@@ -196,11 +196,13 @@ class KnowledgeTable:
                 knowledge_bases.append(
                     KnowledgeUserModel.model_validate(
                         {
-                            **(await self._to_knowledge_model(
-                                knowledge,
-                                access_grants=grants_map.get(knowledge.id, []),
-                                db=db,
-                            )).model_dump(),
+                            **(
+                                await self._to_knowledge_model(
+                                    knowledge,
+                                    access_grants=grants_map.get(knowledge.id, []),
+                                    db=db,
+                                )
+                            ).model_dump(),
                             'user': user.model_dump() if user else None,
                         }
                     )
@@ -249,9 +251,7 @@ class KnowledgeTable:
 
                 stmt = stmt.order_by(Knowledge.updated_at.desc(), Knowledge.id.asc())
 
-                count_result = await db.execute(
-                    select(func.count()).select_from(stmt.subquery())
-                )
+                count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
                 total = count_result.scalar()
                 if skip:
                     stmt = stmt.offset(skip)
@@ -269,11 +269,13 @@ class KnowledgeTable:
                     knowledge_bases.append(
                         KnowledgeUserModel.model_validate(
                             {
-                                **(await self._to_knowledge_model(
-                                    knowledge_base,
-                                    access_grants=grants_map.get(knowledge_base.id, []),
-                                    db=db,
-                                )).model_dump(),
+                                **(
+                                    await self._to_knowledge_model(
+                                        knowledge_base,
+                                        access_grants=grants_map.get(knowledge_base.id, []),
+                                        db=db,
+                                    )
+                                ).model_dump(),
                                 'user': (UserModel.model_validate(user).model_dump() if user else None),
                             }
                         )
@@ -321,9 +323,7 @@ class KnowledgeTable:
                 stmt = stmt.order_by(File.updated_at.desc(), File.id.asc())
 
                 # Count before pagination
-                count_result = await db.execute(
-                    select(func.count()).select_from(stmt.subquery())
-                )
+                count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
                 total = count_result.scalar()
 
                 if skip:
@@ -490,9 +490,7 @@ class KnowledgeTable:
                 stmt = stmt.order_by(primary_sort, File.id.asc())
 
                 # Count BEFORE pagination
-                count_result = await db.execute(
-                    select(func.count()).select_from(stmt.subquery())
-                )
+                count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
                 total = count_result.scalar()
 
                 if skip:
@@ -530,7 +528,9 @@ class KnowledgeTable:
         except Exception:
             return []
 
-    async def get_file_metadatas_by_id(self, knowledge_id: str, db: Optional[AsyncSession] = None) -> list[FileMetadataResponse]:
+    async def get_file_metadatas_by_id(
+        self, knowledge_id: str, db: Optional[AsyncSession] = None
+    ) -> list[FileMetadataResponse]:
         try:
             files = await self.get_files_by_id(knowledge_id, db=db)
             return [FileMetadataResponse(**file.model_dump()) for file in files]
@@ -579,7 +579,9 @@ class KnowledgeTable:
         except Exception:
             return False
 
-    async def remove_file_from_knowledge_by_id(self, knowledge_id: str, file_id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def remove_file_from_knowledge_by_id(
+        self, knowledge_id: str, file_id: str, db: Optional[AsyncSession] = None
+    ) -> bool:
         try:
             async with get_async_db_context(db) as db:
                 await db.execute(delete(KnowledgeFile).filter_by(knowledge_id=knowledge_id, file_id=file_id))
@@ -596,9 +598,7 @@ class KnowledgeTable:
                 await db.commit()
 
                 # Update the knowledge entry's updated_at timestamp
-                await db.execute(
-                    update(Knowledge).filter_by(id=id).values(updated_at=int(time.time()))
-                )
+                await db.execute(update(Knowledge).filter_by(id=id).values(updated_at=int(time.time())))
                 await db.commit()
 
                 return await self.get_knowledge_by_id(id=id, db=db)
@@ -616,7 +616,9 @@ class KnowledgeTable:
         try:
             async with get_async_db_context(db) as db:
                 await db.execute(
-                    update(Knowledge).filter_by(id=id).values(
+                    update(Knowledge)
+                    .filter_by(id=id)
+                    .values(
                         **form_data.model_dump(exclude={'access_grants'}),
                         updated_at=int(time.time()),
                     )
@@ -635,7 +637,9 @@ class KnowledgeTable:
         try:
             async with get_async_db_context(db) as db:
                 await db.execute(
-                    update(Knowledge).filter_by(id=id).values(
+                    update(Knowledge)
+                    .filter_by(id=id)
+                    .values(
                         data=data,
                         updated_at=int(time.time()),
                     )

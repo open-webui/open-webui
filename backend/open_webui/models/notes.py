@@ -113,7 +113,9 @@ class NoteTable:
             permission=permission,
         )
 
-    async def insert_new_note(self, user_id: str, form_data: NoteForm, db: Optional[AsyncSession] = None) -> Optional[NoteModel]:
+    async def insert_new_note(
+        self, user_id: str, form_data: NoteForm, db: Optional[AsyncSession] = None
+    ) -> Optional[NoteModel]:
         async with get_async_db_context(db) as db:
             note = NoteModel(
                 **{
@@ -159,18 +161,22 @@ class NoteTable:
             if filter:
                 query_key = filter.get('query')
                 if query_key:
-                    # Normalize search by removing hyphens and spaces (e.g., "todo" matches "to-do" and "to do")
-                    normalized_query = query_key.replace('-', '').replace(' ', '')
-                    stmt = stmt.filter(
-                        or_(
-                            func.replace(func.replace(Note.title, '-', ''), ' ', '').ilike(f'%{normalized_query}%'),
-                            func.replace(
-                                func.replace(cast(Note.data['content']['md'], Text), '-', ''),
-                                ' ',
-                                '',
-                            ).ilike(f'%{normalized_query}%'),
+                    # Split query into individual words and normalize each
+                    # (strip hyphens so "todo" matches "to-do").
+                    # All words must match somewhere in title OR content (AND semantics).
+                    search_words = query_key.split()
+                    normalized_words = [w.replace('-', '') for w in search_words if w.replace('-', '')]
+                    for word in normalized_words:
+                        stmt = stmt.filter(
+                            or_(
+                                func.replace(func.replace(Note.title, '-', ''), ' ', '').ilike(f'%{word}%'),
+                                func.replace(
+                                    func.replace(cast(Note.data['content']['md'], Text), '-', ''),
+                                    ' ',
+                                    '',
+                                ).ilike(f'%{word}%'),
+                            )
                         )
-                    )
 
                 view_option = filter.get('view_option')
                 if view_option == 'created':
@@ -216,9 +222,7 @@ class NoteTable:
                 stmt = stmt.order_by(Note.updated_at.desc())
 
             # Count BEFORE pagination
-            count_result = await db.execute(
-                select(func.count()).select_from(stmt.subquery())
-            )
+            count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
             total = count_result.scalar()
 
             if skip:
@@ -236,11 +240,13 @@ class NoteTable:
             for note, user in items:
                 notes.append(
                     NoteUserResponse(
-                        **(await self._to_note_model(
-                            note,
-                            access_grants=grants_map.get(note.id, []),
-                            db=db,
-                        )).model_dump(),
+                        **(
+                            await self._to_note_model(
+                                note,
+                                access_grants=grants_map.get(note.id, []),
+                                db=db,
+                            )
+                        ).model_dump(),
                         user=(UserResponse(**UserModel.model_validate(user).model_dump()) if user else None),
                     )
                 )

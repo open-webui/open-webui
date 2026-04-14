@@ -415,7 +415,9 @@ async def update_feedback_by_id(
 
 
 @router.delete('/feedback/{id}')
-async def delete_feedback_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def delete_feedback_by_id(
+    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     if user.role == 'admin':
         success = await Feedbacks.delete_feedback_by_id(id=id, db=db)
     else:

@@ -145,9 +145,7 @@ class AutomationTable:
 
     async def count_by_user(self, user_id: str, db: Optional[AsyncSession] = None) -> int:
         async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(func.count()).select_from(Automation).filter_by(user_id=user_id)
-            )
+            result = await db.execute(select(func.count()).select_from(Automation).filter_by(user_id=user_id))
             return result.scalar()
 
     async def get_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[AutomationModel]:
@@ -185,9 +183,7 @@ class AutomationTable:
             stmt = stmt.order_by(Automation.created_at.desc())
 
             # Get total count
-            count_result = await db.execute(
-                select(func.count()).select_from(stmt.subquery())
-            )
+            count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
             total = count_result.scalar()
 
             if skip:
@@ -343,18 +339,14 @@ class AutomationRunTable:
                 .subquery()
             )
             result = await db.execute(
-                select(AutomationRun)
-                .join(
+                select(AutomationRun).join(
                     subq,
                     (AutomationRun.automation_id == subq.c.automation_id)
                     & (AutomationRun.created_at == subq.c.max_created),
                 )
             )
             rows = result.scalars().all()
-            return {
-                row.automation_id: AutomationRunModel.model_validate(row)
-                for row in rows
-            }
+            return {row.automation_id: AutomationRunModel.model_validate(row) for row in rows}
 
     async def get_by_automation(
         self,

@@ -268,7 +268,7 @@ async def update_memory_by_id(
 
     memory = await Memories.update_memory_by_id_and_user_id(memory_id, user.id, form_data.content)
     if memory is None:
-        raise HTTPException(status_code=404, detail='Memory not found')
+        raise HTTPException(status_code=404, detail=ERROR_MESSAGES.NOT_FOUND)
 
     if form_data.content is not None:
         vector = await request.app.state.EMBEDDING_FUNCTION(memory.content, user=user)

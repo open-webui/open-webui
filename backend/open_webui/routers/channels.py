@@ -61,7 +61,7 @@ from open_webui.utils.chat import generate_chat_completion
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.channels import extract_mentions, replace_mentions
 from open_webui.internal.db import get_async_session
@@ -94,7 +94,9 @@ async def channel_has_access(
     return False
 
 
-async def get_channel_users_with_access(channel: ChannelModel, permission: str = 'read', db: Optional[AsyncSession] = None):
+async def get_channel_users_with_access(
+    channel: ChannelModel, permission: str = 'read', db: Optional[AsyncSession] = None
+):
     return await AccessGrants.get_users_with_access(
         resource_type='channel',
         resource_id=channel.id,
@@ -138,7 +140,7 @@ async def check_channels_access(request: Request, user: Optional[UserModel] = No
     if not request.app.state.config.ENABLE_CHANNELS:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail='Channels are not enabled',
+            detail=ERROR_MESSAGES.FEATURE_DISABLED('Channels'),
         )
 
     if user:
@@ -302,6 +304,14 @@ async def create_new_channel(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
+
+    form_data.access_grants = filter_allowed_access_grants(
+        request.app.state.config.USER_PERMISSIONS,
+        user.id,
+        user.role,
+        form_data.access_grants,
+        'sharing.public_channels',
+    )
 
     try:
         if form_data.type == 'dm':
@@ -633,6 +643,14 @@ async def update_channel_by_id(
     if channel.user_id != user.id and user.role != 'admin':
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
+    form_data.access_grants = filter_allowed_access_grants(
+        request.app.state.config.USER_PERMISSIONS,
+        user.id,
+        user.role,
+        form_data.access_grants,
+        'sharing.public_channels',
+    )
+
     try:
         channel = await Channels.update_channel_by_id(id, form_data, db=db)
         return ChannelModel(**channel.model_dump())
@@ -877,11 +895,13 @@ async def model_response_handler(request, channel, message, user, db=None):
         if model:
             try:
                 # reverse to get in chronological order
-                thread_messages = (await Messages.get_messages_by_parent_id(
-                    channel.id,
-                    message.parent_id if message.parent_id else message.id,
-                    db=db,
-                ))[::-1]
+                thread_messages = (
+                    await Messages.get_messages_by_parent_id(
+                        channel.id,
+                        message.parent_id if message.parent_id else message.id,
+                        db=db,
+                    )
+                )[::-1]
 
                 response_message, channel = await new_message_handler(
                     request,
@@ -1104,7 +1124,9 @@ async def post_new_message(
         try:
             if files := message.data.get('files', []):
                 for file in files:
-                    await Channels.set_file_message_id_in_channel_by_id(channel.id, file.get('id', ''), message.id, db=db)
+                    await Channels.set_file_message_id_in_channel_by_id(
+                        channel.id, file.get('id', ''), message.id, db=db
+                    )
         except Exception as e:
             log.debug(e)
 
@@ -1769,7 +1791,7 @@ async def post_webhook_message(
     if not webhook:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Invalid webhook URL',
+            detail=ERROR_MESSAGES.INVALID_URL,
         )
 
     channel = await Channels.get_channel_by_id(webhook.channel_id, db=db)
@@ -1787,7 +1809,7 @@ async def post_webhook_message(
     if not message:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail='Failed to create message',
+            detail=ERROR_MESSAGES.DEFAULT('Failed to create message'),
         )
 
     # Update last_used_at

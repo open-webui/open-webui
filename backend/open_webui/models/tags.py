@@ -71,7 +71,9 @@ class TagTable:
                 log.exception(f'Error inserting a new tag: {e}')
                 return None
 
-    async def get_tag_by_name_and_user_id(self, name: str, user_id: str, db: Optional[AsyncSession] = None) -> Optional[TagModel]:
+    async def get_tag_by_name_and_user_id(
+        self, name: str, user_id: str, db: Optional[AsyncSession] = None
+    ) -> Optional[TagModel]:
         try:
             id = name.replace(' ', '_').lower()
             async with get_async_db_context(db) as db:
@@ -86,7 +88,9 @@ class TagTable:
             result = await db.execute(select(Tag).filter_by(user_id=user_id))
             return [TagModel.model_validate(tag) for tag in result.scalars().all()]
 
-    async def get_tags_by_ids_and_user_id(self, ids: list[str], user_id: str, db: Optional[AsyncSession] = None) -> list[TagModel]:
+    async def get_tags_by_ids_and_user_id(
+        self, ids: list[str], user_id: str, db: Optional[AsyncSession] = None
+    ) -> list[TagModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(Tag).filter(Tag.id.in_(ids), Tag.user_id == user_id))
             return [TagModel.model_validate(tag) for tag in result.scalars().all()]
@@ -103,7 +107,9 @@ class TagTable:
             log.error(f'delete_tag: {e}')
             return False
 
-    async def delete_tags_by_ids_and_user_id(self, ids: list[str], user_id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def delete_tags_by_ids_and_user_id(
+        self, ids: list[str], user_id: str, db: Optional[AsyncSession] = None
+    ) -> bool:
         """Delete all tags whose id is in *ids* for the given user, in one query."""
         if not ids:
             return True

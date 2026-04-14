@@ -250,11 +250,11 @@ class MessageTable:
                 }
         return None
 
-    async def get_thread_replies_by_message_id(self, id: str, db: Optional[AsyncSession] = None) -> list[MessageReplyToResponse]:
+    async def get_thread_replies_by_message_id(
+        self, id: str, db: Optional[AsyncSession] = None
+    ) -> list[MessageReplyToResponse]:
         async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(Message).filter_by(parent_id=id).order_by(Message.created_at.desc())
-            )
+            result = await db.execute(select(Message).filter_by(parent_id=id).order_by(Message.created_at.desc()))
             all_messages = result.scalars().all()
 
             messages = []
@@ -369,7 +369,9 @@ class MessageTable:
                 )
             return messages
 
-    async def get_last_message_by_channel_id(self, channel_id: str, db: Optional[AsyncSession] = None) -> Optional[MessageModel]:
+    async def get_last_message_by_channel_id(
+        self, channel_id: str, db: Optional[AsyncSession] = None
+    ) -> Optional[MessageModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(
                 select(Message).filter_by(channel_id=channel_id).order_by(Message.created_at.desc()).limit(1)
@@ -453,9 +455,7 @@ class MessageTable:
     ) -> Optional[MessageReactionModel]:
         async with get_async_db_context(db) as db:
             # check for existing reaction
-            result = await db.execute(
-                select(MessageReaction).filter_by(message_id=id, user_id=user_id, name=name)
-            )
+            result = await db.execute(select(MessageReaction).filter_by(message_id=id, user_id=user_id, name=name))
             existing_reaction = result.scalars().first()
             if existing_reaction:
                 return MessageReactionModel.model_validate(existing_reaction)

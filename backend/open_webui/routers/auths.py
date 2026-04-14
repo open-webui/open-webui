@@ -54,6 +54,7 @@ from open_webui.config import (
     OAUTH_PROVIDERS,
     OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
 )
+from open_webui.utils.oauth import auth_manager_config
 from pydantic import BaseModel
 
 from open_webui.utils.misc import parse_duration, validate_email_format
@@ -96,7 +97,9 @@ log = logging.getLogger(__name__)
 signin_rate_limiter = RateLimiter(redis_client=get_redis_client(), limit=5 * 3, window=60 * 3)
 
 
-async def create_session_response(request: Request, user, db, response: Response = None, set_cookie: bool = False) -> dict:
+async def create_session_response(
+    request: Request, user, db, response: Response = None, set_cookie: bool = False
+) -> dict:
     """
     Create JWT token and build session response for a user.
     Shared helper for signin, signup, ldap_auth, add_user, and token_exchange endpoints.
@@ -321,6 +324,14 @@ async def ldap_auth(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACTION_PROHIBITED,
         )
+
+    # Reject empty passwords before attempting the LDAP bind.
+    # Per RFC 4513 §5.1.2, a Simple Bind with a non-empty DN but empty
+    # password is "unauthenticated simple authentication" — many LDAP
+    # servers (OpenLDAP default, some AD configs) return success for these,
+    # which would grant access without valid credentials.
+    if not form_data.password or not form_data.password.strip():
+        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
     # NOW load LDAP config variables
     LDAP_SERVER_LABEL = request.app.state.config.LDAP_SERVER_LABEL
@@ -909,7 +920,9 @@ async def add_user(
 
 
 @router.get('/admin/details')
-async def get_admin_details(request: Request, user=Depends(get_current_user), db: AsyncSession = Depends(get_async_session)):
+async def get_admin_details(
+    request: Request, user=Depends(get_current_user), db: AsyncSession = Depends(get_async_session)
+):
     if request.app.state.config.SHOW_ADMIN_DETAILS:
         admin_email = request.app.state.config.ADMIN_EMAIL
         admin_name = None
@@ -1118,7 +1131,7 @@ async def update_ldap_server(request: Request, form_data: LdapServerConfig, user
     for key in required_fields:
         value = getattr(form_data, key)
         if not value:
-            raise HTTPException(400, detail=f'Required field {key} is empty')
+            raise HTTPException(400, detail=ERROR_MESSAGES.REQUIRED_FIELD_EMPTY(key))
 
     request.app.state.config.LDAP_SERVER_LABEL = form_data.label
     request.app.state.config.LDAP_SERVER_HOST = form_data.host
@@ -1173,7 +1186,9 @@ async def update_ldap_config(request: Request, form_data: LdapConfigForm, user=D
 
 # create api key
 @router.post('/api_key', response_model=ApiKey)
-async def generate_api_key(request: Request, user=Depends(get_current_user), db: AsyncSession = Depends(get_async_session)):
+async def generate_api_key(
+    request: Request, user=Depends(get_current_user), db: AsyncSession = Depends(get_async_session)
+):
     if not request.app.state.config.ENABLE_API_KEYS or (
         user.role != 'admin'
         and not await has_permission(user.id, 'features.api_keys', request.app.state.config.USER_PERMISSIONS)
@@ -1245,7 +1260,7 @@ async def token_exchange(
     if provider not in OAUTH_PROVIDERS:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Provider '{provider}' is not configured",
+            detail=ERROR_MESSAGES.OAUTH_NOT_CONFIGURED(provider),
         )
     # Get the OAuth client for this provider
     oauth_manager = request.app.state.oauth_manager
@@ -1253,7 +1268,7 @@ async def token_exchange(
     if not client:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"OAuth client for '{provider}' not found",
+            detail=ERROR_MESSAGES.OAUTH_NOT_CONFIGURED(provider),
         )
 
     # Validate the token by calling the userinfo endpoint
@@ -1294,6 +1309,17 @@ async def token_exchange(
             detail='Token missing required email claim',
         )
     email = email.lower()
+
+    # Enforce domain allowlist — same check as the normal OAuth callback
+    if (
+        '*' not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
+        and email.split('@')[-1] not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
+    ):
+        log.warning(f'Token exchange denied: email domain not in allowed domains list')
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
 
     # Try to find the user by OAuth sub
     user = await Users.get_user_by_oauth_sub(provider, sub, db=db)

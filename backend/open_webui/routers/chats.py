@@ -1,6 +1,7 @@
 import json
 import logging
 from typing import Optional
+from uuid import uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 import asyncio
 from fastapi.responses import StreamingResponse
@@ -493,7 +494,9 @@ async def delete_all_user_chats(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    if user.role == 'user' and not await has_permission(user.id, 'chat.delete', request.app.state.config.USER_PERMISSIONS):
+    if user.role == 'user' and not await has_permission(
+        user.id, 'chat.delete', request.app.state.config.USER_PERMISSIONS
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -538,7 +541,9 @@ async def get_user_chat_list_by_user_id(
     if direction:
         filter['direction'] = direction
 
-    return await Chats.get_chat_list_by_user_id(user_id, include_archived=True, filter=filter, skip=skip, limit=limit, db=db)
+    return await Chats.get_chat_list_by_user_id(
+        user_id, include_archived=True, filter=filter, skip=skip, limit=limit, db=db
+    )
 
 
 ############################
@@ -553,7 +558,7 @@ async def create_new_chat(
     db: AsyncSession = Depends(get_async_session),
 ):
     try:
-        chat = await Chats.insert_new_chat(user.id, form_data, db=db)
+        chat = await Chats.insert_new_chat(str(uuid4()), user.id, form_data, db=db)
         return ChatResponse(**chat.model_dump())
     except Exception as e:
         log.exception(e)
@@ -620,7 +625,9 @@ async def search_user_chats(
 
 
 @router.get('/folder/{folder_id}', response_model=list[ChatResponse])
-async def get_chats_by_folder_id(folder_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_chats_by_folder_id(
+    folder_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     folder_ids = [folder_id]
     children_folders = await Folders.get_children_folders_by_id_and_user_id(folder_id, user.id, db=db)
     if children_folders:
@@ -815,7 +822,9 @@ async def get_shared_session_user_chat_list(
 
 
 @router.get('/share/{share_id}', response_model=Optional[ChatResponse])
-async def get_shared_chat_by_id(share_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_shared_chat_by_id(
+    share_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     if user.role == 'pending':
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
@@ -851,7 +860,9 @@ async def get_user_chat_list_by_tag_name(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    chats = await Chats.get_chat_list_by_user_id_and_tag_name(user.id, form_data.name, form_data.skip, form_data.limit, db=db)
+    chats = await Chats.get_chat_list_by_user_id_and_tag_name(
+        user.id, form_data.name, form_data.skip, form_data.limit, db=db
+    )
     if len(chats) == 0:
         await Tags.delete_tag_by_name_and_user_id(form_data.name, user.id, db=db)
 
@@ -1056,7 +1067,9 @@ async def delete_chat_by_id(
 
 
 @router.get('/{id}/pinned', response_model=Optional[bool])
-async def get_pinned_status_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_pinned_status_by_id(
+    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
         return chat.pinned
@@ -1137,7 +1150,9 @@ async def clone_chat_by_id(
 
 
 @router.post('/{id}/clone/shared', response_model=Optional[ChatResponse])
-async def clone_shared_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def clone_shared_chat_by_id(
+    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     if user.role == 'admin':
         chat = await Chats.get_chat_by_id(id, db=db)
     else:
@@ -1250,7 +1265,9 @@ async def share_chat_by_id(
 
 
 @router.delete('/{id}/share', response_model=Optional[bool])
-async def delete_shared_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def delete_shared_chat_by_id(
+    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
         if not chat.share_id:
@@ -1371,7 +1388,9 @@ async def delete_tag_by_id_and_tag_name(
 
 
 @router.delete('/{id}/tags/all', response_model=Optional[bool])
-async def delete_all_tags_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def delete_all_tags_by_id(
+    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
         old_tags = chat.meta.get('tags', [])

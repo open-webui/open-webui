@@ -125,7 +125,9 @@ class FileUpdateForm(BaseModel):
 
 
 class FilesTable:
-    async def insert_new_file(self, user_id: str, form_data: FileForm, db: Optional[AsyncSession] = None) -> Optional[FileModel]:
+    async def insert_new_file(
+        self, user_id: str, form_data: FileForm, db: Optional[AsyncSession] = None
+    ) -> Optional[FileModel]:
         async with get_async_db_context(db) as db:
             file_data = form_data.model_dump()
 
@@ -167,7 +169,9 @@ class FilesTable:
         except Exception:
             return None
 
-    async def get_file_by_id_and_user_id(self, id: str, user_id: str, db: Optional[AsyncSession] = None) -> Optional[FileModel]:
+    async def get_file_by_id_and_user_id(
+        self, id: str, user_id: str, db: Optional[AsyncSession] = None
+    ) -> Optional[FileModel]:
         async with get_async_db_context(db) as db:
             try:
                 result = await db.execute(select(File).filter_by(id=id, user_id=user_id))
@@ -179,7 +183,9 @@ class FilesTable:
             except Exception:
                 return None
 
-    async def get_file_metadata_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[FileMetadataResponse]:
+    async def get_file_metadata_by_id(
+        self, id: str, db: Optional[AsyncSession] = None
+    ) -> Optional[FileMetadataResponse]:
         async with get_async_db_context(db) as db:
             try:
                 file = await db.get(File, id)
@@ -211,12 +217,12 @@ class FilesTable:
 
     async def get_files_by_ids(self, ids: list[str], db: Optional[AsyncSession] = None) -> list[FileModel]:
         async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(File).filter(File.id.in_(ids)).order_by(File.updated_at.desc())
-            )
+            result = await db.execute(select(File).filter(File.id.in_(ids)).order_by(File.updated_at.desc()))
             return [FileModel.model_validate(file) for file in result.scalars().all()]
 
-    async def get_file_metadatas_by_ids(self, ids: list[str], db: Optional[AsyncSession] = None) -> list[FileMetadataResponse]:
+    async def get_file_metadatas_by_ids(
+        self, ids: list[str], db: Optional[AsyncSession] = None
+    ) -> list[FileMetadataResponse]:
         async with get_async_db_context(db) as db:
             result = await db.execute(
                 select(File.id, File.hash, File.meta, File.created_at, File.updated_at)
@@ -251,18 +257,11 @@ class FilesTable:
             if user_id:
                 stmt = stmt.filter_by(user_id=user_id)
 
-            count_result = await db.execute(
-                select(func.count()).select_from(stmt.subquery())
-            )
+            count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
             total = count_result.scalar()
 
-            result = await db.execute(
-                stmt.order_by(File.updated_at.desc(), File.id.desc()).offset(skip).limit(limit)
-            )
-            items = [
-                FileModelResponse.model_validate(file, from_attributes=True)
-                for file in result.scalars().all()
-            ]
+            result = await db.execute(stmt.order_by(File.updated_at.desc(), File.id.desc()).offset(skip).limit(limit))
+            items = [FileModelResponse.model_validate(file, from_attributes=True) for file in result.scalars().all()]
 
             return FileListResponse(items=items, total=total)
 
@@ -320,9 +319,7 @@ class FilesTable:
             if pattern != '%':
                 stmt = stmt.filter(File.filename.ilike(pattern, escape='\\'))
 
-            result = await db.execute(
-                stmt.order_by(File.created_at.desc(), File.id.desc()).offset(skip).limit(limit)
-            )
+            result = await db.execute(stmt.order_by(File.created_at.desc(), File.id.desc()).offset(skip).limit(limit))
             return [FileModel.model_validate(file) for file in result.scalars().all()]
 
     async def update_file_by_id(
@@ -349,7 +346,9 @@ class FilesTable:
                 log.exception(f'Error updating file completely by id: {e}')
                 return None
 
-    async def update_file_hash_by_id(self, id: str, hash: Optional[str], db: Optional[AsyncSession] = None) -> Optional[FileModel]:
+    async def update_file_hash_by_id(
+        self, id: str, hash: Optional[str], db: Optional[AsyncSession] = None
+    ) -> Optional[FileModel]:
         async with get_async_db_context(db) as db:
             try:
                 result = await db.execute(select(File).filter_by(id=id))
@@ -362,7 +361,9 @@ class FilesTable:
             except Exception:
                 return None
 
-    async def update_file_data_by_id(self, id: str, data: dict, db: Optional[AsyncSession] = None) -> Optional[FileModel]:
+    async def update_file_data_by_id(
+        self, id: str, data: dict, db: Optional[AsyncSession] = None
+    ) -> Optional[FileModel]:
         async with get_async_db_context(db) as db:
             try:
                 result = await db.execute(select(File).filter_by(id=id))
@@ -374,7 +375,9 @@ class FilesTable:
             except Exception as e:
                 return None
 
-    async def update_file_metadata_by_id(self, id: str, meta: dict, db: Optional[AsyncSession] = None) -> Optional[FileModel]:
+    async def update_file_metadata_by_id(
+        self, id: str, meta: dict, db: Optional[AsyncSession] = None
+    ) -> Optional[FileModel]:
         async with get_async_db_context(db) as db:
             try:
                 result = await db.execute(select(File).filter_by(id=id))

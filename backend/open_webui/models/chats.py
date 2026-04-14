@@ -292,9 +292,10 @@ class ChatTable:
 
         return changed
 
-    async def insert_new_chat(self, user_id: str, form_data: ChatForm, db: Optional[AsyncSession] = None) -> Optional[ChatModel]:
+    async def insert_new_chat(
+        self, id: str, user_id: str, form_data: ChatForm, db: Optional[AsyncSession] = None
+    ) -> Optional[ChatModel]:
         async with get_async_db_context(db) as db:
-            id = str(uuid.uuid4())
             chat = ChatModel(
                 **{
                     'id': id,
@@ -551,7 +552,9 @@ class ChatTable:
             await self.update_chat_by_id(id, chat, db=db)
             return message_files
 
-    async def insert_shared_chat_by_chat_id(self, chat_id: str, db: Optional[AsyncSession] = None) -> Optional[ChatModel]:
+    async def insert_shared_chat_by_chat_id(
+        self, chat_id: str, db: Optional[AsyncSession] = None
+    ) -> Optional[ChatModel]:
         async with get_async_db_context(db) as db:
             # Get the existing chat to share
             chat = await db.get(Chat, chat_id)
@@ -585,7 +588,9 @@ class ChatTable:
             await db.commit()
             return shared_chat if shared_result else None
 
-    async def update_shared_chat_by_chat_id(self, chat_id: str, db: Optional[AsyncSession] = None) -> Optional[ChatModel]:
+    async def update_shared_chat_by_chat_id(
+        self, chat_id: str, db: Optional[AsyncSession] = None
+    ) -> Optional[ChatModel]:
         try:
             async with get_async_db_context(db) as db:
                 chat = await db.get(Chat, chat_id)
@@ -689,7 +694,9 @@ class ChatTable:
         db: Optional[AsyncSession] = None,
     ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as db:
-            stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at).filter_by(user_id=user_id, archived=True)
+            stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at).filter_by(
+                user_id=user_id, archived=True
+            )
 
             if filter:
                 query_key = filter.get('query')
@@ -740,7 +747,11 @@ class ChatTable:
         db: Optional[AsyncSession] = None,
     ) -> list[SharedChatResponse]:
         async with get_async_db_context(db) as db:
-            stmt = select(Chat.id, Chat.title, Chat.share_id, Chat.updated_at, Chat.created_at).filter_by(user_id=user_id).filter(Chat.share_id.isnot(None))
+            stmt = (
+                select(Chat.id, Chat.title, Chat.share_id, Chat.updated_at, Chat.created_at)
+                .filter_by(user_id=user_id)
+                .filter(Chat.share_id.isnot(None))
+            )
 
             if filter:
                 query_key = filter.get('query')
@@ -793,7 +804,9 @@ class ChatTable:
         db: Optional[AsyncSession] = None,
     ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as db:
-            stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at).filter_by(user_id=user_id)
+            stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at).filter_by(
+                user_id=user_id
+            )
             if not include_archived:
                 stmt = stmt.filter_by(archived=False)
 
@@ -846,7 +859,9 @@ class ChatTable:
         db: Optional[AsyncSession] = None,
     ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as db:
-            stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at).filter_by(user_id=user_id)
+            stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at).filter_by(
+                user_id=user_id
+            )
 
             if not include_folders:
                 stmt = stmt.filter_by(folder_id=None)
@@ -889,10 +904,7 @@ class ChatTable:
     ) -> list[ChatModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(Chat)
-                .filter(Chat.id.in_(chat_ids))
-                .filter_by(archived=False)
-                .order_by(Chat.updated_at.desc())
+                select(Chat).filter(Chat.id.in_(chat_ids)).filter_by(archived=False).order_by(Chat.updated_at.desc())
             )
             all_chats = result.scalars().all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
@@ -925,7 +937,9 @@ class ChatTable:
         except Exception:
             return None
 
-    async def get_chat_by_id_and_user_id(self, id: str, user_id: str, db: Optional[AsyncSession] = None) -> Optional[ChatModel]:
+    async def get_chat_by_id_and_user_id(
+        self, id: str, user_id: str, db: Optional[AsyncSession] = None
+    ) -> Optional[ChatModel]:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(Chat).filter_by(id=id, user_id=user_id))
@@ -941,9 +955,7 @@ class ChatTable:
         """
         try:
             async with get_async_db_context(db) as db:
-                result = await db.execute(
-                    select(exists().where(and_(Chat.id == id, Chat.user_id == user_id)))
-                )
+                result = await db.execute(select(exists().where(and_(Chat.id == id, Chat.user_id == user_id))))
                 return result.scalar()
         except Exception:
             return False
@@ -997,9 +1009,7 @@ class ChatTable:
             else:
                 stmt = stmt.order_by(Chat.updated_at.desc(), Chat.id)
 
-            count_result = await db.execute(
-                select(func.count()).select_from(stmt.subquery())
-            )
+            count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
             total = count_result.scalar()
 
             if skip is not None:
@@ -1017,7 +1027,9 @@ class ChatTable:
                 }
             )
 
-    async def get_pinned_chats_by_user_id(self, user_id: str, db: Optional[AsyncSession] = None) -> list[ChatTitleIdResponse]:
+    async def get_pinned_chats_by_user_id(
+        self, user_id: str, db: Optional[AsyncSession] = None
+    ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as db:
             result = await db.execute(
                 select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at)
@@ -1060,7 +1072,9 @@ class ChatTable:
         search_text = sanitize_text_for_db(search_text).lower().strip()
 
         if not search_text:
-            return await self.get_chat_list_by_user_id(user_id, include_archived, filter={}, skip=skip, limit=limit, db=db)
+            return await self.get_chat_list_by_user_id(
+                user_id, include_archived, filter={}, skip=skip, limit=limit, db=db
+            )
 
         search_text_words = search_text.split(' ')
 
@@ -1305,7 +1319,9 @@ class ChatTable:
         except Exception:
             return None
 
-    async def get_chat_tags_by_id_and_user_id(self, id: str, user_id: str, db: Optional[AsyncSession] = None) -> list[TagModel]:
+    async def get_chat_tags_by_id_and_user_id(
+        self, id: str, user_id: str, db: Optional[AsyncSession] = None
+    ) -> list[TagModel]:
         async with get_async_db_context(db) as db:
             chat = await db.get(Chat, id)
             tag_ids = chat.meta.get('tags', [])
@@ -1320,7 +1336,9 @@ class ChatTable:
         db: Optional[AsyncSession] = None,
     ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as db:
-            stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at).filter_by(user_id=user_id)
+            stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at).filter_by(
+                user_id=user_id
+            )
             tag_id = tag_name.replace(' ', '_').lower()
 
             bind = await db.connection()
@@ -1378,7 +1396,9 @@ class ChatTable:
         except Exception:
             return None
 
-    async def count_chats_by_tag_name_and_user_id(self, tag_name: str, user_id: str, db: Optional[AsyncSession] = None) -> int:
+    async def count_chats_by_tag_name_and_user_id(
+        self, tag_name: str, user_id: str, db: Optional[AsyncSession] = None
+    ) -> int:
         async with get_async_db_context(db) as db:
             stmt = select(func.count(Chat.id)).filter_by(user_id=user_id, archived=False)
             tag_id = tag_name.replace(' ', '_').lower()
@@ -1424,11 +1444,11 @@ class ChatTable:
                     orphans.append(tag_id)
             await Tags.delete_tags_by_ids_and_user_id(orphans, user_id, db=db)
 
-    async def count_chats_by_folder_id_and_user_id(self, folder_id: str, user_id: str, db: Optional[AsyncSession] = None) -> int:
+    async def count_chats_by_folder_id_and_user_id(
+        self, folder_id: str, user_id: str, db: Optional[AsyncSession] = None
+    ) -> int:
         async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(func.count(Chat.id)).filter_by(user_id=user_id, folder_id=folder_id)
-            )
+            result = await db.execute(select(func.count(Chat.id)).filter_by(user_id=user_id, folder_id=folder_id))
             count = result.scalar()
 
             log.info(f"Count of chats for folder '{folder_id}': {count}")
@@ -1470,9 +1490,7 @@ class ChatTable:
     async def delete_chat_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
         try:
             async with get_async_db_context(db) as db:
-                await db.execute(
-                    update(AutomationRun).filter_by(chat_id=id).values(chat_id=None)
-                )
+                await db.execute(update(AutomationRun).filter_by(chat_id=id).values(chat_id=None))
                 await db.execute(delete(ChatMessage).filter_by(chat_id=id))
                 await db.execute(delete(Chat).filter_by(id=id))
                 await db.commit()
@@ -1484,9 +1502,7 @@ class ChatTable:
     async def delete_chat_by_id_and_user_id(self, id: str, user_id: str, db: Optional[AsyncSession] = None) -> bool:
         try:
             async with get_async_db_context(db) as db:
-                await db.execute(
-                    update(AutomationRun).filter_by(chat_id=id).values(chat_id=None)
-                )
+                await db.execute(update(AutomationRun).filter_by(chat_id=id).values(chat_id=None))
                 await db.execute(delete(ChatMessage).filter_by(chat_id=id))
                 await db.execute(delete(Chat).filter_by(id=id, user_id=user_id))
                 await db.commit()
@@ -1502,7 +1518,9 @@ class ChatTable:
 
                 chat_id_subquery = select(Chat.id).filter_by(user_id=user_id).scalar_subquery()
                 await db.execute(
-                    update(AutomationRun).filter(AutomationRun.chat_id.in_(select(Chat.id).filter_by(user_id=user_id))).values(chat_id=None)
+                    update(AutomationRun)
+                    .filter(AutomationRun.chat_id.in_(select(Chat.id).filter_by(user_id=user_id)))
+                    .values(chat_id=None)
                 )
                 await db.execute(
                     delete(ChatMessage).filter(ChatMessage.chat_id.in_(select(Chat.id).filter_by(user_id=user_id)))
@@ -1514,16 +1532,16 @@ class ChatTable:
         except Exception:
             return False
 
-    async def delete_chats_by_user_id_and_folder_id(self, user_id: str, folder_id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def delete_chats_by_user_id_and_folder_id(
+        self, user_id: str, folder_id: str, db: Optional[AsyncSession] = None
+    ) -> bool:
         try:
             async with get_async_db_context(db) as db:
                 chat_ids_stmt = select(Chat.id).filter_by(user_id=user_id, folder_id=folder_id)
                 await db.execute(
                     update(AutomationRun).filter(AutomationRun.chat_id.in_(chat_ids_stmt)).values(chat_id=None)
                 )
-                await db.execute(
-                    delete(ChatMessage).filter(ChatMessage.chat_id.in_(chat_ids_stmt))
-                )
+                await db.execute(delete(ChatMessage).filter(ChatMessage.chat_id.in_(chat_ids_stmt)))
                 await db.execute(delete(Chat).filter_by(user_id=user_id, folder_id=folder_id))
                 await db.commit()
 
@@ -1619,9 +1637,7 @@ class ChatTable:
     ) -> list[ChatFileModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(ChatFile)
-                .filter_by(chat_id=chat_id, message_id=message_id)
-                .order_by(ChatFile.created_at.asc())
+                select(ChatFile).filter_by(chat_id=chat_id, message_id=message_id).order_by(ChatFile.created_at.asc())
             )
             all_chat_files = result.scalars().all()
             return [ChatFileModel.model_validate(chat_file) for chat_file in all_chat_files]

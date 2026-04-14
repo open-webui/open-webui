@@ -8,7 +8,6 @@
 
 	import ScheduleDropdown from '$lib/components/automations/ScheduleDropdown.svelte';
 	import ModelDropdown from '$lib/components/automations/ModelDropdown.svelte';
-	import TerminalDropdown from '$lib/components/automations/TerminalDropdown.svelte';
 
 	import {
 		createAutomation,
@@ -16,7 +15,6 @@
 		type AutomationForm,
 		type AutomationResponse
 	} from '$lib/apis/automations';
-	import { getTerminalServers, type TerminalServer } from '$lib/apis/terminal/index';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -30,11 +28,6 @@
 	let is_active = true;
 
 	let loading = false;
-
-	// Terminal state
-	let terminalServers: TerminalServer[] = [];
-	let terminalServerId = '';
-	let terminalCwd = '';
 
 	// Schedule dropdown ref
 	let scheduleDropdown: ScheduleDropdown;
@@ -58,15 +51,7 @@
 				data: {
 					prompt: prompt.trim(),
 					model_id: model_id.trim(),
-					rrule: scheduleDropdown.buildRrule(),
-					...(terminalServerId
-						? {
-								terminal: {
-									server_id: terminalServerId,
-									...(terminalCwd.trim() ? { cwd: terminalCwd.trim() } : {})
-								}
-							}
-						: {})
+					rrule: scheduleDropdown.buildRrule()
 				},
 				is_active
 			};
@@ -90,20 +75,11 @@
 	};
 
 	const init = async () => {
-		// Load terminal servers
-		try {
-			terminalServers = await getTerminalServers(localStorage.token);
-		} catch {
-			terminalServers = [];
-		}
-
 		if (automation) {
 			name = automation.name;
 			prompt = automation.data.prompt;
 			model_id = automation.data.model_id;
 			is_active = automation.is_active;
-			terminalServerId = automation.data.terminal?.server_id || '';
-			terminalCwd = automation.data.terminal?.cwd || '';
 			if (scheduleDropdown) {
 				scheduleDropdown.parseRrule(automation.data.rrule);
 			}
@@ -112,8 +88,6 @@
 			prompt = '';
 			model_id = '';
 			is_active = true;
-			terminalServerId = '';
-			terminalCwd = '';
 		}
 	};
 
@@ -158,14 +132,6 @@
 				<ScheduleDropdown bind:this={scheduleDropdown} side="top" align="start" />
 
 				<ModelDropdown bind:model_id side="top" align="start" />
-
-				<TerminalDropdown
-					{terminalServers}
-					bind:terminalServerId
-					bind:terminalCwd
-					side="top"
-					align="start"
-				/>
 			</div>
 
 			<div class="flex items-center gap-2 shrink-0">

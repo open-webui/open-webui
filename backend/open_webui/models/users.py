@@ -31,10 +31,12 @@ import datetime
 # daily bread of every session. Let none go hungry.
 ####################
 
+
 class UserSettings(BaseModel):
     ui: Optional[dict] = {}
     model_config = ConfigDict(extra='allow')
     pass
+
 
 class User(Base):
     __tablename__ = 'user'
@@ -68,6 +70,7 @@ class User(Base):
     last_active_at = Column(BigInteger)
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
+
 
 class UserModel(BaseModel):
     id: str
@@ -109,10 +112,12 @@ class UserModel(BaseModel):
             self.profile_image_url = f'/api/v1/users/{self.id}/profile/image'
         return self
 
+
 class UserStatusModel(UserModel):
     is_active: bool = False
 
     model_config = ConfigDict(from_attributes=True)
+
 
 class ApiKey(Base):
     __tablename__ = 'api_key'
@@ -126,6 +131,7 @@ class ApiKey(Base):
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)
 
+
 class ApiKeyModel(BaseModel):
     id: str
     user_id: str
@@ -138,9 +144,11 @@ class ApiKeyModel(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 ####################
 # Forms
 ####################
+
 
 class UpdateProfileForm(BaseModel):
     profile_image_url: str
@@ -154,24 +162,30 @@ class UpdateProfileForm(BaseModel):
     def check_profile_image_url(cls, v: str) -> str:
         return validate_profile_image_url(v)
 
+
 class UserGroupIdsModel(UserModel):
     group_ids: list[str] = []
 
+
 class UserModelResponse(UserModel):
     model_config = ConfigDict(extra='allow')
+
 
 class UserListResponse(BaseModel):
     users: list[UserModelResponse]
     total: int
 
+
 class UserGroupIdsListResponse(BaseModel):
     users: list[UserGroupIdsModel]
     total: int
+
 
 class UserStatus(BaseModel):
     status_emoji: Optional[str] = None
     status_message: Optional[str] = None
     status_expires_at: Optional[int] = None
+
 
 class UserInfoResponse(UserStatus):
     id: str
@@ -182,50 +196,62 @@ class UserInfoResponse(UserStatus):
     groups: Optional[list] = []
     is_active: bool = False
 
+
 class UserIdNameResponse(BaseModel):
     id: str
     name: str
+
 
 class UserIdNameStatusResponse(UserStatus):
     id: str
     name: str
     is_active: Optional[bool] = None
 
+
 class UserInfoListResponse(BaseModel):
     users: list[UserInfoResponse]
     total: int
 
+
 class UserIdNameListResponse(BaseModel):
     users: list[UserIdNameResponse]
     total: int
+
 
 class UserNameResponse(BaseModel):
     id: str
     name: str
     role: str
 
+
 class UserResponse(UserNameResponse):
     email: str
+
 
 class UserProfileImageResponse(UserNameResponse):
     email: str
     profile_image_url: str
 
+
 class UserRoleUpdateForm(BaseModel):
     id: str
     role: str
 
+
 class UserUpdateForm(BaseModel):
-    role: str
-    name: str
-    email: str
-    profile_image_url: str
+    role: Optional[str] = None
+    name: Optional[str] = None
+    email: Optional[str] = None
+    profile_image_url: Optional[str] = None
     password: Optional[str] = None
 
-    @field_validator('profile_image_url')
+    @field_validator('profile_image_url', mode='before')
     @classmethod
-    def check_profile_image_url(cls, v: str) -> str:
+    def check_profile_image_url(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
         return validate_profile_image_url(v)
+
 
 class UsersTable:
     async def insert_new_user(
@@ -292,7 +318,9 @@ class UsersTable:
         except Exception:
             return None
 
-    async def get_user_by_oauth_sub(self, provider: str, sub: str, db: Optional[AsyncSession] = None) -> Optional[UserModel]:
+    async def get_user_by_oauth_sub(
+        self, provider: str, sub: str, db: Optional[AsyncSession] = None
+    ) -> Optional[UserModel]:
         try:
             async with get_async_db_context(db) as db:
                 dialect_name = db.bind.dialect.name
@@ -457,9 +485,7 @@ class UsersTable:
                 stmt = stmt.order_by(User.created_at.desc())
 
             # Count BEFORE pagination
-            count_result = await db.execute(
-                select(func.count()).select_from(stmt.subquery())
-            )
+            count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
             total = count_result.scalar()
 
             # correct pagination logic
@@ -478,20 +504,18 @@ class UsersTable:
     async def get_users_by_group_id(self, group_id: str, db: Optional[AsyncSession] = None) -> list[UserModel]:
         async with get_async_db_context(db) as db:
             from open_webui.models.groups import GroupMember
+
             result = await db.execute(
-                select(User)
-                
-                .join(GroupMember, User.id == GroupMember.user_id)
-                .filter(GroupMember.group_id == group_id)
+                select(User).join(GroupMember, User.id == GroupMember.user_id).filter(GroupMember.group_id == group_id)
             )
             users = result.scalars().all()
             return [UserModel.model_validate(user) for user in users]
 
-    async def get_users_by_user_ids(self, user_ids: list[str], db: Optional[AsyncSession] = None) -> list[UserStatusModel]:
+    async def get_users_by_user_ids(
+        self, user_ids: list[str], db: Optional[AsyncSession] = None
+    ) -> list[UserStatusModel]:
         async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(User).filter(User.id.in_(user_ids))
-            )
+            result = await db.execute(select(User).filter(User.id.in_(user_ids)))
             users = result.scalars().all()
             return [UserModel.model_validate(user) for user in users]
 
@@ -536,7 +560,9 @@ class UsersTable:
             )
             return result.scalar()
 
-    async def update_user_role_by_id(self, id: str, role: str, db: Optional[AsyncSession] = None) -> Optional[UserModel]:
+    async def update_user_role_by_id(
+        self, id: str, role: str, db: Optional[AsyncSession] = None
+    ) -> Optional[UserModel]:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(User).filter_by(id=id))
@@ -674,7 +700,9 @@ class UsersTable:
             print(e)
             return None
 
-    async def update_user_settings_by_id(self, id: str, updated: dict, db: Optional[AsyncSession] = None) -> Optional[UserModel]:
+    async def update_user_settings_by_id(
+        self, id: str, updated: dict, db: Optional[AsyncSession] = None
+    ) -> Optional[UserModel]:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(User).filter_by(id=id))
@@ -801,5 +829,6 @@ class UsersTable:
                 three_minutes_ago = int(time.time()) - 180
                 return user.last_active_at >= three_minutes_ago
             return False
+
 
 Users = UsersTable()

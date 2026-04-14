@@ -399,7 +399,8 @@
 			{/if}
 			<iframe
 				src={serveUrl}
-				sandbox="allow-scripts allow-same-origin allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
+				sandbox="allow-scripts allow-same-origin allow-downloads{($settings?.iframeSandboxAllowForms ??
+				false)
 					? ' allow-forms'
 					: ''}"
 				class="w-full h-full border-none bg-white"

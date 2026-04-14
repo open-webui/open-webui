@@ -141,7 +141,9 @@ class AuthsTable:
         except Exception:
             return None
 
-    async def authenticate_user_by_api_key(self, api_key: str, db: Optional[AsyncSession] = None) -> Optional[UserModel]:
+    async def authenticate_user_by_api_key(
+        self, api_key: str, db: Optional[AsyncSession] = None
+    ) -> Optional[UserModel]:
         log.info(f'authenticate_user_by_api_key')
         # if no api_key, return None
         if not api_key:
@@ -159,9 +161,7 @@ class AuthsTable:
             async with get_async_db_context(db) as db:
                 # Single JOIN query instead of two separate queries
                 result = await db.execute(
-                    select(Auth, User)
-                    .join(User, Auth.id == User.id)
-                    .filter(Auth.email == email, Auth.active == True)
+                    select(Auth, User).join(User, Auth.id == User.id).filter(Auth.email == email, Auth.active == True)
                 )
                 row = result.first()
                 if row:
