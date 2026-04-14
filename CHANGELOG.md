@@ -172,6 +172,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧹 **Per-chat draft clearing.** Sent message drafts are now cleared using the active chat key, so sent text no longer reappears in the input after a refresh. [Commit](https://github.com/open-webui/open-webui/commit/124b7e9154d7f3ca8a16f2b90621209ac8d6b8c1), [#23296](https://github.com/open-webui/open-webui/issues/23296)
 - ✉️ **Context-aware input action button.** The input now shows the send action when text or files are present during generation, while keeping stop controls for truly empty input states to avoid action confusion. [Commit](https://github.com/open-webui/open-webui/commit/86472bb4453af7ea4e5ddc8d127b14d8e67733bc), [#23306](https://github.com/open-webui/open-webui/issues/23306)
 - 📉 **Pyodide prompt cache stability.** Pyodide code interpreter context is now appended to the system prompt instead of user messages, preserving stable prefix caching across turns and reducing repeated token costs in long native tool-calling chats. [#23269](https://github.com/open-webui/open-webui/issues/23269)
+
 ### Changed
 
 - ⚠️ **Database Migrations**: This release includes database schema changes; we strongly recommend backing up your database and all associated data before upgrading in production environments. If you are running a multi-worker, multi-server, or load-balanced deployment, all instances must be updated simultaneously, rolling updates are not supported and will cause application failures due to schema incompatibility.
