@@ -46,7 +46,6 @@ from fastapi.staticfiles import StaticFiles
 from starlette_compress import CompressMiddleware
 
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response, StreamingResponse
 from starlette.datastructures import Headers
@@ -58,6 +57,12 @@ from starsessions import (
 from starsessions.stores.redis import RedisStore
 
 from open_webui.utils import logger
+from open_webui.utils.asgi_middleware import (
+    AuthTokenMiddleware,
+    CommitSessionMiddleware,
+    RedirectMiddleware,
+    WebsocketUpgradeGuardMiddleware,
+)
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
 from open_webui.utils.logger import start_logger
 from open_webui.utils.session_pool import get_session
@@ -1359,103 +1364,19 @@ if ENABLE_COMPRESSION_MIDDLEWARE:
     app.add_middleware(CompressMiddleware)
 
 
-class RedirectMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        # Check if the request is a GET request
-        if request.method == 'GET':
-            path = request.url.path
-            query_params = dict(parse_qs(urlparse(str(request.url)).query))
-
-            redirect_params = {}
-
-            # Check for the specific watch path and the presence of 'v' parameter
-            if path.endswith('/watch') and 'v' in query_params:
-                # Extract the first 'v' parameter
-                youtube_video_id = query_params['v'][0]
-                redirect_params['youtube'] = youtube_video_id
-
-            if 'shared' in query_params and len(query_params['shared']) > 0:
-                # PWA share_target support
-
-                text = query_params['shared'][0]
-                if text:
-                    urls = re.match(r'https://\S+', text)
-                    if urls:
-                        from open_webui.retrieval.loaders.youtube import _parse_video_id
-
-                        if youtube_video_id := _parse_video_id(urls[0]):
-                            redirect_params['youtube'] = youtube_video_id
-                        else:
-                            redirect_params['load-url'] = urls[0]
-                    else:
-                        redirect_params['q'] = text
-
-            if redirect_params:
-                redirect_url = f'/?{urlencode(redirect_params)}'
-                return RedirectResponse(url=redirect_url)
-
-        # Proceed with the normal flow of other requests
-        response = await call_next(request)
-        return response
-
-
+# All HTTP middlewares below are pure-ASGI implementations. The previous
+# `BaseHTTPMiddleware` / `@app.middleware('http')` versions wrapped the
+# downstream app in an anyio task group whose cancel scope cancelled
+# in-flight DB calls (and any other awaits) on client disconnect /
+# response completion — which surfaced as noisy SQLAlchemy
+# `terminate_force_close` tracebacks under aiosqlite and as random
+# CancelledError storms across the request path. See
+# `open_webui.utils.asgi_middleware` for the rationale.
 app.add_middleware(RedirectMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
-
-
-@app.middleware('http')
-async def commit_session_after_request(request: Request, call_next):
-    response = await call_next(request)
-    # log.debug("Commit session after request")
-    try:
-        ScopedSession.commit()
-    finally:
-        # CRITICAL: remove() returns the connection to the pool.
-        # Without this, connections remain "checked out" and accumulate
-        # as "idle in transaction" in PostgreSQL.
-        ScopedSession.remove()
-    return response
-
-
-@app.middleware('http')
-async def check_url(request: Request, call_next):
-    start_time = int(time.time())
-    request.state.token = get_http_authorization_cred(request.headers.get('Authorization'))
-    # Fallback to cookie token for browser sessions
-    if request.state.token is None and request.cookies.get('token'):
-        from fastapi.security import HTTPAuthorizationCredentials
-
-        request.state.token = HTTPAuthorizationCredentials(scheme='Bearer', credentials=request.cookies.get('token'))
-
-    # Fallback to x-api-key header (Anthropic-compatible clients use this
-    # for ALL requests, including GET /v1/models, not just POST /v1/messages).
-    if request.state.token is None and request.headers.get('x-api-key'):
-        from fastapi.security import HTTPAuthorizationCredentials
-
-        request.state.token = HTTPAuthorizationCredentials(
-            scheme='Bearer', credentials=request.headers.get('x-api-key')
-        )
-
-    request.state.enable_api_keys = app.state.config.ENABLE_API_KEYS
-    response = await call_next(request)
-    process_time = int(time.time()) - start_time
-    response.headers['X-Process-Time'] = str(process_time)
-    return response
-
-
-@app.middleware('http')
-async def inspect_websocket(request: Request, call_next):
-    if '/ws/socket.io' in request.url.path and request.query_params.get('transport') == 'websocket':
-        upgrade = (request.headers.get('Upgrade') or '').lower()
-        connection = (request.headers.get('Connection') or '').lower().split(',')
-        # Check that there's the correct headers for an upgrade, else reject the connection
-        # This is to work around this upstream issue: https://github.com/miguelgrinberg/python-engineio/issues/367
-        if upgrade != 'websocket' or 'upgrade' not in connection:
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={'detail': 'Invalid WebSocket upgrade request'},
-            )
-    return await call_next(request)
+app.add_middleware(CommitSessionMiddleware)
+app.add_middleware(AuthTokenMiddleware, fastapi_app=app)
+app.add_middleware(WebsocketUpgradeGuardMiddleware)
 
 
 app.add_middleware(
