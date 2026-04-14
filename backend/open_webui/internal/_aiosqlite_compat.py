@@ -45,9 +45,11 @@ created. To keep the blast radius small the install is:
     `_terminate_force_close` symbol (older or upstream-fixed
     versions);
   * a no-op if the upstream implementation has already moved off the
-    `self._connection.stop` reference — detected by inspecting the
-    original source — so a future SQLAlchemy fix isn't shadowed by
-    this shim;
+    `self._connection.stop` reference — detected via source
+    inspection with a bytecode fallback (so the heuristic still
+    works on zipped, pyc-only or otherwise stripped builds where
+    `inspect.getsource()` raises) — so a future SQLAlchemy fix
+    isn't shadowed by this shim;
   * idempotent so repeated imports don't stack patches.
 
 The caller in `internal.db` only invokes `install()` when the runtime
@@ -61,6 +63,53 @@ import inspect
 import logging
 
 log = logging.getLogger(__name__)
+
+
+def _looks_buggy(original) -> bool:
+    """Return True if `original` looks like the buggy upstream impl
+    that references `self._connection.stop`.
+
+    Two signals, in order of preference:
+
+    1. Source text inspection — exact and obvious, but fails on
+       deployments where source isn't on disk (zipped distributions,
+       pyc-only installs, frozen runtimes).
+    2. Bytecode `co_names` inspection — works on every CPython build
+       that exposes `__code__`. Both `_connection` and `stop` appear
+       in `co_names` whenever the function does an attribute access of
+       the form `self._connection.stop`, regardless of whitespace or
+       formatting changes.
+
+    If neither inspection succeeds we err on the side of patching:
+    the upstream `_terminate_force_close` already raised
+    `NotImplementedError` for us once (which is why we're here), and
+    a possibly-redundant shim is preferable to silently restoring the
+    multi-page ERROR traceback the user explicitly reported.
+    """
+    try:
+        original_source = inspect.getsource(original)
+    except (OSError, TypeError):
+        original_source = None
+
+    if original_source is not None:
+        return 'self._connection.stop' in original_source
+
+    code = getattr(original, '__code__', None)
+    if code is not None:
+        names = set(getattr(code, 'co_names', ()))
+        if {'_connection', 'stop'}.issubset(names):
+            return True
+        # Bytecode says it's not the buggy shape — believe it.
+        return False
+
+    # Neither source nor bytecode available. Patch defensively; the
+    # caller already established that the buggy `NotImplementedError`
+    # path is the existing behaviour.
+    log.debug(
+        'aiosqlite shim: could not inspect upstream _terminate_force_close '
+        'via source or bytecode; applying compatibility patch defensively.'
+    )
+    return True
 
 
 def install() -> None:
@@ -80,14 +129,7 @@ def install() -> None:
     if getattr(original, '__open_webui_patched__', False):
         return  # Idempotent — already applied.
 
-    # Only patch the specific buggy implementation. If upstream has
-    # changed how `_terminate_force_close` is implemented (no longer
-    # touching `self._connection.stop`) defer to whatever they ship.
-    try:
-        original_source = inspect.getsource(original)
-    except (OSError, TypeError):
-        original_source = ''
-    if 'self._connection.stop' not in original_source:
+    if not _looks_buggy(original):
         return
 
     def _terminate_force_close(self) -> None:
