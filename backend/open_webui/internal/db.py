@@ -123,6 +123,12 @@ if SQLALCHEMY_DATABASE_URL.startswith('sqlite+sqlcipher://'):
 
         conn = sqlcipher3.connect(db_path, check_same_thread=False)
         conn.execute(f"PRAGMA key = '{database_password}'")
+        # Match the journal_mode policy of the unencrypted sqlite path.
+        # Without WAL the encrypted sync engine and aiosqlite engine
+        # serialize on the same database-file lock, freezing the loop
+        # under concurrent requests.
+        if DATABASE_ENABLE_SQLITE_WAL:
+            conn.execute('PRAGMA journal_mode=WAL')
         return conn
 
     # The dummy "sqlite://" URL would cause SQLAlchemy to auto-select

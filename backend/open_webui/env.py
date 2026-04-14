@@ -375,7 +375,15 @@ else:
     except Exception:
         DATABASE_POOL_RECYCLE = 3600
 
-DATABASE_ENABLE_SQLITE_WAL = os.environ.get('DATABASE_ENABLE_SQLITE_WAL', 'False').lower() == 'true'
+# SQLite WAL (Write-Ahead Logging) defaults to *on* because Open WebUI
+# always uses both a sync engine (sqlite3 / sqlcipher3) and an async engine
+# (aiosqlite) against the same database file. Without WAL, the database
+# uses rollback-journal mode where every writer takes an exclusive lock
+# that blocks all readers across both engines, which under concurrent
+# requests cascades into the entire FastAPI loop stalling on lock
+# contention. Operators who explicitly need rollback-journal can opt out
+# by setting `DATABASE_ENABLE_SQLITE_WAL=False`.
+DATABASE_ENABLE_SQLITE_WAL = os.environ.get('DATABASE_ENABLE_SQLITE_WAL', 'True').lower() == 'true'
 
 DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = os.environ.get('DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL', None)
 if DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL is not None:
