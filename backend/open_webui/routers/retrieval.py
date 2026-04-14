@@ -2522,9 +2522,16 @@ async def delete_entries_from_collection(
                 )
             hash = file.hash
 
+            # Pre-existing bug: this used `metadata=` which is not a
+            # parameter on `VectorDBBase.delete` nor on any backend
+            # implementation, so the call always raised TypeError that
+            # was silently swallowed by the surrounding `except
+            # Exception` and the endpoint reported `{'status': False}`
+            # for every request. Use `filter` to actually do what the
+            # endpoint name promises.
             await ASYNC_VECTOR_DB_CLIENT.delete(
                 collection_name=form_data.collection_name,
-                metadata={'hash': hash},
+                filter={'hash': hash},
             )
             return {'status': True}
         else:
