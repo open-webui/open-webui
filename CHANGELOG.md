@@ -181,6 +181,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧹 **Per-chat draft clearing.** Sent message drafts are now cleared using the active chat key, so sent text no longer reappears in the input after a refresh. [Commit](https://github.com/open-webui/open-webui/commit/124b7e9154d7f3ca8a16f2b90621209ac8d6b8c1), [#23296](https://github.com/open-webui/open-webui/issues/23296)
 - ✉️ **Context-aware input action button.** The input now shows the send action when text or files are present during generation, while keeping stop controls for truly empty input states to avoid action confusion. [Commit](https://github.com/open-webui/open-webui/commit/86472bb4453af7ea4e5ddc8d127b14d8e67733bc), [#23306](https://github.com/open-webui/open-webui/issues/23306)
 - 📉 **Pyodide prompt cache stability.** Pyodide code interpreter context is now appended to the system prompt instead of user messages, preserving stable prefix caching across turns and reducing repeated token costs in long native tool-calling chats. [#23269](https://github.com/open-webui/open-webui/issues/23269)
+- 🧪 **Temp chat outlet filtering.** Outlet filters now process temporary chats more reliably, preserving assistant output and usage data so local chat responses stay consistent when filter pipelines are enabled. [Commit](https://github.com/open-webui/open-webui/commit/70a6a24f143b221c787bc50b72582ee1e0c2dac0)
 
 ### Changed
 
@@ -188,6 +189,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧨 **Plugin async migration required.** Custom plugins for Tools, Functions, and Pipelines may require migration to the new async backend signatures after upgrading, so plugin maintainers should update handlers and database call patterns for compatibility and follow the 0.9.0 plugin migration guide. [Migration Guide](https://docs.openwebui.com/features/extensibility/plugin/migration/to-0.9.0)
 - 🔄 **Automation terminal source.** Automations now use the terminal configured on the selected model instead of a separate per-automation terminal picker, keeping terminal behavior consistent between chat and scheduled runs. [Commit](https://github.com/open-webui/open-webui/commit/47d413ce7b2a006a8126f4a9055b13e5fcb33a1d)
 - 🚧 **OpenAI passthrough now opt-in.** Direct OpenAI catch-all proxy requests are now disabled by default and require enabling "ENABLE_OPENAI_API_PASSTHROUGH", so deployments relying on passthrough must explicitly turn it on after upgrading. [#23640](https://github.com/open-webui/open-webui/pull/23640)
+- 🗄️ **SQLite WAL default enabled.** SQLite deployments now default to enabling write-ahead logging, improving concurrent read and write behavior without requiring manual configuration. [Commit](https://github.com/open-webui/open-webui/commit/2f9e326dba3b1087932cb6b8075ed1881bd1c6d6)
 
 ## [0.8.12] - 2026-03-26
 
