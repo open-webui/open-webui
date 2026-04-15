@@ -41,6 +41,56 @@ from typing_extensions import Self
 log = logging.getLogger(__name__)
 
 
+def _create_engine(url: str | URL, connect_args: dict | None = None) -> Engine:
+    if isinstance(DATABASE_POOL_SIZE, int):
+        if DATABASE_POOL_SIZE > 0:
+            engine = create_engine(
+                url,
+                pool_size=DATABASE_POOL_SIZE,
+                max_overflow=DATABASE_POOL_MAX_OVERFLOW,
+                pool_timeout=DATABASE_POOL_TIMEOUT,
+                pool_recycle=DATABASE_POOL_RECYCLE,
+                pool_pre_ping=True,
+                poolclass=QueuePool,
+                connect_args=connect_args,
+            )
+        else:
+            engine = create_engine(
+                url,
+                pool_pre_ping=True,
+                poolclass=NullPool,
+                connect_args=connect_args,
+            )
+    else:
+        engine = create_engine(url, pool_pre_ping=True, connect_args=connect_args)
+    return engine
+
+
+def _create_async_engine(url: str | URL, connect_args: dict | None = None) -> AsyncEngine:
+    if isinstance(DATABASE_POOL_SIZE, int):
+        if DATABASE_POOL_SIZE > 0:
+            engine = create_async_engine(
+                url,
+                pool_size=DATABASE_POOL_SIZE,
+                max_overflow=DATABASE_POOL_MAX_OVERFLOW,
+                pool_timeout=DATABASE_POOL_TIMEOUT,
+                pool_recycle=DATABASE_POOL_RECYCLE,
+                pool_pre_ping=True,
+                poolclass=QueuePool,
+                connect_args=connect_args,
+            )
+        else:
+            engine = create_async_engine(
+                url,
+                pool_pre_ping=True,
+                poolclass=NullPool,
+                connect_args=connect_args,
+            )
+    else:
+        engine = create_async_engine(url, pool_pre_ping=True, connect_args=connect_args)
+    return engine
+
+
 class IAMToken(BaseModel):
     token: SecretStr
     expiration: datetime
@@ -131,30 +181,7 @@ class RDSIAMConfig:
             port=self.db_port,
             database=self.db_name,
         )
-
-        if isinstance(DATABASE_POOL_SIZE, int):
-            if DATABASE_POOL_SIZE > 0:
-                engine = create_engine(
-                    url,
-                    pool_size=DATABASE_POOL_SIZE,
-                    max_overflow=DATABASE_POOL_MAX_OVERFLOW,
-                    pool_timeout=DATABASE_POOL_TIMEOUT,
-                    pool_recycle=DATABASE_POOL_RECYCLE,
-                    pool_pre_ping=True,
-                    poolclass=QueuePool,
-                    connect_args=self.sync_connect_args,
-                )
-            else:
-                engine = create_engine(
-                    url,
-                    pool_pre_ping=True,
-                    poolclass=NullPool,
-                    connect_args=self.sync_connect_args,
-                )
-        else:
-            engine = create_engine(url, pool_pre_ping=True, connect_args=self.sync_connect_args)
-
-        return engine
+        return _create_engine(url=url, connect_args=self.sync_connect_args)
 
     def _get_async_connect_args(self) -> dict:
         connect_args = {"ssl": True}
@@ -189,30 +216,7 @@ class RDSIAMConfig:
                 port=self.db_port,
                 database=self.db_name,
             )
-
-        if isinstance(DATABASE_POOL_SIZE, int):
-            if DATABASE_POOL_SIZE > 0:
-                engine = create_async_engine(
-                    url,
-                    pool_size=DATABASE_POOL_SIZE,
-                    max_overflow=DATABASE_POOL_MAX_OVERFLOW,
-                    pool_timeout=DATABASE_POOL_TIMEOUT,
-                    pool_recycle=DATABASE_POOL_RECYCLE,
-                    pool_pre_ping=True,
-                    poolclass=QueuePool,
-                    connect_args=self.async_connect_args,
-                )
-            else:
-                engine = create_async_engine(
-                    url,
-                    pool_pre_ping=True,
-                    poolclass=NullPool,
-                    connect_args=self.async_connect_args,
-                )
-        else:
-            engine = create_async_engine(url, pool_pre_ping=True, connect_args=self.async_connect_args)
-
-        return engine
+        return _create_async_engine(url=url, connect_args=self.async_connect_args)
 
     def check_token(self, dialect, connection_record, connection_args, connection_kwargs) -> None:
         now = datetime.now(tz=timezone.utc)
@@ -379,21 +383,7 @@ elif DATABASE_ENABLE_IAM_TOKEN_AUTH:
     engine = rds_iam_config.create_engine()
     event.listen(engine, 'do_connect', rds_iam_config.check_token)
 else:
-    if isinstance(DATABASE_POOL_SIZE, int):
-        if DATABASE_POOL_SIZE > 0:
-            engine = create_engine(
-                SQLALCHEMY_DATABASE_URL,
-                pool_size=DATABASE_POOL_SIZE,
-                max_overflow=DATABASE_POOL_MAX_OVERFLOW,
-                pool_timeout=DATABASE_POOL_TIMEOUT,
-                pool_recycle=DATABASE_POOL_RECYCLE,
-                pool_pre_ping=True,
-                poolclass=QueuePool,
-            )
-        else:
-            engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True, poolclass=NullPool)
-    else:
-        engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
+    engine = _create_engine(url=SQLALCHEMY_DATABASE_URL)
 
 
 # Sync session — used ONLY for startup config loading (config.py runs at import time)
@@ -439,27 +429,7 @@ elif DATABASE_ENABLE_IAM_TOKEN_AUTH:
     async_engine = rds_iam_config.create_engine(is_async=True)
     event.listen(async_engine.sync_engine, 'do_connect', rds_iam_config.check_token)
 else:
-    if isinstance(DATABASE_POOL_SIZE, int):
-        if DATABASE_POOL_SIZE > 0:
-            async_engine = create_async_engine(
-                ASYNC_SQLALCHEMY_DATABASE_URL,
-                pool_size=DATABASE_POOL_SIZE,
-                max_overflow=DATABASE_POOL_MAX_OVERFLOW,
-                pool_timeout=DATABASE_POOL_TIMEOUT,
-                pool_recycle=DATABASE_POOL_RECYCLE,
-                pool_pre_ping=True,
-            )
-        else:
-            async_engine = create_async_engine(
-                ASYNC_SQLALCHEMY_DATABASE_URL,
-                pool_pre_ping=True,
-                poolclass=NullPool,
-            )
-    else:
-        async_engine = create_async_engine(
-            ASYNC_SQLALCHEMY_DATABASE_URL,
-            pool_pre_ping=True,
-        )
+    async_engine = _create_async_engine(url=ASYNC_SQLALCHEMY_DATABASE_URL)
 
 
 AsyncSessionLocal = async_sessionmaker(
