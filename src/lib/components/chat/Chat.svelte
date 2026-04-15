@@ -3709,7 +3709,7 @@
 			return [message];
 		}
 
-		// Group consecutive tool calls (no meaningful text between them = parallel calls)
+		// Group consecutive tool calls (no meaningful text between them = parallel calls from same turn)
 		const groups = [{ toolCalls: [parsedToolCalls[0]], textBeforeStart: 0 }];
 
 		for (let i = 1; i < parsedToolCalls.length; i++) {
@@ -3726,17 +3726,40 @@
 			}
 		}
 
-		// Build expanded messages
-		const expandedMessages = [];
-		let isFirstGroup = true;
+		// Compute trailing text (content after the last tool call)
+		const lastParsedTc = parsedToolCalls[parsedToolCalls.length - 1];
+		const trailingText = normalizePreservedAssistantContent(content.slice(lastParsedTc.matchEnd));
+		const hasTrailingText = !!trailingText;
 
-		for (const group of groups) {
+		// Where do reasoning_details belong?
+		//
+		// The frontend accumulates reasoning_details from ALL turns into one array, but each
+		// new turn's SSE chunks overwrite previous ones (same indices). So message.reasoning_details
+		// is always from the LAST turn's reasoning — i.e. the most recent thinking.
+		//
+		// Two cases:
+		// - No trailing text (retry): the error happened during the continuation after the last
+		//   tool call round. reasoning_details = that round's thinking → attach to last group.
+		// - Has trailing text (completed message): the model finished with a final response.
+		//   reasoning_details = the final turn's thinking → attach to the trailing text message,
+		//   NOT to any tool call group (we can't reconstruct earlier rounds' thinking anyway).
+
+		const expandedMessages = [];
+
+		for (let groupIdx = 0; groupIdx < groups.length; groupIdx++) {
+			const group = groups[groupIdx];
+			const isLastGroup = groupIdx === groups.length - 1;
 			const firstTc = group.toolCalls[0];
 			const textBefore = normalizePreservedAssistantContent(
 				content.slice(group.textBeforeStart, firstTc.matchStart)
 			);
 
-			// Single assistant message with all tool_calls in this group
+			// Attach reasoning_details only on the last group, and only when there is no
+			// trailing text (retry case). For completed messages the reasoning belongs to
+			// the final response turn, not to the tool-call turns.
+			const groupReasoningDetails =
+				isLastGroup && !hasTrailingText ? message.reasoning_details : undefined;
+
 			expandedMessages.push({
 				...message,
 				role: 'assistant',
@@ -3750,9 +3773,7 @@
 					}
 				})),
 				preservedToolContext: undefined,
-				...(isFirstGroup && message.reasoning_details
-					? { reasoning_details: message.reasoning_details }
-					: {})
+				reasoning_details: groupReasoningDetails
 			});
 
 			// Individual tool result messages
@@ -3763,21 +3784,17 @@
 					content: normalizeToolResultContent(tc.result)
 				});
 			}
-
-			isFirstGroup = false;
 		}
 
-		// Handle trailing text after last tool call
-		const lastGroup = groups[groups.length - 1];
-		const lastTc = lastGroup.toolCalls[lastGroup.toolCalls.length - 1];
-		const trailingText = normalizePreservedAssistantContent(content.slice(lastTc.matchEnd));
-
-		if (trailingText) {
+		// Trailing text = model's final response after all tool calls completed.
+		// reasoning_details from the message is this final turn's thinking — attach it here.
+		if (hasTrailingText) {
 			expandedMessages.push({
 				...message,
 				content: trailingText,
 				preservedToolContext: undefined,
 				tool_calls: undefined
+				// reasoning_details kept from ...message spread — correct for this turn
 			});
 		}
 
@@ -3785,7 +3802,24 @@
 	};
 
 	const expandMessagesForToolResumption = (messages = []) => {
-		return messages.flatMap((message) => expandPreservedToolContextMessage(message));
+		return messages.flatMap((message) => {
+			if (message?.preservedToolContext) {
+				return expandPreservedToolContextMessage(message);
+			}
+
+			// Also expand completed assistant messages that have tool call HTML blocks.
+			// These are messages that finished normally (not retries), but still need
+			// to be sent to the API in proper tool_calls format rather than as raw HTML.
+			if (message?.role === 'assistant' && !message?.tool_calls) {
+				const content = getStringMessageContent(message.content ?? '');
+				if (/<details\s+type="tool_calls"[^>]+done="true"/.test(content)) {
+					// Pass the full content (trailing text = model's final response, keep it)
+					return expandPreservedToolContextMessage({ ...message, preservedToolContext: true });
+				}
+			}
+
+			return [message];
+		});
 	};
 
 	const retryFromLastRequest = async (message, modelId = null) => {
