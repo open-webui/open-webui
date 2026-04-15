@@ -2548,11 +2548,44 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             if metadata and metadata.get('message_id'):
                                 headers[FORWARD_SESSION_INFO_HEADER_MESSAGE_ID] = metadata.get('message_id')
 
-                        mcp_clients[server_id] = MCPClient()
-                        await mcp_clients[server_id].connect(
-                            url=mcp_server_connection.get('url', ''),
-                            headers=headers if headers else None,
-                        )
+                        # Emit connecting status so the user sees activity during MCP handshake
+                        if event_emitter:
+                            await event_emitter(
+                                {
+                                    'type': 'status',
+                                    'data': {
+                                        'action': 'mcp_connect',
+                                        'description': f"Connecting to '{server_id}'...",
+                                        'done': False,
+                                    },
+                                }
+                            )
+
+                        # Reuse a pooled connection when using static bearer auth to avoid
+                        # a full MCP handshake on every message (the main cause of the
+                        # 15–20 s silent "blinking dot" phase).
+                        pool = getattr(request.app.state, 'mcp_client_pool', None)
+                        if pool is None:
+                            request.app.state.mcp_client_pool = {}
+                            pool = request.app.state.mcp_client_pool
+
+                        pool_key = server_id if auth_type == 'bearer' else None
+                        reused = False
+
+                        if pool_key and pool_key in pool:
+                            cached_client = pool[pool_key]
+                            if cached_client.session is not None:
+                                mcp_clients[server_id] = cached_client
+                                reused = True
+
+                        if not reused:
+                            mcp_clients[server_id] = MCPClient()
+                            await mcp_clients[server_id].connect(
+                                url=mcp_server_connection.get('url', ''),
+                                headers=headers if headers else None,
+                            )
+                            if pool_key is not None:
+                                pool[pool_key] = mcp_clients[server_id]
 
                         function_name_filter_list = mcp_server_connection.get('config', {}).get(
                             'function_name_filter_list', ''
@@ -2562,6 +2595,19 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             function_name_filter_list = function_name_filter_list.split(',')
 
                         tool_specs = await mcp_clients[server_id].list_tool_specs()
+
+                        if event_emitter:
+                            await event_emitter(
+                                {
+                                    'type': 'status',
+                                    'data': {
+                                        'action': 'mcp_connect',
+                                        'description': f"Connected to '{server_id}'",
+                                        'done': True,
+                                    },
+                                }
+                            )
+
                         for tool_spec in tool_specs:
 
                             async def make_tool_function(client, function_name):
@@ -2592,6 +2638,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             }
                     except Exception as e:
                         log.debug(e)
+                        # Evict any stale pool entry so the next request tries a fresh connect
+                        pool = getattr(request.app.state, 'mcp_client_pool', {})
+                        pool.pop(server_id, None)
                         if event_emitter:
                             await event_emitter(
                                 {
