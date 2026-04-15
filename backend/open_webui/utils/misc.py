@@ -148,19 +148,24 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
     messages = []
     pending_tool_calls = []
     pending_content = []
+    pending_reasoning = []
 
     def flush_pending():
-        nonlocal pending_content, pending_tool_calls
+        nonlocal pending_content, pending_tool_calls, pending_reasoning
         if pending_content or pending_tool_calls:
-            messages.append(
-                {
-                    'role': 'assistant',
-                    'content': '\n'.join(pending_content) if pending_content else '',
-                    **({'tool_calls': pending_tool_calls} if pending_tool_calls else {}),
-                }
-            )
+            msg = {
+                'role': 'assistant',
+                'content': '\n'.join(pending_content) if pending_content else '',
+                **({'tool_calls': pending_tool_calls} if pending_tool_calls else {}),
+            }
+            # Preserve reasoning_content for providers that require it on
+            # assistant messages (e.g. Moonshot Kimi K2.5 tool-call rounds).
+            if pending_reasoning:
+                msg['reasoning_content'] = '\n'.join(pending_reasoning)
+            messages.append(msg)
             pending_content = []
             pending_tool_calls = []
+            pending_reasoning = []
 
     for item in output:
         item_type = item.get('type', '')
@@ -232,7 +237,6 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
 
         elif item_type == 'reasoning':
             if raw:
-                # Include reasoning with original tags for LLM re-processing
                 reasoning_text = ''
                 source_list = item.get('summary', []) or item.get('content', [])
                 for part in source_list:
@@ -245,6 +249,7 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
                     start_tag = item.get('start_tag', '<think>')
                     end_tag = item.get('end_tag', '</think>')
                     pending_content.append(f'{start_tag}{reasoning_text}{end_tag}')
+                    pending_reasoning.append(reasoning_text)
             # else: skip reasoning blocks for normal LLM messages
 
         elif item_type == 'open_webui:code_interpreter':
