@@ -75,7 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧮 **Usage analytics accuracy.** Token usage is now normalized before chat messages are saved, so model and user usage reports stay accurate across OpenAI-compatible providers. [Commit](https://github.com/open-webui/open-webui/commit/4dea4fdf54e00ebaba8e3178128bf8709453d2a2)
 - 🧩 **Richer Anthropic tool results.** Anthropic-compatible tool calls now preserve more tool result content types, including images and structured search or document outputs, so models can use fuller tool context instead of receiving only plain text fragments. [#23188](https://github.com/open-webui/open-webui/issues/23188), [Commit](https://github.com/open-webui/open-webui/commit/40f5b3d135190dc9a2d8e94dbb1b2cbcbd829132)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 **Translation updates.** Translations for Russian, German, Tamil, Spanish, Catalan, Japanese, and Irish were enhanced and expanded.
+- 🌐 **Translation updates.** Translations for Irish, Catalan, German, Simplified Chinese, Hindi, and Portuguese (Brazil) were enhanced and expanded.
 
 ### Fixed
 
