@@ -3068,9 +3068,10 @@ async def outlet_filter_handler(ctx):
     Persists outlet-modified content to DB and emits a chat:outlet event
     so the frontend can sync its in-memory state.
 
-    For temp chats (local: prefix), messages are built from form_data
-    plus the assistant response message stored in ctx['assistant_message'],
-    since temp chats have no DB-persisted history.
+    For temp chats (local: prefix) and API callers without a persisted
+    chat_id / message_id, messages are built from form_data plus the
+    assistant response message stored in ctx['assistant_message'], since
+    these callers have no DB-persisted history. See #23740.
     """
     request = ctx['request']
     user = ctx['user']
@@ -3082,17 +3083,29 @@ async def outlet_filter_handler(ctx):
     chat_id = metadata.get('chat_id', '')
     message_id = metadata.get('message_id')
 
-    if not chat_id or not message_id:
-        return
-
-    is_temp_chat = chat_id.startswith('local:')
+    # In-memory branch covers:
+    #   - temp chats (chat_id starts with 'local:')
+    #   - API callers that omit chat_id and/or id in the request body
+    is_temp_chat = (
+        not chat_id
+        or chat_id.startswith('local:')
+        or not message_id
+    )
 
     try:
         messages_map = None
 
         if is_temp_chat:
-            # Temp chats have no DB record — build message list from
-            # the in-memory form_data plus the assistant response.
+            # Synthesize local-only ids for the outlet payload when the
+            # caller didn't provide them. Scope these to outlet_data only —
+            # do NOT write them back to metadata, because the surrounding
+            # pipeline (streaming save, event routing, webhook URLs) must
+            # keep seeing the real values.
+            effective_chat_id = chat_id or f'local:{uuid4()}'
+            effective_message_id = message_id or str(uuid4())
+
+            # Temp / API callers have no DB record — build message list
+            # from the in-memory form_data plus the assistant response.
             form_messages = ctx.get('form_data', {}).get('messages', [])
             assistant_message = ctx.get('assistant_message', {})
 
@@ -3102,16 +3115,19 @@ async def outlet_filter_handler(ctx):
                     'content': m.get('content', ''),
                 }
                 for m in form_messages
+                if isinstance(m, dict)
             ]
 
             # Append the full assistant message (content, output, usage, etc.)
             if assistant_message:
                 message_list.append({
-                    'id': message_id,
+                    'id': effective_message_id,
                     'role': 'assistant',
                     **assistant_message,
                 })
         else:
+            effective_chat_id = chat_id
+            effective_message_id = message_id
             messages_map = await Chats.get_messages_map_by_chat_id(chat_id)
             if not messages_map:
                 return
@@ -3138,9 +3154,9 @@ async def outlet_filter_handler(ctx):
                 for m in message_list
             ],
             'filter_ids': metadata.get('filter_ids', []),
-            'chat_id': chat_id,
+            'chat_id': effective_chat_id,
             'session_id': metadata.get('session_id'),
-            'id': message_id,
+            'id': effective_message_id,
         }
 
         # Pipeline outlet filters
