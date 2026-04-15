@@ -380,6 +380,7 @@
 						<ToolCallDisplay
 							id={`${id}-${tokenIdx}-${detailIdx}-tc`}
 							attributes={detailToken.attributes}
+							resultContent={getDetailTextContent(detailToken)}
 							grouped={true}
 							open={$settings?.expandDetails ?? false}
 							className="w-full space-y-1"
@@ -428,6 +429,7 @@
 			<ToolCallDisplay
 				id={`${id}-${tokenIdx}-tc`}
 				attributes={token.attributes}
+				resultContent={getDetailTextContent(token)}
 				open={$settings?.expandDetails ?? false}
 				className="w-full space-y-1"
 			/>

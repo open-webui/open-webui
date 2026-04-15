@@ -19,7 +19,6 @@
 		type AutomationResponse,
 		type AutomationRunModel
 	} from '$lib/apis/automations';
-	import { getTerminalServers, type TerminalServer } from '$lib/apis/terminal/index';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -29,7 +28,6 @@
 
 	import ScheduleDropdown from '$lib/components/automations/ScheduleDropdown.svelte';
 	import ModelDropdown from '$lib/components/automations/ModelDropdown.svelte';
-	import TerminalDropdown from '$lib/components/automations/TerminalDropdown.svelte';
 
 	dayjs.extend(relativeTime);
 	dayjs.extend(localizedFormat);
@@ -42,10 +40,6 @@
 	let prompt = '';
 	let model_id = '';
 	let is_active = true;
-
-	let terminalServers: TerminalServer[] = [];
-	let terminalServerId = '';
-	let terminalCwd = '';
 
 	let loading = false;
 	let saving = false;
@@ -97,15 +91,7 @@
 				data: {
 					prompt: prompt.trim(),
 					model_id: model_id.trim(),
-					rrule: scheduleDropdown.buildRrule(),
-					...(terminalServerId
-						? {
-								terminal: {
-									server_id: terminalServerId,
-									...(terminalCwd.trim() ? { cwd: terminalCwd.trim() } : {})
-								}
-							}
-						: {})
+					rrule: scheduleDropdown.buildRrule()
 				},
 				is_active
 			};
@@ -204,18 +190,11 @@
 		prompt = automation.data.prompt;
 		model_id = automation.data.model_id;
 		is_active = automation.is_active;
-		terminalServerId = automation.data.terminal?.server_id || '';
-		terminalCwd = automation.data.terminal?.cwd || '';
 
 		if (scheduleDropdown) {
 			scheduleDropdown.parseRrule(automation.data.rrule);
 		}
 
-		try {
-			terminalServers = await getTerminalServers(localStorage.token);
-		} catch {
-			terminalServers = [];
-		}
 		await loadRuns();
 	});
 </script>
@@ -354,21 +333,6 @@
 							<span class="text-gray-600 dark:text-gray-400">{$i18n.t('Model')}</span>
 							<ModelDropdown bind:model_id side="bottom" align="end" onChange={markDirty} />
 						</div>
-
-						<!-- Terminal -->
-						{#if terminalServers.length > 0}
-							<div class="flex items-center justify-between text-xs">
-								<span class="text-gray-600 dark:text-gray-400">{$i18n.t('Terminal')}</span>
-								<TerminalDropdown
-									{terminalServers}
-									bind:terminalServerId
-									bind:terminalCwd
-									side="bottom"
-									align="end"
-									onChange={markDirty}
-								/>
-							</div>
-						{/if}
 					</div>
 				</div>
 

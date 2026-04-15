@@ -165,10 +165,12 @@
 						{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
 							<Tooltip
 								className=" w-fit"
-								content={marked.parse(
-									sanitizeResponseContent(
-										models[selectedModelIdx]?.info?.meta?.description ?? ''
-									).replaceAll('\n', '<br>')
+								content={DOMPurify.sanitize(
+									marked.parse(
+										sanitizeResponseContent(
+											models[selectedModelIdx]?.info?.meta?.description ?? ''
+										).replaceAll('\n', '<br>')
+									)
 								)}
 								placement="top"
 							>

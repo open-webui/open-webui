@@ -54,6 +54,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
+    BYPASS_PYDUB_PREPROCESSING,
     DEVICE_TYPE,
     ENABLE_FORWARD_USER_INFO_HEADERS,
 )
@@ -330,7 +331,9 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if user.role != 'admin' and not has_permission(user.id, 'chat.tts', request.app.state.config.USER_PERMISSIONS):
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'chat.tts', request.app.state.config.USER_PERMISSIONS
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -630,6 +633,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 detail=detail,
             )
 
+
 def transcription_handler(request, file_path, metadata, user=None):
     filename = os.path.basename(file_path)
     file_dir = os.path.dirname(file_path)
@@ -660,7 +664,7 @@ def transcription_handler(request, file_path, metadata, user=None):
         data = {'text': transcript.strip()}
 
         # save the transcript to a json file
-        transcript_file = f'{file_dir}/{id}.json'
+        transcript_file = os.path.join(file_dir, f'{id}.json')
         with open(transcript_file, 'w') as f:
             json.dump(data, f)
 
@@ -698,7 +702,7 @@ def transcription_handler(request, file_path, metadata, user=None):
             data = r.json()
 
             # save the transcript to a json file
-            transcript_file = f'{file_dir}/{id}.json'
+            transcript_file = os.path.join(file_dir, f'{id}.json')
             with open(transcript_file, 'w') as f:
                 json.dump(data, f)
 
@@ -767,7 +771,7 @@ def transcription_handler(request, file_path, metadata, user=None):
             data = {'text': transcript.strip()}
 
             # Save transcript
-            transcript_file = f'{file_dir}/{id}.json'
+            transcript_file = os.path.join(file_dir, f'{id}.json')
             with open(transcript_file, 'w') as f:
                 json.dump(data, f)
 
@@ -874,7 +878,7 @@ def transcription_handler(request, file_path, metadata, user=None):
             data = {'text': transcript}
 
             # Save transcript to json file (consistent with other providers)
-            transcript_file = f'{file_dir}/{id}.json'
+            transcript_file = os.path.join(file_dir, f'{id}.json')
             with open(transcript_file, 'w') as f:
                 json.dump(data, f)
 
@@ -1059,7 +1063,7 @@ def transcription_handler(request, file_path, metadata, user=None):
                 data = {'text': transcript}
 
             # Save transcript to json file (consistent with other providers)
-            transcript_file = f'{file_dir}/{id}.json'
+            transcript_file = os.path.join(file_dir, f'{id}.json')
             with open(transcript_file, 'w') as f:
                 json.dump(data, f)
 
@@ -1095,24 +1099,28 @@ def transcription_handler(request, file_path, metadata, user=None):
 def transcribe(request: Request, file_path: str, metadata: Optional[dict] = None, user=None):
     log.info(f'transcribe: {file_path} {metadata}')
 
-    if is_audio_conversion_required(file_path):
-        file_path = convert_audio_to_mp3(file_path)
+    if BYPASS_PYDUB_PREPROCESSING:
+        log.info('Bypassing pydub preprocessing (BYPASS_PYDUB_PREPROCESSING=true)')
+        chunk_paths = [file_path]
+    else:
+        if is_audio_conversion_required(file_path):
+            file_path = convert_audio_to_mp3(file_path)
 
-    try:
-        file_path = compress_audio(file_path)
-    except Exception as e:
-        log.exception(e)
+        try:
+            file_path = compress_audio(file_path)
+        except Exception as e:
+            log.exception(e)
 
-    # Always produce a list of chunk paths (could be one entry if small)
-    try:
-        chunk_paths = split_audio(file_path, MAX_FILE_SIZE)
-        print(f'Chunk paths: {chunk_paths}')
-    except Exception as e:
-        log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
-        )
+        # Always produce a list of chunk paths (could be one entry if small)
+        try:
+            chunk_paths = split_audio(file_path, MAX_FILE_SIZE)
+            print(f'Chunk paths: {chunk_paths}')
+        except Exception as e:
+            log.exception(e)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT(e),
+            )
 
     results = []
     try:
@@ -1208,13 +1216,15 @@ def split_audio(file_path, max_bytes, format='mp3', bitrate='32k'):
 
 
 @router.post('/transcriptions')
-def transcription(
+async def transcription(
     request: Request,
     file: UploadFile = File(...),
     language: Optional[str] = Form(None),
     user=Depends(get_verified_user),
 ):
-    if user.role != 'admin' and not has_permission(user.id, 'chat.stt', request.app.state.config.USER_PERMISSIONS):
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'chat.stt', request.app.state.config.USER_PERMISSIONS
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -1237,9 +1247,9 @@ def transcription(
         filename = f'{id}.{ext}'
         contents = file.file.read()
 
-        file_dir = f'{CACHE_DIR}/audio/transcriptions'
+        file_dir = os.path.join(CACHE_DIR, 'audio', 'transcriptions')
         os.makedirs(file_dir, exist_ok=True)
-        file_path = f'{file_dir}/{filename}'
+        file_path = os.path.join(file_dir, filename)
 
         # Defense-in-depth: ensure resolved path stays within intended directory
         if not os.path.realpath(file_path).startswith(os.path.realpath(file_dir)):

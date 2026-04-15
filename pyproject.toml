@@ -18,10 +18,10 @@ dependencies = [
     "bcrypt==5.0.0",
     "argon2-cffi==25.1.0",
     "PyJWT[crypto]==2.11.0",
-    "authlib==1.6.9",
+    "authlib==1.6.10",
 
-    "requests==2.32.5",
-    "aiohttp==3.13.2", # do not update to 3.13.3 - broken
+    "requests==2.33.1",
+    "aiohttp==3.13.5", # do not update to 3.13.3 - broken
     "async-timeout==5.0.1",
     "aiocache==0.12.3",
     "aiofiles==25.1.0",
@@ -64,8 +64,8 @@ dependencies = [
     "PyMySQL==1.1.2",
     "boto3==1.42.62",
     
-    "transformers==5.3.0",
-    "sentence-transformers==5.2.3",
+    "transformers==5.5.4",
+    "sentence-transformers==5.4.0",
     "accelerate==1.13.0",
     "pyarrow==20.0.0", # fix: pin pyarrow version to 20 for rpi compatibility #15897
     "einops==0.8.2",
@@ -100,7 +100,7 @@ dependencies = [
     "onnxruntime==1.24.3",
     "faster-whisper==1.2.1",
 
-    "black==26.1.0",
+    "black==26.3.1",
     "youtube-transcript-api==1.2.4",
     "pytube==15.0.0",
 
