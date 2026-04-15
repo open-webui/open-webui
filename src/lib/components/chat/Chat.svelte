@@ -338,7 +338,12 @@
 				selectedToolIds = authed;
 				pendingOAuthTools = unauthed;
 			} else if ($settings?.tools) {
-				selectedToolIds = $settings.tools;
+				// Only apply global tool settings for tools compatible with the current model
+				const modelFilterIds = model?.filters?.map((f) => f.id) ?? [];
+				const modelToolIds = model?.info?.meta?.toolIds ?? [];
+				selectedToolIds = $settings.tools.filter(
+					(id) => modelToolIds.includes(id) || modelFilterIds.includes(id)
+				);
 			} else {
 				selectedToolIds = selectedToolIds.filter((id) => !id.startsWith('direct_server:'));
 			}
