@@ -3070,8 +3070,7 @@ async def outlet_filter_handler(ctx):
 
     For temp chats (local: prefix) and API callers without a persisted
     chat_id / message_id, messages are built from form_data plus the
-    assistant response message stored in ctx['assistant_message'], since
-    these callers have no DB-persisted history. See #23740.
+    assistant response message stored in ctx['assistant_message'].
     """
     request = ctx['request']
     user = ctx['user']
@@ -3083,29 +3082,15 @@ async def outlet_filter_handler(ctx):
     chat_id = metadata.get('chat_id', '')
     message_id = metadata.get('message_id')
 
-    # In-memory branch covers:
-    #   - temp chats (chat_id starts with 'local:')
-    #   - API callers that omit chat_id and/or id in the request body
-    is_temp_chat = (
-        not chat_id
-        or chat_id.startswith('local:')
-        or not message_id
-    )
+    is_temp_chat = not chat_id or chat_id.startswith('local:') or not message_id
 
     try:
         messages_map = None
 
         if is_temp_chat:
-            # Synthesize local-only ids for the outlet payload when the
-            # caller didn't provide them. Scope these to outlet_data only —
-            # do NOT write them back to metadata, because the surrounding
-            # pipeline (streaming save, event routing, webhook URLs) must
-            # keep seeing the real values.
             effective_chat_id = chat_id or f'local:{uuid4()}'
             effective_message_id = message_id or str(uuid4())
 
-            # Temp / API callers have no DB record — build message list
-            # from the in-memory form_data plus the assistant response.
             form_messages = ctx.get('form_data', {}).get('messages', [])
             assistant_message = ctx.get('assistant_message', {})
 
@@ -3118,7 +3103,6 @@ async def outlet_filter_handler(ctx):
                 if isinstance(m, dict)
             ]
 
-            # Append the full assistant message (content, output, usage, etc.)
             if assistant_message:
                 message_list.append({
                     'id': effective_message_id,
