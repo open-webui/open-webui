@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import asynccontextmanager, contextmanager, closing
 from typing import Any, Optional
 
 from open_webui.internal.wrappers import register_connection
@@ -108,6 +108,22 @@ def _make_async_url(url: str) -> str:
 #              Alembic, peewee migration, health checks)
 # ============================================================
 
+# Shared SQLite connection handler, used by both sync and async engines
+def _sqlite_on_connect(dbapi_connection, connection_record):
+    with closing(dbapi_connection.cursor()) as cursor:
+        if DATABASE_ENABLE_SQLITE_WAL:
+            cursor.execute('PRAGMA journal_mode=WAL')
+            # synchronous=NORMAL is safe with WAL: durable on app crash, may roll back
+            # last transactions on OS crash or power loss; acceptable for most web apps.
+            cursor.execute('PRAGMA synchronous=NORMAL')
+            cursor.execute('PRAGMA journal_size_limit=67108864') # Cap WAL file at 64 MB
+            cursor.execute('PRAGMA cache_size=-32768')           # 32 MB page cache, per connection
+            cursor.execute('PRAGMA temp_store=MEMORY')
+            cursor.execute('PRAGMA busy_timeout=5000')           # Retry up to 5 s on lock contention
+        else:
+            cursor.execute('PRAGMA journal_mode=DELETE')
+
+
 # Handle SQLCipher URLs
 if SQLALCHEMY_DATABASE_URL.startswith('sqlite+sqlcipher://'):
     database_password = os.environ.get('DATABASE_PASSWORD')
@@ -154,16 +170,7 @@ if SQLALCHEMY_DATABASE_URL.startswith('sqlite+sqlcipher://'):
 
 elif 'sqlite' in SQLALCHEMY_DATABASE_URL:
     engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={'check_same_thread': False})
-
-    def on_connect(dbapi_connection, connection_record):
-        cursor = dbapi_connection.cursor()
-        if DATABASE_ENABLE_SQLITE_WAL:
-            cursor.execute('PRAGMA journal_mode=WAL')
-        else:
-            cursor.execute('PRAGMA journal_mode=DELETE')
-        cursor.close()
-
-    event.listen(engine, 'connect', on_connect)
+    event.listen(engine, 'connect', _sqlite_on_connect)
 else:
     if isinstance(DATABASE_POOL_SIZE, int):
         if DATABASE_POOL_SIZE > 0:
@@ -212,14 +219,7 @@ if 'sqlite' in ASYNC_SQLALCHEMY_DATABASE_URL:
         ASYNC_SQLALCHEMY_DATABASE_URL,
         connect_args={'check_same_thread': False},
     )
-
-    if DATABASE_ENABLE_SQLITE_WAL:
-
-        @event.listens_for(async_engine.sync_engine, 'connect')
-        def _set_sqlite_wal(dbapi_connection, connection_record):
-            cursor = dbapi_connection.cursor()
-            cursor.execute('PRAGMA journal_mode=WAL')
-            cursor.close()
+    event.listen(async_engine.sync_engine, 'connect', _sqlite_on_connect)
 else:
     if isinstance(DATABASE_POOL_SIZE, int):
         if DATABASE_POOL_SIZE > 0:
