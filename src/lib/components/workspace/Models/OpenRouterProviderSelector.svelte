@@ -22,9 +22,7 @@
 		}
 		loading = true;
 		try {
-			console.log('OpenRouterProviderSelector: fetching endpoints for', modelId);
 			const res = await getModelEndpoints(localStorage.token, modelId);
-			console.log('OpenRouterProviderSelector: got response', res);
 			endpoints = res?.data?.endpoints ?? [];
 		} catch (e) {
 			console.error('Failed to fetch endpoints:', e);
@@ -80,7 +78,7 @@
 	};
 </script>
 
-{#if true}
+{#if loading || endpoints.length > 0}
 	<div class="my-2">
 		<div class="px-4 py-3 bg-gray-50 dark:bg-gray-950 rounded-3xl">
 			<div class="flex w-full justify-between items-center">

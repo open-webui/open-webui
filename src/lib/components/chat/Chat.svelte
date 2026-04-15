@@ -2667,6 +2667,8 @@
 
 						const MAX_RETRIES = 5;
 						let retryCancelled = false;
+						let savedToolContent = null;
+						let savedReasoningDetails = null;
 
 						for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
 							let responseMessage = _history.messages[responseMessageId];
@@ -2674,7 +2676,18 @@
 							if (attempt > 1) {
 								// Re-enable generating for retry (socket error handler sets it false)
 								generating = true;
-								responseMessage.content = '';
+
+								// Preserve tool context so retry continues from where it left off
+								if (savedToolContent) {
+									responseMessage.content = savedToolContent;
+									responseMessage.preservedToolContext = true;
+									if (savedReasoningDetails) {
+										responseMessage.reasoning_details = savedReasoningDetails;
+									}
+								} else {
+									responseMessage.content = '';
+								}
+
 								responseMessage.error = null;
 								responseMessage.done = false;
 								responseMessage.retrying = null;
@@ -2717,6 +2730,13 @@
 							responseMessage = _history.messages[responseMessageId];
 
 							if (!responseMessage.error) break;
+
+							// Save tool context from failed attempt for next retry
+							const failedToolContext = getRetryableToolContext(responseMessage.content);
+							if (failedToolContext?.hasCompletedToolCall) {
+								savedToolContent = failedToolContext.content;
+								savedReasoningDetails = responseMessage.reasoning_details || null;
+							}
 
 							if (attempt < MAX_RETRIES) {
 								const waitSeconds = attempt * 2;
@@ -2761,16 +2781,25 @@
 								continue;
 							}
 
-							// All retries exhausted — check for provider restrictions
+							// All retries exhausted — restore tool context so manual retry can use it
+							if (savedToolContent) {
+								responseMessage.content = savedToolContent;
+								responseMessage.preservedToolContext = true;
+								if (savedReasoningDetails) {
+									responseMessage.reasoning_details = savedReasoningDetails;
+								}
+							}
+
+							// Check for provider restrictions
 							const hasProviderRestrictions = !!(
 								model?.info?.params?.custom_params?.provider?.only?.length ||
 								model?.info?.params?.custom_params?.provider?.order?.length
 							);
 							if (hasProviderRestrictions) {
 								responseMessage.providerFailed = true;
-								_history.messages[responseMessageId] = responseMessage;
-								mirrorHistoryMessage(responseMessageId);
 							}
+							_history.messages[responseMessageId] = responseMessage;
+							mirrorHistoryMessage(responseMessageId);
 							break;
 						}
 
@@ -3358,9 +3387,21 @@
 		const model = $models.find((m) => m.id === (message.selectedModelId ?? message.model));
 		if (!model) return;
 
+		// Preserve tool context from the failed message so retry continues from where it left off
+		const originalToolContext = getRetryableToolContext(message?.content ?? '');
+		let savedToolContent = null;
+		let savedReasoningDetails = null;
+		if (originalToolContext?.hasCompletedToolCall) {
+			savedToolContent = originalToolContext.content;
+			savedReasoningDetails = message.reasoning_details || null;
+			message.content = savedToolContent;
+			message.preservedToolContext = true;
+		} else {
+			message.content = '';
+		}
+
 		message.error = null;
 		message.providerFailed = false;
-		message.content = '';
 		message.done = false;
 		history.messages[message.id] = message;
 		history = { ...history };
@@ -3375,7 +3416,16 @@
 				let responseMessage = _history.messages[message.id];
 
 				if (attempt > 1) {
-					responseMessage.content = '';
+					// Preserve tool context so retry continues from where it left off
+					if (savedToolContent) {
+						responseMessage.content = savedToolContent;
+						responseMessage.preservedToolContext = true;
+						if (savedReasoningDetails) {
+							responseMessage.reasoning_details = savedReasoningDetails;
+						}
+					} else {
+						responseMessage.content = '';
+					}
 					responseMessage.error = null;
 					responseMessage.done = false;
 					responseMessage.retrying = null;
@@ -3417,6 +3467,13 @@
 				responseMessage = _history.messages[message.id];
 
 				if (!responseMessage.error) break;
+
+				// Save tool context from failed attempt for next retry
+				const failedToolContext = getRetryableToolContext(responseMessage.content);
+				if (failedToolContext?.hasCompletedToolCall) {
+					savedToolContent = failedToolContext.content;
+					savedReasoningDetails = responseMessage.reasoning_details || null;
+				}
 
 				if (attempt < MAX_RETRIES) {
 					generating = true;
@@ -3623,52 +3680,97 @@
 			return [message];
 		}
 
-		const expandedMessages = [];
-		let lastIndex = 0;
-
+		// Parse all completed tool calls with their positions
+		const parsedToolCalls = [];
 		for (const match of matches) {
 			const matchStart = match.index ?? 0;
 			const matchEnd = matchStart + match[0].length;
-			const textBefore = normalizePreservedAssistantContent(content.slice(lastIndex, matchStart));
 
 			const attributes = {};
 			const attributeRegex = /(\w+)="([^"]*)"/g;
 			let attributeMatch;
-
 			while ((attributeMatch = attributeRegex.exec(match[1] ?? '')) !== null) {
 				attributes[attributeMatch[1]] = attributeMatch[2];
 			}
 
 			if (attributes.done === 'true' && attributes.id && attributes.name) {
-				expandedMessages.push({
-					...message,
-					role: 'assistant',
-					content: textBefore,
-					tool_calls: [
-						{
-							id: attributes.id,
-							type: 'function',
-							function: {
-								name: attributes.name,
-								arguments: normalizeToolCallArguments(attributes.arguments ?? '')
-							}
-						}
-					],
-					preservedToolContext: undefined,
-					...(message.reasoning_details ? { reasoning_details: message.reasoning_details } : {})
+				parsedToolCalls.push({
+					matchStart,
+					matchEnd,
+					id: attributes.id,
+					name: attributes.name,
+					arguments: attributes.arguments ?? '',
+					result: attributes.result ?? ''
 				});
+			}
+		}
 
+		if (parsedToolCalls.length === 0) {
+			return [message];
+		}
+
+		// Group consecutive tool calls (no meaningful text between them = parallel calls)
+		const groups = [{ toolCalls: [parsedToolCalls[0]], textBeforeStart: 0 }];
+
+		for (let i = 1; i < parsedToolCalls.length; i++) {
+			const prevEnd = parsedToolCalls[i - 1].matchEnd;
+			const currStart = parsedToolCalls[i].matchStart;
+			const textBetween = normalizePreservedAssistantContent(content.slice(prevEnd, currStart));
+
+			if (textBetween) {
+				// Meaningful text between — new group (separate model turn)
+				groups.push({ toolCalls: [parsedToolCalls[i]], textBeforeStart: prevEnd });
+			} else {
+				// No text between — same group (parallel calls from one turn)
+				groups[groups.length - 1].toolCalls.push(parsedToolCalls[i]);
+			}
+		}
+
+		// Build expanded messages
+		const expandedMessages = [];
+		let isFirstGroup = true;
+
+		for (const group of groups) {
+			const firstTc = group.toolCalls[0];
+			const textBefore = normalizePreservedAssistantContent(
+				content.slice(group.textBeforeStart, firstTc.matchStart)
+			);
+
+			// Single assistant message with all tool_calls in this group
+			expandedMessages.push({
+				...message,
+				role: 'assistant',
+				content: textBefore,
+				tool_calls: group.toolCalls.map((tc) => ({
+					id: tc.id,
+					type: 'function',
+					function: {
+						name: tc.name,
+						arguments: normalizeToolCallArguments(tc.arguments)
+					}
+				})),
+				preservedToolContext: undefined,
+				...(isFirstGroup && message.reasoning_details
+					? { reasoning_details: message.reasoning_details }
+					: {})
+			});
+
+			// Individual tool result messages
+			for (const tc of group.toolCalls) {
 				expandedMessages.push({
 					role: 'tool',
-					tool_call_id: attributes.id,
-					content: normalizeToolResultContent(attributes.result ?? '')
+					tool_call_id: tc.id,
+					content: normalizeToolResultContent(tc.result)
 				});
 			}
 
-			lastIndex = matchEnd;
+			isFirstGroup = false;
 		}
 
-		const trailingText = normalizePreservedAssistantContent(content.slice(lastIndex));
+		// Handle trailing text after last tool call
+		const lastGroup = groups[groups.length - 1];
+		const lastTc = lastGroup.toolCalls[lastGroup.toolCalls.length - 1];
+		const trailingText = normalizePreservedAssistantContent(content.slice(lastTc.matchEnd));
 
 		if (trailingText) {
 			expandedMessages.push({
