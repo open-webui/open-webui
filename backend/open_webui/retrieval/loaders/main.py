@@ -234,6 +234,18 @@ class Loader:
         self.kwargs = kwargs
 
     def load(self, filename: str, file_content_type: str, file_path: str) -> list[Document]:
+        if (
+            self.engine == 'external'
+            and not self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_URL')
+            or self.engine == 'external'
+            and not self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_API_KEY')
+        ):
+            log.warning(
+                'AUTOFALLBACK: External loader selected but missing URL/API key for %s (%s). Using native loader.',
+                filename,
+                file_content_type,
+            )
+
         loader = self._get_loader(filename, file_content_type, file_path)
 
         if self.engine == 'external':
@@ -241,7 +253,7 @@ class Loader:
                 docs = loader.load()
             except Exception as exc:
                 log.warning(
-                    'External loader failed for %s (%s). Falling back to native loader. Error: %s',
+                    'AUTOFALLBACK: External loader failed for %s (%s). Falling back to native loader. Error: %s',
                     filename,
                     file_content_type,
                     exc,
