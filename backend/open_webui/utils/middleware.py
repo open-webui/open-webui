@@ -4924,12 +4924,23 @@ async def streaming_chat_response_handler(response, ctx):
                     chunk = json.loads(payload)
                 except Exception:
                     return
+                # Providers vary in chunk shape; be defensive so a surprise
+                # payload never breaks the generator for API callers on this
+                # path.
+                if not isinstance(chunk, dict):
+                    return
                 # OpenAI Chat Completions streaming: choices[].delta.content
-                for choice in chunk.get('choices', []) or []:
-                    delta = choice.get('delta') or {}
-                    delta_content = delta.get('content')
-                    if delta_content:
-                        accumulated_content += delta_content
+                choices = chunk.get('choices') or []
+                if isinstance(choices, list):
+                    for choice in choices:
+                        if not isinstance(choice, dict):
+                            continue
+                        delta = choice.get('delta')
+                        if not isinstance(delta, dict):
+                            continue
+                        delta_content = delta.get('content')
+                        if isinstance(delta_content, str) and delta_content:
+                            accumulated_content += delta_content
                 # OpenAI Responses-API streaming: top-level delta with text
                 # (e.g. response.output_text.delta events)
                 delta = chunk.get('delta')
@@ -4939,8 +4950,9 @@ async def streaming_chat_response_handler(response, ctx):
                     text = delta.get('text') or delta.get('content')
                     if isinstance(text, str):
                         accumulated_content += text
-                if chunk.get('usage'):
-                    accumulated_usage = chunk['usage']
+                usage = chunk.get('usage')
+                if isinstance(usage, dict):
+                    accumulated_usage = usage
 
             def accumulate(raw_bytes):
                 nonlocal accumulate_buffer
@@ -5012,13 +5024,18 @@ async def streaming_chat_response_handler(response, ctx):
                 # would read stale DB content (the empty placeholder inserted
                 # pre-inference). Mirrors the main-path write at middleware.py
                 # lines ~4790-4803.
+                #
+                # We persist even when accumulated_content is empty —
+                # tool-call-only streams, function-call-only streams, and
+                # providers that put final content in non-delta.content
+                # fields produce no accumulated text, but the message still
+                # needs to be marked done so the placeholder doesn't linger.
                 fallback_chat_id = metadata.get('chat_id')
                 fallback_message_id = metadata.get('message_id')
                 if (
                     fallback_chat_id
                     and fallback_message_id
                     and not fallback_chat_id.startswith('local:')
-                    and accumulated_content
                 ):
                     try:
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
