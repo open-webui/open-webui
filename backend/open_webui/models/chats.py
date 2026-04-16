@@ -1323,8 +1323,10 @@ class ChatTable:
         self, id: str, user_id: str, db: Optional[AsyncSession] = None
     ) -> list[TagModel]:
         async with get_async_db_context(db) as db:
-            chat = await db.get(Chat, id)
-            tag_ids = chat.meta.get('tags', [])
+            stmt = select(Chat.meta).where(Chat.id == id)
+            result = await db.execute(stmt)
+            meta = result.scalar_one_or_none()
+            tag_ids = (meta or {}).get('tags', [])
             return await Tags.get_tags_by_ids_and_user_id(tag_ids, user_id, db=db)
 
     async def get_chat_list_by_user_id_and_tag_name(
