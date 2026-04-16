@@ -4901,6 +4901,11 @@ async def streaming_chat_response_handler(response, ctx):
             # produced nothing, so mixed-shape streams don't double-count.
             terminal_content = ''
             accumulate_buffer = ''
+            # Multiple SSE "data:" lines in one event are concatenated with
+            # '\n' per spec; JSON allows embedded whitespace so the result
+            # still parses. Buffered across _process_line calls until a
+            # blank line ends the event.
+            sse_event_data = []
             decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
 
             def wrap_item(item):
@@ -4921,18 +4926,9 @@ async def streaming_chat_response_handler(response, ctx):
                     return ''.join(parts)
                 return ''
 
-            def _parse_line(line):
+            def _parse_payload(payload):
                 nonlocal accumulated_content, accumulated_usage, terminal_content
-                line = line.strip()
-                if not line:
-                    return
-                if line.startswith('data:'):
-                    payload = line[5:].lstrip()
-                    if not payload or payload == '[DONE]':
-                        return
-                elif line.startswith('{') or line.startswith('['):
-                    payload = line
-                else:
+                if not payload or payload == '[DONE]':
                     return
                 try:
                     chunk = json.loads(payload)
@@ -4981,6 +4977,21 @@ async def streaming_chat_response_handler(response, ctx):
                 if isinstance(usage, dict):
                     accumulated_usage = usage
 
+            def _process_line(line):
+                # SSE: blank line ends an event; assemble buffered data lines.
+                # NDJSON: each non-empty line is a standalone JSON object.
+                if not line.strip():
+                    if sse_event_data:
+                        _parse_payload('\n'.join(sse_event_data))
+                        sse_event_data.clear()
+                    return
+                stripped = line.strip()
+                if stripped.startswith('data:'):
+                    sse_event_data.append(stripped[5:].lstrip())
+                elif stripped.startswith('{') or stripped.startswith('['):
+                    _parse_payload(stripped)
+                # Other SSE fields (event:, id:, retry:) are ignored.
+
             def accumulate(raw_bytes):
                 nonlocal accumulate_buffer
                 if isinstance(raw_bytes, bytes):
@@ -4998,7 +5009,7 @@ async def streaming_chat_response_handler(response, ctx):
                 parts = accumulate_buffer.split('\n')
                 accumulate_buffer = parts[-1]
                 for line in parts[:-1]:
-                    _parse_line(line)
+                    _process_line(line)
 
             def flush_accumulate_buffer():
                 nonlocal accumulate_buffer
@@ -5009,8 +5020,12 @@ async def streaming_chat_response_handler(response, ctx):
                 except Exception:
                     pass
                 if accumulate_buffer:
-                    _parse_line(accumulate_buffer)
+                    _process_line(accumulate_buffer)
                     accumulate_buffer = ''
+                # Flush any trailing SSE event that didn't end with a blank line.
+                if sse_event_data:
+                    _parse_payload('\n'.join(sse_event_data))
+                    sse_event_data.clear()
 
             for event in events:
                 event, _ = await process_filter_functions(
