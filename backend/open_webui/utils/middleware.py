@@ -3347,7 +3347,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                                 },
                             )
 
-                if is_persisted_chat or event_emitter:
+                if (is_persisted_chat or event_emitter) and metadata.get('message_id'):
                     await _run_background_tasks(ctx)
 
                 ctx['assistant_message'] = {
