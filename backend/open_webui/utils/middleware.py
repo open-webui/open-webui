@@ -3331,7 +3331,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                                 },
                             )
 
-                if metadata.get('chat_id'):
+                if is_persisted_chat or event_emitter:
                     await _run_background_tasks(ctx)
 
                 ctx['assistant_message'] = {
@@ -4906,6 +4906,21 @@ async def streaming_chat_response_handler(response, ctx):
             def wrap_item(item):
                 return f'{item}\n' if is_ndjson else f'data: {item}\n\n'
 
+            def _extract_text(value):
+                # Accept plain strings and multimodal content arrays like
+                # [{"type": "text", "text": "..."}, ...].
+                if isinstance(value, str):
+                    return value
+                if isinstance(value, list):
+                    parts = []
+                    for block in value:
+                        if isinstance(block, dict):
+                            text = block.get('text') or block.get('content')
+                            if isinstance(text, str):
+                                parts.append(text)
+                    return ''.join(parts)
+                return ''
+
             def _parse_line(line):
                 nonlocal accumulated_content, accumulated_usage, terminal_content
                 line = line.strip()
@@ -4932,35 +4947,32 @@ async def streaming_chat_response_handler(response, ctx):
                         continue
                     delta = choice.get('delta')
                     if isinstance(delta, dict):
-                        delta_content = delta.get('content')
-                        if isinstance(delta_content, str) and delta_content:
-                            accumulated_content += delta_content
+                        text = _extract_text(delta.get('content'))
+                        if text:
+                            accumulated_content += text
                     else:
                         msg = choice.get('message')
                         if isinstance(msg, dict):
-                            msg_content = msg.get('content')
-                            if isinstance(msg_content, str) and msg_content:
-                                terminal_content = msg_content
+                            text = _extract_text(msg.get('content'))
+                            if text:
+                                terminal_content = text
                 # Responses-API: top-level delta (stream) + response.completed (snapshot).
                 delta = chunk.get('delta')
                 if isinstance(delta, str):
                     accumulated_content += delta
                 elif isinstance(delta, dict):
-                    text = delta.get('text') or delta.get('content')
-                    if isinstance(text, str):
+                    text = _extract_text(delta.get('text') or delta.get('content'))
+                    if text:
                         accumulated_content += text
                 if chunk.get('type') == 'response.completed':
                     resp = chunk.get('response')
                     if isinstance(resp, dict):
                         parts = []
                         for item in resp.get('output') or []:
-                            if not isinstance(item, dict):
-                                continue
-                            for block in item.get('content') or []:
-                                if isinstance(block, dict):
-                                    text = block.get('text')
-                                    if isinstance(text, str):
-                                        parts.append(text)
+                            if isinstance(item, dict):
+                                text = _extract_text(item.get('content'))
+                                if text:
+                                    parts.append(text)
                         if parts:
                             terminal_content = ''.join(parts)
                         if isinstance(resp.get('usage'), dict):
@@ -5072,7 +5084,7 @@ async def streaming_chat_response_handler(response, ctx):
                     except Exception as e:
                         log.debug(f'Error persisting streamed message in fallback: {e}')
 
-                if fallback_chat_id:
+                if fallback_is_persisted:
                     await _run_background_tasks(ctx)
 
                 ctx['assistant_message'] = {
