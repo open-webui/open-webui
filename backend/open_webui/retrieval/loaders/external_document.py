@@ -83,4 +83,18 @@ class ExternalDocumentLoader(BaseLoader):
             else:
                 raise Exception('Error loading document: No content returned')
         else:
+            if response.status_code == 422:
+                detail = ''
+                try:
+                    error_data = response.json()
+                    detail = error_data.get('detail', '') if isinstance(error_data, dict) else ''
+                except Exception:
+                    detail = response.text or ''
+
+                if 'No extractable text' in detail:
+                    log.warning(
+                        'AUTOFALLBACK: External document loader returned 422 No extractable text for %s. Falling back to native loader.',
+                        self.file_path,
+                    )
+
             raise Exception(f'Error loading document: {response.status_code} {response.text}')
