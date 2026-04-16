@@ -3157,11 +3157,27 @@ async def outlet_filter_handler(ctx):
             log.debug(f'Pipeline outlet filter error: {e}')
 
         # Function outlet filters
+        # If we synthesised ids for the outlet payload, expose them via
+        # __metadata__ too so filter functions that key correlation off
+        # __metadata__['chat_id' | 'message_id'] see the same values as
+        # form_data. Shallow copy so we don't mutate the caller's dict.
+        if is_temp_chat and (
+            effective_chat_id != metadata.get('chat_id')
+            or effective_message_id != metadata.get('message_id')
+        ):
+            filter_metadata = {
+                **metadata,
+                'chat_id': effective_chat_id,
+                'message_id': effective_message_id,
+            }
+        else:
+            filter_metadata = metadata
+
         extra_params = {
             '__event_emitter__': event_emitter,
             '__event_call__': event_caller,
             '__user__': user.model_dump() if isinstance(user, UserModel) else {},
-            '__metadata__': metadata,
+            '__metadata__': filter_metadata,
             '__request__': request,
             '__model__': model,
         }
