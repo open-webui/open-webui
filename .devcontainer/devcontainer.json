@@ -1,0 +1,27 @@
+{
+  "name": "open-webui",
+  "image": "mcr.microsoft.com/devcontainers/docker-in-docker:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "forwardPorts": [3000, 8080, 11434, 5173],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "svelte.svelte-vscode",
+        "ms-python.python",
+        "charliermarsh.ruff",
+        "DavidAnson.vscode-markdownlint"
+      ]
+    }
+  },
+  "postCreateCommand": "cp .env.example .env && echo '✓ .env file created from .env.example - update with your API keys before running docker-compose up'",
+  "remoteUser": "root",
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "8gb",
+    "storage": "32gb"
+  }
+}
