@@ -16,6 +16,7 @@ from starlette.background import BackgroundTask
 
 from open_webui.utils.auth import get_verified_user
 from open_webui.utils.access_control import has_connection_access
+from open_webui.utils.terminals import build_terminal_proxy_auth, build_terminal_ws_url
 from open_webui.models.groups import Groups
 from open_webui.models.users import Users
 
@@ -104,25 +105,7 @@ async def proxy_terminal(
     if request.query_params:
         target_url += f'?{request.query_params}'
 
-    headers = {'X-User-Id': user.id}
-    # Forward per-session cwd tracking header
-    session_id = request.headers.get('x-session-id')
-    if session_id:
-        headers['X-Session-Id'] = session_id
-    cookies = {}
-    auth_type = connection.get('auth_type', 'bearer')
-
-    if auth_type == 'bearer':
-        headers['Authorization'] = f'Bearer {connection.get("key", "")}'
-    elif auth_type == 'session':
-        cookies = request.cookies
-        headers['Authorization'] = f'Bearer {request.state.token.credentials}'
-    elif auth_type == 'system_oauth':
-        cookies = request.cookies
-        oauth_token = request.headers.get('x-oauth-access-token', '')
-        if oauth_token:
-            headers['Authorization'] = f'Bearer {oauth_token}'
-    # auth_type == "none": no Authorization header
+    headers, cookies, _ = build_terminal_proxy_auth(request, connection, user.id)
 
     content_type = request.headers.get('content-type')
     if content_type:
@@ -259,32 +242,25 @@ async def ws_terminal(
         await ws.close(code=4003, reason='Terminal server URL not configured')
         return
 
-    # Build upstream WebSocket URL (no token in URL)
-    ws_base = base_url.replace('https://', 'wss://').replace('http://', 'ws://')
-
-    # Route through orchestrator policy endpoint if policy_id is set
-    policy_id = connection.get('policy_id')
-    upstream_params = {}
-    # For orchestrator-backed servers, pass user_id
-    upstream_params['user_id'] = user.id
-
-    import urllib.parse
-
-    if policy_id:
-        upstream_url = f'{ws_base}/p/{policy_id}/api/terminals/{session_id}'
-    else:
-        upstream_url = f'{ws_base}/api/terminals/{session_id}'
-    if upstream_params:
-        upstream_url += f'?{urllib.parse.urlencode(upstream_params)}'
+    upstream_url = build_terminal_ws_url(
+        base_url=base_url,
+        session_id=session_id,
+        user_id=user.id,
+        policy_id=connection.get('policy_id'),
+    )
+    headers, cookies, auth_type = build_terminal_proxy_auth(ws, connection, user.id)
 
     session = aiohttp.ClientSession()
     try:
-        async with session.ws_connect(upstream_url) as upstream:
+        async with session.ws_connect(
+            upstream_url,
+            headers=headers,
+            cookies=cookies,
+        ) as upstream:
             import asyncio
             import json as _json
 
             # First-message auth to upstream terminal server
-            auth_type = connection.get('auth_type', 'bearer')
             if auth_type == 'bearer':
                 key = connection.get('key', '')
                 await upstream.send_str(_json.dumps({'type': 'auth', 'token': key}))
