@@ -1,6 +1,7 @@
 import asyncio
 import ipaddress
 import logging
+import os
 import socket
 import ssl
 import urllib.parse
@@ -182,7 +183,7 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         self,
         web_paths,
         verify_ssl: bool = True,
-        trust_env: bool = False,
+        trust_env: bool = True,
         requests_per_second: Optional[float] = None,
         continue_on_failure: bool = True,
         api_key: Optional[str] = None,
@@ -272,7 +273,7 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         continue_on_failure: bool = True,
         requests_per_second: Optional[float] = None,
         verify_ssl: bool = True,
-        trust_env: bool = False,
+        trust_env: bool = True,
         proxy: Optional[Dict[str, str]] = None,
     ):
         """Initialize SafeTavilyLoader with rate limiting and SSL verification support.
@@ -394,7 +395,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
         self,
         web_paths: List[str],
         verify_ssl: bool = True,
-        trust_env: bool = False,
+        trust_env: bool = True,
         requests_per_second: Optional[float] = None,
         continue_on_failure: bool = True,
         headless: bool = True,
@@ -492,7 +493,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
 class SafeWebBaseLoader(WebBaseLoader):
     """WebBaseLoader with enhanced error handling for URLs."""
 
-    def __init__(self, trust_env: bool = False, *args, **kwargs):
+    def __init__(self, trust_env: bool = True, *args, **kwargs):
         """Initialize SafeWebBaseLoader
         Args:
             trust_env (bool, optional): set to True if using proxy to make web requests, for example
@@ -502,7 +503,12 @@ class SafeWebBaseLoader(WebBaseLoader):
         self.trust_env = trust_env
 
     async def _fetch(self, url: str, retries: int = 3, cooldown: int = 2, backoff: float = 1.5) -> str:
-        async with aiohttp.ClientSession(trust_env=self.trust_env) as session:
+        # honour trust_env, but also auto-enable when proxy env vars are present
+        # so that PersistentConfig DB value of False cannot silently bypass the proxy
+        effective_trust_env = self.trust_env or bool(
+            os.environ.get("https_proxy") or os.environ.get("http_proxy")
+        )
+        async with aiohttp.ClientSession(trust_env=effective_trust_env) as session:
             for i in range(retries):
                 try:
                     kwargs: Dict = dict(
@@ -587,7 +593,7 @@ def get_web_loader(
     urls: Union[str, Sequence[str]],
     verify_ssl: bool = True,
     requests_per_second: int = 2,
-    trust_env: bool = False,
+    trust_env: bool = True,
 ):
     # Check if the URLs are valid
     safe_urls = safe_validate_urls([urls] if isinstance(urls, str) else urls)
