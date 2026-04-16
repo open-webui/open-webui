@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.9.0] - 2026-04-15
+## [0.9.0] - 2026-04-17
 
 ### Added
 
@@ -75,6 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧮 **Usage analytics accuracy.** Token usage is now normalized before chat messages are saved, so model and user usage reports stay accurate across OpenAI-compatible providers. [Commit](https://github.com/open-webui/open-webui/commit/4dea4fdf54e00ebaba8e3178128bf8709453d2a2)
 - 🧩 **Richer Anthropic tool results.** Anthropic-compatible tool calls now preserve more tool result content types, including images and structured search or document outputs, so models can use fuller tool context instead of receiving only plain text fragments. [#23188](https://github.com/open-webui/open-webui/issues/23188), [Commit](https://github.com/open-webui/open-webui/commit/40f5b3d135190dc9a2d8e94dbb1b2cbcbd829132)
 - 🖼️ **ComfyUI request reliability.** ComfyUI image generation and editing now use shared async connections with consistent SSL handling, making image uploads and workflow runs more reliable under concurrent load. [Commit](https://github.com/open-webui/open-webui/commit/5944eda0ff25a284f7157252683bccede741cbe7)
+- 🎛️ **Reranking batch size control.** Administrators can now set "RAG_RERANKING_BATCH_SIZE" in Documents settings to control reranking workload size, helping balance retrieval speed and resource usage for their deployment. [Commit](https://github.com/open-webui/open-webui/commit/4d2f18981051205016bd24d39521e25a33581225)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 **Translation updates.** Translations for Irish, Catalan, German, Simplified Chinese, Hindi, and Portuguese (Brazil) were enhanced and expanded.
 
