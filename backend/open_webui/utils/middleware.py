@@ -1,3 +1,4 @@
+import codecs
 import copy
 import time
 import logging
@@ -4894,13 +4895,20 @@ async def streaming_chat_response_handler(response, ctx):
     else:
         # Fallback: forward upstream body to the caller and accumulate
         # chunks to fire outlet after completion (API callers w/o WS).
+        content_type = response.headers.get('Content-Type', '')
+        is_ndjson = 'application/x-ndjson' in content_type
+
         async def stream_wrapper(original_generator, events):
             accumulated_content = ''
             accumulated_usage = None
             accumulate_buffer = ''
+            # Incremental decoder holds partial multibyte codepoints split
+            # across chunk boundaries instead of dropping them.
+            decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
 
             def wrap_item(item):
-                return f'data: {item}\n\n'
+                # NDJSON = one raw JSON object per line; SSE = "data: ...\n\n".
+                return f'{item}\n' if is_ndjson else f'data: {item}\n\n'
 
             def _parse_line(line):
                 # Accepts SSE "data: {...}" framing AND raw NDJSON lines
@@ -4948,11 +4956,19 @@ async def streaming_chat_response_handler(response, ctx):
                     accumulated_usage = usage
 
             def accumulate(raw_bytes):
-                # Rolling buffer — SSE/NDJSON frames may split across chunks.
+                # Rolling buffer — SSE/NDJSON frames may split across chunks,
+                # as can UTF-8 codepoints (hence the incremental decoder).
                 nonlocal accumulate_buffer
-                try:
-                    raw = raw_bytes.decode('utf-8') if isinstance(raw_bytes, bytes) else raw_bytes
-                except Exception:
+                if isinstance(raw_bytes, bytes):
+                    try:
+                        raw = decoder.decode(raw_bytes)
+                    except Exception:
+                        return
+                elif isinstance(raw_bytes, str):
+                    raw = raw_bytes
+                else:
+                    return
+                if not raw:
                     return
                 accumulate_buffer += raw
                 parts = accumulate_buffer.split('\n')
@@ -4962,6 +4978,12 @@ async def streaming_chat_response_handler(response, ctx):
 
             def flush_accumulate_buffer():
                 nonlocal accumulate_buffer
+                try:
+                    tail = decoder.decode(b'', final=True)
+                    if tail:
+                        accumulate_buffer += tail
+                except Exception:
+                    pass
                 if accumulate_buffer:
                     _parse_line(accumulate_buffer)
                     accumulate_buffer = ''
