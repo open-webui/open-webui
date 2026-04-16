@@ -4,6 +4,7 @@
 
 	import { user, config, settings } from '$lib/stores';
 	import { updateUserProfile, createAPIKey, getAPIKey, getSessionUser } from '$lib/apis/auths';
+	import { getMyProfile, updateMyProfile } from '$lib/apis/marketplace';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
@@ -31,6 +32,8 @@
 	let _gender = '';
 	let gender = '';
 	let dateOfBirth = '';
+	
+	let marketplaceRole = 'Client';
 
 	let webhookUrl = '';
 	let showAPIKeys = false;
@@ -64,6 +67,10 @@
 			gender: gender ? gender : null,
 			date_of_birth: dateOfBirth ? dateOfBirth : null
 		}).catch((error) => {
+			toast.error(`${error}`);
+		});
+
+		await updateMyProfile(localStorage.token, { role: marketplaceRole }).catch((error) => {
 			toast.error(`${error}`);
 		});
 
@@ -106,6 +113,11 @@
 			dateOfBirth = user?.date_of_birth ?? '';
 		}
 
+		const profile = await getMyProfile(localStorage.token).catch(() => null);
+		if (profile) {
+			marketplaceRole = profile.role ?? 'Client';
+		}
+
 		webhookUrl = $settings?.notifications?.webhook_url ?? '';
 
 		// Only fetch API key if the feature is enabled and user has permission
@@ -142,6 +154,20 @@
 
 				<div class="flex flex-1 flex-col">
 					<div class=" flex-1">
+						<div class="flex flex-col w-full mb-2">
+							<div class=" mb-1 text-xs font-medium">{$i18n.t('Marketplace Role')}</div>
+
+							<div class="flex-1">
+								<select
+									class="w-full text-sm dark:text-gray-300 bg-transparent outline-hidden"
+									bind:value={marketplaceRole}
+								>
+									<option value="Client">{$i18n.t('Client')}</option>
+									<option value="Freelancer">{$i18n.t('Freelancer')}</option>
+								</select>
+							</div>
+						</div>
+						
 						<div class="flex flex-col w-full">
 							<div class=" mb-1 text-xs font-medium">{$i18n.t('Name')}</div>
 

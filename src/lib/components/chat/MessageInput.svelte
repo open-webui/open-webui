@@ -61,6 +61,7 @@
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
+	import { createHelpRequest } from '$lib/apis/marketplace';
 
 	import { createNoteHandler } from '../notes/utils';
 	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
@@ -155,6 +156,20 @@
 	$: if (!showValvesModal) {
 		integrationsMenuCloseOnOutsideClick = true;
 	}
+
+	const handleHumanHelp = async () => {
+		if (prompt.trim() === '') {
+			toast.error($i18n.t('Please type a message to need help with.'));
+			return;
+		}
+		const request = await createHelpRequest(localStorage.token, { message: prompt }).catch((e) => {
+			toast.error(`${e}`);
+		});
+		if (request) {
+			toast.success($i18n.t('Human help requested successfully!'));
+			prompt = '';
+		}
+	};
 
 	$: onChange({
 		prompt,
@@ -1991,7 +2006,22 @@
 												</Tooltip>
 											</div>
 										{:else}
-											<div class=" flex items-center">
+											<div class=" flex items-center mr-1">
+											<Tooltip content={$i18n.t('Ask for human help instead of AI')}>
+												<button
+													class="{!(prompt === '' && files.length === 0)
+														? 'bg-amber-500 hover:bg-amber-600 text-white dark:bg-amber-500 dark:hover:bg-amber-400'
+														: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full px-2.5 py-1.5 self-center text-xs font-bold"
+													type="button"
+													disabled={(prompt === '' && files.length === 0)}
+													on:click={handleHumanHelp}
+												>
+													Help
+												</button>
+											</Tooltip>
+										</div>
+
+										<div class=" flex items-center">
 												<Tooltip
 													content={uploadPending
 														? $i18n.t('Waiting for upload...')

@@ -16,6 +16,13 @@ services:
     container_name: open-webui
     volumes:
       - open-webui:/app/backend/data
+      - ./backend/open_webui/env.py:/app/backend/open_webui/env.py:ro
+      - ./branding/hiveai-logo.png:/app/backend/open_webui/static/favicon.png:ro
+      - ./branding/hiveai-logo.png:/app/backend/open_webui/static/favicon-dark.png:ro
+      - ./branding/hiveai-logo.png:/app/backend/open_webui/static/favicon-96x96.png:ro
+      - ./branding/hiveai-logo.png:/app/backend/open_webui/static/apple-touch-icon.png:ro
+      - ./branding/hiveai-logo.png:/app/backend/open_webui/static/splash.png:ro
+      - ./branding/hiveai-logo.png:/app/backend/open_webui/static/splash-dark.png:ro
     depends_on:
       - ollama
     ports:
@@ -23,6 +30,11 @@ services:
     environment:
       - 'OLLAMA_BASE_URL=http://ollama:11434'
       - 'WEBUI_SECRET_KEY='
+      - "WEBUI_NAME=${WEBUI_NAME-Open WebUI}"
+      - "OFFLINE_MODE=${OFFLINE_MODE-false}"
+      - "RAG_EMBEDDING_MODEL_AUTO_UPDATE=${RAG_EMBEDDING_MODEL_AUTO_UPDATE-false}"
+      - "SUPABASE_URL=${SUPABASE_URL-}"
+      - "SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY-}"
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
