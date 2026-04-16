@@ -2861,7 +2861,13 @@ async def _run_background_tasks(ctx):
     try:
         await background_tasks_handler(bg_ctx)
     except Exception as e:
-        log.debug(f'background_tasks_handler error: {e}')
+        meta = ctx.get('metadata') or {}
+        log.warning(
+            'background_tasks_handler failed (chat_id=%s message_id=%s): %s',
+            meta.get('chat_id'),
+            meta.get('message_id'),
+            e,
+        )
 
 
 async def background_tasks_handler(ctx):
@@ -3088,7 +3094,7 @@ async def outlet_filter_handler(ctx):
     chat_id = metadata.get('chat_id', '')
     message_id = metadata.get('message_id')
 
-    is_temp_chat = not chat_id or chat_id.startswith('local:') or not message_id
+    is_temp_chat = not chat_id or chat_id.startswith('local:')
 
     try:
         messages_map = None
