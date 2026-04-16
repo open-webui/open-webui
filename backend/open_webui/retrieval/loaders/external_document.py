@@ -10,6 +10,35 @@ from open_webui.utils.headers import include_user_info_headers
 log = logging.getLogger(__name__)
 
 
+def _extract_error_message(value) -> str:
+    if isinstance(value, str):
+        return value
+
+    if isinstance(value, list):
+        parts = []
+        for item in value:
+            message = _extract_error_message(item)
+            if message:
+                parts.append(message)
+        return ' '.join(parts)
+
+    if isinstance(value, dict):
+        for key in ('detail', 'message', 'msg'):
+            if key in value:
+                message = _extract_error_message(value[key])
+                if message:
+                    return message
+
+        parts = []
+        for item in value.values():
+            message = _extract_error_message(item)
+            if message:
+                parts.append(message)
+        return ' '.join(parts)
+
+    return ''
+
+
 class ExternalDocumentLoader(BaseLoader):
     def __init__(
         self,
@@ -87,7 +116,7 @@ class ExternalDocumentLoader(BaseLoader):
                 detail = ''
                 try:
                     error_data = response.json()
-                    detail = error_data.get('detail', '') if isinstance(error_data, dict) else ''
+                    detail = _extract_error_message(error_data)
                 except Exception:
                     detail = response.text or ''
 

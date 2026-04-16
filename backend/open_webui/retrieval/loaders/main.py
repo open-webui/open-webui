@@ -260,10 +260,10 @@ class Loader:
                 docs = loader.load()
             except Exception as exc:
                 log.warning(
-                    'AUTOFALLBACK: External loader failed for %s (%s). Falling back to native loader. Error: %s',
+                    'AUTOFALLBACK: External loader failed for %s (%s). Falling back to native loader. Error type: %s',
                     filename,
                     file_content_type,
-                    exc,
+                    type(exc).__name__,
                 )
                 fallback_loader = self._get_loader(
                     filename,
