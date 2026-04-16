@@ -234,7 +234,26 @@ class Loader:
 
     def load(self, filename: str, file_content_type: str, file_path: str) -> list[Document]:
         loader = self._get_loader(filename, file_content_type, file_path)
-        docs = loader.load()
+
+        if self.engine == 'external':
+            try:
+                docs = loader.load()
+            except Exception as exc:
+                log.warning(
+                    'External loader failed for %s (%s). Falling back to native loader. Error: %s',
+                    filename,
+                    file_content_type,
+                    exc,
+                )
+                fallback_loader = self._get_loader(
+                    filename,
+                    file_content_type,
+                    file_path,
+                    allow_external=False,
+                )
+                docs = fallback_loader.load()
+        else:
+            docs = loader.load()
 
         return [Document(page_content=ftfy.fix_text(doc.page_content), metadata=doc.metadata) for doc in docs]
 
@@ -246,10 +265,18 @@ class Loader:
             and not file_content_type.find('html') >= 0
         )
 
-    def _get_loader(self, filename: str, file_content_type: str, file_path: str):
+    def _get_loader(
+        self,
+        filename: str,
+        file_content_type: str,
+        file_path: str,
+        allow_external: bool = True,
+    ):
         file_ext = filename.split('.')[-1].lower()
 
         if (
+            allow_external
+            and
             self.engine == 'external'
             and self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_URL')
             and self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_API_KEY')
