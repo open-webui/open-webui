@@ -5154,15 +5154,19 @@ async def streaming_chat_response_handler(response, ctx):
                     except Exception as e:
                         log.debug(f'Error persisting streamed message in fallback: {e}')
 
-                if fallback_is_persisted:
-                    await _run_background_tasks(ctx)
+                # Skip background tasks and outlet on error to match the
+                # non-streaming path, which never reaches them when content
+                # extraction fails.
+                if accumulated_error is None:
+                    if fallback_is_persisted:
+                        await _run_background_tasks(ctx)
 
-                ctx['assistant_message'] = {
-                    'content': accumulated_content,
-                    'output': output,
-                    **({'usage': normalized_usage} if normalized_usage else {}),
-                }
-                await outlet_filter_handler(ctx)
+                    ctx['assistant_message'] = {
+                        'content': accumulated_content,
+                        'output': output,
+                        **({'usage': normalized_usage} if normalized_usage else {}),
+                    }
+                    await outlet_filter_handler(ctx)
             except Exception as e:
                 log.debug(f'Error running outlet in fallback stream: {e}')
 
