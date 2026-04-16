@@ -695,7 +695,7 @@ class ChatTable:
                 chat = db.query(Chat).filter_by(share_id=id).first()
 
                 if chat:
-                    return self.get_chat_by_id(id)
+                    return self.get_chat_by_id(chat.id)
                 else:
                     return None
         except Exception:

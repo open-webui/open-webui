@@ -109,6 +109,7 @@
 	export let preloadedDataPromise: Promise<any> | null = null;
 
 	let loading = true;
+	let navigateGeneration = 0; // Incremented on each navigation; stale loadChat calls abort before touching state
 
 	const eventTarget = new EventTarget();
 	let controlPane;
@@ -404,6 +405,7 @@
 	});
 
 	const navigateHandler = async () => {
+		const myGeneration = ++navigateGeneration;
 		loading = true;
 		lastPersistedWebSearchEnabled = null;
 
@@ -421,7 +423,7 @@
 			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
 		);
 
-		if (chatIdProp && (await loadChat())) {
+		if (chatIdProp && (await loadChat(myGeneration))) {
 			await tick();
 			loading = false;
 
@@ -1537,7 +1539,7 @@
 		}
 	};
 
-	const loadChat = async () => {
+	const loadChat = async (generation: number = navigateGeneration) => {
 		const currentChatId = chatIdProp || getVisibleChatId();
 
 		if (!currentChatId) {
@@ -1585,6 +1587,11 @@
 			]);
 		}
 
+		// Abort if a newer navigation started while we were fetching
+		if (generation !== navigateGeneration) {
+			return false;
+		}
+
 		chat = _chat;
 
 		if (!chat) {
@@ -1605,8 +1612,6 @@
 		if (!chatContent) {
 			return null;
 		}
-
-		console.log(chatContent);
 
 		selectedModels =
 			(chatContent?.models ?? undefined) !== undefined
