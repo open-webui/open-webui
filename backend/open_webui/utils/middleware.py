@@ -2765,16 +2765,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
 
 async def get_event_emitter_and_caller(metadata):
+    # Requires session_id so API callers without a WS session take the
+    # body-streaming fallback; DB/outlet gated independently downstream.
     event_emitter = None
     event_caller = None
-
-    # Both need session_id — API callers without a WS session fall into
-    # the body-streaming fallback; DB/outlet/webhook are gated independently
-    # downstream (on chat_id / not-local:). See #23740.
     if metadata.get('session_id') and metadata.get('chat_id') and metadata.get('message_id'):
         event_emitter = await get_event_emitter(metadata)
         event_caller = await get_event_call(metadata)
-
     return event_emitter, event_caller
 
 
@@ -2860,8 +2857,6 @@ async def _noop_event_emitter(event_data):
 
 
 async def _run_background_tasks(ctx):
-    # No-op emitter fallback keeps DB-only side effects (title/tags/
-    # follow-ups) running for persisted chats without a WS session.
     bg_ctx = ctx if ctx.get('event_emitter') else {**ctx, 'event_emitter': _noop_event_emitter}
     try:
         await background_tasks_handler(bg_ctx)
@@ -4901,22 +4896,17 @@ async def streaming_chat_response_handler(response, ctx):
         async def stream_wrapper(original_generator, events):
             accumulated_content = ''
             accumulated_usage = None
-            # Terminal snapshot text from non-delta shapes (e.g.
-            # choices[].message.content, response.completed.output).
-            # Used only if no delta-based content was captured.
+            # Snapshot content (choices[].message.content,
+            # response.completed.output). Used only if the delta path
+            # produced nothing, so mixed-shape streams don't double-count.
             terminal_content = ''
             accumulate_buffer = ''
-            # Incremental decoder holds partial multibyte codepoints split
-            # across chunk boundaries instead of dropping them.
             decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
 
             def wrap_item(item):
-                # NDJSON = one raw JSON object per line; SSE = "data: ...\n\n".
                 return f'{item}\n' if is_ndjson else f'data: {item}\n\n'
 
             def _parse_line(line):
-                # Accepts SSE "data: {...}" framing AND raw NDJSON lines
-                # (process_chat_response routes both through this handler).
                 nonlocal accumulated_content, accumulated_usage, terminal_content
                 line = line.strip()
                 if not line:
@@ -4935,27 +4925,23 @@ async def streaming_chat_response_handler(response, ctx):
                     return
                 if not isinstance(chunk, dict):
                     return
-                # OpenAI Chat Completions: choices[].delta.content (streaming)
-                # or choices[].message.content (snapshot/non-delta).
-                choices = chunk.get('choices') or []
-                if isinstance(choices, list):
-                    for choice in choices:
-                        if not isinstance(choice, dict):
-                            continue
-                        delta = choice.get('delta')
-                        if isinstance(delta, dict):
-                            delta_content = delta.get('content')
-                            if isinstance(delta_content, str) and delta_content:
-                                accumulated_content += delta_content
-                        else:
-                            msg = choice.get('message')
-                            if isinstance(msg, dict):
-                                msg_content = msg.get('content')
-                                if isinstance(msg_content, str) and msg_content:
-                                    terminal_content = msg_content
-                # OpenAI Responses-API: top-level delta (str or {text|content})
-                # for streaming, response.completed with response.output[]
-                # .content[].text as the terminal snapshot.
+                # Chat Completions: delta.content (stream) or message.content (snapshot).
+                choices = chunk.get('choices')
+                for choice in choices if isinstance(choices, list) else []:
+                    if not isinstance(choice, dict):
+                        continue
+                    delta = choice.get('delta')
+                    if isinstance(delta, dict):
+                        delta_content = delta.get('content')
+                        if isinstance(delta_content, str) and delta_content:
+                            accumulated_content += delta_content
+                    else:
+                        msg = choice.get('message')
+                        if isinstance(msg, dict):
+                            msg_content = msg.get('content')
+                            if isinstance(msg_content, str) and msg_content:
+                                terminal_content = msg_content
+                # Responses-API: top-level delta (stream) + response.completed (snapshot).
                 delta = chunk.get('delta')
                 if isinstance(delta, str):
                     accumulated_content += delta
@@ -4984,8 +4970,6 @@ async def streaming_chat_response_handler(response, ctx):
                     accumulated_usage = usage
 
             def accumulate(raw_bytes):
-                # Rolling buffer — SSE/NDJSON frames may split across chunks,
-                # as can UTF-8 codepoints (hence the incremental decoder).
                 nonlocal accumulate_buffer
                 if isinstance(raw_bytes, bytes):
                     try:
@@ -5044,10 +5028,6 @@ async def streaming_chat_response_handler(response, ctx):
             # Stream complete — persist final message and fire outlet.
             try:
                 flush_accumulate_buffer()
-
-                # Fall back to terminal-snapshot content only if no
-                # delta-based content was captured, so mixed-shape streams
-                # (deltas + a final snapshot event) don't double-count.
                 if not accumulated_content and terminal_content:
                     accumulated_content = terminal_content
 
