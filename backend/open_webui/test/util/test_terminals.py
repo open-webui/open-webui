@@ -68,6 +68,29 @@ def test_build_terminal_proxy_auth_system_oauth():
     assert cookies == {'oauth': 'cookie'}
 
 
+def test_build_terminal_proxy_auth_session_uses_explicit_session_token():
+    request = _request(
+        headers={'x-session-id': 'session-1'},
+        cookies={'token': 'cookie-token'},
+        token=None,
+    )
+
+    headers, cookies, auth_type = build_terminal_proxy_auth(
+        request,
+        {'auth_type': 'session'},
+        'user-1',
+        session_token='validated-jwt',
+    )
+
+    assert auth_type == 'session'
+    assert headers == {
+        'X-User-Id': 'user-1',
+        'X-Session-Id': 'session-1',
+        'Authorization': 'Bearer validated-jwt',
+    }
+    assert cookies == {'token': 'cookie-token'}
+
+
 def test_build_terminal_ws_url_uses_policy_route_when_configured():
     url = build_terminal_ws_url(
         base_url='https://orchestrator.example.com',

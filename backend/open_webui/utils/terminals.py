@@ -1,7 +1,13 @@
 from urllib.parse import urlencode
 
 
-def build_terminal_proxy_auth(request, connection: dict, user_id: str) -> tuple[dict, dict, str]:
+def build_terminal_proxy_auth(
+    request,
+    connection: dict,
+    user_id: str,
+    *,
+    session_token: str | None = None,
+) -> tuple[dict, dict, str]:
     headers = {'X-User-Id': user_id}
 
     session_id = request.headers.get('x-session-id')
@@ -15,7 +21,7 @@ def build_terminal_proxy_auth(request, connection: dict, user_id: str) -> tuple[
         headers['Authorization'] = f'Bearer {connection.get("key", "")}'
     elif auth_type == 'session':
         cookies = request.cookies
-        token = getattr(getattr(request.state, 'token', None), 'credentials', None)
+        token = session_token or getattr(getattr(request.state, 'token', None), 'credentials', None)
         if token:
             headers['Authorization'] = f'Bearer {token}'
     elif auth_type == 'system_oauth':

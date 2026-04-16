@@ -172,7 +172,7 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
     The client must send ``{"type": "auth", "token": "<jwt>"}`` as its first
     message after connecting.
 
-    Returns ``(user, connection)`` on success, or ``None`` after closing *ws*
+    Returns ``(user, connection, token)`` on success, or ``None`` after closing *ws*
     with an appropriate error code.
     """
     import asyncio
@@ -215,7 +215,7 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
         await ws.close(code=4003, reason='Access denied')
         return None
 
-    return user, connection
+    return user, connection, token
 
 
 @router.websocket('/{server_id}/api/terminals/{session_id}')
@@ -235,7 +235,7 @@ async def ws_terminal(
     result = await _resolve_authenticated_connection(ws, server_id)
     if result is None:
         return
-    user, connection = result
+    user, connection, token = result
 
     base_url = (connection.get('url') or '').rstrip('/')
     if not base_url:
@@ -248,7 +248,12 @@ async def ws_terminal(
         user_id=user.id,
         policy_id=connection.get('policy_id'),
     )
-    headers, cookies, auth_type = build_terminal_proxy_auth(ws, connection, user.id)
+    headers, cookies, auth_type = build_terminal_proxy_auth(
+        ws,
+        connection,
+        user.id,
+        session_token=token,
+    )
 
     session = aiohttp.ClientSession()
     try:
