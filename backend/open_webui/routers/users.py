@@ -384,7 +384,9 @@ async def get_user_info_by_session_user(user=Depends(get_verified_user), db: Asy
 async def update_user_info_by_session_user(
     form_data: dict, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
-    # user already fetched by get_verified_user — no need to refetch
+    # Merges against the auth-time snapshot of user.info. The previous pre-merge
+    # refetch only narrowed (did not eliminate) the lost-update window on concurrent
+    # same-user writes; real safety needs row locking or a version column.
     existing_info = user.info or {}
     updated = await Users.update_user_by_id(user.id, {'info': {**existing_info, **form_data}}, db=db)
     if updated:
