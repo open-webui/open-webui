@@ -47,6 +47,7 @@ class ExternalDocumentLoader(BaseLoader):
         api_key: str,
         mime_type=None,
         user=None,
+        timeout=30,
         **kwargs,
     ) -> None:
         self.url = url
@@ -54,6 +55,11 @@ class ExternalDocumentLoader(BaseLoader):
 
         self.file_path = file_path
         self.mime_type = mime_type
+        try:
+            timeout_value = int(timeout)
+            self.timeout = timeout_value if timeout_value > 0 else 30
+        except (TypeError, ValueError):
+            self.timeout = 30
 
         self.user = user
 
@@ -81,7 +87,10 @@ class ExternalDocumentLoader(BaseLoader):
             url = url[:-1]
 
         try:
-            response = requests.put(f'{url}/process', data=data, headers=headers)
+            response = requests.put(f'{url}/process', data=data, headers=headers, timeout=self.timeout)
+        except requests.Timeout as e:
+            log.error(f'External document loader timed out after {self.timeout}s: {e}')
+            raise Exception(f'Error connecting to endpoint: timed out after {self.timeout}s')
         except Exception as e:
             log.error(f'Error connecting to endpoint: {e}')
             raise Exception(f'Error connecting to endpoint: {e}')
@@ -112,8 +121,8 @@ class ExternalDocumentLoader(BaseLoader):
             else:
                 raise Exception('Error loading document: No content returned')
         else:
+            detail = ''
             if response.status_code == 422:
-                detail = ''
                 try:
                     error_data = response.json()
                     detail = _extract_error_message(error_data)
@@ -126,4 +135,18 @@ class ExternalDocumentLoader(BaseLoader):
                         self.file_path,
                     )
 
-            raise Exception(f'Error loading document: {response.status_code} {response.text}')
+            if not detail:
+                try:
+                    error_data = response.json()
+                    detail = _extract_error_message(error_data)
+                except Exception:
+                    detail = response.text or response.reason or ''
+
+            safe_detail = ' '.join(detail.split())
+            if len(safe_detail) > 500:
+                safe_detail = f'{safe_detail[:500]}...'
+
+            if safe_detail:
+                raise Exception(f'Error loading document: {response.status_code} {safe_detail}')
+
+            raise Exception(f'Error loading document: {response.status_code}')

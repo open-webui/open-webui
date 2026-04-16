@@ -242,6 +242,13 @@ class Loader:
             self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_API_KEY')
         )
 
+    @staticmethod
+    def _sanitize_error_message(error: Exception, max_length: int = 300) -> str:
+        message = ' '.join(str(error).split())
+        if len(message) > max_length:
+            return f'{message[:max_length]}...'
+        return message
+
     def load(self, filename: str, file_content_type: str, file_path: str) -> list[Document]:
         is_external = self.engine == 'external'
         has_external_config = self._has_external_config()
@@ -259,14 +266,15 @@ class Loader:
             try:
                 docs = loader.load()
             except Exception as exc:
+                safe_error = self._sanitize_error_message(exc)
                 log.warning(
                     'AUTOFALLBACK: External loader failed for %s (%s). Falling back to native loader. Error type: %s. Error: %s',
                     filename,
                     file_content_type,
                     type(exc).__name__,
-                    exc,
-                    exc_info=True,
+                    safe_error,
                 )
+                log.debug('AUTOFALLBACK: External loader failure traceback for %s', filename, exc_info=True)
                 fallback_loader = self._get_loader(
                     filename,
                     file_content_type,
@@ -320,6 +328,7 @@ class Loader:
                 api_key=self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_API_KEY').strip(),
                 mime_type=file_content_type,
                 user=self.user,
+                timeout=self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_TIMEOUT', 30),
             )
         elif self.engine == 'tika' and self.kwargs.get('TIKA_SERVER_URL'):
             if self._is_text_file(file_ext, file_content_type):
