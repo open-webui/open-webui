@@ -4955,7 +4955,13 @@ async def streaming_chat_response_handler(response, ctx):
                     return
                 try:
                     chunk = json.loads(payload)
-                except Exception:
+                except Exception as e:
+                    log.debug(
+                        'fallback stream parse error (%s, payload=%r): %s',
+                        'NDJSON' if is_ndjson else 'SSE',
+                        payload[:120],
+                        e,
+                    )
                     return
                 if not isinstance(chunk, dict):
                     return
