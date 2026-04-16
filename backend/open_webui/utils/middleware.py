@@ -2867,6 +2867,26 @@ async def get_system_oauth_token(request, user):
     return oauth_token
 
 
+async def _noop_event_emitter(event_data):
+    """No-op emitter used to keep background_tasks_handler's DB-only side
+    effects (auto-title, auto-tags, follow-ups persistence) working for
+    persisted chats whose caller has no WebSocket session."""
+    return None
+
+
+async def _run_background_tasks(ctx):
+    """Run background_tasks_handler with a no-op event_emitter fallback,
+    wrapped so a failure cannot prevent outlet_filter_handler from running."""
+    if ctx.get('event_emitter'):
+        bg_ctx = ctx
+    else:
+        bg_ctx = {**ctx, 'event_emitter': _noop_event_emitter}
+    try:
+        await background_tasks_handler(bg_ctx)
+    except Exception as e:
+        log.debug(f'background_tasks_handler error: {e}')
+
+
 async def background_tasks_handler(ctx):
     request = ctx['request']
     form_data = ctx['form_data']
@@ -3334,14 +3354,11 @@ async def non_streaming_chat_response_handler(response, ctx):
                                 },
                             )
 
-                # background_tasks_handler assumes persisted-chat metadata
-                # and a working event_emitter for follow-ups / title / tags
-                # generation; isolate failures so outlet still runs.
-                if is_persisted_chat and event_emitter:
-                    try:
-                        await background_tasks_handler(ctx)
-                    except Exception as e:
-                        log.debug(f'background_tasks_handler error: {e}')
+                # Run follow-ups / auto-title / auto-tags for persisted
+                # chats; uses a no-op emitter fallback when there's no
+                # WebSocket session, so DB side-effects still land.
+                if is_persisted_chat:
+                    await _run_background_tasks(ctx)
 
                 ctx['assistant_message'] = {
                     'content': content,
@@ -4914,11 +4931,18 @@ async def streaming_chat_response_handler(response, ctx):
             def _parse_line(line):
                 nonlocal accumulated_content, accumulated_usage
                 line = line.strip()
-                # Accept "data: {...}" and "data:{...}" (SSE spec allows both).
-                if not line.startswith('data:'):
+                if not line:
                     return
-                payload = line[5:].lstrip()
-                if not payload or payload == '[DONE]':
+                # Accept SSE framing ("data: {...}" / "data:{...}") AND
+                # raw NDJSON lines (application/x-ndjson is routed through
+                # this same handler by process_chat_response).
+                if line.startswith('data:'):
+                    payload = line[5:].lstrip()
+                    if not payload or payload == '[DONE]':
+                        return
+                elif line.startswith('{') or line.startswith('['):
+                    payload = line
+                else:
                     return
                 try:
                     chunk = json.loads(payload)
@@ -5018,6 +5042,15 @@ async def streaming_chat_response_handler(response, ctx):
                     else []
                 )
 
+                # Normalize usage for schema parity with the main / non-
+                # streaming paths (both call normalize_usage before
+                # persisting / emitting).
+                normalized_usage = (
+                    normalize_usage(accumulated_usage)
+                    if isinstance(accumulated_usage, dict)
+                    else None
+                )
+
                 # Persist the final assistant message for persisted chats.
                 # Backend callers that provide chat_id + message_id but no
                 # session take this fallback path; without this write, outlet
@@ -5032,11 +5065,12 @@ async def streaming_chat_response_handler(response, ctx):
                 # needs to be marked done so the placeholder doesn't linger.
                 fallback_chat_id = metadata.get('chat_id')
                 fallback_message_id = metadata.get('message_id')
-                if (
-                    fallback_chat_id
-                    and fallback_message_id
+                fallback_is_persisted = (
+                    bool(fallback_chat_id)
+                    and bool(fallback_message_id)
                     and not fallback_chat_id.startswith('local:')
-                ):
+                )
+                if fallback_is_persisted:
                     try:
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             fallback_chat_id,
@@ -5046,16 +5080,22 @@ async def streaming_chat_response_handler(response, ctx):
                                 'role': 'assistant',
                                 'content': accumulated_content,
                                 'output': output,
-                                **({'usage': accumulated_usage} if accumulated_usage else {}),
+                                **({'usage': normalized_usage} if normalized_usage else {}),
                             },
                         )
                     except Exception as e:
                         log.debug(f'Error persisting streamed message in fallback: {e}')
 
+                    # Mirror the non-streaming path: run follow-ups /
+                    # auto-title / auto-tags for persisted chats even
+                    # without a WebSocket session. Uses a no-op emitter
+                    # so DB side-effects still land.
+                    await _run_background_tasks(ctx)
+
                 ctx['assistant_message'] = {
                     'content': accumulated_content,
                     'output': output,
-                    **({'usage': accumulated_usage} if accumulated_usage else {}),
+                    **({'usage': normalized_usage} if normalized_usage else {}),
                 }
                 await outlet_filter_handler(ctx)
             except Exception as e:
