@@ -3336,7 +3336,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                                 },
                             )
 
-                if is_persisted_chat:
+                if metadata.get('chat_id'):
                     await _run_background_tasks(ctx)
 
                 ctx['assistant_message'] = {
@@ -4901,6 +4901,10 @@ async def streaming_chat_response_handler(response, ctx):
         async def stream_wrapper(original_generator, events):
             accumulated_content = ''
             accumulated_usage = None
+            # Terminal snapshot text from non-delta shapes (e.g.
+            # choices[].message.content, response.completed.output).
+            # Used only if no delta-based content was captured.
+            terminal_content = ''
             accumulate_buffer = ''
             # Incremental decoder holds partial multibyte codepoints split
             # across chunk boundaries instead of dropping them.
@@ -4913,7 +4917,7 @@ async def streaming_chat_response_handler(response, ctx):
             def _parse_line(line):
                 # Accepts SSE "data: {...}" framing AND raw NDJSON lines
                 # (process_chat_response routes both through this handler).
-                nonlocal accumulated_content, accumulated_usage
+                nonlocal accumulated_content, accumulated_usage, terminal_content
                 line = line.strip()
                 if not line:
                     return
@@ -4931,19 +4935,27 @@ async def streaming_chat_response_handler(response, ctx):
                     return
                 if not isinstance(chunk, dict):
                     return
-                # OpenAI Chat Completions: choices[].delta.content
+                # OpenAI Chat Completions: choices[].delta.content (streaming)
+                # or choices[].message.content (snapshot/non-delta).
                 choices = chunk.get('choices') or []
                 if isinstance(choices, list):
                     for choice in choices:
                         if not isinstance(choice, dict):
                             continue
                         delta = choice.get('delta')
-                        if not isinstance(delta, dict):
-                            continue
-                        delta_content = delta.get('content')
-                        if isinstance(delta_content, str) and delta_content:
-                            accumulated_content += delta_content
-                # OpenAI Responses-API: top-level delta (str or {text|content}).
+                        if isinstance(delta, dict):
+                            delta_content = delta.get('content')
+                            if isinstance(delta_content, str) and delta_content:
+                                accumulated_content += delta_content
+                        else:
+                            msg = choice.get('message')
+                            if isinstance(msg, dict):
+                                msg_content = msg.get('content')
+                                if isinstance(msg_content, str) and msg_content:
+                                    terminal_content = msg_content
+                # OpenAI Responses-API: top-level delta (str or {text|content})
+                # for streaming, response.completed with response.output[]
+                # .content[].text as the terminal snapshot.
                 delta = chunk.get('delta')
                 if isinstance(delta, str):
                     accumulated_content += delta
@@ -4951,6 +4963,22 @@ async def streaming_chat_response_handler(response, ctx):
                     text = delta.get('text') or delta.get('content')
                     if isinstance(text, str):
                         accumulated_content += text
+                if chunk.get('type') == 'response.completed':
+                    resp = chunk.get('response')
+                    if isinstance(resp, dict):
+                        parts = []
+                        for item in resp.get('output') or []:
+                            if not isinstance(item, dict):
+                                continue
+                            for block in item.get('content') or []:
+                                if isinstance(block, dict):
+                                    text = block.get('text')
+                                    if isinstance(text, str):
+                                        parts.append(text)
+                        if parts:
+                            terminal_content = ''.join(parts)
+                        if isinstance(resp.get('usage'), dict):
+                            accumulated_usage = resp['usage']
                 usage = chunk.get('usage')
                 if isinstance(usage, dict):
                     accumulated_usage = usage
@@ -5017,6 +5045,12 @@ async def streaming_chat_response_handler(response, ctx):
             try:
                 flush_accumulate_buffer()
 
+                # Fall back to terminal-snapshot content only if no
+                # delta-based content was captured, so mixed-shape streams
+                # (deltas + a final snapshot event) don't double-count.
+                if not accumulated_content and terminal_content:
+                    accumulated_content = terminal_content
+
                 output = (
                     [
                         {
@@ -5058,6 +5092,7 @@ async def streaming_chat_response_handler(response, ctx):
                     except Exception as e:
                         log.debug(f'Error persisting streamed message in fallback: {e}')
 
+                if fallback_chat_id:
                     await _run_background_tasks(ctx)
 
                 ctx['assistant_message'] = {
