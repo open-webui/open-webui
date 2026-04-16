@@ -123,7 +123,7 @@ class OAuthSessionTable:
                         'user_id': user_id,
                         'provider': provider,
                         'token': self._encrypt_token(token),
-                        'expires_at': token.get('expires_at'),
+                        'expires_at': token.get('expires_at') or int(time.time() + 3600),
                         'created_at': current_time,
                         'updated_at': current_time,
                     }
@@ -151,7 +151,9 @@ class OAuthSessionTable:
             log.error(f'Error creating OAuth session: {e}')
             return None
 
-    async def get_session_by_id(self, session_id: str, db: Optional[AsyncSession] = None) -> Optional[OAuthSessionModel]:
+    async def get_session_by_id(
+        self, session_id: str, db: Optional[AsyncSession] = None
+    ) -> Optional[OAuthSessionModel]:
         """Get OAuth session by ID"""
         try:
             async with get_async_db_context(db) as db:
@@ -235,15 +237,17 @@ class OAuthSessionTable:
                 results = []
                 for session in sessions:
                     try:
-                        results.append(OAuthSessionModel(
-                            id=session.id,
-                            user_id=session.user_id,
-                            provider=session.provider,
-                            token=self._decrypt_token(session.token),
-                            expires_at=session.expires_at,
-                            created_at=session.created_at,
-                            updated_at=session.updated_at,
-                        ))
+                        results.append(
+                            OAuthSessionModel(
+                                id=session.id,
+                                user_id=session.user_id,
+                                provider=session.provider,
+                                token=self._decrypt_token(session.token),
+                                expires_at=session.expires_at,
+                                created_at=session.created_at,
+                                updated_at=session.updated_at,
+                            )
+                        )
                     except Exception as e:
                         log.warning(
                             f'Skipping OAuth session {session.id} due to decryption failure, deleting corrupted session: {type(e).__name__}: {e}'
@@ -266,9 +270,11 @@ class OAuthSessionTable:
                 current_time = int(time.time())
 
                 await db.execute(
-                    update(OAuthSession).filter_by(id=session_id).values(
+                    update(OAuthSession)
+                    .filter_by(id=session_id)
+                    .values(
                         token=self._encrypt_token(token),
-                        expires_at=token.get('expires_at'),
+                        expires_at=token.get('expires_at') or int(time.time() + 3600),
                         updated_at=current_time,
                     )
                 )

@@ -62,7 +62,9 @@ async def get_model_analytics(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get message counts per model."""
-    counts = await ChatMessages.get_message_count_by_model(start_date=start_date, end_date=end_date, group_id=group_id, db=db)
+    counts = await ChatMessages.get_message_count_by_model(
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
+    )
     models = [
         ModelAnalyticsEntry(model_id=model_id, count=count)
         for model_id, count in sorted(counts.items(), key=lambda x: -x[1])
@@ -80,7 +82,9 @@ async def get_user_analytics(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get message counts and token usage per user with user info."""
-    counts = await ChatMessages.get_message_count_by_user(start_date=start_date, end_date=end_date, group_id=group_id, db=db)
+    counts = await ChatMessages.get_message_count_by_user(
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
+    )
     token_usage = await ChatMessages.get_token_usage_by_user(
         start_date=start_date, end_date=end_date, group_id=group_id, db=db
     )
@@ -227,7 +231,9 @@ async def get_token_usage(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get token usage aggregated by model."""
-    usage = await ChatMessages.get_token_usage_by_model(start_date=start_date, end_date=end_date, group_id=group_id, db=db)
+    usage = await ChatMessages.get_token_usage_by_model(
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
+    )
 
     models = [
         TokenUsageEntry(model_id=model_id, **data)

@@ -728,7 +728,8 @@
 
 			// Apply theme classes (mirrors logic from chat/Settings/General.svelte)
 			const themes = ['dark', 'light', 'oled-dark'];
-			let themeToApply = newTheme === 'oled-dark' ? 'dark' : newTheme === 'her' ? 'light' : newTheme;
+			let themeToApply =
+				newTheme === 'oled-dark' ? 'dark' : newTheme === 'her' ? 'light' : newTheme;
 			if (newTheme === 'system') {
 				themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 			}
@@ -988,13 +989,15 @@
 							console.error('Error refreshing backend config:', error);
 						}
 
-					// Relay auth token to desktop app for API access
-					if (window.electronAPI?.send) {
-						window.electronAPI.send({
-							type: 'token:update',
-							token: localStorage.token
-						}).catch(() => {});
-					}
+						// Relay auth token to desktop app for API access
+						if (window.electronAPI?.send) {
+							window.electronAPI
+								.send({
+									type: 'token:update',
+									token: localStorage.token
+								})
+								.catch(() => {});
+						}
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');

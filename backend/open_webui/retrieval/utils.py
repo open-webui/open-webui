@@ -20,6 +20,7 @@ from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 
 from open_webui.config import VECTOR_DB
+from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
 
@@ -121,7 +122,7 @@ class VectorSearchRetriever(BaseRetriever):
         run_manager: CallbackManagerForRetrieverRun,
     ) -> list[Document]:
         embedding = await self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
-        result = VECTOR_DB_CLIENT.search(
+        result = await ASYNC_VECTOR_DB_CLIENT.search(
             collection_name=self.collection_name,
             vectors=[embedding],
             limit=self.top_k,
@@ -488,16 +489,24 @@ async def query_collection_with_hybrid_search(
 ) -> dict:
     results = []
     error = False
-    # Fetch collection data once per collection sequentially
-    # Avoid fetching the same data multiple times later
-    collection_results = {}
-    for collection_name in collection_names:
+    # Fetch every collection's contents once up front so the
+    # per-query/per-document loop below can reuse them. Each fetch
+    # offloads to a worker thread, so run them concurrently with
+    # `asyncio.gather` instead of awaiting them serially — otherwise
+    # latency scales linearly with `len(collection_names)`.
+    log.debug(
+        'query_collection_with_hybrid_search: prefetching %d collections',
+        len(collection_names),
+    )
+
+    async def _fetch_collection(name: str):
         try:
-            log.debug(f'query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:collection {collection_name}')
-            collection_results[collection_name] = VECTOR_DB_CLIENT.get(collection_name=collection_name)
+            return name, await ASYNC_VECTOR_DB_CLIENT.get(collection_name=name)
         except Exception as e:
-            log.exception(f'Failed to fetch collection {collection_name}: {e}')
-            collection_results[collection_name] = None
+            log.exception(f'Failed to fetch collection {name}: {e}')
+            return name, None
+
+    collection_results = dict(await asyncio.gather(*(_fetch_collection(name) for name in collection_names)))
 
     log.info(f'Starting hybrid search for {len(queries)} queries in {len(collection_names)} collections...')
 
@@ -1140,7 +1149,9 @@ async def get_sources_from_items(
 
             try:
                 if full_context:
-                    query_result = get_all_items_from_collections(collection_names)
+                    # Sync helper makes blocking VECTOR_DB_CLIENT calls;
+                    # offload so the async caller's event loop stays free.
+                    query_result = await asyncio.to_thread(get_all_items_from_collections, collection_names)
                 else:
                     query_result = await query_collection(
                         request,

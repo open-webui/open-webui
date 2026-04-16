@@ -272,13 +272,10 @@ class ChatMessageTable:
         """Get distinct chat_ids that used a specific model."""
 
         async with get_async_db_context(db) as db:
-            stmt = (
-                select(
-                    ChatMessage.chat_id,
-                    func.max(ChatMessage.created_at).label('last_message_at'),
-                )
-                .filter(ChatMessage.model_id == model_id)
-            )
+            stmt = select(
+                ChatMessage.chat_id,
+                func.max(ChatMessage.created_at).label('last_message_at'),
+            ).filter(ChatMessage.model_id == model_id)
             if start_date:
                 stmt = stmt.filter(ChatMessage.created_at >= start_date)
             if end_date:
@@ -313,13 +310,10 @@ class ChatMessageTable:
         async with get_async_db_context(db) as db:
             from open_webui.models.groups import GroupMember
 
-            stmt = (
-                select(ChatMessage.model_id, func.count(ChatMessage.id).label('count'))
-                .filter(
-                    ChatMessage.role == 'assistant',
-                    ChatMessage.model_id.isnot(None),
-                    ~ChatMessage.user_id.like('shared-%'),
-                )
+            stmt = select(ChatMessage.model_id, func.count(ChatMessage.id).label('count')).filter(
+                ChatMessage.role == 'assistant',
+                ChatMessage.model_id.isnot(None),
+                ~ChatMessage.user_id.like('shared-%'),
             )
 
             if start_date:
@@ -365,19 +359,16 @@ class ChatMessageTable:
             else:
                 raise NotImplementedError(f'Unsupported dialect: {dialect}')
 
-            stmt = (
-                select(
-                    ChatMessage.model_id,
-                    func.coalesce(func.sum(input_tokens), 0).label('input_tokens'),
-                    func.coalesce(func.sum(output_tokens), 0).label('output_tokens'),
-                    func.count(ChatMessage.id).label('message_count'),
-                )
-                .filter(
-                    ChatMessage.role == 'assistant',
-                    ChatMessage.model_id.isnot(None),
-                    ChatMessage.usage.isnot(None),
-                    ~ChatMessage.user_id.like('shared-%'),
-                )
+            stmt = select(
+                ChatMessage.model_id,
+                func.coalesce(func.sum(input_tokens), 0).label('input_tokens'),
+                func.coalesce(func.sum(output_tokens), 0).label('output_tokens'),
+                func.count(ChatMessage.id).label('message_count'),
+            ).filter(
+                ChatMessage.role == 'assistant',
+                ChatMessage.model_id.isnot(None),
+                ChatMessage.usage.isnot(None),
+                ~ChatMessage.user_id.like('shared-%'),
             )
 
             if start_date:
@@ -430,19 +421,16 @@ class ChatMessageTable:
             else:
                 raise NotImplementedError(f'Unsupported dialect: {dialect}')
 
-            stmt = (
-                select(
-                    ChatMessage.user_id,
-                    func.coalesce(func.sum(input_tokens), 0).label('input_tokens'),
-                    func.coalesce(func.sum(output_tokens), 0).label('output_tokens'),
-                    func.count(ChatMessage.id).label('message_count'),
-                )
-                .filter(
-                    ChatMessage.role == 'assistant',
-                    ChatMessage.user_id.isnot(None),
-                    ChatMessage.usage.isnot(None),
-                    ~ChatMessage.user_id.like('shared-%'),
-                )
+            stmt = select(
+                ChatMessage.user_id,
+                func.coalesce(func.sum(input_tokens), 0).label('input_tokens'),
+                func.coalesce(func.sum(output_tokens), 0).label('output_tokens'),
+                func.count(ChatMessage.id).label('message_count'),
+            ).filter(
+                ChatMessage.role == 'assistant',
+                ChatMessage.user_id.isnot(None),
+                ChatMessage.usage.isnot(None),
+                ~ChatMessage.user_id.like('shared-%'),
             )
 
             if start_date:
@@ -476,9 +464,8 @@ class ChatMessageTable:
         async with get_async_db_context(db) as db:
             from open_webui.models.groups import GroupMember
 
-            stmt = (
-                select(ChatMessage.user_id, func.count(ChatMessage.id).label('count'))
-                .filter(~ChatMessage.user_id.like('shared-%'))
+            stmt = select(ChatMessage.user_id, func.count(ChatMessage.id).label('count')).filter(
+                ~ChatMessage.user_id.like('shared-%')
             )
 
             if start_date:
@@ -503,9 +490,8 @@ class ChatMessageTable:
         async with get_async_db_context(db) as db:
             from open_webui.models.groups import GroupMember
 
-            stmt = (
-                select(ChatMessage.chat_id, func.count(ChatMessage.id).label('count'))
-                .filter(~ChatMessage.user_id.like('shared-%'))
+            stmt = select(ChatMessage.chat_id, func.count(ChatMessage.id).label('count')).filter(
+                ~ChatMessage.user_id.like('shared-%')
             )
 
             if start_date:
@@ -532,13 +518,10 @@ class ChatMessageTable:
             from datetime import datetime, timedelta
             from open_webui.models.groups import GroupMember
 
-            stmt = (
-                select(ChatMessage.created_at, ChatMessage.model_id)
-                .filter(
-                    ChatMessage.role == 'assistant',
-                    ChatMessage.model_id.isnot(None),
-                    ~ChatMessage.user_id.like('shared-%'),
-                )
+            stmt = select(ChatMessage.created_at, ChatMessage.model_id).filter(
+                ChatMessage.role == 'assistant',
+                ChatMessage.model_id.isnot(None),
+                ~ChatMessage.user_id.like('shared-%'),
             )
 
             if start_date:
@@ -582,13 +565,10 @@ class ChatMessageTable:
         async with get_async_db_context(db) as db:
             from datetime import datetime, timedelta
 
-            stmt = (
-                select(ChatMessage.created_at, ChatMessage.model_id)
-                .filter(
-                    ChatMessage.role == 'assistant',
-                    ChatMessage.model_id.isnot(None),
-                    ~ChatMessage.user_id.like('shared-%'),
-                )
+            stmt = select(ChatMessage.created_at, ChatMessage.model_id).filter(
+                ChatMessage.role == 'assistant',
+                ChatMessage.model_id.isnot(None),
+                ~ChatMessage.user_id.like('shared-%'),
             )
 
             if start_date:

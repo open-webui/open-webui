@@ -51,6 +51,7 @@ from open_webui.env import (
     ENABLE_FORWARD_USER_INFO_HEADERS,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     FORWARD_SESSION_INFO_HEADER_MESSAGE_ID,
+    REDIS_KEY_PREFIX,
 )
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.tools.builtin import (
@@ -85,7 +86,8 @@ from open_webui.tools.builtin import (
     view_file,
     view_knowledge_file,
     view_skill,
-    tasks,
+    create_tasks,
+    update_task,
     create_automation,
     update_automation,
     list_automations,
@@ -101,7 +103,9 @@ log = logging.getLogger(__name__)
 
 # Let no function be called without need, and let what
 # it yields justify the cost of running it.
-async def get_async_tool_function_and_apply_extra_params(function: Callable, extra_params: dict) -> Callable[..., Awaitable]:
+async def get_async_tool_function_and_apply_extra_params(
+    function: Callable, extra_params: dict
+) -> Callable[..., Awaitable]:
     sig = inspect.signature(function)
     extra_params = {k: v for k, v in extra_params.items() if k in sig.parameters}
     partial_func = partial(function, **extra_params)
@@ -540,11 +544,13 @@ async def get_builtin_tools(
 
     # Task management - break down complex work into trackable steps
     if is_builtin_tool_enabled('tasks'):
-        builtin_functions.append(tasks)
+        builtin_functions.extend([create_tasks, update_task])
 
     # Automation tools - create and manage scheduled automations from chat
     if is_builtin_tool_enabled('automations') and await has_user_permission('automations'):
-        builtin_functions.extend([create_automation, update_automation, list_automations, toggle_automation, delete_automation])
+        builtin_functions.extend(
+            [create_automation, update_automation, list_automations, toggle_automation, delete_automation]
+        )
 
     for func in builtin_functions:
         callable = await get_async_tool_function_and_apply_extra_params(
@@ -806,7 +812,7 @@ def convert_openapi_to_tool_payload(openapi_spec):
                     if not description:
                         description = param.get('description') or ''
                     if param_schema.get('enum') and isinstance(param_schema.get('enum'), list):
-                        description += f'. Possible values: {", ".join(param_schema.get("enum"))}'
+                        description += f'. Possible values: {", ".join(str(v) for v in param_schema.get("enum"))}'
                     param_property = {
                         'type': param_schema.get('type') or 'string',
                         'description': description,
@@ -849,7 +855,9 @@ async def set_tool_servers(request: Request):
     request.app.state.TOOL_SERVERS = await get_tool_servers_data(request.app.state.config.TOOL_SERVER_CONNECTIONS)
 
     if request.app.state.redis is not None:
-        await request.app.state.redis.set('tool_servers', json.dumps(request.app.state.TOOL_SERVERS))
+        await request.app.state.redis.set(
+            f'{REDIS_KEY_PREFIX}:tool_servers', json.dumps(request.app.state.TOOL_SERVERS)
+        )
 
     return request.app.state.TOOL_SERVERS
 
@@ -858,7 +866,7 @@ async def get_tool_servers(request: Request):
     tool_servers = []
     if request.app.state.redis is not None:
         try:
-            tool_servers = json.loads(await request.app.state.redis.get('tool_servers'))
+            tool_servers = json.loads(await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:tool_servers'))
             request.app.state.TOOL_SERVERS = tool_servers
         except Exception as e:
             log.error(f'Error fetching tool_servers from Redis: {e}')
@@ -984,7 +992,9 @@ async def set_terminal_servers(request: Request):
     )
 
     if request.app.state.redis is not None:
-        await request.app.state.redis.set('terminal_servers', json.dumps(request.app.state.TERMINAL_SERVERS))
+        await request.app.state.redis.set(
+            f'{REDIS_KEY_PREFIX}:terminal_servers', json.dumps(request.app.state.TERMINAL_SERVERS)
+        )
 
     return request.app.state.TERMINAL_SERVERS
 
@@ -994,7 +1004,7 @@ async def get_terminal_servers(request: Request):
     terminal_servers = []
     if request.app.state.redis is not None:
         try:
-            terminal_servers = json.loads(await request.app.state.redis.get('terminal_servers'))
+            terminal_servers = json.loads(await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:terminal_servers'))
             request.app.state.TERMINAL_SERVERS = terminal_servers
         except Exception as e:
             log.error(f'Error fetching terminal_servers from Redis: {e}')

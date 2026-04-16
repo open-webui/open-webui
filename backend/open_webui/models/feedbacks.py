@@ -251,9 +251,7 @@ class FeedbackTable:
                 stmt = stmt.order_by(Feedback.created_at.desc())
 
             # Count BEFORE pagination
-            count_result = await db.execute(
-                select(func.count()).select_from(stmt.subquery())
-            )
+            count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
             total = count_result.scalar()
 
             if skip:
@@ -280,8 +278,9 @@ class FeedbackTable:
     async def get_all_feedback_ids(self, db: Optional[AsyncSession] = None) -> list[FeedbackIdResponse]:
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(Feedback.id, Feedback.user_id, Feedback.created_at, Feedback.updated_at)
-                .order_by(Feedback.updated_at.desc())
+                select(Feedback.id, Feedback.user_id, Feedback.created_at, Feedback.updated_at).order_by(
+                    Feedback.updated_at.desc()
+                )
             )
             return [
                 FeedbackIdResponse(
@@ -378,16 +377,12 @@ class FeedbackTable:
 
     async def get_feedbacks_by_type(self, type: str, db: Optional[AsyncSession] = None) -> list[FeedbackModel]:
         async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(Feedback).filter_by(type=type).order_by(Feedback.updated_at.desc())
-            )
+            result = await db.execute(select(Feedback).filter_by(type=type).order_by(Feedback.updated_at.desc()))
             return [FeedbackModel.model_validate(feedback) for feedback in result.scalars().all()]
 
     async def get_feedbacks_by_user_id(self, user_id: str, db: Optional[AsyncSession] = None) -> list[FeedbackModel]:
         async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(Feedback).filter_by(user_id=user_id).order_by(Feedback.updated_at.desc())
-            )
+            result = await db.execute(select(Feedback).filter_by(user_id=user_id).order_by(Feedback.updated_at.desc()))
             return [FeedbackModel.model_validate(feedback) for feedback in result.scalars().all()]
 
     async def update_feedback_by_id(

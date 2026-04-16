@@ -285,7 +285,7 @@ async def load_tool_from_url(request: Request, form_data: LoadUrlForm, user=Depe
             'content': data,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f'Error importing tool: {e}')
+        raise HTTPException(status_code=500, detail=ERROR_MESSAGES.DEFAULT(e))
 
 
 ############################
@@ -622,7 +622,9 @@ async def delete_tools_by_id(
 
 
 @router.get('/id/{id}/valves', response_model=Optional[dict])
-async def get_tools_valves_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_tools_valves_by_id(
+    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     tools = await Tools.get_tool_by_id(id, db=db)
     if not tools:
         raise HTTPException(
@@ -775,7 +777,9 @@ async def update_tools_valves_by_id(
 
 
 @router.get('/id/{id}/valves/user', response_model=Optional[dict])
-async def get_tools_user_valves_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_tools_user_valves_by_id(
+    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     tools = await Tools.get_tool_by_id(id, db=db)
     if not tools:
         raise HTTPException(

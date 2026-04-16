@@ -74,14 +74,14 @@ class FolderForm(BaseModel):
     data: Optional[dict] = None
     meta: Optional[dict] = None
     parent_id: Optional[str] = None
-    model_config = ConfigDict(extra='allow')
+    model_config = ConfigDict(extra='forbid')
 
 
 class FolderUpdateForm(BaseModel):
     name: Optional[str] = None
     data: Optional[dict] = None
     meta: Optional[dict] = None
-    model_config = ConfigDict(extra='allow')
+    model_config = ConfigDict(extra='forbid')
 
 
 class FolderTable:
@@ -171,9 +171,7 @@ class FolderTable:
             async with get_async_db_context(db) as db:
                 # Check if folder exists
                 result = await db.execute(
-                    select(Folder)
-                    .filter_by(parent_id=parent_id, user_id=user_id)
-                    .filter(Folder.name.ilike(name))
+                    select(Folder).filter_by(parent_id=parent_id, user_id=user_id).filter(Folder.name.ilike(name))
                 )
                 folder = result.scalars().first()
 
@@ -235,8 +233,7 @@ class FolderTable:
                 form_data = form_data.model_dump(exclude_unset=True)
 
                 existing_result = await db.execute(
-                    select(Folder)
-                    .filter_by(
+                    select(Folder).filter_by(
                         name=form_data.get('name'),
                         parent_id=folder.parent_id,
                         user_id=user_id,
@@ -289,7 +286,9 @@ class FolderTable:
             log.error(f'update_folder: {e}')
             return
 
-    async def delete_folder_by_id_and_user_id(self, id: str, user_id: str, db: Optional[AsyncSession] = None) -> list[str]:
+    async def delete_folder_by_id_and_user_id(
+        self, id: str, user_id: str, db: Optional[AsyncSession] = None
+    ) -> list[str]:
         try:
             folder_ids = []
             async with get_async_db_context(db) as db:

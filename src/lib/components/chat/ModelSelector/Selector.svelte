@@ -450,6 +450,7 @@
 		});
 
 		if (res) {
+			// $i18n.t('Model {{modelId}} not found')
 			toast.success(
 				$i18n.t('Model {{modelName}} deleted successfully', { modelName: model.name ?? model.id })
 			);

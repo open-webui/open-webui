@@ -905,9 +905,17 @@ async def cleanup_response(
     session: Optional[aiohttp.ClientSession],
 ):
     if response:
-        response.close()
+        if not response.closed:
+            # aiohttp 3.9+ made ClientResponse.close() synchronous (returns None).
+            # Older versions returned a coroutine.  Handle both gracefully.
+            result = response.close()
+            if result is not None:
+                await result
     if session:
-        await session.close()
+        if not session.closed:
+            result = session.close()
+            if result is not None:
+                await result
 
 
 async def stream_wrapper(response, session, content_handler=None):

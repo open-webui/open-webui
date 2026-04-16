@@ -37,7 +37,7 @@ from open_webui.models.channels import Channels, ChannelMember, Channel
 from open_webui.models.messages import Messages, Message
 from open_webui.models.groups import Groups
 from open_webui.models.memories import Memories
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.utils.sanitize import sanitize_code
 
 log = logging.getLogger(__name__)
@@ -653,7 +653,7 @@ async def delete_memory(
         result = await Memories.delete_memory_by_id_and_user_id(memory_id, user.id)
 
         if result:
-            VECTOR_DB_CLIENT.delete(collection_name=f'user-memory-{user.id}', ids=[memory_id])
+            await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=f'user-memory-{user.id}', ids=[memory_id])
             return json.dumps(
                 {'status': 'success', 'message': f'Memory {memory_id} deleted'},
                 ensure_ascii=False,
@@ -760,14 +760,26 @@ async def search_notes(
             content_snippet = ''
             if note.data and note.data.get('content', {}).get('md'):
                 md_content = note.data['content']['md']
-                lower_content = md_content.lower()
-                lower_query = query.lower()
-                idx = lower_content.find(lower_query)
-                if idx != -1:
-                    start = max(0, idx - 50)
-                    end = min(len(md_content), idx + len(query) + 100)
+                content_lower = md_content.lower()
+
+                # Find the first matching word to center the snippet around.
+                search_words = query.lower().split()
+                match_pos = -1
+                match_len = len(query)
+                for word in search_words:
+                    found_pos = content_lower.find(word)
+                    if found_pos != -1:
+                        match_pos = found_pos
+                        match_len = len(word)
+                        break
+
+                if match_pos != -1:
+                    snippet_start = max(0, match_pos - 50)
+                    snippet_end = min(len(md_content), match_pos + match_len + 100)
                     content_snippet = (
-                        ('...' if start > 0 else '') + md_content[start:end] + ('...' if end < len(md_content) else '')
+                        ('...' if snippet_start > 0 else '')
+                        + md_content[snippet_start:snippet_end]
+                        + ('...' if snippet_end < len(md_content) else '')
                     )
                 else:
                     content_snippet = md_content[:150] + ('...' if len(md_content) > 150 else '')
@@ -1213,7 +1225,7 @@ async def search_channel_messages(
         end_ts = end_timestamp * 1_000_000_000 if end_timestamp else None
 
         # Search messages using the model method
-        matching_messages = Messages.search_messages_by_channel_ids(
+        matching_messages = await Messages.search_messages_by_channel_ids(
             channel_ids=channel_ids,
             query=query,
             start_timestamp=start_ts,
@@ -1274,7 +1286,7 @@ async def view_channel_message(
     try:
         user_id = __user__.get('id')
 
-        message = Messages.get_message_by_id(message_id)
+        message = await Messages.get_message_by_id(message_id)
 
         if not message:
             return json.dumps({'error': 'Message not found'})
@@ -1336,7 +1348,7 @@ async def view_channel_thread(
         user_id = __user__.get('id')
 
         # Get the parent message
-        parent_message = Messages.get_message_by_id(parent_message_id)
+        parent_message = await Messages.get_message_by_id(parent_message_id)
 
         if not parent_message:
             return json.dumps({'error': 'Message not found'})
@@ -1353,7 +1365,7 @@ async def view_channel_thread(
             return json.dumps({'error': 'Access denied'})
 
         # Get all thread replies
-        thread_replies = Messages.get_thread_replies_by_message_id(parent_message_id)
+        thread_replies = await Messages.get_thread_replies_by_message_id(parent_message_id)
 
         # Build the response
         messages = []
@@ -2190,7 +2202,7 @@ async def query_knowledge_bases(
         import heapq
         from open_webui.models.knowledge import Knowledges
         from open_webui.routers.knowledge import KNOWLEDGE_BASES_COLLECTION
-        from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+        from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 
         user_id = __user__.get('id')
         user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
@@ -2215,7 +2227,7 @@ async def query_knowledge_bases(
 
             accessible_ids = [kb.id for kb in accessible_knowledge_bases.items]
 
-            search_results = VECTOR_DB_CLIENT.search(
+            search_results = await ASYNC_VECTOR_DB_CLIENT.search(
                 collection_name=KNOWLEDGE_BASES_COLLECTION,
                 vectors=[query_embedding],
                 filter={'knowledge_base_id': {'$in': accessible_ids}},
@@ -2337,13 +2349,40 @@ VALID_TASK_STATUSES = {'pending', 'in_progress', 'completed', 'cancelled'}
 
 class TaskItem(BaseModel):
     id: Optional[str] = Field(None, description='Unique identifier for the task. Auto-generated if omitted.')
-    content: Optional[str] = Field(None, description='Task description. Aliases: title, name, description.')
+    content: str = Field(..., description='Task description.')
     status: Literal['pending', 'in_progress', 'completed', 'cancelled'] = Field('pending', description='Task status.')
 
 
-async def tasks(
-    tasks: Optional[list[TaskItem]] = None,
-    overwrite: bool = True,
+def _task_summary(all_tasks: list[dict]) -> dict:
+    """Build summary counts for a task list."""
+    pending = sum(1 for t in all_tasks if t['status'] == 'pending')
+    in_progress = sum(1 for t in all_tasks if t['status'] == 'in_progress')
+    completed = sum(1 for t in all_tasks if t['status'] == 'completed')
+    cancelled = sum(1 for t in all_tasks if t['status'] == 'cancelled')
+    return {
+        'total': len(all_tasks),
+        'pending': pending,
+        'in_progress': in_progress,
+        'completed': completed,
+        'cancelled': cancelled,
+    }
+
+
+async def _emit_tasks(event_emitter, all_tasks: list[dict]):
+    """Persist task state to the UI."""
+    if event_emitter:
+        await event_emitter(
+            {
+                'type': 'chat:message:tasks',
+                'data': {
+                    'tasks': all_tasks,
+                },
+            }
+        )
+
+
+async def create_tasks(
+    tasks: list[TaskItem],
     __chat_id__: str = None,
     __message_id__: str = None,
     __event_emitter__: callable = None,
@@ -2351,148 +2390,98 @@ async def tasks(
     __user__: dict = None,
 ) -> str:
     """
-    Track progress on multi-step work by maintaining a task checklist.
-    Use this whenever a request involves multiple steps or could take
-    significant effort. Call to set the full list, then call again
-    with overwrite=false after completing each task to mark it
-    completed. Do not leave tasks in_progress when the work is done.
-    Each task has an id, content, and status (pending, in_progress,
-    completed, cancelled).
+    Create a task checklist to track progress on multi-step work.
+    Call this once at the start to define all steps, then use
+    update_task to mark each task as you complete it.
 
-    :param tasks: Optional list of task items. Each item: id (string), content (string, required for new tasks), status (pending|in_progress|completed|cancelled). Leave empty to fetch without modifying.
-    :param overwrite: If true (default), replaces the entire task list. If false, updates/adds tasks by id while keeping existing ones.
+    :param tasks: List of task items. Each item: content (string, required), status (pending|in_progress|completed|cancelled, default pending), id (optional, auto-generated).
     :return: JSON with the full task list and summary counts
     """
     if __chat_id__ is None:
         return json.dumps({'error': 'Chat context not available'})
 
     try:
-
-        def _to_dict(task) -> dict:
-            """Convert TaskItem or dict to plain dict."""
+        all_tasks = []
+        for idx, task in enumerate(tasks):
             if hasattr(task, 'model_dump'):
                 d = task.model_dump(exclude_none=True)
-                # Include any extra fields the model sent
-                if hasattr(task, 'model_extra') and task.model_extra:
-                    d.update(task.model_extra)
-                return d
-            return dict(task) if not isinstance(task, dict) else task
+            elif isinstance(task, dict):
+                d = task
+            else:
+                d = dict(task)
 
-        def _resolve_content(d: dict) -> str:
-            """Accept content, title, name, or description as the task text."""
-            for key in ('content', 'title', 'name', 'description'):
-                val = str(d.get(key, '')).strip()
-                if val:
-                    return val
-            return ''
+            content = str(d.get('content', '')).strip()
+            if not content:
+                continue
 
-        def _resolve_id(d: dict, idx: int) -> str:
-            """Use provided id, or auto-generate from index."""
-            item_id = str(d.get('id', '') or '').strip()
-            return item_id if item_id else str(idx + 1)
+            item_id = str(d.get('id', '') or '').strip() or str(idx + 1)
+            status = str(d.get('status', 'pending')).strip().lower()
+            if status not in VALID_TASK_STATUSES:
+                status = 'pending'
 
-        if tasks is None:
-            # Read-only - return current list
-            all_tasks = await Chats.get_chat_tasks_by_id(__chat_id__)
-        elif overwrite:
-            # Full replacement - validate and write
-            all_tasks = []
-            for idx, task in enumerate(tasks):
-                d = _to_dict(task)
-                item_id = _resolve_id(d, idx)
-                content = _resolve_content(d)
-                if not content:
-                    continue
+            all_tasks.append({'id': item_id, 'content': content, 'status': status})
 
-                status = str(d.get('status', 'pending')).strip().lower()
-                if status not in VALID_TASK_STATUSES:
-                    status = 'pending'
-
-                all_tasks.append(
-                    {
-                        'id': item_id,
-                        'content': content,
-                        'status': status,
-                    }
-                )
-        else:
-            # Partial update - merge by id
-            existing_tasks = await Chats.get_chat_tasks_by_id(__chat_id__)
-            existing_by_id = {t['id']: t for t in existing_tasks}
-
-            seen_ids = set()
-            for idx, task in enumerate(tasks):
-                d = _to_dict(task)
-                item_id = _resolve_id(d, len(existing_tasks) + idx)
-
-                seen_ids.add(item_id)
-
-                if item_id in existing_by_id:
-                    resolved = _resolve_content(d)
-                    if resolved:
-                        existing_by_id[item_id]['content'] = resolved
-                    status = str(d.get('status', '')).strip().lower()
-                    if status and status in VALID_TASK_STATUSES:
-                        existing_by_id[item_id]['status'] = status
-                else:
-                    content = _resolve_content(d)
-                    if not content:
-                        continue
-
-                    status = str(d.get('status', 'pending')).strip().lower()
-                    if status not in VALID_TASK_STATUSES:
-                        status = 'pending'
-
-                    existing_by_id[item_id] = {
-                        'id': item_id,
-                        'content': content,
-                        'status': status,
-                    }
-
-            # Preserve order of existing, append new
-            all_tasks = []
-            for t in existing_tasks:
-                if t['id'] in existing_by_id:
-                    all_tasks.append(existing_by_id[t['id']])
-            for item_id in seen_ids:
-                if not any(t['id'] == item_id for t in existing_tasks):
-                    all_tasks.append(existing_by_id[item_id])
-
-        # Persist to DB and emit (skip for read-only)
-        if tasks is not None:
-            await Chats.update_chat_tasks_by_id(__chat_id__, all_tasks)
-
-            if __event_emitter__:
-                await __event_emitter__(
-                    {
-                        'type': 'chat:message:tasks',
-                        'data': {
-                            'tasks': all_tasks,
-                        },
-                    }
-                )
-
-        # Build summary counts
-        pending = sum(1 for t in all_tasks if t['status'] == 'pending')
-        in_progress = sum(1 for t in all_tasks if t['status'] == 'in_progress')
-        completed = sum(1 for t in all_tasks if t['status'] == 'completed')
-        cancelled = sum(1 for t in all_tasks if t['status'] == 'cancelled')
+        await Chats.update_chat_tasks_by_id(__chat_id__, all_tasks)
+        await _emit_tasks(__event_emitter__, all_tasks)
 
         return json.dumps(
-            {
-                'tasks': all_tasks,
-                'summary': {
-                    'total': len(all_tasks),
-                    'pending': pending,
-                    'in_progress': in_progress,
-                    'completed': completed,
-                    'cancelled': cancelled,
-                },
-            },
+            {'tasks': all_tasks, 'summary': _task_summary(all_tasks)},
             ensure_ascii=False,
         )
     except Exception as e:
         log.exception(f'tasks error: {e}')
+        return json.dumps({'error': str(e)})
+
+
+async def update_task(
+    id: str,
+    status: str = 'completed',
+    __chat_id__: str = None,
+    __message_id__: str = None,
+    __event_emitter__: callable = None,
+    __request__: Request = None,
+    __user__: dict = None,
+) -> str:
+    """
+    Mark a single task as completed, in_progress, pending, or cancelled.
+    Call this after finishing each step. You MUST call this for every
+    task, including the very last one.
+
+    :param id: The task ID to update
+    :param status: New status: completed, in_progress, pending, or cancelled (default: completed)
+    :return: JSON with the updated task list and summary counts
+    """
+    if __chat_id__ is None:
+        return json.dumps({'error': 'Chat context not available'})
+
+    try:
+        status = status.strip().lower()
+        if status not in VALID_TASK_STATUSES:
+            return json.dumps(
+                {'error': f'Invalid status: {status}. Must be one of: {", ".join(sorted(VALID_TASK_STATUSES))}'}
+            )
+
+        all_tasks = await Chats.get_chat_tasks_by_id(__chat_id__)
+
+        found = False
+        for task in all_tasks:
+            if task['id'] == id:
+                task['status'] = status
+                found = True
+                break
+
+        if not found:
+            return json.dumps({'error': f'Task with id "{id}" not found'})
+
+        await Chats.update_chat_tasks_by_id(__chat_id__, all_tasks)
+        await _emit_tasks(__event_emitter__, all_tasks)
+
+        return json.dumps(
+            {'tasks': all_tasks, 'summary': _task_summary(all_tasks)},
+            ensure_ascii=False,
+        )
+    except Exception as e:
+        log.exception(f'update_task_status error: {e}')
         return json.dumps({'error': str(e)})
 
 

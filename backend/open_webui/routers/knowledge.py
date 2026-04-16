@@ -2,7 +2,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from fastapi.responses import StreamingResponse
-from fastapi.concurrency import run_in_threadpool
+
 import logging
 import io
 import zipfile
@@ -19,7 +19,7 @@ from open_webui.models.knowledge import (
     KnowledgeUserResponse,
 )
 from open_webui.models.files import Files, FileModel, FileMetadataResponse
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.retrieval import (
     process_file,
     ProcessFileForm,
@@ -66,7 +66,7 @@ async def embed_knowledge_base_metadata(
     try:
         content = f'{name}\n\n{description}' if description else name
         embedding = await request.app.state.EMBEDDING_FUNCTION(content)
-        VECTOR_DB_CLIENT.upsert(
+        await ASYNC_VECTOR_DB_CLIENT.upsert(
             collection_name=KNOWLEDGE_BASES_COLLECTION,
             items=[
                 {
@@ -85,10 +85,10 @@ async def embed_knowledge_base_metadata(
         return False
 
 
-def remove_knowledge_base_metadata_embedding(knowledge_base_id: str) -> bool:
+async def remove_knowledge_base_metadata_embedding(knowledge_base_id: str) -> bool:
     """Remove knowledge base embedding."""
     try:
-        VECTOR_DB_CLIENT.delete(
+        await ASYNC_VECTOR_DB_CLIENT.delete(
             collection_name=KNOWLEDGE_BASES_COLLECTION,
             ids=[knowledge_base_id],
         )
@@ -310,8 +310,8 @@ async def reindex_knowledge_files(
         try:
             files = await Knowledges.get_files_by_id(knowledge_base.id, db=db)
             try:
-                if VECTOR_DB_CLIENT.has_collection(collection_name=knowledge_base.id):
-                    VECTOR_DB_CLIENT.delete_collection(collection_name=knowledge_base.id)
+                if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name=knowledge_base.id):
+                    await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=knowledge_base.id)
             except Exception as e:
                 log.error(f'Error deleting collection {knowledge_base.id}: {str(e)}')
                 continue  # Skip, don't raise
@@ -319,8 +319,7 @@ async def reindex_knowledge_files(
             failed_files = []
             for file in files:
                 try:
-                    await run_in_threadpool(
-                        process_file,
+                    await process_file(
                         request,
                         ProcessFileForm(file_id=file.id, collection_name=knowledge_base.id),
                         user=user,
@@ -543,7 +542,7 @@ async def update_knowledge_access_by_id(
     await AccessGrants.set_access_grants('knowledge', id, form_data.access_grants, db=db)
 
     return KnowledgeFilesResponse(
-        **await Knowledges.get_knowledge_by_id(id=id, db=db).model_dump(),
+        **(await Knowledges.get_knowledge_by_id(id=id, db=db)).model_dump(),
         files=await Knowledges.get_file_metadatas_by_id(id, db=db),
     )
 
@@ -659,7 +658,7 @@ async def add_file_to_knowledge_by_id(
 
     # Add content to the vector database
     try:
-        process_file(
+        await process_file(
             request,
             ProcessFileForm(file_id=form_data.file_id, collection_name=id),
             user=user,
@@ -733,11 +732,11 @@ async def update_file_from_knowledge_by_id(
         )
 
     # Remove content from the vector database
-    VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'file_id': form_data.file_id})
+    await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'file_id': form_data.file_id})
 
     # Add content to the vector database
     try:
-        process_file(
+        await process_file(
             request,
             ProcessFileForm(file_id=form_data.file_id, collection_name=id),
             user=user,
@@ -815,11 +814,11 @@ async def remove_file_from_knowledge_by_id(
 
     # Remove content from the vector database
     try:
-        VECTOR_DB_CLIENT.delete(
+        await ASYNC_VECTOR_DB_CLIENT.delete(
             collection_name=knowledge.id, filter={'file_id': form_data.file_id}
         )  # Remove by file_id first
 
-        VECTOR_DB_CLIENT.delete(
+        await ASYNC_VECTOR_DB_CLIENT.delete(
             collection_name=knowledge.id, filter={'hash': file.hash}
         )  # Remove by hash as well in case of duplicates
     except Exception as e:
@@ -831,8 +830,8 @@ async def remove_file_from_knowledge_by_id(
         try:
             # Remove the file's collection from vector database
             file_collection = f'file-{form_data.file_id}'
-            if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
-                VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+            if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+                await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
         except Exception as e:
             log.debug('This was most likely caused by bypassing embedding processing')
             log.debug(e)
@@ -859,7 +858,9 @@ async def remove_file_from_knowledge_by_id(
 
 
 @router.delete('/{id}/delete', response_model=bool)
-async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def delete_knowledge_by_id(
+    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
         raise HTTPException(
@@ -914,13 +915,13 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user), db: A
 
     # Clean up vector DB
     try:
-        VECTOR_DB_CLIENT.delete_collection(collection_name=id)
+        await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=id)
     except Exception as e:
         log.debug(e)
         pass
 
     # Remove knowledge base embedding
-    remove_knowledge_base_metadata_embedding(id)
+    await remove_knowledge_base_metadata_embedding(id)
 
     result = await Knowledges.delete_knowledge_by_id(id=id, db=db)
     return result
@@ -932,7 +933,9 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user), db: A
 
 
 @router.post('/{id}/reset', response_model=Optional[KnowledgeResponse])
-async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def reset_knowledge_by_id(
+    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
         raise HTTPException(
@@ -957,12 +960,12 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user), db: As
         )
 
     try:
-        VECTOR_DB_CLIENT.delete_collection(collection_name=id)
+        await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=id)
     except Exception as e:
         log.debug(e)
         pass
 
-    knowledge = Knowledges.reset_knowledge_by_id(id=id, db=db)
+    knowledge = await Knowledges.reset_knowledge_by_id(id=id, db=db)
     return knowledge
 
 

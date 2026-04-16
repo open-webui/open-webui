@@ -8,7 +8,7 @@ from urllib.parse import quote, urlparse
 
 import aiohttp
 from aiocache import cached
-import requests
+
 
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
@@ -52,9 +52,12 @@ from open_webui.utils.payload import (
     apply_system_prompt_to_body,
 )
 from open_webui.utils.misc import (
-    cleanup_response,
     convert_logit_bias_input_to_json,
     stream_chunks_handler,
+)
+from open_webui.utils.session_pool import (
+    cleanup_response,
+    get_session,
     stream_wrapper,
 )
 
@@ -309,19 +312,20 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
         r = None
         try:
-            r = requests.post(
+            session = await get_session()
+            r = await session.post(
                 url=f'{url}/audio/speech',
                 data=body,
                 headers=headers,
                 cookies=cookies,
-                stream=True,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
             )
 
             r.raise_for_status()
 
             # Save the streaming content to a file
             with open(file_path, 'wb') as f:
-                for chunk in r.iter_content(chunk_size=8192):
+                async for chunk in r.content.iter_chunked(8192):
                     f.write(chunk)
 
             with open(file_body_path, 'w') as f:
@@ -336,14 +340,14 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             detail = None
             if r is not None:
                 try:
-                    res = r.json()
+                    res = await r.json()
                     if 'error' in res:
                         detail = f'External: {res["error"]}'
                 except Exception:
                     detail = f'External: {e}'
 
             raise HTTPException(
-                status_code=r.status_code if r else 500,
+                status_code=r.status if r else 500,
                 detail=detail if detail else 'Open WebUI: Server Connection Error',
             )
 
@@ -688,7 +692,7 @@ async def verify_connection(
             elif is_anthropic_url(url):
                 result = await get_anthropic_models(url, key)
                 if result is None:
-                    raise HTTPException(status_code=500, detail='Failed to connect to Anthropic API')
+                    raise HTTPException(status_code=500, detail=ERROR_MESSAGES.SERVER_CONNECTION_ERROR)
                 if 'error' in result:
                     raise HTTPException(status_code=500, detail=result['error'])
                 return result
@@ -715,10 +719,10 @@ async def verify_connection(
         except aiohttp.ClientError as e:
             # ClientError covers all aiohttp requests issues
             log.exception(f'Client error: {str(e)}')
-            raise HTTPException(status_code=500, detail='Open WebUI: Server Connection Error')
+            raise HTTPException(status_code=500, detail=ERROR_MESSAGES.SERVER_CONNECTION_ERROR)
         except Exception as e:
             log.exception(f'Unexpected error: {e}')
-            raise HTTPException(status_code=500, detail='Open WebUI: Server Connection Error')
+            raise HTTPException(status_code=500, detail=ERROR_MESSAGES.SERVER_CONNECTION_ERROR)
 
 
 def get_azure_allowed_params(api_version: str) -> set[str]:
@@ -1080,7 +1084,7 @@ async def generate_chat_completion(
     else:
         raise HTTPException(
             status_code=404,
-            detail='Model not found',
+            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
         )
 
     # Get the API config for the model
@@ -1174,12 +1178,11 @@ async def generate_chat_completion(
     payload = json.dumps(payload)
 
     r = None
-    session = None
     streaming = False
     response = None
 
     try:
-        session = aiohttp.ClientSession(trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT))
+        session = await get_session()
 
         r = await session.request(
             method='POST',
@@ -1188,13 +1191,33 @@ async def generate_chat_completion(
             headers=headers,
             cookies=cookies,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
         )
 
         # Check if response is SSE
         if 'text/event-stream' in r.headers.get('Content-Type', ''):
+            # If the provider returned an error status with SSE content-type,
+            # read the body and return a proper error response instead of
+            # streaming the error back (which hides the error from logs).
+            if r.status >= 400:
+                error_body = await r.text()
+                log.error(
+                    'Provider returned HTTP %d with SSE content-type: %s',
+                    r.status,
+                    error_body[:1000],
+                )
+                try:
+                    error_json = json.loads(error_body)
+                    return JSONResponse(status_code=r.status, content=error_json)
+                except json.JSONDecodeError:
+                    return JSONResponse(
+                        status_code=r.status,
+                        content={'error': {'message': error_body, 'code': r.status}},
+                    )
+
             streaming = True
             return StreamingResponse(
-                stream_wrapper(r, session, stream_chunks_handler),
+                stream_wrapper(r, content_handler=stream_chunks_handler),
                 status_code=r.status,
                 headers=dict(r.headers),
             )
@@ -1221,11 +1244,11 @@ async def generate_chat_completion(
 
         raise HTTPException(
             status_code=r.status if r else 500,
-            detail='Open WebUI: Server Connection Error',
+            detail=ERROR_MESSAGES.SERVER_CONNECTION_ERROR,
         )
     finally:
         if not streaming:
-            await cleanup_response(r, session)
+            await cleanup_response(r)
 
 
 async def embeddings(request: Request, form_data: dict, user):
@@ -1261,27 +1284,24 @@ async def embeddings(request: Request, form_data: dict, user):
     )
 
     r = None
-    session = None
     streaming = False
 
     headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
     try:
-        session = aiohttp.ClientSession(
-            trust_env=True,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
-        )
+        session = await get_session()
         r = await session.request(
             method='POST',
             url=f'{url}/embeddings',
             data=body,
             headers=headers,
             cookies=cookies,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
         )
 
         if 'text/event-stream' in r.headers.get('Content-Type', ''):
             streaming = True
             return StreamingResponse(
-                stream_wrapper(r, session),
+                stream_wrapper(r),
                 status_code=r.status,
                 headers=dict(r.headers),
             )
@@ -1302,11 +1322,11 @@ async def embeddings(request: Request, form_data: dict, user):
         log.exception(e)
         raise HTTPException(
             status_code=r.status if r else 500,
-            detail='Open WebUI: Server Connection Error',
+            detail=ERROR_MESSAGES.SERVER_CONNECTION_ERROR,
         )
     finally:
         if not streaming:
-            await cleanup_response(r, session)
+            await cleanup_response(r)
 
 
 class ResponsesForm(BaseModel):
@@ -1365,7 +1385,6 @@ async def responses(
     )
 
     r = None
-    session = None
     streaming = False
 
     try:
@@ -1388,10 +1407,7 @@ async def responses(
         else:
             request_url = f'{url}/responses'
 
-        session = aiohttp.ClientSession(
-            trust_env=True,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
-        )
+        session = await get_session()
         r = await session.request(
             method='POST',
             url=request_url,
@@ -1399,13 +1415,14 @@ async def responses(
             headers=headers,
             cookies=cookies,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
         )
 
         # Check if response is SSE
         if 'text/event-stream' in r.headers.get('Content-Type', ''):
             streaming = True
             return StreamingResponse(
-                stream_wrapper(r, session),
+                stream_wrapper(r),
                 status_code=r.status,
                 headers=dict(r.headers),
             )
@@ -1429,11 +1446,11 @@ async def responses(
         log.exception(e)
         raise HTTPException(
             status_code=r.status if r else 500,
-            detail='Open WebUI: Server Connection Error',
+            detail=ERROR_MESSAGES.SERVER_CONNECTION_ERROR,
         )
     finally:
         if not streaming:
-            await cleanup_response(r, session)
+            await cleanup_response(r)
 
 
 @router.api_route('/{path:path}', methods=['GET', 'POST', 'PUT', 'DELETE'])
@@ -1479,7 +1496,6 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     )
 
     r = None
-    session = None
     streaming = False
 
     try:
@@ -1508,10 +1524,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         else:
             request_url = f'{url}/{path}'
 
-        session = aiohttp.ClientSession(
-            trust_env=True,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
-        )
+        session = await get_session()
         r = await session.request(
             method=request.method,
             url=request_url,
@@ -1519,13 +1532,14 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             headers=headers,
             cookies=cookies,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
         )
 
         # Check if response is SSE
         if 'text/event-stream' in r.headers.get('Content-Type', ''):
             streaming = True
             return StreamingResponse(
-                stream_wrapper(r, session),
+                stream_wrapper(r),
                 status_code=r.status,
                 headers=dict(r.headers),
             )
@@ -1553,4 +1567,4 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         )
     finally:
         if not streaming:
-            await cleanup_response(r, session)
+            await cleanup_response(r)

@@ -1,9 +1,10 @@
 <script lang="ts">
+	import type i18nType from '$lib/i18n';
 	import { getContext } from 'svelte';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: typeof i18nType = getContext('i18n');
 
 	export let frequency = 'DAILY';
 	export let interval = 1;
@@ -23,23 +24,23 @@
 
 	let showDropdown = false;
 
-	const FREQUENCIES = [
-		{ key: 'ONCE', label: 'Once' },
-		{ key: 'HOURLY', label: 'Hourly' },
-		{ key: 'DAILY', label: 'Daily' },
-		{ key: 'WEEKLY', label: 'Weekly' },
-		{ key: 'MONTHLY', label: 'Monthly' },
-		{ key: 'CUSTOM', label: 'Custom' }
+	$: FREQUENCIES = [
+		{ key: 'ONCE', label: $i18n.t('Once') },
+		{ key: 'HOURLY', label: $i18n.t('Hourly') },
+		{ key: 'DAILY', label: $i18n.t('Daily') },
+		{ key: 'WEEKLY', label: $i18n.t('Weekly') },
+		{ key: 'MONTHLY', label: $i18n.t('Monthly') },
+		{ key: 'CUSTOM', label: $i18n.t('Custom') }
 	];
 
-	const DAYS = [
-		{ key: 'MO', label: 'Mo' },
-		{ key: 'TU', label: 'Tu' },
-		{ key: 'WE', label: 'We' },
-		{ key: 'TH', label: 'Th' },
-		{ key: 'FR', label: 'Fr' },
-		{ key: 'SA', label: 'Sa' },
-		{ key: 'SU', label: 'Su' }
+	$: DAYS = [
+		{ key: 'MO', label: $i18n.t('Mo', { context: 'day_of_week' }) },
+		{ key: 'TU', label: $i18n.t('Tu', { context: 'day_of_week' }) },
+		{ key: 'WE', label: $i18n.t('We', { context: 'day_of_week' }) },
+		{ key: 'TH', label: $i18n.t('Th', { context: 'day_of_week' }) },
+		{ key: 'FR', label: $i18n.t('Fr', { context: 'day_of_week' }) },
+		{ key: 'SA', label: $i18n.t('Sa', { context: 'day_of_week' }) },
+		{ key: 'SU', label: $i18n.t('Su', { context: 'day_of_week' }) }
 	];
 
 	let lastVisualFrequency = 'DAILY';

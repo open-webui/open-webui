@@ -194,20 +194,12 @@ def get_redis_connection(
     connection = None
 
     connect_timeout_kwargs = (
-        {'socket_connect_timeout': REDIS_SOCKET_CONNECT_TIMEOUT}
-        if REDIS_SOCKET_CONNECT_TIMEOUT is not None
-        else {}
+        {'socket_connect_timeout': REDIS_SOCKET_CONNECT_TIMEOUT} if REDIS_SOCKET_CONNECT_TIMEOUT is not None else {}
     )
 
-    keepalive_kwargs = (
-        {'socket_keepalive': True} if REDIS_SOCKET_KEEPALIVE else {}
-    )
+    keepalive_kwargs = {'socket_keepalive': True} if REDIS_SOCKET_KEEPALIVE else {}
 
-    health_check_kwargs = (
-        {'health_check_interval': REDIS_HEALTH_CHECK_INTERVAL}
-        if REDIS_HEALTH_CHECK_INTERVAL
-        else {}
-    )
+    health_check_kwargs = {'health_check_interval': REDIS_HEALTH_CHECK_INTERVAL} if REDIS_HEALTH_CHECK_INTERVAL else {}
 
     if async_mode:
         import redis.asyncio as redis

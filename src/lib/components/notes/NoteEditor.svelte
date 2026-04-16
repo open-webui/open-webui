@@ -35,7 +35,8 @@
 		showSidebar,
 		socket,
 		user,
-		WEBUI_NAME
+		WEBUI_NAME,
+		pinnedNotes
 	} from '$lib/stores';
 
 	import { downloadPdf } from './utils';
@@ -64,7 +65,9 @@
 		deleteNoteById,
 		getNoteById,
 		updateNoteById,
-		updateNoteAccessGrants
+		updateNoteAccessGrants,
+		toggleNotePinnedStatusById,
+		getPinnedNoteList
 	} from '$lib/apis/notes';
 
 	import RichTextInput from '../common/RichTextInput.svelte';
@@ -1087,6 +1090,12 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 									}}
 									onDelete={() => {
 										showDeleteConfirm = true;
+									}}
+									isPinned={note.is_pinned ?? false}
+									onPin={async () => {
+										await toggleNotePinnedStatusById(localStorage.token, note.id);
+										note = await getNoteById(localStorage.token, note.id);
+										pinnedNotes.set(await getPinnedNoteList(localStorage.token).catch(() => []));
 									}}
 								>
 									<div class="p-1 bg-transparent hover:bg-white/5 transition rounded-lg">

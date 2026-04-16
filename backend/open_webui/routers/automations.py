@@ -74,7 +74,7 @@ async def check_automation_limits(request, user, rrule_str: str, db, is_create: 
             if max_count > 0 and await Automations.count_by_user(user.id, db=db) >= max_count:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f'Automation limit reached ({max_count})',
+                    detail=ERROR_MESSAGES.AUTOMATION_LIMIT_EXCEEDED(max_count),
                 )
 
     # Min interval (create + update)
@@ -86,7 +86,7 @@ async def check_automation_limits(request, user, rrule_str: str, db, is_create: 
             if interval is not None and interval < min_interval:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f'Schedule too frequent. Minimum interval is {min_interval} seconds.',
+                    detail=ERROR_MESSAGES.AUTOMATION_TOO_FREQUENT(min_interval),
                 )
 
 
@@ -167,15 +167,6 @@ async def create_new_automation(
 
     await check_automation_limits(request, user, form_data.data.rrule, db, is_create=True)
 
-    # Validate terminal server exists if linked
-    if form_data.data.terminal and form_data.data.terminal.server_id:
-        connections = request.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
-        if not any(c.get('id') == form_data.data.terminal.server_id for c in connections):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail='Terminal server not found',
-            )
-
     tz = user.timezone
     automation = await Automations.insert(user.id, form_data, next_run_ns(form_data.data.rrule, tz=tz), db=db)
     return await enrich_automation(automation, db, tz=tz)
@@ -225,15 +216,6 @@ async def update_automation_by_id(
         )
 
     await check_automation_limits(request, user, form_data.data.rrule, db, is_create=False)
-
-    # Validate terminal server exists if linked
-    if form_data.data.terminal and form_data.data.terminal.server_id:
-        connections = request.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
-        if not any(c.get('id') == form_data.data.terminal.server_id for c in connections):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail='Terminal server not found',
-            )
 
     tz = user.timezone
     updated = await Automations.update_by_id(id, form_data, next_run_ns(form_data.data.rrule, tz=tz), db=db)

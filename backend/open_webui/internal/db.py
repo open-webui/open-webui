@@ -214,6 +214,7 @@ if 'sqlite' in ASYNC_SQLALCHEMY_DATABASE_URL:
     )
 
     if DATABASE_ENABLE_SQLITE_WAL:
+
         @event.listens_for(async_engine.sync_engine, 'connect')
         def _set_sqlite_wal(dbapi_connection, connection_record):
             cursor = dbapi_connection.cursor()
@@ -229,7 +230,6 @@ else:
                 pool_timeout=DATABASE_POOL_TIMEOUT,
                 pool_recycle=DATABASE_POOL_RECYCLE,
                 pool_pre_ping=True,
-                poolclass=QueuePool,
             )
         else:
             async_engine = create_async_engine(

@@ -520,7 +520,7 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 			textArea.style.position = 'fixed';
 
 			document.body.appendChild(textArea);
-			textArea.focus();
+			textArea.focus({ preventScroll: true });
 			textArea.select();
 
 			try {
@@ -923,8 +923,19 @@ export const processDetails = (content) => {
 				attributes[attributeMatch[1]] = attributeMatch[2];
 			}
 
+			// New format: result in body content; Old format: result in attribute
+			let resultText = '';
 			if (attributes.result) {
-				content = content.replace(match, unescapeHtml(attributes.result));
+				resultText = unescapeHtml(attributes.result);
+			} else {
+				// Extract body content (strip <summary>...</summary>)
+				const bodyMatch = match.match(/<summary>[\s\S]*?<\/summary>\s*([\s\S]*?)\s*<\/details>/i);
+				if (bodyMatch && bodyMatch[1].trim()) {
+					resultText = unescapeHtml(bodyMatch[1].trim());
+				}
+			}
+			if (resultText) {
+				content = content.replace(match, resultText);
 			}
 		}
 	}

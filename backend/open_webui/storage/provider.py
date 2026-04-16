@@ -140,7 +140,7 @@ class S3StorageProvider(StorageProvider):
 
     def upload_file(self, file: BinaryIO, filename: str, tags: Dict[str, str]) -> Tuple[bytes, str]:
         """Handles uploading of the file to S3 storage."""
-        _, file_path = LocalStorageProvider.upload_file(file, filename, tags)
+        contents, file_path = LocalStorageProvider.upload_file(file, filename, tags)
         s3_key = os.path.join(self.key_prefix, filename)
         try:
             self.s3_client.upload_file(file_path, self.bucket_name, s3_key)
@@ -153,7 +153,7 @@ class S3StorageProvider(StorageProvider):
                     Tagging=tagging,
                 )
             return (
-                open(file_path, 'rb').read(),
+                contents,
                 f's3://{self.bucket_name}/{s3_key}',
             )
         except ClientError as e:

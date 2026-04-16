@@ -22,11 +22,12 @@ from dateutil.rrule import rrulestr
 from fastapi import Request
 from starlette.datastructures import Headers
 
+from open_webui.constants import ERROR_MESSAGES
 from open_webui.models.automations import Automations, AutomationRuns, AutomationModel
 from open_webui.models.chats import ChatForm, Chats
 from open_webui.models.users import Users
 from open_webui.utils.task import prompt_template
-from open_webui.internal.db import get_db
+from open_webui.internal.db import get_async_db
 
 log = logging.getLogger(__name__)
 
@@ -59,9 +60,9 @@ def validate_rrule(s: str) -> None:
     try:
         rule = _parse_rule(s)
     except Exception as e:
-        raise ValueError(f'Invalid RRULE: {e}')
+        raise ValueError(ERROR_MESSAGES.AUTOMATION_INVALID_RRULE(e))
     if rule.after(datetime.now()) is None:
-        raise ValueError('RRULE has no future occurrences')
+        raise ValueError(ERROR_MESSAGES.AUTOMATION_NO_FUTURE_RUNS)
 
 
 def next_run_ns(s: str, tz: str = None) -> Optional[int]:
@@ -125,7 +126,7 @@ async def automation_worker_loop(app) -> None:
     log.info(f'Automation worker started (poll interval: {AUTOMATION_POLL_INTERVAL}s)')
     while True:
         try:
-            with get_db() as db:
+            async with get_async_db() as db:
                 batch = await Automations.claim_due(int(time.time_ns()), limit=10, db=db)
             if batch:
                 log.info(f'Claimed {len(batch)} due automation(s)')
@@ -224,6 +225,16 @@ def _resolve_model_filter_ids(app, model_id: str) -> list[str]:
     return list(filter_ids) if filter_ids else []
 
 
+def _resolve_model_terminal_id(app, model_id: str) -> Optional[str]:
+    """Read model default terminal_id from model config.
+
+    The frontend does this in Chat.svelte (model.info.meta.terminalId).
+    """
+    models = getattr(app.state, 'MODELS', {})
+    model = models.get(model_id, {})
+    return model.get('info', {}).get('meta', {}).get('terminalId') or None
+
+
 async def _set_terminal_cwd(app, server_id: str, user, cwd: str, chat_id: str) -> None:
     """Set the working directory on a terminal server via the proxy.
 
@@ -296,8 +307,9 @@ async def execute_automation(app, automation: AutomationModel) -> None:
         user_msg_id = str(uuid4())
         assistant_msg_id = str(uuid4())
 
-        # Create the chat with user message (same structure as frontend)
+        chat_id = str(uuid4())
         chat = await Chats.insert_new_chat(
+            chat_id,
             automation.user_id,
             ChatForm(
                 chat={
@@ -357,13 +369,8 @@ async def execute_automation(app, automation: AutomationModel) -> None:
         features = _resolve_model_features(app, model_id)
         filter_ids = _resolve_model_filter_ids(app, model_id)
 
-        # If a terminal is linked, set the CWD before building the payload
-        terminal_id = None
-        if terminal_config and terminal_config.get('server_id'):
-            terminal_id = terminal_config['server_id']
-            cwd = terminal_config.get('cwd')
-            if cwd:
-                await _set_terminal_cwd(app, terminal_id, user, cwd, chat.id)
+        # Resolve terminal from model config
+        terminal_id = _resolve_model_terminal_id(app, model_id)
 
         # Build the same payload the frontend sends to /api/chat/completions
         form_data = {
@@ -372,7 +379,13 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             'stream': True,
             'chat_id': chat.id,
             'id': assistant_msg_id,
-            'parent_id': user_msg_id,
+            'parent_id': None,  # Root message (chat already created above)
+            'user_message': {
+                'id': user_msg_id,
+                'parentId': None,
+                'role': 'user',
+                'content': prompt,
+            },
             'session_id': f'automation:{automation.id}',
             'background_tasks': {},
         }
@@ -423,5 +436,5 @@ async def _record_run(
     error: str = None,
 ):
     """Insert a run record into automation_run."""
-    with get_db() as db:
+    async with get_async_db() as db:
         await AutomationRuns.insert(automation_id, status, chat_id=chat_id, error=error, db=db)

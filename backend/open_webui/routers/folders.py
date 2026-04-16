@@ -89,7 +89,9 @@ async def get_folders(
                         valid_files.append(file)
 
                 folder.data['files'] = valid_files
-                await Folders.update_folder_by_id_and_user_id(folder.id, user.id, FolderUpdateForm(data=folder.data), db=db)
+                await Folders.update_folder_by_id_and_user_id(
+                    folder.id, user.id, FolderUpdateForm(data=folder.data), db=db
+                )
 
         folder_list.append(FolderNameIdResponse(**folder.model_dump()))
 
@@ -107,7 +109,9 @@ async def create_folder(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    folder = await Folders.get_folder_by_parent_id_and_user_id_and_name(form_data.parent_id, user.id, form_data.name, db=db)
+    folder = await Folders.get_folder_by_parent_id_and_user_id_and_name(
+        form_data.parent_id, user.id, form_data.name, db=db
+    )
 
     if folder:
         raise HTTPException(
@@ -250,7 +254,9 @@ async def update_folder_is_expanded_by_id(
     folder = await Folders.get_folder_by_id_and_user_id(id, user.id, db=db)
     if folder:
         try:
-            folder = await Folders.update_folder_is_expanded_by_id_and_user_id(id, user.id, form_data.is_expanded, db=db)
+            folder = await Folders.update_folder_is_expanded_by_id_and_user_id(
+                id, user.id, form_data.is_expanded, db=db
+            )
             return folder
         except Exception as e:
             log.exception(e)
