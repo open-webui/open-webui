@@ -580,6 +580,33 @@
 									bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_API_KEY}
 								/>
 							</div>
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									{$i18n.t('Request Timeout (seconds)')}
+								</div>
+								<input
+									class="w-20 text-sm bg-transparent outline-hidden text-right"
+									type="number"
+									min="1"
+									bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_TIMEOUT}
+									placeholder="30"
+								/>
+							</div>
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t(
+											'When enabled, Open WebUI automatically falls back to the native document loader if the external loader fails.'
+										)}
+										placement="top-start"
+									>
+										{$i18n.t('Enable Auto Fallback')}
+									</Tooltip>
+								</div>
+								<div class="flex items-center">
+									<Switch bind:state={RAGConfig.ENABLE_EXTERNAL_LOADER_AUTO_FALLBACK} />
+								</div>
+							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'tika'}
 							<div class="flex w-full mt-1">
 								<div class="flex-1 mr-2">

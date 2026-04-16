@@ -2752,6 +2752,18 @@ EXTERNAL_DOCUMENT_LOADER_API_KEY = PersistentConfig(
     os.environ.get('EXTERNAL_DOCUMENT_LOADER_API_KEY', ''),
 )
 
+EXTERNAL_DOCUMENT_LOADER_TIMEOUT = PersistentConfig(
+    'EXTERNAL_DOCUMENT_LOADER_TIMEOUT',
+    'rag.external_document_loader_timeout',
+    os.environ.get('EXTERNAL_DOCUMENT_LOADER_TIMEOUT', '30'),
+)
+
+ENABLE_EXTERNAL_LOADER_AUTO_FALLBACK = PersistentConfig(
+    'ENABLE_EXTERNAL_LOADER_AUTO_FALLBACK',
+    'rag.enable_external_loader_auto_fallback',
+    os.environ.get('ENABLE_EXTERNAL_LOADER_AUTO_FALLBACK', 'True').lower() == 'true',
+)
+
 TIKA_SERVER_URL = PersistentConfig(
     'TIKA_SERVER_URL',
     'rag.tika_server_url',

@@ -242,6 +242,14 @@ class Loader:
             self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_API_KEY')
         )
 
+    def _is_external_auto_fallback_enabled(self) -> bool:
+        value = self.kwargs.get('ENABLE_EXTERNAL_LOADER_AUTO_FALLBACK', True)
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().lower() == 'true'
+        return bool(value)
+
     @staticmethod
     def _sanitize_error_message(error: Exception, max_length: int = 300) -> str:
         message = ' '.join(str(error).split())
@@ -252,6 +260,7 @@ class Loader:
     def load(self, filename: str, file_content_type: str, file_path: str) -> list[Document]:
         is_external = self.engine == 'external'
         has_external_config = self._has_external_config()
+        fallback_enabled = self._is_external_auto_fallback_enabled()
 
         if is_external and not has_external_config:
             log.warning(
@@ -266,6 +275,15 @@ class Loader:
             try:
                 docs = loader.load()
             except Exception as exc:
+                if not fallback_enabled:
+                    log.warning(
+                        'External loader failed for %s (%s) and auto fallback is disabled. Error type: %s',
+                        filename,
+                        file_content_type,
+                        type(exc).__name__,
+                    )
+                    raise
+
                 safe_error = self._sanitize_error_message(exc)
                 log.warning(
                     'AUTOFALLBACK: External loader failed for %s (%s). Falling back to native loader. Error type: %s. Error: %s',
