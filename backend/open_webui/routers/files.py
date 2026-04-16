@@ -50,6 +50,7 @@ from open_webui.storage.provider import Storage
 
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, STORAGE_LOCAL_CACHE, STORAGE_PROVIDER, UPLOAD_DIR
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.knowledge_collections import reindex_file_in_collection
 from open_webui.utils.misc import strict_match_mime_type
 from pydantic import BaseModel
 
@@ -577,14 +578,17 @@ async def update_file_data_content_by_id(
         knowledges = await Knowledges.get_knowledges_by_file_id(id, db=db)
         for knowledge in knowledges:
             try:
-                # Remove old embeddings for this file from the KB collection
-                await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'file_id': id})
-                # Re-add from the now-updated file-{file_id} collection
-                await process_file(
-                    request,
-                    ProcessFileForm(file_id=id, collection_name=knowledge.id),
+                # Rebuild first, then drop the stale vectors by their old ids.
+                # This preserves the previously indexed chunks if the rebuild fails.
+                await reindex_file_in_collection(
+                    request=request,
+                    file_id=id,
+                    collection_name=knowledge.id,
                     user=user,
                     db=db,
+                    process_file_form_factory=ProcessFileForm,
+                    process_file_func=process_file,
+                    vector_db_client=ASYNC_VECTOR_DB_CLIENT,
                 )
             except Exception as e:
                 log.warning(f'Failed to update knowledge {knowledge.id} after content change for file {id}: {e}')
