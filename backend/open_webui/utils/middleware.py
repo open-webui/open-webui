@@ -4912,6 +4912,7 @@ async def streaming_chat_response_handler(response, ctx):
         async def stream_wrapper(original_generator, events):
             accumulated_content = ''
             accumulated_usage = None
+            accumulated_error = None
             # Snapshot content (choices[].message.content,
             # response.completed.output). Used only if the delta path
             # produced nothing, so mixed-shape streams don't double-count.
@@ -4943,7 +4944,7 @@ async def streaming_chat_response_handler(response, ctx):
                 return ''
 
             def _parse_payload(payload):
-                nonlocal accumulated_content, accumulated_usage, terminal_content
+                nonlocal accumulated_content, accumulated_usage, terminal_content, accumulated_error
                 if not payload or payload == '[DONE]':
                     return
                 try:
@@ -4952,6 +4953,24 @@ async def streaming_chat_response_handler(response, ctx):
                     return
                 if not isinstance(chunk, dict):
                     return
+                # Provider errors — capture and stop treating this as success.
+                err = chunk.get('error')
+                if err:
+                    accumulated_error = err
+                    return
+                if chunk.get('type') in ('response.failed', 'response.error'):
+                    accumulated_error = chunk.get('response') or chunk
+                    return
+                chunk_type = chunk.get('type')
+                # Responses-API reasoning/summary/refusal/tool-call events
+                # must NOT leak into the persisted assistant content.
+                is_reasoning_event = isinstance(chunk_type, str) and (
+                    'reasoning' in chunk_type
+                    or 'summary' in chunk_type
+                    or 'refusal' in chunk_type
+                    or 'function_call' in chunk_type
+                    or 'tool_call' in chunk_type
+                )
                 # Chat Completions: delta.content (stream) or message.content (snapshot).
                 choices = chunk.get('choices')
                 for choice in choices if isinstance(choices, list) else []:
@@ -4969,22 +4988,28 @@ async def streaming_chat_response_handler(response, ctx):
                             if text:
                                 terminal_content = text
                 # Responses-API: top-level delta (stream) + response.completed (snapshot).
-                delta = chunk.get('delta')
-                if isinstance(delta, str):
-                    accumulated_content += delta
-                elif isinstance(delta, dict):
-                    text = _extract_text(delta.get('text') or delta.get('content'))
-                    if text:
-                        accumulated_content += text
-                if chunk.get('type') == 'response.completed':
+                if not is_reasoning_event:
+                    delta = chunk.get('delta')
+                    if isinstance(delta, str):
+                        accumulated_content += delta
+                    elif isinstance(delta, dict):
+                        text = _extract_text(delta.get('text') or delta.get('content'))
+                        if text:
+                            accumulated_content += text
+                if chunk_type == 'response.completed':
                     resp = chunk.get('response')
                     if isinstance(resp, dict):
                         parts = []
                         for item in resp.get('output') or []:
-                            if isinstance(item, dict):
-                                text = _extract_text(item.get('content'))
-                                if text:
-                                    parts.append(text)
+                            if not isinstance(item, dict):
+                                continue
+                            # Only assistant message items; skip reasoning,
+                            # summary, function_call, etc.
+                            if item.get('type') != 'message':
+                                continue
+                            text = _extract_text(item.get('content'))
+                            if text:
+                                parts.append(text)
                         if parts:
                             terminal_content = ''.join(parts)
                         if isinstance(resp.get('usage'), dict):
@@ -5049,7 +5074,7 @@ async def streaming_chat_response_handler(response, ctx):
                     filter_functions=filter_functions,
                     filter_type='stream',
                     form_data=event,
-                    extra_params=extra_params,
+                    extra_params={'__body__': form_data, **extra_params},
                 )
 
                 if event:
@@ -5061,7 +5086,7 @@ async def streaming_chat_response_handler(response, ctx):
                     filter_functions=filter_functions,
                     filter_type='stream',
                     form_data=data,
-                    extra_params=extra_params,
+                    extra_params={'__body__': form_data, **extra_params},
                 )
 
                 if data:
@@ -5101,17 +5126,31 @@ async def streaming_chat_response_handler(response, ctx):
                 )
                 if fallback_is_persisted:
                     try:
-                        await Chats.upsert_message_to_chat_by_id_and_message_id(
-                            fallback_chat_id,
-                            fallback_message_id,
-                            {
-                                'done': True,
-                                'role': 'assistant',
-                                'content': accumulated_content,
-                                'output': output,
-                                **({'usage': normalized_usage} if normalized_usage else {}),
-                            },
-                        )
+                        if accumulated_error is not None:
+                            # Persist error state instead of a fake-success
+                            # done:True with empty content.
+                            err = accumulated_error
+                            if isinstance(err, dict):
+                                err_content = err.get('detail') or err.get('message') or err
+                            else:
+                                err_content = str(err)
+                            await Chats.upsert_message_to_chat_by_id_and_message_id(
+                                fallback_chat_id,
+                                fallback_message_id,
+                                {'error': {'content': err_content}},
+                            )
+                        else:
+                            await Chats.upsert_message_to_chat_by_id_and_message_id(
+                                fallback_chat_id,
+                                fallback_message_id,
+                                {
+                                    'done': True,
+                                    'role': 'assistant',
+                                    'content': accumulated_content,
+                                    'output': output,
+                                    **({'usage': normalized_usage} if normalized_usage else {}),
+                                },
+                            )
                     except Exception as e:
                         log.debug(f'Error persisting streamed message in fallback: {e}')
 
