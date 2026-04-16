@@ -2767,24 +2767,11 @@ async def get_event_emitter_and_caller(metadata):
     event_emitter = None
     event_caller = None
 
-    # event_emitter broadcasts to a user's websocket room. Require
-    # session_id so pure API callers (no WebSocket) fall into the
-    # body-streaming fallback path instead of the event-driven main path
-    # (which delivers content only via WebSocket and returns None as HTTP
-    # body, manifesting as "streaming returns null" for API callers).
-    #
-    # Note: this narrows the emitter to callers with a real WebSocket
-    # session. DB persistence, webhook delivery, and outlet filters are
-    # now gated independently (on chat_id / not-local:) so backend
-    # callers that provide a persisted chat_id + message_id without a
-    # session still get their data persisted — see the non-streaming and
-    # fallback streaming paths below.
+    # Both need session_id — API callers without a WS session fall into
+    # the body-streaming fallback; DB/outlet/webhook are gated independently
+    # downstream (on chat_id / not-local:). See #23740.
     if metadata.get('session_id') and metadata.get('chat_id') and metadata.get('message_id'):
         event_emitter = await get_event_emitter(metadata)
-
-    # event_caller needs session_id — it calls back to a specific
-    # websocket session (used by direct tools, pyodide code interpreter).
-    if metadata.get('session_id') and metadata.get('chat_id') and metadata.get('message_id'):
         event_caller = await get_event_call(metadata)
 
     return event_emitter, event_caller
@@ -2868,19 +2855,13 @@ async def get_system_oauth_token(request, user):
 
 
 async def _noop_event_emitter(event_data):
-    """No-op emitter used to keep background_tasks_handler's DB-only side
-    effects (auto-title, auto-tags, follow-ups persistence) working for
-    persisted chats whose caller has no WebSocket session."""
     return None
 
 
 async def _run_background_tasks(ctx):
-    """Run background_tasks_handler with a no-op event_emitter fallback,
-    wrapped so a failure cannot prevent outlet_filter_handler from running."""
-    if ctx.get('event_emitter'):
-        bg_ctx = ctx
-    else:
-        bg_ctx = {**ctx, 'event_emitter': _noop_event_emitter}
+    # No-op emitter fallback keeps DB-only side effects (title/tags/
+    # follow-ups) running for persisted chats without a WS session.
+    bg_ctx = ctx if ctx.get('event_emitter') else {**ctx, 'event_emitter': _noop_event_emitter}
     try:
         await background_tasks_handler(bg_ctx)
     except Exception as e:
@@ -3354,9 +3335,6 @@ async def non_streaming_chat_response_handler(response, ctx):
                                 },
                             )
 
-                # Run follow-ups / auto-title / auto-tags for persisted
-                # chats; uses a no-op emitter fallback when there's no
-                # WebSocket session, so DB side-effects still land.
                 if is_persisted_chat:
                     await _run_background_tasks(ctx)
 
@@ -4914,28 +4892,23 @@ async def streaming_chat_response_handler(response, ctx):
         return await response_handler(response, events)
 
     else:
-        # Fallback: stream the upstream body straight to the caller.
-        # Used by pure API callers (no WebSocket session) — we also
-        # accumulate chunks here to fire outlet filters after completion.
+        # Fallback: forward upstream body to the caller and accumulate
+        # chunks to fire outlet after completion (API callers w/o WS).
         async def stream_wrapper(original_generator, events):
             accumulated_content = ''
             accumulated_usage = None
-            # Rolling buffer: SSE frames can be split across network chunks
-            # (e.g. a large JSON payload in one `data:` line). We hold an
-            # incomplete trailing line until the next chunk brings a newline.
             accumulate_buffer = ''
 
             def wrap_item(item):
                 return f'data: {item}\n\n'
 
             def _parse_line(line):
+                # Accepts SSE "data: {...}" framing AND raw NDJSON lines
+                # (process_chat_response routes both through this handler).
                 nonlocal accumulated_content, accumulated_usage
                 line = line.strip()
                 if not line:
                     return
-                # Accept SSE framing ("data: {...}" / "data:{...}") AND
-                # raw NDJSON lines (application/x-ndjson is routed through
-                # this same handler by process_chat_response).
                 if line.startswith('data:'):
                     payload = line[5:].lstrip()
                     if not payload or payload == '[DONE]':
@@ -4948,12 +4921,9 @@ async def streaming_chat_response_handler(response, ctx):
                     chunk = json.loads(payload)
                 except Exception:
                     return
-                # Providers vary in chunk shape; be defensive so a surprise
-                # payload never breaks the generator for API callers on this
-                # path.
                 if not isinstance(chunk, dict):
                     return
-                # OpenAI Chat Completions streaming: choices[].delta.content
+                # OpenAI Chat Completions: choices[].delta.content
                 choices = chunk.get('choices') or []
                 if isinstance(choices, list):
                     for choice in choices:
@@ -4965,8 +4935,7 @@ async def streaming_chat_response_handler(response, ctx):
                         delta_content = delta.get('content')
                         if isinstance(delta_content, str) and delta_content:
                             accumulated_content += delta_content
-                # OpenAI Responses-API streaming: top-level delta with text
-                # (e.g. response.output_text.delta events)
+                # OpenAI Responses-API: top-level delta (str or {text|content}).
                 delta = chunk.get('delta')
                 if isinstance(delta, str):
                     accumulated_content += delta
@@ -4979,14 +4948,13 @@ async def streaming_chat_response_handler(response, ctx):
                     accumulated_usage = usage
 
             def accumulate(raw_bytes):
+                # Rolling buffer — SSE/NDJSON frames may split across chunks.
                 nonlocal accumulate_buffer
                 try:
                     raw = raw_bytes.decode('utf-8') if isinstance(raw_bytes, bytes) else raw_bytes
                 except Exception:
                     return
                 accumulate_buffer += raw
-                # Split on newline; last element is potentially incomplete,
-                # hold it over for the next chunk.
                 parts = accumulate_buffer.split('\n')
                 accumulate_buffer = parts[-1]
                 for line in parts[:-1]:
@@ -5023,9 +4991,8 @@ async def streaming_chat_response_handler(response, ctx):
                     accumulate(data)
                     yield data
 
-            # Stream complete — fire outlet filters with the accumulated content.
+            # Stream complete — persist final message and fire outlet.
             try:
-                # Flush any trailing buffer content from accumulate().
                 flush_accumulate_buffer()
 
                 output = (
@@ -5042,27 +5009,10 @@ async def streaming_chat_response_handler(response, ctx):
                     else []
                 )
 
-                # Normalize usage for schema parity with the main / non-
-                # streaming paths (both call normalize_usage before
-                # persisting / emitting).
                 normalized_usage = (
-                    normalize_usage(accumulated_usage)
-                    if isinstance(accumulated_usage, dict)
-                    else None
+                    normalize_usage(accumulated_usage) if isinstance(accumulated_usage, dict) else None
                 )
 
-                # Persist the final assistant message for persisted chats.
-                # Backend callers that provide chat_id + message_id but no
-                # session take this fallback path; without this write, outlet
-                # would read stale DB content (the empty placeholder inserted
-                # pre-inference). Mirrors the main-path write at middleware.py
-                # lines ~4790-4803.
-                #
-                # We persist even when accumulated_content is empty —
-                # tool-call-only streams, function-call-only streams, and
-                # providers that put final content in non-delta.content
-                # fields produce no accumulated text, but the message still
-                # needs to be marked done so the placeholder doesn't linger.
                 fallback_chat_id = metadata.get('chat_id')
                 fallback_message_id = metadata.get('message_id')
                 fallback_is_persisted = (
@@ -5086,10 +5036,6 @@ async def streaming_chat_response_handler(response, ctx):
                     except Exception as e:
                         log.debug(f'Error persisting streamed message in fallback: {e}')
 
-                    # Mirror the non-streaming path: run follow-ups /
-                    # auto-title / auto-tags for persisted chats even
-                    # without a WebSocket session. Uses a no-op emitter
-                    # so DB side-effects still land.
                     await _run_background_tasks(ctx)
 
                 ctx['assistant_message'] = {
