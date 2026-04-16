@@ -255,7 +255,7 @@ class Loader:
 
         loader = self._get_loader(filename, file_content_type, file_path)
 
-        if self.engine == 'external':
+        if is_external and has_external_config:
             try:
                 docs = loader.load()
             except Exception as exc:
