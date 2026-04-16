@@ -384,8 +384,12 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user), db: AsyncSes
 
 
 @router.get('/model/profile/image')
-async def get_model_profile_image(id: str, user=Depends(get_verified_user)):
-    model = await Models.get_model_by_id(id)
+async def get_model_profile_image(
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    model = await Models.get_model_by_id(id, db=db)
 
     if model:
         etag = f'"{model.updated_at}"' if model.updated_at else None
