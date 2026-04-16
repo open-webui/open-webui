@@ -1,5 +1,6 @@
 import logging
 import json
+import os
 from typing import Optional, List
 
 
@@ -27,6 +28,15 @@ def search_sougou(
         cred = credential.Credential(sougou_api_sid, sougou_api_sk)
         http_profile = HttpProfile()
         http_profile.endpoint = 'tms.tencentcloudapi.com'
+        # Tencent Cloud SDK does not read proxy env vars automatically
+        proxy = (
+            os.environ.get("https_proxy")
+            or os.environ.get("HTTPS_PROXY")
+            or os.environ.get("http_proxy")
+            or os.environ.get("HTTP_PROXY")
+        )
+        if proxy:
+            http_profile.proxy = proxy
         client_profile = ClientProfile()
         client_profile.http_profile = http_profile
         params = json.dumps({'Query': query, 'Cnt': 20})
