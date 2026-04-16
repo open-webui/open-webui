@@ -2769,7 +2769,16 @@ async def get_event_emitter_and_caller(metadata):
 
     # event_emitter broadcasts to a user's websocket room. Require
     # session_id so pure API callers (no WebSocket) fall into the
-    # body-streaming fallback path instead of the event-driven main path.
+    # body-streaming fallback path instead of the event-driven main path
+    # (which delivers content only via WebSocket and returns None as HTTP
+    # body, manifesting as "streaming returns null" for API callers).
+    #
+    # Note: this narrows the emitter to callers with a real WebSocket
+    # session. DB persistence, webhook delivery, and outlet filters are
+    # now gated independently (on chat_id / not-local:) so backend
+    # callers that provide a persisted chat_id + message_id without a
+    # session still get their data persisted — see the non-streaming and
+    # fallback streaming paths below.
     if metadata.get('session_id') and metadata.get('chat_id') and metadata.get('message_id'):
         event_emitter = await get_event_emitter(metadata)
 
@@ -3213,6 +3222,9 @@ async def non_streaming_chat_response_handler(response, ctx):
     if response_data is None:
         return response
 
+    chat_id = metadata.get('chat_id') or ''
+    is_persisted_chat = bool(chat_id) and not chat_id.startswith('local:')
+
     try:
         if 'error' in response_data:
             error = response_data.get('error')
@@ -3224,7 +3236,7 @@ async def non_streaming_chat_response_handler(response, ctx):
 
             log.error('Provider returned error (non-streaming): %s', error)
 
-            if event_emitter:
+            if is_persisted_chat and metadata.get('message_id'):
                 await Chats.upsert_message_to_chat_by_id_and_message_id(
                     metadata['chat_id'],
                     metadata['message_id'],
@@ -3232,15 +3244,15 @@ async def non_streaming_chat_response_handler(response, ctx):
                         'error': {'content': error},
                     },
                 )
-                if isinstance(error, str) or isinstance(error, dict):
-                    await event_emitter(
-                        {
-                            'type': 'chat:message:error',
-                            'data': {'error': {'content': error}},
-                        }
-                    )
+            if event_emitter and (isinstance(error, str) or isinstance(error, dict)):
+                await event_emitter(
+                    {
+                        'type': 'chat:message:error',
+                        'data': {'error': {'content': error}},
+                    }
+                )
 
-        if event_emitter and 'selected_model_id' in response_data:
+        if 'selected_model_id' in response_data and is_persisted_chat and metadata.get('message_id'):
             await Chats.upsert_message_to_chat_by_id_and_message_id(
                 metadata['chat_id'],
                 metadata['message_id'],
@@ -3270,6 +3282,10 @@ async def non_streaming_chat_response_handler(response, ctx):
 
                 usage = normalize_usage(response_data.get('usage', {}) or {})
 
+                title = None
+                if is_persisted_chat:
+                    title = await Chats.get_chat_title_by_id(metadata['chat_id'])
+
                 if event_emitter:
                     await event_emitter(
                         {
@@ -3277,9 +3293,6 @@ async def non_streaming_chat_response_handler(response, ctx):
                             'data': response_data,
                         }
                     )
-
-                    title = await Chats.get_chat_title_by_id(metadata['chat_id'])
-
                     await event_emitter(
                         {
                             'type': 'chat:completion',
@@ -3292,7 +3305,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                         }
                     )
 
-                    # Save message in the database
+                if is_persisted_chat and metadata.get('message_id'):
                     await Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata['chat_id'],
                         metadata['message_id'],
@@ -3321,7 +3334,15 @@ async def non_streaming_chat_response_handler(response, ctx):
                                 },
                             )
 
-                await background_tasks_handler(ctx)
+                # background_tasks_handler assumes persisted-chat metadata
+                # and a working event_emitter for follow-ups / title / tags
+                # generation; isolate failures so outlet still runs.
+                if is_persisted_chat and event_emitter:
+                    try:
+                        await background_tasks_handler(ctx)
+                    except Exception as e:
+                        log.debug(f'background_tasks_handler error: {e}')
+
                 ctx['assistant_message'] = {
                     'content': content,
                     'output': response_output,
@@ -4894,20 +4915,31 @@ async def streaming_chat_response_handler(response, ctx):
                     return
                 for line in raw.splitlines():
                     line = line.strip()
-                    if not line.startswith('data: '):
+                    # Accept "data: {...}" and "data:{...}" (SSE spec allows both).
+                    if not line.startswith('data:'):
                         continue
-                    payload = line[6:].strip()
+                    payload = line[5:].lstrip()
                     if not payload or payload == '[DONE]':
                         continue
                     try:
                         chunk = json.loads(payload)
                     except Exception:
                         continue
+                    # OpenAI Chat Completions streaming: choices[].delta.content
                     for choice in chunk.get('choices', []) or []:
                         delta = choice.get('delta') or {}
                         delta_content = delta.get('content')
                         if delta_content:
                             accumulated_content += delta_content
+                    # OpenAI Responses-API streaming: top-level delta with text
+                    # (e.g. response.output_text.delta events)
+                    delta = chunk.get('delta')
+                    if isinstance(delta, str):
+                        accumulated_content += delta
+                    elif isinstance(delta, dict):
+                        text = delta.get('text') or delta.get('content')
+                        if isinstance(text, str):
+                            accumulated_content += text
                     if chunk.get('usage'):
                         accumulated_usage = chunk['usage']
 
