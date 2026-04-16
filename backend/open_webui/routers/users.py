@@ -355,7 +355,13 @@ async def update_user_status_by_session_user(
             detail=ERROR_MESSAGES.ACTION_PROHIBITED,
         )
     # user already fetched by get_verified_user — no need to refetch
-    return await Users.update_user_status_by_id(user.id, form_data, db=db)
+    updated = await Users.update_user_status_by_id(user.id, form_data, db=db)
+    if updated:
+        return updated
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=ERROR_MESSAGES.USER_NOT_FOUND,
+    )
 
 
 ############################
