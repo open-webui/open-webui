@@ -4903,45 +4903,64 @@ async def streaming_chat_response_handler(response, ctx):
         async def stream_wrapper(original_generator, events):
             accumulated_content = ''
             accumulated_usage = None
+            # Rolling buffer: SSE frames can be split across network chunks
+            # (e.g. a large JSON payload in one `data:` line). We hold an
+            # incomplete trailing line until the next chunk brings a newline.
+            accumulate_buffer = ''
 
             def wrap_item(item):
                 return f'data: {item}\n\n'
 
-            def accumulate(raw_bytes):
+            def _parse_line(line):
                 nonlocal accumulated_content, accumulated_usage
+                line = line.strip()
+                # Accept "data: {...}" and "data:{...}" (SSE spec allows both).
+                if not line.startswith('data:'):
+                    return
+                payload = line[5:].lstrip()
+                if not payload or payload == '[DONE]':
+                    return
+                try:
+                    chunk = json.loads(payload)
+                except Exception:
+                    return
+                # OpenAI Chat Completions streaming: choices[].delta.content
+                for choice in chunk.get('choices', []) or []:
+                    delta = choice.get('delta') or {}
+                    delta_content = delta.get('content')
+                    if delta_content:
+                        accumulated_content += delta_content
+                # OpenAI Responses-API streaming: top-level delta with text
+                # (e.g. response.output_text.delta events)
+                delta = chunk.get('delta')
+                if isinstance(delta, str):
+                    accumulated_content += delta
+                elif isinstance(delta, dict):
+                    text = delta.get('text') or delta.get('content')
+                    if isinstance(text, str):
+                        accumulated_content += text
+                if chunk.get('usage'):
+                    accumulated_usage = chunk['usage']
+
+            def accumulate(raw_bytes):
+                nonlocal accumulate_buffer
                 try:
                     raw = raw_bytes.decode('utf-8') if isinstance(raw_bytes, bytes) else raw_bytes
                 except Exception:
                     return
-                for line in raw.splitlines():
-                    line = line.strip()
-                    # Accept "data: {...}" and "data:{...}" (SSE spec allows both).
-                    if not line.startswith('data:'):
-                        continue
-                    payload = line[5:].lstrip()
-                    if not payload or payload == '[DONE]':
-                        continue
-                    try:
-                        chunk = json.loads(payload)
-                    except Exception:
-                        continue
-                    # OpenAI Chat Completions streaming: choices[].delta.content
-                    for choice in chunk.get('choices', []) or []:
-                        delta = choice.get('delta') or {}
-                        delta_content = delta.get('content')
-                        if delta_content:
-                            accumulated_content += delta_content
-                    # OpenAI Responses-API streaming: top-level delta with text
-                    # (e.g. response.output_text.delta events)
-                    delta = chunk.get('delta')
-                    if isinstance(delta, str):
-                        accumulated_content += delta
-                    elif isinstance(delta, dict):
-                        text = delta.get('text') or delta.get('content')
-                        if isinstance(text, str):
-                            accumulated_content += text
-                    if chunk.get('usage'):
-                        accumulated_usage = chunk['usage']
+                accumulate_buffer += raw
+                # Split on newline; last element is potentially incomplete,
+                # hold it over for the next chunk.
+                parts = accumulate_buffer.split('\n')
+                accumulate_buffer = parts[-1]
+                for line in parts[:-1]:
+                    _parse_line(line)
+
+            def flush_accumulate_buffer():
+                nonlocal accumulate_buffer
+                if accumulate_buffer:
+                    _parse_line(accumulate_buffer)
+                    accumulate_buffer = ''
 
             for event in events:
                 event, _ = await process_filter_functions(
@@ -4970,6 +4989,9 @@ async def streaming_chat_response_handler(response, ctx):
 
             # Stream complete — fire outlet filters with the accumulated content.
             try:
+                # Flush any trailing buffer content from accumulate().
+                flush_accumulate_buffer()
+
                 output = (
                     [
                         {
@@ -4983,6 +5005,36 @@ async def streaming_chat_response_handler(response, ctx):
                     if accumulated_content
                     else []
                 )
+
+                # Persist the final assistant message for persisted chats.
+                # Backend callers that provide chat_id + message_id but no
+                # session take this fallback path; without this write, outlet
+                # would read stale DB content (the empty placeholder inserted
+                # pre-inference). Mirrors the main-path write at middleware.py
+                # lines ~4790-4803.
+                fallback_chat_id = metadata.get('chat_id')
+                fallback_message_id = metadata.get('message_id')
+                if (
+                    fallback_chat_id
+                    and fallback_message_id
+                    and not fallback_chat_id.startswith('local:')
+                    and accumulated_content
+                ):
+                    try:
+                        await Chats.upsert_message_to_chat_by_id_and_message_id(
+                            fallback_chat_id,
+                            fallback_message_id,
+                            {
+                                'done': True,
+                                'role': 'assistant',
+                                'content': accumulated_content,
+                                'output': output,
+                                **({'usage': accumulated_usage} if accumulated_usage else {}),
+                            },
+                        )
+                    except Exception as e:
+                        log.debug(f'Error persisting streamed message in fallback: {e}')
+
                 ctx['assistant_message'] = {
                     'content': accumulated_content,
                     'output': output,
