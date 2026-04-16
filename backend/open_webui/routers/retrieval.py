@@ -1614,7 +1614,7 @@ async def process_file(
                 if file_path:
                     file_path = await asyncio.to_thread(Storage.get_file, file_path)
                     loader_kwargs = {
-                        user=user,
+                        'user': user,
                         'DATALAB_MARKER_API_KEY': request.app.state.config.DATALAB_MARKER_API_KEY,
                         'DATALAB_MARKER_API_BASE_URL': request.app.state.config.DATALAB_MARKER_API_BASE_URL,
                         'DATALAB_MARKER_ADDITIONAL_CONFIG': request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG,
@@ -1646,7 +1646,9 @@ async def process_file(
                         'MINERU_PARAMS': request.app.state.config.MINERU_PARAMS,
                     }
 
-                    extraction_engine = request.app.state.config.CONTENT_EXTRACTION_ENGINE
+                    extraction_engine = (
+                        request.app.state.config.CONTENT_EXTRACTION_ENGINE or ''
+                    ).strip().lower()
                     loader = Loader(engine=extraction_engine, **loader_kwargs)
 
                     try:

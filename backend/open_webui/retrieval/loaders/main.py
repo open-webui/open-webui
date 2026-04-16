@@ -229,7 +229,7 @@ class DoclingLoader:
 
 class Loader:
     def __init__(self, engine: str = '', **kwargs):
-        self.engine = engine
+        self.engine = (engine or '').strip().lower()
         self.user = kwargs.get('user', None)
         self.kwargs = kwargs
 
