@@ -908,7 +908,7 @@ async def delete_knowledge_by_id(
                     base_model_id=model.base_model_id,
                     meta=model.meta,
                     params=model.params,
-                    access_grants=model.access_grants,
+                    access_grants=[g.model_dump() for g in (model.access_grants or [])],
                     is_active=model.is_active,
                 )
                 await Models.update_model_by_id(model.id, model_form, db=db)
