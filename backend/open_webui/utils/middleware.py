@@ -5137,7 +5137,7 @@ async def streaming_chat_response_handler(response, ctx):
                             await Chats.upsert_message_to_chat_by_id_and_message_id(
                                 fallback_chat_id,
                                 fallback_message_id,
-                                {'error': {'content': err_content}},
+                                {'done': True, 'error': {'content': err_content}},
                             )
                         else:
                             await Chats.upsert_message_to_chat_by_id_and_message_id(
