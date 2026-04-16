@@ -26,7 +26,18 @@ def search_duckduckgo(
     Returns:
         list[SearchResult]: A list of search results
     """
-    proxy = os.environ.get("https_proxy") or os.environ.get("http_proxy")
+    proxy = (
+        os.environ.get("https_proxy")
+        or os.environ.get("HTTPS_PROXY")
+        or os.environ.get("http_proxy")
+        or os.environ.get("HTTP_PROXY")
+    )
+    # httpx (used internally by ddgs) reliably reads uppercase env vars;
+    # ensure they are set so the proxy is picked up regardless of ddgs version
+    if proxy:
+        os.environ.setdefault("HTTPS_PROXY", proxy)
+        os.environ.setdefault("HTTP_PROXY", proxy)
+
     # Use the DDGS context manager to create a DDGS object
     search_results = []
     with DDGS(proxy=proxy) as ddgs:
