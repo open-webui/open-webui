@@ -1745,16 +1745,8 @@
 											{@const filter = toggleFilters.find((f) => f.id === filterId)}
 											{#if filter}
 												<Tooltip content={filter?.name} placement="top">
-													<button
-														on:click|preventDefault={() => {
-															selectedFilterIds = selectedFilterIds.filter((id) => id !== filterId);
-														}}
-														type="button"
-														class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {selectedFilterIds.includes(
-															filterId
-														)
-															? 'text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-600/10 border border-sky-200/40 dark:border-sky-500/20'
-															: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '} capitalize"
+													<div
+														class="p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 max-w-full overflow-hidden text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-400/10 border border-sky-200/40 dark:border-sky-500/20"
 													>
 														{#if filter?.icon}
 															<div class="size-4 items-center flex justify-center">
@@ -1770,10 +1762,31 @@
 														{:else}
 															<Sparkles className="size-4" strokeWidth="1.75" />
 														{/if}
-														<div class="hidden group-hover:block">
-															<XMark className="size-4" strokeWidth="1.75" />
-														</div>
-													</button>
+
+														{#if filter?.has_user_valves && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.valves ?? true))}
+															<button
+																type="button"
+																class="hover:text-sky-700 dark:hover:text-sky-100 transition"
+																on:click|preventDefault|stopPropagation={() => {
+																	selectedValvesType = 'function';
+																	selectedValvesItemId = filterId;
+																	showValvesModal = true;
+																}}
+															>
+																<Knobs className="size-3.5" />
+															</button>
+														{/if}
+
+														<button
+															type="button"
+															class="hover:text-sky-700 dark:hover:text-sky-100 transition"
+															on:click|preventDefault|stopPropagation={() => {
+																selectedFilterIds = selectedFilterIds.filter((id) => id !== filterId);
+															}}
+														>
+															<XMark className="size-3.5" strokeWidth="1.75" />
+														</button>
+													</div>
 												</Tooltip>
 											{/if}
 										{/each}
