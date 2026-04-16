@@ -6,7 +6,7 @@ from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, get_async_db_context
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text
+from sqlalchemy import BigInteger, Column, Index, String, Text
 
 ####################
 # Memory DB Schema
@@ -19,10 +19,14 @@ class Memory(Base):
     __tablename__ = 'memory'
 
     id = Column(String, primary_key=True, unique=True)
-    user_id = Column(String, index=True)
+    user_id = Column(String)
     content = Column(Text)
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
+
+    __table_args__ = (
+        Index('memory_user_id_idx', 'user_id'),
+    )
 
 
 class MemoryModel(BaseModel):
