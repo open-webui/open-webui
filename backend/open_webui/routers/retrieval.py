@@ -1650,20 +1650,7 @@ async def process_file(
                         request.app.state.config.CONTENT_EXTRACTION_ENGINE or ''
                     ).strip().lower()
                     loader = Loader(engine=extraction_engine, **loader_kwargs)
-
-                    try:
-                        docs = await loader.aload(file.filename, file.meta.get('content_type'), file_path)
-                    except Exception as e:
-                        if extraction_engine == 'external':
-                            log.warning(
-                                'AUTOFALLBACK: External content extraction failed for %s. Retrying with native default loader. Error: %s',
-                                file.filename,
-                                e,
-                            )
-                            fallback_loader = Loader(engine='', **loader_kwargs)
-                            docs = await fallback_loader.aload(file.filename, file.meta.get('content_type'), file_path)
-                        else:
-                            raise
+                    docs = await loader.aload(file.filename, file.meta.get('content_type'), file_path)
 
                     docs = [
                         Document(

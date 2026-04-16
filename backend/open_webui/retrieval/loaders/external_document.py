@@ -93,7 +93,7 @@ class ExternalDocumentLoader(BaseLoader):
 
                 if 'No extractable text' in detail:
                     log.warning(
-                        'AUTOFALLBACK: External document loader returned 422 No extractable text for %s. Falling back to native loader.',
+                        'AUTOFALLBACK: External document loader returned 422 No extractable text for %s; signaling upstream loader to fallback to native parsing.',
                         self.file_path,
                     )
 

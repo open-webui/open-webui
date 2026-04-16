@@ -233,11 +233,18 @@ class Loader:
         self.user = kwargs.get('user', None)
         self.kwargs = kwargs
 
+    @staticmethod
+    def _is_non_empty_string(value) -> bool:
+        return isinstance(value, str) and value.strip() != ''
+
+    def _has_external_config(self) -> bool:
+        return self._is_non_empty_string(self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_URL')) and self._is_non_empty_string(
+            self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_API_KEY')
+        )
+
     def load(self, filename: str, file_content_type: str, file_path: str) -> list[Document]:
         is_external = self.engine == 'external'
-        has_external_config = self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_URL') and self.kwargs.get(
-            'EXTERNAL_DOCUMENT_LOADER_API_KEY'
-        )
+        has_external_config = self._has_external_config()
 
         if is_external and not has_external_config:
             log.warning(
@@ -303,13 +310,12 @@ class Loader:
             allow_external
             and
             self.engine == 'external'
-            and self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_URL')
-            and self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_API_KEY')
+            and self._has_external_config()
         ):
             loader = ExternalDocumentLoader(
                 file_path=file_path,
-                url=self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_URL'),
-                api_key=self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_API_KEY'),
+                url=self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_URL').strip(),
+                api_key=self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_API_KEY').strip(),
                 mime_type=file_content_type,
                 user=self.user,
             )
