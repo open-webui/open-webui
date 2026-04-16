@@ -234,12 +234,12 @@ class Loader:
         self.kwargs = kwargs
 
     def load(self, filename: str, file_content_type: str, file_path: str) -> list[Document]:
-        if (
-            self.engine == 'external'
-            and not self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_URL')
-            or self.engine == 'external'
-            and not self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_API_KEY')
-        ):
+        is_external = self.engine == 'external'
+        has_external_config = self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_URL') and self.kwargs.get(
+            'EXTERNAL_DOCUMENT_LOADER_API_KEY'
+        )
+
+        if is_external and not has_external_config:
             log.warning(
                 'AUTOFALLBACK: External loader selected but missing URL/API key for %s (%s). Using native loader.',
                 filename,
