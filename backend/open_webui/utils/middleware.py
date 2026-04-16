@@ -2767,10 +2767,10 @@ async def get_event_emitter_and_caller(metadata):
     event_emitter = None
     event_caller = None
 
-    # event_emitter only needs user_id + chat_id + message_id.
-    # It broadcasts to user:{user_id} room AND persists to DB,
-    # so it works for backend-initiated calls (automations, API).
-    if metadata.get('chat_id') and metadata.get('message_id'):
+    # event_emitter broadcasts to a user's websocket room. Require
+    # session_id so pure API callers (no WebSocket) fall into the
+    # body-streaming fallback path instead of the event-driven main path.
+    if metadata.get('session_id') and metadata.get('chat_id') and metadata.get('message_id'):
         event_emitter = await get_event_emitter(metadata)
 
     # event_caller needs session_id — it calls back to a specific
@@ -3213,18 +3213,18 @@ async def non_streaming_chat_response_handler(response, ctx):
     if response_data is None:
         return response
 
-    if event_emitter:
-        try:
-            if 'error' in response_data:
-                error = response_data.get('error')
+    try:
+        if 'error' in response_data:
+            error = response_data.get('error')
 
-                if isinstance(error, dict):
-                    error = error.get('detail', error)
-                else:
-                    error = str(error)
+            if isinstance(error, dict):
+                error = error.get('detail', error)
+            else:
+                error = str(error)
 
-                log.error('Provider returned error (non-streaming): %s', error)
+            log.error('Provider returned error (non-streaming): %s', error)
 
+            if event_emitter:
                 await Chats.upsert_message_to_chat_by_id_and_message_id(
                     metadata['chat_id'],
                     metadata['message_id'],
@@ -3240,20 +3240,37 @@ async def non_streaming_chat_response_handler(response, ctx):
                         }
                     )
 
-            if 'selected_model_id' in response_data:
-                await Chats.upsert_message_to_chat_by_id_and_message_id(
-                    metadata['chat_id'],
-                    metadata['message_id'],
-                    {
-                        'selectedModelId': response_data['selected_model_id'],
-                    },
-                )
+        if event_emitter and 'selected_model_id' in response_data:
+            await Chats.upsert_message_to_chat_by_id_and_message_id(
+                metadata['chat_id'],
+                metadata['message_id'],
+                {
+                    'selectedModelId': response_data['selected_model_id'],
+                },
+            )
 
-            choices = response_data.get('choices', [])
-            if choices and choices[0].get('message', {}).get('content'):
-                content = response_data['choices'][0]['message']['content']
+        choices = response_data.get('choices', [])
+        if choices and choices[0].get('message', {}).get('content'):
+            content = response_data['choices'][0]['message']['content']
 
-                if content:
+            if content:
+                # Use output from backend if provided (OR-compliant backends),
+                # otherwise generate from response content
+                response_output = response_data.get('output')
+                if not response_output:
+                    response_output = [
+                        {
+                            'type': 'message',
+                            'id': output_id('msg'),
+                            'status': 'completed',
+                            'role': 'assistant',
+                            'content': [{'type': 'output_text', 'text': content}],
+                        }
+                    ]
+
+                usage = normalize_usage(response_data.get('usage', {}) or {})
+
+                if event_emitter:
                     await event_emitter(
                         {
                             'type': 'chat:completion',
@@ -3262,20 +3279,6 @@ async def non_streaming_chat_response_handler(response, ctx):
                     )
 
                     title = await Chats.get_chat_title_by_id(metadata['chat_id'])
-
-                    # Use output from backend if provided (OR-compliant backends),
-                    # otherwise generate from response content
-                    response_output = response_data.get('output')
-                    if not response_output:
-                        response_output = [
-                            {
-                                'type': 'message',
-                                'id': output_id('msg'),
-                                'status': 'completed',
-                                'role': 'assistant',
-                                'content': [{'type': 'output_text', 'text': content}],
-                            }
-                        ]
 
                     await event_emitter(
                         {
@@ -3290,8 +3293,6 @@ async def non_streaming_chat_response_handler(response, ctx):
                     )
 
                     # Save message in the database
-                    usage = normalize_usage(response_data.get('usage', {}) or {})
-
                     await Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata['chat_id'],
                         metadata['message_id'],
@@ -3320,23 +3321,18 @@ async def non_streaming_chat_response_handler(response, ctx):
                                 },
                             )
 
-                    await background_tasks_handler(ctx)
-                    ctx['assistant_message'] = {
-                        'content': content,
-                        'output': response_output,
-                        **({'usage': usage} if usage else {}),
-                    }
-                    await outlet_filter_handler(ctx)
+                await background_tasks_handler(ctx)
+                ctx['assistant_message'] = {
+                    'content': content,
+                    'output': response_output,
+                    **({'usage': usage} if usage else {}),
+                }
+                await outlet_filter_handler(ctx)
 
-            response = build_response_object(response, merge_events_into_response(response_data, events))
-        except Exception as e:
-            log.debug(f'Error occurred while processing request: {e}')
-            pass
-
-        return response
-
-    if isinstance(response, dict):
-        response = merge_events_into_response(response_data, events)
+        response = build_response_object(response, merge_events_into_response(response_data, events))
+    except Exception as e:
+        log.debug(f'Error occurred while processing request: {e}')
+        pass
 
     return response
 
@@ -4880,10 +4876,40 @@ async def streaming_chat_response_handler(response, ctx):
         return await response_handler(response, events)
 
     else:
-        # Fallback to the original response
+        # Fallback: stream the upstream body straight to the caller.
+        # Used by pure API callers (no WebSocket session) — we also
+        # accumulate chunks here to fire outlet filters after completion.
         async def stream_wrapper(original_generator, events):
+            accumulated_content = ''
+            accumulated_usage = None
+
             def wrap_item(item):
                 return f'data: {item}\n\n'
+
+            def accumulate(raw_bytes):
+                nonlocal accumulated_content, accumulated_usage
+                try:
+                    raw = raw_bytes.decode('utf-8') if isinstance(raw_bytes, bytes) else raw_bytes
+                except Exception:
+                    return
+                for line in raw.splitlines():
+                    line = line.strip()
+                    if not line.startswith('data: '):
+                        continue
+                    payload = line[6:].strip()
+                    if not payload or payload == '[DONE]':
+                        continue
+                    try:
+                        chunk = json.loads(payload)
+                    except Exception:
+                        continue
+                    for choice in chunk.get('choices', []) or []:
+                        delta = choice.get('delta') or {}
+                        delta_content = delta.get('content')
+                        if delta_content:
+                            accumulated_content += delta_content
+                    if chunk.get('usage'):
+                        accumulated_usage = chunk['usage']
 
             for event in events:
                 event, _ = await process_filter_functions(
@@ -4907,7 +4933,32 @@ async def streaming_chat_response_handler(response, ctx):
                 )
 
                 if data:
+                    accumulate(data)
                     yield data
+
+            # Stream complete — fire outlet filters with the accumulated content.
+            try:
+                output = (
+                    [
+                        {
+                            'type': 'message',
+                            'id': output_id('msg'),
+                            'status': 'completed',
+                            'role': 'assistant',
+                            'content': [{'type': 'output_text', 'text': accumulated_content}],
+                        }
+                    ]
+                    if accumulated_content
+                    else []
+                )
+                ctx['assistant_message'] = {
+                    'content': accumulated_content,
+                    'output': output,
+                    **({'usage': accumulated_usage} if accumulated_usage else {}),
+                }
+                await outlet_filter_handler(ctx)
+            except Exception as e:
+                log.debug(f'Error running outlet in fallback stream: {e}')
 
         return StreamingResponse(
             stream_wrapper(response.body_iterator, events),
