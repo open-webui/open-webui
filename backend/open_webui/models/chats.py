@@ -928,12 +928,16 @@ class ChatTable:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(Chat).filter_by(share_id=id))
-                chat = result.scalars().first()
+                chat_item = result.scalars().first()
 
-                if chat:
-                    return await self.get_chat_by_id(id, db=db)
-                else:
+                if chat_item is None:
                     return None
+
+                if self._sanitize_chat_row(chat_item):
+                    await db.commit()
+                    await db.refresh(chat_item)
+
+                return ChatModel.model_validate(chat_item)
         except Exception:
             return None
 
