@@ -257,10 +257,19 @@ async def generate_function_chat_completion(request, form_data, user, models: di
     extra_params['__tools__'] = metadata.get('tools', {})
 
     if model_info:
+        request_model_id = form_data['model']
+
         if model_info.base_model_id:
             form_data['model'] = model_info.base_model_id
 
-        params = model_info.params.model_dump()
+        default_model_params = getattr(request.app.state.config, 'DEFAULT_MODEL_PARAMS', None) or {}
+        runtime_model_params = ((request.app.state.MODELS.get(request_model_id, {}) or {}).get('info') or {}).get('params') or {}
+        db_model_params = model_info.params.model_dump() if model_info.params else {}
+        params = {
+            **default_model_params,
+            **runtime_model_params,
+            **db_model_params,
+        }
 
         if params:
             system = params.pop('system', None)

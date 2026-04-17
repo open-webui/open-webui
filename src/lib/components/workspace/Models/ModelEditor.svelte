@@ -254,11 +254,14 @@
 		// reflects the actual defaults rather than hardcoded values
 		const modelsConfig = await getModelsDefaults(localStorage.token).catch(() => null);
 		const defaultMeta = modelsConfig?.DEFAULT_MODEL_METADATA ?? {};
+		const defaultParams = modelsConfig?.DEFAULT_MODEL_PARAMS ?? {};
 
 		// Use admin defaults as base, falling back to hardcoded defaults
 		capabilities = { ...DEFAULT_CAPABILITIES, ...(defaultMeta.capabilities ?? {}) };
 		defaultFeatureIds = defaultMeta.defaultFeatureIds ?? [];
 		builtinTools = defaultMeta.builtinTools ?? {};
+		params = { ...params, ...defaultParams };
+		system = defaultParams?.system ?? system;
 
 		// Scroll to top 'workspace-container' element
 		const workspaceContainer = document.getElementById('workspace-container');
@@ -267,12 +270,14 @@
 		}
 
 		if (model) {
+			const modelMeta = model?.meta ?? model?.info?.meta ?? {};
+			const modelParams = model?.params ?? model?.info?.params ?? {};
 			name = model.name;
 			await tick();
 
 			id = model.id;
 
-			enableDescription = model?.meta?.description !== null;
+			enableDescription = modelMeta?.description !== null;
 
 			if (model.base_model_id) {
 				const base_model = $models
@@ -288,16 +293,16 @@
 				}
 			}
 
-			system = model?.params?.system ?? '';
+			system = modelParams?.system ?? system;
 
-			params = { ...params, ...model?.params };
+			params = { ...params, ...modelParams };
 			params.stop = params?.stop
 				? (typeof params.stop === 'string' ? params.stop.split(',') : (params?.stop ?? [])).join(
 						','
 					)
 				: null;
 
-			knowledge = (model?.meta?.knowledge ?? []).map((item) => {
+			knowledge = (modelMeta?.knowledge ?? []).map((item) => {
 				if (item?.collection_name && item?.type !== 'file') {
 					return {
 						id: item.collection_name,
@@ -316,18 +321,18 @@
 				}
 			});
 
-			toolIds = model?.meta?.toolIds ?? [];
-			skillIds = model?.meta?.skillIds ?? [];
-			filterIds = model?.meta?.filterIds ?? [];
-			defaultFilterIds = model?.meta?.defaultFilterIds ?? [];
-			actionIds = model?.meta?.actionIds ?? [];
+			toolIds = modelMeta?.toolIds ?? [];
+			skillIds = modelMeta?.skillIds ?? [];
+			filterIds = modelMeta?.filterIds ?? [];
+			defaultFilterIds = modelMeta?.defaultFilterIds ?? [];
+			actionIds = modelMeta?.actionIds ?? [];
 
 			// Per-model overrides take precedence over admin defaults
-			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
-			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? defaultFeatureIds;
-			builtinTools = model?.meta?.builtinTools ?? builtinTools;
-			terminalId = model?.meta?.terminalId ?? '';
-			tts = { voice: model?.meta?.tts?.voice ?? '' };
+			capabilities = { ...capabilities, ...(modelMeta?.capabilities ?? {}) };
+			defaultFeatureIds = modelMeta?.defaultFeatureIds ?? defaultFeatureIds;
+			builtinTools = modelMeta?.builtinTools ?? builtinTools;
+			terminalId = modelMeta?.terminalId ?? '';
+			tts = { voice: modelMeta?.tts?.voice ?? '' };
 
 			accessGrants = model?.access_grants ?? [];
 

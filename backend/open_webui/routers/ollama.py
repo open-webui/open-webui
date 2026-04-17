@@ -1100,7 +1100,21 @@ async def generate_chat_completion(
         del payload['metadata']
 
     model_id = payload['model']
+
+    if not request.app.state.MODELS or model_id not in request.app.state.MODELS:
+        await get_all_models(request, user=user)
+
+    runtime_model = request.app.state.MODELS.get(model_id)
     model_info = await Models.get_model_by_id(model_id)
+
+    default_model_params = getattr(request.app.state.config, 'DEFAULT_MODEL_PARAMS', None) or {}
+    runtime_model_params = ((runtime_model.get('info') or {}).get('params') or {}) if runtime_model else {}
+    db_model_params = model_info.params.model_dump() if model_info and model_info.params else {}
+    effective_model_params = {
+        **default_model_params,
+        **runtime_model_params,
+        **db_model_params,
+    }
 
     if model_info:
         if model_info.base_model_id:
@@ -1109,13 +1123,11 @@ async def generate_chat_completion(
             )  # Use request's base_model_id if available
             payload['model'] = base_model_id
 
-        params = model_info.params.model_dump()
+        if effective_model_params:
+            system = effective_model_params.pop('system', None)
 
-        if params:
-            system = params.pop('system', None)
-
-            payload = apply_model_params_to_body_ollama(params, payload)
-            if not bypass_system_prompt:
+            payload = apply_model_params_to_body_ollama(effective_model_params, payload)
+            if not bypass_system_prompt and system is not None:
                 payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
         await check_model_access(user, model_info, bypass_filter)

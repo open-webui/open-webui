@@ -578,6 +578,7 @@ class ModelsConfigForm(BaseModel):
 async def get_models_defaults(request: Request, user=Depends(get_verified_user)):
     return {
         'DEFAULT_MODEL_METADATA': request.app.state.config.DEFAULT_MODEL_METADATA,
+        'DEFAULT_MODEL_PARAMS': request.app.state.config.DEFAULT_MODEL_PARAMS,
     }
 
 

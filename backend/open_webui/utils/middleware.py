@@ -2147,7 +2147,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             form_data['model'] = selected_model_id
             metadata['selected_model_id'] = selected_model_id
 
+    system_prompt = (form_data.get('params') or {}).get('system')
+
     form_data = apply_params_to_form_data(form_data, model)
+
+    if system_prompt:
+        form_data['messages'] = add_or_update_system_message(system_prompt, form_data.get('messages', []))
+
     log.debug(f'form_data: {form_data}')
 
     # Load messages from DB when available — DB preserves structured 'output' items

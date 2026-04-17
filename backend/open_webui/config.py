@@ -592,7 +592,6 @@ OAUTH_USERNAME_CLAIM = PersistentConfig(
     os.environ.get('OAUTH_USERNAME_CLAIM', 'name'),
 )
 
-
 OAUTH_PICTURE_CLAIM = PersistentConfig(
     'OAUTH_PICTURE_CLAIM',
     'oauth.oidc.avatar_claim',
@@ -1299,10 +1298,16 @@ MODEL_ORDER_LIST = PersistentConfig(
     [],
 )
 
+try:
+    default_model_metadata = json.loads(os.environ.get('DEFAULT_MODEL_METADATA', '{}'))
+except Exception as e:
+    log.exception(f'Error loading DEFAULT_MODEL_METADATA: {e}')
+    default_model_metadata = {}
+
 DEFAULT_MODEL_METADATA = PersistentConfig(
     'DEFAULT_MODEL_METADATA',
     'models.default_metadata',
-    {},
+    default_model_metadata,
 )
 
 try:
