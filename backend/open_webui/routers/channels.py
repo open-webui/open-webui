@@ -925,8 +925,8 @@ async def model_response_handler(request, channel, message, user, db=None):
                 images = []
 
                 # Batch fetch all users in a single query (fixes N+1 problem)
-                user_ids = list({m.user_id for m in thread_messages})
-                message_users = {u.id: u for u in await Users.get_users_by_user_ids(user_ids, db=db)}
+                user_ids = list({message.user_id for message in thread_messages})
+                message_users = {user.id: user for user in await Users.get_users_by_user_ids(user_ids, db=db)}
 
                 for thread_message in thread_messages:
                     message_user = message_users.get(thread_message.user_id)
