@@ -512,6 +512,7 @@
 						}
 					}
 					history = history;
+				return; // Patches history.messages directly; skip the trailing write-back.
 				} else if (type === 'chat:message:favorite') {
 					// Update message favorite status
 					message.favorite = data.favorite;
