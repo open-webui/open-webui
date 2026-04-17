@@ -691,6 +691,7 @@ def transcription_handler(request, file_path, metadata, user=None):
                         files={'file': (filename, audio_file)},
                         data=payload,
                         timeout=AIOHTTP_CLIENT_TIMEOUT,
+                        verify=AIOHTTP_CLIENT_SESSION_SSL
                     )
 
                 if r.status_code == 200:
@@ -1304,6 +1305,7 @@ async def get_available_models(request: Request) -> list[dict]:
                 try:
                     async with session.get(
                         f'{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/models',
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL
                     ) as response:
                         response.raise_for_status()
                         data = await response.json()
@@ -1315,6 +1317,7 @@ async def get_available_models(request: Request) -> list[dict]:
                     try:
                         async with session.get(
                             f'{request.app.state.config.TTS_OPENAI_API_BASE_URL}/models',
+                            ssl=AIOHTTP_CLIENT_SESSION_SSL
                         ) as response:
                             response.raise_for_status()
                             data = await response.json()
@@ -1362,6 +1365,7 @@ async def get_available_voices(request) -> dict:
                 async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
                     async with session.get(
                         f'{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/voices',
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL
                     ) as response:
                         response.raise_for_status()
                         data = await response.json()
