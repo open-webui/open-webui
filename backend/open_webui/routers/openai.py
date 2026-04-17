@@ -62,6 +62,18 @@ from open_webui.utils.anthropic import is_anthropic_url, get_anthropic_models
 
 log = logging.getLogger(__name__)
 
+# Hop-by-hop headers that must not be forwarded by a proxy.
+# These are stripped to prevent ERR_CONTENT_DECODING_FAILED and similar errors
+# when the upstream response is re-streamed through a different HTTP stack.
+STRIPPED_RESPONSE_HEADERS = frozenset(
+    ("transfer-encoding", "connection", "content-encoding", "content-length")
+)
+
+
+def _filter_upstream_headers(headers: dict) -> dict:
+    """Remove hop-by-hop headers that should not be forwarded."""
+    return {k: v for k, v in headers.items() if k.lower() not in STRIPPED_RESPONSE_HEADERS}
+
 
 ##########################################
 #
@@ -1186,7 +1198,7 @@ async def generate_chat_completion(
             return StreamingResponse(
                 stream_wrapper(r, session, stream_chunks_handler),
                 status_code=r.status,
-                headers=dict(r.headers),
+                headers=_filter_upstream_headers(dict(r.headers)),
             )
         else:
             try:
@@ -1273,7 +1285,7 @@ async def embeddings(request: Request, form_data: dict, user):
             return StreamingResponse(
                 stream_wrapper(r, session),
                 status_code=r.status,
-                headers=dict(r.headers),
+                headers=_filter_upstream_headers(dict(r.headers)),
             )
         else:
             try:
@@ -1389,7 +1401,7 @@ async def responses(
             return StreamingResponse(
                 stream_wrapper(r, session),
                 status_code=r.status,
-                headers=dict(r.headers),
+                headers=_filter_upstream_headers(dict(r.headers)),
             )
         else:
             try:
@@ -1495,7 +1507,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             return StreamingResponse(
                 stream_wrapper(r, session),
                 status_code=r.status,
-                headers=dict(r.headers),
+                headers=_filter_upstream_headers(dict(r.headers)),
             )
         else:
             try:
