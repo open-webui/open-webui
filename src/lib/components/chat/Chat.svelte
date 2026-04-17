@@ -512,6 +512,7 @@
 						}
 					}
 					history = history;
+				return; // Patches history.messages directly; skip the trailing write-back.
 				} else if (type === 'chat:message:favorite') {
 					// Update message favorite status
 					message.favorite = data.favorite;
@@ -2306,6 +2307,9 @@
 		// Use the user-selected terminal from the dropdown
 		const activeTerminalId = $selectedTerminalId ?? null;
 
+		// Only send terminal_id if the model has terminal capability enabled
+		const terminalEnabled = model.info?.meta?.capabilities?.terminal ?? true;
+
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
 			{
@@ -2323,7 +2327,7 @@
 				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
 				tool_ids: toolIds.length > 0 ? toolIds : undefined,
 				skill_ids: skillIds.length > 0 ? skillIds : undefined,
-				terminal_id: activeTerminalId ?? undefined,
+				terminal_id: terminalEnabled ? (activeTerminalId ?? undefined) : undefined,
 				tool_servers: [
 					...($toolServers ?? []).filter(
 						(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
@@ -3007,7 +3011,7 @@
 										if (e.detail || files.length > 0) {
 											await tick();
 
-											submitHandler(e.detail.replaceAll('\n\n', '\n'));
+											submitHandler(e.detail);
 										}
 									}}
 								/>
@@ -3050,7 +3054,7 @@
 										clearDraft();
 										if (e.detail || files.length > 0) {
 											await tick();
-											submitHandler(e.detail.replaceAll('\n\n', '\n'));
+											submitHandler(e.detail);
 										}
 									}}
 								/>

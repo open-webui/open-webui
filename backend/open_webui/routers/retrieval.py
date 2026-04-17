@@ -82,6 +82,7 @@ from open_webui.retrieval.web.yandex import search_yandex
 from open_webui.retrieval.web.ydc import search_youcom
 
 from open_webui.retrieval.utils import (
+    filter_accessible_collections,
     get_content_from_url,
     get_embedding_function,
     get_reranking_function,
@@ -1800,6 +1801,8 @@ async def process_text(
     collection_name = form_data.collection_name
     if collection_name is None:
         collection_name = calculate_sha256_string(form_data.content)
+    else:
+        await _validate_collection_access([collection_name], user, access_type='write')
 
     docs = [
         Document(
@@ -1841,6 +1844,8 @@ async def process_web(
             collection_name = form_data.collection_name
             if not collection_name:
                 collection_name = calculate_sha256_string(form_data.url)[:63]
+            else:
+                await _validate_collection_access([collection_name], user, access_type='write')
 
             if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
                 await run_in_threadpool(
@@ -2344,32 +2349,20 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
         )
 
 
-async def _validate_collection_access(collection_names: list[str], user) -> None:
+async def _validate_collection_access(collection_names: list[str], user, access_type: str = 'read') -> None:
     """
-    Prevent users from querying collections they don't own.
-    Enforces ownership on user-memory-* and file-* collections.
-    Admins bypass this check.
+    Raise 403 if the user lacks access to any of the requested collections.
+    Delegates to the shared filter_accessible_collections utility so the
+    access rules stay in one place.
     """
-    if user.role == 'admin':
-        return
-
-    for name in collection_names:
-        if name.startswith('user-memory-') and name != f'user-memory-{user.id}':
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-            )
-        elif name.startswith('file-'):
-            file_id = name[len('file-') :]
-            if not await has_access_to_file(
-                file_id=file_id,
-                access_type='read',
-                user=user,
-            ):
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-                )
+    requested = set(collection_names)
+    allowed = await filter_accessible_collections(requested, user, access_type=access_type)
+    denied = requested - allowed
+    if denied:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
 
 
 class QueryDocForm(BaseModel):

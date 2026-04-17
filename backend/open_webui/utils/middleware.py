@@ -401,12 +401,61 @@ def is_opening_code_block(content):
     return len(backtick_segments) > 1 and len(backtick_segments) % 2 == 0
 
 
+_OPENAI_TOOL_DISPLAY_NAMES = {
+    'web_search_call': 'Web Search',
+    'file_search_call': 'File Search',
+    'computer_call': 'Computer Use',
+}
+
+
+def _render_openai_tool_call_handler(item: dict, done: bool) -> str:
+    """Render an OpenAI Responses API server-side tool item as a <details> block.
+
+    Handles web_search_call, file_search_call, and computer_call items whose
+    schemas are defined in the openai-python SDK (generated from OpenAPI spec).
+    """
+    item_type = item.get('type', '')
+    call_id = item.get('id', '')
+    display_name = _OPENAI_TOOL_DISPLAY_NAMES.get(item_type, item_type)
+
+    # Build a short summary of what the tool did
+    summary = ''
+    if item_type == 'web_search_call':
+        action = item.get('action', {})
+        if isinstance(action, dict):
+            atype = action.get('type', '')
+            if atype == 'search':
+                queries = action.get('queries') or []
+                query = action.get('query', '')
+                summary = f'Search: {", ".join(str(q) for q in queries)}' if queries else (f'Search: {query}' if query else '')
+            elif atype == 'open_page':
+                summary = f'Open page: {action.get("url", "")}' if action.get('url') else ''
+            elif atype == 'find_in_page':
+                summary = f'Find in page: {action.get("pattern", "")}' if action.get('pattern') else ''
+    elif item_type == 'file_search_call':
+        queries = item.get('queries', [])
+        if queries:
+            summary = f'Queries: {", ".join(str(q) for q in queries)}'
+    elif item_type == 'computer_call':
+        action = item.get('action')
+        actions = item.get('actions')
+        if isinstance(action, dict):
+            summary = f'Action: {action.get("type", "unknown")}'
+        elif isinstance(actions, list) and actions:
+            summary = f'Actions: {", ".join(a.get("type", "?") for a in actions if isinstance(a, dict))}'
+
+    escaped_name = html.escape(display_name)
+    if done:
+        return f'<details type="tool_calls" done="true" id="{call_id}" name="{escaped_name}" arguments="">\n<summary>Tool Executed</summary>\n{html.escape(summary)}\n</details>\n'
+    return f'<details type="tool_calls" done="false" id="{call_id}" name="{escaped_name}" arguments="">\n<summary>Executing...</summary>\n</details>\n'
+
+
 def serialize_output(output: list) -> str:
     """
     Convert OR-aligned output items to HTML for display.
     For LLM consumption, use convert_output_to_messages() instead.
     """
-    content = ''
+    parts: list[str] = []
 
     # First pass: collect function_call_output items by call_id for lookup
     tool_outputs = {}
@@ -423,46 +472,48 @@ def serialize_output(output: list) -> str:
                 if 'text' in content_part:
                     text = content_part.get('text', '').strip()
                     if text:
-                        content = f'{content}{text}\n'
+                        parts.append(text)
 
         elif item_type == 'function_call':
-            # Render tool call inline with its result (if available)
-            if content and not content.endswith('\n'):
-                content += '\n'
-
             call_id = item.get('call_id', '')
             name = item.get('name', '')
             arguments = item.get('arguments', '')
 
             result_item = tool_outputs.get(call_id)
             if result_item:
-                result_text = ''
+                result_parts: list[str] = []
                 for result_output in result_item.get('output', []):
                     if 'text' in result_output:
                         output_text = result_output.get('text', '')
-                        result_text += str(output_text) if not isinstance(output_text, str) else output_text
+                        result_parts.append(str(output_text) if not isinstance(output_text, str) else output_text)
+                result_text = ''.join(result_parts)
                 files = result_item.get('files')
                 embeds = result_item.get('embeds', '')
 
-                content += f'<details type="tool_calls" done="true" id="{call_id}" name="{name}" arguments="{html.escape(json.dumps(arguments))}" files="{html.escape(json.dumps(files)) if files else ""}" embeds="{html.escape(json.dumps(embeds))}">\n<summary>Tool Executed</summary>\n{html.escape(json.dumps(result_text, ensure_ascii=False))}\n</details>\n'
+                parts.append(f'<details type="tool_calls" done="true" id="{call_id}" name="{name}" arguments="{html.escape(json.dumps(arguments))}" files="{html.escape(json.dumps(files)) if files else ""}" embeds="{html.escape(json.dumps(embeds))}">\n<summary>Tool Executed</summary>\n{html.escape(json.dumps(result_text, ensure_ascii=False))}\n</details>')
             else:
-                content += f'<details type="tool_calls" done="false" id="{call_id}" name="{name}" arguments="{html.escape(json.dumps(arguments))}">\n<summary>Executing...</summary>\n</details>\n'
+                parts.append(f'<details type="tool_calls" done="false" id="{call_id}" name="{name}" arguments="{html.escape(json.dumps(arguments))}">\n<summary>Executing...</summary>\n</details>')
 
         elif item_type == 'function_call_output':
             # Already handled inline with function_call above
             pass
 
+        elif item_type in _OPENAI_TOOL_DISPLAY_NAMES:
+            status = item.get('status', 'in_progress')
+            done = status in ('completed', 'failed', 'incomplete') or idx != len(output) - 1
+            parts.append(_render_openai_tool_call_handler(item, done).rstrip('\n'))
+
         elif item_type == 'reasoning':
-            reasoning_content = ''
+            reasoning_parts: list[str] = []
             # Check for 'summary' (new structure) or 'content' (legacy/fallback)
             source_list = item.get('summary', []) or item.get('content', [])
             for content_part in source_list:
                 if 'text' in content_part:
-                    reasoning_content += content_part.get('text', '')
+                    reasoning_parts.append(content_part.get('text', ''))
                 elif 'summary' in content_part:  # Handle potential nested logic if any
                     pass
 
-            reasoning_content = reasoning_content.strip()
+            reasoning_content = ''.join(reasoning_parts).strip()
 
             duration = item.get('duration')
             status = item.get('status', 'in_progress')
@@ -471,9 +522,6 @@ def serialize_output(output: list) -> str:
             # render as done (a subsequent item means reasoning is complete)
             is_last_item = idx == len(output) - 1
 
-            if content and not content.endswith('\n'):
-                content += '\n'
-
             display = html.escape(
                 '\n'.join(
                     (f'> {line}' if not line.startswith('>') else line) for line in reasoning_content.splitlines()
@@ -481,19 +529,22 @@ def serialize_output(output: list) -> str:
             )
 
             if status == 'completed' or duration is not None or not is_last_item:
-                content = f'{content}<details type="reasoning" done="true" duration="{duration or 0}">\n<summary>Thought for {duration or 0} seconds</summary>\n{display}\n</details>\n'
+                parts.append(f'<details type="reasoning" done="true" duration="{duration or 0}">\n<summary>Thought for {duration or 0} seconds</summary>\n{display}\n</details>')
             else:
-                content = f'{content}<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n{display}\n</details>\n'
+                parts.append(f'<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n{display}\n</details>')
 
         elif item_type == 'open_webui:code_interpreter':
+            # Code interpreter needs to inspect/mutate prior accumulated content
+            # to strip trailing unclosed code fences — materialize only here.
+            content = '\n'.join(parts)
             content_stripped, original_whitespace = split_content_and_whitespace(content)
             if is_opening_code_block(content_stripped):
                 content = content_stripped.rstrip('`').rstrip() + original_whitespace
             else:
                 content = content_stripped + original_whitespace
 
-            if content and not content.endswith('\n'):
-                content += '\n'
+            # Re-split back into parts list after mutation
+            parts = [content] if content else []
 
             # Render the code_interpreter item as a <details> block
             # so the frontend Collapsible renders "Analyzing..."/"Analyzed".
@@ -519,11 +570,11 @@ def serialize_output(output: list) -> str:
                 output_attr = f' output="{html.escape(output_json)}"'
 
             if status == 'completed' or duration is not None or not is_last_item:
-                content += f'<details type="code_interpreter" done="true" duration="{duration or 0}"{output_attr}>\n<summary>Analyzed</summary>\n{display}\n</details>\n'
+                parts.append(f'<details type="code_interpreter" done="true" duration="{duration or 0}"{output_attr}>\n<summary>Analyzed</summary>\n{display}\n</details>')
             else:
-                content += f'<details type="code_interpreter" done="false"{output_attr}>\n<summary>Analyzing…</summary>\n{display}\n</details>\n'
+                parts.append(f'<details type="code_interpreter" done="false"{output_attr}>\n<summary>Analyzing…</summary>\n{display}\n</details>')
 
-    return content.strip()
+    return '\n'.join(parts).strip()
 
 
 def deep_merge(target, source):
@@ -2466,6 +2517,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     metadata = {
         **metadata,
+        'model_id': form_data.get('model'),
         'tool_ids': tool_ids,
         'terminal_id': terminal_id,
         'files': files,
@@ -2624,7 +2676,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
         # Resolve terminal tools if terminal_id is set (outside tool_ids check
         # so system terminals work even when no other tools are selected)
-        if terminal_id:
+        terminal_capability = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('terminal', True)
+        if terminal_id and terminal_capability:
             try:
                 terminal_result = await get_terminal_tools(
                     request,
@@ -3112,11 +3165,13 @@ async def outlet_filter_handler(ctx):
 
             # Append the full assistant message (content, output, usage, etc.)
             if assistant_message:
-                message_list.append({
-                    'id': message_id,
-                    'role': 'assistant',
-                    **assistant_message,
-                })
+                message_list.append(
+                    {
+                        'id': message_id,
+                        'role': 'assistant',
+                        **assistant_message,
+                    }
+                )
         else:
             messages_map = await Chats.get_messages_map_by_chat_id(chat_id)
             if not messages_map:
@@ -3317,7 +3372,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                             await post_webhook(
                                 request.app.state.WEBUI_NAME,
                                 webhook_url,
-                                f'{title} - {request.app.state.config.WEBUI_URL}/c/{metadata["chat_id"]}\n\n{content}',
+                                f'{content}\n\n{title} - {request.app.state.config.WEBUI_URL}/c/{metadata["chat_id"]}',
                                 {
                                     'action': 'chat',
                                     'message': content,
@@ -3756,6 +3811,40 @@ async def streaming_chat_response_handler(response, ctx):
                                 # Check for Responses API events (type field starts with "response.")
                                 elif data.get('type', '').startswith('response.'):
                                     output, response_metadata = handle_responses_streaming_event(data, output)
+
+                                    # Emit citation sources from finalized output items
+                                    # (mirrors Chat Completions annotation handling at delta level)
+                                    if data.get('type') == 'response.output_item.done':
+                                        item = data.get('item', {})
+                                        if item.get('type') == 'message':
+                                            for part in item.get('content', []):
+                                                for annotation in part.get('annotations', []):
+                                                    if annotation.get('type') == 'url_citation':
+                                                        # Handle both flat (Responses API) and nested (Chat Completions) formats
+                                                        url_citation = annotation.get('url_citation', annotation)
+
+                                                        url = url_citation.get('url', '')
+                                                        title = url_citation.get('title', url)
+
+                                                        if url:
+                                                            await event_emitter(
+                                                                {
+                                                                    'type': 'source',
+                                                                    'data': {
+                                                                        'source': {
+                                                                            'name': title,
+                                                                            'url': url,
+                                                                        },
+                                                                        'document': [title],
+                                                                        'metadata': [
+                                                                            {
+                                                                                'source': url,
+                                                                                'name': title,
+                                                                            }
+                                                                        ],
+                                                                    },
+                                                                }
+                                                            )
 
                                     processed_data = {
                                         'output': full_output(),
@@ -4827,7 +4916,7 @@ async def streaming_chat_response_handler(response, ctx):
                         await post_webhook(
                             request.app.state.WEBUI_NAME,
                             webhook_url,
-                            f'{title} - {request.app.state.config.WEBUI_URL}/c/{metadata["chat_id"]}\n\n{content}',
+                            f'{content}\n\n{title} - {request.app.state.config.WEBUI_URL}/c/{metadata["chat_id"]}',
                             {
                                 'action': 'chat',
                                 'message': content,

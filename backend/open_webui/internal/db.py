@@ -15,6 +15,12 @@ from open_webui.env import (
     DATABASE_POOL_TIMEOUT,
     DATABASE_ENABLE_SQLITE_WAL,
     DATABASE_ENABLE_SESSION_SHARING,
+    DATABASE_SQLITE_PRAGMA_SYNCHRONOUS,
+    DATABASE_SQLITE_PRAGMA_BUSY_TIMEOUT,
+    DATABASE_SQLITE_PRAGMA_CACHE_SIZE,
+    DATABASE_SQLITE_PRAGMA_TEMP_STORE,
+    DATABASE_SQLITE_PRAGMA_MMAP_SIZE,
+    DATABASE_SQLITE_PRAGMA_JOURNAL_SIZE_LIMIT,
     ENABLE_DB_MIGRATIONS,
 )
 from peewee_migrate import Router
@@ -155,13 +161,31 @@ if SQLALCHEMY_DATABASE_URL.startswith('sqlite+sqlcipher://'):
 elif 'sqlite' in SQLALCHEMY_DATABASE_URL:
     engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={'check_same_thread': False})
 
-    def on_connect(dbapi_connection, connection_record):
+    def _apply_sqlite_pragmas(dbapi_connection):
+        """Apply all configured SQLite PRAGMAs to a raw DBAPI connection."""
         cursor = dbapi_connection.cursor()
         if DATABASE_ENABLE_SQLITE_WAL:
             cursor.execute('PRAGMA journal_mode=WAL')
         else:
             cursor.execute('PRAGMA journal_mode=DELETE')
+
+        # Each PRAGMA is skipped when its env var is empty, allowing opt-out.
+        if DATABASE_SQLITE_PRAGMA_SYNCHRONOUS:
+            cursor.execute(f'PRAGMA synchronous={DATABASE_SQLITE_PRAGMA_SYNCHRONOUS}')
+        if DATABASE_SQLITE_PRAGMA_BUSY_TIMEOUT:
+            cursor.execute(f'PRAGMA busy_timeout={DATABASE_SQLITE_PRAGMA_BUSY_TIMEOUT}')
+        if DATABASE_SQLITE_PRAGMA_CACHE_SIZE:
+            cursor.execute(f'PRAGMA cache_size={DATABASE_SQLITE_PRAGMA_CACHE_SIZE}')
+        if DATABASE_SQLITE_PRAGMA_TEMP_STORE:
+            cursor.execute(f'PRAGMA temp_store={DATABASE_SQLITE_PRAGMA_TEMP_STORE}')
+        if DATABASE_SQLITE_PRAGMA_MMAP_SIZE:
+            cursor.execute(f'PRAGMA mmap_size={DATABASE_SQLITE_PRAGMA_MMAP_SIZE}')
+        if DATABASE_SQLITE_PRAGMA_JOURNAL_SIZE_LIMIT:
+            cursor.execute(f'PRAGMA journal_size_limit={DATABASE_SQLITE_PRAGMA_JOURNAL_SIZE_LIMIT}')
         cursor.close()
+
+    def on_connect(dbapi_connection, connection_record):
+        _apply_sqlite_pragmas(dbapi_connection)
 
     event.listen(engine, 'connect', on_connect)
 else:
@@ -213,13 +237,9 @@ if 'sqlite' in ASYNC_SQLALCHEMY_DATABASE_URL:
         connect_args={'check_same_thread': False},
     )
 
-    if DATABASE_ENABLE_SQLITE_WAL:
-
-        @event.listens_for(async_engine.sync_engine, 'connect')
-        def _set_sqlite_wal(dbapi_connection, connection_record):
-            cursor = dbapi_connection.cursor()
-            cursor.execute('PRAGMA journal_mode=WAL')
-            cursor.close()
+    @event.listens_for(async_engine.sync_engine, 'connect')
+    def _set_sqlite_pragmas(dbapi_connection, connection_record):
+        _apply_sqlite_pragmas(dbapi_connection)
 else:
     if isinstance(DATABASE_POOL_SIZE, int):
         if DATABASE_POOL_SIZE > 0:

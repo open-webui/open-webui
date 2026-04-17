@@ -260,6 +260,12 @@ select {
 	display: none;
 }
 
+/* Hide leaked Mermaid temp containers if render cleanup misses */
+body > div[id^='dmermaid-'],
+body > iframe[id^='imermaid-'] {
+	display: none !important;
+}
+
 .scrollbar-hidden:active::-webkit-scrollbar-thumb,
 .scrollbar-hidden:focus::-webkit-scrollbar-thumb,
 .scrollbar-hidden:hover::-webkit-scrollbar-thumb {

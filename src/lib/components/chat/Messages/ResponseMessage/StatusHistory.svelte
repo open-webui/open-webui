@@ -3,6 +3,7 @@
 	const i18n = getContext('i18n');
 
 	import StatusItem from './StatusHistory/StatusItem.svelte';
+	import equal from 'fast-deep-equal';
 	export let statusHistory = [];
 	export let expand = false;
 
@@ -21,10 +22,7 @@
 		status = history.at(-1);
 	}
 
-	$: if (
-		statusHistory.length !== history.length ||
-		JSON.stringify(statusHistory) !== JSON.stringify(history)
-	) {
+	$: if (!equal(statusHistory, history)) {
 		history = statusHistory;
 	}
 </script>

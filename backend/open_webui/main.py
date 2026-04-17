@@ -1823,6 +1823,8 @@ async def chat_completion(
         request.state.metadata = metadata
         form_data['metadata'] = metadata
 
+    except HTTPException:
+        raise
     except Exception as e:
         log.debug(f'Error processing chat metadata: {e}')
         raise HTTPException(

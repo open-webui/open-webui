@@ -276,14 +276,8 @@ async def update_default_user_permissions(request: Request, form_data: UserPermi
 async def get_user_settings_by_session_user(
     user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
-    user = await Users.get_user_by_id(user.id, db=db)
-    if user:
-        return user.settings
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.USER_NOT_FOUND,
-        )
+    # user already fetched by get_verified_user — no need to refetch
+    return user.settings
 
 
 ############################
@@ -339,14 +333,8 @@ async def get_user_status_by_session_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACTION_PROHIBITED,
         )
-    user = await Users.get_user_by_id(user.id, db=db)
-    if user:
-        return user
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.USER_NOT_FOUND,
-        )
+    # user already fetched by get_verified_user — no need to refetch
+    return user
 
 
 ############################
@@ -366,15 +354,14 @@ async def update_user_status_by_session_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACTION_PROHIBITED,
         )
-    user = await Users.get_user_by_id(user.id, db=db)
-    if user:
-        user = await Users.update_user_status_by_id(user.id, form_data, db=db)
-        return user
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.USER_NOT_FOUND,
-        )
+    # user already fetched by get_verified_user — no need to refetch
+    updated = await Users.update_user_status_by_id(user.id, form_data, db=db)
+    if updated:
+        return updated
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=ERROR_MESSAGES.USER_NOT_FOUND,
+    )
 
 
 ############################
@@ -384,14 +371,8 @@ async def update_user_status_by_session_user(
 
 @router.get('/user/info', response_model=Optional[dict])
 async def get_user_info_by_session_user(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
-    user = await Users.get_user_by_id(user.id, db=db)
-    if user:
-        return user.info
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.USER_NOT_FOUND,
-        )
+    # user already fetched by get_verified_user — no need to refetch
+    return user.info
 
 
 ############################
@@ -403,19 +384,13 @@ async def get_user_info_by_session_user(user=Depends(get_verified_user), db: Asy
 async def update_user_info_by_session_user(
     form_data: dict, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
-    user = await Users.get_user_by_id(user.id, db=db)
-    if user:
-        if user.info is None:
-            user.info = {}
-
-        user = await Users.update_user_by_id(user.id, {'info': {**user.info, **form_data}}, db=db)
-        if user:
-            return user.info
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.USER_NOT_FOUND,
-            )
+    # Merges against the auth-time snapshot of user.info. The previous pre-merge
+    # refetch only narrowed (did not eliminate) the lost-update window on concurrent
+    # same-user writes; real safety needs row locking or a version column.
+    existing_info = user.info or {}
+    updated = await Users.update_user_by_id(user.id, {'info': {**existing_info, **form_data}}, db=db)
+    if updated:
+        return updated.info
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

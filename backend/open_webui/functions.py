@@ -34,8 +34,10 @@ from open_webui.utils.plugin import (
     load_function_module_by_id,
     get_function_module_from_cache,
 )
+from open_webui.utils.access_control import check_model_access
 
-from open_webui.env import GLOBAL_LOG_LEVEL
+from open_webui.env import GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 
 from open_webui.utils.misc import (
     add_or_update_system_message,
@@ -262,9 +264,20 @@ async def generate_function_chat_completion(request, form_data, user, models: di
         if model_info.base_model_id:
             form_data['model'] = model_info.base_model_id
 
+        if not BYPASS_MODEL_ACCESS_CONTROL:
+            bypass = isinstance(user, UserModel) and user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL
+            await check_model_access(
+                user if isinstance(user, UserModel) else UserModel(**user),
+                model_info,
+                bypass,
+            )
+
         default_model_params = getattr(request.app.state.config, 'DEFAULT_MODEL_PARAMS', None) or {}
-        runtime_model_params = ((request.app.state.MODELS.get(request_model_id, {}) or {}).get('info') or {}).get('params') or {}
+        runtime_model_params = (
+            ((request.app.state.MODELS.get(request_model_id, {}) or {}).get('info') or {}).get('params') or {}
+        )
         db_model_params = model_info.params.model_dump() if model_info.params else {}
+
         params = {
             **default_model_params,
             **runtime_model_params,
