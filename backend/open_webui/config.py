@@ -4148,3 +4148,24 @@ LDAP_ATTRIBUTE_FOR_GROUPS = PersistentConfig(
     'ldap.server.attribute_for_groups',
     os.environ.get('LDAP_ATTRIBUTE_FOR_GROUPS', 'memberOf'),
 )
+
+####################################
+# Pipelines 
+####################################
+ENABLE_PIPELINE_USER_GROUPS = PersistentConfig(
+    "ENABLE_PIPELINE_USER_GROUPS",
+    "pipeline.user_groups",
+    os.environ.get("ENABLE_PIPELINE_USER_GROUPS", "False").lower() =="true"
+)
+
+ENABLE_PIPELINE_USER_OAUTH = PersistentConfig(
+    "ENABLE_PIPELINE_USER_OAUTH",
+    "pipeline.user_oauth",
+    os.environ.get("ENABLE_PIPELINE_USER_OAUTH", "False").lower() =="true"
+)
+
+ENABLE_PIPELINE_USER_API_KEY = PersistentConfig(
+    "ENABLE_PIPELINE_USER_API_KEY",
+    "pipeline.user_api_key",
+    os.environ.get("ENABLE_PIPELINE_USER_API_KEY", "False").lower() =="true"
+)

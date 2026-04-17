@@ -18,7 +18,14 @@ from starlette.responses import FileResponse
 from typing import Optional
 
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
-from open_webui.config import CACHE_DIR
+from open_webui.config import (
+    CACHE_DIR, 
+    ENABLE_PIPELINE_USER_GROUPS, 
+    ENABLE_PIPELINE_USER_OAUTH,
+    ENABLE_PIPELINE_USER_API_KEY
+)
+from open_webui.models.groups import Groups
+from open_webui.models.users import Users
 from open_webui.constants import ERROR_MESSAGES
 
 
@@ -55,7 +62,17 @@ def get_sorted_filters(model_id, models):
 
 
 async def process_pipeline_inlet_filter(request, payload, user, models):
-    user = {'id': user.id, 'email': user.email, 'name': user.name, 'role': user.role}
+    user_info = {"id": user.id, "email": user.email, "name": user.name, "role": user.role}
+
+    # Option to pass additional user info and auth to the Pipelines container
+    if ENABLE_PIPELINE_USER_GROUPS:
+        user_info["groups"] = [g.name for g in await Groups.get_groups_by_member_id(user.id)]
+    if ENABLE_PIPELINE_USER_OAUTH:
+        user_info["oauth"] = user.oauth or {}
+    if ENABLE_PIPELINE_USER_API_KEY:
+        user_info['api_key'] = await Users.get_user_api_key_by_id(user.id)
+    user = user_info
+
     model_id = payload['model']
     sorted_filters = get_sorted_filters(model_id, models)
     model = models[model_id]
