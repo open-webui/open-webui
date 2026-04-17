@@ -8,6 +8,7 @@
 
 	import { marked } from 'marked';
 	import { toast } from 'svelte-sonner';
+	import equal from 'fast-deep-equal';
 
 	import { goto } from '$app/navigation';
 
@@ -226,7 +227,7 @@
 	}
 
 	function areContentsEqual(a, b) {
-		return JSON.stringify(a) === JSON.stringify(b);
+		return equal(a, b);
 	}
 
 	function insertNoteVersion(note) {
