@@ -3500,6 +3500,10 @@ async def streaming_chat_response_handler(response, ctx):
                             before_tag = item_text[: match.start()]
                             after_tag = item_text[match.end() :]
 
+                            # Tag in prose text, skip it.
+                            if before_tag.strip():
+                                continue
+
                             # Keep only text before the tag in the message
                             set_last_text(output, before_tag)
 
