@@ -235,7 +235,7 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
 
         elif item_type == 'reasoning':
             if raw:
-                # Include reasoning with original tags for LLM re-processing
+                # Include reasoning for LLM re-processing.
                 reasoning_text = ''
                 source_list = item.get('summary', []) or item.get('content', [])
                 for part in source_list:
@@ -245,13 +245,18 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
                         reasoning_text += part.get('text', '')
 
                 if reasoning_text:
-                    start_tag = item.get('start_tag', '<think>')
-                    end_tag = item.get('end_tag', '</think>')
-                    pending_content.append(f'{start_tag}{reasoning_text}{end_tag}')
                     # Preserve raw reasoning text as reasoning_content for
                     # providers that require it on assistant tool-call messages
                     # (e.g. Moonshot/Kimi K2.5).
                     pending_reasoning += reasoning_text
+
+                    # Skip the <think> wrap when reasoning came from a native
+                    # field. Some chat templates don't strip <think>, so the
+                    # tags would leak into the prompt (e.g. Gemma 4).
+                    if item.get('attributes', {}).get('type') != 'reasoning_content':
+                        start_tag = item.get('start_tag', '<think>')
+                        end_tag = item.get('end_tag', '</think>')
+                        pending_content.append(f'{start_tag}{reasoning_text}{end_tag}')
             # else: skip reasoning blocks for normal LLM messages
 
         elif item_type == 'open_webui:code_interpreter':
