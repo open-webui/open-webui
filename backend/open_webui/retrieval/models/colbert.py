@@ -59,14 +59,14 @@ class ColBERT(BaseReranker):
 
         return normalized_scores.detach().cpu().numpy().astype(np.float32)
 
-    def predict(self, sentences):
+    def predict(self, sentences, batch_size=32):
         query = sentences[0][0]
         docs = [i[1] for i in sentences]
 
         # Embedding the documents
-        embedded_docs = self.ckpt.docFromText(docs, bsize=32)[0]
+        embedded_docs = self.ckpt.docFromText(docs, bsize=batch_size)[0]
         # Embedding the queries
-        embedded_queries = self.ckpt.queryFromText([query], bsize=32)
+        embedded_queries = self.ckpt.queryFromText([query], bsize=batch_size)
         embedded_query = embedded_queries[0]
 
         # Calculate retrieval scores for the query against all documents

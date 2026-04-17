@@ -148,19 +148,22 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
     messages = []
     pending_tool_calls = []
     pending_content = []
+    pending_reasoning = ''
 
     def flush_pending():
-        nonlocal pending_content, pending_tool_calls
-        if pending_content or pending_tool_calls:
+        nonlocal pending_content, pending_tool_calls, pending_reasoning
+        if pending_content or pending_tool_calls or pending_reasoning:
             messages.append(
                 {
                     'role': 'assistant',
                     'content': '\n'.join(pending_content) if pending_content else '',
                     **({'tool_calls': pending_tool_calls} if pending_tool_calls else {}),
+                    **({'reasoning_content': pending_reasoning} if pending_reasoning else {}),
                 }
             )
             pending_content = []
             pending_tool_calls = []
+            pending_reasoning = ''
 
     for item in output:
         item_type = item.get('type', '')
@@ -245,6 +248,10 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
                     start_tag = item.get('start_tag', '<think>')
                     end_tag = item.get('end_tag', '</think>')
                     pending_content.append(f'{start_tag}{reasoning_text}{end_tag}')
+                    # Preserve raw reasoning text as reasoning_content for
+                    # providers that require it on assistant tool-call messages
+                    # (e.g. Moonshot/Kimi K2.5).
+                    pending_reasoning += reasoning_text
             # else: skip reasoning blocks for normal LLM messages
 
         elif item_type == 'open_webui:code_interpreter':
@@ -905,9 +912,17 @@ async def cleanup_response(
     session: Optional[aiohttp.ClientSession],
 ):
     if response:
-        response.close()
+        if not response.closed:
+            # aiohttp 3.9+ made ClientResponse.close() synchronous (returns None).
+            # Older versions returned a coroutine.  Handle both gracefully.
+            result = response.close()
+            if result is not None:
+                await result
     if session:
-        await session.close()
+        if not session.closed:
+            result = session.close()
+            if result is not None:
+                await result
 
 
 async def stream_wrapper(response, session, content_handler=None):
@@ -961,18 +976,15 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
                         skip_mode = False
                         yield line
                     else:
-                        yield b'data: {}'
-                        yield b'\n'
+                        yield b'data: {}\n'
                 else:
                     # Normal mode: check if line exceeds limit
                     if len(line) > max_buffer_size:
                         skip_mode = True
-                        yield b'data: {}'
-                        yield b'\n'
+                        yield b'data: {}\n'
                         log.info(f'Skip mode triggered, line size: {len(line)}')
                     else:
-                        yield line
-                        yield b'\n'
+                        yield line + b'\n'
 
             # Save the last incomplete fragment
             buffer = lines[-1]
@@ -986,7 +998,6 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
 
         # Process remaining buffer data
         if buffer and not skip_mode:
-            yield buffer
-            yield b'\n'
+            yield buffer + b'\n'
 
     return yield_safe_stream_chunks()

@@ -7,7 +7,6 @@
 	const dispatch = createEventDispatcher();
 
 	import Modal from '$lib/components/common/Modal.svelte';
-	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import MicSolid from '$lib/components/icons/MicSolid.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -57,7 +56,7 @@
 					<div class="shrink-0 w-full flex justify-between items-center">
 						<div class="w-full">
 							<input
-								class="w-full text-3xl font-medium bg-transparent outline-hidden"
+								class="w-full text-3xl bg-transparent outline-hidden"
 								type="text"
 								bind:value={name}
 								placeholder={$i18n.t('Title')}
@@ -67,18 +66,16 @@
 					</div>
 
 					<div class=" flex-1 w-full h-full">
-						<RichTextInput
+						<textarea
+							class="w-full h-full min-h-[200px] bg-transparent outline-none resize-none text-base leading-relaxed placeholder:text-gray-300 dark:placeholder:text-gray-600"
 							bind:value={content}
 							placeholder={$i18n.t('Write something...')}
-							preserveBreaks={true}
 						/>
 					</div>
 				</div>
 			</div>
 
-			<div
-				class="flex flex-row items-center justify-end text-sm font-medium shrink-0 mt-1 p-4 gap-1.5"
-			>
+			<div class="flex flex-row items-center justify-end text-sm shrink-0 mt-1 p-4 gap-1.5">
 				<div class="">
 					{#if voiceInput}
 						<div class=" max-w-full w-full">

@@ -78,7 +78,8 @@ class OneDriveConfig {
 			const msalParams = {
 				auth: {
 					authority: `https://login.microsoftonline.com/${authorityEndpoint}`,
-					clientId: clientId
+					clientId: clientId,
+					redirectUri: window.location.origin
 				}
 			};
 

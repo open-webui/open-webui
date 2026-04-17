@@ -243,8 +243,27 @@ select {
 	animation: smoothFadeIn 0.2s forwards;
 }
 
+@keyframes fade-in-token {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+.fade-in-token {
+	animation: fade-in-token 100ms ease-out;
+}
+
 .katex-mathml {
 	display: none;
+}
+
+/* Hide leaked Mermaid temp containers if render cleanup misses */
+body > div[id^='dmermaid-'],
+body > iframe[id^='imermaid-'] {
+	display: none !important;
 }
 
 .scrollbar-hidden:active::-webkit-scrollbar-thumb,

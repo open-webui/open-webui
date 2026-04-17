@@ -16,9 +16,13 @@ export const getGravatarUrl = async (token: string, email: string) => {
 		})
 		.catch((err) => {
 			console.error(err);
-			error = err;
+			error = err.detail ?? err;
 			return null;
 		});
+
+	if (error) {
+		throw error;
+	}
 
 	return res;
 };

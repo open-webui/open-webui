@@ -45,7 +45,7 @@ async def execute_code(request: Request, form_data: CodeForm, user=Depends(get_v
     if not request.app.state.config.ENABLE_CODE_EXECUTION:
         raise HTTPException(
             status_code=403,
-            detail='Code execution is disabled',
+            detail=ERROR_MESSAGES.FEATURE_DISABLED('Code execution'),
         )
 
     if request.app.state.config.CODE_EXECUTION_ENGINE == 'jupyter':
@@ -69,7 +69,7 @@ async def execute_code(request: Request, form_data: CodeForm, user=Depends(get_v
     else:
         raise HTTPException(
             status_code=400,
-            detail='Code execution engine not supported',
+            detail=ERROR_MESSAGES.DEFAULT('Code execution engine not supported'),
         )
 
 

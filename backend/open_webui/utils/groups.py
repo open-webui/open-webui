@@ -4,7 +4,7 @@ from open_webui.models.groups import Groups
 log = logging.getLogger(__name__)
 
 
-def apply_default_group_assignment(
+async def apply_default_group_assignment(
     default_group_id: str,
     user_id: str,
     db=None,
@@ -18,6 +18,6 @@ def apply_default_group_assignment(
     """
     if default_group_id:
         try:
-            Groups.add_users_to_group(default_group_id, [user_id], db=db)
+            await Groups.add_users_to_group(default_group_id, [user_id], db=db)
         except Exception as e:
             log.error(f'Failed to add user {user_id} to default group {default_group_id}: {e}')
