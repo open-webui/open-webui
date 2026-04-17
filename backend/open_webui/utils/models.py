@@ -22,7 +22,7 @@ from open_webui.utils.plugin import (
     load_function_module_by_id,
     get_function_module_from_cache,
 )
-from open_webui.utils.access_control import has_access
+from open_webui.utils.access_control import has_access, has_base_model_access
 
 
 from open_webui.config import (
@@ -283,11 +283,15 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     # Pre-warm the function module cache once per unique function ID.
     # This ensures each function's DB freshness check runs exactly once,
     # not once per (model × function) pair.
-    for function_id in all_function_ids:
+    # Only attempt to load functions that actually exist in the local DB;
+    # imported/custom model configs may reference tools or filters the user
+    # hasn't installed, and trying to load those would cause persistent
+    # "Failed to load function module" log spam on every model refresh.
+    for function_id in functions_by_id:
         try:
             await get_function_module_from_cache(request, function_id)
         except Exception as e:
-            log.info(f'Failed to load function module for {function_id}: {e}')
+            log.debug(f'Failed to load function module for {function_id}: {e}')
 
     # Apply global model defaults to all models
     # Per-model overrides take precedence over global defaults
@@ -402,6 +406,10 @@ async def check_model_access(user, model, db=None):
                 db=db,
             )
         ):
+            raise Exception('Model not found')
+
+        # Enforce access on chained base models
+        if not await has_base_model_access(user.id, model_info, db=db):
             raise Exception('Model not found')
 
 

@@ -25,7 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import get_async_session, get_async_db_context
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 
 from open_webui.models.channels import Channels
 from open_webui.models.users import Users
@@ -124,7 +124,7 @@ async def process_uploaded_file(
                 stt_supported_content_types = getattr(request.app.state.config, 'STT_SUPPORTED_CONTENT_TYPES', [])
 
                 if strict_match_mime_type(stt_supported_content_types, content_type):
-                    file_path_processed = Storage.get_file(file_path)
+                    file_path_processed = await asyncio.to_thread(Storage.get_file, file_path)
                     result = transcribe(request, file_path_processed, file_metadata, user)
 
                     await process_file(
@@ -242,7 +242,8 @@ async def upload_file_handler(
         id = str(uuid.uuid4())
         name = filename
         filename = f'{id}_{filename}'
-        contents, file_path = Storage.upload_file(
+        contents, file_path = await asyncio.to_thread(
+            Storage.upload_file,
             file.file,
             filename,
             {
@@ -406,8 +407,8 @@ async def delete_all_files(user=Depends(get_admin_user), db: AsyncSession = Depe
     result = await Files.delete_all_files(db=db)
     if result:
         try:
-            Storage.delete_all_files()
-            VECTOR_DB_CLIENT.reset()
+            await asyncio.to_thread(Storage.delete_all_files)
+            await ASYNC_VECTOR_DB_CLIENT.reset()
         except Exception as e:
             log.exception(e)
             log.error('Error deleting files')
@@ -577,7 +578,7 @@ async def update_file_data_content_by_id(
         for knowledge in knowledges:
             try:
                 # Remove old embeddings for this file from the KB collection
-                VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'file_id': id})
+                await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'file_id': id})
                 # Re-add from the now-updated file-{file_id} collection
                 await process_file(
                     request,
@@ -618,7 +619,7 @@ async def get_file_content_by_id(
 
     if file.user_id == user.id or user.role == 'admin' or await has_access_to_file(id, 'read', user, db=db):
         try:
-            file_path = Storage.get_file(file.path)
+            file_path = await asyncio.to_thread(Storage.get_file, file.path)
             file_path = Path(file_path)
 
             # Check if the file already exists in the cache
@@ -685,7 +686,7 @@ async def get_html_file_content_by_id(
 
     if file.user_id == user.id or user.role == 'admin' or await has_access_to_file(id, 'read', user, db=db):
         try:
-            file_path = Storage.get_file(file.path)
+            file_path = await asyncio.to_thread(Storage.get_file, file.path)
             file_path = Path(file_path)
 
             # Check if the file already exists in the cache
@@ -734,7 +735,7 @@ async def get_file_content_by_id(
         headers = {'Content-Disposition': f"attachment; filename*=UTF-8''{encoded_filename}"}
 
         if file_path:
-            file_path = Storage.get_file(file_path)
+            file_path = await asyncio.to_thread(Storage.get_file, file_path)
             file_path = Path(file_path)
 
             # Check if the file already exists in the cache
@@ -789,17 +790,17 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user), db: AsyncS
             await Knowledges.remove_file_from_knowledge_by_id(knowledge.id, id, db=db)
             # Clean KB embeddings (same logic as /knowledge/{id}/file/remove)
             try:
-                VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'file_id': id})
+                await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'file_id': id})
                 if file.hash:
-                    VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'hash': file.hash})
+                    await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'hash': file.hash})
             except Exception as e:
                 log.debug(f'KB embedding cleanup for {knowledge.id}: {e}')
 
         result = await Files.delete_file_by_id(id, db=db)
         if result:
             try:
-                Storage.delete_file(file.path)
-                VECTOR_DB_CLIENT.delete(collection_name=f'file-{id}')
+                await asyncio.to_thread(Storage.delete_file, file.path)
+                await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=f'file-{id}')
             except Exception as e:
                 log.exception(e)
                 log.error('Error deleting files')

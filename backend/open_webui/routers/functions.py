@@ -128,7 +128,7 @@ async def load_function_from_url(request: Request, form_data: LoadUrlForm, user=
             'content': data,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f'Error importing function: {e}')
+        raise HTTPException(status_code=500, detail=ERROR_MESSAGES.DEFAULT(e))
 
 
 ############################

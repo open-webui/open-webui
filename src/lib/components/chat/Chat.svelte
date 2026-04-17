@@ -81,7 +81,6 @@
 	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
 	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
 	import {
-		chatCompleted,
 		generateQueries,
 		chatAction,
 		generateMoACompletion,
@@ -181,6 +180,12 @@
 	}
 
 	const navigateHandler = async () => {
+		// Mark the outgoing chat as read before loading the new one.
+		// $chatId still holds the previous chat here — loadChat() updates it.
+		if ($chatId && $chatId !== chatIdProp && !$temporaryChatEnabled) {
+			updateLastReadAt($chatId);
+		}
+
 		loading = true;
 
 		prompt = '';
@@ -491,6 +496,23 @@
 					if (autoScroll) {
 						scrollToBottom('smooth');
 					}
+				} else if (type === 'chat:outlet') {
+					// Outlet filter ran on backend — sync in-memory state
+					const outletMessages = data.messages ?? [];
+					for (const msg of outletMessages) {
+						if (msg?.id && history.messages[msg.id]) {
+							const existing = history.messages[msg.id];
+							if (existing.content !== msg.content) {
+								history.messages[msg.id] = {
+									...existing,
+									originalContent: existing.content,
+									...msg
+								};
+							}
+						}
+					}
+					history = history;
+				return; // Patches history.messages directly; skip the trailing write-back.
 				} else if (type === 'chat:message:favorite') {
 					// Update message favorite status
 					message.favorite = data.favorite;
@@ -1361,6 +1383,17 @@
 					taskIds = taskRes.task_ids;
 				}
 
+				// If no active tasks and current message is incomplete, generation was interrupted
+				const currentMessage = history.currentId ? history.messages[history.currentId] : null;
+				if (
+					currentMessage &&
+					currentMessage.role === 'assistant' &&
+					!currentMessage.done &&
+					(!taskIds || taskIds.length === 0)
+				) {
+					currentMessage.done = true;
+				}
+
 				await tick();
 
 				return true;
@@ -1416,71 +1449,12 @@
 	};
 
 	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
-		if (!responseMessageId) {
-			console.error('chatCompleted: missing message id', {
-				chatId: _chatId,
-				modelId,
-				messageCount: messages?.length ?? 0
-			});
-			return;
+		// Backend handles outlet filters and persistence inline.
+		// Just refresh the sidebar chat list.
+		if ($chatId == _chatId && !$temporaryChatEnabled) {
+			currentChatPage.set(1);
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 		}
-
-		const res = await chatCompleted(localStorage.token, {
-			model: modelId,
-			messages: messages.map((m) => ({
-				id: m.id,
-				role: m.role,
-				content: m.content,
-				info: m.info ? m.info : undefined,
-				timestamp: m.timestamp,
-				...(m.usage ? { usage: m.usage } : {}),
-				...(m.sources ? { sources: m.sources } : {})
-			})),
-			filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
-			model_item: $models.find((m) => m.id === modelId),
-			chat_id: _chatId,
-			session_id: $socket?.id,
-			id: responseMessageId
-		}).catch((error) => {
-			toast.error(`${error}`);
-			messages.at(-1).error = { content: error };
-
-			return null;
-		});
-
-		if (res !== null && res.messages) {
-			// Update chat history with the new messages
-			for (const message of res.messages) {
-				if (message?.id) {
-					// Add null check for message and message.id
-					history.messages[message.id] = {
-						...history.messages[message.id],
-						...(history.messages[message.id].content !== message.content
-							? { originalContent: history.messages[message.id].content }
-							: {}),
-						...message
-					};
-				}
-			}
-		}
-
-		await tick();
-
-		if ($chatId == _chatId) {
-			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, _chatId, {
-					models: selectedModels,
-					messages: messages,
-					history: history,
-					params: params,
-					files: chatFiles
-				});
-
-				currentChatPage.set(1);
-				await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			}
-		}
-
 		taskIds = null;
 	};
 
@@ -1888,13 +1862,15 @@
 
 		history.currentId = userMessageId;
 
-		// focus on chat input
-		const chatInput = document.getElementById('chat-input');
-		chatInput?.focus();
+		// focus on chat input (skip during voice call to avoid triggering mobile keyboard)
+		if (!$showCallOverlay) {
+			const chatInput = document.getElementById('chat-input');
+			chatInput?.focus();
+		}
 
 		saveSessionSelectedModels();
 
-		await sendMessage(history, userMessageId, { newChat: true });
+		await sendMessage(history, userMessageId);
 	};
 
 	const submitHandler = async (userPrompt, { _raw = false } = {}) => {
@@ -1994,13 +1970,11 @@
 		{
 			messages = null,
 			modelId = null,
-			modelIdx = null,
-			newChat = false
+			modelIdx = null
 		}: {
 			messages?: any[] | null;
 			modelId?: string | null;
 			modelIdx?: number | null;
-			newChat?: boolean;
 		} = {}
 	) => {
 		if (autoScroll) {
@@ -2019,6 +1993,8 @@
 				: selectedModels;
 
 		// Create response messages for each selected model
+		// Build message_ids map: {model_id: assistant_message_id}
+		const messageIdsMap: Record<string, string> = {};
 		for (const [_modelIdx, modelId] of selectedModelIds.entries()) {
 			const model = $models.filter((m) => m.id === modelId).at(0);
 
@@ -2030,6 +2006,7 @@
 					childrenIds: [],
 					role: 'assistant',
 					content: '',
+					done: false,
 					model: model.id,
 					modelName: model.name ?? model.id,
 					modelIdx: modelIdx ? modelIdx : _modelIdx,
@@ -2042,7 +2019,6 @@
 
 				// Append messageId to childrenIds of parent message
 				if (parentId !== null && history.messages[parentId]) {
-					// Add null check before accessing childrenIds
 					history.messages[parentId].childrenIds = [
 						...history.messages[parentId].childrenIds,
 						responseMessageId
@@ -2050,68 +2026,71 @@
 				}
 
 				responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`] = responseMessageId;
+				messageIdsMap[modelId] = responseMessageId;
 			}
 		}
 		history = history;
 
-		// Create new chat if newChat is true and first user message
-		if (newChat && _history.messages[_history.currentId].parentId === null) {
-			_chatId = await initChatHandler(_history);
+		// New chat — backend generates the chat_id on first request
+		if (!_chatId) {
+			if ($temporaryChatEnabled) {
+				_chatId = `local:${$socket?.id}`;
+				await chatId.set(_chatId);
+			}
+			await tick();
 		}
 
 		await tick();
 
+		// Re-clone history so sendMessageSocket gets the response messages we just added
 		_history = structuredClone(history);
-		// Save chat after all messages have been created
-		await saveChatHandler(_chatId, _history);
 
-		await Promise.all(
-			selectedModelIds.map(async (modelId, _modelIdx) => {
-				console.log('modelId', modelId);
-				const model = $models.filter((m) => m.id === modelId).at(0);
+		// Vision capability check
+		for (const mid of selectedModelIds) {
+			const model = $models.filter((m) => m.id === mid).at(0);
+			if (model) {
+				const hasImages = createMessagesList(_history, parentId).some((message) =>
+					message.files?.some(
+						(file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')
+					)
+				);
 
-				if (model) {
-					// If there are image files, check if model is vision capable
-					// Skip this check if image generation is enabled, as images may be for editing or are generated outputs in the history
-					const hasImages = createMessagesList(_history, parentId).some((message) =>
-						message.files?.some(
-							(file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')
-						)
+				if (
+					hasImages &&
+					!(model.info?.meta?.capabilities?.vision ?? true) &&
+					!imageGenerationEnabled
+				) {
+					toast.error(
+						$i18n.t('Model {{modelName}} is not vision capable', {
+							modelName: model.name ?? model.id
+						})
 					);
-
-					if (
-						hasImages &&
-						!(model.info?.meta?.capabilities?.vision ?? true) &&
-						!imageGenerationEnabled
-					) {
-						toast.error(
-							$i18n.t('Model {{modelName}} is not vision capable', {
-								modelName: model.name ?? model.id
-							})
-						);
-					}
-
-					let responseMessageId =
-						responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`];
-					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
-
-					scrollToBottom();
-					await sendMessageSocket(
-						model,
-						messages && messages.length > 0
-							? messages
-							: createMessagesList(_history, responseMessageId),
-						_history,
-						responseMessageId,
-						_chatId
-					);
-
-					if (chatEventEmitter) clearInterval(chatEventEmitter);
-				} else {
-					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 				}
-			})
-		);
+			}
+		}
+
+		// Single request — backend fans out to all models
+		const primaryModelId = selectedModelIds[0];
+		const primaryModel = $models.filter((m) => m.id === primaryModelId).at(0);
+		const primaryResponseMessageId = messageIdsMap[primaryModelId];
+
+		if (primaryModel && primaryResponseMessageId) {
+			const chatEventEmitter = await getChatEventEmitter(primaryModel.id, _chatId);
+
+			scrollToBottom();
+			await sendMessageSocket(
+				primaryModel,
+				messages && messages.length > 0
+					? messages
+					: createMessagesList(_history, primaryResponseMessageId),
+				_history,
+				primaryResponseMessageId,
+				_chatId,
+				selectedModelIds.length > 1 ? messageIdsMap : undefined
+			);
+
+			if (chatEventEmitter) clearInterval(chatEventEmitter);
+		}
 	};
 
 	const getFeatures = () => {
@@ -2166,7 +2145,14 @@
 			.map((token) => decodeURIComponent(JSON.parse(`"${token.replace(/"/g, '\\"')}"`)));
 	};
 
-	const sendMessageSocket = async (model, _messages, _history, responseMessageId, _chatId) => {
+	const sendMessageSocket = async (
+		model,
+		_messages,
+		_history,
+		responseMessageId,
+		_chatId,
+		messageIdsMap?: Record<string, string>
+	) => {
 		const responseMessage = _history.messages[responseMessageId];
 		const userMessage = _history.messages[responseMessage.parentId];
 
@@ -2217,53 +2203,54 @@
 			$settings?.params?.stream_response ??
 			params?.stream_response ??
 			true;
-
+		// Always include system prompt — backend extracts it and prepends to DB messages.
+		// Only temp chats need conversation messages (persisted chats load from DB).
 		let messages = [
 			params?.system || $settings.system
-				? {
-						role: 'system',
-						content: `${params?.system ?? $settings?.system ?? ''}`
-					}
-				: undefined,
-			..._messages.map((message) => ({
-				...message,
-				content: processDetails(message.content),
-				// Include output for temp chats (backend will use it and strip before LLM)
-				...(message.output ? { output: message.output } : {})
-			}))
-		].filter((message) => message);
+				? { role: 'system', content: `${params?.system ?? $settings?.system ?? ''}` }
+				: undefined
+		].filter(Boolean);
+		if ($temporaryChatEnabled) {
+			messages = [
+				...messages,
+				..._messages.map((message) => ({
+					...message,
+					content: processDetails(message.content),
+					...(message.output ? { output: message.output } : {})
+				}))
+			].filter((message) => message);
 
-		messages = messages
-			.map((message, idx, arr) => {
-				const imageFiles = (message?.files ?? []).filter(
-					(file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')
-				);
+			messages = messages
+				.map((message, idx, arr) => {
+					const imageFiles = (message?.files ?? []).filter(
+						(file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')
+					);
 
-				return {
-					role: message.role,
-					// Preserve output items so backend can reconstruct tool_calls/tool-role messages (temp chats)
-					...(message.output ? { output: message.output } : {}),
-					...(message.role === 'user' && imageFiles.length > 0
-						? {
-								content: [
-									{
-										type: 'text',
-										text: message?.merged?.content ?? message.content
-									},
-									...imageFiles.map((file) => ({
-										type: 'image_url',
-										image_url: {
-											url: file.url
-										}
-									}))
-								]
-							}
-						: {
-								content: message?.merged?.content ?? message.content
-							})
-				};
-			})
-			.filter((message) => message?.role === 'user' || message?.content?.trim());
+					return {
+						role: message.role,
+						...(message.output ? { output: message.output } : {}),
+						...(message.role === 'user' && imageFiles.length > 0
+							? {
+									content: [
+										{
+											type: 'text',
+											text: message?.merged?.content ?? message.content
+										},
+										...imageFiles.map((file) => ({
+											type: 'image_url',
+											image_url: {
+												url: file.url
+											}
+										}))
+									]
+								}
+							: {
+									content: message?.merged?.content ?? message.content
+								})
+					};
+				})
+				.filter((message) => message?.role === 'user' || message?.content?.trim());
+		}
 
 		const toolIds = [];
 		const toolServerIds = [];
@@ -2320,12 +2307,15 @@
 		// Use the user-selected terminal from the dropdown
 		const activeTerminalId = $selectedTerminalId ?? null;
 
+		// Only send terminal_id if the model has terminal capability enabled
+		const terminalEnabled = model.info?.meta?.capabilities?.terminal ?? true;
+
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
 			{
 				stream: stream,
 				model: model.id,
-				messages: messages,
+				...(messages.length > 0 ? { messages } : {}),
 				params: {
 					...$settings?.params,
 					...params,
@@ -2337,7 +2327,7 @@
 				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
 				tool_ids: toolIds.length > 0 ? toolIds : undefined,
 				skill_ids: skillIds.length > 0 ? skillIds : undefined,
-				terminal_id: activeTerminalId ?? undefined,
+				terminal_id: terminalEnabled ? (activeTerminalId ?? undefined) : undefined,
 				tool_servers: [
 					...($toolServers ?? []).filter(
 						(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
@@ -2356,20 +2346,16 @@
 				model_item: $models.find((m) => m.id === model.id),
 
 				session_id: $socket?.id,
-				chat_id: $chatId,
+				chat_id: _chatId || undefined,
 				folder_id: $selectedFolder?.id ?? undefined,
 
 				id: responseMessageId,
-				parent_id: userMessage?.id ?? null,
-				parent_message: userMessage,
+				...(messageIdsMap ? { message_ids: messageIdsMap } : {}),
+				parent_id: userMessage?.parentId ?? null,
+				user_message: userMessage,
 
 				background_tasks: {
-					...(!$temporaryChatEnabled &&
-					(messages.length == 1 ||
-						(messages.length == 2 &&
-							messages.at(0)?.role === 'system' &&
-							messages.at(1)?.role === 'user')) &&
-					(selectedModels[0] === model.id || atSelectedModel !== undefined)
+					...(!$temporaryChatEnabled && !_chatId && (userMessage?.parentId ?? null) === null
 						? {
 								title_generation: $settings?.title?.auto ?? true,
 								tags_generation: $settings?.autoTags ?? true
@@ -2418,10 +2404,22 @@
 			if (res.error) {
 				await handleOpenAIError(res.error, responseMessage);
 			} else {
+				// Backend returns task_ids (multi-model) or task_id (single model)
+				const newTaskIds = res.task_ids ?? (res.task_id ? [res.task_id] : []);
 				if (taskIds) {
-					taskIds.push(res.task_id);
+					taskIds.push(...newTaskIds);
 				} else {
-					taskIds = [res.task_id];
+					taskIds = newTaskIds;
+				}
+
+				// Backend returns chat_id for new chats — set store + URL
+				if (res.chat_id && $chatId !== res.chat_id) {
+					await chatId.set(res.chat_id);
+					if (!$temporaryChatEnabled) {
+						window.history.replaceState(history.state, '', `/c/${res.chat_id}`);
+						currentChatPage.set(1);
+						await chats.set(await getChatList(localStorage.token, $currentChatPage));
+					}
 				}
 			}
 		}
@@ -3013,7 +3011,7 @@
 										if (e.detail || files.length > 0) {
 											await tick();
 
-											submitHandler(e.detail.replaceAll('\n\n', '\n'));
+											submitHandler(e.detail);
 										}
 									}}
 								/>
@@ -3056,7 +3054,7 @@
 										clearDraft();
 										if (e.detail || files.length > 0) {
 											await tick();
-											submitHandler(e.detail.replaceAll('\n\n', '\n'));
+											submitHandler(e.detail);
 										}
 									}}
 								/>

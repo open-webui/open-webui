@@ -77,7 +77,9 @@
 	}
 
 	$: args = decode(attributes?.arguments ?? '');
-	$: result = decode(attributes?.result ?? '');
+	export let resultContent: string = '';
+
+	$: result = resultContent || decode(attributes?.result ?? '');
 	$: files = parseJSONString(decode(attributes?.files ?? ''));
 	$: embeds = parseJSONString(decode(attributes?.embeds ?? ''));
 	$: isDone = attributes?.done === 'true';

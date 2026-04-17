@@ -1131,7 +1131,7 @@ async def update_ldap_server(request: Request, form_data: LdapServerConfig, user
     for key in required_fields:
         value = getattr(form_data, key)
         if not value:
-            raise HTTPException(400, detail=f'Required field {key} is empty')
+            raise HTTPException(400, detail=ERROR_MESSAGES.REQUIRED_FIELD_EMPTY(key))
 
     request.app.state.config.LDAP_SERVER_LABEL = form_data.label
     request.app.state.config.LDAP_SERVER_HOST = form_data.host
@@ -1260,7 +1260,7 @@ async def token_exchange(
     if provider not in OAUTH_PROVIDERS:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Provider '{provider}' is not configured",
+            detail=ERROR_MESSAGES.OAUTH_NOT_CONFIGURED(provider),
         )
     # Get the OAuth client for this provider
     oauth_manager = request.app.state.oauth_manager
@@ -1268,7 +1268,7 @@ async def token_exchange(
     if not client:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"OAuth client for '{provider}' not found",
+            detail=ERROR_MESSAGES.OAUTH_NOT_CONFIGURED(provider),
         )
 
     # Validate the token by calling the userinfo endpoint

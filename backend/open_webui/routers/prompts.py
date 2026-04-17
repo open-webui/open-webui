@@ -324,7 +324,7 @@ async def update_prompt_by_id(
         if existing_prompt and existing_prompt.id != prompt.id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Command '/{form_data.command}' is already in use by another prompt",
+                detail=ERROR_MESSAGES.COMMAND_TAKEN,
             )
 
     form_data.access_grants = await filter_allowed_access_grants(
@@ -389,7 +389,7 @@ async def update_prompt_metadata(
         if existing_prompt and existing_prompt.id != prompt.id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Command '/{form_data.command}' is already in use",
+                detail=ERROR_MESSAGES.COMMAND_TAKEN,
             )
 
     updated_prompt = await Prompts.update_prompt_metadata(
@@ -751,7 +751,7 @@ async def get_prompt_diff(
     if not diff:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail='One or both history entries not found',
+            detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
     return diff

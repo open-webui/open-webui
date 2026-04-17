@@ -140,7 +140,7 @@ async def check_channels_access(request: Request, user: Optional[UserModel] = No
     if not request.app.state.config.ENABLE_CHANNELS:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail='Channels are not enabled',
+            detail=ERROR_MESSAGES.FEATURE_DISABLED('Channels'),
         )
 
     if user:
@@ -1791,7 +1791,7 @@ async def post_webhook_message(
     if not webhook:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Invalid webhook URL',
+            detail=ERROR_MESSAGES.INVALID_URL,
         )
 
     channel = await Channels.get_channel_by_id(webhook.channel_id, db=db)
@@ -1809,7 +1809,7 @@ async def post_webhook_message(
     if not message:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail='Failed to create message',
+            detail=ERROR_MESSAGES.DEFAULT('Failed to create message'),
         )
 
     # Update last_used_at

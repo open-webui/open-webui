@@ -66,10 +66,18 @@ async def has_access_to_file(
         return True
 
     # Check if the file is associated with any chats the user has access to
-    # TODO: Granular access control for chats
-    chats = await Chats.get_shared_chats_by_file_id(file_id, db=db)
-    if chats:
-        return True
+    shared_chat_ids = await Chats.get_shared_chat_ids_by_file_id(file_id, db=db)
+    if shared_chat_ids:
+        accessible_ids = await AccessGrants.get_accessible_resource_ids(
+            user_id=user.id,
+            resource_type='shared_chat',
+            resource_ids=shared_chat_ids,
+            permission='read',
+            user_group_ids=user_group_ids,
+            db=db,
+        )
+        if accessible_ids:
+            return True
 
     # Check if the file is directly attached to a shared workspace model
     for model in await Models.get_models_by_user_id(user.id, permission=access_type, db=db):

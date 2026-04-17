@@ -123,7 +123,7 @@ class OAuthSessionTable:
                         'user_id': user_id,
                         'provider': provider,
                         'token': self._encrypt_token(token),
-                        'expires_at': token.get('expires_at'),
+                        'expires_at': token.get('expires_at') or int(time.time() + 3600),
                         'created_at': current_time,
                         'updated_at': current_time,
                     }
@@ -274,7 +274,7 @@ class OAuthSessionTable:
                     .filter_by(id=session_id)
                     .values(
                         token=self._encrypt_token(token),
-                        expires_at=token.get('expires_at'),
+                        expires_at=token.get('expires_at') or int(time.time() + 3600),
                         updated_at=current_time,
                     )
                 )

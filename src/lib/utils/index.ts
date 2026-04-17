@@ -923,8 +923,19 @@ export const processDetails = (content) => {
 				attributes[attributeMatch[1]] = attributeMatch[2];
 			}
 
+			// New format: result in body content; Old format: result in attribute
+			let resultText = '';
 			if (attributes.result) {
-				content = content.replace(match, unescapeHtml(attributes.result));
+				resultText = unescapeHtml(attributes.result);
+			} else {
+				// Extract body content (strip <summary>...</summary>)
+				const bodyMatch = match.match(/<summary>[\s\S]*?<\/summary>\s*([\s\S]*?)\s*<\/details>/i);
+				if (bodyMatch && bodyMatch[1].trim()) {
+					resultText = unescapeHtml(bodyMatch[1].trim());
+				}
+			}
+			if (resultText) {
+				content = content.replace(match, resultText);
 			}
 		}
 	}
@@ -1702,13 +1713,33 @@ export const initMermaid = async () => {
 	return mermaid;
 };
 
-export const renderMermaidDiagram = async (mermaid, code: string) => {
-	const parseResult = await mermaid.parse(code, { suppressErrors: false });
-	if (parseResult) {
-		const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
-		return svg;
+const cleanupMermaidTempElements = (id: string) => {
+	if (typeof document === 'undefined') {
+		return;
 	}
-	return '';
+
+	document.getElementById(id)?.remove();
+	document.getElementById(`d${id}`)?.remove();
+	document.getElementById(`i${id}`)?.remove();
+};
+
+export const renderMermaidDiagram = async (
+	mermaid: typeof import('mermaid').default,
+	code: string,
+	renderId?: string
+) => {
+	const id = renderId ?? `mermaid-${uuidv4()}`;
+	try {
+		const parseResult = await mermaid.parse(code, { suppressErrors: false });
+		if (parseResult) {
+			const { svg } = await mermaid.render(id, code);
+			return svg;
+		}
+		return '';
+	} finally {
+		// Mermaid can leave temporary d*/i* wrappers on error paths.
+		cleanupMermaidTempElements(id);
+	}
 };
 
 export const renderVegaVisualization = async (spec: string, i18n?: any) => {

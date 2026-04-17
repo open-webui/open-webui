@@ -192,27 +192,6 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         proxy: Optional[Dict[str, str]] = None,
         params: Optional[Dict] = None,
     ):
-        """Concurrent document loader for FireCrawl operations.
-
-        Executes multiple FireCrawlLoader instances concurrently using thread pooling
-        to improve bulk processing efficiency.
-        Args:
-            web_paths: List of URLs/paths to process.
-            verify_ssl: If True, verify SSL certificates.
-            trust_env: If True, use proxy settings from environment variables.
-            requests_per_second: Number of requests per second to limit to.
-            continue_on_failure (bool): If True, continue loading other URLs on failure.
-            api_key: API key for FireCrawl service. Defaults to None
-                (uses FIRE_CRAWL_API_KEY environment variable if not provided).
-            api_url: Base URL for FireCrawl API. Defaults to official API endpoint.
-            mode: Operation mode selection:
-                - 'crawl': Website crawling mode
-                - 'scrape': Direct page scraping (default)
-                - 'map': Site map generation
-            proxy: Proxy override settings for the FireCrawl API.
-            params: The parameters to pass to the Firecrawl API.
-                For more details, visit: https://docs.firecrawl.dev/sdks/python#batch-scrape
-        """
         proxy_server = proxy.get('server') if proxy else None
         if trust_env and not proxy_server:
             env_proxies = urllib.request.getproxies()
@@ -229,44 +208,43 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         self.trust_env = trust_env
         self.continue_on_failure = continue_on_failure
         self.api_key = api_key
-        self.api_url = api_url
+        self.api_url = (api_url or 'https://api.firecrawl.dev').rstrip('/')
         self.timeout = timeout
         self.mode = mode
         self.params = params or {}
 
     def lazy_load(self) -> Iterator[Document]:
-        """Load documents using FireCrawl batch_scrape."""
-        log.debug(
-            'Starting FireCrawl batch scrape for %d URLs, mode: %s, params: %s',
-            len(self.web_paths),
-            self.mode,
-            self.params,
-        )
         try:
-            from firecrawl import FirecrawlApp
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {self.api_key}',
+            }
 
-            firecrawl = FirecrawlApp(api_key=self.api_key, api_url=self.api_url)
-            result = firecrawl.batch_scrape(
-                self.web_paths,
-                formats=['markdown'],
-                skip_tls_verification=not self.verify_ssl,
-                ignore_invalid_urls=True,
-                remove_base64_images=True,
-                max_age=300000,  # 5 minutes https://docs.firecrawl.dev/features/fast-scraping#common-maxage-values
-                wait_timeout=self.timeout if self.timeout else len(self.web_paths) * 3,
-                **self.params,
-            )
+            for url in self.web_paths:
+                payload = {
+                    'url': url,
+                    'formats': ['markdown'],
+                    **self.params,
+                }
+                if self.timeout:
+                    payload['timeout'] = self.timeout * 1000
 
-            if result.status != 'completed':
-                raise RuntimeError(f'FireCrawl batch scrape did not complete successfully. result: {result}')
-
-            for data in result.data:
-                metadata = data.metadata or {}
-                yield Document(
-                    page_content=data.markdown or '',
-                    metadata={'source': metadata.url or metadata.source_url or ''},
+                response = requests.post(
+                    f'{self.api_url}/v1/scrape',
+                    headers=headers,
+                    json=payload,
+                    timeout=self.timeout or 60,
+                    verify=self.verify_ssl,
                 )
+                response.raise_for_status()
+                data = response.json().get('data', {})
+                metadata = data.get('metadata', {})
+                source = metadata.get('url') or metadata.get('sourceURL') or url
 
+                yield Document(
+                    page_content=data.get('markdown', ''),
+                    metadata={'source': source},
+                )
         except Exception as e:
             if self.continue_on_failure:
                 log.exception(f'Error extracting content from URLs: {e}')
@@ -274,38 +252,10 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 raise e
 
     async def alazy_load(self):
-        """Async version of lazy_load."""
-        log.debug(
-            'Starting FireCrawl batch scrape for %d URLs, mode: %s, params: %s',
-            len(self.web_paths),
-            self.mode,
-            self.params,
-        )
         try:
-            from firecrawl import FirecrawlApp
-
-            firecrawl = FirecrawlApp(api_key=self.api_key, api_url=self.api_url)
-            result = firecrawl.batch_scrape(
-                self.web_paths,
-                formats=['markdown'],
-                skip_tls_verification=not self.verify_ssl,
-                ignore_invalid_urls=True,
-                remove_base64_images=True,
-                max_age=300000,  # 5 minutes https://docs.firecrawl.dev/features/fast-scraping#common-maxage-values
-                wait_timeout=self.timeout if self.timeout else len(self.web_paths) * 3,
-                **self.params,
-            )
-
-            if result.status != 'completed':
-                raise RuntimeError(f'FireCrawl batch scrape did not complete successfully. result: {result}')
-
-            for data in result.data:
-                metadata = data.metadata or {}
-                yield Document(
-                    page_content=data.markdown or '',
-                    metadata={'source': metadata.url or metadata.source_url or ''},
-                )
-
+            docs = await run_in_threadpool(lambda: list(self.lazy_load()))
+            for doc in docs:
+                yield doc
         except Exception as e:
             if self.continue_on_failure:
                 log.exception(f'Error extracting content from URLs: {e}')

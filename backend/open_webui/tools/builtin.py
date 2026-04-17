@@ -37,7 +37,7 @@ from open_webui.models.channels import Channels, ChannelMember, Channel
 from open_webui.models.messages import Messages, Message
 from open_webui.models.groups import Groups
 from open_webui.models.memories import Memories
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.utils.sanitize import sanitize_code
 
 log = logging.getLogger(__name__)
@@ -653,7 +653,7 @@ async def delete_memory(
         result = await Memories.delete_memory_by_id_and_user_id(memory_id, user.id)
 
         if result:
-            VECTOR_DB_CLIENT.delete(collection_name=f'user-memory-{user.id}', ids=[memory_id])
+            await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=f'user-memory-{user.id}', ids=[memory_id])
             return json.dumps(
                 {'status': 'success', 'message': f'Memory {memory_id} deleted'},
                 ensure_ascii=False,
@@ -2202,7 +2202,7 @@ async def query_knowledge_bases(
         import heapq
         from open_webui.models.knowledge import Knowledges
         from open_webui.routers.knowledge import KNOWLEDGE_BASES_COLLECTION
-        from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+        from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 
         user_id = __user__.get('id')
         user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
@@ -2227,7 +2227,7 @@ async def query_knowledge_bases(
 
             accessible_ids = [kb.id for kb in accessible_knowledge_bases.items]
 
-            search_results = VECTOR_DB_CLIENT.search(
+            search_results = await ASYNC_VECTOR_DB_CLIENT.search(
                 collection_name=KNOWLEDGE_BASES_COLLECTION,
                 vectors=[query_embedding],
                 filter={'knowledge_base_id': {'$in': accessible_ids}},
@@ -2494,7 +2494,6 @@ async def create_automation(
     name: str,
     prompt: str,
     rrule: str,
-    model_id: Optional[str] = None,
     __request__: Request = None,
     __user__: dict = None,
     __metadata__: dict = None,
@@ -2502,6 +2501,7 @@ async def create_automation(
     """
     Create a scheduled automation that runs a prompt on a recurring or one-time schedule.
     Use this when the user wants to schedule a task to run automatically.
+    The automation will use the current chat model.
 
     The rrule parameter must be a valid iCalendar RRULE string. Common examples:
     - Every day at 9am: "DTSTART:20250101T090000\\nRRULE:FREQ=DAILY"
@@ -2516,7 +2516,6 @@ async def create_automation(
     :param name: A short descriptive name for the automation
     :param prompt: The prompt/instructions to execute on each run
     :param rrule: An iCalendar RRULE string defining the schedule
-    :param model_id: Optional model ID to use. Defaults to the current chat model if omitted.
     :return: JSON with the created automation details including id, next scheduled runs
     """
     if __request__ is None:
@@ -2535,11 +2534,10 @@ async def create_automation(
         if not user:
             return json.dumps({'error': 'User not found'})
 
-        # Default to current chat's model if not specified
+        # Always use the calling model for the automation
+        model_id = (__metadata__ or {}).get('model_id')
         if not model_id:
-            model_id = (__metadata__ or {}).get('model_id') or (__metadata__ or {}).get('model')
-        if not model_id:
-            return json.dumps({'error': 'model_id is required (could not detect current model)'})
+            return json.dumps({'error': 'Could not detect current model'})
 
         # Validate the RRULE
         try:

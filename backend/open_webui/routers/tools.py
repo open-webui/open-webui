@@ -285,7 +285,7 @@ async def load_tool_from_url(request: Request, form_data: LoadUrlForm, user=Depe
             'content': data,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f'Error importing tool: {e}')
+        raise HTTPException(status_code=500, detail=ERROR_MESSAGES.DEFAULT(e))
 
 
 ############################

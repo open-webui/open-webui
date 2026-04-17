@@ -204,6 +204,11 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
         # Initialize the new message structure with the role
         new_message = {'role': message['role']}
 
+        # Preserve Ollama-native 'thinking' field (used by reasoning models,
+        # may be injected by filter inlet functions).
+        if 'thinking' in message:
+            new_message['thinking'] = message['thinking']
+
         content = message.get('content', [])
         tool_calls = message.get('tool_calls', None)
         tool_call_id = message.get('tool_call_id', None)

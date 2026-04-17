@@ -45,6 +45,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 
 # Document loaders
 from open_webui.retrieval.loaders.main import Loader
@@ -81,6 +82,7 @@ from open_webui.retrieval.web.yandex import search_yandex
 from open_webui.retrieval.web.ydc import search_youcom
 
 from open_webui.retrieval.utils import (
+    filter_accessible_collections,
     get_content_from_url,
     get_embedding_function,
     get_reranking_function,
@@ -151,7 +153,7 @@ def get_ef(
                 model_kwargs=SENTENCE_TRANSFORMERS_MODEL_KWARGS,
             )
         except Exception as e:
-            log.debug(f'Error loading SentenceTransformer: {e}')
+            log.error(f'Error loading SentenceTransformer: {e}')
 
     return ef
 
@@ -486,6 +488,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         # Reranking settings
         'RAG_RERANKING_MODEL': request.app.state.config.RAG_RERANKING_MODEL,
         'RAG_RERANKING_ENGINE': request.app.state.config.RAG_RERANKING_ENGINE,
+        'RAG_RERANKING_BATCH_SIZE': request.app.state.config.RAG_RERANKING_BATCH_SIZE,
         'RAG_EXTERNAL_RERANKER_URL': request.app.state.config.RAG_EXTERNAL_RERANKER_URL,
         'RAG_EXTERNAL_RERANKER_API_KEY': request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
         'RAG_EXTERNAL_RERANKER_TIMEOUT': request.app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT,
@@ -693,6 +696,7 @@ class ConfigForm(BaseModel):
     # Reranking settings
     RAG_RERANKING_MODEL: Optional[str] = None
     RAG_RERANKING_ENGINE: Optional[str] = None
+    RAG_RERANKING_BATCH_SIZE: Optional[int] = None
     RAG_EXTERNAL_RERANKER_URL: Optional[str] = None
     RAG_EXTERNAL_RERANKER_API_KEY: Optional[str] = None
     RAG_EXTERNAL_RERANKER_TIMEOUT: Optional[str] = None
@@ -939,6 +943,12 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         else request.app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT
     )
 
+    request.app.state.config.RAG_RERANKING_BATCH_SIZE = (
+        form_data.RAG_RERANKING_BATCH_SIZE
+        if form_data.RAG_RERANKING_BATCH_SIZE is not None
+        else request.app.state.config.RAG_RERANKING_BATCH_SIZE
+    )
+
     log.info(
         f'Updating reranking model: {request.app.state.config.RAG_RERANKING_MODEL} to {form_data.RAG_RERANKING_MODEL}'
     )
@@ -966,6 +976,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
                     request.app.state.config.RAG_RERANKING_ENGINE,
                     request.app.state.config.RAG_RERANKING_MODEL,
                     request.app.state.rf,
+                    reranking_batch_size=request.app.state.config.RAG_RERANKING_BATCH_SIZE,
                 )
         except Exception as e:
             log.error(f'Error loading reranking model: {e}')
@@ -1556,7 +1567,7 @@ async def process_file(
 
                 try:
                     # /files/{file_id}/data/content/update
-                    VECTOR_DB_CLIENT.delete_collection(collection_name=f'file-{file.id}')
+                    await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=f'file-{file.id}')
                 except Exception:
                     # Audio file upload pipeline
                     pass
@@ -1579,7 +1590,9 @@ async def process_file(
                 # Check if the file has already been processed and save the content
                 # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
 
-                result = VECTOR_DB_CLIENT.query(collection_name=f'file-{file.id}', filter={'file_id': file.id})
+                result = await ASYNC_VECTOR_DB_CLIENT.query(
+                    collection_name=f'file-{file.id}', filter={'file_id': file.id}
+                )
 
                 if result is not None and len(result.ids[0]) > 0:
                     docs = [
@@ -1609,7 +1622,7 @@ async def process_file(
                 # Usage: /files/
                 file_path = file.path
                 if file_path:
-                    file_path = Storage.get_file(file_path)
+                    file_path = await asyncio.to_thread(Storage.get_file, file_path)
                     loader = Loader(
                         engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
                         user=user,
@@ -1643,7 +1656,7 @@ async def process_file(
                         MINERU_API_TIMEOUT=request.app.state.config.MINERU_API_TIMEOUT,
                         MINERU_PARAMS=request.app.state.config.MINERU_PARAMS,
                     )
-                    docs = loader.load(file.filename, file.meta.get('content_type'), file_path)
+                    docs = await loader.aload(file.filename, file.meta.get('content_type'), file_path)
 
                     docs = [
                         Document(
@@ -1698,7 +1711,12 @@ async def process_file(
 
                     # External embedding API takes time (5-60s+).
                     # Subsequent updates use fresh async sessions.
-                    result = save_docs_to_vector_db(
+                    # NOTE: save_docs_to_vector_db is a sync function that
+                    # calls asyncio.run_coroutine_threadsafe(..., main_loop).result()
+                    # which blocks the calling thread.  We MUST run it in a
+                    # worker thread to avoid deadlocking the event loop.
+                    result = await run_in_threadpool(
+                        save_docs_to_vector_db,
                         request,
                         docs=docs,
                         collection_name=collection_name,
@@ -1783,6 +1801,8 @@ async def process_text(
     collection_name = form_data.collection_name
     if collection_name is None:
         collection_name = calculate_sha256_string(form_data.content)
+    else:
+        await _validate_collection_access([collection_name], user, access_type='write')
 
     docs = [
         Document(
@@ -1824,6 +1844,8 @@ async def process_web(
             collection_name = form_data.collection_name
             if not collection_name:
                 collection_name = calculate_sha256_string(form_data.url)[:63]
+            else:
+                await _validate_collection_access([collection_name], user, access_type='write')
 
             if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
                 await run_in_threadpool(
@@ -2327,32 +2349,20 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
         )
 
 
-async def _validate_collection_access(collection_names: list[str], user) -> None:
+async def _validate_collection_access(collection_names: list[str], user, access_type: str = 'read') -> None:
     """
-    Prevent users from querying collections they don't own.
-    Enforces ownership on user-memory-* and file-* collections.
-    Admins bypass this check.
+    Raise 403 if the user lacks access to any of the requested collections.
+    Delegates to the shared filter_accessible_collections utility so the
+    access rules stay in one place.
     """
-    if user.role == 'admin':
-        return
-
-    for name in collection_names:
-        if name.startswith('user-memory-') and name != f'user-memory-{user.id}':
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-            )
-        elif name.startswith('file-'):
-            file_id = name[len('file-') :]
-            if not await has_access_to_file(
-                file_id=file_id,
-                access_type='read',
-                user=user,
-            ):
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-                )
+    requested = set(collection_names)
+    allowed = await filter_accessible_collections(requested, user, access_type=access_type)
+    denied = requested - allowed
+    if denied:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
 
 
 class QueryDocForm(BaseModel):
@@ -2375,7 +2385,7 @@ async def query_doc_handler(
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (form_data.hybrid is None or form_data.hybrid):
             collection_results = {}
-            collection_results[form_data.collection_name] = VECTOR_DB_CLIENT.get(
+            collection_results[form_data.collection_name] = await ASYNC_VECTOR_DB_CLIENT.get(
                 collection_name=form_data.collection_name
             )
             return await query_doc_with_hybrid_search(
@@ -2404,7 +2414,10 @@ async def query_doc_handler(
             query_embedding = await request.app.state.EMBEDDING_FUNCTION(
                 form_data.query, prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user
             )
-            return query_doc(
+            # query_doc wraps a blocking VECTOR_DB_CLIENT.search call;
+            # offload so the request's event loop stays responsive.
+            return await asyncio.to_thread(
+                query_doc,
                 collection_name=form_data.collection_name,
                 query_embedding=query_embedding,
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
@@ -2502,7 +2515,7 @@ async def delete_entries_from_collection(
     db: AsyncSession = Depends(get_async_session),
 ):
     try:
-        if VECTOR_DB_CLIENT.has_collection(collection_name=form_data.collection_name):
+        if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name=form_data.collection_name):
             file = await Files.get_file_by_id(form_data.file_id, db=db)
             if not file:
                 raise HTTPException(
@@ -2511,13 +2524,37 @@ async def delete_entries_from_collection(
                 )
             hash = file.hash
 
-            VECTOR_DB_CLIENT.delete(
+            # Refuse to issue a `filter={'hash': None}` query — the
+            # match semantics of a null filter value are
+            # backend-dependent (some backends ignore the key, some
+            # match every row whose metadata lacks `hash`) and risk
+            # deleting unrelated entries. Files without a hash are
+            # typically unprocessed / failed / legacy records that
+            # can't be targeted by hash anyway.
+            if hash is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT('File has no hash; cannot delete vector entries by hash.'),
+                )
+
+            # Pre-existing bug: this used `metadata=` which is not a
+            # parameter on `VectorDBBase.delete` nor on any backend
+            # implementation, so the call always raised TypeError that
+            # was silently swallowed by the surrounding `except
+            # Exception` and the endpoint reported `{'status': False}`
+            # for every request. Use `filter` to actually do what the
+            # endpoint name promises.
+            await ASYNC_VECTOR_DB_CLIENT.delete(
                 collection_name=form_data.collection_name,
-                metadata={'hash': hash},
+                filter={'hash': hash},
             )
             return {'status': True}
         else:
             return {'status': False}
+    except HTTPException:
+        # Caller-meaningful errors (404/400 above) must not be
+        # swallowed and re-shaped as `{'status': False}`.
+        raise
     except Exception as e:
         log.exception(e)
         return {'status': False}
@@ -2525,7 +2562,7 @@ async def delete_entries_from_collection(
 
 @router.post('/reset/db')
 async def reset_vector_db(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
-    VECTOR_DB_CLIENT.reset()
+    await ASYNC_VECTOR_DB_CLIENT.reset()
     await Knowledges.delete_all_knowledge(db=db)
 
 

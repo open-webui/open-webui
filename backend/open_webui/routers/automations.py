@@ -74,7 +74,7 @@ async def check_automation_limits(request, user, rrule_str: str, db, is_create: 
             if max_count > 0 and await Automations.count_by_user(user.id, db=db) >= max_count:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f'Automation limit reached ({max_count})',
+                    detail=ERROR_MESSAGES.AUTOMATION_LIMIT_EXCEEDED(max_count),
                 )
 
     # Min interval (create + update)
@@ -86,7 +86,7 @@ async def check_automation_limits(request, user, rrule_str: str, db, is_create: 
             if interval is not None and interval < min_interval:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f'Schedule too frequent. Minimum interval is {min_interval} seconds.',
+                    detail=ERROR_MESSAGES.AUTOMATION_TOO_FREQUENT(min_interval),
                 )
 
 

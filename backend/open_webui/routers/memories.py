@@ -5,7 +5,7 @@ import asyncio
 from typing import Optional
 
 from open_webui.models.memories import Memories, MemoryModel
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.utils.auth import get_verified_user
 from open_webui.internal.db import get_async_session
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -85,7 +85,7 @@ async def add_memory(
 
     vector = await request.app.state.EMBEDDING_FUNCTION(memory.content, user=user)
 
-    VECTOR_DB_CLIENT.upsert(
+    await ASYNC_VECTOR_DB_CLIENT.upsert(
         collection_name=f'user-memory-{user.id}',
         items=[
             {
@@ -138,11 +138,43 @@ async def query_memory(
 
     vector = await request.app.state.EMBEDDING_FUNCTION(form_data.content, user=user)
 
-    results = VECTOR_DB_CLIENT.search(
+    results = await ASYNC_VECTOR_DB_CLIENT.search(
         collection_name=f'user-memory-{user.id}',
         vectors=[vector],
         limit=form_data.k,
     )
+
+    # Filter results by relevance threshold to avoid returning unrelated
+    # memories.  Vector similarity search always returns the top-K nearest
+    # neighbours even when they are completely irrelevant; applying the
+    # same RELEVANCE_THRESHOLD used by RAG ensures only genuinely matching
+    # memories are surfaced (distances are normalised to 0→1, higher is
+    # better).
+    relevance_threshold = getattr(request.app.state.config, 'RELEVANCE_THRESHOLD', 0.0)
+    if results and relevance_threshold > 0.0 and results.distances and results.distances[0]:
+        from open_webui.retrieval.vector.main import SearchResult
+
+        filtered_ids = []
+        filtered_docs = []
+        filtered_metas = []
+        filtered_dists = []
+
+        for idx, score in enumerate(results.distances[0]):
+            if score >= relevance_threshold:
+                if results.ids and results.ids[0]:
+                    filtered_ids.append(results.ids[0][idx])
+                if results.documents and results.documents[0]:
+                    filtered_docs.append(results.documents[0][idx])
+                if results.metadatas and results.metadatas[0]:
+                    filtered_metas.append(results.metadatas[0][idx])
+                filtered_dists.append(score)
+
+        results = SearchResult(
+            ids=[filtered_ids] if filtered_ids else [[]],
+            documents=[filtered_docs] if filtered_docs else [[]],
+            metadatas=[filtered_metas] if filtered_metas else [[]],
+            distances=[filtered_dists] if filtered_dists else [[]],
+        )
 
     return results
 
@@ -175,7 +207,7 @@ async def reset_memory_from_vector_db(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    VECTOR_DB_CLIENT.delete_collection(f'user-memory-{user.id}')
+    await ASYNC_VECTOR_DB_CLIENT.delete_collection(f'user-memory-{user.id}')
 
     memories = await Memories.get_memories_by_user_id(user.id)
 
@@ -184,7 +216,7 @@ async def reset_memory_from_vector_db(
         *[request.app.state.EMBEDDING_FUNCTION(memory.content, user=user) for memory in memories]
     )
 
-    VECTOR_DB_CLIENT.upsert(
+    await ASYNC_VECTOR_DB_CLIENT.upsert(
         collection_name=f'user-memory-{user.id}',
         items=[
             {
@@ -230,7 +262,7 @@ async def delete_memory_by_user_id(
 
     if result:
         try:
-            VECTOR_DB_CLIENT.delete_collection(f'user-memory-{user.id}')
+            await ASYNC_VECTOR_DB_CLIENT.delete_collection(f'user-memory-{user.id}')
         except Exception as e:
             log.error(e)
         return True
@@ -268,12 +300,12 @@ async def update_memory_by_id(
 
     memory = await Memories.update_memory_by_id_and_user_id(memory_id, user.id, form_data.content)
     if memory is None:
-        raise HTTPException(status_code=404, detail='Memory not found')
+        raise HTTPException(status_code=404, detail=ERROR_MESSAGES.NOT_FOUND)
 
     if form_data.content is not None:
         vector = await request.app.state.EMBEDDING_FUNCTION(memory.content, user=user)
 
-        VECTOR_DB_CLIENT.upsert(
+        await ASYNC_VECTOR_DB_CLIENT.upsert(
             collection_name=f'user-memory-{user.id}',
             items=[
                 {
@@ -318,7 +350,7 @@ async def delete_memory_by_id(
     result = await Memories.delete_memory_by_id_and_user_id(memory_id, user.id, db=db)
 
     if result:
-        VECTOR_DB_CLIENT.delete(collection_name=f'user-memory-{user.id}', ids=[memory_id])
+        await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=f'user-memory-{user.id}', ids=[memory_id])
         return True
 
     return False

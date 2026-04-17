@@ -4,7 +4,7 @@ import uuid
 from typing import Optional
 from functools import lru_cache
 
-from sqlalchemy import select, delete, update, or_, func, cast
+from sqlalchemy import Boolean, select, delete, update, or_, func, cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.models.groups import Groups
@@ -29,6 +29,7 @@ class Note(Base):
     title = Column(Text)
     data = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
+    is_pinned = Column(Boolean, default=False, nullable=True)
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -43,6 +44,7 @@ class NoteModel(BaseModel):
     title: str
     data: Optional[dict] = None
     meta: Optional[dict] = None
+    is_pinned: Optional[bool] = False
 
     access_grants: list[AccessGrantModel] = Field(default_factory=list)
 
@@ -77,6 +79,7 @@ class NoteItemResponse(BaseModel):
     id: str
     title: str
     data: Optional[dict]
+    is_pinned: Optional[bool] = False
     updated_at: int
     created_at: int
     user: Optional[UserResponse] = None
@@ -310,6 +313,39 @@ class NoteTable:
 
             await db.commit()
             return await self._to_note_model(note, db=db) if note else None
+
+    async def toggle_note_pinned_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[NoteModel]:
+        try:
+            async with get_async_db_context(db) as db:
+                result = await db.execute(select(Note).filter(Note.id == id))
+                note = result.scalars().first()
+                if not note:
+                    return None
+                note.is_pinned = not note.is_pinned
+                note.updated_at = int(time.time_ns())
+                await db.commit()
+                return await self._to_note_model(note, db=db)
+        except Exception:
+            return None
+
+    async def get_pinned_notes_by_user_id(
+        self,
+        user_id: str,
+        permission: str = 'read',
+        db: Optional[AsyncSession] = None,
+    ) -> list[NoteModel]:
+        async with get_async_db_context(db) as db:
+            user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+            user_group_ids = [group.id for group in user_groups]
+
+            stmt = select(Note).filter(Note.is_pinned == True).order_by(Note.updated_at.desc())
+            stmt = self._has_permission(db, stmt, {'user_id': user_id, 'group_ids': user_group_ids}, permission)
+
+            result = await db.execute(stmt)
+            notes = result.scalars().all()
+            note_ids = [note.id for note in notes]
+            grants_map = await AccessGrants.get_grants_by_resources('note', note_ids, db=db)
+            return [await self._to_note_model(note, access_grants=grants_map.get(note.id, []), db=db) for note in notes]
 
     async def delete_note_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
         try:

@@ -20,12 +20,14 @@ from open_webui.models.files import Files
 from open_webui.routers.files import upload_file_handler
 from open_webui.retrieval.web.utils import validate_url
 
+import asyncio
 import mimetypes
 import base64
 import io
 import re
 
-import requests
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
+from open_webui.utils.session_pool import get_session
 
 BASE64_IMAGE_URL_PREFIX = re.compile(r'data:image/\w+;base64,', re.IGNORECASE)
 MARKDOWN_IMAGE_URL_PATTERN = re.compile(r'!\[(.*?)\]\((.+?)\)', re.IGNORECASE)
@@ -37,19 +39,20 @@ async def get_image_base64_from_url(url: str) -> Optional[str]:
             # Validate URL to prevent SSRF attacks against local/private networks
             validate_url(url)
             # Download the image from the URL
-            response = requests.get(url)
-            response.raise_for_status()
-            image_data = response.content
-            encoded_string = base64.b64encode(image_data).decode('utf-8')
-            content_type = response.headers.get('Content-Type', 'image/png')
-            return f'data:{content_type};base64,{encoded_string}'
+            session = await get_session()
+            async with session.get(url, ssl=AIOHTTP_CLIENT_SESSION_SSL) as response:
+                response.raise_for_status()
+                image_data = await response.read()
+                encoded_string = base64.b64encode(image_data).decode('utf-8')
+                content_type = response.headers.get('Content-Type', 'image/png')
+                return f'data:{content_type};base64,{encoded_string}'
         else:
             file = await Files.get_file_by_id(url)
 
             if not file:
                 return None
 
-            file_path = Storage.get_file(file.path)
+            file_path = await asyncio.to_thread(Storage.get_file, file.path)
             file_path = Path(file_path)
 
             if file_path.is_file():
@@ -68,7 +71,7 @@ async def get_image_url_from_base64(request, base64_image_string, metadata, user
     if BASE64_IMAGE_URL_PREFIX.match(base64_image_string):
         image_url = ''
         # Extract base64 image data from the line
-        image_data, content_type = get_image_data(base64_image_string)
+        image_data, content_type = await get_image_data(base64_image_string)
         if image_data is not None:
             _, image_url = await upload_image(
                 request,
@@ -170,7 +173,7 @@ async def get_image_base64_from_file_id(id: str) -> Optional[str]:
         return None
 
     try:
-        file_path = Storage.get_file(file.path)
+        file_path = await asyncio.to_thread(Storage.get_file, file.path)
         file_path = Path(file_path)
 
         # Check if the file already exists in the cache

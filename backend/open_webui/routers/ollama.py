@@ -157,7 +157,7 @@ async def send_request(
                 log.error(f'Failed to parse error response: {e}')
             raise HTTPException(
                 status_code=r.status,
-                detail='Open WebUI: Server Connection Error',
+                detail=ERROR_MESSAGES.SERVER_CONNECTION_ERROR,
             )
 
         r.raise_for_status()
@@ -184,7 +184,7 @@ async def send_request(
     except Exception as e:
         raise HTTPException(
             status_code=r.status if r else 500,
-            detail=f'Ollama: {e}' if str(e) else 'Open WebUI: Server Connection Error',
+            detail=f'Ollama: {e}' if str(e) else ERROR_MESSAGES.SERVER_CONNECTION_ERROR,
         )
     finally:
         if not streaming:
@@ -251,7 +251,7 @@ async def verify_connection(form_data: ConnectionVerificationForm, user=Depends(
                 return data
         except aiohttp.ClientError as e:
             log.exception(f'Client error: {str(e)}')
-            raise HTTPException(status_code=500, detail='Open WebUI: Server Connection Error')
+            raise HTTPException(status_code=500, detail=ERROR_MESSAGES.SERVER_CONNECTION_ERROR)
         except Exception as e:
             log.exception(f'Unexpected error: {e}')
             error_detail = f'Unexpected error: {str(e)}'
@@ -428,7 +428,7 @@ async def get_filtered_models(models, user, db=None):
 @router.get('/api/tags/{url_idx}')
 async def get_ollama_tags(request: Request, url_idx: Optional[int] = None, user=Depends(get_verified_user)):
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     models = []
 
@@ -621,7 +621,7 @@ async def pull_model(
     user=Depends(get_admin_user),
 ):
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     form_data = form_data.model_dump(exclude_none=True)
     form_data['model'] = form_data.get('model', form_data.get('name'))
@@ -656,7 +656,7 @@ async def push_model(
     user=Depends(get_admin_user),
 ):
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     if url_idx is None:
         await get_all_models(request, user=user)
@@ -699,7 +699,7 @@ async def create_model(
     user=Depends(get_admin_user),
 ):
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     log.debug(f'form_data: {form_data}')
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
@@ -727,7 +727,7 @@ async def copy_model(
     user=Depends(get_admin_user),
 ):
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     if url_idx is None:
         await get_all_models(request, user=user)
@@ -762,7 +762,7 @@ async def delete_model(
     user=Depends(get_admin_user),
 ):
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     form_data = form_data.model_dump(exclude_none=True)
     form_data['model'] = form_data.get('model', form_data.get('name'))
@@ -797,7 +797,7 @@ async def delete_model(
 @router.post('/api/show')
 async def show_model_info(request: Request, form_data: ModelNameForm, user=Depends(get_verified_user)):
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     form_data = form_data.model_dump(exclude_none=True)
     form_data['model'] = form_data.get('model', form_data.get('name'))
@@ -850,7 +850,7 @@ async def embed(
     user=Depends(get_verified_user),
 ):
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     log.info(f'generate_ollama_batch_embeddings {form_data}')
 
@@ -909,7 +909,7 @@ async def embeddings(
     user=Depends(get_verified_user),
 ):
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     log.info(f'generate_ollama_embeddings {form_data}')
 
@@ -976,7 +976,7 @@ async def generate_completion(
     user=Depends(get_verified_user),
 ):
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     # Enforce per-model access control
     await check_model_access(user, await Models.get_model_by_id(form_data.model), BYPASS_MODEL_ACCESS_CONTROL)
@@ -1019,6 +1019,8 @@ class ChatMessage(BaseModel):
     content: Optional[str] = None
     tool_calls: Optional[list[dict]] = None
     images: Optional[list[str]] = None
+
+    model_config = ConfigDict(extra='allow')
 
     @validator('content', pre=True)
     @classmethod
@@ -1067,7 +1069,7 @@ async def generate_chat_completion(
     bypass_system_prompt: bool = False,
 ):
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     # NOTE: We intentionally do NOT use Depends(get_async_session) here.
     # Database operations (get_model_by_id, AccessGrants.has_access) manage their own short-lived sessions.
@@ -1313,7 +1315,7 @@ async def generate_anthropic_messages(
     See https://docs.ollama.com/api/anthropic-compatibility
     """
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     payload = {**form_data}
     model_id = payload.get('model', '')
@@ -1371,7 +1373,7 @@ async def generate_responses(
     See https://ollama.com/blog/responses-api
     """
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     payload = form_data.model_dump()
     model_id = form_data.model
@@ -1381,29 +1383,9 @@ async def generate_responses(
         if model_info.base_model_id:
             payload['model'] = model_info.base_model_id
 
-        # Check if user has access to the model
-        if user.role == 'user':
-            user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
-            if not (
-                user.id == model_info.user_id
-                or await AccessGrants.has_access(
-                    user_id=user.id,
-                    resource_type='model',
-                    resource_id=model_info.id,
-                    permission='read',
-                    user_group_ids=user_group_ids,
-                )
-            ):
-                raise HTTPException(
-                    status_code=403,
-                    detail='Model not found',
-                )
+        await check_model_access(user, model_info)
     else:
-        if user.role != 'admin':
-            raise HTTPException(
-                status_code=403,
-                detail='Model not found',
-            )
+        await check_model_access(user, None)
 
     url, url_idx = await get_ollama_url(request, payload['model'], url_idx)
     api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(

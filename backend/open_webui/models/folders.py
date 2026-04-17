@@ -74,14 +74,14 @@ class FolderForm(BaseModel):
     data: Optional[dict] = None
     meta: Optional[dict] = None
     parent_id: Optional[str] = None
-    model_config = ConfigDict(extra='allow')
+    model_config = ConfigDict(extra='forbid')
 
 
 class FolderUpdateForm(BaseModel):
     name: Optional[str] = None
     data: Optional[dict] = None
     meta: Optional[dict] = None
-    model_config = ConfigDict(extra='allow')
+    model_config = ConfigDict(extra='forbid')
 
 
 class FolderTable:
