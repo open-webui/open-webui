@@ -219,6 +219,35 @@ def _split_tool_calls(
     return expanded
 
 
+def _merge_reasoning_details(details: list, chunk: object) -> None:
+    """Merge reasoning_details delta items into a list in-place.
+
+    Items sharing an integer index are merged: text and summary deltas
+    concatenate when string-valued, other fields overwrite with the latest
+    delta. Items without a usable index are appended in arrival order.
+    """
+    items = chunk if isinstance(chunk, list) else ([chunk] if isinstance(chunk, dict) else [])
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        idx = item.get('index')
+        existing = None
+        if isinstance(idx, int) and idx >= 0:
+            existing = next((e for e in details if e.get('index') == idx), None)
+        if existing is None:
+            new_entry = dict(item)
+            new_entry.setdefault('type', 'reasoning.text')
+            details.append(new_entry)
+            continue
+        for k, v in item.items():
+            if k in ('text', 'summary'):
+                if isinstance(v, str):
+                    base = existing.get(k)
+                    existing[k] = (base + v) if isinstance(base, str) else v
+            else:
+                existing[k] = v
+
+
 def get_citation_source_from_tool_result(
     tool_name: str, tool_params: dict, tool_result: str, tool_id: str = ''
 ) -> list[dict]:
@@ -523,6 +552,8 @@ def serialize_output(output: list) -> str:
                     pass
 
             reasoning_content = ''.join(reasoning_parts).strip()
+            if not reasoning_content:
+                continue  # no displayable text; item stays in output for round-trip
 
             duration = item.get('duration')
             status = item.get('status', 'in_progress')
@@ -3471,7 +3502,35 @@ async def non_streaming_chat_response_handler(response, ctx):
                     # otherwise generate from response content
                     response_output = response_data.get('output')
                     if not response_output:
-                        response_output = [
+                        message_obj = choices[0].get('message', {})
+                        reasoning_text = (
+                            message_obj.get('reasoning_content')
+                            or message_obj.get('reasoning')
+                        )
+                        reasoning_details = message_obj.get('reasoning_details')
+
+                        response_output = []
+
+                        if reasoning_text or reasoning_details:
+                            r_item = {
+                                'type': 'reasoning',
+                                'id': output_id('r'),
+                                'status': 'completed',
+                                'start_tag': '<think>',
+                                'end_tag': '</think>',
+                                'attributes': {'type': 'reasoning_content'},
+                                'content': [{'type': 'output_text', 'text': reasoning_text}] if reasoning_text else [],
+                                'summary': None,
+                            }
+                            if reasoning_details:
+                                r_item['reasoning_details'] = (
+                                    reasoning_details
+                                    if isinstance(reasoning_details, list)
+                                    else [reasoning_details]
+                                )
+                            response_output.append(r_item)
+
+                        response_output.append(
                             {
                                 'type': 'message',
                                 'id': output_id('msg'),
@@ -3479,7 +3538,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                                 'role': 'assistant',
                                 'content': [{'type': 'output_text', 'text': content}],
                             }
-                        ]
+                        )
 
                     await event_emitter(
                         {
@@ -3824,6 +3883,8 @@ async def streaming_chat_response_handler(response, ctx):
 
             # Initialize output: use existing from message if continuing, else create new
             existing_output = message.get('output') if message else None
+            _pending_reasoning_details = []
+
             if existing_output:
                 output = existing_output
             else:
@@ -4188,9 +4249,14 @@ async def streaming_chat_response_handler(response, ctx):
                                         or delta.get('reasoning')
                                         or delta.get('thinking')
                                     )
+                                    reasoning_details_chunk = delta.get('reasoning_details')
+
+                                    # Only create a reasoning item for visible reasoning text.
+                                    # Details-only deltas (e.g. Gemini encrypted blobs) are
+                                    # buffered to avoid splitting the assistant message mid-stream.
                                     if reasoning_content:
                                         if not output or output[-1].get('type') != 'reasoning':
-                                            reasoning_item = {
+                                            output.append({
                                                 'type': 'reasoning',
                                                 'id': output_id('r'),
                                                 'status': 'in_progress',
@@ -4200,23 +4266,37 @@ async def streaming_chat_response_handler(response, ctx):
                                                 'content': [],
                                                 'summary': None,
                                                 'started_at': time.time(),
-                                            }
-                                            output.append(reasoning_item)
-                                        else:
-                                            reasoning_item = output[-1]
+                                            })
 
-                                        # Append to reasoning content
+                                    if reasoning_content:
+                                        reasoning_item = output[-1]
                                         parts = reasoning_item.get('content', [])
                                         if parts and parts[-1].get('type') == 'output_text':
                                             parts[-1]['text'] += reasoning_content
                                         else:
-                                            reasoning_item['content'] = [
-                                                {
-                                                    'type': 'output_text',
-                                                    'text': reasoning_content,
-                                                }
-                                            ]
+                                            reasoning_item['content'] = [{'type': 'output_text', 'text': reasoning_content}]
 
+                                        # Flush any buffered details-only chunks into this reasoning item.
+                                        if _pending_reasoning_details:
+                                            _merge_reasoning_details(
+                                                reasoning_item.setdefault('reasoning_details', []),
+                                                _pending_reasoning_details,
+                                            )
+                                            _pending_reasoning_details.clear()
+
+                                    # Accumulate raw structured reasoning_details for provider round-trip.
+                                    if reasoning_details_chunk:
+                                        if output and output[-1].get('type') == 'reasoning':
+                                            _merge_reasoning_details(
+                                                output[-1].setdefault('reasoning_details', []),
+                                                reasoning_details_chunk,
+                                            )
+                                        else:
+                                            # Buffer until a safe boundary (end-of-stream or real reasoning text).
+                                            items = reasoning_details_chunk if isinstance(reasoning_details_chunk, list) else [reasoning_details_chunk]
+                                            _pending_reasoning_details.extend(items)
+
+                                    if reasoning_content or reasoning_details_chunk:
                                         data = {'content': serialize_output(full_output())}
 
                                     if value:
@@ -4429,6 +4509,30 @@ async def streaming_chat_response_handler(response, ctx):
                                     reasoning_item['ended_at'] - reasoning_item['started_at']
                                 )
                                 reasoning_item['status'] = 'completed'
+
+                    # Flush any buffered reasoning_details that never found a reasoning item.
+                    if _pending_reasoning_details:
+                        target = next((item for item in output if item.get('type') == 'reasoning'), None)
+                        if target is None:
+                            target = {
+                                'type': 'reasoning',
+                                'id': output_id('r'),
+                                'status': 'completed',
+                                'start_tag': '<think>',
+                                'end_tag': '</think>',
+                                'attributes': {'type': 'reasoning_content'},
+                                'content': [],
+                                'summary': None,
+                                'started_at': time.time(),
+                                'ended_at': time.time(),
+                                'duration': 0,
+                            }
+                            output.insert(0, target)
+                        _merge_reasoning_details(
+                            target.setdefault('reasoning_details', []),
+                            _pending_reasoning_details,
+                        )
+                        _pending_reasoning_details.clear()
 
                     if response_tool_calls:
                         tool_calls.append(_split_tool_calls(response_tool_calls))

@@ -159,10 +159,11 @@ def convert_output_to_messages(
     pending_tool_calls = []
     pending_content = []
     pending_reasoning = []  # Only populated when reasoning_format == 'reasoning_content'
+    pending_reasoning_details = None
 
     def flush_pending():
-        nonlocal pending_content, pending_tool_calls, pending_reasoning
-        if not pending_content and not pending_tool_calls and not pending_reasoning:
+        nonlocal pending_content, pending_tool_calls, pending_reasoning, pending_reasoning_details
+        if not pending_content and not pending_tool_calls and not pending_reasoning and not pending_reasoning_details:
             return
 
         message = {
@@ -174,10 +175,14 @@ def convert_output_to_messages(
         if pending_reasoning:
             message['reasoning_content'] = '\n'.join(pending_reasoning)
 
+        if pending_reasoning_details:
+            message['reasoning_details'] = pending_reasoning_details
+
         messages.append(message)
         pending_content = []
         pending_tool_calls = []
         pending_reasoning = []
+        pending_reasoning_details = None
 
     for item in output:
         item_type = item.get('type', '')
@@ -248,7 +253,7 @@ def convert_output_to_messages(
                 )
 
         elif item_type == 'reasoning':
-            if not reasoning_format:
+            if not raw:
                 continue
 
             reasoning_text = ''
@@ -259,15 +264,28 @@ def convert_output_to_messages(
                 elif 'text' in part:
                     reasoning_text += part.get('text', '')
 
+            raw_details = item.get('reasoning_details')
+
             if reasoning_text:
-                if reasoning_format == 'think_tags':
-                    # Ollama: embed in content with the item's original tags
+                if reasoning_format == 'reasoning_content':
+                    # llama.cpp: collect for reasoning_content field
+                    pending_reasoning.append(reasoning_text)
+                elif not raw_details:
+                    # Wrap reasoning in <think> tags for Ollama and any
+                    # provider that lacks structured reasoning_details.
                     start_tag = item.get('start_tag', '<think>')
                     end_tag = item.get('end_tag', '</think>')
                     pending_content.append(f'{start_tag}{reasoning_text}{end_tag}')
-                elif reasoning_format == 'reasoning_content':
-                    # llama.cpp: collect for reasoning_content field
-                    pending_reasoning.append(reasoning_text)
+
+            # Preserve raw structured reasoning_details for provider round-trip
+            if raw_details:
+                if pending_reasoning_details is None:
+                    pending_reasoning_details = list(raw_details) if isinstance(raw_details, list) else [raw_details]
+                elif isinstance(pending_reasoning_details, list):
+                    if isinstance(raw_details, list):
+                        pending_reasoning_details.extend(raw_details)
+                    else:
+                        pending_reasoning_details.append(raw_details)
 
         elif item_type == 'open_webui:code_interpreter':
             # Always include code interpreter content so the LLM knows
