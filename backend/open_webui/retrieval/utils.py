@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 import time
 import re
 
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 from huggingface_hub import snapshot_download
 from langchain_classic.retrievers import (
     ContextualCompressionRetriever,
@@ -82,10 +82,109 @@ def get_loader(request, url: str):
         )
 
 
-def get_content_from_url(request, url: str) -> str:
+PDF_MAX_SIZE = 50 * 1024 * 1024  # 50 MB
+
+
+def extract_text_from_pdf_bytes(pdf_bytes: bytes) -> str:
+    """Extract text from raw PDF bytes using pypdf.
+
+    Returns the concatenated text of all pages, or a placeholder message
+    if no text could be extracted (e.g. image-only PDFs).
+    """
+    import io
+    from pypdf import PdfReader
+
+    reader = PdfReader(io.BytesIO(pdf_bytes))
+    text_parts = []
+    for page in reader.pages:
+        page_text = page.extract_text()
+        if page_text:
+            text_parts.append(page_text)
+    if not text_parts:
+        return '[PDF contains no extractable text (possibly image-only)]'
+    return '\n'.join(text_parts)
+
+
+def extract_pdf_from_url(request, url: str) -> str:
+    """Download a PDF from *url* and extract its text using pypdf.
+
+    Uses the same SSL-verification and proxy settings that the web loader
+    honours so that corporate proxies / self-signed certs keep working.
+    The URL is validated against SSRF rules before downloading.
+    """
+    from open_webui.retrieval.web.utils import validate_url
+
+    validate_url(url)
+
+    verify_ssl = request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION
+    trust_env = request.app.state.config.WEB_SEARCH_TRUST_ENV
+
+    with requests.Session() as session:
+        session.verify = verify_ssl
+        session.trust_env = trust_env
+
+        resp = session.get(url, timeout=60, stream=True)
+        resp.raise_for_status()
+
+        # Reject oversized PDFs early via Content-Length before buffering
+        # the full body.  stream=True defers body download until .content.
+        try:
+            content_length = int(resp.headers.get('Content-Length', 0))
+        except (ValueError, TypeError):
+            content_length = 0
+        if content_length > PDF_MAX_SIZE:
+            resp.close()
+            raise ValueError(
+                f'PDF at {url} exceeds the {PDF_MAX_SIZE // (1024 * 1024)} MB size limit'
+            )
+
+        pdf_bytes = resp.content
+        if len(pdf_bytes) > PDF_MAX_SIZE:
+            raise ValueError(
+                f'PDF at {url} exceeds the {PDF_MAX_SIZE // (1024 * 1024)} MB size limit'
+            )
+
+    return extract_text_from_pdf_bytes(pdf_bytes)
+
+
+def get_content_from_url(request, url: str) -> tuple[str, list[Document]]:
+    # Fast-path: if the URL path ends with .pdf, extract directly with pypdf
+    # to avoid piping binary data through the HTML-oriented web loader.
+    parsed_path = urlparse(url).path.lower()
+    if parsed_path.endswith('.pdf'):
+        log.debug(f'URL ends with .pdf, extracting directly with pypdf: {url}')
+        try:
+            content = extract_pdf_from_url(request, url)
+            docs = [Document(page_content=content, metadata={'source': url})]
+            return content, docs
+        except Exception:
+            log.exception(f'Failed to extract PDF text from {url}')
+            content = f'[Error: Unable to extract text from PDF at {url}]'
+            docs = [Document(page_content=content, metadata={'source': url})]
+            return content, docs
+
     loader = get_loader(request, url)
     docs = loader.load()
     content = ' '.join([doc.page_content for doc in docs])
+
+    # Fallback: if the content looks like raw PDF binary data (starts with
+    # %PDF), the web loader failed to properly extract text.  This can happen
+    # when the URL doesn't end in .pdf but the server returns PDF content.
+    # We must re-download because BeautifulSoup corrupts the binary data
+    # during HTML parsing, so the bytes we already have are not a valid PDF.
+    if content.strip().startswith('%PDF'):
+        log.warning(
+            f'Detected raw PDF binary in fetched content for {url}, '
+            f're-extracting with pypdf'
+        )
+        try:
+            content = extract_pdf_from_url(request, url)
+            docs = [Document(page_content=content, metadata={'source': url})]
+        except Exception:
+            log.exception(f'Failed to extract PDF text from {url}')
+            content = f'[Error: Unable to extract text from PDF at {url}]'
+            docs = [Document(page_content=content, metadata={'source': url})]
+
     return content, docs
 
 

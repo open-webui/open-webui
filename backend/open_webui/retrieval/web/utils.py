@@ -570,6 +570,32 @@ class SafeWebBaseLoader(WebBaseLoader):
                     ) as response:
                         if self.raise_for_status:
                             response.raise_for_status()
+
+                        # Check if the response is a PDF based on Content-Type header.
+                        # This handles cases where the URL doesn't end in .pdf but the
+                        # server returns PDF content (e.g. dynamic download endpoints).
+                        content_type = response.headers.get('Content-Type', '')
+                        if 'application/pdf' in content_type:
+                            log.debug(f'Detected PDF Content-Type for URL: {url}, extracting text with pypdf')
+                            try:
+                                from open_webui.retrieval.utils import extract_text_from_pdf_bytes, PDF_MAX_SIZE
+
+                                pdf_bytes = await response.read()
+                                if len(pdf_bytes) > PDF_MAX_SIZE:
+                                    raise ValueError(
+                                        f'PDF at {url} exceeds the {PDF_MAX_SIZE // (1024 * 1024)} MB size limit'
+                                    )
+
+                                import html as _html
+                                text = extract_text_from_pdf_bytes(pdf_bytes)
+                                # Wrap in HTML so that _unpack_fetch_results -> BeautifulSoup
+                                # preserves the extracted text as-is.
+                                escaped = _html.escape(text)
+                                return f'<html><body><pre>{escaped}</pre></body></html>'
+                            except Exception as e:
+                                log.warning(f'Failed to extract text from PDF at {url}: {e}.')
+                                return f'<html><body><pre>[Error: Unable to extract text from PDF at {url}]</pre></body></html>'
+
                         return await response.text()
                 except aiohttp.ClientConnectionError as e:
                     if i == retries - 1:
