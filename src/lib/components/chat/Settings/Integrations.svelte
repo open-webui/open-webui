@@ -6,7 +6,7 @@
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
-	import { settings, toolServers, terminalServers } from '$lib/stores';
+	import { settings, toolServers, terminalServers, selectedTerminalId } from '$lib/stores';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -28,12 +28,19 @@
 	};
 
 	const updateHandler = async () => {
+		// Clear selectedTerminalId if the currently selected terminal is now disabled
+		const currentSelectedId = $selectedTerminalId;
+		const selectedConfig = terminalServerConfigs.find((s) => s.url === currentSelectedId);
+		if (selectedConfig && !selectedConfig.enabled) {
+			selectedTerminalId.set(null);
+		}
+
 		await saveSettings({
 			toolServers: servers,
 			terminalServers: terminalServerConfigs
 		});
 
-		let toolServersData = await getToolServersData($settings?.toolServers ?? []);
+		let toolServersData = await getToolServersData(servers ?? []);
 		toolServersData = toolServersData.filter((data) => {
 			if (data.error) {
 				toast.error(

@@ -34,9 +34,9 @@
 			: 'outline outline-1 outline-gray-100 dark:outline-gray-800'} {state
 			? ' bg-emerald-500 dark:bg-emerald-700'
 			: 'bg-gray-200 dark:bg-transparent'}"
-		onCheckedChange={async () => {
+		onCheckedChange={async (newValue) => {
 			await tick();
-			dispatch('change', state);
+			dispatch('change', newValue);
 		}}
 	>
 		<Switch.Thumb

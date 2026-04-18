@@ -1941,7 +1941,7 @@
 
 										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
 											<!-- Terminal Server Selector -->
-											{#if terminalCapableModels.length > 0 && (($terminalServers ?? []).length > 0 || ($settings?.terminalServers ?? []).some((s) => s.url))}
+											{#if terminalCapableModels.length > 0 && (($terminalServers ?? []).length > 0 || ($settings?.terminalServers ?? []).some((s) => s.url && s.enabled))}
 												<TerminalMenu bind:show={showTerminalMenu} />
 											{/if}
 

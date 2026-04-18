@@ -14,7 +14,7 @@
 	export let show = false;
 
 	$: systemTerminals = ($terminalServers ?? []).filter((t) => t.id);
-	$: directTerminals = ($settings?.terminalServers ?? []).filter((s) => s.url);
+	$: directTerminals = ($settings?.terminalServers ?? []).filter((s) => s.url && s.enabled);
 
 	const refreshTerminalServersStore = async (servers: typeof directTerminals) => {
 		// Preserve system terminals (those with an `id`) — only refresh direct ones
