@@ -1221,10 +1221,21 @@ async def generate_chat_completion(
         # Check if response is SSE
         if 'text/event-stream' in r.headers.get('Content-Type', ''):
             streaming = True
-            pseudo_prompt = r.headers.get("X-Pseudonymized-Prompt", "")
 
             async def _stream_with_pseudo_prompt():
+                pseudo_prompt = ""
                 async for chunk in stream_wrapper(r, session, stream_chunks_handler):
+                    try:
+                        chunk_str = chunk.decode('utf-8', errors='replace') if isinstance(chunk, bytes) else chunk
+                        data_str = chunk_str.strip()
+                        if data_str.startswith("data: "):
+                            data_str = data_str[6:]
+                        parsed = json.loads(data_str)
+                        if parsed.get("type") == "pseudonymized_prompt":
+                            pseudo_prompt = parsed.get("content", "")
+                            continue
+                    except Exception:
+                        pass
                     yield chunk
                 if pseudo_prompt:
                     synthetic = f'data: {json.dumps({"pseudonymized_prompt": pseudo_prompt})}\n\n'
