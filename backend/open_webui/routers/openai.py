@@ -62,6 +62,10 @@ from open_webui.utils.anthropic import is_anthropic_url, get_anthropic_models
 
 log = logging.getLogger(__name__)
 
+STRIPPED_RESPONSE_HEADERS = frozenset(
+    ("transfer-encoding", "connection", "content-encoding", "content-length")
+)
+
 
 ##########################################
 #
@@ -1186,7 +1190,11 @@ async def generate_chat_completion(
             return StreamingResponse(
                 stream_wrapper(r, session, stream_chunks_handler),
                 status_code=r.status,
-                headers=dict(r.headers),
+                headers={
+                    key: value
+                    for key, value in r.headers.items()
+                    if key.lower() not in STRIPPED_RESPONSE_HEADERS
+                },
             )
         else:
             try:
