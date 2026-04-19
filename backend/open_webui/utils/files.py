@@ -176,3 +176,387 @@ def get_image_base64_from_file_id(id: str) -> Optional[str]:
             return None
     except Exception as e:
         return None
+
+
+# Text-based file extensions that should have their content injected into chat messages
+TEXT_FILE_EXTENSIONS = {
+    # Plain text
+    '.txt', '.md', '.markdown', '.csv', '.log', '.ini', '.cfg', '.conf', '.env',
+    # Data formats
+    '.json', '.yaml', '.yml', '.toml', '.xml', '.html', '.htm',
+    # Code files
+    '.py', '.js', '.ts', '.tsx', '.jsx', '.java', '.cpp', '.c', '.h', '.hpp',
+    '.cs', '.go', '.rs', '.rb', '.php', '.swift', '.kt', '.kts', '.scala',
+    '.sh', '.bash', '.zsh', '.fish', '.ps1', '.bat', '.cmd', '.vbs',
+    '.sql', '.r', '.dart', '.lua', '.perl', '.pl', '.pm', '.hs', '.lhs',
+    '.vue', '.svelte', '.css', '.scss', '.sass', '.less',
+    '.dockerfile', '.makefile', '.cmake',
+    '.ex', '.exs', '.erl', '.hrl', '.m', '.mm', '.plsql', '.db2',
+    # Documents (will be extracted via loaders)
+    '.pdf', '.docx', '.xlsx', '.xls',
+}
+
+# Image extensions to skip (already handled by vision models)
+IMAGE_EXTENSIONS = {
+    '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg', '.ico', '.tiff', '.tif',
+}
+
+# Audio extensions to skip
+AUDIO_EXTENSIONS = {
+    '.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a', '.wma',
+}
+
+# Video extensions to skip
+VIDEO_EXTENSIONS = {
+    '.mp4', '.avi', '.mov', '.mkv', '.webm', '.flv', '.wmv',
+}
+
+# Maximum characters to inject per file to prevent context window overflow
+MAX_FILE_CONTENT_CHARS = 500000
+
+
+def _is_text_file(filename: str) -> bool:
+    """Check if a file is a text-based file that should have content injected."""
+    ext = Path(filename).suffix.lower()
+    return ext in TEXT_FILE_EXTENSIONS
+
+
+def _is_binary_file(filename: str) -> bool:
+    """Check if a file is binary (image, audio, video) that should be skipped."""
+    ext = Path(filename).suffix.lower()
+    return ext in IMAGE_EXTENSIONS | AUDIO_EXTENSIONS | VIDEO_EXTENSIONS
+
+
+def _extract_text_from_file(file_path: str, filename: str) -> Optional[str]:
+    """Extract text content from a file using the appropriate loader."""
+    try:
+        file_path = str(file_path)
+        ext = Path(filename).suffix.lower()
+
+        # Try to read directly for plain text files
+        if ext in {'.txt', '.md', '.markdown', '.json', '.yaml', '.yml', '.toml',
+                    '.xml', '.html', '.htm', '.csv', '.log', '.ini', '.cfg', '.conf',
+                    '.env', '.sql', '.css', '.scss', '.sass', '.less'}:
+            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                return f.read()
+
+        # For code files, try reading as text
+        if ext in {'.py', '.js', '.ts', '.tsx', '.jsx', '.java', '.cpp', '.c', '.h', '.hpp',
+                    '.cs', '.go', '.rs', '.rb', '.php', '.swift', '.kt', '.kts', '.scala',
+                    '.sh', '.bash', '.zsh', '.fish', '.ps1', '.bat', '.cmd', '.vbs',
+                    '.r', '.dart', '.lua', '.perl', '.pl', '.pm', '.hs', '.lhs',
+                    '.vue', '.svelte', '.dockerfile', '.makefile', '.cmake',
+                    '.ex', '.exs', '.erl', '.hrl', '.m', '.mm', '.plsql', '.db2'}:
+            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                return f.read()
+
+        # For PDF, use PyPDFLoader
+        if ext == '.pdf':
+            from open_webui.retrieval.loaders.main import PyPDFLoader
+            loader = PyPDFLoader(file_path)
+            docs = loader.load()
+            return '\n\n'.join(doc.page_content for doc in docs)
+
+        # For DOCX, use Docx2txtLoader
+        if ext == '.docx':
+            from open_webui.retrieval.loaders.main import Docx2txtLoader
+            loader = Docx2txtLoader(file_path)
+            docs = loader.load()
+            return '\n\n'.join(doc.page_content for doc in docs)
+
+        # For Excel files, use ExcelLoader
+        if ext in {'.xlsx', '.xls'}:
+            from open_webui.retrieval.loaders.main import ExcelLoader
+            loader = ExcelLoader(file_path)
+            docs = loader.load()
+            return '\n\n'.join(doc.page_content for doc in docs)
+
+        # Fallback: try reading as text
+        with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+            return f.read()
+
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f'Failed to extract text from {filename}: {e}')
+        return None
+
+
+def inject_file_content_into_messages(messages: list, files_metadata: list, request: Request) -> None:
+    """
+    Inject text file content into the last user message in the messages list.
+
+    This function reads attached text-based files and appends their content
+    to the last user message so the model can see and process the file contents.
+
+    Args:
+        messages: List of message dicts with 'role' and 'content' keys
+        files_metadata: List of file metadata dicts from the chat attachment
+        request: FastAPI request object (for app state access)
+    """
+    from open_webui.config import ENABLE_FILE_CONTENT_INJECTION
+
+    if not ENABLE_FILE_CONTENT_INJECTION.value:
+        return
+
+    if not files_metadata or not messages:
+        return
+
+    # Find the last user message
+    last_user_msg = None
+    for msg in reversed(messages):
+        if msg.get('role') == 'user':
+            last_user_msg = msg
+            break
+
+    if last_user_msg is None:
+        return
+
+    content_parts = []
+
+    # Get the original content
+    original_content = last_user_msg.get('content', '')
+    if isinstance(original_content, list):
+        # Handle multi-modal content (list of content parts)
+        text_parts = [part.get('text', '') for part in original_content if isinstance(part, dict) and part.get('type') == 'text']
+        original_content = '\n'.join(text_parts)
+
+    if original_content:
+        content_parts.append(original_content)
+
+    # Process each attached file
+    for file_meta in files_metadata:
+        file_id = file_meta.get('id', '')
+        filename = file_meta.get('filename', file_meta.get('name', 'unknown'))
+        file_type = file_meta.get('type', '')
+
+        # Skip images (handled by vision models)
+        if file_type == 'image' or _is_binary_file(filename):
+            continue
+
+        # Only process text-based files
+        if not _is_text_file(filename):
+            continue
+
+        try:
+            # Get file record from database
+            file_record = Files.get_file_by_id(file_id)
+            if not file_record:
+                continue
+
+            # Try to use pre-extracted content first (stored during upload)
+            content = None
+            if file_record.data and isinstance(file_record.data, dict):
+                content = file_record.data.get('content')
+
+            # If no pre-extracted content, extract from file
+            if not content and file_record.path:
+                file_path = Storage.get_file(file_record.path)
+                content = _extract_text_from_file(file_path, filename)
+
+            if content:
+                # Truncate if too large
+                if len(content) > MAX_FILE_CONTENT_CHARS:
+                    content = content[:MAX_FILE_CONTENT_CHARS] + f'\n\n... (content truncated, {len(content) - MAX_FILE_CONTENT_CHARS} characters omitted)'
+
+                content_parts.append(f'\n\n--- Attached File: {filename} ---\n{content}\n--- End of {filename} ---')
+
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f'Failed to process attached file {filename}: {e}')
+            continue
+
+    # Update the last user message with injected content
+    if len(content_parts) > 1:
+        last_user_msg['content'] = '\n'.join(content_parts)
+
+
+# Text-based file extensions that should have their content injected into chat messages
+TEXT_FILE_EXTENSIONS = {
+    # Plain text
+    '.txt', '.md', '.markdown', '.csv', '.log', '.ini', '.cfg', '.conf', '.env',
+    # Data formats
+    '.json', '.yaml', '.yml', '.toml', '.xml', '.html', '.htm',
+    # Code files
+    '.py', '.js', '.ts', '.tsx', '.jsx', '.java', '.cpp', '.c', '.h', '.hpp',
+    '.cs', '.go', '.rs', '.rb', '.php', '.swift', '.kt', '.kts', '.scala',
+    '.sh', '.bash', '.zsh', '.fish', '.ps1', '.bat', '.cmd', '.vbs',
+    '.sql', '.r', '.dart', '.lua', '.perl', '.pl', '.pm', '.hs', '.lhs',
+    '.vue', '.svelte', '.css', '.scss', '.sass', '.less',
+    '.dockerfile', '.makefile', '.cmake',
+    '.ex', '.exs', '.erl', '.hrl', '.m', '.mm', '.plsql', '.db2',
+    # Documents (will be extracted via loaders)
+    '.pdf', '.docx', '.xlsx', '.xls',
+}
+
+# Image extensions to skip (already handled by vision models)
+IMAGE_EXTENSIONS = {
+    '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg', '.ico', '.tiff', '.tif',
+}
+
+# Audio extensions to skip
+AUDIO_EXTENSIONS = {
+    '.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a', '.wma',
+}
+
+# Video extensions to skip
+VIDEO_EXTENSIONS = {
+    '.mp4', '.avi', '.mov', '.mkv', '.webm', '.flv', '.wmv',
+}
+
+# Maximum characters to inject per file to prevent context window overflow
+MAX_FILE_CONTENT_CHARS = 500000
+
+
+def _is_text_file(filename: str) -> bool:
+    """Check if a file is a text-based file that should have content injected."""
+    ext = Path(filename).suffix.lower()
+    return ext in TEXT_FILE_EXTENSIONS
+
+
+def _is_binary_file(filename: str) -> bool:
+    """Check if a file is binary (image, audio, video) that should be skipped."""
+    ext = Path(filename).suffix.lower()
+    return ext in IMAGE_EXTENSIONS | AUDIO_EXTENSIONS | VIDEO_EXTENSIONS
+
+
+def _extract_text_from_file(file_path: str, filename: str) -> Optional[str]:
+    """Extract text content from a file using the appropriate loader."""
+    try:
+        file_path = str(file_path)
+        ext = Path(filename).suffix.lower()
+
+        # Try to read directly for plain text files
+        if ext in {'.txt', '.md', '.markdown', '.json', '.yaml', '.yml', '.toml',
+                    '.xml', '.html', '.htm', '.csv', '.log', '.ini', '.cfg', '.conf',
+                    '.env', '.sql', '.css', '.scss', '.sass', '.less'}:
+            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                return f.read()
+
+        # For code files, try reading as text
+        if ext in {'.py', '.js', '.ts', '.tsx', '.jsx', '.java', '.cpp', '.c', '.h', '.hpp',
+                    '.cs', '.go', '.rs', '.rb', '.php', '.swift', '.kt', '.kts', '.scala',
+                    '.sh', '.bash', '.zsh', '.fish', '.ps1', '.bat', '.cmd', '.vbs',
+                    '.r', '.dart', '.lua', '.perl', '.pl', '.pm', '.hs', '.lhs',
+                    '.vue', '.svelte', '.dockerfile', '.makefile', '.cmake',
+                    '.ex', '.exs', '.erl', '.hrl', '.m', '.mm', '.plsql', '.db2'}:
+            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                return f.read()
+
+        # For PDF, use PyPDFLoader
+        if ext == '.pdf':
+            from open_webui.retrieval.loaders.main import PyPDFLoader
+            loader = PyPDFLoader(file_path)
+            docs = loader.load()
+            return '\n\n'.join(doc.page_content for doc in docs)
+
+        # For DOCX, use Docx2txtLoader
+        if ext == '.docx':
+            from open_webui.retrieval.loaders.main import Docx2txtLoader
+            loader = Docx2txtLoader(file_path)
+            docs = loader.load()
+            return '\n\n'.join(doc.page_content for doc in docs)
+
+        # For Excel files, use ExcelLoader
+        if ext in {'.xlsx', '.xls'}:
+            from open_webui.retrieval.loaders.main import ExcelLoader
+            loader = ExcelLoader(file_path)
+            docs = loader.load()
+            return '\n\n'.join(doc.page_content for doc in docs)
+
+        # Fallback: try reading as text
+        with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+            return f.read()
+
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f'Failed to extract text from {filename}: {e}')
+        return None
+
+
+def inject_file_content_into_messages(messages: list, files_metadata: list, request: Request) -> None:
+    """
+    Inject text file content into the last user message in the messages list.
+
+    This function reads attached text-based files and appends their content
+    to the last user message so the model can see and process the file contents.
+
+    Args:
+        messages: List of message dicts with 'role' and 'content' keys
+        files_metadata: List of file metadata dicts from the chat attachment
+        request: FastAPI request object (for app state access)
+    """
+    from open_webui.config import ENABLE_FILE_CONTENT_INJECTION
+
+    if not ENABLE_FILE_CONTENT_INJECTION.value:
+        return
+
+    if not files_metadata or not messages:
+        return
+
+    # Find the last user message
+    last_user_msg = None
+    for msg in reversed(messages):
+        if msg.get('role') == 'user':
+            last_user_msg = msg
+            break
+
+    if last_user_msg is None:
+        return
+
+    content_parts = []
+
+    # Get the original content
+    original_content = last_user_msg.get('content', '')
+    if isinstance(original_content, list):
+        # Handle multi-modal content (list of content parts)
+        text_parts = [part.get('text', '') for part in original_content if isinstance(part, dict) and part.get('type') == 'text']
+        original_content = '\n'.join(text_parts)
+
+    if original_content:
+        content_parts.append(original_content)
+
+    # Process each attached file
+    for file_meta in files_metadata:
+        file_id = file_meta.get('id', '')
+        filename = file_meta.get('filename', file_meta.get('name', 'unknown'))
+        file_type = file_meta.get('type', '')
+
+        # Skip images (handled by vision models)
+        if file_type == 'image' or _is_binary_file(filename):
+            continue
+
+        # Only process text-based files
+        if not _is_text_file(filename):
+            continue
+
+        try:
+            # Get file record from database
+            file_record = Files.get_file_by_id(file_id)
+            if not file_record:
+                continue
+
+            # Try to use pre-extracted content first (stored during upload)
+            content = None
+            if file_record.data and isinstance(file_record.data, dict):
+                content = file_record.data.get('content')
+
+            # If no pre-extracted content, extract from file
+            if not content and file_record.path:
+                file_path = Storage.get_file(file_record.path)
+                content = _extract_text_from_file(file_path, filename)
+
+            if content:
+                # Truncate if too large
+                if len(content) > MAX_FILE_CONTENT_CHARS:
+                    content = content[:MAX_FILE_CONTENT_CHARS] + f'\n\n... (content truncated, {len(content) - MAX_FILE_CONTENT_CHARS} characters omitted)'
+
+                content_parts.append(f'\n\n--- Attached File: {filename} ---\n{content}\n--- End of {filename} ---')
+
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f'Failed to process attached file {filename}: {e}')
+            continue
+
+    # Update the last user message with injected content
+    if len(content_parts) > 1:
+        last_user_msg['content'] = '\n'.join(content_parts)

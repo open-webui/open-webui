@@ -1023,6 +1023,11 @@ async def generate_chat_completion(
     payload = {**form_data}
     metadata = payload.pop('metadata', None)
 
+    # Inject text file content into messages for attached files
+    if metadata and metadata.get('files'):
+        from open_webui.utils.files import inject_file_content_into_messages
+        inject_file_content_into_messages(payload.get('messages', []), metadata['files'], request)
+
     model_id = form_data.get('model')
     model_info = Models.get_model_by_id(model_id)
 

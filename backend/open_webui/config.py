@@ -1522,6 +1522,12 @@ ENABLE_FOLDERS = PersistentConfig(
     os.environ.get('ENABLE_FOLDERS', 'True').lower() == 'true',
 )
 
+ENABLE_FILE_CONTENT_INJECTION = PersistentConfig(
+    'ENABLE_FILE_CONTENT_INJECTION',
+    'general.enable_file_content_injection',
+    os.environ.get('ENABLE_FILE_CONTENT_INJECTION', 'True').lower() == 'true',
+)
+
 FOLDER_MAX_FILE_COUNT = PersistentConfig(
     'FOLDER_MAX_FILE_COUNT',
     'folders.max_file_count',
