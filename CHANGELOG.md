@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.9.0] - 2026-04-19
+## [0.9.0] - 2026-04-20
 
 ### Added
 
@@ -102,6 +102,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 🛡️ **Model description XSS protection.** Model descriptions shown in chat placeholders are now sanitized before rendering, preventing malicious links from executing scripts and helping protect user sessions from takeover. [#23621](https://github.com/open-webui/open-webui/pull/23621)
 - 🧠 **Memory search filtering.** Memory search now correctly filters by the query text instead of returning unrelated results. [Commit](https://github.com/open-webui/open-webui/commit/43e5905c133049036353978704b0abd179716749), [#23826](https://github.com/open-webui/open-webui/issues/23826)
+- 🔐 **Consistent outbound SSL handling.** External requests for tools, functions, terminals, webhooks, retrieval loaders, audio provider discovery, and OpenAI-compatible embedding calls now consistently apply the configured SSL client setting, improving reliability for deployments that require custom certificate or verification behavior. [Commit](https://github.com/open-webui/open-webui/commit/fd25152076ea7c310e42c9bacc5cd2b544eeae48), [Commit](https://github.com/open-webui/open-webui/commit/56c5bc1d3487020ab886d3332aacc1644c1d6123)
 - 🧭 **Scheduled Tasks calendar reliability.** Scheduled Tasks is now handled as a virtual automation calendar that appears only when automation access is available, and calendar selection now filters by stable ID instead of name so event forms behave consistently. [Commit](https://github.com/open-webui/open-webui/commit/1d501cfa3f96b3a9a5f4f7ce996947671fd09f29), [Commit](https://github.com/open-webui/open-webui/commit/24dd5b461eb44d306c823389e0f664c45db042e8)
 - 🖼️ **Image SSL setting support.** Image generation now respects the configured SSL session setting, preventing avoidable connection failures in strict certificate environments. [Commit](https://github.com/open-webui/open-webui/commit/128cf41fcedf2638fc8a6acd850d8b0409be1c4e), [#23777](https://github.com/open-webui/open-webui/issues/23777)
 - 🗂️ **Folder ownership assignment hardening.** Folder create and update inputs now reject unexpected extra fields, preventing clients from overriding protected values like ownership through mass-assignment payloads. [#23648](https://github.com/open-webui/open-webui/pull/23648)
