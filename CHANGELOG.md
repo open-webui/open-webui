@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.9.0] - 2026-04-17
+## [0.9.0] - 2026-04-19
 
 ### Added
 
@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🤖 **Automation model selection reliability.** Automations created from chat now consistently use the calling model, avoiding mismatches when tool calls run under different model contexts. [Commit](https://github.com/open-webui/open-webui/commit/e709d6812f7fba246c4b7907f9fa41f751717566), [Commit](https://github.com/open-webui/open-webui/commit/398718d5059ce2a5614e9e124f20ef48b843ce42), [#23812](https://github.com/open-webui/open-webui/pull/23812)
 - ⏱️ **Automation scheduling limits.** Administrators can now set "AUTOMATION_MAX_COUNT" and "AUTOMATION_MIN_INTERVAL" to limit how many automations each non-admin user can create and prevent overly frequent schedules that could overload the system. [Commit](https://github.com/open-webui/open-webui/commit/406251c2f358ffabce4d631c98c6f2c879feae5c)
 - 📋 **Task management tool.** AI models can now create, update, and track tasks within a chat conversation, breaking down complex requests into manageable steps with real-time status updates. [Commit](https://github.com/open-webui/open-webui/commit/bcb71bb5206ac01d97a39fde8ecf0e0541dde636)
+- 🗓️ **Calendar workspace and event management.** Users can now manage personal and shared calendars from a dedicated Calendar page, create and edit events (including recurring events), and view scheduled automations directly alongside calendar activity. [#23880](https://github.com/open-webui/open-webui/pull/23880)
 - 🧰 **Dedicated task checklist tools.** Built-in task tracking exposes separate tools for creating task lists and updating individual task statuses, giving multi-step chats clearer progress control. [Commit](https://github.com/open-webui/open-webui/commit/a35926261646f8897ba71da1572ed5dff802e3be)
 - ☁️ **Azure responses support.** Azure OpenAI connections now support the newer "/openai/v1" format, enabling chat, responses, and proxy calls to work correctly with that endpoint style. [#23484](https://github.com/open-webui/open-webui/pull/23484)
 - 🤖 **Ollama responses support.** The Ollama proxy now supports the Responses API, letting clients use "/v1/responses" directly with Ollama-hosted models through Open WebUI. [#23483](https://github.com/open-webui/open-webui/pull/23483)
