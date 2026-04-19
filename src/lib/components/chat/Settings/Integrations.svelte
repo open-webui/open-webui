@@ -28,10 +28,10 @@
 	};
 
 	const updateHandler = async () => {
-		// Clear selectedTerminalId if the currently selected terminal is now disabled
+		// Clear selectedTerminalId if the selected terminal is deleted, renamed, or disabled
 		const currentSelectedId = $selectedTerminalId;
 		const selectedConfig = terminalServerConfigs.find((s) => s.url === currentSelectedId);
-		if (selectedConfig && !selectedConfig.enabled) {
+		if (!selectedConfig || !selectedConfig.enabled) {
 			selectedTerminalId.set(null);
 		}
 
