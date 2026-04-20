@@ -31,7 +31,7 @@ from open_webui.routers.ollama import (
     generate_chat_completion as generate_ollama_chat_completion,
 )
 
-from open_webui.routers.pipelines import (
+from open_webui.clients.pipelines import (
     process_pipeline_inlet_filter,
     process_pipeline_outlet_filter,
 )
