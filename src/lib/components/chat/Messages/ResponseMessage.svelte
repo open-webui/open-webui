@@ -1381,8 +1381,12 @@
 													class="{isLastMessage || ($settings?.highContrastMode ?? false)
 														? 'visible'
 														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-													on:click={() => {
-														showDeleteConfirm = true;
+													on:click={(e) => {
+														if (e.shiftKey) {
+															deleteMessageHandler();
+														} else {
+															showDeleteConfirm = true;
+														}
 													}}
 												>
 													<svg
