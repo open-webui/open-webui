@@ -34,7 +34,7 @@ from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
 )
-from open_webui.routers.tasks import (
+from open_webui.clients.tasks import (
     generate_queries,
     generate_title,
     generate_follow_ups,
