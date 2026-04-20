@@ -220,18 +220,6 @@
 		}
 	};
 
-	const refreshModelsHandler = async () => {
-		refreshingModels = true;
-		try {
-			await init();
-			toast.success($i18n.t('Models refreshed successfully'));
-		} catch (error) {
-			toast.error($i18n.t('Failed to refresh models'));
-		} finally {
-			refreshingModels = false;
-		}
-	};
-
 	const upsertModelHandler = async (model, overrides = {}, showToast = true) => {
 		model = { ...model, base_model_id: null, ...overrides };
 
