@@ -1045,6 +1045,7 @@ async def generate_chat_completion(
     idx = 0
 
     payload = {**form_data}
+    payload.pop('folder_id', None)
     metadata = payload.pop('metadata', None)
 
     model_id = form_data.get('model')
@@ -1360,6 +1361,7 @@ async def responses(
     Routes to the correct upstream backend based on the model field.
     """
     payload = form_data.model_dump(exclude_none=True)
+    payload.pop('folder_id', None)
 
     idx = 0
     model_id = form_data.model
