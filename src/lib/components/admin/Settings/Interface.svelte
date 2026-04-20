@@ -416,6 +416,58 @@
 			</div>
 		</div>
 
+		<div class="mb-3.5">
+			<div class="mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('PWA Cache')}</div>
+
+			<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
+
+			<div class="mb-2.5">
+				<div class="mb-1 text-xs font-medium">{$i18n.t('Clear PWA Cache & Reload')}</div>
+				<div class="mb-2 text-xs text-gray-500 dark:text-gray-400">
+					{$i18n.t('If you are using Open WebUI as a PWA (Add to Dock/Home Screen) and the interface appears outdated, clear the cache to fetch the latest version.')}
+				</div>
+				<button
+					class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+					type="button"
+					on:click={async () => {
+						try {
+							if ('serviceWorker' in navigator) {
+								const registrations = await navigator.serviceWorker.getRegistrations();
+								await Promise.all(registrations.map((r) => r.unregister()));
+							}
+							if ('caches' in window) {
+								const cacheNames = await caches.keys();
+								await Promise.all(cacheNames.map((name) => caches.delete(name)));
+							}
+							toast.success($i18n.t('Cache cleared. Reloading...'));
+							setTimeout(() => {
+								location.reload();
+							}, 1000);
+						} catch (error) {
+							toast.error($i18n.t('Failed to clear cache'));
+							console.error('Error clearing cache:', error);
+						}
+					}}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke-width="1.5"
+						stroke="currentColor"
+						class="size-4"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182"
+						/>
+					</svg>
+					{$i18n.t('Clear Cache & Reload')}
+				</button>
+			</div>
+		</div>
+
 		<div class="flex justify-end text-sm font-medium">
 			<button
 				class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
