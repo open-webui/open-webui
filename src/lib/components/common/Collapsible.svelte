@@ -144,6 +144,8 @@
 								})}
 							/>
 						{/if}
+					{:else if attributes?.type === 'streaming'}
+						{$i18n.t('Agent Execution Log')}
 					{:else}
 						{title}
 					{/if}
