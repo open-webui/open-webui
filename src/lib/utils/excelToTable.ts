@@ -8,7 +8,7 @@
  * - Sanitized output
  */
 
-import type { WorkSheet } from 'xlsx';
+import type { WorkSheet } from '@e965/xlsx';
 
 /** Convert column index (0-based) to Excel-style letter (A, B, …, Z, AA, AB, …) */
 const colLetter = (i: number): string => {
@@ -38,7 +38,7 @@ export interface ExcelTableResult {
  * Uses sheet_to_json with header:1 for a raw 2D array.
  */
 export async function excelToTable(worksheet: WorkSheet): Promise<ExcelTableResult> {
-	const XLSX = await import('xlsx');
+	const XLSX = await import('@e965/xlsx');
 	const rows: unknown[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
 
 	if (rows.length === 0) {

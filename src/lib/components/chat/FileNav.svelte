@@ -157,7 +157,7 @@
 	let currentSlide = 0;
 	let excelSheetNames: string[] = [];
 	let selectedExcelSheet = '';
-	let excelWorkbook: import('xlsx').WorkBook | null = null;
+	let excelWorkbook: import('@e965/xlsx').WorkBook | null = null;
 
 	// ── File preview toolbar state (bound from FilePreview) ─────────────
 	let editing = false;
@@ -373,7 +373,7 @@
 						const DOMPurify = (await import('dompurify')).default;
 						fileOfficeHtml = DOMPurify.sanitize(res.value);
 					} else if (ext === 'xlsx') {
-						const XLSX = await import('xlsx');
+						const XLSX = await import('@e965/xlsx');
 						const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
 						excelWorkbook = wb;
 						excelSheetNames = wb.SheetNames;

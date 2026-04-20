@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { WorkBook } from 'xlsx';
+	import type { WorkBook } from '@e965/xlsx';
 	import DOMPurify from 'dompurify';
 
 	import { getContext, onMount, tick } from 'svelte';
@@ -154,7 +154,7 @@
 			excelError = '';
 			const [arrayBuffer, { read }] = await Promise.all([
 				getFileContentById(item.id),
-				import('xlsx')
+				import('@e965/xlsx')
 			]);
 			excelWorkbook = read(arrayBuffer, { type: 'array' });
 			excelSheetNames = excelWorkbook.SheetNames;
