@@ -275,13 +275,20 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
         elif item_type == 'open_webui:rag_source':
             # Flush any pending content/tool_calls before adding tool result
             flush_pending()
-            # Just pass rag source as is
+            # Pass rag source as a tool message (agentic mode only)
             messages.append(
                 {
                     'role': 'tool',
                     'content': item.get('content'),
                 }
             )
+
+        elif item_type == 'open_webui:rag_context':
+            # Non-agentic RAG context — handled by process_messages_with_output
+            # which prepends the <context> block to the next user message.
+            # Skipped here to avoid producing role:tool messages for models
+            # that don't support function calling.
+            pass
 
         elif item_type.startswith('open_webui:'):
             # Skip other extension types

@@ -589,8 +589,8 @@ def serialize_output(output: list) -> str:
                     f'<details type="code_interpreter" done="false"{output_attr}>\n<summary>Analyzing…</summary>\n{display}\n</details>'
                 )
 
-        elif item_type == 'open_webui:rag_source':
-            # Skip serializing RAG template
+        elif item_type in ('open_webui:rag_source', 'open_webui:rag_context'):
+            # Skip serializing RAG items — they are for LLM consumption only
             continue
 
     return '\n'.join(parts).strip()
@@ -980,8 +980,12 @@ def apply_source_context_to_messages(
     include_content: bool = True,
 ) -> list:
     """
-    Build source context from citation sources and apply to messages.
-    Uses RAG template to format context for model consumption.
+    Build source context from citation sources and prepend a raw <context> block
+    to the last user message.
+
+    RAG instructions are injected separately into the system prompt so they
+    remain in the stable cached prefix. This function only injects the
+    <context> block, keeping the user message content predictable across turns.
 
     When include_content is False, emit <source> tags with id/name but no
     document body — useful when the content is already present elsewhere
@@ -990,17 +994,26 @@ def apply_source_context_to_messages(
     if not sources or not user_message:
         return messages
 
-    context = get_source_context(sources, include_content=include_content)
-
-    context = context.strip()
+    context = get_source_context(sources, include_content=include_content).strip()
     if not context:
         return messages
 
-    return add_or_update_user_message(
-        rag_template(request.app.state.config.RAG_INSTRUCTIONS, context, user_message),
-        messages,
-        append=False,
-    )
+    context_block = '<context>\n' + context + '\n</context>'
+    return add_or_update_user_message(context_block, messages, append=False)
+
+
+def has_rag_context_in_history(messages: list) -> bool:
+    """
+    Return True if any assistant message in the list has a stored
+    open_webui:rag_context output item, indicating that RAG was active
+    in a previous turn of this conversation.
+    """
+    for message in messages:
+        if message.get('role') == 'assistant':
+            for item in message.get('output', []):
+                if item.get('type') == 'open_webui:rag_context':
+                    return True
+    return False
 
 
 async def process_tool_result(
@@ -2158,11 +2171,41 @@ def process_messages_with_output(messages: list[dict]) -> list[dict]:
 
     For assistant messages with 'output' field, produces properly formatted
     OpenAI-style messages (tool_calls + tool results). Strips 'output' before LLM.
+
+    Also handles open_webui:rag_context items: when an assistant message stored
+    a RAG context, those sources were retrieved for the *preceding* user question.
+    We therefore retroactively inject the <context> block into the last user
+    message already added to `processed` (look backward, not forward). This keeps
+    the <context> alongside the question that triggered the retrieval and avoids
+    ever producing role:tool messages, which would break models without tool support.
+
+    The current turn's user message (last in the list) is never touched here —
+    it stays clean for query generation. Its context is added later by
+    apply_source_context_to_messages after retrieval completes.
     """
     processed = []
 
     for message in messages:
         if message.get('role') == 'assistant' and message.get('output'):
+            # Collect any rag_context items stored in this assistant's output.
+            # The sources they contain were retrieved for the preceding user
+            # question, so inject them retroactively into the last user message
+            # already in `processed`.
+            rag_ctx_items = [
+                i for i in message['output'] if i.get('type') == 'open_webui:rag_context'
+            ]
+            if rag_ctx_items:
+                rag_context = '\n'.join(i.get('content', '') for i in rag_ctx_items)
+                # Walk back through processed to find the last user message
+                for prev in reversed(processed):
+                    if prev.get('role') == 'user':
+                        content = prev.get('content', '')
+                        if isinstance(content, list):
+                            prev['content'] = [{'type': 'text', 'text': rag_context}] + content
+                        else:
+                            prev['content'] = rag_context + ('\n' + content if content else '')
+                        break
+
             # Use output items for clean OpenAI-format messages
             output_messages = convert_output_to_messages(message['output'], raw=True)
             if output_messages:
@@ -2218,9 +2261,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     chat_id = metadata.get('chat_id')
     user_message_id = metadata.get('user_message_id')
 
+    # Track whether any prior turn stored RAG context — used later to decide
+    # whether to inject RAG instructions into the system prompt even when
+    # the current turn has no new sources.
+    rag_in_history = False
+
     if chat_id and user_message_id and not chat_id.startswith('local:'):
         db_messages = await load_messages_from_db(chat_id, user_message_id)
         if db_messages:
+            rag_in_history = has_rag_context_in_history(db_messages)
             system_message = get_system_message(form_data.get('messages', []))
             form_data['messages'] = [system_message, *db_messages] if system_message else db_messages
 
@@ -2791,8 +2840,23 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     metadata['user_prompt'] = get_last_user_message(form_data['messages'])
     metadata['sources'] = sources[:] if sources else []
 
-    # If context is not empty, insert it into the messages
-    if sources and prompt:
+    # Inject RAG instructions into the system prompt when RAG is active —
+    # either because the current turn has retrieved sources, or because a
+    # prior turn did (detected via open_webui:rag_context items in history).
+    # Keeping the instructions in the system prompt (stable prefix) rather
+    # than embedded in the user message is what enables context caching.
+    is_native_fc = metadata.get('params', {}).get('function_calling') == 'native'
+    rag_active = bool(sources) or rag_in_history
+    if rag_active and not is_native_fc:
+        form_data['messages'] = add_or_update_system_message(
+            request.app.state.config.RAG_INSTRUCTIONS,
+            form_data['messages'],
+            append=True,
+        )
+
+    # Prepend <context> block to the current user message when there are sources.
+    # The instructions live in the system prompt; only the context block goes here.
+    if sources and prompt and not is_native_fc:
         form_data['messages'] = apply_source_context_to_messages(request, form_data['messages'], sources, prompt)
 
     # If there are citations, add them to the data_items
@@ -3363,6 +3427,26 @@ async def non_streaming_chat_response_handler(response, ctx):
                                 'content': [{'type': 'output_text', 'text': content}],
                             }
                         ]
+
+                    # Persist RAG context in output so subsequent turns can
+                    # re-inject the <context> block before the user message,
+                    # keeping the cached prefix stable. Only for non-native-FC
+                    # mode — native FC handles context via open_webui:rag_source.
+                    form_data = ctx.get('form_data', {})
+                    if not form_data.get('tools') and metadata.get('sources'):
+                        rag_context_str = (
+                            '<context>\n'
+                            + get_source_context(metadata['sources']).strip()
+                            + '\n</context>'
+                        )
+                        response_output.append(
+                            {
+                                'type': 'open_webui:rag_context',
+                                'id': output_id('rgc'),
+                                'content': rag_context_str,
+                                'status': 'completed',
+                            }
+                        )
 
                     await event_emitter(
                         {
@@ -4895,6 +4979,25 @@ async def streaming_chat_response_handler(response, ctx):
                         except Exception as e:
                             log.debug(e)
                             break
+
+                # Persist RAG context in output so subsequent turns can
+                # re-inject the <context> block before the user message,
+                # keeping the cached prefix stable. Only for non-native-FC
+                # mode — native FC handles context via open_webui:rag_source.
+                if not form_data.get('tools') and metadata.get('sources'):
+                    rag_context_str = (
+                        '<context>\n'
+                        + get_source_context(metadata['sources']).strip()
+                        + '\n</context>'
+                    )
+                    output.append(
+                        {
+                            'type': 'open_webui:rag_context',
+                            'id': output_id('rgc'),
+                            'content': rag_context_str,
+                            'status': 'completed',
+                        }
+                    )
 
                 # Mark all in-progress items as completed
                 for item in output:
