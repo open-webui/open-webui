@@ -37,9 +37,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile          # Standard Dockerfile, nicht Dockerfile.m365-test
+          file: Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # cache-from und cache-to komplett entfernt
