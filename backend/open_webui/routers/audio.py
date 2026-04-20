@@ -1304,6 +1304,7 @@ async def get_available_models(request: Request) -> list[dict]:
                 try:
                     async with session.get(
                         f'{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/models',
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
                     ) as response:
                         response.raise_for_status()
                         data = await response.json()
@@ -1315,6 +1316,7 @@ async def get_available_models(request: Request) -> list[dict]:
                     try:
                         async with session.get(
                             f'{request.app.state.config.TTS_OPENAI_API_BASE_URL}/models',
+                            ssl=AIOHTTP_CLIENT_SESSION_SSL,
                         ) as response:
                             response.raise_for_status()
                             data = await response.json()
@@ -1335,6 +1337,7 @@ async def get_available_models(request: Request) -> list[dict]:
                         'xi-api-key': request.app.state.config.TTS_API_KEY,
                         'Content-Type': 'application/json',
                     },
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as response:
                     response.raise_for_status()
                     models = await response.json()
@@ -1362,6 +1365,7 @@ async def get_available_voices(request) -> dict:
                 async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
                     async with session.get(
                         f'{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/voices',
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
                     ) as response:
                         response.raise_for_status()
                         data = await response.json()
@@ -1401,7 +1405,7 @@ async def get_available_voices(request) -> dict:
 
             timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
             async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-                async with session.get(url, headers=headers) as response:
+                async with session.get(url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL) as response:
                     response.raise_for_status()
                     voices = await response.json()
 
@@ -1422,6 +1426,7 @@ async def get_available_voices(request) -> dict:
                         headers={
                             'Authorization': f'Bearer {api_key}',
                         },
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
                     ) as response:
                         response.raise_for_status()
                         voices_data = await response.json()
@@ -1456,6 +1461,7 @@ async def get_elevenlabs_voices(api_key: str) -> dict:
                     'xi-api-key': api_key,
                     'Content-Type': 'application/json',
                 },
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as response:
                 response.raise_for_status()
                 voices_data = await response.json()

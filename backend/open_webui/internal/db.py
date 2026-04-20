@@ -436,9 +436,19 @@ get_db = contextmanager(get_session)
 ASYNC_SQLALCHEMY_DATABASE_URL = _make_async_url(SQLALCHEMY_DATABASE_URL)
 
 if 'sqlite' in ASYNC_SQLALCHEMY_DATABASE_URL:
+    # Generous default — async coroutines + no session sharing = high connection demand.
+    _sqlite_pool_size = (
+        DATABASE_POOL_SIZE
+        if isinstance(DATABASE_POOL_SIZE, int) and DATABASE_POOL_SIZE > 0
+        else 512
+    )
     async_engine = create_async_engine(
         ASYNC_SQLALCHEMY_DATABASE_URL,
         connect_args={'check_same_thread': False},
+        pool_size=_sqlite_pool_size,
+        pool_timeout=DATABASE_POOL_TIMEOUT,
+        pool_recycle=DATABASE_POOL_RECYCLE,
+        pool_pre_ping=True,
     )
     
     @event.listens_for(async_engine.sync_engine, 'connect')

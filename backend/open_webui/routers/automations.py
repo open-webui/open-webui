@@ -39,6 +39,11 @@ PAGE_ITEM_COUNT = 30
 
 
 async def check_automations_permission(request, user):
+    if not request.app.state.config.ENABLE_AUTOMATIONS:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
     if user.role != 'admin' and not await has_permission(
         user.id, 'features.automations', request.app.state.config.USER_PERMISSIONS
     ):

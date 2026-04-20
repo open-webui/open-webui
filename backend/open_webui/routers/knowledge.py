@@ -539,9 +539,7 @@ async def update_knowledge_access_by_id(
         'sharing.public_knowledge',
     )
 
-    knowledge.access_grants = await AccessGrants.set_access_grants(
-        'knowledge', id, form_data.access_grants, db=db
-    )
+    knowledge.access_grants = await AccessGrants.set_access_grants('knowledge', id, form_data.access_grants, db=db)
 
     return KnowledgeFilesResponse(
         **knowledge.model_dump(),

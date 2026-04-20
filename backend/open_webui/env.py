@@ -696,6 +696,15 @@ ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION = (
     os.environ.get('ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION', 'False').lower() == 'true'
 )
 
+# When enabled, uses a hardcoded extension-to-MIME dictionary as a last-resort
+# fallback when both mimetypes.guess_type() and file.meta.content_type fail to
+# determine the content type. This can help on minimal container images (e.g.
+# wolfi-base) that lack /etc/mime.types AND have legacy files without stored
+# content_type metadata.
+ENABLE_IMAGE_CONTENT_TYPE_EXTENSION_FALLBACK = (
+    os.environ.get('ENABLE_IMAGE_CONTENT_TYPE_EXTENSION_FALLBACK', 'False').lower() == 'true'
+)
+
 CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = os.environ.get('CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE', '1')
 
 if CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE == '':

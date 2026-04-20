@@ -923,15 +923,13 @@ async def model_response_handler(request, channel, message, user, db=None):
 
                 thread_history = []
                 images = []
-                message_users = {}
+
+                # Batch fetch all users in a single query (fixes N+1 problem)
+                user_ids = list({message.user_id for message in thread_messages})
+                message_users = {user.id: user for user in await Users.get_users_by_user_ids(user_ids, db=db)}
 
                 for thread_message in thread_messages:
-                    message_user = None
-                    if thread_message.user_id not in message_users:
-                        message_user = await Users.get_user_by_id(thread_message.user_id, db=db)
-                        message_users[thread_message.user_id] = message_user
-                    else:
-                        message_user = message_users[thread_message.user_id]
+                    message_user = message_users.get(thread_message.user_id)
 
                     if thread_message.meta and thread_message.meta.get('model_id', None):
                         # If the message was sent by a model, use the model name

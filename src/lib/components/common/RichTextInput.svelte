@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
+	import equal from 'fast-deep-equal';
 
 	marked.use({
 		breaks: true,
@@ -1257,7 +1258,7 @@
 		}
 
 		if (json) {
-			if (JSON.stringify(value) !== JSON.stringify(jsonValue)) {
+			if (!equal(value, jsonValue)) {
 				editor.commands.setContent(value);
 				selectTemplate();
 			}

@@ -19,6 +19,7 @@
 		WEBUI_DEPLOYMENT_ID,
 		mobile,
 		socket,
+		socketConnected,
 		chatId,
 		chats,
 		currentChatPage,
@@ -51,7 +52,7 @@
 	import 'tippy.js/dist/tippy.css';
 
 	import { executeToolServer, getBackendConfig, getModels, getVersion } from '$lib/apis';
-	import { getSessionUser, userSignOut } from '$lib/apis/auths';
+	import { getSessionUser, updateUserTimezone, userSignOut } from '$lib/apis/auths';
 	import { getAllTags, getChatList } from '$lib/apis/chats';
 	import { chatCompletion } from '$lib/apis/openai';
 	import {
@@ -62,7 +63,7 @@
 	} from '$lib/utils/connections';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
-	import { bestMatchingLanguage, displayFileHandler } from '$lib/utils';
+	import { bestMatchingLanguage, displayFileHandler, getUserTimezone } from '$lib/utils';
 	import { setTextScale } from '$lib/utils/text-scale';
 
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
@@ -127,8 +128,17 @@
 			console.log('connect_error', err);
 		});
 
+		let hasConnectedOnce = false;
+
 		_socket.on('connect', async () => {
 			console.log('connected', _socket.id);
+
+			if (hasConnectedOnce) {
+				socketConnected.set(true);
+				toast.success($i18n.t('Reconnected'));
+			}
+			hasConnectedOnce = true;
+
 			const res = await getVersion(localStorage.token);
 
 			const deploymentId = res?.deployment_id ?? null;
@@ -182,6 +192,8 @@
 
 		_socket.on('disconnect', (reason, details) => {
 			console.log(`Socket ${_socket.id} disconnected due to ${reason}`);
+			socketConnected.set(false);
+			toast.warning($i18n.t('Connection lost. Reconnecting...'));
 
 			if (heartbeatInterval) {
 				clearInterval(heartbeatInterval);
@@ -425,13 +437,13 @@
 			return;
 		}
 
-		let isFocused = document.visibilityState !== 'visible';
+		let isInBackground = document.visibilityState !== 'visible';
 		if (window.electronAPI) {
 			const res = await window.electronAPI.send({
 				type: 'window:isFocused'
 			});
 			if (res) {
-				isFocused = res.isFocused;
+				isInBackground = !res.isFocused;
 			}
 		}
 
@@ -439,7 +451,39 @@
 		const type = event?.data?.type ?? null;
 		const data = event?.data?.data ?? null;
 
-		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isFocused) {
+		// Calendar alerts are not chat-scoped — handle before chat_id checks
+		if (type === 'calendar:alert' && data) {
+			const timeStr =
+				data.minutes_until <= 0
+					? $i18n.t('Starting now')
+					: data.minutes_until === 1
+						? $i18n.t('Starting in 1 minute')
+						: $i18n.t('Starting in {{count}} minutes', { count: data.minutes_until });
+
+			toast.custom(NotificationToast, {
+				componentProps: {
+					onClick: () => {
+						goto('/calendar');
+					},
+					title: data.title,
+					content: timeStr
+				},
+				duration: 30000,
+				unstyled: true
+			});
+
+			if ($isLastActiveTab) {
+				if ($settings?.notificationEnabled ?? false) {
+					new Notification(`${data.title} • Open WebUI`, {
+						body: timeStr,
+						icon: `${WEBUI_BASE_URL}/static/favicon.png`
+					});
+				}
+			}
+			return;
+		}
+
+		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isInBackground) {
 			if (type === 'chat:completion') {
 				const { done, content, title } = data;
 				const displayTitle = title || $i18n.t('New Chat');
@@ -607,17 +651,17 @@
 		// check url path
 		const channel = $page.url.pathname.includes(`/channels/${event.channel_id}`);
 
-		let isFocused = document.visibilityState !== 'visible';
+		let isInBackground = document.visibilityState !== 'visible';
 		if (window.electronAPI) {
 			const res = await window.electronAPI.send({
 				type: 'window:isFocused'
 			});
 			if (res) {
-				isFocused = res.isFocused;
+				isInBackground = !res.isFocused;
 			}
 		}
 
-		if ((!channel || isFocused) && event?.user?.id !== $user?.id) {
+		if ((!channel || isInBackground) && event?.user?.id !== $user?.id) {
 			await tick();
 			const type = event?.data?.type ?? null;
 			const data = event?.data?.data ?? null;
@@ -987,6 +1031,12 @@
 							await config.set(await getBackendConfig());
 						} catch (error) {
 							console.error('Error refreshing backend config:', error);
+						}
+
+						// Keep user timezone in sync on every app load/refresh
+						const timezone = getUserTimezone();
+						if (timezone) {
+							updateUserTimezone(localStorage.token, timezone);
 						}
 
 						// Relay auth token to desktop app for API access
