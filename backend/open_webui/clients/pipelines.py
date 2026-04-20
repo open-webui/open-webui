@@ -96,7 +96,7 @@ async def _run_filter_stage(
         for filter_ in sorted_filters:
             try:
                 url_idx = int(filter_.get('urlIdx'))
-            except (TypeError, ValueError):
+            except Exception:
                 continue
 
             url = request.app.state.config.OPENAI_API_BASE_URLS[url_idx]

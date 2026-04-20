@@ -48,6 +48,13 @@ async def add_memory(
     form_data: AddMemoryForm,
     user: UserModel,
 ) -> MemoryModel | None:
+    """Insert a user memory and upsert its embedding.
+
+    NOTE: This intentionally does NOT take a `Depends(get_async_session)` session.
+    `insert_new_memory` manages its own short-lived session so we don't hold a
+    DB connection while awaiting `EMBEDDING_FUNCTION` (external API call,
+    1-5+ seconds).
+    """
     await _ensure_user_can_use_memories(request, user)
 
     memory = await Memories.insert_new_memory(user.id, form_data.content)
@@ -72,6 +79,13 @@ async def query_memory(
     form_data: QueryMemoryForm,
     user: UserModel,
 ) -> Any:
+    """Semantic-search a user's memories.
+
+    NOTE: This intentionally does NOT take a `Depends(get_async_session)` session.
+    `get_memories_by_user_id` manages its own short-lived session so we don't
+    hold a DB connection while awaiting `EMBEDDING_FUNCTION` (external API call,
+    1-5+ seconds).
+    """
     await _ensure_user_can_use_memories(request, user)
 
     memories = await Memories.get_memories_by_user_id(user.id)
@@ -126,6 +140,13 @@ async def update_memory_by_id(
     form_data: MemoryUpdateModel,
     user: UserModel,
 ) -> MemoryModel | None:
+    """Update a memory and re-embed if content changed.
+
+    NOTE: This intentionally does NOT take a `Depends(get_async_session)` session.
+    `update_memory_by_id_and_user_id` manages its own short-lived session so we
+    don't hold a DB connection while awaiting `EMBEDDING_FUNCTION` (external API
+    call, 1-5+ seconds).
+    """
     await _ensure_user_can_use_memories(request, user)
 
     memory = await Memories.update_memory_by_id_and_user_id(memory_id, user.id, form_data.content)

@@ -66,17 +66,15 @@ async def _run_task_pipeline(
     user: UserModel,
     models: dict[str, dict[str, Any]],
     payload: dict[str, Any],
-    error_content: dict[str, Any] | None = None,
-    error_status: int = status.HTTP_400_BAD_REQUEST,
 ) -> Any:
     payload = await process_pipeline_inlet_filter(request, payload, user, models)
     try:
         return await generate_chat_completion(request, form_data=payload, user=user)
-    except Exception as e:
+    except Exception:
         log.error('Exception occurred', exc_info=True)
         return JSONResponse(
-            status_code=error_status,
-            content=error_content if error_content is not None else {'detail': str(e)},
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={'detail': 'An internal error has occurred.'},
         )
 
 
@@ -96,7 +94,10 @@ async def generate_title(
 
     log.debug(f'generating chat title using model {task_model_id} for user {user.email} ')
 
-    template = request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE or DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE
+    if request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE != '':
+        template = request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE
+    else:
+        template = DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE
     content = title_generation_template(template, form_data['messages'], user)
     max_tokens = models[task_model_id].get('info', {}).get('params', {}).get('max_tokens', 1000)
     token_key = 'max_tokens' if models[task_model_id].get('owned_by') == 'ollama' else 'max_completion_tokens'
@@ -109,13 +110,7 @@ async def generate_title(
         'metadata': _task_metadata(request, form_data, str(TASKS.TITLE_GENERATION)),
     }
 
-    return await _run_task_pipeline(
-        request,
-        user,
-        models,
-        payload,
-        error_content={'detail': 'An internal error has occurred.'},
-    )
+    return await _run_task_pipeline(request, user, models, payload)
 
 
 async def generate_follow_ups(
@@ -134,10 +129,10 @@ async def generate_follow_ups(
 
     log.debug(f'generating chat title using model {task_model_id} for user {user.email} ')
 
-    template = (
-        request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE
-        or DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE
-    )
+    if request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE != '':
+        template = request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE
+    else:
+        template = DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE
     content = follow_up_generation_template(template, form_data['messages'], user)
 
     payload = {
@@ -147,13 +142,7 @@ async def generate_follow_ups(
         'metadata': _task_metadata(request, form_data, str(TASKS.FOLLOW_UP_GENERATION)),
     }
 
-    return await _run_task_pipeline(
-        request,
-        user,
-        models,
-        payload,
-        error_content={'detail': 'An internal error has occurred.'},
-    )
+    return await _run_task_pipeline(request, user, models, payload)
 
 
 async def generate_chat_tags(
@@ -172,9 +161,10 @@ async def generate_chat_tags(
 
     log.debug(f'generating chat tags using model {task_model_id} for user {user.email} ')
 
-    template = (
-        request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE or DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE
-    )
+    if request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE != '':
+        template = request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE
+    else:
+        template = DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE
     content = tags_generation_template(template, form_data['messages'], user)
 
     payload = {
@@ -184,14 +174,15 @@ async def generate_chat_tags(
         'metadata': _task_metadata(request, form_data, str(TASKS.TAGS_GENERATION)),
     }
 
-    return await _run_task_pipeline(
-        request,
-        user,
-        models,
-        payload,
-        error_content={'detail': 'An internal error has occurred.'},
-        error_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-    )
+    payload = await process_pipeline_inlet_filter(request, payload, user, models)
+    try:
+        return await generate_chat_completion(request, form_data=payload, user=user)
+    except Exception as e:
+        log.error(f'Error generating chat completion: {e}')
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={'detail': 'An internal error has occurred.'},
+        )
 
 
 async def generate_image_prompt(
@@ -204,10 +195,10 @@ async def generate_image_prompt(
 
     log.debug(f'generating image prompt using model {task_model_id} for user {user.email} ')
 
-    template = (
-        request.app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE
-        or DEFAULT_IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE
-    )
+    if request.app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE != '':
+        template = request.app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE
+    else:
+        template = DEFAULT_IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE
     content = image_prompt_generation_template(template, form_data['messages'], user)
 
     payload = {
@@ -217,13 +208,7 @@ async def generate_image_prompt(
         'metadata': _task_metadata(request, form_data, str(TASKS.IMAGE_PROMPT_GENERATION)),
     }
 
-    return await _run_task_pipeline(
-        request,
-        user,
-        models,
-        payload,
-        error_content={'detail': 'An internal error has occurred.'},
-    )
+    return await _run_task_pipeline(request, user, models, payload)
 
 
 async def generate_queries(
@@ -252,10 +237,10 @@ async def generate_queries(
 
     log.debug(f'generating {type_} queries using model {task_model_id} for user {user.email}')
 
-    template = (
-        request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE.strip()
-        or DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE
-    )
+    if (request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE).strip() != '':
+        template = request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE
+    else:
+        template = DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE
     content = query_generation_template(template, form_data['messages'], user)
 
     payload = {
@@ -265,4 +250,11 @@ async def generate_queries(
         'metadata': _task_metadata(request, form_data, str(TASKS.QUERY_GENERATION)),
     }
 
-    return await _run_task_pipeline(request, user, models, payload)
+    payload = await process_pipeline_inlet_filter(request, payload, user, models)
+    try:
+        return await generate_chat_completion(request, form_data=payload, user=user)
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={'detail': str(e)},
+        )
