@@ -99,10 +99,13 @@ async def send_get_request(
                 cookies=cookies,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as response:
-                return await response.json()
+                data = await response.json()
+                model_count = len(data.get('data', [])) if isinstance(data, dict) else len(data) if isinstance(data, list) else 0
+                log.info(f'Fetched {model_count} models from {url}')
+                return data
     except Exception as e:
         # Handle connection error here
-        log.error(f'Connection error: {e}')
+        log.error(f'Failed to fetch models from {url}: {e} (timeout: {AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST}s)')
         return None
 
 

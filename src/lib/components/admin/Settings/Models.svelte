@@ -25,6 +25,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import Refresh from '$lib/components/icons/Refresh.svelte';
 
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
 	import { toast } from 'svelte-sonner';
@@ -53,6 +54,8 @@
 	let modelsImportInProgress = false;
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
+
+	let refreshingModels = false;
 
 	let models = null;
 
@@ -203,6 +206,30 @@
 				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 			)
 		);
+	};
+
+	const refreshModelsHandler = async () => {
+		refreshingModels = true;
+		try {
+			await init();
+			toast.success($i18n.t('Models refreshed successfully'));
+		} catch (error) {
+			toast.error($i18n.t('Failed to refresh models'));
+		} finally {
+			refreshingModels = false;
+		}
+	};
+
+	const refreshModelsHandler = async () => {
+		refreshingModels = true;
+		try {
+			await init();
+			toast.success($i18n.t('Models refreshed successfully'));
+		} catch (error) {
+			toast.error($i18n.t('Failed to refresh models'));
+		} finally {
+			refreshingModels = false;
+		}
 	};
 
 	const upsertModelHandler = async (model, overrides = {}, showToast = true) => {
@@ -414,31 +441,61 @@
 							}}
 						/>
 
-						<button
-							class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
-							disabled={modelsImportInProgress}
-							on:click={() => {
-								modelsImportInputElement.click();
-							}}
-						>
-							{#if modelsImportInProgress}
-								<Spinner className="size-3" />
-							{/if}
-							<div class=" self-center font-medium line-clamp-1">
-								{$i18n.t('Import')}
-							</div>
-						</button>
+					<button
+						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+						disabled={modelsImportInProgress}
+						on:click={() => {
+							modelsImportInputElement.click();
+						}}
+					>
+						{#if modelsImportInProgress}
+							<Spinner className="size-3" />
+						{/if}
+						<div class=" self-center font-medium line-clamp-1">
+							{$i18n.t('Import')}
+						</div>
+					</button>
 
-						<button
-							class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
-							on:click={async () => {
-								downloadModels(models);
-							}}
-						>
-							<div class=" self-center font-medium line-clamp-1">
-								{$i18n.t('Export')}
-							</div>
-						</button>
+					<button
+						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+						on:click={async () => {
+							downloadModels(models);
+						}}
+					>
+						<div class=" self-center font-medium line-clamp-1">
+							{$i18n.t('Export')}
+						</div>
+					</button>
+
+					<button
+						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+						disabled={refreshingModels}
+						on:click={refreshModelsHandler}
+					>
+						{#if refreshingModels}
+							<Spinner className="size-3" />
+						{:else}
+							<Refresh className="size-3" />
+						{/if}
+						<div class=" self-center font-medium line-clamp-1">
+							{$i18n.t('Refresh')}
+						</div>
+					</button>
+
+					<button
+						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+						disabled={refreshingModels}
+						on:click={refreshModelsHandler}
+					>
+						{#if refreshingModels}
+							<Spinner className="size-3" />
+						{:else}
+							<Refresh className="size-3" />
+						{/if}
+						<div class=" self-center font-medium line-clamp-1">
+							{$i18n.t('Refresh')}
+						</div>
+					</button>
 					{/if}
 
 					<button

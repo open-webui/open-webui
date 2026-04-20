@@ -1964,16 +1964,17 @@ async def chat_completion_files_handler(
                 unique_ids.add(_id)
 
         sources_count = len(unique_ids)
-        await __event_emitter__(
-            {
-                'type': 'status',
-                'data': {
-                    'action': 'sources_retrieved',
-                    'count': sources_count,
-                    'done': True,
-                },
-            }
-        )
+        if sources_count > 0:
+            await __event_emitter__(
+                {
+                    'type': 'status',
+                    'data': {
+                        'action': 'sources_retrieved',
+                        'count': sources_count,
+                        'done': True,
+                    },
+                }
+            )
 
     return body, {'sources': sources}
 
