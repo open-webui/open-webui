@@ -32,7 +32,6 @@
 	import Check from '$lib/components/icons/Check.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 	import Refresh from '$lib/components/icons/Refresh.svelte';
-	import Refresh from '$lib/components/icons/Refresh.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
@@ -49,9 +48,7 @@
 			models.set(
 				await getModels(
 					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
-					false,
-					true
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 				)
 			);
 			toast.success($i18n.t('Models refreshed successfully'));
