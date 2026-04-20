@@ -133,7 +133,6 @@ from open_webui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
     ENABLE_REALTIME_CHAT_SAVE,
     ENABLE_QUERIES_CACHE,
-    RAG_SYSTEM_CONTEXT,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     FORWARD_SESSION_INFO_HEADER_MESSAGE_ID,
@@ -590,6 +589,10 @@ def serialize_output(output: list) -> str:
                     f'<details type="code_interpreter" done="false"{output_attr}>\n<summary>Analyzing…</summary>\n{display}\n</details>'
                 )
 
+        elif item_type == 'open_webui:rag_source':
+            # Skip serializing RAG template
+            continue
+
     return '\n'.join(parts).strip()
 
 
@@ -955,7 +958,7 @@ def get_source_context(sources: list, source_ids: dict = None, include_content: 
             source_id = meta.get('source') or source.get('source', {}).get('id') or 'N/A'
             if source_id not in source_ids:
                 source_ids[source_id] = len(source_ids) + 1
-            src_name = source.get('source', {}).get('name')
+            src_name = meta.get('name')
             src_type = source.get('source', {}).get('type')
             src_rid = source.get('source', {}).get('id')
             body = doc if include_content else ''
@@ -993,18 +996,11 @@ def apply_source_context_to_messages(
     if not context:
         return messages
 
-    if RAG_SYSTEM_CONTEXT:
-        return add_or_update_system_message(
-            rag_template(request.app.state.config.RAG_TEMPLATE, context, user_message),
-            messages,
-            append=True,
-        )
-    else:
-        return add_or_update_user_message(
-            rag_template(request.app.state.config.RAG_TEMPLATE, context, user_message),
-            messages,
-            append=False,
-        )
+    return add_or_update_user_message(
+        rag_template(request.app.state.config.RAG_INSTRUCTIONS, context, user_message),
+        messages,
+        append=False,
+    )
 
 
 async def process_tool_result(
@@ -4403,6 +4399,10 @@ async def streaming_chat_response_handler(response, ctx):
 
                     results = []
 
+                    needs_rag_template = False
+                    new_rag_source = False
+                    source_ids = {}
+
                     for tool_call in response_tool_calls:
                         tool_call_id = tool_call.get('id', '')
                         tool_function_name = tool_call.get('function', {}).get('name', '')
@@ -4516,6 +4516,9 @@ async def streaming_chat_response_handler(response, ctx):
                                     tool_result=tool_result,
                                     tool_id=tool.get('tool_id', '') if tool else '',
                                 )
+                                if len(all_tool_call_sources) == 0:
+                                    needs_rag_template = True
+                                new_rag_source = True
                                 tool_call_sources.extend(citation_sources)
                             except Exception as e:
                                 log.exception(f'Error extracting citation source: {e}')
@@ -4566,6 +4569,43 @@ async def streaming_chat_response_handler(response, ctx):
                             }
                         )
 
+                    # Dry run get_source_context with all sources to populate source_ids
+                    all_tool_call_sources.extend(tool_call_sources)
+                    get_source_context(metadata.get('sources', []), source_ids)
+                    get_source_context(all_tool_call_sources, source_ids, include_content=False)
+
+                    # Get <context> string from all citations
+                    source_context = get_source_context(
+                        metadata.get('sources', []), source_ids
+                    ) + get_source_context(
+                        tool_call_sources,
+                        source_ids,
+                        include_content=False
+                    )
+                    source_context = '<context>\n' + source_context.strip() + '\n</context>'
+
+                    # Append RAG instructions after function call results
+                    if needs_rag_template:
+                        # If first source, we need to tell model how to cite sources
+                        output.append(
+                            {
+                                'type': 'open_webui:rag_source',
+                                'id': output_id('fco'),
+                                'content': request.app.state.config.RAG_INSTRUCTIONS + source_context,
+                                'status': 'completed'
+                            }
+                        )
+                    elif new_rag_source:
+                        # If it's not the first source, we just append context and not repeat instructions
+                        output.append(
+                            {
+                                'type': 'open_webui:rag_source',
+                                'id': output_id('fco'),
+                                'content': source_context,
+                                'status': 'completed'
+                            }
+                        )
+
                     # Append a new empty message item for the next response
                     output.append(
                         {
@@ -4581,53 +4621,6 @@ async def streaming_chat_response_handler(response, ctx):
                     if citations_enabled:
                         for source in tool_call_sources:
                             await event_emitter({'type': 'source', 'data': source})
-
-                        # Apply tool source context to messages for the model.
-                        # Restoring to pre-RAG original prevents duplicating
-                        # the RAG template across file and tool sources.
-                        all_tool_call_sources.extend(tool_call_sources)
-                        if all_tool_call_sources and user_message:
-                            # Restore pre-RAG message state before re-applying
-                            # to prevent RAG template duplication.
-                            original_user_message = metadata.get('user_prompt') or user_message
-                            set_last_user_message_content(
-                                original_user_message,
-                                form_data['messages'],
-                            )
-                            replace_system_message_content(
-                                original_system_content or '',
-                                form_data['messages'],
-                            )
-
-                            # Build context: file sources with content,
-                            # tool sources as citation markers only.
-                            source_ids = {}
-                            source_context = get_source_context(
-                                metadata.get('sources', []), source_ids
-                            ) + get_source_context(
-                                all_tool_call_sources,
-                                source_ids,
-                                include_content=False,
-                            )
-                            source_context = source_context.strip()
-                            if source_context:
-                                rag_content = rag_template(
-                                    request.app.state.config.RAG_TEMPLATE,
-                                    source_context,
-                                    user_message,
-                                )
-                                if RAG_SYSTEM_CONTEXT:
-                                    form_data['messages'] = add_or_update_system_message(
-                                        rag_content,
-                                        form_data['messages'],
-                                        append=True,
-                                    )
-                                else:
-                                    form_data['messages'] = add_or_update_user_message(
-                                        rag_content,
-                                        form_data['messages'],
-                                        append=False,
-                                    )
                         tool_call_sources.clear()
 
                     # Strip input_image parts (large base64 data URIs) from the
@@ -4639,6 +4632,9 @@ async def streaming_chat_response_handler(response, ctx):
                             parts = item.get('output', [])
                             if any(p.get('type') == 'input_image' for p in parts):
                                 item = {**item, 'output': [p for p in parts if p.get('type') != 'input_image']}
+                        # Don't send RAG template to frontend
+                        elif item.get('type') == 'open_webui:rag_source':
+                            continue
                         frontend_output.append(item)
 
                     await event_emitter(

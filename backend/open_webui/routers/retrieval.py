@@ -265,7 +265,7 @@ async def get_status(request: Request):
         'status': True,
         'CHUNK_SIZE': request.app.state.config.CHUNK_SIZE,
         'CHUNK_OVERLAP': request.app.state.config.CHUNK_OVERLAP,
-        'RAG_TEMPLATE': request.app.state.config.RAG_TEMPLATE,
+        'RAG_INSTRUCTIONS': request.app.state.config.RAG_INSTRUCTIONS,
         'RAG_EMBEDDING_ENGINE': request.app.state.config.RAG_EMBEDDING_ENGINE,
         'RAG_EMBEDDING_MODEL': request.app.state.config.RAG_EMBEDDING_MODEL,
         'RAG_RERANKING_MODEL': request.app.state.config.RAG_RERANKING_MODEL,
@@ -444,7 +444,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
     return {
         'status': True,
         # RAG settings
-        'RAG_TEMPLATE': request.app.state.config.RAG_TEMPLATE,
+        'RAG_INSTRUCTIONS': request.app.state.config.RAG_INSTRUCTIONS,
         'TOP_K': request.app.state.config.TOP_K,
         'BYPASS_EMBEDDING_AND_RETRIEVAL': request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL,
         'RAG_FULL_CONTEXT': request.app.state.config.RAG_FULL_CONTEXT,
@@ -645,7 +645,7 @@ class WebConfig(BaseModel):
 
 class ConfigForm(BaseModel):
     # RAG settings
-    RAG_TEMPLATE: Optional[str] = None
+    RAG_INSTRUCTIONS: Optional[str] = None
     TOP_K: Optional[int] = None
     BYPASS_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
     RAG_FULL_CONTEXT: Optional[bool] = None
@@ -727,8 +727,8 @@ class ConfigForm(BaseModel):
 @router.post('/config/update')
 async def update_rag_config(request: Request, form_data: ConfigForm, user=Depends(get_admin_user)):
     # RAG settings
-    request.app.state.config.RAG_TEMPLATE = (
-        form_data.RAG_TEMPLATE if form_data.RAG_TEMPLATE is not None else request.app.state.config.RAG_TEMPLATE
+    request.app.state.config.RAG_INSTRUCTIONS = (
+        form_data.RAG_INSTRUCTIONS if form_data.RAG_INSTRUCTIONS is not None else request.app.state.config.RAG_INSTRUCTIONS
     )
     request.app.state.config.TOP_K = form_data.TOP_K if form_data.TOP_K is not None else request.app.state.config.TOP_K
     request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL = (
@@ -1118,7 +1118,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
     return {
         'status': True,
         # RAG settings
-        'RAG_TEMPLATE': request.app.state.config.RAG_TEMPLATE,
+        'RAG_INSTRUCTIONS': request.app.state.config.RAG_INSTRUCTIONS,
         'TOP_K': request.app.state.config.TOP_K,
         'BYPASS_EMBEDDING_AND_RETRIEVAL': request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL,
         'RAG_FULL_CONTEXT': request.app.state.config.RAG_FULL_CONTEXT,

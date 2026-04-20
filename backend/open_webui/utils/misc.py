@@ -272,6 +272,17 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
                 if output_text:
                     pending_content.append(f'<code_interpreter_output>\n{output_text}\n</code_interpreter_output>')
 
+        elif item_type == 'open_webui:rag_source':
+            # Flush any pending content/tool_calls before adding tool result
+            flush_pending()
+            # Just pass rag source as is
+            messages.append(
+                {
+                    'role': 'tool',
+                    'content': item.get('content'),
+                }
+            )
+
         elif item_type.startswith('open_webui:'):
             # Skip other extension types
             pass

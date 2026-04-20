@@ -8,7 +8,7 @@ import uuid
 
 from open_webui.utils.misc import get_last_user_message, get_messages_content
 
-from open_webui.config import DEFAULT_RAG_TEMPLATE
+from open_webui.config import DEFAULT_RAG_INSTRUCTIONS
 
 log = logging.getLogger(__name__)
 
@@ -245,7 +245,7 @@ def replace_messages_variable(template: str, messages: Optional[list[dict]] = No
 # but illuminate it, so that the answer serves the one who asked.
 def rag_template(template: str, context: str, query: str):
     if template.strip() == '':
-        template = DEFAULT_RAG_TEMPLATE
+        template = DEFAULT_RAG_INSTRUCTIONS
 
     template = prompt_template(template)
 
@@ -270,11 +270,7 @@ def rag_template(template: str, context: str, query: str):
         template = template.replace('{{QUERY}}', query_placeholder)
         query_placeholders.append((query_placeholder, '{{QUERY}}'))
 
-    template = template.replace('[context]', context)
-    template = template.replace('{{CONTEXT}}', context)
-
-    template = template.replace('[query]', query)
-    template = template.replace('{{QUERY}}', query)
+    template = template + '<context>\n' + context + '\n</context>'
 
     for query_placeholder, original_placeholder in query_placeholders:
         template = template.replace(query_placeholder, original_placeholder)

@@ -1342,7 +1342,7 @@
 									className="w-full"
 								>
 									<Textarea
-										bind:value={RAGConfig.RAG_TEMPLATE}
+										bind:value={RAGConfig.RAG_INSTRUCTIONS}
 										placeholder={$i18n.t(
 											'Leave empty to use the default prompt, or enter a custom prompt'
 										)}

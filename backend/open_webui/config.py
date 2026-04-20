@@ -3040,8 +3040,8 @@ CHUNK_OVERLAP = PersistentConfig(
     int(os.environ.get('CHUNK_OVERLAP', '100')),
 )
 
-DEFAULT_RAG_TEMPLATE = """### Task:
-Respond to the user query using the provided context, incorporating inline citations in the format [id] **only when the <source> tag includes an explicit id attribute** (e.g., <source id="1">).
+DEFAULT_RAG_INSTRUCTIONS = """### Task:
+When responding to the user query using the provided context, incorporate inline citations in the format [id] using the id you receive after each information retrieval tool response inside <context> tag (e.g., <source id="1">).
 
 ### Guidelines:
 - If you don't know the answer, clearly state that.
@@ -3061,15 +3061,12 @@ If the user asks about a specific topic and the information is found in a source
 ### Output:
 Provide a clear and direct response to the user's query, including inline citations in the format [id] only when the <source> tag with id attribute is present in the context.
 
-<context>
-{{CONTEXT}}
-</context>
 """
 
-RAG_TEMPLATE = PersistentConfig(
-    'RAG_TEMPLATE',
-    'rag.template',
-    os.environ.get('RAG_TEMPLATE', DEFAULT_RAG_TEMPLATE),
+RAG_INSTRUCTIONS = PersistentConfig(
+    'RAG_INSTRUCTIONS',
+    'rag.instructions',
+    os.environ.get('RAG_INSTRUCTIONS', DEFAULT_RAG_INSTRUCTIONS),
 )
 
 RAG_OPENAI_API_BASE_URL = PersistentConfig(
