@@ -1,0 +1,45 @@
+name: Deploy to self-hosted
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    timeout-minutes: 45
+    steps:
+      - name: Pull latest code
+        working-directory: /opt/hyu-math
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+          git log -1 --oneline
+
+      - name: Build and restart containers
+        working-directory: /opt/hyu-math
+        run: |
+          docker compose build
+          docker compose up -d --remove-orphans
+
+      - name: Wait for healthy
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://localhost:3000/health >/dev/null 2>&1; then
+              echo "Service is healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Service did not become healthy in time"
+          docker compose -f /opt/hyu-math/docker-compose.yaml logs --tail=80
+          exit 1
+
+      - name: Prune old images
+        if: always()
+        run: docker image prune -f
