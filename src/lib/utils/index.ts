@@ -121,7 +121,31 @@ export const sanitizeResponseContent = (content: string) => {
 };
 
 export const processResponseContent = (content: string) => {
+	// ACP-5048: Strip incomplete <details> tags that appear during streaming.
+	// During streaming, content accumulates character-by-character, so we may
+	// have an opening <details> without a matching </details>. The marked
+	// extension cannot parse incomplete tags, causing them to render as raw text.
+	content = stripIncompleteDetails(content);
 	return content.trim();
+};
+
+/**
+ * Strip incomplete (unclosed) <details> tags from the end of streaming content.
+ * Only removes the trailing unclosed block — fully closed blocks are left intact.
+ */
+export const stripIncompleteDetails = (content: string): string => {
+	// Count opening and closing <details> tags
+	const openTags = content.match(/<details[\s>]/gi) || [];
+	const closeTags = content.match(/<\/details>/gi) || [];
+
+	if (openTags.length > closeTags.length) {
+		// There's at least one unclosed <details> — find and remove the last unclosed one
+		const lastOpenIdx = content.lastIndexOf('<details');
+		if (lastOpenIdx !== -1) {
+			content = content.slice(0, lastOpenIdx);
+		}
+	}
+	return content;
 };
 
 export function unescapeHtml(html: string) {
@@ -807,7 +831,7 @@ export const removeAllDetails = (content) => {
 };
 
 export const processDetails = (content) => {
-	content = removeDetails(content, ['reasoning', 'code_interpreter']);
+	content = removeDetails(content, ['reasoning', 'code_interpreter', 'streaming']);
 
 	// This regex matches <details> tags with type="tool_calls" and captures their attributes to convert them to <tool_calls> tags
 	const detailsRegex = /<details\s+type="tool_calls"([^>]*)>([\s\S]*?)<\/details>/gis;
