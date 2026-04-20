@@ -23,7 +23,7 @@ from open_webui.routers.images import (
     CreateImageForm,
     EditImageForm,
 )
-from open_webui.routers.memories import (
+from open_webui.clients.memories import (
     query_memory,
     add_memory as _add_memory,
     update_memory_by_id,
