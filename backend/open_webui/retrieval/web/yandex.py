@@ -19,7 +19,10 @@ from xml.etree.ElementTree import Element
 log = logging.getLogger(__name__)
 
 
-def xml_element_contents_to_string(element: Element) -> str:
+def xml_element_contents_to_string(element: Optional[Element]) -> str:
+    if element is None:
+        return ''
+
     buffer = [element.text if element.text else '']
 
     for child in element:
@@ -91,11 +94,20 @@ def search_yandex(
         results = []
 
         for group in doc_root.findall('response/results/grouping/group'):
+            url = xml_element_contents_to_string(group.find('doc/url')).strip('\n')
+            title = xml_element_contents_to_string(group.find('doc/title')).strip('\n')
+            snippet = xml_element_contents_to_string(group.find('doc/passages/passage'))
+
+            # Some Yandex results do not include all expected doc fields.
+            # Skip invalid entries instead of failing the full search request.
+            if not url or not title:
+                continue
+
             results.append(
                 {
-                    'url': xml_element_contents_to_string(group.find('doc/url')).strip('\n'),
-                    'title': xml_element_contents_to_string(group.find('doc/title')).strip('\n'),
-                    'snippet': xml_element_contents_to_string(group.find('doc/passages/passage')),
+                    'url': url,
+                    'title': title,
+                    'snippet': snippet,
                 }
             )
 
