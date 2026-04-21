@@ -1,1 +1,23 @@
-{}
+{
+  "name": "Kolb-Bot",
+  "short_name": "Kolb-Bot",
+  "description": "Kolb-Bot - AI Chat Interface",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#343541",
+  "theme_color": "#171717",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

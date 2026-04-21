@@ -97,7 +97,7 @@
 	};
 
 	const shareHandler = async () => {
-		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
+		toast.success($i18n.t('Redirecting you to Kolb-Bot Community'));
 
 		// remove snapshot from feedbacks
 		const feedbacksToShare = feedbacks.map((f) => {

@@ -206,7 +206,7 @@
 									{$i18n.t('Help')}
 								</div>
 								<div class=" text-xs text-gray-500">
-									{$i18n.t('Discover how to use Open WebUI and seek support from the community.')}
+									{$i18n.t('Discover how to use Kolb-Bot and seek support from the community.')}
 								</div>
 							</div>
 
@@ -228,10 +228,10 @@
 									/>
 								</a>
 
-								<a href="https://twitter.com/OpenWebUI" target="_blank">
+								<a href="https://twitter.com/Kolb-Bot" target="_blank">
 									<img
 										alt="X (formerly Twitter) Follow"
-										src="https://img.shields.io/twitter/follow/OpenWebUI"
+										src="https://img.shields.io/twitter/follow/Kolb-Bot"
 									/>
 								</a>
 

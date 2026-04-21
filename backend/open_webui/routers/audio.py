@@ -390,7 +390,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             detail = None
 
             status_code = 500
-            detail = f'Open WebUI: Server Connection Error'
+            detail = f'Kolb-Bot: Server Connection Error'
 
             if r is not None:
                 status_code = r.status
@@ -457,7 +457,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
             raise HTTPException(
                 status_code=getattr(r, 'status', 500) if r else 500,
-                detail=detail if detail else 'Open WebUI: Server Connection Error',
+                detail=detail if detail else 'Kolb-Bot: Server Connection Error',
             )
 
     elif request.app.state.config.TTS_ENGINE == 'azure':
@@ -513,7 +513,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
             raise HTTPException(
                 status_code=getattr(r, 'status', 500) if r else 500,
-                detail=detail if detail else 'Open WebUI: Server Connection Error',
+                detail=detail if detail else 'Kolb-Bot: Server Connection Error',
             )
 
     elif request.app.state.config.TTS_ENGINE == 'transformers':
@@ -637,7 +637,7 @@ def transcription_handler(request, file_path, metadata, user=None):
                 except Exception:
                     detail = f'External: {e}'
 
-            raise Exception(detail if detail else 'Open WebUI: Server Connection Error')
+            raise Exception(detail if detail else 'Kolb-Bot: Server Connection Error')
 
     elif request.app.state.config.STT_ENGINE == 'deepgram':
         try:
@@ -705,7 +705,7 @@ def transcription_handler(request, file_path, metadata, user=None):
                         detail = f'External: {res["error"].get("message", "")}'
                 except Exception:
                     detail = f'External: {e}'
-            raise Exception(detail if detail else 'Open WebUI: Server Connection Error')
+            raise Exception(detail if detail else 'Kolb-Bot: Server Connection Error')
 
     elif request.app.state.config.STT_ENGINE == 'azure':
         # Check file exists and size
@@ -838,7 +838,7 @@ def transcription_handler(request, file_path, metadata, user=None):
 
             raise HTTPException(
                 status_code=status_code,
-                detail=detail if detail else 'Open WebUI: Server Connection Error',
+                detail=detail if detail else 'Kolb-Bot: Server Connection Error',
             )
 
     elif request.app.state.config.STT_ENGINE == 'mistral':
@@ -1010,7 +1010,7 @@ def transcription_handler(request, file_path, metadata, user=None):
 
             raise HTTPException(
                 status_code=getattr(r, 'status_code', 500) if r else 500,
-                detail=detail if detail else 'Open WebUI: Server Connection Error',
+                detail=detail if detail else 'Kolb-Bot: Server Connection Error',
             )
 
 
