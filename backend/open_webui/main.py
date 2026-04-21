@@ -2150,6 +2150,8 @@ async def get_app_config(request: Request):
         'audio.stt.engine',
         'rag.file.max_size',
         'rag.file.max_count',
+        'rag.knowledge.max_size',
+        'rag.knowledge.max_count',
         'file.image_compression_width',
         'file.image_compression_height',
         'user.permissions',
@@ -2258,6 +2260,10 @@ async def get_app_config(request: Request):
                         'width': config.get('file.image_compression_width'),
                         'height': config.get('file.image_compression_height'),
                     },
+                },
+                'knowledge': {
+                    'max_size': config.get('rag.knowledge.max_size'),
+                    'max_count': config.get('rag.knowledge.max_count'),
                 },
                 'permissions': {**(config.get('user.permissions') or {})},
                 'google_drive': {

@@ -315,6 +315,8 @@ RETRIEVAL_CONFIG_KEYS = {
     'JINA_API_BASE_URL': 'web.search.jina_api_base_url',
     'JINA_API_KEY': 'web.search.jina_api_key',
     'KAGI_SEARCH_API_KEY': 'web.search.kagi_search_api_key',
+    'KNOWLEDGE_MAX_COUNT': 'rag.knowledge.max_count',
+    'KNOWLEDGE_MAX_SIZE': 'rag.knowledge.max_size',
     'LINKUP_API_KEY': 'web.search.linkup_api_key',
     'LINKUP_SEARCH_PARAMS': 'web.search.linkup_search_params',
     'MINERU_API_KEY': 'rag.mineru_api_key',
@@ -683,6 +685,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         # File upload settings
         'FILE_MAX_SIZE': config.FILE_MAX_SIZE,
         'FILE_MAX_COUNT': config.FILE_MAX_COUNT,
+        'KNOWLEDGE_MAX_SIZE': config.KNOWLEDGE_MAX_SIZE,
+        'KNOWLEDGE_MAX_COUNT': config.KNOWLEDGE_MAX_COUNT,
         'FILE_IMAGE_COMPRESSION_WIDTH': config.FILE_IMAGE_COMPRESSION_WIDTH,
         'FILE_IMAGE_COMPRESSION_HEIGHT': config.FILE_IMAGE_COMPRESSION_HEIGHT,
         'ALLOWED_FILE_EXTENSIONS': config.ALLOWED_FILE_EXTENSIONS,
@@ -922,6 +926,8 @@ class ConfigForm(BaseModel):
     # File upload settings
     FILE_MAX_SIZE: Union[int, str | None] = None
     FILE_MAX_COUNT: Union[int, str | None] = None
+    KNOWLEDGE_MAX_SIZE: Union[int, str | None] = None
+    KNOWLEDGE_MAX_COUNT: Union[int, str | None] = None
     FILE_IMAGE_COMPRESSION_WIDTH: Union[int, str | None] = None
     FILE_IMAGE_COMPRESSION_HEIGHT: Union[int, str | None] = None
     ALLOWED_FILE_EXTENSIONS: list[str | None] = None
@@ -1216,6 +1222,10 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         config.FILE_MAX_SIZE = None if form_data.FILE_MAX_SIZE == '' else form_data.FILE_MAX_SIZE
     if form_data.FILE_MAX_COUNT is not None:
         config.FILE_MAX_COUNT = None if form_data.FILE_MAX_COUNT == '' else form_data.FILE_MAX_COUNT
+    if form_data.KNOWLEDGE_MAX_SIZE is not None:
+        config.KNOWLEDGE_MAX_SIZE = None if form_data.KNOWLEDGE_MAX_SIZE == '' else form_data.KNOWLEDGE_MAX_SIZE
+    if form_data.KNOWLEDGE_MAX_COUNT is not None:
+        config.KNOWLEDGE_MAX_COUNT = None if form_data.KNOWLEDGE_MAX_COUNT == '' else form_data.KNOWLEDGE_MAX_COUNT
     if form_data.FILE_IMAGE_COMPRESSION_WIDTH is not None:
         config.FILE_IMAGE_COMPRESSION_WIDTH = (
             None if form_data.FILE_IMAGE_COMPRESSION_WIDTH == '' else form_data.FILE_IMAGE_COMPRESSION_WIDTH
@@ -1390,6 +1400,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         # File upload settings
         'FILE_MAX_SIZE': config.FILE_MAX_SIZE,
         'FILE_MAX_COUNT': config.FILE_MAX_COUNT,
+        'KNOWLEDGE_MAX_SIZE': config.KNOWLEDGE_MAX_SIZE,
+        'KNOWLEDGE_MAX_COUNT': config.KNOWLEDGE_MAX_COUNT,
         'FILE_IMAGE_COMPRESSION_WIDTH': config.FILE_IMAGE_COMPRESSION_WIDTH,
         'FILE_IMAGE_COMPRESSION_HEIGHT': config.FILE_IMAGE_COMPRESSION_HEIGHT,
         'ALLOWED_FILE_EXTENSIONS': config.ALLOWED_FILE_EXTENSIONS,
