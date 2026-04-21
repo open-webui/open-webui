@@ -2,6 +2,8 @@ export const DEFAULT_PERMISSIONS = {
 	workspace: {
 		models: false,
 		knowledge: false,
+		knowledge_max_count: null as number | null,
+		knowledge_max_size: null as number | null,
 		prompts: false,
 		tools: false,
 		skills: false,

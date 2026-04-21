@@ -1723,6 +1723,24 @@ USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS = (
     os.getenv('USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS', 'False').lower() == 'true'
 )
 
+_knowledge_max_count_raw = os.getenv('USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_MAX_COUNT', '').strip()
+if _knowledge_max_count_raw:
+    _knowledge_max_count_val = int(_knowledge_max_count_raw)
+    if _knowledge_max_count_val < 0:
+        raise ValueError(f"USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_MAX_COUNT must be >= 0, got {_knowledge_max_count_val}")
+    USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_MAX_COUNT = _knowledge_max_count_val
+else:
+    USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_MAX_COUNT = None
+
+_knowledge_max_size_raw = os.getenv('USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_MAX_SIZE', '').strip()
+if _knowledge_max_size_raw:
+    _knowledge_max_size_val = int(_knowledge_max_size_raw)
+    if _knowledge_max_size_val < 0:
+        raise ValueError(f"USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_MAX_SIZE must be >= 0, got {_knowledge_max_size_val}")
+    USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_MAX_SIZE = _knowledge_max_size_val
+else:
+    USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_MAX_SIZE = None
+
 USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS = (
     os.getenv('USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS', 'False').lower() == 'true'
 )
@@ -1926,6 +1944,8 @@ DEFAULT_USER_PERMISSIONS = {
     'workspace': {
         'models': USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS,
         'knowledge': USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS,
+        'knowledge_max_count': USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_MAX_COUNT,
+        'knowledge_max_size': USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_MAX_SIZE,
         'prompts': USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS,
         'tools': USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS,
         'skills': USER_PERMISSIONS_WORKSPACE_SKILLS_ACCESS,

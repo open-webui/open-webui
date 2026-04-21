@@ -175,6 +175,8 @@ async def get_user_permissisions(
 class WorkspacePermissions(BaseModel):
     models: bool = False
     knowledge: bool = False
+    knowledge_max_count: Optional[int] = Field(default=None, ge=0)
+    knowledge_max_size: Optional[int] = Field(default=None, ge=0)
     prompts: bool = False
     tools: bool = False
     skills: bool = False

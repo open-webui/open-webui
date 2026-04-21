@@ -9,7 +9,9 @@ from open_webui.models.access_grants import (
     strip_anyone_access_grants,
     strip_user_access_grants,
 )
+from open_webui.models.config import Config
 from open_webui.models.groups import Groups
+from open_webui.models.knowledge import Knowledges
 from open_webui.models.users import UserModel
 from open_webui.utils.json_codec import JSONCodec
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,10 +45,21 @@ async def get_permissions(
     def combine_permissions(permissions: dict[str, Any], group_permissions: dict[str, Any]) -> dict[str, Any]:
         """Combine permissions from multiple groups by taking the most permissive value."""
         for key, value in group_permissions.items():
+            if value is None:
+                continue  # None means "not configured for this group", skip
             if isinstance(value, dict):
                 if key not in permissions:
                     permissions[key] = {}
                 permissions[key] = combine_permissions(permissions[key], value)
+            elif isinstance(value, int) and not isinstance(value, bool):
+                if key not in permissions or permissions[key] is None:
+                    permissions[key] = value
+                elif isinstance(permissions[key], int) and not isinstance(permissions[key], bool):
+                    # 0 = unlimited (most permissive), otherwise take the highest limit
+                    if permissions[key] == 0 or value == 0:
+                        permissions[key] = 0
+                    else:
+                        permissions[key] = max(permissions[key], value)
             else:
                 if key not in permissions:
                     permissions[key] = value
@@ -103,6 +116,89 @@ async def has_permission(
     # Check default permissions afterward if the group permissions don't allow it
     default_permissions = fill_missing_permissions(default_permissions, DEFAULT_USER_PERMISSIONS)
     return get_permission(default_permissions, permission_hierarchy)
+
+
+async def get_permission_value(
+    user_id: str,
+    permission_key: str,
+    default_permissions: dict[str, Any] = {},
+    db: AsyncSession | None = None,
+) -> Any:
+    """
+    Return the raw value of a permission for a user (int, bool, None, etc.).
+
+    For integer-valued permissions across multiple groups the most permissive
+    value is returned: 0 means unlimited (always wins), otherwise the maximum.
+    Returns None when no group or default has a value for the key.
+    """
+
+    def traverse(permissions: dict[str, Any], keys: list[str]) -> Any:
+        for key in keys:
+            if not isinstance(permissions, dict) or key not in permissions:
+                return None
+            permissions = permissions[key]
+        return permissions
+
+    permission_hierarchy = permission_key.split('.')
+    user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+
+    best: Any = None
+    for group in user_groups:
+        value = traverse(group.permissions or {}, permission_hierarchy)
+        if value is None:
+            continue
+        if isinstance(value, int) and not isinstance(value, bool):
+            if best is None:
+                best = value
+            elif best == 0 or value == 0:
+                best = 0  # 0 = unlimited, always wins
+            else:
+                best = max(best, value)
+        elif value and best is None:
+            best = value
+
+    if best is not None:
+        return best
+
+    # Fall back to default permissions, backfilling any keys missing from the
+    # persisted defaults (e.g. newly added permissions) from the compiled-in
+    # DEFAULT_USER_PERMISSIONS so they take effect without an admin re-save.
+    merged = fill_missing_permissions(default_permissions, DEFAULT_USER_PERMISSIONS)
+    return traverse(merged, permission_hierarchy)
+
+
+async def enforce_knowledge_upload_limits(
+    user: UserModel,
+    knowledge_id: str,
+    file_size: int,
+    db: AsyncSession | None = None,
+) -> None:
+    """
+    Raise ValueError if adding a file of `file_size` bytes to `knowledge_id`
+    would exceed the caller's per-group (or default) knowledge base limits.
+
+    Admins always bypass. Every code path that links a file to a knowledge
+    base should call this before doing so, rather than re-deriving the check —
+    the limits only mean anything if every path enforces them.
+    """
+    if user is None or user.role == 'admin':
+        return
+
+    default_permissions = await Config.get('user.permissions')
+
+    max_count = await get_permission_value(
+        user.id, 'workspace.knowledge_max_count', default_permissions, db=db,
+    )
+    if max_count is not None and max_count != 0:
+        current_count = await Knowledges.get_file_count_by_id(knowledge_id, db=db)
+        if current_count >= max_count:
+            raise ValueError(f'Knowledge base file limit reached ({max_count} files maximum).')
+
+    max_size = await get_permission_value(
+        user.id, 'workspace.knowledge_max_size', default_permissions, db=db,
+    )
+    if max_size is not None and max_size != 0 and file_size > max_size * 1024 * 1024:
+        raise ValueError(f'File size exceeds the {max_size} MB limit for knowledge base uploads.')
 
 
 async def has_access(

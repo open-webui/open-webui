@@ -91,7 +91,34 @@
 					ariaLabel={$i18n.t('Knowledge Access')}
 				/>
 			</div>
-			{#if defaultPermissions?.workspace?.knowledge && !permissions.workspace.knowledge}
+			{#if permissions.workspace.knowledge}
+				<div class="ml-2 flex flex-col gap-2 pt-0.5 pb-1">
+					<div class="flex w-full justify-between">
+						<div class="self-center text-xs">
+							{$i18n.t('Max Files per Knowledge Base')}
+						</div>
+						<input
+							class="w-20 text-xs text-right bg-transparent outline-hidden border-b border-gray-300 dark:border-gray-600"
+							type="number"
+							min="0"
+							placeholder={$i18n.t('Unlimited')}
+							bind:value={permissions.workspace.knowledge_max_count}
+						/>
+					</div>
+					<div class="flex w-full justify-between">
+						<div class="self-center text-xs">
+							{$i18n.t('Max File Size (MB)')}
+						</div>
+						<input
+							class="w-20 text-xs text-right bg-transparent outline-hidden border-b border-gray-300 dark:border-gray-600"
+							type="number"
+							min="0"
+							placeholder={$i18n.t('Unlimited')}
+							bind:value={permissions.workspace.knowledge_max_size}
+						/>
+					</div>
+				</div>
+			{:else if defaultPermissions?.workspace?.knowledge}
 				<div>
 					<div class="text-xs text-gray-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}

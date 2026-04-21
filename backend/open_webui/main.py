@@ -198,7 +198,7 @@ from open_webui.tasks import (
     stop_task,
 )  # Import from tasks.py
 from open_webui.utils import logger
-from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control import get_permission_value, has_permission
 from open_webui.utils.actions import chat_action as chat_action_handler
 from open_webui.utils.asgi_middleware import (
     AuthTokenMiddleware,
@@ -780,6 +780,18 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(CommitSessionMiddleware)
 app.add_middleware(AuthTokenMiddleware, fastapi_app=app)
 app.add_middleware(WebsocketUpgradeGuardMiddleware)
+
+
+async def _resolve_knowledge_limit(user, permission_key: str, user_permissions: dict):
+    """Return the effective knowledge file limit for a user.
+
+    Admin users get None (unlimited). For regular users, group/default permissions
+    are checked; 0 means unlimited (returns None).
+    """
+    if user is None or user.role == 'admin':
+        return None
+    value = await get_permission_value(user.id, permission_key, user_permissions)
+    return None if (value is None or value == 0) else value
 
 
 app.add_middleware(
@@ -2258,6 +2270,16 @@ async def get_app_config(request: Request):
                         'width': config.get('file.image_compression_width'),
                         'height': config.get('file.image_compression_height'),
                     },
+                },
+                'knowledge': {
+                    'max_size': await _resolve_knowledge_limit(
+                        user, 'workspace.knowledge_max_size',
+                        config.get('user.permissions') or {},
+                    ),
+                    'max_count': await _resolve_knowledge_limit(
+                        user, 'workspace.knowledge_max_count',
+                        config.get('user.permissions') or {},
+                    ),
                 },
                 'permissions': {**(config.get('user.permissions') or {})},
                 'google_drive': {
