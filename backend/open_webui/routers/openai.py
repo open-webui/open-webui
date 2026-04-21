@@ -9,6 +9,19 @@ from urllib.parse import quote, urlparse
 import aiohttp
 from aiocache import cached
 
+# Headers that become stale after aiohttp auto-decompresses upstream responses.
+# Forwarding them causes clients to attempt decompression on plain-text bodies.
+# See https://github.com/aio-libs/aiohttp/issues/4462
+_STRIP_PROXY_HEADERS = frozenset({
+    "Content-Encoding",
+    "Content-Length",
+    "Transfer-Encoding",
+})
+
+
+def _clean_proxy_headers(raw_headers) -> dict:
+    return {k: v for k, v in raw_headers.items() if k not in _STRIP_PROXY_HEADERS}
+
 
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
@@ -1219,7 +1232,7 @@ async def generate_chat_completion(
             return StreamingResponse(
                 stream_wrapper(r, content_handler=stream_chunks_handler),
                 status_code=r.status,
-                headers=dict(r.headers),
+                headers=_clean_proxy_headers(r.headers),
             )
         else:
             try:
@@ -1304,7 +1317,7 @@ async def embeddings(request: Request, form_data: dict, user):
             return StreamingResponse(
                 stream_wrapper(r),
                 status_code=r.status,
-                headers=dict(r.headers),
+                headers=_clean_proxy_headers(r.headers),
             )
         else:
             try:
@@ -1425,7 +1438,7 @@ async def responses(
             return StreamingResponse(
                 stream_wrapper(r),
                 status_code=r.status,
-                headers=dict(r.headers),
+                headers=_clean_proxy_headers(r.headers),
             )
         else:
             try:
@@ -1542,7 +1555,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             return StreamingResponse(
                 stream_wrapper(r),
                 status_code=r.status,
-                headers=dict(r.headers),
+                headers=_clean_proxy_headers(r.headers),
             )
         else:
             try:
