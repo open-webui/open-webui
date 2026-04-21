@@ -30,7 +30,7 @@ jobs:
       - name: Wait for healthy
         run: |
           for i in {1..30}; do
-            if curl -fsS http://localhost:3000/health >/dev/null 2>&1; then
+            if curl -fsS http://localhost:8080/health >/dev/null 2>&1; then
               echo "Service is healthy"
               exit 0
             fi
