@@ -1175,6 +1175,17 @@ async def generate_chat_completion(
                     part.get('text', '') for part in message['content'] if part.get('type') in ('input_text', 'text')
                 )
 
+    # Ensure Anthropic streaming responses include usage data.
+    # Anthropic's OpenAI-compat endpoint only returns usage when explicitly
+    # requested via stream_options. Without it, the middleware's normalize_usage
+    # finds nothing. setdefault preserves any client-provided value.
+    if (
+        is_anthropic_url(url)
+        and isinstance(payload, dict)
+        and payload.get('stream')
+    ):
+        payload.setdefault('stream_options', {'include_usage': True})
+
     payload = json.dumps(payload)
 
     r = None
