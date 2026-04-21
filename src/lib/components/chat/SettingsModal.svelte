@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, onMount, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { config, models, settings, user } from '$lib/stores';
+	import { config, models, settings, settingsTab, user } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
 	import { getModels as _getModels } from '$lib/apis';
 	import { goto } from '$app/navigation';
@@ -547,6 +547,14 @@
 	};
 
 	let selectedTab = 'general';
+
+	$: if (show) {
+		selectedTab = $settingsTab || 'general';
+	}
+
+	$: if (selectedTab) {
+		settingsTab.set(selectedTab);
+	}
 
 	// Function to handle sideways scrolling
 	const scrollHandler = (event) => {
