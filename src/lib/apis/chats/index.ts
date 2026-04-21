@@ -300,6 +300,79 @@ export const getSharedChatList = async (token: string = '', page: number = 1, fi
 	}));
 };
 
+export const getSharedChatListV2 = async (
+	token: string = '',
+	page: number = 1,
+	filters?: {
+		query?: string;
+		order_by?: string;
+		direction?: 'asc' | 'desc';
+	}
+) => {
+	return getSharedChatList(token, page, filters);
+};
+
+export const getSharedChatsCount = async (token: string = '', query?: string) => {
+	let error = null;
+	const searchParams = new URLSearchParams();
+	if (query) {
+		searchParams.append('query', query);
+	}
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/shared/count?${searchParams.toString()}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const revokeSharedChatsBatch = async (token: string = '', chat_ids: string[]) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/shared/revoke`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({ ids: chat_ids })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const getAllChats = async (token: string) => {
 	let error = null;
 

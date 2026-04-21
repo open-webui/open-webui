@@ -3,6 +3,7 @@ import logging
 from typing import Optional
 from uuid import uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func, select
 import asyncio
 from fastapi.responses import StreamingResponse
 
@@ -23,7 +24,7 @@ from open_webui.models.chats import (
     ChatHistoryStats,
     MessageStats,
 )
-from open_webui.models.shared_chats import SharedChats, SharedChatResponse
+from open_webui.models.shared_chats import SharedChats, SharedChat, SharedChatResponse
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.tags import TagModel, Tags
 from open_webui.models.folders import Folders
@@ -207,6 +208,21 @@ class ChatStatsExportList(BaseModel):
     items: list[ChatStatsExport]
     total: int
     page: int
+
+
+class SharedChatCountResponse(BaseModel):
+    total: int
+
+
+class BatchRevokeSharedChatsRequest(BaseModel):
+    ids: list[str]
+
+
+class BatchRevokeSharedChatsResponse(BaseModel):
+    requested: int
+    revoked: int
+    skipped: int
+    failed_ids: list[str]
 
 
 def _process_chat_for_export(chat) -> Optional[ChatStatsExport]:
@@ -785,6 +801,62 @@ async def unarchive_all_chats(user=Depends(get_verified_user), db: AsyncSession 
 ############################
 
 
+@router.get('/shared/count', response_model=SharedChatCountResponse)
+async def get_shared_session_user_chat_count(
+    query: Optional[str] = None,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    stmt = select(func.count()).select_from(SharedChat).where(SharedChat.user_id == user.id)
+    if query:
+        stmt = stmt.where(SharedChat.title.ilike(f'%{query}%'))
+
+    result = await db.execute(stmt)
+    total = result.scalar() or 0
+    return SharedChatCountResponse(total=total)
+
+
+@router.post('/shared/revoke', response_model=BatchRevokeSharedChatsResponse)
+async def revoke_shared_chats_batch(
+    form_data: BatchRevokeSharedChatsRequest,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    unique_ids = list(dict.fromkeys(form_data.ids))
+    if len(unique_ids) == 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='ids must not be empty')
+    if len(unique_ids) > 200:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='At most 200 unique chat ids are allowed per request',
+        )
+
+    revoked = 0
+    skipped = 0
+
+    for chat_id in unique_ids:
+        chat = await Chats.get_chat_by_id_and_user_id(chat_id, user.id, db=db)
+        if not chat or not chat.share_id:
+            skipped += 1
+            continue
+
+        deleted = await SharedChats.delete_by_chat_id(chat_id, db=db)
+        cleared = await Chats.update_chat_share_id_by_id(chat_id, None, db=db)
+
+        if deleted and cleared:
+            await AccessGrants.set_access_grants('shared_chat', chat_id, [], db=db)
+            revoked += 1
+        else:
+            skipped += 1
+
+    return BatchRevokeSharedChatsResponse(
+        requested=len(unique_ids),
+        revoked=revoked,
+        skipped=skipped,
+        failed_ids=[],
+    )
+
+
 @router.get('/shared', response_model=list[SharedChatResponse])
 async def get_shared_session_user_chat_list(
     page: Optional[int] = None,
@@ -797,7 +869,7 @@ async def get_shared_session_user_chat_list(
     if page is None:
         page = 1
 
-    limit = 60
+    limit = 20
     skip = (page - 1) * limit
 
     filter = {}
