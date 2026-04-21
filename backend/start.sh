@@ -79,15 +79,20 @@ else
     ARGS=(--workers "$UVICORN_WORKERS")
 fi
 
-export FRONTEND_BUILD_DIR="/home/shared/hyu-math/build"
+export FRONTEND_BUILD_DIR="${FRONTEND_BUILD_DIR:-/home/shared/hyu-math/build}"
 export ENABLE_OAUTH_SIGNUP=true
 export HANYANG_CLIENT_ID=b0e42ba07cdfa2e3be3889d7186d33f7
 export HANYANG_CLIENT_SECRET=196ca9394c6da9abab7c2e26bed3c7
-export HANYANG_REDIRECT_URI=http://hy-aitutor.hanyang.ac.kr:8080/oauth/hanyang/login/callback
+export HANYANG_REDIRECT_URI=https://hy-aitutor.hanyang.ac.kr/oauth/hanyang/login/callback
 export HANYANG_OAUTH_SCOPE=35,10
+
+# Langfuse Configuration
+export LANGFUSE_PUBLIC_KEY=pk-lf-304294de-1f20-4eb0-922e-bce40e360f39
+export LANGFUSE_SECRET_KEY=sk-lf-581cd7be-77aa-4625-9566-4dd3c2ff14d7
+export LANGFUSE_HOST=https://us.cloud.langfuse.com
 # Run uvicorn
 # WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec "$PYTHON_CMD" -m uvicorn open_webui.main:app \
-WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" DATA_DIR="/home/shared/hyu-math/backend/open_webui/data" python -m uvicorn open_webui.main:app \
+WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" DATA_DIR="${DATA_DIR:-/home/shared/hyu-math/backend/open_webui/data}" python -m uvicorn open_webui.main:app \
     --host "$HOST" \
     --port "$PORT" \
     --forwarded-allow-ips '*' \
