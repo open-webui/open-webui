@@ -885,7 +885,7 @@
 		if (terminalFileData) {
 			try {
 				const data = JSON.parse(terminalFileData);
-				if (data.name && data.path && data.url && data.key) {
+				if (data.name && data.path && typeof data.url === 'string' && typeof data.key === 'string') {
 					toast.info($i18n.t('Downloading {{name}} from OpenTerminal...', { name: data.name }));
 					const result = await downloadFileBlob(data.url, data.key, data.path, data.sessionId);
 					if (result && result.blob) {
@@ -900,7 +900,10 @@
 					e.stopPropagation();
 					return;
 				}
-			} catch (_) {}
+			} catch (err) {
+				console.error('Failed to handle terminal file drop:', err);
+				toast.error($i18n.t('Failed to process terminal file drop'));
+			}
 		}
 
 		if (e.dataTransfer?.files) {
