@@ -135,12 +135,29 @@ def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
 
 async def convert_streaming_response_ollama_to_openai(ollama_streaming_response):
     has_tool_calls = False
+    in_reasoning = False
+
     async for data in ollama_streaming_response.body_iterator:
         data = json.loads(data)
 
         model = data.get('model', 'ollama')
         message_content = data.get('message', {}).get('content', None)
         reasoning_content = data.get('message', {}).get('thinking', None)
+
+        # Convert Ollama's `thinking` field to <think> tags in standard content.
+        # This makes reasoning visible to ALL OpenAI-compatible clients, not just
+        # those that understand the non-standard `reasoning_content` delta field.
+        # Open WebUI's browser middleware already renders <think> as collapsible blocks.
+        if reasoning_content:
+            if not in_reasoning:
+                in_reasoning = True
+                message_content = "<think>\n" + reasoning_content
+            else:
+                message_content = reasoning_content
+            reasoning_content = None
+        elif in_reasoning and message_content:
+            in_reasoning = False
+            message_content = "\n</think>\n\n" + message_content
         tool_calls = data.get('message', {}).get('tool_calls', None)
         openai_tool_calls = None
 
