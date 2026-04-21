@@ -128,7 +128,7 @@
 			<div
 				class="pointer-events-auto z-20 flex justify-between items-center p-2.5 font-primar text-gray-900 dark:text-white"
 			>
-				<div class="flex-1 flex items-center justify-between pr-1">
+				<div class="flex-1 flex items-center justify-between">
 					<div class="flex items-center space-x-2">
 						<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
 							<button
@@ -217,16 +217,6 @@
 					</div>
 				</div>
 
-				<button
-					class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-gray-850"
-					on:click={() => {
-						dispatch('close');
-						showControls.set(false);
-						showArtifacts.set(false);
-					}}
-				>
-					<XMark className="size-3.5 text-gray-900 dark:text-white" />
-				</button>
 			</div>
 		{/if}
 

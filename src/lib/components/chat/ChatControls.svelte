@@ -20,7 +20,8 @@
 		settings,
 		showFileNavPath,
 		selectedTerminalId,
-		user
+		user,
+		artifactContents
 	} from '$lib/stores';
 
 	import { uploadFile } from '$lib/apis/files';
@@ -75,8 +76,10 @@
 		!!$selectedTerminalId ||
 		(codeInterpreterEnabled && $config?.code?.interpreter_engine !== 'jupyter');
 	$: showOverviewTab = hasMessages;
+	$: showArtifactsTab = ($artifactContents ?? []).length > 0;
 
 	// Tab fallback: if active tab becomes hidden, switch to next available
+	$: if (!showArtifactsTab && activeTab === 'artifacts') activeTab = 'controls';
 	$: if (!showOverviewTab && activeTab === 'overview') activeTab = 'controls';
 	$: if (!showFilesTab && activeTab === 'files') activeTab = 'controls';
 	$: if (!showControlsTab && activeTab === 'controls') {
@@ -93,6 +96,12 @@
 	$: if ($showFileNavPath) {
 		activeTab = 'files';
 		showControls.set(true);
+	}
+
+	$: if ($showArtifacts) {
+		activeTab = 'artifacts';
+		showControls.set(true);
+		showArtifacts.set(false);
 	}
 
 	// Auto-open Files tab when a terminal is selected (suppress panel open when full-screen)
@@ -258,7 +267,7 @@
 	$: if (paneReady && !chatId) closeHandler();
 
 	// Helper: is a "special" full-screen panel active?
-	$: specialPanel = $showCallOverlay || $showArtifacts || $showEmbeds;
+	$: specialPanel = $showCallOverlay || $showEmbeds;
 </script>
 
 {#if !largeScreen}
@@ -285,17 +294,15 @@
 					</div>
 				{:else if $showEmbeds}
 					<Embeds />
-				{:else if $showArtifacts}
-					<Artifacts {history} />
 				{:else}
 					<!-- Controls + Files tabs -->
 					<div class="flex flex-col h-full min-h-0">
 						<!-- Tab bar -->
 						<div class="flex items-center justify-between px-2 pt-2 pb-2 shrink-0">
-							<div class="flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
+							<div class="flex-1 flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
 								{#if showControlsTab}
 									<button
-										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+										class="flex-1 px-2 py-1 text-[13px] rounded-lg transition whitespace-nowrap {activeTab ===
 										'controls'
 											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 											: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
@@ -306,7 +313,7 @@
 								{/if}
 								{#if showFilesTab}
 									<button
-										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+										class="flex-1 px-2 py-1 text-[13px] rounded-lg transition whitespace-nowrap {activeTab ===
 										'files'
 											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 											: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
@@ -317,7 +324,7 @@
 								{/if}
 								{#if showOverviewTab}
 									<button
-										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+										class="flex-1 px-2 py-1 text-[13px] rounded-lg transition whitespace-nowrap {activeTab ===
 										'overview'
 											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 											: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
@@ -326,9 +333,20 @@
 										{$i18n.t('Overview')}
 									</button>
 								{/if}
+								{#if showArtifactsTab}
+									<button
+										class="flex-1 px-2 py-1 text-[13px] rounded-lg transition whitespace-nowrap {activeTab ===
+										'artifacts'
+											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
+											: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+										on:click={() => (activeTab = 'artifacts')}
+									>
+										{$i18n.t('Artifacts')}
+									</button>
+								{/if}
 							</div>
 							<button
-								class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+								class="p-1 shrink-0 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
 								on:click={() => showControls.set(false)}
 								aria-label={$i18n.t('Close')}
 							>
@@ -352,7 +370,7 @@
 									? 'overflow-y-auto px-3 pt-1'
 									: ''}"
 						>
-							{#if activeTab === 'overview'}
+								{#if activeTab === 'overview'}
 								<Overview
 									{history}
 									onNodeClick={(e) => {
@@ -361,6 +379,8 @@
 									}}
 									onClose={() => showControls.set(false)}
 								/>
+							{:else if activeTab === 'artifacts'}
+								<Artifacts {history} />
 							{:else if activeTab === 'files' && $selectedTerminalId}
 								<FileNav onAttach={handleTerminalAttach} {chatId} />
 							{:else if activeTab === 'files' && codeInterpreterEnabled}
@@ -431,17 +451,15 @@
 						</div>
 					{:else if $showEmbeds}
 						<Embeds overlay={dragged} />
-					{:else if $showArtifacts}
-						<Artifacts {history} overlay={dragged} />
 					{:else}
 						<!-- Controls + Files tabs -->
 						<div class="flex flex-col h-full min-h-0">
 							<!-- Tab bar -->
 							<div class="flex items-center justify-between px-2 pt-2 pb-2 shrink-0">
-								<div class="flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
+								<div class="flex-1 flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
 									{#if showControlsTab}
 										<button
-											class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+											class="flex-1 px-2 py-1 text-[13px] rounded-lg transition whitespace-nowrap {activeTab ===
 											'controls'
 												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 												: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
@@ -452,7 +470,7 @@
 									{/if}
 									{#if showFilesTab}
 										<button
-											class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+											class="flex-1 px-2 py-1 text-[13px] rounded-lg transition whitespace-nowrap {activeTab ===
 											'files'
 												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 												: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
@@ -463,7 +481,7 @@
 									{/if}
 									{#if showOverviewTab}
 										<button
-											class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+											class="flex-1 px-2 py-1 text-[13px] rounded-lg transition whitespace-nowrap {activeTab ===
 											'overview'
 												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
 												: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
@@ -472,9 +490,20 @@
 											{$i18n.t('Overview')}
 										</button>
 									{/if}
+									{#if showArtifactsTab}
+										<button
+											class="flex-1 px-2 py-1 text-[13px] rounded-lg transition whitespace-nowrap {activeTab ===
+											'artifacts'
+												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
+												: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+											on:click={() => (activeTab = 'artifacts')}
+										>
+											{$i18n.t('Artifacts')}
+										</button>
+									{/if}
 								</div>
 								<button
-									class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+									class="p-1 shrink-0 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
 									on:click={() => showControls.set(false)}
 									aria-label={$i18n.t('Close')}
 								>
@@ -512,6 +541,8 @@
 										}}
 										onClose={() => showControls.set(false)}
 									/>
+								{:else if activeTab === 'artifacts'}
+									<Artifacts {history} overlay={dragged} />
 								{:else if activeTab === 'files' && $selectedTerminalId}
 									<FileNav onAttach={handleTerminalAttach} overlay={dragged} {chatId} />
 								{:else if activeTab === 'files' && codeInterpreterEnabled}
