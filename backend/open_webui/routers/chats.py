@@ -833,27 +833,36 @@ async def revoke_shared_chats_batch(
 
     revoked = 0
     skipped = 0
+    failed_ids = []
 
     for chat_id in unique_ids:
-        chat = await Chats.get_chat_by_id_and_user_id(chat_id, user.id, db=db)
-        if not chat or not chat.share_id:
-            skipped += 1
-            continue
+        try:
+            chat = await Chats.get_chat_by_id_and_user_id(chat_id, user.id, db=db)
+            if not chat or not chat.share_id:
+                skipped += 1
+                continue
 
-        deleted = await SharedChats.delete_by_chat_id(chat_id, db=db)
-        cleared = await Chats.update_chat_share_id_by_id(chat_id, None, db=db)
+            deleted = await SharedChats.delete_by_chat_id(chat_id, db=db)
+            cleared = await Chats.update_chat_share_id_by_id(chat_id, None, db=db)
+            grants_cleared = False
+            if deleted and cleared:
+                await AccessGrants.set_access_grants('shared_chat', chat_id, [], db=db)
+                grants_cleared = True
 
-        if deleted and cleared:
-            await AccessGrants.set_access_grants('shared_chat', chat_id, [], db=db)
-            revoked += 1
-        else:
+            if deleted and cleared and grants_cleared:
+                revoked += 1
+            else:
+                skipped += 1
+                failed_ids.append(chat_id)
+        except Exception:
             skipped += 1
+            failed_ids.append(chat_id)
 
     return BatchRevokeSharedChatsResponse(
         requested=len(unique_ids),
         revoked=revoked,
         skipped=skipped,
-        failed_ids=[],
+        failed_ids=failed_ids,
     )
 
 

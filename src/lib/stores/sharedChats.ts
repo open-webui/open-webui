@@ -1,16 +1,16 @@
 import { writable } from 'svelte/store';
 
-// ============ 成员C 新增：共享聊天状态管理 ============
+// Shared chats selection state
 
-// 选中的共享聊天ID集合（跨分页保持）
+// Selected shared chat IDs (persist across pages)
 export const selectedChatIds = writable<Set<string>>(new Set());
 
-// 清空所有选中
+// Clear all selected IDs
 export const clearSelection = () => {
   selectedChatIds.set(new Set());
 };
 
-// 切换单个聊天的选中状态
+// Toggle a single chat selection
 export const toggleSelectChat = (chatId: string) => {
   selectedChatIds.update(set => {
     const newSet = new Set(set);
@@ -23,7 +23,7 @@ export const toggleSelectChat = (chatId: string) => {
   });
 };
 
-// 全选当前页的所有聊天
+// Select all chats on current page
 export const selectAllOnPage = (chatIds: string[]) => {
   selectedChatIds.update(set => {
     const newSet = new Set(set);
@@ -32,7 +32,7 @@ export const selectAllOnPage = (chatIds: string[]) => {
   });
 };
 
-// 取消全选当前页的所有聊天
+// Deselect all chats on current page
 export const deselectAllOnPage = (chatIds: string[]) => {
   selectedChatIds.update(set => {
     const newSet = new Set(set);

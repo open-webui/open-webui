@@ -3,7 +3,7 @@
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { deleteSharedChatById, getSharedChatListV2, getSharedChatsCount, revokeSharedChatsBatch } from '$lib/apis/chats';
-	import { selectedChatIds, clearSelection, toggleSelectChat, selectAllOnPage, deselectAllOnPage } from '$lib/stores/sharedChats';
+	import { selectedChatIds, clearSelection, selectAllOnPage, deselectAllOnPage } from '$lib/stores/sharedChats';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import SharedChatsTable from './SharedChatsTable.svelte';
@@ -24,10 +24,17 @@
 	let totalCount = 0;
 	let searchDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
 	let requestVersion = 0;
+	let prevShow = false;
 
 	$: hasPrevPage = page > 1;
-	$: selectedCount = 0;
-	selectedChatIds.subscribe(val => { selectedCount = val.size; });
+	$: selectedCount = $selectedChatIds.size;
+
+	const clearScheduledLoad = () => {
+		if (searchDebounceTimeout) {
+			clearTimeout(searchDebounceTimeout);
+			searchDebounceTimeout = null;
+		}
+	};
 
 	const loadChats = async () => {
 		if (!show) return;
@@ -42,23 +49,26 @@
 
 			const res = await getSharedChatListV2(localStorage.token, page, filters);
 			if (currentRequest !== requestVersion) return;
-			chatList = Array.isArray(res) ? res : (res?.data ?? []);
-			hasNextPage = (chatList.length ?? 0) >= PAGE_SIZE;
+			const nextChatList = Array.isArray(res) ? res : (res?.data ?? []);
 			
 			const countRes = await getSharedChatsCount(localStorage.token, query);
 			if (currentRequest !== requestVersion) return;
-			totalCount = Array.isArray(countRes) ? countRes.length : (countRes?.total ?? 0);
+			const nextTotalCount = Array.isArray(countRes) ? countRes.length : (countRes?.total ?? 0);
+
+			chatList = nextChatList;
+			totalCount = nextTotalCount;
+			hasNextPage = page * PAGE_SIZE < nextTotalCount;
 		} catch (error: any) {
 			toast.error(error.message || 'Failed to load shared chats');
 		} finally {
-			loading = false;
+			if (currentRequest === requestVersion) {
+				loading = false;
+			}
 		}
 	};
 
 	const scheduleLoad = () => {
-		if (searchDebounceTimeout) {
-			clearTimeout(searchDebounceTimeout);
-		}
+		clearScheduledLoad();
 		searchDebounceTimeout = setTimeout(loadChats, 300);
 	};
 
@@ -88,9 +98,7 @@
 	};
 
 	const unshareSelected = async () => {
-		let ids: string[] = [];
-		const unsubscribe = selectedChatIds.subscribe(val => { ids = Array.from(val); });
-		unsubscribe();
+		const ids = Array.from($selectedChatIds);
 		
 		if (ids.length === 0) return;
 		
@@ -107,30 +115,18 @@
 
 	const toggleSelectChatHandler = (chatId: string, checked: boolean) => {
 		if (checked) {
-			selectedChatIds.update(set => new Set(set).add(chatId));
+			selectAllOnPage([chatId]);
 		} else {
-			selectedChatIds.update(set => {
-				const newSet = new Set(set);
-				newSet.delete(chatId);
-				return newSet;
-			});
+			deselectAllOnPage([chatId]);
 		}
 	};
 
 	const toggleSelectAllPage = (checked: boolean) => {
 		const chatIds = chatList.map(c => c.id);
 		if (checked) {
-			selectedChatIds.update(set => {
-				const newSet = new Set(set);
-				chatIds.forEach(id => newSet.add(id));
-				return newSet;
-			});
+			selectAllOnPage(chatIds);
 		} else {
-			selectedChatIds.update(set => {
-				const newSet = new Set(set);
-				chatIds.forEach(id => newSet.delete(id));
-				return newSet;
-			});
+			deselectAllOnPage(chatIds);
 		}
 	};
 
@@ -146,14 +142,15 @@
 		loadChats();
 	};
 
-	$: if (show) {
+	$: if (show && !prevShow) {
+		prevShow = true;
 		page = 1;
 		loadChats();
-	} else {
-		if (searchDebounceTimeout) {
-			clearTimeout(searchDebounceTimeout);
-			searchDebounceTimeout = null;
-		}
+	}
+
+	$: if (!show && prevShow) {
+		prevShow = false;
+		clearScheduledLoad();
 		page = 1;
 		query = '';
 	}
