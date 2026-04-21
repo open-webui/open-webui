@@ -2465,6 +2465,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # tool resolution (tool_ids, MCP servers, builtin tools).
     payload_tools = form_data.get('tools', None)
 
+    # Strip client-provided tools for models that don't support native tool calling.
+    # API clients (e.g. @ai-sdk/openai-compatible) may always send tools/tool_choice
+    # even for models that reject them (DeepSeek R1, etc.), causing Ollama errors.
+    if payload_tools:
+        function_calling_mode = metadata.get('params', {}).get('function_calling') or \
+            model.get('info', {}).get('params', {}).get('function_calling')
+        if function_calling_mode != 'native':
+            form_data.pop('tools', None)
+            form_data.pop('tool_choice', None)
+            payload_tools = None
+
     # Skills
     user_skill_ids = set(form_data.pop('skill_ids', None) or [])
     model_skill_ids = set(model.get('info', {}).get('meta', {}).get('skillIds', []))
