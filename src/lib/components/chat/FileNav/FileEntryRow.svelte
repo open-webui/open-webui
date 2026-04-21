@@ -17,6 +17,7 @@
 	export let currentPath: string;
 	export let terminalUrl: string = '';
 	export let terminalKey: string = '';
+	export let sessionId: string = '';
 
 	export let onOpen: (entry: FileEntry) => void = () => {};
 	export let onDownload: (path: string) => void = () => {};
@@ -191,7 +192,8 @@
 							path: filePath,
 							name: entry.name,
 							url: terminalUrl,
-							key: terminalKey
+							key: terminalKey,
+							sessionId
 						})
 					);
 				}

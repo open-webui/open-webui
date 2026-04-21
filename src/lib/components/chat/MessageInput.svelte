@@ -887,7 +887,7 @@
 				const data = JSON.parse(terminalFileData);
 				if (data.name && data.path && data.url && data.key) {
 					toast.info($i18n.t('Downloading {{name}} from OpenTerminal...', { name: data.name }));
-					const result = await downloadFileBlob(data.url, data.key, data.path);
+					const result = await downloadFileBlob(data.url, data.key, data.path, data.sessionId);
 					if (result && result.blob) {
 						const file = new File([result.blob], result.filename || data.name, {
 							type: result.blob.type

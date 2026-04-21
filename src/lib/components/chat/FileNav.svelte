@@ -1341,6 +1341,7 @@
 									{currentPath}
 									terminalUrl={selectedTerminal.url}
 									terminalKey={selectedTerminal.key}
+									sessionId={chatId ?? ''}
 									selected={selectedEntries.has(
 										entry.type === 'directory'
 											? `${currentPath}${entry.name}/`
