@@ -58,6 +58,7 @@
 	import { getChatById } from '$lib/apis/chats';
 	import { getSessionUser } from '$lib/apis/auths';
 	import { getTools } from '$lib/apis/tools';
+	import { downloadFileBlob } from '$lib/apis/terminal';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
@@ -828,8 +829,12 @@
 	const onDragOver = (e: DragEvent) => {
 		e.preventDefault();
 
-		// Check if a file or a sidebar chat item is being dragged.
-		if (e.dataTransfer?.types?.includes('Files') || e.dataTransfer?.types?.includes('text/plain')) {
+		// Check if a file, sidebar chat item, or terminal file is being dragged.
+		if (
+			e.dataTransfer?.types?.includes('Files') ||
+			e.dataTransfer?.types?.includes('text/plain') ||
+			e.dataTransfer?.types?.includes('application/x-terminal-file')
+		) {
 			dragged = true;
 		} else {
 			dragged = false;
@@ -874,6 +879,28 @@
 			} catch (_) {
 				// Not valid JSON — fall through to file handling
 			}
+		}
+
+		const terminalFileData = e.dataTransfer?.getData('application/x-terminal-file');
+		if (terminalFileData) {
+			try {
+				const data = JSON.parse(terminalFileData);
+				if (data.name && data.path && data.url && data.key) {
+					toast.info($i18n.t('Downloading {{name}} from OpenTerminal...', { name: data.name }));
+					const result = await downloadFileBlob(data.url, data.key, data.path);
+					if (result && result.blob) {
+						const file = new File([result.blob], result.filename || data.name, {
+							type: result.blob.type
+						});
+						inputFilesHandler([file]);
+					} else {
+						toast.error($i18n.t('Failed to download file from OpenTerminal'));
+					}
+					dragged = false;
+					e.stopPropagation();
+					return;
+				}
+			} catch (_) {}
 		}
 
 		if (e.dataTransfer?.files) {
