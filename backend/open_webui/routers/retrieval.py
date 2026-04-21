@@ -497,6 +497,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'WEB_FETCH_MAX_CONTENT_LENGTH': request.app.state.config.WEB_FETCH_MAX_CONTENT_LENGTH,
             'WEB_LOADER_CONCURRENT_REQUESTS': request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
             'WEB_SEARCH_DOMAIN_FILTER_LIST': request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            'WEB_SEARCH_WARNING_ENABLED': request.app.state.config.WEB_SEARCH_WARNING_ENABLED,
             'BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL': request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
             'BYPASS_WEB_SEARCH_WEB_LOADER': request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER,
             'OLLAMA_CLOUD_WEB_SEARCH_API_KEY': request.app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
@@ -564,6 +565,7 @@ class WebConfig(BaseModel):
     WEB_SEARCH_RESULT_COUNT: int | None = None
     WEB_SEARCH_CONCURRENT_REQUESTS: int | None = None
     WEB_SEARCH_DOMAIN_FILTER_LIST: list[str | None] = []
+    WEB_SEARCH_WARNING_ENABLED: bool | None = None
     WEB_FETCH_MAX_CONTENT_LENGTH: int | None = None
     WEB_LOADER_CONCURRENT_REQUESTS: int | None = None
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL: bool | None = None
@@ -1047,6 +1049,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         request.app.state.config.WEB_FETCH_MAX_CONTENT_LENGTH = form_data.web.WEB_FETCH_MAX_CONTENT_LENGTH
         request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS = form_data.web.WEB_LOADER_CONCURRENT_REQUESTS
         request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST = form_data.web.WEB_SEARCH_DOMAIN_FILTER_LIST
+        request.app.state.config.WEB_SEARCH_WARNING_ENABLED = form_data.web.WEB_SEARCH_WARNING_ENABLED
         request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
             form_data.web.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
         )
@@ -1186,6 +1189,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'WEB_FETCH_MAX_CONTENT_LENGTH': request.app.state.config.WEB_FETCH_MAX_CONTENT_LENGTH,
             'WEB_LOADER_CONCURRENT_REQUESTS': request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
             'WEB_SEARCH_DOMAIN_FILTER_LIST': request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            'WEB_SEARCH_WARNING_ENABLED': request.app.state.config.WEB_SEARCH_WARNING_ENABLED,
             'BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL': request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
             'BYPASS_WEB_SEARCH_WEB_LOADER': request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER,
             'OLLAMA_CLOUD_WEB_SEARCH_API_KEY': request.app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY,

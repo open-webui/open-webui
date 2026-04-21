@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getRAGConfig, updateRAGConfig } from '$lib/apis/retrieval';
 	import Switch from '$lib/components/common/Switch.svelte';
+	import { config } from '$lib/stores';
 
 	import { models } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
@@ -148,6 +149,21 @@
 						</div>
 						<div class="flex items-center relative">
 							<Switch bind:state={webConfig.ENABLE_WEB_SEARCH} />
+						</div>
+					</div>
+
+					<div class="mb-2.5 flex w-full justify-between">
+						<div class="self-center text-xs font-medium">
+							{$i18n.t('Show Web Search Warning')}
+						</div>
+						<div class="flex items-center relative">
+							<Tooltip
+								content={$i18n.t(
+									'Display a warning to users when web search is enabled, informing them that data may be sent externally.'
+								)}
+							>
+								<Switch bind:state={webConfig.WEB_SEARCH_WARNING_ENABLED} />
+							</Tooltip>
 						</div>
 					</div>
 

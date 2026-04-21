@@ -160,6 +160,31 @@
 	let selectedValvesItemId = null;
 	let integrationsMenuCloseOnOutsideClick = true;
 
+	export let showWebSearchWarning = false;
+
+	// Show banner when web search is enabled (respect both config variants, fallback to true)
+	$: showWebSearchWarning =
+		webSearchEnabled &&
+		(($config?.features as any)?.WEB_SEARCH_WARNING_ENABLED ??
+			($config?.features as any)?.web_search_warning_enabled ??
+			false);
+
+	// Show toast warning when web search is enabled
+	let previousWebSearchState = false;
+	$: {
+		const warningEnabled =
+			($config?.features as any)?.WEB_SEARCH_WARNING_ENABLED ??
+			($config?.features as any)?.web_search_warning_enabled ??
+			false;
+		if (webSearchEnabled && !previousWebSearchState && warningEnabled) {
+			toast.warning($i18n.t('Web search is enabled. Data may be sent to external services.'), {
+				duration: 4000,
+				position: 'top-right'
+			});
+		}
+		previousWebSearchState = webSearchEnabled;
+	}
+
 	$: if (!showValvesModal) {
 		integrationsMenuCloseOnOutsideClick = true;
 	}
@@ -1728,6 +1753,29 @@
 									{/if}
 
 									<div class="ml-1 flex gap-1.5">
+										{#if showWebSearchWarning}
+											<div
+												class="w-full bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 px-4 py-2"
+											>
+												<div class="flex items-center justify-between gap-2">
+													<div class="flex items-center gap-2">
+														<GlobeAlt class="w-4 h-4 text-yellow-600 dark:text-yellow-500" />
+														<span class="text-xs text-yellow-800 dark:text-yellow-200 font-medium">
+															{$i18n.t(
+																'Web search is enabled. Data may be sent to external services.'
+															)}
+														</span>
+													</div>
+													<button
+														class="text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200"
+														on:click={() => (showWebSearchWarning = false)}
+													>
+														<XMark class="w-4 h-4" />
+													</button>
+												</div>
+											</div>
+										{/if}
+
 										{#if (selectedToolIds ?? []).length > 0}
 											<Tooltip
 												content={$i18n.t('{{COUNT}} Available Tools', {

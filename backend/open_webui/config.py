@@ -1519,6 +1519,12 @@ ENABLE_WEB_SEARCH = ConfigVar(
     os.getenv('ENABLE_WEB_SEARCH', 'False').lower() == 'true',
 )
 
+WEB_SEARCH_WARNING_ENABLED = ConfigVar(
+    'WEB_SEARCH_WARNING_ENABLED',
+    'rag.web.search.warning_enabled',
+    os.getenv('WEB_SEARCH_WARNING_ENABLED', 'False').lower() == 'true',
+)
+
 WEB_SEARCH_ENGINE = ConfigVar(
     'WEB_SEARCH_ENGINE',
     'rag.web.search.engine',
@@ -1606,7 +1612,6 @@ WEB_SEARCH_TRUST_ENV = ConfigVar(
     'rag.web.search.trust_env',
     os.getenv('WEB_SEARCH_TRUST_ENV', 'True').lower() == 'true',
 )
-
 
 OLLAMA_CLOUD_WEB_SEARCH_API_KEY = ConfigVar(
     'OLLAMA_CLOUD_WEB_SEARCH_API_KEY',
