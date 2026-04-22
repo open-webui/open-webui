@@ -17,7 +17,6 @@
 	import Image from '$lib/components/common/Image.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Sparkles from '../../icons/Sparkles.svelte';
-	import Pin from '../../icons/Pin.svelte';
 
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
@@ -213,25 +212,12 @@
 					<div class="mb-2 flex {($settings?.chatBubble ?? true) ? 'justify-end' : ''}">
 						<Tooltip content={getMcpPromptTooltip(message.mcpPromptSelection)}>
 							<div
-								class="inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs
-									{message.mcpPromptSelection.mode === 'chat'
-									? 'border-amber-200/60 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-400/10 dark:text-amber-200'
-									: 'border-sky-200/50 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-400/10 dark:text-sky-200'}"
+								class="inline-flex max-w-full items-center gap-1.5 rounded-full border border-sky-200/50 bg-sky-50 px-2.5 py-1 text-xs text-sky-700 dark:border-sky-500/20 dark:bg-sky-400/10 dark:text-sky-200"
 							>
-								{#if message.mcpPromptSelection.mode === 'chat'}
-									<Pin className="size-3.5 shrink-0" strokeWidth="1.75" />
-								{:else}
-									<Sparkles className="size-3.5 shrink-0" strokeWidth="1.75" />
-								{/if}
+								<Sparkles className="size-3.5 shrink-0" strokeWidth="1.75" />
 
 								<span class="truncate max-w-44">
 									{getMcpPromptDisplayName(message.mcpPromptSelection)}
-								</span>
-
-								<span class="shrink-0 text-[10px] uppercase tracking-wide opacity-75">
-									{message.mcpPromptSelection.mode === 'chat'
-										? $i18n.t('This chat')
-										: $i18n.t('This turn')}
 								</span>
 							</div>
 						</Tooltip>

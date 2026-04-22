@@ -74,18 +74,12 @@ class MCPClient:
 
     @asynccontextmanager
     async def temporary_connection(self, url: str, headers: Optional[dict] = None):
-        """Open an MCP session and close it within the same task.
-
-        Some MCP SDK streamable HTTP cleanup paths are task-sensitive on
-        Python 3.11+/anyio. For short-lived one-shot operations such as
-        server verification and prompt discovery, keeping connect/close
-        inside the same async context avoids cross-task shutdown errors.
-        """
         previous_session = self.session
         previous_exit_stack = self.exit_stack
 
         async with AsyncExitStack() as exit_stack:
             self.session = await self._open_session(exit_stack, url, headers=headers)
+            self.exit_stack = exit_stack
             try:
                 yield self
             finally:
@@ -226,10 +220,6 @@ class MCPClient:
             # orphaned coroutines from spinning at 100 % CPU.
             log.debug('MCPClient.disconnect() suppressed RuntimeError: %s', exc)
         except BaseExceptionGroup as exc:
-            # Python 3.11+ may wrap the same streamable_http cleanup
-            # failures in a BaseExceptionGroup instead of a bare
-            # RuntimeError. Cleanup should stay best-effort and never
-            # convert a successful MCP request into a 500 response.
             log.debug('MCPClient.disconnect() suppressed BaseExceptionGroup: %s', exc)
         except Exception as exc:
             log.debug('MCPClient.disconnect() error: %s', exc)
@@ -241,3 +231,27 @@ class MCPClient:
     async def __aexit__(self, exc_type, exc_value, traceback):
         await self.exit_stack.__aexit__(exc_type, exc_value, traceback)
         await self.disconnect()
+
+
+def build_mcp_user_error_message(exc: BaseException, default: str) -> str:
+    """Return a short user-facing MCP error message.
+
+    MCP streamable HTTP failures can surface as nested TaskGroup /
+    ExceptionGroup wrappers that are useful for logs but too noisy for API
+    responses. Unwrap nested exceptions and fall back to the provided default
+    when the raw error is empty or not actionable.
+    """
+    if isinstance(exc, BaseExceptionGroup):
+        # Prefer the first nested exception that yields an actionable message.
+        for nested_exc in exc.exceptions:
+            nested_message = build_mcp_user_error_message(nested_exc, default)
+            if nested_message != default:
+                return nested_message
+        return default
+
+    message = str(exc).strip()
+    if not message or 'TaskGroup' in message:
+        # Hide framework noise from user-facing responses.
+        return default
+
+    return message

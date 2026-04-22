@@ -332,8 +332,7 @@
 
 					{#each Object.keys(tools) as toolId}
 						{@const isMcpServer = toolId.startsWith('server:mcp:')}
-						{@const promptSelectable =
-							isMcpServer && tools[toolId].enabled && (tools[toolId]?.authenticated ?? true)}
+						{@const promptSelectable = isMcpServer && (tools[toolId]?.authenticated ?? true)}
 						<button
 							class="relative flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
 							on:click={async (e) => {
@@ -402,7 +401,7 @@
 
 							{#if promptSelectable}
 								<div class=" shrink-0">
-									<Tooltip content={$i18n.t('MCP Prompt')}>
+									<Tooltip content={$i18n.t('Select MCP Prompt')}>
 										<button
 											class="self-center w-fit text-sm text-sky-600 dark:text-sky-300 hover:text-sky-700 dark:hover:text-sky-200 transition rounded-full"
 											type="button"

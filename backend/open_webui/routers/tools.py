@@ -1,51 +1,46 @@
 import logging
-from pathlib import Path
-from typing import Optional
-import time
 import re
+import time
+from typing import Optional
+
 import aiohttp
-from open_webui.env import (
-    AIOHTTP_CLIENT_SESSION_SSL,
-    AIOHTTP_CLIENT_TIMEOUT,
-    ENABLE_FORWARD_USER_INFO_HEADERS,
-)
-from open_webui.models.groups import Groups
-from pydantic import BaseModel, Field, HttpUrl
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, CACHE_DIR
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT
 from open_webui.internal.db import get_async_session
-
-
-from open_webui.models.oauth_sessions import OAuthSessions
+from open_webui.models.access_grants import AccessGrants
+from open_webui.models.groups import Groups
 from open_webui.models.tools import (
+    ToolAccessResponse,
     ToolForm,
     ToolModel,
     ToolResponse,
-    ToolUserResponse,
-    ToolAccessResponse,
     Tools,
+    ToolUserResponse,
 )
-from open_webui.models.access_grants import AccessGrants
-from open_webui.utils.plugin import (
-    load_tool_module_by_id,
-    replace_imports,
-    get_tool_module_from_cache,
-    resolve_valves_schema_options,
-)
-from open_webui.utils.tools import get_tool_specs
-from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import (
-    has_permission,
+    filter_allowed_access_grants,
     has_access,
     has_connection_access,
-    filter_allowed_access_grants,
+    has_permission,
 )
-from open_webui.utils.tools import get_tool_servers
-from open_webui.utils.mcp.client import MCPClient
-from open_webui.utils.headers import include_user_info_headers
-
-from open_webui.config import CACHE_DIR, BYPASS_ADMIN_ACCESS_CONTROL
-from open_webui.constants import ERROR_MESSAGES
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.mcp.client import MCPClient, build_mcp_user_error_message
+from open_webui.utils.middleware import (
+    build_mcp_server_headers,
+    get_mcp_server_connection,
+    get_system_oauth_token,
+)
+from open_webui.utils.plugin import (
+    get_tool_module_from_cache,
+    load_tool_module_by_id,
+    replace_imports,
+    resolve_valves_schema_options,
+)
+from open_webui.utils.tools import get_tool_servers, get_tool_specs
+from pydantic import BaseModel, Field, HttpUrl
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -248,16 +243,7 @@ async def get_tool_list(user=Depends(get_verified_user), db: AsyncSession = Depe
 
 @router.get('/mcp/{server_id}/prompts', response_model=MCPPromptListResponse)
 async def get_mcp_prompt_list(request: Request, server_id: str, user=Depends(get_verified_user)):
-    mcp_server_connection = next(
-        (
-            server_connection
-            for server_connection in request.app.state.config.TOOL_SERVER_CONNECTIONS
-            if server_connection.get('type', '') == 'mcp'
-            and server_connection.get('config', {}).get('enable')
-            and server_connection.get('info', {}).get('id') == server_id
-        ),
-        None,
-    )
+    mcp_server_connection = get_mcp_server_connection(request, server_id, enabled_only=True)
 
     if not mcp_server_connection:
         raise HTTPException(
@@ -265,40 +251,24 @@ async def get_mcp_prompt_list(request: Request, server_id: str, user=Depends(get
             detail=f'MCP server with id {server_id} not found',
         )
 
-    if not has_connection_access(user, mcp_server_connection):
+    if not await has_connection_access(user, mcp_server_connection):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    auth_type = mcp_server_connection.get('auth_type', '')
-    headers = {}
+    extra_params = {'__oauth_token__': None}
+    if mcp_server_connection.get('auth_type') == 'system_oauth':
+        extra_params['__oauth_token__'] = await get_system_oauth_token(request, user)
 
-    if auth_type == 'bearer':
-        headers['Authorization'] = f'Bearer {mcp_server_connection.get("key", "")}'
-    elif auth_type == 'session':
-        headers['Authorization'] = f'Bearer {request.state.token.credentials}'
-    elif auth_type == 'system_oauth':
-        oauth_token = None
-        if request.cookies.get('oauth_session_id', None):
-            oauth_token = await request.app.state.oauth_manager.get_oauth_token(
-                user.id,
-                request.cookies.get('oauth_session_id', None),
-            )
-        if oauth_token:
-            headers['Authorization'] = f'Bearer {oauth_token.get("access_token", "")}'
-    elif auth_type in ('oauth_2.1', 'oauth_2.1_static'):
-        oauth_server_id = server_id.split(':')[-1] if ':' in server_id else server_id
-        oauth_token = await request.app.state.oauth_client_manager.get_oauth_token(user.id, f'mcp:{oauth_server_id}')
-        if oauth_token:
-            headers['Authorization'] = f'Bearer {oauth_token.get("access_token", "")}'
-
-    connection_headers = mcp_server_connection.get('headers', None)
-    if connection_headers and isinstance(connection_headers, dict):
-        headers.update(connection_headers)
-
-    if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-        headers = include_user_info_headers(headers, user)
+    headers = await build_mcp_server_headers(
+        request,
+        user,
+        {},
+        extra_params,
+        server_id,
+        mcp_server_connection,
+    )
 
     try:
         mcp_client = MCPClient()
@@ -330,9 +300,10 @@ async def get_mcp_prompt_list(request: Request, server_id: str, user=Depends(get
         raise
     except Exception as e:
         log.exception(f'Failed to load MCP prompts for {server_id}: {e}')
+        error_message = build_mcp_user_error_message(e, 'Unable to connect to the MCP server.')
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Failed to load MCP prompts: {e}',
+            detail=f'Failed to load MCP prompts: {error_message}',
         )
 
 

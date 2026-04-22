@@ -13,6 +13,14 @@ export type MCPPrompt = {
 	arguments?: MCPPromptArgument[];
 };
 
+export type MCPPromptSelection = {
+	serverId: string;
+	serverName: string;
+	name: string;
+	title?: string;
+	arguments: Record<string, string>;
+};
+
 export const createNewTool = async (token: string, tool: object) => {
 	let error = null;
 

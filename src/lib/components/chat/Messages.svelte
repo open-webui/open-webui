@@ -428,7 +428,12 @@
 					content: userPrompt,
 					...(files && { files: files }),
 					models: selectedModels,
-					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+					timestamp: Math.floor(Date.now() / 1000), // Unix epoch
+					...(history.messages[messageId].mcpPromptSelection
+						? {
+								mcpPromptSelection: structuredClone(history.messages[messageId].mcpPromptSelection)
+							}
+						: {})
 				};
 
 				let messageParentId = history.messages[messageId].parentId;

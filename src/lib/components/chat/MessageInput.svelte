@@ -57,7 +57,12 @@
 	import { deleteFileById } from '$lib/apis/files';
 	import { getChatById } from '$lib/apis/chats';
 	import { getSessionUser } from '$lib/apis/auths';
-	import { getMCPPrompts, getTools, type MCPPrompt } from '$lib/apis/tools';
+	import {
+		getMCPPrompts,
+		getTools,
+		type MCPPrompt,
+		type MCPPromptSelection
+	} from '$lib/apis/tools';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
@@ -81,8 +86,6 @@
 	import Photo from '../icons/Photo.svelte';
 	import Wrench from '../icons/Wrench.svelte';
 	import Sparkles from '../icons/Sparkles.svelte';
-	import Pin from '../icons/Pin.svelte';
-	import PinSlash from '../icons/PinSlash.svelte';
 
 	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
 	import Voice from '../icons/Voice.svelte';
@@ -135,8 +138,7 @@
 
 	export let selectedToolIds = [];
 	export let selectedFilterIds = [];
-	export let pendingMcpPromptSelection = null;
-	export let activeChatMcpPromptSelection = null;
+	export let pendingMcpPromptSelection: MCPPromptSelection | null = null;
 
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
@@ -146,15 +148,6 @@
 
 	let showTerminalMenu = false;
 
-	type MCPPromptSelection = {
-		serverId: string;
-		serverName: string;
-		name: string;
-		title?: string;
-		arguments: Record<string, string>;
-		mode?: 'once' | 'chat';
-	};
-
 	type MCPPromptVariableMap = Record<
 		string,
 		{
@@ -163,7 +156,12 @@
 		}
 	>;
 
-	export let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
+	export let messageQueue: {
+		id: string;
+		prompt: string;
+		files: any[];
+		mcpPromptSelection: MCPPromptSelection | null;
+	}[] = [];
 	export let onQueueSendNow: (id: string) => void = () => {};
 	export let onQueueEdit: (id: string) => void = () => {};
 	export let onQueueDelete: (id: string) => void = () => {};
@@ -205,7 +203,6 @@
 		selectedToolIds,
 		selectedFilterIds,
 		pendingMcpPromptSelection,
-		activeChatMcpPromptSelection,
 		imageGenerationEnabled,
 		webSearchEnabled,
 		codeInterpreterEnabled
@@ -372,25 +369,16 @@
 		);
 	};
 
-	const ensureMcpPromptToolSelected = (serverId: string) => {
-		const toolId = `server:mcp:${serverId}`;
-		if (!selectedToolIds.includes(toolId)) {
-			selectedToolIds = [...selectedToolIds, toolId];
-		}
-	};
-
 	const createMcpPromptSelection = (
 		prompt: MCPPrompt,
-		argumentsMap: Record<string, string> = {},
-		mode: 'once' | 'chat' = 'once'
+		argumentsMap: Record<string, string> = {}
 	): MCPPromptSelection => {
 		return {
 			serverId: mcpPromptServerId,
 			serverName: mcpPromptServerName,
 			name: prompt.name,
 			title: prompt.title,
-			arguments: argumentsMap,
-			mode
+			arguments: argumentsMap
 		} as MCPPromptSelection;
 	};
 
@@ -398,38 +386,20 @@
 		prompt: MCPPrompt,
 		argumentsMap: Record<string, string> = {}
 	) => {
-		ensureMcpPromptToolSelected(mcpPromptServerId);
-		pendingMcpPromptSelection = createMcpPromptSelection(prompt, argumentsMap, 'once');
+		pendingMcpPromptSelection = createMcpPromptSelection(prompt, argumentsMap);
 		showMcpPromptPickerModal = false;
 		toast.success(
-			$i18n.t('Selected MCP prompt for this turn: {{prompt}}', {
+			$i18n.t('Selected MCP prompt: {{prompt}}', {
 				prompt: prompt.title ?? prompt.name
 			})
 		);
 	};
 
-	const setActiveChatMcpPromptSelection = (
-		prompt: MCPPrompt,
-		argumentsMap: Record<string, string> = {}
-	) => {
-		ensureMcpPromptToolSelected(mcpPromptServerId);
-		pendingMcpPromptSelection = null;
-		activeChatMcpPromptSelection = createMcpPromptSelection(prompt, argumentsMap, 'chat');
-		showMcpPromptPickerModal = false;
-		toast.success(
-			$i18n.t('Pinned MCP prompt for this chat: {{prompt}}', {
-				prompt: prompt.title ?? prompt.name
-			})
-		);
-	};
-
-	const selectMcpPrompt = async (prompt: MCPPrompt, mode: 'once' | 'chat' = 'once') => {
+	const selectMcpPrompt = async (prompt: MCPPrompt) => {
 		const promptArguments = prompt.arguments ?? [];
-		const applySelection =
-			mode === 'chat' ? setActiveChatMcpPromptSelection : setPendingMcpPromptSelection;
 
 		if (promptArguments.length === 0) {
-			applySelection(prompt, {});
+			setPendingMcpPromptSelection(prompt, {});
 			await tick();
 			document.getElementById('chat-input')?.focus();
 			return;
@@ -444,16 +414,12 @@
 		}, {} as MCPPromptVariableMap);
 
 		inputVariablesModalCallback = (variableValues) => {
-			applySelection(prompt, normalizeMcpPromptArguments(variableValues));
+			setPendingMcpPromptSelection(prompt, normalizeMcpPromptArguments(variableValues));
 			showInputVariablesModal = false;
 		};
 
 		showMcpPromptPickerModal = false;
 		showInputVariablesModal = true;
-	};
-
-	const pinMcpPromptToChat = async (prompt: MCPPrompt) => {
-		await selectMcpPrompt(prompt, 'chat');
 	};
 
 	const openMcpPromptPicker = async ({ serverId, name }: { serverId: string; name: string }) => {
@@ -1274,7 +1240,6 @@
 	serverName={mcpPromptServerName}
 	prompts={mcpPrompts}
 	onSelect={selectMcpPrompt}
-	onPin={pinMcpPromptToChat}
 	onClose={async () => {
 		await tick();
 		document.getElementById('chat-input')?.focus();
@@ -1883,35 +1848,6 @@
 									{/if}
 
 									<div class="ml-1 flex gap-1.5">
-										{#if activeChatMcpPromptSelection}
-											<Tooltip
-												content={`${activeChatMcpPromptSelection.serverName}: ${activeChatMcpPromptSelection.title ?? activeChatMcpPromptSelection.name}`}
-												placement="top"
-											>
-												<button
-													on:click|preventDefault={() => {
-														activeChatMcpPromptSelection = null;
-													}}
-													type="button"
-													aria-label={$i18n.t('Clear pinned MCP prompt')}
-													class="group px-2 py-[5px] flex gap-1.5 items-center text-xs rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden
-														text-amber-700 dark:text-amber-200 bg-amber-50 hover:bg-amber-100 dark:bg-amber-400/10 dark:hover:bg-amber-500/15 border border-amber-200/50 dark:border-amber-500/20"
-												>
-													<Pin className="size-3.5" strokeWidth="1.75" />
-													<span class="truncate max-w-40">
-														{activeChatMcpPromptSelection.title ??
-															activeChatMcpPromptSelection.name}
-													</span>
-													<span class="shrink-0 text-[10px] uppercase tracking-wide opacity-75">
-														{$i18n.t('This chat')}
-													</span>
-													<div class="hidden group-hover:block">
-														<PinSlash className="size-3.5" strokeWidth="1.75" />
-													</div>
-												</button>
-											</Tooltip>
-										{/if}
-
 										{#if pendingMcpPromptSelection}
 											<Tooltip
 												content={`${pendingMcpPromptSelection.serverName}: ${pendingMcpPromptSelection.title ?? pendingMcpPromptSelection.name}`}
@@ -1929,9 +1865,6 @@
 													<Sparkles className="size-3.5" strokeWidth="1.75" />
 													<span class="truncate max-w-44">
 														{pendingMcpPromptSelection.title ?? pendingMcpPromptSelection.name}
-													</span>
-													<span class="shrink-0 text-[10px] uppercase tracking-wide opacity-75">
-														{$i18n.t('This turn')}
 													</span>
 													<div class="hidden group-hover:block">
 														<XMark className="size-3.5" strokeWidth="1.75" />

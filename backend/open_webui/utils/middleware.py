@@ -114,7 +114,7 @@ from open_webui.utils.filter import (
 from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.utils.payload import apply_system_prompt_to_body
 from open_webui.utils.response import normalize_usage
-from open_webui.utils.mcp.client import MCPClient
+from open_webui.utils.mcp.client import MCPClient, build_mcp_user_error_message
 
 
 from open_webui.config import (
@@ -2202,12 +2202,23 @@ def normalize_mcp_prompt_messages(prompt_result: dict) -> tuple[list[dict], list
     return messages, sorted(omitted_content_types)
 
 
-def insert_messages_after_system(messages: list[dict], inserted_messages: list[dict]) -> list[dict]:
+def insert_messages_before_current_user_turn(
+    messages: list[dict], inserted_messages: list[dict]
+) -> list[dict]:
+    """Insert MCP prompt messages right before the current user message.
+
+    In chat, the resolved MCP prompt should apply to the active user turn.
+    This helper treats the last user-role message in the payload as the
+    active turn and inserts the prompt messages immediately before it.
+    """
     if not inserted_messages:
         return messages
 
-    insert_at = 1 if messages and messages[0].get('role') == 'system' else 0
-    return [*messages[:insert_at], *inserted_messages, *messages[insert_at:]]
+    for index in reversed(range(len(messages))):
+        if messages[index].get('role') == 'user':
+            return [*messages[:index], *inserted_messages, *messages[index:]]
+
+    return [*messages, *inserted_messages]
 
 
 async def emit_mcp_prompt_notification(event_emitter, content: str, level: str = 'warning'):
@@ -2221,6 +2232,111 @@ async def emit_mcp_prompt_notification(event_emitter, content: str, level: str =
                 },
             }
         )
+
+
+def get_mcp_server_connection(request: Request, server_id: str, enabled_only: bool = False):
+    return next(
+        (
+            server_connection
+            for server_connection in request.app.state.config.TOOL_SERVER_CONNECTIONS
+            if server_connection.get('type', '') == 'mcp'
+            and server_connection.get('info', {}).get('id') == server_id
+            and (
+                not enabled_only
+                or bool(server_connection.get('config', {}).get('enable'))
+            )
+        ),
+        None,
+    )
+
+
+async def build_mcp_server_headers(
+    request: Request,
+    user,
+    metadata: dict,
+    extra_params: dict,
+    server_id: str,
+    mcp_server_connection: dict,
+) -> dict:
+    auth_type = mcp_server_connection.get('auth_type', '')
+    headers = {}
+
+    if auth_type == 'bearer':
+        headers['Authorization'] = f'Bearer {mcp_server_connection.get("key", "")}'
+    elif auth_type == 'none':
+        pass
+    elif auth_type == 'session':
+        headers['Authorization'] = f'Bearer {request.state.token.credentials}'
+    elif auth_type == 'system_oauth':
+        oauth_token = extra_params.get('__oauth_token__', None)
+        if oauth_token:
+            headers['Authorization'] = f'Bearer {oauth_token.get("access_token", "")}'
+    elif auth_type in ('oauth_2.1', 'oauth_2.1_static'):
+        oauth_server_id = server_id.split(':')[-1] if ':' in server_id else server_id
+        oauth_token = await request.app.state.oauth_client_manager.get_oauth_token(user.id, f'mcp:{oauth_server_id}')
+
+        if oauth_token:
+            headers['Authorization'] = f'Bearer {oauth_token.get("access_token", "")}'
+
+    connection_headers = mcp_server_connection.get('headers', None)
+    if connection_headers and isinstance(connection_headers, dict):
+        headers.update(connection_headers)
+
+    if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+        headers = include_user_info_headers(headers, user)
+        if metadata.get('chat_id'):
+            headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get('chat_id')
+        if metadata.get('message_id'):
+            headers[FORWARD_SESSION_INFO_HEADER_MESSAGE_ID] = metadata.get('message_id')
+
+    return headers
+
+
+async def resolve_mcp_prompt_selection(
+    request: Request,
+    user,
+    metadata: dict,
+    extra_params: dict,
+    mcp_prompt_selection: dict,
+) -> tuple[list[dict], list[str]]:
+    server_id = mcp_prompt_selection.get('server_id', '')
+    if not server_id:
+        raise Exception('Selected MCP prompt server is unavailable for this request.')
+
+    mcp_server_connection = get_mcp_server_connection(request, server_id, enabled_only=True)
+    if not mcp_server_connection:
+        raise Exception(f"Selected MCP prompt server '{server_id}' was not found or is disabled.")
+
+    if not await has_connection_access(user, mcp_server_connection):
+        raise Exception('Access denied to the selected MCP prompt server.')
+
+    headers = await build_mcp_server_headers(
+        request,
+        user,
+        metadata,
+        extra_params,
+        server_id,
+        mcp_server_connection,
+    )
+
+    mcp_client = MCPClient()
+    try:
+        async with mcp_client.temporary_connection(
+            url=mcp_server_connection.get('url', ''),
+            headers=headers if headers else None,
+        ):
+            prompt_result = await mcp_client.get_prompt(
+                mcp_prompt_selection.get('name', ''),
+                mcp_prompt_selection.get('arguments') or None,
+            )
+    except Exception as e:
+        error_message = build_mcp_user_error_message(
+            e,
+            'Unable to connect to the selected MCP prompt server.',
+        )
+        raise Exception(f'Failed to resolve the selected MCP prompt: {error_message}') from e
+
+    return normalize_mcp_prompt_messages(prompt_result)
 
 
 async def process_chat_payload(request, form_data, user, metadata, model):
@@ -2505,12 +2621,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     form_data.pop('folder_id', None)
     mcp_prompt_selection = metadata.get('mcp_prompt_selection') or None
 
-    # Caller-provided OpenAI-style tools take precedence over server-side
-    # tool resolution (tool_ids, MCP servers, builtin tools).
     payload_tools = form_data.get('tools', None)
-
-    if mcp_prompt_selection and payload_tools:
-        raise Exception('MCP prompt selection is not supported when explicit tools are supplied in the request.')
 
     # Skills
     user_skill_ids = set(form_data.pop('skill_ids', None) or [])
@@ -2582,6 +2693,35 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     }
     form_data['metadata'] = metadata
 
+    if mcp_prompt_selection:
+        mcp_prompt_messages, mcp_prompt_omitted_content_types = await resolve_mcp_prompt_selection(
+            request,
+            user,
+            metadata,
+            extra_params,
+            mcp_prompt_selection,
+        )
+
+        if mcp_prompt_messages:
+            # Keep MCP prompts scoped to the active user turn instead of
+            # hoisting them to the start of the conversation history.
+            form_data['messages'] = insert_messages_before_current_user_turn(
+                form_data['messages'],
+                mcp_prompt_messages,
+            )
+        else:
+            await emit_mcp_prompt_notification(
+                event_emitter,
+                'The selected MCP prompt returned no text content and was skipped.',
+            )
+
+        if mcp_prompt_omitted_content_types:
+            await emit_mcp_prompt_notification(
+                event_emitter,
+                'The selected MCP prompt omitted unsupported content types: '
+                + ', '.join(mcp_prompt_omitted_content_types),
+            )
+
     # When the caller provides an explicit OpenAI-style `tools` array in the
     # request body, skip all server-side tool resolution and pass the caller's
     # tools through to the model unchanged.
@@ -2598,26 +2738,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
         mcp_clients = {}
         mcp_tools_dict = {}
-        mcp_prompt_messages = []
-        mcp_prompt_omitted_content_types = []
-        mcp_prompt_resolved = False
-        mcp_prompt_error = None
-
         if tool_ids:
             for tool_id in tool_ids:
                 if tool_id.startswith('server:mcp:'):
                     try:
                         server_id = tool_id[len('server:mcp:') :]
-                        mcp_server_id = server_id
-
-                        mcp_server_connection = None
-                        for server_connection in request.app.state.config.TOOL_SERVER_CONNECTIONS:
-                            if (
-                                server_connection.get('type', '') == 'mcp'
-                                and server_connection.get('info', {}).get('id') == server_id
-                            ):
-                                mcp_server_connection = server_connection
-                                break
+                        mcp_server_connection = get_mcp_server_connection(request, server_id)
 
                         if not mcp_server_connection:
                             log.error(f'MCP server with id {server_id} not found')
@@ -2628,63 +2754,24 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             log.warning(f'Access denied to MCP server {server_id} for user {user.id}')
                             continue
 
-                        auth_type = mcp_server_connection.get('auth_type', '')
-                        headers = {}
-                        if auth_type == 'bearer':
-                            headers['Authorization'] = f'Bearer {mcp_server_connection.get("key", "")}'
-                        elif auth_type == 'none':
-                            # No authentication
-                            pass
-                        elif auth_type == 'session':
-                            headers['Authorization'] = f'Bearer {request.state.token.credentials}'
-                        elif auth_type == 'system_oauth':
-                            oauth_token = extra_params.get('__oauth_token__', None)
-                            if oauth_token:
-                                headers['Authorization'] = f'Bearer {oauth_token.get("access_token", "")}'
-                        elif auth_type in ('oauth_2.1', 'oauth_2.1_static'):
-                            try:
-                                splits = server_id.split(':')
-                                server_id = splits[-1] if len(splits) > 1 else server_id
-
-                                oauth_token = await request.app.state.oauth_client_manager.get_oauth_token(
-                                    user.id, f'mcp:{server_id}'
-                                )
-
-                                if oauth_token:
-                                    headers['Authorization'] = f'Bearer {oauth_token.get("access_token", "")}'
-                            except Exception as e:
-                                log.error(f'Error getting OAuth token: {e}')
-                                oauth_token = None
-
-                        connection_headers = mcp_server_connection.get('headers', None)
-                        if connection_headers and isinstance(connection_headers, dict):
-                            for key, value in connection_headers.items():
-                                headers[key] = value
-
-                        # Add user info headers if enabled
-                        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-                            headers = include_user_info_headers(headers, user)
-                            if metadata and metadata.get('chat_id'):
-                                headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get('chat_id')
-                            if metadata and metadata.get('message_id'):
-                                headers[FORWARD_SESSION_INFO_HEADER_MESSAGE_ID] = metadata.get('message_id')
+                        try:
+                            headers = await build_mcp_server_headers(
+                                request,
+                                user,
+                                metadata,
+                                extra_params,
+                                server_id,
+                                mcp_server_connection,
+                            )
+                        except Exception as e:
+                            log.error(f'Error building MCP headers for {server_id}: {e}')
+                            continue
 
                         mcp_clients[server_id] = MCPClient()
                         await mcp_clients[server_id].connect(
                             url=mcp_server_connection.get('url', ''),
                             headers=headers if headers else None,
                         )
-
-                        if mcp_prompt_selection and mcp_prompt_selection.get('server_id') == mcp_server_id:
-                            prompt_result = await mcp_clients[server_id].get_prompt(
-                                mcp_prompt_selection.get('name', ''),
-                                mcp_prompt_selection.get('arguments') or None,
-                            )
-                            (
-                                mcp_prompt_messages,
-                                mcp_prompt_omitted_content_types,
-                            ) = normalize_mcp_prompt_messages(prompt_result)
-                            mcp_prompt_resolved = True
 
                         function_name_filter_list = mcp_server_connection.get('config', {}).get(
                             'function_name_filter_list', ''
@@ -2723,11 +2810,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 'direct': False,
                             }
                     except Exception as e:
-                        if (
-                            mcp_prompt_selection
-                            and mcp_prompt_selection.get('server_id') == tool_id[len('server:mcp:') :]
-                        ):
-                            mcp_prompt_error = str(e)
                         log.debug(e)
                         if event_emitter:
                             await event_emitter(
@@ -2737,35 +2819,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 }
                             )
                         continue
-
-            if mcp_prompt_selection:
-                selected_mcp_tool_id = f'server:mcp:{mcp_prompt_selection.get("server_id", "")}'
-
-                if selected_mcp_tool_id not in (tool_ids or []):
-                    raise Exception('Selected MCP prompt server is not enabled for this chat.')
-
-                if not mcp_prompt_resolved:
-                    raise Exception(
-                        mcp_prompt_error or f"Failed to resolve MCP prompt '{mcp_prompt_selection.get('name', '')}'"
-                    )
-
-                if mcp_prompt_messages:
-                    form_data['messages'] = insert_messages_after_system(
-                        form_data['messages'],
-                        mcp_prompt_messages,
-                    )
-                else:
-                    await emit_mcp_prompt_notification(
-                        event_emitter,
-                        'The selected MCP prompt returned no text content and was skipped.',
-                    )
-
-                if mcp_prompt_omitted_content_types:
-                    await emit_mcp_prompt_notification(
-                        event_emitter,
-                        'The selected MCP prompt omitted unsupported content types: '
-                        + ', '.join(mcp_prompt_omitted_content_types),
-                    )
 
             tools_dict = await get_tools(
                 request,
@@ -2781,9 +2834,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
             if mcp_tools_dict:
                 tools_dict = {**tools_dict, **mcp_tools_dict}
-
-        if mcp_prompt_selection and not tool_ids:
-            raise Exception('Selected MCP prompt server is not enabled for this chat.')
 
         # Resolve terminal tools if terminal_id is set (outside tool_ids check
         # so system terminals work even when no other tools are selected)

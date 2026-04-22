@@ -89,7 +89,7 @@
 		stopTasksByChatId,
 		getTaskIdsByChatId
 	} from '$lib/apis';
-	import { getTools } from '$lib/apis/tools';
+	import { getTools, type MCPPromptSelection } from '$lib/apis/tools';
 	import { uploadFile } from '$lib/apis/files';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { getFunctions } from '$lib/apis/functions';
@@ -147,8 +147,7 @@
 	let selectedToolIds = [];
 	let selectedFilterIds = [];
 	let pendingOAuthTools = [];
-	let pendingMcpPromptSelection = null;
-	let activeChatMcpPromptSelection = null;
+	let pendingMcpPromptSelection: MCPPromptSelection | null = null;
 
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
@@ -172,20 +171,42 @@
 
 	let taskIds = null;
 
+	type QueuedChatRequest = {
+		id: string;
+		prompt: string;
+		files: any[];
+		mcpPromptSelection: MCPPromptSelection | null;
+	};
+
 	// Chat Input
 	let prompt = '';
 	let chatFiles = [];
 	let files = [];
 	let params = {};
 
-	const serializeMcpPromptSelection = (selection) => JSON.stringify(selection ?? null);
-	const cloneMcpPromptSelection = (selection) =>
-		selection ? structuredClone(selection) : undefined;
-	const getCurrentMcpPromptSelection = () =>
-		cloneMcpPromptSelection(pendingMcpPromptSelection ?? activeChatMcpPromptSelection);
+	const cloneMcpPromptSelection = (
+		selection: MCPPromptSelection | null | undefined
+	): MCPPromptSelection | undefined => (selection ? structuredClone(selection) : undefined);
+	const cloneMcpPromptSelectionOrNull = (selection: MCPPromptSelection | null | undefined) =>
+		selection ? structuredClone(selection) : null;
+	const getCurrentMcpPromptSelection = () => cloneMcpPromptSelection(pendingMcpPromptSelection);
+	const getCurrentMcpPromptSelectionSnapshot = () =>
+		cloneMcpPromptSelectionOrNull(pendingMcpPromptSelection);
+	const getMcpPromptSelectionKey = (selection: MCPPromptSelection | null | undefined) => {
+		if (!selection) {
+			return 'null';
+		}
 
-	let persistedActiveChatMcpPromptSelection = serializeMcpPromptSelection(null);
-	let persistActiveChatMcpPromptTimeout = null;
+		return JSON.stringify({
+			serverId: selection.serverId,
+			name: selection.name,
+			arguments: Object.fromEntries(
+				Object.entries(selection.arguments ?? {}).sort(([left], [right]) =>
+					left.localeCompare(right)
+				)
+			)
+		});
+	};
 
 	$: if (chatIdProp) {
 		navigateHandler();
@@ -207,8 +228,6 @@
 		selectedToolIds = [];
 		selectedFilterIds = [];
 		pendingMcpPromptSelection = null;
-		activeChatMcpPromptSelection = null;
-		persistedActiveChatMcpPromptSelection = serializeMcpPromptSelection(null);
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
 
@@ -247,9 +266,6 @@
 						if ('pendingMcpPromptSelection' in input) {
 							pendingMcpPromptSelection = input.pendingMcpPromptSelection;
 						}
-						if ('activeChatMcpPromptSelection' in input) {
-							activeChatMcpPromptSelection = input.activeChatMcpPromptSelection;
-						}
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
@@ -282,31 +298,6 @@
 
 	$: if (selectedModels && chatIdProp !== '') {
 		saveSessionSelectedModels();
-	}
-
-	$: {
-		const serializedActiveChatMcpPromptSelection = serializeMcpPromptSelection(
-			activeChatMcpPromptSelection
-		);
-
-		if (
-			!loading &&
-			$chatId &&
-			chat &&
-			!$temporaryChatEnabled &&
-			serializedActiveChatMcpPromptSelection !== persistedActiveChatMcpPromptSelection
-		) {
-			if (persistActiveChatMcpPromptTimeout) {
-				clearTimeout(persistActiveChatMcpPromptTimeout);
-			}
-
-			persistActiveChatMcpPromptTimeout = setTimeout(async () => {
-				chat = await updateChatById(localStorage.token, $chatId, {
-					activeMcpPromptSelection: activeChatMcpPromptSelection ?? null
-				});
-				persistedActiveChatMcpPromptSelection = serializedActiveChatMcpPromptSelection;
-			}, 250);
-		}
 	}
 
 	const saveSessionSelectedModels = () => {
@@ -842,9 +833,6 @@
 						if ('pendingMcpPromptSelection' in input) {
 							pendingMcpPromptSelection = input.pendingMcpPromptSelection;
 						}
-						if ('activeChatMcpPromptSelection' in input) {
-							activeChatMcpPromptSelection = input.activeChatMcpPromptSelection;
-						}
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
@@ -869,9 +857,6 @@
 				$socket?.off('events', chatEventHandler);
 				audioQueueInstance?.destroy();
 				audioQueue.set(null);
-				if (persistActiveChatMcpPromptTimeout) {
-					clearTimeout(persistActiveChatMcpPromptTimeout);
-				}
 			} catch (e) {
 				console.error(e);
 			}
@@ -1246,8 +1231,6 @@
 		autoScroll = true;
 
 		resetInput();
-		activeChatMcpPromptSelection = null;
-		persistedActiveChatMcpPromptSelection = serializeMcpPromptSelection(null);
 		await chatId.set('');
 		await chatTitle.set('');
 
@@ -1405,11 +1388,6 @@
 					(chatContent?.history ?? undefined) !== undefined
 						? chatContent.history
 						: convertMessagesToHistory(chatContent.messages);
-				activeChatMcpPromptSelection = chatContent?.activeMcpPromptSelection ?? null;
-				persistedActiveChatMcpPromptSelection = serializeMcpPromptSelection(
-					activeChatMcpPromptSelection
-				);
-
 				chatTitle.set(chatContent.title);
 
 				params = chatContent?.params ?? {};
@@ -1493,15 +1471,38 @@
 
 		processingQueueChats.add(targetChatId);
 		try {
-			const combinedPrompt = queue.map((m) => m.prompt).join('\n\n');
-			const combinedFiles = queue.flatMap((m) => m.files);
+			const firstSelectionKey = getMcpPromptSelectionKey(queue[0]?.mcpPromptSelection);
+			const batch: QueuedChatRequest[] = [];
+
+			for (const item of queue) {
+				if (getMcpPromptSelectionKey(item.mcpPromptSelection) !== firstSelectionKey) {
+					break;
+				}
+
+				batch.push(item);
+			}
+
+			const combinedPrompt = batch.map((m) => m.prompt).join('\n\n');
+			const combinedFiles = batch.flatMap((m) => m.files);
+			const batchSelection = cloneMcpPromptSelectionOrNull(batch[0]?.mcpPromptSelection);
+			const remainingQueue = queue.slice(batch.length);
 
 			chatRequestQueues.update((q) => {
-				const { [targetChatId]: _, ...rest } = q;
-				return rest;
+				if (remainingQueue.length === 0) {
+					const { [targetChatId]: _, ...rest } = q;
+					return rest;
+				}
+
+				return {
+					...q,
+					[targetChatId]: remainingQueue
+				};
 			});
 
-			await submitPrompt(combinedPrompt, combinedFiles);
+			await submitPrompt(combinedPrompt, combinedFiles, {
+				mcpPromptSelectionOverride: batchSelection,
+				clearPendingMcpPromptSelection: false
+			});
 		} finally {
 			processingQueueChats.delete(targetChatId);
 		}
@@ -1561,12 +1562,8 @@
 					messages: messages,
 					history: history,
 					params: params,
-					files: chatFiles,
-					activeMcpPromptSelection: activeChatMcpPromptSelection ?? null
+					files: chatFiles
 				});
-				persistedActiveChatMcpPromptSelection = serializeMcpPromptSelection(
-					activeChatMcpPromptSelection
-				);
 
 				currentChatPage.set(1);
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
@@ -1886,9 +1883,22 @@
 	// Chat functions
 	//////////////////////////
 
-	const submitPrompt = async (inputContent, inputFiles) => {
+	const submitPrompt = async (
+		inputContent,
+		inputFiles,
+		{
+			mcpPromptSelectionOverride = undefined,
+			clearPendingMcpPromptSelection = true
+		}: {
+			mcpPromptSelectionOverride?: MCPPromptSelection | null;
+			clearPendingMcpPromptSelection?: boolean;
+		} = {}
+	) => {
 		const _files = structuredClone(inputFiles);
-		const mcpPromptSelection = getCurrentMcpPromptSelection();
+		const mcpPromptSelection =
+			mcpPromptSelectionOverride === undefined
+				? getCurrentMcpPromptSelection()
+				: cloneMcpPromptSelection(mcpPromptSelectionOverride);
 
 		chatFiles.push(
 			..._files.filter(
@@ -1916,7 +1926,9 @@
 			...(mcpPromptSelection ? { mcpPromptSelection } : {})
 		};
 
-		pendingMcpPromptSelection = null;
+		if (clearPendingMcpPromptSelection) {
+			pendingMcpPromptSelection = null;
+		}
 
 		// Add message to history and Set currentId to messageId
 		history.messages[userMessageId] = userMessage;
@@ -1994,10 +2006,22 @@
 			if ($settings?.enableMessageQueue ?? true) {
 				// Enqueue the request
 				const _files = structuredClone(files);
+				const queuedMcpPromptSelection = getCurrentMcpPromptSelectionSnapshot();
 				chatRequestQueues.update((q) => ({
 					...q,
-					[$chatId]: [...(q[$chatId] ?? []), { id: uuidv4(), prompt: userPrompt, files: _files }]
+					[$chatId]: [
+						...(q[$chatId] ?? []),
+						{
+							id: uuidv4(),
+							prompt: userPrompt,
+							files: _files,
+							mcpPromptSelection: queuedMcpPromptSelection
+						}
+					]
 				}));
+				if (queuedMcpPromptSelection) {
+					pendingMcpPromptSelection = null;
+				}
 				// Clear input
 				messageInput?.setText('');
 				prompt = '';
@@ -2336,13 +2360,6 @@
 				}
 			} else {
 				toolIds.push(toolId);
-			}
-		}
-
-		if (mcpPromptSelection) {
-			const selectedMcpToolId = `server:mcp:${mcpPromptSelection.server_id}`;
-			if (!toolIds.includes(selectedMcpToolId)) {
-				toolIds.push(selectedMcpToolId);
 			}
 		}
 
@@ -2763,14 +2780,10 @@
 					params: params,
 					history: history,
 					messages: createMessagesList(history, history.currentId),
-					activeMcpPromptSelection: activeChatMcpPromptSelection ?? null,
 					tags: [],
 					timestamp: Date.now()
 				},
 				$selectedFolder?.id
-			);
-			persistedActiveChatMcpPromptSelection = serializeMcpPromptSelection(
-				activeChatMcpPromptSelection
 			);
 
 			_chatId = chat.id;
@@ -2801,12 +2814,8 @@
 					history: history,
 					messages: createMessagesList(history, history.currentId),
 					params: params,
-					files: chatFiles,
-					activeMcpPromptSelection: activeChatMcpPromptSelection ?? null
+					files: chatFiles
 				});
-				persistedActiveChatMcpPromptSelection = serializeMcpPromptSelection(
-					activeChatMcpPromptSelection
-				);
 			}
 		}
 	};
@@ -2976,7 +2985,6 @@
 										params: params,
 										history: history,
 										messages: messages,
-										activeMcpPromptSelection: activeChatMcpPromptSelection ?? null,
 										timestamp: Date.now()
 									},
 									null
@@ -3047,7 +3055,6 @@
 									bind:selectedToolIds
 									bind:selectedFilterIds
 									bind:pendingMcpPromptSelection
-									bind:activeChatMcpPromptSelection
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
 									{pendingOAuthTools}
@@ -3073,7 +3080,10 @@
 											}));
 											await stopResponse(false);
 											await tick();
-											await submitPrompt(item.prompt, item.files);
+											await submitPrompt(item.prompt, item.files, {
+												mcpPromptSelectionOverride: item.mcpPromptSelection,
+												clearPendingMcpPromptSelection: false
+											});
 										}
 									}}
 									onQueueEdit={(id) => {
@@ -3087,6 +3097,13 @@
 											}));
 											// Set files and restore prompt to input
 											files = item.files;
+											if (item.mcpPromptSelection) {
+												pendingMcpPromptSelection = cloneMcpPromptSelection(
+													item.mcpPromptSelection
+												);
+											} else {
+												pendingMcpPromptSelection = null;
+											}
 											messageInput?.setText(item.prompt);
 										}
 									}}
@@ -3130,7 +3147,6 @@
 									bind:selectedToolIds
 									bind:selectedFilterIds
 									bind:pendingMcpPromptSelection
-									bind:activeChatMcpPromptSelection
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled

@@ -1,22 +1,22 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+	import type { MCPPrompt } from '$lib/apis/tools';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
-	import Pin from '$lib/components/icons/Pin.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: Writable<i18nType> = getContext('i18n');
 
 	export let show = false;
 	export let loading = false;
 	export let serverName = '';
-	export let prompts = [];
+	export let prompts: MCPPrompt[] = [];
 
-	export let onSelect = async () => {};
-	export let onPin = async () => {};
+	export let onSelect: (prompt: MCPPrompt) => Promise<void> | void = async () => {};
 	export let onClose = () => {};
 </script>
 
@@ -53,27 +53,19 @@
 					{$i18n.t('No MCP prompts are available for this server.')}
 				</div>
 			{:else}
-				<div class="mb-3 text-xs text-gray-500 dark:text-gray-400">
-					{$i18n.t(
-						'Click a prompt to use it on the next turn, or pin it to re-apply it on every turn in this chat.'
-					)}
-				</div>
-
 				<div class="flex max-h-96 flex-col gap-2 overflow-y-auto pr-1">
 					{#each prompts as prompt (prompt.name)}
-						<div
+						<button
+							type="button"
 							class="w-full rounded-2xl border border-gray-100 px-4 py-3 transition hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900/50"
+							on:click={() => onSelect(prompt)}
 						>
 							<div class="flex items-start gap-3">
 								<div class="mt-0.5 shrink-0 text-sky-500 dark:text-sky-300">
 									<Sparkles className="size-4" strokeWidth="1.75" />
 								</div>
 
-								<button
-									type="button"
-									class="min-w-0 flex-1 text-left"
-									on:click={() => onSelect(prompt)}
-								>
+								<div class="min-w-0 flex-1 text-left">
 									<div class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
 										{prompt.title ?? prompt.name}
 									</div>
@@ -95,22 +87,9 @@
 											})}
 										</div>
 									{/if}
-								</button>
-
-								<div class="shrink-0">
-									<Tooltip content={$i18n.t('Pin to this chat')}>
-										<button
-											type="button"
-											class="rounded-full p-2 text-amber-600 transition hover:bg-amber-50 hover:text-amber-700 dark:text-amber-300 dark:hover:bg-amber-400/10 dark:hover:text-amber-200"
-											aria-label={$i18n.t('Pin prompt to this chat')}
-											on:click={() => onPin(prompt)}
-										>
-											<Pin className="size-4" strokeWidth="1.75" />
-										</button>
-									</Tooltip>
 								</div>
 							</div>
-						</div>
+						</button>
 					{/each}
 				</div>
 			{/if}
