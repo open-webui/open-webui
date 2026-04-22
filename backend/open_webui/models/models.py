@@ -42,6 +42,12 @@ class ModelMeta(BaseModel):
         User-facing description of the model.
     """
 
+    greeting: Optional[str] = None
+    """
+        Message automatically shown to the user when this model is selected,
+        before any user input. Leave None to require the user to start the conversation.
+    """
+
     capabilities: Optional[dict] = None
 
     model_config = ConfigDict(extra='allow')

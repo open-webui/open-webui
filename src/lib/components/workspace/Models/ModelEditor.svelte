@@ -71,6 +71,8 @@
 	}
 
 	let system = '';
+	let greeting = '';
+
 	let info = {
 		id: '',
 		base_model_id: null,
@@ -229,6 +231,13 @@
 		}
 
 		info.params.system = system.trim() === '' ? null : system;
+
+		if (greeting.trim() !== '') {
+			info.meta.greeting = greeting.trim();
+		} else {
+			delete info.meta.greeting;
+		}
+
 		info.params.stop = params.stop
 			? (typeof params.stop === 'string' ? params.stop.split(',') : params.stop).filter((s) =>
 					s.trim()
@@ -289,6 +298,7 @@
 			}
 
 			system = model?.params?.system ?? '';
+			greeting = model?.meta?.greeting ?? '';
 
 			params = { ...params, ...model?.params };
 			params.stop = params?.stop
@@ -696,6 +706,20 @@
 										)}
 										rows={4}
 										bind:value={system}
+									/>
+								</div>
+							</div>
+
+							<div class="my-1">
+								<div class=" text-xs font-medium mb-2">{$i18n.t('Greeting Message')}</div>
+								<div>
+									<Textarea
+										className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
+										placeholder={$i18n.t(
+											'Enter a message to display automatically when this model is selected (leave empty to require users to start the conversation)'
+										)}
+										rows={2}
+										bind:value={greeting}
 									/>
 								</div>
 							</div>

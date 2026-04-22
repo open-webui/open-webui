@@ -383,6 +383,46 @@
 				selectedTerminalId.set(model.info.meta.terminalId);
 			}
 		}
+
+		injectGreeting();
+	};
+
+	const injectGreeting = () => {
+		if (chatIdProp) return;
+		if (selectedModels.length !== 1 || !selectedModels[0]) return;
+
+		const hasRealMessages = Object.values(history.messages).some((m: any) => !m.greeting);
+		if (hasRealMessages) return;
+
+		const model = $models.find((m) => m.id === selectedModels[0]);
+		const greetingText = model?.info?.meta?.greeting;
+
+		if (greetingText) {
+			const greetingId = uuidv4();
+			history = {
+				messages: {
+					[greetingId]: {
+						id: greetingId,
+						parentId: null,
+						childrenIds: [],
+						role: 'assistant',
+						content: greetingText,
+						done: true,
+						greeting: true,
+						model: model.id,
+						modelName: model.name ?? model.id,
+						modelIdx: 0,
+						timestamp: Math.floor(Date.now() / 1000)
+					}
+				},
+				currentId: greetingId
+			};
+		} else {
+			const hasGreeting = Object.values(history.messages).some((m: any) => m.greeting);
+			if (hasGreeting) {
+				history = { messages: {}, currentId: null };
+			}
+		}
 	};
 
 	const showMessage = async (message, scroll = true) => {
@@ -1306,6 +1346,8 @@
 		selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
+
+		injectGreeting();
 
 		const chatInput = document.getElementById('chat-input');
 		setTimeout(() => chatInput?.focus(), 0);
