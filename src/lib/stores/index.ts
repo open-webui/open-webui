@@ -27,7 +27,7 @@ export const appData = writable(null);
 export const MODEL_DOWNLOAD_POOL = writable({});
 
 export const mobile = writable(false);
-export const privacyProxy = writable(true);
+export const privacyProxy = writable(false);
 export const highlightEntities = writable<{ text: string; entities: any[] } | null>(null);
 export const socket: Writable<null | Socket> = writable(null);
 export const activeUserIds: Writable<null | string[]> = writable(null);
