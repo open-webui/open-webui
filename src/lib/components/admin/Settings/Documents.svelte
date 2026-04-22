@@ -1186,6 +1186,23 @@
 							{/if}
 
 							<div class="  mb-2.5 flex w-full justify-between">
+								<div class=" self-center text-xs font-medium">
+									{$i18n.t('Reranking Batch Size')}
+								</div>
+
+								<div class="">
+									<input
+										bind:value={RAGConfig.RAG_RERANKING_BATCH_SIZE}
+										type="number"
+										class=" bg-transparent text-center w-14 outline-none"
+										min="1"
+										max="16000"
+										step="1"
+									/>
+								</div>
+							</div>
+
+							<div class="  mb-2.5 flex w-full justify-between">
 								<div class=" self-center text-xs font-medium">{$i18n.t('Top K')}</div>
 								<div class="flex items-center relative">
 									<input

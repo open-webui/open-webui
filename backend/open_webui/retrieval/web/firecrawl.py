@@ -1,6 +1,7 @@
 import logging
 from typing import Optional, List
 
+import requests
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 
 log = logging.getLogger(__name__)
@@ -14,23 +15,38 @@ def search_firecrawl(
     filter_list: Optional[List[str]] = None,
 ) -> List[SearchResult]:
     try:
-        from firecrawl import FirecrawlApp
+        url = firecrawl_url.rstrip('/')
+        response = requests.post(
+            f'{url}/v1/search',
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {firecrawl_api_key}',
+            },
+            json={
+                'query': query,
+                'limit': count,
+                'timeout': count * 3000,
+            },
+            timeout=count * 3 + 10,
+        )
+        response.raise_for_status()
+        data = response.json().get('data', {})
 
-        firecrawl = FirecrawlApp(api_key=firecrawl_api_key, api_url=firecrawl_url)
-        response = firecrawl.search(query=query, limit=count, ignore_invalid_urls=True, timeout=count * 3)
-        results = response.web
-        if filter_list:
-            results = get_filtered_results(results, filter_list)
         results = [
             SearchResult(
-                link=result.url,
-                title=result.title,
-                snippet=result.description,
+                link=r.get('url', ''),
+                title=r.get('title', ''),
+                snippet=r.get('description', ''),
             )
-            for result in results[:count]
+            for r in data.get('web', [])
         ]
-        log.info(f'External search results: {results}')
+
+        if filter_list:
+            results = get_filtered_results(results, filter_list)
+
+        results = results[:count]
+        log.info(f'FireCrawl search results: {results}')
         return results
     except Exception as e:
-        log.error(f'Error in External search: {e}')
+        log.error(f'Error in FireCrawl search: {e}')
         return []

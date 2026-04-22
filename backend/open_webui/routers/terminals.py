@@ -16,6 +16,7 @@ from starlette.background import BackgroundTask
 
 from open_webui.utils.auth import get_verified_user
 from open_webui.utils.access_control import has_connection_access
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
 from open_webui.models.groups import Groups
 from open_webui.models.users import Users
 
@@ -52,7 +53,7 @@ def _sanitize_proxy_path(path: str) -> str | None:
 async def list_terminal_servers(request: Request, user=Depends(get_verified_user)):
     """Return terminal servers the authenticated user has access to."""
     connections = request.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
-    user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
+    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
 
     return [
         {
@@ -61,7 +62,7 @@ async def list_terminal_servers(request: Request, user=Depends(get_verified_user
             'name': connection.get('name', ''),
         }
         for connection in connections
-        if connection.get('enabled', True) and has_connection_access(user, connection, user_group_ids)
+        if connection.get('enabled', True) and await has_connection_access(user, connection, user_group_ids)
     ]
 
 
@@ -82,8 +83,8 @@ async def proxy_terminal(
     if connection is None:
         return JSONResponse({'error': f"Terminal server '{server_id}' not found"}, status_code=404)
 
-    user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
-    if not has_connection_access(user, connection, user_group_ids):
+    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
+    if not await has_connection_access(user, connection, user_group_ids):
         return JSONResponse({'error': 'Access denied'}, status_code=403)
 
     base_url = (connection.get('url') or '').rstrip('/')
@@ -105,6 +106,10 @@ async def proxy_terminal(
         target_url += f'?{request.query_params}'
 
     headers = {'X-User-Id': user.id}
+    # Forward per-session cwd tracking header
+    session_id = request.headers.get('x-session-id')
+    if session_id:
+        headers['X-Session-Id'] = session_id
     cookies = {}
     auth_type = connection.get('auth_type', 'bearer')
 
@@ -137,6 +142,7 @@ async def proxy_terminal(
             headers=headers,
             cookies=cookies,
             data=body or None,
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
         )
 
         upstream_content_type = upstream_response.headers.get('content-type', '')
@@ -204,7 +210,7 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
         if data is None or 'id' not in data:
             await ws.close(code=4001, reason='Invalid token')
             return None
-        user = Users.get_user_by_id(data['id'])
+        user = await Users.get_user_by_id(data['id'])
         if user is None:
             await ws.close(code=4001, reason='User not found')
             return None
@@ -223,8 +229,8 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
         await ws.close(code=4004, reason='Terminal server not found')
         return None
 
-    user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
-    if not has_connection_access(user, connection, user_group_ids):
+    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
+    if not await has_connection_access(user, connection, user_group_ids):
         await ws.close(code=4003, reason='Access denied')
         return None
 
@@ -275,7 +281,7 @@ async def ws_terminal(
 
     session = aiohttp.ClientSession()
     try:
-        async with session.ws_connect(upstream_url) as upstream:
+        async with session.ws_connect(upstream_url, ssl=AIOHTTP_CLIENT_SESSION_SSL) as upstream:
             import asyncio
             import json as _json
 

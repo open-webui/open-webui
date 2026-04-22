@@ -19,7 +19,7 @@ def get_task_model_id(default_model_id: str, task_model: str, task_model_externa
     # Set the task model
     task_model_id = default_model_id
     # Check if the user has a custom task model and use that model
-    if models[task_model_id].get('connection_type') == 'local':
+    if models.get(task_model_id, {}).get('connection_type') == 'local':
         if task_model and task_model in models:
             task_model_id = task_model
     else:

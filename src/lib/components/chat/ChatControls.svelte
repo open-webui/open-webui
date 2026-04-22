@@ -72,7 +72,10 @@
 
 	$: showControlsTab = $user?.role === 'admin' || ($user?.permissions?.chat?.controls ?? true);
 	$: showFilesTab =
-		!!$selectedTerminalId ||
+		($selectedTerminalId &&
+			(($terminalServers ?? []).some((t) => t.id && t.id === $selectedTerminalId) ||
+				$user?.role === 'admin' ||
+				($user?.permissions?.features?.direct_tool_servers ?? true))) ||
 		(codeInterpreterEnabled && $config?.code?.interpreter_engine !== 'jupyter');
 	$: showOverviewTab = hasMessages;
 
@@ -96,11 +99,20 @@
 	}
 
 	// Auto-open Files tab when a terminal is selected (suppress panel open when full-screen)
-	$: if ($selectedTerminalId) {
+	$: if ($selectedTerminalId && showFilesTab) {
 		activeTab = 'files';
 		if (largeScreen) {
 			showControls.set(true);
 		}
+	}
+
+	// Clear selected direct terminal if user lost permission
+	$: if (
+		$selectedTerminalId &&
+		!($terminalServers ?? []).some((t) => t.id && t.id === $selectedTerminalId) &&
+		!($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))
+	) {
+		selectedTerminalId.set(null);
 	}
 
 	// Attach a terminal file to the chat input
@@ -362,7 +374,7 @@
 									onClose={() => showControls.set(false)}
 								/>
 							{:else if activeTab === 'files' && $selectedTerminalId}
-								<FileNav onAttach={handleTerminalAttach} />
+								<FileNav onAttach={handleTerminalAttach} {chatId} />
 							{:else if activeTab === 'files' && codeInterpreterEnabled}
 								<PyodideFileNav />
 							{:else}
@@ -513,7 +525,7 @@
 										onClose={() => showControls.set(false)}
 									/>
 								{:else if activeTab === 'files' && $selectedTerminalId}
-									<FileNav onAttach={handleTerminalAttach} overlay={dragged} />
+									<FileNav onAttach={handleTerminalAttach} overlay={dragged} {chatId} />
 								{:else if activeTab === 'files' && codeInterpreterEnabled}
 									<PyodideFileNav overlay={dragged} />
 								{:else}
