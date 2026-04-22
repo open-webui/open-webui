@@ -679,6 +679,13 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(scheduler_worker_loop(app))
 
+    # Background health probes for OpenAI-compatible connections, consumed by
+    # the failover resolver and surfaced in the UI as status dots.
+    from open_webui.utils.provider_health import health_check_loop
+
+    app.state.PROVIDER_HEALTH = {}
+    app.state.provider_health_task = asyncio.create_task(health_check_loop(app))
+
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         try:
             await get_all_models(
@@ -742,6 +749,9 @@ async def lifespan(app: FastAPI):
 
     if hasattr(app.state, 'redis_task_command_listener'):
         app.state.redis_task_command_listener.cancel()
+
+    if hasattr(app.state, 'provider_health_task'):
+        app.state.provider_health_task.cancel()
 
 
 app = FastAPI(

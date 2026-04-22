@@ -1648,11 +1648,33 @@
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
-		const { id, done, choices, content, output, sources, selected_model_id, error, usage } = data;
+		const {
+			id,
+			done,
+			choices,
+			content,
+			output,
+			sources,
+			selected_model_id,
+			error,
+			usage,
+			provider_selected,
+			_owui_provider
+		} = data;
 
 		// Store raw OR-aligned output items from backend
 		if (output) {
 			message.output = output;
+		}
+
+		// Failover: surface which provider answered this message. For SSE,
+		// the backend emits `{provider_selected: {...}}` as the first event;
+		// for non-streaming, `_owui_provider` rides on the response body.
+		if (provider_selected) {
+			message.provider = provider_selected;
+		}
+		if (_owui_provider) {
+			message.provider = _owui_provider;
 		}
 
 		if (error) {
@@ -1967,11 +1989,13 @@
 		{
 			messages = null,
 			modelId = null,
-			modelIdx = null
+			modelIdx = null,
+			skipProviderUrls = []
 		}: {
 			messages?: any[] | null;
 			modelId?: string | null;
 			modelIdx?: number | null;
+			skipProviderUrls?: string[];
 		} = {}
 	) => {
 		if (autoScroll) {
@@ -2083,7 +2107,8 @@
 				_history,
 				primaryResponseMessageId,
 				_chatId,
-				selectedModelIds.length > 1 ? messageIdsMap : undefined
+				selectedModelIds.length > 1 ? messageIdsMap : undefined,
+				skipProviderUrls
 			);
 
 			if (chatEventEmitter) clearInterval(chatEventEmitter);
@@ -2148,7 +2173,8 @@
 		_history,
 		responseMessageId,
 		_chatId,
-		messageIdsMap?: Record<string, string>
+		messageIdsMap?: Record<string, string>,
+		skipProviderUrls: string[] = []
 	) => {
 		const responseMessage = _history.messages[responseMessageId];
 		const userMessage = _history.messages[responseMessage.parentId];
@@ -2366,7 +2392,8 @@
 						}
 					: {})
 			},
-			`${WEBUI_BASE_URL}/api`
+			`${WEBUI_BASE_URL}/api`,
+			skipProviderUrls
 		).catch(async (error) => {
 			console.log(error);
 
@@ -2544,7 +2571,7 @@
 		await sendMessage(history, userMessageId);
 	};
 
-	const regenerateResponse = async (message, suggestionPrompt = null) => {
+	const regenerateResponse = async (message, suggestionPrompt = null, options: { skipProviderUrls?: string[] } = {}) => {
 		console.log('regenerateResponse');
 
 		if (history.currentId) {
@@ -2577,6 +2604,9 @@
 							modelId: message.model,
 							modelIdx: message.modelIdx
 						}
+					: {}),
+				...(options.skipProviderUrls && options.skipProviderUrls.length > 0
+					? { skipProviderUrls: options.skipProviderUrls }
 					: {})
 			});
 		}

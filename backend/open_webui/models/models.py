@@ -33,6 +33,26 @@ class ModelParams(BaseModel):
     pass
 
 
+class FailoverProvider(BaseModel):
+    """One entry in a workspace model's ordered failover list.
+
+    `connection_url` is the stable key into OPENAI_API_BASE_URLS (we match
+    by URL, not list index, so a connection deletion doesn't silently
+    re-wire another model's failover chain).
+    `model_name` is the model id as the remote provider knows it — same model
+    is often named differently across providers (gpt-4o vs gpt-4-turbo).
+    `capabilities` is what the user asserts this provider supports; when the
+    incoming request needs a capability (tools, vision), providers missing it
+    are filtered out. An empty list means "unknown — try it anyway".
+    """
+
+    connection_url: str
+    model_name: str
+    capabilities: list[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(extra='allow')
+
+
 # ModelMeta is a model for the data stored in the meta field of the Model table
 class ModelMeta(BaseModel):
     profile_image_url: Optional[str] = '/static/favicon.png'
@@ -43,6 +63,13 @@ class ModelMeta(BaseModel):
     """
 
     capabilities: Optional[dict] = None
+
+    failover_providers: Optional[list[FailoverProvider]] = None
+    """
+        Ordered list of OpenAI-compatible providers to try when this model
+        is invoked. First entry is primary. If unset, legacy base_model_id
+        routing is used.
+    """
 
     model_config = ConfigDict(extra='allow')
 
