@@ -29,6 +29,8 @@
 	import { capitalizeFirstLetter, copyToClipboard } from '$lib/utils';
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
+	import CheckCircle from '../icons/CheckCircle.svelte';
+	import Minus from '../icons/Minus.svelte';
 	import ModelMenu from './Models/ModelMenu.svelte';
 	import ModelDeleteConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -41,6 +43,8 @@
 	import XMark from '../icons/XMark.svelte';
 	import EyeSlash from '../icons/EyeSlash.svelte';
 	import Eye from '../icons/Eye.svelte';
+
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import ViewSelector from './common/ViewSelector.svelte';
 	import TagSelector from './common/TagSelector.svelte';
 	import Pagination from '../common/Pagination.svelte';
@@ -222,6 +226,54 @@
 
 		settings.set({ ...$settings, pinnedModels: pinnedModels });
 		await updateUserSettings(localStorage.token, { ui: $settings });
+	};
+
+	const enableAllHandler = async () => {
+		const modelsToEnable = (models ?? []).filter((m) => !(m.is_active ?? true));
+		// Optimistic UI update
+		modelsToEnable.forEach((m) => (m.is_active = true));
+		models = models;
+		// Sync with server
+		await Promise.all(modelsToEnable.map((model) => toggleModelById(localStorage.token, model.id)));
+	};
+
+	const disableAllHandler = async () => {
+		const modelsToDisable = (models ?? []).filter((m) => m.is_active ?? true);
+		// Optimistic UI update
+		modelsToDisable.forEach((m) => (m.is_active = false));
+		models = models;
+		// Sync with server
+		await Promise.all(
+			modelsToDisable.map((model) => toggleModelById(localStorage.token, model.id))
+		);
+	};
+
+	const showAllHandler = async () => {
+		const modelsToShow = (models ?? []).filter((m) => m?.meta?.hidden === true);
+		// Optimistic UI update
+		modelsToShow.forEach((m) => {
+			m.meta = { ...m.meta, hidden: false };
+		});
+		models = models;
+		// Sync with server
+		await Promise.all(
+			modelsToShow.map((model) => updateModelById(localStorage.token, model.id, model))
+		);
+		toast.success($i18n.t('All models are now visible'));
+	};
+
+	const hideAllHandler = async () => {
+		const modelsToHide = (models ?? []).filter((m) => !(m?.meta?.hidden ?? false));
+		// Optimistic UI update
+		modelsToHide.forEach((m) => {
+			m.meta = { ...m.meta, hidden: true };
+		});
+		models = models;
+		// Sync with server
+		await Promise.all(
+			modelsToHide.map((model) => updateModelById(localStorage.token, model.id, model))
+		);
+		toast.success($i18n.t('All models are now hidden'));
 	};
 
 	onMount(async () => {
@@ -453,6 +505,71 @@
 					/>
 				{/if}
 			</div>
+
+			<div class="flex-1"></div>
+
+			<Dropdown>
+				<Tooltip content={$i18n.t('Actions')}>
+					<button
+						class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+						type="button"
+					>
+						<EllipsisHorizontal className="size-4" />
+					</button>
+				</Tooltip>
+
+				<div slot="content">
+					<div
+						class="w-[170px] rounded-xl p-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
+					>
+						<button
+							class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+							type="button"
+							on:click={() => {
+								enableAllHandler();
+							}}
+						>
+							<CheckCircle className="size-4" />
+							<div class="flex items-center">{$i18n.t('Enable All')}</div>
+						</button>
+
+						<button
+							class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+							type="button"
+							on:click={() => {
+								disableAllHandler();
+							}}
+						>
+							<Minus className="size-4" />
+							<div class="flex items-center">{$i18n.t('Disable All')}</div>
+						</button>
+
+						<hr class="border-gray-100 dark:border-gray-800 my-1" />
+
+						<button
+							class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+							type="button"
+							on:click={() => {
+								showAllHandler();
+							}}
+						>
+							<Eye className="size-4" />
+							<div class="flex items-center">{$i18n.t('Show All')}</div>
+						</button>
+
+						<button
+							class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+							type="button"
+							on:click={() => {
+								hideAllHandler();
+							}}
+						>
+							<EyeSlash className="size-4" />
+							<div class="flex items-center">{$i18n.t('Hide All')}</div>
+						</button>
+					</div>
+				</div>
+			</Dropdown>
 		</div>
 
 		{#if models !== null}
@@ -484,6 +601,9 @@
 												src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}`}
 												alt="modelfile profile"
 												class=" rounded-2xl size-12 object-cover"
+												on:error={(e) => {
+													e.target.src = '/favicon.png';
+												}}
 											/>
 										</div>
 									</div>

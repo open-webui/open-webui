@@ -31,6 +31,7 @@
 	} = {};
 
 	export let open = false;
+	export let grouped = false;
 	export let className = '';
 
 	const RESULT_PREVIEW_LIMIT = 10000;
@@ -76,7 +77,9 @@
 	}
 
 	$: args = decode(attributes?.arguments ?? '');
-	$: result = decode(attributes?.result ?? '');
+	export let resultContent: string = '';
+
+	$: result = resultContent || decode(attributes?.result ?? '');
 	$: files = parseJSONString(decode(attributes?.files ?? ''));
 	$: embeds = parseJSONString(decode(attributes?.embeds ?? ''));
 	$: isDone = attributes?.done === 'true';
@@ -87,7 +90,7 @@
 </script>
 
 <div {id} class={className}>
-	{#if embeds && Array.isArray(embeds) && embeds.length > 0}
+	{#if !grouped && embeds && Array.isArray(embeds) && embeds.length > 0}
 		<!-- Embed Mode: Show iframes without collapsible behavior -->
 		<div class="py-1 w-full cursor-pointer">
 			<div class="w-full text-xs text-gray-500">
@@ -138,9 +141,9 @@
 				<!-- Label -->
 				<div class="flex-1 line-clamp-1">
 					<!-- Short label (below md) -->
-					<span class="@md:hidden font-semibold text-black dark:text-white">{attributes.name}</span>
+					<span class="@md:hidden text-black dark:text-white">{attributes.name}</span>
 					<!-- Full label (md and above) -->
-					<span class="hidden @md:inline">
+					<span class="hidden @md:inline font-normal">
 						{#if isDone}
 							<Markdown
 								id={`${componentId}-tool-call-title`}
@@ -197,10 +200,10 @@
 								</div>
 							{:else}
 								<div class="tool-call-body w-full max-w-none!">
-									<Markdown
-										id={`${componentId}-tool-call-args`}
-										content={`\`\`\`json\n${formatJSONString(args)}\n\`\`\``}
-									/>
+									<pre
+										class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre font-mono bg-gray-50 dark:bg-gray-900 rounded-lg p-2.5 overflow-x-auto">{formatJSONString(
+											args
+										)}</pre>
 								</div>
 							{/if}
 						</div>
@@ -216,10 +219,12 @@
 							</div>
 							<div class="w-full max-w-none!">
 								{#if typeof parsedResult === 'object' && parsedResult !== null}
-									<Markdown
-										id={`${componentId}-tool-call-result`}
-										content={`\`\`\`json\n${JSON.stringify(parsedResult, null, 2)}\n\`\`\``}
-									/>
+									<pre
+										class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre font-mono bg-gray-50 dark:bg-gray-900 rounded-lg p-2.5 overflow-x-auto">{JSON.stringify(
+											parsedResult,
+											null,
+											2
+										)}</pre>
 								{:else}
 									{@const resultStr = String(parsedResult)}
 									{@const isTruncated = resultStr.length > RESULT_PREVIEW_LIMIT && !expandedResult}

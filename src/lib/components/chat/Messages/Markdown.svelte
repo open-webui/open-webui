@@ -8,6 +8,7 @@
 	import markedKatexExtension from '$lib/utils/marked/katex-extension';
 	import { disableSingleTilde } from '$lib/utils/marked/strikethrough-extension';
 	import { mentionExtension } from '$lib/utils/marked/mention-extension';
+	import colonFenceExtension from '$lib/utils/marked/colon-fence-extension';
 
 	import MarkdownTokens from './Markdown/MarkdownTokens.svelte';
 	import footnoteExtension from '$lib/utils/marked/footnote-extension';
@@ -48,6 +49,7 @@
 	marked.use(markedExtension(options));
 	marked.use(citationExtension(options));
 	marked.use(footnoteExtension(options));
+	marked.use(colonFenceExtension(options));
 	marked.use(disableSingleTilde);
 	marked.use({
 		extensions: [
@@ -69,17 +71,11 @@
 	};
 
 	const updateHandler = (content) => {
-		if (content) {
-			if (done) {
-				cancelAnimationFrame(pendingUpdate);
+		if (content && !pendingUpdate) {
+			pendingUpdate = requestAnimationFrame(() => {
 				pendingUpdate = null;
 				parseTokens();
-			} else if (!pendingUpdate) {
-				pendingUpdate = requestAnimationFrame(() => {
-					pendingUpdate = null;
-					parseTokens();
-				});
-			}
+			});
 		}
 	};
 

@@ -7,6 +7,7 @@
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import equal from 'fast-deep-equal';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
@@ -58,7 +59,7 @@
 		if (source) {
 			if (message.content !== source.content) {
 				message = structuredClone(source);
-			} else if (JSON.stringify(message) !== JSON.stringify(source)) {
+			} else if (!equal(message, source)) {
 				message = structuredClone(source);
 			}
 		}
@@ -135,7 +136,9 @@
 	{#if !($settings?.chatBubble ?? true)}
 		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 mt-1`}>
 			<ProfileImage
-				src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
+				src={user?.id
+					? `${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`
+					: `${WEBUI_BASE_URL}/static/favicon.png`}
 				className={'size-8 user-message-profile-image'}
 			/>
 		</div>
@@ -147,8 +150,8 @@
 					{#if message.user}
 						{$i18n.t('You')}
 						<span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
-					{:else if $settings.showUsername || $_user.name !== user.name}
-						{user.name}
+					{:else if $settings.showUsername || $_user?.name !== user?.name}
+						{user?.name ?? $i18n.t('You')}
 					{:else}
 						{$i18n.t('You')}
 					{/if}
@@ -548,8 +551,12 @@
 									class="{($settings?.highContrastMode ?? false)
 										? ''
 										: 'invisible group-hover:visible'} p-1 rounded-sm dark:hover:text-white hover:text-black transition"
-									on:click={() => {
-										showDeleteConfirm = true;
+									on:click={(e) => {
+										if (e.shiftKey) {
+											deleteMessageHandler();
+										} else {
+											showDeleteConfirm = true;
+										}
 									}}
 								>
 									<svg

@@ -55,10 +55,12 @@
 	import { uploadFile } from '$lib/apis/files';
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
+	import { getChatById } from '$lib/apis/chats';
 	import { getSessionUser } from '$lib/apis/auths';
 	import { getTools } from '$lib/apis/tools';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
+	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
 
 	import { createNoteHandler } from '../notes/utils';
 	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
@@ -82,24 +84,22 @@
 
 	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
 	import Voice from '../icons/Voice.svelte';
-	import Cloud from '../icons/Cloud.svelte';
+	import Terminal from '../icons/Terminal.svelte';
 	import IntegrationsMenu from './MessageInput/IntegrationsMenu.svelte';
 	import TerminalMenu from './MessageInput/TerminalMenu.svelte';
 	import Component from '../icons/Component.svelte';
 	import PlusAlt from '../icons/PlusAlt.svelte';
 	import Dropdown from '../common/Dropdown.svelte';
 
-	import { DropdownMenu } from 'bits-ui';
-	import { flyAndScale } from '$lib/utils/transitions';
-
 	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
 	import Knobs from '../icons/Knobs.svelte';
 	import ValvesModal from '../workspace/common/ValvesModal.svelte';
-	import PageEdit from '../icons/PageEdit.svelte';
+	import Note from '../icons/Note.svelte';
 	import { goto } from '$app/navigation';
 	import InputModal from '../common/InputModal.svelte';
 	import Expand from '../icons/Expand.svelte';
 	import QueuedMessageItem from './MessageInput/QueuedMessageItem.svelte';
+	import TaskList from './Messages/ResponseMessage/TaskList.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -122,6 +122,11 @@
 	export let history;
 	export let taskIds = null;
 
+	$: isActive =
+		(taskIds && taskIds.length > 0) ||
+		(history.currentId && history.messages[history.currentId]?.done != true) ||
+		generating;
+
 	export let prompt = '';
 	export let files = [];
 
@@ -132,12 +137,16 @@
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
 
+	export let pendingOAuthTools = [];
+
 	let showTerminalMenu = false;
 
 	export let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
 	export let onQueueSendNow: (id: string) => void = () => {};
 	export let onQueueEdit: (id: string) => void = () => {};
 	export let onQueueDelete: (id: string) => void = () => {};
+
+	export let chatTasks = [];
 
 	let inputContent = null;
 
@@ -334,7 +343,9 @@
 			}
 
 			chatInputElement?.setText(text);
-			chatInputElement?.focus();
+			if (!$showCallOverlay) {
+				chatInputElement?.focus();
+			}
 
 			if (text !== '') {
 				text = await inputVariableHandler(text);
@@ -403,7 +414,7 @@
 	let command = '';
 	export let showCommands = false;
 	$: showCommands =
-		['/', '#', '@', '$'].includes(command?.charAt(0)) || '\\#' === command?.slice(0, 2);
+		['/', '#', '@', '$', ':'].includes(command?.charAt(0)) || '\\#' === command?.slice(0, 2);
 	let suggestions = null;
 
 	let showTools = false;
@@ -484,6 +495,11 @@
 			$models.find((m) => m.id === model)?.info?.meta?.capabilities?.code_interpreter ?? true
 	);
 
+	let terminalCapableModels = [];
+	$: terminalCapableModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(
+		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.terminal ?? true
+	);
+
 	let toggleFilters = [];
 	$: toggleFilters = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels)
 		.map((id) => ($models.find((model) => model.id === id) || {})?.filters ?? [])
@@ -517,6 +533,11 @@
 	// Disable code interpreter when terminal is active (mutually exclusive)
 	$: if ($selectedTerminalId && codeInterpreterEnabled) {
 		codeInterpreterEnabled = false;
+	}
+
+	// Clear selected terminal when model doesn't support terminal
+	$: if ($selectedTerminalId && terminalCapableModels.length === 0) {
+		selectedTerminalId.set(null);
 	}
 
 	const scrollToBottom = () => {
@@ -807,8 +828,8 @@
 	const onDragOver = (e: DragEvent) => {
 		e.preventDefault();
 
-		// Check if a file is being dragged.
-		if (e.dataTransfer?.types?.includes('Files')) {
+		// Check if a file or a sidebar chat item is being dragged.
+		if (e.dataTransfer?.types?.includes('Files') || e.dataTransfer?.types?.includes('text/plain')) {
 			dragged = true;
 		} else {
 			dragged = false;
@@ -825,6 +846,35 @@
 	const onDrop = async (e: DragEvent) => {
 		e.preventDefault();
 		console.log(e);
+
+		// Check if the dropped data is a sidebar chat item
+		const textData = e.dataTransfer?.getData('text/plain');
+		if (textData) {
+			try {
+				const data = JSON.parse(textData);
+				if (data.type === 'chat' && data.id) {
+					// Fetch the chat to get its title, then add as a reference chat
+					const chat = await getChatById(localStorage.token, data.id);
+					if (chat) {
+						const chatItem = {
+							type: 'chat',
+							id: chat.id,
+							name: chat.title,
+							collection_name: '',
+							status: 'processed'
+						};
+						if (!files.find((f) => f.id === chatItem.id)) {
+							files = [...files, chatItem];
+						}
+					}
+					dragged = false;
+					e.stopPropagation();
+					return;
+				}
+			} catch (_) {
+				// Not valid JSON — fall through to file handling
+			}
+		}
 
 		if (e.dataTransfer?.files) {
 			const inputFiles = Array.from(e.dataTransfer?.files);
@@ -905,6 +955,9 @@
 								}
 							];
 						} else {
+							if (files.find((f) => f.url === data || f.name === data)) {
+								return;
+							}
 							onUpload(e);
 						}
 					}
@@ -940,6 +993,9 @@
 								}
 							];
 						} else {
+							if (files.find((f) => f.url === data || f.name === data)) {
+								return;
+							}
 							onUpload(e);
 						}
 					}
@@ -975,6 +1031,9 @@
 								}
 							];
 						} else {
+							if (files.find((f) => f.url === data || f.name === data)) {
+								return;
+							}
 							onUpload(e);
 						}
 					}
@@ -982,6 +1041,25 @@
 			},
 			{
 				char: '$',
+				render: getSuggestionRenderer(CommandSuggestionList, {
+					i18n,
+					onSelect: (e) => {
+						document.getElementById('chat-input')?.focus();
+					},
+
+					insertTextHandler: insertTextAtCursor,
+					onUpload: () => {}
+				})
+			},
+			{
+				char: ':',
+				allowSpaces: false,
+				command: ({ editor, range, props }) => {
+					// Convert the Unicode hex codepoint (e.g. "1F44B") to the actual emoji character (👋)
+					const codepoint = props.id;
+					const emoji = String.fromCodePoint(parseInt(codepoint, 16));
+					editor.chain().focus().deleteRange(range).insertContent(emoji).run();
+				},
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					i18n,
 					onSelect: (e) => {
@@ -1014,8 +1092,8 @@
 
 			dropzoneElement = document.getElementById('chat-pane');
 			if (dropzoneElement) {
-				dropzoneElement.addEventListener('dragover', onDragOver);
-				dropzoneElement.addEventListener('drop', onDrop);
+				dropzoneElement.addEventListener('dragover', onDragOver, true);
+				dropzoneElement.addEventListener('drop', onDrop, true);
 				dropzoneElement.addEventListener('dragleave', onDragLeave);
 			}
 
@@ -1033,8 +1111,8 @@
 			window.removeEventListener('blur', onBlur);
 
 			if (dropzoneElement) {
-				dropzoneElement.removeEventListener('dragover', onDragOver);
-				dropzoneElement.removeEventListener('drop', onDrop);
+				dropzoneElement.removeEventListener('dragover', onDragOver, true);
+				dropzoneElement.removeEventListener('drop', onDrop, true);
 				dropzoneElement.removeEventListener('dragleave', onDragLeave);
 			}
 		};
@@ -1177,6 +1255,13 @@
 							class="hidden"
 							on:click={() => createMessagePair(prompt)}
 						/>
+
+						<!-- Task list display -->
+						{#if isActive && chatTasks.length > 0}
+							<div class="mx-1">
+								<TaskList tasks={chatTasks} />
+							</div>
+						{/if}
 
 						<!-- Queued messages display -->
 						{#if messageQueue.length > 0}
@@ -1666,13 +1751,25 @@
 											</Tooltip>
 										{/if}
 
-										{#each selectedFilterIds as filterId}
+										{#each selectedFilterIds as filterId (filterId)}
 											{@const filter = toggleFilters.find((f) => f.id === filterId)}
 											{#if filter}
 												<Tooltip content={filter?.name} placement="top">
 													<button
 														on:click|preventDefault={() => {
-															selectedFilterIds = selectedFilterIds.filter((id) => id !== filterId);
+															if (
+																filter?.has_user_valves &&
+																($_user?.role === 'admin' ||
+																	($_user?.permissions?.chat?.valves ?? true))
+															) {
+																selectedValvesType = 'function';
+																selectedValvesItemId = filterId;
+																showValvesModal = true;
+															} else {
+																selectedFilterIds = selectedFilterIds.filter(
+																	(id) => id !== filterId
+																);
+															}
 														}}
 														type="button"
 														class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {selectedFilterIds.includes(
@@ -1695,7 +1792,18 @@
 														{:else}
 															<Sparkles className="size-4" strokeWidth="1.75" />
 														{/if}
-														<div class="hidden group-hover:block">
+														<!-- svelte-ignore a11y-click-events-have-key-events -->
+														<!-- svelte-ignore a11y-no-static-element-interactions -->
+														<div
+															class="hidden group-hover:block"
+															on:click={(e) => {
+																e.stopPropagation();
+																e.preventDefault();
+																selectedFilterIds = selectedFilterIds.filter(
+																	(id) => id !== filterId
+																);
+															}}
+														>
 															<XMark className="size-4" strokeWidth="1.75" />
 														</div>
 													</button>
@@ -1756,7 +1864,7 @@
 														? 'm-1'
 														: 'focus:outline-hidden rounded-full'}"
 												>
-													<Cloud className="size-3.5" strokeWidth="2" />
+													<Terminal className="size-3.5" strokeWidth="2" />
 
 													<div class="hidden group-hover:block">
 														<XMark className="size-4" strokeWidth="1.75" />
@@ -1764,11 +1872,32 @@
 												</button>
 											</Tooltip>
 										{/if}
+
+										{#each pendingOAuthTools as pendingTool (pendingTool.id)}
+											<Tooltip content={$i18n.t('Click to connect')} placement="top">
+												<button
+													on:click|preventDefault={() => {
+														sessionStorage.setItem('pendingOAuthToolId', pendingTool.id);
+														const authUrl = getOAuthClientAuthorizationUrl(
+															pendingTool.serverId,
+															pendingTool.authType ?? 'mcp'
+														);
+														window.open(authUrl, '_self', 'noopener');
+													}}
+													type="button"
+													class="group px-2 py-[5px] flex gap-1.5 items-center text-xs rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden
+														text-amber-600 dark:text-amber-400 bg-amber-50 hover:bg-amber-100 dark:bg-amber-400/10 dark:hover:bg-amber-600/10 border border-amber-200/40 dark:border-amber-500/20"
+												>
+													<Wrench className="size-3.5" strokeWidth="1.75" />
+													<span class="truncate">{pendingTool.name}</span>
+												</button>
+											</Tooltip>
+										{/each}
 									</div>
 								</div>
 
 								<div class="self-end flex space-x-1 mr-1 shrink-0 gap-[0.5px]">
-									{#if (taskIds && taskIds.length > 0) || (history.currentId && history.messages[history.currentId]?.done != true) || generating}
+									{#if isActive && prompt === '' && files.length === 0}
 										<div class=" flex items-center">
 											<Tooltip content={$i18n.t('Stop')}>
 												<button
@@ -1793,26 +1922,29 @@
 											</Tooltip>
 										</div>
 									{:else}
-										{#if prompt !== '' && !history?.currentId && ($config?.features?.enable_notes ?? false) && ($_user?.role === 'admin' || ($_user?.permissions?.features?.notes ?? true))}
+										{#if prompt !== '' && !history?.currentId && !$selectedTerminalId && ($config?.features?.enable_notes ?? false) && ($_user?.role === 'admin' || ($_user?.permissions?.features?.notes ?? true))}
 											<!-- {$i18n.t('Create Note')}  -->
 											<Tooltip content={$i18n.t('Create note')} className=" flex items-center">
 												<button
 													id="create-note-button"
-													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center"
+													class=" text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 -mr-1 self-center"
 													type="button"
 													disabled={prompt === '' && files.length === 0}
 													on:click={() => {
 														createNote();
 													}}
 												>
-													<PageEdit className="size-4.5 translate-y-[0.5px]" />
+													<Note className="size-4.5 translate-y-[0.5px]" />
 												</button>
 											</Tooltip>
 										{/if}
 
 										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
 											<!-- Terminal Server Selector -->
-											{#if ($terminalServers ?? []).length > 0 || ($settings?.terminalServers ?? []).some((s) => s.url)}
+											{@const hasDirectToolServerAccess =
+												$_user?.role === 'admin' ||
+												($_user?.permissions?.features?.direct_tool_servers ?? true)}
+											{#if terminalCapableModels.length > 0 && (($terminalServers ?? []).some((t) => t.id) || (hasDirectToolServerAccess && (($terminalServers ?? []).some((t) => !t.id) || ($settings?.terminalServers ?? []).some((s) => s.url))))}
 												<TerminalMenu bind:show={showTerminalMenu} />
 											{/if}
 

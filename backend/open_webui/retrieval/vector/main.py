@@ -63,9 +63,7 @@ class VectorDBBase(ABC):
         pass
 
     @abstractmethod
-    def query(
-        self, collection_name: str, filter: Dict, limit: Optional[int] = None
-    ) -> Optional[GetResult]:
+    def query(self, collection_name: str, filter: Dict, limit: Optional[int] = None) -> Optional[GetResult]:
         """Query vectors from a collection using metadata filter."""
         pass
 

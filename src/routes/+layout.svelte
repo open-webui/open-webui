@@ -19,6 +19,7 @@
 		WEBUI_DEPLOYMENT_ID,
 		mobile,
 		socket,
+		socketConnected,
 		chatId,
 		chats,
 		currentChatPage,
@@ -35,7 +36,8 @@
 		showControls,
 		showFileNavPath,
 		showFileNavDir,
-		pyodideWorker
+		pyodideWorker,
+		desktopEvent
 	} from '$lib/stores';
 	import { getFileContentById } from '$lib/apis/files';
 	import { goto } from '$app/navigation';
@@ -49,13 +51,19 @@
 	import '../app.css';
 	import 'tippy.js/dist/tippy.css';
 
-	import { executeToolServer, getBackendConfig, getVersion } from '$lib/apis';
-	import { getSessionUser, userSignOut } from '$lib/apis/auths';
+	import { executeToolServer, getBackendConfig, getModels, getVersion } from '$lib/apis';
+	import { getSessionUser, updateUserTimezone, userSignOut } from '$lib/apis/auths';
 	import { getAllTags, getChatList } from '$lib/apis/chats';
 	import { chatCompletion } from '$lib/apis/openai';
+	import {
+		addOpenAIConnection,
+		removeOpenAIConnection,
+		addTerminalConnection,
+		removeTerminalConnection
+	} from '$lib/utils/connections';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
-	import { bestMatchingLanguage, displayFileHandler } from '$lib/utils';
+	import { bestMatchingLanguage, displayFileHandler, getUserTimezone } from '$lib/utils';
 	import { setTextScale } from '$lib/utils/text-scale';
 
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
@@ -120,8 +128,17 @@
 			console.log('connect_error', err);
 		});
 
+		let hasConnectedOnce = false;
+
 		_socket.on('connect', async () => {
 			console.log('connected', _socket.id);
+
+			if (hasConnectedOnce) {
+				socketConnected.set(true);
+				toast.success($i18n.t('Reconnected'));
+			}
+			hasConnectedOnce = true;
+
 			const res = await getVersion(localStorage.token);
 
 			const deploymentId = res?.deployment_id ?? null;
@@ -152,6 +169,7 @@
 
 			if (version !== null) {
 				WEBUI_VERSION.set(version);
+				window.WEBUI_VERSION = version;
 			}
 
 			console.log('version', version);
@@ -174,6 +192,8 @@
 
 		_socket.on('disconnect', (reason, details) => {
 			console.log(`Socket ${_socket.id} disconnected due to ${reason}`);
+			socketConnected.set(false);
+			toast.warning($i18n.t('Connection lost. Reconnecting...'));
 
 			if (heartbeatInterval) {
 				clearInterval(heartbeatInterval);
@@ -369,7 +389,7 @@
 		return { toolServer, toolServerData, token };
 	};
 
-	const executeTool = async (data, cb) => {
+	const executeTool = async (data, cb, chatId) => {
 		const { toolServer, toolServerData, token } = resolveToolServer(data.server?.url);
 
 		console.log('executeTool', data, toolServer);
@@ -380,7 +400,8 @@
 				toolServer.url,
 				data?.name,
 				data?.params,
-				toolServerData
+				toolServerData,
+				chatId
 			);
 
 			console.log('executeToolServer', res);
@@ -416,13 +437,13 @@
 			return;
 		}
 
-		let isFocused = document.visibilityState !== 'visible';
+		let isInBackground = document.visibilityState !== 'visible';
 		if (window.electronAPI) {
 			const res = await window.electronAPI.send({
 				type: 'window:isFocused'
 			});
 			if (res) {
-				isFocused = res.isFocused;
+				isInBackground = !res.isFocused;
 			}
 		}
 
@@ -430,7 +451,39 @@
 		const type = event?.data?.type ?? null;
 		const data = event?.data?.data ?? null;
 
-		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isFocused) {
+		// Calendar alerts are not chat-scoped — handle before chat_id checks
+		if (type === 'calendar:alert' && data) {
+			const timeStr =
+				data.minutes_until <= 0
+					? $i18n.t('Starting now')
+					: data.minutes_until === 1
+						? $i18n.t('Starting in 1 minute')
+						: $i18n.t('Starting in {{count}} minutes', { count: data.minutes_until });
+
+			toast.custom(NotificationToast, {
+				componentProps: {
+					onClick: () => {
+						goto('/calendar');
+					},
+					title: data.title,
+					content: timeStr
+				},
+				duration: 30000,
+				unstyled: true
+			});
+
+			if ($isLastActiveTab) {
+				if ($settings?.notificationEnabled ?? false) {
+					new Notification(`${data.title} • Open WebUI`, {
+						body: timeStr,
+						icon: `${WEBUI_BASE_URL}/static/favicon.png`
+					});
+				}
+			}
+			return;
+		}
+
+		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isInBackground) {
 			if (type === 'chat:completion') {
 				const { done, content, title } = data;
 				const displayTitle = title || $i18n.t('New Chat');
@@ -479,7 +532,7 @@
 				executePythonAsWorker(data.id, data.code, cb, data.files || []);
 			} else if (type === 'execute:tool') {
 				console.log('execute:tool', data);
-				executeTool(data, cb);
+				executeTool(data, cb, event.chat_id);
 			} else if (type === 'request:chat:completion') {
 				console.log(data, $socket.id);
 				const { session_id, channel, form_data, model } = data;
@@ -598,17 +651,17 @@
 		// check url path
 		const channel = $page.url.pathname.includes(`/channels/${event.channel_id}`);
 
-		let isFocused = document.visibilityState !== 'visible';
+		let isInBackground = document.visibilityState !== 'visible';
 		if (window.electronAPI) {
 			const res = await window.electronAPI.send({
 				type: 'window:isFocused'
 			});
 			if (res) {
-				isFocused = res.isFocused;
+				isInBackground = !res.isFocused;
 			}
 		}
 
-		if ((!channel || isFocused) && event?.user?.id !== $user?.id) {
+		if ((!channel || isInBackground) && event?.user?.id !== $user?.id) {
 			await tick();
 			const type = event?.data?.type ?? null;
 			const data = event?.data?.data ?? null;
@@ -692,6 +745,93 @@
 		}
 	};
 
+	const desktopEventHandler = async (event) => {
+		// Events that don't require auth
+		if (event.type === 'page:reload') {
+			location.reload();
+			return;
+		}
+		if (event.type === 'page:navigate' && event.data?.path) {
+			await goto(event.data.path);
+			return;
+		}
+		if (event.type === 'query' && (event.data?.query || event.data?.files?.length)) {
+			desktopEvent.set(event);
+			await goto('/');
+			return;
+		}
+		if (event.type === 'call') {
+			desktopEvent.set(event);
+			await goto('/');
+			return;
+		}
+		if (event.type === 'theme:update' && event.data?.theme) {
+			const newTheme = event.data.theme;
+			localStorage.setItem('theme', newTheme);
+			theme.set(newTheme);
+
+			// Apply theme classes (mirrors logic from chat/Settings/General.svelte)
+			const themes = ['dark', 'light', 'oled-dark'];
+			let themeToApply =
+				newTheme === 'oled-dark' ? 'dark' : newTheme === 'her' ? 'light' : newTheme;
+			if (newTheme === 'system') {
+				themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+			}
+			themes
+				.filter((e) => e !== themeToApply)
+				.forEach((e) => {
+					e.split(' ').forEach((cls) => document.documentElement.classList.remove(cls));
+				});
+			themeToApply.split(' ').forEach((cls) => document.documentElement.classList.add(cls));
+			return;
+		}
+		if (event.type === 'models:refresh') {
+			const token = localStorage.token;
+			if (token) {
+				models.set(
+					await getModels(
+						token,
+						$config?.features?.enable_direct_connections
+							? ($settings?.directConnections ?? null)
+							: null
+					)
+				);
+			}
+			return;
+		}
+
+		const token = localStorage.token;
+		if (!token) return;
+
+		// Only admins can modify system-level connections
+		if ($user?.role !== 'admin') return;
+
+		try {
+			if (event.type === 'connections:terminal') {
+				if (event.data.action === 'add') {
+					await addTerminalConnection(token, {
+						url: event.data.url,
+						key: event.data.key,
+						name: 'Local Open Terminal'
+					});
+				} else if (event.data.action === 'remove') {
+					await removeTerminalConnection(token, event.data.url);
+				}
+			} else if (event.type === 'connections:openai') {
+				if (event.data.action === 'add') {
+					await addOpenAIConnection(token, {
+						url: event.data.url,
+						key: event.data.key
+					});
+				} else if (event.data.action === 'remove') {
+					await removeOpenAIConnection(token, event.data.url);
+				}
+			}
+		} catch (e) {
+			console.error('Desktop connection update failed:', e);
+		}
+	};
+
 	const windowMessageEventHandler = async (event) => {
 		if (
 			!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:9999'].includes(
@@ -767,6 +907,11 @@
 					appData.set(data);
 				}
 			}
+
+			// Listen for desktop service lifecycle events (scalable protocol)
+			if (window.electronAPI.onEvent) {
+				window.electronAPI.onEvent(desktopEventHandler);
+			}
 		}
 
 		// Listen for messages on the BroadcastChannel
@@ -838,6 +983,12 @@
 			backendConfig = await getBackendConfig();
 			console.log('Backend config:', backendConfig);
 		} catch (error) {
+			if (error?.authRedirect) {
+				// Forward-auth proxy is redirecting to an external login page.
+				// Full-page navigation lets the browser follow the redirect natively.
+				window.location.href = '/';
+				return;
+			}
 			console.error('Error loading backend config:', error);
 		}
 		// Initialize i18n even if we didn't get a backend config,
@@ -880,6 +1031,22 @@
 							await config.set(await getBackendConfig());
 						} catch (error) {
 							console.error('Error refreshing backend config:', error);
+						}
+
+						// Keep user timezone in sync on every app load/refresh
+						const timezone = getUserTimezone();
+						if (timezone) {
+							updateUserTimezone(localStorage.token, timezone);
+						}
+
+						// Relay auth token to desktop app for API access
+						if (window.electronAPI?.send) {
+							window.electronAPI
+								.send({
+									type: 'token:update',
+									token: localStorage.token
+								})
+								.catch(() => {});
 						}
 					} else {
 						// Redirect Invalid Session User to /auth Page

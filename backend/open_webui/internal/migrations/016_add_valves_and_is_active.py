@@ -36,14 +36,14 @@ with suppress(ImportError):
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your migrations here."""
 
-    migrator.add_fields("tool", valves=pw.TextField(null=True))
-    migrator.add_fields("function", valves=pw.TextField(null=True))
-    migrator.add_fields("function", is_active=pw.BooleanField(default=False))
+    migrator.add_fields('tool', valves=pw.TextField(null=True))
+    migrator.add_fields('function', valves=pw.TextField(null=True))
+    migrator.add_fields('function', is_active=pw.BooleanField(default=False))
 
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your rollback migrations here."""
 
-    migrator.remove_fields("tool", "valves")
-    migrator.remove_fields("function", "valves")
-    migrator.remove_fields("function", "is_active")
+    migrator.remove_fields('tool', 'valves')
+    migrator.remove_fields('function', 'valves')
+    migrator.remove_fields('function', 'is_active')

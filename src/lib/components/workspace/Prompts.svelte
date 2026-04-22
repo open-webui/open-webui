@@ -64,6 +64,7 @@
 		loading = true;
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
+			page = 1;
 			getPromptList();
 		}, 300);
 	}
