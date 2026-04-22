@@ -98,6 +98,7 @@ from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
     get_content_from_message,
     convert_output_to_messages,
+    add_reasoning_content_to_tool_messages,
     strip_empty_content_blocks,
 )
 from open_webui.utils.tools import (
@@ -4660,12 +4661,17 @@ async def streaming_chat_response_handler(response, ctx):
 
                         if ENABLE_RESPONSES_API_STATEFUL and last_response_id:
                             system_message = get_system_message(form_data['messages'])
+                            tool_messages = add_reasoning_content_to_tool_messages(
+                                convert_output_to_messages(output, raw=True), output, model_id
+                            )
                             new_form_data['messages'] = (
                                 [system_message] if system_message else []
-                            ) + convert_output_to_messages(output, raw=True)
+                            ) + tool_messages
                             new_form_data['previous_response_id'] = last_response_id
                         else:
-                            tool_messages = convert_output_to_messages(output, raw=True)
+                            tool_messages = add_reasoning_content_to_tool_messages(
+                                convert_output_to_messages(output, raw=True), output, model_id
+                            )
 
                             # Chat Completions providers don't support multimodal
                             # tool messages.  Extract images into a user message.
@@ -4875,13 +4881,16 @@ async def streaming_chat_response_handler(response, ctx):
                         )
 
                         try:
+                            tool_messages = add_reasoning_content_to_tool_messages(
+                                convert_output_to_messages(output, raw=True), output, model_id
+                            )
                             new_form_data = {
                                 **form_data,
                                 'model': model_id,
                                 'stream': True,
                                 'messages': [
                                     *form_data['messages'],
-                                    *convert_output_to_messages(output, raw=True),
+                                    *tool_messages,
                                 ],
                             }
 

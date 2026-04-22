@@ -129,6 +129,119 @@ def get_content_from_message(message: dict) -> Optional[str]:
     return None
 
 
+def model_requires_reasoning_content_for_tool_calls(model_id: Optional[str]) -> bool:
+    """
+    Some OpenAI-compatible thinking models require assistant tool-call messages
+    to preserve top-level reasoning_content on continuation turns.
+    """
+    if not model_id:
+        return False
+
+    model_name = model_id.lower()
+    return 'kimi' in model_name or 'moonshot' in model_name
+
+
+def _extract_reasoning_content_from_item(item: dict) -> str:
+    reasoning_parts = []
+
+    source_list = item.get('summary', []) or item.get('content', [])
+    for part in source_list:
+        text = part.get('text', '')
+        if text:
+            reasoning_parts.append(text)
+
+    return ''.join(reasoning_parts).strip()
+
+
+def get_assistant_reasoning_content_from_output(output: list[dict]) -> list[str]:
+    """
+    Mirror convert_output_to_messages() assistant-message boundaries so
+    reasoning_content can be reattached to the matching assistant tool-call
+    message instead of being applied globally.
+    """
+    assistant_reasoning = []
+    pending_reasoning = []
+    pending_tool_calls = []
+    pending_content = []
+
+    def flush_pending():
+        nonlocal pending_reasoning, pending_tool_calls, pending_content
+        if pending_content or pending_tool_calls:
+            assistant_reasoning.append(''.join(pending_reasoning).strip())
+            pending_reasoning = []
+            pending_tool_calls = []
+            pending_content = []
+
+    for item in output:
+        item_type = item.get('type', '')
+
+        if item_type == 'message':
+            content_parts = item.get('content', [])
+            text = ''
+            for part in content_parts:
+                if part.get('type') == 'output_text':
+                    text += part.get('text', '')
+            if text:
+                pending_content.append(text)
+
+        elif item_type == 'function_call':
+            pending_tool_calls.append(item)
+
+        elif item_type == 'function_call_output':
+            flush_pending()
+
+        elif item_type == 'reasoning':
+            reasoning_text = _extract_reasoning_content_from_item(item)
+            if reasoning_text:
+                pending_reasoning.append(reasoning_text)
+
+        elif item_type == 'open_webui:code_interpreter':
+            if item.get('code') or item.get('output'):
+                pending_content.append('code_interpreter')
+
+        elif item_type.startswith('open_webui:'):
+            pass
+
+    flush_pending()
+    return assistant_reasoning
+
+
+def add_reasoning_content_to_tool_messages(
+    messages: list[dict], output: list[dict], model_id: Optional[str]
+) -> list[dict]:
+    """
+    Re-add top-level reasoning_content to assistant tool-call messages for
+    providers that require it during the post-tool continuation request.
+    """
+    if not model_requires_reasoning_content_for_tool_calls(model_id):
+        return messages
+
+    assistant_reasoning = get_assistant_reasoning_content_from_output(output)
+    if not any(assistant_reasoning):
+        return messages
+
+    adjusted_messages = []
+    assistant_index = 0
+    for message in messages:
+        reasoning_content = None
+        if message.get('role') == 'assistant':
+            if assistant_index < len(assistant_reasoning):
+                reasoning_content = assistant_reasoning[assistant_index]
+            assistant_index += 1
+
+        if (
+            message.get('role') == 'assistant'
+            and message.get('tool_calls')
+            and reasoning_content
+            and not message.get('reasoning_content')
+        ):
+            message = {**message, 'reasoning_content': reasoning_content}
+
+        adjusted_messages.append(message)
+
+    return adjusted_messages
+
+
 def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
     """
     Convert OR-aligned output items to OpenAI Chat Completion-format messages.
