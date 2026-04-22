@@ -2,6 +2,7 @@ import asyncio
 import ipaddress
 import logging
 import os
+import re
 import socket
 import ssl
 import urllib.parse
@@ -490,6 +491,42 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
             await browser.close()
 
 
+# Browser headers for URL fetching.  Many news and content sites check
+# Sec-Fetch-* and User-Agent to filter out non-browser HTTP clients; sending
+# these headers avoids most soft bot-detection blocks without spoofing cookies.
+_BROWSER_FETCH_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    ),
+    "Accept": (
+        "text/html,application/xhtml+xml,application/xml;q=0.9,"
+        "image/avif,image/webp,image/apng,*/*;q=0.8"
+    ),
+    "Accept-Language": "en-US,en;q=0.9",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Site": "none",
+}
+
+# Compiled once at import time for efficiency
+_BOT_CHALLENGE_RE = re.compile(
+    r"g-recaptcha|are you a human|id=['\"]challenge-form['\"]"
+    r"|name=['\"]challenge['\"]|cf-challenge|cf_chl_captcha"
+    r"|__cf_chl_jschl_tk__|DDoS protection by",
+    re.IGNORECASE,
+)
+
+
+def _is_bot_challenge(html: str) -> bool:
+    """Return True if the page looks like a CAPTCHA or WAF challenge.
+
+    Services like Cloudflare return HTTP 200 with a challenge page instead of
+    a real error code — callers must inspect the body to detect this case.
+    """
+    return bool(_BOT_CHALLENGE_RE.search(html))
+
+
 class SafeWebBaseLoader(WebBaseLoader):
     """WebBaseLoader with enhanced error handling for URLs."""
 
@@ -511,8 +548,10 @@ class SafeWebBaseLoader(WebBaseLoader):
         async with aiohttp.ClientSession(trust_env=effective_trust_env) as session:
             for i in range(retries):
                 try:
+                    # Merge browser headers first so caller-supplied headers
+                    # (e.g. auth tokens from self.session.headers) take precedence
                     kwargs: Dict = dict(
-                        headers=self.session.headers,
+                        headers={**_BROWSER_FETCH_HEADERS, **self.session.headers},
                         cookies=self.session.cookies.get_dict(),
                     )
                     if not self.session.verify:
@@ -523,9 +562,28 @@ class SafeWebBaseLoader(WebBaseLoader):
                         **(self.requests_kwargs | kwargs),
                         allow_redirects=False,
                     ) as response:
+                        # 202 is used by some services as a soft rate-limit signal;
+                        # 503 is a WAF / Cloudflare soft-block — treat like 429
+                        if response.status in (202, 503):
+                            raise aiohttp.ClientResponseError(
+                                response.request_info,
+                                response.history,
+                                status=response.status,
+                                message=f"Bot-detection / rate-limit (HTTP {response.status})",
+                            )
                         if self.raise_for_status:
                             response.raise_for_status()
-                        return await response.text()
+                        html = await response.text()
+                        # Cloudflare and other WAFs return HTTP 200 with a challenge
+                        # page instead of a real error code — detect by body content
+                        if _is_bot_challenge(html):
+                            raise aiohttp.ClientResponseError(
+                                response.request_info,
+                                response.history,
+                                status=200,
+                                message="Bot-detection challenge page in response body",
+                            )
+                        return html
                 except aiohttp.ClientConnectionError as e:
                     if i == retries - 1:
                         raise
