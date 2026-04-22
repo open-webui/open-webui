@@ -17,6 +17,7 @@ high-cardinality label sets.
 
 from __future__ import annotations
 
+import asyncio
 import time
 from typing import Dict, List, Sequence, Any
 from base64 import b64encode
@@ -124,16 +125,32 @@ def setup_metrics(app: FastAPI, resource: Resource) -> None:
         unit='ms',
     )
 
-    async def observe_active_users(
+    users_total = 0
+    users_active = 0
+    users_active_today = 0
+
+    async def refresh_metric_values(interval: float):
+        nonlocal users_total
+        nonlocal users_active
+        nonlocal users_active_today
+        while True:
+            users_total = await Users.get_num_users() or 0
+            users_active = await Users.get_active_user_count()
+            users_active_today = await Users.get_num_users_active_today()
+            await asyncio.sleep(interval)
+
+    asyncio.create_task(refresh_metric_values(OTEL_METRICS_EXPORT_INTERVAL_MILLIS / 1000))
+
+    def observe_active_users(
         options: metrics.CallbackOptions,
     ) -> Sequence[metrics.Observation]:
         return [
             metrics.Observation(
-                value=await Users.get_active_user_count(),
+                value=users_active,
             )
         ]
 
-    async def observe_total_registered_users(
+    def observe_total_registered_users(
         options: metrics.CallbackOptions,
     ) -> Sequence[metrics.Observation]:
         # IMPORTANT: Use get_num_users() for efficient COUNT(*) query.
@@ -141,7 +158,7 @@ def setup_metrics(app: FastAPI, resource: Resource) -> None:
         # causing connection pool exhaustion on high-latency databases (e.g., Aurora).
         return [
             metrics.Observation(
-                value=await Users.get_num_users() or 0,
+                value=users_total,
             )
         ]
 
@@ -159,10 +176,10 @@ def setup_metrics(app: FastAPI, resource: Resource) -> None:
         callbacks=[observe_active_users],
     )
 
-    async def observe_users_active_today(
+    def observe_users_active_today(
         options: metrics.CallbackOptions,
     ) -> Sequence[metrics.Observation]:
-        return [metrics.Observation(value=await Users.get_num_users_active_today())]
+        return [metrics.Observation(value=users_active_today)]
 
     meter.create_observable_gauge(
         name='webui.users.active.today',
