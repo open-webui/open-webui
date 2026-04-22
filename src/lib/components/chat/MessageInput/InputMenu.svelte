@@ -142,6 +142,7 @@
 							on:click={() => {
 								if (fileUploadEnabled) {
 									uploadFilesHandler();
+									show = false;
 								}
 							}}
 						>
@@ -175,6 +176,7 @@
 											cameraInputElement.click();
 										}
 									}
+									show = false;
 								}
 							}}
 						>
@@ -197,6 +199,7 @@
 							on:click={() => {
 								if (webUploadEnabled) {
 									showAttachWebpageModal = true;
+									show = false;
 								}
 							}}
 						>
@@ -336,6 +339,7 @@
 								type="button"
 								on:click={() => {
 									uploadGoogleDriveHandler();
+									show = false;
 								}}
 							>
 								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 87.3 78" class="w-4">
@@ -575,6 +579,7 @@
 							type="button"
 							on:click={() => {
 								uploadOneDriveHandler('personal');
+								show = false;
 							}}
 						>
 							<div class="flex flex-col">
@@ -589,6 +594,7 @@
 							type="button"
 							on:click={() => {
 								uploadOneDriveHandler('organizations');
+								show = false;
 							}}
 						>
 							<div class="flex flex-col">

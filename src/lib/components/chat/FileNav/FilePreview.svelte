@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { getContext, onDestroy, tick } from 'svelte';
-	import panzoom, { type PanZoom } from 'panzoom';
+	import { getContext, tick } from 'svelte';
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
 	import { settings } from '$lib/stores';
@@ -8,6 +7,7 @@
 	import { initMermaid, renderMermaidDiagram } from '$lib/utils';
 	import Spinner from '../../common/Spinner.svelte';
 	import PDFViewer from '../../common/PDFViewer.svelte';
+	import PanzoomContainer from '../../common/PanzoomContainer.svelte';
 	import JsonTreeView from './JsonTreeView.svelte';
 	import NotebookView from './NotebookView.svelte';
 	import SqliteView from './SqliteView.svelte';
@@ -103,6 +103,13 @@
 	$: isNotebook = getExt(selectedFile) === 'ipynb';
 	$: isCode = isCodeFile(selectedFile);
 	$: csvDelimiter = getExt(selectedFile) === 'tsv' ? '\t' : ',';
+
+	// For HTML files on system terminals (proxy URL), use path-based serving
+	// so the iframe can resolve relative CSS/JS/image references via cookie auth.
+	$: serveUrl =
+		isHtml && selectedFile && baseUrl && baseUrl.includes('/api/v1/terminals/')
+			? `${baseUrl}/files/serve/${selectedFile.replace(/^\//, '')}`
+			: null;
 	$: renderedHtml =
 		isMarkdown && fileContent
 			? DOMPurify.sanitize(marked.parse(fileContent, { async: false }) as string)
@@ -250,38 +257,14 @@
 		showRaw = true;
 	}
 
-	let pzInstance: PanZoom | null = null;
-
-	const initImagePanzoom = (node: HTMLElement) => {
-		pzInstance = panzoom(node, {
-			bounds: true,
-			boundsPadding: 0.1,
-			zoomSpeed: 0.065,
-			zoomDoubleClickSpeed: 1
-		});
-	};
-
+	let panzoomRef: PanzoomContainer;
 	export const resetImageView = () => {
-		if (pzInstance) {
-			pzInstance.moveTo(0, 0);
-			pzInstance.zoomAbs(0, 0, 1);
-		}
-	};
-
-	export const disposePanzoom = () => {
-		if (pzInstance) {
-			pzInstance.dispose();
-			pzInstance = null;
-		}
+		panzoomRef?.reset();
 	};
 
 	export const resetPdfView = () => {
 		pdfViewerRef?.resetView();
 	};
-
-	onDestroy(() => {
-		disposePanzoom();
-	});
 </script>
 
 <div
@@ -293,14 +276,18 @@
 	{#if fileLoading}
 		<div class="flex items-center justify-center h-full"><Spinner className="size-4" /></div>
 	{:else if fileImageUrl !== null}
-		<div class="w-full h-full flex items-center justify-center" use:initImagePanzoom>
+		<PanzoomContainer
+			bind:this={panzoomRef}
+			className="w-full h-full flex items-center justify-center"
+			options={{ zoomDoubleClickSpeed: 1 }}
+		>
 			<img
 				src={fileImageUrl}
 				alt={selectedFile?.split('/').pop()}
 				class="max-w-full max-h-full object-contain p-3"
 				draggable="false"
 			/>
-		</div>
+		</PanzoomContainer>
 	{:else if fileVideoUrl !== null}
 		<div class="w-full h-full flex items-center justify-center bg-black">
 			<!-- svelte-ignore a11y-media-has-caption -->
@@ -343,9 +330,10 @@
 		</div>
 	{:else if fileOfficeSlides !== null && fileOfficeSlides.length > 0}
 		<div class="flex flex-col h-full">
-			<div
-				class="w-full flex-1 min-h-0 flex items-center justify-center overflow-hidden"
-				use:initImagePanzoom
+			<PanzoomContainer
+				bind:this={panzoomRef}
+				className="w-full flex-1 min-h-0 flex items-center justify-center overflow-hidden"
+				options={{ zoomDoubleClickSpeed: 1 }}
 			>
 				<img
 					src={fileOfficeSlides[currentSlide]}
@@ -353,7 +341,7 @@
 					class="max-w-full max-h-full object-contain p-3"
 					draggable="false"
 				/>
-			</div>
+			</PanzoomContainer>
 			{#if fileOfficeSlides.length > 1}
 				<div
 					class="flex items-center justify-center gap-3 py-2 px-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500"
@@ -405,7 +393,20 @@
 			{/if}
 		</div>
 	{:else if fileContent !== null}
-		{#if isHtml && !showRaw}
+		{#if isHtml && !showRaw && serveUrl}
+			{#if overlay}
+				<div class="absolute top-0 left-0 right-0 bottom-0 z-10"></div>
+			{/if}
+			<iframe
+				src={serveUrl}
+				sandbox="allow-scripts allow-same-origin allow-downloads{($settings?.iframeSandboxAllowForms ??
+				false)
+					? ' allow-forms'
+					: ''}"
+				class="w-full h-full border-none bg-white"
+				title="HTML Preview"
+			/>
+		{:else if isHtml && !showRaw}
 			{#if overlay}
 				<div class="absolute top-0 left-0 right-0 bottom-0 z-10"></div>
 			{/if}

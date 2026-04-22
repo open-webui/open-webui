@@ -18,24 +18,6 @@ function mentionStart(src: string) {
 	return src.indexOf('<');
 }
 
-function mentionTokenizer(this: any, src: string, options: MentionOptions = {}) {
-	const trigger = options.triggerChar ?? '@';
-	// Build dynamic regex for `<@id>`, `<@id|label>`, `<@id|>`
-	// Added forward slash (/) to the character class for IDs
-	const re = new RegExp(`^<\\${trigger}([\\w.\\-:/]+)(?:\\|([^>]*))?>`);
-	const m = re.exec(src);
-	if (!m) return;
-
-	const [, id, label] = m;
-	return {
-		type: 'mention',
-		raw: m[0],
-		triggerChar: trigger,
-		id,
-		label: label && label.length > 0 ? label : id
-	};
-}
-
 function mentionRenderer(token: any, options: MentionOptions = {}) {
 	const trigger = options.triggerChar ?? '@';
 	const cls = options.className ?? 'mention';
@@ -55,15 +37,34 @@ function mentionRenderer(token: any, options: MentionOptions = {}) {
 }
 
 export function mentionExtension(opts: MentionOptions = {}) {
+	// Compile the regex once when the extension is created, not on every tokenizer call.
+	// mentionStart fires on every '<' in the document, making the tokenizer a hot path.
+	const trigger = opts.triggerChar ?? '@';
+	const re = new RegExp(`^<\\${trigger}([\\w.\\-:/]+)(?:\\|([^>]*))?>`);
+	const snapshot: MentionOptions = {
+		triggerChar: trigger,
+		className: opts.className,
+		extraAttrs: opts.extraAttrs
+	};
+
 	return {
 		name: 'mention',
 		level: 'inline' as const,
 		start: mentionStart,
 		tokenizer(src: string) {
-			return mentionTokenizer.call(this, src, opts);
+			const m = re.exec(src);
+			if (!m) return;
+			const [, id, label] = m;
+			return {
+				type: 'mention',
+				raw: m[0],
+				triggerChar: trigger,
+				id,
+				label: label && label.length > 0 ? label : id
+			};
 		},
 		renderer(token: any) {
-			return mentionRenderer(token, opts);
+			return mentionRenderer(token, snapshot);
 		}
 	};
 }

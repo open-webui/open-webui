@@ -39,9 +39,9 @@
 				aria-label={collapsed ? 'Expand' : 'Collapse'}
 			>
 				{#if collapsed}
-					<ChevronDown className="w-2.5 h-2.5" />
-				{:else}
 					<ChevronUp className="w-2.5 h-2.5" />
+				{:else}
+					<ChevronDown className="w-2.5 h-2.5" />
 				{/if}
 			</button>
 		</div>

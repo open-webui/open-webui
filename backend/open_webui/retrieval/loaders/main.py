@@ -1,3 +1,4 @@
+import asyncio
 import requests
 import logging
 import ftfy
@@ -237,6 +238,18 @@ class Loader:
         docs = loader.load()
 
         return [Document(page_content=ftfy.fix_text(doc.page_content), metadata=doc.metadata) for doc in docs]
+
+    async def aload(self, filename: str, file_content_type: str, file_path: str) -> list[Document]:
+        """
+        Async wrapper around `load`.
+
+        Document loaders dispatched by `_get_loader` (PyMuPDF, Unstructured,
+        python-docx, Tika, etc.) are uniformly synchronous and CPU/IO-bound.
+        Calling `load` directly from an async handler would block the event
+        loop for the entire parse — minutes for large PDFs. This offloads
+        the work to a worker thread so the loop stays responsive.
+        """
+        return await asyncio.to_thread(self.load, filename, file_content_type, file_path)
 
     def _is_text_file(self, file_ext: str, file_content_type: str) -> bool:
         return file_ext in known_source_ext or (

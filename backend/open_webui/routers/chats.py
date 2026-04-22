@@ -1,7 +1,8 @@
 import json
 import logging
 from typing import Optional
-from sqlalchemy.orm import Session
+from uuid import uuid4
+from sqlalchemy.ext.asyncio import AsyncSession
 import asyncio
 from fastapi.responses import StreamingResponse
 
@@ -16,16 +17,17 @@ from open_webui.models.chats import (
     ChatResponse,
     Chats,
     ChatTitleIdResponse,
-    SharedChatResponse,
     ChatStatsExport,
     AggregateChatStats,
     ChatBody,
     ChatHistoryStats,
     MessageStats,
 )
+from open_webui.models.shared_chats import SharedChats, SharedChatResponse
+from open_webui.models.access_grants import AccessGrants
 from open_webui.models.tags import TagModel, Tags
 from open_webui.models.folders import Folders
-from open_webui.internal.db import get_session
+from open_webui.internal.db import get_async_session
 
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
@@ -34,7 +36,7 @@ from pydantic import BaseModel
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
 
 log = logging.getLogger(__name__)
 
@@ -49,19 +51,19 @@ router = APIRouter()
 
 @router.get('/', response_model=list[ChatTitleIdResponse])
 @router.get('/list', response_model=list[ChatTitleIdResponse])
-def get_session_user_chat_list(
+async def get_session_user_chat_list(
     user=Depends(get_verified_user),
     page: Optional[int] = None,
     include_pinned: Optional[bool] = False,
     include_folders: Optional[bool] = False,
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     try:
         if page is not None:
             limit = 60
             skip = (page - 1) * limit
 
-            return Chats.get_chat_title_id_list_by_user_id(
+            return await Chats.get_chat_title_id_list_by_user_id(
                 user.id,
                 include_folders=include_folders,
                 include_pinned=include_pinned,
@@ -70,7 +72,7 @@ def get_session_user_chat_list(
                 db=db,
             )
         else:
-            return Chats.get_chat_title_id_list_by_user_id(
+            return await Chats.get_chat_title_id_list_by_user_id(
                 user.id,
                 include_folders=include_folders,
                 include_pinned=include_pinned,
@@ -88,17 +90,17 @@ def get_session_user_chat_list(
 
 
 @router.get('/stats/usage', response_model=ChatUsageStatsListResponse)
-def get_session_user_chat_usage_stats(
+async def get_session_user_chat_usage_stats(
     items_per_page: Optional[int] = 50,
     page: Optional[int] = 1,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     try:
         limit = items_per_page
         skip = (page - 1) * limit
 
-        result = Chats.get_chats_by_user_id(user.id, skip=skip, limit=limit, db=db)
+        result = await Chats.get_chats_by_user_id(user.id, skip=skip, limit=limit, db=db)
 
         chats = result.items
         total = result.total
@@ -332,11 +334,11 @@ def _process_chat_for_export(chat) -> Optional[ChatStatsExport]:
         return None
 
 
-def calculate_chat_stats(user_id, skip=0, limit=10, filter=None):
+async def calculate_chat_stats(user_id, skip=0, limit=10, filter=None):
     if filter is None:
         filter = {}
 
-    result = Chats.get_chats_by_user_id(
+    result = await Chats.get_chats_by_user_id(
         user_id,
         skip=skip,
         limit=limit,
@@ -352,12 +354,12 @@ def calculate_chat_stats(user_id, skip=0, limit=10, filter=None):
     return chat_stats_export_list, result.total
 
 
-def generate_chat_stats_jsonl_generator(user_id, filter):
+async def generate_chat_stats_jsonl_generator(user_id, filter):
     """
-    Synchronous generator for streaming chat stats export.
+    Async generator for streaming chat stats export.
 
     NOTE: We intentionally do NOT pass a shared db session here. Instead, we let
-    each batch create its own short-lived session via get_db_context(None).
+    each batch create its own short-lived session via get_async_db_context(None).
     This is critical for SQLite in low-resource environments because:
     1. SQLite uses file-level locking
     2. Holding a session open for the entire streaming duration blocks other requests
@@ -368,12 +370,12 @@ def generate_chat_stats_jsonl_generator(user_id, filter):
 
     while True:
         # Each batch gets its own session that closes after the query
-        result = Chats.get_chats_by_user_id(
+        result = await Chats.get_chats_by_user_id(
             user_id,
             filter=filter,
             skip=skip,
             limit=limit,
-            db=None,  # Let get_db_context create a fresh session per batch
+            db=None,  # Let get_async_db_context create a fresh session per batch
         )
         if not result.items:
             break
@@ -421,7 +423,7 @@ async def export_chat_stats(
             limit = CHAT_EXPORT_PAGE_ITEM_COUNT
             skip = (page - 1) * limit
 
-            chat_stats_export_list, total = await asyncio.to_thread(calculate_chat_stats, user.id, skip, limit, filter)
+            chat_stats_export_list, total = await calculate_chat_stats(user.id, skip, limit, filter)
 
             return ChatStatsExportList(items=chat_stats_export_list, total=total, page=page)
 
@@ -440,7 +442,7 @@ async def export_single_chat_stats(
     request: Request,
     chat_id: str,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     Export stats for exactly one chat by ID.
@@ -454,7 +456,7 @@ async def export_single_chat_stats(
         )
 
     try:
-        chat = Chats.get_chat_by_id(chat_id, db=db)
+        chat = await Chats.get_chat_by_id(chat_id, db=db)
 
         if not chat:
             raise HTTPException(
@@ -469,8 +471,8 @@ async def export_single_chat_stats(
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
 
-        # Process the chat for export
-        chat_stats = await asyncio.to_thread(_process_chat_for_export, chat)
+        # Process the chat for export (pure computation, no DB)
+        chat_stats = _process_chat_for_export(chat)
 
         if not chat_stats:
             raise HTTPException(
@@ -491,15 +493,17 @@ async def export_single_chat_stats(
 async def delete_all_user_chats(
     request: Request,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    if user.role == 'user' and not has_permission(user.id, 'chat.delete', request.app.state.config.USER_PERMISSIONS):
+    if user.role == 'user' and not await has_permission(
+        user.id, 'chat.delete', request.app.state.config.USER_PERMISSIONS
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    result = Chats.delete_chats_by_user_id(user.id, db=db)
+    result = await Chats.delete_chats_by_user_id(user.id, db=db)
     return result
 
 
@@ -516,7 +520,7 @@ async def get_user_chat_list_by_user_id(
     order_by: Optional[str] = None,
     direction: Optional[str] = None,
     user=Depends(get_admin_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     if not ENABLE_ADMIN_CHAT_ACCESS:
         raise HTTPException(
@@ -538,7 +542,9 @@ async def get_user_chat_list_by_user_id(
     if direction:
         filter['direction'] = direction
 
-    return Chats.get_chat_list_by_user_id(user_id, include_archived=True, filter=filter, skip=skip, limit=limit, db=db)
+    return await Chats.get_chat_list_by_user_id(
+        user_id, include_archived=True, filter=filter, skip=skip, limit=limit, db=db
+    )
 
 
 ############################
@@ -550,10 +556,10 @@ async def get_user_chat_list_by_user_id(
 async def create_new_chat(
     form_data: ChatForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     try:
-        chat = Chats.insert_new_chat(user.id, form_data, db=db)
+        chat = await Chats.insert_new_chat(str(uuid4()), user.id, form_data, db=db)
         return ChatResponse(**chat.model_dump())
     except Exception as e:
         log.exception(e)
@@ -569,10 +575,10 @@ async def create_new_chat(
 async def import_chats(
     form_data: ChatsImportForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     try:
-        chats = Chats.import_chats(user.id, form_data.chats, db=db)
+        chats = await Chats.import_chats(user.id, form_data.chats, db=db)
         return chats
     except Exception as e:
         log.exception(e)
@@ -585,11 +591,11 @@ async def import_chats(
 
 
 @router.get('/search', response_model=list[ChatTitleIdResponse])
-def search_user_chats(
+async def search_user_chats(
     text: str,
     page: Optional[int] = None,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     if page is None:
         page = 1
@@ -599,7 +605,7 @@ def search_user_chats(
 
     chat_list = [
         ChatTitleIdResponse(**chat.model_dump())
-        for chat in Chats.get_chats_by_user_id_and_search_text(user.id, text, skip=skip, limit=limit, db=db)
+        for chat in await Chats.get_chats_by_user_id_and_search_text(user.id, text, skip=skip, limit=limit, db=db)
     ]
 
     # Delete tag if no chat is found
@@ -607,9 +613,9 @@ def search_user_chats(
     if page == 1 and len(words) == 1 and words[0].startswith('tag:'):
         tag_id = words[0].replace('tag:', '')
         if len(chat_list) == 0:
-            if Tags.get_tag_by_name_and_user_id(tag_id, user.id, db=db):
+            if await Tags.get_tag_by_name_and_user_id(tag_id, user.id, db=db):
                 log.debug(f'deleting tag: {tag_id}')
-                Tags.delete_tag_by_name_and_user_id(tag_id, user.id, db=db)
+                await Tags.delete_tag_by_name_and_user_id(tag_id, user.id, db=db)
 
     return chat_list
 
@@ -620,15 +626,17 @@ def search_user_chats(
 
 
 @router.get('/folder/{folder_id}', response_model=list[ChatResponse])
-async def get_chats_by_folder_id(folder_id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
+async def get_chats_by_folder_id(
+    folder_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     folder_ids = [folder_id]
-    children_folders = Folders.get_children_folders_by_id_and_user_id(folder_id, user.id, db=db)
+    children_folders = await Folders.get_children_folders_by_id_and_user_id(folder_id, user.id, db=db)
     if children_folders:
         folder_ids.extend([folder.id for folder in children_folders])
 
     return [
         ChatResponse(**chat.model_dump())
-        for chat in Chats.get_chats_by_folder_ids_and_user_id(folder_ids, user.id, db=db)
+        for chat in await Chats.get_chats_by_folder_ids_and_user_id(folder_ids, user.id, db=db)
     ]
 
 
@@ -637,15 +645,16 @@ async def get_chat_list_by_folder_id(
     folder_id: str,
     page: Optional[int] = 1,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     try:
         limit = 10
         skip = (page - 1) * limit
 
+        chats = await Chats.get_chats_by_folder_id_and_user_id(folder_id, user.id, skip=skip, limit=limit, db=db)
         return [
-            {'title': chat.title, 'id': chat.id, 'updated_at': chat.updated_at}
-            for chat in Chats.get_chats_by_folder_id_and_user_id(folder_id, user.id, skip=skip, limit=limit, db=db)
+            {'title': chat.title, 'id': chat.id, 'updated_at': chat.updated_at, 'last_read_at': chat.last_read_at}
+            for chat in chats
         ]
 
     except Exception as e:
@@ -659,8 +668,8 @@ async def get_chat_list_by_folder_id(
 
 
 @router.get('/pinned', response_model=list[ChatTitleIdResponse])
-async def get_user_pinned_chats(user=Depends(get_verified_user), db: Session = Depends(get_session)):
-    return Chats.get_pinned_chats_by_user_id(user.id, db=db)
+async def get_user_pinned_chats(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    return await Chats.get_pinned_chats_by_user_id(user.id, db=db)
 
 
 ############################
@@ -669,8 +678,8 @@ async def get_user_pinned_chats(user=Depends(get_verified_user), db: Session = D
 
 
 @router.get('/all', response_model=list[ChatResponse])
-async def get_user_chats(user=Depends(get_verified_user), db: Session = Depends(get_session)):
-    result = Chats.get_chats_by_user_id(user.id, db=db)
+async def get_user_chats(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    result = await Chats.get_chats_by_user_id(user.id, db=db)
     return [ChatResponse(**chat.model_dump()) for chat in result.items]
 
 
@@ -680,8 +689,8 @@ async def get_user_chats(user=Depends(get_verified_user), db: Session = Depends(
 
 
 @router.get('/all/archived', response_model=list[ChatResponse])
-async def get_user_archived_chats(user=Depends(get_verified_user), db: Session = Depends(get_session)):
-    return [ChatResponse(**chat.model_dump()) for chat in Chats.get_archived_chats_by_user_id(user.id, db=db)]
+async def get_user_archived_chats(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    return [ChatResponse(**chat.model_dump()) for chat in await Chats.get_archived_chats_by_user_id(user.id, db=db)]
 
 
 ############################
@@ -690,9 +699,9 @@ async def get_user_archived_chats(user=Depends(get_verified_user), db: Session =
 
 
 @router.get('/all/tags', response_model=list[TagModel])
-async def get_all_user_tags(user=Depends(get_verified_user), db: Session = Depends(get_session)):
+async def get_all_user_tags(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     try:
-        tags = Tags.get_tags_by_user_id(user.id, db=db)
+        tags = await Tags.get_tags_by_user_id(user.id, db=db)
         return tags
     except Exception as e:
         log.exception(e)
@@ -705,13 +714,13 @@ async def get_all_user_tags(user=Depends(get_verified_user), db: Session = Depen
 
 
 @router.get('/all/db', response_model=list[ChatResponse])
-async def get_all_user_chats_in_db(user=Depends(get_admin_user), db: Session = Depends(get_session)):
+async def get_all_user_chats_in_db(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
     if not ENABLE_ADMIN_EXPORT:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
-    return [ChatResponse(**chat.model_dump()) for chat in Chats.get_chats(db=db)]
+    return [ChatResponse(**chat.model_dump()) for chat in await Chats.get_chats(db=db)]
 
 
 ############################
@@ -726,7 +735,7 @@ async def get_archived_session_user_chat_list(
     order_by: Optional[str] = None,
     direction: Optional[str] = None,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     if page is None:
         page = 1
@@ -742,7 +751,7 @@ async def get_archived_session_user_chat_list(
     if direction:
         filter['direction'] = direction
 
-    return Chats.get_archived_chat_list_by_user_id(
+    return await Chats.get_archived_chat_list_by_user_id(
         user.id,
         filter=filter,
         skip=skip,
@@ -757,8 +766,8 @@ async def get_archived_session_user_chat_list(
 
 
 @router.post('/archive/all', response_model=bool)
-async def archive_all_chats(user=Depends(get_verified_user), db: Session = Depends(get_session)):
-    return Chats.archive_all_chats_by_user_id(user.id, db=db)
+async def archive_all_chats(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    return await Chats.archive_all_chats_by_user_id(user.id, db=db)
 
 
 ############################
@@ -767,8 +776,8 @@ async def archive_all_chats(user=Depends(get_verified_user), db: Session = Depen
 
 
 @router.post('/unarchive/all', response_model=bool)
-async def unarchive_all_chats(user=Depends(get_verified_user), db: Session = Depends(get_session)):
-    return Chats.unarchive_all_chats_by_user_id(user.id, db=db)
+async def unarchive_all_chats(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    return await Chats.unarchive_all_chats_by_user_id(user.id, db=db)
 
 
 ############################
@@ -783,7 +792,7 @@ async def get_shared_session_user_chat_list(
     order_by: Optional[str] = None,
     direction: Optional[str] = None,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     if page is None:
         page = 1
@@ -799,7 +808,7 @@ async def get_shared_session_user_chat_list(
     if direction:
         filter['direction'] = direction
 
-    return Chats.get_shared_chat_list_by_user_id(
+    return await SharedChats.get_by_user_id(
         user.id,
         filter=filter,
         skip=skip,
@@ -814,20 +823,37 @@ async def get_shared_session_user_chat_list(
 
 
 @router.get('/share/{share_id}', response_model=Optional[ChatResponse])
-async def get_shared_chat_by_id(share_id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
+async def get_shared_chat_by_id(
+    share_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     if user.role == 'pending':
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
-    if user.role == 'user' or (user.role == 'admin' and not ENABLE_ADMIN_CHAT_ACCESS):
-        chat = Chats.get_chat_by_share_id(share_id, db=db)
-    elif user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS:
-        chat = Chats.get_chat_by_id(share_id, db=db)
-
-    if chat:
-        return ChatResponse(**chat.model_dump())
-
+    if user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS:
+        chat = await Chats.get_chat_by_id(share_id, db=db)
     else:
+        chat = await Chats.get_chat_by_share_id(share_id, db=db)
+
+    if not chat:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    # Look up the original chat_id to check access grants
+    shared = await SharedChats.get_by_id(share_id, db=db)
+    if shared:
+        has_grant = await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='shared_chat',
+            resource_id=shared.chat_id,
+            permission='read',
+            db=db,
+        )
+        if not has_grant:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+
+    return ChatResponse(**chat.model_dump())
 
 
 ############################
@@ -848,11 +874,13 @@ class TagFilterForm(TagForm):
 async def get_user_chat_list_by_tag_name(
     form_data: TagFilterForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    chats = Chats.get_chat_list_by_user_id_and_tag_name(user.id, form_data.name, form_data.skip, form_data.limit, db=db)
+    chats = await Chats.get_chat_list_by_user_id_and_tag_name(
+        user.id, form_data.name, form_data.skip, form_data.limit, db=db
+    )
     if len(chats) == 0:
-        Tags.delete_tag_by_name_and_user_id(form_data.name, user.id, db=db)
+        await Tags.delete_tag_by_name_and_user_id(form_data.name, user.id, db=db)
 
     return chats
 
@@ -863,14 +891,28 @@ async def get_user_chat_list_by_tag_name(
 
 
 @router.get('/{id}', response_model=Optional[ChatResponse])
-async def get_chat_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
-    chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+async def get_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+
+    if not chat:
+        # Check if user has access via access grants (shared_chat grants)
+        if user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS:
+            chat = await Chats.get_chat_by_id(id, db=db)
+        else:
+            has_grant = await AccessGrants.has_access(
+                user_id=user.id,
+                resource_type='shared_chat',
+                resource_id=id,
+                permission='read',
+                db=db,
+            )
+            if has_grant:
+                chat = await Chats.get_chat_by_id(id, db=db)
 
     if chat:
         return ChatResponse(**chat.model_dump())
 
-    else:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
 
 ############################
@@ -883,12 +925,12 @@ async def update_chat_by_id(
     id: str,
     form_data: ChatForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
         updated_chat = {**chat.chat, **form_data.chat}
-        chat = Chats.update_chat_by_id(id, updated_chat, db=db)
+        chat = await Chats.update_chat_by_id(id, updated_chat, db=db)
         return ChatResponse(**chat.model_dump())
     else:
         raise HTTPException(
@@ -910,9 +952,9 @@ async def update_chat_message_by_id(
     message_id: str,
     form_data: MessageForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    chat = Chats.get_chat_by_id(id, db=db)
+    chat = await Chats.get_chat_by_id(id, db=db)
 
     if not chat:
         raise HTTPException(
@@ -926,7 +968,7 @@ async def update_chat_message_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    chat = Chats.upsert_message_to_chat_by_id_and_message_id(
+    chat = await Chats.upsert_message_to_chat_by_id_and_message_id(
         id,
         message_id,
         {
@@ -934,9 +976,9 @@ async def update_chat_message_by_id(
         },
     )
 
-    event_emitter = get_event_emitter(
+    event_emitter = await get_event_emitter(
         {
-            'user_id': user.id,
+            'user_id': chat.user_id,
             'chat_id': id,
             'message_id': message_id,
         },
@@ -972,9 +1014,9 @@ async def send_chat_message_event_by_id(
     message_id: str,
     form_data: EventForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    chat = Chats.get_chat_by_id(id, db=db)
+    chat = await Chats.get_chat_by_id(id, db=db)
 
     if not chat:
         raise HTTPException(
@@ -988,9 +1030,9 @@ async def send_chat_message_event_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    event_emitter = get_event_emitter(
+    event_emitter = await get_event_emitter(
         {
-            'user_id': user.id,
+            'user_id': chat.user_id,
             'chat_id': id,
             'message_id': message_id,
         }
@@ -1016,36 +1058,36 @@ async def delete_chat_by_id(
     request: Request,
     id: str,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     if user.role == 'admin':
-        chat = Chats.get_chat_by_id(id, db=db)
+        chat = await Chats.get_chat_by_id(id, db=db)
         if not chat:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=ERROR_MESSAGES.NOT_FOUND,
             )
-        Chats.delete_orphan_tags_for_user(chat.meta.get('tags', []), user.id, threshold=1, db=db)
+        await Chats.delete_orphan_tags_for_user(chat.meta.get('tags', []), user.id, threshold=1, db=db)
 
-        result = Chats.delete_chat_by_id(id, db=db)
+        result = await Chats.delete_chat_by_id(id, db=db)
 
         return result
     else:
-        if not has_permission(user.id, 'chat.delete', request.app.state.config.USER_PERMISSIONS):
+        if not await has_permission(user.id, 'chat.delete', request.app.state.config.USER_PERMISSIONS):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
 
-        chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+        chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
         if not chat:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=ERROR_MESSAGES.NOT_FOUND,
             )
-        Chats.delete_orphan_tags_for_user(chat.meta.get('tags', []), user.id, threshold=1, db=db)
+        await Chats.delete_orphan_tags_for_user(chat.meta.get('tags', []), user.id, threshold=1, db=db)
 
-        result = Chats.delete_chat_by_id_and_user_id(id, user.id, db=db)
+        result = await Chats.delete_chat_by_id_and_user_id(id, user.id, db=db)
         return result
 
 
@@ -1055,8 +1097,10 @@ async def delete_chat_by_id(
 
 
 @router.get('/{id}/pinned', response_model=Optional[bool])
-async def get_pinned_status_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
-    chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+async def get_pinned_status_by_id(
+    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
+    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
         return chat.pinned
     else:
@@ -1069,10 +1113,10 @@ async def get_pinned_status_by_id(id: str, user=Depends(get_verified_user), db: 
 
 
 @router.post('/{id}/pin', response_model=Optional[ChatResponse])
-async def pin_chat_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
-    chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+async def pin_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
-        chat = Chats.toggle_chat_pinned_by_id(id, db=db)
+        chat = await Chats.toggle_chat_pinned_by_id(id, db=db)
         return chat
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
@@ -1092,9 +1136,9 @@ async def clone_chat_by_id(
     form_data: CloneForm,
     id: str,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
         updated_chat = {
             **chat.chat,
@@ -1103,7 +1147,7 @@ async def clone_chat_by_id(
             'title': form_data.title if form_data.title else f'Clone of {chat.title}',
         }
 
-        chats = Chats.import_chats(
+        chats = await Chats.import_chats(
             user.id,
             [
                 ChatImportForm(
@@ -1136,45 +1180,66 @@ async def clone_chat_by_id(
 
 
 @router.post('/{id}/clone/shared', response_model=Optional[ChatResponse])
-async def clone_shared_chat_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
+async def clone_shared_chat_by_id(
+    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     if user.role == 'admin':
-        chat = Chats.get_chat_by_id(id, db=db)
+        chat = await Chats.get_chat_by_id(id, db=db)
     else:
-        chat = Chats.get_chat_by_share_id(id, db=db)
+        chat = await Chats.get_chat_by_share_id(id, db=db)
 
-    if chat:
-        updated_chat = {
-            **chat.chat,
-            'originalChatId': chat.id,
-            'branchPointMessageId': chat.chat['history']['currentId'],
-            'title': f'Clone of {chat.title}',
-        }
-
-        chats = Chats.import_chats(
-            user.id,
-            [
-                ChatImportForm(
-                    **{
-                        'chat': updated_chat,
-                        'meta': chat.meta,
-                        'pinned': chat.pinned,
-                        'folder_id': chat.folder_id,
-                    }
-                )
-            ],
-            db=db,
+    if not chat:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-        if chats:
-            chat = chats[0]
-            return ChatResponse(**chat.model_dump())
-        else:
+    # Enforce access grants
+    shared = await SharedChats.get_by_id(id, db=db)
+    if shared and user.role != 'admin':
+        has_grant = await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='shared_chat',
+            resource_id=shared.chat_id,
+            permission='read',
+            db=db,
+        )
+        if not has_grant:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=ERROR_MESSAGES.DEFAULT(),
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
+
+    updated_chat = {
+        **chat.chat,
+        'originalChatId': chat.id,
+        'branchPointMessageId': chat.chat['history']['currentId'],
+        'title': f'Clone of {chat.title}',
+    }
+
+    chats = await Chats.import_chats(
+        user.id,
+        [
+            ChatImportForm(
+                **{
+                    'chat': updated_chat,
+                    'meta': chat.meta,
+                    'pinned': chat.pinned,
+                    'folder_id': chat.folder_id,
+                }
+            )
+        ],
+        db=db,
+    )
+
+    if chats:
+        chat = chats[0]
+        return ChatResponse(**chat.model_dump())
     else:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT(),
+        )
 
 
 ############################
@@ -1183,18 +1248,18 @@ async def clone_shared_chat_by_id(id: str, user=Depends(get_verified_user), db: 
 
 
 @router.post('/{id}/archive', response_model=Optional[ChatResponse])
-async def archive_chat_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
-    chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+async def archive_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
-        chat = Chats.toggle_chat_archive_by_id(id, db=db)
+        chat = await Chats.toggle_chat_archive_by_id(id, db=db)
 
         tag_ids = chat.meta.get('tags', [])
         if chat.archived:
             # Archived chats are excluded from count — clean up orphans
-            Chats.delete_orphan_tags_for_user(tag_ids, user.id, db=db)
+            await Chats.delete_orphan_tags_for_user(tag_ids, user.id, db=db)
         else:
             # Unarchived — ensure tag rows exist
-            Tags.ensure_tags_exist(tag_ids, user.id, db=db)
+            await Tags.ensure_tags_exist(tag_ids, user.id, db=db)
 
         return ChatResponse(**chat.model_dump())
     else:
@@ -1211,30 +1276,42 @@ async def share_chat_by_id(
     request: Request,
     id: str,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     if (user.role != 'admin') and (
-        not has_permission(user.id, 'chat.share', request.app.state.config.USER_PERMISSIONS)
+        not await has_permission(user.id, 'chat.share', request.app.state.config.USER_PERMISSIONS)
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
 
     if chat:
         if chat.share_id:
-            shared_chat = Chats.update_shared_chat_by_chat_id(chat.id, db=db)
-            return ChatResponse(**shared_chat.model_dump())
+            # Re-snapshot existing share
+            shared = await SharedChats.update(chat.share_id, db=db)
+            if shared:
+                # Re-fetch the original chat to return
+                chat = await Chats.get_chat_by_id(id, db=db)
+                return ChatResponse(**chat.model_dump())
 
-        shared_chat = Chats.insert_shared_chat_by_chat_id(chat.id, db=db)
-        if not shared_chat:
+        # Create new share
+        shared = await SharedChats.create(id, user.id, db=db)
+        if not shared:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=ERROR_MESSAGES.DEFAULT(),
             )
-        return ChatResponse(**shared_chat.model_dump())
+        # Set share_id on the original chat
+        chat = await Chats.update_chat_share_id_by_id(id, shared.id, db=db)
+        if not chat:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=ERROR_MESSAGES.DEFAULT(),
+            )
+        return ChatResponse(**chat.model_dump())
 
     else:
         raise HTTPException(
@@ -1244,26 +1321,110 @@ async def share_chat_by_id(
 
 
 ############################
-# DeletedSharedChatById
+# DeleteSharedChatById
 ############################
 
 
 @router.delete('/{id}/share', response_model=Optional[bool])
-async def delete_shared_chat_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
-    chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+async def delete_shared_chat_by_id(
+    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
+    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
         if not chat.share_id:
             return False
 
-        result = Chats.delete_shared_chat_by_chat_id(id, db=db)
-        update_result = Chats.update_chat_share_id_by_id(id, None, db=db)
+        await SharedChats.delete_by_chat_id(id, db=db)
+        await Chats.update_chat_share_id_by_id(id, None, db=db)
 
-        return result and update_result != None
+        # Revoke all access grants for this shared chat
+        await AccessGrants.set_access_grants('shared_chat', id, [], db=db)
+
+        return True
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
+
+
+############################
+# UpdateSharedChatAccessById
+############################
+
+
+class ChatAccessGrantsForm(BaseModel):
+    access_grants: list[dict]
+
+
+@router.post('/shared/{id}/access/update', response_model=Optional[ChatResponse])
+async def update_shared_chat_access_by_id(
+    request: Request,
+    id: str,
+    form_data: ChatAccessGrantsForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+    if not chat:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if chat.user_id != user.id and user.role != 'admin':
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    form_data.access_grants = await filter_allowed_access_grants(
+        request.app.state.config.USER_PERMISSIONS,
+        user.id,
+        user.role,
+        form_data.access_grants,
+        'sharing.public_chats',
+    )
+
+    await AccessGrants.set_access_grants('shared_chat', id, form_data.access_grants, db=db)
+
+    return ChatResponse(**chat.model_dump())
+
+
+############################
+# GetSharedChatAccessById
+############################
+
+
+@router.get('/shared/{id}/access', response_model=list)
+async def get_shared_chat_access_by_id(
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+    if not chat:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if chat.user_id != user.id and user.role != 'admin':
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    grants = await AccessGrants.get_grants_by_resource('shared_chat', id, db=db)
+    return [
+        {
+            'id': g.id,
+            'principal_type': g.principal_type,
+            'principal_id': g.principal_id,
+            'permission': g.permission,
+        }
+        for g in grants
+    ]
 
 
 ############################
@@ -1280,11 +1441,11 @@ async def update_chat_folder_id_by_id(
     id: str,
     form_data: ChatFolderIdForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
-        chat = Chats.update_chat_folder_id_by_id_and_user_id(id, user.id, form_data.folder_id, db=db)
+        chat = await Chats.update_chat_folder_id_by_id_and_user_id(id, user.id, form_data.folder_id, db=db)
         return ChatResponse(**chat.model_dump())
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
@@ -1296,11 +1457,11 @@ async def update_chat_folder_id_by_id(
 
 
 @router.get('/{id}/tags', response_model=list[TagModel])
-async def get_chat_tags_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
-    chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+async def get_chat_tags_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
         tags = chat.meta.get('tags', [])
-        return Tags.get_tags_by_ids_and_user_id(tags, user.id, db=db)
+        return await Tags.get_tags_by_ids_and_user_id(tags, user.id, db=db)
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
@@ -1315,9 +1476,9 @@ async def add_tag_by_id_and_tag_name(
     id: str,
     form_data: TagForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
         tags = chat.meta.get('tags', [])
         tag_id = form_data.name.replace(' ', '_').lower()
@@ -1329,11 +1490,11 @@ async def add_tag_by_id_and_tag_name(
             )
 
         if tag_id not in tags:
-            Chats.add_chat_tag_by_id_and_user_id_and_tag_name(id, user.id, form_data.name, db=db)
+            await Chats.add_chat_tag_by_id_and_user_id_and_tag_name(id, user.id, form_data.name, db=db)
 
-        chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+        chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
         tags = chat.meta.get('tags', [])
-        return Tags.get_tags_by_ids_and_user_id(tags, user.id, db=db)
+        return await Tags.get_tags_by_ids_and_user_id(tags, user.id, db=db)
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
 
@@ -1348,18 +1509,18 @@ async def delete_tag_by_id_and_tag_name(
     id: str,
     form_data: TagForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
-        Chats.delete_tag_by_id_and_user_id_and_tag_name(id, user.id, form_data.name, db=db)
+        await Chats.delete_tag_by_id_and_user_id_and_tag_name(id, user.id, form_data.name, db=db)
 
-        if Chats.count_chats_by_tag_name_and_user_id(form_data.name, user.id, db=db) == 0:
-            Tags.delete_tag_by_name_and_user_id(form_data.name, user.id, db=db)
+        if await Chats.count_chats_by_tag_name_and_user_id(form_data.name, user.id, db=db) == 0:
+            await Tags.delete_tag_by_name_and_user_id(form_data.name, user.id, db=db)
 
-        chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+        chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
         tags = chat.meta.get('tags', [])
-        return Tags.get_tags_by_ids_and_user_id(tags, user.id, db=db)
+        return await Tags.get_tags_by_ids_and_user_id(tags, user.id, db=db)
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
@@ -1370,12 +1531,14 @@ async def delete_tag_by_id_and_tag_name(
 
 
 @router.delete('/{id}/tags/all', response_model=Optional[bool])
-async def delete_all_tags_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
-    chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+async def delete_all_tags_by_id(
+    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
+    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
         old_tags = chat.meta.get('tags', [])
-        Chats.delete_all_tags_by_id_and_user_id(id, user.id, db=db)
-        Chats.delete_orphan_tags_for_user(old_tags, user.id, db=db)
+        await Chats.delete_all_tags_by_id_and_user_id(id, user.id, db=db)
+        await Chats.delete_orphan_tags_for_user(old_tags, user.id, db=db)
 
         return True
     else:

@@ -60,13 +60,14 @@ if USE_CUDA.lower() == 'true':
 else:
     DEVICE_TYPE = 'cpu'
 
-try:
-    import torch
+if sys.platform == 'darwin':
+    try:
+        import torch
 
-    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
-        DEVICE_TYPE = 'mps'
-except Exception:
-    pass
+        if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+            DEVICE_TYPE = 'mps'
+    except Exception:
+        pass
 
 ####################################
 # LOGGING
@@ -374,7 +375,35 @@ else:
     except Exception:
         DATABASE_POOL_RECYCLE = 3600
 
-DATABASE_ENABLE_SQLITE_WAL = os.environ.get('DATABASE_ENABLE_SQLITE_WAL', 'False').lower() == 'true'
+DATABASE_ENABLE_SQLITE_WAL = os.environ.get('DATABASE_ENABLE_SQLITE_WAL', 'True').lower() == 'true'
+
+# SQLite PRAGMA tuning — these defaults are optimised for WAL-mode web-server
+# workloads.  Each can be overridden via its environment variable.
+# Set any value to an empty string to skip that PRAGMA entirely.
+
+# PRAGMA synchronous: NORMAL (1) is safe with WAL and avoids an fsync per
+# transaction.  Valid values: OFF (0), NORMAL (1), FULL (2), EXTRA (3).
+DATABASE_SQLITE_PRAGMA_SYNCHRONOUS = os.environ.get('DATABASE_SQLITE_PRAGMA_SYNCHRONOUS', 'NORMAL')
+
+# PRAGMA busy_timeout (ms): how long a connection waits for a write lock
+# before raising SQLITE_BUSY.
+DATABASE_SQLITE_PRAGMA_BUSY_TIMEOUT = os.environ.get('DATABASE_SQLITE_PRAGMA_BUSY_TIMEOUT', '5000')
+
+# PRAGMA cache_size: negative value = KiB.  -65536 ≈ 64 MB page cache.
+DATABASE_SQLITE_PRAGMA_CACHE_SIZE = os.environ.get('DATABASE_SQLITE_PRAGMA_CACHE_SIZE', '-65536')
+
+# PRAGMA temp_store: MEMORY (2) keeps temp tables and indices in RAM.
+# Valid values: DEFAULT (0), FILE (1), MEMORY (2).
+DATABASE_SQLITE_PRAGMA_TEMP_STORE = os.environ.get('DATABASE_SQLITE_PRAGMA_TEMP_STORE', 'MEMORY')
+
+# PRAGMA mmap_size (bytes): memory-mapped I/O size.  268435456 ≈ 256 MB.
+# Set to 0 to disable mmap.
+DATABASE_SQLITE_PRAGMA_MMAP_SIZE = os.environ.get('DATABASE_SQLITE_PRAGMA_MMAP_SIZE', '268435456')
+
+# PRAGMA journal_size_limit (bytes): caps the WAL file size after checkpoint.
+# Without this the WAL grows unbounded during write bursts and is never
+# truncated.  67108864 ≈ 64 MB.  Set to -1 for no limit (SQLite default).
+DATABASE_SQLITE_PRAGMA_JOURNAL_SIZE_LIMIT = os.environ.get('DATABASE_SQLITE_PRAGMA_JOURNAL_SIZE_LIMIT', '67108864')
 
 DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = os.environ.get('DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL', None)
 if DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL is not None:
@@ -424,6 +453,27 @@ try:
     REDIS_SOCKET_CONNECT_TIMEOUT = float(REDIS_SOCKET_CONNECT_TIMEOUT)
 except ValueError:
     REDIS_SOCKET_CONNECT_TIMEOUT = None
+
+# Whether to enable TCP SO_KEEPALIVE on Redis client sockets. Opt-in:
+# defaults to off so behavior is unchanged for existing deployments. When
+# enabled, the kernel sends TCP keepalive probes on idle connections so
+# half-closed sockets (e.g. after a silent firewall/LB reset or a NIC
+# flap) are detected before the next command lands on them.
+REDIS_SOCKET_KEEPALIVE = os.environ.get('REDIS_SOCKET_KEEPALIVE', 'False').lower() == 'true'
+
+# How often (in seconds) redis-py should PING an idle pooled connection
+# before reusing it. Opt-in: defaults to unset (empty string) so behavior
+# is unchanged for existing deployments. When set, should be shorter than
+# the Redis server `timeout` setting and any firewall/LB idle timeout on
+# the path to Redis, so stale connections are detected before a real
+# command lands on them. Set to 0 or empty to disable.
+REDIS_HEALTH_CHECK_INTERVAL = os.environ.get('REDIS_HEALTH_CHECK_INTERVAL', '')
+try:
+    REDIS_HEALTH_CHECK_INTERVAL = int(REDIS_HEALTH_CHECK_INTERVAL)
+    if REDIS_HEALTH_CHECK_INTERVAL <= 0:
+        REDIS_HEALTH_CHECK_INTERVAL = None
+except ValueError:
+    REDIS_HEALTH_CHECK_INTERVAL = None
 
 REDIS_RECONNECT_DELAY = os.environ.get('REDIS_RECONNECT_DELAY', '')
 
@@ -495,6 +545,16 @@ PASSWORD_VALIDATION_HINT = os.environ.get('PASSWORD_VALIDATION_HINT', '')
 
 BYPASS_MODEL_ACCESS_CONTROL = os.environ.get('BYPASS_MODEL_ACCESS_CONTROL', 'False').lower() == 'true'
 
+# When enabled, skips pydub-based preprocessing (format conversion, compression,
+# and chunked splitting) before sending files to processing engines. Useful when
+# the upstream provider handles these steps or when ffmpeg is unavailable.
+BYPASS_PYDUB_PREPROCESSING = os.environ.get('BYPASS_PYDUB_PREPROCESSING', 'False').lower() == 'true'
+
+# When disabled (default), the OpenAI catch-all proxy endpoint (/{path:path})
+# is blocked. Enable only if you need direct passthrough to upstream OpenAI-
+# compatible APIs for endpoints not natively handled by Open WebUI.
+ENABLE_OPENAI_API_PASSTHROUGH = os.environ.get('ENABLE_OPENAI_API_PASSTHROUGH', 'False').lower() == 'true'
+
 WEBUI_AUTH_SIGNOUT_REDIRECT_URL = os.environ.get('WEBUI_AUTH_SIGNOUT_REDIRECT_URL', None)
 
 ####################################
@@ -543,6 +603,12 @@ OAUTH_MAX_SESSIONS_PER_USER = int(os.environ.get('OAUTH_MAX_SESSIONS_PER_USER', 
 # Token Exchange Configuration
 # Allows external apps to exchange OAuth tokens for OpenWebUI tokens
 ENABLE_OAUTH_TOKEN_EXCHANGE = os.environ.get('ENABLE_OAUTH_TOKEN_EXCHANGE', 'False').lower() == 'true'
+
+# Back-Channel Logout Configuration
+# When enabled, exposes POST /oauth/backchannel-logout for IdP-initiated logout
+# per OpenID Connect Back-Channel Logout 1.0 spec.
+# Requires Redis for JWT revocation.
+ENABLE_OAUTH_BACKCHANNEL_LOGOUT = os.environ.get('ENABLE_OAUTH_BACKCHANNEL_LOGOUT', 'False').lower() == 'true'
 
 ####################################
 # SCIM Configuration
@@ -606,6 +672,15 @@ else:
 
 ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION = (
     os.environ.get('ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION', 'False').lower() == 'true'
+)
+
+# When enabled, uses a hardcoded extension-to-MIME dictionary as a last-resort
+# fallback when both mimetypes.guess_type() and file.meta.content_type fail to
+# determine the content type. This can help on minimal container images (e.g.
+# wolfi-base) that lack /etc/mime.types AND have legacy files without stored
+# content_type metadata.
+ENABLE_IMAGE_CONTENT_TYPE_EXTENSION_FALLBACK = (
+    os.environ.get('ENABLE_IMAGE_CONTENT_TYPE_EXTENSION_FALLBACK', 'False').lower() == 'true'
 )
 
 CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = os.environ.get('CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE', '1')
@@ -771,6 +846,36 @@ else:
         AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER = AIOHTTP_CLIENT_TIMEOUT
 
 
+####################################
+# AIOHTTP Connection Pool
+####################################
+
+AIOHTTP_POOL_CONNECTIONS = os.environ.get('AIOHTTP_POOL_CONNECTIONS', '')
+if AIOHTTP_POOL_CONNECTIONS == '':
+    AIOHTTP_POOL_CONNECTIONS = None
+else:
+    try:
+        AIOHTTP_POOL_CONNECTIONS = int(AIOHTTP_POOL_CONNECTIONS)
+    except ValueError:
+        AIOHTTP_POOL_CONNECTIONS = None
+
+AIOHTTP_POOL_CONNECTIONS_PER_HOST = os.environ.get('AIOHTTP_POOL_CONNECTIONS_PER_HOST', '')
+if AIOHTTP_POOL_CONNECTIONS_PER_HOST == '':
+    AIOHTTP_POOL_CONNECTIONS_PER_HOST = None
+else:
+    try:
+        AIOHTTP_POOL_CONNECTIONS_PER_HOST = int(AIOHTTP_POOL_CONNECTIONS_PER_HOST)
+    except ValueError:
+        AIOHTTP_POOL_CONNECTIONS_PER_HOST = None
+
+AIOHTTP_POOL_DNS_TTL = os.environ.get('AIOHTTP_POOL_DNS_TTL', '300')
+try:
+    AIOHTTP_POOL_DNS_TTL = int(AIOHTTP_POOL_DNS_TTL)
+    if AIOHTTP_POOL_DNS_TTL < 0:
+        AIOHTTP_POOL_DNS_TTL = 300
+except ValueError:
+    AIOHTTP_POOL_DNS_TTL = 300
+
 RAG_EMBEDDING_TIMEOUT = os.environ.get('RAG_EMBEDDING_TIMEOUT', '')
 
 if RAG_EMBEDDING_TIMEOUT == '':
@@ -873,6 +978,9 @@ AUDIT_EXCLUDED_PATHS = [path.lstrip('/') for path in AUDIT_EXCLUDED_PATHS]
 AUDIT_INCLUDED_PATHS = os.getenv('AUDIT_INCLUDED_PATHS', '').split(',')
 AUDIT_INCLUDED_PATHS = [path.strip() for path in AUDIT_INCLUDED_PATHS]
 AUDIT_INCLUDED_PATHS = [path.lstrip('/') for path in AUDIT_INCLUDED_PATHS if path]
+
+# When enabled, GET requests are also audited (disabled by default to avoid log noise)
+ENABLE_AUDIT_GET_REQUESTS = os.getenv('ENABLE_AUDIT_GET_REQUESTS', 'False').lower() == 'true'
 
 
 ####################################

@@ -34,6 +34,7 @@ from open_webui.retrieval.vector.main import (
     SearchResult,
     GetResult,
 )
+from open_webui.utils.misc import sanitize_text_for_db
 from open_webui.config import (
     PGVECTOR_DB_URL,
     PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH,
@@ -289,7 +290,9 @@ class PgvectorClient(VectorDBBase):
                     vector = self.adjust_vector_length(item['vector'])
                     # Use raw SQL for BYTEA/pgcrypto
                     # Ensure metadata is converted to its JSON text representation
-                    json_metadata = json.dumps(item['metadata'])
+                    # Sanitize to strip null bytes / surrogates that PostgreSQL cannot store
+                    json_metadata = sanitize_text_for_db(json.dumps(item['metadata']))
+                    item_text = sanitize_text_for_db(item['text'])
                     self.session.execute(
                         text("""
                             INSERT INTO document_chunk
@@ -305,7 +308,7 @@ class PgvectorClient(VectorDBBase):
                             'id': item['id'],
                             'vector': vector,
                             'collection_name': collection_name,
-                            'text': item['text'],
+                            'text': item_text,
                             'metadata_text': json_metadata,
                             'key': PGVECTOR_PGCRYPTO_KEY,
                         },
@@ -338,7 +341,9 @@ class PgvectorClient(VectorDBBase):
             if PGVECTOR_PGCRYPTO:
                 for item in items:
                     vector = self.adjust_vector_length(item['vector'])
-                    json_metadata = json.dumps(item['metadata'])
+                    # Sanitize to strip null bytes / surrogates that PostgreSQL cannot store
+                    json_metadata = sanitize_text_for_db(json.dumps(item['metadata']))
+                    item_text = sanitize_text_for_db(item['text'])
                     self.session.execute(
                         text("""
                             INSERT INTO document_chunk
@@ -358,7 +363,7 @@ class PgvectorClient(VectorDBBase):
                             'id': item['id'],
                             'vector': vector,
                             'collection_name': collection_name,
-                            'text': item['text'],
+                            'text': item_text,
                             'metadata_text': json_metadata,
                             'key': PGVECTOR_PGCRYPTO_KEY,
                         },

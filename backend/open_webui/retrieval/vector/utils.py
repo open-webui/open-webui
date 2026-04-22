@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from open_webui.utils.misc import sanitize_text_for_db
+
 KEYS_TO_EXCLUDE = ['content', 'pages', 'tables', 'paragraphs', 'sections', 'figures']
 
 
@@ -12,7 +14,8 @@ def filter_metadata(metadata: dict[str, any]) -> dict[str, any]:
 def process_metadata(
     metadata: dict[str, any],
 ) -> dict[str, any]:
-    # Removes large fields and converts non-serializable types (datetime, list, dict) to strings.
+    # Removes large fields, converts non-serializable types (datetime, list, dict) to strings,
+    # and sanitizes strings for database storage (strips null bytes and invalid surrogates).
     result = {}
     for key, value in metadata.items():
         # Skip large fields
@@ -20,7 +23,7 @@ def process_metadata(
             continue
         # Convert non-serializable fields to strings
         if isinstance(value, (datetime, list, dict)):
-            result[key] = str(value)
+            result[key] = sanitize_text_for_db(str(value))
         else:
-            result[key] = value
+            result[key] = sanitize_text_for_db(value)
     return result
