@@ -40,7 +40,7 @@
 
 	export let orderBy = 'updated_at';
 	export let direction = 'desc'; // 'asc' or 'desc'
-export let showCreatedAtSort = false;
+	export let showCreatedAtSort = false;
 
 	export let chatList = null;
 	export let allChatsLoaded = false;
@@ -168,7 +168,9 @@ export let showCreatedAtSort = false;
 								<button
 									class="px-1.5 py-1 cursor-pointer select-none {showUserInfo
 										? 'flex-1'
-										: 'basis-3/5'}"
+										: showCreatedAtSort
+											? 'flex-1'
+											: 'basis-3/5'}"
 									on:click={() => setSortKey('title')}
 								>
 									<div class="flex gap-1.5 items-center">
@@ -192,7 +194,9 @@ export let showCreatedAtSort = false;
 								<button
 									class="px-1.5 py-1 cursor-pointer select-none hidden sm:flex {showUserInfo
 										? 'w-28'
-										: 'sm:basis-2/5'} justify-end"
+										: showCreatedAtSort
+											? 'w-28'
+											: 'sm:basis-2/5'} justify-end"
 									on:click={() => setSortKey('updated_at')}
 								>
 									<div class="flex gap-1.5 items-center">
@@ -217,7 +221,7 @@ export let showCreatedAtSort = false;
 									<button
 										class="px-1.5 py-1 cursor-pointer select-none hidden sm:flex {showUserInfo
 											? 'w-28'
-											: 'sm:basis-2/5'} justify-end"
+											: 'w-28'} justify-end"
 										on:click={() => setSortKey('created_at')}
 									>
 										<div class="flex gap-1.5 items-center">
