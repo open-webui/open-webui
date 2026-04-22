@@ -11,6 +11,7 @@
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
+	import FailoverProviders from '$lib/components/common/FailoverProviders.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
 	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
 	import SkillsSelector from '$lib/components/workspace/Models/SkillsSelector.svelte';
@@ -106,6 +107,17 @@
 	let terminalId = '';
 	let tts = { voice: '' };
 	let ragTopK: number | null = null;
+
+	// Ordered list of OpenAI-compatible providers to try for this workspace
+	// model. Bound to FailoverProviders.svelte. Replaces the single
+	// base-model dropdown; the legacy `info.base_model_id` is still written
+	// on save (first provider's model name) so code paths that only know
+	// about it keep working.
+	let failoverProviders: Array<{
+		connection_url: string;
+		model_name: string;
+		capabilities: string[];
+	}> = [];
 
 	const submitHandler = async () => {
 		loading = true;
@@ -237,6 +249,23 @@
 			}
 		}
 
+		// Persist the ordered failover list and mirror the primary into the
+		// legacy base_model_id so code paths that only know the old shape
+		// keep working.
+		const validProviders = failoverProviders.filter(
+			(p) => p.connection_url && p.model_name
+		);
+		if (validProviders.length > 0) {
+			info.meta.failover_providers = validProviders;
+			info.base_model_id = validProviders[0].model_name;
+		} else {
+			if (info.meta.failover_providers) {
+				delete info.meta.failover_providers;
+			}
+			// `info.base_model_id` is left untouched — if the editor has no
+			// failover entries, we preserve whatever was there (including null).
+		}
+
 		info.params.system = system.trim() === '' ? null : system;
 		info.params.stop = params.stop
 			? (typeof params.stop === 'string' ? params.stop.split(',') : params.stop).filter((s) =>
@@ -338,6 +367,27 @@
 			terminalId = model?.meta?.terminalId ?? '';
 			tts = { voice: model?.meta?.tts?.voice ?? '' };
 			ragTopK = model?.meta?.rag_top_k ?? null;
+
+			// Failover config: prefer the new ordered list if present; fall
+			// back to the legacy base_model_id (one-entry list with an
+			// empty URL that the user can then point at a connection).
+			if (Array.isArray(model?.meta?.failover_providers) && model.meta.failover_providers.length > 0) {
+				failoverProviders = model.meta.failover_providers.map((p) => ({
+					connection_url: p.connection_url ?? '',
+					model_name: p.model_name ?? '',
+					capabilities: p.capabilities ?? []
+				}));
+			} else if (model?.base_model_id) {
+				failoverProviders = [
+					{
+						connection_url: '',
+						model_name: model.base_model_id,
+						capabilities: []
+					}
+				];
+			} else {
+				failoverProviders = [];
+			}
 
 			accessGrants = model?.access_grants ?? [];
 
@@ -611,24 +661,10 @@
 							{#if preset}
 								<div class="mb-1">
 									<div class=" text-xs font-medium mb-1 text-gray-500">
-										{$i18n.t('Base Model (From)')}
+										{$i18n.t('Providers (primary + failover)')}
 									</div>
 
-									<div>
-										<select
-											class="text-sm w-full bg-transparent outline-hidden"
-											placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
-											bind:value={info.base_model_id}
-											required
-										>
-											<option value={null} class=" text-gray-900"
-												>{$i18n.t('Select a base model')}</option
-											>
-											{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena' && !(m?.direct ?? false)) as model}
-												<option value={model.id} class=" text-gray-900">{model.name}</option>
-											{/each}
-										</select>
-									</div>
+									<FailoverProviders bind:providers={failoverProviders} />
 								</div>
 							{/if}
 

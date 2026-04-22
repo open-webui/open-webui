@@ -333,18 +333,26 @@ export const verifyOpenAIConnection = async (
 export const chatCompletion = async (
 	token: string = '',
 	body: object,
-	url: string = `${WEBUI_BASE_URL}/api`
+	url: string = `${WEBUI_BASE_URL}/api`,
+	// Set when retrying after a failover-provider failure — the backend
+	// will skip these connection URLs when resolving the candidate list.
+	skipProviderUrls: string[] = []
 ): Promise<[Response | null, AbortController]> => {
 	const controller = new AbortController();
 	let error = null;
 
+	const headers: Record<string, string> = {
+		Authorization: `Bearer ${token}`,
+		'Content-Type': 'application/json'
+	};
+	if (skipProviderUrls.length > 0) {
+		headers['X-Skip-Provider-URLs'] = skipProviderUrls.join(',');
+	}
+
 	const res = await fetch(`${url}/chat/completions`, {
 		signal: controller.signal,
 		method: 'POST',
-		headers: {
-			Authorization: `Bearer ${token}`,
-			'Content-Type': 'application/json'
-		},
+		headers,
 		body: JSON.stringify(body)
 	}).catch((err) => {
 		console.error(err);
@@ -362,16 +370,25 @@ export const chatCompletion = async (
 export const generateOpenAIChatCompletion = async (
 	token: string = '',
 	body: object,
-	url: string = `${WEBUI_BASE_URL}/api`
+	url: string = `${WEBUI_BASE_URL}/api`,
+	// When regenerating after a mid-stream provider failure, the caller can
+	// pass the failed provider URL(s) here. The backend's failover resolver
+	// will skip those and pick the next candidate.
+	skipProviderUrls: string[] = []
 ) => {
 	let error = null;
 
+	const headers: Record<string, string> = {
+		Authorization: `Bearer ${token}`,
+		'Content-Type': 'application/json'
+	};
+	if (skipProviderUrls.length > 0) {
+		headers['X-Skip-Provider-URLs'] = skipProviderUrls.join(',');
+	}
+
 	const res = await fetch(`${url}/chat/completions`, {
 		method: 'POST',
-		headers: {
-			Authorization: `Bearer ${token}`,
-			'Content-Type': 'application/json'
-		},
+		headers,
 		credentials: 'include',
 		body: JSON.stringify(body)
 	})

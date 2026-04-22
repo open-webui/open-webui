@@ -639,6 +639,29 @@
 					</span>
 				</Tooltip>
 
+				{#if message.provider}
+					<Tooltip
+						content={`${message.provider.url ?? ''}\n${$i18n.t('Model: {{m}}', { m: message.provider.model_name ?? '' })}${
+							(message.provider.position ?? 0) > 0
+								? '\n' + $i18n.t('Answered by backup #{{n}}', { n: message.provider.position })
+								: ''
+						}`}
+						placement="top-start"
+					>
+						<span
+							class="self-center text-[10px] font-medium px-1.5 py-0.5 rounded-full ml-1.5 translate-y-[1px] {(message.provider.position ?? 0) > 0
+								? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+								: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}"
+						>
+							{#if (message.provider.position ?? 0) > 0}
+								{$i18n.t('backup #{{n}}', { n: message.provider.position })}
+							{:else}
+								{$i18n.t('primary')}
+							{/if}
+						</span>
+					</Tooltip>
+				{/if}
+
 				{#if message.timestamp}
 					<div
 						class="self-center text-xs font-medium first-letter:capitalize ml-0.5 translate-y-[1px] {($settings?.highContrastMode ??
@@ -1364,6 +1387,36 @@
 															stroke-linecap="round"
 															stroke-linejoin="round"
 															d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+														/>
+													</svg>
+												</button>
+											</Tooltip>
+										{/if}
+
+										{#if message?.provider?.url && isLastMessage}
+											<Tooltip content={$i18n.t('Retry with a different provider')} placement="bottom">
+												<button
+													type="button"
+													aria-label={$i18n.t('Retry with a different provider')}
+													class="visible p-1.5 hover:bg-amber-500/10 rounded-lg text-amber-600 dark:text-amber-400 transition"
+													on:click={() => {
+														showRateComment = false;
+														regenerateResponse(message, null, {
+															skipProviderUrls: [message.provider.url]
+														});
+													}}
+												>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 20 20"
+														fill="currentColor"
+														class="w-4 h-4"
+														aria-hidden="true"
+													>
+														<path
+															fill-rule="evenodd"
+															d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+															clip-rule="evenodd"
 														/>
 													</svg>
 												</button>

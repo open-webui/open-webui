@@ -3,6 +3,7 @@ import hashlib
 import json
 import logging
 import re
+import time
 from typing import Optional
 from urllib.parse import quote, urlparse
 
@@ -58,12 +59,21 @@ from open_webui.utils.misc import (
 from open_webui.utils.session_pool import (
     cleanup_response,
     get_session,
+    prefetch_stream_bytes,
+    prefetched_stream_wrapper,
     stream_wrapper,
 )
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.utils.anthropic import is_anthropic_url, get_anthropic_models
+from open_webui.utils.failover import (
+    ProviderCandidate,
+    RetryableProviderError,
+    is_retryable_error,
+    parse_retry_after,
+    resolve_failover_candidates,
+)
 
 log = logging.getLogger(__name__)
 
@@ -646,6 +656,19 @@ class ConnectionVerificationForm(BaseModel):
     config: Optional[dict] = None
 
 
+@router.get('/health')
+async def get_provider_health(request: Request, user=Depends(get_verified_user)):
+    """Return the current health snapshot for configured OpenAI connections.
+
+    Used by the UI for status dots. Available to verified users (not just
+    admins) because any user may need to see if the model they're chatting
+    with is currently reachable.
+    """
+    from open_webui.utils.provider_health import snapshot_provider_health
+
+    return snapshot_provider_health(request.app)
+
+
 @router.post('/verify')
 async def verify_connection(
     request: Request,
@@ -1042,8 +1065,6 @@ async def generate_chat_completion(
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
-    idx = 0
-
     payload = {**form_data}
     metadata = payload.pop('metadata', None)
 
@@ -1072,140 +1093,211 @@ async def generate_chat_completion(
     else:
         await check_model_access(user, None, bypass_filter)
 
-    # Check if model is already in app state cache to avoid expensive get_all_models() call
-    models = request.app.state.OPENAI_MODELS
-    if not models or model_id not in models:
-        await get_all_models(request, user=user)
-        models = request.app.state.OPENAI_MODELS
-    model = models.get(model_id)
+    # Failover: the frontend sets this header when a previous attempt failed
+    # so we skip the providers it already tried on the retry.
+    skip_header = request.headers.get('X-Skip-Provider-URLs', '')
+    skip_urls = [u.strip() for u in skip_header.split(',') if u.strip()]
 
-    if model:
-        idx = model['urlIdx']
-    else:
+    # Populate OPENAI_MODELS cache once so the legacy resolver path works.
+    if not request.app.state.OPENAI_MODELS:
+        await get_all_models(request, user=user)
+
+    health_cache = getattr(request.app.state, 'PROVIDER_HEALTH', None)
+    candidates = resolve_failover_candidates(
+        request=request,
+        model_info=model_info,
+        payload=payload,
+        skip_urls=skip_urls,
+        health_cache=health_cache,
+    )
+
+    # If the legacy resolver found nothing (model not in cache), refresh and retry.
+    if not candidates:
+        await get_all_models(request, user=user)
+        candidates = resolve_failover_candidates(
+            request=request,
+            model_info=model_info,
+            payload=payload,
+            skip_urls=skip_urls,
+            health_cache=health_cache,
+        )
+
+    if not candidates:
         raise HTTPException(
             status_code=404,
             detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
         )
 
-    # Get the API config for the model
-    api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
-        str(idx),
-        request.app.state.config.OPENAI_API_CONFIGS.get(
-            request.app.state.config.OPENAI_API_BASE_URLS[idx], {}
-        ),  # Legacy support
+    last_error: Optional[RetryableProviderError] = None
+    for i, candidate in enumerate(candidates):
+        is_last = i == len(candidates) - 1
+        try:
+            return await _try_provider_candidate(
+                request=request,
+                candidate=candidate,
+                payload=payload,
+                metadata=metadata,
+                user=user,
+            )
+        except RetryableProviderError as rpe:
+            last_error = rpe
+            log.info(
+                'Failover: provider %s failed (%s); %s',
+                rpe.provider_url,
+                rpe.status_code,
+                'no more candidates' if is_last else 'trying next candidate',
+            )
+            _record_provider_failure(request, rpe)
+            if is_last:
+                raise HTTPException(
+                    status_code=rpe.status_code or 502,
+                    detail=rpe.detail or ERROR_MESSAGES.SERVER_CONNECTION_ERROR,
+                )
+            continue
+
+    # Unreachable — the loop either returns, raises, or continues.
+    raise HTTPException(
+        status_code=last_error.status_code if last_error else 500,
+        detail=last_error.detail if last_error else ERROR_MESSAGES.SERVER_CONNECTION_ERROR,
     )
 
-    prefix_id = api_config.get('prefix_id', None)
-    if prefix_id:
-        payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
 
-    # Add user info to the payload if the model is a pipeline
-    if 'pipeline' in model and model.get('pipeline'):
-        payload['user'] = {
+async def _try_provider_candidate(
+    request: Request,
+    candidate: ProviderCandidate,
+    payload: dict,
+    metadata: Optional[dict],
+    user,
+):
+    """Run the chat-completion request against a single provider candidate.
+
+    Returns the response (dict / StreamingResponse / JSONResponse / PlainTextResponse)
+    on success. Raises ``RetryableProviderError`` when the failure looks
+    transient so the outer loop can try the next candidate.
+
+    This mirrors what the original single-provider handler did end-to-end
+    (Azure-v1/legacy, Responses API, reasoning models, logit_bias, pipeline
+    user-info, SSE vs JSON response shapes) but parameterised by ``candidate``
+    so each retry can target a different URL/model.
+    """
+    attempt_payload = {**payload}
+    attempt_payload['model'] = candidate.model_name
+
+    url = candidate.url
+    key = candidate.key
+    api_config = candidate.api_config
+    idx = candidate.url_idx
+
+    if candidate.prefix_id:
+        attempt_payload['model'] = attempt_payload['model'].replace(f'{candidate.prefix_id}.', '')
+
+    # Pipeline user-info injection: only when the model at THIS provider is a
+    # pipeline. Sending the user-dict to a plain OpenAI endpoint would break
+    # them (they expect a string for ``user``).
+    models_state = request.app.state.OPENAI_MODELS or {}
+    cache_entry = models_state.get(candidate.model_name)
+    if (
+        cache_entry
+        and cache_entry.get('pipeline')
+        and cache_entry.get('urlIdx') == idx
+    ):
+        attempt_payload['user'] = {
             'name': user.name,
             'id': user.id,
             'email': user.email,
             'role': user.role,
         }
 
-    url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
-    key = request.app.state.config.OPENAI_API_KEYS[idx]
-
-    # Check if model is a reasoning model that needs special handling
-    if is_openai_new_model(payload['model']):
-        payload = openai_reasoning_model_handler(payload)
+    # Reasoning-model / OpenAI-new-model handling
+    if is_openai_new_model(attempt_payload['model']):
+        attempt_payload = openai_reasoning_model_handler(attempt_payload)
     elif 'api.openai.com' not in url:
-        # Remove "max_completion_tokens" from the payload for backward compatibility
-        if 'max_completion_tokens' in payload:
-            payload['max_tokens'] = payload['max_completion_tokens']
-            del payload['max_completion_tokens']
+        if 'max_completion_tokens' in attempt_payload:
+            attempt_payload['max_tokens'] = attempt_payload['max_completion_tokens']
+            del attempt_payload['max_completion_tokens']
 
-    if 'max_tokens' in payload and 'max_completion_tokens' in payload:
-        del payload['max_tokens']
+    if 'max_tokens' in attempt_payload and 'max_completion_tokens' in attempt_payload:
+        del attempt_payload['max_tokens']
 
-    # Convert the modified body back to JSON
-    if 'logit_bias' in payload and payload['logit_bias']:
-        logit_bias = convert_logit_bias_input_to_json(payload['logit_bias'])
-
+    if 'logit_bias' in attempt_payload and attempt_payload['logit_bias']:
+        logit_bias = convert_logit_bias_input_to_json(attempt_payload['logit_bias'])
         if logit_bias:
-            payload['logit_bias'] = json.loads(logit_bias)
+            attempt_payload['logit_bias'] = json.loads(logit_bias)
 
     headers, cookies = await get_headers_and_cookies(request, url, key, api_config, metadata, user=user)
-
     is_responses = api_config.get('api_type') == 'responses'
 
+    # Request-URL construction (Azure v1 vs legacy, Responses vs chat/completions)
     if api_config.get('azure', False):
-        # Only set api-key header if not using Azure Entra ID authentication
         auth_type = api_config.get('auth_type', 'bearer')
         if auth_type not in ('azure_ad', 'microsoft_entra_id'):
             headers['api-key'] = key
-
-        # Azure v1 format: base URL already ends with /openai/v1,
-        # model stays in the payload, no deployment URL rewriting.
         is_azure_v1 = bool(re.search(r'/openai/v1(?:/|$)', url))
-
         if is_azure_v1:
             if is_responses:
-                payload = convert_to_responses_payload(payload)
+                attempt_payload = convert_to_responses_payload(attempt_payload)
                 request_url = f'{url.rstrip("/")}/responses'
             else:
                 request_url = f'{url.rstrip("/")}/chat/completions'
         else:
             api_version = api_config.get('api_version', '2023-03-15-preview')
-            request_url, payload = convert_to_azure_payload(url, payload, api_version)
+            request_url, attempt_payload = convert_to_azure_payload(url, attempt_payload, api_version)
             headers['api-version'] = api_version
-
             if is_responses:
-                payload = convert_to_responses_payload(payload)
+                attempt_payload = convert_to_responses_payload(attempt_payload)
                 request_url = f'{request_url}/responses?api-version={api_version}'
             else:
                 request_url = f'{request_url}/chat/completions?api-version={api_version}'
     else:
         if is_responses:
-            payload = convert_to_responses_payload(payload)
+            attempt_payload = convert_to_responses_payload(attempt_payload)
             request_url = f'{url}/responses'
         else:
             request_url = f'{url}/chat/completions'
-    # For Chat Completions, strip image parts from multimodal tool messages
-    # (Chat Completions doesn't support images in tool content).
-    if not is_responses and 'messages' in payload:
-        for message in payload['messages']:
+
+    # Chat Completions can't handle image parts in tool messages; collapse to text.
+    if not is_responses and 'messages' in attempt_payload:
+        for message in attempt_payload['messages']:
             if message.get('role') == 'tool' and isinstance(message.get('content'), list):
                 message['content'] = ''.join(
-                    part.get('text', '') for part in message['content'] if part.get('type') in ('input_text', 'text')
+                    part.get('text', '')
+                    for part in message['content']
+                    if part.get('type') in ('input_text', 'text')
                 )
 
-    payload = json.dumps(payload)
+    payload_json = json.dumps(attempt_payload)
 
     r = None
     streaming = False
-    response = None
-
     try:
         session = await get_session()
-
         r = await session.request(
             method='POST',
             url=request_url,
-            data=payload,
+            data=payload_json,
             headers=headers,
             cookies=cookies,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
             timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
         )
 
-        # Check if response is SSE
         if 'text/event-stream' in r.headers.get('Content-Type', ''):
-            # If the provider returned an error status with SSE content-type,
-            # read the body and return a proper error response instead of
-            # streaming the error back (which hides the error from logs).
+            # SSE with error status: read body and treat as non-stream response.
             if r.status >= 400:
                 error_body = await r.text()
                 log.error(
-                    'Provider returned HTTP %d with SSE content-type: %s',
+                    'Provider %s returned HTTP %d with SSE content-type: %s',
+                    url,
                     r.status,
                     error_body[:1000],
                 )
+                if is_retryable_error(r.status, None):
+                    raise RetryableProviderError(
+                        status_code=r.status,
+                        detail=error_body[:500],
+                        retry_after=parse_retry_after(r.headers.get('Retry-After')),
+                        provider_url=url,
+                    )
                 try:
                     error_json = json.loads(error_body)
                     return JSONResponse(status_code=r.status, content=error_json)
@@ -1215,33 +1307,100 @@ async def generate_chat_completion(
                         content={'error': {'message': error_body, 'code': r.status}},
                     )
 
-            streaming = True
-            return StreamingResponse(
-                stream_wrapper(r, content_handler=stream_chunks_handler),
-                status_code=r.status,
-                headers=dict(r.headers),
-            )
-        else:
+            # Phase 2: buffer window. Pre-read up to 2KB / 500ms so a provider
+            # that 200s-then-dies becomes a retryable failure.
             try:
-                response = await r.json()
-            except Exception as e:
-                log.error(e)
-                response = await r.text()
+                prefetched = await prefetch_stream_bytes(r, buffer_bytes=2048, timeout_ms=500)
+            except (aiohttp.ClientError, asyncio.TimeoutError, OSError) as prefetch_exc:
+                log.warning('Stream prefetch failed for %s: %s', url, prefetch_exc)
+                raise RetryableProviderError(
+                    status_code=None,
+                    detail=f'Stream error during buffer window: {prefetch_exc}',
+                    provider_url=url,
+                ) from prefetch_exc
 
-            if r.status >= 400:
-                if isinstance(response, (dict, list)):
-                    return JSONResponse(status_code=r.status, content=response)
-                else:
-                    return PlainTextResponse(status_code=r.status, content=response)
+            # Past the window — commit to streaming.
+            streaming = True
+            provider_event = (
+                'data: '
+                + json.dumps(
+                    {
+                        'provider_selected': {
+                            'url': candidate.url,
+                            'model_name': candidate.model_name,
+                            'position': candidate.position,
+                        }
+                    }
+                )
+                + '\n\n'
+            ).encode()
 
-            # Convert Responses API result to simple format
-            if is_responses and isinstance(response, dict):
-                response = convert_responses_result(response)
+            response_headers = dict(r.headers)
+            response_headers['X-Selected-Provider-URL'] = url
+            response_headers['X-Selected-Provider-Position'] = str(candidate.position)
+            # The original Content-Length (if any) now lies; strip it.
+            response_headers.pop('Content-Length', None)
+            response_headers.pop('content-length', None)
 
-            return response
+            return StreamingResponse(
+                prefetched_stream_wrapper(
+                    r,
+                    prefetched_chunks=prefetched,
+                    content_handler=stream_chunks_handler,
+                    leading_events=[provider_event],
+                ),
+                status_code=r.status,
+                headers=response_headers,
+            )
+
+        # Non-SSE response
+        try:
+            response = await r.json()
+        except Exception as e:
+            log.error(e)
+            response = await r.text()
+
+        if r.status >= 400:
+            if is_retryable_error(r.status, None):
+                detail = response if isinstance(response, str) else json.dumps(response)
+                raise RetryableProviderError(
+                    status_code=r.status,
+                    detail=detail[:500],
+                    retry_after=parse_retry_after(r.headers.get('Retry-After')),
+                    provider_url=url,
+                )
+            if isinstance(response, (dict, list)):
+                return JSONResponse(status_code=r.status, content=response)
+            return PlainTextResponse(status_code=r.status, content=response)
+
+        if is_responses and isinstance(response, dict):
+            response = convert_responses_result(response)
+
+        # Tag the response so downstream persistence can record which provider answered.
+        if isinstance(response, dict):
+            response.setdefault(
+                '_owui_provider',
+                {
+                    'url': candidate.url,
+                    'model_name': candidate.model_name,
+                    'position': candidate.position,
+                },
+            )
+
+        return response
+
+    except RetryableProviderError:
+        raise
+    except HTTPException:
+        raise
     except Exception as e:
-        log.exception(e)
-
+        log.exception('Provider %s raised: %s', url, e)
+        if is_retryable_error(None, e):
+            raise RetryableProviderError(
+                status_code=r.status if r else None,
+                detail=str(e)[:500],
+                provider_url=url,
+            ) from e
         raise HTTPException(
             status_code=r.status if r else 500,
             detail=ERROR_MESSAGES.SERVER_CONNECTION_ERROR,
@@ -1249,6 +1408,27 @@ async def generate_chat_completion(
     finally:
         if not streaming:
             await cleanup_response(r)
+
+
+def _record_provider_failure(request: Request, error: RetryableProviderError) -> None:
+    """Mark a provider as unhealthy in the app-state cache.
+
+    Honors ``Retry-After`` from the error if present; otherwise defaults to
+    a 60-second cool-off so follow-up requests skip this provider.
+    """
+    if not error.provider_url:
+        return
+    health = getattr(request.app.state, 'PROVIDER_HEALTH', None)
+    if health is None:
+        request.app.state.PROVIDER_HEALTH = {}
+        health = request.app.state.PROVIDER_HEALTH
+    unhealthy_for = error.retry_after if error.retry_after is not None else 60
+    entry = health.setdefault(error.provider_url, {})
+    entry['status'] = 'unhealthy'
+    entry['last_error'] = error.detail
+    entry['last_error_at'] = time.time()
+    entry['last_error_status'] = error.status_code
+    entry['unhealthy_until'] = time.time() + unhealthy_for
 
 
 async def embeddings(request: Request, form_data: dict, user):
