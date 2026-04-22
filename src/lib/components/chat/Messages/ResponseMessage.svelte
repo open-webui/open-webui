@@ -189,6 +189,24 @@
 
 	let showRateComment = false;
 
+	const formatUsage = (usage) =>
+		JSON.stringify(usage, null, 2)
+			.replace(/"([^(")"]+)":/g, '$1:')
+			.slice(1, -1)
+			.split('\n')
+			.map((line) => line.slice(2))
+			.map((line) => (line.endsWith(',') ? line.slice(0, -1) : line))
+			.join('\n');
+
+	const copyUsageToClipboard = async (usage) => {
+		const res = await _copyToClipboard(formatUsage(usage));
+		if (res) {
+			toast.success($i18n.t('Copied to clipboard'));
+		} else {
+			toast.error($i18n.t('Failed to copy'));
+		}
+	};
+
 	const copyToClipboard = async (text) => {
 		text = removeAllDetails(text);
 
@@ -1103,25 +1121,17 @@
 								{#if message.usage}
 									<Tooltip
 										content={message.usage
-											? `<pre>${sanitizeResponseContent(
-													JSON.stringify(message.usage, null, 2)
-														.replace(/"([^(")"]+)":/g, '$1:')
-														.slice(1, -1)
-														.split('\n')
-														.map((line) => line.slice(2))
-														.map((line) => (line.endsWith(',') ? line.slice(0, -1) : line))
-														.join('\n')
-												)}</pre>`
+											? `<pre>${sanitizeResponseContent(formatUsage(message.usage))}</pre>`
 											: ''}
 										placement="bottom"
 									>
 										<button
-											aria-hidden="true"
+											aria-label={$i18n.t('Copy to clipboard')}
 											class=" {isLastMessage || ($settings?.highContrastMode ?? false)
 												? 'visible'
 												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition whitespace-pre-wrap"
-											on:click={() => {
-												console.log(message);
+											on:click={async () => {
+												await copyUsageToClipboard(message.usage);
 											}}
 											id="info-{message.id}"
 										>
